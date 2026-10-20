@@ -219,6 +219,7 @@ GUIDES = {
         ],
     },
     "best-ai-debate-tools": {
+        "software": True,
         "modified": "2026-10-20",
         "features": [
             ("Feature comparison", "What each kind of tool does well: general chatbots, research assistants, dedicated debate platforms, and timers or flowing tools."),
@@ -768,6 +769,7 @@ GUIDES = {
         ],
     },
     "debatelab-vs-chatgpt": {
+        "software": True,
         "features": [
             ("A general assistant", "ChatGPT can brainstorm, explain, draft and revise on any subject, including debate."),
             ("A debate workspace", "{product} organises prep around one motion at a time, with structured cases, an AI opponent, a timer and judged practice rounds."),
@@ -1196,6 +1198,112 @@ GUIDES = {
             ("What should I do if my evidence is weak?", "Do not read it. Find a better source, narrow your claim, or make the argument analytically without the card."),
             ("Where does {product} keep my sources?", "In the Library for your Current Debate. Sources you mark active are used by the other tools for that debate."),
             ("Is a card better than an analytical argument?", "Only if it is accurate and relevant. A strong warrant without a card often beats a weak card that does not survive a question."),
+        ],
+    },
+    "debatelab-pricing": {
+        "software": True,
+        "lead": "A 3-day free trial with no credit card, then one paid plan. Prices on this page were checked in October 2026.",
+        "features": [
+            ("Trial: $0 for 3 days", "All 11 prep modes with starter AI prep access and starter models. No credit card required to start."),
+            ("Pro: $5/month + tax", "Expanded AI prep access, all 10 models, Active Grounding research and priority support."),
+            ("No permanent free plan", "When the trial ends, a Pro subscription is required to keep using {product}. You can cancel any time."),
+        ],
+        "sections": [
+            ("What each plan includes (as of October 2026)", [
+                {"h3": "Trial"},
+                {"list": [
+                    "Price: $0 for 3 days. No credit card required.",
+                    "All 11 prep modes: Case Generator, Case Attacker, Brainstorm, Factoids, Ask Coach, Crossfire, Sparring, Source Library, Debate Timer, Flowchart and History.",
+                    "Starter AI prep access and starter models.",
+                ]},
+                {"h3": "Pro"},
+                {"list": [
+                    "Price: $5 per month, plus tax.",
+                    "All 11 prep modes.",
+                    "Expanded AI prep access, with higher daily limits for heavy prep weeks.",
+                    "All 10 models, including Claude Opus and Sonnet, GPT-6.1 Sol and Gemini.",
+                    "Active Grounding research and priority support.",
+                ]},
+                "There is no permanent free plan. After the trial, a subscription is required to continue using {product}.",
+            ]),
+            ("Is Pro worth it for you?", [
+                "It depends on how often you prepare. Use the trial on a real motion: generate a case, attack it, run one Sparring round and read the verdict. If that loop saved you time, Pro is priced for students who prep every week or have a tournament coming.",
+                "If you debate a few times a year, or you need a tool that stays free, {product} is probably not the right fit. A general chatbot's free tier can cover occasional brainstorming, and some practice tools are free to use.",
+            ]),
+            ("Cancelling", [
+                "You can cancel any time from the Settings page. You keep Pro access until the end of the billing period you already paid for.",
+            ]),
+        ],
+        "faqs": [
+            ("How much does {product} cost?", "As of October 2026, {product} has a 3-day free trial with no credit card required. After that, Pro costs $5/month + tax."),
+            ("Is there a free plan?", "No. There is a 3-day free trial, but no permanent free plan. A subscription is required after the trial."),
+            ("Do I need a credit card for the trial?", "No. You can start the 3-day trial without a credit card."),
+            ("What does Pro add over the trial?", "Expanded AI prep access with higher daily limits, all 10 models including Claude Opus and Sonnet, GPT-6.1 Sol and Gemini, Active Grounding research and priority support."),
+            ("Can I cancel my subscription?", "Yes, any time from the Settings page. You keep access until the end of your billing period."),
+        ],
+    },
+    "debatelab-vs-windebate": {
+        "software": True,
+        "features": [
+            ("Formats", "As of October 2026, WinDebate names six formats: Public Forum, Lincoln-Douglas, Congressional, Policy, World Schools and British Parliamentary. {product}'s Sparring rounds cover School 4-6-6-3, Lincoln-Douglas and Public Forum."),
+            ("Price", "WinDebate has a free tier with monthly limits and paid plans from $19.99/month. {product} has a 3-day free trial, then Pro at $5/month + tax."),
+            ("Workflow", "WinDebate is organised as prep, practice, live round and review. {product} keeps cases, sources, practice rounds and debriefs together in one Current Debate."),
+        ],
+        "sections": [
+            ("What WinDebate offers", [
+                "WinDebate (windebate.ai) describes itself as a debate training platform with four stages: prep, practice, live and review. Its site lists research on both sides with evidence and rebuttal trees, targeted drills for attack, defense, weighing and speeches, a Live Round Assistant that captures speeches and builds response cards, replay review that turns a round into drills, and progress tracking.",
+                "As of October 2026, its plans are Free ($0, with 1 research session, 10 drills and 1 Live Assistant round a month), Plus ($19.99/month, which adds voice input and playback and weekly progress) and Pro ($39.99/month). These details come from WinDebate's own site; check it for current terms.",
+            ]),
+            ("What {product} offers", [
+                "{product} is an AI debate prep and practice app with 11 prep modes. You start a Current Debate for one motion, add sources to its Library, generate a structured case with a predicted opponent case, find weak links with Attack, research claims with Factoids, ask the Ask coach, drill cross-examination in Crossfire, and run timed Sparring rounds against an AI opponent that end in a verdict. A speech timer and an argument flowchart round it out.",
+                "As of October 2026, {product} has a 3-day free trial with no credit card, then Pro at $5/month + tax. The app is available in English, Spanish and Hungarian.",
+            ]),
+            ("How to choose", [
+                {"list": [
+                    "You debate Policy, Congress or British Parliamentary and want a tool that names your format: WinDebate lists all three.",
+                    "You want to track progress across a season or review recorded rounds: WinDebate lists progress tracking and replay review.",
+                    "You want a free tier you can keep using: WinDebate has one; {product} does not.",
+                    "You want full practice rounds against an AI opponent in School 4-6-6-3, Lincoln-Douglas or Public Forum, with a verdict: {product}.",
+                    "You prepare in Spanish or Hungarian, or want the lowest paid price: {product}.",
+                ]},
+                "The fairest test is to run the same motion through both during {product}'s trial and WinDebate's free tier, then compare the cases, the feedback and how much setup each needed.",
+            ]),
+        ],
+        "faqs": [
+            ("Is {product} cheaper than WinDebate?", "As of October 2026, {product} Pro is $5/month + tax and WinDebate's paid plans start at $19.99/month. WinDebate also has a free tier with monthly limits; {product} has a 3-day trial and no permanent free plan."),
+            ("Which formats does each tool support?", "WinDebate names Public Forum, Lincoln-Douglas, Congressional, Policy, World Schools and British Parliamentary. {product}'s case, Attack, Ask and Crossfire tools work for any motion, and Sparring runs School 4-6-6-3, Lincoln-Douglas and Public Forum rounds."),
+            ("Can I use both?", "Yes. They are separate products, and some debaters use one for prep and another for review."),
+        ],
+    },
+    "debatelab-vs-debateclub": {
+        "software": True,
+        "features": [
+            ("Audience", "As of October 2026, DebateClub describes itself as training for high-stakes conversations such as negotiations, pitches and meetings. {product} is built for school and competitive debate."),
+            ("Practice style", "DebateClub is voice-only sparring with opponent personas. {product} combines case prep tools with timed Sparring rounds you can type or speak."),
+            ("Price", "DebateClub has a free tier with one debate credit and Pro at $19/month. {product} has a 3-day free trial, then Pro at $5/month + tax."),
+        ],
+        "sections": [
+            ("What DebateClub offers", [
+                "DebateClub (debateclub.app) calls itself a training platform for high-stakes conversations: you speak out loud and an AI sparring partner responds in real time. Its site lists opponent personas such as a skeptical investor or a hostile critic, detection and scoring of rhetorical techniques, session recordings and a prep screen for openings and counters. It does not name school or competitive debate formats.",
+                "As of October 2026, its plans are Free ($0, one debate credit) and Pro ($19/month or $149/year). These details come from DebateClub's own site; check it for current terms.",
+            ]),
+            ("What {product} offers", [
+                "{product} is an AI debate prep and practice app for students and competitive debaters, with 11 prep modes. It builds structured cases with a predicted opponent case, finds weak links with Attack, researches claims with Factoids, drills cross-examination in Crossfire and runs timed Sparring rounds in School 4-6-6-3, Lincoln-Douglas and Public Forum that end in a verdict. Voice mode lets you speak your speeches instead of typing them.",
+                "As of October 2026, {product} has a 3-day free trial with no credit card, then Pro at $5/month + tax. The app is available in English, Spanish and Hungarian.",
+            ]),
+            ("Which fits you", [
+                {"list": [
+                    "Preparing for a negotiation, pitch, interview or meeting: DebateClub is built for that.",
+                    "Practising out loud against interruptions and difficult personas: DebateClub.",
+                    "Preparing cases, rebuttals and evidence for a debate tournament: {product}.",
+                    "Practising full rounds in a school debate format with speech times and a verdict: {product}.",
+                ]},
+            ]),
+        ],
+        "faqs": [
+            ("Is DebateClub for competitive debate?", "As of October 2026, DebateClub's site describes training for high-stakes conversations such as negotiations and pitches and does not name competitive debate formats."),
+            ("Does {product} support voice practice?", "Yes. Sparring has a voice mode, so you can speak your speeches instead of typing them."),
+            ("Which is cheaper?", "As of October 2026, {product} Pro is $5/month + tax and DebateClub Pro is $19/month. DebateClub also has a free tier with one debate credit; {product} has a 3-day trial and no permanent free plan."),
         ],
     },
 }

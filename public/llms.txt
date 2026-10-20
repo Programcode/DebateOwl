@@ -1,13 +1,61 @@
 # DebateLab by Pi-Stack
 
-DebateLab by Pi-Stack is an AI debate preparation platform at https://debate.pi-stack.org/.
+> DebateLab is an AI debate prep and practice app for students and competitive debaters that builds structured cases, finds the weak points in arguments, researches evidence with citations and runs timed practice rounds against an AI opponent.
 
-Important public pages:
-- https://debate.pi-stack.org/ — homepage
-- https://debate.pi-stack.org/ai-debate-practice — AI debate practice overview
-- https://debate.pi-stack.org/ai-debate-case-generator — case generation
-- https://debate.pi-stack.org/debate-rebuttal-practice — rebuttal practice
-- https://debate.pi-stack.org/debatelab-pricing — plans and pricing
-- https://debate.pi-stack.org/sitemap.xml — every public page
+DebateLab by Pi-Stack runs at https://debate.pi-stack.org/. It is a separate product from debatelab.ai.
 
-Product summary: DebateLab helps students, coaches, and competitive debaters generate cases, practice rebuttals, find evidence leads, map argument flowcharts, ask for coaching, and time speeches.
+## Key facts (as of October 2026)
+
+- Who it is for: students, competitive debaters and their coaches.
+- 11 prep modes: Case Generator, Case Attacker, Brainstorm, Factoids, Ask Coach, Crossfire, Sparring, Source Library, Debate Timer, Flowchart, History.
+- Practice: Sparring runs timed rounds against an AI opponent in School 4-6-6-3, Lincoln-Douglas and Public Forum and ends with a judged verdict. Crossfire drills cross-examination.
+- Languages: English, Spanish and Hungarian.
+- Pricing: As of October 2026, DebateLab has a 3-day free trial with no credit card required, then Pro costs $5/month + tax. There is no permanent free plan.
+- Pro adds expanded AI prep access, all 10 models (including Claude Opus and Sonnet, GPT-6.1 Sol and Gemini), Active Grounding research and priority support.
+- Privacy: cases, sources, practice rounds and history stay behind sign-in and are not indexed.
+
+## Main pages
+
+- [Home](https://debate.pi-stack.org/): what DebateLab is, the 11 prep modes, pricing and FAQ
+- [Pricing](https://debate.pi-stack.org/debatelab-pricing): trial, Pro and what each includes
+- [Best AI debate tools](https://debate.pi-stack.org/best-ai-debate-tools): how to choose an AI debate tool
+- [Sitemap](https://debate.pi-stack.org/sitemap.xml): every public page
+
+## Guides
+
+- [AI Debate Practice for Stronger Cases, Rebuttals, and Speeches](https://debate.pi-stack.org/ai-debate-practice): Practice debate online with DebateLab: AI opponents, targeted drills, rebuttal feedback, evidence research, argument flowcharts, and tournament-ready prep tools.
+- [AI Debate Case Generator with Citations](https://debate.pi-stack.org/ai-debate-case-generator): Use an AI debate case generator to draft structured cases with claims, warrants, impacts, and evidence leads, then verify sources before round.
+- [Practice Rebuttals Before Your Opponent Finds the Weakness](https://debate.pi-stack.org/debate-rebuttal-practice): Practice rebuttals with DebateLab. Analyze arguments, find weak warrants, missing weighing, logical gaps, and cross-examination traps before your round.
+- [Ask an AI Debate Coach for Round-Ready Prep](https://debate.pi-stack.org/ai-debate-coach): Ask DebateLab's AI debate coach for help with strategy, argument structure, weighing, rebuttals, speeches, prep questions, and practice feedback.
+- [Find Better Debate Evidence Without Losing the Argument](https://debate.pi-stack.org/debate-evidence-finder): Find evidence leads for debate cases with DebateLab, then verify original sources, citations, warrants, and impact links before using them in round.
+- [Map the Clash With an Argument Flowchart](https://debate.pi-stack.org/argument-flowchart): Map debate arguments, clash, links, impacts, and weighing with DebateLab's argument flowchart workflow for clearer speeches and rebuttals.
+- [Practice With an Online Debate Timer](https://debate.pi-stack.org/online-debate-timer): Use DebateLab as an online debate timer for speech practice, prep drills, rebuttal timing, and tournament-ready pacing across formats.
+- [How to Write a Debate Case](https://debate.pi-stack.org/how-to-write-a-debate-case): Learn how to write a debate case with a clear motion analysis, burdens, contentions, warrants, evidence, impacts, and weighing using DebateLab.
+- [How to Practice Debate Rebuttals](https://debate.pi-stack.org/how-to-practice-rebuttals): Learn how to practice debate rebuttals with drills for warrants, evidence quality, impact weighing, cross-examination, and speech collapse.
+- [Public Forum Debate Prep with AI](https://debate.pi-stack.org/public-forum-debate): Prepare for Public Forum debate with DebateLab: case construction, rebuttal drills, summary and final focus practice, crossfire prep, and evidence research.
+- [Lincoln-Douglas Debate Prep with AI](https://debate.pi-stack.org/lincoln-douglas-debate): Prepare for Lincoln-Douglas debate with DebateLab: value and criterion structure, case writing, rebuttal drills, cross-examination, and value debate practice.
+- [Policy Debate Prep with AI](https://debate.pi-stack.org/policy-debate): Prepare for Policy/CX debate with DebateLab: plan text, advantages, disadvantages, counterplans, topicality, and kritik prep with AI-assisted research.
+- [British Parliamentary Debate Prep with AI](https://debate.pi-stack.org/british-parliamentary-debate): Prepare for British Parliamentary debate with DebateLab: motion analysis, government and opposition roles, extensions, POIs, and comparative weighing.
+- [Congressional Debate Prep with AI](https://debate.pi-stack.org/congress-debate): Prepare for Congressional debate with DebateLab: bill analysis, speeches, questioning, ranking, and crystallization practice for congress rounds.
+- [World Schools Debate Prep with AI](https://debate.pi-stack.org/world-schools-debate): Prepare for World Schools Style debate with DebateLab: motion analysis, burdens, speeches, POIs, reply speeches, and team coordination.
+- [How to Weigh in Debate](https://debate.pi-stack.org/how-to-weigh-in-debate): Learn how to weigh in debate using magnitude, probability, timeframe, reversibility, scope, and link strength to frame the ballot for the judge.
+- [How to Cross-Examine in Debate](https://debate.pi-stack.org/how-to-cross-examine-in-debate): Learn how to cross-examine in debate with targeted questions that expose weak warrants, missing evidence, flawed logic, and unsupported impacts.
+- [How to Prepare for a Debate Tournament](https://debate.pi-stack.org/how-to-prepare-for-a-debate-tournament): Learn how to prepare for a debate tournament: topic research, case writing, rebuttal blocks, speech timing, and tournament-day strategy.
+- [How to Flow in Debate](https://debate.pi-stack.org/how-to-flow-in-debate): Learn how to flow in debate: track arguments, map clash, visualize links and impacts, and use your flow to write better speeches and rebuttals.
+- [AI Rebuttal Generator for Debate](https://debate.pi-stack.org/ai-rebuttal-generator): Use an AI rebuttal generator to find weak warrants, build targeted blocks, and practice responses to common debate arguments.
+- [Debate Topics for Students](https://debate.pi-stack.org/debate-topics-for-students): Browse debate topics for students organized by format, difficulty, and subject, with AI-assisted case brainstorming and prep workflows.
+- [Debate Clash Points: Find and Attack the Key Argument](https://debate.pi-stack.org/debate-clash-points): Learn how to identify debate clash points, select the winning clash, and frame the ballot for the judge in any debate format.
+- [Common Debate Fallacies and How to Attack Them](https://debate.pi-stack.org/debate-fallacies): Learn common logical fallacies in debate: ad hominem, straw man, false dichotomy, slippery slope, and how to turn them into rebuttal opportunities.
+- [Debate Prep Time Management](https://debate.pi-stack.org/debate-prep-time-management): Learn how to manage prep time in debate: allocation strategies, block building, speech prioritization, and tournament-day prep workflow.
+- [Debate Judge Adaptation Guide](https://debate.pi-stack.org/debate-judge-adaptation): Learn how to adapt to different debate judges: lay judges, tech judges, flow judges, and how to read the room for better ballot outcomes.
+- [AI vs Traditional Debate Prep](https://debate.pi-stack.org/ai-vs-traditional-debate-prep): Compare AI debate prep tools with traditional research and coaching methods, and learn how to combine both for the strongest tournament preparation.
+- [How to Build a Debate Block File](https://debate.pi-stack.org/debate-block-file-guide): Learn how to build a debate block file with pre-written responses to common arguments, structured by clash, and ready for use in round.
+- [Debate Speech Structure Guide](https://debate.pi-stack.org/debate-speech-structure): Learn debate speech structure for every format: opening, rebuttal, summary, final focus, crystallization, and reply speech organization.
+- [Debate Motion Analysis Guide](https://debate.pi-stack.org/debate-motion-analysis): Learn how to analyze a debate motion: define terms, identify burdens, map clashes, and build case strategy from the topic release.
+- [How to Collapse in Debate](https://debate.pi-stack.org/debate-collapsing-strategy): Learn how to collapse in debate: select the winning clash, drop losing arguments, and concentrate your time on the comparison that wins the ballot.
+- [Debate Speech Delivery and Pronunciation Guide](https://debate.pi-stack.org/debate-pronunciation-and-delivery): Improve your debate speech delivery with tips on clarity, pacing, emphasis, pronunciation, and using pauses for judge-friendly presentations.
+- [Best AI Debate Tools Compared](https://debate.pi-stack.org/best-ai-debate-tools): Compare the best AI debate tools for case generation, rebuttal practice, evidence research, flowcharts, coaching, and tournament preparation.
+- [DebateLab Pricing and Plans](https://debate.pi-stack.org/debatelab-pricing): DebateLab pricing and plans for AI debate practice: free trial, Pro features, and what is included for students and competitive debaters.
+- [DebateLab vs ChatGPT for Debate Prep](https://debate.pi-stack.org/debatelab-vs-chatgpt): Compare DebateLab vs ChatGPT for debate prep: structured workflows vs generic chat, evidence research, rebuttal drills, case generation, and coaching.
+- [DebateLab vs WinDebate](https://debate.pi-stack.org/debatelab-vs-windebate): Compare DebateLab vs WinDebate: case generation, rebuttal drills, evidence research, format coverage, pricing, and workflow differences.
+- [DebateLab vs DebateClub](https://debate.pi-stack.org/debatelab-vs-debateclub): Compare DebateLab vs DebateClub: voice debating, case generation, rebuttal drills, evidence research, and workflow differences for competitive debaters.

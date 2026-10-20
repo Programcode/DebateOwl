@@ -19,7 +19,7 @@ const FinalCTA = () => {
             <div className="section-container relative z-10">
                 <Reveal className="mx-auto max-w-3xl text-center">
                     <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary/10 px-4 py-2 text-sm text-foreground/85">
-                        <Sparkles className="h-4 w-4 text-primary" />
+                        <Sparkles aria-hidden="true" className="h-4 w-4 text-primary" />
                         {t('finalCta.freeTrialAvailable')}
                     </div>
 
@@ -32,7 +32,7 @@ const FinalCTA = () => {
                     <div className="mt-10 inline-flex">
                         <Link to="/app" {...appPrefetch} className="btn-primary-gradient inline-flex items-center gap-3 px-10 py-5 text-lg">
                             <span className="relative z-10">{t('finalCta.cta')}</span>
-                            <ArrowRight className="relative z-10 h-5 w-5" />
+                            <ArrowRight aria-hidden="true" className="relative z-10 h-5 w-5" />
                         </Link>
                     </div>
                 </Reveal>

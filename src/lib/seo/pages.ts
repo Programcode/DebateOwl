@@ -5,6 +5,15 @@ export const SITE_ORIGIN = site.origin;
 export const BRAND = site.brand;
 export const PRODUCT = site.product;
 export const ORGANIZATION = site.organization;
+/** "DebateLab is an AI debate prep and practice app for …", the sentence agents quote. */
+export const DEFINITION = `${PRODUCT} is ${site.definition}.`;
+export const PRICING = site.pricing;
+
+/** The month prices and plan facts were last checked, as "October 2026" in the given language. */
+export function factsAsOf(language: string): string {
+  return new Intl.DateTimeFormat(language, { month: 'long', year: 'numeric', timeZone: 'UTC' })
+    .format(new Date(`${site.factsCheckedOn}T00:00:00Z`));
+}
 
 export interface PageHead {
   title: string;
@@ -21,7 +30,7 @@ export interface PageHead {
 export const PAGE_HEADS = {
   '/': {
     title: `${BRAND} | AI Debate Prep, Cases & Rebuttals`,
-    description: `${BRAND} helps students and competitive debaters practice with AI opponents, case generation, rebuttal drills, evidence leads, coaching, timers, and argument flowcharts.`,
+    description: `${PRODUCT} is an AI debate prep and practice app for students and competitive debaters: cases, rebuttals, evidence, coaching and timed practice rounds against an AI opponent.`,
     canonicalPath: '/',
   },
   '/terms': {

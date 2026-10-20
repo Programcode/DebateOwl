@@ -1,10 +1,12 @@
 #!/usr/bin/env python3
+from datetime import date
 from pathlib import Path
 import html
 import json
 import sys
 
 sys.dont_write_bytecode = True  # keep scripts/__pycache__ out of the tree
+from seo_answers import ANSWERS  # noqa: E402
 from seo_guides import GUIDES  # noqa: E402
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -16,13 +18,27 @@ BASE = SITE["origin"]
 BRAND = SITE["brand"]
 PRODUCT = SITE["product"]
 ORGANIZATION = SITE["organization"]
+PRICING = SITE["pricing"]
+# Prices and plan facts are stated "as of" this month; move it when they are rechecked.
+FACTS_AS_OF = date.fromisoformat(SITE["factsCheckedOn"]).strftime("%B %Y")
+DEFINITION = f'{PRODUCT} is {SITE["definition"]}.'
+# One line every guide, llms.txt and the pricing page share.
+PLAN_FACTS = (
+    f"As of {FACTS_AS_OF}, {PRODUCT} has a {PRICING['trialDays']}-day free trial with no credit card required, "
+    f"then Pro costs ${PRICING['proMonthly']}/month + tax. There is no permanent free plan."
+)
 # The date the page text last changed. The build reads it into sitemap.xml as
 # <lastmod>, so bump it only when the copy changes, not on every regeneration.
 # A guide whose own copy changed alone sets "modified" in seo_guides.py instead.
-CONTENT_DATE = "2026-10-19"
+CONTENT_DATE = "2026-10-20"
+# The commit that first added every current guide (git log --diff-filter=A).
+# A new guide sets "published" in its PAGES entry.
+PUBLISHED_DATE = "2026-07-05"
+# The lead answer under the first H2 stays short enough to quote whole.
+ANSWER_MAX_WORDS = 100
 
 CSS = """
-:root{color-scheme:dark;--bg:#070a12;--panel:#101827;--text:#f8fafc;--muted:#b6c2d6;--brand:#7c5cff;--brand2:#22d3ee;--line:rgba(255,255,255,.14)}*{box-sizing:border-box}body{margin:0;background:radial-gradient(circle at 18% 8%,rgba(124,92,255,.30),transparent 34rem),radial-gradient(circle at 85% 18%,rgba(34,211,238,.18),transparent 28rem),var(--bg);color:var(--text);font-family:ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;line-height:1.65}a{color:inherit}.wrap{width:min(1120px,92vw);margin:auto}.nav{display:flex;justify-content:space-between;align-items:center;gap:18px;padding:24px 0}.brand{font-weight:850;letter-spacing:-.04em;font-size:1.25rem;text-decoration:none}.nav div{display:flex;gap:18px;flex-wrap:wrap;justify-content:flex-end}.nav a{color:var(--muted);text-decoration:none}.hero{padding:54px 0 34px}.eyebrow{display:inline-flex;border:1px solid var(--line);border-radius:999px;padding:8px 12px;color:#c4b5fd;background:rgba(124,92,255,.12);font-size:.92rem}.hero h1{max-width:940px;font-size:clamp(2.35rem,6vw,5.15rem);line-height:1;letter-spacing:-.07em;margin:22px 0}.lead{max-width:800px;color:var(--muted);font-size:clamp(1.08rem,1.8vw,1.28rem)}.cta{display:flex;gap:14px;flex-wrap:wrap;margin-top:28px}.btn{display:inline-flex;align-items:center;justify-content:center;border-radius:14px;padding:14px 20px;font-weight:750;text-decoration:none}.primary{background:linear-gradient(135deg,var(--brand),var(--brand2));color:white}.secondary{border:1px solid var(--line);background:rgba(255,255,255,.06)}.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;margin:34px 0}.card{border:1px solid var(--line);border-radius:24px;background:rgba(16,24,39,.78);padding:24px;box-shadow:0 24px 80px rgba(0,0,0,.24)}.card h2,.card h3{letter-spacing:-.035em;line-height:1.12;margin-top:0}.muted{color:var(--muted)}.section{padding:34px 0}.article{max-width:840px}.article h2{font-size:clamp(1.65rem,3vw,2.35rem);letter-spacing:-.04em;line-height:1.14;margin-top:2rem}.article h3{font-size:1.2rem;letter-spacing:-.025em}.links{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin:28px 0}.links a{border:1px solid var(--line);border-radius:16px;padding:14px;text-decoration:none;background:rgba(255,255,255,.05)}details{border:1px solid var(--line);border-radius:18px;padding:16px 18px;margin:12px 0;background:rgba(255,255,255,.05)}summary{cursor:pointer;font-weight:750}.footer{border-top:1px solid var(--line);color:var(--muted);padding:28px 0;margin-top:42px}.breadcrumb{color:var(--muted);font-size:.94rem;margin-top:8px}@media(max-width:760px){.nav{align-items:flex-start;flex-direction:column}.nav div{justify-content:flex-start}.grid,.links{grid-template-columns:1fr}.hero{padding-top:34px}.hero h1{letter-spacing:-.045em}}
+:root{color-scheme:dark;--bg:#070a12;--panel:#101827;--text:#f8fafc;--muted:#b6c2d6;--brand:#7c5cff;--brand2:#22d3ee;--line:rgba(255,255,255,.14)}*{box-sizing:border-box}body{margin:0;background:radial-gradient(circle at 18% 8%,rgba(124,92,255,.30),transparent 34rem),radial-gradient(circle at 85% 18%,rgba(34,211,238,.18),transparent 28rem),var(--bg);color:var(--text);font-family:ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;line-height:1.65}a{color:inherit}.wrap{width:min(1120px,92vw);margin:auto}.nav{display:flex;justify-content:space-between;align-items:center;gap:18px;padding:24px 0}.brand{font-weight:850;letter-spacing:-.04em;font-size:1.25rem;text-decoration:none}.nav div{display:flex;gap:18px;flex-wrap:wrap;justify-content:flex-end}.nav a{color:var(--muted);text-decoration:none}.hero{padding:54px 0 34px}.eyebrow{display:inline-flex;border:1px solid var(--line);border-radius:999px;padding:8px 12px;color:#c4b5fd;background:rgba(124,92,255,.12);font-size:.92rem}.hero h1{max-width:940px;font-size:clamp(2.35rem,6vw,5.15rem);line-height:1;letter-spacing:-.07em;margin:22px 0}.lead{max-width:800px;color:var(--muted);font-size:clamp(1.08rem,1.8vw,1.28rem)}.cta{display:flex;gap:14px;flex-wrap:wrap;margin-top:28px}.btn{display:inline-flex;align-items:center;justify-content:center;border-radius:14px;padding:14px 20px;font-weight:750;text-decoration:none}.primary{background:linear-gradient(135deg,var(--brand),var(--brand2));color:white}.secondary{border:1px solid var(--line);background:rgba(255,255,255,.06)}.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;margin:34px 0}.card{border:1px solid var(--line);border-radius:24px;background:rgba(16,24,39,.78);padding:24px;box-shadow:0 24px 80px rgba(0,0,0,.24)}.card h2,.card h3{letter-spacing:-.035em;line-height:1.12;margin-top:0}.muted{color:var(--muted)}.section{padding:34px 0}.article{max-width:840px}.article h2{font-size:clamp(1.65rem,3vw,2.35rem);letter-spacing:-.04em;line-height:1.14;margin-top:2rem}.article h3{font-size:1.2rem;letter-spacing:-.025em}.links{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin:28px 0}.links a{border:1px solid var(--line);border-radius:16px;padding:14px;text-decoration:none;background:rgba(255,255,255,.05)}details{border:1px solid var(--line);border-radius:18px;padding:16px 18px;margin:12px 0;background:rgba(255,255,255,.05)}summary{cursor:pointer;font-weight:750}.footer{border-top:1px solid var(--line);color:var(--muted);padding:28px 0;margin-top:42px}.breadcrumb{color:var(--muted);font-size:.94rem;margin-top:8px}.dates{color:var(--muted);font-size:.94rem;margin:18px 0 0}.answer{max-width:840px;border:1px solid var(--line);border-left:4px solid var(--brand);border-radius:20px;background:rgba(16,24,39,.78);padding:22px 26px}.answer h2{font-size:clamp(1.35rem,2.4vw,1.8rem);letter-spacing:-.035em;line-height:1.18;margin:0 0 10px}.answer p{margin:0}@media(max-width:760px){.nav{align-items:flex-start;flex-direction:column}.nav div{justify-content:flex-start}.grid,.links{grid-template-columns:1fr}.hero{padding-top:34px}.hero h1{letter-spacing:-.045em}}
 """.strip()
 
 PAGES = [
@@ -84,14 +100,58 @@ def fill(value):
 # Merging by slug keeps PAGES in order, which internal_links() depends on.
 PAGES = [fill({**page, **GUIDES.get(page["slug"], {})}) for page in PAGES]
 FAQS = fill(FAQS)
+ANSWERS = fill(ANSWERS)
 
-NAV = [("AI practice","/ai-debate-practice"),("Case generator","/ai-debate-case-generator"),("Rebuttal practice","/debate-rebuttal-practice"),("Evidence finder","/debate-evidence-finder"),("Open app","/app")]
+NAV = [("AI practice","/ai-debate-practice"),("Case generator","/ai-debate-case-generator"),("Rebuttal practice","/debate-rebuttal-practice"),("Evidence finder","/debate-evidence-finder"),("Pricing","/debatelab-pricing"),("Open app","/app")]
+
+# The eleven prep modes, named as the landing page names them.
+PREP_MODES = ["Case Generator", "Case Attacker", "Brainstorm", "Factoids", "Ask Coach", "Crossfire", "Sparring", "Source Library", "Debate Timer", "Flowchart", "History"]
+SOFTWARE_ID = BASE + "/#software"
+ORGANIZATION_REF = {"@type": "Organization", "@id": BASE + "/#organization", "name": ORGANIZATION, "url": BASE + "/"}
+SOFTWARE = {
+    "@type": "SoftwareApplication",
+    "@id": SOFTWARE_ID,
+    "name": BRAND,
+    "alternateName": PRODUCT,
+    "description": DEFINITION,
+    "applicationCategory": "EducationalApplication",
+    "operatingSystem": "Web",
+    "url": BASE + "/",
+    "inLanguage": ["en", "es", "hu"],
+    "featureList": PREP_MODES,
+    "offers": [
+        {"@type": "Offer", "name": "Free trial", "price": "0", "priceCurrency": PRICING["currency"], "description": f"{PRICING['trialDays']}-day free trial, no credit card required."},
+        {"@type": "Offer", "name": "Pro", "price": PRICING["proMonthly"], "priceCurrency": PRICING["currency"], "description": "Monthly subscription, billed plus tax.", "priceSpecification": {"@type": "UnitPriceSpecification", "price": PRICING["proMonthly"], "priceCurrency": PRICING["currency"], "billingDuration": "P1M", "valueAddedTaxIncluded": False}},
+    ],
+    "publisher": {"@id": BASE + "/#organization"},
+}
 
 def page_url(slug):
     return f"{BASE}/{slug}"
 
 def esc(s):
     return html.escape(s, quote=True)
+
+def long_date(iso):
+    value = date.fromisoformat(iso)
+    return f"{value.strftime('%B')} {value.day}, {value.year}"
+
+def json_script(data):
+    """JSON for a <script> element. Entities are not decoded there, so only "<" is escaped."""
+    return json.dumps(data, separators=(",", ":"), ensure_ascii=False).replace("<", "\\u003c")
+
+def lead_answer(page):
+    """The page's main question and its short answer, checked so no page drifts."""
+    slug = page["slug"]
+    if slug not in ANSWERS:
+        raise SystemExit(f"{slug} has no entry in seo_answers.ANSWERS")
+    question, answer = ANSWERS[slug]
+    words = len(answer.split())
+    if not question.endswith("?"):
+        raise SystemExit(f"{slug}: the lead question must end with '?'")
+    if words > ANSWER_MAX_WORDS:
+        raise SystemExit(f"{slug}: the lead answer has {words} words; the limit is {ANSWER_MAX_WORDS}")
+    return question, answer
 
 def internal_links(current):
     links = [(p["title"].replace(f" | {PRODUCT}", "").replace(f" | {PRODUCT} Guide", ""), "/" + p["slug"]) for p in PAGES if p["slug"] != current]
@@ -121,7 +181,21 @@ def render_block(block):
     rows = "".join(f"<p><strong>{esc(label)}</strong> {esc(text)}</p>" for label, text in example["rows"])
     return f'<div class="card"><h3>{esc(example["title"])}</h3>{rows}</div>'
 
+def structured_data(page, question, answer, faqs, published, modified):
+    # sitemap.mjs reads the first dateModified in the file, so the Article stays first.
+    graph = [
+        {"@type": "Article", "headline": page["h1"], "name": page["title"], "url": page_url(page["slug"]), "description": page["description"], "inLanguage": "en", "dateModified": modified, "datePublished": published, "author": ORGANIZATION_REF, "publisher": ORGANIZATION_REF, "about": {"@id": SOFTWARE_ID}},
+        {"@type": "FAQPage", "mainEntity": [{"@type": "Question", "name": q, "acceptedAnswer": {"@type": "Answer", "text": a}} for q, a in [(question, answer), *faqs]]},
+        {"@type": "BreadcrumbList", "itemListElement": [{"@type": "ListItem", "position": 1, "name": BRAND, "item": BASE + "/"}, {"@type": "ListItem", "position": 2, "name": page["h1"], "item": page_url(page["slug"])}]},
+    ]
+    if page.get("software"):
+        graph.append(SOFTWARE)
+    return json_script({"@context": "https://schema.org", "@graph": graph})
+
 def render_page(page):
+    question, answer = lead_answer(page)
+    published = page.get("published", PUBLISHED_DATE)
+    modified = page.get("modified", CONTENT_DATE)
     feature_cards = "".join(feature_card(feature) for feature in page["features"])
     article = []
     for heading, blocks in page["sections"]:
@@ -130,7 +204,7 @@ def render_page(page):
     faqs = page.get("faqs", FAQS)
     faq_html = "".join(f"<details><summary>{esc(q)}</summary><p>{esc(a)}</p></details>" for q, a in faqs)
     nav = "".join(f'<a href="{href}">{esc(label)}</a>' for label, href in NAV)
-    json_ld = json.dumps({"@context":"https://schema.org","@graph":[{"@type":"Article","headline":page["h1"],"name":page["title"],"url":page_url(page["slug"]),"description":page["description"],"dateModified":page.get("modified", CONTENT_DATE),"publisher":{"@type":"Organization","@id":BASE + "/#organization","name":ORGANIZATION,"url":BASE + "/"}},{"@type":"FAQPage","mainEntity":[{"@type":"Question","name":q,"acceptedAnswer":{"@type":"Answer","text":a}} for q,a in faqs]},{"@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":BRAND,"item":BASE + "/"},{"@type":"ListItem","position":2,"name":page["h1"],"item":page_url(page["slug"])}]}]}, separators=(",", ":"))
+    dates = f'Published <time datetime="{published}">{long_date(published)}</time> · Updated <time datetime="{modified}">{long_date(modified)}</time>'
     return f'''<!doctype html>
 <html lang="en">
 <head>
@@ -146,24 +220,64 @@ def render_page(page):
   <meta property="og:description" content="{esc(page["description"])}" />
   <meta property="og:url" content="{page_url(page["slug"])}" />
   <meta property="og:image" content="{BASE}/hero-visual.png" />
+  <meta property="og:image:alt" content="{esc(f"{PRODUCT} debate prep workspace preview")}" />
+  <meta property="article:published_time" content="{published}" />
+  <meta property="article:modified_time" content="{modified}" />
   <meta name="twitter:card" content="summary_large_image" />
   <link rel="stylesheet" href="/seo-pages.css" />
-  <script type="application/ld+json">{html.escape(json_ld, quote=False)}</script>
+  <script type="application/ld+json">{structured_data(page, question, answer, faqs, published, modified)}</script>
 </head>
 <body>
-  <main class="wrap">
+  <header class="wrap">
     <nav class="nav" aria-label="Primary"><a class="brand" href="/">{BRAND}</a><div>{nav}</div></nav>
-    <div class="breadcrumb"><a href="/">{PRODUCT}</a> / {esc(page["h1"])}</div>
-    <section class="hero"><span class="eyebrow">{esc(page["eyebrow"])}</span><h1>{esc(page["h1"])}</h1><p class="lead">{esc(page["lead"])}</p><div class="cta"><a class="btn primary" href="/app">Start practicing</a><a class="btn secondary" href="/">See {PRODUCT}</a></div></section>
-    <section class="grid" aria-label="Highlights">{feature_cards}</section>
-    <article class="article section">{"".join(article)}</article>
-    <section class="section article"><h2>Related {PRODUCT} guides</h2><div class="links">{internal_links(page["slug"])}</div></section>
-    <section class="section faq article"><h2>Frequently asked questions</h2>{faq_html}</section>
+  </header>
+  <main class="wrap">
+    <nav class="breadcrumb" aria-label="Breadcrumb"><a href="/">{PRODUCT}</a> / <span aria-current="page">{esc(page["h1"])}</span></nav>
+    <article>
+      <header class="hero"><span class="eyebrow">{esc(page["eyebrow"])}</span><h1>{esc(page["h1"])}</h1><p class="lead">{esc(page["lead"])}</p><p class="dates">{dates}</p><div class="cta"><a class="btn primary" href="/app">Start practicing</a><a class="btn secondary" href="/">See {PRODUCT}</a></div></header>
+      <section class="answer" aria-labelledby="short-answer"><h2 id="short-answer">{esc(question)}</h2><p>{esc(answer)}</p></section>
+      <section class="grid" aria-label="Highlights">{feature_cards}</section>
+      <div class="article section">{"".join(article)}</div>
+      <section class="section faq article" aria-labelledby="faq"><h2 id="faq">Frequently asked questions</h2>{faq_html}</section>
+    </article>
+    <aside class="section article" aria-labelledby="about"><h2 id="about">About {PRODUCT}</h2><p>{esc(DEFINITION)} The app is available in English, Spanish and Hungarian.</p><p>{esc(PLAN_FACTS)} <a href="/debatelab-pricing">See pricing</a>.</p></aside>
+    <section class="section article" aria-labelledby="related"><h2 id="related">Related {PRODUCT} guides</h2><nav class="links" aria-label="Related guides">{internal_links(page["slug"])}</nav></section>
   </main>
-  <footer class="footer"><div class="wrap">{BRAND}: <a href="/">Home</a> / <a href="/privacy">Privacy</a> / <a href="/terms">Terms</a> / <a href="/sitemap.xml">Sitemap</a></div></footer>
+  <footer class="footer"><div class="wrap">{BRAND}: <a href="/">Home</a> / <a href="/debatelab-pricing">Pricing</a> / <a href="/privacy">Privacy</a> / <a href="/terms">Terms</a> / <a href="/sitemap.xml">Sitemap</a></div></footer>
 </body>
 </html>
 '''
+
+def llms_txt():
+    """public/llms.txt: a plain summary for AI agents, from the same facts as the pages."""
+    guides = "\n".join(f'- [{p["h1"]}]({page_url(p["slug"])}): {p["description"]}' for p in PAGES)
+    return f"""# {BRAND}
+
+> {DEFINITION}
+
+{BRAND} runs at {BASE}/. It is a separate product from debatelab.ai.
+
+## Key facts (as of {FACTS_AS_OF})
+
+- Who it is for: students, competitive debaters and their coaches.
+- 11 prep modes: {", ".join(PREP_MODES)}.
+- Practice: Sparring runs timed rounds against an AI opponent in School 4-6-6-3, Lincoln-Douglas and Public Forum and ends with a judged verdict. Crossfire drills cross-examination.
+- Languages: English, Spanish and Hungarian.
+- Pricing: {PLAN_FACTS}
+- Pro adds expanded AI prep access, all 10 models (including Claude Opus and Sonnet, GPT-6.1 Sol and Gemini), Active Grounding research and priority support.
+- Privacy: cases, sources, practice rounds and history stay behind sign-in and are not indexed.
+
+## Main pages
+
+- [Home]({BASE}/): what {PRODUCT} is, the 11 prep modes, pricing and FAQ
+- [Pricing]({page_url("debatelab-pricing")}): trial, Pro and what each includes
+- [Best AI debate tools]({page_url("best-ai-debate-tools")}): how to choose an AI debate tool
+- [Sitemap]({BASE}/sitemap.xml): every public page
+
+## Guides
+
+{guides}
+"""
 
 def main():
     (PUBLIC / "seo-pages.css").write_text(CSS + "\n")
@@ -171,8 +285,9 @@ def main():
         directory = PUBLIC / page["slug"]
         directory.mkdir(parents=True, exist_ok=True)
         (directory / "index.html").write_text(render_page(page))
+    (PUBLIC / "llms.txt").write_text(llms_txt())
 
-    print(f"Generated {len(PAGES)} public SEO pages; the build writes sitemap.xml")
+    print(f"Generated {len(PAGES)} public SEO pages and llms.txt; the build writes sitemap.xml")
 
 if __name__ == "__main__":
     main()

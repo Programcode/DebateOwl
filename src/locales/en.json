@@ -824,7 +824,10 @@
   "footer": {
     "terms": "Terms",
     "privacy": "Privacy",
-    "copyright": "© 2026 DebateLab by Pi-Stack. All rights reserved."
+    "copyright": "© 2026 DebateLab by Pi-Stack. All rights reserved.",
+    "navLabel": "Footer",
+    "pricingGuide": "Pricing details",
+    "compareTools": "Compare AI debate tools"
   },
   "announcements": {
     "regionLabel": "Announcement",
@@ -833,8 +836,8 @@
     "dismissError": "Could not dismiss this announcement."
   },
   "hero": {
-    "headline": "Prep Faster. Argue Smarter. Win More Rounds.",
-    "subheadline": "AI-powered debate preparation that gives you the edge in every round.",
+    "headline": "Prepare Cases and Practice Rounds with AI",
+    "subheadline": "DebateLab is an AI debate prep and practice app for students and competitive debaters that builds structured cases, finds the weak points in arguments, researches evidence with citations and runs timed practice rounds against an AI opponent.",
     "trialBadge": "3-day free trial",
     "requestsBadge": "Daily AI prep",
     "requestsBadgeValue": "Included",
@@ -957,12 +960,13 @@
     "trialBadge": "New Users",
     "trialDesc": "Use the full workflow before deciding on Pro.",
     "proBadge": "Power Users",
-    "proDesc": "For heavy prep weeks, tougher topics, and higher daily limits."
+    "proDesc": "For heavy prep weeks, tougher topics, and higher daily limits.",
+    "asOf": "Prices as of {{asOf}}."
   },
   "faq": {
     "title": "Frequently Asked Questions",
     "q1": "How much does DebateLab cost?",
-    "a1": "DebateLab offers a 3-day free trial. After that, Pro is $5/month + tax for expanded access and all 10 models.",
+    "a1": "As of {{asOf}}, DebateLab offers a 3-day free trial with no credit card required. After that, Pro is $5/month + tax for expanded access and all 10 models. There is no permanent free plan.",
     "q2": "What do I get with Pro?",
     "a2": "Expanded AI prep access, all 10 models including Claude Opus and Sonnet, GPT-6.1 Sol, and Gemini, Active Grounding™ research, and priority support.",
     "q3": "Can I cancel my subscription?",
@@ -971,7 +975,9 @@
     "a4": "We use Active Grounding™ technology to verify claims against real sources. Any unverified information is clearly marked as such.",
     "q5": "Can I save and export my work?",
     "a5": "Yes! Save cases, brainstorms, and chats to History. Export to Word, PDF, or Google Docs.",
-    "subtitle": "Pricing, workflow, and product details at a glance."
+    "subtitle": "Pricing, workflow, and product details at a glance.",
+    "q6": "What is DebateLab?",
+    "a6": "DebateLab is an AI debate prep and practice app for students and competitive debaters. It has 11 prep modes, including a case generator, a case attacker, evidence research with citations, an AI coach, Crossfire and timed Sparring rounds against an AI opponent, and it is available in English, Spanish and Hungarian."
   },
   "finalCta": {
     "title": "Ready to Build Your Next Winning Case?",
@@ -2414,5 +2420,10 @@
   "clock": {
     "timeUp": "Time is up.",
     "remaining": "{{time}} left."
+  },
+  "shortAnswer": {
+    "question": "What is the best AI debate practice tool?",
+    "answer": "It depends on what you need. As of {{asOf}}, DebateLab fits students and competitive debaters who want one place to build cases, find weak points, check evidence and run timed practice rounds, in English, Spanish or Hungarian: a 3-day free trial with no card, then $5/month + tax. If you want free practice against an AI opponent in World Schools or Asian Parliamentary style, debatelab.ai, a separate product, says it is free. If you mostly need brainstorming or writing help on any subject, a general assistant such as ChatGPT is more flexible.",
+    "compare": "Compare AI debate tools"
   }
 }
