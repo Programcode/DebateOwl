@@ -88,16 +88,31 @@ function checkUrl(url, where, fromFile) {
 
 const textOf = (html) => html.replace(/<[^>]+>/g, '').replace(/&[#\w]+;/g, 'x').trim();
 
-/** Whether attributes give an accessible name: aria-label, or aria-labelledby naming elements with text in `html`. */
+/** The text inside the element whose start tag begins at `start`, nested elements included. */
+function elementText(html, start) {
+  const name = html.slice(start).match(/^<([\w-]+)/)?.[1];
+  const open = html.indexOf('>', start);
+  if (!name || open < 0) return '';
+  const tags = new RegExp(`<(/?)${name}\\b[^>]*>`, 'gi');
+  tags.lastIndex = open + 1;
+  let depth = 1;
+  for (let match = tags.exec(html); match; match = tags.exec(html)) {
+    depth += match[1] ? -1 : 1;
+    if (depth === 0) return textOf(html.slice(open + 1, match.index));
+  }
+  return '';
+}
+
+/**
+ * Whether attributes give an accessible name: a non-blank aria-label, or an
+ * aria-labelledby whose referenced elements in `html` together have text.
+ */
 function namedByAria(attributes, html) {
-  if (/\saria-label="[^"]*\S[^"]*"/.test(attributes)) return true;
-  const ids = attributes.match(/\saria-labelledby="([^"]+)"/)?.[1].trim().split(/\s+/);
-  if (!ids) return false;
-  return ids.every((id) => {
-    const start = html.search(new RegExp(`\\sid="${id.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}"`));
-    if (start < 0) return false;
-    const open = html.indexOf('>', start);
-    return Boolean(textOf(html.slice(open + 1, html.indexOf('</', open))));
+  if (attributes.match(/\saria-label="([^"]*)"/)?.[1].trim()) return true;
+  const ids = attributes.match(/\saria-labelledby="([^"]+)"/)?.[1].trim().split(/\s+/) ?? [];
+  return ids.some((id) => {
+    const at = html.search(new RegExp(`\\sid="${id.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}"`));
+    return at >= 0 && Boolean(elementText(html, html.lastIndexOf('<', at)));
   });
 }
 
@@ -135,11 +150,11 @@ for (const file of htmlFiles(DIST)) {
     if (!namedByAria(attributes, body) && !textOf(content)) report(where, 'button without an accessible name');
   }
   const labelled = new Set([...body.matchAll(/<label\b[^>]*\sfor="([^"]+)"/g)].map((match) => match[1]));
-  // A field inside its <label> is labelled by it.
-  const wrapped = new Set([...body.matchAll(/<label\b[^>]*>([\s\S]*?)<\/label>/g)]
-    .flatMap((match) => [...match[1].matchAll(/<(?:input|select|textarea)\b[^>]*>/g)].map((field) => field[0])));
-  for (const [tag] of body.matchAll(/<(?:input|select|textarea)\b[^>]*>/g)) {
-    if (/\stype="hidden"/.test(tag) || wrapped.has(tag) || namedByAria(tag, body)) continue;
+  // A field inside a <label> element is labelled by it.
+  const labelSpans = [...body.matchAll(/<label\b[^>]*>[\s\S]*?<\/label>/g)].map((match) => [match.index, match.index + match[0].length]);
+  const insideLabel = (index) => labelSpans.some(([from, to]) => index > from && index < to);
+  for (const { 0: tag, index } of body.matchAll(/<(?:input|select|textarea)\b[^>]*>/g)) {
+    if (/\stype="hidden"/.test(tag) || insideLabel(index) || namedByAria(tag, body)) continue;
     const id = tag.match(/\sid="([^"]+)"/)?.[1];
     if (!id || !labelled.has(id)) report(where, `form field without a label: ${tag.slice(0, 80)}`);
   }
