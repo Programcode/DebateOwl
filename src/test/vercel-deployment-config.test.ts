@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 import { SUPABASE_PROJECTS } from "@/lib/supabase/projects";
@@ -51,11 +51,33 @@ describe("Vercel frontend deployment configuration", () => {
 
     const pages = "debatelab|debate-lab|debatelab-ai|debatelab-app|what-is-debatelab|debatelab-by-programcode|about-debatelab";
     // Vercel matches a trailing slash only when the source spells it out.
-    expect(config.redirects).toEqual(["", "/", "/:rest+"].map((suffix) => ({
+    expect(config.redirects?.filter((rule) => rule.source.startsWith("/:page("))).toEqual(["", "/", "/:rest+"].map((suffix) => ({
       source: `/:page(${pages})${suffix}`,
       destination: "/",
       statusCode: 301,
     })));
+  });
+
+  it("redirects each retired guide to a live guide that no page links past", () => {
+    const guideRedirects = (loadConfig().redirects ?? []).filter((rule) => !rule.source.startsWith("/:page("));
+    const retired = new Set(guideRedirects.map((rule) => rule.source.replace(/\/$/, "")));
+    const pages = readdirSync(resolve(process.cwd(), "public"), { withFileTypes: true })
+      .filter((entry) => entry.isDirectory() && existsSync(resolve(process.cwd(), "public", entry.name, "index.html")))
+      .map((entry) => `/${entry.name}`);
+
+    expect(retired.size).toBeGreaterThan(0);
+    for (const rule of guideRedirects) {
+      expect(rule.statusCode).toBe(301);
+      // One hop to a page that exists, never to another retired slug.
+      expect(pages).toContain(rule.destination);
+      expect(retired.has(rule.destination)).toBe(false);
+    }
+    for (const page of pages) {
+      // A generated page left behind would be shadowed by its redirect.
+      expect(retired.has(page)).toBe(false);
+      const html = readProjectFile(`public${page}/index.html`);
+      for (const source of retired) expect(html).not.toContain(`href="${source}"`);
+    }
   });
 
   it("preserves the production security headers", () => {

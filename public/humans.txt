@@ -1,4 +1,4 @@
 DebateLab by Pi-Stack
 Site: https://debate.pi-stack.org/
 Purpose: AI debate preparation for students and competitive debaters.
-Key pages: /, /ai-debate-practice, /debate-case-generator, /debate-rebuttal-practice, /debatelab-pricing
+Key pages: /, /ai-debate-practice, /ai-debate-case-generator, /debate-rebuttal-practice, /debatelab-pricing
