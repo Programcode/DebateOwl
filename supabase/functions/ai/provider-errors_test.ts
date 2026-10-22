@@ -1,4 +1,4 @@
-import { assertEquals } from "jsr:@std/assert@1.0.19";
+import { assertEquals, assertRejects, assertThrows } from "jsr:@std/assert@1.0.19";
 for (const [key, value] of Object.entries({
   SUPABASE_URL: "https://supabase.test", SUPABASE_ANON_KEY: "test-anon-key",
   SUPABASE_SERVICE_ROLE_KEY: "test-service-key", OPENROUTER_API_KEY: "test-provider-key",
@@ -38,5 +38,42 @@ Deno.test("AI JSON and SSE failures never expose provider response bodies", asyn
       assertEquals(text.includes(expected), true);
       assertEquals(text.includes('"code":"provider_error"'), true);
     }
+  } finally { globalThis.fetch = originalFetch; }
+});
+
+Deno.test("common JSON slips are repaired locally instead of paying for a retry", async () => {
+  const { parseJsonFromText } = await import("./provider.ts");
+  const parse = (text: string) => parseJsonFromText(text, "OpenRouter");
+  assertEquals(parse('```JSON\n{"a":1}\n```'), { a: 1 });
+  assertEquals(parse('```\n{"a":1}\n```'), { a: 1 });
+  assertEquals(parse('Here you go: {"a":"x"} Note: {not json}'), { a: "x" });
+  assertEquals(parse('Use {braces} like so. {"a":[1,2,],}'), { a: [1, 2] });
+  assertEquals(parse('{"a":"line one\nline two\t!"}'), { a: "line one\nline two\t!" });
+  assertEquals(parse('{"a":"keep , ] inside strings",}'), { a: "keep , ] inside strings" });
+  // A broken outer object never yields one of its nested objects.
+  assertThrows(() => parse('{"case": {"title": "x"}, oops}'));
+  // A reply cut off mid-object is not completed.
+  assertThrows(() => parse('{"contentions": [{"title": "x"}, {"title": "y"'));
+});
+
+Deno.test("a reply cut at the output cap is not retried, and a schema is sent as strict json_schema", async () => {
+  const { callAI } = await import("./provider.ts");
+  const originalFetch = globalThis.fetch;
+  const bodies: Array<Record<string, unknown>> = [];
+  globalThis.fetch = (async (_input: Request | URL | string, init?: RequestInit) => {
+    bodies.push(JSON.parse(String(init?.body)));
+    return Response.json({
+      choices: [{ message: { content: '{"queries": ["a", "b' }, finish_reason: "length" }],
+      usage: { prompt_tokens: 10, completion_tokens: 5, cost: 0.01 },
+    });
+  }) as typeof fetch;
+  try {
+    const schema = { name: "follow_up_queries", schema: { type: "object" } };
+    const error = await assertRejects(() =>
+      callAI("openrouter", "openai/gpt-6-luna", "system", [{ role: "user", content: "hi" }], "low", undefined, undefined, schema)
+    ) as { usage?: { inputTokens?: number } };
+    assertEquals(bodies.length, 1);
+    assertEquals(bodies[0].response_format, { type: "json_schema", json_schema: { name: "follow_up_queries", strict: true, schema: { type: "object" } } });
+    assertEquals(error.usage?.inputTokens, 10);
   } finally { globalThis.fetch = originalFetch; }
 });

@@ -1,5 +1,5 @@
-// OpenRouter calls, JSON parsing with one repair retry, and the shared
-// request budget.
+// OpenRouter calls, JSON parsing with local repair and one paid repair retry,
+// and the shared request budget.
 
 import {
   mergeNormalizedUsage,
@@ -19,6 +19,7 @@ import {
   MAX_PROVIDER_ERROR_BODY_CHARS,
   MAX_PROVIDER_RESPONSE_BYTES,
   OPENROUTER_API_URL,
+  type JsonOutputSchema,
   type Provider,
   readResponseText,
 } from "../_shared/research.ts";
@@ -36,6 +37,8 @@ export class InvalidJsonResponseError extends Error {
   readonly rawText: string;
   /** Token usage of the failed attempt so repair retries can bill it. */
   usage?: NormalizedUsage;
+  /** The provider stopped at the output token cap, so a retry would be cut too. */
+  truncated = false;
 
   constructor(providerName: string, rawText: string) {
     super(`${providerName} returned invalid JSON`);
@@ -52,31 +55,105 @@ export class InvalidJsonResponseError extends Error {
 export function parseProviderContent(
   text: string,
   providerName: string,
-  usage: NormalizedUsage | undefined
+  usage: NormalizedUsage | undefined,
+  finishReason?: unknown,
 ): { output: unknown; usage?: NormalizedUsage } {
   try {
     return { output: parseJsonFromText(text, providerName), usage };
   } catch (err) {
-    if (err instanceof InvalidJsonResponseError && usage) err.usage = usage;
+    if (err instanceof InvalidJsonResponseError) {
+      if (usage) err.usage = usage;
+      err.truncated = finishReason === "length";
+    }
     throw err;
   }
 }
 
+/**
+ * Reads the JSON object in a model reply. A paid repair retry costs a whole
+ * second answer, so the common slips are fixed here first: markdown fences,
+ * prose around the object, trailing commas, and raw line breaks inside
+ * strings. A reply cut off mid-object is not completed: that would ship a
+ * partial result as if it were whole.
+ */
 export function parseJsonFromText(text: string, providerName: string) {
   if (!text) throw new Error(`${providerName} returned empty response content`);
-  try {
-    return JSON.parse(text);
-  } catch {
-    const codeBlock = text.match(/```json\s*([\s\S]*?)\s*```/i);
-    if (codeBlock?.[1]) {
-      try { return JSON.parse(codeBlock[1]); } catch { /* fall through */ }
-    }
-    const jsonMatch = text.match(/\{[\s\S]*\}/);
-    if (jsonMatch?.[0]) {
-      try { return JSON.parse(jsonMatch[0]); } catch { /* fall through */ }
-    }
+  const candidates = [text];
+  const fenced = text.match(/```[a-z]*\s*([\s\S]*?)\s*```/i)?.[1];
+  if (fenced) candidates.push(fenced);
+  candidates.push(...balancedObjects(text));
+  for (const candidate of candidates) {
+    try { return JSON.parse(candidate); } catch { /* try the repaired text */ }
+    try { return JSON.parse(repairJsonText(candidate)); } catch { /* next candidate */ }
   }
   throw new InvalidJsonResponseError(providerName, text);
+}
+
+// Prose before the answer may itself hold braces, so a few starts are tried.
+const MAX_OBJECT_STARTS = 8;
+
+/**
+ * Each complete top-level `{...}` span in the text, string-aware. The scan
+ * resumes after a span, never inside it, so a nested object is never taken
+ * for the answer, and it stops at an unclosed object for the same reason.
+ */
+function balancedObjects(text: string): string[] {
+  const spans: string[] = [];
+  let start = text.indexOf("{");
+  while (start !== -1 && spans.length < MAX_OBJECT_STARTS) {
+    let depth = 0;
+    let inString = false;
+    let end = -1;
+    for (let index = start; index < text.length; index++) {
+      const char = text[index];
+      if (inString) {
+        if (char === "\\") index++;
+        else if (char === "\"") inString = false;
+      } else if (char === "\"") {
+        inString = true;
+      } else if (char === "{") {
+        depth++;
+      } else if (char === "}" && --depth === 0) {
+        end = index;
+        break;
+      }
+    }
+    if (end === -1) break;
+    spans.push(text.slice(start, end + 1));
+    start = text.indexOf("{", end + 1);
+  }
+  return spans;
+}
+
+/** Drops trailing commas and escapes raw control characters inside strings. */
+function repairJsonText(text: string): string {
+  let out = "";
+  let inString = false;
+  for (let index = 0; index < text.length; index++) {
+    const char = text[index];
+    if (inString) {
+      if (char === "\\") {
+        out += char + (text[index + 1] ?? "");
+        index++;
+      } else if (char === "\"") {
+        inString = false;
+        out += char;
+      } else if (char === "\n") out += "\\n";
+      else if (char === "\r") out += "\\r";
+      else if (char === "\t") out += "\\t";
+      else if (char < " ") out += `\\u${char.charCodeAt(0).toString(16).padStart(4, "0")}`;
+      else out += char;
+      continue;
+    }
+    if (char === "\"") inString = true;
+    if (char === ",") {
+      let next = index + 1;
+      while (next < text.length && /\s/.test(text[next])) next++;
+      if (text[next] === "}" || text[next] === "]") continue;
+    }
+    out += char;
+  }
+  return out;
 }
 
 export interface AIResult {
@@ -100,7 +177,7 @@ export interface GenerationStream {
 export type GenerationPhase = "research" | "writing" | "checking";
 
 type OpenRouterResponse = {
-  choices?: Array<{ message?: { content?: string | null } }>;
+  choices?: Array<{ message?: { content?: string | null }; finish_reason?: unknown }>;
   usage?: unknown;
 };
 
@@ -128,11 +205,17 @@ export async function callAI(
   reasoningEffort: ReasoningEffort,
   signal?: AbortSignal,
   stream?: GenerationStream,
+  outputSchema?: JsonOutputSchema,
 ): Promise<AIResult> {
   try {
-    return await callAIOnce(provider, model, systemPrompt, messages, reasoningEffort, signal, stream);
+    return await callAIOnce(provider, model, systemPrompt, messages, reasoningEffort, signal, stream, outputSchema);
   } catch (err) {
     if (!(err instanceof InvalidJsonResponseError)) throw attachMissingUsage(err, "call");
+    // The same request under the same output cap would be cut off again.
+    if (err.truncated) {
+      console.warn(`[AI] ${err.providerName} reply hit the output token cap; not retrying`);
+      throw attachMissingUsage(err, "call");
+    }
 
     console.warn(`[AI] ${err.providerName} returned invalid JSON; retrying with repair prompt`);
     stream?.reset();
@@ -146,6 +229,7 @@ export async function callAI(
         reasoningEffort,
         signal,
         stream,
+        outputSchema,
       );
     } catch (retryError) {
       // Preserve the completed first attempt if cancellation or another
@@ -197,6 +281,7 @@ export async function callAIOnce(
   reasoningEffort: ReasoningEffort,
   signal?: AbortSignal,
   stream?: GenerationStream,
+  outputSchema?: JsonOutputSchema,
 ): Promise<AIResult> {
   if (provider !== OPENROUTER_PROVIDER) throw new Error(`Unsupported provider: ${provider}`);
   return await callOpenRouter(
@@ -205,6 +290,7 @@ export async function callAIOnce(
     reasoningEffort,
     signal,
     stream,
+    outputSchema,
   );
 }
 
@@ -227,6 +313,7 @@ export async function callOpenRouter(
   reasoningEffort: ReasoningEffort,
   signal?: AbortSignal,
   stream?: GenerationStream,
+  outputSchema?: JsonOutputSchema,
 ): Promise<AIResult> {
   const apiKey = Deno.env.get("OPENROUTER_API_KEY");
   if (!apiKey) throw new Error("OPENROUTER_API_KEY missing");
@@ -236,7 +323,10 @@ export async function callOpenRouter(
     model,
     messages,
     max_tokens: Math.min(modelEntry.maxTokens, MAX_REQUEST_OUTPUT_TOKENS),
-    response_format: { type: "json_object" },
+    // With require_parameters, a schema routes only to endpoints that enforce it.
+    response_format: outputSchema
+      ? { type: "json_schema", json_schema: { name: outputSchema.name, strict: true, schema: outputSchema.schema } }
+      : { type: "json_object" },
     reasoning: { effort: reasoningEffort, exclude: true },
     // Omitting sort and order keeps OpenRouter's balanced provider load balancing.
     provider: { require_parameters: true },
@@ -254,7 +344,7 @@ export async function callOpenRouter(
   }
   if (!data?.choices || !Array.isArray(data.choices) || data.choices.length === 0) throw new Error("OpenRouter returned no choices");
   const usage = normalizeProviderUsage(data.usage) ?? missingOpenRouterUsage("response");
-  return parseProviderContent(data.choices[0]?.message?.content ?? "", "OpenRouter", usage);
+  return parseProviderContent(data.choices[0]?.message?.content ?? "", "OpenRouter", usage, data.choices[0]?.finish_reason);
 }
 
 // A streamed reply wraps every token in a JSON frame (ids, model, provider,
@@ -280,7 +370,7 @@ async function streamOpenRouter(
   signal?: AbortSignal,
 ): Promise<AIResult> {
   stream.phase("writing");
-  const { text, usage } = await fetchWithTimeoutAndConsume(`${OPENROUTER_API_URL}/v1/chat/completions`, {
+  const { text, usage, finishReason } = await fetchWithTimeoutAndConsume(`${OPENROUTER_API_URL}/v1/chat/completions`, {
     method: "POST",
     headers: { "Content-Type": "application/json", "Authorization": `Bearer ${apiKey}` },
     body: JSON.stringify({ ...payload, stream: true, stream_options: { include_usage: true } }),
@@ -294,14 +384,14 @@ async function streamOpenRouter(
     }
     return await readOpenRouterStream(response.body, stream, bodySignal);
   });
-  return parseProviderContent(text, "OpenRouter", usage);
+  return parseProviderContent(text, "OpenRouter", usage, finishReason);
 }
 
 export async function readOpenRouterStream(
   body: ReadableStream<Uint8Array>,
   stream: GenerationStream,
   signal: AbortSignal,
-): Promise<{ text: string; usage: NormalizedUsage }> {
+): Promise<{ text: string; usage: NormalizedUsage; finishReason?: string }> {
   const reader = body.getReader();
   const decoder = new TextDecoder();
   let buffer = "";
@@ -311,7 +401,7 @@ export async function readOpenRouterStream(
   const encoder = new TextEncoder();
   let usageRaw: Record<string, unknown> | undefined;
   let done = false;
-  let finished = false;
+  let finishReason: string | undefined;
 
   const processLine = (line: string) => {
     const trimmed = line.trim();
@@ -332,7 +422,7 @@ export async function readOpenRouterStream(
       throw new Error("AI provider request failed");
     }
     const choice = Array.isArray(chunk.choices) ? chunk.choices[0] : undefined;
-    if (typeof choice?.finish_reason === "string" && choice.finish_reason) finished = true;
+    if (typeof choice?.finish_reason === "string" && choice.finish_reason) finishReason = choice.finish_reason;
     const content = choice?.delta?.content;
     if (typeof content === "string" && content) {
       text += content;
@@ -380,10 +470,10 @@ export async function readOpenRouterStream(
   } finally {
     void reader.cancel().catch(() => undefined);
   }
-  if (!done && !finished) {
+  if (!done && !finishReason) {
     const error = new Error("OpenRouter stream ended before completion") as Error & { usage?: NormalizedUsage };
     error.usage = usageRaw ? { ...normalizeOpenRouterUsage(usageRaw), incomplete: true } : missingOpenRouterUsage("stream");
     throw error;
   }
-  return { text, usage: usageRaw ? normalizeOpenRouterUsage(usageRaw) : missingOpenRouterUsage("stream") };
+  return { text, usage: usageRaw ? normalizeOpenRouterUsage(usageRaw) : missingOpenRouterUsage("stream"), finishReason };
 }
