@@ -21,6 +21,8 @@ esac
 
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$DIR/lib/lock.sh"
+source "$DIR/lib/supabase-cli.sh"
+use_pinned_supabase_cli "$(cd "$DIR/.." && pwd)"
 
 DB_LOCK="$HOME/.superset/debatelab-db.lock"
 FAKE_PROVIDER=debatelab-fake-openrouter

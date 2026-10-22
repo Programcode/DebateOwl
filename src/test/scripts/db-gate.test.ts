@@ -41,6 +41,7 @@ it("stops local Supabase when database tests fail", async () => {
     env: {
       ...process.env,
       CALL_LOG: log,
+      DEBATELAB_SUPABASE_BIN_DIR: bin,
       HOME: root,
       PATH: `${bin}:${process.env.PATH ?? ""}`,
       TMPDIR: root,
