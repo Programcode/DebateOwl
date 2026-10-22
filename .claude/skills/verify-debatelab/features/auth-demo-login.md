@@ -10,6 +10,8 @@ A visitor signs in with a demo access code on the Login page. The `demo-code-log
 - `auth-signout` signs out from Settings, after which `/app/generate` redirects to `/login`.
 - `auth-refresh` refreshes an expired access token before an AI request.
 - `auth-session-expired` signs out a session the server revoked: the stored tokens are refused, so the app goes to `/login` and shows `Your session expired. Sign in again.` once (`recipes/auth.spec.ts`).
+- `auth-email-link` opens the sign-in link from the email after a resend failed with 429. It lands on `/app` through `/auth/callback` without showing `/login` on the way, and the same link opened again shows `This sign-in link has expired or was already used. Send a new code.` on `/login` (`recipes/auth.spec.ts`).
+- `auth-switch-account` signs out from Settings (the logout request has `scope=local`) and signs a second account in on the same `/login` page. It lands on `/app`, not on Settings, and gets its own onboarding tour. On phones the menu still opens and navigates while the tour shows (`recipes/auth.spec.ts`).
 
 ## How to get to it (user POV)
 
@@ -27,11 +29,13 @@ Preconditions:
 - **Persist.** Reload the page. The URL stays `/app`. On `/app/settings`, the page shows `user.email`.
 - **Reject.** On a signed-out page, submit `DEMO-ZZZZ-ZZZZ`. The element with role `alert` has the text `Demo code not found.`, and the URL still matches `/login`.
 - **Sign out.** On `/app/settings`, click the button named `Sign out`, then go to `/app/generate`. The URL matches `/login`.
+- **Email link.** Local email templates are code-only, so the recipe builds the link prod's email carries: `${LOCAL_SUPABASE_URL}/auth/v1/verify?token=pkce_<sha224(email + code)>&type=magiclink&redirect_to=<redirect_to of the /auth/v1/otp request>`. The `redirect_to` is `http://127.0.0.1:18081/auth/callback?sb_flow_id=<32 hex>`. Route `**/auth/v1/otp**` to a 429 before clicking `Resend code` to reproduce the failed resend.
+- **Switch account.** After `Sign out`, sign the second account in on the same `/login` page. `page.goto("/login")` drops the history state that the bug depended on. Create the second user with `createDemoUser` and delete it in `finally`.
 - **Revoked session.** Signed in on `/app`, replace `access_token` in the `debate-auth-local` localStorage entry with a JWT the server refuses, `refresh_token` with `x`, and `expires_at` with now + 3000 s, then reload. Within a few seconds the URL matches `/login` and a `status` element says `Your session expired. Sign in again.`. A second reload no longer shows it.
 
 ## Gotchas
 
-- A first sign-in on a new account starts the onboarding tour on `/app`. Its first step (`Welcome to DebateLab!`, `Start your first debate here.`) offers `Start debate`. The fixtures pre-seed `debate-trainer-onboarding` to skip it. Interactive runs click `Skip Tour` (`[data-test-id="button-skip"]`). The tour itself is covered in [current-debate](./current-debate.md).
+- A first sign-in on a new account starts the onboarding tour on `/app`. Its first step (`Welcome to DebateLab!`, `Start your first debate here.`) offers `Start debate`. The fixtures pre-seed `debate-trainer-onboarding` to skip it. The tour is tracked per account (store version 1, `completedUserIds`). A version 0 seed with `hasCompletedOnboarding: true` covers only the next account that signs in, so a second account in the same browser sees the tour. Interactive runs click `Skip Tour` (`[data-test-id="button-skip"]`). The tour itself is covered in [current-debate](./current-debate.md).
 - Sessions are stored under the `debate-auth-local` localStorage key in local-preview mode. Don't reuse stub-session helpers (`e2e/helpers/auth.ts`). They fake auth and prove rendering only.
-- Google sign-in is not wired to the local stack. Only demo codes work here.
+- Google sign-in is not wired to the local stack. Demo codes, email codes and the email link work here.
 - The revoked-session check forces one token refresh before it signs out. An Auth outage (network error, 5xx, 429) keeps the session, and that path is covered by `src/test/auth/session-expiry.test.ts`, not by a recipe.

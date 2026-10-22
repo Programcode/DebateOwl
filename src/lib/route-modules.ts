@@ -28,6 +28,7 @@ export const routeLoaders = {
   "/privacy": cacheLoader(() => import("@/pages/PrivacyPage")),
   "/expocit/sources": cacheLoader(() => import("@/pages/SourcesPage")),
   "/login": cacheLoader(() => import("@/pages/LoginPage")),
+  "/auth/callback": cacheLoader(() => import("@/pages/AuthCallbackPage")),
   "/share/:code": cacheLoader(() => import("@/pages/SharedPage")),
   "/app": cacheLoader(() => import("@/pages/HomePage")),
   "/app/debate": cacheLoader(() => import("@/pages/CurrentDebatePage")),

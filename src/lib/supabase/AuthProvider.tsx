@@ -9,7 +9,15 @@ import { useSettingsStore } from '@/lib/stores/settings-store';
 import { useSparringStore } from '@/lib/stores/sparring-store';
 import { useDebateStore } from '@/lib/stores/debate-store';
 import { useDebateContextStore } from '@/lib/stores/debate-context-store';
-import { getOAuthRedirectUrl, openExternalUrl } from '@/lib/native';
+import { openExternalUrl } from '@/lib/native';
+import {
+  AUTH_CALLBACK_PATH,
+  authCallbackErrorFor,
+  authCallbackUrl,
+  readAuthCallbackParams,
+  withoutCallbackParams,
+  type AuthCallbackError,
+} from '@/lib/auth-callback';
 import { setJamUserId } from '@/lib/jam-metadata';
 import { clearCrossfireDraftOnAuthChange } from '@/lib/crossfire/storage';
 import { abortToolRuns } from '@/components/features/tools/tool-run';
@@ -104,6 +112,7 @@ function clearGoogleTokens() {
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
+  const [callbackError, setCallbackError] = useState<AuthCallbackError | null>(null);
   const hydrateSessionStore = useSessionStore((state) => state.hydrateFromServer);
   const prepareSessionStore = useSessionStore((state) => state.prepareForUser);
   const hydrateSettingsStore = useSettingsStore((state) => state.hydrateFromServer);
@@ -173,39 +182,39 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     localStorage.removeItem('google_provider_token');
     localStorage.removeItem('google_provider_refresh_token');
 
-    const hydrateOAuthCallbackSession = async () => {
-      const code = new URLSearchParams(window.location.search).get('code');
-      if (code) {
-        const cleanupOAuthParams = () => {
-          const nextUrl = new URL(window.location.href);
-          nextUrl.searchParams.delete('code');
-          nextUrl.searchParams.delete('state');
-          nextUrl.searchParams.delete('error');
-          nextUrl.searchParams.delete('error_description');
-          window.history.replaceState(window.history.state, '', `${nextUrl.pathname}${nextUrl.search}`);
-        };
+    // Set before the first await: auth-js announces the empty stored session
+    // while the code is still being exchanged, and that must not end loading.
+    const callbackUrl = new URL(window.location.href);
+    let callbackPending = callbackUrl.pathname === AUTH_CALLBACK_PATH;
 
-        let result: Awaited<ReturnType<typeof supabase.auth.exchangeCodeForSession>>;
-        let preserveOAuthParams = false;
-        try {
-          result = await withAuthTimeout(
-            supabase.auth.exchangeCodeForSession(code),
-            'OAuth code exchange timeout',
-            OAUTH_CODE_EXCHANGE_TIMEOUT_MS,
-          );
-        } catch (error) {
-          preserveOAuthParams = error instanceof AuthTimeoutError;
-          throw error;
-        } finally {
-          if (!preserveOAuthParams) cleanupOAuthParams();
-        }
-
-        const { data, error } = result;
-        if (error) throw error;
-        return data.session;
+    const hydrateOAuthCallbackSession = async (): Promise<Session | null> => {
+      if (!callbackPending) return null;
+      const { code, flowId, error } = readAuthCallbackParams(callbackUrl);
+      window.history.replaceState(window.history.state, '', withoutCallbackParams(callbackUrl));
+      if (error) {
+        setCallbackError(error);
+        return null;
       }
+      if (!code) return null;
 
-      return null;
+      // Finishing a sign-in is as explicit as pressing a sign-in button.
+      allowSessionsAfterSignIn();
+      try {
+        // The flow id picks this sign-in's own verifier, so another tab's
+        // sign-in or a failed resend can't break the link.
+        const { data, error: exchangeError } = await withAuthTimeout(
+          supabase.auth.exchangeCodeForSession(code, flowId ? { flowId } : undefined),
+          'OAuth code exchange timeout',
+          OAUTH_CODE_EXCHANGE_TIMEOUT_MS,
+        );
+        if (exchangeError) throw exchangeError;
+        return data.session;
+      } catch (err) {
+        // A session this browser already had still stands; getSession restores it below.
+        console.warn('[Auth] sign-in callback failed:', err);
+        if (mounted) setCallbackError(authCallbackErrorFor(err));
+        return null;
+      }
     };
 
     const init = async () => {
@@ -255,6 +264,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         currentUserIdRef.current = undefined;
         setJamUserId(undefined);
       } finally {
+        callbackPending = false;
         if (mounted) setLoading(false);
       }
     };
@@ -277,6 +287,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setJamUserId(nextUserId);
       setActiveAccessToken(newSession?.access_token ?? null, newSession?.user.id ?? null);
       setSession(newSession);
+      if (event === 'SIGNED_IN') setCallbackError(null);
 
       // Provider access tokens are short-lived. Keep them only for this browser
       // session; a later export must reauthorize if no fresh token is available.
@@ -293,7 +304,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         resetDebateStore();
         useDebateContextStore.getState().resetLocalData();
         clearGoogleTokens();
-        setLoading(false);
+        if (!callbackPending) setLoading(false);
         return;
       }
 
@@ -350,7 +361,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     session,
     user: session?.user ?? null,
     loading,
-    signInWithGoogle: async ({ driveAccess = false } = {}) => {
+    callbackError,
+    clearCallbackError: () => setCallbackError(null),
+    signInWithGoogle: async ({ driveAccess = false, next } = {}) => {
       allowSessionsAfterSignIn();
       // Always use the SDK-generated URL so PKCE's code_verifier is written
       // to storage before redirect. The previous Promise.race against a 1200ms
@@ -360,7 +373,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: getOAuthRedirectUrl(),
+          redirectTo: authCallbackUrl(window.location.origin, next),
           skipBrowserRedirect: true,
           ...(driveAccess ? { scopes: 'https://www.googleapis.com/auth/drive.file' } : {}),
           queryParams: undefined,
@@ -372,14 +385,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       await openExternalUrl(data.url);
     },
-    signInWithEmailOtp: async (email) => {
+    signInWithEmailOtp: async (email, { next } = {}) => {
       allowSessionsAfterSignIn();
       const normalizedEmail = email.trim();
       if (!normalizedEmail) throw new Error('Email is required.');
 
       const { error } = await supabase.auth.signInWithOtp({
         email: normalizedEmail,
-        options: { shouldCreateUser: true },
+        // Prod's email also carries a link. It must open the callback, not the landing page.
+        options: { shouldCreateUser: true, emailRedirectTo: authCallbackUrl(window.location.origin, next) },
       });
       if (error) throw error;
     },
@@ -418,7 +432,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (verificationError) throw verificationError;
     },
     signOut: async () => {
-      await supabase.auth.signOut();
+      // Local scope: signing out here must not sign the account out on other devices.
+      await supabase.auth.signOut({ scope: 'local' });
       clearCrossfireDraftOnAuthChange(session?.user?.id, undefined);
       resetSessionStore();
       resetSettingsStore();
@@ -435,7 +450,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       discardLocalState();
     },
     discardTabState,
-  }), [session, loading, discardLocalState, discardTabState, resetSessionStore, resetSettingsStore, resetSparringStore]);
+  }), [session, loading, callbackError, discardLocalState, discardTabState, resetSessionStore, resetSettingsStore, resetSparringStore]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

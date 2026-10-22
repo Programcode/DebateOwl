@@ -106,6 +106,10 @@
       "destination": "/app-shell.html"
     },
     {
+      "source": "/auth/callback",
+      "destination": "/app-shell.html"
+    },
+    {
       "source": "/share/:path*",
       "destination": "/app-shell.html"
     },
@@ -182,6 +186,15 @@
     },
     {
       "source": "/login",
+      "headers": [
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex, nofollow"
+        }
+      ]
+    },
+    {
+      "source": "/auth/callback",
       "headers": [
         {
           "key": "X-Robots-Tag",

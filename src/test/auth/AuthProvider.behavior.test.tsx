@@ -107,7 +107,6 @@ vi.mock('@/lib/supabase/client', () => ({
 }));
 
 vi.mock('@/lib/native', () => ({
-  getOAuthRedirectUrl: () => `${window.location.origin}/app`,
   openExternalUrl: openExternalUrlMock,
 }));
 
@@ -142,12 +141,13 @@ import { crossfireStorageKey } from '@/lib/crossfire/storage';
 import { useDebateStore } from '@/lib/stores/debate-store';
 
 function AuthConsumer() {
-  const { loading, user, signInWithGoogle, signOut } = useAuth();
+  const { loading, user, callbackError, signInWithGoogle, signOut } = useAuth();
 
   return (
     <div>
       <div data-testid="loading">{String(loading)}</div>
       <div data-testid="user">{user?.id ?? 'none'}</div>
+      <div data-testid="callback-error">{callbackError ?? 'none'}</div>
       <button onClick={() => void signInWithGoogle()} type="button">sign-in</button>
       <button onClick={() => void signInWithGoogle({ driveAccess: true })} type="button">sign-in-with-drive</button>
       <button onClick={() => void signOut()} type="button">sign-out</button>
@@ -507,7 +507,7 @@ describe('AuthProvider behavior', () => {
       expect(signInWithOAuthMock).toHaveBeenCalledWith({
         provider: 'google',
         options: {
-          redirectTo: `${window.location.origin}/app`,
+          redirectTo: `${window.location.origin}/auth/callback`,
           skipBrowserRedirect: true,
           queryParams: undefined,
         },
@@ -533,7 +533,7 @@ describe('AuthProvider behavior', () => {
       expect(signInWithOAuthMock).toHaveBeenCalledWith({
         provider: 'google',
         options: {
-          redirectTo: `${window.location.origin}/app`,
+          redirectTo: `${window.location.origin}/auth/callback`,
           skipBrowserRedirect: true,
           scopes: 'https://www.googleapis.com/auth/drive.file',
           queryParams: undefined,
@@ -554,7 +554,7 @@ describe('AuthProvider behavior', () => {
     await waitFor(() => {
       expect(signInWithOtpMock).toHaveBeenCalledWith({
         email: 'student@example.com',
-        options: { shouldCreateUser: true },
+        options: { shouldCreateUser: true, emailRedirectTo: `${window.location.origin}/auth/callback` },
       });
     });
   });
@@ -629,8 +629,8 @@ describe('AuthProvider behavior', () => {
     await waitFor(() => expect(screen.getByTestId('passwordless-error')).toHaveTextContent('invalid session handoff'));
   });
 
-  it('exchanges PKCE codes from the callback URL and clears the query string', async () => {
-    window.history.replaceState({}, '', '/app?code=pkce-code');
+  it('exchanges the callback code with its own flow verifier and keeps the deep link', async () => {
+    window.history.replaceState({}, '', '/auth/callback?code=pkce-code&sb_flow_id=0123456789abcdef&next=%2Fapp%2Fhistory');
     exchangeCodeForSessionMock.mockResolvedValue({
       data: { session: { user: { id: 'pkce-user' } } },
       error: null,
@@ -646,14 +646,109 @@ describe('AuthProvider behavior', () => {
       expect(screen.getByTestId('user')).toHaveTextContent('pkce-user');
     });
 
-    expect(exchangeCodeForSessionMock).toHaveBeenCalledWith('pkce-code');
+    expect(exchangeCodeForSessionMock).toHaveBeenCalledWith('pkce-code', { flowId: '0123456789abcdef' });
+    expect(window.location.search).toBe('?next=%2Fapp%2Fhistory');
+  });
+
+  it('exchanges a callback code without a flow id the old way', async () => {
+    window.history.replaceState({}, '', '/auth/callback?code=pkce-code');
+    exchangeCodeForSessionMock.mockResolvedValue({
+      data: { session: { user: { id: 'pkce-user' } } },
+      error: null,
+    });
+
+    render(
+      <AuthProvider>
+        <AuthConsumer />
+      </AuthProvider>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByTestId('user')).toHaveTextContent('pkce-user');
+    });
+    expect(exchangeCodeForSessionMock).toHaveBeenCalledWith('pkce-code', undefined);
     expect(window.location.search).toBe('');
   });
 
-  it('fails open when PKCE callback exchange hangs', async () => {
+  it('stays loading while the callback exchange runs, even when auth reports no session yet', async () => {
+    window.history.replaceState({}, '', '/auth/callback?code=pkce-code');
+    let finishExchange!: (value: unknown) => void;
+    exchangeCodeForSessionMock.mockReturnValue(new Promise((resolve) => { finishExchange = resolve; }));
+
+    render(
+      <AuthProvider>
+        <AuthConsumer />
+      </AuthProvider>
+    );
+
+    // auth-js announces the empty stored session while the code is still being exchanged.
+    act(() => callbackRef.current?.('INITIAL_SESSION', null));
+    expect(screen.getByTestId('loading')).toHaveTextContent('true');
+
+    await act(async () => {
+      finishExchange({ data: { session: { user: { id: 'pkce-user' }, access_token: 'token' } }, error: null });
+    });
+
+    await waitFor(() => expect(screen.getByTestId('user')).toHaveTextContent('pkce-user'));
+    expect(screen.getByTestId('loading')).toHaveTextContent('false');
+  });
+
+  it('says why a callback exchange failed and keeps any session the browser already had', async () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    window.history.replaceState({}, '', '/auth/callback?code=pkce-code&sb_flow_id=0123456789abcdef');
+    exchangeCodeForSessionMock.mockResolvedValue({
+      data: { session: null },
+      error: Object.assign(new Error('PKCE code verifier not found in storage.'), { code: 'pkce_code_verifier_not_found' }),
+    });
+    getSessionMock.mockResolvedValue({ data: { session: { user: { id: 'existing-user' }, access_token: 'token' } }, error: null });
+
+    render(
+      <AuthProvider>
+        <AuthConsumer />
+      </AuthProvider>
+    );
+
+    await waitFor(() => expect(screen.getByTestId('loading')).toHaveTextContent('false'));
+    expect(screen.getByTestId('callback-error')).toHaveTextContent('other-browser');
+    expect(screen.getByTestId('user')).toHaveTextContent('existing-user');
+    expect(window.location.search).toBe('');
+    warnSpy.mockRestore();
+  });
+
+  it('reads an expired-link error from the callback URL without exchanging anything', async () => {
+    window.history.replaceState({}, '', '/auth/callback?error=access_denied&error_code=otp_expired&error_description=Email+link+is+invalid+or+has+expired');
+
+    render(
+      <AuthProvider>
+        <AuthConsumer />
+      </AuthProvider>
+    );
+
+    await waitFor(() => expect(screen.getByTestId('loading')).toHaveTextContent('false'));
+    expect(screen.getByTestId('callback-error')).toHaveTextContent('link-expired');
+    expect(screen.getByTestId('user')).toHaveTextContent('none');
+    expect(exchangeCodeForSessionMock).not.toHaveBeenCalled();
+    expect(window.location.search).toBe('');
+  });
+
+  it('ignores a code query parameter outside the callback route', async () => {
+    window.history.replaceState({}, '', '/app/history?code=not-ours');
+
+    render(
+      <AuthProvider>
+        <AuthConsumer />
+      </AuthProvider>
+    );
+
+    await waitFor(() => expect(screen.getByTestId('loading')).toHaveTextContent('false'));
+    expect(exchangeCodeForSessionMock).not.toHaveBeenCalled();
+    expect(window.location.search).toBe('?code=not-ours');
+  });
+
+  it('stops waiting and reports a failed sign-in when the callback exchange hangs', async () => {
     vi.useFakeTimers();
     const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
-    window.history.replaceState({}, '', '/app?code=stalled-code');
+    window.history.replaceState({}, '', '/auth/callback?code=stalled-code');
     exchangeCodeForSessionMock.mockReturnValue(new Promise(() => {}));
 
     render(
@@ -662,15 +757,20 @@ describe('AuthProvider behavior', () => {
       </AuthProvider>
     );
 
+    act(() => callbackRef.current?.('INITIAL_SESSION', null));
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(14_000);
+    });
+    expect(screen.getByTestId('loading')).toHaveTextContent('true');
+
     await act(async () => {
       // Keep this in sync with the OAuth code-exchange timeout in AuthProvider.
-      await vi.advanceTimersByTimeAsync(15_000);
+      await vi.advanceTimersByTimeAsync(1_000);
     });
 
     expect(screen.getByTestId('loading')).toHaveTextContent('false');
     expect(screen.getByTestId('user')).toHaveTextContent('none');
-    expect(warnSpy).toHaveBeenCalledWith('[Auth] init failed:', expect.any(Error));
-    expect(window.location.search).toBe('?code=stalled-code');
+    expect(screen.getByTestId('callback-error')).toHaveTextContent('failed');
 
     warnSpy.mockRestore();
     vi.useRealTimers();
@@ -696,7 +796,7 @@ describe('AuthProvider behavior', () => {
     });
   });
 
-  it('signOut delegates to Supabase and resets both stores', async () => {
+  it('signOut ends only this device\'s session and resets both stores', async () => {
     render(
       <AuthProvider>
         <AuthConsumer />
@@ -706,7 +806,7 @@ describe('AuthProvider behavior', () => {
     fireEvent.click(screen.getByRole('button', { name: 'sign-out' }));
 
     await waitFor(() => {
-      expect(signOutMock).toHaveBeenCalled();
+      expect(signOutMock).toHaveBeenCalledWith({ scope: 'local' });
     });
 
     expect(resetSessionStoreMock).toHaveBeenCalled();

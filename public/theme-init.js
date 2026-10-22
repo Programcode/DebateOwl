@@ -20,7 +20,7 @@
 
   try {
     var pathname = window.location.pathname;
-    if (pathname === '/app' || pathname.indexOf('/app/') === 0 || pathname === '/login') {
+    if (pathname === '/app' || pathname.indexOf('/app/') === 0 || pathname === '/login' || pathname === '/auth/callback') {
       document.documentElement.classList.add('app-shell');
     }
   } catch {

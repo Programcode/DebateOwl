@@ -539,6 +539,7 @@
     "demoCodePlaceholder": "DEMO-AB12-CD34",
     "signInWithDemoCode": "Sign in with demo code",
     "signingIn": "Signing in...",
+    "finishingSignIn": "Signing you in…",
     "invalidEmail": "Enter a valid email address.",
     "invalidCode": "Enter a valid six-digit code.",
     "invalidDemoCode": "Enter a valid demo code.",
@@ -559,7 +560,10 @@
       "demoUsedUp": "This demo code has no uses left.",
       "rateLimited": "Too many attempts. Try again later.",
       "codeExpired": "That code is wrong or has expired. Check it or send a new one.",
-      "network": "Can't reach DebateLab. Check your connection and try again."
+      "network": "Can't reach DebateLab. Check your connection and try again.",
+      "linkExpired": "This sign-in link has expired or was already used. Send a new code.",
+      "linkOtherBrowser": "This sign-in link only works in the browser where you asked for it. Send a new code here.",
+      "callbackFailed": "Sign-in didn't finish. Try again."
     }
   },
   "admin": {

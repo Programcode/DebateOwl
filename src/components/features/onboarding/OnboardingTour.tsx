@@ -4,12 +4,33 @@ import { useTranslation } from 'react-i18next';
 import Joyride, { ACTIONS, CallBackProps, EVENTS, STATUS, Step } from 'react-joyride';
 import { useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { useOnboardingStore } from '@/hooks/use-onboarding';
+import { hasCompletedOnboarding as completedFor, useOnboardingStore } from '@/hooks/use-onboarding';
 import { useDebateStore } from '@/lib/stores/debate-store';
 
-export function OnboardingTour({ eligibleAt }: { eligibleAt?: number } = {}) {
+// Below `lg` the header's menu button is the navigation. There the tour draws no
+// overlay, so a tap on the menu (or anything else) still works while it shows,
+// and its tooltip sits under the header (z-50) and the open menu and its scrim
+// (z-40). Joyride draws the tooltip at zIndex + 100.
+const COMPACT_LAYOUT_QUERY = '(max-width: 1023px)';
+const COMPACT_TOOLTIP_Z_INDEX = 35;
+
+function useCompactLayout() {
+    const [compact, setCompact] = useState(() => typeof window !== 'undefined' && window.matchMedia?.(COMPACT_LAYOUT_QUERY).matches === true);
+    useEffect(() => {
+        const query = window.matchMedia?.(COMPACT_LAYOUT_QUERY);
+        if (!query) return;
+        const update = () => setCompact(query.matches);
+        query.addEventListener('change', update);
+        return () => query.removeEventListener('change', update);
+    }, []);
+    return compact;
+}
+
+export function OnboardingTour({ eligibleAt, userId }: { eligibleAt?: number; userId: string }) {
     const { t } = useTranslation();
-    const { isTourRunning, hasCompletedOnboarding, setOnboardingComplete, startTour, stopTour } = useOnboardingStore();
+    const hasCompletedOnboarding = useOnboardingStore((state) => completedFor(state, userId));
+    const { isTourRunning, setOnboardingComplete, startTour, stopTour } = useOnboardingStore();
+    const compactLayout = useCompactLayout();
     const location = useLocation();
     const currentDebateId = useDebateStore((state) => state.currentDebateId);
     const debateDialog = useDebateStore((state) => state.dialog);
@@ -151,12 +172,12 @@ export function OnboardingTour({ eligibleAt }: { eligibleAt?: number } = {}) {
         const finishedStatuses: string[] = [STATUS.FINISHED, STATUS.SKIPPED];
 
         if (finishedStatuses.includes(status)) {
-            setOnboardingComplete();
+            setOnboardingComplete(userId);
             setStepIndex(0);
         } else if (type === EVENTS.STEP_AFTER || type === EVENTS.TARGET_NOT_FOUND) {
             setStepIndex(index + (action === ACTIONS.PREV ? -1 : 1));
         }
-    }, [setOnboardingComplete]);
+    }, [setOnboardingComplete, userId]);
 
     return (
         <Joyride
@@ -164,6 +185,7 @@ export function OnboardingTour({ eligibleAt }: { eligibleAt?: number } = {}) {
             stepIndex={stepIndex}
             run={isTourRunning && debateDialog === null}
             continuous
+            disableOverlay={compactLayout}
             scrollOffset={scrollOffset}
             scrollToFirstStep
             showSkipButton
@@ -178,7 +200,7 @@ export function OnboardingTour({ eligibleAt }: { eligibleAt?: number } = {}) {
                     textColor: 'hsl(var(--popover-foreground))',
                     // Hungarian footer labels wrap at Joyride's default 380px.
                     width: 'min(440px, calc(100vw - 2rem))',
-                    zIndex: 10000,
+                    zIndex: compactLayout ? COMPACT_TOOLTIP_Z_INDEX - 100 : 10000,
                 },
                 tooltip: {
                     backgroundColor: 'hsl(var(--popover))',

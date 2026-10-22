@@ -1,9 +1,51 @@
-import { expect, test } from "./fixtures";
+import { createHash } from "node:crypto";
+import type { APIRequestContext, Page } from "@playwright/test";
+import { createDemoUser, debateControl, deleteDemoUser, expect, test } from "./fixtures";
 
-// Feature map: features/auth.md. Demo-code sign-in, reload, rejection, and
+// Feature map: features/auth-demo-login.md. Demo-code sign-in, reload, rejection, and
 // sign-out are covered by e2e/full-stack/auth.spec.ts, which drive also runs.
 
 const mailer = process.env.WORKSPACE_TEST_MAILER_URL;
+const supabaseUrl = process.env.LOCAL_SUPABASE_URL;
+
+/** Reads the six-digit code sent to `email` after `sentAfter` from the local Mailpit inbox. */
+async function readOtp(request: APIRequestContext, email: string, sentAfter: number) {
+  let otp = "";
+  await expect.poll(async () => {
+    const payload = await (await request.get(`${mailer}/api/v1/messages`)).json() as { messages?: Array<Record<string, unknown>> };
+    for (const message of payload.messages ?? []) {
+      if (!JSON.stringify(message).includes(email)) continue;
+      if (Date.parse(String(message.Created ?? 0)) < sentAfter - 5_000) continue;
+      const detail = await (await request.get(`${mailer}/api/v1/message/${message.ID}`)).text();
+      otp = detail.match(/\b(\d{6})\b/)?.[1] ?? "";
+      if (otp) break;
+    }
+    return otp;
+  }, { timeout: 30_000 }).toMatch(/^\d{6}$/);
+  return otp;
+}
+
+/** Every path this tab shows, kept across reloads, so a flash of /login is caught. */
+async function recordPaths(page: Page) {
+  await page.addInitScript(() => {
+    const record = () => {
+      const seen = JSON.parse(sessionStorage.getItem("verify-paths") ?? "[]") as string[];
+      sessionStorage.setItem("verify-paths", JSON.stringify([...seen, location.pathname]));
+    };
+    for (const method of ["pushState", "replaceState"] as const) {
+      const original = history[method].bind(history);
+      history[method] = (...args: Parameters<History["pushState"]>) => {
+        original(...args);
+        record();
+      };
+    }
+    record();
+  });
+  return {
+    clear: () => page.evaluate(() => sessionStorage.removeItem("verify-paths")),
+    seen: () => page.evaluate(() => JSON.parse(sessionStorage.getItem("verify-paths") ?? "[]") as string[]),
+  };
+}
 
 test("auth-email-otp: an emailed one-time code signs an existing account in", async ({ page, user, request, evidence }) => {
   test.skip(!mailer, "WORKSPACE_TEST_MAILER_URL is missing; run through verify.sh drive");
@@ -15,19 +57,7 @@ test("auth-email-otp: an emailed one-time code signs an existing account in", as
   await expect(page.getByText("Code sent").first()).toBeVisible();
   await evidence.shot("01-code-sent");
 
-  // Read the real message from the local Mailpit inbox.
-  let otp = "";
-  await expect.poll(async () => {
-    const payload = await (await request.get(`${mailer}/api/v1/messages`)).json() as { messages?: Array<Record<string, unknown>> };
-    for (const message of payload.messages ?? []) {
-      if (!JSON.stringify(message).includes(user.email)) continue;
-      if (Date.parse(String(message.Created ?? 0)) < sentAfter - 5_000) continue;
-      const detail = await (await request.get(`${mailer}/api/v1/message/${message.ID}`)).text();
-      otp = detail.match(/\b(\d{6})\b/)?.[1] ?? "";
-      if (otp) break;
-    }
-    return otp;
-  }, { timeout: 30_000 }).toMatch(/^\d{6}$/);
+  const otp = await readOtp(request, user.email, sentAfter);
   await evidence.step("Read the one-time code from Mailpit");
 
   await page.getByRole("textbox", { name: "Verification code" }).fill(otp);
@@ -65,4 +95,107 @@ test("auth-session-expired: a session the server revoked signs out to the login 
   // The notice is for this sign-out only.
   await page.reload();
   await expect(page.getByText("Your session expired. Sign in again.")).toHaveCount(0);
+});
+
+test("auth-email-link: the emailed sign-in link signs in after a failed resend, and a used link says so", async ({ page, user, request, evidence }) => {
+  test.skip(!mailer || !supabaseUrl, "Mailpit or LOCAL_SUPABASE_URL is missing; run through verify.sh drive");
+  const paths = await recordPaths(page);
+  const sentAfter = Date.now();
+  await page.goto("/login");
+  await page.getByRole("tab", { name: "Email" }).click();
+  await page.getByLabel("Email address").fill(user.email);
+  const otpRequest = page.waitForRequest((request) => request.url().includes("/auth/v1/otp"));
+  await page.getByRole("button", { name: "Send code" }).click();
+  // The link returns to the callback route with this sign-in's own flow id.
+  const redirectTo = new URL((await otpRequest).url()).searchParams.get("redirect_to") ?? "";
+  expect(redirectTo).toMatch(/^http:\/\/127\.0\.0\.1:18081\/auth\/callback\?sb_flow_id=[0-9a-f]{32}$/);
+  await expect(page.getByText("Code sent").first()).toBeVisible();
+  const otp = await readOtp(request, user.email, sentAfter);
+  await evidence.step(`Sent a code; the link returns to ${redirectTo.replace(/sb_flow_id=.*/, "sb_flow_id=<flow>")}`);
+
+  // AUTH-01: the resend hits Auth's rate limit, and auth-js drops that resend's verifier.
+  await page.route("**/auth/v1/otp**", (route) => route.fulfill({
+    status: 429,
+    contentType: "application/json",
+    body: JSON.stringify({ code: 429, error_code: "over_email_send_rate_limit", msg: "email rate limit exceeded" }),
+  }));
+  await page.getByRole("button", { name: "Resend code" }).click();
+  await expect(page.getByText("Too many attempts. Try again later.")).toBeVisible();
+  await page.unroute("**/auth/v1/otp**");
+  await evidence.shot("01-resend-rate-limited");
+
+  // The link in prod's email: Auth's /verify with the PKCE token hash of this code.
+  const link = `${supabaseUrl}/auth/v1/verify?${new URLSearchParams({
+    token: `pkce_${createHash("sha224").update(user.email + otp).digest("hex")}`,
+    type: "magiclink",
+    redirect_to: redirectTo,
+  })}`;
+  await paths.clear();
+  await page.goto(link);
+  await expect(page).toHaveURL(/\/app$/, { timeout: 20_000 });
+  await expect(debateControl(page)).toBeVisible();
+  // AUTH-17: the callback waits for the exchange; it never shows /login on the way.
+  const seen = await paths.seen();
+  await evidence.json("02-paths-after-link", seen);
+  expect(seen).toContain("/auth/callback");
+  expect(seen).not.toContain("/login");
+  await page.reload();
+  await expect(page).toHaveURL(/\/app$/);
+  await evidence.shot("02-signed-in-by-link");
+  await evidence.step("Opened the emailed link after the failed resend; signed in on /app without passing /login");
+
+  // AUTH-02: the same link again, in a browser that is no longer signed in.
+  await page.evaluate(() => {
+    for (const key of Object.keys(localStorage)) if (/^debate-auth-[a-z]+$/.test(key)) localStorage.removeItem(key);
+  });
+  await page.goto(link);
+  await expect(page).toHaveURL(/\/login$/, { timeout: 20_000 });
+  await expect(page.getByRole("alert")).toHaveText("This sign-in link has expired or was already used. Send a new code.");
+  await evidence.shot("03-used-link-message");
+  await evidence.aria("03-used-link-message");
+  await evidence.step("Opened the used link again; /login says it expired or was used");
+});
+
+test("auth-switch-account: the next account on this browser starts on /app, gets its own tour, and sign-out stays local", async ({ signedIn: page, evidence }, testInfo) => {
+  const second = await createDemoUser(`${testInfo.project.name}-second`);
+  try {
+    // The first account (tour already seen) leaves off on Settings and signs out.
+    await page.goto("/app/settings");
+    const logout = page.waitForRequest((request) => request.url().includes("/auth/v1/logout"));
+    await page.getByRole("button", { name: "Sign out" }).click();
+    // AUTH-19: this device only.
+    expect(new URL((await logout).url()).searchParams.get("scope")).toBe("local");
+    await expect(page).toHaveURL(/\/login$/);
+    await evidence.step("Signed out from /app/settings with scope=local");
+
+    // AUTH-06: a different account signs in on the same /login page.
+    await page.getByRole("tab", { name: "Demo code" }).click();
+    await page.getByRole("textbox", { name: "Demo code" }).fill(second.code);
+    await page.getByRole("button", { name: "Sign in with demo code" }).click();
+    await expect(page).toHaveURL(/\/app$/, { timeout: 20_000 });
+    await evidence.step("Signed in as a second account; landed on /app, not /app/settings");
+
+    // AUTH-07: the second account gets its own tour.
+    const tour = page.getByText("Welcome to DebateLab!");
+    await expect(tour).toBeVisible({ timeout: 10_000 });
+    await evidence.shot("01-second-account-tour");
+    if (await page.getByRole("button", { name: "Open menu" }).isVisible()) {
+      // On phones the tour must not block the header's menu: open it and use it.
+      await page.getByRole("button", { name: "Open menu" }).click();
+      const menu = page.getByRole("navigation", { name: "Mobile navigation" });
+      await expect(menu).toBeVisible();
+      await evidence.shot("02-menu-open-during-tour");
+      await menu.getByRole("link", { name: /History/ }).click();
+      await expect(page).toHaveURL(/\/app\/history$/);
+      await evidence.step("Opened the menu and went to History while the tour showed");
+      // The tour waits on /app and picks up again there.
+      await page.goBack();
+      await expect(tour).toBeVisible({ timeout: 10_000 });
+    }
+    await page.locator('[data-test-id="button-skip"]').click();
+    await expect(tour).toBeHidden();
+    await evidence.step("Skipped the tour");
+  } finally {
+    await deleteDemoUser(second);
+  }
 });
