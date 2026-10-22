@@ -29,6 +29,8 @@ const requests = [];
 // Subscription state the fake Stripe returns, set by tests through /__subscription.
 const subscriptions = new Map();
 let failures = [];
+// Replies cut off at max_tokens (finish_reason "length"), set through /__truncate.
+let truncations = [];
 let upstreamCalls = 0;
 // Delay between streamed chunks; a test can slow it to keep a draft on screen.
 let streamDelayMs;
@@ -225,26 +227,26 @@ function json(res, status, value) {
   res.end(JSON.stringify(value));
 }
 
-function stream(res) {
+function stream(res, finishReason = "stop") {
   res.writeHead(200, { "content-type": "text/event-stream", "cache-control": "no-cache" });
   const chunks = [`${MARK} streamed answer: `, "weigh access ", "against cost."];
   for (const content of chunks) {
     res.write(`data: ${JSON.stringify({ choices: [{ delta: { content } }] })}\n\n`);
   }
-  res.write(`data: ${JSON.stringify({ choices: [{ delta: {}, finish_reason: "stop" }] })}\n\n`);
+  res.write(`data: ${JSON.stringify({ choices: [{ delta: {}, finish_reason: finishReason }] })}\n\n`);
   res.write(`data: ${JSON.stringify({ choices: [], usage })}\n\n`);
   res.end("data: [DONE]\n\n");
 }
 
 // Live generation: a structured answer streamed in small chunks, the way a
 // model writes tokens, so the client's partial rendering runs for real.
-async function streamJson(res, content) {
+async function streamJson(res, content, finishReason = "stop") {
   res.writeHead(200, { "content-type": "text/event-stream", "cache-control": "no-cache" });
   for (let index = 0; index < content.length; index += STREAM_CHUNK_CHARS) {
     res.write(`data: ${JSON.stringify({ choices: [{ delta: { content: content.slice(index, index + STREAM_CHUNK_CHARS) } }] })}\n\n`);
     await new Promise((resolve) => setTimeout(resolve, streamDelayMs ?? STREAM_CHUNK_DELAY_MS));
   }
-  res.write(`data: ${JSON.stringify({ choices: [{ delta: {}, finish_reason: "stop" }] })}\n\n`);
+  res.write(`data: ${JSON.stringify({ choices: [{ delta: {}, finish_reason: finishReason }] })}\n\n`);
   res.write(`data: ${JSON.stringify({ choices: [], usage })}\n\n`);
   res.end("data: [DONE]\n\n");
 }
@@ -259,7 +261,7 @@ async function proxy(req, res, path) {
   const body = JSON.parse(await readBody(req));
   const chat = path === "/api/v1/chat/completions";
   const record = chat
-    ? { ...classify(body), requestedModel: body.model, model: chatModel(body.model), stream: body.stream === true }
+    ? { ...classify(body), requestedModel: body.model, model: chatModel(body.model), stream: body.stream === true, maxTokens: body.max_tokens }
     : { feature: "jev", model: body.model };
   delete record.output;
   requests.push(record);
@@ -332,6 +334,7 @@ createServer(async (req, res) => {
   if (url.pathname === "/__reset" && req.method === "POST") {
     requests.length = 0;
     failures = [];
+    truncations = [];
     streamDelayMs = undefined;
     return json(res, 200, { ok: true });
   }
@@ -343,6 +346,11 @@ createServer(async (req, res) => {
   if (url.pathname === "/__subscription" && req.method === "POST") {
     const subscription = JSON.parse(await readBody(req) || "{}");
     subscriptions.set(subscription.id, subscription);
+    return json(res, 200, { ok: true });
+  }
+  if (url.pathname === "/__truncate" && req.method === "POST") {
+    const { feature, count = 1 } = JSON.parse(await readBody(req) || "{}");
+    truncations.push({ feature, count });
     return json(res, 200, { ok: true });
   }
   if (url.pathname === "/__fail" && req.method === "POST") {
@@ -381,7 +389,7 @@ createServer(async (req, res) => {
   const body = JSON.parse(await readBody(req));
   const { output, ...record } = classify(body);
   const { feature } = record;
-  requests.push({ ...record, model: body.model, stream: body.stream === true });
+  requests.push({ ...record, model: body.model, stream: body.stream === true, maxTokens: body.max_tokens });
   if (!feature) return json(res, 500, { error: { message: "Fake OpenRouter does not recognize this prompt" } });
 
   const failure = failures.find((item) => item.count > 0 && (!item.feature || item.feature === feature));
@@ -389,13 +397,18 @@ createServer(async (req, res) => {
     failure.count -= 1;
     return json(res, failure.status, { error: { message: `Fake ${feature} failure` } });
   }
-  if (feature === "ask-stream") return stream(res);
+  // A cut-off reply stops halfway with finish_reason "length", as a model does at max_tokens.
+  const truncation = truncations.find((item) => item.count > 0 && (!item.feature || item.feature === feature));
+  if (truncation) truncation.count -= 1;
+  const finishReason = truncation ? "length" : "stop";
+  if (feature === "ask-stream") return stream(res, finishReason);
   if (output === null) return json(res, 500, { error: { message: `Fake ${feature} could not parse the request` } });
-  if (body.stream === true) return streamJson(res, JSON.stringify(output));
+  const content = truncation ? JSON.stringify(output).slice(0, Math.floor(JSON.stringify(output).length / 2)) : JSON.stringify(output);
+  if (body.stream === true) return streamJson(res, content, finishReason);
   return json(res, 200, {
     id: `fake-${requests.length}`,
     model: body.model,
-    choices: [{ index: 0, finish_reason: "stop", message: { role: "assistant", content: JSON.stringify(output) } }],
+    choices: [{ index: 0, finish_reason: finishReason, message: { role: "assistant", content } }],
     usage,
   });
 }).listen(port, "0.0.0.0", () => console.log(`${upstream ? "live proxy" : "fake OpenRouter"} listening on ${port}`));

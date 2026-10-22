@@ -97,7 +97,7 @@ export async function handleAsk(ctx: FeatureContext): Promise<Response> {
   const systemPrompt = await buildSystemPromptFor(feature, effectiveResearch);
   const prompt = `${basePrompt}${urlContext}${webSearchContext}`;
   const messages = [...history, { role: "user", content: prompt }];
-  const aiResult = recordMainResult(await callAI(provider, model, systemPrompt, messages, reasoningEffort, workSignal, ctx.stream));
+  const aiResult = recordMainResult(await callAI(provider, model, systemPrompt, messages, reasoningEffort, "ask", workSignal, ctx.stream));
   const output = cleanGeneratedText(aiResult.output);
 
   if (output && typeof output === "object") {

@@ -63,6 +63,7 @@ export async function handleCrossfire(ctx: FeatureContext, options: CrossfireHan
     systemPrompt,
     [{ role: "user", content: userPrompt }],
     reasoningEffort,
+    crossfireInput.operation === "next-turn" ? "crossfireTurn" : "crossfireDebrief",
     workSignal,
     ctx.stream,
   ));

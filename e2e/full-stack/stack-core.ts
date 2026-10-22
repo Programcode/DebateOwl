@@ -22,7 +22,7 @@ export const admin = stackReady
   ? createClient(supabaseUrl!, serviceKey!, { auth: { persistSession: false } })
   : (null as never);
 
-export type FakeRequest = { feature: string | null; model?: string; stream?: boolean; system: string; user: string };
+export type FakeRequest = { feature: string | null; model?: string; stream?: boolean; maxTokens?: number; system: string; user: string };
 
 export const fake = {
   async reset() {
@@ -33,6 +33,10 @@ export const fake = {
   },
   async fail(feature: string, status = 500, count = 1) {
     await fetch(`${fakeUrl}/__fail`, { method: "POST", body: JSON.stringify({ feature, status, count }) });
+  },
+  /** Cuts the next `count` replies for a feature off at max_tokens (fake mode only). */
+  async truncate(feature: string, count = 1) {
+    await fetch(`${fakeUrl}/__truncate`, { method: "POST", body: JSON.stringify({ feature, count }) });
   },
   /** Sets what the fake Stripe returns for GET /v1/subscriptions/:id. */
   async stripeSubscription(subscription: { id: string; status: string }) {

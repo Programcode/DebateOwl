@@ -419,6 +419,7 @@
     "streamInterruptedDesc": "Kérdezz újra a teljes válaszért.",
     "chatSaved": "Chat mentve",
     "chatSavedDesc": "Az Előzményekből újra megnyithatod.",
+    "replyCutOff": "Ez a válasz elérte a hosszkorlátot, ezért idő előtt véget ér. Tegyél fel szűkebb kérdést, vagy kérd, hogy folytassa.",
     "retryableFailedDesc": "Nem sikerült elérni az MI-t. Ellenőrizd a kapcsolatot, majd próbáld újra.",
     "saveFailed": "A mentés sikertelen",
     "saveFailedDesc": "Nem sikerült menteni a chatet. Próbáld újra.",

@@ -35,7 +35,7 @@ export async function handleFactoids(ctx: FeatureContext): Promise<Response> {
   const userPrompt = buildUserPrompt(feature, sanitizedInput, searchContext);
   const messages = [{ role: "user", content: userPrompt }];
 
-  const aiResult = recordMainResult(await callAI(provider, model, systemPrompt, messages, reasoningEffort, workSignal, ctx.stream));
+  const aiResult = recordMainResult(await callAI(provider, model, systemPrompt, messages, reasoningEffort, "factoids", workSignal, ctx.stream));
   const output = cleanGeneratedText(aiResult.output);
 
   // Post-process: quality floor. Only citations whose URL matches fetched,

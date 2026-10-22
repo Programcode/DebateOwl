@@ -8,10 +8,15 @@ import {
 } from "../_shared/cost.ts";
 import {
   getModelCatalogEntry,
-  MAX_REQUEST_OUTPUT_TOKENS,
   type ModelCatalogEntry,
   type ReasoningEffort,
 } from "../_shared/model-catalog.ts";
+import {
+  outputTokenLimit,
+  REPLY_TOKEN_CAPS,
+  type ReplyCap,
+  TRUNCATION_RETRY_FACTOR,
+} from "../_shared/output-caps.ts";
 import {
   fetchJsonWithTimeout,
   fetchWithTimeoutAndConsume,
@@ -44,6 +49,18 @@ export class InvalidJsonResponseError extends Error {
     this.name = "InvalidJsonResponseError";
     this.providerName = providerName;
     this.rawText = rawText;
+  }
+}
+
+/** The provider stopped at max_tokens, so the reply is incomplete. */
+export class OutputTruncatedError extends Error {
+  /** Token usage of the cut-off attempt so the retry can bill it. */
+  usage?: NormalizedUsage;
+
+  constructor(usage?: NormalizedUsage) {
+    super("AI reply was cut off at its token cap");
+    this.name = "OutputTruncatedError";
+    this.usage = usage;
   }
 }
 
@@ -102,7 +119,7 @@ export interface GenerationStream {
 export type GenerationPhase = "research" | "writing" | "checking";
 
 type OpenRouterResponse = {
-  choices?: Array<{ message?: { content?: string | null } }>;
+  choices?: Array<{ message?: { content?: string | null }; finish_reason?: unknown }>;
   usage?: unknown;
 };
 
@@ -128,52 +145,73 @@ export async function callAI(
   systemPrompt: string,
   messages: Array<{ role: string; content: string }>,
   reasoningEffort: ReasoningEffort,
+  cap: ReplyCap,
   signal?: AbortSignal,
   stream?: GenerationStream,
 ): Promise<AIResult> {
+  const replyTokens = REPLY_TOKEN_CAPS[cap];
   try {
-    return await callAIOnce(provider, model, systemPrompt, messages, reasoningEffort, signal, stream);
+    return await callAIOnce(provider, model, systemPrompt, messages, reasoningEffort, replyTokens, signal, stream);
   } catch (err) {
+    if (err instanceof OutputTruncatedError) {
+      console.warn(`[AI] Reply hit its ${cap} cap (${replyTokens} tokens, ${model}, effort ${reasoningEffort}); retrying with ${replyTokens * TRUNCATION_RETRY_FACTOR}`);
+      stream?.reset();
+      return await retryOnce(err.usage, "truncation_retry", () =>
+        callAIOnce(provider, model, systemPrompt, messages, reasoningEffort, replyTokens * TRUNCATION_RETRY_FACTOR, signal, stream)
+      );
+    }
     if (!(err instanceof InvalidJsonResponseError)) throw attachMissingUsage(err, "call");
 
     console.warn(`[AI] ${err.providerName} returned invalid JSON; retrying with repair prompt`);
     stream?.reset();
-    let retry: AIResult;
-    try {
-      retry = await callAIOnce(
+    return await retryOnce(err.usage, "repair_retry", () =>
+      callAIOnce(
         provider,
         model,
         `${systemPrompt}\n\nJSON REPAIR INSTRUCTION: Return only valid JSON matching this schema, no prose.`,
         withJsonRepairPrompt(messages),
         reasoningEffort,
+        replyTokens,
         signal,
         stream,
-      );
-    } catch (retryError) {
-      // Preserve the completed first attempt if cancellation or another
-      // failure prevents the repair attempt from returning a result.
-      const retryUsage = retryError && typeof retryError === "object" && "usage" in retryError
-        ? (retryError as { usage?: NormalizedUsage }).usage ?? missingOpenRouterUsage("repair_retry")
-        : missingOpenRouterUsage("repair_retry");
-      const usage = mergeNormalizedUsage([err.usage, retryUsage]);
-      if (usage && retryError && typeof retryError === "object") {
-        const errorWithUsage = retryError as {
-          usage?: NormalizedUsage;
-          completedUsage?: NormalizedUsage;
-        };
-        errorWithUsage.usage = usage;
-        // The first response was parsed before the retry began, so retain it
-        // even if the retry is the operation cancelled by the caller.
-        errorWithUsage.completedUsage = err.usage;
-      }
-      throw attachMissingUsage(retryError, "repair_retry");
-    }
-    // The failed attempt still consumed tokens; bill both.
-    return {
-      output: retry.output,
-      usage: mergeNormalizedUsage([err.usage, retry.usage]),
-    };
+      )
+    );
   }
+}
+
+/** Runs the single retry after a failed attempt and bills both attempts. */
+async function retryOnce(
+  firstUsage: NormalizedUsage | undefined,
+  reason: string,
+  attempt: () => Promise<AIResult>,
+): Promise<AIResult> {
+  let retry: AIResult;
+  try {
+    retry = await attempt();
+  } catch (retryError) {
+    // Preserve the completed first attempt if cancellation or another
+    // failure prevents the retry from returning a result.
+    const retryUsage = retryError && typeof retryError === "object" && "usage" in retryError
+      ? (retryError as { usage?: NormalizedUsage }).usage ?? missingOpenRouterUsage(reason)
+      : missingOpenRouterUsage(reason);
+    const usage = mergeNormalizedUsage([firstUsage, retryUsage]);
+    if (usage && retryError && typeof retryError === "object") {
+      const errorWithUsage = retryError as {
+        usage?: NormalizedUsage;
+        completedUsage?: NormalizedUsage;
+      };
+      errorWithUsage.usage = usage;
+      // The first response was received before the retry began, so retain it
+      // even if the retry is the operation cancelled by the caller.
+      errorWithUsage.completedUsage = firstUsage;
+    }
+    throw attachMissingUsage(retryError, reason);
+  }
+  // The failed attempt still consumed tokens; bill both.
+  return {
+    output: retry.output,
+    usage: mergeNormalizedUsage([firstUsage, retry.usage]),
+  };
 }
 
 export function withJsonRepairPrompt(messages: Array<{ role: string; content: string }>) {
@@ -197,6 +235,7 @@ export async function callAIOnce(
   systemPrompt: string,
   messages: Array<{ role: string; content: string }>,
   reasoningEffort: ReasoningEffort,
+  replyTokens: number,
   signal?: AbortSignal,
   stream?: GenerationStream,
 ): Promise<AIResult> {
@@ -205,6 +244,7 @@ export async function callAIOnce(
     [{ role: "system", content: systemPrompt }, ...messages],
     model,
     reasoningEffort,
+    replyTokens,
     signal,
     stream,
   );
@@ -227,6 +267,7 @@ export async function callOpenRouter(
   messages: Array<{ role: string; content: string }>,
   model: string,
   reasoningEffort: ReasoningEffort,
+  replyTokens: number,
   signal?: AbortSignal,
   stream?: GenerationStream,
 ): Promise<AIResult> {
@@ -237,7 +278,7 @@ export async function callOpenRouter(
   const payload: Record<string, unknown> = {
     model,
     messages: withPromptCaching(model, messages),
-    max_tokens: Math.min(modelEntry.maxTokens, MAX_REQUEST_OUTPUT_TOKENS),
+    max_tokens: outputTokenLimit(replyTokens, reasoningEffort, modelEntry.maxTokens),
     response_format: { type: "json_object" },
     reasoning: { effort: reasoningEffort, exclude: true },
     provider: openRouterProviderOptions(model),
@@ -256,6 +297,7 @@ export async function callOpenRouter(
   if (!data?.choices || !Array.isArray(data.choices) || data.choices.length === 0) throw new Error("OpenRouter returned no choices");
   const usage = normalizeProviderUsage(data.usage) ?? missingOpenRouterUsage("response");
   warnIfClaudeNotByok(model, usage.raw, "ai");
+  if (data.choices[0]?.finish_reason === "length") throw new OutputTruncatedError(usage);
   return parseProviderContent(data.choices[0]?.message?.content ?? "", "OpenRouter", usage);
 }
 
@@ -283,7 +325,7 @@ async function streamOpenRouter(
   signal?: AbortSignal,
 ): Promise<AIResult> {
   stream.phase("writing");
-  const { text, usage } = await fetchWithTimeoutAndConsume(`${OPENROUTER_API_URL}/v1/chat/completions`, {
+  const { text, usage, finishReason } = await fetchWithTimeoutAndConsume(`${OPENROUTER_API_URL}/v1/chat/completions`, {
     method: "POST",
     headers: { "Content-Type": "application/json", "Authorization": `Bearer ${apiKey}` },
     body: JSON.stringify({ ...payload, stream: true, stream_options: { include_usage: true } }),
@@ -298,6 +340,7 @@ async function streamOpenRouter(
     return await readOpenRouterStream(response.body, stream, bodySignal, model);
   });
   warnIfClaudeNotByok(model, usage.raw, "ai");
+  if (finishReason === "length") throw new OutputTruncatedError(usage);
   return parseProviderContent(text, "OpenRouter", usage);
 }
 
@@ -306,7 +349,7 @@ export async function readOpenRouterStream(
   stream: GenerationStream,
   signal: AbortSignal,
   model = "",
-): Promise<{ text: string; usage: NormalizedUsage }> {
+): Promise<{ text: string; usage: NormalizedUsage; finishReason?: string }> {
   const reader = body.getReader();
   const decoder = new TextDecoder();
   let buffer = "";
@@ -316,7 +359,7 @@ export async function readOpenRouterStream(
   const encoder = new TextEncoder();
   let usageRaw: Record<string, unknown> | undefined;
   let done = false;
-  let finished = false;
+  let finishReason: string | undefined;
 
   const processLine = (line: string) => {
     const trimmed = line.trim();
@@ -337,7 +380,7 @@ export async function readOpenRouterStream(
       throw providerRequestError(model, null, text.length > 0);
     }
     const choice = Array.isArray(chunk.choices) ? chunk.choices[0] : undefined;
-    if (typeof choice?.finish_reason === "string" && choice.finish_reason) finished = true;
+    if (typeof choice?.finish_reason === "string" && choice.finish_reason) finishReason = choice.finish_reason;
     const content = choice?.delta?.content;
     if (typeof content === "string" && content) {
       text += content;
@@ -385,10 +428,10 @@ export async function readOpenRouterStream(
   } finally {
     void reader.cancel().catch(() => undefined);
   }
-  if (!done && !finished) {
+  if (!done && !finishReason) {
     const error = new Error("OpenRouter stream ended before completion") as Error & { usage?: NormalizedUsage };
     error.usage = usageRaw ? { ...normalizeOpenRouterUsage(usageRaw), incomplete: true } : missingOpenRouterUsage("stream");
     throw error;
   }
-  return { text, usage: usageRaw ? normalizeOpenRouterUsage(usageRaw) : missingOpenRouterUsage("stream") };
+  return { text, usage: usageRaw ? normalizeOpenRouterUsage(usageRaw) : missingOpenRouterUsage("stream"), finishReason };
 }
