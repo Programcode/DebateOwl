@@ -8,6 +8,7 @@ import {
   processWebhookEvent,
   webhookFailureResponse,
 } from "./webhook-event-lifecycle.ts";
+import { accountPresence, type AccountPresence } from "./account-presence.ts";
 
 // Validate required environment variables
 const STRIPE_SECRET_KEY = Deno.env.get("STRIPE_SECRET_KEY");
@@ -175,6 +176,19 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
 
   console.log(`[WEBHOOK] Checkout completed for user ${userId}, sub: ${subscriptionId}`);
 
+  // Deleting an account cancels billing it can see. A Checkout that finishes
+  // in that window would otherwise keep charging a subscription with no user,
+  // and the database insert fails forever. Cancel it and acknowledge the event.
+  const presence = await lookupAccount(userId);
+  if (presence === "unknown") {
+    throw new Error("Could not confirm the account for this checkout");
+  }
+  if (presence === "missing") {
+    console.warn(`[WEBHOOK] Checkout completed after the account was deleted; canceling ${subscriptionId}`);
+    await cancelSubscriptionIfPresent(subscriptionId);
+    return;
+  }
+
   // Fetch the full subscription from Stripe
   const subscription = await stripe.subscriptions.retrieve(subscriptionId);
 
@@ -215,6 +229,28 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
   }
 
   console.log(`[WEBHOOK] User ${userId} upgraded to Pro`);
+}
+
+async function lookupAccount(userId: string): Promise<AccountPresence> {
+  const { data, error } = await supabase.auth.admin.getUserById(userId);
+  const status = error && typeof error === "object" && "status" in error && typeof error.status === "number"
+    ? error.status
+    : null;
+  return accountPresence({
+    user: data?.user ?? null,
+    errorStatus: status,
+    errorMessage: error?.message ?? null,
+  });
+}
+
+async function cancelSubscriptionIfPresent(subscriptionId: string): Promise<void> {
+  try {
+    await stripe.subscriptions.cancel(subscriptionId);
+  } catch (error) {
+    const code = error && typeof error === "object" && "code" in error ? String(error.code) : "";
+    if (code === "resource_missing") return;
+    throw error;
+  }
 }
 
 async function handlePaymentSucceeded(invoice: Stripe.Invoice) {
