@@ -14,6 +14,15 @@ const port = Number(process.env.PORT ?? 8787);
 const upstream = process.env.UPSTREAM;
 const liveModel = process.env.LIVE_MODEL;
 const chatModel = (requested) => (liveModel === "as-requested" ? requested : liveModel);
+// Claude requests pin OpenRouter to the Anthropic provider. A rewritten
+// model is served elsewhere, so it keeps only the provider options that
+// still apply to it.
+const liveChatBody = (body) => {
+  const model = chatModel(body.model);
+  if (model === body.model || !body.provider || typeof body.provider !== "object") return { ...body, model };
+  const { only: _only, allow_fallbacks: _allowFallbacks, ...provider } = body.provider;
+  return { ...body, model, provider };
+};
 const maxUpstreamCalls = Number(process.env.MAX_UPSTREAM_CALLS ?? 200);
 if (upstream && !liveModel) throw new Error("LIVE_MODEL is required with UPSTREAM");
 const requests = [];
@@ -280,7 +289,7 @@ async function proxy(req, res, path) {
     const response = await fetch(`${upstream}${path.replace(/^\/api/, "")}`, {
       method: "POST",
       headers: { authorization: req.headers.authorization ?? "", "content-type": "application/json" },
-      body: JSON.stringify(chat ? { ...body, model: chatModel(body.model) } : body),
+      body: JSON.stringify(chat ? liveChatBody(body) : body),
       signal: hangUp.signal,
     });
     record.status = response.status;
