@@ -40,7 +40,10 @@ interface SparringSetupProps {
   /** Fill the motion from the Current Debate. */
   debatePrefill?: boolean;
   onStart: (values: SparringSetupValues) => void;
-  /** AI requests the whole round costs (every reply and the judge), or null when unknown. */
+  /**
+   * AI requests the whole round costs (every reply and the judge), from the
+   * server. Null when unknown: an older server charges each reply and the judge.
+   */
   roundCost?: number | null;
   /** AI requests left today, or null when unknown. A round that does not fit gets a warning. */
   remainingRequests?: number | null;
@@ -73,7 +76,8 @@ export function SparringSetup({ onStart, roundCost = null, remainingRequests = n
   const plannedTurns = useMemo(() => buildSparringTurns(format, userSide), [format, userSide]);
   const aiRequests = plannedTurns.filter((turn) => turn.speaker === 'ai').length;
   // The whole round (every reply and the judge) is charged once, by model weight.
-  const cost = roundCost ?? 1;
+  // Unknown means an older server may be charging per call, so count that way.
+  const cost = roundCost ?? aiRequests + 1;
   const requestShortfall = remainingRequests !== null && remainingRequests < cost;
   const canStart = motion.trim().length >= 8 && !isStarting && isOnline;
 

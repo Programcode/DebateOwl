@@ -33,7 +33,11 @@ export interface RateLimitResult {
   session?: QuotaSession;
   /** Names this request's session charge, so a refund gives back only that charge. */
   sessionChargeId?: number;
+  /** UTC day a per-call reservation was made; refund_daily_quota gives back only today's units. */
+  reservedOn?: string;
 }
+
+const utcDay = () => new Date().toISOString().slice(0, 10);
 
 /** One Crossfire or Sparring round, charged once (see SESSION_QUOTA). */
 export interface QuotaSession {
@@ -239,23 +243,31 @@ export async function checkRateLimit(userId: string | null, model?: ModelSelecti
     // 20261022130001_weighted_quota_weekly_budget.sql). Sessions go through
     // the ledger in 20261022220000_ai_quota_sessions.sql.
     const units = quotaUnitsFor(model);
-    const { data: quota, error: quotaError } = session
-      ? await supabase.rpc("claim_ai_session_quota", {
+    const reserve = (perSession: QuotaSession | undefined) => perSession
+      ? supabase.rpc("claim_ai_session_quota", {
         p_user_id: userId,
-        p_feature: session.feature,
-        p_session_key: session.key,
+        p_feature: perSession.feature,
+        p_session_key: perSession.key,
         p_limit: dailyLimit,
         p_units: units,
         p_weekly_cap_usd: WEEKLY_AI_BUDGET_USD,
-        p_max_calls: SESSION_QUOTA[session.feature].maxCalls,
-        p_ttl_seconds: SESSION_QUOTA[session.feature].ttlSeconds,
+        p_max_calls: SESSION_QUOTA[perSession.feature].maxCalls,
+        p_ttl_seconds: SESSION_QUOTA[perSession.feature].ttlSeconds,
       })
-      : await supabase.rpc("consume_ai_quota", {
+      : supabase.rpc("consume_ai_quota", {
         p_user_id: userId,
         p_limit: dailyLimit,
         p_units: units,
         p_weekly_cap_usd: WEEKLY_AI_BUDGET_USD,
       });
+    let { data: quota, error: quotaError } = await reserve(session);
+    // A database without 20261022220000_ai_quota_sessions.sql (functions
+    // deployed before the migration) charges per call, as before.
+    if (session && quotaError && isMissingFunction(quotaError)) {
+      console.warn("[RATE LIMIT] Session quota ledger missing; charging per call");
+      session = undefined;
+      ({ data: quota, error: quotaError } = await reserve(undefined));
+    }
 
     if (quotaError) {
       console.error("[RATE LIMIT] Quota reservation failed:", quotaError);
@@ -269,7 +281,7 @@ export async function checkRateLimit(userId: string | null, model?: ModelSelecti
 
     const charged = session ? quotaRow.charged === true : true;
     const sessionCharge = session && charged && typeof quotaRow.charge_id === "number" ? { sessionChargeId: quotaRow.charge_id } : {};
-    return { allowed: true, limit: dailyLimit, current, units, canAccessProModels, charged, ...(session ? { session } : {}), ...sessionCharge };
+    return { allowed: true, limit: dailyLimit, current, units, canAccessProModels, charged, ...(session ? { session } : { reservedOn: utcDay() }), ...sessionCharge };
   } catch (err) {
     console.error("[RATE LIMIT] Check failed:", err);
     return { allowed: false, reason: "Unable to verify your account access. Please try again.", statusCode: 500 };
@@ -310,8 +322,11 @@ export async function peekRateLimit(userId: string, model?: ModelSelection): Pro
  * other call has run on it. Returns whether units went back. A failed refund
  * is logged, never thrown, so the student still gets the error.
  */
-export async function refundQuotaReservation(userId: string, reservation: Pick<RateLimitResult, "allowed" | "units" | "charged" | "session" | "sessionChargeId">): Promise<boolean> {
+export async function refundQuotaReservation(userId: string, reservation: Pick<RateLimitResult, "allowed" | "units" | "charged" | "session" | "sessionChargeId" | "reservedOn">): Promise<boolean> {
   if (!reservation.allowed || !reservation.units || reservation.charged === false) return false;
+  // refund_daily_quota lowers today's counter. Past midnight UTC that would
+  // credit the new day for units spent yesterday, so the run stays charged.
+  if (!reservation.session && reservation.reservedOn && reservation.reservedOn !== utcDay()) return false;
   try {
     if (reservation.session) {
       if (!reservation.sessionChargeId) return false;
@@ -331,6 +346,11 @@ export async function refundQuotaReservation(userId: string, reservation: Pick<R
     console.error("[RATE LIMIT] Quota refund failed:", err);
     return false;
   }
+}
+
+/** PostgREST's "function not found" (PGRST202), or Postgres's undefined_function. */
+function isMissingFunction(error: { code?: string }): boolean {
+  return error.code === "PGRST202" || error.code === "42883";
 }
 
 // ai_requests.error_code holds a short code the admin views can group by.

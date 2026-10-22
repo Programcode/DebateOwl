@@ -66,7 +66,11 @@ function install() {
         const name = url.pathname.split("/").at(-1)!;
         harness.rpcs.push({ name, body: JSON.parse(String(init?.body ?? "{}")) });
         if (name === "consume_ai_quota") return json([{ allowed: true, current_count: 1, denied_by: null }]);
-        if (name === "claim_ai_session_quota") return json([harness.claim]);
+        if (name === "claim_ai_session_quota") {
+          // A database the session migration has not reached yet.
+          if (harness.claim.missing) return json({ code: "PGRST202", message: "Could not find the function public.claim_ai_session_quota" }, 404);
+          return json([harness.claim]);
+        }
         if (name === "refund_daily_quota") return json(0);
         if (name === "refund_ai_session_quota") return json(1);
         if (name === "peek_ai_quota") return json([{ current_count: 3, week_spend_usd: 0 }]);
@@ -183,6 +187,20 @@ Deno.test("a Sparring round is charged per round by its own session id", async (
     assertEquals([harness.rpcs.at(-1)!.body.p_feature, harness.rpcs.at(-1)!.body.p_session_key], ["sparring", SPARRING_SESSION]);
   } finally {
     globalThis.fetch = originalFetch;
+  }
+});
+
+Deno.test("functions deployed before the session migration charge Sparring per call instead of failing", async () => {
+  const originalWarn = console.warn;
+  console.warn = () => undefined;
+  install();
+  try {
+    reset({ content: SPARRING_REPLY }, { missing: true });
+    assertEquals((await send({ feature: "sparring", input: sparringInput })).status, 200);
+    assertEquals(rpcNames(), ["claim_ai_session_quota", "consume_ai_quota"]);
+  } finally {
+    globalThis.fetch = originalFetch;
+    console.warn = originalWarn;
   }
 });
 

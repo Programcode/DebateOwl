@@ -243,7 +243,10 @@ export async function handleRequest(req: Request): Promise<Response> {
     effectiveReasoningEffort: reasoningEffort,
   }));
   const providerKey = Deno.env.get("OPENROUTER_API_KEY");
-  if (!providerKey) return jsonResponse({ error: "OpenRouter is not configured" }, 500, corsHeaders);
+  if (!providerKey) {
+    await refundQuotaReservation(user.id, rateLimit);
+    return jsonResponse({ error: "OpenRouter is not configured" }, 500, corsHeaders);
+  }
 
   const history = normalizeHistory(input.history);
   const startedAt = Date.now();

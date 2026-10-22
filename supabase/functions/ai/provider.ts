@@ -484,6 +484,8 @@ export async function readOpenRouterStream(
     const data = trimmed.slice("data:".length).trim();
     if (data === "[DONE]") {
       done = true;
+      // A stream that ends without a finish_reason still finished its answer.
+      if (!finishReason) stream.finished?.();
       return;
     }
     let chunk: OpenRouterStreamChunk;

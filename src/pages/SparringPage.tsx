@@ -26,6 +26,7 @@ import { useVoiceAvailability } from '@/lib/voice/availability';
 import type { SpeechDelivery } from '@/lib/voice/delivery';
 import { opponentVoice } from '@/lib/voice/opponent-voice';
 import { useSessionQuota } from '@/hooks/use-session-quota';
+import { useSubscription } from '@/hooks/use-subscription';
 import { useAuth } from '@/lib/supabase/AuthProvider';
 import { useSubscriptionError } from '@/hooks/use-subscription-error';
 import { SubscriptionErrorModals } from '@/components/features/subscription';
@@ -142,6 +143,9 @@ export default function SparringPage() {
   const config = useMemo(() => sparringConfig ?? getFeatureConfig('sparring'), [getFeatureConfig, sparringConfig]);
   // A round costs one use however many replies it takes; the setup says so.
   const sessionQuota = useSessionQuota('sparring', config, !session);
+  // While the server's answer is unknown (an older server, a timeout), warn
+  // from the browser's own estimate, as before session charging.
+  const { remainingToday } = useSubscription();
   const [checkingQuota, setCheckingQuota] = useState(false);
   useEffect(() => {
     if (userIdRef.current === userId) return;
@@ -379,7 +383,7 @@ export default function SparringPage() {
           initialValues={workspace.context ? { motion: workspace.context.motion, userSide: workspace.context.side } : undefined}
           onStart={handleStart}
           roundCost={sessionQuota.units}
-          remainingRequests={sessionQuota.remaining}
+          remainingRequests={sessionQuota.remaining ?? remainingToday}
           blockedReason={sessionQuota.blocked}
           isStarting={checkingQuota}
           debatePrefill={!workspace.context}
