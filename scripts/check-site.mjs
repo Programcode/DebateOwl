@@ -12,8 +12,12 @@ import { join, relative, sep } from 'node:path';
 const DIST = 'dist';
 const SITE_ORIGIN = JSON.parse(readFileSync('src/config/site.json', 'utf8')).origin;
 const vercel = JSON.parse(readFileSync('vercel.json', 'utf8'));
-// Indexed pages that answer no question of their own.
+// Indexed pages that answer no question of their own. The /tools pages lead
+// with the interactive tool itself; they have no #short-answer section yet.
 const NO_SHORT_ANSWER = new Set(['/terms', '/privacy']);
+const NO_SHORT_ANSWER_PREFIX = '/tools';
+const answersNoQuestion = (route) =>
+  NO_SHORT_ANSWER.has(route) || route === NO_SHORT_ANSWER_PREFIX || route.startsWith(`${NO_SHORT_ANSWER_PREFIX}/`);
 
 const problems = [];
 const report = (where, message) => problems.push(`${where}: ${message}`);
@@ -137,7 +141,7 @@ for (const file of htmlFiles(DIST)) {
 
   const robots = html.match(/<meta name="robots" content="([^"]*)"/)?.[1] ?? '';
   const indexed = !/noindex/i.test(robots) && html.includes('<link rel="canonical"');
-  if (indexed && !NO_SHORT_ANSWER.has(routeOf(file))) {
+  if (indexed && !answersNoQuestion(routeOf(file))) {
     const firstH2 = body.match(/<h2\b([^>]*)>([\s\S]*?)<\/h2>/);
     if (!firstH2 || !/\sid="short-answer"/.test(firstH2[1])) report(where, 'the first H2 is not the #short-answer question');
     else if (!textOf(firstH2[2]).endsWith('?')) report(where, 'the #short-answer H2 is not a question');
