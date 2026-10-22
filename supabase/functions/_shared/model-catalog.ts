@@ -4,7 +4,6 @@
  */
 
 export type ReasoningEffort = "low" | "medium" | "high";
-export const MAX_REQUEST_OUTPUT_TOKENS = 32_768;
 
 export interface ModelCatalogEntry {
   readonly id: string;

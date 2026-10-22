@@ -18,8 +18,9 @@ for (const [key, value] of Object.entries(environment)) Deno.env.set(key, value)
 
 const { createRequestBudgetSignal, handleRequest } = await import("./index.ts");
 const { handleRequest: handleStreamRequest } = await import("../ai-stream/index.ts");
-const { BACKGROUND_MODEL, MAX_REQUEST_OUTPUT_TOKENS, MODEL_CATALOG } = await import("../_shared/model-catalog.ts");
+const { BACKGROUND_MODEL, MODEL_CATALOG } = await import("../_shared/model-catalog.ts");
 const { MAX_ASK_HISTORY_MESSAGES } = await import("../_shared/prompt-budget.ts");
+const { outputTokenLimit, REPLY_TOKEN_CAPS } = await import("../_shared/output-caps.ts");
 
 Deno.test("AI request work shares one deadline signal", () => {
   const caller = new AbortController();
@@ -750,7 +751,8 @@ Deno.test("AI handlers use strict OpenRouter routing and server-side reasoning t
       const entry = MODEL_CATALOG[index];
       const body = openRouterBodies[index];
       if (body.model !== entry.id) throw new Error(`wrong routed model: ${String(body.model)}`);
-      if (body.max_tokens !== MAX_REQUEST_OUTPUT_TOKENS) throw new Error(`output cap was not enforced for ${entry.id}`);
+      const effort = entry.isProOnly ? "high" : "low";
+      if (body.max_tokens !== outputTokenLimit(REPLY_TOKEN_CAPS.ask, effort, entry.maxTokens)) throw new Error(`Ask output cap was not enforced for ${entry.id}`);
       const reasoning = body.reasoning as Record<string, unknown>;
       const provider = body.provider as Record<string, unknown>;
       if (reasoning.effort !== (entry.isProOnly ? "high" : "low")) throw new Error(`tier effort was not enforced for ${entry.id}`);
@@ -819,7 +821,7 @@ Deno.test("streaming OpenRouter usage records zero and missing costs distinctly"
       body: JSON.stringify({ feature: "ask", model: "openai/gpt-6-luna", input: { message: "Hello", mode: "general" } }),
     }));
     await withZero.text();
-    if (streamBodies[0]?.max_tokens !== MAX_REQUEST_OUTPUT_TOKENS) throw new Error("stream output cap was not enforced");
+    if (streamBodies[0]?.max_tokens !== outputTokenLimit(REPLY_TOKEN_CAPS.ask, "low", 128_000)) throw new Error("stream Ask output cap was not enforced");
     if (usageRows.at(-1)?.cost_usd !== 0) throw new Error(`zero stream cost was not logged: ${JSON.stringify(usageRows.at(-1))}`);
 
     includeUsage = false;
