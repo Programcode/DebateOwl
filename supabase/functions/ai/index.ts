@@ -748,11 +748,22 @@ export async function handleRequest(req: Request): Promise<Response> {
   // Characters of model text streamed to the browser. A reset does not take
   // any back: the student has already read them.
   let deliveredChars = 0;
+  // The streamed answer on screen is complete: the model sent its
+  // finish_reason. A repair retry's reset voids it.
+  let modelFinished = false;
   const countDelivered = (stream?: GenerationStream): GenerationStream | undefined => stream && {
     ...stream,
     delta: (text) => {
       deliveredChars += text.length;
       stream.delta(text);
+    },
+    reset: () => {
+      modelFinished = false;
+      stream.reset();
+    },
+    finished: () => {
+      modelFinished = true;
+      stream.finished?.();
     },
   };
   const runFeature = async (sink?: GenerationStream): Promise<Response> => {
@@ -879,9 +890,10 @@ export async function handleRequest(req: Request): Promise<Response> {
       // the browser leaving (reload, closed tab, Stop) before the student saw
       // a usable part of the answer. A run whose answer was saved, or that
       // streamed REFUND_MAX_DELIVERED_CHARS or more, stays charged, and so
-      // does one the browser left after the model had finished: a short
-      // answer may already be on screen.
-      const leftAfterAnswer = aborted && !timedOut && Boolean(completedMainUsage);
+      // does one cut off after the model had finished: a short answer may
+      // already be on screen. The finish_reason counts even when the usage
+      // trailer after it was lost to the disconnect.
+      const leftAfterAnswer = aborted && (Boolean(completedMainUsage) || modelFinished);
       const refundable = !outputSaved && !leftAfterAnswer && deliveredChars < REFUND_MAX_DELIVERED_CHARS;
       // Refund before answering, so a retry sent straight away sees it.
       const refunded = refundable && await refundQuotaReservation(userId, rateLimit);

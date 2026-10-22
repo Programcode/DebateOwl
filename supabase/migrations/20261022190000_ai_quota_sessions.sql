@@ -215,3 +215,23 @@ REVOKE ALL ON FUNCTION public.peek_ai_quota(uuid, text)
   FROM PUBLIC, anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.peek_ai_quota(uuid, text)
   TO service_role;
+
+-- The signed-in user's own AI units used today, as consume_ai_quota counts
+-- them. The Settings usage line reads it: counting ai_requests rows
+-- overstates usage now that a Crossfire or Sparring round logs a row per call
+-- but is charged once, and a refunded run still logs its row.
+CREATE FUNCTION public.ai_usage_today()
+RETURNS integer
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+  SELECT COALESCE((
+    SELECT c.request_count FROM public.daily_usage_counters c
+    WHERE c.user_id = auth.uid() AND c.usage_date = CURRENT_DATE AND c.quota_key = 'ai'
+  ), 0);
+$$;
+
+REVOKE ALL ON FUNCTION public.ai_usage_today() FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.ai_usage_today() TO authenticated, service_role;

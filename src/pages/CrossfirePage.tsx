@@ -387,6 +387,9 @@ export default function CrossfirePage() {
   // A round costs one use however many turns it takes; the setup says so.
   const sessionQuota = useSessionQuota('crossfire', modelConfig, state.phase === 'setup');
   const [checkingQuota, setCheckingQuota] = useState(false);
+  // Names the latest Start; a newer Start, leaving the page, or switching
+  // accounts makes an earlier one that is still checking quota stale.
+  const startRequestRef = useRef(0);
   const voiceLanguage = isAppLanguage(outputLanguage) ? outputLanguage : 'en';
   const voiceAvailability = useVoiceAvailability();
   // A voice round falls back to typing when the microphone is lost.
@@ -407,6 +410,7 @@ export default function CrossfirePage() {
   }, []);
 
   useEffect(() => () => {
+    startRequestRef.current += 1;
     requestRef.current?.abort();
     abortSignalRequests();
     opponentVoice.stop();
@@ -414,6 +418,8 @@ export default function CrossfirePage() {
 
   useEffect(() => {
     if (stateOwnerId === user?.id) return;
+    startRequestRef.current += 1;
+    setCheckingQuota(false);
     requestRef.current?.abort();
     abortSignalRequests();
     dispatch({ type: 'state-restored', state: restoreState(user?.id, undefined) });
@@ -620,17 +626,25 @@ export default function CrossfirePage() {
   };
 
   const beginSession = async (debateId: string | null) => {
-    if (stateRef.current.phase !== 'setup' || checkingQuota) return;
+    // The round starts from the setup as it was when Start was pressed, with
+    // the debate chosen for that motion.
+    const target = stateRef.current;
+    if (target.phase !== 'setup') return;
+    const startRequest = startRequestRef.current + 1;
+    startRequestRef.current = startRequest;
     // Check today's quota before the clock starts, so a round the server
     // would refuse never starts. An unknown answer does not block.
     setCheckingQuota(true);
-    const refusal = await sessionQuota.checkBeforeStart().finally(() => setCheckingQuota(false));
+    const refusal = await sessionQuota.checkBeforeStart();
+    if (startRequestRef.current !== startRequest) return;
+    setCheckingQuota(false);
     if (refusal) {
       handleSubscriptionError(refusal);
       return;
     }
-    const current = stateRef.current;
-    if (current.phase !== 'setup') return;
+    // Edited, restarted, or restored while the check ran: this Start is stale.
+    if (stateRef.current !== target) return;
+    const current = target;
     debateTargetRef.current = debateId;
     artifactRequestIdRef.current = crypto.randomUUID();
     opponentVoice.beginRound();

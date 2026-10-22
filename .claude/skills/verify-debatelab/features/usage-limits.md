@@ -27,5 +27,5 @@ Crossfire and Sparring are charged per round, not per call: the round's first ca
 
 ## Gotchas
 
-- Demo users are Pro with Claude Opus 5.5 as the default model, so every Generate in other recipes uses 5 units of their 999.
+- Demo users are Pro with Claude Sonnet 5.5 as the default model, so every Generate in other recipes uses 2 units of their 999. The weighted step picks Opus itself.
 - The weekly sum counts `cap_cost_usd` of every `ai_requests` row since Monday 00:00 UTC, including voice and Jev routing rows; NULL (unknown or logged before the column existed) counts as nothing, and `cost_usd` alone never counts. Cost is logged after the provider answers, so the cap can be passed by about one request.

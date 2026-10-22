@@ -30,7 +30,7 @@ Preconditions:
 - **Start Crossfire.** On `/app/crossfire`, fill test id `crossfire-resolution` and `crossfire-argument`. Click `mode-question-ai` (or `mode-ai-questions-user`), then `start-crossfire`, then `chooseForMotion(page, "create")`.
 - **Crossfire turn.** Fill `crossfire-input` and click `submit-turn`. The text `FAKE-PROVIDER crossfire answer` and `Direct answer` appear. `providerCall("crossfire")` and `providerCall("jev")` both fired.
 - **Debrief.** Click `end-crossfire`. Test id `crossfire-debrief` is visible. `crossfires` for the user equals `[{title: <resolution>, debates: {motion: <resolution>}}]`.
-- **Out of requests.** Through `admin`, set `user_settings.daily_limit_override` to N, upsert today's `daily_usage_counters` row (`quota_key: "ai"`, `request_count: N`; what the `ai` function checks), and insert N `ai_requests` rows (what the Settings usage line counts; Crossfire and Sparring ask the server). Start Crossfire in `mode-ai-questions-user`: a `dialog` containing `N of N` opens and `start-crossfire` is back. On `/app/sparring`, `sparring-request-shortfall` says `You have no AI requests left today`.
+- **Out of requests.** Through `admin`, set `user_settings.daily_limit_override` to N, upsert today's `daily_usage_counters` row (`quota_key: "ai"`, `request_count: N`; what the `ai` function checks), and insert N `ai_requests` rows (the fallback the Settings usage line counts against a database without `ai_usage_today`; Crossfire and Sparring ask the server). Start Crossfire in `mode-ai-questions-user`: a `dialog` containing `N of N` opens and `start-crossfire` is back. On `/app/sparring`, `sparring-request-shortfall` says `You have no AI requests left today`.
 
 ## Gotchas
 

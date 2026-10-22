@@ -93,10 +93,14 @@ export default function SparringPage() {
 
   // A reply that arrives after the student left is saved but not spoken.
   const mountedRef = useRef(true);
+  // Names the latest Start; a newer Start or leaving the page makes an
+  // earlier one that is still checking quota stale.
+  const startRequestRef = useRef(0);
   useEffect(() => {
     mountedRef.current = true;
     return () => {
       mountedRef.current = false;
+      startRequestRef.current += 1;
       opponentVoice.stop();
     };
   }, []);
@@ -129,7 +133,9 @@ export default function SparringPage() {
     if (session?.id) window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
   }, [session?.id]);
 
-  const config = useMemo(() => getFeatureConfig('sparring'), [getFeatureConfig]);
+  // Follows the model picked in setup; getFeatureConfig alone never changes identity.
+  const sparringConfig = useSettingsStore((state) => state.featureConfigs.sparring);
+  const config = useMemo(() => sparringConfig ?? getFeatureConfig('sparring'), [getFeatureConfig, sparringConfig]);
   // A round costs one use however many replies it takes; the setup says so.
   const sessionQuota = useSessionQuota('sparring', config, !session);
   const [checkingQuota, setCheckingQuota] = useState(false);
@@ -297,15 +303,21 @@ export default function SparringPage() {
   const handleStart = (values: SparringSetupValues) => debateGate.run(values.motion, (target) => void beginRound(values, target.debateId));
 
   const beginRound = async (values: SparringSetupValues, debateId: string | null) => {
-    if (checkingQuota) return;
+    const roundBefore = useSparringStore.getState().currentSession;
+    const startRequest = startRequestRef.current + 1;
+    startRequestRef.current = startRequest;
     // Check today's quota before the round opens, so a speech is never
     // written for a round the server would refuse. An unknown answer does not block.
     setCheckingQuota(true);
-    const refusal = await sessionQuota.checkBeforeStart().finally(() => setCheckingQuota(false));
+    const refusal = await sessionQuota.checkBeforeStart();
+    if (startRequestRef.current !== startRequest || !mountedRef.current) return;
+    setCheckingQuota(false);
     if (refusal) {
       handleSubscriptionError(refusal);
       return;
     }
+    // A round was restored or started elsewhere while the check ran: never replace it.
+    if (useSparringStore.getState().currentSession !== roundBefore) return;
     const target = { debateId };
     artifactRequestIdRef.current = crypto.randomUUID();
     opponentVoice.beginRound();

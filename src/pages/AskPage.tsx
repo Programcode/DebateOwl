@@ -149,6 +149,9 @@ export default function AskPage() {
     });
   }, [askChatId, askLoading, askMessages.length, askPersistedCount, lastRole, syncAskChat, t, toast, workspace.context]);
 
+  // The latest handleSend, for Retry and Discuss, which outlive the render that made them.
+  const sendRef = useRef<(...args: Parameters<typeof handleSend>) => ReturnType<typeof handleSend>>(async () => false);
+
   /**
    * Sends a question. Returns false when the message is rejected before sending, so the
    * composer keeps the text. A retry re-asks the last question without adding it again.
@@ -371,7 +374,8 @@ export default function AskPage() {
       console.error(error);
 
       // Failures stay in the chat with a Retry that re-asks without duplicating the question.
-      const retryAsk = (): void => { void handleSend(message, mode, citationMode, webSearch, prosConsMode, argumentMapMode, files, true); };
+      // Retry runs the latest handler, so a model picked after the failure is used.
+      const retryAsk = (): void => { void sendRef.current(message, mode, citationMode, webSearch, prosConsMode, argumentMapMode, files, true); };
       if (subError.handleSubscriptionError(error)) {
         // The dialog explains the limit; the question stays in the chat, marked
         // as not sent, with a Retry for once there is room again.
@@ -415,7 +419,6 @@ export default function AskPage() {
   // "Discuss" on a tool result opens Ask with its prompt, sent here like a typed question.
   const location = useLocation();
   const discussPrompt = (location.state as { discussPrompt?: string } | null)?.discussPrompt;
-  const sendRef = useRef(handleSend);
   sendRef.current = handleSend;
   const discussedKey = useRef<string | null>(null);
   useEffect(() => {

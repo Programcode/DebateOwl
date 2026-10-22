@@ -113,7 +113,7 @@ test("cross-ai-questions: the AI questions the user, answers are judged, and the
 /**
  * Today's AI requests are used up: the server's counter (what the ai function
  * checks, and what Crossfire and Sparring ask it for before a round) and the
- * usage rows (what the Settings usage line counts). A refused call and a Jev
+ * usage rows (the Settings usage line's fallback on an older database). A refused call and a Jev
  * helper row are on the list too, and must not count as used.
  */
 async function useUpDailyRequests(userId: string, limit: number) {

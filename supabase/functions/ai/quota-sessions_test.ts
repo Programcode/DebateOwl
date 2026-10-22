@@ -244,6 +244,47 @@ Deno.test("a streamed run the browser cancels is refunded only before a usable a
   }
 });
 
+Deno.test("a finished answer stays charged when the browser leaves before the usage trailer", async () => {
+  const originalError = console.error;
+  console.error = () => undefined;
+  install();
+  try {
+    // A complete, short answer (well under REFUND_MAX_DELIVERED_CHARS) ends
+    // with finish_reason "stop"; the usage frame and [DONE] never arrive
+    // because the browser disconnects first.
+    const answer = JSON.stringify({ response: "Fares cover little of the cost.", followUpQuestions: [], uncertainties: [] });
+    for (const [label, finished, refunded] of [
+      ["cut off mid-answer", false, true],
+      ["finished, trailer lost", true, false],
+    ] as const) {
+      reset({ hangAfter: answer, finished });
+      const browser = new AbortController();
+      const response = await send({ feature: "ask", input: { message: "A question", mode: "general", webSearch: false }, stream: true }, browser.signal);
+      const reader = response.body!.getReader();
+      // Read until every delta of the answer has reached the browser.
+      const decoder = new TextDecoder();
+      let raw = "";
+      let streamed = "";
+      while (streamed !== answer) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        raw += decoder.decode(value, { stream: true });
+        streamed = [...raw.matchAll(/event: delta\ndata: (.+)\n\n/g)].map((match) => JSON.parse(match[1]).text).join("");
+      }
+      assertEquals(streamed, answer, label);
+      browser.abort();
+      await reader.cancel().catch(() => undefined);
+      for (let wait = 0; wait < 50 && harness.usageRows.length === 0; wait += 1) await new Promise((resolve) => setTimeout(resolve, 10));
+      assertEquals(answer.length < REFUND_MAX_DELIVERED_CHARS, true, label);
+      assertEquals(rpcNames(), refunded ? ["consume_ai_quota", "refund_daily_quota"] : ["consume_ai_quota"], label);
+      assertEquals(harness.usageRows.at(-1)?.status, "cancelled", label);
+    }
+  } finally {
+    globalThis.fetch = originalFetch;
+    console.error = originalError;
+  }
+});
+
 Deno.test("a quota check reports a round's cost and what is left without reserving", async () => {
   install();
   try {

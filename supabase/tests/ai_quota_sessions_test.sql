@@ -1,5 +1,5 @@
 BEGIN;
-SELECT plan(20);
+SELECT plan(22);
 
 INSERT INTO auth.users (id)
 VALUES
@@ -141,6 +141,22 @@ SELECT results_eq(
   ARRAY[5],
   'peeking reads today''s count'
 );
+
+RESET ROLE;
+SELECT ok(
+  NOT has_function_privilege('anon', 'public.ai_usage_today()', 'EXECUTE')
+    AND has_function_privilege('authenticated', 'public.ai_usage_today()', 'EXECUTE'),
+  'only signed-in users can read their own usage'
+);
+SET LOCAL ROLE authenticated;
+SELECT set_config('request.jwt.claims', '{"sub":"88888888-8888-4888-8888-888888888888","role":"authenticated"}', true);
+SELECT set_config('request.jwt.claim.sub', '88888888-8888-4888-8888-888888888888', true);
+SELECT is(
+  public.ai_usage_today(),
+  5,
+  'a user reads today''s charged units, not one per logged call'
+);
+RESET ROLE;
 
 SELECT * FROM finish();
 ROLLBACK;

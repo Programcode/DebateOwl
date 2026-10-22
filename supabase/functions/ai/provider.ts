@@ -217,6 +217,11 @@ export interface GenerationStream {
   reset: () => void;
   /** The request moved to a step that writes nothing yet. */
   phase: (name: GenerationPhase) => void;
+  /**
+   * The model ended its answer (any finish_reason but "length", which is
+   * retried). Arrives before the usage trailer, which a disconnect can lose.
+   */
+  finished?: () => void;
 }
 
 export type GenerationPhase = "research" | "writing" | "checking";
@@ -495,13 +500,16 @@ export async function readOpenRouterStream(
       throw providerRequestError(model, null, text.length > 0);
     }
     const choice = Array.isArray(chunk.choices) ? chunk.choices[0] : undefined;
-    if (typeof choice?.finish_reason === "string" && choice.finish_reason) finishReason = choice.finish_reason;
     const content = choice?.delta?.content;
     if (typeof content === "string" && content) {
       text += content;
       textBytes += encoder.encode(content).byteLength;
       if (textBytes > MAX_PROVIDER_RESPONSE_BYTES) throw new Error(`Provider response exceeds ${MAX_PROVIDER_RESPONSE_BYTES} bytes`);
       stream.delta(content);
+    }
+    if (typeof choice?.finish_reason === "string" && choice.finish_reason) {
+      if (!finishReason && choice.finish_reason !== "length") stream.finished?.();
+      finishReason = choice.finish_reason;
     }
   };
 

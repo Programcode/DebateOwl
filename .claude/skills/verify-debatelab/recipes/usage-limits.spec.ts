@@ -33,6 +33,9 @@ test("usage-weighted: Opus counts as 5 requests, a lighter model still runs, and
 
   await openGenerate(page);
   const selector = page.getByRole("combobox", { name: "Select AI model for generate" });
+  // Demo users default to Sonnet (20261022120000_opus_default_to_sonnet.sql); pick Opus.
+  await selector.click();
+  await page.getByRole("option", { name: /Claude Opus 5\.5/ }).click();
   await expect(selector).toContainText("Claude Opus 5.5");
   await page.getByRole("button", { name: "Generate Debate Case" }).click();
   const daily = page.getByRole("dialog");
@@ -42,7 +45,9 @@ test("usage-weighted: Opus counts as 5 requests, a lighter model still runs, and
   expect(await generateCalls()).toBe(0);
   expect(await aiCounter(userId)).toBe(3);
   await evidence.step("Opus refused with 4 units left; no provider call; counter unchanged at 3");
-  await daily.getByRole("button", { name: "Not now" }).click();
+  // Pro accounts get OK, others Not now; Escape closes either.
+  await page.keyboard.press("Escape");
+  await expect(daily).toHaveCount(0);
 
   await selector.click();
   await page.getByRole("option", { name: /Claude Haiku 5\.5/ }).click();
@@ -204,11 +209,12 @@ test("usage-ask-not-sent: a question refused by the daily limit stays, marked No
   if (seedError) throw seedError;
   const question = "What is the strongest objection to free public transport?";
   await page.goto("/app/ask");
-  await page.getByRole("textbox", { name: /Ask/ }).first().fill(question);
+  await page.getByRole("textbox", { name: "Message to your debate coach" }).fill(question);
   await page.keyboard.press("Enter");
   const dialog = page.getByRole("dialog");
   await expect(dialog).toBeVisible({ timeout: AI_TIMEOUT });
-  await dialog.getByRole("button", { name: "Not now" }).click();
+  await page.keyboard.press("Escape");
+  await expect(dialog).toHaveCount(0);
   const notSent = page.getByRole("alert").filter({ hasText: "Not sent: daily limit reached" });
   await expect(notSent).toBeVisible();
   await expect(page.getByText(question).first()).toBeVisible();
@@ -216,7 +222,8 @@ test("usage-ask-not-sent: a question refused by the daily limit stays, marked No
   await evidence.aria("01-ask-not-sent", notSent);
 
   await admin.from("user_settings").update({ daily_limit_override: 20 }).eq("user_id", userId);
-  const answer = aiResponse(page, "ask");
+  // Plain Ask answers stream from ai-stream.
+  const answer = page.waitForResponse((response) => response.url().endsWith("/functions/v1/ai-stream"), { timeout: AI_TIMEOUT });
   await notSent.getByRole("button", { name: "Retry" }).click();
   await answer;
   await expect(notSent).toHaveCount(0);
