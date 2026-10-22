@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -6,6 +6,7 @@ import { useAuth } from '@/lib/supabase/AuthProvider';
 import GoogleDocsIcon from '@/components/icons/GoogleDocsIcon';
 import { ExternalLink, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { useExternalRedirectPending } from '@/hooks/use-external-redirect-pending';
 
 interface GoogleDriveAuthModalProps {
   open: boolean;
@@ -16,14 +17,17 @@ export function GoogleDriveAuthModal({ open, onOpenChange }: GoogleDriveAuthModa
   const { t } = useTranslation();
   const { signInWithGoogle } = useAuth();
   const { toast } = useToast();
-  const [isConnecting, setIsConnecting] = useState(false);
+  const { pending: isConnecting, run: runRedirect, reset: resetRedirect } = useExternalRedirectPending();
+
+  // Callers keep this dialog mounted while closed; reopening starts fresh.
+  useEffect(() => {
+    if (!open) resetRedirect();
+  }, [open, resetRedirect]);
 
   const handleConnect = async () => {
-    setIsConnecting(true);
     try {
-      await signInWithGoogle({ driveAccess: true });
+      await runRedirect(() => signInWithGoogle({ driveAccess: true }));
     } catch (error) {
-      setIsConnecting(false);
       toast({
         title: t('googleDriveAuth.failedTitle', 'Could not open Google'),
         description: error instanceof Error ? error.message : t('googleDriveAuth.failedDesc', 'Please try again.'),
