@@ -809,7 +809,8 @@ export async function handleRequest(req: Request): Promise<Response> {
       // it fails the student gets an outage message, and their request back
       // if no provider call had finished or written anything yet.
       const claudeUnavailable = err instanceof ClaudeProviderUnavailableError;
-      const refundable = claudeUnavailable && !err.afterOutput && !completedMainUsage && !usageError?.completedUsage;
+      const refundable = claudeUnavailable && !err.afterOutput && !completedMainUsage && !usageError?.completedUsage &&
+        researchUsage.length === 0 && !researchAccountingIncomplete;
       await logUsage(
         userId,
         feature,

@@ -44,7 +44,7 @@ Deno.test("AI JSON and SSE failures never expose provider response bodies", asyn
 Deno.test("a refused Claude call is not retried elsewhere, shows an outage, and gives the request back", async () => {
   const originalFetch = globalThis.fetch;
   const originalWarn = console.warn;
-  let failure: "http" | "chunk" | "chunk-after-text" = "http";
+  let failure: "http" | "chunk" | "chunk-after-text" | "repair" | "after-research" | "ok" = "http";
   let refunds = 0;
   const usageRows: Array<Record<string, unknown>> = [];
   const providerBodies: Array<Record<string, unknown>> = [];
@@ -69,24 +69,41 @@ Deno.test("a refused Claude call is not retried elsewhere, shows an outage, and 
       }
     }
     if (url.href === "https://openrouter.ai/api/v1/chat/completions") {
-      providerBodies.push(JSON.parse(String(init?.body)));
-      if (failure === "http") return new Response("PRIVATE_PROVIDER_BODY", { status: 402 });
+      const body = JSON.parse(String(init?.body));
+      providerBodies.push(body);
+      const usage = { prompt_tokens: 10, completion_tokens: 5, cost: 0, is_byok: true };
+      if (failure === "ok" && body.stream) {
+        return new Response(`data: {"choices":[{"delta":{"content":"ok"},"finish_reason":"stop"}],"usage":${JSON.stringify(usage)}}\n\ndata: [DONE]\n\n`, { headers: { "Content-Type": "text/event-stream" } });
+      }
+      if (failure === "ok") return Response.json({ choices: [{ message: { content: JSON.stringify({ response: "ok", followUpQuestions: [], uncertainties: [] }) } }], usage });
+      // A completed attempt with invalid JSON, then a refused repair retry.
+      const repairRetry = JSON.stringify(body.messages).includes("JSON REPAIR INSTRUCTION");
+      if (failure === "repair" && !repairRetry) return Response.json({ choices: [{ message: { content: "not json" } }], usage });
+      // The research search decision (on Haiku) succeeds before the main call is refused.
+      const searchDecision = JSON.stringify(body.messages).includes("User message:");
+      if (failure === "after-research" && searchDecision) return Response.json({ choices: [{ message: { content: JSON.stringify({ shouldSearch: false, query: "" }) } }], usage });
+      if (failure === "http" || failure === "repair" || failure === "after-research") return new Response("PRIVATE_PROVIDER_BODY", { status: 402 });
       const text = failure === "chunk-after-text" ? 'data: {"choices":[{"delta":{"content":"{\\"resp"}}]}\n\n' : "";
       return new Response(`${text}data: {"error":{"message":"PRIVATE_PROVIDER_BODY"}}\n\n`, { headers: { "Content-Type": "text/event-stream" } });
     }
     throw new Error(`Unexpected request: ${url}`);
   }) as typeof fetch;
-  const send = (handle: typeof ai, extra: Record<string, unknown> = {}) => handle(new Request("http://127.0.0.1/functions/v1/ai", {
+  const send = (handle: typeof ai, extra: Record<string, unknown> = {}, model = "anthropic/claude-haiku-5.5") => handle(new Request("http://127.0.0.1/functions/v1/ai", {
     method: "POST", headers: { Authorization: "Bearer test-token", "Content-Type": "application/json" },
-    body: JSON.stringify({ feature: "ask", model: "anthropic/claude-haiku-5.5", input: { message: "A question", mode: "general", webSearch: false }, ...extra }),
+    body: JSON.stringify({ feature: "ask", model, input: { message: "A question", mode: "general", webSearch: false }, ...extra }),
   }));
   try {
     for (const [label, kind, run] of [
-      ["ai", "http", async () => {
+      ...(["http", "repair"] as const).map((kind) => [`ai ${kind}`, kind, async () => {
         const response = await send(ai);
         assertEquals(response.status, 503);
         return await response.text();
-      }],
+      }] as const),
+      ["ai after research", "after-research", async () => {
+        const response = await send(ai, { input: { message: "What is the latest evidence?", mode: "general", citationMode: true } });
+        assertEquals(response.status, 503);
+        return await response.text();
+      }] as const,
       ...(["http", "chunk", "chunk-after-text"] as const).flatMap((kind) => [
         [`ai live ${kind}`, kind, async () => {
           const text = await (await send(ai, { stream: true })).text();
@@ -109,7 +126,8 @@ Deno.test("a refused Claude call is not retried elsewhere, shows an outage, and 
       assertEquals(text.includes("Anthropic Claude is temporarily unavailable. Please try again later."), true, label);
       assertEquals(text.includes('"code":"provider_unavailable"'), true, label);
       // A failure after the model wrote text keeps the request: the key already paid for it.
-      assertEquals(refunds, kind === "chunk-after-text" ? 0 : 1, `${label} refunds only a failure before output`);
+      // The repair case already completed a paid attempt before the retry failed.
+      assertEquals(refunds, kind === "chunk-after-text" || kind === "repair" || kind === "after-research" ? 0 : 1, `${label} refunds only a failure before output`);
       assertEquals(usageRows.map((row) => row.error_code), ["claude_unavailable"], label);
       // Every attempt stays on the Anthropic route; nothing is retried on another model or provider.
       assertEquals(providerBodies.length > 0, true, label);
@@ -118,6 +136,15 @@ Deno.test("a refused Claude call is not retried elsewhere, shows an outage, and 
         assertEquals(body.provider, { only: ["anthropic"], allow_fallbacks: false, require_parameters: true }, label);
       }
     }
+
+    // Neither a successful Claude answer nor a failure on another model gives a request back.
+    refunds = 0;
+    failure = "ok";
+    assertEquals((await send(ai)).status, 200);
+    assertEquals((await (await send(stream)).text()).includes("event: final"), true);
+    failure = "http";
+    assertEquals((await send(ai, {}, "openai/gpt-6-luna")).status, 500);
+    assertEquals(refunds, 0);
   } finally {
     globalThis.fetch = originalFetch;
     console.warn = originalWarn;

@@ -377,8 +377,10 @@ export async function handleRequest(req: Request): Promise<Response> {
         // back if the model had written nothing yet.
         const claudeUnavailable = !isAbort && err instanceof ClaudeProviderUnavailableError;
         if (claudeUnavailable) {
-          try { emit("error", { message: CLAUDE_UNAVAILABLE_MESSAGE, code: CLAUDE_UNAVAILABLE_CODE, status: CLAUDE_UNAVAILABLE_STATUS }); } catch { /* client disconnected */ }
+          // Refund before the client hears of the failure, so a retry it
+          // sends straight away sees the request already given back.
           if (!err.afterOutput && !accumulated) await refundDailyQuota(user.id);
+          try { emit("error", { message: CLAUDE_UNAVAILABLE_MESSAGE, code: CLAUDE_UNAVAILABLE_CODE, status: CLAUDE_UNAVAILABLE_STATUS }); } catch { /* client disconnected */ }
         } else if (!isAbort) {
           try { emit("error", { message: "AI streaming failed. Please try again.", code: "provider_error" }); } catch { /* client disconnected */ }
         }

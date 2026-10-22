@@ -6,6 +6,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { useSparringStore } from '@/lib/stores/sparring-store';
 import { useSettingsStore } from '@/lib/stores/settings-store';
 import { generateSparringTurn, judgeSparringSession } from '@/lib/ai/client';
+import { getUserFacingAIError } from '@/lib/ai/error-display';
 import type { SparringRespondInput, SparringScoreInput, SparringSpeech } from '@/lib/ai/schemas/sparring';
 import { SparringSetup, type SparringSetupValues } from '@/components/features/sparring/SparringSetup';
 import { SparringRound } from '@/components/features/sparring/SparringRound';
@@ -26,7 +27,7 @@ import type { SpeechDelivery } from '@/lib/voice/delivery';
 import { opponentVoice } from '@/lib/voice/opponent-voice';
 
 function readableError(error: unknown, fallback: string) {
-  if (error instanceof Error && error.message.trim()) return error.message;
+  if (error instanceof Error && error.message.trim()) return getUserFacingAIError(error);
   return fallback;
 }
 
