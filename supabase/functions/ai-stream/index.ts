@@ -344,11 +344,14 @@ export async function handleRequest(req: Request): Promise<Response> {
           throw new Error("OpenRouter stream ended before completion");
         }
 
-        // The text already reached the reader, so a cut-off answer cannot be
-        // retried. The flag tells the user it stopped short.
+        // A cut-off answer that already reached the reader cannot be retried;
+        // the flag tells the user it stopped short. One that spent the whole
+        // cap on reasoning sent nothing, so it fails and the client asks the
+        // structured endpoint, which retries with a larger cap.
         const replyTruncated = streamFinishReason === "length";
         if (replyTruncated) {
           console.warn(`[AI_STREAM] Reply hit its ask cap (${REPLY_TOKEN_CAPS.ask} tokens, ${model}, effort ${reasoningEffort})`);
+          if (!accumulated.trim()) throw new Error("OpenRouter reply was cut off before any text");
         }
 
         const output = {

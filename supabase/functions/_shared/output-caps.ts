@@ -15,10 +15,10 @@ export const REPLY_TOKEN_CAPS = {
   crossfireTurn: 1_000,
   /** The turn-cited Crossfire debrief: six arrays of findings. */
   crossfireDebrief: 2_000,
-  /** One Sparring opponent speech. */
-  sparringSpeech: 1_500,
+  /** One Sparring opponent speech: up to 7 minutes, 6,000 characters. */
+  sparringSpeech: 2_500,
   /** The Sparring scorecard: four categories, moments, areas, verdict. */
-  sparringScore: 2_000,
+  sparringScore: 3_000,
   /** A full case, any length setting. */
   generate: 6_000,
   attack: 4_000,
@@ -37,12 +37,12 @@ export type ReplyCap = keyof typeof REPLY_TOKEN_CAPS;
 export const TRUNCATION_RETRY_FACTOR = 2;
 
 /**
- * The share of max_tokens a budget-based model (Claude) may spend on
+ * The percentage of max_tokens a budget-based model (Claude) may spend on
  * reasoning at each effort. OpenRouter sets its budget to
  * max(max_tokens * share, 1024).
  * https://openrouter.ai/docs/use-cases/reasoning-tokens
  */
-const REASONING_SHARE: Record<ReasoningEffort, number> = { low: 0.2, medium: 0.5, high: 0.8 };
+const REASONING_SHARE_PERCENT: Record<ReasoningEffort, number> = { low: 20, medium: 50, high: 80 };
 
 /**
  * Reasoning room kept on top of the reply at each effort. Effort-based models
@@ -62,6 +62,6 @@ export function outputTokenLimit(
   effort: ReasoningEffort,
   modelMaxTokens: number,
 ): number {
-  const afterBudget = Math.ceil(replyTokens / (1 - REASONING_SHARE[effort]));
+  const afterBudget = Math.ceil((replyTokens * 100) / (100 - REASONING_SHARE_PERCENT[effort]));
   return Math.min(modelMaxTokens, Math.max(afterBudget, replyTokens + REASONING_HEADROOM[effort]));
 }
