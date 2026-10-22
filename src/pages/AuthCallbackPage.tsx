@@ -1,9 +1,10 @@
 import { useEffect } from 'react';
-import { Navigate, useSearchParams } from 'react-router-dom';
+import { Link, Navigate, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Loader2 } from 'lucide-react';
 import { useAuth } from '@/lib/supabase/AuthProvider';
 import { useToast } from '@/hooks/use-toast';
+import { Button } from '@/components/ui/button';
 import { AUTH_CALLBACK_ERROR_KEYS, safeNextPath } from '@/lib/auth-callback';
 
 /**
@@ -36,5 +37,22 @@ export default function AuthCallbackPage() {
   }
 
   if (user) return <Navigate to={next} replace />;
+
+  // The exchange did not answer in time. This URL still holds the unused code,
+  // so a reload retries it; a late success still opens the app from here.
+  if (callbackError === 'timed-out') {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center gap-4 bg-background p-6 text-center">
+        <p className="max-w-sm text-sm" role="alert">{t('login.errors.callbackTimedOut')}</p>
+        <div className="flex flex-wrap justify-center gap-2">
+          <Button onClick={() => window.location.reload()}>{t('login.retrySignIn')}</Button>
+          <Button variant="outline" asChild>
+            <Link to="/login" replace>{t('login.backToSignIn')}</Link>
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
   return <Navigate to="/login" state={{ from: { pathname: next } }} replace />;
 }

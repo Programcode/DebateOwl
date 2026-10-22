@@ -144,7 +144,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (restoredSessionsBlocked()) return false;
         if (typeof supabase.auth.getUser !== 'function') return true;
         try {
-          const { error } = await supabase.auth.getUser();
+          // Bounded: during a sign-in callback nothing else ends the wait.
+          const { error } = await withAuthTimeout(supabase.auth.getUser(), 'User lookup timeout');
           if (!isDeadUserLookup(error)) return true;
           await rejectDeadSession(supabase.auth);
           return false;
@@ -215,7 +216,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         settled = !(err instanceof AuthTimeoutError);
         // A session this browser already had still stands; getSession restores it below.
         console.warn('[Auth] sign-in callback failed:', err);
-        if (mounted) setCallbackError(authCallbackErrorFor(err));
+        if (mounted) setCallbackError(settled ? authCallbackErrorFor(err) : 'timed-out');
         return null;
       } finally {
         // Only once the exchange has an answer: a reload during the spinner,

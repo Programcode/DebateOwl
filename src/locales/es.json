@@ -540,6 +540,8 @@
     "signInWithDemoCode": "Iniciar sesión con código demo",
     "signingIn": "Iniciando sesión...",
     "finishingSignIn": "Iniciando sesión…",
+    "retrySignIn": "Reintentar",
+    "backToSignIn": "Volver al inicio de sesión",
     "invalidEmail": "Introduce una dirección de email válida.",
     "invalidCode": "Introduce un código válido de seis dígitos.",
     "invalidDemoCode": "Introduce un código demo válido.",
@@ -563,7 +565,8 @@
       "network": "No se puede conectar con DebateLab. Revisa tu conexión e inténtalo de nuevo.",
       "linkExpired": "Este enlace de inicio de sesión ha caducado o ya se usó. Solicita un código nuevo.",
       "linkOtherBrowser": "Este enlace de inicio de sesión solo funciona en el navegador donde lo pediste. Solicita aquí un código nuevo.",
-      "callbackFailed": "No se completó el inicio de sesión. Inténtalo de nuevo."
+      "callbackFailed": "No se completó el inicio de sesión. Inténtalo de nuevo.",
+      "callbackTimedOut": "El inicio de sesión está tardando más de lo normal. Inténtalo de nuevo."
     }
   },
   "admin": {

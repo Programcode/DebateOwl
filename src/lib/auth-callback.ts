@@ -2,13 +2,17 @@
 // the code; AuthCallbackPage waits for it and then opens `next` or /login.
 export const AUTH_CALLBACK_PATH = '/auth/callback';
 
-/** Why a callback did not sign anyone in. LoginPage shows a message for each. */
-export type AuthCallbackError = 'link-expired' | 'other-browser' | 'failed';
+/**
+ * Why a callback did not sign anyone in. LoginPage shows a message for each.
+ * `timed-out` is not a final answer: the code stays in the URL for a retry.
+ */
+export type AuthCallbackError = 'link-expired' | 'other-browser' | 'failed' | 'timed-out';
 
 export const AUTH_CALLBACK_ERROR_KEYS: Record<AuthCallbackError, string> = {
   'link-expired': 'login.errors.linkExpired',
   'other-browser': 'login.errors.linkOtherBrowser',
   failed: 'login.errors.callbackFailed',
+  'timed-out': 'login.errors.callbackTimedOut',
 };
 
 export type AuthCallbackParams = {

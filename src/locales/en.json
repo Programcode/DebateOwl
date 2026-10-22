@@ -540,6 +540,8 @@
     "signInWithDemoCode": "Sign in with demo code",
     "signingIn": "Signing in...",
     "finishingSignIn": "Signing you in…",
+    "retrySignIn": "Try again",
+    "backToSignIn": "Back to sign-in",
     "invalidEmail": "Enter a valid email address.",
     "invalidCode": "Enter a valid six-digit code.",
     "invalidDemoCode": "Enter a valid demo code.",
@@ -563,7 +565,8 @@
       "network": "Can't reach DebateLab. Check your connection and try again.",
       "linkExpired": "This sign-in link has expired or was already used. Send a new code.",
       "linkOtherBrowser": "This sign-in link only works in the browser where you asked for it. Send a new code here.",
-      "callbackFailed": "Sign-in didn't finish. Try again."
+      "callbackFailed": "Sign-in didn't finish. Try again.",
+      "callbackTimedOut": "Signing in is taking longer than it should. Try again."
     }
   },
   "admin": {

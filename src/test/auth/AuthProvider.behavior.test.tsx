@@ -717,6 +717,30 @@ describe('AuthProvider behavior', () => {
     expect(screen.getByTestId('user')).toHaveTextContent('callback-user');
   });
 
+  it('ends the callback wait when the stored session\'s user lookup never answers', async () => {
+    vi.useFakeTimers();
+    try {
+      window.history.replaceState({}, '', '/auth/callback?error=access_denied&error_code=otp_expired');
+      getSessionMock.mockResolvedValue({ data: { session: { user: { id: 'stored-user' }, access_token: 'stored' } }, error: null });
+      getUserMock.mockReturnValue(new Promise(() => {}));
+
+      render(
+        <AuthProvider>
+          <AuthConsumer />
+        </AuthProvider>
+      );
+
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(4_000);
+      });
+      // Auth did not answer: an outage keeps the stored session, and the page moves on.
+      expect(screen.getByTestId('loading')).toHaveTextContent('false');
+      expect(screen.getByTestId('user')).toHaveTextContent('stored-user');
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it('keeps a callback error when the stored session is restored afterwards', async () => {
     window.history.replaceState({}, '', '/auth/callback?error=access_denied&error_code=otp_expired');
     getSessionMock.mockResolvedValue({ data: { session: { user: { id: 'stored-user' }, access_token: 'stored' } }, error: null });
@@ -809,7 +833,7 @@ describe('AuthProvider behavior', () => {
 
     expect(screen.getByTestId('loading')).toHaveTextContent('false');
     expect(screen.getByTestId('user')).toHaveTextContent('none');
-    expect(screen.getByTestId('callback-error')).toHaveTextContent('failed');
+    expect(screen.getByTestId('callback-error')).toHaveTextContent('timed-out');
     // A timeout is not a final answer: the code may still be good, so a reload can retry it.
     expect(window.location.search).toBe('?code=stalled-code');
 
