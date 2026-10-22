@@ -90,6 +90,8 @@ A configured mock provider bypasses Supabase for local and test behavior. It is 
 
 Shared research, source ranking, URL validation, and prompt construction live under [`supabase/functions/_shared/`](../supabase/functions/_shared/).
 
+Research makes two small model calls of its own: Ask decides whether a question needs web search, and deep research writes follow-up search queries. Both run on `BACKGROUND_MODEL` (Claude Haiku 5.5 at low effort) in [`supabase/functions/_shared/model-catalog.ts`](../supabase/functions/_shared/model-catalog.ts), not on the model the user picked; only the answer uses that model. Their usage is still added to the parent request's row.
+
 The import endpoint validates public HTTP URLs, resolves redirect targets, blocks private networks, and enforces response timeout, content type, and size limits. Research paths bound source count and content before prompt construction.
 
 [`supabase/functions/_shared/prompt-budget.ts`](../supabase/functions/_shared/prompt-budget.ts) holds the limits that set how many input tokens a request pays for: characters kept per fetched page, search snippets per research prompt, earlier Ask messages, and the Ask context cap. A research prompt lists each source once: a page read in full is not repeated as a search snippet, and a URL that several queries found appears a single time. For `anthropic/*` models the system prompt carries a `cache_control` breakpoint, so a repeat of the same prefix within five minutes is billed at the cache-read price; a prompt below the model's minimum cacheable length is sent uncached at the normal price.
