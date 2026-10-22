@@ -122,6 +122,35 @@ async function resolveCheckoutPriceId(): Promise<{ id: string; source: string }>
   );
 }
 
+const BLOCKING_SUBSCRIPTION_STATUSES = new Set(["active", "trialing"]);
+
+/** A paid period that has not ended yet. Past or missing end dates do not block a new checkout. */
+export function subscriptionStillPaid(
+  row: { status?: string | null; current_period_end?: string | null } | null,
+  now = Date.now(),
+): boolean {
+  if (!row?.status || !BLOCKING_SUBSCRIPTION_STATUSES.has(row.status)) return false;
+  const end = Date.parse(row.current_period_end ?? "");
+  return Number.isFinite(end) && end > now;
+}
+
+async function findBlockingSubscription(userId: string): Promise<"subscribed" | "clear" | "lookup_failed"> {
+  const { data, error } = await supabase
+    .from("subscriptions")
+    .select("status, current_period_end")
+    .eq("user_id", userId)
+    .in("status", ["active", "trialing"])
+    .order("current_period_end", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (error) {
+    console.error(`[CHECKOUT] Active subscription lookup failed for ${userId}: ${error.code ?? "unknown"}`);
+    return "lookup_failed";
+  }
+  return subscriptionStillPaid(data) ? "subscribed" : "clear";
+}
+
 async function findCustomerIdByUser(user: { id: string; email?: string | null }): Promise<string | null> {
   const { data: existingSub, error: subLookupError } = await supabase
     .from("subscriptions")
@@ -243,6 +272,25 @@ export async function handleRequest(req: Request): Promise<Response> {
     if (!isAllowedCheckoutRedirectUrl(successUrl) || !isAllowedCheckoutRedirectUrl(cancelUrl)) {
       return new Response(JSON.stringify({ error: "successUrl and cancelUrl must use an approved app origin" }), {
         status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const alreadySubscribed = await findBlockingSubscription(user.id);
+    if (alreadySubscribed === "lookup_failed") {
+      return new Response(JSON.stringify({
+        error: "Could not confirm your subscription. Try again in a moment.",
+      }), {
+        status: 503,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    if (alreadySubscribed === "subscribed") {
+      return new Response(JSON.stringify({
+        error: "You already have an active Pro subscription.",
+        code: "ALREADY_SUBSCRIBED",
+      }), {
+        status: 409,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
