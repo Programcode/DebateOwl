@@ -13,8 +13,10 @@ const JAM_SCRIPT_TIMEOUT_MS = 3_000;
  * That iframe is cross-origin. Chrome cannot tell whether it is eligible for
  * the back/forward cache, and an `unload` listener inside it would block the
  * whole page. `pagehide` removes the frame first (it does not block the cache
- * the way `unload` and `beforeunload` do) and `pageshow` puts the same node
- * back when the page is restored.
+ * the way `unload` and `beforeunload` do). The frame is not put back when the
+ * page is restored: a re-added frame reloads and starts a new handshake, which
+ * Jam's already-initialized parent script rejects. Jam stays off on a page
+ * restored from the back/forward cache and returns on the next full load.
  */
 export const JAM_PASSIVE_DELAY_MS = 8_000;
 
@@ -65,34 +67,20 @@ export async function loadJamRecorder(options: JamLoaderOptions = {}): Promise<v
   await Promise.all(JAM_SCRIPT_URLS.map((source) => appendJamModule(documentRef, source)));
 }
 
-function detachJamFrames(documentRef: Document): HTMLIFrameElement[] {
-  const frames = [...documentRef.querySelectorAll<HTMLIFrameElement>(JAM_FRAME_SELECTOR)];
-  for (const frame of frames) frame.remove();
-  return frames;
-}
-
-function pageWasPersisted(event: Event): boolean {
-  return 'persisted' in event && Boolean((event as PageTransitionEvent).persisted);
+function detachJamFrames(documentRef: Document): void {
+  for (const frame of documentRef.querySelectorAll<HTMLIFrameElement>(JAM_FRAME_SELECTOR)) frame.remove();
 }
 
 export function scheduleJamRecorder(options: JamLoaderOptions = {}): void {
   const documentRef = options.documentRef ?? document;
   const windowRef = documentRef.defaultView ?? window;
   let started = false;
-  let detachedFrames: HTMLIFrameElement[] = [];
 
   // pagehide, not unload: unload listeners make the page ineligible for bfcache.
+  // Nothing is restored on pageshow; see the note on JAM_PASSIVE_DELAY_MS.
   windowRef.addEventListener('pagehide', () => {
-    detachedFrames = detachJamFrames(documentRef);
+    detachJamFrames(documentRef);
   }, { capture: true });
-  windowRef.addEventListener('pageshow', (event) => {
-    if (!pageWasPersisted(event)) return;
-    const parent = documentRef.body ?? documentRef.documentElement;
-    for (const frame of detachedFrames) {
-      if (!frame.isConnected) parent.append(frame);
-    }
-    detachedFrames = [];
-  });
 
   const start = (): void => {
     if (started) return;

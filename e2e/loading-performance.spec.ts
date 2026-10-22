@@ -22,6 +22,31 @@ test('a stalled Jam recorder cannot delay the real application', async ({ page, 
   await expect(page.getByText('DebateLab by Pi-Stack is the official')).toHaveCount(0);
 });
 
+test('a page restored from the back/forward cache leaves Jam off instead of re-adding its frame', async ({ page, browserName }) => {
+  test.skip(browserName === 'webkit', 'Jam recording requires MediaRecorder, which this WebKit runtime does not expose.');
+  await page.route('https://js.jam.dev/**', (route) => route.fulfill({ status: 200, contentType: 'text/javascript', body: '' }));
+
+  await page.goto('/', { waitUntil: 'load' });
+  const heading = page.getByRole('heading', { name: /Prepare Cases and Practice Rounds/ });
+  await expect(heading).toBeVisible();
+  const jamRequest = page.waitForRequest('https://js.jam.dev/**');
+  await page.evaluate(() => window.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true })));
+  await jamRequest;
+
+  // Stand-in for the capture frame Jam injects; the real one is cross-origin.
+  const frames = await page.evaluate(() => {
+    const frame = document.createElement('iframe');
+    frame.dataset.jamCapture = 'true';
+    document.body.append(frame);
+    window.dispatchEvent(new PageTransitionEvent('pagehide', { persisted: true }));
+    const afterHide = document.querySelectorAll('iframe[data-jam-capture]').length;
+    window.dispatchEvent(new PageTransitionEvent('pageshow', { persisted: true }));
+    return { afterHide, afterShow: document.querySelectorAll('iframe[data-jam-capture]').length };
+  });
+  expect(frames).toEqual({ afterHide: 0, afterShow: 0 });
+  await expect(heading).toBeVisible();
+});
+
 test('public routes keep the real UI after refresh', async ({ page }) => {
   await setLocale(page, 'en');
   for (const [path, label] of [

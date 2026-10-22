@@ -52,7 +52,7 @@ describe("scheduleJamRecorder", () => {
     expect(jamScripts()).toEqual([]);
   });
 
-  it("removes Jam frames on pagehide and restores them from the back/forward cache", () => {
+  it("removes Jam frames on pagehide and leaves them off after a back/forward cache restore", () => {
     const listened: string[] = [];
     const realAdd = window.addEventListener.bind(window);
     vi.spyOn(window, "addEventListener").mockImplementation((type, listener, options) => {
@@ -62,7 +62,6 @@ describe("scheduleJamRecorder", () => {
 
     scheduleJamRecorder({ mediaRecorderAvailable: false });
     expect(listened).toContain("pagehide");
-    expect(listened).toContain("pageshow");
     expect(listened).not.toContain("unload");
     expect(listened).not.toContain("beforeunload");
 
@@ -77,7 +76,7 @@ describe("scheduleJamRecorder", () => {
     const restored = new Event("pageshow");
     Object.defineProperty(restored, "persisted", { value: true });
     window.dispatchEvent(restored);
-    expect(frame.isConnected).toBe(true);
-    frame.remove();
+    expect(frame.isConnected).toBe(false);
+    expect(document.querySelectorAll("iframe[data-jam-capture]")).toHaveLength(0);
   });
 });
