@@ -1,10 +1,13 @@
 /** Runtime environment resolver for Supabase. */
 
+import { E2E_SUPABASE_ANON_KEY, E2E_SUPABASE_URL } from "./e2e-guard";
 import { STAGING_PREVIEW_PROXY_PATH, SUPABASE_PROJECTS } from "./projects";
 
 export type SupabaseEnv = "local" | "production" | "staging";
 
 type EnvironmentInput = {
+  VITE_E2E?: string;
+  VITE_E2E_ALLOW_PROD?: string;
   VITE_LOCAL_PREVIEW?: string;
   VITE_LOCAL_SUPABASE_ANON_KEY?: string;
   VITE_LOCAL_SUPABASE_URL?: string;
@@ -27,6 +30,8 @@ export function resolveSupabaseConfig(
 ): SupabaseConfig {
   const localPreview = environment.VITE_LOCAL_PREVIEW === "true";
   const stagingPreview = environment.VITE_STAGING_PREVIEW === "true";
+  const e2e = environment.VITE_E2E === "1";
+  const allowProduction = environment.VITE_E2E_ALLOW_PROD === "1";
   if (localPreview && stagingPreview) {
     throw new Error("Local preview and staging preview cannot both be enabled");
   }
@@ -62,12 +67,22 @@ export function resolveSupabaseConfig(
     if (pinned !== "production" && pinned !== "staging") {
       throw new Error(`Unknown VITE_SUPABASE_ENV: ${pinned}`);
     }
+    if (e2e && pinned === "production" && !allowProduction) {
+      throw new Error("E2E refuses to target the production Supabase project. Set VITE_E2E_ALLOW_PROD=1 to force it.");
+    }
     return { ...ENVS[pinned], env: pinned, pinned: true };
   }
 
-  return storage.getItem(ENV_STORAGE_KEY) === "staging"
-    ? { ...ENVS.staging, env: "staging" }
-    : { ...ENVS.production, env: "production" };
+  const selected = storage.getItem(ENV_STORAGE_KEY) === "staging"
+    ? { ...ENVS.staging, env: "staging" as const }
+    : { ...ENVS.production, env: "production" as const };
+  // Playwright sets VITE_E2E. The saved toggle still selects staging, and the
+  // production fallback goes to a name that does not resolve, so a stub
+  // session cannot present a malformed token to the production project.
+  if (e2e && !allowProduction && selected.env === "production") {
+    return { anonKey: E2E_SUPABASE_ANON_KEY, env: "production", url: E2E_SUPABASE_URL };
+  }
+  return selected;
 }
 
 const storageReader: StorageReader = {
