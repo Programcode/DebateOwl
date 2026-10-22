@@ -1725,6 +1725,8 @@
   },
   "sharedPage": {
     "title": "Megosztott tartalom",
+    "notFoundTitle": "A megosztott hivatkozás nem található",
+    "backHome": "Vissza a kezdőlapra",
     "noCode": "Nincs megosztási kód megadva",
     "notFound": "Tartalom nem található",
     "loadFailed": "Nem sikerült betölteni a megosztott tartalmat",

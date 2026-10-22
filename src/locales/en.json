@@ -1725,6 +1725,8 @@
   },
   "sharedPage": {
     "title": "Shared Content",
+    "notFoundTitle": "Shared link not found",
+    "backHome": "Back to home",
     "noCode": "No share code provided",
     "notFound": "Content not found",
     "loadFailed": "Failed to load shared content",

@@ -220,10 +220,14 @@ def render_page(page):
   <meta property="og:description" content="{esc(page["description"])}" />
   <meta property="og:url" content="{page_url(page["slug"])}" />
   <meta property="og:image" content="{BASE}/hero-visual.png" />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="630" />
   <meta property="og:image:alt" content="{esc(f"{PRODUCT} debate prep workspace preview")}" />
   <meta property="article:published_time" content="{published}" />
   <meta property="article:modified_time" content="{modified}" />
   <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:image" content="{BASE}/hero-visual.png" />
+  <meta name="twitter:image:alt" content="{esc(f"{PRODUCT} debate prep workspace preview")}" />
   <link rel="stylesheet" href="/seo-pages.css" />
   <script type="application/ld+json">{structured_data(page, question, answer, faqs, published, modified)}</script>
 </head>
