@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useSessionStore, type Source } from '@/lib/stores/session-store';
+import { DebateRequiredError, useSessionStore, type Source } from '@/lib/stores/session-store';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button, buttonVariants } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -243,7 +243,18 @@ export default function LibraryPage() {
     if (errors.title) return addTitleRef.current?.focus();
     if (errors.content) return addContentRef.current?.focus();
     // The Library always shows the Current Debate, even while tools run one-off.
-    await addSource({ ...newSource, debateId: currentDebate?.id ?? null });
+    try {
+      await addSource({ ...newSource, debateId: currentDebate?.id ?? null });
+    } catch (error) {
+      toast({
+        title: t('libraryPage.saveFailed', 'Could not save this source.'),
+        description: error instanceof DebateRequiredError
+          ? t('debate.sourceNeedsDebate', 'Start or select a debate before saving sources.')
+          : undefined,
+        variant: 'destructive',
+      });
+      return;
+    }
     setNewSource({ title: '', content: '', type: 'text', origin: '', folder: newSource.folder });
     setIsAdding(false);
   };

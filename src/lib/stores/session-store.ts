@@ -1,5 +1,6 @@
 import { create } from 'zustand';
-import { persist, createJSONStorage } from 'zustand/middleware';
+import { persist } from 'zustand/middleware';
+import { resilientLocalStorage } from '@/lib/stores/resilient-local-storage';
 import type { Node, Edge } from 'reactflow';
 import type { GenerateOutput, GenerateInput } from '../ai/schemas/generate';
 import type { AttackOutput, AttackInput } from '../ai/schemas/attack';
@@ -7,6 +8,7 @@ import type { BrainstormOutput, BrainstormInput } from '../ai/schemas/brainstorm
 import type { FactoidsOutput, FactoidsInput } from '../ai/schemas/factoids';
 import type { AskOutput } from '../ai/schemas/ask';
 import { supabase } from '@/lib/supabase/client';
+import { currentUserId } from '@/lib/supabase/current-user';
 import i18n from '@/i18n';
 import { activeDebateId, useDebateStore, type DebateSide } from './debate-store';
 
@@ -121,6 +123,8 @@ export interface FlowchartData {
 }
 
 export interface SessionState {
+  /** Account these persisted drafts belong to. Null until sign-in binds them. */
+  ownerUserId: string | null;
   generateResult: GenerateOutput | null;
   generateLoading: boolean;
   /** The Generate section being regenerated; kept here so it survives leaving the page. */
@@ -170,6 +174,12 @@ export interface SessionState {
   setFactoidsForm: (data: Partial<FactoidsInput>) => void;
 
   setGenerateResult: (result: GenerateOutput | null) => void;
+  /**
+   * Debate the current Generate result belongs to. Null is one-off work.
+   * Undefined means a result restored before this was recorded.
+   */
+  generateResultDebateId: string | null | undefined;
+  setGenerateResultDebateId: (debateId: string | null) => void;
   setGenerateLoading: (loading: boolean) => void;
   setGenerateRegeneratingSection: (section: string | null) => void;
   saveCurrentCase: (title: string) => Promise<void>;
@@ -229,6 +239,12 @@ export interface SessionState {
   serverHydration: 'pending' | 'partial' | 'complete';
   clearAllData: () => Promise<void>;
   resetLocalData: () => void;
+  /**
+   * Binds persisted drafts to the signed-in account. A different account, or
+   * drafts saved before accounts were recorded, is cleared first so one
+   * browser cannot show the previous person's work.
+   */
+  prepareForUser: (userId: string) => void;
   clearSession: () => void;
 
   pendingFlowchartData: FlowchartData | null;
@@ -279,6 +295,54 @@ function normalizeFolder(folder?: string | null) {
   return trimmed || 'General';
 }
 
+/** Device-only work that must not cross accounts. Server lists reload after this. */
+function sessionWorkForAccount(ownerUserId: string | null): Partial<SessionState> {
+  return {
+    ownerUserId,
+    serverHydration: 'pending',
+    savedCases: [],
+    savedAttacks: [],
+    savedBrainstorms: [],
+    savedFactoids: [],
+    savedChats: [],
+    savedFlowcharts: [],
+    savedCrossfires: [],
+    autosavedCases: [],
+    autosavedAttacks: [],
+    autosavedBrainstorms: [],
+    autosavedFactoids: [],
+    askChatId: null,
+    askChatDebateId: null,
+    askPersistedCount: 0,
+    sourceFolders: ['General'],
+    sourceLibrary: [],
+    generateResult: null,
+    attackResult: null,
+    brainstormResult: null,
+    factoidsResult: null,
+    askMessages: [],
+    askStreamingAssistant: null,
+    pendingFlowchartData: null,
+    generateForm: {},
+    generateResultDebateId: undefined,
+    attackForm: {},
+    brainstormForm: {},
+    factoidsForm: {},
+  };
+}
+
+/**
+ * Keeps a rehydrate that finishes after sign-in from putting another account's
+ * snapshot back. Drafts with no owner are kept only while nobody is bound yet;
+ * binding then clears them.
+ */
+export function mergePersistedSessionState(persistedState: unknown, currentState: SessionState): SessionState {
+  const saved = persistedState && typeof persistedState === 'object' ? persistedState as Partial<SessionState> : {};
+  const savedOwner = typeof saved.ownerUserId === 'string' ? saved.ownerUserId : null;
+  if (currentState.ownerUserId && savedOwner !== currentState.ownerUserId) return currentState;
+  return { ...currentState, ...saved, ownerUserId: savedOwner ?? currentState.ownerUserId };
+}
+
 function mergeSourceFolders(currentFolders: string[], sources: Source[] = []) {
   return Array.from(new Set([
     'General',
@@ -288,8 +352,11 @@ function mergeSourceFolders(currentFolders: string[], sources: Source[] = []) {
 }
 
 async function getUserId() {
-  const { data } = await supabase.auth.getUser();
-  return data.user?.id || null;
+  return await currentUserId();
+}
+
+function signInRequired(action: string): Error {
+  return new Error(`Sign in to ${action}`);
 }
 
 type EqQuery = {
@@ -454,6 +521,7 @@ export function parseSourceProvenance(value: unknown): SourceProvenance | undefi
 export const useSessionStore = create<SessionState>()(
   persist(
     (set, get) => ({
+      ownerUserId: null as string | null,
       generateResult: null as GenerateOutput | null,
       generateLoading: false,
       generateRegeneratingSection: null as string | null,
@@ -485,11 +553,13 @@ export const useSessionStore = create<SessionState>()(
       sourceLibrary: [] as Source[],
 
       generateForm: {},
+      generateResultDebateId: undefined as string | null | undefined,
       attackForm: {},
       brainstormForm: {},
       factoidsForm: {},
 
       setGenerateForm: (data) => set((state) => ({ generateForm: mergeFormState(state.generateForm, data) })),
+      setGenerateResultDebateId: (debateId) => set({ generateResultDebateId: debateId }),
       setAttackForm: (data) => set((state) => ({ attackForm: mergeFormState(state.attackForm, data) })),
       setBrainstormForm: (data) => set((state) => ({ brainstormForm: mergeFormState(state.brainstormForm, data) })),
       setFactoidsForm: (data) => set((state) => ({ factoidsForm: mergeFormState(state.factoidsForm, data) })),
@@ -509,13 +579,7 @@ export const useSessionStore = create<SessionState>()(
         const place = (list: Source[], item: Source) =>
           restoredId ? [...list, item].sort((x, y) => y.createdAt - x.createdAt) : [item, ...list];
         const userId = await getUserId();
-        if (!userId) {
-          set((state) => ({
-            sourceFolders: mergeSourceFolders(state.sourceFolders, [localItem]),
-            sourceLibrary: place(state.sourceLibrary, localItem),
-          }));
-          return;
-        }
+        if (!userId) throw signInRequired('save this source');
 
         const folderResult = await supabase
           .from('source_folders')
@@ -560,14 +624,17 @@ export const useSessionStore = create<SessionState>()(
       },
       createSourceFolder: async (folder) => {
         const normalized = normalizeFolder(folder);
+        const userId = await getUserId();
+        if (!userId) throw signInRequired('save this folder');
+        throwOnWriteError(
+          await supabase
+            .from('source_folders')
+            .upsert({ user_id: userId, name: normalized }, { onConflict: 'user_id,name' }),
+          'save source folder',
+        );
         set((state) => ({
           sourceFolders: mergeSourceFolders([...state.sourceFolders, normalized], state.sourceLibrary),
         }));
-        const userId = await getUserId();
-        if (!userId) return;
-        await supabase
-          .from('source_folders')
-          .upsert({ user_id: userId, name: normalized }, { onConflict: 'user_id,name' });
       },
       updateSource: async (id, patch) => {
         const current = get().sourceLibrary.find((s) => s.id === id);
@@ -595,7 +662,7 @@ export const useSessionStore = create<SessionState>()(
 
         try {
           const userId = await getUserId();
-          if (!userId) return;
+          if (!userId) throw signInRequired('save this source');
           if (nextSource.folder) {
             const folderResult = await supabase
               .from('source_folders')
@@ -660,7 +727,7 @@ export const useSessionStore = create<SessionState>()(
         set((state) => ({ sourceLibrary: state.sourceLibrary.map((source) => updates.get(source.id) ?? source) }));
         try {
           const userId = await getUserId();
-          if (!userId) return;
+          if (!userId) throw signInRequired('save this source');
           await Promise.all(Array.from(updates.values()).map(async (source) => {
             const result = await applyUserScopedIdFilter(
               supabase.from('sources').update({ metadata: source.metadata ?? null }),
@@ -696,7 +763,7 @@ export const useSessionStore = create<SessionState>()(
         };
 
         const userId = await getUserId();
-        if (!userId) return applyRename();
+        if (!userId) throw signInRequired('rename this folder');
         const folderResult = await supabase
           .from('source_folders')
           .upsert({ user_id: userId, name: to }, { onConflict: 'user_id,name' });
@@ -737,7 +804,7 @@ export const useSessionStore = create<SessionState>()(
         };
 
         const userId = await getUserId();
-        if (!userId) return applyDelete();
+        if (!userId) throw signInRequired('delete this folder');
         if (affected.length > 0) {
           throwOnWriteError(
             await supabase.from('sources').update({ folder: 'General' }).eq('user_id', userId).eq('debate_id', debateId).eq('folder', folder),
@@ -757,13 +824,12 @@ export const useSessionStore = create<SessionState>()(
         const debateId = useDebateStore.getState().currentDebateId;
         if (!debateId) throw new DebateRequiredError();
         const userId = await getUserId();
-        if (userId) {
-          throwOnWriteError(
-            await supabase.from('sources').update({ is_active: isActive })
-              .eq('user_id', userId).eq('debate_id', debateId).eq('folder', normalized),
-            'update source folder activity',
-          );
-        }
+        if (!userId) throw signInRequired('update this folder');
+        throwOnWriteError(
+          await supabase.from('sources').update({ is_active: isActive })
+            .eq('user_id', userId).eq('debate_id', debateId).eq('folder', normalized),
+          'update source folder activity',
+        );
         set((state) => ({
           sourceLibrary: state.sourceLibrary.map((source) =>
             source.debateId === debateId && normalizeFolder(source.folder) === normalized ? { ...source, isActive } : source
@@ -772,10 +838,9 @@ export const useSessionStore = create<SessionState>()(
       },
       removeSource: async (id) => {
         const userId = await getUserId();
-        if (userId) {
-          const result = await applyUserScopedIdFilter(supabase.from('sources').delete(), userId, id);
-          throwOnWriteError(result, 'delete source');
-        }
+        if (!userId) throw signInRequired('delete this source');
+        const result = await applyUserScopedIdFilter(supabase.from('sources').delete(), userId, id);
+        throwOnWriteError(result, 'delete source');
         set((state) => ({ sourceLibrary: state.sourceLibrary.filter((source) => source.id !== id) }));
       },
       toggleSource: async (id) => {
@@ -783,12 +848,11 @@ export const useSessionStore = create<SessionState>()(
         if (!current) return;
         const nextValue = !current.isActive;
         const userId = await getUserId();
-        if (userId) {
-          throwOnWriteError(
-            await applyUserScopedIdFilter(supabase.from('sources').update({ is_active: nextValue }), userId, id),
-            'toggle source activity',
-          );
-        }
+        if (!userId) throw signInRequired('update this source');
+        throwOnWriteError(
+          await applyUserScopedIdFilter(supabase.from('sources').update({ is_active: nextValue }), userId, id),
+          'toggle source activity',
+        );
         set((state) => ({
           sourceLibrary: state.sourceLibrary.map((source) => source.id === id ? { ...source, isActive: nextValue } : source),
         }));
@@ -822,12 +886,8 @@ export const useSessionStore = create<SessionState>()(
       saveCurrentCase: async (title) => {
         const current = get().generateResult;
         if (!current) return;
-        const localItem = { id: generateId(), data: current, createdAt: Date.now(), title };
         const userId = await getUserId();
-        if (!userId) {
-          set((state) => ({ savedCases: [localItem, ...state.savedCases] }));
-          return;
-        }
+        if (!userId) throw signInRequired('save this case');
         const { data, error } = await supabase
           .from('cases')
           .insert({ user_id: userId, title, input: {}, output: current })
@@ -839,13 +899,37 @@ export const useSessionStore = create<SessionState>()(
         set((state) => ({ savedCases: [savedItem, ...state.savedCases] }));
       },
       deleteSavedCase: async (id) => {
-        set((state) => ({ savedCases: state.savedCases.filter((c) => c.id !== id) }));
-        const userId = await getUserId();
-        await applyUserScopedIdFilter(supabase.from('cases').delete(), userId, id);
+        const previous = get().savedCases;
+        set({ savedCases: previous.filter((item) => item.id !== id) });
+        try {
+          const userId = await getUserId();
+          // A missing session must not report success for a row the server still has.
+          if (!userId) throw new Error('[SessionStore] Could not confirm the signed-in user to delete a case');
+          throwOnWriteError(
+            await applyUserScopedIdFilter(supabase.from('cases').delete(), userId, id),
+            'delete case',
+          );
+        } catch (error) {
+          set({ savedCases: previous });
+          throw error;
+        }
       },
       loadSavedCase: (id) => {
         const item = get().savedCases.find((c) => c.id === id);
-        if (item) set({ generateResult: item.data });
+        if (!item) return;
+        const motion = item.data.metadata?.motion?.trim();
+        const side = item.data.metadata?.side;
+        set({
+          generateResult: item.data,
+          // Null means this case is one-off, so a later regenerate does not
+          // borrow whichever debate happens to be open.
+          generateResultDebateId: item.debateId ?? null,
+          generateForm: {
+            ...get().generateForm,
+            ...(motion ? { motion } : {}),
+            ...(side ? { side } : {}),
+          },
+        });
       },
 
       setAttackResult: (result) => {
@@ -859,12 +943,8 @@ export const useSessionStore = create<SessionState>()(
       saveCurrentAttack: async (title) => {
         const current = get().attackResult;
         if (!current) return;
-        const localItem = { id: generateId(), data: current, createdAt: Date.now(), title };
         const userId = await getUserId();
-        if (!userId) {
-          set((state) => ({ savedAttacks: [localItem, ...state.savedAttacks] }));
-          return;
-        }
+        if (!userId) throw signInRequired('save this attack');
         const { data, error } = await supabase
           .from('attacks')
           .insert({ user_id: userId, title, input: {}, output: current })
@@ -891,12 +971,8 @@ export const useSessionStore = create<SessionState>()(
       saveCurrentBrainstorm: async (title) => {
         const current = get().brainstormResult;
         if (!current) return;
-        const localItem = { id: generateId(), data: current, createdAt: Date.now(), title };
         const userId = await getUserId();
-        if (!userId) {
-          set((state) => ({ savedBrainstorms: [localItem, ...state.savedBrainstorms] }));
-          return;
-        }
+        if (!userId) throw signInRequired('save this brainstorm');
         const { data, error } = await supabase
           .from('brainstorms')
           .insert({ user_id: userId, title, input: {}, output: current })
@@ -923,12 +999,8 @@ export const useSessionStore = create<SessionState>()(
       saveCurrentFactoids: async (title) => {
         const current = get().factoidsResult;
         if (!current) return;
-        const localItem = { id: generateId(), data: current, createdAt: Date.now(), title };
         const userId = await getUserId();
-        if (!userId) {
-          set((state) => ({ savedFactoids: [localItem, ...state.savedFactoids] }));
-          return;
-        }
+        if (!userId) throw signInRequired('save these factoids');
         const { data, error } = await supabase
           .from('factoids')
           .insert({ user_id: userId, title, input: {}, output: current })
@@ -961,12 +1033,8 @@ export const useSessionStore = create<SessionState>()(
       saveCurrentChat: async (title) => {
         const current = get().askMessages;
         if (current.length === 0) return;
-        const localItem = { id: generateId(), data: current, createdAt: Date.now(), title };
         const userId = await getUserId();
-        if (!userId) {
-          set((state) => ({ savedChats: [localItem, ...state.savedChats] }));
-          return;
-        }
+        if (!userId) throw signInRequired('save this chat');
         const { data: chat, error } = await supabase
           .from('chats')
           .insert({ user_id: userId, title })
@@ -995,12 +1063,8 @@ export const useSessionStore = create<SessionState>()(
       },
 
       saveFlowchart: async (title, data, debateId = activeDebateId()) => {
-        const localItem = { id: generateId(), data, createdAt: Date.now(), title, debateId, side: 'neutral' as const };
         const userId = await getUserId();
-        if (!userId) {
-          set((state) => ({ savedFlowcharts: [localItem, ...state.savedFlowcharts] }));
-          return;
-        }
+        if (!userId) throw signInRequired('save this flowchart');
         const { data: saved, error } = await supabase
           .from('flowcharts')
           .insert({
@@ -1029,7 +1093,7 @@ export const useSessionStore = create<SessionState>()(
 
       recordResult: async (kind, { title, input, output, debateId, side }) => {
         const userId = await getUserId();
-        if (!userId) throw new Error('[SessionStore] Sign in to save results to a debate');
+        if (!userId) throw signInRequired('save results to a debate');
         const { data, error } = await supabase
           .from(RESULT_TABLES[kind])
           .insert({ user_id: userId, debate_id: debateId, side, title: title.slice(0, 300) || 'Untitled', input: input ?? {}, output })
@@ -1046,7 +1110,7 @@ export const useSessionStore = create<SessionState>()(
 
       updateRecordedResult: async (kind, id, output) => {
         const userId = await getUserId();
-        if (!userId) return;
+        if (!userId) throw signInRequired('update this result');
         throwOnWriteError(
           await applyUserScopedIdFilter(supabase.from(RESULT_TABLES[kind]).update({ output }), userId, id),
           `update ${kind}`,
@@ -1233,38 +1297,11 @@ export const useSessionStore = create<SessionState>()(
           askPersistedCount: 0,
         });
       },
-      resetLocalData: () => set({
-        serverHydration: 'pending',
-        savedCases: [],
-        savedAttacks: [],
-        savedBrainstorms: [],
-        savedFactoids: [],
-        savedChats: [],
-        savedFlowcharts: [],
-        savedCrossfires: [],
-        autosavedCases: [],
-        autosavedAttacks: [],
-        autosavedBrainstorms: [],
-        autosavedFactoids: [],
-        askChatId: null,
-        askChatDebateId: null,
-        askPersistedCount: 0,
-        sourceFolders: ['General'],
-        sourceLibrary: [],
-        generateResult: null,
-        attackResult: null,
-        brainstormResult: null,
-        factoidsResult: null,
-        askMessages: [],
-        askStreamingAssistant: null,
-        // Drafts belong to the signed-in user too; the next person on this
-        // browser must not see them prefilled.
-        pendingFlowchartData: null,
-        generateForm: {},
-        attackForm: {},
-        brainstormForm: {},
-        factoidsForm: {},
-      }),
+      resetLocalData: () => set(sessionWorkForAccount(null)),
+      prepareForUser: (userId) => {
+        if (get().ownerUserId === userId) return;
+        set(sessionWorkForAccount(userId));
+      },
 
       clearSession: () => set({
         generateResult: null,
@@ -1278,6 +1315,7 @@ export const useSessionStore = create<SessionState>()(
         askPersistedCount: 0,
         pendingFlowchartData: null,
         generateForm: {},
+        generateResultDebateId: undefined,
         attackForm: {},
         brainstormForm: {},
         factoidsForm: {},
@@ -1285,11 +1323,12 @@ export const useSessionStore = create<SessionState>()(
     }),
     {
       name: 'debate-trainer-storage',
-      storage: createJSONStorage(() => localStorage),
+      storage: resilientLocalStorage(),
       // v1 scopes saved work and sources to debates. Drop lists persisted by
       // older clients: the server replaces them on hydrate, and keeping them
       // would resurrect purged legacy rows and debate-less sources.
       version: 1,
+      merge: mergePersistedSessionState,
       migrate: (persistedState) => {
         const state = { ...(persistedState as Record<string, unknown>) };
         for (const key of [
@@ -1325,7 +1364,7 @@ async function syncAskChatNow(debateId: string | null): Promise<void> {
   if (askMessages.length === 0 || askPersistedCount >= askMessages.length) return;
   if (!askChatId && !debateId) return;
   const userId = await getUserId();
-  if (!userId) return;
+  if (!userId) throw signInRequired('save this chat');
   // Clearing or replacing the conversation while a write is in flight must not
   // hand this chat or its count to the next conversation.
   const sameConversation = () => {

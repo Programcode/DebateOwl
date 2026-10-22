@@ -7,6 +7,7 @@ import { HttpError, jsonError, requireUser } from "../_shared/auth.ts";
 import { getCorsHeaders } from "../_shared/cors.ts";
 import {
   findCustomerOwnedByUser,
+  hasOpenSubscription,
   isAllowedCheckoutRedirectUrl,
 } from "./checkout-security.ts";
 
@@ -248,6 +249,30 @@ export async function handleRequest(req: Request): Promise<Response> {
     }
 
     const resolvedPrice = await resolveCheckoutPriceId();
+
+    // A second Checkout session creates a second subscription on the same
+    // customer. Refuse while one can still bill, and send the student to
+    // Settings to manage the one they have.
+    const { data: existingSubscriptions, error: subscriptionReadError } = await supabase
+      .from("subscriptions")
+      .select("status")
+      .eq("user_id", user.id);
+    if (subscriptionReadError) {
+      console.error(`[CHECKOUT] Could not read subscriptions for ${user.id}: ${subscriptionReadError.code}`);
+      return new Response(JSON.stringify({ error: "Failed to create checkout session" }), {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    if (hasOpenSubscription(existingSubscriptions)) {
+      return new Response(JSON.stringify({
+        error: "You already have a subscription. Manage it from Settings.",
+        code: "already_subscribed",
+      }), {
+        status: 409,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
     // Get or create Stripe customer
     let customerId = await findCustomerIdByUser({ id: user.id, email: user.email });

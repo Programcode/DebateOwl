@@ -15,7 +15,9 @@ const {
   signOutMock,
   unsubscribeMock,
   hydrateSessionStoreMock,
+  prepareSessionStoreMock,
   hydrateSettingsStoreMock,
+  prepareSettingsStoreMock,
   resetSessionStoreMock,
   clearSessionStoreMock,
   resetSettingsStoreMock,
@@ -36,7 +38,9 @@ const {
   const signOutMock = vi.fn();
   const unsubscribeMock = vi.fn();
   const hydrateSessionStoreMock = vi.fn();
+  const prepareSessionStoreMock = vi.fn();
   const hydrateSettingsStoreMock = vi.fn();
+  const prepareSettingsStoreMock = vi.fn();
   const resetSessionStoreMock = vi.fn();
   const clearSessionStoreMock = vi.fn();
   const resetSettingsStoreMock = vi.fn();
@@ -63,7 +67,9 @@ const {
     signOutMock,
     unsubscribeMock,
     hydrateSessionStoreMock,
+    prepareSessionStoreMock,
     hydrateSettingsStoreMock,
+    prepareSettingsStoreMock,
     resetSessionStoreMock,
     clearSessionStoreMock,
     resetSettingsStoreMock,
@@ -104,6 +110,7 @@ vi.mock('@/lib/native', () => ({
 vi.mock('@/lib/stores/session-store', () => ({
   useSessionStore: (selector: (state: any) => any) => selector({
     hydrateFromServer: hydrateSessionStoreMock,
+    prepareForUser: prepareSessionStoreMock,
     resetLocalData: resetSessionStoreMock,
     clearSession: clearSessionStoreMock,
   }),
@@ -112,6 +119,7 @@ vi.mock('@/lib/stores/session-store', () => ({
 vi.mock('@/lib/stores/settings-store', () => ({
   useSettingsStore: (selector: (state: any) => any) => selector({
     hydrateFromServer: hydrateSettingsStoreMock,
+    prepareForUser: prepareSettingsStoreMock,
     resetLocalData: resetSettingsStoreMock,
   }),
 }));
@@ -206,7 +214,9 @@ describe('AuthProvider behavior', () => {
 
     expect(screen.getByTestId('user')).toHaveTextContent('user_1');
     expect(hydrateSessionStoreMock).toHaveBeenCalled();
+    expect(prepareSessionStoreMock).toHaveBeenCalledWith('user_1');
     expect(hydrateSettingsStoreMock).toHaveBeenCalled();
+    expect(prepareSettingsStoreMock).toHaveBeenCalledWith('user_1');
     expect(prepareSparringStoreMock).toHaveBeenCalledWith('user_1');
     expect(hydrateSparringStoreMock).toHaveBeenCalled();
     expect(onAuthStateChangeMock).toHaveBeenCalled();
@@ -232,7 +242,9 @@ describe('AuthProvider behavior', () => {
     });
 
     expect(hydrateSessionStoreMock).toHaveBeenCalledTimes(1);
+    expect(prepareSessionStoreMock).toHaveBeenCalledTimes(1);
     expect(hydrateSettingsStoreMock).toHaveBeenCalledTimes(1);
+    expect(prepareSettingsStoreMock).toHaveBeenCalledTimes(1);
     expect(prepareSparringStoreMock).toHaveBeenCalledTimes(1);
     expect(hydrateSparringStoreMock).toHaveBeenCalledTimes(1);
   });
@@ -261,8 +273,43 @@ describe('AuthProvider behavior', () => {
     });
 
     expect(hydrateSessionStoreMock).toHaveBeenCalled();
+    expect(prepareSessionStoreMock).toHaveBeenCalledWith('user_2');
     expect(hydrateSettingsStoreMock).toHaveBeenCalled();
+    expect(prepareSettingsStoreMock).toHaveBeenCalledWith('user_2');
     expect(prepareSparringStoreMock).toHaveBeenCalledWith('user_2');
+  });
+
+  it('drops another account\'s current debate before the app unlocks', async () => {
+    useDebateStore.setState({
+      ownerUserId: 'user_a',
+      debates: [{
+        id: 'debate-a',
+        motion: 'Secret motion',
+        settings: {},
+        instructions: '',
+        lastActivityAt: 1,
+        createdAt: 1,
+      }],
+      currentDebateId: 'debate-a',
+    });
+    getSessionMock.mockResolvedValue({
+      data: { session: { user: { id: 'user_b' }, access_token: 'token' } },
+      error: null,
+    });
+
+    render(
+      <AuthProvider>
+        <AuthConsumer />
+      </AuthProvider>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByTestId('loading')).toHaveTextContent('false');
+    });
+
+    expect(useDebateStore.getState().ownerUserId).toBe('user_b');
+    expect(useDebateStore.getState().debates).toEqual([]);
+    expect(useDebateStore.getState().currentDebateId).toBeNull();
   });
 
   it('removes refresh tokens persisted by older clients during startup', async () => {
