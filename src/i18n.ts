@@ -6,7 +6,7 @@ import hu from './locales/hu.json';
 import toolsEn from './locales/tools/en.json';
 import toolsEs from './locales/tools/es.json';
 import toolsHu from './locales/tools/hu.json';
-import { languageName, type AppLanguage } from './lib/languages';
+import { type AppLanguage } from './lib/languages';
 
 // Bundled resources make init synchronous; the returned promise cannot reject.
 void i18n.use(initReactI18next).init({
@@ -28,7 +28,6 @@ export async function applyAppLanguage(language: AppLanguage): Promise<void> {
   if (typeof document === 'undefined') return;
 
   document.documentElement.lang = language;
-  document.querySelector<HTMLMetaElement>('meta[name="language"]')?.setAttribute('content', languageName(language));
 }
 
 export default i18n;
