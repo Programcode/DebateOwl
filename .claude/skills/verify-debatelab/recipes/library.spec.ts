@@ -106,9 +106,13 @@ test("lib-offline: offline, the switch does not move and says the change was not
   await expect(sheet.getByRole("textbox", { name: "Content" })).toHaveValue("Fares, ridership and a rewritten note.");
   await evidence.shot("02-offline-edit-kept");
   await page.context().setOffline(false);
-  const { data } = await admin.from("sources").select("is_active").eq("user_id", await user.userId()).eq("title", "Offline study");
-  expect(data).toEqual([{ is_active: true }]);
-  await evidence.json("03-row-unchanged", data);
+  const row = async () => (await admin.from("sources").select("content,is_active").eq("user_id", await user.userId()).eq("title", "Offline study")).data;
+  expect(await row()).toEqual([{ content: "Fares and ridership.", is_active: true }]);
+  // Back online, the kept text saves on retry and the switch is left as it was.
+  await sheet.getByRole("button", { name: "Save" }).click();
+  await expect(page.getByText("Source updated")).toBeVisible();
+  await expect.poll(row).toEqual([{ content: "Fares, ridership and a rewritten note.", is_active: true }]);
+  await evidence.json("03-row-after-retry", await row());
 });
 
 test("lib-dedupe and lib-layout: a page saved once per debate, and long titles keep their room on a phone", async ({ signedIn: page, user, evidence }) => {

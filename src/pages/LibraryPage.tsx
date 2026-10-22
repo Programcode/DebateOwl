@@ -220,6 +220,9 @@ export default function LibraryPage() {
   const draftTitleRef = useRef<HTMLInputElement>(null);
   const draftContentRef = useRef<HTMLTextAreaElement>(null);
   const draftLoadedFor = useRef<string | null>(null);
+  // What the sheet loaded, so Save sends only the fields the student changed.
+  const draftBase = useRef<typeof sourceDraft | null>(null);
+  const [isSavingDraft, setIsSavingDraft] = useState(false);
   const [newSource, setNewSource] = useState({
     title: '',
     content: '',
@@ -512,15 +515,17 @@ export default function LibraryPage() {
     }
     if (draftLoadedFor.current === selectedSource.id) return;
     draftLoadedFor.current = selectedSource.id;
-    setDraftErrors({});
-    setSourceDraft({
+    const loaded = {
       title: selectedSource.title,
       content: selectedSource.content,
       type: selectedSource.type,
       origin: selectedSource.origin || '',
       folder: selectedSource.folder || 'General',
       isActive: selectedSource.isActive,
-    });
+    };
+    draftBase.current = loaded;
+    setDraftErrors({});
+    setSourceDraft(loaded);
   }, [selectedSource]);
   useEffect(() => {
     setFolderRenameValue(selectedFolder === 'all' ? '' : selectedFolder);
@@ -599,21 +604,25 @@ export default function LibraryPage() {
     }
   };
   const handleSaveSourceDraft = async () => {
-    if (!selectedSource) return;
+    if (!selectedSource || isSavingDraft) return;
     const errors = requiredErrors(sourceDraft.title, sourceDraft.content);
     setDraftErrors(errors);
     if (errors.title) return draftTitleRef.current?.focus();
     if (errors.content) return draftContentRef.current?.focus();
 
+    // Only what was edited here is written, so a change that reached this
+    // source while the sheet was open (a switch, research) is not overwritten.
+    const base = draftBase.current;
+    const draft = sourceDraft;
+    const patch = Object.fromEntries(
+      (Object.keys(draft) as Array<keyof typeof draft>)
+        .filter((key) => !base || draft[key] !== base[key])
+        .map((key) => [key, draft[key]]),
+    ) as Partial<typeof draft>;
+    setIsSavingDraft(true);
     try {
-      await updateSource(selectedSource.id, {
-        title: sourceDraft.title,
-        content: sourceDraft.content,
-        type: sourceDraft.type,
-        origin: sourceDraft.origin,
-        folder: sourceDraft.folder,
-        isActive: sourceDraft.isActive,
-      });
+      await updateSource(selectedSource.id, patch);
+      draftBase.current = draft;
     } catch (error) {
       toast({
         title: t('libraryPage.saveFailed', 'Could not save this source.'),
@@ -623,6 +632,8 @@ export default function LibraryPage() {
         variant: 'destructive',
       });
       return;
+    } finally {
+      setIsSavingDraft(false);
     }
     toast({ title: t('libraryPage.sourceUpdated', 'Source updated'), description: t('libraryPage.sourceUpdatedDesc', 'Your source changes were saved.') });
   };
@@ -1241,8 +1252,8 @@ export default function LibraryPage() {
                     {t('common.delete', 'Delete')}
                   </Button>
                 </div>
-                <Button type="button" onClick={() => void handleSaveSourceDraft()}>
-                  <Save className="mr-2 h-4 w-4" />
+                <Button type="button" disabled={isSavingDraft} onClick={() => void handleSaveSourceDraft()}>
+                  {isSavingDraft ? <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" /> : <Save className="mr-2 h-4 w-4" />}
                   {t('common.save', 'Save')}
                 </Button>
               </SheetFooter>
