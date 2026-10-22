@@ -108,11 +108,12 @@ Deno.test("a refused Claude call is not retried elsewhere, shows an outage, and 
         assertEquals(response.status, 503);
         return await response.text();
       }] as const),
-      ["ai after research", "after-research", async () => {
+      ...(["after-research", "http"] as const).map((kind) => [`ai research ${kind}`, kind, async () => {
+        // In a full outage ("http") the Haiku research step is refused too, which is no paid work.
         const response = await send(ai, { input: { message: "What is the latest evidence?", mode: "general", citationMode: true } });
         assertEquals(response.status, 503);
         return await response.text();
-      }] as const,
+      }] as const),
       ...(["http", "chunk", "chunk-after-text", "chunk-charged"] as const).flatMap((kind) => [
         [`ai live ${kind}`, kind, async () => {
           const text = await (await send(ai, { stream: true })).text();

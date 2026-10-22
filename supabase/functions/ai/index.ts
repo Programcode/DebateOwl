@@ -640,6 +640,9 @@ export async function handleRequest(req: Request): Promise<Response> {
   // collected here so the parent request's row accounts for every token.
   const researchUsage: NormalizedUsage[] = [];
   let researchAccountingIncomplete = false;
+  // A research step that finished, or failed after paid work. Claude refusing
+  // a research step outright (the same outage as the main call) does not count.
+  let researchDidWork = false;
   // Research sub-calls are small background steps, so they use the fixed
   // cheap model instead of the user's choice.
   const researchDeps: ResearchDeps = {
@@ -656,6 +659,7 @@ export async function handleRequest(req: Request): Promise<Response> {
         // A provider that ignores cancellation must not append usage after the
         // research timeout has already been finalized by the parent request.
         if (result.usage && !args.signal?.aborted) researchUsage.push(result.usage);
+        researchDidWork = true;
         return { output: result.output };
       } catch (err) {
         const usageError = err && typeof err === "object"
@@ -663,6 +667,9 @@ export async function handleRequest(req: Request): Promise<Response> {
           : undefined;
         const researchErrorUsage = selectObservedUsage(usageError, args.signal?.aborted === true);
         if (researchErrorUsage) researchUsage.push(researchErrorUsage);
+        const refusedForFree = err instanceof ClaudeProviderUnavailableError && !err.afterOutput &&
+          !usageError?.completedUsage && !chargedAgainstCap(researchErrorUsage);
+        if (!refusedForFree) researchDidWork = true;
         throw err;
       }
     },
@@ -813,14 +820,13 @@ export async function handleRequest(req: Request): Promise<Response> {
       // it fails the student gets an outage message, and their request back
       // if no provider call had finished or written anything yet.
       const claudeUnavailable = err instanceof ClaudeProviderUnavailableError;
-      const researchRan = researchUsage.length > 0 || researchAccountingIncomplete;
       const errorUsage = mergeNormalizedUsage([
         mainErrorUsage,
         ...researchUsageForLog(),
       ]);
       // OpenRouter credits already spent on the request keep it counted.
       const refundable = claudeUnavailable && !err.afterOutput && !completedMainUsage && !usageError?.completedUsage &&
-        !researchRan && !chargedAgainstCap(errorUsage);
+        !researchDidWork && !researchAccountingIncomplete && !chargedAgainstCap(errorUsage);
       await logUsage(
         userId,
         feature,
