@@ -650,6 +650,29 @@ describe('AuthProvider behavior', () => {
     expect(window.location.search).toBe('?next=%2Fapp%2Fhistory');
   });
 
+  it('keeps Google\'s provider token and drops the previous account\'s draft after a callback sign-in', async () => {
+    sessionStorage.removeItem('google_provider_token');
+    localStorage.setItem(crossfireStorageKey('stored-user'), '{"draft":true}');
+    window.history.replaceState({}, '', '/auth/callback?code=pkce-code');
+    let finishExchange!: (value: unknown) => void;
+    exchangeCodeForSessionMock.mockReturnValue(new Promise((resolve) => { finishExchange = resolve; }));
+
+    render(
+      <AuthProvider>
+        <AuthConsumer />
+      </AuthProvider>
+    );
+
+    act(() => callbackRef.current?.('INITIAL_SESSION', { user: { id: 'stored-user' }, access_token: 'stored' }));
+    await act(async () => {
+      finishExchange({ data: { session: { user: { id: 'google-user' }, access_token: 'token', provider_token: 'google-access' } }, error: null });
+    });
+
+    await waitFor(() => expect(screen.getByTestId('user')).toHaveTextContent('google-user'));
+    expect(sessionStorage.getItem('google_provider_token')).toBe('google-access');
+    expect(localStorage.getItem(crossfireStorageKey('stored-user'))).toBeNull();
+  });
+
   it('exchanges a callback code without a flow id the old way', async () => {
     window.history.replaceState({}, '', '/auth/callback?code=pkce-code');
     exchangeCodeForSessionMock.mockResolvedValue({
@@ -796,6 +819,75 @@ describe('AuthProvider behavior', () => {
       expect(screen.getByTestId('callback-error')).toHaveTextContent(expectedError);
       // The answer is final now, so the used code leaves the URL.
       expect(window.location.search).toBe('');
+    } finally {
+      warnSpy.mockRestore();
+      vi.useRealTimers();
+    }
+  });
+
+  it('after a timeout, leaves the stored account alone until the exchange answers, then opens the new one', async () => {
+    vi.useFakeTimers();
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    try {
+      window.history.replaceState({}, '', '/auth/callback?code=slow-code');
+      getSessionMock.mockResolvedValue({ data: { session: { user: { id: 'stored-user' }, access_token: 'stored' } }, error: null });
+      let finishExchange!: (value: unknown) => void;
+      exchangeCodeForSessionMock.mockReturnValue(new Promise((resolve) => { finishExchange = resolve; }));
+
+      render(
+        <AuthProvider>
+          <AuthConsumer />
+        </AuthProvider>
+      );
+
+      act(() => callbackRef.current?.('INITIAL_SESSION', { user: { id: 'stored-user' }, access_token: 'stored' }));
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(15_000);
+      });
+      // Nothing is restored or checked while the slow exchange may still sign someone in.
+      expect(screen.getByTestId('loading')).toHaveTextContent('false');
+      expect(screen.getByTestId('user')).toHaveTextContent('none');
+      expect(getSessionMock).not.toHaveBeenCalled();
+      expect(getUserMock).not.toHaveBeenCalled();
+
+      await act(async () => {
+        finishExchange({ data: { session: { user: { id: 'callback-user' }, access_token: 'token' } }, error: null });
+        await vi.advanceTimersByTimeAsync(0);
+      });
+      expect(screen.getByTestId('user')).toHaveTextContent('callback-user');
+      expect(prepareSessionStoreMock).toHaveBeenCalledWith('callback-user');
+      expect(prepareSessionStoreMock).not.toHaveBeenCalledWith('stored-user');
+    } finally {
+      warnSpy.mockRestore();
+      vi.useRealTimers();
+    }
+  });
+
+  it('after a timeout and a late failure, restores the stored account through the usual check', async () => {
+    vi.useFakeTimers();
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    try {
+      window.history.replaceState({}, '', '/auth/callback?code=slow-code');
+      getSessionMock.mockResolvedValue({ data: { session: { user: { id: 'stored-user' }, access_token: 'stored' } }, error: null });
+      let finishExchange!: (value: unknown) => void;
+      exchangeCodeForSessionMock.mockReturnValue(new Promise((resolve) => { finishExchange = resolve; }));
+
+      render(
+        <AuthProvider>
+          <AuthConsumer />
+        </AuthProvider>
+      );
+
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(15_000);
+      });
+      await act(async () => {
+        finishExchange({ data: { session: null }, error: Object.assign(new Error('expired'), { code: 'flow_state_expired' }) });
+        await vi.advanceTimersByTimeAsync(0);
+      });
+      expect(screen.getByTestId('callback-error')).toHaveTextContent('link-expired');
+      expect(getUserMock).toHaveBeenCalled();
+      expect(screen.getByTestId('user')).toHaveTextContent('stored-user');
     } finally {
       warnSpy.mockRestore();
       vi.useRealTimers();

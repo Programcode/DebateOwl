@@ -88,6 +88,9 @@ class AuthTimeoutError extends Error {
   }
 }
 
+/** What a code exchange that outlived its timeout finally answered. */
+type LateAnswer = { session: Session | null; lateError: unknown };
+
 function withAuthTimeout<T>(operation: Promise<T>, message: string, timeoutMs = AUTH_OPERATION_TIMEOUT_MS): Promise<T> {
   return Promise.race([
     operation,
@@ -188,6 +191,55 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // while the code is still being exchanged, and that must not end loading.
     const callbackUrl = new URL(window.location.href);
     let callbackPending = callbackUrl.pathname === AUTH_CALLBACK_PATH;
+    // True while the callback's code exchange has no answer, even past the
+    // timeout. auth-js keeps announcing sessions meanwhile (the stored
+    // account, then the exchange's own); only the exchange's answer may
+    // sign an account in, so the listener ignores them all.
+    let exchangeInFlight = false;
+    // The first account auth-js announced while the exchange ran: the one
+    // this browser had before the callback ('' for none).
+    let accountBeforeCallback: string | undefined;
+
+    const applySession = (session: Session, previousUserId = currentUserIdRef.current) => {
+      // What the listener does for any other sign-in.
+      clearCrossfireDraftOnAuthChange(previousUserId || undefined, session.user?.id);
+      if (session.provider_token) sessionStorage.setItem('google_provider_token', session.provider_token);
+      setActiveAccessToken(session.access_token, session.user.id);
+      setSession(session);
+      currentUserIdRef.current = session.user?.id;
+      setJamUserId(session.user?.id);
+      hydrateStores(session.user?.id);
+    };
+
+    // The session this browser already had, checked with the server first.
+    const restoreStoredSession = async () => {
+      // In some browser states (stalled locks, blocked storage, extensions),
+      // getSession() can hang long enough to look like a frozen app. If it
+      // doesn't resolve quickly, fail open to the login route and rely on
+      // onAuthStateChange to populate the session when available.
+      const getSessionResult = await Promise.race([
+        supabase.auth.getSession(),
+        new Promise<never>((_, reject) => setTimeout(() => reject(new Error('getSession timeout')), AUTH_OPERATION_TIMEOUT_MS)),
+      ]);
+
+      if (!mounted) return;
+      const { data, error } = getSessionResult;
+      if (error) console.warn('[Auth] getSession error:', error.message);
+      if (data.session?.access_token && !(await confirmRestoredSession(data.session.access_token))) {
+        if (!mounted) return;
+        dropRestoredSession();
+        return;
+      }
+      if (!mounted) return;
+      if (data.session) {
+        applySession(data.session);
+      } else {
+        setActiveAccessToken(null);
+        setSession(null);
+        currentUserIdRef.current = undefined;
+        setJamUserId(undefined);
+      }
+    };
 
     const hydrateOAuthCallbackSession = async (): Promise<Session | null> => {
       if (!callbackPending) return null;
@@ -207,28 +259,44 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       allowSessionsAfterSignIn();
       // The flow id picks this sign-in's own verifier, so another tab's
       // sign-in or a failed resend can't break the link.
+      exchangeInFlight = true;
       const exchange = supabase.auth.exchangeCodeForSession(code, flowId ? { flowId } : undefined);
       let settled = true;
       try {
         const { data, error: exchangeError } = await withAuthTimeout(exchange, 'OAuth code exchange timeout', OAUTH_CODE_EXCHANGE_TIMEOUT_MS);
+        exchangeInFlight = false;
         if (exchangeError) throw exchangeError;
         return data.session;
       } catch (err) {
         // A timeout is not a final answer: the code may still be good.
         settled = !(err instanceof AuthTimeoutError);
-        // A session this browser already had still stands; getSession restores it below.
+        if (settled) exchangeInFlight = false;
+        // A session this browser already had still stands; init restores it.
         console.warn('[Auth] sign-in callback failed:', err);
         if (mounted) setCallbackError(settled ? authCallbackErrorFor(err) : 'timed-out');
         if (!settled) {
-          // The late answer is final. A success is announced by auth-js and
-          // opens the app; a failure replaces the timeout with its real reason.
+          // The late answer is final: a success signs that account in, a
+          // failure gives its real reason and restores the stored session.
           void exchange
-            .then(({ error: lateError }) => lateError, (lateError: unknown) => lateError ?? new Error('Exchange failed'))
-            .then((lateError) => {
+            .then(
+              ({ data, error: lateError }): LateAnswer => (lateError || !data.session ? { session: null, lateError } : { session: data.session, lateError: null }),
+              (lateError: unknown): LateAnswer => ({ session: null, lateError }),
+            )
+            .then(async ({ session, lateError }) => {
+              exchangeInFlight = false;
               if (!mounted) return;
-              setCallbackError(lateError ? authCallbackErrorFor(lateError) : null);
+              const onCallbackPage = window.location.pathname === AUTH_CALLBACK_PATH;
               cleanUrl();
-            });
+              if (session) {
+                setCallbackError(null);
+                applySession(session, accountBeforeCallback);
+                return;
+              }
+              // Only the callback page still shows this attempt's outcome.
+              if (onCallbackPage) setCallbackError(authCallbackErrorFor(lateError));
+              await restoreStoredSession();
+            })
+            .catch((lateError: unknown) => console.warn('[Auth] restoring the stored session failed:', lateError));
         }
         return null;
       } finally {
@@ -244,39 +312,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (!mounted) return;
 
         if (oauthSession) {
-          setActiveAccessToken(oauthSession.access_token, oauthSession.user.id);
-          setSession(oauthSession);
-          currentUserIdRef.current = oauthSession.user?.id;
-          setJamUserId(oauthSession.user?.id);
-          hydrateStores(oauthSession.user?.id);
+          applySession(oauthSession, accountBeforeCallback);
           return;
         }
+        // Timed out: the late answer decides which account, if any, opens.
+        if (exchangeInFlight) return;
 
-        // In some browser states (stalled locks, blocked storage, extensions),
-        // getSession() can hang long enough to look like a frozen app. If it
-        // doesn't resolve quickly, fail open to the login route and rely on
-        // onAuthStateChange to populate the session when available.
-        const getSessionResult = await Promise.race([
-          supabase.auth.getSession(),
-          new Promise<never>((_, reject) => setTimeout(() => reject(new Error('getSession timeout')), AUTH_OPERATION_TIMEOUT_MS)),
-        ]);
-
-        if (!mounted) return;
-        const { data, error } = getSessionResult;
-        if (error) console.warn('[Auth] getSession error:', error.message);
-        if (data.session?.access_token && !(await confirmRestoredSession(data.session.access_token))) {
-          if (!mounted) return;
-          dropRestoredSession();
-          return;
-        }
-        if (!mounted) return;
-        setActiveAccessToken(data.session?.access_token ?? null, data.session?.user.id ?? null);
-        setSession(data.session ?? null);
-        currentUserIdRef.current = data.session?.user?.id;
-        setJamUserId(data.session?.user?.id);
-        if (data.session) {
-          hydrateStores(data.session.user?.id);
-        }
+        await restoreStoredSession();
       } catch (err) {
         console.warn('[Auth] init failed:', err);
         if (!mounted) return;
@@ -294,6 +336,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     const { data: authListener } = supabase.auth.onAuthStateChange((event, newSession) => {
       if (import.meta.env.DEV) console.log('[Auth] Event:', event, 'Provider Token:', newSession?.provider_token ? 'present' : 'null');
+      if (exchangeInFlight) {
+        accountBeforeCallback ??= newSession?.user?.id ?? '';
+        return;
+      }
 
       if (newSession && restoredSessionsBlocked()) {
         dropRestoredSession();
