@@ -72,21 +72,23 @@ describe('useExternalRedirectPending', () => {
     expect(result.current.pending).toBe(false);
   });
 
-  it('does not let a request from before a reset clear a newer one', async () => {
-    vi.useFakeTimers();
-    const first = deferred();
-    const second = deferred();
-    const { result } = renderHook(() => useExternalRedirectPending(1000));
-    let stale!: Promise<void>;
-    act(() => { stale = result.current.run(() => first.promise); });
+  it('keeps blocking a second request when reset while the first is still running', async () => {
+    const request = deferred();
+    const navigate = vi.fn(() => request.promise);
+    const { result } = renderHook(() => useExternalRedirectPending());
+    let running!: Promise<void>;
+    act(() => { running = result.current.run(navigate); });
+
     act(() => result.current.reset());
-    act(() => { void result.current.run(() => second.promise); });
+    expect(result.current.pending).toBe(true);
+    await act(() => result.current.run(navigate));
+    expect(navigate).toHaveBeenCalledTimes(1);
 
     await act(async () => {
-      first.resolve();
-      await stale;
+      request.resolve();
+      await running;
     });
-    act(() => { vi.advanceTimersByTime(5000); });
-    expect(result.current.pending).toBe(true);
+    act(() => result.current.reset());
+    expect(result.current.pending).toBe(false);
   });
 });

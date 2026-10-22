@@ -9,50 +9,53 @@ const SAFETY_TIMEOUT_MS = 8000;
  * may restore this page from the back/forward cache with React state frozen,
  * so pending is also cleared on a persisted `pageshow`, when the page becomes
  * visible again after it hid, and a few seconds after navigation started.
- * Those resets wait until the helper resolved, so a slow request can't be
- * started twice.
+ *
+ * Nothing clears pending while the helper is still running, `reset` included:
+ * the helper ends in a navigation that can't be cancelled, so releasing the
+ * button early would let a second click start a second request.
  */
 export function useExternalRedirectPending(timeoutMs = SAFETY_TIMEOUT_MS) {
   const [pending, setPending] = useState(false);
   const pendingRef = useRef(false);
-  const navigatingRef = useRef(false);
+  const requestingRef = useRef(false);
   const hiddenRef = useRef(false);
-  const generationRef = useRef(0);
   const timerRef = useRef<ReturnType<typeof setTimeout>>();
 
-  const reset = useCallback(() => {
-    generationRef.current += 1;
+  const clear = useCallback(() => {
     clearTimeout(timerRef.current);
     pendingRef.current = false;
-    navigatingRef.current = false;
     hiddenRef.current = false;
     setPending(false);
   }, []);
 
+  const reset = useCallback(() => {
+    if (!requestingRef.current) clear();
+  }, [clear]);
+
   const run = useCallback(async (navigate: () => Promise<void>) => {
     if (pendingRef.current) return;
-    const generation = ++generationRef.current;
     pendingRef.current = true;
+    requestingRef.current = true;
     setPending(true);
     try {
       await navigate();
     } catch (error) {
-      if (generation === generationRef.current) reset();
+      requestingRef.current = false;
+      clear();
       throw error;
     }
-    if (generation !== generationRef.current) return;
-    navigatingRef.current = true;
-    timerRef.current = setTimeout(reset, timeoutMs);
-  }, [reset, timeoutMs]);
+    requestingRef.current = false;
+    timerRef.current = setTimeout(clear, timeoutMs);
+  }, [clear, timeoutMs]);
 
   useEffect(() => {
     const onPageShow = (event: PageTransitionEvent) => {
       if (event.persisted && pendingRef.current) reset();
     };
     const onVisibilityChange = () => {
-      if (!navigatingRef.current) return;
+      if (!pendingRef.current || requestingRef.current) return;
       if (document.visibilityState === 'hidden') hiddenRef.current = true;
-      else if (hiddenRef.current) reset();
+      else if (hiddenRef.current) clear();
     };
     window.addEventListener('pageshow', onPageShow);
     document.addEventListener('visibilitychange', onVisibilityChange);
@@ -61,7 +64,7 @@ export function useExternalRedirectPending(timeoutMs = SAFETY_TIMEOUT_MS) {
       document.removeEventListener('visibilitychange', onVisibilityChange);
       clearTimeout(timerRef.current);
     };
-  }, [reset]);
+  }, [clear, reset]);
 
   return { pending, run, reset };
 }

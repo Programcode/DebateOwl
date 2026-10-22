@@ -48,4 +48,17 @@ describe('PricingModal Upgrade Now', () => {
     reopen(true);
     expect(await screen.findByRole('button', { name: 'Upgrade Now' })).toBeEnabled();
   });
+
+  it('sends one checkout request when reopened while the first is still loading', async () => {
+    let finish!: () => void;
+    stripe.redirectToCheckout.mockImplementationOnce(() => new Promise<undefined>((resolve) => { finish = () => resolve(undefined); }));
+    const { reopen } = renderModal();
+    await startCheckout();
+
+    reopen(false);
+    reopen(true);
+    fireEvent.click(await screen.findByRole('button', { name: 'Redirecting...' }));
+    expect(stripe.redirectToCheckout).toHaveBeenCalledTimes(1);
+    finish();
+  });
 });
