@@ -279,7 +279,8 @@ const PREPARE_KINDS = new Set<DebateItemKind>(PREPARE_TABLES.map((table) => KIND
  * the recent work, and a Prepare result the Prepare list.
  */
 export function debateListScopes(debateId: string | null, change: 'source' | DebateItemKind): CopyScope[] {
-  return debateId ? listScopes(debateId, change) : [];
+  // Work outside every debate has no counts, but History lists it.
+  return debateId ? listScopes(debateId, change) : [{ group: 'history', key: 'one-off' }];
 }
 
 /**
@@ -296,8 +297,10 @@ export function deletedListScopes(deletedFrom: (string | null)[], change: 'sourc
 function listScopes(debateId: string | undefined, change: 'source' | DebateItemKind): CopyScope[] {
   const of = debateId ? `${debateId}:` : '';
   const scopes: CopyScope[] = [debateId ? { group: 'debate-lists', key: `counts:${debateId}` } : { group: 'debate-lists', prefix: 'counts:' }];
-  if (change === 'source') return [...scopes, { group: 'debate-lists', prefix: 'source-counts:', about: debateId }];
-  scopes.push({ group: 'debate-lists', prefix: `recent:${of}` });
+  // History lists a debate's work, but not its sources; a delete from an unknown debate may have been one-off, so every History copy goes.
+  const history: CopyScope = debateId ? { group: 'history', key: debateId } : { group: 'history' };
+  if (change === 'source') return [...scopes, { group: 'debate-lists', prefix: 'source-counts:', about: debateId }, ...(debateId ? [] : [history])];
+  scopes.push(history, { group: 'debate-lists', prefix: `recent:${of}` });
   if (PREPARE_KINDS.has(change)) scopes.push({ group: 'debate-lists', prefix: `prepare:${of}` });
   return scopes;
 }

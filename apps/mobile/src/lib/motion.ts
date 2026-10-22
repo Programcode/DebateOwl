@@ -14,6 +14,11 @@ export function sameMotion(a: string | undefined | null, b: string | undefined |
   return Boolean(a && b) && normalizeMotion(a!) === normalizeMotion(b!);
 }
 
+/** The website's suggestDebate (UnsortedWork.tsx): a debate only on an exact motion or title match; the student still confirms. */
+export function suggestDebate(debates: Debate[], candidates: (string | undefined)[]): Debate | undefined {
+  return debates.find((debate) => candidates.some((candidate) => sameMotion(debate.motion, candidate)));
+}
+
 export type MotionDecision =
   | { kind: 'attach'; debateId: string }
   | { kind: 'one-off' }

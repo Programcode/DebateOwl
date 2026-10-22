@@ -8,6 +8,8 @@ export interface MenuItem {
   label: string;
   icon?: IconName;
   destructive?: boolean;
+  /** Shown but not selectable, as the website's ModelSelector shows Pro models to other students. */
+  disabled?: boolean;
 }
 
 export interface ActionMenuProps {
@@ -34,7 +36,7 @@ export function ActionMenu({ visible, title, items, cancelLabel, onSelect, onClo
       const { items: current, onSelect: select, onClose: close } = latest.current;
       close();
       const item = index === undefined ? undefined : current[index];
-      if (item) select(item.key);
+      if (item && !item.disabled) select(item.key);
     };
     const labels = latest.current.items.map((item) => item.label);
     if (Platform.OS === 'ios') {
@@ -44,12 +46,13 @@ export function ActionMenu({ visible, title, items, cancelLabel, onSelect, onClo
           options: [...labels, cancelLabel],
           cancelButtonIndex: labels.length,
           destructiveButtonIndex: latest.current.items.flatMap((item, index) => (item.destructive ? [index] : [])),
+          disabledButtonIndices: latest.current.items.flatMap((item, index) => (item.disabled ? [index] : [])),
         },
         (index) => choose(index < labels.length ? index : undefined),
       );
     } else {
       Alert.alert(title ?? '', undefined, [
-        ...labels.map((label, index) => ({ text: label, onPress: () => choose(index) })),
+        ...labels.flatMap((label, index) => (latest.current.items[index].disabled ? [] : [{ text: label, onPress: () => choose(index) }])),
         { text: cancelLabel, style: 'cancel' as const, onPress: () => choose(undefined) },
       ], { cancelable: true, onDismiss: () => choose(undefined) });
     }

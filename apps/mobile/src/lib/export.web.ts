@@ -5,7 +5,7 @@ import * as Clipboard from 'expo-clipboard';
  * exist there. It keeps the HTML it would print and the text it copied on
  * window, so the screenshot script can show and check them.
  */
-type ExportProbe = { __debatelabExport?: { html?: string; fileName?: string; copied?: string; shared?: string } };
+type ExportProbe = { __debatelabExport?: { html?: string; fileName?: string; copied?: string; shared?: string; json?: string } };
 
 function probe() {
   const target = window as unknown as ExportProbe;
@@ -15,6 +15,11 @@ function probe() {
 
 export function sharePdf(html: string, fileName: string): Promise<void> {
   Object.assign(probe(), { html, fileName });
+  return Promise.resolve();
+}
+
+export function shareJson(json: string, fileName: string): Promise<void> {
+  Object.assign(probe(), { json, fileName });
   return Promise.resolve();
 }
 

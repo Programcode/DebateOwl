@@ -90,11 +90,14 @@ function Root() {
             <Stack.Screen name="debates" options={sheet} />
             <Stack.Screen name="new-debate" options={sheet} />
             <Stack.Screen name="delete-account" options={sheet} />
+            <Stack.Screen name="delete-data" options={sheet} />
             <Stack.Screen name="add-link" options={sheet} />
             <Stack.Screen name="new-note" options={sheet} />
             <Stack.Screen name="source/[id]" options={sheet} />
             {/* Full screen above the tabs, as in mock 07. */}
             <Stack.Screen name="ask" />
+            {/* History, full screen above the tabs like the documents it opens. */}
+            <Stack.Screen name="history" />
             {/* Generate, Attack, Brainstorm, Factoids and their documents, full screen above the tabs, as in mock 03. */}
             <Stack.Screen name="generate" />
             <Stack.Screen name="case/[id]" />

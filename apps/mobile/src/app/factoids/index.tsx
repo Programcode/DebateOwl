@@ -9,6 +9,7 @@ import { DocumentScreen } from '@/components/document';
 import { DocumentHeader } from '@/components/document-header';
 import { Field } from '@/components/field';
 import { FormGroup, SelectRow } from '@/components/form-rows';
+import { ModelPicker } from '@/components/model-picker';
 import { SegmentedControl } from '@/components/segmented-control';
 import { Text } from '@/components/text';
 import { ToolError, ToolProgress, ToolTitle, WorkingIn } from '@/components/tool-form';
@@ -17,7 +18,6 @@ import { useAuth } from '@/lib/auth';
 import { backLabel } from '@/lib/back-label';
 import { buildDebateContext } from '@/lib/context-request';
 import { useDebates } from '@/lib/debate-context';
-import { fetchFeatureConfig } from '@/lib/feature-config';
 import { keepOpenResult } from '@/lib/open-results';
 import { arrivalNotices, autosaveSources, findFactoids, keepSourceAssessments, recordResult } from '@/lib/results';
 import { sessionSlot } from '@/lib/session-memory';
@@ -46,7 +46,7 @@ export default function FactoidsScreen() {
   const { session } = useAuth();
   const userId = session?.user.id ?? null;
   const { activeDebateId, refresh } = useDebates();
-  const { outputLanguage } = useSettings();
+  const { outputLanguage, readFeatureConfig } = useSettings();
   const { colors } = useTheme();
   const [form, setFormState] = useState<FactoidsInput>(lastForm.get);
   const [claimError, setClaimError] = useState(false);
@@ -104,7 +104,7 @@ export default function FactoidsScreen() {
     setPhase('working');
     try {
       const [config, debateContext] = await Promise.all([
-        fetchFeatureConfig(forUser, 'factoids'),
+        readFeatureConfig(forUser, 'factoids'),
         debateId ? buildDebateContext(forUser, debateId, 'factoids', input.direction === 'against' ? 'con' : 'pro') : Promise.resolve(undefined),
       ]);
       if (!isCurrent()) return;
@@ -240,6 +240,7 @@ export default function FactoidsScreen() {
               testID="factoids-source-count"
             />
           </FormGroup>
+          <ModelPicker feature="factoids" />
           <Field
             label={t('factoidsForm.region')}
             value={form.region ?? ''}

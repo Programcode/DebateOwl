@@ -9,6 +9,7 @@ import { DocumentScreen } from '@/components/document';
 import { DocumentHeader } from '@/components/document-header';
 import { Field } from '@/components/field';
 import { FormGroup, SelectRow, SwitchRow } from '@/components/form-rows';
+import { ModelPicker } from '@/components/model-picker';
 import { Text } from '@/components/text';
 import { ToolError, ToolProgress, ToolTitle, WorkingIn } from '@/components/tool-form';
 import { AIError, isAbortError, type AIErrorKind } from '@/lib/ai-request';
@@ -16,7 +17,6 @@ import { useAuth } from '@/lib/auth';
 import { backLabel } from '@/lib/back-label';
 import { buildDebateContext } from '@/lib/context-request';
 import { useDebates } from '@/lib/debate-context';
-import { fetchFeatureConfig } from '@/lib/feature-config';
 import { keepOpenResult, openResult } from '@/lib/open-results';
 import { caseToText } from '@/lib/result-text';
 import { arrivalNotices, attackCase, autosaveSources, fetchResult, isCompleteCase, keepSourceAssessments, recordResult } from '@/lib/results';
@@ -48,7 +48,7 @@ export default function AttackScreen() {
   const { session } = useAuth();
   const userId = session?.user.id ?? null;
   const { activeDebateId, refresh } = useDebates();
-  const { outputLanguage } = useSettings();
+  const { outputLanguage, readFeatureConfig } = useSettings();
   const { colors } = useTheme();
   const [form, setFormState] = useState<AttackInput>(lastForm.get);
   const [textError, setTextError] = useState(false);
@@ -116,7 +116,7 @@ export default function AttackScreen() {
     setPhase('attacking');
     try {
       const [config, debateContext] = await Promise.all([
-        fetchFeatureConfig(forUser, 'attack'),
+        readFeatureConfig(forUser, 'attack'),
         debateId ? buildDebateContext(forUser, debateId, 'attack', 'both') : Promise.resolve(undefined),
       ]);
       if (!isCurrent()) return;
@@ -233,6 +233,7 @@ export default function AttackScreen() {
               onChange={(analyzeWeighing) => setForm({ analyzeWeighing })}
             />
           </FormGroup>
+          <ModelPicker feature="attack" />
           {error ? <ToolError title={t('attack.failed')} error={error} onRetry={() => void submit()} /> : null}
         </>
       )}

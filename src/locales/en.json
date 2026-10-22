@@ -2424,7 +2424,8 @@
       "itemMeta": "{{kind}}, {{when}}",
       "loadFailed": "Could not load your debate.",
       "viewAria": "Show preparation for",
-      "recentSources": "Recent sources"
+      "recentSources": "Recent sources",
+      "seeAll": "See all"
     },
     "common": {
       "done": "Done"
@@ -2448,6 +2449,8 @@
       "usage": "{{used}} of {{limit}} AI uses today",
       "loadFailed": "Could not load your subscription.",
       "saveFailed": "Could not save your settings. Try again.",
+      "historyDesc": "Everything you saved, by debate",
+      "deleteDataDesc": "Saved work, sources and debates. Your account and settings stay.",
       "notifications": {
         "title": "Notifications",
         "description": "Get a notification on this phone when a sparring round is scored.",
@@ -2646,6 +2649,9 @@
     },
     "document": {
       "onThisPage": "On this page"
+    },
+    "history": {
+      "loadFailed": "Could not load your history."
     },
     "permissions": {
       "speechRecognition": "DebateLab turns your voice into text when you dictate a question, a Crossfire answer or a Sparring speech. Apple processes the audio to recognize it.",

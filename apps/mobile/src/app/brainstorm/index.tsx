@@ -9,6 +9,7 @@ import { DocumentScreen } from '@/components/document';
 import { DocumentHeader } from '@/components/document-header';
 import { Field } from '@/components/field';
 import { FormGroup, SelectRow } from '@/components/form-rows';
+import { ModelPicker } from '@/components/model-picker';
 import { Text } from '@/components/text';
 import { ToolError, ToolProgress, ToolTitle, WorkingIn } from '@/components/tool-form';
 import { AIError, isAbortError, type AIErrorKind } from '@/lib/ai-request';
@@ -16,7 +17,6 @@ import { useAuth } from '@/lib/auth';
 import { backLabel } from '@/lib/back-label';
 import { buildDebateContext } from '@/lib/context-request';
 import { useDebates } from '@/lib/debate-context';
-import { fetchFeatureConfig } from '@/lib/feature-config';
 import { decideMotionTarget, shouldPrefillMotion } from '@/lib/motion';
 import { chooseMotionTarget } from '@/lib/motion-gate';
 import { keepOpenResult } from '@/lib/open-results';
@@ -41,7 +41,7 @@ export default function BrainstormScreen() {
   const { session } = useAuth();
   const userId = session?.user.id ?? null;
   const { debates, current, oneOff, create, switchTo, refresh } = useDebates();
-  const { outputLanguage } = useSettings();
+  const { outputLanguage, readFeatureConfig } = useSettings();
   const { colors } = useTheme();
   const [form, setFormState] = useState<BrainstormInput>(lastForm.get);
   const [motionError, setMotionError] = useState(false);
@@ -96,7 +96,7 @@ export default function BrainstormScreen() {
     setPhase('working');
     try {
       const [config, debateContext] = await Promise.all([
-        fetchFeatureConfig(forUser, 'brainstorm'),
+        readFeatureConfig(forUser, 'brainstorm'),
         debateId ? buildDebateContext(forUser, debateId, 'brainstorm', input.side) : Promise.resolve(undefined),
       ]);
       if (!isCurrent()) return;
@@ -251,6 +251,7 @@ export default function BrainstormScreen() {
               testID="brainstorm-output"
             />
           </FormGroup>
+          <ModelPicker feature="brainstorm" />
           <Field
             label={t('brainstormForm.existing')}
             value={form.context ?? ''}

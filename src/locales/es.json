@@ -2424,7 +2424,8 @@
       "itemMeta": "{{kind}}, {{when}}",
       "loadFailed": "No se pudo cargar tu debate.",
       "viewAria": "Mostrar la preparación de",
-      "recentSources": "Fuentes recientes"
+      "recentSources": "Fuentes recientes",
+      "seeAll": "Ver todo"
     },
     "common": {
       "done": "Listo"
@@ -2448,6 +2449,8 @@
       "usage": "{{used}} de {{limit}} usos de IA hoy",
       "loadFailed": "No se pudo cargar tu suscripción.",
       "saveFailed": "No se pudieron guardar tus ajustes. Inténtalo de nuevo.",
+      "historyDesc": "Todo lo que guardaste, por debate",
+      "deleteDataDesc": "Trabajo guardado, fuentes y debates. Tu cuenta y tus ajustes se mantienen.",
       "notifications": {
         "title": "Notificaciones",
         "description": "Recibe una notificación en este teléfono cuando se puntúe una ronda de sparring.",
@@ -2646,6 +2649,9 @@
     },
     "document": {
       "onThisPage": "En esta página"
+    },
+    "history": {
+      "loadFailed": "No se pudo cargar tu historial."
     },
     "permissions": {
       "speechRecognition": "DebateLab convierte tu voz en texto cuando dictas una pregunta, una respuesta de Interrogatorio o un discurso de Sparring. Apple procesa el audio para reconocerlo.",

@@ -9,6 +9,7 @@ import { DocumentScreen } from '@/components/document';
 import { DocumentHeader } from '@/components/document-header';
 import { Field } from '@/components/field';
 import { FormGroup, SelectRow } from '@/components/form-rows';
+import { ModelPicker } from '@/components/model-picker';
 import { SegmentedControl } from '@/components/segmented-control';
 import { Text } from '@/components/text';
 import { ToolError, ToolProgress, ToolTitle, WorkingIn } from '@/components/tool-form';
@@ -17,7 +18,6 @@ import { useAuth } from '@/lib/auth';
 import { backLabel } from '@/lib/back-label';
 import { buildDebateContext } from '@/lib/context-request';
 import { useDebates } from '@/lib/debate-context';
-import { fetchFeatureConfig } from '@/lib/feature-config';
 import { decideMotionTarget, shouldPrefillMotion } from '@/lib/motion';
 import { chooseMotionTarget } from '@/lib/motion-gate';
 import { keepOpenResult } from '@/lib/open-results';
@@ -48,7 +48,7 @@ export default function GenerateScreen() {
   const { session } = useAuth();
   const userId = session?.user.id ?? null;
   const { debates, current, oneOff, create, switchTo, refresh } = useDebates();
-  const { outputLanguage } = useSettings();
+  const { outputLanguage, readFeatureConfig } = useSettings();
   const { colors } = useTheme();
   const [form, setFormState] = useState<GenerateInput>(lastForm.get);
   const [motionError, setMotionError] = useState(false);
@@ -93,7 +93,7 @@ export default function GenerateScreen() {
     setPhase('generating');
     try {
       const [config, debateContext] = await Promise.all([
-        fetchFeatureConfig(forUser, 'generate'),
+        readFeatureConfig(forUser, 'generate'),
         debateId ? buildDebateContext(forUser, debateId, 'generate', input.side) : Promise.resolve(undefined),
       ]);
       if (!isCurrent()) return;
@@ -245,6 +245,7 @@ export default function GenerateScreen() {
               ]}
             />
           </FormGroup>
+          <ModelPicker feature="generate" />
           <FormGroup label={t('generateForm.moreOptions')} footer={t('generateForm.styleNote')}>
             <SelectRow<GenerateInput['length']>
               first

@@ -2424,7 +2424,8 @@
       "itemMeta": "{{kind}}, {{when}}",
       "loadFailed": "Nem sikerült betölteni a vitát.",
       "viewAria": "Felkészülés megjelenítése",
-      "recentSources": "Legutóbbi források"
+      "recentSources": "Legutóbbi források",
+      "seeAll": "Összes"
     },
     "common": {
       "done": "Kész"
@@ -2448,6 +2449,8 @@
       "usage": "Ma {{used}} / {{limit}} MI-használat",
       "loadFailed": "Nem sikerült betölteni az előfizetésedet.",
       "saveFailed": "Nem sikerült menteni a beállításokat. Próbáld újra.",
+      "historyDesc": "Minden mentett munkád, vitánként",
+      "deleteDataDesc": "Mentett munkák, források és viták. A fiókod és a beállításaid megmaradnak.",
       "notifications": {
         "title": "Értesítések",
         "description": "Értesítést kapsz erre a telefonra, amikor elkészül egy sparring forduló értékelése.",
@@ -2646,6 +2649,9 @@
     },
     "document": {
       "onThisPage": "Ezen az oldalon"
+    },
+    "history": {
+      "loadFailed": "Nem sikerült betölteni az előzményeidet."
     },
     "permissions": {
       "speechRecognition": "A DebateLab szöveggé alakítja a hangodat, amikor kérdést, keresztkérdezési választ vagy vitapárbaj-beszédet diktálsz. A hangot az Apple dolgozza fel a felismeréshez.",

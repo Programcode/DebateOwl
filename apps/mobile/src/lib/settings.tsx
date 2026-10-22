@@ -1,4 +1,4 @@
-import { getDefaultFeatureConfigs } from '@debatelab/core/ai/feature-configs';
+import { getDefaultFeatureConfigs, type FeatureTab } from '@debatelab/core/ai/feature-configs';
 import { readEntitlement } from '@debatelab/core/supabase/entitlement';
 import { DEFAULT_MODEL, DEFAULT_PRO_MODEL } from '@debatelab/core/contract/model-catalog';
 import { isAppLanguage, type AppLanguage } from '@debatelab/core/languages';
@@ -6,6 +6,15 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 
 import { useAuth } from './auth';
+import {
+  canUseProModels,
+  featureConfigsWith,
+  fetchFeatureConfig,
+  fetchFeatureSettings,
+  type FeatureConfig,
+  type FeatureConfigChange,
+} from './feature-config';
+import { readFeatureConfigAfterWrites } from './feature-config-read';
 import i18n, { deviceLanguage } from './i18n';
 import { createSerialQueue } from './serial-queue';
 import { supabase } from './supabase';
@@ -27,6 +36,10 @@ type SettingsContextValue = Settings & {
   setLanguage: (language: AppLanguage) => Promise<void>;
   setOutputLanguage: (language: AppLanguage) => Promise<void>;
   setTheme: (theme: ThemePreference) => Promise<void>;
+  /** Saves one tool's model or reasoning to feature_configs, in order with every other settings write. */
+  setFeatureConfig: (feature: FeatureTab, change: FeatureConfigChange) => Promise<void>;
+  /** A tool's config, read after every settings write made before it, so a tool runs with the model just picked. */
+  readFeatureConfig: (userId: string, feature: FeatureTab) => Promise<FeatureConfig>;
 };
 
 // The columns each setting is stored in, in the website's user_settings row.
@@ -41,6 +54,8 @@ const SettingsContext = createContext<SettingsContextValue>({
   setLanguage: async () => {},
   setOutputLanguage: async () => {},
   setTheme: async () => {},
+  setFeatureConfig: async () => {},
+  readFeatureConfig: fetchFeatureConfig,
 });
 
 function isThemePreference(value: unknown): value is ThemePreference {
@@ -60,6 +75,9 @@ function parseSettings(value: unknown): Settings | null {
 }
 
 const cacheKey = (userId: string) => `debatelab.settings.${userId}`;
+
+/** How long a tool waits for earlier settings writes before reading its model anyway, with the choice still being saved on top. */
+const READ_WAIT_MS = 5000;
 
 function isEmptyObject(value: unknown): boolean {
   return !!value && typeof value === 'object' && !Array.isArray(value) && Object.keys(value).length === 0;
@@ -108,6 +126,32 @@ async function writeSetting(userId: string, key: SettingKey, value: string, conf
 }
 
 /**
+ * Writes one tool's change into the row's feature_configs, as the website's
+ * setFeatureConfig saves the whole object: every tool's config read fresh and
+ * normalised, the website's defaults filled in where none was saved (so an
+ * empty feature_configs is filled here too), and the change applied. A Pro
+ * model is refused without Pro access, and nothing is written when Pro access
+ * can't be read.
+ */
+async function writeFeatureConfig(userId: string, feature: FeatureTab, change: FeatureConfigChange) {
+  const { data, error } = await supabase
+    .from('user_settings')
+    .select('feature_configs')
+    .eq('user_id', userId)
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  if (!data) throw new Error('No settings row for this account');
+  const pro = await canUseProModels(userId);
+  if (pro === null) throw new Error('Could not read Pro access');
+  const featureConfigs = featureConfigsWith(data.feature_configs, pro, feature, change);
+  const { error: writeError } = await supabase
+    .from('user_settings')
+    .update({ feature_configs: featureConfigs, updated_at: new Date().toISOString() })
+    .eq('user_id', userId);
+  if (writeError) throw new Error(writeError.message);
+}
+
+/**
  * Interface language, AI output language and theme from the account's
  * user_settings row, shared with the website. The last known values are kept
  * on the device so the app opens in the right language and theme.
@@ -133,6 +177,11 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const versions = useRef<Record<SettingKey, number>>({ language: 0, outputLanguage: 0, theme: 0 });
   // Whether the row's feature_configs is filled in; null until a load or save tells.
   const configsSaved = useRef<boolean | null>(null);
+  // Per tool and field, the model or reasoning still being saved, so a tool
+  // that stops waiting for a slow save still runs with it. Each entry is
+  // dropped when its save settles, unless a later save of that field replaced it.
+  const pendingConfigs = useRef(new Map<string, { feature: FeatureTab; change: FeatureConfigChange; seq: number }>());
+  const pendingSeq = useRef(0);
   // Saves write one at a time in the order they were made, so the last choice
   // is the last write even when an earlier save's Pro-access check is slower.
   const [writes] = useState(createSerialQueue);
@@ -155,6 +204,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     owner.current = userId;
     const gen = ++generation.current;
     configsSaved.current = null;
+    pendingConfigs.current.clear();
     if (!userId) {
       apply({ ...SIGNED_OUT, language: deviceLanguage() }, null, gen);
       confirmed.current = { ...latest.current };
@@ -225,13 +275,56 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     }
   }, [apply, writes]);
 
+  // The picker shows its own optimistic value and rolls it back on failure (model-picker.tsx).
+  const setFeatureConfig = useCallback(async (feature: FeatureTab, change: FeatureConfigChange) => {
+    const forUser = owner.current;
+    if (!forUser) throw new Error('Sign in to choose a model');
+    const gen = generation.current;
+    const seq = ++pendingSeq.current;
+    const fields = (Object.keys(change) as (keyof FeatureConfigChange)[]).filter((field) => change[field] !== undefined);
+    const keys = fields.map((field) => {
+      const key = `${feature}.${field}`;
+      pendingConfigs.current.set(key, { feature, change: { [field]: change[field] }, seq });
+      return key;
+    });
+    try {
+      await writes(async () => {
+        if (generation.current !== gen) return;
+        await writeFeatureConfig(forUser, feature, change);
+        if (generation.current !== gen) return;
+        configsSaved.current = true;
+      });
+    } finally {
+      if (generation.current === gen) {
+        for (const key of keys) if (pendingConfigs.current.get(key)?.seq === seq) pendingConfigs.current.delete(key);
+      }
+    }
+  }, [writes]);
+
+  const readFeatureConfig = useCallback((forUser: string, feature: FeatureTab) => {
+    const gen = generation.current;
+    return readFeatureConfigAfterWrites({
+      writes,
+      read: () => fetchFeatureSettings(forUser, feature),
+      // Only this account's choices, and none from before an owner change.
+      pending: () => {
+        if (generation.current !== gen || owner.current !== forUser) return null;
+        const entries = [...pendingConfigs.current.values()].filter((entry) => entry.feature === feature);
+        return entries.length ? Object.assign({}, ...entries.map((entry) => entry.change)) as FeatureConfigChange : null;
+      },
+      waitMs: READ_WAIT_MS,
+    });
+  }, [writes]);
+
   const value = useMemo<SettingsContextValue>(() => ({
     ...settings,
     ready,
     setLanguage: (language) => save('language', language),
     setOutputLanguage: (language) => save('outputLanguage', language),
     setTheme: (theme) => save('theme', theme),
-  }), [settings, ready, save]);
+    setFeatureConfig,
+    readFeatureConfig,
+  }), [settings, ready, save, setFeatureConfig, readFeatureConfig]);
 
   return <SettingsContext.Provider value={value}>{children}</SettingsContext.Provider>;
 }

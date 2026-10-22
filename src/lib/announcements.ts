@@ -1,16 +1,15 @@
 import { supabase, SUPABASE_URL } from '@/lib/supabase/client';
 import { z } from 'zod';
+import {
+  ActiveAnnouncementsResponseSchema,
+  AnnouncementRowSchema,
+  normalizeAnnouncement,
+  type UserAnnouncement,
+} from '@debatelab/core/announcements';
+
+export type { UserAnnouncement };
 
 export type AnnouncementTargetType = 'all' | 'users';
-
-export interface UserAnnouncement {
-  id: string;
-  title: string;
-  body: string;
-  startsAt: string;
-  expiresAt: string | null;
-  createdAt: string;
-}
 
 export interface AdminAnnouncement extends UserAnnouncement {
   targetType: AnnouncementTargetType;
@@ -28,25 +27,12 @@ export interface CreateAnnouncementInput {
   expiresAt?: string;
 }
 
-const AnnouncementRowSchema = z.object({
-  id: z.uuid(),
-  title: z.string(),
-  body: z.string(),
-  starts_at: z.iso.datetime({ offset: true }),
-  expires_at: z.iso.datetime({ offset: true }).nullable(),
-  created_at: z.iso.datetime({ offset: true }),
-});
-
 const AdminAnnouncementRowSchema = AnnouncementRowSchema.extend({
   target_type: z.enum(['all', 'users']),
   target_user_ids: z.array(z.uuid()).nullable(),
   deactivated_at: z.iso.datetime({ offset: true }).nullable(),
   // Null once the author's account is deleted.
   created_by: z.uuid().nullable(),
-});
-
-const ActiveAnnouncementsResponseSchema = z.object({
-  announcements: z.array(AnnouncementRowSchema),
 });
 
 const AdminAnnouncementsResponseSchema = z.object({
@@ -61,7 +47,6 @@ const DeactivateAnnouncementResponseSchema = z.object({
   announcement: AdminAnnouncementRowSchema,
 });
 
-type AnnouncementRow = z.infer<typeof AnnouncementRowSchema>;
 type AdminAnnouncementRow = z.infer<typeof AdminAnnouncementRowSchema>;
 
 async function requestFunction({
@@ -108,17 +93,6 @@ async function requestFunction({
   }
 
   return payload;
-}
-
-function normalizeAnnouncement(row: AnnouncementRow): UserAnnouncement {
-  return {
-    id: row.id,
-    title: row.title,
-    body: row.body,
-    startsAt: row.starts_at,
-    expiresAt: row.expires_at,
-    createdAt: row.created_at,
-  };
 }
 
 function normalizeAdminAnnouncement(row: AdminAnnouncementRow): AdminAnnouncement {
