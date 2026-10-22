@@ -14,6 +14,9 @@ export interface SessionQuota {
   units: number;
 }
 
+/** How long Start waits for the quota check before going ahead without it. */
+export const QUOTA_CHECK_TIMEOUT_MS = 8_000;
+
 function numberOrUndefined(value: unknown): number | undefined {
   return typeof value === 'number' && Number.isFinite(value) ? value : undefined;
 }
@@ -27,11 +30,26 @@ function numberOrUndefined(value: unknown): number | undefined {
 export async function checkSessionQuota(feature: 'crossfire' | 'sparring', config: ProviderConfig): Promise<SessionQuota | null> {
   const accessToken = getActiveAccessToken();
   if (!accessToken) return null;
+  const controller = new AbortController();
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  // A stalled check must not hold Start: past the timeout the answer is unknown.
+  const timedOut = new Promise<null>((resolve) => {
+    timer = setTimeout(() => {
+      controller.abort();
+      resolve(null);
+    }, QUOTA_CHECK_TIMEOUT_MS);
+  });
   try {
-    const { data, error } = await invokeAuthenticatedFunction<Record<string, unknown>>('ai', {
-      headers: { Authorization: `Bearer ${accessToken}` },
-      body: { feature, model: config.model, quotaCheck: true },
-    });
+    const answer = await Promise.race([
+      invokeAuthenticatedFunction<Record<string, unknown>>('ai', {
+        headers: { Authorization: `Bearer ${accessToken}` },
+        body: { feature, model: config.model, quotaCheck: true },
+        signal: controller.signal,
+      }),
+      timedOut,
+    ]);
+    if (!answer) return null;
+    const { data, error } = answer;
     const quota = !error && data?.quota && typeof data.quota === 'object' ? data.quota as Record<string, unknown> : null;
     if (!quota || typeof quota.allowed !== 'boolean') return null;
     return {
@@ -43,6 +61,8 @@ export async function checkSessionQuota(feature: 'crossfire' | 'sparring', confi
     };
   } catch {
     return null;
+  } finally {
+    clearTimeout(timer);
   }
 }
 

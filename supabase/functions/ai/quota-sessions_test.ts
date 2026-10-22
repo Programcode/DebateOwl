@@ -26,7 +26,7 @@ interface Harness {
   /** What claim_ai_session_quota answers. */
   claim: Record<string, unknown>;
   /** The provider's reply: text, an HTTP failure, or text then a stream that never ends (optionally after finishing the answer). */
-  reply: { content: string } | { status: number } | { hangAfter: string; finished?: boolean };
+  reply: { content: string } | { status: number } | { hangAfter: string; finished?: boolean; thenFail?: boolean };
 }
 
 const harness: Harness = { rpcs: [], usageRows: [], claim: {}, reply: { content: "" } };
@@ -35,7 +35,7 @@ function json(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), { status, headers: { "Content-Type": "application/json" } });
 }
 
-function hangingStream(text: string, finished: boolean, signal: AbortSignal | null | undefined): ReadableStream<Uint8Array> {
+function hangingStream(text: string, finished: boolean, signal: AbortSignal | null | undefined, thenFail = false): ReadableStream<Uint8Array> {
   const encoder = new TextEncoder();
   return new ReadableStream({
     start(controller) {
@@ -43,6 +43,8 @@ function hangingStream(text: string, finished: boolean, signal: AbortSignal | nu
         controller.enqueue(encoder.encode(`data: ${JSON.stringify({ choices: [{ delta: { content: text.slice(index, index + 20) } }] })}\n\n`));
       }
       if (finished) controller.enqueue(encoder.encode(`data: ${JSON.stringify({ choices: [{ delta: {}, finish_reason: "stop" }] })}\n\n`));
+      // The connection to the provider drops before the usage trailer.
+      if (thenFail) setTimeout(() => controller.error(new TypeError("error reading a body from connection")), 20);
       // The model keeps "thinking" until the request is cancelled.
       signal?.addEventListener("abort", () => controller.error(new DOMException("Aborted", "AbortError")), { once: true });
     },
@@ -80,7 +82,7 @@ function install() {
       const body = JSON.parse(String(init?.body));
       const reply = harness.reply;
       if ("status" in reply) return json({ error: { message: "Provider overloaded" } }, reply.status);
-      if ("hangAfter" in reply) return new Response(hangingStream(reply.hangAfter, reply.finished === true, init?.signal), { headers: { "Content-Type": "text/event-stream" } });
+      if ("hangAfter" in reply) return new Response(hangingStream(reply.hangAfter, reply.finished === true, init?.signal, reply.thenFail === true), { headers: { "Content-Type": "text/event-stream" } });
       if (body.stream) {
         const usage = { prompt_tokens: 10, completion_tokens: 5, cost: 0.000001 };
         return new Response(
@@ -278,6 +280,34 @@ Deno.test("a finished answer stays charged when the browser leaves before the us
       assertEquals(answer.length < REFUND_MAX_DELIVERED_CHARS, true, label);
       assertEquals(rpcNames(), refunded ? ["consume_ai_quota", "refund_daily_quota"] : ["consume_ai_quota"], label);
       assertEquals(harness.usageRows.at(-1)?.status, "cancelled", label);
+    }
+  } finally {
+    globalThis.fetch = originalFetch;
+    console.error = originalError;
+  }
+});
+
+Deno.test("a finished answer stays charged when the provider connection drops before the usage trailer", async () => {
+  const originalError = console.error;
+  console.error = () => undefined;
+  install();
+  try {
+    const answer = JSON.stringify({ response: "Fares cover little of the cost.", followUpQuestions: [], uncertainties: [] });
+    for (const [label, handle, body] of [
+      ["ai", send, { feature: "ask", input: { message: "A question", mode: "general", webSearch: false }, stream: true }],
+      ["ai-stream", (request: Record<string, unknown>) => handleStream(new Request("http://127.0.0.1/functions/v1/ai-stream", {
+        method: "POST",
+        headers: { Authorization: "Bearer test-token", "Content-Type": "application/json" },
+        body: JSON.stringify({ model: "openai/gpt-6-luna", ...request }),
+      })), { feature: "ask", input: { message: "A question", mode: "general" } }],
+    ] as const) {
+      for (const [finished, refunded] of [[false, true], [true, false]] as const) {
+        // The browser stays connected; the upstream read fails after the answer.
+        reset({ hangAfter: answer, finished, thenFail: true });
+        const text = await (await handle(body)).text();
+        assertEquals(text.includes('"charged":false'), refunded, `${label} finished=${finished}`);
+        assertEquals(rpcNames().includes("refund_daily_quota"), refunded, `${label} finished=${finished}`);
+      }
     }
   } finally {
     globalThis.fetch = originalFetch;

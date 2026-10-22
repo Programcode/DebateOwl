@@ -890,11 +890,12 @@ export async function handleRequest(req: Request): Promise<Response> {
       // the browser leaving (reload, closed tab, Stop) before the student saw
       // a usable part of the answer. A run whose answer was saved, or that
       // streamed REFUND_MAX_DELIVERED_CHARS or more, stays charged, and so
-      // does one cut off after the model had finished: a short answer may
-      // already be on screen. The finish_reason counts even when the usage
-      // trailer after it was lost to the disconnect.
-      const leftAfterAnswer = aborted && (Boolean(completedMainUsage) || modelFinished);
-      const refundable = !outputSaved && !leftAfterAnswer && deliveredChars < REFUND_MAX_DELIVERED_CHARS;
+      // does one whose streamed answer the model had finished, however the
+      // request ended afterwards (a disconnect, a failed read of the usage
+      // trailer): a short answer may already be on screen. A non-streamed
+      // call the browser left after the provider answered stays charged too.
+      const answerFinished = modelFinished || (aborted && Boolean(completedMainUsage));
+      const refundable = !outputSaved && !answerFinished && deliveredChars < REFUND_MAX_DELIVERED_CHARS;
       // Refund before answering, so a retry sent straight away sees it.
       const refunded = refundable && await refundQuotaReservation(userId, rateLimit);
       // The weekly cap counts real spend, so a refunded run's OpenRouter cost

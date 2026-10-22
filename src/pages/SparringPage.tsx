@@ -26,6 +26,7 @@ import { useVoiceAvailability } from '@/lib/voice/availability';
 import type { SpeechDelivery } from '@/lib/voice/delivery';
 import { opponentVoice } from '@/lib/voice/opponent-voice';
 import { useSessionQuota } from '@/hooks/use-session-quota';
+import { useAuth } from '@/lib/supabase/AuthProvider';
 import { useSubscriptionError } from '@/hooks/use-subscription-error';
 import { SubscriptionErrorModals } from '@/components/features/subscription';
 
@@ -93,9 +94,12 @@ export default function SparringPage() {
 
   // A reply that arrives after the student left is saved but not spoken.
   const mountedRef = useRef(true);
-  // Names the latest Start; a newer Start or leaving the page makes an
-  // earlier one that is still checking quota stale.
+  // Names the latest Start; a newer Start, leaving the page, or switching
+  // accounts makes an earlier one that is still checking quota stale.
   const startRequestRef = useRef(0);
+  const { user } = useAuth();
+  const userId = user?.id;
+  const userIdRef = useRef(userId);
   useEffect(() => {
     mountedRef.current = true;
     return () => {
@@ -139,6 +143,13 @@ export default function SparringPage() {
   // A round costs one use however many replies it takes; the setup says so.
   const sessionQuota = useSessionQuota('sparring', config, !session);
   const [checkingQuota, setCheckingQuota] = useState(false);
+  useEffect(() => {
+    if (userIdRef.current === userId) return;
+    userIdRef.current = userId;
+    // A Start pressed by the previous account never opens a round for this one.
+    startRequestRef.current += 1;
+    setCheckingQuota(false);
+  }, [userId]);
 
   const retryAi = useCallback(() => {
     aiRequestRef.current = null;
@@ -303,6 +314,7 @@ export default function SparringPage() {
   const handleStart = (values: SparringSetupValues) => debateGate.run(values.motion, (target) => void beginRound(values, target.debateId));
 
   const beginRound = async (values: SparringSetupValues, debateId: string | null) => {
+    const owner = userIdRef.current;
     const roundBefore = useSparringStore.getState().currentSession;
     const startRequest = startRequestRef.current + 1;
     startRequestRef.current = startRequest;
@@ -310,7 +322,7 @@ export default function SparringPage() {
     // written for a round the server would refuse. An unknown answer does not block.
     setCheckingQuota(true);
     const refusal = await sessionQuota.checkBeforeStart();
-    if (startRequestRef.current !== startRequest || !mountedRef.current) return;
+    if (startRequestRef.current !== startRequest || !mountedRef.current || userIdRef.current !== owner) return;
     setCheckingQuota(false);
     if (refusal) {
       handleSubscriptionError(refusal);

@@ -402,11 +402,13 @@ export async function handleRequest(req: Request): Promise<Response> {
         // empty reply, or the browser leaving (reload, closed tab, Stop)
         // before the student read a usable part of the answer. One that
         // streamed REFUND_MAX_DELIVERED_CHARS or more stays charged, and so
-        // does one the browser left after the model had finished: a short
-        // answer is already on screen. Refund before the client hears of the
-        // failure, so a retry it sends straight away sees it given back.
-        const answerFinished = streamSawDone || streamSawFinishReason;
-        const refunded = !(isAbort && answerFinished) && accumulated.length < REFUND_MAX_DELIVERED_CHARS &&
+        // does one the model had finished, however the request ended
+        // afterwards: a short answer is already on screen. A reply cut off at
+        // its cap with no text is not finished; the client asks again.
+        // Refund before the client hears of the failure, so a retry it sends
+        // straight away sees it given back.
+        const answerFinished = (streamSawDone || streamSawFinishReason) && streamFinishReason !== "length";
+        const refunded = !answerFinished && accumulated.length < REFUND_MAX_DELIVERED_CHARS &&
           await refundQuotaReservation(user.id, rateLimit);
         // The weekly cap counts real spend, so a refunded run's OpenRouter
         // cost still counts. Only a Claude refusal that cost nothing is logged at 0.
