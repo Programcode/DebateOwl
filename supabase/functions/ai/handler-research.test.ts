@@ -418,6 +418,15 @@ Deno.test("Ask marks only surviving URL and research context as available", asyn
     if (helperModels.length !== 2 || helperModels.some((model) => model !== BACKGROUND_MODEL)) {
       throw new Error(`research helpers did not use the background model: ${JSON.stringify(helperModels)}`);
     }
+    // The background model is Claude, so research steps on a GPT request
+    // must stay on the Anthropic key too, while the GPT answer is not pinned.
+    for (const body of providerBodies) {
+      const routing = body.provider as Record<string, unknown>;
+      const pinned = JSON.stringify(routing.only) === '["anthropic"]' && routing.allow_fallbacks === false;
+      if (pinned !== String(body.model).startsWith("anthropic/")) {
+        throw new Error(`wrong provider routing for ${String(body.model)}: ${JSON.stringify(routing)}`);
+      }
+    }
     if (providerBodies.filter((body) => body.model === "openai/gpt-6-luna").length !== 1) {
       throw new Error("Ask answer did not use the requested model");
     }
@@ -767,6 +776,15 @@ Deno.test("AI handlers use strict OpenRouter routing and server-side reasoning t
       if (reasoning.effort !== (entry.isProOnly ? "high" : "low")) throw new Error(`tier effort was not enforced for ${entry.id}`);
       if (reasoning.exclude !== true || provider.require_parameters !== true) throw new Error(`strict reasoning route missing for ${entry.id}`);
       if ("sort" in provider || "order" in provider) throw new Error(`sort/order disabled balanced routing for ${entry.id}`);
+      // Claude runs only on the Anthropic key (BYOK); every other family keeps
+      // OpenRouter's balanced routing across providers.
+      if (entry.id.startsWith("anthropic/")) {
+        if (JSON.stringify(provider.only) !== '["anthropic"]' || provider.allow_fallbacks !== false) {
+          throw new Error(`Claude was not pinned to Anthropic without fallbacks: ${JSON.stringify(provider)}`);
+        }
+      } else if ("only" in provider || "allow_fallbacks" in provider) {
+        throw new Error(`non-Claude route was restricted for ${entry.id}: ${JSON.stringify(provider)}`);
+      }
       if ((body.response_format as Record<string, unknown>)?.type !== "json_object") throw new Error(`JSON response format missing for ${entry.id}`);
       // With require_parameters, one endpoint without temperature support
       // turns the whole request into a routing 404 (Claude Opus 5 did).

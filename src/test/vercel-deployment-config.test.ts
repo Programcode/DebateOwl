@@ -9,6 +9,9 @@ type HeaderRule = {
 };
 
 type VercelConfig = {
+  git?: {
+    deploymentEnabled?: boolean | Record<string, boolean>;
+  };
   trailingSlash?: boolean;
   redirects?: Array<{ source: string; destination: string; statusCode?: number }>;
   rewrites?: Array<{ source: string; destination: string }>;
@@ -59,6 +62,18 @@ const cspDirective = (csp: string, name: string) =>
   csp.split(";").map((part) => part.trim()).find((part) => part.startsWith(`${name} `)) ?? "";
 
 describe("Vercel frontend deployment configuration", () => {
+  it("deploys main automatically and does not deploy any other branch", () => {
+    // Unspecified branches default to true, and a branch deploys when any
+    // matching rule is true. `*` does not match a slash, so `cursor/…` needs `**`.
+    // https://vercel.com/docs/project-configuration/git-configuration
+    expect(loadConfig().git).toEqual({
+      deploymentEnabled: {
+        main: true,
+        "**": false,
+      },
+    });
+  });
+
   it("serves the SPA shell for app routes only, so unknown paths get the real 404", () => {
     const config = loadConfig();
 

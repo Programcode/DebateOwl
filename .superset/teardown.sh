@@ -6,6 +6,9 @@ set -euo pipefail
 
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$DIR/lib/lock.sh"
+source "$DIR/lib/supabase-cli.sh"
+# Teardown still runs when npm ci never did; then there is no stack to stop.
+use_pinned_supabase_cli "$(cd "$DIR/.." && pwd)" 2>/dev/null || exit 0
 
 WORKSPACE_KEY="$(pwd)"
 PORTS_LOCK="$HOME/.superset/debatelab-ports/lock"

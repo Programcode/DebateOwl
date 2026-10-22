@@ -171,6 +171,9 @@ Deno.test("streaming Ask forwards the shared prompt and returns provider SSE", a
     if (!routing || typeof routing !== "object" || Array.isArray(routing)) throw new Error("provider preferences were missing");
     const preferences = routing as Record<string, unknown>;
     if (preferences.require_parameters !== true) throw new Error("parameter support was not required");
+    if (JSON.stringify(preferences.only) !== '["anthropic"]' || preferences.allow_fallbacks !== false) {
+      throw new Error(`streamed Claude was not pinned to Anthropic without fallbacks: ${JSON.stringify(preferences)}`);
+    }
     if ("sort" in preferences || "order" in preferences) {
       throw new Error(`sort/order disables OpenRouter balanced routing: ${JSON.stringify(preferences)}`);
     }

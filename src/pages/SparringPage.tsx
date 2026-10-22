@@ -30,8 +30,8 @@ import { useSubscriptionError } from '@/hooks/use-subscription-error';
 import { SubscriptionErrorModals } from '@/components/features/subscription';
 
 function readableError(error: unknown, fallback: string) {
-  if (isAISubscriptionError(error)) return getUserFacingAIError(error);
-  if (error instanceof Error && error.message.trim()) return error.message;
+  // Subscription errors have their own text; provider errors get the translated outage message.
+  if (isAISubscriptionError(error) || (error instanceof Error && error.message.trim())) return getUserFacingAIError(error);
   return fallback;
 }
 

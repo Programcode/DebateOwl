@@ -39,6 +39,8 @@ Both endpoints accept an optional `debateContext` of IDs (`debateId`, `side`, `s
 
 Both endpoints route every model inference through OpenRouter and enforce the shared ten-model Basic/Pro catalog. Basic accounts get Claude Haiku 5.5 (the default), GPT-6 Luna, and Muse Spark 1.3 Contributor; Claude Sonnet 5.5 is the Pro default and Claude Opus 5.5 runs only when picked; Pro-only models require active Pro access. Retired catalog IDs from older clients resolve to their successor before validation.
 
+Claude runs only on DebateLab's own Anthropic key, added to OpenRouter as BYOK. [`_shared/provider-routing.ts`](functions/_shared/provider-routing.ts) sends `anthropic/*` requests with `provider: { only: ["anthropic"], allow_fallbacks: false }`, so Bedrock, Vertex, Azure and every other provider are never tried; other models keep OpenRouter's balanced routing. The request body cannot stop OpenRouter from serving Anthropic on its own credits when the key fails, so the key's **Shared capacity fallback** in OpenRouter must be set to "Never use shared capacity for any model on this provider". When a Claude call is refused, the endpoints answer 503 `provider_unavailable` and log `claude_unavailable`. The request gets back exactly the units `consume_ai_quota` reserved for it (`refundQuotaReservation` passes `RateLimitResult.units` to `refund_daily_quota`), and its row is logged with `cap_cost_usd` 0, but only when nothing was paid for: no text written, no finished model call (a research step Claude refused in the same outage does not count), and no OpenRouter charge against the weekly cap. Jev routing and source-ranking rows are logged separately and keep their own cap cost. The Ask page does not resend a `provider_unavailable` stream failure through the plain endpoint. A Claude response whose usage shows `is_byok: false` or a `cost` above zero logs a `claude_not_byok` warning; past the monthly BYOK allowance, OpenRouter's BYOK fee also shows as cost.
+
 The browser boundary is [`../src/lib/ai/client.ts`](../src/lib/ai/client.ts). Shared prompt, research, source-quality, cost, entitlement, CORS, and control logic lives in `_shared`.
 
 ### Content and sharing
@@ -110,15 +112,15 @@ When creating a table, sequence or function in `public`, grant only the Data API
 Local gate:
 
 ```bash
-supabase db start
+npx supabase db start
 npm run test:db
-supabase stop --no-backup
+npx supabase stop --no-backup
 ```
 
 Requirements:
 
 - Docker
-- Supabase CLI 2.115 or newer
+- Supabase CLI 2.121.0, pinned in `package.json` (`npm ci` installs it)
 - exclusive ownership of the default local ports and containers
 
 The stack begins at port `54321` and is not parallel-safe across worktrees. Coordinate before starting it. Stop the stack before finishing, including after failures when safe.

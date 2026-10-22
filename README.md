@@ -24,7 +24,7 @@ Requirements:
 
 - Node.js 22.x and npm, using the committed `package-lock.json`
 - Deno 2.x for Edge Function tests
-- Docker and Supabase CLI 2.115 or newer for the local database gate
+- Docker and Supabase CLI 2.121.0, pinned in `package.json` (`npm ci` installs it) for the local database gate
 - Playwright browsers for browser tests
 
 ```bash
@@ -59,7 +59,7 @@ Browser or PWA
   -> OpenRouter models, research providers, Stripe, Google APIs
 ```
 
-- The frontend is hosted on **Vercel**. [`vercel.json`](vercel.json) owns the build, app-route rewrites, cache policy, and security headers. Merging to `main` deploys it to production.
+- The frontend is hosted on **Vercel**. [`vercel.json`](vercel.json) owns the build, app-route rewrites, cache policy, and security headers. Merging to `main` deploys it to production. Pushes to other branches do not.
 - **Supabase** holds auth, data, and Edge Functions. Migrations and function deploys are separate operations that need explicit authorization.
 - The browser never holds provider secrets. AI requests go to the `ai` and `ai-stream` Edge Functions, which check auth, quotas, and controls, load debate sources by ID, call the model through OpenRouter, validate the output, and record usage.
 
