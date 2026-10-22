@@ -22,6 +22,7 @@ import {
   type SparringRequest,
 } from "./sparring-persistence.ts";
 import {
+  chargedAgainstCap,
   excludeFromCap,
   mergeNormalizedUsage,
   selectObservedUsage,
@@ -812,12 +813,14 @@ export async function handleRequest(req: Request): Promise<Response> {
       // it fails the student gets an outage message, and their request back
       // if no provider call had finished or written anything yet.
       const claudeUnavailable = err instanceof ClaudeProviderUnavailableError;
-      const refundable = claudeUnavailable && !err.afterOutput && !completedMainUsage && !usageError?.completedUsage &&
-        researchUsage.length === 0 && !researchAccountingIncomplete;
+      const researchRan = researchUsage.length > 0 || researchAccountingIncomplete;
       const errorUsage = mergeNormalizedUsage([
         mainErrorUsage,
         ...researchUsageForLog(),
       ]);
+      // OpenRouter credits already spent on the request keep it counted.
+      const refundable = claudeUnavailable && !err.afterOutput && !completedMainUsage && !usageError?.completedUsage &&
+        !researchRan && !chargedAgainstCap(errorUsage);
       await logUsage(
         userId,
         feature,

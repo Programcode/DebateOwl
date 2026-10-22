@@ -14,6 +14,7 @@ import {
   loadDebateContext,
 } from "../_shared/debate-context-loader.ts";
 import {
+  chargedAgainstCap,
   excludeFromCap,
   markIncompleteUsage,
   normalizeOpenRouterUsage,
@@ -393,7 +394,9 @@ export async function handleRequest(req: Request): Promise<Response> {
         // When it fails the student gets an outage message, and their request
         // back if the model had written nothing yet.
         const claudeUnavailable = !isAbort && err instanceof ClaudeProviderUnavailableError;
-        const refunded = claudeUnavailable && !err.afterOutput && !accumulated;
+        const observedUsage = collectUsage();
+        // OpenRouter credits already spent on the request keep it counted.
+        const refunded = claudeUnavailable && !err.afterOutput && !accumulated && !chargedAgainstCap(observedUsage);
         if (claudeUnavailable) {
           // Refund before the client hears of the failure, so a retry it
           // sends straight away sees the request already given back.
@@ -402,7 +405,6 @@ export async function handleRequest(req: Request): Promise<Response> {
         } else if (!isAbort) {
           try { emit("error", { message: "AI streaming failed. Please try again.", code: "provider_error" }); } catch { /* client disconnected */ }
         }
-        const observedUsage = collectUsage();
         await logUsage(
           user.id,
           "ask",

@@ -4,9 +4,9 @@
 -- must be the p_units that consume_ai_quota
 -- (20261022130001_weighted_quota_weekly_budget.sql) reserved for that
 -- request: 5 for Opus or Auto Pro, 2 for Sonnet, 1 for a cheap model. It only
--- lowers today's existing counter and never below zero. The refunded
--- request's ai_requests row is logged with cap_cost_usd 0, so it does not
--- count toward the weekly cap either.
+-- lowers today's existing counter and never below zero. A request that
+-- OpenRouter already charged credits for is never refunded; a refunded one is
+-- logged with cap_cost_usd 0, so it does not count toward the weekly cap.
 CREATE FUNCTION public.refund_daily_quota(
   p_user_id uuid,
   p_units integer DEFAULT 1,

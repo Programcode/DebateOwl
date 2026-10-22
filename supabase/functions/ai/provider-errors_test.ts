@@ -44,7 +44,7 @@ Deno.test("AI JSON and SSE failures never expose provider response bodies", asyn
 Deno.test("a refused Claude call is not retried elsewhere, shows an outage, and gives the request back", async () => {
   const originalFetch = globalThis.fetch;
   const originalWarn = console.warn;
-  let failure: "http" | "chunk" | "chunk-after-text" | "repair" | "after-research" | "ok" = "http";
+  let failure: "http" | "chunk" | "chunk-after-text" | "chunk-charged" | "repair" | "after-research" | "ok" = "http";
   let tier = "trial";
   // consume_ai_quota reservations and refund_daily_quota refunds, in units.
   const reservedUnits: number[] = [];
@@ -90,8 +90,9 @@ Deno.test("a refused Claude call is not retried elsewhere, shows an outage, and 
       if (failure === "after-research" && searchDecision) return Response.json({ choices: [{ message: { content: JSON.stringify({ shouldSearch: false, query: "" }) } }], usage });
       if (failure === "http" || failure === "repair" || failure === "after-research") return new Response("PRIVATE_PROVIDER_BODY", { status: 402 });
       const text = failure === "chunk-after-text" ? 'data: {"choices":[{"delta":{"content":"{\\"resp"}}]}\n\n' : "";
-      // OpenRouter reported a charge before the stream failed.
-      const charge = 'data: {"choices":[],"usage":{"prompt_tokens":10,"completion_tokens":0,"cost":0.25}}\n\n';
+      // Usage arrives before the error: free on the BYOK key, or a charge on OpenRouter credits.
+      const cost = failure === "chunk-charged" ? 0.25 : 0;
+      const charge = `data: {"choices":[],"usage":{"prompt_tokens":10,"completion_tokens":0,"cost":${cost},"is_byok":${cost === 0}}}\n\n`;
       return new Response(`${text}${charge}data: {"error":{"message":"PRIVATE_PROVIDER_BODY"}}\n\n`, { headers: { "Content-Type": "text/event-stream" } });
     }
     throw new Error(`Unexpected request: ${url}`);
@@ -112,7 +113,7 @@ Deno.test("a refused Claude call is not retried elsewhere, shows an outage, and 
         assertEquals(response.status, 503);
         return await response.text();
       }] as const,
-      ...(["http", "chunk", "chunk-after-text"] as const).flatMap((kind) => [
+      ...(["http", "chunk", "chunk-after-text", "chunk-charged"] as const).flatMap((kind) => [
         [`ai live ${kind}`, kind, async () => {
           const text = await (await send(ai, { stream: true })).text();
           assertEquals(text.includes('"status":503'), true);
@@ -136,12 +137,13 @@ Deno.test("a refused Claude call is not retried elsewhere, shows an outage, and 
       assertEquals(text.includes('"code":"provider_unavailable"'), true, label);
       // A failure after the model wrote text keeps the request: the key already paid for it.
       // The repair case already completed a paid attempt before the retry failed.
-      const refunded = !(kind === "chunk-after-text" || kind === "repair" || kind === "after-research");
+      // OpenRouter credits already charged also keep the request counted.
+      const refunded = !(kind === "chunk-after-text" || kind === "chunk-charged" || kind === "repair" || kind === "after-research");
       assertEquals(refundedUnits, refunded ? [1] : [], `${label} refunds only a failure before output`);
       assertEquals(usageRows.map((row) => row.error_code), ["claude_unavailable"], label);
-      // A refunded request stays out of the weekly cap even when OpenRouter reported a charge.
+      // A refunded request adds nothing to the weekly cap; a charged one keeps its charge.
       if (refunded) assertEquals(usageRows[0].cap_cost_usd, 0, label);
-      if (kind === "chunk-after-text") assertEquals(usageRows[0].cap_cost_usd, 0.25, label);
+      if (kind === "chunk-charged") assertEquals(usageRows[0].cap_cost_usd, 0.25, label);
       // Every attempt stays on the Anthropic route; nothing is retried on another model or provider.
       assertEquals(providerBodies.length > 0, true, label);
       for (const body of providerBodies) {
