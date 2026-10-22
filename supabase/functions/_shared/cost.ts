@@ -170,7 +170,9 @@ export function calculateRequestCost(args: {
     outputTokens: usage?.outputTokens ?? null,
     reasoningOutputTokens: usage?.reasoningOutputTokens ?? null,
     costUsd: usage?.incomplete ? null : usage?.reportedCostUsd ?? null,
-    capCostUsd: usage && !usage.incomplete ? capCostOf(usage) ?? null : null,
+    // The cap counts what is known even when the rest of the cost is not: a
+    // lower bound stops a user sooner than leaving the request out entirely.
+    capCostUsd: usage ? capCostOf(usage) ?? null : null,
     pricingSnapshotId: "openrouter-response-usage",
     pricingSourceUrl: "https://openrouter.ai/docs/cookbook/administration/usage-accounting",
     costCalculationVersion: OPENROUTER_COST_CALCULATION_VERSION,
@@ -205,7 +207,8 @@ export function mergeNormalizedUsage(usages: Array<NormalizedUsage | undefined>)
     reportedCostUsd: defined.every((u) => !u.incomplete && typeof u.reportedCostUsd === "number")
       ? defined.reduce((total, usage) => total + (usage.reportedCostUsd ?? 0), 0)
       : undefined,
-    capCostUsd: defined.every((u) => !u.incomplete && typeof capCostOf(u) === "number")
+    // Cap spend is a lower bound: calls with an unknown charge add nothing.
+    capCostUsd: defined.some((u) => typeof capCostOf(u) === "number")
       ? defined.reduce((total, usage) => total + (capCostOf(usage) ?? 0), 0)
       : undefined,
     raw: { calls: defined.map((u) => u.raw ?? null) },

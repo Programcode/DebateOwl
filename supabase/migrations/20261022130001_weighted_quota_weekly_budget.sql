@@ -13,8 +13,9 @@
 -- BYOK call that is only OpenRouter's fee, usually 0, because the provider
 -- bills our own key), plus non-OpenRouter charges such as Exa and ElevenLabs.
 -- So a Claude call on the BYOK Anthropic key adds about nothing, and a Claude
--- call that falls back to OpenRouter credits counts in full. NULL means
--- unknown or not recorded; it never counts. Rows logged before this
+-- call that falls back to OpenRouter credits counts in full. When part of a
+-- request's cost is unknown, the known part is recorded (a lower bound). NULL
+-- means nothing is known or the row predates this column; it never counts. Rows logged before this
 -- migration have NULL, so rewriting their cost_usd (for example the BYOK
 -- cost backfill) cannot move anyone toward the cap.
 ALTER TABLE public.ai_requests

@@ -237,14 +237,17 @@ Deno.test("a usage with a separate provider charge counts it toward the cap in f
   if (Math.abs((result.capCostUsd ?? -1) - 0.03) > 1e-12) throw new Error(`research charge not counted: ${result.capCostUsd}`);
 });
 
-Deno.test("unknown or incomplete spend never counts toward the cap", () => {
+Deno.test("the cap counts the known part of a partly unknown request", () => {
   const known = normalizeOpenRouterUsage({ prompt_tokens: 10, completion_tokens: 10, cost: 0.5 });
   const unknown = normalizeOpenRouterUsage({ prompt_tokens: 10, completion_tokens: 10 });
-  if (calculateRequestCost({ provider: "openrouter", model: "x", usage: mergeNormalizedUsage([known, unknown]) }).capCostUsd !== null) {
-    throw new Error("a partly unknown request got a cap figure");
+  const partial = calculateRequestCost({ provider: "openrouter", model: "x", usage: mergeNormalizedUsage([known, unknown]) });
+  if (partial.costUsd !== null) throw new Error("a partly unknown request got a full cost");
+  if (partial.capCostUsd !== 0.5) throw new Error(`known part missing from the cap: ${partial.capCostUsd}`);
+  if (calculateRequestCost({ provider: "openrouter", model: "x", usage: markIncompleteUsage(known) }).capCostUsd !== 0.5) {
+    throw new Error("cancelled work dropped its known charge from the cap");
   }
-  if (calculateRequestCost({ provider: "openrouter", model: "x", usage: markIncompleteUsage(known) }).capCostUsd !== null) {
-    throw new Error("incomplete work got a cap figure");
+  if (calculateRequestCost({ provider: "openrouter", model: "x", usage: unknown }).capCostUsd !== null) {
+    throw new Error("a wholly unknown request got a cap figure");
   }
 });
 
