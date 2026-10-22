@@ -10,6 +10,28 @@
     "ctaPricing": "Kezdd 3 napos ingyenes próbával, bankkártya nélkül. Utána a DebateLab havi 5 dollár plusz adó.",
     "ctaButton": "Ingyenes próba indítása"
   },
+  "shortAnswer": {
+    "hub": {
+      "question": "Milyen ingyenes vitaeszközöket használhatok regisztráció nélkül?",
+      "answer": "Négyet, mind ingyenes, és egyikhez sem kell fiók: egy fordulóidőmérőt, amely hét formátum beszédsorrendjét és beszédidejét ismeri, egy tételgenerátort, amely {{total}} eredeti, gyakorlásra írt vitatételből húz, egy nyomtatható jegyzetlapot, amelyen minden beszédnek saját oszlopa van, és egy beszédidő-kalkulátort. A böngésződben futnak, és a fordulóidat és piszkozataidat ott tárolják, nem szerveren."
+    },
+    "timer": {
+      "question": "Van olyan ingyenes vitaidőmérő, amely ismeri az egyes formátumok beszédidejét?",
+      "answer": "Igen, ez. Válaszd ki a Public Forum, Lincoln-Douglas, Policy, British Parliamentary, World Schools, Asian Parliamentary vagy az iskolai 4-6-6-3 formátumot, és az időmérő betölti a beszédek sorrendjét és hosszát, mutatja a védett időt, amikor nem lehet közbekérdezni, a Public Forum, Lincoln-Douglas és Policy formátumban pedig mindkét oldalnak saját felkészülési időkeretet ad. Ingyenes, nem kell hozzá fiók, és a futó forduló az oldal újratöltése után is megmarad."
+    },
+    "motions": {
+      "question": "Hol találok véletlenszerű vitatételeket gyakorláshoz?",
+      "answer": "Itt. A generátor egy tételt húz, vétógyakorlathoz hármat, {{total}} eredeti, ehhez az oldalhoz írt gyakorló tételből. Szűrhetsz téma, nehézség és tételtípus szerint, a megfogalmazás pedig lehet This House vagy Resolved. Ingyenes, nem kell hozzá fiók, és lejjebb az összes tétel megtalálható téma szerint."
+    },
+    "flow": {
+      "question": "Hogyan készíthetek jegyzetlapot egy vitafordulóhoz?",
+      "answer": "Válaszd ki itt a formátumot és a papírméretet, majd nyomtasd ki. A lapon minden beszédnek saját oszlopa van, elhangzási sorrendben, a beszélő szerepével felcímkézve és az oldal színével jelölve, alul pedig egy sáv a keresztkérdésekhez vagy a közbekérdezésekhez. PDF-hez a nyomtatási ablakban válaszd a Mentés PDF-ként lehetőséget. Ingyenes, és nem kell hozzá fiók."
+    },
+    "calc": {
+      "question": "Mennyi ideig tart elmondani a beszédemet?",
+      "answer": "Oszd el a szavak számát a beszédtempóddal. Átlagos, percenként 130 szavas tempóban egy 520 szavas beszéd nagyjából 4 perc, gyors, 160 szavas tempóban körülbelül 3 perc 15 másodperc. Illeszd be a beszédet a lenti kalkulátorba, és megmutatja az időt lassú, átlagos, gyors és saját tempóban, valamint azt, hogy mely vitabeszéd-időkbe fér bele. A szöveg nem hagyja el a böngésződet."
+    }
+  },
   "timer": {
     "region": "{{format}} vitaidőmérő",
     "format": "Formátum",

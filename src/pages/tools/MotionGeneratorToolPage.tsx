@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { MotionGenerator } from '@/components/free-tools/MotionGenerator';
 import { ToolCta, ToolFaq, ToolPageLayout } from '@/components/free-tools/ToolPageLayout';
 import { PRACTICE_MOTIONS } from '@/lib/free-tools/practice-motions';
@@ -61,12 +62,15 @@ function MotionList() {
 }
 
 export default function MotionGeneratorToolPage() {
+  const { t } = useTranslation('tools');
+  const shortAnswer = { question: t('shortAnswer.motions.question'), answer: t('shortAnswer.motions.answer', { total: PRACTICE_MOTIONS.length }) };
   return (
     <ToolPageLayout
       route="/tools/debate-motion-generator"
       title="Debate motion generator"
       intro={<p>Draw a practice motion, or three for a veto drill, from {PRACTICE_MOTIONS.length} original motions across twelve topics. Filter by difficulty and motion type, and switch between &quot;This House&quot; wording for BP and World Schools and &quot;Resolved&quot; wording for US formats.</p>}
-      structuredData={toolStructuredData('/tools/debate-motion-generator', NAME, FAQ)}
+      shortAnswer={shortAnswer}
+      structuredData={toolStructuredData('/tools/debate-motion-generator', NAME, [shortAnswer, ...FAQ])}
       tool={<MotionGenerator />}
     >
       <section>

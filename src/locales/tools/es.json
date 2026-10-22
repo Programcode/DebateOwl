@@ -10,6 +10,28 @@
     "ctaPricing": "Empieza con 3 días de prueba gratis, sin tarjeta. Después, DebateLab cuesta 5 $ al mes más impuestos.",
     "ctaButton": "Empezar la prueba gratis"
   },
+  "shortAnswer": {
+    "hub": {
+      "question": "¿Qué herramientas de debate gratis puedo usar sin crear una cuenta?",
+      "answer": "Cuatro, todas gratis y sin registro: un cronómetro de rondas que conoce el orden y la duración de los discursos de siete formatos, un generador que saca mociones de un banco de {{total}} mociones de práctica originales, una hoja de flujo imprimible con una columna por discurso y una calculadora de duración de discursos. Funcionan en tu navegador y guardan ahí tus rondas y borradores, no en un servidor."
+    },
+    "timer": {
+      "question": "¿Hay algún cronómetro de debate gratis que conozca los tiempos de cada formato?",
+      "answer": "Sí, este. Elige Public Forum, Lincoln-Douglas, Policy, British Parliamentary, World Schools, Asian Parliamentary o el formato escolar 4-6-6-3, y carga el orden y la duración de los discursos, muestra el tiempo protegido en que no se admiten puntos de información y, en Public Forum, Lincoln-Douglas y Policy, da a cada lado su reserva de tiempo de preparación. Es gratis, no necesita cuenta y conserva la ronda en curso aunque recargues la página."
+    },
+    "motions": {
+      "question": "¿Dónde consigo mociones de debate al azar para practicar?",
+      "answer": "Aquí. El generador saca una moción, o tres para un ejercicio de veto, de {{total}} mociones de práctica originales escritas para este sitio, con filtros de tema, dificultad y tipo de moción, y redacción «Esta Casa» o «Resolved». Es gratis, no necesita cuenta, y más abajo están todas las mociones ordenadas por tema."
+    },
+    "flow": {
+      "question": "¿Cómo hago una hoja de flujo para un debate?",
+      "answer": "Elige aquí tu formato y el tamaño del papel, e imprime. La hoja tiene una columna por discurso en orden de intervención, rotulada con el turno de cada orador y coloreada según el lado, y una franja abajo para notas de preguntas cruzadas o puntos de información. Para obtener un PDF, elige Guardar como PDF en el cuadro de impresión. Es gratis y no necesita cuenta."
+    },
+    "calc": {
+      "question": "¿Cuánto tardaré en pronunciar mi discurso?",
+      "answer": "Divide el número de palabras entre tu ritmo de habla. A un ritmo medio de 130 palabras por minuto, un discurso de 520 palabras dura unos 4 minutos; a un ritmo rápido de 160, unos 3 minutos y 15 segundos. Pega el discurso en la calculadora de abajo para ver la duración a ritmo lento, medio, rápido y al tuyo, y en qué turnos de debate cabe. El texto nunca sale de tu navegador."
+    }
+  },
   "timer": {
     "region": "Cronómetro de ronda de {{format}}",
     "format": "Formato",
