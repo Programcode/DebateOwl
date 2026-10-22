@@ -1601,6 +1601,7 @@
     "newFolderPlaceholder": "Folder name...",
     "newFolderHint": "Need a new folder? Use the \"New folder\" button up top.",
     "createFolder": "Create folder",
+    "saveFailed": "Could not save this source.",
     "sortBy": "Sort by",
     "sortSmart": "Smart",
     "sortMostUsed": "Most used",

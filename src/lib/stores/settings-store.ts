@@ -14,6 +14,7 @@ import {
 } from '../../../supabase/functions/_shared/model-catalog';
 import type { ProviderConfig } from '../ai/providers/types';
 import { supabase } from '@/lib/supabase/client';
+import { currentUserId } from '@/lib/supabase/current-user';
 
 export type FeatureTab = 'generate' | 'attack' | 'brainstorm' | 'factoids' | 'ask' | 'sparring';
 type CoreFeatureTab = Exclude<FeatureTab, 'sparring'>;
@@ -164,8 +165,7 @@ async function canAccessProModels(settings: Record<string, unknown>): Promise<bo
 }
 
 async function getUserId() {
-  const { data } = await supabase.auth.getUser();
-  return data.user?.id || null;
+  return await currentUserId();
 }
 
 // The auth trigger provisions every settings row, and clients may only UPDATE
