@@ -13,7 +13,7 @@
   "shortAnswer": {
     "hub": {
       "question": "Milyen ingyenes vitaeszközöket használhatok regisztráció nélkül?",
-      "answer": "Négyet, mind ingyenes, és egyikhez sem kell fiók: egy fordulóidőmérőt, amely hét formátum beszédsorrendjét és beszédidejét ismeri, egy tételgenerátort, amely {{total}} eredeti, gyakorlásra írt vitatételből húz, egy nyomtatható jegyzetlapot, amelyen minden beszédnek saját oszlopa van, és egy beszédidő-kalkulátort. A böngésződben futnak, és a fordulóidat és piszkozataidat ott tárolják, nem szerveren."
+      "answer": "Négyet, mind ingyenes, és egyikhez sem kell fiók: egy fordulóidőmérőt, amely hét formátum beszédsorrendjét és beszédidejét ismeri, egy tételgenerátort, amely {{total}} eredeti, gyakorlásra írt vitatételből húz, egy nyomtatható jegyzetlapot, amelyen minden beszédnek saját oszlopa van, és egy beszédidő-kalkulátort. A böngésződben futnak, és az időmérő ott tárolja a fordulódat, nem szerveren."
     },
     "timer": {
       "question": "Van olyan ingyenes vitaidőmérő, amely ismeri az egyes formátumok beszédidejét?",
