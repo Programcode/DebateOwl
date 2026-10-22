@@ -238,7 +238,8 @@ function OptionalOnboardingTour() {
   const completed = useOnboardingStore((state) => hasCompletedOnboarding(state, userId));
   const isTourRunning = useOnboardingStore((state) => state.isTourRunning);
   const claimLegacyCompletion = useOnboardingStore((state) => state.claimLegacyCompletion);
-  const shouldLoadTour = isTourRunning || (location.pathname === "/app" && !completed);
+  // A tour left running by the previous account never opens for one that finished it.
+  const shouldLoadTour = !completed && (isTourRunning || location.pathname === "/app");
 
   useEffect(() => {
     if (userId) claimLegacyCompletion(userId);

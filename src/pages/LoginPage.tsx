@@ -13,7 +13,7 @@ import { useExternalRedirectPending } from '@/hooks/use-external-redirect-pendin
 import { consumeWorkspaceInvite } from '@/lib/workspace/invite-handoff';
 import { localizeAuthError } from '@/lib/auth-errors';
 import { clearSessionExpiredNotice, sessionExpiredNotice } from '@/lib/supabase/session-expiry';
-import type { AuthCallbackError } from '@/lib/auth-callback';
+import { AUTH_CALLBACK_ERROR_KEYS } from '@/lib/auth-callback';
 
 type AuthMode = 'email' | 'demo';
 type AuthStatus = 'idle' | 'submitting' | 'code-sent' | 'verifying' | 'success' | 'error';
@@ -30,12 +30,6 @@ function otpDigits(value: string): string {
 function isAuthMode(value: string): value is AuthMode {
   return value === 'email' || value === 'demo';
 }
-
-const CALLBACK_ERROR_KEYS: Record<AuthCallbackError, string> = {
-  'link-expired': 'login.errors.linkExpired',
-  'other-browser': 'login.errors.linkOtherBrowser',
-  failed: 'login.errors.callbackFailed',
-};
 
 /** RequireAuth's redirect: the page that needed sign-in, and whose session just ended there. */
 type LoginRouteState = { from?: { pathname?: string }; fromUserId?: string } | null;
@@ -221,7 +215,7 @@ export default function LoginPage() {
           )}
           {linkError && authStatus === 'idle' && (
             <p className="mb-4 rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive" role="alert">
-              {t(CALLBACK_ERROR_KEYS[linkError])}
+              {t(AUTH_CALLBACK_ERROR_KEYS[linkError])}
             </p>
           )}
           <Button className="w-full" onClick={() => void handleGoogleSignIn()} disabled={isRedirecting}>

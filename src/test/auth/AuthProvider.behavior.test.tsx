@@ -693,6 +693,43 @@ describe('AuthProvider behavior', () => {
     expect(screen.getByTestId('loading')).toHaveTextContent('false');
   });
 
+  it('stays loading through the stored session\'s events until another account\'s callback exchange settles', async () => {
+    window.history.replaceState({}, '', '/auth/callback?code=pkce-code');
+    let finishExchange!: (value: unknown) => void;
+    exchangeCodeForSessionMock.mockReturnValue(new Promise((resolve) => { finishExchange = resolve; }));
+
+    render(
+      <AuthProvider>
+        <AuthConsumer />
+      </AuthProvider>
+    );
+
+    // auth-js restores the account already stored in this browser while B's code is exchanged.
+    act(() => callbackRef.current?.('INITIAL_SESSION', { user: { id: 'stored-user' }, access_token: 'stored' }));
+    expect(screen.getByTestId('loading')).toHaveTextContent('true');
+
+    await act(async () => {
+      finishExchange({ data: { session: { user: { id: 'callback-user' }, access_token: 'token' } }, error: null });
+    });
+    await waitFor(() => expect(screen.getByTestId('loading')).toHaveTextContent('false'));
+    expect(screen.getByTestId('user')).toHaveTextContent('callback-user');
+  });
+
+  it('keeps a callback error when the stored session is restored afterwards', async () => {
+    window.history.replaceState({}, '', '/auth/callback?error=access_denied&error_code=otp_expired');
+    getSessionMock.mockResolvedValue({ data: { session: { user: { id: 'stored-user' }, access_token: 'stored' } }, error: null });
+
+    render(
+      <AuthProvider>
+        <AuthConsumer />
+      </AuthProvider>
+    );
+
+    await waitFor(() => expect(screen.getByTestId('loading')).toHaveTextContent('false'));
+    act(() => callbackRef.current?.('SIGNED_IN', { user: { id: 'stored-user' }, access_token: 'stored' }));
+    expect(screen.getByTestId('callback-error')).toHaveTextContent('link-expired');
+  });
+
   it('says why a callback exchange failed and keeps any session the browser already had', async () => {
     const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
     window.history.replaceState({}, '', '/auth/callback?code=pkce-code&sb_flow_id=0123456789abcdef');

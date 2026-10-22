@@ -287,7 +287,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setJamUserId(nextUserId);
       setActiveAccessToken(newSession?.access_token ?? null, newSession?.user.id ?? null);
       setSession(newSession);
-      if (event === 'SIGNED_IN') setCallbackError(null);
 
       // Provider access tokens are short-lived. Keep them only for this browser
       // session; a later export must reauthorize if no fresh token is available.
@@ -328,7 +327,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       } else {
         hydrateStores(nextUserId);
       }
-      setLoading(false);
+      // A session this browser already had is announced while the callback
+      // exchange runs; the callback page must wait for the account it signs in.
+      if (!callbackPending) setLoading(false);
     });
 
     return () => {

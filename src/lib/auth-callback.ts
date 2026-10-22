@@ -5,6 +5,12 @@ export const AUTH_CALLBACK_PATH = '/auth/callback';
 /** Why a callback did not sign anyone in. LoginPage shows a message for each. */
 export type AuthCallbackError = 'link-expired' | 'other-browser' | 'failed';
 
+export const AUTH_CALLBACK_ERROR_KEYS: Record<AuthCallbackError, string> = {
+  'link-expired': 'login.errors.linkExpired',
+  'other-browser': 'login.errors.linkOtherBrowser',
+  failed: 'login.errors.callbackFailed',
+};
+
 export type AuthCallbackParams = {
   code: string | null;
   flowId: string | null;

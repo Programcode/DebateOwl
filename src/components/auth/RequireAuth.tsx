@@ -1,4 +1,4 @@
-import { useRef } from 'react';
+import { useEffect, useRef } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/lib/supabase/AuthProvider';
 import { Loader2 } from 'lucide-react';
@@ -10,7 +10,9 @@ export function RequireAuth({ children }: { children: React.ReactNode }) {
   // The account this layout last showed. A sign-out here stamps the redirect
   // with it, so LoginPage returns only that account to the page it left.
   const lastUserId = useRef<string | undefined>(undefined);
-  if (user) lastUserId.current = user.id;
+  useEffect(() => {
+    if (user) lastUserId.current = user.id;
+  }, [user]);
 
   if (loading) {
     return (

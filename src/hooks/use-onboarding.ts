@@ -21,6 +21,17 @@ type PersistedOnboarding = Pick<OnboardingState, 'completedUserIds' | 'legacyCom
 
 const withUser = (userIds: string[], userId: string) => (userIds.includes(userId) ? userIds : [...userIds, userId]);
 
+/** Stored state is browser data: anything malformed counts as nothing stored. */
+function readPersisted(value: unknown): PersistedOnboarding {
+    const stored = (value ?? {}) as Partial<Record<keyof PersistedOnboarding, unknown>>;
+    return {
+        completedUserIds: Array.isArray(stored.completedUserIds)
+            ? stored.completedUserIds.filter((id): id is string => typeof id === 'string')
+            : [],
+        legacyCompleted: stored.legacyCompleted === true,
+    };
+}
+
 export function hasCompletedOnboarding(state: PersistedOnboarding, userId: string | undefined): boolean {
     return !userId || state.legacyCompleted || state.completedUserIds.includes(userId);
 }
@@ -51,8 +62,10 @@ export const useOnboardingStore = create<OnboardingState>()(
                     const legacy = persisted as { hasCompletedOnboarding?: unknown } | null;
                     return { completedUserIds: [], legacyCompleted: legacy?.hasCompletedOnboarding === true };
                 }
-                return persisted as PersistedOnboarding;
+                return readPersisted(persisted);
             },
+            // migrate runs only on a version change; every rehydrate is checked here.
+            merge: (persisted, current) => ({ ...current, ...readPersisted(persisted) }),
         }
     )
 );

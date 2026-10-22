@@ -42,4 +42,13 @@ describe('onboarding tour per account', () => {
     useOnboardingStore.getState().claimLegacyCompletion('student-a');
     expect(hasCompletedOnboarding(useOnboardingStore.getState(), 'student-a')).toBe(false);
   });
+
+  it('ignores a damaged stored copy instead of breaking every protected page', async () => {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ state: { completedUserIds: null, legacyCompleted: 'yes' }, version: 1 }));
+    const { useOnboardingStore, hasCompletedOnboarding } = await loadStore();
+
+    const state = useOnboardingStore.getState();
+    expect(state.completedUserIds).toEqual([]);
+    expect(hasCompletedOnboarding(state, 'student-a')).toBe(false);
+  });
 });
