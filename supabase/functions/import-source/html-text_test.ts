@@ -107,3 +107,29 @@ Deno.test("text after the last > is kept, with no tag parsing", () => {
   const html = `<p>${"word ".repeat(25)}</p> 3 < 5 and more words here`;
   assertEquals(stripHtml(html).includes("3 < 5 and more words here"), true);
 });
+
+Deno.test("a real Wikipedia page keeps its article text and drops the chrome", async () => {
+  // en.wikipedia.org/wiki/Free_public_transport as served on 2026-10-22 (CC BY-SA 4.0), gzipped.
+  // Its <html> carries `vector-toc-available` and `vector-feature-toc-pinned-*`, which once
+  // matched the `toc` chrome rule and stripped the whole page.
+  const gz = await Deno.readFile(new URL("./testdata/wikipedia-free-public-transport.html.gz", import.meta.url));
+  const html = await new Response(new Blob([gz]).stream().pipeThrough(new DecompressionStream("gzip"))).text();
+  const text = stripHtml(html);
+  const words = text.split(/\s+/).filter(Boolean).length;
+  if (words < 1_000) throw new Error(`expected the article body, got ${words} words`);
+  assertEquals(/free public transport/i.test(text.slice(0, 600)), true);
+  // Each of these leaked into imports before #195 (language menu, edit links).
+  assertEquals(text.includes("18 languages"), false);
+  assertEquals(text.includes("Čeština"), false);
+  assertEquals(/\[\s*edit\s*\]/.test(text), false);
+});
+
+Deno.test("chrome rules match whole class tokens, not fragments of page flags", () => {
+  const body = "Free fares raised ridership in Tallinn and cut car trips in the city centre. ".repeat(6);
+  const html = `<html class="vector-toc-available vector-feature-toc-pinned-clientpref-1 noprint-flag">` +
+    `<body class="skin-vector-2022"><div id="toc" class="toc">Contents 1 History</div>` +
+    `<div class="mw-body vector-toc-landmark"><p>${body}</p></div></body></html>`;
+  const text = stripHtml(html);
+  assertEquals(text.includes("Free fares raised ridership"), true);
+  assertEquals(text.includes("Contents 1 History"), false);
+});
