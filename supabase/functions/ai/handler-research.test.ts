@@ -19,6 +19,7 @@ for (const [key, value] of Object.entries(environment)) Deno.env.set(key, value)
 const { createRequestBudgetSignal, handleRequest } = await import("./index.ts");
 const { handleRequest: handleStreamRequest } = await import("../ai-stream/index.ts");
 const { MAX_REQUEST_OUTPUT_TOKENS, MODEL_CATALOG } = await import("../_shared/model-catalog.ts");
+const { MAX_ASK_HISTORY_MESSAGES } = await import("../_shared/prompt-budget.ts");
 
 Deno.test("AI request work shares one deadline signal", () => {
   const caller = new AbortController();
@@ -394,6 +395,7 @@ Deno.test("Ask marks only surviving URL and research context as available", asyn
     return {
       system: String(messages.find((message) => message.role === "system")?.content ?? ""),
       user: String(messages.at(-1)?.content ?? ""),
+      messages,
       body: await response.json(),
     };
   };
@@ -403,6 +405,20 @@ Deno.test("Ask marks only surviving URL and research context as available", asyn
     if (!emptySearch.user.includes("Research Context: NONE")) throw new Error("empty search was marked available");
     if (emptySearch.user.includes("WEB RESEARCH RESULTS") || emptySearch.system.includes("RESEARCH CITATION RULES:")) {
       throw new Error("empty search context leaked into the Ask provider prompt");
+    }
+
+    // Only the latest earlier messages reach the model, and only as chat turns.
+    const history = Array.from({ length: 10 }, (_, index) => ({
+      role: index === 5 ? "system" : index % 2 === 0 ? "user" : "assistant",
+      content: `Earlier turn ${index}`,
+    }));
+    const longChat = await runAsk({ message: "And the counterargument?", mode: "general", history });
+    const earlier = longChat.messages.slice(1, -1);
+    if (earlier.length !== MAX_ASK_HISTORY_MESSAGES - 1 || earlier.some((message) => message.role === "system")) {
+      throw new Error(`Ask sent unexpected history: ${JSON.stringify(earlier)}`);
+    }
+    if (earlier[0].content !== "Earlier turn 4" || earlier.at(-1)?.content !== "Earlier turn 9") {
+      throw new Error("Ask history did not keep the latest messages");
     }
 
     scenario = "empty-url";

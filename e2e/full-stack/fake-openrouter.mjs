@@ -176,16 +176,28 @@ const routes = [
   ["ask", "You are a debate coach chat bot", ask],
 ];
 
+// A cacheable system prompt arrives as text parts instead of a plain string.
+function messageText(message) {
+  const content = message?.content;
+  if (Array.isArray(content)) return content.map((part) => part?.text ?? "").join("");
+  return String(content ?? "");
+}
+
 function classify(body) {
   const messages = Array.isArray(body.messages) ? body.messages : [];
-  const system = String(messages.find((message) => message.role === "system")?.content ?? "");
+  const systemMessage = messages.find((message) => message.role === "system");
+  const system = messageText(systemMessage);
   const user = String(messages.at(-1)?.content ?? "");
+  const shape = {
+    messageCount: messages.length,
+    cacheBreakpoint: Array.isArray(systemMessage?.content) && systemMessage.content.some((part) => part?.cache_control),
+  };
   if (body.stream === true && system.includes("Answer in clear Markdown that can stream smoothly")) {
-    return { feature: "ask-stream", system, user };
+    return { feature: "ask-stream", system, user, ...shape };
   }
   const route = routes.find(([, marker]) => system.includes(marker));
-  if (!route) return { feature: null, system, user };
-  return { feature: route[0], system, user, output: route[2](user, system) };
+  if (!route) return { feature: null, system, user, ...shape };
+  return { feature: route[0], system, user, ...shape, output: route[2](user, system) };
 }
 
 function jevAnswers(questions) {
@@ -358,8 +370,9 @@ createServer(async (req, res) => {
   }
 
   const body = JSON.parse(await readBody(req));
-  const { feature, system, user, output } = classify(body);
-  requests.push({ feature, model: body.model, stream: body.stream === true, system, user });
+  const { output, ...record } = classify(body);
+  const { feature } = record;
+  requests.push({ ...record, model: body.model, stream: body.stream === true });
   if (!feature) return json(res, 500, { error: { message: "Fake OpenRouter does not recognize this prompt" } });
 
   const failure = failures.find((item) => item.count > 0 && (!item.feature || item.feature === feature));
