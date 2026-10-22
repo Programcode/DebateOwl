@@ -69,6 +69,8 @@ const Hero = () => {
                             </a>
                         </Reveal>
 
+                        <FeaturedOn />
+
                         <Reveal onLoad delay={0.15} className="mt-8 grid gap-3 sm:grid-cols-3">
                             {planHighlights.map((item) => (
                                 <div key={item.label} className="rounded-xl border border-border/70 bg-card p-4">
@@ -94,6 +96,42 @@ const Hero = () => {
         </section>
     );
 };
+
+// Launch directories check that their badge is on the homepage above the fold.
+// Both themes render and CSS shows one, because the prerendered HTML can't know
+// the visitor's theme. Image hosts must stay in vercel.json's img-src.
+const FEATURED_BADGES = [
+    {
+        alt: "Featured on LaunchIgniter",
+        width: 154,
+        light: { href: "https://launchigniter.com/product/debatelab?ref=badge-debatelab", src: "https://launchigniter.com/api/badge/debatelab?theme=light" },
+        dark: { href: "https://launchigniter.com/product/debatelab?ref=badge-debatelab", src: "https://launchigniter.com/api/badge/debatelab?theme=dark" },
+    },
+    {
+        alt: "Launched on StartupBase",
+        width: 150,
+        light: { href: "https://startupbase.io/products/debatelab?utm_source=startupbase&utm_medium=badge&utm_campaign=launch-badge-light", src: "https://statics.startupbase.io/site/badges/launched-on-sb.svg" },
+        dark: { href: "https://startupbase.io/products/debatelab?utm_source=startupbase&utm_medium=badge&utm_campaign=launch-badge-dark", src: "https://statics.startupbase.io/site/badges/launched-on-sb-dark.svg" },
+    },
+];
+
+const FeaturedOn = () => (
+    <Reveal onLoad delay={0.15} className="mt-5">
+        <div data-featured-on className="flex flex-wrap items-center gap-3">
+            {FEATURED_BADGES.flatMap((badge) => (["light", "dark"] as const).map((theme) => (
+                <a
+                    key={badge[theme].src}
+                    href={badge[theme].href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className={`${theme === "light" ? "dark:hidden" : "hidden dark:block"} rounded-lg opacity-90 transition-opacity hover:opacity-100 focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring`}
+                >
+                    <img src={badge[theme].src} alt={badge.alt} width={badge.width} height={40} loading="eager" className="h-10 w-auto" />
+                </a>
+            )))}
+        </div>
+    </Reveal>
+);
 
 const HeroPreview = () => {
     const { t } = useTranslation();

@@ -114,7 +114,7 @@
       "headers": [
         {
           "key": "Content-Security-Policy",
-          "value": "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; form-action 'self'; img-src 'self' data: blob: https://*.jam.dev; font-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self' https://*.jam.dev; worker-src 'self' blob:; frame-src 'self' https://accounts.google.com https://*.jam.dev; connect-src 'self' https://*.jam.dev https://uziwdtkzofptihahfooo.supabase.co https://brifeyypjauyusmkptkx.supabase.co https://*.ingest.sentry.io https://*.sentry.io https://eu.i.posthog.com https://*.posthog.com;"
+          "value": "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; form-action 'self'; img-src 'self' data: blob: https://*.jam.dev https://launchigniter.com https://statics.startupbase.io; font-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self' https://*.jam.dev; worker-src 'self' blob:; frame-src 'self' https://accounts.google.com https://*.jam.dev; connect-src 'self' https://*.jam.dev https://uziwdtkzofptihahfooo.supabase.co https://brifeyypjauyusmkptkx.supabase.co https://*.ingest.sentry.io https://*.sentry.io https://eu.i.posthog.com https://*.posthog.com;"
         },
         {
           "key": "X-Frame-Options",
