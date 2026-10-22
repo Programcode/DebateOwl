@@ -4,12 +4,21 @@ import { setLocale, stubSupabaseSession } from './helpers/auth';
 test('a stalled Jam recorder cannot delay the real application', async ({ page, browserName }) => {
   test.skip(browserName === 'webkit', 'Jam recording requires MediaRecorder, which this WebKit runtime does not expose.');
   await page.route('https://js.jam.dev/**', async () => new Promise(() => undefined));
-  const jamRequest = page.waitForRequest('https://js.jam.dev/**');
+  const jamRequests: string[] = [];
+  page.on('request', (request) => {
+    if (request.url().startsWith('https://js.jam.dev/')) jamRequests.push(request.url());
+  });
 
   await page.goto('/', { waitUntil: 'domcontentloaded' });
 
-  await jamRequest;
+  // Jam waits for an interaction, so the landing page is up before any recorder request.
   await expect(page.getByRole('heading', { name: /Prepare Cases and Practice Rounds/ })).toBeVisible({ timeout: 2_000 });
+  expect(jamRequests).toEqual([]);
+
+  const jamRequest = page.waitForRequest('https://js.jam.dev/**');
+  await page.evaluate(() => window.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true })));
+  await jamRequest;
+  await expect(page.getByRole('heading', { name: /Prepare Cases and Practice Rounds/ })).toBeVisible();
   await expect(page.getByText('DebateLab by Pi-Stack is the official')).toHaveCount(0);
 });
 
