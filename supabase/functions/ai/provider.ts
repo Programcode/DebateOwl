@@ -218,8 +218,9 @@ export interface GenerationStream {
   /** The request moved to a step that writes nothing yet. */
   phase: (name: GenerationPhase) => void;
   /**
-   * The model ended its answer (any finish_reason but "length", which is
-   * retried). Arrives before the usage trailer, which a disconnect can lose.
+   * The model ended a non-empty answer (any finish_reason but "length",
+   * which is retried, or [DONE]). Arrives before the usage trailer, which a
+   * disconnect can lose.
    */
   finished?: () => void;
 }
@@ -484,8 +485,9 @@ export async function readOpenRouterStream(
     const data = trimmed.slice("data:".length).trim();
     if (data === "[DONE]") {
       done = true;
-      // A stream that ends without a finish_reason still finished its answer.
-      if (!finishReason) stream.finished?.();
+      // A stream that ends without a finish_reason still finished its answer,
+      // if it wrote one: an empty reply is a failure, not an answer.
+      if (!finishReason && text) stream.finished?.();
       return;
     }
     let chunk: OpenRouterStreamChunk;
@@ -510,7 +512,7 @@ export async function readOpenRouterStream(
       stream.delta(content);
     }
     if (typeof choice?.finish_reason === "string" && choice.finish_reason) {
-      if (!finishReason && choice.finish_reason !== "length") stream.finished?.();
+      if (!finishReason && choice.finish_reason !== "length" && text) stream.finished?.();
       finishReason = choice.finish_reason;
     }
   };

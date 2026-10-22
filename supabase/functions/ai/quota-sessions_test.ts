@@ -333,6 +333,21 @@ Deno.test("a finished answer stays charged when the provider connection drops be
   }
 });
 
+Deno.test("an empty streamed reply is refunded even though the model said it finished", async () => {
+  const originalError = console.error;
+  console.error = () => undefined;
+  install();
+  try {
+    reset({ content: "" });
+    const text = await (await send({ feature: "ask", input: { message: "A question", mode: "general", webSearch: false }, stream: true })).text();
+    assertEquals(rpcNames(), ["consume_ai_quota", "refund_daily_quota"]);
+    assertEquals(text.includes('"charged":false'), true);
+  } finally {
+    globalThis.fetch = originalFetch;
+    console.error = originalError;
+  }
+});
+
 Deno.test("a quota check reports a round's cost and what is left without reserving", async () => {
   install();
   try {
