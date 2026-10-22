@@ -2449,7 +2449,15 @@
       "loadFailed": "Could not load your subscription.",
       "saveFailed": "Could not save your settings. Try again.",
       "historyDesc": "Everything you saved, by debate",
-      "deleteDataDesc": "Saved work, sources and debates. Your account and settings stay."
+      "deleteDataDesc": "Saved work, sources and debates. Your account and settings stay.",
+      "notifications": {
+        "title": "Notifications",
+        "description": "Get a notification on this phone when a sparring round is scored.",
+        "blocked": "Notifications are off for this app in iOS Settings.",
+        "openSettings": "Open Settings",
+        "unavailable": "This version of the app cannot receive notifications yet.",
+        "failed": "Could not change notifications. Try again."
+      }
     },
     "deleteAccount": {
       "failedHint": "Your account is still here. Check your connection and try again."

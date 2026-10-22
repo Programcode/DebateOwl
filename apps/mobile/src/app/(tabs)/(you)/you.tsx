@@ -3,10 +3,11 @@ import { useFocusEffect, useRouter } from 'expo-router';
 import * as WebBrowser from 'expo-web-browser';
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, AppState, Linking, Pressable, StyleSheet, View } from 'react-native';
 
 import { TextButton } from '@/components/buttons';
 import { Card, IconTile } from '@/components/card';
+import { SwitchRow } from '@/components/form-rows';
 import { Icon } from '@/components/icon';
 import type { IconName } from '@/components/icon-paths';
 import { ScreenTitle } from '@/components/screen-title';
@@ -18,6 +19,8 @@ import { useAuth } from '@/lib/auth';
 import { showNotice } from '@/lib/confirm';
 import { formatDate } from '@/lib/dates';
 import { shareJson } from '@/lib/export';
+import { disablePush, enablePush, readPushState, type PushState } from '@/lib/push';
+import { createPushSwitch, type PushSwitchView } from '@/lib/push-switch';
 import { useSettings, type ThemePreference } from '@/lib/settings';
 import { fetchSubscription, type Subscription, type SubscriptionTier } from '@/lib/subscription';
 import { supabaseEnv } from '@/lib/supabase-config';
@@ -143,6 +146,8 @@ export default function YouScreen() {
         ) : null}
       </Card>
 
+      <NotificationsCard userId={session?.user.id} />
+
       <Text accessibilityRole="header" weight="bold" style={styles.section}>
         {t('settings.account')}
       </Text>
@@ -258,6 +263,63 @@ function Setting({ label, children }: { label: string; children: ReactNode }) {
   );
 }
 
+const PUSH_DESCRIPTIONS: Record<PushState, string> = {
+  on: 'mobile.you.notifications.description',
+  off: 'mobile.you.notifications.description',
+  blocked: 'mobile.you.notifications.blocked',
+  unavailable: 'mobile.you.notifications.unavailable',
+};
+
+/** Push notifications for this account on this phone (lib/push.ts). */
+function NotificationsCard({ userId }: { userId: string | undefined }) {
+  const { t } = useTranslation();
+  const { colors } = useTheme();
+  const { language } = useSettings();
+  const [{ state, busy, failed }, setView] = useState<PushSwitchView>({ state: null, busy: false, failed: false });
+  const [pushSwitch] = useState(() => createPushSwitch((patch) => setView((view) => ({ ...view, ...patch }))));
+
+  const load = useCallback(() => {
+    if (userId) pushSwitch.load(() => readPushState(userId));
+  }, [userId, pushSwitch]);
+
+  // The switch may have changed in iOS Settings while DebateLab was in the background.
+  useFocusEffect(load);
+  useEffect(() => {
+    const subscription = AppState.addEventListener('change', (next) => {
+      if (next === 'active') load();
+    });
+    return () => subscription.remove();
+  }, [load]);
+
+  const change = (on: boolean) => {
+    if (!userId) return;
+    pushSwitch.change(() => (on ? enablePush(userId, language) : disablePush(userId).then((): PushState => 'off')));
+  };
+
+  return (
+    <Card style={styles.list}>
+      <SwitchRow
+        first
+        label={t('mobile.you.notifications.title')}
+        description={t(PUSH_DESCRIPTIONS[state ?? 'off'])}
+        value={state === 'on'}
+        onChange={change}
+        disabled={busy || state === null || state === 'unavailable' || state === 'blocked'}
+      />
+      {state === 'blocked' ? (
+        <View style={styles.inset}>
+          <TextButton label={t('mobile.you.notifications.openSettings')} onPress={() => void Linking.openSettings()} />
+        </View>
+      ) : null}
+      {failed ? (
+        <Text accessibilityRole="alert" weight="medium" style={[styles.small, styles.inset, { color: colors.destructive }]}>
+          {t('mobile.you.notifications.failed')}
+        </Text>
+      ) : null}
+    </Card>
+  );
+}
+
 function SubscriptionCard({ userId }: { userId: string | undefined }) {
   const { t } = useTranslation();
   const { colors } = useTheme();
@@ -359,4 +421,5 @@ const styles = StyleSheet.create({
   rowTitle: { fontSize: 16 },
   email: { fontSize: 17 },
   pressed: { opacity: 0.6 },
+  inset: { paddingHorizontal: 16, paddingBottom: 12 },
 });

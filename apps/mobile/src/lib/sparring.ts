@@ -98,8 +98,15 @@ export function noteJudgedRound(userId: string, id: string, debateId: string | n
 export async function attachSparring(userId: string, id: string, debateId: string, side: SparringSide): Promise<void> {
   const { error } = await supabase.rpc('attach_to_debate', { p_kind: 'sparring', p_id: id, p_debate_id: debateId, p_side: side });
   if (error) throw new Error(error.message);
-  // The round may have been outside every debate until now.
-  afterWrite(userId, [{ group: 'sparring', key: id }, ...roundListScopes(debateId), ...roundListScopes(null), ...debateListScopes(debateId, 'sparring')]);
+  // The server saved the judged round outside every debate, so History's
+  // one-off copy can still list it until this drops that copy too.
+  afterWrite(userId, [
+    { group: 'sparring', key: id },
+    ...roundListScopes(debateId),
+    ...roundListScopes(null),
+    ...debateListScopes(debateId, 'sparring'),
+    ...debateListScopes(null, 'sparring'),
+  ]);
 }
 
 /** A saved, judged round; null when there is none or it does not check out. Offline, the saved copy. */

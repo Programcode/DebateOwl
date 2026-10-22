@@ -38,4 +38,36 @@ describe('readFeatureConfigAfterWrites', () => {
     await vi.advanceTimersByTimeAsync(5000);
     await expect(config).resolves.toEqual(saved);
   });
+
+  it('reads the saved row again when the save finishes during the fallback read', async () => {
+    const writes = createSerialQueue();
+    let releaseSave = () => {};
+    void writes(() => new Promise<void>((resolve) => {
+      releaseSave = resolve;
+    }));
+    const updated: FeatureConfig = { ...saved, model: 'deepseek/deepseek-v4-flash-0731' };
+    const reads: ((settings: { config: FeatureConfig; pro: boolean }) => void)[] = [];
+    let pendingChoice: { model: string } | null = { model: updated.model };
+    const config = readFeatureConfigAfterWrites({
+      writes,
+      read: () => new Promise((resolve) => {
+        reads.push(resolve);
+      }),
+      pending: () => pendingChoice,
+      waitMs: 5000,
+    });
+
+    await vi.advanceTimersByTimeAsync(5000);
+    expect(reads).toHaveLength(1);
+    releaseSave();
+    pendingChoice = null;
+    await vi.advanceTimersByTimeAsync(0);
+    expect(reads).toHaveLength(2);
+    // The fallback copied the row before the save landed, then the choice was cleared.
+    reads[0]?.({ config: saved, pro: false });
+    await vi.advanceTimersByTimeAsync(0);
+    expect(reads).toHaveLength(3);
+    reads[2]?.({ config: updated, pro: true });
+    await expect(config).resolves.toEqual(updated);
+  });
 });

@@ -8,7 +8,10 @@
  *   PORT=<free port> npx tsx apps/mobile/scripts/screenshots.ts
  *
  * ONLY=iphone-light-en limits a run to the combinations whose name starts with it.
- * SCREENS=history,announcements limits it to those groups of screens (see SCREEN_GROUPS).
+ * SCREENS=you,timer limits the signed-in screens to those groups: debate,
+ * library, prepare, practice, you, empty, ask, results, brainstorm, factoids,
+ * timer, crossfire, sparring, flowchart, one-off, history, announcements,
+ * account, model. Sign-in screens are always shot.
  * ONLY=offline runs only the offline reading check (see shootOfflineScreens).
  *
  * Signed-in screens need a staging session. With STAGING_DEMO_CODE set, the
@@ -87,11 +90,8 @@ const OUT = join(__dirname, '../../../.verify/mobile-shots');
 const PORT = Number(process.env.PORT);
 const DEMO_CODE = process.env.STAGING_DEMO_CODE?.trim();
 const ONLY = process.env.ONLY?.trim() ?? '';
-const SCREEN_GROUPS = ['sign-in', 'offline', 'debate', 'library', 'tabs', 'empty', 'ask', 'results', 'tools', 'timer', 'crossfire', 'sparring', 'flowchart', 'oneoff', 'history', 'announcements', 'account', 'model'] as const;
-const SCREENS = (process.env.SCREENS ?? '').split(',').map((group) => group.trim()).filter(Boolean);
-const unknownGroups = SCREENS.filter((group) => !(SCREEN_GROUPS as readonly string[]).includes(group));
-if (unknownGroups.length > 0) throw new Error(`Unknown SCREENS: ${unknownGroups.join(', ')}`);
-const wants = (group: (typeof SCREEN_GROUPS)[number]) => SCREENS.length === 0 || SCREENS.includes(group);
+const SCREENS = process.env.SCREENS?.split(',').map((name) => name.trim()).filter(Boolean);
+const want = (group: string) => !SCREENS?.length || SCREENS.includes(group);
 const ORIGIN = `http://127.0.0.1:${PORT}`;
 const STAGING_HOST = new URL(SUPABASE_PROJECTS.staging.url).host;
 const SESSION_KEY = `sb-${STAGING_HOST.split('.')[0]}-auth-token`;
@@ -103,6 +103,7 @@ const DEVICES = {
 const SCHEMES = ['light', 'dark'] as const;
 const LOCALES = { en: 'en-GB', hu: 'hu-HU' } as const;
 const SIGNED_IN_ROUTES = { prepare: '/prepare', practice: '/practice', you: '/you' };
+const NOTIFICATIONS = { en: 'Notifications', hu: 'Értesítések' } as const;
 const REST = `https://${STAGING_HOST}/rest/v1`;
 
 const TYPES: Record<string, string> = {
@@ -1274,7 +1275,13 @@ async function signIn(browser: Browser, problems: string[]): Promise<StorageStat
   await page.getByRole('tab', { name: 'Demo code' }).click();
   await page.getByRole('textbox').fill(DEMO_CODE ?? '');
   await page.getByRole('button', { name: 'Sign in with demo code' }).click();
-  await page.getByRole('tab', { name: 'Debate' }).waitFor({ timeout: 30_000 });
+  await page.getByRole('tab', { name: 'Debate' }).waitFor({ timeout: 30_000 }).catch(async (error: unknown) => {
+    const alert = await page.getByRole('alert').first().textContent({ timeout: 1_000 }).catch(() => null);
+    // The field shows the code in plain text; empty it so the screenshot never holds it.
+    await page.getByRole('textbox').fill('');
+    await shoot(page, 'sign-in-failed');
+    throw new Error(`Demo-code sign-in did not finish${alert ? `: ${alert}` : ''}`, { cause: error });
+  });
   if (authHosts.length === 0 || authHosts.some((host) => host !== STAGING_HOST)) {
     throw new Error(`Sign-in reached ${[...new Set(authHosts)].join(', ') || 'no backend'}, expected ${STAGING_HOST}`);
   }
@@ -1541,42 +1548,40 @@ async function main() {
     if (!session) console.log('STAGING_DEMO_CODE is not set: signed-in screens skipped');
     else if (ONLY === 'offline') {
       for (const [index, run] of OFFLINE_RUNS.entries()) shots += await shootOfflineScreens(browser, session, problems, run, index === 0);
-    } else if (wants('offline')) await checkOfflineColdStart(browser, session, problems);
+    } else await checkOfflineColdStart(browser, session, problems);
 
     for (const [device, options] of Object.entries(DEVICES)) {
       for (const scheme of SCHEMES) {
         for (const [language, locale] of Object.entries(LOCALES)) {
           const prefix = `${device}-${scheme}-${language}`;
           if (!prefix.startsWith(ONLY)) continue;
-          if (wants('sign-in')) {
-            const signedOut = await browser.newContext({ ...options, colorScheme: scheme, locale });
-            const page = await signedOut.newPage();
-            watchErrors(page, problems, prefix);
-            await page.goto(`${ORIGIN}/sign-in`);
-            await page.getByRole('tablist').waitFor();
-            await shoot(page, `${prefix}-sign-in`);
-            await page.getByRole('button').first().click();
-            await page.getByRole('alert').waitFor();
-            await shoot(page, `${prefix}-sign-in-error`);
-            await page.getByRole('tab').nth(1).click();
-            await shoot(page, `${prefix}-sign-in-demo`);
-            shots += 3;
-            await signedOut.close();
-          }
+          const signedOut = await browser.newContext({ ...options, colorScheme: scheme, locale });
+          const page = await signedOut.newPage();
+          watchErrors(page, problems, prefix);
+          await page.goto(`${ORIGIN}/sign-in`);
+          await page.getByRole('tablist').waitFor();
+          await shoot(page, `${prefix}-sign-in`);
+          await page.getByRole('button').first().click();
+          await page.getByRole('alert').waitFor();
+          await shoot(page, `${prefix}-sign-in-error`);
+          await page.getByRole('tab').nth(1).click();
+          await shoot(page, `${prefix}-sign-in-demo`);
+          shots += 3;
+          await signedOut.close();
 
           if (!session) continue;
           const signedIn = await browser.newContext({ ...options, colorScheme: scheme, locale, storageState: session });
           const tabPage = await signedIn.newPage();
           watchErrors(tabPage, problems, `${prefix} signed in`);
           await pinSettings(tabPage, language);
-          if (wants('debate')) {
+          if (want('debate')) {
             await shootDebateScreens(tabPage, prefix).catch(async (error: unknown) => {
               await shoot(tabPage, `${prefix}-failed`);
               throw error;
             });
             shots += 6;
           }
-          if (wants('library')) {
+          if (want('library')) {
             await shootLibraryScreens(tabPage, prefix).catch(async (error: unknown) => {
               await shoot(tabPage, `${prefix}-failed`);
               throw error;
@@ -1584,52 +1589,60 @@ async function main() {
             shots += 5;
           }
           for (const [name, route] of Object.entries(SIGNED_IN_ROUTES)) {
-            if (!wants('tabs') && !(name === 'you' && wants('account'))) continue;
+            if (!want(name)) continue;
             await tabPage.goto(`${ORIGIN}${route}`);
             await tabPage.getByRole('tablist').first().waitFor();
             if (name === 'you') await tabPage.getByTestId('subscription-tier').waitFor({ timeout: 30_000 });
             await settle(tabPage);
             await shoot(tabPage, `${prefix}-${name}`);
             shots += 1;
+            if (name === 'you') {
+              // The web preview turns notifications on without registering anything (push.web.ts).
+              const notifications = tabPage.getByRole('switch', { name: NOTIFICATIONS[language as keyof typeof NOTIFICATIONS] });
+              await notifications.scrollIntoViewIfNeeded();
+              await notifications.click();
+              await tabPage.waitForFunction(() => document.querySelector('[role="switch"]:checked') !== null);
+              await shoot(tabPage, `${prefix}-you-notifications-on`);
+              shots += 1;
+            }
           }
-          if (wants('empty')) {
+          if (want('empty')) {
             const emptyPage = await signedIn.newPage();
             watchErrors(emptyPage, problems, `${prefix} empty`);
             await pinSettings(emptyPage, language);
             await shootEmptyDebate(emptyPage, prefix);
             shots += 2;
           }
-          if (wants('ask')) {
+          if (want('ask')) {
             await shootAskScreens(signedIn, prefix, language, problems);
             shots += 3;
           }
-          if (wants('results')) {
+          if (want('results')) {
             await shootResultScreens(signedIn, prefix, language, problems);
             shots += 9;
           }
-          if (wants('tools')) {
-            for (const tool of ['brainstorm', 'factoids'] as const) {
-              await shootTool(signedIn, prefix, language, problems, tool);
-              shots += 6;
-            }
+          for (const tool of ['brainstorm', 'factoids'] as const) {
+            if (!want(tool)) continue;
+            await shootTool(signedIn, prefix, language, problems, tool);
+            shots += 6;
           }
-          if (wants('timer')) {
+          if (want('timer')) {
             await shootTimerScreens(signedIn, prefix, language, problems);
             shots += 3;
           }
-          if (wants('crossfire')) {
+          if (want('crossfire')) {
             await shootCrossfireScreens(signedIn, prefix, language, problems);
             shots += 3;
           }
-          if (wants('sparring')) {
+          if (want('sparring')) {
             await shootSparringScreens(signedIn, prefix, language, problems);
             shots += 6;
           }
-          if (wants('flowchart')) {
+          if (want('flowchart')) {
             await shootFlowchart(signedIn, prefix, language, problems);
             shots += 10;
           }
-          if (wants('oneoff')) {
+          if (want('one-off')) {
             const oneOffPage = await signedIn.newPage();
             watchErrors(oneOffPage, problems, `${prefix} one-off tools`);
             await pinSettings(oneOffPage, language);
@@ -1637,23 +1650,22 @@ async function main() {
             await oneOffPage.close();
             shots += 2;
           }
-          if (wants('history')) {
+          if (want('history')) {
             await shootHistory(signedIn, prefix, language, problems).catch(failedIn(signedIn, prefix, 'history'));
             shots += 7;
           }
-          if (wants('announcements')) {
+          if (want('announcements')) {
             await shootAnnouncements(signedIn, prefix, language, problems).catch(failedIn(signedIn, prefix, 'announcements'));
             shots += 2;
           }
-          if (wants('account')) {
+          if (want('account')) {
             await shootAccount(signedIn, prefix, language, problems).catch(failedIn(signedIn, prefix, 'account'));
             shots += 2;
           }
-          if (wants('model')) {
+          if (want('model')) {
             await shootModelPicker(signedIn, prefix, language, problems).catch(failedIn(signedIn, prefix, 'model'));
             shots += 2;
           }
-          await tabPage.close();
           await signedIn.close();
         }
       }

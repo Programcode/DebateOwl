@@ -10,6 +10,7 @@ import {
   type SparringDatabaseSchema,
 } from "./sparring-persistence.ts";
 import { loadAuthorizedWorkspaceContext } from "../_shared/workspace-context.ts";
+import { deliverPush, expoAccessToken, type PushNotification, supabasePushStore } from "../_shared/push.ts";
 
 // Generate unique request ID for tracing
 export function generateRequestId(): string {
@@ -35,6 +36,23 @@ export const workspaceDatabase = supabase as unknown as Parameters<typeof loadAu
 export const sparringSupabase = createClient<SparringDatabaseSchema>(supabaseUrl, supabaseServiceKey);
 export const sparringIntegritySecret = Deno.env.get("SPARRING_INTEGRITY_SECRET")?.trim()
   || await deriveSparringIntegritySecret(supabaseServiceKey);
+
+const pushStore = supabasePushStore(supabase);
+
+/**
+ * Sends push notifications without holding the response: the Edge Runtime
+ * keeps the worker alive for it through waitUntil. Where there is no Edge
+ * Runtime (Deno tests), the caller waits instead. Never rejects.
+ */
+export function sendPushAfterResponse(notifications: PushNotification[]): Promise<void> {
+  const delivery = deliverPush(pushStore, notifications, { accessToken: expoAccessToken() });
+  const runtime = (globalThis as { EdgeRuntime?: { waitUntil?: (promise: Promise<unknown>) => void } }).EdgeRuntime;
+  if (typeof runtime?.waitUntil === "function") {
+    runtime.waitUntil(delivery);
+    return Promise.resolve();
+  }
+  return delivery;
+}
 
 export function narrowSparringDatabase(database: object): SparringDatabase {
   return database as SparringDatabase;
