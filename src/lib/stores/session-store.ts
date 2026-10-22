@@ -1,5 +1,6 @@
 import { create } from 'zustand';
-import { persist, createJSONStorage } from 'zustand/middleware';
+import { persist } from 'zustand/middleware';
+import { resilientLocalStorage } from '@/lib/stores/resilient-local-storage';
 import type { Node, Edge } from 'reactflow';
 import type { GenerateOutput, GenerateInput } from '../ai/schemas/generate';
 import type { AttackOutput, AttackInput } from '../ai/schemas/attack';
@@ -1285,7 +1286,7 @@ export const useSessionStore = create<SessionState>()(
     }),
     {
       name: 'debate-trainer-storage',
-      storage: createJSONStorage(() => localStorage),
+      storage: resilientLocalStorage(),
       // v1 scopes saved work and sources to debates. Drop lists persisted by
       // older clients: the server replaces them on hydrate, and keeping them
       // would resurrect purged legacy rows and debate-less sources.
