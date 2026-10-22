@@ -703,7 +703,10 @@
       "confirmBanDesc": "Addig nem használhatja a DebateLabet, amíg fel nem oldod a tiltást.",
       "confirmUnban": "Feloldod a tiltást: {{email}}?",
       "confirmRemoveAdmin": "Elveszed az admin jogot: {{email}}?",
-      "confirmRoleDesc": "Átlagos felhasználó lesz."
+      "confirmRoleDesc": "Átlagos felhasználó lesz.",
+      "loadMore": "További felhasználók betöltése",
+      "loadingMore": "További felhasználók betöltése…",
+      "loadMoreFailed": "Nem sikerült további felhasználókat betölteni"
     },
     "promos": {
       "createTitle": "Promóciós kód létrehozása",

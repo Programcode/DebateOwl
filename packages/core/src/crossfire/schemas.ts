@@ -115,8 +115,14 @@ export const CrossfireReplySchema = z.object({
 }).strict();
 export type CrossfireReply = z.infer<typeof CrossfireReplySchema>;
 
+const TurnIdSchema = z.string().trim().min(1).max(40);
+/** One cited turn. A later turn is not evidence about this one. */
+const SingleTurnReferenceSchema = z.object({
+  turnIds: z.array(TurnIdSchema).length(1),
+  claim: boundedText(1, 800),
+}).strict();
 const TurnReferenceSchema = z.object({
-  turnIds: z.array(z.string().trim().min(1).max(40)).min(1).max(6),
+  turnIds: z.array(TurnIdSchema).min(1).max(6),
   claim: boundedText(1, 800),
 }).strict();
 
@@ -127,10 +133,10 @@ const BetterFollowUpSchema = z.object({
 }).strict();
 
 export const CrossfireDebriefSchema = z.object({
-  concessionsSecured: z.array(TurnReferenceSchema).max(MAX_CROSSFIRE_DEBRIEF_ITEMS),
-  controlledQuestions: z.array(TurnReferenceSchema).max(MAX_CROSSFIRE_DEBRIEF_ITEMS),
-  weakOrRepetitiveQuestions: z.array(TurnReferenceSchema).max(MAX_CROSSFIRE_DEBRIEF_ITEMS),
-  evasiveOrIncompleteAnswers: z.array(TurnReferenceSchema).max(MAX_CROSSFIRE_DEBRIEF_ITEMS),
+  concessionsSecured: z.array(SingleTurnReferenceSchema).max(MAX_CROSSFIRE_DEBRIEF_ITEMS),
+  controlledQuestions: z.array(SingleTurnReferenceSchema).max(MAX_CROSSFIRE_DEBRIEF_ITEMS),
+  weakOrRepetitiveQuestions: z.array(SingleTurnReferenceSchema).max(MAX_CROSSFIRE_DEBRIEF_ITEMS),
+  evasiveOrIncompleteAnswers: z.array(SingleTurnReferenceSchema).max(MAX_CROSSFIRE_DEBRIEF_ITEMS),
   missedFollowUps: z.array(TurnReferenceSchema).max(MAX_CROSSFIRE_DEBRIEF_ITEMS),
   betterFollowUpQuestions: z.array(BetterFollowUpSchema).max(MAX_CROSSFIRE_DEBRIEF_ITEMS),
   strongestExchange: TurnReferenceSchema.nullable(),

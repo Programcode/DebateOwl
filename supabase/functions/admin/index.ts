@@ -77,7 +77,7 @@ async function isAdmin(userId: string): Promise<boolean> {
         .from("user_roles")
         .select("role")
         .eq("user_id", userId)
-        .single();
+        .maybeSingle();
     return data?.role === "admin";
 }
 
@@ -378,13 +378,23 @@ export async function handleRequest(req: Request): Promise<Response> {
             });
         }
 
-        // GET /admin?action=users - List users with usage
+        // GET /admin?action=users - One page of users with usage.
+        // GoTrue's default page is 50; the client asks for the next page.
         if (action === "users") {
-            const { data: users } = await supabase.auth.admin.listUsers();
+            const pageRaw = Number.parseInt(url.searchParams.get("page") ?? "1", 10);
+            const perPageRaw = Number.parseInt(url.searchParams.get("perPage") ?? "50", 10);
+            const page = Number.isFinite(pageRaw) && pageRaw >= 1 ? Math.min(pageRaw, 10_000) : 1;
+            const perPage = Number.isFinite(perPageRaw) && perPageRaw >= 1 ? Math.min(perPageRaw, 100) : 50;
+            const { data: listed, error: listError } = await supabase.auth.admin.listUsers({ page, perPage });
+            if (listError) throw listError;
+            const pageUsers = listed?.users ?? [];
+            const hasMore = listed && "nextPage" in listed
+                ? listed.nextPage != null
+                : pageUsers.length === perPage;
 
             // Get usage counts for each user
             const enrichedUsers = await Promise.all(
-                (users?.users || []).slice(0, 100).map(async (u) => {
+                pageUsers.map(async (u) => {
                     const { count } = await supabase
                         .from("ai_requests")
                         .select("*", { count: "exact", head: true })
@@ -399,7 +409,7 @@ export async function handleRequest(req: Request): Promise<Response> {
                         .from("user_roles")
                         .select("role")
                         .eq("user_id", u.id)
-                        .single();
+                        .maybeSingle();
 
                     const { data: settings } = await supabase
                         .from("user_settings")
@@ -423,7 +433,7 @@ export async function handleRequest(req: Request): Promise<Response> {
                 })
             );
 
-            return new Response(JSON.stringify({ users: enrichedUsers }), {
+            return new Response(JSON.stringify({ users: enrichedUsers, page, perPage, hasMore }), {
                 headers: { ...corsHeaders, "Content-Type": "application/json" },
             });
         }

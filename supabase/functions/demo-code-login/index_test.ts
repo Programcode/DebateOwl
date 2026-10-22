@@ -31,6 +31,7 @@ type Scenario = {
   browserFingerprint?: string;
   appMetadata?: Record<string, unknown>;
   attemptLookupFails?: boolean;
+  createFails?: boolean;
   currentRole?: string | null;
   existingUser?: boolean;
   redirectTo?: string;
@@ -43,10 +44,10 @@ async function runScenario({
   browserFingerprint,
   appMetadata = {},
   attemptLookupFails = false,
+  createFails = false,
   currentRole = "user",
   existingUser = true,
   redirectTo,
-  userMetadata = {},
 }: Scenario) {
   const calls: Array<{ body: Record<string, unknown> | null; method: string; pathname: string; search: string }> = [];
   const originalFetch = globalThis.fetch;
@@ -75,24 +76,23 @@ async function runScenario({
       return new Response(null, { headers: { "Content-Range": `*/${count}` } });
     }
     if (url.pathname === "/rest/v1/demo_access_codes") return jsonResponse(demoCode);
-    if (url.pathname === "/auth/v1/admin/users" && request.method === "GET") {
-      return jsonResponse({
-        users: existingUser
-          ? [{
-            id: "22222222-2222-4222-8222-222222222222",
-            email: demoCode.email,
-            app_metadata: appMetadata,
-            user_metadata: userMetadata,
-          }]
-          : [],
-      });
+    if (url.pathname === "/rest/v1/rpc/lookup_auth_user_by_email") {
+      return jsonResponse(existingUser
+        ? [{
+          id: "22222222-2222-4222-8222-222222222222",
+          email: demoCode.email,
+          app_metadata: appMetadata,
+        }]
+        : []);
     }
+    if (url.pathname === "/rest/v1/rpc/refund_demo_access_code") return jsonResponse(0);
     if (url.pathname === "/rest/v1/demo_access_attempts") return jsonResponse([], 201);
     if (url.pathname === "/rest/v1/user_roles" && request.method === "GET") {
       return jsonResponse(currentRole === null ? null : { role: currentRole });
     }
     if (url.pathname === "/rest/v1/rpc/consume_demo_access_code") return jsonResponse([{ reserved: true }]);
     if (url.pathname === "/auth/v1/admin/users" && request.method === "POST") {
+      if (createFails) return jsonResponse({ message: "create failed" }, 500);
       return jsonResponse({
         id: "33333333-3333-4333-8333-333333333333",
         email: demoCode.email,
@@ -157,8 +157,14 @@ Deno.test("matching app_metadata permits demo-account reuse", async () => {
   if (countCalls(calls, "/rest/v1/rpc/consume_demo_access_code") !== 1) {
     throw new Error("matching server binding did not reserve one use");
   }
-  if (countCalls(calls, "/auth/v1/admin/users") !== 1) {
+  if (countCalls(calls, "/rest/v1/rpc/lookup_auth_user_by_email") !== 1) {
+    throw new Error("matching server binding did not look the user up directly");
+  }
+  if (calls.some((call) => call.pathname === "/auth/v1/admin/users" && call.method === "POST")) {
     throw new Error("matching server binding created another Auth user");
+  }
+  if (calls.some((call) => call.pathname === "/auth/v1/admin/users" && call.method === "GET")) {
+    throw new Error("matching server binding paged through auth users");
   }
 });
 
@@ -172,6 +178,17 @@ Deno.test("unrelated Auth account is rejected before code, role, or settings mut
     "/rest/v1/user_settings",
   ]) {
     if (countCalls(calls, pathname) !== 0) throw new Error(`unrelated account mutated ${pathname}`);
+  }
+});
+
+Deno.test("a failed account creation refunds the reserved demo-code use", async () => {
+  const { calls, response } = await runScenario({ existingUser: false, createFails: true });
+  if (response.status !== 500) throw new Error(`failed creation returned ${response.status}`);
+  if (countCalls(calls, "/rest/v1/rpc/consume_demo_access_code") !== 1) {
+    throw new Error("failed creation did not reserve a use");
+  }
+  if (countCalls(calls, "/rest/v1/rpc/refund_demo_access_code") !== 1) {
+    throw new Error("failed creation did not refund the reserved use");
   }
 });
 

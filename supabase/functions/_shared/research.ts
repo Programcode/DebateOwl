@@ -93,7 +93,7 @@ export interface ResearchDeps {
  * server already validates in code: with `strict` every property is required,
  * so the schema has to match that validator exactly. Keep to keywords every
  * routed provider accepts: type, properties, required, items, enum, anyOf,
- * and additionalProperties false.
+ * minItems, maxItems, and additionalProperties false.
  */
 export interface JsonOutputSchema {
   name: string;
