@@ -57,6 +57,12 @@ Deno.test("common JSON slips are repaired locally instead of paying for a retry"
   assertThrows(() => parse('{"response":"Example:\n```\n{"response":"inner"}\n```\nunfinished'));
   // Two objects that both parse leave the answer ambiguous.
   assertThrows(() => parse('Note: {} means omitted. Answer: {"response":"Use evidence."}'));
+  assertThrows(() => parse('```\n{"response":"example"}\n```\nActually: {"response":"final"}'));
+  assertThrows(() => parse("{note} ".repeat(9) + '{"response":"example"} {"response":"final"}'));
+  // Past the span limit the reply is rejected, never accepted early.
+  assertThrows(() => parse("{note} ".repeat(20) + '{"response":"only"}'));
+  // An unclosed brace leaves the rest unread, so an earlier object is not trusted.
+  assertThrows(() => parse('{"response":"example"} then { {"response":"final"}'));
   // Fence-like text inside valid JSON parses at once.
   const started = performance.now();
   assertEquals(parse(JSON.stringify({ a: "```" + " ".repeat(20_000) + "x" })), { a: "```" + " ".repeat(20_000) + "x" });

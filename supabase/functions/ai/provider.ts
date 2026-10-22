@@ -81,39 +81,46 @@ export function parseJsonFromText(text: string, providerName: string) {
   if (!text) throw new Error(`${providerName} returned empty response content`);
   const whole = parseOrRepair(text);
   if (whole.ok) return whole.value;
-  // A fence counts only when it wraps the reply. One inside a string of an
-  // unfinished object is an example, not the answer.
+  // A fence counts only when it wraps the whole reply. One inside a string of
+  // an unfinished object, or followed by more text, is not the answer.
   const trimmed = text.trim();
-  if (trimmed.startsWith("```")) {
+  if (trimmed.startsWith("```") && trimmed.endsWith("```")) {
     const open = trimmed.indexOf("\n");
-    const close = trimmed.lastIndexOf("```");
+    const close = trimmed.length - 3;
     if (open !== -1 && close > open) {
       const fenced = parseOrRepair(trimmed.slice(open + 1, close));
       if (fenced.ok) return fenced.value;
     }
   }
-  const parsed = balancedObjects(text).map(parseOrRepair).filter((result): result is { ok: true; value: unknown } => result.ok);
-  if (parsed.length === 1) return parsed[0].value;
+  const single = onlyObject(text);
+  if (single.ok) return single.value;
   throw new InvalidJsonResponseError(providerName, text);
 }
 
-function parseOrRepair(text: string): { ok: true; value: unknown } | { ok: false } {
+type Parsed = { ok: true; value: unknown } | { ok: false };
+
+// Prose around an answer holds a few braces at most.
+const MAX_OBJECT_SPANS = 16;
+
+function parseOrRepair(text: string): Parsed {
   try { return { ok: true, value: JSON.parse(text) }; } catch { /* try the repaired text */ }
   try { return { ok: true, value: JSON.parse(repairJsonText(text)) }; } catch { return { ok: false }; }
 }
 
-// Prose before the answer may itself hold braces, so a few starts are tried.
-const MAX_OBJECT_STARTS = 8;
-
 /**
- * Each complete top-level `{...}` span in the text, string-aware. The scan
- * resumes after a span, never inside it, so a nested object is never taken
- * for the answer, and it stops at an unclosed object for the same reason.
+ * The one top-level `{...}` span in the text that parses, string-aware. The
+ * scan resumes after a span, never inside it, so a nested object is never
+ * taken for the answer, and each character is read once. It fails when two
+ * spans parse (the answer is ambiguous), when an unclosed `{` leaves the rest
+ * of the text unread, or past MAX_OBJECT_SPANS, which bounds the parse work
+ * on a reply full of braces. Failing sends the reply to the paid retry.
  */
-function balancedObjects(text: string): string[] {
-  const spans: string[] = [];
+function onlyObject(text: string): Parsed {
+  let found: Parsed = { ok: false };
+  let spans = 0;
   let start = text.indexOf("{");
-  while (start !== -1 && spans.length < MAX_OBJECT_STARTS) {
+  while (start !== -1) {
+    if (++spans > MAX_OBJECT_SPANS) return { ok: false };
     let depth = 0;
     let inString = false;
     let end = -1;
@@ -131,11 +138,15 @@ function balancedObjects(text: string): string[] {
         break;
       }
     }
-    if (end === -1) break;
-    spans.push(text.slice(start, end + 1));
+    if (end === -1) return { ok: false };
+    const parsed = parseOrRepair(text.slice(start, end + 1));
+    if (parsed.ok) {
+      if (found.ok) return { ok: false };
+      found = parsed;
+    }
     start = text.indexOf("{", end + 1);
   }
-  return spans;
+  return found;
 }
 
 /** Drops trailing commas and escapes raw control characters inside strings. */
