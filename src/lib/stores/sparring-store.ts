@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 import { z } from 'zod';
 import { supabase } from '@/lib/supabase/client';
+import { currentUserId } from '@/lib/supabase/current-user';
 import {
   SparringScorecardSchema,
   SparringSpeakerSchema,
@@ -478,9 +479,9 @@ export const useSparringStore = create<SparringStoreState>()(
       hydrateSavedSessions: async () => {
         if (get().hydrated) return;
         const epoch = hydrationEpoch;
-        const { data: { user } } = await supabase.auth.getUser();
+        const userId = await currentUserId();
         if (epoch !== hydrationEpoch) return;
-        if (!user) {
+        if (!userId) {
           set({ hydrated: true });
           return;
         }
@@ -505,8 +506,8 @@ export const useSparringStore = create<SparringStoreState>()(
       deleteSavedSession: async (id) => {
         const previous = get().savedSessions;
         set({ savedSessions: previous.filter((session) => session.id !== id) });
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) return;
+        const userId = await currentUserId();
+        if (!userId) return;
         const { error } = await supabase.from('sparring_sessions').delete().eq('id', id);
         if (error) {
           set({ savedSessions: previous });

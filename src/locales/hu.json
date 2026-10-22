@@ -446,6 +446,13 @@
     "manageSubscription": "Előfizetés kezelése",
     "setUpBilling": "Számlázás beállítása",
     "upgradeToPro": "Váltás Pro-ra",
+    "confirmingSubscription": "A Pro előfizetés megerősítése…",
+    "checkoutCanceled": "Fizetés megszakítva",
+    "checkoutCanceledDesc": "Nem történt terhelés.",
+    "checkoutConfirmed": "Pro csomagod aktív",
+    "checkoutConfirmedDesc": "Az előfizetésed él.",
+    "checkoutConfirmSlowTitle": "Még várunk a Stripe-ra",
+    "checkoutConfirmSlow": "A Stripe még nem erősítette meg a fizetést. Frissítés után ez az oldal utoléri.",
     "accessActive": "Az MI-hozzáférés aktív. Használati korlátok érvényesek lehetnek.",
     "accessExpired": "A hozzáférésed lejárt. Válts magasabb csomagra az MI-eszközök további használatához.",
     "globalSettings": "Globális beállítások",
@@ -1333,7 +1340,8 @@
     "limitReachedDesc": "Ma {{current}} / {{limit}} benne foglalt MI használatot használtál fel. A hozzáférés éjfélkor (UTC) frissül.",
     "upgrade": "Frissítés Pro-ra - $5/hó",
     "upgradeNote": "Több MI felkészülési hozzáférés + magas szintű érvelés",
-    "notNow": "Most nem"
+    "notNow": "Most nem",
+    "gotIt": "Rendben"
   },
   "modelModal": {
     "title": "Pro érvelés",
@@ -1600,6 +1608,7 @@
     "newFolderPlaceholder": "Mappa neve...",
     "newFolderHint": "Új mappára van szükség? Használd a felső „Új mappa” gombot.",
     "createFolder": "Mappa létrehozása",
+    "saveFailed": "Ezt a forrást nem sikerült menteni.",
     "sortBy": "Rendezés",
     "sortSmart": "Intelligens",
     "sortMostUsed": "Legtöbbet használt",

@@ -27,6 +27,7 @@ import {
   type Provider,
   readResponseText,
 } from "../_shared/research.ts";
+import { withPromptCaching } from "../_shared/prompt-budget.ts";
 
 export const OPENROUTER_PROVIDER: Provider = "openrouter";
 
@@ -275,7 +276,7 @@ export async function callOpenRouter(
   const modelEntry = modelForRequest(model);
   const payload: Record<string, unknown> = {
     model,
-    messages,
+    messages: withPromptCaching(model, messages),
     max_tokens: outputTokenLimit(replyTokens, reasoningEffort, modelEntry.maxTokens),
     response_format: { type: "json_object" },
     reasoning: { effort: reasoningEffort, exclude: true },

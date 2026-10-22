@@ -84,9 +84,38 @@ export default function AskPage() {
     setAskLoading(false);
   };
 
+  // Leaving the page aborts the request. The in-flight handler then sees a new
+  // request id and will not clear the flags, so do it here or Ask comes back
+  // stuck on Typing with the composer disabled. A partial answer is kept.
+  const leaveCleanupRef = useRef({
+    abortActiveRequest,
+    addAskMessage,
+    setAskLoading,
+    setAskStreamingAssistant,
+    stoppedNote: t('ask.stopped', 'You stopped this answer before it finished.'),
+  });
+  leaveCleanupRef.current = {
+    abortActiveRequest,
+    addAskMessage,
+    setAskLoading,
+    setAskStreamingAssistant,
+    stoppedNote: t('ask.stopped', 'You stopped this answer before it finished.'),
+  };
   useEffect(() => () => {
-    abortActiveRequest();
-  }, [abortActiveRequest]);
+    const cleanup = leaveCleanupRef.current;
+    const partial = useSessionStore.getState().askStreamingAssistant;
+    cleanup.abortActiveRequest();
+    cleanup.setAskLoading(false);
+    cleanup.setAskStreamingAssistant(null);
+    const kept = partial?.content.trim();
+    if (!kept) return;
+    cleanup.addAskMessage({
+      id: partial?.id,
+      role: 'assistant',
+      content: kept,
+      output: { response: kept, followUpQuestions: [], uncertainties: [cleanup.stoppedNote] },
+    });
+  }, []);
 
   // A reply still in flight belongs to the scope it was asked in; a new debate
   // or one-off mode starts a fresh conversation, so drop the late answer.

@@ -39,6 +39,12 @@ export type ModelSelection = ModelId | AutoModelSelection;
 export const DEFAULT_MODEL = "anthropic/claude-haiku-5.5" as const;
 export const DEFAULT_PRO_MODEL = "anthropic/claude-opus-5.5" as const;
 
+// Small background steps inside research (the Ask search decision and the
+// follow-up search queries) run on this fixed cheap model at low effort,
+// whatever model the user picked. Only the answer itself uses their model.
+export const BACKGROUND_MODEL: ModelId = "anthropic/claude-haiku-5.5";
+export const BACKGROUND_REASONING_EFFORT: ReasoningEffort = "low";
+
 // Retired catalog IDs that older clients (an installed PWA, a saved setting)
 // may still send. Both the server and the settings store resolve them here.
 // The old defaults (GPT-5.6 Luna, Claude Sonnet 5) move to the new defaults;

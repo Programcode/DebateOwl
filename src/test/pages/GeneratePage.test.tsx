@@ -45,6 +45,10 @@ const mockAddAskMessage = vi.fn();
 const mockSetAskLoading = vi.fn();
 let mockGenerateResult: any = null;
 let mockGenerateForm: any = { motion: 'Existing motion', side: 'pro', format: 'bp', role: 'intro', length: 'brief', audience: 'beginner', tone: 'formal' };
+let mockGenerateResultDebateId: string | null | undefined;
+const mockSetGenerateResultDebateId = vi.fn((debateId: string | null) => {
+    mockGenerateResultDebateId = debateId;
+});
 
 let mockRegeneratingSection: string | null = null;
 const mockStoreListeners = new Set<() => void>();
@@ -60,10 +64,12 @@ vi.mock('@/lib/stores/session-store', async () => {
         generateLoading: false,
         generateRegeneratingSection: mockRegeneratingSection,
         generateForm: mockGenerateForm,
+        generateResultDebateId: mockGenerateResultDebateId,
         autosavedCases: [] as any[],
         setGenerateResult: mockSetGenerateResult,
         setGenerateLoading: mockSetGenerateLoading,
         setGenerateRegeneratingSection: mockSetRegeneratingSection,
+        setGenerateResultDebateId: mockSetGenerateResultDebateId,
         saveCurrentCase: mockSaveCurrentCase,
         addAskMessage: mockAddAskMessage,
         setAskLoading: mockSetAskLoading,
@@ -127,6 +133,7 @@ describe('GeneratePage Integration', () => {
         vi.clearAllMocks();
         mockGenerateResult = null;
         mockRegeneratingSection = null;
+        mockGenerateResultDebateId = undefined;
         mockGenerateForm = { motion: 'Existing motion', side: 'pro', format: 'bp', role: 'intro', length: 'brief', audience: 'beginner', tone: 'formal' };
     });
 
@@ -329,6 +336,29 @@ describe('GeneratePage Integration', () => {
 
         await waitFor(() => expect(generateCase).toHaveBeenCalledTimes(2));
         expect((generateCase as Mock).mock.calls[1][3]).toBeNull();
+    });
+
+    it('regenerates a loaded case with that case\'s motion and debate', async () => {
+        seedCurrentDebate({ motion: 'Existing motion' });
+        mockGenerateResultDebateId = 'loaded-debate';
+        mockGenerateResult = {
+            caseStructure: { thesis: 'Loaded thesis' },
+            contentions: [] as any[],
+            predictedOpponentCase: {},
+            counters: [] as any[],
+            metadata: { side: 'con', format: 'custom', motion: 'Loaded motion', generatedAt: '2026-01-01T00:00:00Z' },
+        };
+        (generateCase as Mock).mockResolvedValue({ result: mockGenerateResult, discoveredSources: [] });
+
+        render(<BrowserRouter><GeneratePage /></BrowserRouter>);
+        fireEvent.click(screen.getByTestId('regenerate-section'));
+
+        await waitFor(() => expect(generateCase).toHaveBeenCalledTimes(1));
+        expect((generateCase as Mock).mock.calls[0][0]).toEqual(expect.objectContaining({
+            motion: 'Loaded motion',
+            side: 'con',
+        }));
+        expect((generateCase as Mock).mock.calls[0][3]).toBe('loaded-debate');
     });
 
     it('after a reload, regenerates in the Current Debate only when the motion matches', async () => {
