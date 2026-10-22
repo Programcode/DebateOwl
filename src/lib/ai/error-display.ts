@@ -19,7 +19,7 @@ function providerLabel(provider?: string, message = ''): string {
 /** The limit dialog's explanation, also used where a page shows the error inline. */
 export function subscriptionLimitMessage({ code, limit, current, units }: { code?: string; limit?: number; current?: number; units?: number }): string {
   if (code === 'trial_expired') return i18n.t('limitModal.trialEndedDesc');
-  if (code === 'monthly_budget_reached') return i18n.t('limitModal.monthlyReachedDesc');
+  if (code === 'weekly_budget_reached') return i18n.t('limitModal.weeklyReachedDesc');
   const remaining = Math.max(0, (limit || 0) - (current || 0));
   // A weighted model can be refused while lighter requests still fit today.
   if ((units ?? 1) > 1 && remaining > 0) return i18n.t('limitModal.weightedDesc', { units, remaining });

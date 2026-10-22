@@ -21,7 +21,7 @@ async function generateCalls(): Promise<number> {
   return (await providerCalls()).filter((call) => call.feature === "generate").length;
 }
 
-test("usage-weighted: Opus counts as 5 requests, a lighter model still runs, and the monthly cap stops everything", async ({ signedIn: page, user, evidence }) => {
+test("usage-weighted: Opus counts as 5 requests, a lighter model still runs, and the weekly cap stops everything", async ({ signedIn: page, user, evidence }) => {
   const userId = await user.userId();
   // Demo users are Pro on Claude Opus 5.5 with a limit of 999. Leave room for
   // 4 more units today: too few for Opus, enough for Haiku.
@@ -54,27 +54,27 @@ test("usage-weighted: Opus counts as 5 requests, a lighter model still runs, and
   await evidence.shot("02-haiku-runs");
   await evidence.step("Haiku ran and used 1 unit (counter 4)");
 
-  // Reach the monthly budget with spend logged earlier this month.
+  // Reach the weekly budget with cap spend logged earlier this week.
   const { error: spendError } = await admin.from("ai_requests").insert({
-    user_id: userId, feature: "generate", provider: "openrouter", model: "anthropic/claude-opus-5.5", status: "success", cost_usd: 3,
+    user_id: userId, feature: "generate", provider: "openrouter", model: "anthropic/claude-opus-5.5", status: "success", cost_usd: 2, cap_cost_usd: 2,
   });
   if (spendError) throw spendError;
   await page.getByRole("button", { name: "Generate Debate Case" }).click();
-  const monthly = page.getByRole("dialog");
-  await expect(monthly.getByText("Monthly AI Allowance Used")).toBeVisible({ timeout: AI_TIMEOUT });
-  await expect(monthly.getByText("It refreshes on the 1st of next month (UTC).", { exact: false })).toBeVisible();
-  await evidence.shot("03-monthly-cap");
+  const weekly = page.getByRole("dialog");
+  await expect(weekly.getByText("Weekly AI Allowance Used")).toBeVisible({ timeout: AI_TIMEOUT });
+  await expect(weekly.getByText("It refreshes on Monday at 00:00 UTC.", { exact: false })).toBeVisible();
+  await evidence.shot("03-weekly-cap");
   expect(await generateCalls()).toBe(1);
   expect(await aiCounter(userId)).toBe(4);
-  await evidence.step("Monthly cap refused the request; no provider call; daily counter unchanged");
-  await monthly.getByRole("button", { name: "OK" }).click();
-  await expect(monthly).toHaveCount(0);
+  await evidence.step("Weekly cap refused the request; no provider call; daily counter unchanged");
+  await weekly.getByRole("button", { name: "OK" }).click();
+  await expect(weekly).toHaveCount(0);
 });
 
-test("usage-monthly-inline: Sparring shows the translated monthly-cap message, not the server's English reason", async ({ signedIn: page, user, evidence }) => {
+test("usage-weekly-inline: Sparring shows the translated weekly-cap message, not the server's English reason", async ({ signedIn: page, user, evidence }) => {
   const userId = await user.userId();
   const { error } = await admin.from("ai_requests").insert({
-    user_id: userId, feature: "sparring", provider: "openrouter", model: "anthropic/claude-opus-5.5", status: "success", cost_usd: 3,
+    user_id: userId, feature: "sparring", provider: "openrouter", model: "anthropic/claude-opus-5.5", status: "success", cost_usd: 2, cap_cost_usd: 2,
   });
   if (error) throw error;
 
@@ -90,9 +90,9 @@ test("usage-monthly-inline: Sparring shows the translated monthly-cap message, n
   await page.getByRole("button", { name: "Submit speech" }).click();
 
   // The client's catalog copy ("You've used ...") differs from the server reason ("You've reached ...").
-  await expect(page.getByText("You've used this month's AI allowance.", { exact: false })).toBeVisible({ timeout: AI_TIMEOUT });
-  await expect(page.getByText("You've reached this month's AI usage allowance", { exact: false })).toHaveCount(0);
-  await evidence.shot("04-sparring-monthly-cap");
+  await expect(page.getByText("You've used this week's AI allowance.", { exact: false })).toBeVisible({ timeout: AI_TIMEOUT });
+  await expect(page.getByText("You've reached this week's AI usage allowance", { exact: false })).toHaveCount(0);
+  await evidence.shot("04-sparring-weekly-cap");
   expect((await providerCalls()).filter((call) => call.feature === "sparring")).toEqual([]);
-  await evidence.step("Sparring opponent turn refused by the monthly cap with the translated message; no provider call");
+  await evidence.step("Sparring opponent turn refused by the weekly cap with the translated message; no provider call");
 });

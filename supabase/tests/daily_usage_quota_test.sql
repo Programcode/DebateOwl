@@ -1,5 +1,5 @@
 BEGIN;
-SELECT plan(21);
+SELECT plan(14);
 
 INSERT INTO auth.users (id)
 VALUES
@@ -36,15 +36,15 @@ SELECT results_eq(
   'the migration leaves one consume_daily_quota overload'
 );
 SELECT ok(
-  NOT has_function_privilege('anon', 'public.consume_daily_quota(uuid, integer, text, integer, numeric)', 'EXECUTE'),
+  NOT has_function_privilege('anon', 'public.consume_daily_quota(uuid, integer, text)', 'EXECUTE'),
   'anonymous callers cannot reserve quota'
 );
 SELECT ok(
-  NOT has_function_privilege('authenticated', 'public.consume_daily_quota(uuid, integer, text, integer, numeric)', 'EXECUTE'),
+  NOT has_function_privilege('authenticated', 'public.consume_daily_quota(uuid, integer, text)', 'EXECUTE'),
   'authenticated callers cannot reserve quota'
 );
 SELECT ok(
-  has_function_privilege('service_role', 'public.consume_daily_quota(uuid, integer, text, integer, numeric)', 'EXECUTE'),
+  has_function_privilege('service_role', 'public.consume_daily_quota(uuid, integer, text)', 'EXECUTE'),
   'service role can reserve quota'
 );
 
@@ -106,68 +106,5 @@ SELECT results_eq(
   'rows without an explicit quota key retain their count under ai'
 );
 
--- Weighted reservations and the monthly AI budget.
-INSERT INTO auth.users (id) VALUES ('66666666-6666-4666-8666-666666666666');
-SET LOCAL ROLE service_role;
-SELECT set_config('request.jwt.claim.role', 'service_role', true);
-
-SELECT results_eq(
-  $$SELECT allowed, current_count, denied_by
-    FROM public.consume_daily_quota('66666666-6666-4666-8666-666666666666', 10, 'ai', 6)$$,
-  $$VALUES (true, 6, NULL::text)$$,
-  'a weighted request reserves all of its units'
-);
-SELECT results_eq(
-  $$SELECT allowed, current_count, denied_by
-    FROM public.consume_daily_quota('66666666-6666-4666-8666-666666666666', 10, 'ai', 5)$$,
-  $$VALUES (false, 6, 'daily'::text)$$,
-  'a weighted request that does not fit is refused and leaves the counter alone'
-);
-SELECT results_eq(
-  $$SELECT allowed, current_count, denied_by
-    FROM public.consume_daily_quota('66666666-6666-4666-8666-666666666666', 10, 'ai', 4)$$,
-  $$VALUES (true, 10, NULL::text)$$,
-  'a request that exactly fills the limit is allowed'
-);
-SELECT results_eq(
-  $$SELECT allowed, current_count, denied_by
-    FROM public.consume_daily_quota('66666666-6666-4666-8666-666666666666', 3, 'weighted_first', 5)$$,
-  $$VALUES (false, 0, 'daily'::text)$$,
-  'a first request larger than the whole limit is refused'
-);
-SELECT throws_ok(
-  $$SELECT * FROM public.consume_daily_quota('66666666-6666-4666-8666-666666666666', 10, 'ai', 0)$$,
-  'P0001',
-  'quota reservation is restricted to trusted server code',
-  'zero-unit reservations are rejected'
-);
-
-RESET ROLE;
-INSERT INTO public.ai_requests (user_id, feature, provider, model, status, cost_usd, created_at)
-VALUES
-  ('66666666-6666-4666-8666-666666666666', 'ask', 'openrouter', 'anthropic/claude-opus-5.5', 'success', 2.50, now()),
-  ('66666666-6666-4666-8666-666666666666', 'ask', 'openrouter', 'anthropic/claude-opus-5.5', 'success', 9.00, now() - interval '40 days');
-SET LOCAL ROLE service_role;
-
-SELECT results_eq(
-  $$SELECT allowed, denied_by
-    FROM public.consume_daily_quota('66666666-6666-4666-8666-666666666666', 100, 'ai', 1, 3.00)$$,
-  $$VALUES (true, NULL::text)$$,
-  'spend under the monthly cap is allowed and earlier months do not count'
-);
-
-RESET ROLE;
-INSERT INTO public.ai_requests (user_id, feature, provider, model, status, cost_usd)
-VALUES ('66666666-6666-4666-8666-666666666666', 'ask', 'openrouter', 'anthropic/claude-opus-5.5', 'success', 0.50);
-SET LOCAL ROLE service_role;
-
-SELECT results_eq(
-  $$SELECT allowed, current_count, denied_by
-    FROM public.consume_daily_quota('66666666-6666-4666-8666-666666666666', 100, 'ai', 1, 3.00)$$,
-  $$VALUES (false, 11, 'monthly'::text)$$,
-  'reaching the monthly cap refuses the request without consuming daily quota'
-);
-
-RESET ROLE;
 SELECT * FROM finish();
 ROLLBACK;

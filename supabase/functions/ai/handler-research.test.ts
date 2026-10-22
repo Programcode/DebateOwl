@@ -198,7 +198,7 @@ Deno.test("factoids handler carries Exa filters and consulted-source metadata ac
         });
       }
       if (url.pathname.includes("/rest/v1/rate_limits")) return jsonResponse({ limit_value: 50 });
-      if (url.pathname.includes("/rest/v1/rpc/consume_daily_quota")) {
+      if (/\/rest\/v1\/rpc\/consume_(daily|ai)_quota$/.test(url.pathname)) {
         return jsonResponse([{ allowed: true, current_count: 1 }]);
       }
       if (url.pathname.includes("/rest/v1/global_prompts")) return jsonResponse({ prompt_text: null });
@@ -336,7 +336,7 @@ Deno.test("Ask marks only surviving URL and research context as available", asyn
         });
       }
       if (url.pathname.includes("/rest/v1/rate_limits")) return jsonResponse({ limit_value: 50 });
-      if (url.pathname.includes("/rest/v1/rpc/consume_daily_quota")) {
+      if (/\/rest\/v1\/rpc\/consume_(daily|ai)_quota$/.test(url.pathname)) {
         return jsonResponse([{ allowed: true, current_count: 1 }]);
       }
       if (url.pathname.includes("/rest/v1/global_prompts")) return jsonResponse({ prompt_text: null });
@@ -468,7 +468,7 @@ function supabaseTestResponse(url: URL): Response | undefined {
   });
   if (url.pathname.includes("/rest/v1/subscriptions")) return jsonResponse([{ status: "active", current_period_end: "2099-01-01T00:00:00.000Z" }]);
   if (url.pathname.includes("/rest/v1/rate_limits")) return jsonResponse({ limit_value: 50 });
-  if (url.pathname.includes("/rest/v1/rpc/consume_daily_quota")) return jsonResponse([{ allowed: true, current_count: 1 }]);
+  if (/\/rest\/v1\/rpc\/consume_(daily|ai)_quota$/.test(url.pathname)) return jsonResponse([{ allowed: true, current_count: 1 }]);
   if (url.pathname.includes("/rest/v1/global_prompts")) return jsonResponse({ prompt_text: null });
   if (url.pathname.includes("/rest/v1/ai_requests")) return new Response(null, { status: 201 });
   throw new Error(`Unhandled Supabase request: ${url}`);
@@ -565,7 +565,7 @@ Deno.test("Crossfire returns newest-exchange signals without making them a reply
   const claimedSignalKeys = new Set<string>();
   globalThis.fetch = (async (input: Request | URL | string, init?: RequestInit) => {
     const url = new URL(input instanceof Request ? input.url : String(input));
-    if (url.origin === "https://supabase.test" && url.pathname.includes("/rest/v1/rpc/consume_daily_quota")) {
+    if (url.origin === "https://supabase.test" && /\/rest\/v1\/rpc\/consume_(daily|ai)_quota$/.test(url.pathname)) {
       const body = JSON.parse(String(init?.body ?? "{}")) as { p_quota_key?: string };
       if (body.p_quota_key?.startsWith("crossfire_signal:")) {
         const allowed = !claimedSignalKeys.has(body.p_quota_key);

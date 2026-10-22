@@ -23,10 +23,13 @@ export const MODEL_QUOTA_UNITS: Readonly<Record<string, number>> = {
 };
 
 /**
- * Monthly cap on a user's logged AI spend (ai_requests.cost_usd), in USD,
- * per calendar month in UTC. Set to null to turn the cap off.
+ * Weekly cap on a user's AI spend, in USD, per calendar week starting Monday
+ * 00:00 UTC. Only ai_requests.cap_cost_usd counts: OpenRouter credit charges
+ * plus Exa and ElevenLabs. Calls billed to our own BYOK key (Claude on the
+ * Anthropic Max plan) add only OpenRouter's fee, usually 0. Set to null to
+ * turn the cap off.
  */
-export const MONTHLY_AI_BUDGET_USD: number | null = 3;
+export const WEEKLY_AI_BUDGET_USD: number | null = 2;
 
 /** Default daily quota units per tier, before overrides and rate_limits rows. */
 export const TRIAL_DAILY_LIMIT = 5;

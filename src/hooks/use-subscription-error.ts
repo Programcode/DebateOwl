@@ -32,7 +32,7 @@ export function useSubscriptionError(): SubscriptionErrorState {
   const handleSubscriptionError = useCallback((error: unknown): boolean => {
     if (isAISubscriptionError(error)) {
       const subError = error as AISubscriptionError;
-      if (subError.code === 'trial_expired' || subError.code === 'monthly_budget_reached') {
+      if (subError.code === 'trial_expired' || subError.code === 'weekly_budget_reached') {
         setLimitModalVariant(subError.code);
       } else {
         setLimitModalVariant('limit_reached');

@@ -17,7 +17,7 @@ Deno.test("AI JSON and SSE failures never expose provider response bodies", asyn
       if (url.pathname.endsWith("/subscriptions")) return Response.json([]);
       if (url.pathname.endsWith("/rate_limits")) return Response.json({ limit_value: 50 });
       if (url.pathname.endsWith("/global_prompts")) return Response.json({ prompt_text: null });
-      if (url.pathname.endsWith("/consume_daily_quota")) return Response.json([{ allowed: true, current_count: 1 }]);
+      if (/\/consume_(daily|ai)_quota$/.test(url.pathname)) return Response.json([{ allowed: true, current_count: 1 }]);
       if (url.pathname.endsWith("/ai_requests")) return new Response(null, { status: 201 });
     }
     if (url.href === "https://openrouter.ai/api/v1/chat/completions") return new Response("PRIVATE_PROVIDER_BODY", { status: 400 });

@@ -5,7 +5,7 @@ import { AlertTriangle, Zap, Clock } from 'lucide-react';
 import { useSubscription } from '@/hooks/use-subscription';
 import { subscriptionLimitMessage } from '@/lib/ai/error-display';
 
-export type LimitModalVariant = 'limit_reached' | 'trial_expired' | 'monthly_budget_reached';
+export type LimitModalVariant = 'limit_reached' | 'trial_expired' | 'weekly_budget_reached';
 
 interface LimitReachedModalProps {
   open: boolean;
@@ -22,14 +22,14 @@ export function LimitReachedModal({ open, onOpenChange, variant, limit, current,
   const { t } = useTranslation();
   const { isPro } = useSubscription();
   const isTrialExpired = variant === 'trial_expired';
-  const isMonthlyBudget = variant === 'monthly_budget_reached';
+  const isWeeklyBudget = variant === 'weekly_budget_reached';
   // A Pro student who used today's included requests already pays. Selling Pro again is the wrong next step.
   const paidDailyCap = isPro && !isTrialExpired;
 
   const title = isTrialExpired
     ? t('limitModal.trialEnded')
-    : isMonthlyBudget
-      ? t('limitModal.monthlyReached')
+    : isWeeklyBudget
+      ? t('limitModal.weeklyReached')
       : t('limitModal.limitReached');
   const description = subscriptionLimitMessage({ code: variant, limit, current, units });
 
@@ -49,10 +49,10 @@ export function LimitReachedModal({ open, onOpenChange, variant, limit, current,
         </DialogHeader>
 
         <div className="flex flex-col gap-2 mt-4">
-          {isMonthlyBudget || paidDailyCap ? (
+          {isWeeklyBudget || paidDailyCap ? (
             // Upgrading does not lift the spend cap, and a paid plan already has Pro.
             <Button onClick={() => onOpenChange(false)} size="lg" className="w-full">
-              {isMonthlyBudget ? t('limitModal.ok') : t('limitModal.gotIt')}
+              {isWeeklyBudget ? t('limitModal.ok') : t('limitModal.gotIt')}
             </Button>
           ) : (
             <>

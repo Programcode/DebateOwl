@@ -254,7 +254,7 @@ export async function callSupabaseAI<T = unknown>(
       const errorCode = data.code as string | undefined;
 
       // Subscription errors (402 / trial expired / limit reached)
-      if (errorCode === 'trial_expired' || errorCode === 'limit_reached' || errorCode === 'monthly_budget_reached') {
+      if (errorCode === 'trial_expired' || errorCode === 'limit_reached' || errorCode === 'weekly_budget_reached') {
         throw new AISubscriptionError(errorMessage, {
           statusCode: 402,
           requestId,

@@ -211,3 +211,45 @@ Deno.test("ElevenLabs cost fails closed for an unlisted model, missing usage, or
   if (calculateRequestCost({ provider: "elevenlabs", model: "eleven_v4" }).costUsd !== null) throw new Error("missing usage was priced");
   if (calculateRequestCost({ provider: "elevenlabs", model: "eleven_v4", usage: { incomplete: true } }).costUsd !== null) throw new Error("incomplete work was priced");
 });
+
+Deno.test("the weekly cap counts OpenRouter credit spend, not BYOK provider charges", () => {
+  // A BYOK Claude call: OpenRouter charges only its fee (0 here); the provider bills our own key.
+  const byok = normalizeOpenRouterUsage({ prompt_tokens: 1500, completion_tokens: 600, cost: 0, is_byok: true });
+  // A Claude call that fell back to OpenRouter credits counts in full.
+  const credits = normalizeOpenRouterUsage({ prompt_tokens: 1500, completion_tokens: 600, cost: 0.012, is_byok: false });
+  const gpt = normalizeOpenRouterUsage({ prompt_tokens: 1000, completion_tokens: 500, cost: 0.004 });
+  if (calculateRequestCost({ provider: "openrouter", model: "anthropic/claude-opus-5.5", usage: byok }).capCostUsd !== 0) {
+    throw new Error("a BYOK call counted toward the cap");
+  }
+  if (calculateRequestCost({ provider: "openrouter", model: "anthropic/claude-opus-5.5", usage: credits }).capCostUsd !== 0.012) {
+    throw new Error("a credit-billed Claude call did not count");
+  }
+  const merged = calculateRequestCost({ provider: "openrouter", model: "openai/gpt-6-luna", usage: mergeNormalizedUsage([gpt, byok]) });
+  if (Math.abs((merged.capCostUsd ?? -1) - 0.004) > 1e-12) throw new Error(`merged cap spend wrong: ${merged.capCostUsd}`);
+});
+
+Deno.test("a usage with a separate provider charge counts it toward the cap in full", () => {
+  // Exa-style usage: a known charge with no separate cap figure.
+  const research = { reportedCostUsd: 0.03 };
+  const byok = normalizeOpenRouterUsage({ prompt_tokens: 10, completion_tokens: 10, cost: 0, is_byok: true });
+  const merged = mergeNormalizedUsage([byok, research]);
+  const result = calculateRequestCost({ provider: "openrouter", model: "anthropic/claude-haiku-5.5", usage: merged });
+  if (Math.abs((result.capCostUsd ?? -1) - 0.03) > 1e-12) throw new Error(`research charge not counted: ${result.capCostUsd}`);
+});
+
+Deno.test("unknown or incomplete spend never counts toward the cap", () => {
+  const known = normalizeOpenRouterUsage({ prompt_tokens: 10, completion_tokens: 10, cost: 0.5 });
+  const unknown = normalizeOpenRouterUsage({ prompt_tokens: 10, completion_tokens: 10 });
+  if (calculateRequestCost({ provider: "openrouter", model: "x", usage: mergeNormalizedUsage([known, unknown]) }).capCostUsd !== null) {
+    throw new Error("a partly unknown request got a cap figure");
+  }
+  if (calculateRequestCost({ provider: "openrouter", model: "x", usage: markIncompleteUsage(known) }).capCostUsd !== null) {
+    throw new Error("incomplete work got a cap figure");
+  }
+});
+
+Deno.test("ElevenLabs voice cost counts toward the cap", () => {
+  const usage = normalizeElevenLabsUsage({ characters: 1000, characterCostHeader: "1000", requestId: null });
+  const result = calculateRequestCost({ provider: "elevenlabs", model: "eleven_v4_turbo", usage });
+  if (result.capCostUsd !== result.costUsd || result.costUsd === null) throw new Error("voice cost missing from the cap");
+});

@@ -10,7 +10,7 @@ import {
   isAutoModelSelection,
   type ModelSelection,
 } from "./model-catalog.ts";
-import { MONTHLY_AI_BUDGET_USD, PRO_DAILY_LIMIT, quotaUnitsFor, TRIAL_DAILY_LIMIT } from "./usage-limits.ts";
+import { WEEKLY_AI_BUDGET_USD, PRO_DAILY_LIMIT, quotaUnitsFor, TRIAL_DAILY_LIMIT } from "./usage-limits.ts";
 
 const supabase = createClient(
   Deno.env.get("SUPABASE_URL")!,
@@ -23,7 +23,7 @@ export interface RateLimitResult {
   reason?: string;
   limit?: number;
   current?: number;
-  code?: "limit_reached" | "monthly_budget_reached" | "trial_expired" | "banned" | "upgrade_required";
+  code?: "limit_reached" | "weekly_budget_reached" | "trial_expired" | "banned" | "upgrade_required";
   /** Quota units this request needed; more than 1 for expensive models. */
   units?: number;
   statusCode?: number;
@@ -176,14 +176,14 @@ export async function checkRateLimit(userId: string | null, model?: ModelSelecti
 
     // Atomically reserve today's quota units server-side so concurrent requests
     // can't race past the limit. Expensive models reserve several units, and
-    // the same call refuses users over the monthly AI budget (see
-    // 20261022130001_weighted_quota_monthly_budget.sql).
+    // the same call refuses users over the weekly AI budget (see
+    // 20261022130001_weighted_quota_weekly_budget.sql).
     const units = quotaUnitsFor(model);
-    const { data: quota, error: quotaError } = await supabase.rpc("consume_daily_quota", {
+    const { data: quota, error: quotaError } = await supabase.rpc("consume_ai_quota", {
       p_user_id: userId,
       p_limit: dailyLimit,
       p_units: units,
-      p_monthly_cap_usd: MONTHLY_AI_BUDGET_USD,
+      p_weekly_cap_usd: WEEKLY_AI_BUDGET_USD,
     });
 
     if (quotaError) {
@@ -195,8 +195,8 @@ export async function checkRateLimit(userId: string | null, model?: ModelSelecti
     const current = quotaRow?.current_count ?? 0;
 
     if (!quotaRow?.allowed) {
-      if (quotaRow?.denied_by === "monthly") {
-        return { allowed: false, reason: "You've reached this month's AI usage allowance. It resets on the 1st of next month (UTC). Contact support if you need more.", code: "monthly_budget_reached", limit: dailyLimit, current, units, statusCode: 402 };
+      if (quotaRow?.denied_by === "weekly") {
+        return { allowed: false, reason: "You've reached this week's AI usage allowance. It resets on Monday at 00:00 UTC. Contact support if you need more.", code: "weekly_budget_reached", limit: dailyLimit, current, units, statusCode: 402 };
       }
       const remaining = Math.max(0, dailyLimit - current);
       const reason = remaining > 0
@@ -238,6 +238,8 @@ export async function logUsage(
       status,
       error_code: errorCode,
       cost_usd: cost.costUsd,
+      // Weekly spend cap input (20261022130001_weighted_quota_weekly_budget.sql).
+      cap_cost_usd: cost.capCostUsd,
       // Audit columns added by migration 20260822000000_ai_request_cost_audit.sql.
       cached_input_tokens: cost.cachedInputTokens,
       cache_write_tokens: cost.cacheWriteTokens,
