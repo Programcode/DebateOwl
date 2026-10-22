@@ -87,7 +87,7 @@ case "$cmd" in
     ;;
   test)
     sb test db "$@"
-    for script in test-daily-quota test-workspace-invite-concurrency test-workspace-mutation-concurrency; do
+    for script in test-daily-quota test-opus-default-migration test-workspace-invite-concurrency test-workspace-mutation-concurrency; do
       SUPABASE_DB_URL="$(db_url)" bash "$root/scripts/$script.sh"
     done
     ;;
