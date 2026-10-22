@@ -21,6 +21,7 @@ supabase/config.toml       local and function gateway configuration
 supabase/functions/        Deno Edge Functions
 supabase/functions/_shared shared auth, validation, prompts, research, and cost logic
 supabase/migrations/       ordered database history
+supabase/rollbacks/        down scripts for data migrations; never applied by db push
 supabase/tests/            pgTAP database and policy tests
 ```
 
@@ -36,7 +37,7 @@ supabase/tests/            pgTAP database and policy tests
 
 Both endpoints accept an optional `debateContext` of IDs (`debateId`, `side`, `sourceIds`, `outputs`). `_shared/debate-context-loader.ts` loads the matching material with the service role, filtering every query by the caller's user ID and the one debate, and returns 404 for a debate the caller does not own before any quota is reserved. Requests without it still accept the legacy `sourceIds` field.
 
-Both endpoints route every model inference through OpenRouter and enforce the shared ten-model Basic/Pro catalog. Basic accounts get Claude Haiku 5.5 (the default), GPT-6 Luna, and Muse Spark 1.3 Contributor; Claude Opus 5.5 is the Pro default; Pro-only models require active Pro access. Retired catalog IDs from older clients resolve to their successor before validation.
+Both endpoints route every model inference through OpenRouter and enforce the shared ten-model Basic/Pro catalog. Basic accounts get Claude Haiku 5.5 (the default), GPT-6 Luna, and Muse Spark 1.3 Contributor; Claude Sonnet 5.5 is the Pro default and Claude Opus 5.5 runs only when picked; Pro-only models require active Pro access. Retired catalog IDs from older clients resolve to their successor before validation.
 
 Claude runs only on DebateLab's own Anthropic key, added to OpenRouter as BYOK. [`_shared/provider-routing.ts`](functions/_shared/provider-routing.ts) sends `anthropic/*` requests with `provider: { only: ["anthropic"], allow_fallbacks: false }`, so Bedrock, Vertex and any other provider are never tried; other models keep OpenRouter's balanced routing. The request body cannot stop OpenRouter from serving Anthropic on its own credits when the key fails, so the key's **Shared capacity fallback** in OpenRouter must be set to "Never use shared capacity for any model on this provider". When a Claude call is refused, the endpoints answer 503 `provider_unavailable`, log `claude_unavailable`, and give the reserved daily request back through `refund_daily_quota` when the failure came before any output or completed provider call, research steps included. The Ask page does not resend a `provider_unavailable` stream failure through the plain endpoint. A Claude response whose usage shows `is_byok: false` or a `cost` above zero logs a `claude_not_byok` warning; past the monthly BYOK allowance, OpenRouter's BYOK fee also shows as cost.
 
@@ -129,6 +130,8 @@ The database gate proves migration replay and pgTAP assertions locally. It does 
 `20260927170000_debate_context_pins.sql` is additive: it creates `debate_context_pins`, the saved results a student pins per debate, with RLS and a composite key to the owner's debate.
 
 `20260926090100_legacy_debate_cleanup.sql` defines `private.purge_legacy_debate_material`, which deletes legacy results, chats, flowcharts, sparring rounds, and sources that belong to no debate and had no activity in the 30 days before `20260926090000_current_debates.sql` recorded its rollout time in `private.current_debate_rollout`. The migration does not call it, so applying it deletes nothing; legacy rows stay in the Unsorted view. Running the purge on a remote project is a separate, destructive step that needs explicit authorization for that environment. Work created after the rollout is never touched, however late it runs.
+
+`20261022120000_opus_default_to_sonnet.sql` moves every saved Claude Opus 5.5 tool setting in `user_settings.feature_configs` to Claude Sonnet 5.5, because Opus was the Pro default and a saved row cannot tell a default from a pick. It first copies each changed row into `private.opus_default_backup` and skips users already there, so a second run changes nothing. Apply it only after the frontend that makes Sonnet the Pro default is live; otherwise an account that never saved settings still gets Opus on its first load. `supabase/rollbacks/20261022120000_opus_default_to_sonnet.down.sql` restores Opus wherever a tool still holds the Sonnet the migration wrote, and empties the backup. To roll back, copy it into `supabase/migrations` under a new timestamp. `scripts/test-opus-default-migration.sh`, part of `npm run test:db`, runs both twice against seeded rows.
 
 ## Adding an Edge Function
 

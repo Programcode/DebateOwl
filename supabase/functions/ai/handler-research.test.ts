@@ -694,7 +694,7 @@ Deno.test("AI handlers use strict OpenRouter routing and server-side reasoning t
       decisionBodies.push(body);
       const questions = body.questions as Record<string, { criteria: Record<string, string> }>;
       const labels = Object.keys(questions.model.criteria);
-      const choice = labels.includes("anthropic/claude-haiku-5.5") ? "anthropic/claude-haiku-5.5" : "anthropic/claude-opus-5.5";
+      const choice = labels.includes("anthropic/claude-haiku-5.5") ? "anthropic/claude-haiku-5.5" : "anthropic/claude-sonnet-5.5";
       return jsonResponse({
         model: "typesafe/jev-1.13",
         answers: {
@@ -749,7 +749,7 @@ Deno.test("AI handlers use strict OpenRouter routing and server-side reasoning t
     const autoPro = await requestForModel("auto-pro", "pro");
     if (autoPro.status !== 200) throw new Error(`Pro Auto Pro returned ${autoPro.status}: ${await autoPro.text()}`);
     const autoProPayload = await autoPro.json();
-    if (autoProPayload.meta?.resolvedModel !== "anthropic/claude-opus-5.5") {
+    if (autoProPayload.meta?.resolvedModel !== "anthropic/claude-sonnet-5.5") {
       throw new Error(`Auto Pro metadata was wrong: ${JSON.stringify(autoProPayload.meta)}`);
     }
 
@@ -788,12 +788,12 @@ Deno.test("AI handlers use strict OpenRouter routing and server-side reasoning t
       if ((body.reasoning as Record<string, unknown>).effort !== "low") throw new Error("unsupported Pro medium was not lowered");
     }
     if (openRouterBodies.at(-2)?.model !== "anthropic/claude-haiku-5.5") throw new Error("Auto Fast did not call Haiku");
-    if (openRouterBodies.at(-1)?.model !== "anthropic/claude-opus-5.5") throw new Error("Auto Pro did not call Opus");
+    if (openRouterBodies.at(-1)?.model !== "anthropic/claude-sonnet-5.5") throw new Error("Auto Pro did not call Sonnet");
 
     // A stale client still sending a retired ID reaches its successor, not a 400.
     const retired = await requestForModel("anthropic/claude-sonnet-5", "pro");
     if (retired.status !== 200) throw new Error(`retired Sonnet 5 returned ${retired.status}: ${await retired.text()}`);
-    if (openRouterBodies.at(-1)?.model !== "anthropic/claude-opus-5.5") throw new Error("retired Sonnet 5 did not reach Opus 5.5");
+    if (openRouterBodies.at(-1)?.model !== "anthropic/claude-sonnet-5.5") throw new Error("retired Sonnet 5 did not reach Sonnet 5.5");
   } finally {
     globalThis.fetch = originalFetch;
     if (originalTier === undefined) delete testState.__testTier;
