@@ -46,7 +46,7 @@ const LEGACY_MODEL_SUCCESSORS: Record<string, string> = {
   'gpt-5.4-mini': DEFAULT_MODEL,
   'gpt-4o': DEFAULT_MODEL,
   'gpt-4o-mini': DEFAULT_MODEL,
-  'claude-opus-4-7': DEFAULT_PRO_MODEL,
+  'claude-opus-4-7': 'anthropic/claude-opus-5.5',
   'claude-sonnet-4-6': DEFAULT_PRO_MODEL,
   'claude-haiku-4-5-20251001': DEFAULT_MODEL,
   'gemini-3.1-pro-preview': 'google/gemini-3.8-flash',

@@ -38,18 +38,20 @@ export type AutoModelSelection = (typeof AUTO_MODEL_SELECTIONS)[number]["id"];
 export type ModelSelection = ModelId | AutoModelSelection;
 
 export const DEFAULT_MODEL = "anthropic/claude-haiku-5.5" as const;
-export const DEFAULT_PRO_MODEL = "anthropic/claude-opus-5.5" as const;
+// Opus costs several times Sonnet, so Pro starts on Sonnet and Opus is only
+// used when someone picks it.
+export const DEFAULT_PRO_MODEL = "anthropic/claude-sonnet-5.5" as const;
 
 // Retired catalog IDs that older clients (an installed PWA, a saved setting)
 // may still send. Both the server and the settings store resolve them here.
 // The old defaults (GPT-5.6 Luna, Claude Sonnet 5) move to the new defaults;
-// the rest move to their family's successor. A Basic ID never maps to Pro,
+// the rest move to their family's successor, so a saved Opus pick stays Opus. A Basic ID never maps to Pro,
 // so DeepSeek V4 Flash, which was Basic, moves to the Basic default.
 const RETIRED_MODEL_SUCCESSORS = new Map<string, ModelId>([
   ["openai/gpt-5.6-luna", DEFAULT_MODEL],
   ["deepseek/deepseek-v4-flash-0731", DEFAULT_MODEL],
   ["anthropic/claude-sonnet-5", DEFAULT_PRO_MODEL],
-  ["anthropic/claude-opus-5", DEFAULT_PRO_MODEL],
+  ["anthropic/claude-opus-5", "anthropic/claude-opus-5.5"],
   ["openai/gpt-5.6-sol", "openai/gpt-6.1-sol"],
   ["openai/gpt-5.6-terra", "openai/gpt-6.1-sol"],
   ["meta/muse-spark-1.3", "meta/muse-spark-1.3-contributor"],

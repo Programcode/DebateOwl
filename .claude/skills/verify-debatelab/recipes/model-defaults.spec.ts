@@ -3,7 +3,7 @@ import { admin, AI_TIMEOUT, aiResponse, chooseForMotion, expect, providerCalls, 
 
 // Feature map: features/model-defaults.md.
 const motion = "This House would make public transport free at the point of use";
-const OPUS = "anthropic/claude-opus-5.5";
+const SONNET = "anthropic/claude-sonnet-5.5";
 const HAIKU = "anthropic/claude-haiku-5.5";
 
 async function settings(userId: string) {
@@ -25,29 +25,29 @@ async function generateOnce(page: Page) {
   return response;
 }
 
-test("model-pro-default: a new Pro account starts on Claude Opus 5.5 and generates with it", async ({ signedIn: page, user, evidence }) => {
+test("model-pro-default: a new Pro account starts on Claude Sonnet 5.5, keeps Opus as an opt-in, and generates with Sonnet", async ({ signedIn: page, user, evidence }) => {
   const userId = await user.userId();
-  await expect.poll(async () => (await settings(userId)).generate?.model, { timeout: AI_TIMEOUT }).toBe(OPUS);
+  await expect.poll(async () => (await settings(userId)).generate?.model, { timeout: AI_TIMEOUT }).toBe(SONNET);
 
   await page.goto("/app/generate");
   const selector = page.getByRole("combobox", { name: "Select AI model for generate" });
-  await expect(selector).toContainText("Claude Opus 5.5");
+  await expect(selector).toContainText("Claude Sonnet 5.5");
   await selector.click();
   await expect(page.getByRole("option", { name: /Claude Haiku 5\.5/ })).toBeEnabled();
-  await expect(page.getByRole("option", { name: /Claude Sonnet 5\.5/ })).toBeEnabled();
+  await expect(page.getByRole("option", { name: /Claude Opus 5\.5/ })).toBeEnabled();
   await evidence.shot("01-pro-model-list");
   await page.keyboard.press("Escape");
-  await evidence.step("New Pro account: selector shows Claude Opus 5.5, all Claude 5.5 models enabled");
+  await evidence.step("New Pro account: selector shows Claude Sonnet 5.5; Opus 5.5 stays enabled as an opt-in");
 
   const body = await generateOnce(page);
-  expect((body.meta as { resolvedModel?: string } | undefined)?.resolvedModel ?? OPUS).toBe(OPUS);
+  expect((body.meta as { resolvedModel?: string } | undefined)?.resolvedModel ?? SONNET).toBe(SONNET);
   const calls = await providerCalls();
   // Live mode rewrites the upstream model to the pin, so read what the app asked for.
-  expect(calls.filter((call) => call.feature === "generate").map((call) => call.requestedModel ?? call.model)).toContain(OPUS);
+  expect(calls.filter((call) => call.feature === "generate").map((call) => call.requestedModel ?? call.model)).toContain(SONNET);
   const { data: usage } = await admin.from("ai_requests").select("feature,status,model").eq("user_id", userId);
-  expect(usage).toContainEqual(expect.objectContaining({ feature: "generate", status: "success", model: OPUS }));
+  expect(usage).toContainEqual(expect.objectContaining({ feature: "generate", status: "success", model: SONNET }));
   await evidence.json("02-ai-requests", usage);
-  await evidence.shot("02-generated-with-opus");
+  await evidence.shot("02-generated-with-sonnet");
 });
 
 test("model-basic-default: a Basic account starts on Claude Haiku 5.5 with only Haiku, Luna and Muse Spark unlocked", async ({ signedIn: page, user, evidence }) => {
@@ -81,7 +81,7 @@ test("model-basic-default: a Basic account starts on Claude Haiku 5.5 with only 
   await evidence.json("02-ai-requests", usage);
 });
 
-test("model-retired: a saved Claude Sonnet 5 setting moves to Claude Opus 5.5", async ({ signedIn: page, user, evidence }) => {
+test("model-retired: a saved Claude Sonnet 5 setting moves to Claude Sonnet 5.5", async ({ signedIn: page, user, evidence }) => {
   const userId = await user.userId();
   const retired = Object.fromEntries(["generate", "attack", "brainstorm", "factoids", "ask", "sparring"].map((feature) => [
     feature,
@@ -91,9 +91,9 @@ test("model-retired: a saved Claude Sonnet 5 setting moves to Claude Opus 5.5", 
   await page.evaluate(() => localStorage.removeItem("debate-trainer-settings"));
   await page.goto("/app/generate");
 
-  await expect(page.getByRole("combobox", { name: "Select AI model for generate" })).toContainText("Claude Opus 5.5");
+  await expect(page.getByRole("combobox", { name: "Select AI model for generate" })).toContainText("Claude Sonnet 5.5");
   await expect.poll(async () => Object.values(await settings(userId)).map((config) => config.model), { timeout: AI_TIMEOUT })
-    .toEqual(Array(6).fill(OPUS));
+    .toEqual(Array(6).fill(SONNET));
   await evidence.shot("01-retired-migrated");
-  await evidence.step("Saved Sonnet 5 configs were rewritten to Opus 5.5 in user_settings");
+  await evidence.step("Saved Sonnet 5 configs were rewritten to Sonnet 5.5 in user_settings");
 });
