@@ -545,6 +545,7 @@
     "failed": "No se pudo iniciar sesión",
     "tryAgain": "Inténtalo de nuevo.",
     "backHome": "Volver a DebateLab",
+    "sessionExpired": "Tu sesión ha caducado. Vuelve a iniciar sesión.",
     "errors": {
       "demoNotFound": "No se encontró el código de demostración.",
       "demoUnusable": "Este código de demostración no se puede usar.",
@@ -552,7 +553,7 @@
       "demoExpired": "Este código de demostración ha caducado.",
       "demoUsedUp": "Este código de demostración ya no tiene usos.",
       "rateLimited": "Demasiados intentos. Inténtalo más tarde.",
-      "codeExpired": "Ese código ha caducado. Solicita uno nuevo.",
+      "codeExpired": "Ese código es incorrecto o ha caducado. Revísalo o solicita uno nuevo.",
       "network": "No se puede conectar con DebateLab. Revisa tu conexión e inténtalo de nuevo."
     }
   },

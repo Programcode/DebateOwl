@@ -545,6 +545,7 @@
     "failed": "Could not start sign in",
     "tryAgain": "Please try again.",
     "backHome": "Back to DebateLab",
+    "sessionExpired": "Your session expired. Sign in again.",
     "errors": {
       "demoNotFound": "Demo code not found.",
       "demoUnusable": "This demo code cannot be used.",
@@ -552,7 +553,7 @@
       "demoExpired": "This demo code has expired.",
       "demoUsedUp": "This demo code has no uses left.",
       "rateLimited": "Too many attempts. Try again later.",
-      "codeExpired": "That code has expired. Send a new one.",
+      "codeExpired": "That code is wrong or has expired. Check it or send a new one.",
       "network": "Can't reach DebateLab. Check your connection and try again."
     }
   },

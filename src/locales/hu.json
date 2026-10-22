@@ -545,6 +545,7 @@
     "failed": "Nem sikerült elindítani a bejelentkezést",
     "tryAgain": "Próbáld újra.",
     "backHome": "Vissza a DebateLabhez",
+    "sessionExpired": "A munkameneted lejárt. Jelentkezz be újra.",
     "errors": {
       "demoNotFound": "Nincs ilyen demókód.",
       "demoUnusable": "Ez a demókód nem használható.",
@@ -552,7 +553,7 @@
       "demoExpired": "Ez a demókód lejárt.",
       "demoUsedUp": "Ezzel a demókóddal már nem lehet többször belépni.",
       "rateLimited": "Túl sok próbálkozás. Próbáld újra később.",
-      "codeExpired": "Ez a kód lejárt. Kérj újat.",
+      "codeExpired": "Ez a kód hibás vagy lejárt. Ellenőrizd, vagy kérj újat.",
       "network": "A DebateLab nem érhető el. Ellenőrizd a kapcsolatot, és próbáld újra."
     }
   },
