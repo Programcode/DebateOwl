@@ -1305,6 +1305,7 @@
     "pros": "Pros",
     "cons": "Contras",
     "placeholder": "Pregunta a tu coach de debate...",
+    "inputLabel": "Mensaje para tu coach de debate",
     "placeholderListening": "Escuchando...",
     "saveToLibrary": "Guardar en biblioteca",
     "saveMessage": "Guardar mensaje en biblioteca",

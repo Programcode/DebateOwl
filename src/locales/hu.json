@@ -1305,6 +1305,7 @@
     "pros": "Mellette",
     "cons": "Ellene",
     "placeholder": "Kérdezd a vitaedződ...",
+    "inputLabel": "Üzenet a vitaedződnek",
     "placeholderListening": "Hallgatás...",
     "saveToLibrary": "Mentés a könyvtárba",
     "saveMessage": "Üzenet mentése a könyvtárba",
