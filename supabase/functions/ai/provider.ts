@@ -334,7 +334,7 @@ export async function readOpenRouterStream(
         ? (chunk.error as { message?: unknown }).message
         : chunk.error;
       console.error("[OpenRouter] Stream error:", typeof message === "string" ? message.slice(0, 2000) : "stream error");
-      throw providerRequestError(model, null);
+      throw providerRequestError(model, null, text.length > 0);
     }
     const choice = Array.isArray(chunk.choices) ? chunk.choices[0] : undefined;
     if (typeof choice?.finish_reason === "string" && choice.finish_reason) finished = true;

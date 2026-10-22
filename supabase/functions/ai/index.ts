@@ -806,8 +806,10 @@ export async function handleRequest(req: Request): Promise<Response> {
       // post-processing error. This avoids counting its repair attempts twice.
       const mainErrorUsage = completedMainUsage ?? selectObservedUsage(usageError, workSignal?.aborted === true);
       // Claude runs only on the Anthropic key, with no fallback provider. When
-      // it fails the student gets an outage message and their request back.
+      // it fails the student gets an outage message, and their request back
+      // if no provider call had finished or written anything yet.
       const claudeUnavailable = err instanceof ClaudeProviderUnavailableError;
+      const refundable = claudeUnavailable && !err.afterOutput && !completedMainUsage && !usageError?.completedUsage;
       await logUsage(
         userId,
         feature,
@@ -822,7 +824,7 @@ export async function handleRequest(req: Request): Promise<Response> {
         claudeUnavailable ? "claude_unavailable" : "ai_error",
       );
       if (claudeUnavailable) {
-        await refundDailyQuota(userId);
+        if (refundable) await refundDailyQuota(userId);
         return new Response(JSON.stringify({ error: CLAUDE_UNAVAILABLE_MESSAGE, code: CLAUDE_UNAVAILABLE_CODE }), { status: CLAUDE_UNAVAILABLE_STATUS, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
       return new Response(JSON.stringify({ error: "AI request failed. Please try again.", code: "provider_error" }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });

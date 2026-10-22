@@ -21,22 +21,25 @@ export function openRouterProviderOptions(model: string): Record<string, unknown
 /**
  * A Claude call OpenRouter refused or failed. With fallbacks off this usually
  * means the Anthropic key is out of credit or erroring, so the request is not
- * retried elsewhere, the student sees a provider outage, and the reserved
- * daily request is given back.
+ * retried elsewhere and the student sees a provider outage. The reserved daily
+ * request is given back only when the failure came before any output.
  */
 export class ClaudeProviderUnavailableError extends Error {
   readonly status: number | null;
+  /** The model had already written text when the failure arrived. */
+  readonly afterOutput: boolean;
 
-  constructor(status: number | null) {
+  constructor(status: number | null, afterOutput = false) {
     super("AI provider request failed");
     this.name = "ClaudeProviderUnavailableError";
     this.status = status;
+    this.afterOutput = afterOutput;
   }
 }
 
 /** Throws the Claude-specific error for Claude models, the generic one otherwise. */
-export function providerRequestError(model: string, status: number | null): Error {
-  return isClaudeModel(model) ? new ClaudeProviderUnavailableError(status) : new Error("AI provider request failed");
+export function providerRequestError(model: string, status: number | null, afterOutput = false): Error {
+  return isClaudeModel(model) ? new ClaudeProviderUnavailableError(status, afterOutput) : new Error("AI provider request failed");
 }
 
 export const CLAUDE_UNAVAILABLE_CODE = "provider_unavailable";

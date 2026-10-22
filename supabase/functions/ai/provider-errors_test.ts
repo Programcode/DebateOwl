@@ -44,7 +44,7 @@ Deno.test("AI JSON and SSE failures never expose provider response bodies", asyn
 Deno.test("a refused Claude call is not retried elsewhere, shows an outage, and gives the request back", async () => {
   const originalFetch = globalThis.fetch;
   const originalWarn = console.warn;
-  let failure: "http" | "chunk" = "http";
+  let failure: "http" | "chunk" | "chunk-after-text" = "http";
   let refunds = 0;
   const usageRows: Array<Record<string, unknown>> = [];
   const providerBodies: Array<Record<string, unknown>> = [];
@@ -71,7 +71,8 @@ Deno.test("a refused Claude call is not retried elsewhere, shows an outage, and 
     if (url.href === "https://openrouter.ai/api/v1/chat/completions") {
       providerBodies.push(JSON.parse(String(init?.body)));
       if (failure === "http") return new Response("PRIVATE_PROVIDER_BODY", { status: 402 });
-      return new Response('data: {"error":{"message":"PRIVATE_PROVIDER_BODY"}}\n\n', { headers: { "Content-Type": "text/event-stream" } });
+      const text = failure === "chunk-after-text" ? 'data: {"choices":[{"delta":{"content":"{\\"resp"}}]}\n\n' : "";
+      return new Response(`${text}data: {"error":{"message":"PRIVATE_PROVIDER_BODY"}}\n\n`, { headers: { "Content-Type": "text/event-stream" } });
     }
     throw new Error(`Unexpected request: ${url}`);
   }) as typeof fetch;
@@ -86,7 +87,7 @@ Deno.test("a refused Claude call is not retried elsewhere, shows an outage, and 
         assertEquals(response.status, 503);
         return await response.text();
       }],
-      ...(["http", "chunk"] as const).flatMap((kind) => [
+      ...(["http", "chunk", "chunk-after-text"] as const).flatMap((kind) => [
         [`ai live ${kind}`, kind, async () => {
           const text = await (await send(ai, { stream: true })).text();
           assertEquals(text.includes('"status":503'), true);
@@ -107,7 +108,8 @@ Deno.test("a refused Claude call is not retried elsewhere, shows an outage, and 
       assertEquals(text.includes("PRIVATE_PROVIDER_BODY"), false, label);
       assertEquals(text.includes("Anthropic Claude is temporarily unavailable. Please try again later."), true, label);
       assertEquals(text.includes('"code":"provider_unavailable"'), true, label);
-      assertEquals(refunds, 1, `${label} refunds the reserved request once`);
+      // A failure after the model wrote text keeps the request: the key already paid for it.
+      assertEquals(refunds, kind === "chunk-after-text" ? 0 : 1, `${label} refunds only a failure before output`);
       assertEquals(usageRows.map((row) => row.error_code), ["claude_unavailable"], label);
       // Every attempt stays on the Anthropic route; nothing is retried on another model or provider.
       assertEquals(providerBodies.length > 0, true, label);

@@ -313,7 +313,7 @@ export async function handleRequest(req: Request): Promise<Response> {
               : providerError;
             if (isClaudeModel(model)) {
               console.error("[OpenRouter] Stream error:", typeof message === "string" ? message.slice(0, 2000) : "stream error");
-              throw providerRequestError(model, null);
+              throw providerRequestError(model, null, accumulated.length > 0);
             }
             throw new Error(typeof message === "string" ? message : "OpenRouter stream error");
           }
@@ -373,11 +373,12 @@ export async function handleRequest(req: Request): Promise<Response> {
         console.error("[AI_STREAM] Stream failed:", (err instanceof Error ? err.message : String(err)).slice(0, 2000));
         const isAbort = req.signal.aborted || (err instanceof DOMException && err.name === "AbortError");
         // Claude runs only on the Anthropic key, with no fallback provider.
-        // When it fails the student gets an outage message and their request back.
+        // When it fails the student gets an outage message, and their request
+        // back if the model had written nothing yet.
         const claudeUnavailable = !isAbort && err instanceof ClaudeProviderUnavailableError;
         if (claudeUnavailable) {
           try { emit("error", { message: CLAUDE_UNAVAILABLE_MESSAGE, code: CLAUDE_UNAVAILABLE_CODE, status: CLAUDE_UNAVAILABLE_STATUS }); } catch { /* client disconnected */ }
-          await refundDailyQuota(user.id);
+          if (!err.afterOutput && !accumulated) await refundDailyQuota(user.id);
         } else if (!isAbort) {
           try { emit("error", { message: "AI streaming failed. Please try again.", code: "provider_error" }); } catch { /* client disconnected */ }
         }
