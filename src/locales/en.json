@@ -1338,6 +1338,7 @@
     "limitReached": "Daily Access Paused",
     "limitReachedDesc": "You've used {{current}} of {{limit}} included AI uses today. Access refreshes at midnight UTC.",
     "weightedDesc": "This model counts as {{units}} uses, and you have {{remaining}} left today. Pick a lighter model or wait until midnight UTC.",
+    "weightedTooLargeDesc": "This model counts as {{units}} uses, more than your daily limit of {{limit}}. Pick a lighter model.",
     "weeklyReached": "Weekly AI Allowance Used",
     "weeklyReachedDesc": "You've used this week's AI allowance. It refreshes on Monday at 00:00 UTC. Contact support if you need more.",
     "ok": "OK",

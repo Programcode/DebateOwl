@@ -1338,6 +1338,7 @@
     "limitReached": "Acceso diario pausado",
     "limitReachedDesc": "Has usado {{current}} de {{limit}} usos de IA incluidos hoy. El acceso se renueva a medianoche UTC.",
     "weightedDesc": "Este modelo cuenta como {{units}} usos y te quedan {{remaining}} hoy. Elige un modelo más ligero o espera a la medianoche UTC.",
+    "weightedTooLargeDesc": "Este modelo cuenta como {{units}} usos, más que tu límite diario de {{limit}}. Elige un modelo más ligero.",
     "weeklyReached": "Asignación semanal de IA agotada",
     "weeklyReachedDesc": "Has usado la asignación de IA de esta semana. Se renueva el lunes a las 00:00 UTC. Contacta con soporte si necesitas más.",
     "ok": "Entendido",

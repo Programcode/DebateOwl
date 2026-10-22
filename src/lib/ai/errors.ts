@@ -1,3 +1,5 @@
+import { localizedLimitMessage } from './limit-message';
+
 /**
  * Base class for AI-related errors with structured information.
  */
@@ -230,15 +232,13 @@ export function mapAIError(
   }
 
   if (statusCode === 402) {
-    const code = typeof payload?.code === 'string' ? payload.code : undefined;
-    return new AISubscriptionError(message, {
-      statusCode,
-      requestId,
-      code,
+    const details = {
+      code: typeof payload?.code === 'string' ? payload.code : undefined,
       limit: typeof payload?.limit === 'number' ? payload.limit : undefined,
       current: typeof payload?.current === 'number' ? payload.current : undefined,
       units: typeof payload?.units === 'number' ? payload.units : undefined,
-    });
+    };
+    return new AISubscriptionError(localizedLimitMessage(message, details), { statusCode, requestId, ...details });
   }
 
   if (statusCode === 403) {

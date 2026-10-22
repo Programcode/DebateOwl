@@ -179,3 +179,14 @@ Deno.test("the weekly budget refusal has its own code", async () => {
     assertEquals(result.statusCode, 402, "statusCode");
   });
 });
+
+Deno.test("a model heavier than the whole daily limit is not told to wait", async () => {
+  const smallLimit = { ...proUser, daily_limit_override: 3 };
+  await withSupabase({ user_settings: smallLimit, quota: [{ allowed: false, current_count: 0, denied_by: "daily" }] }, async () => {
+    const result = await checkRateLimit("user-1", "anthropic/claude-opus-5.5");
+    assertEquals(result.code, "limit_reached", "code");
+    assertEquals(result.limit, 3, "limit");
+    assertEquals(result.reason?.includes("more than your daily limit of 3"), true, `reason: ${result.reason}`);
+    assertEquals(result.reason?.includes("midnight"), false, "reason must not suggest waiting");
+  });
+});

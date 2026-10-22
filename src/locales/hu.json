@@ -1338,6 +1338,7 @@
     "limitReached": "Napi hozzáférés szünetel",
     "limitReachedDesc": "Ma {{current}} / {{limit}} benne foglalt MI használatot használtál fel. A hozzáférés éjfélkor (UTC) frissül.",
     "weightedDesc": "Ez a modell {{units}} használatnak számít, és ma még {{remaining}} maradt. Válassz könnyebb modellt, vagy várj éjfélig (UTC).",
+    "weightedTooLargeDesc": "Ez a modell {{units}} használatnak számít, ami több, mint a napi {{limit}} kereted. Válassz könnyebb modellt.",
     "weeklyReached": "Elfogyott a heti MI keret",
     "weeklyReachedDesc": "Felhasználtad az e heti MI keretet. Hétfőn 00:00-kor (UTC) frissül. Ha többre van szükséged, írj az ügyfélszolgálatnak.",
     "ok": "Rendben",

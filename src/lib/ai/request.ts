@@ -10,6 +10,7 @@ import { toast } from '@/hooks/use-toast';
 import { captureException, captureProductEvent } from '@/lib/observability';
 import { isAppLanguage, type AppLanguage } from '@/lib/languages';
 import i18n from '@/i18n';
+import { localizedLimitMessage } from './limit-message';
 import type { WorkspaceToolContext } from '@/lib/workspace/tool-context';
 import {
   AIError,
@@ -255,14 +256,13 @@ export async function callSupabaseAI<T = unknown>(
 
       // Subscription errors (402 / trial expired / limit reached)
       if (errorCode === 'trial_expired' || errorCode === 'limit_reached' || errorCode === 'weekly_budget_reached') {
-        throw new AISubscriptionError(errorMessage, {
-          statusCode: 402,
-          requestId,
+        const details = {
           code: errorCode,
-          limit: data.limit as number | undefined,
-          current: data.current as number | undefined,
-          units: data.units as number | undefined,
-        });
+          limit: typeof data.limit === 'number' ? data.limit : undefined,
+          current: typeof data.current === 'number' ? data.current : undefined,
+          units: typeof data.units === 'number' ? data.units : undefined,
+        };
+        throw new AISubscriptionError(localizedLimitMessage(errorMessage, details), { statusCode: 402, requestId, ...details });
       }
 
       // Model restriction (403 / upgrade_required)

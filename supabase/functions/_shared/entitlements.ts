@@ -199,7 +199,9 @@ export async function checkRateLimit(userId: string | null, model?: ModelSelecti
         return { allowed: false, reason: "You've reached this week's AI usage allowance. It resets on Monday at 00:00 UTC. Contact support if you need more.", code: "weekly_budget_reached", limit: dailyLimit, current, units, statusCode: 402 };
       }
       const remaining = Math.max(0, dailyLimit - current);
-      const reason = remaining > 0
+      const reason = units > dailyLimit
+        ? `This model counts as ${units} requests, more than your daily limit of ${dailyLimit}. Pick a lighter model.`
+        : remaining > 0
         ? `This model counts as ${units} requests and you have ${remaining} left today. Pick a lighter model or wait until midnight UTC.`
         : `You've used all ${dailyLimit} of your daily requests. ${sub.tier === "pro" ? "Limit resets at midnight UTC." : `Upgrade to Pro for ${PRO_DAILY_LIMIT} daily requests.`}`;
       return { allowed: false, reason, code: "limit_reached", limit: dailyLimit, current, units, statusCode: 402 };
