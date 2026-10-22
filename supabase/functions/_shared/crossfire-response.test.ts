@@ -34,3 +34,16 @@ Deno.test("Crossfire debrief still rejects invalid non-omitted sections", () => 
     throw new Error("invalid transcript reference was accepted");
   }
 });
+
+Deno.test("a single-turn debrief field cannot cite a later turn as well", () => {
+  const result = validateCrossfireDebrief({
+    evasiveOrIncompleteAnswers: [{
+      turnIds: ["T2", "T3"],
+      claim: "Turn 2 dodged, judged from turn 3",
+    }],
+    strongestExchange: { turnIds: ["T1", "T2"], claim: "The opening exchange" },
+  }, [{ id: "T1" }, { id: "T2" }, { id: "T3" }]);
+  if (!("error" in result) || !result.error.includes("exactly one turn")) {
+    throw new Error(`expected a one-turn rejection, got ${JSON.stringify(result)}`);
+  }
+});

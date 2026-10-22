@@ -1,4 +1,7 @@
 import { defineConfig, devices } from '@playwright/test';
+import { assertE2eSupabaseTarget } from './src/lib/supabase/e2e-guard';
+
+assertE2eSupabaseTarget();
 
 const PORT = Number(process.env.PORT || 18080);
 const baseURL = process.env.PLAYWRIGHT_BASE_URL || `http://127.0.0.1:${PORT}`;
@@ -80,5 +83,9 @@ export default defineConfig({
     timeout: 120_000,
     stdout: 'ignore',
     stderr: 'pipe',
+    env: {
+      VITE_E2E: '1',
+      ...(process.env.E2E_ALLOW_PROD === '1' ? { VITE_E2E_ALLOW_PROD: '1' } : {}),
+    },
   },
 });

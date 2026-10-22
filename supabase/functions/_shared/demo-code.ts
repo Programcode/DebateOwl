@@ -48,9 +48,19 @@ export function getDemoCodeDenialReason(code: DemoCodeState, now = Date.now()): 
   return null;
 }
 
+let warnedPepperFallback = false;
+
 export async function hashDemoCode(code: string) {
-  const pepper = Deno.env.get("DEMO_CODE_PEPPER") || Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+  const dedicated = Deno.env.get("DEMO_CODE_PEPPER");
+  const pepper = dedicated || Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
   if (!pepper) throw new Error("Missing demo code pepper");
+  // A dedicated pepper is preferred. The service-role fallback stays so a
+  // project that has not set DEMO_CODE_PEPPER keeps accepting existing codes,
+  // and the warning names the missing secret without printing its value.
+  if (!dedicated && !warnedPepperFallback) {
+    warnedPepperFallback = true;
+    console.warn("[DEMO_CODE] DEMO_CODE_PEPPER is not set; falling back to the service-role key. Set a dedicated pepper.");
+  }
 
   const bytes = new TextEncoder().encode(`${pepper}:${code}`);
   const digest = await crypto.subtle.digest("SHA-256", bytes);

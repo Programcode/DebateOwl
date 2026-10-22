@@ -702,7 +702,10 @@
       "confirmBanDesc": "They can't use DebateLab until you unban them.",
       "confirmUnban": "Unban {{email}}?",
       "confirmRemoveAdmin": "Remove admin from {{email}}?",
-      "confirmRoleDesc": "They become a regular user."
+      "confirmRoleDesc": "They become a regular user.",
+      "loadMore": "Load more users",
+      "loadingMore": "Loading more users",
+      "loadMoreFailed": "Could not load more users"
     },
     "promos": {
       "createTitle": "Create Promo Code",

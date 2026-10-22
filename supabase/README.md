@@ -177,7 +177,7 @@ Supabase injects `SUPABASE_URL`, `SUPABASE_ANON_KEY` and `SUPABASE_SERVICE_ROLE_
 - `STRIPE_SECRET_KEY` and `STRIPE_WEBHOOK_SECRET`, or checkout, the billing portal, the webhook and account deletion fail (`stripe-webhook` fails at startup without them);
 - `ELEVENLABS_API_KEY` for the opponent's voice, which otherwise falls back to the browser voice.
 
-`DEMO_CODE_PEPPER` and `SPARRING_INTEGRITY_SECRET` fall back to a value derived from the service-role key. The `WORKSPACE_INVITE_*` values serve only the hidden Workspace. `npm run backend:status -- --project-ref <ref>` lists which expected names a project lacks, without printing values.
+`DEMO_CODE_PEPPER` and `SPARRING_INTEGRITY_SECRET` fall back to a value derived from the service-role key. Demo-code login logs a warning when `DEMO_CODE_PEPPER` is missing and still accepts codes hashed with that fallback. The `WORKSPACE_INVITE_*` values serve only the hidden Workspace. `npm run backend:status -- --project-ref <ref>` lists which expected names a project lacks, without printing values.
 
 Use `supabase secrets` or protected deployment configuration for server values. Never place server secrets in `VITE_*`, source files, docs, screenshots, traces, logs, or comments.
 

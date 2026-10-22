@@ -3,7 +3,7 @@
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.114.0";
 import { HttpError, jsonError, requireUser } from "../_shared/auth.ts";
-import { PUBLIC_WEB_APP_ORIGIN, getCorsHeaders } from "../_shared/cors.ts";
+import { PUBLIC_WEB_APP_ORIGIN, getCorsHeaders, isAllowedOrigin } from "../_shared/cors.ts";
 import { BodyTooLargeError, discardRequestBody, readBoundedBody } from "../_shared/bounded-body.ts";
 
 // Shared items are saved text, so 512 KB of JSON leaves room for long cases and
@@ -25,6 +25,37 @@ function generateShareCode(): string {
         code += chars.charAt(bytes[i] % chars.length);
     }
     return code;
+}
+
+/** Prefer the caller's allowed origin, then the configured app origin. */
+function shareOrigin(req: Request): string {
+    const origin = req.headers.get("origin");
+    if (origin && isAllowedOrigin(origin)) return origin;
+    const referer = req.headers.get("referer");
+    if (referer) {
+        try {
+            const refererOrigin = new URL(referer).origin;
+            if (isAllowedOrigin(refererOrigin)) return refererOrigin;
+        } catch {
+            // A malformed Referer is not an app origin.
+        }
+    }
+    let configured: string | undefined;
+    try {
+        configured = Deno.env.get("PUBLIC_WEB_APP_ORIGIN")?.trim();
+    } catch {
+        // The test runner allow-lists env names. An unread optional origin is the constant below.
+        configured = undefined;
+    }
+    if (configured) {
+        try {
+            const parsed = new URL(configured);
+            if (parsed.protocol === "https:" || parsed.protocol === "http:") return parsed.origin;
+        } catch {
+            // Fall through to the production origin.
+        }
+    }
+    return PUBLIC_WEB_APP_ORIGIN;
 }
 
 function jsonResponse(body: unknown, status: number, corsHeaders: Record<string, string>) {
@@ -162,7 +193,7 @@ export async function handleRequest(req: Request): Promise<Response> {
 
         return new Response(JSON.stringify({
             shareCode: data.share_code,
-            shareUrl: `${PUBLIC_WEB_APP_ORIGIN}/share/${data.share_code}`,
+            shareUrl: `${shareOrigin(req)}/share/${data.share_code}`,
             expiresAt: data.expires_at,
         }), {
             headers: { ...corsHeaders, "Content-Type": "application/json" },

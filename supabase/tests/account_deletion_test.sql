@@ -1,5 +1,5 @@
 BEGIN;
-SELECT plan(28);
+SELECT plan(29);
 
 -- The leaver deletes their account; the stayer shares workspaces, announcements,
 -- and grants with them and must keep everything of their own.
@@ -306,6 +306,15 @@ SELECT ok(
     AND current_setting('test.export') LIKE '%LEAVER-MESSAGE%'
     AND current_setting('test.export') NOT LIKE '%STAYER-PRIVATE%',
   'the export contains the user''s own content and none of another user''s'
+);
+SELECT ok(
+  current_setting('test.export') NOT LIKE '%cus_leaver%'
+    AND current_setting('test.export') NOT LIKE '%stripe_customer_id%'
+    AND current_setting('test.export') NOT LIKE '%daily_limit_override%'
+    AND current_setting('test.export') NOT LIKE '%gifted_trial%'
+    AND current_setting('test.export') NOT LIKE '%pricing_snapshot_id%'
+    AND current_setting('test.export') NOT LIKE '%raw_usage%',
+  'Stripe customer ids, gifted-trial markers, limit overrides, and upstream cost fields stay out of the export'
 );
 SELECT ok(
   current_setting('test.export') NOT LIKE '%LEAVER-CIPHERTEXT%'
