@@ -1,6 +1,7 @@
 import { createClient, type User } from "https://esm.sh/@supabase/supabase-js@2.114.0";
 import { isPrivateIpv4, isPrivateIpv6, validatePublicHttpUrl, validateResolvedPublicHost } from "./url-validation.ts";
 import { readBoundedText } from "./resource-limits.ts";
+import { getMeta, getTitle, stripHtml } from "./html-text.ts";
 import { BodyTooLargeError, discardRequestBody, readBoundedBody, untilAborted } from "../_shared/bounded-body.ts";
 import { HttpError, jsonError, requireUser } from "../_shared/auth.ts";
 import { getCorsHeaders } from "../_shared/cors.ts";
@@ -100,85 +101,6 @@ async function fetchWithRedirects(initialUrl: URL, signal: AbortSignal) {
     return { response, finalUrl: currentUrl };
   }
   throw new Error("Too many redirects.");
-}
-
-function decodeEntities(text: string) {
-  return text
-    .replace(/&nbsp;/gi, " ")
-    .replace(/&amp;/gi, "&")
-    .replace(/&quot;/gi, "\"")
-    .replace(/&apos;/gi, "'")
-    .replace(/&lt;/gi, "<")
-    .replace(/&gt;/gi, ">")
-    .replace(/&#x([0-9a-f]+);/gi, (_, hex) => {
-      const code = parseInt(hex, 16);
-      return Number.isFinite(code) ? String.fromCodePoint(code) : "";
-    })
-    .replace(/&#(\d+);/g, (_, dec) => {
-      const code = parseInt(dec, 10);
-      return Number.isFinite(code) ? String.fromCodePoint(code) : "";
-    });
-}
-
-function getMeta(html: string, names: string[]) {
-  for (const name of names) {
-    const pattern = new RegExp(`<meta\\s+[^>]*(?:name|property)=["']${name}["'][^>]*content=["']([^"']+)["'][^>]*>`, "i");
-    const reversePattern = new RegExp(`<meta\\s+[^>]*content=["']([^"']+)["'][^>]*(?:name|property)=["']${name}["'][^>]*>`, "i");
-    const match = html.match(pattern) || html.match(reversePattern);
-    if (match?.[1]) return decodeEntities(match[1].trim());
-  }
-  return undefined;
-}
-
-function getTitle(html: string, fallback: string) {
-  return getMeta(html, ["og:title", "twitter:title"]) ||
-    decodeEntities(html.match(/<title[^>]*>([\s\S]*?)<\/title>/i)?.[1]?.replace(/\s+/g, " ").trim() || "") ||
-    fallback;
-}
-
-function stripHtml(html: string) {
-  const cleaned = html
-    .replace(/<script[\s\S]*?<\/script>/gi, " ")
-    .replace(/<style[\s\S]*?<\/style>/gi, " ")
-    .replace(/<template[\s\S]*?<\/template>/gi, " ")
-    .replace(/<noscript[\s\S]*?<\/noscript>/gi, " ")
-    .replace(/<!--[\s\S]*?-->/g, " ")
-    .replace(/<(nav|footer|header|aside|form|svg|iframe|button)[\s\S]*?<\/\1>/gi, " ")
-    .replace(/<(div|section)[^>]*role=["'](banner|navigation|complementary|search|contentinfo)["'][\s\S]*?<\/\1>/gi, " ")
-    .replace(/<(div|section)[^>]*(?:id|class)=["'][^"']*(?:cookie|consent|banner|nav(?:bar|igation)?|menu|sidebar|header|footer|subscribe|newsletter|social|share|paywall)[^"']*["'][\s\S]*?<\/\1>/gi, " ");
-
-  const candidates: string[] = [];
-  const blockPattern = /<(article|main|section|div)[^>]*(?:id|class)=["'][^"']*(?:article|content|story|post|entry|main|body|reader)[^"']*["'][^>]*>([\s\S]*?)<\/\1>/gi;
-  for (const match of cleaned.matchAll(blockPattern)) {
-    if (match[2]) candidates.push(match[2]);
-  }
-  const semanticMatch = cleaned.match(/<(article|main)[^>]*>([\s\S]*?)<\/\1>/i);
-  if (semanticMatch?.[2]) candidates.push(semanticMatch[2]);
-  candidates.push(cleaned);
-
-  const textCandidates = candidates
-    .map((candidate) => htmlToText(candidate))
-    .filter((text) => text.split(/\s+/).filter(Boolean).length >= 20);
-
-  return textCandidates.sort((a, b) => scoreReadableText(b) - scoreReadableText(a))[0] || htmlToText(cleaned);
-}
-
-function htmlToText(html: string) {
-  return decodeEntities(html
-    .replace(/<\/(p|div|section|article|main|h[1-6]|li|blockquote|tr)>/gi, "\n")
-    .replace(/<br\s*\/?>/gi, "\n")
-    .replace(/<[^>]+>/g, " ")
-    .replace(/[ \t]+/g, " ")
-    .replace(/\n{3,}/g, "\n\n")
-    .trim());
-}
-
-function scoreReadableText(text: string) {
-  const words = text.split(/\s+/).filter(Boolean).length;
-  const paragraphs = text.split(/\n{2,}/).filter((part) => part.trim().split(/\s+/).length >= 12).length;
-  const punctuation = (text.match(/[.!?]/g) || []).length;
-  const navPenalty = (text.match(/\b(cookie|subscribe|sign in|advertisement|privacy policy|all rights reserved)\b/gi) || []).length * 30;
-  return words + paragraphs * 80 + punctuation * 4 - navPenalty;
 }
 
 const UI_PHRASE_PATTERNS = [
@@ -313,7 +235,6 @@ export async function handleRequest(req: Request): Promise<Response> {
     }
 
     const raw = await readBoundedText(response, deadline.signal);
-    clearTimeout(deadlineTimer);
     const isHtml = contentType.includes("html") || /<html|<article|<main|<p[\s>]/i.test(raw);
     const content = normalizeText(isHtml ? stripHtml(raw) : raw);
 
