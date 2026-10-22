@@ -11,12 +11,19 @@ import { useAuth } from '@/lib/supabase/AuthProvider';
 import { useToast } from '@/hooks/use-toast';
 import { consumeWorkspaceInvite } from '@/lib/workspace/invite-handoff';
 import { localizeAuthError } from '@/lib/auth-errors';
+import { clearSessionExpiredNotice, sessionExpiredNotice } from '@/lib/supabase/session-expiry';
 
 type AuthMode = 'email' | 'demo';
 type AuthStatus = 'idle' | 'submitting' | 'code-sent' | 'verifying' | 'success' | 'error';
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const DEMO_CODE_PATTERN = /^DEMO-[A-Z0-9]{4}-[A-Z0-9]{4}$/;
+const OTP_LENGTH = 6;
+
+/** Email codes are digits only. Pasted spaces, dashes and letters never reach Auth. */
+function otpDigits(value: string): string {
+  return value.replace(/\D/g, '').slice(0, OTP_LENGTH);
+}
 
 function isAuthMode(value: string): value is AuthMode {
   return value === 'email' || value === 'demo';
@@ -32,6 +39,8 @@ export default function LoginPage() {
   const [emailSent, setEmailSent] = useState(false);
   const [demoCode, setDemoCode] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
+  // Set when the server refused this tab's session and it was signed out.
+  const [sessionExpired] = useState(sessionExpiredNotice);
   const otpInputRef = useRef<HTMLInputElement>(null);
   const emailInputRef = useRef<HTMLInputElement>(null);
   const demoInputRef = useRef<HTMLInputElement>(null);
@@ -44,6 +53,10 @@ export default function LoginPage() {
   useEffect(() => {
     if (user) navigate(consumeWorkspaceInvite() ?? from, { replace: true });
   }, [user, navigate, from]);
+
+  useEffect(() => {
+    if (sessionExpired) clearSessionExpiredNotice();
+  }, [sessionExpired]);
 
   useEffect(() => {
     if (authStatus === 'code-sent') otpInputRef.current?.focus();
@@ -179,6 +192,11 @@ export default function LoginPage() {
           <CardDescription>{t('login.subtitle')}</CardDescription>
         </CardHeader>
         <CardContent>
+          {sessionExpired && (
+            <p className="mb-4 rounded-md border border-border bg-muted px-3 py-2 text-sm" role="status">
+              {t('login.sessionExpired', 'Your session expired. Sign in again.')}
+            </p>
+          )}
           <Button className="w-full" onClick={() => void handleGoogleSignIn()} disabled={isRedirecting}>
             {isRedirecting ? t('login.redirecting', 'Redirecting...') : t('login.google')}
           </Button>
@@ -212,9 +230,8 @@ export default function LoginPage() {
                       autoComplete="one-time-code"
                       placeholder={t('login.verificationCodePlaceholder', '123456')}
                       pattern="[0-9]*"
-                      maxLength={6}
                       value={otp}
-                      onChange={(event) => setOtp(event.target.value)}
+                      onChange={(event) => setOtp(otpDigits(event.target.value))}
                       aria-describedby={describedBy('login-otp-hint', 'login-otp-error')}
                       aria-invalid={authStatus === 'error'}
                       disabled={isSubmitting || authStatus === 'success'}
@@ -224,7 +241,7 @@ export default function LoginPage() {
                       {t('login.codeSentDesc', 'Check your email for the six-digit code.')}
                     </p>
                   </div>
-                  <Button className="w-full" type="submit" disabled={isSubmitting || authStatus === 'success'}>
+                  <Button className="w-full" type="submit" disabled={isSubmitting || authStatus === 'success' || otp.length !== OTP_LENGTH}>
                     {authStatus === 'verifying' ? t('login.verifying', 'Verifying...') : t('login.verifyCode', 'Verify code')}
                   </Button>
                   <Button type="button" variant="ghost" className="w-full" onClick={() => resetAuthState('email')} disabled={isSubmitting}>

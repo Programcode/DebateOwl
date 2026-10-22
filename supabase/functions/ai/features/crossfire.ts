@@ -3,11 +3,12 @@ import { callAI } from "../provider.ts";
 import { cleanGeneratedText, getCurrentDateContext } from "../text.ts";
 import { buildCrossfireNextTurnPrompt, buildCrossfireDebriefPrompt } from "../prompt-builder.ts";
 import { buildSystemPrompt, type DebatePromptContext, type PromptSource } from "../../_shared/prompts.ts";
-import { validateCrossfireDebrief } from "../../_shared/crossfire-response.ts";
+import { crossfireDebriefSchema, validateCrossfireDebrief } from "../../_shared/crossfire-response.ts";
 import {
   createCrossfireSignalToken,
   type CrossfireInput,
   crossfireReplyOutput,
+  crossfireReplySchema,
   MAX_CROSSFIRE_PROMPT_CHARS,
 } from "./crossfire-input.ts";
 import { prepareVoiceReply, type VoicePayload } from "../../_shared/voice-token.ts";
@@ -63,8 +64,12 @@ export async function handleCrossfire(ctx: FeatureContext, options: CrossfireHan
     systemPrompt,
     [{ role: "user", content: userPrompt }],
     reasoningEffort,
+    crossfireInput.operation === "next-turn" ? "crossfireTurn" : "crossfireDebrief",
     workSignal,
     ctx.stream,
+    crossfireInput.operation === "next-turn"
+      ? crossfireReplySchema(crossfireInput.expectedReply)
+      : crossfireDebriefSchema(crossfireInput.transcript),
   ));
   const cleanedOutput = cleanGeneratedText(aiResult.output);
   const output = crossfireInput.operation === "next-turn"

@@ -44,3 +44,25 @@ export function usePageHead(route: PrerenderedRoute) {
     };
   }, [route]);
 }
+
+/** Sign-in, the signed-in app and share links: never indexed (vercel.json sends the same X-Robots-Tag). */
+const PRIVATE_ROUTE = /^\/(login|app|share)(\/|$)/;
+
+/**
+ * Titles each private page "<page> · DebateLab" (the shell's title) and marks it noindex while it
+ * is on screen. Every other route keeps the shell's head or sets its own.
+ */
+export function usePrivateRouteHead(pathname: string, label: string) {
+  const isPrivate = PRIVATE_ROUTE.test(pathname);
+  useEffect(() => {
+    if (!isPrivate) return;
+    // "Sign in to DebateLab" already names the app.
+    document.title = label.includes(SHELL_HEAD.title) ? label : `${label} · ${SHELL_HEAD.title}`;
+    setMeta('robots', 'noindex, nofollow');
+    setCanonical(undefined);
+    return () => {
+      document.title = SHELL_HEAD.title;
+      setMeta('robots', SHELL_HEAD.robots);
+    };
+  }, [isPrivate, label]);
+}

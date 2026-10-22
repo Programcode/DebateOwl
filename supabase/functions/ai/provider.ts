@@ -1,5 +1,5 @@
-// OpenRouter calls, JSON parsing with one repair retry, and the shared
-// request budget.
+// OpenRouter calls, JSON parsing with local repair and one paid repair retry,
+// and the shared request budget.
 
 import {
   mergeNormalizedUsage,
@@ -8,10 +8,15 @@ import {
 } from "../_shared/cost.ts";
 import {
   getModelCatalogEntry,
-  MAX_REQUEST_OUTPUT_TOKENS,
   type ModelCatalogEntry,
   type ReasoningEffort,
 } from "../_shared/model-catalog.ts";
+import {
+  outputTokenLimit,
+  REPLY_TOKEN_CAPS,
+  type ReplyCap,
+  TRUNCATION_RETRY_FACTOR,
+} from "../_shared/output-caps.ts";
 import {
   fetchJsonWithTimeout,
   fetchWithTimeoutAndConsume,
@@ -19,6 +24,7 @@ import {
   MAX_PROVIDER_ERROR_BODY_CHARS,
   MAX_PROVIDER_RESPONSE_BYTES,
   OPENROUTER_API_URL,
+  type JsonOutputSchema,
   type Provider,
   readResponseText,
 } from "../_shared/research.ts";
@@ -46,6 +52,18 @@ export class InvalidJsonResponseError extends Error {
   }
 }
 
+/** The provider stopped at max_tokens, so the reply is incomplete. */
+export class OutputTruncatedError extends Error {
+  /** Token usage of the cut-off attempt so the retry can bill it. */
+  usage?: NormalizedUsage;
+
+  constructor(usage?: NormalizedUsage) {
+    super("AI reply was cut off at its token cap");
+    this.name = "OutputTruncatedError";
+    this.usage = usage;
+  }
+}
+
 /**
  * Parses provider content, attaching the attempt's token usage to a parse
  * failure so callAI's repair retry can fold it into the final accounting.
@@ -53,7 +71,7 @@ export class InvalidJsonResponseError extends Error {
 export function parseProviderContent(
   text: string,
   providerName: string,
-  usage: NormalizedUsage | undefined
+  usage: NormalizedUsage | undefined,
 ): { output: unknown; usage?: NormalizedUsage } {
   try {
     return { output: parseJsonFromText(text, providerName), usage };
@@ -63,21 +81,123 @@ export function parseProviderContent(
   }
 }
 
+/**
+ * Reads the JSON object in a model reply. A paid repair retry costs a whole
+ * second answer, so the common slips are fixed here first: markdown fences,
+ * prose around the object, trailing commas, and raw line breaks inside
+ * strings. A reply cut off mid-object is not completed: that would ship a
+ * partial result as if it were whole. When prose holds more than one object
+ * that parses, the answer is ambiguous and the reply is rejected.
+ */
 export function parseJsonFromText(text: string, providerName: string) {
   if (!text) throw new Error(`${providerName} returned empty response content`);
-  try {
-    return JSON.parse(text);
-  } catch {
-    const codeBlock = text.match(/```json\s*([\s\S]*?)\s*```/i);
-    if (codeBlock?.[1]) {
-      try { return JSON.parse(codeBlock[1]); } catch { /* fall through */ }
-    }
-    const jsonMatch = text.match(/\{[\s\S]*\}/);
-    if (jsonMatch?.[0]) {
-      try { return JSON.parse(jsonMatch[0]); } catch { /* fall through */ }
+  const whole = parseOrRepair(text);
+  if (whole.ok) return whole.value;
+  // A fence counts only when it wraps the whole reply. One inside a string of
+  // an unfinished object, or followed by more text, is not the answer.
+  const trimmed = text.trim();
+  if (trimmed.startsWith("```") && trimmed.endsWith("```")) {
+    const open = trimmed.indexOf("\n");
+    const close = trimmed.length - 3;
+    if (open !== -1 && close > open) {
+      const fenced = parseOrRepair(trimmed.slice(open + 1, close));
+      if (fenced.ok) return fenced.value;
     }
   }
+  const single = onlyObject(text);
+  if (single.ok) return single.value;
   throw new InvalidJsonResponseError(providerName, text);
+}
+
+type Parsed = { ok: true; value: unknown } | { ok: false };
+
+// Prose around an answer holds a few braces at most.
+const MAX_OBJECT_SPANS = 16;
+
+function parseOrRepair(text: string): Parsed {
+  try { return { ok: true, value: JSON.parse(text) }; } catch { /* try the repaired text */ }
+  try { return { ok: true, value: JSON.parse(repairJsonText(text)) }; } catch { return { ok: false }; }
+}
+
+/**
+ * The one top-level `{...}` span in the text that parses, string-aware. The
+ * scan resumes after a span, never inside it, so a nested object is never
+ * taken for the answer, and each character is read once. It fails when two
+ * spans parse (the answer is ambiguous), when a span that looks like JSON (it
+ * holds a `"` or `:`) does not parse, when an unclosed `{` leaves the rest
+ * of the text unread, or past MAX_OBJECT_SPANS, which bounds the parse work
+ * on a reply full of braces. Failing sends the reply to the paid retry.
+ */
+function onlyObject(text: string): Parsed {
+  let found: Parsed = { ok: false };
+  let spans = 0;
+  let start = text.indexOf("{");
+  while (start !== -1) {
+    if (++spans > MAX_OBJECT_SPANS) return { ok: false };
+    let depth = 0;
+    let inString = false;
+    let end = -1;
+    for (let index = start; index < text.length; index++) {
+      const char = text[index];
+      if (inString) {
+        if (char === "\\") index++;
+        else if (char === "\"") inString = false;
+      } else if (char === "\"") {
+        inString = true;
+      } else if (char === "{") {
+        depth++;
+      } else if (char === "}" && --depth === 0) {
+        end = index;
+        break;
+      }
+    }
+    if (end === -1) return { ok: false };
+    const span = text.slice(start, end + 1);
+    const parsed = parseOrRepair(span);
+    if (parsed.ok) {
+      if (found.ok) return { ok: false };
+      found = parsed;
+    } else if (/[":]/.test(span)) {
+      // A span that looks like JSON but does not parse may be the real answer
+      // with a slip (an unescaped quote can even close it early, so the scan
+      // resumes inside it). Trusting another span then returns the wrong
+      // object, so the reply goes to the retry. Prose like {braces} is skipped.
+      return { ok: false };
+    }
+    start = text.indexOf("{", end + 1);
+  }
+  return found;
+}
+
+/** Drops trailing commas and escapes raw control characters inside strings. */
+function repairJsonText(text: string): string {
+  let out = "";
+  let inString = false;
+  for (let index = 0; index < text.length; index++) {
+    const char = text[index];
+    if (inString) {
+      if (char === "\\") {
+        out += char + (text[index + 1] ?? "");
+        index++;
+      } else if (char === "\"") {
+        inString = false;
+        out += char;
+      } else if (char === "\n") out += "\\n";
+      else if (char === "\r") out += "\\r";
+      else if (char === "\t") out += "\\t";
+      else if (char < " ") out += `\\u${char.charCodeAt(0).toString(16).padStart(4, "0")}`;
+      else out += char;
+      continue;
+    }
+    if (char === "\"") inString = true;
+    if (char === ",") {
+      let next = index + 1;
+      while (next < text.length && /\s/.test(text[next])) next++;
+      if (text[next] === "}" || text[next] === "]") continue;
+    }
+    out += char;
+  }
+  return out;
 }
 
 export interface AIResult {
@@ -101,7 +221,7 @@ export interface GenerationStream {
 export type GenerationPhase = "research" | "writing" | "checking";
 
 type OpenRouterResponse = {
-  choices?: Array<{ message?: { content?: string | null } }>;
+  choices?: Array<{ message?: { content?: string | null }; finish_reason?: unknown }>;
   usage?: unknown;
 };
 
@@ -127,52 +247,75 @@ export async function callAI(
   systemPrompt: string,
   messages: Array<{ role: string; content: string }>,
   reasoningEffort: ReasoningEffort,
+  cap: ReplyCap,
   signal?: AbortSignal,
   stream?: GenerationStream,
+  outputSchema?: JsonOutputSchema,
 ): Promise<AIResult> {
+  const replyTokens = REPLY_TOKEN_CAPS[cap];
   try {
-    return await callAIOnce(provider, model, systemPrompt, messages, reasoningEffort, signal, stream);
+    return await callAIOnce(provider, model, systemPrompt, messages, reasoningEffort, replyTokens, signal, stream, outputSchema);
   } catch (err) {
+    if (err instanceof OutputTruncatedError) {
+      console.warn(`[AI] Reply hit its ${cap} cap (${replyTokens} tokens, ${model}, effort ${reasoningEffort}); retrying with ${replyTokens * TRUNCATION_RETRY_FACTOR}`);
+      stream?.reset();
+      return await retryOnce(err.usage, "truncation_retry", () =>
+        callAIOnce(provider, model, systemPrompt, messages, reasoningEffort, replyTokens * TRUNCATION_RETRY_FACTOR, signal, stream, outputSchema)
+      );
+    }
     if (!(err instanceof InvalidJsonResponseError)) throw attachMissingUsage(err, "call");
 
     console.warn(`[AI] ${err.providerName} returned invalid JSON; retrying with repair prompt`);
     stream?.reset();
-    let retry: AIResult;
-    try {
-      retry = await callAIOnce(
+    return await retryOnce(err.usage, "repair_retry", () =>
+      callAIOnce(
         provider,
         model,
         `${systemPrompt}\n\nJSON REPAIR INSTRUCTION: Return only valid JSON matching this schema, no prose.`,
         withJsonRepairPrompt(messages),
         reasoningEffort,
+        replyTokens,
         signal,
         stream,
-      );
-    } catch (retryError) {
-      // Preserve the completed first attempt if cancellation or another
-      // failure prevents the repair attempt from returning a result.
-      const retryUsage = retryError && typeof retryError === "object" && "usage" in retryError
-        ? (retryError as { usage?: NormalizedUsage }).usage ?? missingOpenRouterUsage("repair_retry")
-        : missingOpenRouterUsage("repair_retry");
-      const usage = mergeNormalizedUsage([err.usage, retryUsage]);
-      if (usage && retryError && typeof retryError === "object") {
-        const errorWithUsage = retryError as {
-          usage?: NormalizedUsage;
-          completedUsage?: NormalizedUsage;
-        };
-        errorWithUsage.usage = usage;
-        // The first response was parsed before the retry began, so retain it
-        // even if the retry is the operation cancelled by the caller.
-        errorWithUsage.completedUsage = err.usage;
-      }
-      throw attachMissingUsage(retryError, "repair_retry");
-    }
-    // The failed attempt still consumed tokens; bill both.
-    return {
-      output: retry.output,
-      usage: mergeNormalizedUsage([err.usage, retry.usage]),
-    };
+        outputSchema,
+      )
+    );
   }
+}
+
+/** Runs the single retry after a failed attempt and bills both attempts. */
+async function retryOnce(
+  firstUsage: NormalizedUsage | undefined,
+  reason: string,
+  attempt: () => Promise<AIResult>,
+): Promise<AIResult> {
+  let retry: AIResult;
+  try {
+    retry = await attempt();
+  } catch (retryError) {
+    // Preserve the completed first attempt if cancellation or another
+    // failure prevents the retry from returning a result.
+    const retryUsage = retryError && typeof retryError === "object" && "usage" in retryError
+      ? (retryError as { usage?: NormalizedUsage }).usage ?? missingOpenRouterUsage(reason)
+      : missingOpenRouterUsage(reason);
+    const usage = mergeNormalizedUsage([firstUsage, retryUsage]);
+    if (usage && retryError && typeof retryError === "object") {
+      const errorWithUsage = retryError as {
+        usage?: NormalizedUsage;
+        completedUsage?: NormalizedUsage;
+      };
+      errorWithUsage.usage = usage;
+      // The first response was received before the retry began, so retain it
+      // even if the retry is the operation cancelled by the caller.
+      errorWithUsage.completedUsage = firstUsage;
+    }
+    throw attachMissingUsage(retryError, reason);
+  }
+  // The failed attempt still consumed tokens; bill both.
+  return {
+    output: retry.output,
+    usage: mergeNormalizedUsage([firstUsage, retry.usage]),
+  };
 }
 
 export function withJsonRepairPrompt(messages: Array<{ role: string; content: string }>) {
@@ -196,16 +339,20 @@ export async function callAIOnce(
   systemPrompt: string,
   messages: Array<{ role: string; content: string }>,
   reasoningEffort: ReasoningEffort,
+  replyTokens: number,
   signal?: AbortSignal,
   stream?: GenerationStream,
+  outputSchema?: JsonOutputSchema,
 ): Promise<AIResult> {
   if (provider !== OPENROUTER_PROVIDER) throw new Error(`Unsupported provider: ${provider}`);
   return await callOpenRouter(
     [{ role: "system", content: systemPrompt }, ...messages],
     model,
     reasoningEffort,
+    replyTokens,
     signal,
     stream,
+    outputSchema,
   );
 }
 
@@ -226,8 +373,10 @@ export async function callOpenRouter(
   messages: Array<{ role: string; content: string }>,
   model: string,
   reasoningEffort: ReasoningEffort,
+  replyTokens: number,
   signal?: AbortSignal,
   stream?: GenerationStream,
+  outputSchema?: JsonOutputSchema,
 ): Promise<AIResult> {
   const apiKey = Deno.env.get("OPENROUTER_API_KEY");
   if (!apiKey) throw new Error("OPENROUTER_API_KEY missing");
@@ -236,8 +385,11 @@ export async function callOpenRouter(
   const payload: Record<string, unknown> = {
     model,
     messages: withPromptCaching(model, messages),
-    max_tokens: Math.min(modelEntry.maxTokens, MAX_REQUEST_OUTPUT_TOKENS),
-    response_format: { type: "json_object" },
+    max_tokens: outputTokenLimit(replyTokens, reasoningEffort, modelEntry.maxTokens),
+    // With require_parameters, a schema routes only to endpoints that enforce it.
+    response_format: outputSchema
+      ? { type: "json_schema", json_schema: { name: outputSchema.name, strict: true, schema: outputSchema.schema } }
+      : { type: "json_object" },
     reasoning: { effort: reasoningEffort, exclude: true },
     // Omitting sort and order keeps OpenRouter's balanced provider load balancing.
     provider: { require_parameters: true },
@@ -255,6 +407,7 @@ export async function callOpenRouter(
   }
   if (!data?.choices || !Array.isArray(data.choices) || data.choices.length === 0) throw new Error("OpenRouter returned no choices");
   const usage = normalizeProviderUsage(data.usage) ?? missingOpenRouterUsage("response");
+  if (data.choices[0]?.finish_reason === "length") throw new OutputTruncatedError(usage);
   return parseProviderContent(data.choices[0]?.message?.content ?? "", "OpenRouter", usage);
 }
 
@@ -281,7 +434,7 @@ async function streamOpenRouter(
   signal?: AbortSignal,
 ): Promise<AIResult> {
   stream.phase("writing");
-  const { text, usage } = await fetchWithTimeoutAndConsume(`${OPENROUTER_API_URL}/v1/chat/completions`, {
+  const { text, usage, finishReason } = await fetchWithTimeoutAndConsume(`${OPENROUTER_API_URL}/v1/chat/completions`, {
     method: "POST",
     headers: { "Content-Type": "application/json", "Authorization": `Bearer ${apiKey}` },
     body: JSON.stringify({ ...payload, stream: true, stream_options: { include_usage: true } }),
@@ -295,6 +448,7 @@ async function streamOpenRouter(
     }
     return await readOpenRouterStream(response.body, stream, bodySignal);
   });
+  if (finishReason === "length") throw new OutputTruncatedError(usage);
   return parseProviderContent(text, "OpenRouter", usage);
 }
 
@@ -302,7 +456,7 @@ export async function readOpenRouterStream(
   body: ReadableStream<Uint8Array>,
   stream: GenerationStream,
   signal: AbortSignal,
-): Promise<{ text: string; usage: NormalizedUsage }> {
+): Promise<{ text: string; usage: NormalizedUsage; finishReason?: string }> {
   const reader = body.getReader();
   const decoder = new TextDecoder();
   let buffer = "";
@@ -312,7 +466,7 @@ export async function readOpenRouterStream(
   const encoder = new TextEncoder();
   let usageRaw: Record<string, unknown> | undefined;
   let done = false;
-  let finished = false;
+  let finishReason: string | undefined;
 
   const processLine = (line: string) => {
     const trimmed = line.trim();
@@ -333,7 +487,7 @@ export async function readOpenRouterStream(
       throw new Error("AI provider request failed");
     }
     const choice = Array.isArray(chunk.choices) ? chunk.choices[0] : undefined;
-    if (typeof choice?.finish_reason === "string" && choice.finish_reason) finished = true;
+    if (typeof choice?.finish_reason === "string" && choice.finish_reason) finishReason = choice.finish_reason;
     const content = choice?.delta?.content;
     if (typeof content === "string" && content) {
       text += content;
@@ -381,10 +535,10 @@ export async function readOpenRouterStream(
   } finally {
     void reader.cancel().catch(() => undefined);
   }
-  if (!done && !finished) {
+  if (!done && !finishReason) {
     const error = new Error("OpenRouter stream ended before completion") as Error & { usage?: NormalizedUsage };
     error.usage = usageRaw ? { ...normalizeOpenRouterUsage(usageRaw), incomplete: true } : missingOpenRouterUsage("stream");
     throw error;
   }
-  return { text, usage: usageRaw ? normalizeOpenRouterUsage(usageRaw) : missingOpenRouterUsage("stream") };
+  return { text, usage: usageRaw ? normalizeOpenRouterUsage(usageRaw) : missingOpenRouterUsage("stream"), finishReason };
 }

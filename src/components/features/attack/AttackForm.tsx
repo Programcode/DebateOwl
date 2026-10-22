@@ -162,20 +162,24 @@ export function AttackForm({ onSubmit, isLoading, importedCase, debateContext = 
               <div className="space-y-4 rounded-lg border border-border p-4">
                 <div className="flex items-center justify-between gap-4">
                   <div className="space-y-0.5">
-                    <Label className="text-sm font-medium">{t('attackForm.detectFallacies')}</Label>
-                    <p className="text-xs text-muted-foreground">{t('attackForm.detectFallaciesDesc')}</p>
+                    <Label htmlFor="attack-detectFallacies" className="text-sm font-medium">{t('attackForm.detectFallacies')}</Label>
+                    <p id="attack-detectFallacies-desc" className="text-xs text-muted-foreground">{t('attackForm.detectFallaciesDesc')}</p>
                   </div>
                   <Switch
+                    id="attack-detectFallacies"
+                    aria-describedby="attack-detectFallacies-desc"
                     checked={currentValues.detectFallacies}
                     onCheckedChange={(checked) => setValue('detectFallacies', checked)}
                   />
                 </div>
                 <div className="flex items-center justify-between gap-4">
                   <div className="space-y-0.5">
-                    <Label className="text-sm font-medium">{t('attackForm.analyzeWeighing')}</Label>
-                    <p className="text-xs text-muted-foreground">{t('attackForm.analyzeWeighingDesc')}</p>
+                    <Label htmlFor="attack-analyzeWeighing" className="text-sm font-medium">{t('attackForm.analyzeWeighing')}</Label>
+                    <p id="attack-analyzeWeighing-desc" className="text-xs text-muted-foreground">{t('attackForm.analyzeWeighingDesc')}</p>
                   </div>
                   <Switch
+                    id="attack-analyzeWeighing"
+                    aria-describedby="attack-analyzeWeighing-desc"
                     checked={currentValues.analyzeWeighing}
                     onCheckedChange={(checked) => setValue('analyzeWeighing', checked)}
                   />

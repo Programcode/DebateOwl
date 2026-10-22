@@ -206,6 +206,22 @@ test("gen-error: a provider failure shows an error and the retry succeeds", asyn
   await evidence.shot("02-retried");
 });
 
+test("gen-cutoff: a case cut off at its length cap is retried once with a larger cap and still appears", async ({ signedIn: page, evidence }) => {
+  test.skip(LIVE, "only the fake provider can force a cut-off reply");
+  await fake.truncate("generate");
+  await openGenerate(page);
+  const response = aiResponse(page, "generate");
+  await page.getByRole("button", { name: "Generate Debate Case" }).click();
+  const body = await response;
+  await expect(page.getByText((body.output as unknown as CaseOutput).caseStructure.thesis).first()).toBeVisible();
+  await expect(page.getByRole("alert").filter({ hasText: "Generation Failed" })).toHaveCount(0);
+  const caps = (await fake.requests()).filter((request) => request.feature === "generate").map((request) => request.maxTokens ?? 0);
+  await evidence.json("01-generate-max-tokens", caps);
+  expect(caps).toHaveLength(2);
+  expect(caps[1]).toBeGreaterThan(caps[0]);
+  await evidence.shot("02-case-after-retry");
+});
+
 test("gen-quota: an account without quota is told why and the provider is never called", async ({ signedIn: page, user, evidence }) => {
   await admin.from("user_settings").update({ daily_limit_override: 0 }).eq("user_id", await user.userId());
   await openGenerate(page);

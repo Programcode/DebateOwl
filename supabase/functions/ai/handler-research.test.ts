@@ -18,8 +18,9 @@ for (const [key, value] of Object.entries(environment)) Deno.env.set(key, value)
 
 const { createRequestBudgetSignal, handleRequest } = await import("./index.ts");
 const { handleRequest: handleStreamRequest } = await import("../ai-stream/index.ts");
-const { BACKGROUND_MODEL, MAX_REQUEST_OUTPUT_TOKENS, MODEL_CATALOG } = await import("../_shared/model-catalog.ts");
+const { BACKGROUND_MODEL, MODEL_CATALOG } = await import("../_shared/model-catalog.ts");
 const { MAX_ASK_HISTORY_MESSAGES } = await import("../_shared/prompt-budget.ts");
+const { outputTokenLimit, REPLY_TOKEN_CAPS } = await import("../_shared/output-caps.ts");
 
 Deno.test("AI request work shares one deadline signal", () => {
   const caller = new AbortController();
@@ -198,7 +199,7 @@ Deno.test("factoids handler carries Exa filters and consulted-source metadata ac
         });
       }
       if (url.pathname.includes("/rest/v1/rate_limits")) return jsonResponse({ limit_value: 50 });
-      if (url.pathname.includes("/rest/v1/rpc/consume_daily_quota")) {
+      if (/\/rest\/v1\/rpc\/consume_(daily|ai)_quota$/.test(url.pathname)) {
         return jsonResponse([{ allowed: true, current_count: 1 }]);
       }
       if (url.pathname.includes("/rest/v1/global_prompts")) return jsonResponse({ prompt_text: null });
@@ -336,7 +337,7 @@ Deno.test("Ask marks only surviving URL and research context as available", asyn
         });
       }
       if (url.pathname.includes("/rest/v1/rate_limits")) return jsonResponse({ limit_value: 50 });
-      if (url.pathname.includes("/rest/v1/rpc/consume_daily_quota")) {
+      if (/\/rest\/v1\/rpc\/consume_(daily|ai)_quota$/.test(url.pathname)) {
         return jsonResponse([{ allowed: true, current_count: 1 }]);
       }
       if (url.pathname.includes("/rest/v1/global_prompts")) return jsonResponse({ prompt_text: null });
@@ -468,7 +469,7 @@ function supabaseTestResponse(url: URL): Response | undefined {
   });
   if (url.pathname.includes("/rest/v1/subscriptions")) return jsonResponse([{ status: "active", current_period_end: "2099-01-01T00:00:00.000Z" }]);
   if (url.pathname.includes("/rest/v1/rate_limits")) return jsonResponse({ limit_value: 50 });
-  if (url.pathname.includes("/rest/v1/rpc/consume_daily_quota")) return jsonResponse([{ allowed: true, current_count: 1 }]);
+  if (/\/rest\/v1\/rpc\/consume_(daily|ai)_quota$/.test(url.pathname)) return jsonResponse([{ allowed: true, current_count: 1 }]);
   if (url.pathname.includes("/rest/v1/global_prompts")) return jsonResponse({ prompt_text: null });
   if (url.pathname.includes("/rest/v1/ai_requests")) return new Response(null, { status: 201 });
   throw new Error(`Unhandled Supabase request: ${url}`);
@@ -565,7 +566,7 @@ Deno.test("Crossfire returns newest-exchange signals without making them a reply
   const claimedSignalKeys = new Set<string>();
   globalThis.fetch = (async (input: Request | URL | string, init?: RequestInit) => {
     const url = new URL(input instanceof Request ? input.url : String(input));
-    if (url.origin === "https://supabase.test" && url.pathname.includes("/rest/v1/rpc/consume_daily_quota")) {
+    if (url.origin === "https://supabase.test" && /\/rest\/v1\/rpc\/consume_(daily|ai)_quota$/.test(url.pathname)) {
       const body = JSON.parse(String(init?.body ?? "{}")) as { p_quota_key?: string };
       if (body.p_quota_key?.startsWith("crossfire_signal:")) {
         const allowed = !claimedSignalKeys.has(body.p_quota_key);
@@ -685,7 +686,7 @@ Deno.test("AI handlers use strict OpenRouter routing and server-side reasoning t
       decisionBodies.push(body);
       const questions = body.questions as Record<string, { criteria: Record<string, string> }>;
       const labels = Object.keys(questions.model.criteria);
-      const choice = labels.includes("anthropic/claude-haiku-5.5") ? "anthropic/claude-haiku-5.5" : "anthropic/claude-opus-5.5";
+      const choice = labels.includes("anthropic/claude-haiku-5.5") ? "anthropic/claude-haiku-5.5" : "anthropic/claude-sonnet-5.5";
       return jsonResponse({
         model: "typesafe/jev-1.13",
         answers: {
@@ -740,7 +741,7 @@ Deno.test("AI handlers use strict OpenRouter routing and server-side reasoning t
     const autoPro = await requestForModel("auto-pro", "pro");
     if (autoPro.status !== 200) throw new Error(`Pro Auto Pro returned ${autoPro.status}: ${await autoPro.text()}`);
     const autoProPayload = await autoPro.json();
-    if (autoProPayload.meta?.resolvedModel !== "anthropic/claude-opus-5.5") {
+    if (autoProPayload.meta?.resolvedModel !== "anthropic/claude-sonnet-5.5") {
       throw new Error(`Auto Pro metadata was wrong: ${JSON.stringify(autoProPayload.meta)}`);
     }
 
@@ -750,7 +751,8 @@ Deno.test("AI handlers use strict OpenRouter routing and server-side reasoning t
       const entry = MODEL_CATALOG[index];
       const body = openRouterBodies[index];
       if (body.model !== entry.id) throw new Error(`wrong routed model: ${String(body.model)}`);
-      if (body.max_tokens !== MAX_REQUEST_OUTPUT_TOKENS) throw new Error(`output cap was not enforced for ${entry.id}`);
+      const effort = entry.isProOnly ? "high" : "low";
+      if (body.max_tokens !== outputTokenLimit(REPLY_TOKEN_CAPS.ask, effort, entry.maxTokens)) throw new Error(`Ask output cap was not enforced for ${entry.id}`);
       const reasoning = body.reasoning as Record<string, unknown>;
       const provider = body.provider as Record<string, unknown>;
       if (reasoning.effort !== (entry.isProOnly ? "high" : "low")) throw new Error(`tier effort was not enforced for ${entry.id}`);
@@ -770,12 +772,12 @@ Deno.test("AI handlers use strict OpenRouter routing and server-side reasoning t
       if ((body.reasoning as Record<string, unknown>).effort !== "low") throw new Error("unsupported Pro medium was not lowered");
     }
     if (openRouterBodies.at(-2)?.model !== "anthropic/claude-haiku-5.5") throw new Error("Auto Fast did not call Haiku");
-    if (openRouterBodies.at(-1)?.model !== "anthropic/claude-opus-5.5") throw new Error("Auto Pro did not call Opus");
+    if (openRouterBodies.at(-1)?.model !== "anthropic/claude-sonnet-5.5") throw new Error("Auto Pro did not call Sonnet");
 
     // A stale client still sending a retired ID reaches its successor, not a 400.
     const retired = await requestForModel("anthropic/claude-sonnet-5", "pro");
     if (retired.status !== 200) throw new Error(`retired Sonnet 5 returned ${retired.status}: ${await retired.text()}`);
-    if (openRouterBodies.at(-1)?.model !== "anthropic/claude-opus-5.5") throw new Error("retired Sonnet 5 did not reach Opus 5.5");
+    if (openRouterBodies.at(-1)?.model !== "anthropic/claude-sonnet-5.5") throw new Error("retired Sonnet 5 did not reach Sonnet 5.5");
   } finally {
     globalThis.fetch = originalFetch;
     if (originalTier === undefined) delete testState.__testTier;
@@ -819,7 +821,7 @@ Deno.test("streaming OpenRouter usage records zero and missing costs distinctly"
       body: JSON.stringify({ feature: "ask", model: "openai/gpt-6-luna", input: { message: "Hello", mode: "general" } }),
     }));
     await withZero.text();
-    if (streamBodies[0]?.max_tokens !== MAX_REQUEST_OUTPUT_TOKENS) throw new Error("stream output cap was not enforced");
+    if (streamBodies[0]?.max_tokens !== outputTokenLimit(REPLY_TOKEN_CAPS.ask, "low", 128_000)) throw new Error("stream Ask output cap was not enforced");
     if (usageRows.at(-1)?.cost_usd !== 0) throw new Error(`zero stream cost was not logged: ${JSON.stringify(usageRows.at(-1))}`);
 
     includeUsage = false;

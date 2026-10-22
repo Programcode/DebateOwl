@@ -38,6 +38,14 @@ export interface NormalizedUsage {
   reasoningOutputTokens?: number;
   /** OpenRouter's authoritative account charge, in USD. */
   reportedCostUsd?: number;
+  /**
+   * The part of reportedCostUsd that counts toward the weekly spend cap. For
+   * OpenRouter it is `usage.cost`, what OpenRouter took from our credits; a
+   * BYOK call billed to our own provider key adds only OpenRouter's fee.
+   * Undefined means "same as reportedCostUsd" (Exa, ElevenLabs, merged calls
+   * that did not set it).
+   */
+  capCostUsd?: number;
   /** Characters ElevenLabs billed for a speech request. */
   billedCharacters?: number;
   /** Untouched provider usage object, kept verbatim for audit. */
@@ -52,6 +60,8 @@ export interface CostResult {
   reasoningOutputTokens: number | null;
   /** null when the model has no verified pricing in the snapshot. */
   costUsd: number | null;
+  /** USD that counts toward the weekly spend cap; null when unknown. */
+  capCostUsd: number | null;
   pricingSnapshotId: string;
   pricingSourceUrl: string | null;
   costCalculationVersion: string;
@@ -94,7 +104,13 @@ export function normalizeOpenRouterUsage(usage: Record<string, unknown>): Normal
     cacheWriteTokens: intOrUndefined(promptDetails?.cache_write_tokens),
     outputTokens: intOrUndefined(usage.completion_tokens),
     reasoningOutputTokens: intOrUndefined(completionDetails?.reasoning_tokens),
+    // The logged charge: for a BYOK call, OpenRouter's fee plus what the
+    // provider billed our key (calculator v2).
     reportedCostUsd: openRouterCostOrUndefined(usage),
+    // usage.cost is OpenRouter's credit charge. For a BYOK call it is only the
+    // OpenRouter fee, so Claude on our own Anthropic key stays out of the cap,
+    // and a call that fell back to OpenRouter credits counts in full.
+    capCostUsd: reportedCostOrUndefined(usage.cost),
     raw: usage,
   };
 }
@@ -157,12 +173,20 @@ function calculateElevenLabsCost(model: string, usage?: NormalizedUsage): CostRe
     costUsd: rate === undefined || characters === undefined || usage?.incomplete
       ? null
       : Number(((characters / 1_000) * rate).toFixed(6)),
+    capCostUsd: null,
     pricingSnapshotId: ELEVENLABS_PRICING_SNAPSHOT_ID,
     pricingSourceUrl: rate === undefined ? null : ELEVENLABS_PRICING_SOURCE_URL,
     costCalculationVersion: ELEVENLABS_COST_CALCULATION_VERSION,
   };
+  // ElevenLabs bills our own account, so all of it counts toward the cap.
+  result.capCostUsd = result.costUsd;
   if (usage?.raw) result.rawUsage = usage.raw;
   return result;
+}
+
+/** Cap spend for one usage record: its own cap figure, else its full reported cost. */
+function capCostOf(usage: NormalizedUsage): number | undefined {
+  return usage.capCostUsd ?? usage.reportedCostUsd;
 }
 
 export function calculateRequestCost(args: {
@@ -188,6 +212,9 @@ export function calculateRequestCost(args: {
     outputTokens: usage?.outputTokens ?? null,
     reasoningOutputTokens: usage?.reasoningOutputTokens ?? null,
     costUsd: usage?.incomplete ? null : usage?.reportedCostUsd ?? null,
+    // The cap counts what is known even when the rest of the cost is not: a
+    // lower bound stops a user sooner than leaving the request out entirely.
+    capCostUsd: usage ? capCostOf(usage) ?? null : null,
     pricingSnapshotId: "openrouter-response-usage",
     pricingSourceUrl: "https://openrouter.ai/docs/cookbook/administration/usage-accounting",
     costCalculationVersion: OPENROUTER_COST_CALCULATION_VERSION,
@@ -221,6 +248,10 @@ export function mergeNormalizedUsage(usages: Array<NormalizedUsage | undefined>)
     reasoningOutputTokens: sum(defined.map((u) => u.reasoningOutputTokens)),
     reportedCostUsd: defined.every((u) => !u.incomplete && typeof u.reportedCostUsd === "number")
       ? defined.reduce((total, usage) => total + (usage.reportedCostUsd ?? 0), 0)
+      : undefined,
+    // Cap spend is a lower bound: calls with an unknown charge add nothing.
+    capCostUsd: defined.some((u) => typeof capCostOf(u) === "number")
+      ? defined.reduce((total, usage) => total + (capCostOf(usage) ?? 0), 0)
       : undefined,
     raw: { calls: defined.map((u) => u.raw ?? null) },
   };
