@@ -81,8 +81,41 @@ export interface ResearchDeps {
     messages: Array<{ role: string; content: string }>;
     reasoningEffort: ReasoningEffort;
     signal?: AbortSignal;
+    outputSchema?: JsonOutputSchema;
   }) => Promise<{ output: unknown }>;
 }
+
+/**
+ * A JSON Schema the provider must hold the reply to. Only for outputs the
+ * server already validates in code: with `strict` every property is required,
+ * so the schema has to match that validator exactly. Keep to keywords every
+ * routed provider accepts: type, properties, required, items, enum, anyOf,
+ * and additionalProperties false.
+ */
+export interface JsonOutputSchema {
+  name: string;
+  schema: Record<string, unknown>;
+}
+
+const QUERIES_SCHEMA: JsonOutputSchema = {
+  name: "follow_up_queries",
+  schema: {
+    type: "object",
+    properties: { queries: { type: "array", items: { type: "string" } } },
+    required: ["queries"],
+    additionalProperties: false,
+  },
+};
+
+const SEARCH_DECISION_SCHEMA: JsonOutputSchema = {
+  name: "search_decision",
+  schema: {
+    type: "object",
+    properties: { shouldSearch: { type: "boolean" }, query: { type: "string" } },
+    required: ["shouldSearch", "query"],
+    additionalProperties: false,
+  },
+};
 
 export function emptyResearchContext(): ResearchContext {
   return { searches: [], rankedResults: [], readContent: [], verifiedUrls: new Set() };
@@ -378,6 +411,7 @@ export async function decideAskSearch(
       messages: [{ role: "user", content: prompt }],
       reasoningEffort: deps.reasoningEffort,
       signal: deps.signal,
+      outputSchema: SEARCH_DECISION_SCHEMA,
     });
     const decision = decisionResult.output;
     if (decision && typeof decision === "object") {
@@ -416,6 +450,7 @@ async function generateFollowUpQueries(
       messages: [{ role: "user", content: prompt }],
       reasoningEffort: deps.reasoningEffort,
       signal: deps.signal,
+      outputSchema: QUERIES_SCHEMA,
     });
     const parsed = typeof result.output === "object" && result.output !== null ? result.output : {};
     if (Array.isArray((parsed as { queries?: string[] }).queries)) {

@@ -1,3 +1,5 @@
+import type { JsonOutputSchema } from "./research.ts";
+
 export const MAX_CROSSFIRE_REPLY_CHARS = 2_500;
 export const MAX_CROSSFIRE_DEBRIEF_ITEMS = 8;
 export const MAX_CROSSFIRE_REFERENCE_IDS = 6;
@@ -79,6 +81,56 @@ function crossfireDebriefItem(
     return { error: `${fieldName}.claim is invalid` };
   }
   return { value: { turnIds: turnIds.value, claim: value.claim.trim() } };
+}
+
+/**
+ * The provider-side shape of a debrief, mirroring validateCrossfireDebrief.
+ * Turn IDs are pinned to the transcript's, so a reply cannot cite a turn that
+ * does not exist. Counts, lengths, and duplicates stay with the validator.
+ */
+export function crossfireDebriefSchema(transcript: Array<{ id: string }>): JsonOutputSchema {
+  const ids = [...new Set(transcript.map((turn) => turn.id))];
+  const turnIds = { type: "array", items: ids.length ? { type: "string", enum: ids } : { type: "string" } };
+  const item = {
+    type: "object",
+    properties: { turnIds, claim: { type: "string" } },
+    required: ["turnIds", "claim"],
+    additionalProperties: false,
+  };
+  const items = { type: "array", items: item };
+  return {
+    name: "crossfire_debrief",
+    schema: {
+      type: "object",
+      properties: {
+        concessionsSecured: items,
+        controlledQuestions: items,
+        weakOrRepetitiveQuestions: items,
+        evasiveOrIncompleteAnswers: items,
+        missedFollowUps: items,
+        betterFollowUpQuestions: {
+          type: "array",
+          items: {
+            type: "object",
+            properties: { turnIds, question: { type: "string" }, reason: { type: "string" } },
+            required: ["turnIds", "question", "reason"],
+            additionalProperties: false,
+          },
+        },
+        strongestExchange: { anyOf: [item, { type: "null" }] },
+      },
+      required: [
+        "concessionsSecured",
+        "controlledQuestions",
+        "weakOrRepetitiveQuestions",
+        "evasiveOrIncompleteAnswers",
+        "missedFollowUps",
+        "betterFollowUpQuestions",
+        "strongestExchange",
+      ],
+      additionalProperties: false,
+    },
+  };
 }
 
 export function validateCrossfireDebrief(
