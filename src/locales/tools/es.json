@@ -13,7 +13,7 @@
   "shortAnswer": {
     "hub": {
       "question": "¿Qué herramientas de debate gratis puedo usar sin crear una cuenta?",
-      "answer": "Cuatro, todas gratis y sin registro: un cronómetro de rondas que conoce el orden y la duración de los discursos de siete formatos, un generador que saca mociones de un banco de {{total}} mociones de práctica originales, una hoja de flujo imprimible con una columna por discurso y una calculadora de duración de discursos. Funcionan en tu navegador y guardan ahí tus rondas y borradores, no en un servidor."
+      "answer": "Cuatro, todas gratis y sin registro: un cronómetro de rondas que conoce el orden y la duración de los discursos de siete formatos, un generador que saca mociones de un banco de {{total}} mociones de práctica originales, una hoja de flujo imprimible con una columna por discurso y una calculadora de duración de discursos. Funcionan en tu navegador, y el cronómetro guarda ahí tu ronda, no en un servidor."
     },
     "timer": {
       "question": "¿Hay algún cronómetro de debate gratis que conozca los tiempos de cada formato?",

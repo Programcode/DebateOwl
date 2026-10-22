@@ -13,7 +13,7 @@
   "shortAnswer": {
     "hub": {
       "question": "What free debate tools can I use without an account?",
-      "answer": "Four, all free and all usable without signing up: a round timer that knows the speech order and times of seven formats, a motion generator that draws from {{total}} original practice motions, a printable flow sheet with a column for every speech, and a speech time calculator. They run in your browser and save your rounds and drafts there, not on a server."
+      "answer": "Four, all free and all usable without signing up: a round timer that knows the speech order and times of seven formats, a motion generator that draws from {{total}} original practice motions, a printable flow sheet with a column for every speech, and a speech time calculator. They run in your browser, and the timer saves your round there, not on a server."
     },
     "timer": {
       "question": "Is there a free debate timer that knows each format's speech times?",
