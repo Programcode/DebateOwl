@@ -76,7 +76,7 @@ Deno.test("streaming Ask forwards the shared prompt and returns provider SSE", a
           headers: { "Content-Type": "application/json" },
         });
       }
-      if (url.pathname.includes("/rest/v1/rpc/consume_daily_quota")) {
+      if (/\/rest\/v1\/rpc\/consume_(daily|ai)_quota$/.test(url.pathname)) {
         return new Response(JSON.stringify([{ allowed: true, current_count: 1 }]), {
           headers: { "Content-Type": "application/json" },
         });
