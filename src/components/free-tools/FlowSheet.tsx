@@ -51,12 +51,12 @@ export function FlowSheet() {
   );
 
   return (
-    <section aria-label={t('flow.region')} className="rounded-2xl border border-border bg-card p-4 shadow-sm sm:p-6 print:border-0 print:p-0 print:shadow-none">
+    <section aria-label={t('flow.region')} className="rounded-2xl border border-border bg-card p-4 shadow-sm sm:p-6 print:border-0 print:bg-transparent print:p-0 print:shadow-none">
       {/* Sized to the chosen paper; everything else on the page is hidden when printing. */}
       <style>{`@media print {
   @page { size: ${paper === 'a4' ? 'A4' : 'letter'} ${orientation}; margin: 10mm; }
   html, body { background: #fff !important; }
-  .flow-sheet { position: fixed; left: 0; top: 0; width: ${width}mm !important; height: ${height}mm !important; aspect-ratio: auto !important; box-shadow: none !important; }
+  .flow-sheet { position: fixed; left: 0; top: 0; width: ${width}mm !important; max-width: none !important; height: ${height}mm !important; aspect-ratio: auto !important; box-shadow: none !important; }
 }`}</style>
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 print:hidden">
         <label className="flex flex-col gap-1 text-sm font-medium">
@@ -101,13 +101,13 @@ export function FlowSheet() {
           style={{ aspectRatio: `${width} / ${height}`, maxWidth: orientation === 'landscape' ? '100%' : '640px' }}
           data-testid="flow-sheet"
         >
-          <div className="flex flex-wrap gap-x-4 gap-y-1 border-b-2 border-slate-800 pb-1.5 text-[11px]">
-            <span className="font-bold">{format.name}</span>
-            {field(t('flow.motionShort'), header.motion)}
-            <div className="flex w-full gap-4 sm:w-auto sm:flex-[0_0_40%]">
+          <div className="space-y-1 border-b-2 border-slate-800 pb-1.5 text-[11px]">
+            <div className="flex gap-4">
+              <span className="shrink-0 font-bold">{format.name}</span>
               {field(t('flow.roundShort'), header.round)}
               {field(t('flow.judgeShort'), header.judge)}
             </div>
+            {field(t('flow.motionShort'), header.motion)}
           </div>
           <div className="mt-1.5 grid min-h-0 flex-1" style={{ gridTemplateColumns: `repeat(${columns.length}, minmax(0, 1fr))` }}>
             {columns.map((segment, index) => (

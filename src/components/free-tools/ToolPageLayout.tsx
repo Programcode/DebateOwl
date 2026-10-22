@@ -7,7 +7,7 @@ import { jsonLd, type FaqEntry, type ToolRoute } from '@/lib/seo/tool-pages';
 import { cn } from '@/lib/utils';
 
 export const FREE_TOOLS = [
-  { route: '/tools/debate-timer', name: 'Debate timer', blurb: 'Round timer with presets for six formats, protected time, POI knocks and prep banks for each side.' },
+  { route: '/tools/debate-timer', name: 'Debate timer', blurb: 'Round timer for PF, LD, Policy, BP, World Schools and Asian Parliamentary, with protected time, POI knocks and prep banks.' },
   { route: '/tools/debate-motion-generator', name: 'Debate motion generator', blurb: 'Draw one practice motion or three for a veto drill, from 300 original motions sorted by topic and difficulty.' },
   { route: '/tools/debate-flow-sheet', name: 'Debate flow sheet', blurb: 'A printable one-page flow with a column for every speech in your format, on A4 or Letter.' },
   { route: '/tools/speech-time-calculator', name: 'Speech time calculator', blurb: 'Paste a speech to see how long it takes to deliver and which speech slots it fits.' },
