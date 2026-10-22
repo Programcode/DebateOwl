@@ -25,6 +25,7 @@ import { supabase } from '@/lib/supabase/client';
 import { getActiveEnv } from '@/lib/supabase/env';
 import { useToast } from '@/hooks/use-toast';
 import { useSubscription } from '@/hooks/use-subscription';
+import { useExternalRedirectPending } from '@/hooks/use-external-redirect-pending';
 import { redirectToPortal } from '@/lib/stripe';
 import { deleteAccount, downloadAccountData } from '@/lib/account';
 import { PricingModal } from '@/components/features/subscription/PricingModal';
@@ -80,7 +81,7 @@ export default function SettingsPage() {
   const signInMethod = signInMethodKey(user);
   const subscription = useSubscription();
   const [pricingOpen, setPricingOpen] = useState(false);
-  const [portalLoading, setPortalLoading] = useState(false);
+  const { pending: portalLoading, run: runPortalRedirect } = useExternalRedirectPending();
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deleteEmail, setDeleteEmail] = useState('');
   const [exporting, setExporting] = useState(false);
@@ -226,9 +227,8 @@ export default function SettingsPage() {
   };
 
   const handleManageSubscription = async () => {
-    setPortalLoading(true);
     try {
-      await redirectToPortal();
+      await runPortalRedirect(redirectToPortal);
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to open billing portal';
       if (message.toLowerCase().includes('no active subscription')) {
@@ -244,7 +244,6 @@ export default function SettingsPage() {
           variant: 'destructive',
         });
       }
-      setPortalLoading(false);
     }
   };
 
