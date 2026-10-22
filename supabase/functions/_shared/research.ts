@@ -263,16 +263,31 @@ export async function fetchJsonWithTimeout<T = unknown>(
 
 export type ExaUsageSink = (usage: NormalizedUsage) => void;
 
-// A response Exa answered successfully was billed. Like research model calls,
-// work that finishes after the request's signal aborted is not reported: the
-// timeout already marked the request's research accounting incomplete.
-function reportExaUsage(
-  endpoint: "search" | "contents",
-  data: unknown,
-  signal: AbortSignal | undefined,
-  onUsage: ExaUsageSink | undefined,
-): void {
-  if (onUsage && !signal?.aborted) onUsage(normalizeExaUsage(endpoint, data));
+// Reports each sent Exa call once. A successful response was billed at the
+// charge it reports; an error status was not. A call that was sent but never
+// settled (cancelled, timed out, unreadable body) may still have been billed,
+// so it makes the request's cost unknown instead of quietly lowering it.
+function exaUsageReporter(endpoint: "search" | "contents", onUsage: ExaUsageSink | undefined) {
+  let sent = false;
+  let reported = false;
+  const report = (usage: NormalizedUsage) => {
+    if (reported || !onUsage) return;
+    reported = true;
+    onUsage(usage);
+  };
+  return {
+    sent: () => { sent = true; },
+    response: (ok: boolean, data: unknown) => {
+      if (!ok) {
+        reported = true;
+        return;
+      }
+      report(normalizeExaUsage(endpoint, data));
+    },
+    unsettled: () => {
+      if (sent) report({ incomplete: true, raw: { provider: "exa", endpoint, unsettled: true } });
+    },
+  };
 }
 
 // exaSearch: web search using Exa's neural search (type "auto" = balanced relevance & speed)
@@ -288,8 +303,10 @@ export async function exaSearch(
     console.warn("[EXA] EXA_API_KEY not configured");
     return [];
   }
+  const usage = exaUsageReporter("search", onUsage);
   try {
     throwIfAborted(signal);
+    usage.sent();
     const { response, data } = await fetchJsonWithTimeout<{ results?: unknown }>("https://api.exa.ai/search", {
       method: "POST",
       headers: { "Content-Type": "application/json", "x-api-key": apiKey },
@@ -300,7 +317,7 @@ export async function exaSearch(
         contents: { text: { maxCharacters: 10000 } },
       }),
     }, 30000, signal);
-    if (response.ok) reportExaUsage("search", data, signal, onUsage);
+    usage.response(response.ok, data);
     throwIfAborted(signal);
     if (!response.ok) {
       console.warn(`[EXA] Search failed (${response.status}) queryLength=${query.length}`);
@@ -314,6 +331,7 @@ export async function exaSearch(
       publishedDate: r.publishedDate,
     }));
   } catch (err) {
+    usage.unsettled();
     if (signal?.aborted) throw err;
     console.warn(`[EXA] Search failed queryLength=${query.length}`);
     return [];
@@ -327,14 +345,16 @@ export async function exaGetContents(url: string, signal?: AbortSignal, onUsage?
     console.warn("[EXA] EXA_API_KEY not configured");
     return "";
   }
+  const usage = exaUsageReporter("contents", onUsage);
   try {
     throwIfAborted(signal);
+    usage.sent();
     const { response, data } = await fetchJsonWithTimeout<{ results?: unknown }>("https://api.exa.ai/contents", {
       method: "POST",
       headers: { "Content-Type": "application/json", "x-api-key": apiKey },
       body: JSON.stringify({ urls: [url], text: { maxCharacters: 8000 } }),
     }, 30000, signal);
-    if (response.ok) reportExaUsage("contents", data, signal, onUsage);
+    usage.response(response.ok, data);
     throwIfAborted(signal);
     if (!response.ok) {
       console.warn(`[EXA] Contents fetch failed (${response.status}) urlLength=${url.length}`);
@@ -343,6 +363,7 @@ export async function exaGetContents(url: string, signal?: AbortSignal, onUsage?
     if (!data?.results || !Array.isArray(data.results) || data.results.length === 0) return "";
     return (data.results[0]?.text || "").slice(0, 8000);
   } catch (err) {
+    usage.unsettled();
     if (signal?.aborted) throw err;
     console.warn(`[EXA] Contents fetch failed urlLength=${url.length}`);
     return "";

@@ -294,7 +294,7 @@ Deno.test("filtered research retries without domain filters when Exa returns no 
   }
 });
 
-Deno.test("research reports the charge of every billed Exa call and none for failed ones", async () => {
+Deno.test("research reports every billed Exa call, none for error statuses, and unknown for unsettled ones", async () => {
   const originalFetch = globalThis.fetch;
   const previousApiKey = Deno.env.get("EXA_API_KEY");
   Deno.env.set("EXA_API_KEY", "test-key");
@@ -306,6 +306,7 @@ Deno.test("research reports the charge of every billed Exa call and none for fai
     const body = JSON.parse(String(init?.body)) as Record<string, unknown>;
     if (String(input).endsWith("/contents")) {
       const [url] = body.urls as string[];
+      if (url.includes("energy.gov")) return Promise.reject(new TypeError("connection reset"));
       return url.includes("gsa.gov")
         ? json({ requestId: "read-ok", results: [{ text: "page" }], costDollars: { total: 0.001 } })
         : json({ error: "upstream" }, 500);
@@ -318,6 +319,7 @@ Deno.test("research reports the charge of every billed Exa call and none for fai
         results: [
           { title: "Official guidance", url: "https://gsa.gov/policy", text: "Official government procurement policy with detailed methodology." },
           { title: "Agency data", url: "https://data.gov/procurement", text: "Official government procurement data and supporting methodology." },
+          { title: "Energy procurement", url: "https://energy.gov/procurement", text: "Official government procurement rules and supporting methodology." },
         ],
         costDollars: { total: 0.007 },
       });
@@ -333,15 +335,20 @@ Deno.test("research reports the charge of every billed Exa call and none for fai
       onExaUsage: (usage) => usages.push(usage),
     }, {
       maxFollowUpQueries: 0,
-      maxUrlsToRead: 2,
+      maxUrlsToRead: 3,
       maxSeedQueries: 1,
       overallTimeoutMs: 1000,
       preferredSourceType: "government",
     });
-    const ids = usages.map((usage) => usage.raw?.request_id).sort();
+    const billed = usages.filter((usage) => !usage.incomplete);
+    const ids = billed.map((usage) => usage.raw?.request_id).sort();
     if (ids.join(",") !== "fallback,filtered,read-ok") throw new Error(`unexpected billed Exa calls: ${ids.join(",")}`);
-    const total = usages.reduce((sum, usage) => sum + (usage.reportedCostUsd ?? 0), 0);
+    const total = billed.reduce((sum, usage) => sum + (usage.reportedCostUsd ?? 0), 0);
     if (Math.abs(total - 0.013) > 1e-12) throw new Error(`Exa charges did not add up: ${total}`);
+    const unsettled = usages.filter((usage) => usage.incomplete);
+    if (unsettled.length !== 1 || unsettled[0].raw?.endpoint !== "contents") {
+      throw new Error(`the reset page read was not reported as unknown: ${JSON.stringify(unsettled)}`);
+    }
   } finally {
     globalThis.fetch = originalFetch;
     if (previousApiKey === undefined) Deno.env.delete("EXA_API_KEY");
