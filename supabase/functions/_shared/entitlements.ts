@@ -10,6 +10,7 @@ import {
   isAutoModelSelection,
   type ModelSelection,
 } from "./model-catalog.ts";
+import { MONTHLY_AI_BUDGET_USD, PRO_DAILY_LIMIT, quotaUnitsFor, TRIAL_DAILY_LIMIT } from "./usage-limits.ts";
 
 const supabase = createClient(
   Deno.env.get("SUPABASE_URL")!,
@@ -22,7 +23,9 @@ export interface RateLimitResult {
   reason?: string;
   limit?: number;
   current?: number;
-  code?: "limit_reached" | "trial_expired" | "banned" | "upgrade_required";
+  code?: "limit_reached" | "monthly_budget_reached" | "trial_expired" | "banned" | "upgrade_required";
+  /** Quota units this request needed; more than 1 for expensive models. */
+  units?: number;
   statusCode?: number;
 }
 
@@ -62,14 +65,14 @@ export async function getSubscriptionInfo(userId: string): Promise<SubscriptionI
   const expired = { tier: "expired", dailyLimit: limitOrDefault(0), canAccessProModels: false, trialEndsAt: user.trial_ends_at, gracePeriodEndsAt: user.grace_period_ends_at };
   const activeGiftTrial = user.trial_ends_at ? new Date(user.trial_ends_at) : null;
   const giftTrialInfo = activeGiftTrial && now < activeGiftTrial
-    ? { tier: "trial", dailyLimit: limitOrDefault(5), canAccessProModels: false, trialEndsAt: user.trial_ends_at, gracePeriodEndsAt: user.grace_period_ends_at }
+    ? { tier: "trial", dailyLimit: limitOrDefault(TRIAL_DAILY_LIMIT), canAccessProModels: false, trialEndsAt: user.trial_ends_at, gracePeriodEndsAt: user.grace_period_ends_at }
     : null;
 
   // Legacy free users in grace period get pro-level access
   if (tier === "legacy_free") {
     const graceEnd = user.grace_period_ends_at ? new Date(user.grace_period_ends_at) : null;
     if (graceEnd && now < graceEnd) {
-      return { tier: "legacy_free", dailyLimit: limitOrDefault(50), canAccessProModels: true, trialEndsAt: user.trial_ends_at, gracePeriodEndsAt: user.grace_period_ends_at };
+      return { tier: "legacy_free", dailyLimit: limitOrDefault(PRO_DAILY_LIMIT), canAccessProModels: true, trialEndsAt: user.trial_ends_at, gracePeriodEndsAt: user.grace_period_ends_at };
     }
     if (giftTrialInfo) return giftTrialInfo;
     // Grace period expired — treat as expired
@@ -82,7 +85,7 @@ export async function getSubscriptionInfo(userId: string): Promise<SubscriptionI
   if (tier === "pro") {
     const promoEnd = user.grace_period_ends_at ? new Date(user.grace_period_ends_at) : null;
     if (promoEnd && now < promoEnd) {
-      return { tier: "pro", dailyLimit: limitOrDefault(50), canAccessProModels: true, trialEndsAt: user.trial_ends_at, gracePeriodEndsAt: user.grace_period_ends_at };
+      return { tier: "pro", dailyLimit: limitOrDefault(PRO_DAILY_LIMIT), canAccessProModels: true, trialEndsAt: user.trial_ends_at, gracePeriodEndsAt: user.grace_period_ends_at };
     }
 
     const { data: subscriptions } = await supabase
@@ -98,7 +101,7 @@ export async function getSubscriptionInfo(userId: string): Promise<SubscriptionI
     );
 
     if (activeSubscription) {
-      return { tier: "pro", dailyLimit: limitOrDefault(50), canAccessProModels: true, trialEndsAt: user.trial_ends_at, gracePeriodEndsAt: user.grace_period_ends_at };
+      return { tier: "pro", dailyLimit: limitOrDefault(PRO_DAILY_LIMIT), canAccessProModels: true, trialEndsAt: user.trial_ends_at, gracePeriodEndsAt: user.grace_period_ends_at };
     }
 
     if (giftTrialInfo) return giftTrialInfo;
@@ -109,7 +112,7 @@ export async function getSubscriptionInfo(userId: string): Promise<SubscriptionI
   if (tier === "trial") {
     const trialEnd = user.trial_ends_at ? new Date(user.trial_ends_at) : null;
     if (trialEnd && now < trialEnd) {
-      return { tier: "trial", dailyLimit: limitOrDefault(5), canAccessProModels: false, trialEndsAt: user.trial_ends_at, gracePeriodEndsAt: user.grace_period_ends_at };
+      return { tier: "trial", dailyLimit: limitOrDefault(TRIAL_DAILY_LIMIT), canAccessProModels: false, trialEndsAt: user.trial_ends_at, gracePeriodEndsAt: user.grace_period_ends_at };
     }
     // Trial expired
     return expired;
@@ -171,11 +174,16 @@ export async function checkRateLimit(userId: string | null, model?: ModelSelecti
       return { allowed: false, reason: "Your daily request limit is currently set to zero. Contact support if this seems wrong.", code: "limit_reached", limit: 0, current: 0, statusCode: 402 };
     }
 
-    // Atomically reserve today's request slot server-side so concurrent requests
-    // can't race past the limit (see consume_daily_quota in the security hardening migration).
+    // Atomically reserve today's quota units server-side so concurrent requests
+    // can't race past the limit. Expensive models reserve several units, and
+    // the same call refuses users over the monthly AI budget (see
+    // 20261022120001_weighted_quota_monthly_budget.sql).
+    const units = quotaUnitsFor(model);
     const { data: quota, error: quotaError } = await supabase.rpc("consume_daily_quota", {
       p_user_id: userId,
       p_limit: dailyLimit,
+      p_units: units,
+      p_monthly_cap_usd: MONTHLY_AI_BUDGET_USD,
     });
 
     if (quotaError) {
@@ -187,10 +195,17 @@ export async function checkRateLimit(userId: string | null, model?: ModelSelecti
     const current = quotaRow?.current_count ?? 0;
 
     if (!quotaRow?.allowed) {
-      return { allowed: false, reason: `You've used all ${dailyLimit} of your daily requests. ${sub.tier === "pro" ? "Limit resets at midnight UTC." : "Upgrade to Pro for 50 daily requests."}`, code: "limit_reached", limit: dailyLimit, current, statusCode: 402 };
+      if (quotaRow?.denied_by === "monthly") {
+        return { allowed: false, reason: "You've reached this month's AI usage allowance. It resets on the 1st of next month (UTC). Contact support if you need more.", code: "monthly_budget_reached", limit: dailyLimit, current, units, statusCode: 402 };
+      }
+      const remaining = Math.max(0, dailyLimit - current);
+      const reason = remaining > 0
+        ? `This model counts as ${units} requests and you have ${remaining} left today. Pick a lighter model or wait until midnight UTC.`
+        : `You've used all ${dailyLimit} of your daily requests. ${sub.tier === "pro" ? "Limit resets at midnight UTC." : `Upgrade to Pro for ${PRO_DAILY_LIMIT} daily requests.`}`;
+      return { allowed: false, reason, code: "limit_reached", limit: dailyLimit, current, units, statusCode: 402 };
     }
 
-    return { allowed: true, limit: dailyLimit, current, canAccessProModels: sub.canAccessProModels };
+    return { allowed: true, limit: dailyLimit, current, units, canAccessProModels: sub.canAccessProModels };
   } catch (err) {
     console.error("[RATE LIMIT] Check failed:", err);
     return { allowed: false, reason: "Unable to verify your account access. Please try again.", statusCode: 500 };

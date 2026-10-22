@@ -1330,6 +1330,10 @@
     "trialEndedDesc": "Tu prueba gratuita de 3 días ha terminado. Actualiza a Pro para seguir usando DebateLab.",
     "limitReached": "Acceso diario pausado",
     "limitReachedDesc": "Has usado {{current}} de {{limit}} usos de IA incluidos hoy. El acceso se renueva a medianoche UTC.",
+    "weightedDesc": "Este modelo cuenta como {{units}} usos y te quedan {{remaining}} hoy. Elige un modelo más ligero o espera a la medianoche UTC.",
+    "monthlyReached": "Asignación mensual de IA agotada",
+    "monthlyReachedDesc": "Has usado la asignación de IA de este mes. Se renueva el día 1 del próximo mes (UTC). Contacta con soporte si necesitas más.",
+    "ok": "Entendido",
     "upgrade": "Actualizar a Pro - $5/mes",
     "upgradeNote": "Más acceso a preparación con IA + razonamiento alto",
     "notNow": "Ahora no"

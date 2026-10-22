@@ -538,7 +538,8 @@ export async function handleRequest(req: Request): Promise<Response> {
       error: rateLimit.reason,
       code: rateLimit.code,
       limit: rateLimit.limit,
-      current: rateLimit.current
+      current: rateLimit.current,
+      units: rateLimit.units,
     }), {
       status: rateLimit.statusCode || 429,
       headers: { ...corsHeaders, "Content-Type": "application/json" }

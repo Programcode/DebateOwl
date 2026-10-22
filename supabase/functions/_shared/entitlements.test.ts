@@ -7,6 +7,7 @@ for (const [key, value] of Object.entries({
 })) Deno.env.set(key, value);
 
 const { getSubscriptionInfo, checkRateLimit } = await import("./entitlements.ts");
+const { MODEL_QUOTA_UNITS, MONTHLY_AI_BUDGET_USD } = await import("./usage-limits.ts");
 
 function json(body: unknown, status = 200): Response {
   return Response.json(body, { status });
@@ -22,17 +23,21 @@ interface Routes {
   subscriptions?: unknown;
   rate_limits?: unknown;
   quota?: unknown;
+  onQuota?: (body: Record<string, unknown>) => void;
 }
 
 async function withSupabase<T>(routes: Routes, run: () => Promise<T>): Promise<T> {
   const originalFetch = globalThis.fetch;
-  globalThis.fetch = (async (input: Request | URL | string) => {
+  globalThis.fetch = (async (input: Request | URL | string, init?: RequestInit) => {
     const url = new URL(input instanceof Request ? input.url : String(input));
     if (url.pathname.includes("/rest/v1/user_settings")) return json(routes.user_settings ?? null);
     if (url.pathname.includes("/rest/v1/user_roles")) return json(routes.user_roles ?? { role: "user" });
     if (url.pathname.includes("/rest/v1/subscriptions")) return json(routes.subscriptions ?? []);
     if (url.pathname.includes("/rest/v1/rate_limits")) return json(routes.rate_limits ?? null);
-    if (url.pathname.includes("/rpc/consume_daily_quota")) return json(routes.quota ?? [{ allowed: true, current_count: 1 }]);
+    if (url.pathname.includes("/rpc/consume_daily_quota")) {
+      routes.onQuota?.(JSON.parse(String(init?.body ?? "{}")));
+      return json(routes.quota ?? [{ allowed: true, current_count: 1 }]);
+    }
     throw new Error(`Unexpected request: ${url}`);
   }) as typeof fetch;
   try {
@@ -137,6 +142,40 @@ Deno.test("expired access is refused with the trial-expired code", async () => {
     const result = await checkRateLimit("user-1");
     assertEquals(result.allowed, false, "allowed");
     assertEquals(result.code, "trial_expired", "code");
+    assertEquals(result.statusCode, 402, "statusCode");
+  });
+});
+
+const proUser = { subscription_tier: "pro", daily_limit_override: null, trial_ends_at: null, grace_period_ends_at: future() };
+
+Deno.test("an expensive model reserves its weighted units and the monthly cap", async () => {
+  let sent: Record<string, unknown> = {};
+  await withSupabase({ user_settings: proUser, onQuota: (body) => { sent = body; } }, async () => {
+    const result = await checkRateLimit("user-1", "anthropic/claude-opus-5.5");
+    assertEquals(result.allowed, true, "allowed");
+    assertEquals(sent.p_units, MODEL_QUOTA_UNITS["anthropic/claude-opus-5.5"], "p_units");
+    assertEquals(sent.p_monthly_cap_usd, MONTHLY_AI_BUDGET_USD, "p_monthly_cap_usd");
+  });
+  await withSupabase({ user_settings: proUser, onQuota: (body) => { sent = body; } }, async () => {
+    await checkRateLimit("user-1", "openai/gpt-6-luna");
+    assertEquals(sent.p_units, 1, "cheap model p_units");
+  });
+});
+
+Deno.test("a weighted refusal says how many requests remain", async () => {
+  await withSupabase({ user_settings: proUser, quota: [{ allowed: false, current_count: 47, denied_by: "daily" }] }, async () => {
+    const result = await checkRateLimit("user-1", "anthropic/claude-opus-5.5");
+    assertEquals(result.code, "limit_reached", "code");
+    assertEquals(result.units, 5, "units");
+    assertEquals(result.reason?.includes("3 left today"), true, "reason mentions remaining requests");
+  });
+});
+
+Deno.test("the monthly budget refusal has its own code", async () => {
+  await withSupabase({ user_settings: proUser, quota: [{ allowed: false, current_count: 2, denied_by: "monthly" }] }, async () => {
+    const result = await checkRateLimit("user-1", "openai/gpt-6-luna");
+    assertEquals(result.allowed, false, "allowed");
+    assertEquals(result.code, "monthly_budget_reached", "code");
     assertEquals(result.statusCode, 402, "statusCode");
   });
 });

@@ -254,13 +254,14 @@ export async function callSupabaseAI<T = unknown>(
       const errorCode = data.code as string | undefined;
 
       // Subscription errors (402 / trial expired / limit reached)
-      if (errorCode === 'trial_expired' || errorCode === 'limit_reached') {
+      if (errorCode === 'trial_expired' || errorCode === 'limit_reached' || errorCode === 'monthly_budget_reached') {
         throw new AISubscriptionError(errorMessage, {
           statusCode: 402,
           requestId,
           code: errorCode,
           limit: data.limit as number | undefined,
           current: data.current as number | undefined,
+          units: data.units as number | undefined,
         });
       }
 

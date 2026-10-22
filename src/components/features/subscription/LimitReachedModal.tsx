@@ -3,18 +3,39 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Button } from '@/components/ui/button';
 import { AlertTriangle, Zap, Clock } from 'lucide-react';
 
+export type LimitModalVariant = 'limit_reached' | 'trial_expired' | 'monthly_budget_reached';
+
 interface LimitReachedModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  variant: 'limit_reached' | 'trial_expired';
+  variant: LimitModalVariant;
   limit?: number;
   current?: number;
+  /** Quota units the refused request needed; above 1 for expensive models. */
+  units?: number;
   onUpgrade: () => void;
 }
 
-export function LimitReachedModal({ open, onOpenChange, variant, limit, current, onUpgrade }: LimitReachedModalProps) {
+export function LimitReachedModal({ open, onOpenChange, variant, limit, current, units, onUpgrade }: LimitReachedModalProps) {
   const { t } = useTranslation();
   const isTrialExpired = variant === 'trial_expired';
+  const isMonthlyBudget = variant === 'monthly_budget_reached';
+  const remaining = Math.max(0, (limit || 0) - (current || 0));
+  // A weighted model can be refused while lighter requests still fit today.
+  const isWeightedRefusal = !isTrialExpired && !isMonthlyBudget && (units ?? 1) > 1 && remaining > 0;
+
+  const title = isTrialExpired
+    ? t('limitModal.trialEnded')
+    : isMonthlyBudget
+      ? t('limitModal.monthlyReached')
+      : t('limitModal.limitReached');
+  const description = isTrialExpired
+    ? t('limitModal.trialEndedDesc')
+    : isMonthlyBudget
+      ? t('limitModal.monthlyReachedDesc')
+      : isWeightedRefusal
+        ? t('limitModal.weightedDesc', { units, remaining })
+        : t('limitModal.limitReachedDesc', { current: current || 0, limit: limit || 0 });
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -27,28 +48,30 @@ export function LimitReachedModal({ open, onOpenChange, variant, limit, current,
               <AlertTriangle className="h-6 w-6 text-amber-600 dark:text-amber-400" />
             )}
           </div>
-          <DialogTitle className="text-center">
-            {isTrialExpired ? t('limitModal.trialEnded') : t('limitModal.limitReached')}
-          </DialogTitle>
-          <DialogDescription className="text-center">
-            {isTrialExpired
-              ? t('limitModal.trialEndedDesc')
-              : t('limitModal.limitReachedDesc', { current: current || 0, limit: limit || 0 })}
-          </DialogDescription>
+          <DialogTitle className="text-center">{title}</DialogTitle>
+          <DialogDescription className="text-center">{description}</DialogDescription>
         </DialogHeader>
 
-        <div className="flex flex-col gap-2 mt-4">
-          <Button onClick={onUpgrade} size="lg" className="w-full">
-            <Zap className="h-4 w-4 mr-2" />
-            {t('limitModal.upgrade')}
-          </Button>
-          <Button variant="ghost" className="w-full" onClick={() => onOpenChange(false)}>
-            {t('limitModal.notNow', 'Not now')}
-          </Button>
-          <p className="text-xs text-muted-foreground text-center mt-1">
-            {t('limitModal.upgradeNote')}
-          </p>
-        </div>
+        {isMonthlyBudget ? (
+          <div className="flex flex-col gap-2 mt-4">
+            <Button size="lg" className="w-full" onClick={() => onOpenChange(false)}>
+              {t('limitModal.ok')}
+            </Button>
+          </div>
+        ) : (
+          <div className="flex flex-col gap-2 mt-4">
+            <Button onClick={onUpgrade} size="lg" className="w-full">
+              <Zap className="h-4 w-4 mr-2" />
+              {t('limitModal.upgrade')}
+            </Button>
+            <Button variant="ghost" className="w-full" onClick={() => onOpenChange(false)}>
+              {t('limitModal.notNow', 'Not now')}
+            </Button>
+            <p className="text-xs text-muted-foreground text-center mt-1">
+              {t('limitModal.upgradeNote')}
+            </p>
+          </div>
+        )}
       </DialogContent>
     </Dialog>
   );

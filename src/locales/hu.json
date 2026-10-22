@@ -1330,6 +1330,10 @@
     "trialEndedDesc": "A 3 napos ingyenes próbaidőszakod lejárt. Frissíts Pro-ra a DebateLab további használatához.",
     "limitReached": "Napi hozzáférés szünetel",
     "limitReachedDesc": "Ma {{current}} / {{limit}} benne foglalt MI használatot használtál fel. A hozzáférés éjfélkor (UTC) frissül.",
+    "weightedDesc": "Ez a modell {{units}} használatnak számít, és ma még {{remaining}} maradt. Válassz könnyebb modellt, vagy várj éjfélig (UTC).",
+    "monthlyReached": "Elfogyott a havi MI keret",
+    "monthlyReachedDesc": "Felhasználtad az e havi MI keretet. A következő hónap 1-jén (UTC) frissül. Ha többre van szükséged, írj az ügyfélszolgálatnak.",
+    "ok": "Rendben",
     "upgrade": "Frissítés Pro-ra - $5/hó",
     "upgradeNote": "Több MI felkészülési hozzáférés + magas szintű érvelés",
     "notNow": "Most nem"

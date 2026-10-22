@@ -56,16 +56,19 @@ export class AISubscriptionError extends AIError {
   readonly code?: string;
   readonly limit?: number;
   readonly current?: number;
+  /** Quota units the refused request needed; above 1 for expensive models. */
+  readonly units?: number;
 
   constructor(
     message: string = 'Subscription required.',
-    options?: { statusCode?: number; requestId?: string; code?: string; limit?: number; current?: number }
+    options?: { statusCode?: number; requestId?: string; code?: string; limit?: number; current?: number; units?: number }
   ) {
     super(message, { statusCode: options?.statusCode ?? 402, requestId: options?.requestId });
     this.name = 'AISubscriptionError';
     this.code = options?.code;
     this.limit = options?.limit;
     this.current = options?.current;
+    this.units = options?.units;
   }
 }
 
@@ -234,6 +237,7 @@ export function mapAIError(
       code,
       limit: typeof payload?.limit === 'number' ? payload.limit : undefined,
       current: typeof payload?.current === 'number' ? payload.current : undefined,
+      units: typeof payload?.units === 'number' ? payload.units : undefined,
     });
   }
 
