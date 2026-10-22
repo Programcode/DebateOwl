@@ -199,6 +199,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       // Finishing a sign-in is as explicit as pressing a sign-in button.
       allowSessionsAfterSignIn();
+      let settled = true;
       try {
         // The flow id picks this sign-in's own verifier, so another tab's
         // sign-in or a failed resend can't break the link.
@@ -210,14 +211,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (exchangeError) throw exchangeError;
         return data.session;
       } catch (err) {
+        // A timeout is not a final answer: the code may still be good.
+        settled = !(err instanceof AuthTimeoutError);
         // A session this browser already had still stands; getSession restores it below.
         console.warn('[Auth] sign-in callback failed:', err);
         if (mounted) setCallbackError(authCallbackErrorFor(err));
         return null;
       } finally {
-        // Only once the exchange settles: a reload during the spinner must
-        // still find the unused code and its flow id.
-        if (mounted) cleanUrl();
+        // Only once the exchange has an answer: a reload during the spinner,
+        // or after a timeout, must still find the unused code and its flow id.
+        if (mounted && settled) cleanUrl();
       }
     };
 

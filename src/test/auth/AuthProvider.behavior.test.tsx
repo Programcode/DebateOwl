@@ -810,6 +810,8 @@ describe('AuthProvider behavior', () => {
     expect(screen.getByTestId('loading')).toHaveTextContent('false');
     expect(screen.getByTestId('user')).toHaveTextContent('none');
     expect(screen.getByTestId('callback-error')).toHaveTextContent('failed');
+    // A timeout is not a final answer: the code may still be good, so a reload can retry it.
+    expect(window.location.search).toBe('?code=stalled-code');
 
     warnSpy.mockRestore();
     vi.useRealTimers();
