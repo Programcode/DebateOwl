@@ -17,6 +17,7 @@ import { StagingBanner } from "@/components/StagingBanner";
 import { captureException, captureProductEvent, toTelemetrySafeError } from "@/lib/observability";
 import { routeLoaders, type RouteLoader } from "@/lib/route-modules";
 import type { PrerenderedRoute } from "@/lib/seo/pages";
+import { usePrivateRouteHead } from "@/lib/seo/use-page-head";
 import { RouteSkeleton, type RouteSkeletonVariant } from "@/components/loading/RouteSkeleton";
 import { useTranslation } from "react-i18next";
 import { COLLABORATION_URL } from "@/lib/workspace/collaboration-config";
@@ -217,6 +218,7 @@ function RouteContent({ children }: { children: ReactNode }) {
   const fallback = getRouteFallback(location.pathname);
   const label = fallback.labelKey ? t(fallback.labelKey, fallback.label) : fallback.label;
   const statusText = t("common.openingPage", { page: label });
+  usePrivateRouteHead(location.pathname, label);
 
   return (
     <LocalizedRouteErrorBoundary key={location.pathname}>

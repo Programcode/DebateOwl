@@ -105,6 +105,23 @@ const strengthTranslationKeys = {
     weak: 'flowchart.strengthWeak',
 };
 
+// React Flow 11 writes its keyboard help for nodes and edges in English, with no
+// prop to change it (v12's ariaLabelConfig has one). That text is static, so
+// React never writes it again after mount; the translated help takes its place.
+function LocalizedA11yDescriptions(): null {
+    const { t } = useTranslation();
+    const rfId = useStore((state) => state.rfId);
+    useEffect(() => {
+        const replace = (id: string, text: string) => {
+            const element = document.getElementById(id);
+            if (element && element.textContent !== text) element.textContent = text;
+        };
+        replace(`react-flow__node-desc-${rfId}`, t('flowchart.a11yNodeHelp'));
+        replace(`react-flow__edge-desc-${rfId}`, t('flowchart.a11yEdgeHelp'));
+    }, [rfId, t]);
+    return null;
+}
+
 // React Flow's own control buttons have fixed English names, so the canvas
 // renders the same four with translated ones.
 function LocalizedControls() {
@@ -269,6 +286,18 @@ export default function FlowchartPage() {
 
     const [nodes, setNodes, onNodesChange] = useNodesState(createInitialNodes(t));
     const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
+    // Screen readers name an edge by the nodes it joins, not by internal ids.
+    // Only the canvas gets these; saved charts keep plain edges.
+    // Keyed on ids and titles, so dragging a node does not rebuild every edge.
+    const nodeTitlesKey = JSON.stringify(nodes.map((node) => [node.id, (node.data as FlowNodeData | undefined)?.label ?? '']));
+    const nodeTitles = useMemo(() => new Map<string, string>(JSON.parse(nodeTitlesKey) as Array<[string, string]>), [nodeTitlesKey]);
+    const labelledEdges = useMemo(() => edges.map((edge) => ({
+        ...edge,
+        ariaLabel: t('flowchart.edgeAriaLabel', {
+            source: nodeTitles.get(edge.source) || edge.source,
+            target: nodeTitles.get(edge.target) || edge.target,
+        }),
+    })), [edges, nodeTitles, t]);
 
     // Save/Load dialog states
     const [isSaveDialogOpen, setIsSaveDialogOpen] = useState(false);
@@ -792,7 +821,7 @@ export default function FlowchartPage() {
                             zoomOnScroll={false}
                             preventScrolling={false}
                             nodes={nodes}
-                            edges={edges}
+                            edges={labelledEdges}
                             onNodesChange={onNodesChange}
                             onEdgesChange={onEdgesChange}
                             onConnect={onConnect}
@@ -804,6 +833,7 @@ export default function FlowchartPage() {
                             attributionPosition="bottom-left"
                         >
                             <LocalizedControls />
+                            <LocalizedA11yDescriptions />
                             <MiniMap
                                 ariaLabel={t('flowchart.miniMap')}
                                 nodeColor={(node) => {

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   findCustomerOwnedByUser,
+  hasOpenSubscription,
   isAllowedCheckoutRedirectUrl,
 } from "../../supabase/functions/create-checkout/checkout-security";
 
@@ -27,5 +28,16 @@ describe("checkout security", () => {
 
     expect(findCustomerOwnedByUser(customers, "user-123")).toBe("cus_correct");
     expect(findCustomerOwnedByUser(customers, "missing-user")).toBeNull();
+  });
+
+  it("treats a subscription that can still bill as a reason to refuse another checkout", () => {
+    expect(hasOpenSubscription([{ status: "active" }, { status: "canceled" }])).toBe(true);
+    expect(hasOpenSubscription([{ status: "trialing" }])).toBe(true);
+    expect(hasOpenSubscription([{ status: "past_due" }])).toBe(true);
+    expect(hasOpenSubscription([{ status: "paused" }])).toBe(true);
+    expect(hasOpenSubscription([{ status: "unpaid" }])).toBe(true);
+    expect(hasOpenSubscription([{ status: "canceled" }, { status: "incomplete" }, { status: "incomplete_expired" }])).toBe(false);
+    expect(hasOpenSubscription([])).toBe(false);
+    expect(hasOpenSubscription(null)).toBe(false);
   });
 });

@@ -1,4 +1,4 @@
-import { admin, AI_TIMEOUT, aiResponse, chooseForMotion, expect, expectProviderCalls, LIVE, providerCalls, test } from "./fixtures";
+import { admin, AI_TIMEOUT, aiResponse, chooseForMotion, expect, expectProviderCalls, fake, LIVE, providerCalls, test } from "./fixtures";
 
 // Feature map: features/ai-tools.md.
 
@@ -89,6 +89,24 @@ test("ask-stream: Ask streams a coaching answer and records usage", async ({ sig
     const { data } = await admin.from("ai_requests").select("feature,status").eq("user_id", await user.userId());
     return data;
   }, { timeout: AI_TIMEOUT }).toContainEqual(expect.objectContaining({ feature: "ask", status: "success" }));
+});
+
+test("ask-cutoff: a streamed answer cut off at its length cap says so under the answer", async ({ signedIn: page, evidence }) => {
+  test.skip(LIVE, "only the fake provider can force a cut-off reply");
+  await fake.truncate("ask-stream");
+  await page.goto("/app/ask");
+  await page.getByPlaceholder("Ask your debate coach...").fill("How should I weigh access against cost?");
+  const stream = page.waitForResponse((response) => response.url().endsWith("/functions/v1/ai-stream"), { timeout: AI_TIMEOUT });
+  await page.getByRole("button", { name: "Send message" }).click();
+  const events = await (await stream).text();
+  expect(events).toContain('"replyTruncated":true');
+  // The partial answer stays, with the notice under it rather than an error.
+  await expect(page.getByText("weigh access against cost.").first()).toBeVisible();
+  await expect(page.getByText("This answer hit its length limit and stops early.", { exact: false })).toBeVisible();
+  await expect(page.getByText("Response was interrupted")).toHaveCount(0);
+  await evidence.shot("01-cut-off-notice");
+  const features = (await providerCalls()).map((call) => call.feature);
+  expect(features).toEqual(["ask-stream"]);
 });
 
 test("ask-cited: Ask in citation mode uses the structured endpoint", async ({ signedIn: page, evidence }) => {

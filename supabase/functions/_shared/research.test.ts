@@ -12,6 +12,7 @@ import {
   MAX_PROVIDER_RESPONSE_BYTES,
   type ResearchContext,
 } from "./research.ts";
+import { MAX_FETCHED_PAGE_CHARS } from "./prompt-budget.ts";
 
 function ctxWith(overrides: Partial<ResearchContext>): ResearchContext {
   return { ...emptyResearchContext(), ...overrides };
@@ -19,9 +20,30 @@ function ctxWith(overrides: Partial<ResearchContext>): ResearchContext {
 
 Deno.test("empty research does not render a research context block", () => {
   const rendered = buildResearchContext(ctxWith({
-    searches: [{ query: "empty search", results: "" }],
+    searches: [{ query: "empty search", results: [] }],
   }));
   if (rendered !== "") throw new Error(`empty research rendered unexpected context: ${rendered}`);
+});
+
+Deno.test("research context lists each source once and caps page text", () => {
+  const ranked = (url: string, query: string, qualityScore: number) => ({
+    url, query, title: `Title ${qualityScore}`, content: "snippet", sourceType: "news" as const, qualityScore, qualityLabel: "strong" as const, qualityReasons: [],
+  });
+  const read = ranked("https://news.example/read", "first", 90);
+  const shared = ranked("https://news.example/shared", "first", 80);
+  const rendered = buildResearchContext(ctxWith({
+    searches: [
+      { query: "first", results: [read, shared] },
+      { query: "second", results: [{ ...shared, query: "second" }, ranked("https://news.example/other", "second", 60)] },
+    ],
+    rankedResults: [read, shared],
+    readContent: [{ url: read.url, title: "Read", content: "p".repeat(MAX_FETCHED_PAGE_CHARS + 500), result: read }],
+  }));
+  const count = (needle: string) => rendered.split(needle).length - 1;
+  if (count(read.url) !== 1) throw new Error("a page read in full was repeated as a search snippet");
+  if (count(shared.url) !== 1) throw new Error("a URL found by two searches was listed twice");
+  if (count("https://news.example/other") !== 1) throw new Error("a distinct search result was dropped");
+  if (count("p".repeat(MAX_FETCHED_PAGE_CHARS + 1)) !== 0) throw new Error("page text exceeded the configured cap");
 });
 
 Deno.test("factoid citations backed by strong or moderate fetched sources stay verified", () => {
@@ -242,7 +264,7 @@ Deno.test("Exa contents sends the documented maxCharacters field", async () => {
   try {
     await exaGetContents("https://example.com/report");
     const text = requestBody?.text as { maxCharacters?: number; max_characters?: number } | undefined;
-    if (text?.maxCharacters !== 8000) throw new Error("contents maxCharacters was not sent");
+    if (text?.maxCharacters !== MAX_FETCHED_PAGE_CHARS) throw new Error("contents maxCharacters was not sent");
     if (text?.max_characters !== undefined) throw new Error("legacy contents casing leaked into request");
   } finally {
     globalThis.fetch = originalFetch;

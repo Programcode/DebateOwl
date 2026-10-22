@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useSessionStore, type Source } from '@/lib/stores/session-store';
+import { DebateRequiredError, useSessionStore, type Source } from '@/lib/stores/session-store';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button, buttonVariants } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -74,14 +74,15 @@ function SourceRow({
             {source.type === 'url' ? <Globe className="h-4 w-4" /> : <FileText className="h-4 w-4" />}
           </div>
           <div className="min-w-0">
-            <div className="flex items-center gap-1.5">
+            {/* On a phone the title gets two lines of its own; one truncated line left a few letters. */}
+            <div className="flex items-start gap-1.5 sm:items-center">
               <button
                 type="button"
                 onClick={(event) => {
                   event.stopPropagation();
                   onOpen(source);
                 }}
-                className="min-w-0 truncate rounded-sm text-left text-sm font-medium text-foreground transition-colors hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                className="line-clamp-2 min-w-0 break-words rounded-sm text-left text-sm font-medium text-foreground transition-colors hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:line-clamp-1"
               >
                 {source.title}
               </button>
@@ -91,13 +92,14 @@ function SourceRow({
                   target="_blank"
                   rel="noopener noreferrer"
                   onClick={(event) => event.stopPropagation()}
-                  className="shrink-0 rounded-sm text-muted-foreground transition-colors hover:text-primary"
+                  className="mt-0.5 shrink-0 rounded-sm text-muted-foreground transition-colors hover:text-primary sm:mt-0"
                   aria-label={t('libraryPage.openOrigin', { title: source.title, defaultValue: 'Open {{title}} in a new tab' })}
                 >
                   <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
                 </a>
               )}
-              <Badge variant="outline" className="shrink-0 py-0">
+              {/* The row icon already shows the type; on a phone the title needs the room. */}
+              <Badge variant="outline" className="hidden shrink-0 py-0 sm:inline-flex">
                 {t(`libraryPage.${source.type}Source`, source.type.toUpperCase())}
               </Badge>
             </div>
@@ -135,7 +137,7 @@ function SourceRow({
           <Button
             variant="ghost"
             size="icon"
-            className="h-9 w-9 text-destructive"
+            className="h-9 w-9 text-destructive pointer-coarse:h-11 pointer-coarse:w-11"
             onClick={(event) => {
               event.stopPropagation();
               onRemove(source);
@@ -145,7 +147,9 @@ function SourceRow({
             <Trash2 className="h-4 w-4" />
           </Button>
           <div className="flex items-center justify-center pointer-coarse:min-h-11 pointer-coarse:min-w-11" onClick={(event) => event.stopPropagation()}>
+            {/* On touch the switch's own tap area grows to 44px tall, like the Checkbox's. */}
             <Switch
+              className="relative pointer-coarse:after:absolute pointer-coarse:after:-inset-2.5"
               checked={source.isActive}
               onCheckedChange={() => onToggle(source.id)}
               aria-label={t('libraryPage.toggleSourceLabel', { title: source.title })}
@@ -243,7 +247,18 @@ export default function LibraryPage() {
     if (errors.title) return addTitleRef.current?.focus();
     if (errors.content) return addContentRef.current?.focus();
     // The Library always shows the Current Debate, even while tools run one-off.
-    await addSource({ ...newSource, debateId: currentDebate?.id ?? null });
+    try {
+      await addSource({ ...newSource, debateId: currentDebate?.id ?? null });
+    } catch (error) {
+      toast({
+        title: t('libraryPage.saveFailed', 'Could not save this source.'),
+        description: error instanceof DebateRequiredError
+          ? t('debate.sourceNeedsDebate', 'Start or select a debate before saving sources.')
+          : undefined,
+        variant: 'destructive',
+      });
+      return;
+    }
     setNewSource({ title: '', content: '', type: 'text', origin: '', folder: newSource.folder });
     setIsAdding(false);
   };

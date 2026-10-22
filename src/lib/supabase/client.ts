@@ -5,11 +5,50 @@ import {
   FunctionsRelayError,
 } from '@supabase/supabase-js';
 import { getActiveEnv, SUPABASE_URL, SUPABASE_ANON_KEY } from './env';
+import { verifySessionAfterRejection } from './session-expiry';
 
 export { SUPABASE_URL };
 
 /** Where supabase-js keeps this project's session; each project has its own. */
 export const AUTH_STORAGE_KEY = `debate-auth-${getActiveEnv()}`;
+
+let activeAccessToken: string | null = null;
+let activeUserId: string | null = null;
+
+/**
+ * Whether a Supabase answer says the server refused this browser's session.
+ * A 403 from REST is a policy answer, not an auth one, so only Auth's own
+ * user lookup counts 403. The token and logout endpoints are left out: the
+ * check that follows a rejection calls them itself.
+ */
+export function isAuthRejection(url: string, status: number): boolean {
+  let path: string;
+  try {
+    path = new URL(url, SUPABASE_URL).pathname;
+  } catch {
+    return false;
+  }
+  if (path === '/auth/v1/user') return status === 401 || status === 403;
+  if (path.startsWith('/rest/v1/') || path.startsWith('/functions/v1/')) return status === 401;
+  return false;
+}
+
+function requestUrl(input: RequestInfo | URL): string {
+  if (typeof input === 'string') return input;
+  if (input instanceof URL) return input.href;
+  return input.url;
+}
+
+// A signed-in request the server refused may mean a revoked session. supabase-js
+// holds its session lock while some of these requests run, so the check (which
+// takes that lock) is queued for after the request instead of run inside it.
+const watchedFetch: typeof fetch = async (input, init) => {
+  const response = await globalThis.fetch(input, init);
+  if (activeAccessToken && isAuthRejection(requestUrl(input), response.status)) {
+    setTimeout(() => void verifySessionAfterRejection(supabase.auth), 0);
+  }
+  return response;
+};
 
 export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
   auth: {
@@ -20,10 +59,8 @@ export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
     flowType: 'pkce',
     storageKey: AUTH_STORAGE_KEY,
   },
+  global: { fetch: watchedFetch },
 });
-
-let activeAccessToken: string | null = null;
-let activeUserId: string | null = null;
 
 export function setActiveAccessToken(accessToken: string | null, userId: string | null = null): void {
   activeAccessToken = accessToken;

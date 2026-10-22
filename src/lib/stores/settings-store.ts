@@ -14,12 +14,15 @@ import {
 } from '../../../supabase/functions/_shared/model-catalog';
 import type { ProviderConfig } from '../ai/providers/types';
 import { supabase } from '@/lib/supabase/client';
+import { currentUserId } from '@/lib/supabase/current-user';
 
 export type FeatureTab = 'generate' | 'attack' | 'brainstorm' | 'factoids' | 'ask' | 'sparring';
 type CoreFeatureTab = Exclude<FeatureTab, 'sparring'>;
 type FeatureConfigs = Record<CoreFeatureTab, ProviderConfig> & Partial<Record<'sparring', ProviderConfig>>;
 
 interface SettingsState {
+  /** Account these device settings belong to. Null until sign-in binds them. */
+  ownerUserId: string | null;
   language: AppLanguage;
   outputLanguage: AppLanguage;
   theme: 'light' | 'dark' | 'system';
@@ -36,6 +39,8 @@ interface SettingsState {
   setWikiResearchEnabled: (enabled: boolean) => void;
   hydrateFromServer: () => Promise<void>;
   resetLocalData: (preserveLanguage?: boolean) => void;
+  /** Drops another account's prompt and model choices before the server copy loads. */
+  prepareForUser: (userId: string) => void;
 }
 
 const DEFAULT_PROVIDER = 'openrouter';
@@ -46,7 +51,7 @@ const LEGACY_MODEL_SUCCESSORS: Record<string, string> = {
   'gpt-5.4-mini': DEFAULT_MODEL,
   'gpt-4o': DEFAULT_MODEL,
   'gpt-4o-mini': DEFAULT_MODEL,
-  'claude-opus-4-7': DEFAULT_PRO_MODEL,
+  'claude-opus-4-7': 'anthropic/claude-opus-5.5',
   'claude-sonnet-4-6': DEFAULT_PRO_MODEL,
   'claude-haiku-4-5-20251001': DEFAULT_MODEL,
   'gemini-3.1-pro-preview': 'google/gemini-3.8-flash',
@@ -160,8 +165,7 @@ async function canAccessProModels(settings: Record<string, unknown>): Promise<bo
 }
 
 async function getUserId() {
-  const { data } = await supabase.auth.getUser();
-  return data.user?.id || null;
+  return await currentUserId();
 }
 
 // The auth trigger provisions every settings row, and clients may only UPDATE
@@ -205,9 +209,22 @@ async function persistMigratedFeatureConfigs(
   }
 }
 
+/**
+ * A rehydrate that finishes after sign-in must not restore another account's
+ * prompt or model choices. Settings saved before an owner was recorded stay
+ * only until this account is bound.
+ */
+export function mergePersistedSettingsState(persistedState: unknown, currentState: SettingsState): SettingsState {
+  const saved = persistedState && typeof persistedState === 'object' ? persistedState as Partial<SettingsState> : {};
+  const savedOwner = typeof saved.ownerUserId === 'string' ? saved.ownerUserId : null;
+  if (currentState.ownerUserId && savedOwner !== currentState.ownerUserId) return currentState;
+  return { ...currentState, ...saved, ownerUserId: savedOwner ?? currentState.ownerUserId };
+}
+
 export const useSettingsStore = create<SettingsState>()(
   persist(
     (set, get) => ({
+      ownerUserId: null as string | null,
       language: 'en',
       outputLanguage: 'en',
       theme: 'system',
@@ -338,6 +355,7 @@ export const useSettingsStore = create<SettingsState>()(
       resetLocalData: (preserveLanguage = false) => {
         const language = preserveLanguage ? get().language : 'en';
         set({
+          ownerUserId: null,
           language,
           outputLanguage: 'en',
           theme: 'system',
@@ -347,10 +365,20 @@ export const useSettingsStore = create<SettingsState>()(
         });
         void applyAppLanguage(language);
       },
+      prepareForUser: (userId) => {
+        if (get().ownerUserId === userId) return;
+        set({
+          ownerUserId: userId,
+          customSystemPrompt: undefined,
+          featureConfigs: getDefaultFeatureConfigs(),
+          wikiResearchEnabled: false,
+        });
+      },
     }),
     {
       name: 'debate-trainer-settings',
       version: 2,
+      merge: mergePersistedSettingsState,
       migrate: (persistedState: unknown, version) => {
         const saved = asRecord(persistedState);
         if (!saved) return persistedState;

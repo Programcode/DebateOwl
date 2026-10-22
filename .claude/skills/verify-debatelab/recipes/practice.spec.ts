@@ -109,3 +109,54 @@ test("cross-ai-questions: the AI questions the user, answers are judged, and the
   await evidence.shot("02-debrief");
   await expectCrossfireSaved(await user.userId());
 });
+
+/**
+ * Today's AI requests are used up: the server's counter (what the ai function
+ * checks) and the usage rows (what the browser counts). A refused call and a
+ * Jev helper row are on the list too, and must not count as used.
+ */
+async function useUpDailyRequests(userId: string, limit: number) {
+  await admin.from("user_settings").update({ daily_limit_override: limit }).eq("user_id", userId);
+  const today = new Date().toISOString().slice(0, 10);
+  const counter = await admin.from("daily_usage_counters").upsert({ user_id: userId, usage_date: today, quota_key: "ai", request_count: limit });
+  expect(counter.error).toBeNull();
+  const rows = [
+    ...Array.from({ length: limit }, () => ({ user_id: userId, feature: "generate", provider: "openrouter", model: "fake", status: "success" })),
+    { user_id: userId, feature: "ask", provider: "openrouter", model: "fake", status: "rate_limited" },
+    { user_id: userId, feature: "jev_model_router", provider: "openrouter", model: "fake", status: "success" },
+  ];
+  const usage = await admin.from("ai_requests").insert(rows);
+  expect(usage.error).toBeNull();
+}
+
+test("cross-daily-limit and spar-daily-limit: with no requests left, Crossfire stays in setup and Sparring warns first", async ({ signedIn: page, user, evidence }) => {
+  await useUpDailyRequests(await user.userId(), 2);
+  await evidence.step("Used up the account's 2 daily AI requests");
+
+  await startCrossfire(page, "mode-ai-questions-user");
+  const dialog = page.getByRole("dialog");
+  await expect(dialog).toBeVisible({ timeout: AI_TIMEOUT });
+  await expect(dialog).toContainText("2 of 2");
+  await evidence.shot("01-crossfire-limit-dialog");
+  await evidence.aria("01-crossfire-limit-dialog", dialog);
+  // The round never started: no clock, no End button, the setup kept.
+  await expect(page.getByTestId("end-crossfire")).toHaveCount(0);
+  await page.keyboard.press("Escape");
+  await expect(page.getByTestId("start-crossfire")).toBeVisible();
+  await expect(page.getByTestId("crossfire-resolution")).toHaveValue(resolution);
+  await evidence.shot("02-crossfire-back-in-setup");
+
+  await page.goto("/app/sparring");
+  await expect(page.getByTestId("sparring-request-shortfall")).toContainText("You have no AI requests left today");
+  await evidence.shot("03-sparring-warns");
+  await evidence.aria("03-sparring-warns", page.getByTestId("sparring-request-shortfall"));
+});
+
+test("cross-end-early: ending a round before any exchange returns to setup without an error", async ({ signedIn: page, evidence }) => {
+  await startCrossfire(page, "mode-question-ai");
+  await expect(page.getByTestId("end-crossfire")).toBeVisible();
+  await page.getByTestId("end-crossfire").click();
+  await expect(page.getByTestId("start-crossfire")).toBeVisible();
+  await expect(page.getByText("Complete at least one exchange before ending the session.")).toHaveCount(0);
+  await evidence.shot("01-back-in-setup");
+});
