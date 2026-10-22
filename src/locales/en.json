@@ -1351,6 +1351,12 @@
     "upgrade": "Upgrade to Pro - $5/mo",
     "useFree": "Use low reasoning instead"
   },
+  "dailyLimit": {
+    "reachedInline": "You've used today's AI requests. They refresh at midnight UTC.",
+    "usage": "Today: {{used}} of {{limit}} AI requests used. They refresh at midnight UTC ({{time}} your time).",
+    "sparringNone": "You have no AI requests left today, so the opponent can't answer. They refresh at midnight UTC.",
+    "sparringShort": "This round needs {{needed}} AI requests and you have {{remaining}} left today, so it would stop before the judge. They refresh at midnight UTC."
+  },
   "pricingModal": {
     "title": "Upgrade to Pro",
     "subtitle": "Unlock higher usage limits, all 10 models, and configurable reasoning.",

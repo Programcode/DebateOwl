@@ -1351,6 +1351,12 @@
     "upgrade": "Frissítés Pro-ra - $5/hó",
     "useFree": "Alacsony szintű érvelés használata"
   },
+  "dailyLimit": {
+    "reachedInline": "Elhasználtad a mai MI-kéréseidet. Éjfélkor (UTC) frissülnek.",
+    "usage": "Ma: {{used}} / {{limit}} MI-kérés felhasználva. Éjfélkor (UTC) frissülnek (nálad {{time}}).",
+    "sparringNone": "Mára nem maradt MI-kérésed, így az ellenfél nem tud válaszolni. Éjfélkor (UTC) frissülnek.",
+    "sparringShort": "Ehhez a körhöz {{needed}} MI-kérés kell, de ma csak {{remaining}} maradt, így a bíró előtt megállna. Éjfélkor (UTC) frissülnek."
+  },
   "pricingModal": {
     "title": "Frissítés Pro-ra",
     "subtitle": "Oldd fel a magasabb használati keretet, mind a 10 modellt és a beállítható érvelést.",
