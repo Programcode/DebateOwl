@@ -1,5 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { toast } from '@/hooks/use-toast';
 import { autosaveDiscoveredSources, normalizeSourceUrl } from './sources';
+
+vi.mock('@/hooks/use-toast', () => ({ toast: vi.fn() }));
 import { useSessionStore, type Source } from '@/lib/stores/session-store';
 
 const DEBATE = 'debate-1';
@@ -31,6 +34,7 @@ describe('autosaveDiscoveredSources', () => {
   const original = useSessionStore.getState();
 
   beforeEach(() => {
+    vi.mocked(toast).mockReset();
     addSource.mockReset();
     updateSource.mockReset();
     // The stubbed write lands in the library like the real one, a moment later.
@@ -88,5 +92,19 @@ describe('autosaveDiscoveredSources', () => {
     await autosaveDiscoveredSources([{ title: 'B', url: 'https://example.org/b' }], 'generate', DEBATE);
 
     expect(addSource).toHaveBeenCalledTimes(2);
+  });
+
+  it('says how many sources research added, counting only new rows', async () => {
+    await autosaveDiscoveredSources([{ title: 'Homework study', url: PAGE }], 'generate', DEBATE);
+    vi.mocked(toast).mockReset();
+
+    await autosaveDiscoveredSources([
+      { title: 'Homework study', url: `${PAGE}?utm_source=exa` },
+      { title: 'A', url: 'https://example.org/a' },
+      { title: 'B', url: 'https://example.org/b' },
+    ], 'attack', DEBATE);
+
+    expect(toast).toHaveBeenCalledOnce();
+    expect(vi.mocked(toast).mock.calls[0][0]).toMatchObject({ title: 'Added 2 sources to your Library' });
   });
 });

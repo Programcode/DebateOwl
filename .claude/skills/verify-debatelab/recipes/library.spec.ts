@@ -128,3 +128,20 @@ test("lib-dedupe and lib-layout: a page saved once per debate, and long titles k
   const { data } = await admin.from("sources").select("id").eq("user_id", userId);
   expect(data).toHaveLength(1);
 });
+
+test("lib-counts: the debate summary and Ask agree on how many sources a request uses", async ({ signedIn: page, user, evidence }) => {
+  await startDebate(page, motion);
+  const userId = await user.userId();
+  const { data: debateRow } = await admin.from("debates").select("id").eq("user_id", userId).eq("motion", motion).single();
+  // What Attack's research leaves behind: several pages switched on, some off.
+  await admin.from("sources").insert([1, 2, 3, 4, 5, 6, 7].map((n) => ({
+    user_id: userId, debate_id: debateRow!.id, title: `Researched page ${n}`, content: `Finding ${n}`, type: "url",
+    origin: `https://example.org/page-${n}`, folder: "Auto-saved", is_active: n <= 5,
+  })));
+  await page.goto("/app");
+  await expect(page.getByTestId("home-current-debate")).toContainText("7 sources (5 active)");
+  await evidence.shot("01-home-counts");
+  await page.goto("/app/ask");
+  await expect(page.getByTestId("debate-context-control")).toContainText("Using 5 sources");
+  await evidence.shot("02-ask-counts");
+});

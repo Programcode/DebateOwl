@@ -11,6 +11,7 @@ Users save reference texts to their Library. The Library belongs to the Current 
 - `lib-layout` on a phone the row's controls take their own line, so a long title gets the row's width and two lines.
 - `lib-ground` includes only active sources' text in the `system` of later AI calls (Generate, Brainstorm, and others).
 - `lib-delete` deletes a source. It stays gone after a reload and in the `sources` table.
+- `lib-counts` the Current Debate summary on `/app` shows `<total> sources (<active> active)`, and Ask's `Using <n> sources` counts the same active sources.
 - `lib-import` imports a web page by URL through the `import-source` Edge Function, which fetches the page itself (no Exa), so it works in both modes when the VPS has outbound internet.
 - `lib-erase` has Settings → `Delete All My Data` remove this account's sources and nobody else's.
 
@@ -32,6 +33,7 @@ Preconditions:
 - **Phone layout.** At a 360px viewport the title button is wider than 200px and the page has no sideways scroll.
 - **Ground.** Go to `/app/brainstorm`; the motion is prefilled from the debate. Run it (see [ai-tools](./ai-tools.md)). `providerCall("brainstorm").system` contains the active marker and does not contain the paused marker.
 - **Delete.** Click the button named `Delete <title>` (use `exact`). It deletes at once, with no confirmation, and a toast `Deleted <title>` offers `Undo`, which saves the source again. The switch count drops to 0, and stays 0 after `page.reload()`. `sources` no longer has the title.
+- **Counts.** Insert 7 URL sources through `admin`, 5 with `is_active: true`. `/app` test id `home-current-debate` contains `7 sources (5 active)`; on `/app/ask` test id `debate-context-control` contains `Using 5 sources`.
 - **Import.** In the add panel, fill `Import from URL` and click `Import URL`. The `Import preview` panel appears, then `Save imported source` stores a row whose `origin` is the URL.
 - **Erase.** On Settings, click `Delete All My Data`. In the dialog, fill `Type your email to confirm` with `user.email` and click the dialog's `Delete All My Data`. The text `Data Deleted` appears, and `sources` for the user is `[]`.
 
