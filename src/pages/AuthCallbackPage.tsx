@@ -22,7 +22,7 @@ export default function AuthCallbackPage() {
   // The link failed, but this browser is still signed in to another session:
   // that account opens, and the failure is still said.
   useEffect(() => {
-    if (loading || !user || !callbackError) return;
+    if (loading || !user || !callbackError || callbackError === 'timed-out') return;
     toast({ title: t(AUTH_CALLBACK_ERROR_KEYS[callbackError]), variant: 'destructive' });
     clearCallbackError();
   }, [loading, user, callbackError, clearCallbackError, t, toast]);
@@ -36,10 +36,9 @@ export default function AuthCallbackPage() {
     );
   }
 
-  if (user) return <Navigate to={next} replace />;
-
   // The exchange did not answer in time. This URL still holds the unused code,
-  // so a reload retries it; a late success still opens the app from here.
+  // so a reload retries it; a late answer clears this and the page moves on.
+  // Checked before `user`: a session this browser already had must not hide it.
   if (callbackError === 'timed-out') {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center gap-4 bg-background p-6 text-center">
@@ -47,12 +46,13 @@ export default function AuthCallbackPage() {
         <div className="flex flex-wrap justify-center gap-2">
           <Button onClick={() => window.location.reload()}>{t('login.retrySignIn')}</Button>
           <Button variant="outline" asChild>
-            <Link to="/login" replace>{t('login.backToSignIn')}</Link>
+            <Link to="/login" state={{ from: { pathname: next } }} replace>{t('login.backToSignIn')}</Link>
           </Button>
         </div>
       </div>
     );
   }
 
+  if (user) return <Navigate to={next} replace />;
   return <Navigate to="/login" state={{ from: { pathname: next } }} replace />;
 }

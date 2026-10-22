@@ -741,6 +741,91 @@ describe('AuthProvider behavior', () => {
     }
   });
 
+  it('never lets a dead stored account sign out or block the account a callback signs in', async () => {
+    window.history.replaceState({}, '', '/auth/callback?code=pkce-code');
+    let finishExchange!: (value: unknown) => void;
+    exchangeCodeForSessionMock.mockReturnValue(new Promise((resolve) => { finishExchange = resolve; }));
+    // The stored account was revoked elsewhere: its lookup is refused.
+    getUserMock.mockResolvedValue({ data: { user: null }, error: { status: 401, message: 'revoked' } });
+
+    render(
+      <AuthProvider>
+        <AuthConsumer />
+      </AuthProvider>
+    );
+
+    act(() => callbackRef.current?.('INITIAL_SESSION', { user: { id: 'stored-user' }, access_token: 'stored' }));
+    await act(async () => {
+      finishExchange({ data: { session: { user: { id: 'callback-user' }, access_token: 'token' } }, error: null });
+    });
+
+    await waitFor(() => expect(screen.getByTestId('loading')).toHaveTextContent('false'));
+    expect(screen.getByTestId('user')).toHaveTextContent('callback-user');
+    expect(signOutMock).not.toHaveBeenCalled();
+    expect(prepareSessionStoreMock).toHaveBeenCalledWith('callback-user');
+    expect(hydrateSessionStoreMock).toHaveBeenCalled();
+  });
+
+  it.each([
+    ['opens the account and drops the timeout notice on a late success', { data: { session: { user: { id: 'late-user' }, access_token: 'token' } }, error: null }, 'none'],
+    ['gives the real reason on a late failure', { data: { session: null }, error: Object.assign(new Error('expired'), { code: 'flow_state_expired' }) }, 'link-expired'],
+  ])('after a callback timeout, %s', async (_name, lateResult, expectedError) => {
+    vi.useFakeTimers();
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    try {
+      window.history.replaceState({}, '', '/auth/callback?code=slow-code&sb_flow_id=0123456789abcdef');
+      let finishExchange!: (value: unknown) => void;
+      exchangeCodeForSessionMock.mockReturnValue(new Promise((resolve) => { finishExchange = resolve; }));
+
+      render(
+        <AuthProvider>
+          <AuthConsumer />
+        </AuthProvider>
+      );
+
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(15_000);
+      });
+      expect(screen.getByTestId('callback-error')).toHaveTextContent('timed-out');
+      expect(window.location.search).toBe('?code=slow-code&sb_flow_id=0123456789abcdef');
+
+      await act(async () => {
+        finishExchange(lateResult);
+        await vi.advanceTimersByTimeAsync(0);
+      });
+      expect(screen.getByTestId('callback-error')).toHaveTextContent(expectedError);
+      // The answer is final now, so the used code leaves the URL.
+      expect(window.location.search).toBe('');
+    } finally {
+      warnSpy.mockRestore();
+      vi.useRealTimers();
+    }
+  });
+
+  it('does not hold startup on a sign-out of a dead stored session that never answers', async () => {
+    vi.useFakeTimers();
+    try {
+      getSessionMock.mockResolvedValue({ data: { session: { user: { id: 'stored-user' }, access_token: 'stored' } }, error: null });
+      getUserMock.mockResolvedValue({ data: { user: null }, error: { status: 401, message: 'revoked' } });
+      signOutMock.mockReturnValue(new Promise(() => {}));
+
+      render(
+        <AuthProvider>
+          <AuthConsumer />
+        </AuthProvider>
+      );
+
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(4_000);
+      });
+      expect(screen.getByTestId('loading')).toHaveTextContent('false');
+      expect(screen.getByTestId('user')).toHaveTextContent('none');
+    } finally {
+      signOutMock.mockReset();
+      vi.useRealTimers();
+    }
+  });
+
   it('keeps a callback error when the stored session is restored afterwards', async () => {
     window.history.replaceState({}, '', '/auth/callback?error=access_denied&error_code=otp_expired');
     getSessionMock.mockResolvedValue({ data: { session: { user: { id: 'stored-user' }, access_token: 'stored' } }, error: null });

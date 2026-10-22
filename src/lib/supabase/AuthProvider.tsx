@@ -147,12 +147,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           // Bounded: during a sign-in callback nothing else ends the wait.
           const { error } = await withAuthTimeout(supabase.auth.getUser(), 'User lookup timeout');
           if (!isDeadUserLookup(error)) return true;
-          await rejectDeadSession(supabase.auth);
-          return false;
         } catch {
           // Auth did not answer. Keep the local session; this is an outage, not a dead login.
           return true;
         }
+        // The server refused this user. A sign-out that never answers must not hold startup either.
+        await withAuthTimeout(rejectDeadSession(supabase.auth), 'Sign-out timeout').catch((): void => undefined);
+        return false;
       })();
       confirmations.set(accessToken, pending);
       return pending;
@@ -191,7 +192,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const hydrateOAuthCallbackSession = async (): Promise<Session | null> => {
       if (!callbackPending) return null;
       const { code, flowId, error } = readAuthCallbackParams(callbackUrl);
-      const cleanUrl = () => window.history.replaceState(window.history.state, '', withoutCallbackParams(callbackUrl));
+      const cleanUrl = () => {
+        // A late answer can arrive after the user left the callback page.
+        if (window.location.pathname !== AUTH_CALLBACK_PATH) return;
+        window.history.replaceState(window.history.state, '', withoutCallbackParams(callbackUrl));
+      };
       if (error || !code) {
         cleanUrl();
         if (error) setCallbackError(error);
@@ -200,15 +205,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       // Finishing a sign-in is as explicit as pressing a sign-in button.
       allowSessionsAfterSignIn();
+      // The flow id picks this sign-in's own verifier, so another tab's
+      // sign-in or a failed resend can't break the link.
+      const exchange = supabase.auth.exchangeCodeForSession(code, flowId ? { flowId } : undefined);
       let settled = true;
       try {
-        // The flow id picks this sign-in's own verifier, so another tab's
-        // sign-in or a failed resend can't break the link.
-        const { data, error: exchangeError } = await withAuthTimeout(
-          supabase.auth.exchangeCodeForSession(code, flowId ? { flowId } : undefined),
-          'OAuth code exchange timeout',
-          OAUTH_CODE_EXCHANGE_TIMEOUT_MS,
-        );
+        const { data, error: exchangeError } = await withAuthTimeout(exchange, 'OAuth code exchange timeout', OAUTH_CODE_EXCHANGE_TIMEOUT_MS);
         if (exchangeError) throw exchangeError;
         return data.session;
       } catch (err) {
@@ -217,6 +219,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         // A session this browser already had still stands; getSession restores it below.
         console.warn('[Auth] sign-in callback failed:', err);
         if (mounted) setCallbackError(settled ? authCallbackErrorFor(err) : 'timed-out');
+        if (!settled) {
+          // The late answer is final. A success is announced by auth-js and
+          // opens the app; a failure replaces the timeout with its real reason.
+          void exchange
+            .then(({ error: lateError }) => lateError, (lateError: unknown) => lateError ?? new Error('Exchange failed'))
+            .then((lateError) => {
+              if (!mounted) return;
+              setCallbackError(lateError ? authCallbackErrorFor(lateError) : null);
+              cleanUrl();
+            });
+        }
         return null;
       } finally {
         // Only once the exchange has an answer: a reload during the spinner,
@@ -284,7 +297,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       if (newSession && restoredSessionsBlocked()) {
         dropRestoredSession();
-        setLoading(false);
+        if (!callbackPending) setLoading(false);
         return;
       }
 
@@ -324,6 +337,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         useDebateContextStore.getState().resetLocalData();
       }
 
+      // While a callback signs an account in, init checks and loads the
+      // outcome: the new account on success, the stored one only if the
+      // callback fails. Checking a stored account here could sign out, or
+      // block, the account being signed in.
+      if (callbackPending) return;
+
       if (newSession?.access_token) {
         void confirmRestoredSession(newSession.access_token).then((alive) => {
           if (!mounted || !alive || restoredSessionsBlocked()) {
@@ -335,9 +354,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       } else {
         hydrateStores(nextUserId);
       }
-      // A session this browser already had is announced while the callback
-      // exchange runs; the callback page must wait for the account it signs in.
-      if (!callbackPending) setLoading(false);
+      setLoading(false);
     });
 
     return () => {

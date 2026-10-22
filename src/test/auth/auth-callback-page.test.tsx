@@ -55,4 +55,13 @@ describe('sign-in callback page', () => {
     expect(screen.getByRole('button', { name: 'Try again' })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Back to sign-in' })).toHaveAttribute('href', '/login');
   });
+
+  it('keeps the retry after a timeout even when this browser has another session', () => {
+    mocks.auth = { user: { id: 'stored-user' }, callbackError: 'timed-out' };
+    renderCallback();
+
+    expect(screen.queryByText('history')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Try again' })).toBeInTheDocument();
+    expect(mocks.toast).not.toHaveBeenCalled();
+  });
 });
