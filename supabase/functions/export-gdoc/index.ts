@@ -911,6 +911,18 @@ export async function handleRequest(req: Request): Promise<Response> {
             if (!batchUpdateResponse.ok) {
                 const errorText = await batchUpdateResponse.text();
                 console.error("[GDOC] Failed to update document:", errorText.slice(0, 2000));
+                // The empty document already exists in the student's Drive.
+                // Reporting success opened that blank file as if the export worked.
+                return new Response(JSON.stringify({
+                    success: false,
+                    error: "The Google Doc was created, but its content could not be saved. Try the export again.",
+                    code: "DOCUMENT_UPDATE_FAILED",
+                    documentUrl,
+                    documentId,
+                }), {
+                    status: 502,
+                    headers: { ...corsHeaders, "Content-Type": "application/json" }
+                });
             }
         }
 

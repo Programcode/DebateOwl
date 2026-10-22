@@ -58,6 +58,8 @@ interface DebateState {
   setOneOff: (oneOff: boolean) => void;
   openDialog: (dialog: DebateDialog, motion?: string) => void;
   resetLocalData: () => void;
+  /** Drops another account's debate list before the server copy loads. */
+  prepareForUser: (userId: string) => void;
 }
 
 export function normalizeMotion(motion: string): string {
@@ -244,11 +246,18 @@ export const useDebateStore = create<DebateState>()(
         hydrationEpoch += 1;
         set({ ownerUserId: null, debates: [], currentDebateId: null, oneOff: false, hydrated: false, dialog: null, dialogMotion: '' });
       },
+
+      prepareForUser: (userId) => {
+        if (get().ownerUserId === userId) return;
+        hydrationEpoch += 1;
+        set({ ownerUserId: userId, debates: [], currentDebateId: null, oneOff: false, hydrated: false, dialog: null, dialogMotion: '' });
+      },
     }),
     {
       name: 'debatelab-current-debate',
       storage: createJSONStorage(() => localStorage),
       version: 1,
+      merge: mergePersistedDebateState,
       partialize: (state) => ({
         ownerUserId: state.ownerUserId,
         debates: state.debates,
@@ -257,6 +266,18 @@ export const useDebateStore = create<DebateState>()(
     },
   ),
 );
+
+/**
+ * A rehydrate that finishes after sign-in must not restore another account's
+ * debate list. Lists saved before an owner was recorded stay only until this
+ * account is bound.
+ */
+export function mergePersistedDebateState(persistedState: unknown, currentState: DebateState): DebateState {
+  const saved = persistedState && typeof persistedState === 'object' ? persistedState as Partial<DebateState> : {};
+  const savedOwner = typeof saved.ownerUserId === 'string' ? saved.ownerUserId : null;
+  if (currentState.ownerUserId && savedOwner !== currentState.ownerUserId) return currentState;
+  return { ...currentState, ...saved, ownerUserId: savedOwner ?? currentState.ownerUserId };
+}
 
 export function selectCurrentDebate(state: Pick<DebateState, 'debates' | 'currentDebateId'>): Debate | null {
   return state.debates.find((debate) => debate.id === state.currentDebateId) ?? null;
