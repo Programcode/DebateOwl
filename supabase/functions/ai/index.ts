@@ -825,7 +825,8 @@ export async function handleRequest(req: Request): Promise<Response> {
         ...researchUsageForLog(),
       ]);
       // OpenRouter credits already spent on the request keep it counted.
-      const refundable = claudeUnavailable && !err.afterOutput && !completedMainUsage && !usageError?.completedUsage &&
+      // A cancelled request is never refunded, even when the refusal raced the abort.
+      const refundable = claudeUnavailable && !workSignal?.aborted && !err.afterOutput && !completedMainUsage && !usageError?.completedUsage &&
         !researchDidWork && !researchAccountingIncomplete && !chargedAgainstCap(errorUsage);
       await logUsage(
         userId,

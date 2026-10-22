@@ -44,12 +44,13 @@ Deno.test("AI JSON and SSE failures never expose provider response bodies", asyn
 Deno.test("a refused Claude call is not retried elsewhere, shows an outage, and gives the request back", async () => {
   const originalFetch = globalThis.fetch;
   const originalWarn = console.warn;
-  let failure: "http" | "chunk" | "chunk-after-text" | "chunk-charged" | "repair" | "after-research" | "ok" = "http";
+  let failure: "http" | "chunk" | "chunk-after-text" | "chunk-charged" | "error-frame-charged" | "repair" | "after-research" | "ok" = "http";
   let tier = "trial";
   // consume_ai_quota reservations and refund_daily_quota refunds, in units.
   const reservedUnits: number[] = [];
   const refundedUnits: number[] = [];
   const usageRows: Array<Record<string, unknown>> = [];
+  let clientAbort: AbortController | undefined;
   const providerBodies: Array<Record<string, unknown>> = [];
   console.warn = () => undefined;
   globalThis.fetch = (async (input: Request | URL | string, init?: RequestInit) => {
@@ -91,6 +92,10 @@ Deno.test("a refused Claude call is not retried elsewhere, shows an outage, and 
       if (failure === "http" || failure === "repair" || failure === "after-research") return new Response("PRIVATE_PROVIDER_BODY", { status: 402 });
       const text = failure === "chunk-after-text" ? 'data: {"choices":[{"delta":{"content":"{\\"resp"}}]}\n\n' : "";
       // Usage arrives before the error: free on the BYOK key, or a charge on OpenRouter credits.
+      if (failure === "error-frame-charged") {
+        // The charge arrives on the error frame itself, not in a frame before it.
+        return new Response('data: {"error":{"message":"PRIVATE_PROVIDER_BODY"},"usage":{"prompt_tokens":10,"completion_tokens":0,"cost":0.25,"is_byok":false}}\n\n', { headers: { "Content-Type": "text/event-stream" } });
+      }
       const cost = failure === "chunk-charged" ? 0.25 : 0;
       const charge = `data: {"choices":[],"usage":{"prompt_tokens":10,"completion_tokens":0,"cost":${cost},"is_byok":${cost === 0}}}\n\n`;
       return new Response(`${text}${charge}data: {"error":{"message":"PRIVATE_PROVIDER_BODY"}}\n\n`, { headers: { "Content-Type": "text/event-stream" } });
@@ -114,7 +119,7 @@ Deno.test("a refused Claude call is not retried elsewhere, shows an outage, and 
         assertEquals(response.status, 503);
         return await response.text();
       }] as const),
-      ...(["http", "chunk", "chunk-after-text", "chunk-charged"] as const).flatMap((kind) => [
+      ...(["http", "chunk", "chunk-after-text", "chunk-charged", "error-frame-charged"] as const).flatMap((kind) => [
         [`ai live ${kind}`, kind, async () => {
           const text = await (await send(ai, { stream: true })).text();
           assertEquals(text.includes('"status":503'), true);
@@ -139,12 +144,12 @@ Deno.test("a refused Claude call is not retried elsewhere, shows an outage, and 
       // A failure after the model wrote text keeps the request: the key already paid for it.
       // The repair case already completed a paid attempt before the retry failed.
       // OpenRouter credits already charged also keep the request counted.
-      const refunded = !(kind === "chunk-after-text" || kind === "chunk-charged" || kind === "repair" || kind === "after-research");
+      const refunded = !(kind === "chunk-after-text" || kind === "chunk-charged" || kind === "error-frame-charged" || kind === "repair" || kind === "after-research");
       assertEquals(refundedUnits, refunded ? [1] : [], `${label} refunds only a failure before output`);
       assertEquals(usageRows.map((row) => row.error_code), ["claude_unavailable"], label);
       // A refunded request adds nothing to the weekly cap; a charged one keeps its charge.
       if (refunded) assertEquals(usageRows[0].cap_cost_usd, 0, label);
-      if (kind === "chunk-charged") assertEquals(usageRows[0].cap_cost_usd, 0.25, label);
+      if (kind === "chunk-charged" || kind === "error-frame-charged") assertEquals(usageRows[0].cap_cost_usd, 0.25, label);
       // Every attempt stays on the Anthropic route; nothing is retried on another model or provider.
       assertEquals(providerBodies.length > 0, true, label);
       for (const body of providerBodies) {
@@ -161,6 +166,26 @@ Deno.test("a refused Claude call is not retried elsewhere, shows an outage, and 
     failure = "http";
     assertEquals((await send(ai, {}, "openai/gpt-6-luna")).status, 500);
     assertEquals(refundedUnits, []);
+
+    // A cancelled request is never refunded, even when the refusal raced the abort:
+    // the client goes away after the 402 was read, as the handler starts its error path.
+    failure = "http";
+    clientAbort = new AbortController();
+    const originalError = console.error;
+    console.error = (...args: unknown[]) => {
+      if (String(args[0]).startsWith("[ERROR]")) clientAbort?.abort();
+      originalError(...args);
+    };
+    await (await ai(new Request("http://127.0.0.1/functions/v1/ai", {
+      method: "POST", headers: { Authorization: "Bearer test-token", "Content-Type": "application/json" },
+      body: JSON.stringify({ feature: "ask", model: "anthropic/claude-haiku-5.5", input: { message: "A question", mode: "general", webSearch: false } }),
+      signal: clientAbort.signal,
+    }))).text().catch(() => "");
+    console.error = originalError;
+    assertEquals(clientAbort.signal.aborted, true);
+    assertEquals(usageRows.at(-1)?.error_code, "claude_unavailable");
+    assertEquals(refundedUnits, []);
+    clientAbort = undefined;
 
     // The refund gives back exactly the weighted units consume_ai_quota reserved.
     tier = "pro";

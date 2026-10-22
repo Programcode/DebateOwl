@@ -483,6 +483,10 @@ export async function readOpenRouterStream(
     }
     let chunk: OpenRouterStreamChunk;
     try { chunk = JSON.parse(data); } catch { return; }
+    // Usage can ride on the error frame itself; keep it so the charge is billed.
+    if (chunk.usage && typeof chunk.usage === "object" && !Array.isArray(chunk.usage)) {
+      usageRaw = { ...usageRaw, ...(chunk.usage as Record<string, unknown>) };
+    }
     if (chunk.error) {
       const message = typeof chunk.error === "object" && chunk.error !== null && "message" in chunk.error
         ? (chunk.error as { message?: unknown }).message
@@ -498,9 +502,6 @@ export async function readOpenRouterStream(
       textBytes += encoder.encode(content).byteLength;
       if (textBytes > MAX_PROVIDER_RESPONSE_BYTES) throw new Error(`Provider response exceeds ${MAX_PROVIDER_RESPONSE_BYTES} bytes`);
       stream.delta(content);
-    }
-    if (chunk.usage && typeof chunk.usage === "object" && !Array.isArray(chunk.usage)) {
-      usageRaw = { ...usageRaw, ...(chunk.usage as Record<string, unknown>) };
     }
   };
 

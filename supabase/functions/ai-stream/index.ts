@@ -310,6 +310,10 @@ export async function handleRequest(req: Request): Promise<Response> {
           }
           let parsed: Record<string, unknown>;
           try { parsed = JSON.parse(data); } catch { return; }
+          // Usage can ride on the error frame itself; keep it so the charge is billed.
+          if (parsed.usage && typeof parsed.usage === "object" && !Array.isArray(parsed.usage)) {
+            streamUsageRaw = { ...streamUsageRaw, ...(parsed.usage as Record<string, unknown>) };
+          }
           if (parsed.error) {
             const providerError = parsed.error;
             const message = providerError && typeof providerError === "object" && "message" in providerError
@@ -329,9 +333,6 @@ export async function handleRequest(req: Request): Promise<Response> {
           if (typeof delta?.delta?.content === "string" && delta.delta.content) {
             accumulated += delta.delta.content;
             emit("delta", { text: delta.delta.content });
-          }
-          if (parsed.usage && typeof parsed.usage === "object" && !Array.isArray(parsed.usage)) {
-            streamUsageRaw = { ...streamUsageRaw, ...(parsed.usage as Record<string, unknown>) };
           }
         };
         while (true) {
