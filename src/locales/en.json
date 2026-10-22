@@ -254,7 +254,10 @@
     "autoSavedFolder": "Auto-saved",
     "sourceSaveFailed": "Source save failed",
     "sourceSaveFailedDesc": "Could not save “{{title}}” to your library.",
-    "sourceAssessmentSaveFailed": "The source ranking could not be saved."
+    "sourceAssessmentSaveFailed": "The source ranking could not be saved.",
+    "sourcesAutoSaved_one": "Added {{count}} source to your Library",
+    "sourcesAutoSaved_other": "Added {{count}} sources to your Library",
+    "sourcesAutoSavedDesc": "Research found them. They are in the Auto-saved folder, and the ones switched on ground your next requests."
   },
   "generatedArtifacts": {
     "brainstormTitle": "Brainstorm",
@@ -1622,7 +1625,24 @@
     "caseDeleted": "Saved case deleted.",
     "deleteCaseDesc": "This removes the saved case from your history.",
     "deleteCaseTitle": "Delete saved case?",
-    "deleteFailed": "Could not delete saved case."
+    "deleteFailed": "Could not delete saved case.",
+    "tabCrossfire": "Crossfire",
+    "crossfireTitle": "Crossfire rounds",
+    "emptyCrossfire": "No Crossfire rounds yet",
+    "emptyCrossfireDesc": "Finish a Crossfire round to review its transcript and debrief here.",
+    "startCrossfire": "Start Crossfire",
+    "crossfireTurns_one": "{{count}} turn",
+    "crossfireTurns_other": "{{count}} turns",
+    "open": "Open",
+    "crossfireRound": "Crossfire round",
+    "deleteCrossfireAria": "Delete Crossfire round: {{title}}",
+    "deleteCrossfireTitle": "Delete Crossfire round?",
+    "deleteCrossfireDesc": "This removes the transcript and debrief from your history.",
+    "crossfireDeleted": "Crossfire round deleted.",
+    "crossfireDeleteFailed": "Could not delete the Crossfire round.",
+    "crossfireUnreadable": "This round was saved in an older format and cannot be shown.",
+    "crossfireNoDebrief": "This round has no debrief.",
+    "openCrossfireAria": "Open Crossfire round: {{title}}"
   },
   "libraryPage": {
     "title": "Source Library",
@@ -1723,7 +1743,16 @@
     "mergeFolderTitle": "Merge into {{name}}?",
     "mergeFolders": "Merge folders",
     "mergeFailed": "Could not merge the folders. Try again.",
-    "openOrigin": "Open {{title}} in a new tab"
+    "openOrigin": "Open {{title}} in a new tab",
+    "savingSource": "Saving…",
+    "offlineTitle": "Change not saved",
+    "offlineNotSaved": "You are offline. Reconnect and try again.",
+    "toggleFailed": "Could not change this source",
+    "toggleFailedDesc": "It is back to how it was. Try again.",
+    "sourceSaved": "Saved {{title}} to the Library",
+    "duplicateUrlDesc": "This page is already in this debate's Library.",
+    "loadingSources": "Loading sources…",
+    "folderUpdateFailed": "Could not change this folder"
   },
   "autoSavedSources": {
     "undo": "Undo auto-saved sources",
@@ -2278,7 +2307,7 @@
     "deleted": "Debate deleted",
     "deleteFailed": "Could not delete the debate",
     "lastActivity": "Last activity {{when}}",
-    "counts": "{{sources}} sources · {{outputs}} outputs",
+    "counts": "{{sources}} sources ({{active}} active) · {{outputs}} outputs",
     "menuAria": "Current debate: {{motion}}",
     "open": "Open debate",
     "useOneOff": "Use one-off mode",

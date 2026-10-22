@@ -4,7 +4,7 @@ import { useSessionStore } from '@/lib/stores/session-store';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button, buttonVariants } from '@/components/ui/button';
-import { Trash2, Eye, MessageCircle, FileText, Zap, Brain, BookOpen, Dumbbell } from 'lucide-react';
+import { Trash2, Eye, MessageCircle, FileText, Zap, Brain, BookOpen, Dumbbell, Flame, Loader2 } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Badge } from '@/components/ui/badge';
 import { formatEuropeanDateTime } from '@/lib/date-format';
@@ -25,16 +25,20 @@ import { useDebateStore } from '@/lib/stores/debate-store';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { UnsortedWork } from '@/components/features/debate/UnsortedWork';
 import { PageHeader } from '@/components/layout/PageHeader';
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+import { parseSavedCrossfire, SavedCrossfireView } from '@/components/features/crossfire/SavedCrossfireView';
 
 /** History scope value for work that belongs to no debate. */
 const OUTSIDE_DEBATES = 'outside';
 
-const HISTORY_TABS = ['cases', 'chats', 'attacks', 'brainstorms', 'factoids', 'sparring'] as const;
+const HISTORY_TABS = ['cases', 'chats', 'attacks', 'brainstorms', 'factoids', 'sparring', 'crossfire'] as const;
 type HistoryTab = (typeof HISTORY_TABS)[number];
 const isHistoryTab = (value: string | null): value is HistoryTab => HISTORY_TABS.includes(value as HistoryTab);
 
 // Lists scroll with the page on phones; wide screens get a bounded inner list.
 const LIST_CLASS = 'space-y-4 lg:max-h-[500px] lg:overflow-y-auto lg:pr-4';
+// Phones wrap the tabs onto more lines instead of a sideways scroll, each one a 44px target.
+const TAB_CLASS = 'min-h-11 gap-2 sm:min-h-0';
 
 export default function HistoryPage() {
   const { t } = useTranslation();
@@ -53,6 +57,7 @@ export default function HistoryPage() {
   const savedAttacks = inScope(store.savedAttacks);
   const savedBrainstorms = inScope(store.savedBrainstorms);
   const savedFactoids = inScope(store.savedFactoids);
+  const savedCrossfires = inScope(store.savedCrossfires);
   const sparringSessions = inScope(useSparringStore((state) => state.savedSessions));
   const hydrateSparringSessions = useSparringStore((state) => state.hydrateSavedSessions);
   const loadSparringSession = useSparringStore((state) => state.loadSavedSession);
@@ -71,6 +76,11 @@ export default function HistoryPage() {
   };
   const [caseToDelete, setCaseToDelete] = useState<{ id: string; title: string } | null>(null);
   const [sparringSessionToDelete, setSparringSessionToDelete] = useState<{ id: string; motion: string } | null>(null);
+  const [openCrossfireId, setOpenCrossfireId] = useState<string | null>(null);
+  const [crossfireToDelete, setCrossfireToDelete] = useState<{ id: string; title: string } | null>(null);
+  const [deletingCrossfire, setDeletingCrossfire] = useState(false);
+  const [crossfireDeleteError, setCrossfireDeleteError] = useState(false);
+  const openCrossfire = openCrossfireId ? store.savedCrossfires.find((item) => item.id === openCrossfireId) ?? null : null;
 
   useEffect(() => {
     void hydrateSparringSessions();
@@ -130,6 +140,22 @@ export default function HistoryPage() {
     setSparringSessionToDelete(null);
   };
 
+  // The dialog stays open while the delete runs and closes only once it lands.
+  const confirmDeleteCrossfire = () => {
+    if (!crossfireToDelete || deletingCrossfire) return;
+    const { id } = crossfireToDelete;
+    setDeletingCrossfire(true);
+    setCrossfireDeleteError(false);
+    store.deleteRecordedResult('crossfire', id)
+      .then(() => {
+        setCrossfireToDelete(null);
+        setOpenCrossfireId((open) => open === id ? null : open);
+        toast({ title: t('common.deleted', 'Deleted'), description: t('historyPage.crossfireDeleted', 'Crossfire round deleted.') });
+      })
+      .catch(() => setCrossfireDeleteError(true))
+      .finally(() => setDeletingCrossfire(false));
+  };
+
   return (
     <div className="container py-8 px-4">
       <div className="max-w-5xl mx-auto">
@@ -152,13 +178,14 @@ export default function HistoryPage() {
 
         {scope === OUTSIDE_DEBATES ? <UnsortedWork /> : (
         <Tabs value={tab} onValueChange={setTab} className="space-y-6">
-          <TabsList className="w-full justify-start overflow-x-auto">
-            <TabsTrigger value="cases" className="gap-2"><FileText className="h-4 w-4" /> {t('historyPage.tabCases')}</TabsTrigger>
-            <TabsTrigger value="chats" className="gap-2"><MessageCircle className="h-4 w-4" /> {t('historyPage.tabChats')}</TabsTrigger>
-            <TabsTrigger value="attacks" className="gap-2"><Zap className="h-4 w-4" /> {t('historyPage.tabAttacks')}</TabsTrigger>
-            <TabsTrigger value="brainstorms" className="gap-2"><Brain className="h-4 w-4" /> {t('historyPage.tabBrainstorms')}</TabsTrigger>
-            <TabsTrigger value="factoids" className="gap-2"><BookOpen className="h-4 w-4" /> {t('historyPage.tabFactoids')}</TabsTrigger>
-            <TabsTrigger value="sparring" className="gap-2"><Dumbbell className="h-4 w-4" /> {t('historyPage.tabSparring')}</TabsTrigger>
+          <TabsList className="h-auto w-full flex-wrap justify-start">
+            <TabsTrigger value="cases" className={TAB_CLASS}><FileText className="h-4 w-4" /> {t('historyPage.tabCases')}</TabsTrigger>
+            <TabsTrigger value="chats" className={TAB_CLASS}><MessageCircle className="h-4 w-4" /> {t('historyPage.tabChats')}</TabsTrigger>
+            <TabsTrigger value="attacks" className={TAB_CLASS}><Zap className="h-4 w-4" /> {t('historyPage.tabAttacks')}</TabsTrigger>
+            <TabsTrigger value="brainstorms" className={TAB_CLASS}><Brain className="h-4 w-4" /> {t('historyPage.tabBrainstorms')}</TabsTrigger>
+            <TabsTrigger value="factoids" className={TAB_CLASS}><BookOpen className="h-4 w-4" /> {t('historyPage.tabFactoids')}</TabsTrigger>
+            <TabsTrigger value="sparring" className={TAB_CLASS}><Dumbbell className="h-4 w-4" /> {t('historyPage.tabSparring')}</TabsTrigger>
+            <TabsTrigger value="crossfire" className={TAB_CLASS}><Flame className="h-4 w-4" /> {t('historyPage.tabCrossfire', 'Crossfire')}</TabsTrigger>
           </TabsList>
 
           <TabsContent value="cases">
@@ -365,8 +392,112 @@ export default function HistoryPage() {
               </CardContent>
             </Card>
           </TabsContent>
+          <TabsContent value="crossfire">
+            <Card>
+              <CardHeader>
+                <CardTitle>{t('historyPage.crossfireTitle', 'Crossfire rounds')}</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {savedCrossfires.length === 0 ? (
+                  <EmptyState
+                    icon={Flame}
+                    title={t('historyPage.emptyCrossfire', 'No Crossfire rounds yet')}
+                    description={t('historyPage.emptyCrossfireDesc', 'Finish a Crossfire round to review its transcript and debrief here.')}
+                    actionLabel={t('historyPage.startCrossfire', 'Start Crossfire')}
+                    onAction={() => navigate('/app/crossfire')}
+                  />
+                ) : (
+                  <div className={LIST_CLASS}>
+                    {savedCrossfires.map((item) => {
+                      const turns = parseSavedCrossfire(item.data)?.turns.length;
+                      return (
+                        <div key={item.id} data-testid="history-crossfire-row" className="flex items-center justify-between gap-4 rounded-lg border bg-card p-4 transition-colors hover:bg-accent/5">
+                          <div className="min-w-0 space-y-1">
+                            <h4 className="line-clamp-2 break-words font-semibold">{item.title}</h4>
+                            <p className="text-xs text-muted-foreground">
+                              {turns !== undefined && <>{t('historyPage.crossfireTurns', { count: turns })} • </>}
+                              {formatEuropeanDateTime(item.createdAt)}
+                            </p>
+                          </div>
+                          <div className="flex shrink-0 gap-2">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="pointer-coarse:h-11"
+                              onClick={() => setOpenCrossfireId(item.id)}
+                              aria-label={t('historyPage.openCrossfireAria', { title: item.title, defaultValue: 'Open Crossfire round: {{title}}' })}
+                            >
+                              <Eye className="mr-2 h-4 w-4" /> {t('historyPage.open', 'Open')}
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="text-destructive pointer-coarse:h-11 pointer-coarse:w-11"
+                              onClick={() => setCrossfireToDelete({ id: item.id, title: item.title })}
+                              aria-label={t('historyPage.deleteCrossfireAria', { title: item.title, defaultValue: 'Delete Crossfire round: {{title}}' })}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
         </Tabs>
         )}
+        <Sheet open={Boolean(openCrossfire)} onOpenChange={(open) => !open && setOpenCrossfireId(null)}>
+          <SheetContent side="right" className="flex w-full flex-col overflow-hidden p-0 sm:max-w-2xl">
+            {openCrossfire && (
+              <>
+                <SheetHeader className="border-b px-5 py-4 text-left">
+                  <SheetTitle className="pr-8 break-words">{openCrossfire.title}</SheetTitle>
+                  <SheetDescription>{t('historyPage.crossfireRound', 'Crossfire round')} • {formatEuropeanDateTime(openCrossfire.createdAt)}</SheetDescription>
+                </SheetHeader>
+                <div className="flex-1 overflow-y-auto px-5 py-5" data-testid="saved-crossfire">
+                  <SavedCrossfireView output={openCrossfire.data} />
+                </div>
+              </>
+            )}
+          </SheetContent>
+        </Sheet>
+        <AlertDialog
+          open={Boolean(crossfireToDelete)}
+          onOpenChange={(open) => {
+            if (open || deletingCrossfire) return;
+            setCrossfireToDelete(null);
+            setCrossfireDeleteError(false);
+          }}
+        >
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>{t('historyPage.deleteCrossfireTitle', 'Delete Crossfire round?')}</AlertDialogTitle>
+              <AlertDialogDescription>
+                {t('historyPage.deleteCrossfireDesc', 'This removes the transcript and debrief from your history.')}
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            {crossfireDeleteError && (
+              <p role="alert" className="text-sm text-destructive">{t('historyPage.crossfireDeleteFailed', 'Could not delete the Crossfire round.')}</p>
+            )}
+            <AlertDialogFooter>
+              <AlertDialogCancel disabled={deletingCrossfire}>{t('common.cancel', 'Cancel')}</AlertDialogCancel>
+              <AlertDialogAction
+                className={buttonVariants({ variant: 'destructive' })}
+                disabled={deletingCrossfire}
+                onClick={(event) => {
+                  event.preventDefault();
+                  confirmDeleteCrossfire();
+                }}
+              >
+                {deletingCrossfire && <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" />}
+                {t('common.delete', 'Delete')}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
         <AlertDialog open={Boolean(caseToDelete)} onOpenChange={(open) => !open && setCaseToDelete(null)}>
           <AlertDialogContent>
             <AlertDialogHeader>
