@@ -183,6 +183,7 @@ export async function handleRequest(req: Request): Promise<Response> {
       code: rateLimit.code,
       limit: rateLimit.limit,
       current: rateLimit.current,
+      units: rateLimit.units,
     }, rateLimit.statusCode || 402, corsHeaders);
   }
 

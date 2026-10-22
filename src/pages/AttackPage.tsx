@@ -141,6 +141,7 @@ export default function AttackPage() {
         variant={subError.limitModalVariant}
         limit={subError.limitModalLimit}
         current={subError.limitModalCurrent}
+        units={subError.limitModalUnits}
         onUpgrade={() => { subError.setLimitModalOpen(false); subError.setPricingModalOpen(true); }}
       />
       <ModelRestrictedModal

@@ -36,7 +36,8 @@ describe('security hardening regressions', () => {
   it('uses one server-only atomic quota reservation from every billable entrypoint', () => {
     expect(migration).toContain('ON CONFLICT (user_id, usage_date) DO UPDATE');
     expect(migration).toContain("auth.role() <> 'service_role'");
-    for (const source of [entitlements, importer]) expect(source).toContain('consume_daily_quota');
+    expect(entitlements).toContain('consume_ai_quota');
+    expect(importer).toContain('consume_daily_quota');
     expect(entitlements).toContain('Unable to verify your quota');
     expect(entitlements).not.toContain('return { allowed: true }; // Fail open');
     expect(entitlements).not.toContain('return { allowed: true };\n  } catch');
