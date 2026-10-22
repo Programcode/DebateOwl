@@ -636,8 +636,9 @@ export async function handleRequest(req: Request): Promise<Response> {
   });
 
   const startTime = Date.now();
-  // Usage from research sub-calls (search decision, follow-up queries) is
-  // collected here so the parent request's row accounts for every token.
+  // Usage from research sub-calls (search decision, follow-up queries, Exa
+  // searches and page reads) is collected here so the parent request's row
+  // accounts for every token and every paid call.
   const researchUsage: NormalizedUsage[] = [];
   let researchAccountingIncomplete = false;
   // A research step that finished, or failed after paid work. Claude refusing
@@ -652,6 +653,9 @@ export async function handleRequest(req: Request): Promise<Response> {
     signal: workSignal,
     onTimeout: () => {
       researchAccountingIncomplete = true;
+    },
+    onExaUsage: (usage) => {
+      researchUsage.push(usage);
     },
     callModel: async (args) => {
       try {

@@ -41,7 +41,7 @@ export async function handleAsk(ctx: FeatureContext): Promise<Response> {
   let urlContext = "";
   if (urls.size > 0) {
     const contents = await Promise.all(Array.from(urls).slice(0, 3).map(async (u) => {
-      const content = await exaGetContents(u, workSignal);
+      const content = await exaGetContents(u, workSignal, researchDeps.onExaUsage);
       return content.trim()
         ? `--- Content from ${u} ---\n${content}\n--- End of ${u} ---`
         : "";

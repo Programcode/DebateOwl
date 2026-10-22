@@ -3,6 +3,7 @@ import {
   markIncompleteUsage,
   mergeNormalizedUsage,
   normalizeElevenLabsUsage,
+  normalizeExaUsage,
   normalizeOpenRouterUsage,
   selectObservedUsage,
 } from "./cost.ts";
@@ -15,7 +16,68 @@ Deno.test("OpenRouter usage uses its reported account cost, including zero", () 
   });
   if (result.costUsd !== 0) throw new Error(`zero cost was discarded: ${result.costUsd}`);
   if (result.inputTokens !== 1000 || result.outputTokens !== 500) throw new Error("token counts lost");
-  if (result.costCalculationVersion !== "openrouter-usage-v1") throw new Error("wrong calculation version");
+  if (result.costCalculationVersion !== "openrouter-usage-v2") throw new Error("wrong calculation version");
+});
+
+// Shape copied from a staging Claude Haiku 5.5 row that v1 logged as $0.
+const BYOK_USAGE = {
+  prompt_tokens: 1527,
+  completion_tokens: 671,
+  cost: 0,
+  is_byok: true,
+  cost_details: {
+    upstream_inference_cost: 0.0004882,
+    upstream_inference_prompt_cost: 0.0001527,
+    upstream_inference_completions_cost: 0.0003355,
+  },
+};
+
+Deno.test("BYOK OpenRouter usage bills the upstream provider charge plus OpenRouter's fee", () => {
+  const free = calculateRequestCost({
+    provider: "openrouter",
+    model: "anthropic/claude-haiku-5.5",
+    usage: normalizeOpenRouterUsage(BYOK_USAGE),
+  });
+  if (free.costUsd !== 0.0004882) throw new Error(`BYOK upstream charge was not billed: ${free.costUsd}`);
+
+  const withFee = normalizeOpenRouterUsage({ ...BYOK_USAGE, cost: 0.0001 });
+  if (Math.abs((withFee.reportedCostUsd ?? -1) - 0.0005882) > 1e-12) {
+    throw new Error(`BYOK fee was not added to the upstream charge: ${withFee.reportedCostUsd}`);
+  }
+});
+
+Deno.test("BYOK OpenRouter usage without an upstream charge fails closed instead of logging $0", () => {
+  const { cost_details: _details, ...withoutUpstream } = BYOK_USAGE;
+  const result = calculateRequestCost({
+    provider: "openrouter",
+    model: "anthropic/claude-haiku-5.5",
+    usage: normalizeOpenRouterUsage(withoutUpstream),
+  });
+  if (result.costUsd !== null) throw new Error(`missing BYOK upstream cost was logged as ${result.costUsd}`);
+});
+
+Deno.test("Exa charges merge into the request row next to model usage", () => {
+  const search = normalizeExaUsage("search", { requestId: "s1", costDollars: { total: 0.007, search: { neural: 0.007 } } });
+  const read = normalizeExaUsage("contents", { requestId: "c1", costDollars: { total: 0.001 } });
+  const merged = mergeNormalizedUsage([normalizeOpenRouterUsage(BYOK_USAGE), search, read]);
+  const result = calculateRequestCost({ provider: "openrouter", model: "anthropic/claude-haiku-5.5", usage: merged });
+  if (Math.abs((result.costUsd ?? -1) - 0.0084882) > 1e-12) throw new Error(`Exa cost missing from total: ${result.costUsd}`);
+  if (result.inputTokens !== 1527) throw new Error("Exa usage changed token totals");
+  const calls = (result.rawUsage as { calls: Array<Record<string, unknown>> }).calls;
+  if (calls[1]?.provider !== "exa" || calls[1]?.endpoint !== "search" || calls[2]?.request_id !== "c1") {
+    throw new Error("per-call Exa audit entries were lost");
+  }
+});
+
+Deno.test("an Exa response without a charge makes the request cost unknown", () => {
+  const unpriced = normalizeExaUsage("search", { requestId: "s1", results: [] });
+  if (!unpriced.incomplete) throw new Error("missing Exa charge was not marked incomplete");
+  const result = calculateRequestCost({
+    provider: "openrouter",
+    model: "anthropic/claude-haiku-5.5",
+    usage: mergeNormalizedUsage([normalizeOpenRouterUsage(BYOK_USAGE), unpriced]),
+  });
+  if (result.costUsd !== null) throw new Error(`unpriced Exa call was treated as free: ${result.costUsd}`);
 });
 
 Deno.test("OpenRouter usage without a reported cost fails closed", () => {
@@ -255,4 +317,14 @@ Deno.test("ElevenLabs voice cost counts toward the cap", () => {
   const usage = normalizeElevenLabsUsage({ characters: 1000, characterCostHeader: "1000", requestId: null });
   const result = calculateRequestCost({ provider: "elevenlabs", model: "eleven_v4_turbo", usage });
   if (result.capCostUsd !== result.costUsd || result.costUsd === null) throw new Error("voice cost missing from the cap");
+});
+
+Deno.test("a BYOK call logs the provider charge but counts only OpenRouter's fee toward the cap", () => {
+  const byok = normalizeOpenRouterUsage({ ...BYOK_USAGE, cost: 0.0001 });
+  const result = calculateRequestCost({ provider: "openrouter", model: "anthropic/claude-sonnet-5.5", usage: byok });
+  if (Math.abs((result.costUsd ?? -1) - 0.0005882) > 1e-12) throw new Error(`logged cost wrong: ${result.costUsd}`);
+  if (result.capCostUsd !== 0.0001) throw new Error(`cap counted the BYOK provider charge: ${result.capCostUsd}`);
+  // A BYOK usage with no fee figure stays unknown for both, never the provider charge alone.
+  const noFee = normalizeOpenRouterUsage({ ...BYOK_USAGE, cost: undefined });
+  if (noFee.reportedCostUsd !== undefined || noFee.capCostUsd !== undefined) throw new Error("a BYOK call without a fee got a cost");
 });

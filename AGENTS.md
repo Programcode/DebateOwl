@@ -22,11 +22,20 @@ The local Supabase stack still uses shared default ports and container names. In
 - `supabase/migrations/` is the database history and schema source of truth.
 - `src/lib/stores/debate-store.ts` owns the Current Debate: every source and saved result belongs to one debate or to one-off work, and nothing crosses debates.
 - Collaborative Workspace is hidden. Its routes render only when `VITE_COLLABORATION_URL` is set, and production does not set it. Do not extend it unless Adam asks.
-- `.github/workflows/` owns CI behavior. `vercel.json` owns production hosting: build output, SPA fallback, cache policy, and security headers.
+- `.github/workflows/` owns CI behavior. `vercel.json` owns production hosting: build output, SPA fallback, cache policy, security headers, and which Git branches deploy.
 
 ## Deployment
 
 The frontend is hosted on Vercel at `https://debate.pi-stack.org`. Merging to `main` starts a Vercel production deployment, so a merge ships the frontend. Supabase migrations and Edge Functions are not deployed to production by that merge; production deploys are separate authorized operations. Staging syncs itself from `main` within about 5 minutes through a VPS timer; [docs/staging.md](docs/staging.md) is the one place for staging access, seed data, and the sync. `npm run backend:status` (read-only) lists what the linked project is missing; run it before any backend deploy.
+
+Vercel previews are opt-in. A push to `main` deploys both Vercel projects (production, and the staging project's site, which also tracks `main`). A push to any other branch does not create a deployment and does not count toward the daily cap. Request a hosted preview only when there is a real UI change to check. From the repo root, with the Vercel CLI logged in (`vercel login`, or `VERCEL_TOKEN` in the environment; never in the repo):
+
+```bash
+npx vercel link --yes --non-interactive --scope adam-gaborjanis-projects --project debatelab-staging
+npx vercel deploy --yes --non-interactive --scope adam-gaborjanis-projects
+```
+
+That preview is pinned to staging. Do not pass `--prod`, and do not run `vercel --yes` before the link: the first deploy of a new project is production. For a preview that uses production data, link `debate-navigator` instead. One preview is enough. Adam can create the same preview from the Vercel dashboard (Create Deployment, pick the branch, leave the target as Preview) without changing project settings. [docs/operations.md](docs/operations.md#opt-in-previews) has the detail.
 
 ## Normal ports
 
