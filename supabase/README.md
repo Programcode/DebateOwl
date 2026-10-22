@@ -38,6 +38,8 @@ Both endpoints accept an optional `debateContext` of IDs (`debateId`, `side`, `s
 
 Both endpoints route every model inference through OpenRouter and enforce the shared ten-model Basic/Pro catalog. Basic accounts get Claude Haiku 5.5 (the default), GPT-6 Luna, and Muse Spark 1.3 Contributor; Claude Opus 5.5 is the Pro default; Pro-only models require active Pro access. Retired catalog IDs from older clients resolve to their successor before validation.
 
+Claude runs only on DebateLab's own Anthropic key, added to OpenRouter as BYOK. [`_shared/provider-routing.ts`](functions/_shared/provider-routing.ts) sends `anthropic/*` requests with `provider: { only: ["anthropic"], allow_fallbacks: false }`, so Bedrock, Vertex and any other provider are never tried; other models keep OpenRouter's balanced routing. The request body cannot stop OpenRouter from serving Anthropic on its own credits when the key fails, so the key's **Shared capacity fallback** in OpenRouter must be set to "Never use shared capacity for any model on this provider". When a Claude call is refused, the endpoints answer 503 `provider_unavailable`, log `claude_unavailable`, and give the reserved daily request back through `refund_daily_quota`. A Claude response whose usage shows `is_byok: false` or a `cost` above zero logs a `claude_not_byok` warning; past the monthly BYOK allowance, OpenRouter's BYOK fee also shows as cost.
+
 The browser boundary is [`../src/lib/ai/client.ts`](../src/lib/ai/client.ts). Shared prompt, research, source-quality, cost, entitlement, CORS, and control logic lives in `_shared`.
 
 ### Content and sharing

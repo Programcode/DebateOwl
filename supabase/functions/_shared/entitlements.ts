@@ -197,6 +197,20 @@ export async function checkRateLimit(userId: string | null, model?: ModelSelecti
   }
 }
 
+/**
+ * Gives back the daily request checkRateLimit reserved, for a request the
+ * provider could not serve. A failed refund is logged, never thrown, so the
+ * student still gets the error response.
+ */
+export async function refundDailyQuota(userId: string) {
+  try {
+    const { error } = await supabase.rpc("refund_daily_quota", { p_user_id: userId });
+    if (error) throw error;
+  } catch (err) {
+    console.error("[RATE LIMIT] Quota refund failed:", err);
+  }
+}
+
 export async function logUsage(
   userId: string | null,
   feature: string,

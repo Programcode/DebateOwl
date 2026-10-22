@@ -20,7 +20,17 @@ import {
 } from "../_shared/cost.ts";
 import { HttpError, jsonError, requireUser } from "../_shared/auth.ts";
 import { getCorsHeaders } from "../_shared/cors.ts";
-import { checkRateLimit, logUsage } from "../_shared/entitlements.ts";
+import { checkRateLimit, logUsage, refundDailyQuota } from "../_shared/entitlements.ts";
+import {
+  CLAUDE_UNAVAILABLE_CODE,
+  CLAUDE_UNAVAILABLE_MESSAGE,
+  CLAUDE_UNAVAILABLE_STATUS,
+  ClaudeProviderUnavailableError,
+  isClaudeModel,
+  openRouterProviderOptions,
+  providerRequestError,
+  warnIfClaudeNotByok,
+} from "../_shared/provider-routing.ts";
 import { OPENROUTER_API_URL } from "../_shared/research.ts";
 import { MAX_ASK_HISTORY_MESSAGE_CHARS, MAX_ASK_HISTORY_MESSAGES, withPromptCaching } from "../_shared/prompt-budget.ts";
 import {
@@ -267,8 +277,7 @@ export async function handleRequest(req: Request): Promise<Response> {
           messages: withPromptCaching(model, messages),
           max_tokens: Math.min(modelEntry.maxTokens, MAX_REQUEST_OUTPUT_TOKENS),
           reasoning: { effort: reasoningEffort, exclude: true },
-          // Omitting sort and order keeps OpenRouter's balanced provider load balancing.
-          provider: { require_parameters: true },
+          provider: openRouterProviderOptions(model),
           stream: true,
           stream_options: { include_usage: true },
         };
@@ -281,7 +290,7 @@ export async function handleRequest(req: Request): Promise<Response> {
         });
         if (!response.ok || !response.body) {
           console.error(`[OpenRouter] Stream request failed (${response.status}):`, (await response.text()).slice(0, 2000));
-          throw new Error("AI provider request failed");
+          throw providerRequestError(model, response.status);
         }
 
         reader = response.body.getReader();
@@ -302,6 +311,10 @@ export async function handleRequest(req: Request): Promise<Response> {
             const message = providerError && typeof providerError === "object" && "message" in providerError
               ? (providerError as { message?: unknown }).message
               : providerError;
+            if (isClaudeModel(model)) {
+              console.error("[OpenRouter] Stream error:", typeof message === "string" ? message.slice(0, 2000) : "stream error");
+              throw providerRequestError(model, null);
+            }
             throw new Error(typeof message === "string" ? message : "OpenRouter stream error");
           }
           const delta = (Array.isArray(parsed.choices) ? parsed.choices[0] : undefined) as { delta?: { content?: string }; finish_reason?: unknown } | undefined;
@@ -353,12 +366,19 @@ export async function handleRequest(req: Request): Promise<Response> {
         if (!req.signal.aborted) {
           try { emit("final", { output, meta: { requestedModel, resolvedModel: model, ...(debateMeta ? { debateContext: debateMeta } : {}) } }); } catch { /* client disconnected after provider completion */ }
         }
+        warnIfClaudeNotByok(model, streamUsageRaw, "ai-stream");
         await logUsage(user.id, "ask", OPENROUTER_PROVIDER, model, collectUsage(), Date.now() - startedAt);
       } catch (err) {
         cancelUpstream();
         console.error("[AI_STREAM] Stream failed:", (err instanceof Error ? err.message : String(err)).slice(0, 2000));
         const isAbort = req.signal.aborted || (err instanceof DOMException && err.name === "AbortError");
-        if (!isAbort) {
+        // Claude runs only on the Anthropic key, with no fallback provider.
+        // When it fails the student gets an outage message and their request back.
+        const claudeUnavailable = !isAbort && err instanceof ClaudeProviderUnavailableError;
+        if (claudeUnavailable) {
+          try { emit("error", { message: CLAUDE_UNAVAILABLE_MESSAGE, code: CLAUDE_UNAVAILABLE_CODE, status: CLAUDE_UNAVAILABLE_STATUS }); } catch { /* client disconnected */ }
+          await refundDailyQuota(user.id);
+        } else if (!isAbort) {
           try { emit("error", { message: "AI streaming failed. Please try again.", code: "provider_error" }); } catch { /* client disconnected */ }
         }
         const observedUsage = collectUsage();
@@ -370,7 +390,7 @@ export async function handleRequest(req: Request): Promise<Response> {
           markIncompleteUsage(observedUsage),
           Date.now() - startedAt,
           isAbort ? "cancelled" : "error",
-          isAbort ? "client_abort" : "stream_error",
+          isAbort ? "client_abort" : claudeUnavailable ? "claude_unavailable" : "stream_error",
         );
       } finally {
         req.signal.removeEventListener("abort", clientAbortHandler);
