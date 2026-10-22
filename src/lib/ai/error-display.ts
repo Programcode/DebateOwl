@@ -1,5 +1,5 @@
 import i18n from '@/i18n';
-import { AIProviderError } from './client';
+import { AIProviderError, isAISubscriptionError } from './client';
 
 const PROVIDER_LABELS: Record<string, string> = {
   openai: 'OpenAI',
@@ -17,6 +17,12 @@ function providerLabel(provider?: string, message = ''): string {
 }
 
 export function getUserFacingAIError(error: unknown): string {
+  // Out of today's requests: the limit dialog's own words, not the server's English.
+  if (isAISubscriptionError(error)) {
+    if (error.code === 'trial_expired') return i18n.t('limitModal.trialEndedDesc');
+    return i18n.t('limitModal.limitReachedDesc', { current: error.current ?? 0, limit: error.limit ?? 0 });
+  }
+
   if (error instanceof AIProviderError || (error instanceof Error && error.name === 'AIProviderError')) {
     const provider = providerLabel((error as AIProviderError).provider, error.message);
     const raw = error.message;

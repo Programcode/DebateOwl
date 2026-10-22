@@ -642,7 +642,7 @@ export async function handleRequest(req: Request): Promise<Response> {
     },
     callModel: async (args) => {
       try {
-        const result = await callAI(args.provider, args.model, args.systemPrompt, args.messages, args.reasoningEffort, args.signal, undefined, args.outputSchema);
+        const result = await callAI(args.provider, args.model, args.systemPrompt, args.messages, args.reasoningEffort, "research", args.signal, undefined, args.outputSchema);
         // A provider that ignores cancellation must not append usage after the
         // research timeout has already been finalized by the parent request.
         if (result.usage && !args.signal?.aborted) researchUsage.push(result.usage);
@@ -759,11 +759,12 @@ export async function handleRequest(req: Request): Promise<Response> {
           return await handleAttack(ctx);
       }
 
-      // Fallback for any other feature
+      // Fallback for any other feature. Without its own cap it gets the
+      // largest one, a full case.
       const systemPrompt = await buildSystemPromptFor(feature);
       const userPrompt = buildUserPrompt(feature, sanitizedInput, "");
       const messages = [{ role: "user", content: userPrompt }];
-      const fallbackResult = recordMainResult(await callAI(provider, model, systemPrompt, messages, reasoningEffort, workSignal, stream));
+      const fallbackResult = recordMainResult(await callAI(provider, model, systemPrompt, messages, reasoningEffort, "generate", workSignal, stream));
       const output = cleanGeneratedText(fallbackResult.output);
 
       const latencyMs = Date.now() - startTime;

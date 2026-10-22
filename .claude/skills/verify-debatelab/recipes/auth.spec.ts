@@ -37,3 +37,32 @@ test("auth-email-otp: an emailed one-time code signs an existing account in", as
   await expect(page).toHaveURL(/\/app/);
   await evidence.shot("02-signed-in-by-email");
 });
+
+test("auth-session-expired: a session the server revoked signs out to the login page with a message", async ({ signedIn: page, evidence }) => {
+  await page.goto("/app");
+  await expect(page).toHaveURL(/\/app$/);
+  // Like an account deleted in another tab or a password reset: the stored
+  // tokens are still there, but the server refuses both of them.
+  await page.evaluate(() => {
+    const key = Object.keys(localStorage).find((name) => /^debate-auth-[a-z]+$/.test(name));
+    if (!key) throw new Error("no stored session");
+    const stored = JSON.parse(localStorage.getItem(key)!) as Record<string, unknown>;
+    const header = btoa(JSON.stringify({ alg: "HS256", typ: "JWT" })).replace(/=+$/, "");
+    const claims = btoa(JSON.stringify({ sub: "00000000-0000-4000-8000-000000000000", exp: Math.floor(Date.now() / 1000) + 3000 })).replace(/=+$/, "");
+    localStorage.setItem(key, JSON.stringify({
+      ...stored,
+      access_token: `${header}.${claims}.invalid-signature`,
+      refresh_token: "x",
+      expires_at: Math.floor(Date.now() / 1000) + 3000,
+    }));
+  });
+  await evidence.step("Replaced the stored session with tokens the server refuses");
+  await page.reload();
+  await expect(page).toHaveURL(/\/login/, { timeout: 15_000 });
+  await expect(page.getByRole("status").filter({ hasText: "Your session expired. Sign in again." })).toBeVisible();
+  await evidence.shot("01-login-session-expired");
+  await evidence.aria("01-login-session-expired");
+  // The notice is for this sign-out only.
+  await page.reload();
+  await expect(page.getByText("Your session expired. Sign in again.")).toHaveCount(0);
+});

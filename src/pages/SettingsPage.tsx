@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Settings, Lock, Trash2, Crown, CreditCard, Zap, Shield, Download, UserX } from 'lucide-react';
+import type { User } from '@supabase/supabase-js';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
@@ -48,13 +49,35 @@ const tierLabels: Record<string, { labelKey: string; color: string }> = {
   expired: { labelKey: 'settings.tierExpired', color: 'border-destructive/30 bg-destructive/10 text-destructive' },
 };
 
+/** How this account signs in, from what Auth recorded for it (not only this session). */
+function signInMethodKey(user: User | null): string | null {
+  const meta = user?.app_metadata;
+  if (!meta) return null;
+  if (typeof meta.demo_access_code_id === 'string') return 'settings.signInDemo';
+  const providers: unknown[] = Array.isArray(meta.providers) ? meta.providers : [meta.provider];
+  const google = providers.includes('google');
+  const email = providers.includes('email');
+  if (google && email) return 'settings.signInGoogleOrEmail';
+  if (google) return 'settings.signInGoogle';
+  if (email) return 'settings.signInEmail';
+  return null;
+}
+
+/** The next midnight UTC, when the daily AI requests refresh, on the reader's clock. */
+function dailyResetTime(locale: string): string {
+  const now = new Date();
+  const reset = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1));
+  return reset.toLocaleTimeString(locale, { hour: 'numeric', minute: '2-digit' });
+}
+
 export default function SettingsPage() {
   const { language, setLanguage, outputLanguage, setOutputLanguage, theme, setTheme } = useSettingsStore();
   const { clearSession, clearAllData } = useSessionStore();
   const resetSparringLocalData = useSparringStore((state) => state.resetLocalData);
   const { user, signOut } = useAuth();
   const { toast } = useToast();
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const signInMethod = signInMethodKey(user);
   const subscription = useSubscription();
   const [pricingOpen, setPricingOpen] = useState(false);
   const [portalLoading, setPortalLoading] = useState(false);
@@ -279,6 +302,15 @@ export default function SettingsPage() {
                 <p className="text-sm text-muted-foreground">
                   {t(subscription.tier === 'expired' ? 'settings.accessExpired' : 'settings.accessActive')}
                 </p>
+                {subscription.remainingToday !== null && subscription.dailyLimit > 0 && (
+                  <p data-testid="daily-usage" className="text-sm text-muted-foreground">
+                    {t('dailyLimit.usage', {
+                      used: Math.min(subscription.dailyUsed, subscription.dailyLimit),
+                      limit: subscription.dailyLimit,
+                      time: dailyResetTime(i18n.language),
+                    })}
+                  </p>
+                )}
               </>
             )}
           </CardContent>
@@ -351,6 +383,7 @@ export default function SettingsPage() {
               <div className="min-w-0">
                 <p className="text-sm text-muted-foreground">{t('settings.signedInAs')}</p>
                 <p className="font-medium break-all">{user?.email || t('settings.unknownUser')}</p>
+                {signInMethod && <p data-testid="sign-in-method" className="text-xs text-muted-foreground">{t(signInMethod)}</p>}
               </div>
               <Button variant="outline" className="shrink-0" onClick={handleSignOut} disabled={signingOut}>
                 {signingOut ? t('settings.signingOut', 'Signing out…') : t('settings.signOut')}

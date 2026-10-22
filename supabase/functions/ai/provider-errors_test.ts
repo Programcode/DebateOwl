@@ -74,7 +74,7 @@ Deno.test("common JSON slips are repaired locally instead of paying for a retry"
   assertEquals(performance.now() - started < 1_000, true);
 });
 
-Deno.test("a reply cut at the output cap is not retried, and a schema is sent as strict json_schema", async () => {
+Deno.test("a reply cut at its cap is retried once with a larger cap, keeping the strict json_schema", async () => {
   const { callAI } = await import("./provider.ts");
   const originalFetch = globalThis.fetch;
   const bodies: Array<Record<string, unknown>> = [];
@@ -88,10 +88,15 @@ Deno.test("a reply cut at the output cap is not retried, and a schema is sent as
   try {
     const schema = { name: "follow_up_queries", schema: { type: "object" } };
     const error = await assertRejects(() =>
-      callAI("openrouter", "openai/gpt-6-luna", "system", [{ role: "user", content: "hi" }], "low", undefined, undefined, schema)
+      callAI("openrouter", "openai/gpt-6-luna", "system", [{ role: "user", content: "hi" }], "low", "research", undefined, undefined, schema)
     ) as { usage?: { inputTokens?: number } };
-    assertEquals(bodies.length, 1);
-    assertEquals(bodies[0].response_format, { type: "json_schema", json_schema: { name: "follow_up_queries", strict: true, schema: { type: "object" } } });
-    assertEquals(error.usage?.inputTokens, 10);
+    // One cut-off retry with a larger cap, never a repair-prompt retry on top.
+    assertEquals(bodies.length, 2);
+    for (const body of bodies) {
+      assertEquals(body.response_format, { type: "json_schema", json_schema: { name: "follow_up_queries", strict: true, schema: { type: "object" } } });
+    }
+    assertEquals((bodies[1].max_tokens as number) > (bodies[0].max_tokens as number), true);
+    // Both attempts are billed.
+    assertEquals(error.usage?.inputTokens, 20);
   } finally { globalThis.fetch = originalFetch; }
 });
