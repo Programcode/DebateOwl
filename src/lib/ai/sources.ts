@@ -1,4 +1,5 @@
 import {
+  DuplicateSourceError,
   useSessionStore,
   type SourceAssessmentUpdate,
   type SourceProvenance,
@@ -7,6 +8,7 @@ import {
 import { activeDebateId } from '../stores/debate-store';
 import { toast } from '@/hooks/use-toast';
 import { validateUrl } from '@/lib/validation/url';
+import { findSavedPage, normalizeSourceUrl } from '@/lib/source-url';
 import i18n from '@/i18n';
 
 /** A web source discovered during research, with auditable ranking metadata from the edge function. */
@@ -117,36 +119,7 @@ export function parseSourceAssessments(value: unknown): SourceAssessmentUpdate[]
 
 type AutosaveFeature = 'generate' | 'attack' | 'brainstorm' | 'factoids';
 
-// Query parameters that only say where a click came from. Two links that differ
-// only in these open the same page.
-const TRACKING_PARAMS = /^(utm_.+|fbclid|gclid|dclid|gbraid|wbraid|msclkid|yclid|mc_cid|mc_eid|igshid|_ga|_gl|ref_src)$/i;
-
-/**
- * One key per web page: the host lower-cased without "www.", no scheme, no
- * fragment, no tracking parameters, no trailing slash. Null when it is not a URL.
- */
-export function normalizeSourceUrl(url: string): string | null {
-  let parsed: URL;
-  try {
-    parsed = new URL(url.trim());
-  } catch {
-    return null;
-  }
-  if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') return null;
-  const host = parsed.host.toLowerCase().replace(/^www\./, '');
-  const params = new URLSearchParams();
-  parsed.searchParams.forEach((value, key) => {
-    if (!TRACKING_PARAMS.test(key)) params.append(key, value);
-  });
-  const query = params.toString();
-  const path = parsed.pathname.replace(/\/+$/, '');
-  return `${host}${path}${query ? `?${query}` : ''}`;
-}
-
-function savedSourceUrl(source: { origin?: string; metadata?: { url?: string } }): string | null {
-  const url = source.metadata?.url ?? source.origin;
-  return url ? normalizeSourceUrl(url) : null;
-}
+export { normalizeSourceUrl };
 
 // Generate, Attack, Brainstorm and Factoids can finish at the same time. Each
 // batch waits for the one before it, so it sees the rows that batch saved.
@@ -176,6 +149,7 @@ async function autosaveBatch(sources: DiscoveredSource[], capturedVia: AutosaveF
   });
   if (retainedSources.length === 0) return;
 
+  let added = 0;
   for (const source of retainedSources) {
     const session = useSessionStore.getState();
     const metadata = {
@@ -187,10 +161,7 @@ async function autosaveBatch(sources: DiscoveredSource[], capturedVia: AutosaveF
       ...(source.semantic !== undefined ? { semantic: source.semantic } : {}),
       capturedVia,
     };
-    const key = normalizeSourceUrl(source.url);
-    const existing = key
-      ? session.sourceLibrary.find((saved) => saved.debateId === targetDebateId && savedSourceUrl(saved) === key)
-      : undefined;
+    const existing = findSavedPage(session.sourceLibrary, targetDebateId, source.url);
     try {
       if (existing) {
         // Already in this debate's Library: refresh what research learned about
@@ -211,7 +182,10 @@ async function autosaveBatch(sources: DiscoveredSource[], capturedVia: AutosaveF
         isActive: source.qualityLabel === 'strong' || source.qualityLabel === 'moderate',
         metadata,
       });
-    } catch {
+      added += 1;
+    } catch (error) {
+      // Another tab saved this page first; the debate already has it.
+      if (error instanceof DuplicateSourceError) continue;
       toast({
         title: i18n.t('aiClient.sourceSaveFailed'),
         description: i18n.t('aiClient.sourceSaveFailedDesc', { title: source.title }),
@@ -219,5 +193,11 @@ async function autosaveBatch(sources: DiscoveredSource[], capturedVia: AutosaveF
       });
     }
   }
-  console.log(`[AI Client] Saved ${retainedSources.length} sources to library`);
+  // Research changes what grounds the next request, so say so.
+  if (added > 0) {
+    toast({
+      title: i18n.t('aiClient.sourcesAutoSaved', { count: added }),
+      description: i18n.t('aiClient.sourcesAutoSavedDesc'),
+    });
+  }
 }

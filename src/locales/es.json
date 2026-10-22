@@ -254,7 +254,10 @@
     "autoSavedFolder": "Guardado automáticamente",
     "sourceSaveFailed": "No se pudo guardar la fuente",
     "sourceSaveFailedDesc": "No se pudo guardar “{{title}}” en tu biblioteca.",
-    "sourceAssessmentSaveFailed": "No se pudo guardar la clasificación de fuentes."
+    "sourceAssessmentSaveFailed": "No se pudo guardar la clasificación de fuentes.",
+    "sourcesAutoSaved_one": "Se añadió {{count}} fuente a tu biblioteca",
+    "sourcesAutoSaved_other": "Se añadieron {{count}} fuentes a tu biblioteca",
+    "sourcesAutoSavedDesc": "Las encontró la investigación. Están en la carpeta Guardado automáticamente, y las activadas fundamentan tus próximas solicitudes."
   },
   "generatedArtifacts": {
     "brainstormTitle": "Lluvia de ideas",
@@ -1615,7 +1618,24 @@
     "caseDeleted": "Se eliminó el caso guardado.",
     "deleteCaseDesc": "Esto eliminará el caso guardado de tu historial.",
     "deleteCaseTitle": "¿Eliminar el caso guardado?",
-    "deleteFailed": "No se pudo eliminar el caso guardado."
+    "deleteFailed": "No se pudo eliminar el caso guardado.",
+    "tabCrossfire": "Interrogatorio",
+    "crossfireTitle": "Rondas de interrogatorio",
+    "emptyCrossfire": "Aún no hay rondas de interrogatorio",
+    "emptyCrossfireDesc": "Termina una ronda de interrogatorio para revisar aquí su transcripción y su análisis.",
+    "startCrossfire": "Empezar interrogatorio",
+    "crossfireTurns_one": "{{count}} turno",
+    "crossfireTurns_other": "{{count}} turnos",
+    "open": "Abrir",
+    "crossfireRound": "Ronda de interrogatorio",
+    "deleteCrossfireAria": "Eliminar ronda de interrogatorio: {{title}}",
+    "deleteCrossfireTitle": "¿Eliminar la ronda de interrogatorio?",
+    "deleteCrossfireDesc": "Esto elimina la transcripción y el análisis de tu historial.",
+    "crossfireDeleted": "Ronda de interrogatorio eliminada.",
+    "crossfireDeleteFailed": "No se pudo eliminar la ronda de interrogatorio.",
+    "crossfireUnreadable": "Esta ronda se guardó en un formato antiguo y no se puede mostrar.",
+    "crossfireNoDebrief": "Esta ronda no tiene análisis.",
+    "openCrossfireAria": "Abrir ronda de interrogatorio: {{title}}"
   },
   "libraryPage": {
     "title": "Biblioteca de fuentes",
@@ -1716,7 +1736,16 @@
     "mergeFolderTitle": "¿Fusionar con {{name}}?",
     "mergeFolders": "Fusionar carpetas",
     "mergeFailed": "No se pudieron fusionar las carpetas. Inténtalo de nuevo.",
-    "openOrigin": "Abrir {{title}} en una pestaña nueva"
+    "openOrigin": "Abrir {{title}} en una pestaña nueva",
+    "savingSource": "Guardando…",
+    "offlineTitle": "Cambio no guardado",
+    "offlineNotSaved": "Estás sin conexión. Vuelve a conectarte e inténtalo de nuevo.",
+    "toggleFailed": "No se pudo cambiar esta fuente",
+    "toggleFailedDesc": "Volvió a como estaba. Inténtalo de nuevo.",
+    "sourceSaved": "{{title}} se guardó en la biblioteca",
+    "duplicateUrlDesc": "Esta página ya está en la biblioteca de este debate.",
+    "loadingSources": "Cargando fuentes…",
+    "folderUpdateFailed": "No se pudo cambiar esta carpeta"
   },
   "autoSavedSources": {
     "undo": "Deshacer fuentes autoguardadas",
@@ -2271,7 +2300,7 @@
     "deleted": "Debate eliminado",
     "deleteFailed": "No se pudo eliminar el debate",
     "lastActivity": "Última actividad {{when}}",
-    "counts": "{{sources}} fuentes · {{outputs}} resultados",
+    "counts": "{{sources}} fuentes ({{active}} activas) · {{outputs}} resultados",
     "menuAria": "Debate actual: {{motion}}",
     "open": "Abrir debate",
     "useOneOff": "Usar modo puntual",

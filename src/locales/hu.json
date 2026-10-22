@@ -254,7 +254,10 @@
     "autoSavedFolder": "Automatikusan mentett",
     "sourceSaveFailed": "A forrás mentése sikertelen",
     "sourceSaveFailedDesc": "Nem sikerült a(z) „{{title}}” forrást a könyvtárba menteni.",
-    "sourceAssessmentSaveFailed": "A forrásrangsor mentése nem sikerült."
+    "sourceAssessmentSaveFailed": "A forrásrangsor mentése nem sikerült.",
+    "sourcesAutoSaved_one": "{{count}} forrás került a könyvtáradba",
+    "sourcesAutoSaved_other": "{{count}} forrás került a könyvtáradba",
+    "sourcesAutoSavedDesc": "A kutatás találta őket. Az Automatikusan mentett mappában vannak, és a bekapcsoltak alapozzák a következő kéréseidet."
   },
   "generatedArtifacts": {
     "brainstormTitle": "Ötletelés",
@@ -1615,7 +1618,24 @@
     "caseDeleted": "A mentett eset törölve.",
     "deleteCaseDesc": "Ezzel eltávolítod a mentett esetet az előzményeidből.",
     "deleteCaseTitle": "Törlöd a mentett esetet?",
-    "deleteFailed": "Nem sikerült törölni a mentett esetet."
+    "deleteFailed": "Nem sikerült törölni a mentett esetet.",
+    "tabCrossfire": "Keresztkérdezés",
+    "crossfireTitle": "Keresztkérdezési körök",
+    "emptyCrossfire": "Még nincs keresztkérdezési kör",
+    "emptyCrossfireDesc": "Fejezz be egy keresztkérdezési kört, és itt visszanézheted az átiratát és az értékelését.",
+    "startCrossfire": "Keresztkérdezés indítása",
+    "crossfireTurns_one": "{{count}} kör",
+    "crossfireTurns_other": "{{count}} kör",
+    "open": "Megnyitás",
+    "crossfireRound": "Keresztkérdezési kör",
+    "deleteCrossfireAria": "Keresztkérdezési kör törlése: {{title}}",
+    "deleteCrossfireTitle": "Törlöd a keresztkérdezési kört?",
+    "deleteCrossfireDesc": "Ez eltávolítja az átiratot és az értékelést az előzményeidből.",
+    "crossfireDeleted": "Keresztkérdezési kör törölve.",
+    "crossfireDeleteFailed": "Nem sikerült törölni a keresztkérdezési kört.",
+    "crossfireUnreadable": "Ezt a kört régebbi formátumban mentették, ezért nem jeleníthető meg.",
+    "crossfireNoDebrief": "Ehhez a körhöz nincs értékelés.",
+    "openCrossfireAria": "Keresztkérdezési kör megnyitása: {{title}}"
   },
   "libraryPage": {
     "title": "Forráskönyvtár",
@@ -1716,7 +1736,16 @@
     "mergeFolderTitle": "Összevonod ezzel: {{name}}?",
     "mergeFolders": "Mappák összevonása",
     "mergeFailed": "Nem sikerült összevonni a mappákat. Próbáld újra.",
-    "openOrigin": "{{title}} megnyitása új lapon"
+    "openOrigin": "{{title}} megnyitása új lapon",
+    "savingSource": "Mentés…",
+    "offlineTitle": "A változás nem mentődött",
+    "offlineNotSaved": "Nincs internetkapcsolat. Csatlakozz újra, és próbáld meg ismét.",
+    "toggleFailed": "Nem sikerült módosítani ezt a forrást",
+    "toggleFailedDesc": "Visszaállt a korábbi állapotra. Próbáld újra.",
+    "sourceSaved": "A(z) {{title}} bekerült a könyvtárba",
+    "duplicateUrlDesc": "Ez az oldal már szerepel ennek a vitának a könyvtárában.",
+    "loadingSources": "Források betöltése…",
+    "folderUpdateFailed": "Nem sikerült módosítani ezt a mappát"
   },
   "autoSavedSources": {
     "undo": "Automatikus források visszavonása",
@@ -2271,7 +2300,7 @@
     "deleted": "Vita törölve",
     "deleteFailed": "Nem sikerült törölni a vitát",
     "lastActivity": "Utolsó tevékenység: {{when}}",
-    "counts": "{{sources}} forrás · {{outputs}} eredmény",
+    "counts": "{{sources}} forrás ({{active}} aktív) · {{outputs}} eredmény",
     "menuAria": "Aktuális vita: {{motion}}",
     "open": "Vita megnyitása",
     "useOneOff": "Egyszeri mód használata",
