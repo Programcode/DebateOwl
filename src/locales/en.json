@@ -445,6 +445,13 @@
     "manageSubscription": "Manage Subscription",
     "setUpBilling": "Set Up Billing",
     "upgradeToPro": "Upgrade to Pro",
+    "confirmingSubscription": "Confirming your Pro subscription…",
+    "checkoutCanceled": "Checkout canceled",
+    "checkoutCanceledDesc": "No charge was made.",
+    "checkoutConfirmed": "You're on Pro",
+    "checkoutConfirmedDesc": "Your subscription is active.",
+    "checkoutConfirmSlowTitle": "Still waiting on Stripe",
+    "checkoutConfirmSlow": "Stripe hasn't confirmed the payment yet. This page will catch up after a refresh.",
     "accessActive": "AI access is active. Usage limits may apply.",
     "accessExpired": "Your access has expired. Upgrade to continue using AI tools.",
     "globalSettings": "Global Settings",
@@ -1332,7 +1339,8 @@
     "limitReachedDesc": "You've used {{current}} of {{limit}} included AI uses today. Access refreshes at midnight UTC.",
     "upgrade": "Upgrade to Pro - $5/mo",
     "upgradeNote": "More AI prep access + high reasoning",
-    "notNow": "Not now"
+    "notNow": "Not now",
+    "gotIt": "OK"
   },
   "modelModal": {
     "title": "Pro Reasoning",
@@ -1601,6 +1609,7 @@
     "newFolderPlaceholder": "Folder name...",
     "newFolderHint": "Need a new folder? Use the \"New folder\" button up top.",
     "createFolder": "Create folder",
+    "saveFailed": "Could not save this source.",
     "sortBy": "Sort by",
     "sortSmart": "Smart",
     "sortMostUsed": "Most used",

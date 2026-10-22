@@ -183,6 +183,7 @@ describe("Vercel frontend deployment configuration", () => {
     expect(serviceWorker).not.toContain("'/app/sparring'");
     expect(serviceWorker).toContain("'/favicon-72.png'");
     expect(serviceWorker).toContain('cache.put(request, response.clone())');
+    expect(serviceWorker).toContain('htmlMislabeledAsAsset');
     expect(serviceWorker).not.toContain('self.skipWaiting()');
   });
 
