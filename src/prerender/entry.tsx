@@ -6,7 +6,7 @@ import { StaticRouter } from 'react-router-dom';
 import i18n from '@/i18n';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { AuthContext, type AuthContextValue } from '@/lib/supabase/auth-context';
-import { BRAND, ORGANIZATION, PAGE_HEADS, PRODUCT, SITE_ORIGIN, type PageHead, type PrerenderedRoute } from '@/lib/seo/pages';
+import { BRAND, DEFINITION, ORGANIZATION, PAGE_HEADS, PRICING, PRODUCT, SITE_ORIGIN, factsAsOf, type PageHead, type PrerenderedRoute } from '@/lib/seo/pages';
 import LandingPage from '@/pages/LandingPage';
 import TermsPage from '@/pages/TermsPage';
 import PrivacyPage from '@/pages/PrivacyPage';
@@ -63,8 +63,20 @@ function webPage(route: PrerenderedRoute, dateModified: string | undefined) {
   };
 }
 
+/** The landing page's visible questions and answers, in the order the page shows them. */
+function landingQuestions(): Array<[string, string]> {
+  const asOf = factsAsOf('en');
+  return [
+    [i18n.t('shortAnswer.question'), i18n.t('shortAnswer.answer', { asOf })],
+    [i18n.t('faq.q6'), i18n.t('faq.a6')],
+    [i18n.t('faq.q1'), i18n.t('faq.a1', { asOf })],
+    ...[2, 3, 4, 5].map((n): [string, string] => [i18n.t(`faq.q${n}`), i18n.t(`faq.a${n}`)]),
+  ];
+}
+
+const PREP_MODES = ['generate', 'attack', 'brainstorm', 'factoids', 'ask', 'crossfire', 'sparring', 'library', 'timer', 'flowchart', 'history'];
+
 function landingStructuredData(dateModified: string | undefined) {
-  const price = i18n.t('pricing.proPrice').replace(/[^\d.]/g, '');
   return {
     '@context': 'https://schema.org',
     '@graph': [
@@ -91,11 +103,43 @@ function landingStructuredData(dateModified: string | undefined) {
         operatingSystem: 'Web',
         url: `${SITE_ORIGIN}/`,
         image: `${SITE_ORIGIN}/hero-visual.png`,
-        description: PAGE_HEADS['/'].description,
-        offers: { '@type': 'Offer', price, priceCurrency: 'USD' },
+        description: DEFINITION,
+        inLanguage: ['en', 'es', 'hu'],
+        featureList: PREP_MODES.map((mode) => i18n.t(`features.${mode}`)),
+        offers: [
+          {
+            '@type': 'Offer',
+            name: 'Free trial',
+            price: '0',
+            priceCurrency: PRICING.currency,
+            description: `${PRICING.trialDays}-day free trial, no credit card required.`,
+          },
+          {
+            '@type': 'Offer',
+            name: 'Pro',
+            price: PRICING.proMonthly,
+            priceCurrency: PRICING.currency,
+            description: 'Monthly subscription, billed plus tax.',
+            priceSpecification: {
+              '@type': 'UnitPriceSpecification',
+              price: PRICING.proMonthly,
+              priceCurrency: PRICING.currency,
+              billingDuration: 'P1M',
+              valueAddedTaxIncluded: false,
+            },
+          },
+        ],
         publisher: { '@id': ORGANIZATION_ID },
       },
       webPage('/', dateModified),
+      {
+        '@type': 'FAQPage',
+        mainEntity: landingQuestions().map(([name, text]) => ({
+          '@type': 'Question',
+          name,
+          acceptedAnswer: { '@type': 'Answer', text },
+        })),
+      },
     ],
   };
 }

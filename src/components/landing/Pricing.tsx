@@ -3,9 +3,10 @@ import { Reveal } from "./Reveal";
 import { Check, Crown, Sparkles, Zap } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useRoutePrefetch } from "@/hooks/use-route-prefetch";
+import { factsAsOf } from "@/lib/seo/pages";
 
 const Pricing = () => {
-    const { t } = useTranslation();
+    const { t, i18n } = useTranslation();
     const appPrefetch = useRoutePrefetch("/app");
 
     const TRIAL_FEATURES = [
@@ -53,14 +54,14 @@ const Pricing = () => {
                         <ul className="mt-6 space-y-3">
                             {TRIAL_FEATURES.map((feature) => (
                                 <li key={feature} className="flex items-start gap-2 text-sm text-foreground/90">
-                                    <Check className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+                                    <Check aria-hidden="true" className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
                                     <span>{feature}</span>
                                 </li>
                             ))}
                         </ul>
 
                         <Link to="/app" {...appPrefetch} className="btn-secondary-outline mt-8 inline-flex w-full items-center justify-center gap-2 py-3">
-                            <Zap className="h-4 w-4" />
+                            <Zap aria-hidden="true" className="h-4 w-4" />
                             {t('pricing.startTrial')}
                         </Link>
                     </div>
@@ -69,7 +70,7 @@ const Pricing = () => {
                     <Reveal delay={0.05}>
                     <div className="relative h-full rounded-2xl border-2 border-primary/45 bg-card p-7 shadow-xl ring-1 ring-primary/10 transition-[border-color,box-shadow] duration-200 hover:border-primary/60">
                         <div className="absolute -top-4 left-6 inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary/10 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-primary">
-                            <Sparkles className="h-3.5 w-3.5" />
+                            <Sparkles aria-hidden="true" className="h-3.5 w-3.5" />
                             {t('pricing.recommended')}
                         </div>
 
@@ -87,14 +88,14 @@ const Pricing = () => {
                         <ul className="mt-6 space-y-3">
                             {PRO_FEATURES.map((feature) => (
                                 <li key={feature} className="flex items-start gap-2 text-sm text-foreground/90">
-                                    <Check className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+                                    <Check aria-hidden="true" className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
                                     <span>{feature}</span>
                                 </li>
                             ))}
                         </ul>
 
                         <Link to="/app" {...appPrefetch} className="btn-primary-gradient mt-8 inline-flex w-full items-center justify-center gap-2 py-3">
-                            <Crown className="relative z-10 h-4 w-4" />
+                            <Crown aria-hidden="true" className="relative z-10 h-4 w-4" />
                             <span className="relative z-10">{t('pricing.subscribe')}</span>
                         </Link>
                     </div>
@@ -102,7 +103,7 @@ const Pricing = () => {
                 </div>
 
                 <p className="mt-7 text-center text-sm text-muted-foreground">
-                    {t('pricing.noFreePlan')}
+                    {t('pricing.noFreePlan')} {t('pricing.asOf', { asOf: factsAsOf(i18n.language) })}
                 </p>
             </div>
         </section>

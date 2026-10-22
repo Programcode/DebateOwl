@@ -837,7 +837,10 @@
   "footer": {
     "terms": "Feltételek",
     "privacy": "Adatvédelem",
-    "copyright": "© 2026 DebateLab by Pi-Stack. Minden jog fenntartva."
+    "copyright": "© 2026 DebateLab by Pi-Stack. Minden jog fenntartva.",
+    "navLabel": "Lábléc",
+    "pricingGuide": "Árak részletei",
+    "compareTools": "MI-alapú vitaeszközök összehasonlítása"
   },
   "announcements": {
     "regionLabel": "Közlemény",
@@ -846,8 +849,8 @@
     "dismissError": "A közleményt nem sikerült bezárni."
   },
   "hero": {
-    "headline": "Készülj gyorsabban. Érvelj okosabban. Nyerj több fordulót.",
-    "subheadline": "MI-alapú vitafelkészülés, ami előnyt ad minden fordulóban.",
+    "headline": "Készíts eseteket és gyakorolj fordulókat MI-vel",
+    "subheadline": "A DebateLab egy MI-alapú vitafelkészítő és gyakorló alkalmazás diákoknak és versenyvitázóknak, amely strukturált eseteket épít, megtalálja az érvek gyenge pontjait, hivatkozásokkal kutat bizonyítékokat, és időzített gyakorlófordulókat futtat egy MI-ellenféllel szemben.",
     "trialBadge": "3 napos ingyenes próba",
     "requestsBadge": "Napi MI-felkészülés",
     "requestsBadgeValue": "Benne van",
@@ -970,12 +973,13 @@
     "trialBadge": "Új felhasználóknak",
     "trialDesc": "Próbáld ki a teljes munkafolyamatot, mielőtt a Pro mellett döntesz.",
     "proBadge": "Haladó felhasználóknak",
-    "proDesc": "Intenzív felkészülési hetekhez, nehezebb témákhoz és magasabb napi kerethez."
+    "proDesc": "Intenzív felkészülési hetekhez, nehezebb témákhoz és magasabb napi kerethez.",
+    "asOf": "Árak: {{asOf}} állapot szerint."
   },
   "faq": {
     "title": "Gyakran ismételt kérdések",
     "q1": "Mennyibe kerül a DebateLab?",
-    "a1": "A DebateLab 3 napos ingyenes próbát kínál. Ezután a Pro $5/hó + adó bővített hozzáférést és mind a 10 modellt kínálja.",
+    "a1": "{{asOf}} állapot szerint a DebateLab 3 napos ingyenes próbát kínál bankkártya nélkül. Ezután a Pro $5/hó + adó, bővített hozzáféréssel és mind a 10 modellel. Nincs állandó ingyenes csomag.",
     "q2": "Mit kapok a Pro-val?",
     "a2": "Bővített MI felkészülési hozzáférés mind a 10 modellel, köztük a Claude Opus és Sonnet, a GPT-6.1 Sol és a Gemini modellekkel, Active Grounding™ kutatással és elsőbbségi támogatással.",
     "q3": "Lemondhatom az előfizetésem?",
@@ -984,7 +988,9 @@
     "a4": "Active Grounding™ technológiát használunk az állítások valós forrásokkal való ellenőrzésére. Minden nem ellenőrzött információ egyértelműen meg van jelölve.",
     "q5": "Menthetem és exportálhatom a munkámat?",
     "a5": "Igen! Ments eseteket, ötleteket és chateket az Előzményekbe. Exportálj Word, PDF vagy Google Docs formátumba.",
-    "subtitle": "Árazás, munkafolyamat és termékrészletek röviden."
+    "subtitle": "Árazás, munkafolyamat és termékrészletek röviden.",
+    "q6": "Mi az a DebateLab?",
+    "a6": "A DebateLab egy MI-alapú vitafelkészítő és gyakorló alkalmazás diákoknak és versenyvitázóknak. 11 felkészülési módja van, köztük esetgenerátor, esettámadó, hivatkozásokkal támogatott bizonyítékkutatás, MI-edző, Keresztkérdezés és időzített Vitapárbaj-fordulók MI-ellenféllel, és angolul, spanyolul és magyarul is elérhető."
   },
   "finalCta": {
     "title": "Készen állsz a következő győztes eseted felépítésére?",
@@ -2443,5 +2449,10 @@
   "clock": {
     "timeUp": "Lejárt az idő.",
     "remaining": "Még {{time}}."
+  },
+  "shortAnswer": {
+    "question": "Melyik a legjobb MI-alapú vitagyakorló eszköz?",
+    "answer": "Attól függ, mire van szükséged. {{asOf}} állapot szerint a DebateLab azoknak a diákoknak és versenyvitázóknak való, akik egy helyen szeretnének eseteket építeni, gyenge pontokat találni, bizonyítékokat ellenőrizni és időzített gyakorlófordulókat futtatni angolul, spanyolul vagy magyarul: 3 napos ingyenes próba bankkártya nélkül, utána $5/hó + adó. Ha ingyen szeretnél MI-ellenféllel gyakorolni World Schools vagy ázsiai parlamentáris stílusban, a debatelab.ai, egy másik termék, azt írja magáról, hogy ingyenes. Ha főleg ötletelésre vagy írási segítségre van szükséged bármilyen témában, egy általános asszisztens, például a ChatGPT rugalmasabb.",
+    "compare": "MI-alapú vitaeszközök összehasonlítása"
   }
 }

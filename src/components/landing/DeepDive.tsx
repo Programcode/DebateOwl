@@ -26,7 +26,7 @@ const DeepDive = () => {
                             {steps.map((step, index) => (
                                 <Reveal key={step.title} delay={index * 0.05} className="flex gap-4">
                                     <div className="mt-1 w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
-                                        <step.icon className="w-5 h-5 text-primary" />
+                                        <step.icon aria-hidden="true" className="w-5 h-5 text-primary" />
                                     </div>
                                     <div>
                                         <h3 className="font-semibold text-foreground">{step.title}</h3>
@@ -43,26 +43,26 @@ const DeepDive = () => {
                             <div className="space-y-4 font-mono text-sm max-h-[400px] overflow-hidden opacity-90">
                                 <div className="text-muted-foreground">{t('deepDive.preview.processHeading')}</div>
                                 <div className="flex gap-2">
-                                    <span className="text-green-500">➜</span>
+                                    <span aria-hidden="true" className="text-green-500">➜</span>
                                     <span>{t('deepDive.preview.scanning')}</span>
                                 </div>
                                 <div className="flex gap-2">
-                                    <span className="text-green-500">➜</span>
+                                    <span aria-hidden="true" className="text-green-500">➜</span>
                                     <span>{t('deepDive.preview.extracted')}</span>
                                 </div>
                                 <div className="flex gap-2">
-                                    <span className="text-blue-500">➜</span>
+                                    <span aria-hidden="true" className="text-blue-500">➜</span>
                                     <span>{t('deepDive.preview.vectorizing')}</span>
                                 </div>
                                 <div className="p-3 bg-secondary/50 rounded border border-border/50 my-2">
                                     <span className="text-foreground">{t('deepDive.preview.query')}</span>
                                 </div>
                                 <div className="flex gap-2">
-                                    <span className="text-cyan-500">➜</span>
+                                    <span aria-hidden="true" className="text-cyan-500">➜</span>
                                     <span>{t('deepDive.preview.retrieved')}</span>
                                 </div>
                                 <div className="flex gap-2">
-                                    <span className="text-cyan-500">➜</span>
+                                    <span aria-hidden="true" className="text-cyan-500">➜</span>
                                     <span>{t('deepDive.preview.generating')}</span>
                                 </div>
                                 <div className="p-3 bg-primary/10 rounded border border-primary/20 text-foreground">
