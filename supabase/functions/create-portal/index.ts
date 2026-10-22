@@ -2,8 +2,8 @@
 // Generates a portal URL so users can manage their subscription.
 
 import { createClient, type User } from "https://esm.sh/@supabase/supabase-js@2.114.0";
-import Stripe from "https://esm.sh/stripe@14.10.0?target=deno";
 import { HttpError, jsonError, requireUser } from "../_shared/auth.ts";
+import { createEdgeStripe } from "../_shared/stripe.ts";
 import { getCorsHeaders } from "../_shared/cors.ts";
 import {
   findCustomerOwnedByUser,
@@ -19,10 +19,7 @@ if (!STRIPE_SECRET_KEY) throw new Error("Missing required env: STRIPE_SECRET_KEY
 if (!SUPABASE_URL) throw new Error("Missing required env: SUPABASE_URL");
 if (!SUPABASE_SERVICE_ROLE_KEY) throw new Error("Missing required env: SUPABASE_SERVICE_ROLE_KEY");
 
-const stripe = new Stripe(STRIPE_SECRET_KEY, {
-  apiVersion: "2023-10-16",
-  httpClient: Stripe.createFetchHttpClient(),
-});
+const stripe = createEdgeStripe(STRIPE_SECRET_KEY);
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 

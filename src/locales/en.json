@@ -2444,7 +2444,8 @@
     "unavailable": "{{provider}} is temporarily unavailable. Please try again later.",
     "safety": "{{provider}} blocked this request for safety reasons. Try rephrasing your input.",
     "unexpectedProvider": "The AI provider returned an unexpected error. Please try again later.",
-    "unexpected": "An unexpected error occurred"
+    "unexpected": "An unexpected error occurred",
+    "offline": "Check your connection and try again."
   },
   "clock": {
     "timeUp": "Time is up.",

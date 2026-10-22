@@ -44,8 +44,15 @@ function requestUrl(input: RequestInfo | URL): string {
 // takes that lock) is queued for after the request instead of run inside it.
 const watchedFetch: typeof fetch = async (input, init) => {
   const response = await globalThis.fetch(input, init);
-  if (activeAccessToken && isAuthRejection(requestUrl(input), response.status)) {
-    setTimeout(() => void verifySessionAfterRejection(supabase.auth), 0);
+  const url = requestUrl(input);
+  if (activeAccessToken && isAuthRejection(url, response.status)) {
+    let userLookup = false;
+    try {
+      userLookup = new URL(url, SUPABASE_URL).pathname === '/auth/v1/user';
+    } catch {
+      userLookup = false;
+    }
+    setTimeout(() => void verifySessionAfterRejection(supabase.auth, Date.now, { userLookup }), 0);
   }
   return response;
 };

@@ -2444,7 +2444,8 @@
     "unavailable": "{{provider}} no está disponible por ahora. Inténtalo más tarde.",
     "safety": "{{provider}} bloqueó esta solicitud por seguridad. Prueba a reformularla.",
     "unexpectedProvider": "El proveedor de IA devolvió un error inesperado. Inténtalo más tarde.",
-    "unexpected": "Se produjo un error inesperado"
+    "unexpected": "Se produjo un error inesperado",
+    "offline": "Comprueba tu conexión e inténtalo de nuevo."
   },
   "clock": {
     "timeUp": "Se acabó el tiempo.",

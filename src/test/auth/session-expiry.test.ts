@@ -69,6 +69,30 @@ describe('a refused session', () => {
     expect(sessionExpiredNotice()).toBe(false);
   });
 
+  it('signs out immediately when Auth itself refuses the user, without refreshing', async () => {
+    const auth = fakeAuth(null);
+    await expect(verifySessionAfterRejection(auth, Date.now, { userLookup: true })).resolves.toBe('expired');
+    expect(auth.refreshSession).not.toHaveBeenCalled();
+    expect(auth.signOut).toHaveBeenCalledTimes(1);
+    expect(auth.signOut).toHaveBeenCalledWith({ scope: 'local' });
+    await expect(verifySessionAfterRejection(auth, Date.now, { userLookup: true })).resolves.toBe('expired');
+    expect(auth.signOut).toHaveBeenCalledTimes(1);
+  });
+
+  it('backs off after an outage instead of retrying immediately', async () => {
+    let now = 1_000_000;
+    const auth = fakeAuth(new AuthRetryableFetchError('Service Unavailable', 503));
+
+    await expect(verifySessionAfterRejection(auth, () => now)).resolves.toBe('kept');
+    now += 999;
+    await expect(verifySessionAfterRejection(auth, () => now)).resolves.toBe('skipped');
+    now += 2;
+    await expect(verifySessionAfterRejection(auth, () => now)).resolves.toBe('kept');
+
+    expect(auth.refreshSession).toHaveBeenCalledTimes(2);
+    expect(auth.signOut).not.toHaveBeenCalled();
+  });
+
   it('keeps a session whose refresh works, and does not refresh again for the rest of the burst', async () => {
     let now = 1_000_000;
     const auth = fakeAuth(null);

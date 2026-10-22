@@ -788,11 +788,13 @@ export async function handleRequest(req: Request): Promise<Response> {
             const { data, error } = await supabase.rpc("get_active_rate_limits");
 
             if (error) {
-                // Fallback to direct query if RPC doesn't exist yet
-                const { data: fallbackData } = await supabase
+                console.warn("[ADMIN] get_active_rate_limits failed:", error.message);
+                // Same column set the RPC returns. updated_at is not on this table.
+                const { data: fallbackData, error: fallbackError } = await supabase
                     .from("rate_limits")
-                    .select("*")
-                    .order("updated_at", { ascending: false });
+                    .select("id, user_id, limit_type, limit_value, created_at")
+                    .order("created_at", { ascending: false });
+                if (fallbackError) console.warn("[ADMIN] rate_limits lookup failed:", fallbackError.message);
 
                 return new Response(JSON.stringify({ limits: fallbackData || [] }), {
                     headers: { ...corsHeaders, "Content-Type": "application/json" },

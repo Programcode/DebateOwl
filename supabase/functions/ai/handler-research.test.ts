@@ -198,7 +198,10 @@ Deno.test("factoids handler carries Exa filters and consulted-source metadata ac
           grace_period_ends_at: null,
         });
       }
-      if (url.pathname.includes("/rest/v1/rate_limits")) return jsonResponse({ limit_value: 50 });
+      if (url.pathname.includes("/rest/v1/rate_limits")) {
+        if ((url.searchParams.get("order") ?? "").includes("updated_at")) throw new Error(`rate_limits must not order by updated_at: ${url.search}`);
+        return jsonResponse({ limit_value: 50 });
+      }
       if (/\/rest\/v1\/rpc\/consume_(daily|ai)_quota$/.test(url.pathname)) {
         return jsonResponse([{ allowed: true, current_count: 1 }]);
       }
@@ -336,7 +339,10 @@ Deno.test("Ask marks only surviving URL and research context as available", asyn
           grace_period_ends_at: null,
         });
       }
-      if (url.pathname.includes("/rest/v1/rate_limits")) return jsonResponse({ limit_value: 50 });
+      if (url.pathname.includes("/rest/v1/rate_limits")) {
+        if ((url.searchParams.get("order") ?? "").includes("updated_at")) throw new Error(`rate_limits must not order by updated_at: ${url.search}`);
+        return jsonResponse({ limit_value: 50 });
+      }
       if (/\/rest\/v1\/rpc\/consume_(daily|ai)_quota$/.test(url.pathname)) {
         return jsonResponse([{ allowed: true, current_count: 1 }]);
       }
@@ -477,7 +483,10 @@ function supabaseTestResponse(url: URL): Response | undefined {
     grace_period_ends_at: null,
   });
   if (url.pathname.includes("/rest/v1/subscriptions")) return jsonResponse([{ status: "active", current_period_end: "2099-01-01T00:00:00.000Z" }]);
-  if (url.pathname.includes("/rest/v1/rate_limits")) return jsonResponse({ limit_value: 50 });
+  if (url.pathname.includes("/rest/v1/rate_limits")) {
+    if ((url.searchParams.get("order") ?? "").includes("updated_at")) throw new Error(`rate_limits must not order by updated_at: ${url.search}`);
+    return jsonResponse({ limit_value: 50 });
+  }
   if (/\/rest\/v1\/rpc\/consume_(daily|ai)_quota$/.test(url.pathname)) return jsonResponse([{ allowed: true, current_count: 1 }]);
   if (url.pathname.includes("/rest/v1/global_prompts")) return jsonResponse({ prompt_text: null });
   if (url.pathname.includes("/rest/v1/ai_requests")) return new Response(null, { status: 201 });

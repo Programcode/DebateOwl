@@ -1,5 +1,5 @@
 import i18n from '@/i18n';
-import { AIProviderError, isAISubscriptionError } from './client';
+import { AIProviderError, isAINetworkError, isAISubscriptionError } from './errors';
 import { subscriptionLimitMessage } from './limit-message';
 
 const PROVIDER_LABELS: Record<string, string> = {
@@ -21,6 +21,7 @@ function providerLabel(provider?: string, message = ''): string {
 export { subscriptionLimitMessage };
 
 export function getUserFacingAIError(error: unknown): string {
+  if (isAINetworkError(error)) return i18n.t('aiErrors.offline');
   if (isAISubscriptionError(error)) return subscriptionLimitMessage(error);
 
   if (error instanceof AIProviderError || (error instanceof Error && error.name === 'AIProviderError')) {

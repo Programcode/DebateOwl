@@ -2,7 +2,7 @@
 // Processes Stripe events and syncs subscription state to the database.
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.114.0";
-import Stripe from "https://esm.sh/stripe@14.10.0?target=deno";
+import { createEdgeStripe, Stripe } from "../_shared/stripe.ts";
 import {
   duplicateWebhookResponse,
   processWebhookEvent,
@@ -22,17 +22,7 @@ if (!SUPABASE_URL) throw new Error("Missing required env: SUPABASE_URL");
 if (!SUPABASE_SERVICE_ROLE_KEY) throw new Error("Missing required env: SUPABASE_SERVICE_ROLE_KEY");
 
 // Only the local full-stack gate sets this, to reach its fake Stripe.
-const stripeApiUrl = Deno.env.get("STRIPE_API_URL");
-const stripeEndpoint = stripeApiUrl ? new URL(stripeApiUrl) : null;
-const stripe = new Stripe(STRIPE_SECRET_KEY, {
-  apiVersion: "2023-10-16",
-  httpClient: Stripe.createFetchHttpClient(),
-  ...(stripeEndpoint && {
-    host: stripeEndpoint.hostname,
-    port: stripeEndpoint.port || (stripeEndpoint.protocol === "http:" ? "80" : "443"),
-    protocol: stripeEndpoint.protocol.replace(":", "") as "http" | "https",
-  }),
-});
+const stripe = createEdgeStripe(STRIPE_SECRET_KEY, Deno.env.get("STRIPE_API_URL"));
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
@@ -73,7 +63,7 @@ Deno.serve(async (req) => {
   console.log(`[WEBHOOK] Received event: ${event.type} (${event.id})`);
 
   try {
-    const outcome = await processWebhookEvent(event, {
+    const outcome = await processWebhookEvent(event as Stripe.Event & { data: { object: { id: string } } }, {
       // Claim and completion run on the database clock; see claim_webhook_event.
       claim: async (id, type) => {
         const { data, error } = await supabase.rpc("claim_webhook_event", { p_id: id, p_type: type });

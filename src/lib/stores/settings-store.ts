@@ -14,6 +14,7 @@ import {
 } from '../../../supabase/functions/_shared/model-catalog';
 import type { ProviderConfig } from '../ai/providers/types';
 import { supabase } from '@/lib/supabase/client';
+import { restoredSessionsBlocked } from '@/lib/supabase/session-expiry';
 import { currentUserId } from '@/lib/supabase/current-user';
 
 export type FeatureTab = 'generate' | 'attack' | 'brainstorm' | 'factoids' | 'ask' | 'sparring';
@@ -304,6 +305,7 @@ export const useSettingsStore = create<SettingsState>()(
       },
 
       hydrateFromServer: async () => {
+        if (restoredSessionsBlocked()) return;
         const { data, error } = await supabase
           .from('user_settings')
           .select('*')

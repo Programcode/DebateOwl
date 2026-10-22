@@ -8,7 +8,11 @@ export {
   AIProviderError,
   AIResponseError,
   TimeoutError,
+  AINetworkError,
+  AIServerError,
+  AIUnknownError,
   isAIAuthError,
+  isAINetworkError,
   isAIRateLimitError,
   isAIProviderError,
   isTimeoutError,
@@ -16,6 +20,10 @@ export {
   isAIModelRestrictionError,
   classifyAIError,
   mapAIError,
+  isBrowserNetworkFailure,
+  browserIsOffline,
+  privacySafeCauseType,
+  offlineAIMessage,
 } from './errors';
 export type { AIErrorClassification } from './errors';
 export {

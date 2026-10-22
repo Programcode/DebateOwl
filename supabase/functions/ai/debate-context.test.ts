@@ -72,7 +72,10 @@ function install(options: { stream?: boolean; tables?: typeof tables; reply?: un
       if (url.pathname.includes("/rest/v1/user_roles")) return jsonResponse({ role: "user" });
       if (url.pathname.includes("/rest/v1/user_settings")) return jsonResponse({ subscription_tier: "trial", daily_limit_override: 50, trial_ends_at: "2099-01-01T00:00:00.000Z", grace_period_ends_at: null });
       if (url.pathname.includes("/rest/v1/subscriptions")) return jsonResponse([]);
-      if (url.pathname.includes("/rest/v1/rate_limits")) return jsonResponse({ limit_value: 50 });
+      if (url.pathname.includes("/rest/v1/rate_limits")) {
+        if ((url.searchParams.get("order") ?? "").includes("updated_at")) throw new Error(`rate_limits must not order by updated_at: ${url.search}`);
+        return jsonResponse({ limit_value: 50 });
+      }
       if (/\/rest\/v1\/rpc\/consume_(daily|ai)_quota$/.test(url.pathname)) return jsonResponse([{ allowed: true, current_count: 1 }]);
       if (url.pathname.includes("/rest/v1/global_prompts")) return jsonResponse({ prompt_text: null });
       if (url.pathname.includes("/rest/v1/ai_requests")) return new Response(null, { status: 201 });
