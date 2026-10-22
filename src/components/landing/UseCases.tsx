@@ -41,7 +41,7 @@ const UseCases = () => {
                         <Reveal key={persona.title} delay={index * 0.05}>
                         <div className="feature-card h-full p-8">
                             <div className="w-14 h-14 rounded-full bg-secondary flex items-center justify-center mb-6">
-                                <persona.icon className="w-7 h-7 text-primary" />
+                                <persona.icon aria-hidden="true" className="w-7 h-7 text-primary" />
                             </div>
                             <h3 className="text-2xl font-bold mb-1">{persona.title}</h3>
                             <p className="text-primary/80 font-medium mb-6">{persona.subtitle}</p>

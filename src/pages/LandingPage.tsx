@@ -9,15 +9,19 @@ import FinalCTA from "@/components/landing/FinalCTA";
 import Footer from "@/components/landing/Footer";
 import WhatsNew from "@/components/landing/WhatsNew";
 import Pricing from "@/components/landing/Pricing";
+import ShortAnswer from "@/components/landing/ShortAnswer";
 import { usePageHead } from "@/lib/seo/use-page-head";
 
 const LandingPage = () => {
     usePageHead("/");
     return (
         <div className="min-h-screen overflow-x-hidden bg-background">
-            <Navbar />
+            <header>
+                <Navbar />
+            </header>
             <main>
                 <Hero />
+                <ShortAnswer />
                 <WhatsNew />
                 <Features />
                 <Pricing />

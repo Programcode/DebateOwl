@@ -102,7 +102,7 @@ This sends one tiny typed choice to OpenRouter's Decisions endpoint using the pi
 npm run build
 ```
 
-This proves the Vite production bundle compiles and then walks the emitted Vite manifest to reject feature-only PDF, DOCX, chart, ReactFlow, export, and Admin modules from the static `index.html` dependency graph. It does not prove authentication, database behavior, provider access, or production deployment.
+This proves the Vite production bundle compiles, prerenders the public pages, checks the built site's links, fragments, JSON-LD and basic accessibility with `scripts/check-site.mjs`, and then walks the emitted Vite manifest to reject feature-only PDF, DOCX, chart, ReactFlow, export, and Admin modules from the static `index.html` dependency graph. It does not prove authentication, database behavior, provider access, or production deployment.
 
 ## Production service-worker smoke
 
@@ -166,7 +166,7 @@ It does not start local Supabase, run pgTAP, run WebKit, or use protected stagin
 Requirements:
 
 - Docker
-- Supabase CLI 2.115 or newer
+- Supabase CLI 2.121.0, pinned in `package.json` (`npm ci` installs it)
 - exclusive ownership of the local Supabase ports and containers
 
 In Superset, run:
@@ -178,9 +178,9 @@ In Superset, run:
 The wrapper acquires `~/.superset/debatelab-db.lock`, starts full local Supabase, runs `npm run test:db`, then holds the same lock while a controlled Mailpit relay, collaboration process, fake model provider, and Vite client run the real-Auth desktop/mobile workspace and full-stack feature journeys. The `Database` workflow runs this same gate on pull requests that touch its paths, and retains its logs and browser traces on failure. It stops every owned process and the stack on exit, including after failure. To run only the database portion under the same lock, use `./.superset/db-gate.sh --db-only`. Outside Superset, run it with:
 
 ```bash
-supabase db start
+npx supabase db start
 npm run test:db
-supabase stop --no-backup
+npx supabase stop --no-backup
 ```
 
 The stack replays migrations and runs pgTAP tests. The browser portion creates isolated local users and deletes them, captures mail only in local Mailpit, restarts the collaboration process, and proves recovery and revocation. `CREATE INDEX CONCURRENTLY` requires the stated CLI floor so it runs outside the migration batch.

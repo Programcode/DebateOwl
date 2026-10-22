@@ -25,6 +25,8 @@ SKILL_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 REPO="$(git -C "$SKILL_DIR" rev-parse --show-toplevel)"
 cd "$REPO"
 source "$REPO/.superset/lib/lock.sh"
+source "$REPO/.superset/lib/supabase-cli.sh"
+use_pinned_supabase_cli "$REPO"
 
 DB_LOCK="$HOME/.superset/debatelab-db.lock"
 FAKE_PROVIDER=debatelab-fake-openrouter

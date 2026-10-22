@@ -4,7 +4,7 @@ import { useSessionStore } from '@/lib/stores/session-store';
 import { useAuth } from '@/lib/supabase/AuthProvider';
 import { useSettingsStore } from '@/lib/stores/settings-store';
 import { AskChat } from '@/components/features/ask/AskChat';
-import { askChat, isAskMessageWithinBudget, isTimeoutError } from '@/lib/ai/client';
+import { askChat, isAIProviderError, isAskMessageWithinBudget, isTimeoutError } from '@/lib/ai/client';
 import { isAskStreamingSupported, streamAskChat } from '@/lib/ai/streaming';
 import { useSubscriptionError } from '@/hooks/use-subscription-error';
 import { getUserFacingAIError } from '@/lib/ai/error-display';
@@ -293,6 +293,10 @@ export default function AskPage() {
               followUpQuestions: [],
               uncertainties: [t('ask.streamInterrupted', 'The streamed response was interrupted before completion.')],
             };
+          } else if (isAIProviderError(streamError) && streamError.details?.code === 'provider_unavailable') {
+            // The model's provider is down, not the stream: asking again
+            // through the plain endpoint would only fail the same way.
+            throw streamError;
           } else {
             result = await askChat(fullMessage, history, mode, config, options);
           }

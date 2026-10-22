@@ -14,13 +14,25 @@ import {
   loadDebateContext,
 } from "../_shared/debate-context-loader.ts";
 import {
+  chargedAgainstCap,
+  excludeFromCap,
   markIncompleteUsage,
   normalizeOpenRouterUsage,
   type NormalizedUsage,
 } from "../_shared/cost.ts";
 import { HttpError, jsonError, requireUser } from "../_shared/auth.ts";
 import { getCorsHeaders } from "../_shared/cors.ts";
-import { checkRateLimit, logUsage } from "../_shared/entitlements.ts";
+import { checkRateLimit, logUsage, refundQuotaReservation } from "../_shared/entitlements.ts";
+import {
+  CLAUDE_UNAVAILABLE_CODE,
+  CLAUDE_UNAVAILABLE_MESSAGE,
+  CLAUDE_UNAVAILABLE_STATUS,
+  ClaudeProviderUnavailableError,
+  isClaudeModel,
+  openRouterProviderOptions,
+  providerRequestError,
+  warnIfClaudeNotByok,
+} from "../_shared/provider-routing.ts";
 import { OPENROUTER_API_URL } from "../_shared/research.ts";
 import { MAX_ASK_HISTORY_MESSAGE_CHARS, MAX_ASK_HISTORY_MESSAGES, withPromptCaching } from "../_shared/prompt-budget.ts";
 import {
@@ -269,8 +281,7 @@ export async function handleRequest(req: Request): Promise<Response> {
           messages: withPromptCaching(model, messages),
           max_tokens: outputTokenLimit(REPLY_TOKEN_CAPS.ask, reasoningEffort, modelEntry.maxTokens),
           reasoning: { effort: reasoningEffort, exclude: true },
-          // Omitting sort and order keeps OpenRouter's balanced provider load balancing.
-          provider: { require_parameters: true },
+          provider: openRouterProviderOptions(model),
           stream: true,
           stream_options: { include_usage: true },
         };
@@ -283,7 +294,7 @@ export async function handleRequest(req: Request): Promise<Response> {
         });
         if (!response.ok || !response.body) {
           console.error(`[OpenRouter] Stream request failed (${response.status}):`, (await response.text()).slice(0, 2000));
-          throw new Error("AI provider request failed");
+          throw providerRequestError(model, response.status);
         }
 
         reader = response.body.getReader();
@@ -299,11 +310,19 @@ export async function handleRequest(req: Request): Promise<Response> {
           }
           let parsed: Record<string, unknown>;
           try { parsed = JSON.parse(data); } catch { return; }
+          // Usage can ride on the error frame itself; keep it so the charge is billed.
+          if (parsed.usage && typeof parsed.usage === "object" && !Array.isArray(parsed.usage)) {
+            streamUsageRaw = { ...streamUsageRaw, ...(parsed.usage as Record<string, unknown>) };
+          }
           if (parsed.error) {
             const providerError = parsed.error;
             const message = providerError && typeof providerError === "object" && "message" in providerError
               ? (providerError as { message?: unknown }).message
               : providerError;
+            if (isClaudeModel(model)) {
+              console.error("[OpenRouter] Stream error:", typeof message === "string" ? message.slice(0, 2000) : "stream error");
+              throw providerRequestError(model, null, accumulated.length > 0);
+            }
             throw new Error(typeof message === "string" ? message : "OpenRouter stream error");
           }
           const delta = (Array.isArray(parsed.choices) ? parsed.choices[0] : undefined) as { delta?: { content?: string }; finish_reason?: unknown } | undefined;
@@ -314,9 +333,6 @@ export async function handleRequest(req: Request): Promise<Response> {
           if (typeof delta?.delta?.content === "string" && delta.delta.content) {
             accumulated += delta.delta.content;
             emit("delta", { text: delta.delta.content });
-          }
-          if (parsed.usage && typeof parsed.usage === "object" && !Array.isArray(parsed.usage)) {
-            streamUsageRaw = { ...streamUsageRaw, ...(parsed.usage as Record<string, unknown>) };
           }
         };
         while (true) {
@@ -369,24 +385,37 @@ export async function handleRequest(req: Request): Promise<Response> {
         if (!req.signal.aborted) {
           try { emit("final", { output, meta: { requestedModel, resolvedModel: model, ...(debateMeta ? { debateContext: debateMeta } : {}) } }); } catch { /* client disconnected after provider completion */ }
         }
+        warnIfClaudeNotByok(model, streamUsageRaw, "ai-stream");
         await logUsage(user.id, "ask", OPENROUTER_PROVIDER, model, collectUsage(), Date.now() - startedAt);
       } catch (err) {
         cancelUpstream();
         console.error("[AI_STREAM] Stream failed:", (err instanceof Error ? err.message : String(err)).slice(0, 2000));
         const isAbort = req.signal.aborted || (err instanceof DOMException && err.name === "AbortError");
-        if (!isAbort) {
+        // Claude runs only on the Anthropic key, with no fallback provider.
+        // When it fails the student gets an outage message, and their request
+        // back if the model had written nothing yet.
+        const claudeUnavailable = !isAbort && err instanceof ClaudeProviderUnavailableError;
+        const observedUsage = collectUsage();
+        // OpenRouter credits already spent on the request keep it counted.
+        const refunded = claudeUnavailable && !err.afterOutput && !accumulated && !chargedAgainstCap(observedUsage);
+        if (claudeUnavailable) {
+          // Refund before the client hears of the failure, so a retry it
+          // sends straight away sees the request already given back.
+          if (refunded) await refundQuotaReservation(user.id, rateLimit);
+          try { emit("error", { message: CLAUDE_UNAVAILABLE_MESSAGE, code: CLAUDE_UNAVAILABLE_CODE, status: CLAUDE_UNAVAILABLE_STATUS }); } catch { /* client disconnected */ }
+        } else if (!isAbort) {
           try { emit("error", { message: "AI streaming failed. Please try again.", code: "provider_error" }); } catch { /* client disconnected */ }
         }
-        const observedUsage = collectUsage();
         await logUsage(
           user.id,
           "ask",
           OPENROUTER_PROVIDER,
           model,
-          markIncompleteUsage(observedUsage),
+          // A refunded request counts toward neither today's quota nor the weekly cap.
+          refunded ? excludeFromCap(markIncompleteUsage(observedUsage)) : markIncompleteUsage(observedUsage),
           Date.now() - startedAt,
           isAbort ? "cancelled" : "error",
-          isAbort ? "client_abort" : "stream_error",
+          isAbort ? "client_abort" : claudeUnavailable ? "claude_unavailable" : "stream_error",
         );
       } finally {
         req.signal.removeEventListener("abort", clientAbortHandler);

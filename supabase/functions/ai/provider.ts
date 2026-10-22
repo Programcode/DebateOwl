@@ -29,6 +29,7 @@ import {
   readResponseText,
 } from "../_shared/research.ts";
 import { withPromptCaching } from "../_shared/prompt-budget.ts";
+import { openRouterProviderOptions, providerRequestError, warnIfClaudeNotByok } from "../_shared/provider-routing.ts";
 
 export const OPENROUTER_PROVIDER: Provider = "openrouter";
 
@@ -391,10 +392,9 @@ export async function callOpenRouter(
       ? { type: "json_schema", json_schema: { name: outputSchema.name, strict: true, schema: outputSchema.schema } }
       : { type: "json_object" },
     reasoning: { effort: reasoningEffort, exclude: true },
-    // Omitting sort and order keeps OpenRouter's balanced provider load balancing.
-    provider: { require_parameters: true },
+    provider: openRouterProviderOptions(model),
   };
-  if (stream) return await streamOpenRouter(apiKey, payload, stream, signal);
+  if (stream) return await streamOpenRouter(apiKey, model, payload, stream, signal);
 
   const { response, data, errorBody } = await fetchJsonWithTimeout<OpenRouterResponse>(`${OPENROUTER_API_URL}/v1/chat/completions`, {
     method: "POST",
@@ -403,10 +403,11 @@ export async function callOpenRouter(
   }, REQUEST_BUDGET_MS, signal);
   if (!response.ok) {
     console.error(`[OpenRouter] Request failed (${response.status}):`, errorBody?.slice(0, 2000));
-    throw new Error("AI provider request failed");
+    throw providerRequestError(model, response.status);
   }
   if (!data?.choices || !Array.isArray(data.choices) || data.choices.length === 0) throw new Error("OpenRouter returned no choices");
   const usage = normalizeProviderUsage(data.usage) ?? missingOpenRouterUsage("response");
+  warnIfClaudeNotByok(model, usage.raw, "ai");
   if (data.choices[0]?.finish_reason === "length") throw new OutputTruncatedError(usage);
   return parseProviderContent(data.choices[0]?.message?.content ?? "", "OpenRouter", usage);
 }
@@ -429,6 +430,7 @@ type OpenRouterStreamChunk = {
  */
 async function streamOpenRouter(
   apiKey: string,
+  model: string,
   payload: Record<string, unknown>,
   stream: GenerationStream,
   signal?: AbortSignal,
@@ -444,10 +446,11 @@ async function streamOpenRouter(
         ? await readResponseText(response, MAX_PROVIDER_ERROR_BODY_BYTES, MAX_PROVIDER_ERROR_BODY_CHARS, bodySignal, true)
         : { text: "" };
       console.error(`[OpenRouter] Stream request failed (${response.status}):`, body.text.slice(0, 2000));
-      throw new Error("AI provider request failed");
+      throw providerRequestError(model, response.status);
     }
-    return await readOpenRouterStream(response.body, stream, bodySignal);
+    return await readOpenRouterStream(response.body, stream, bodySignal, model);
   });
+  warnIfClaudeNotByok(model, usage.raw, "ai");
   if (finishReason === "length") throw new OutputTruncatedError(usage);
   return parseProviderContent(text, "OpenRouter", usage);
 }
@@ -456,6 +459,7 @@ export async function readOpenRouterStream(
   body: ReadableStream<Uint8Array>,
   stream: GenerationStream,
   signal: AbortSignal,
+  model = "",
 ): Promise<{ text: string; usage: NormalizedUsage; finishReason?: string }> {
   const reader = body.getReader();
   const decoder = new TextDecoder();
@@ -479,12 +483,16 @@ export async function readOpenRouterStream(
     }
     let chunk: OpenRouterStreamChunk;
     try { chunk = JSON.parse(data); } catch { return; }
+    // Usage can ride on the error frame itself; keep it so the charge is billed.
+    if (chunk.usage && typeof chunk.usage === "object" && !Array.isArray(chunk.usage)) {
+      usageRaw = { ...usageRaw, ...(chunk.usage as Record<string, unknown>) };
+    }
     if (chunk.error) {
       const message = typeof chunk.error === "object" && chunk.error !== null && "message" in chunk.error
         ? (chunk.error as { message?: unknown }).message
         : chunk.error;
       console.error("[OpenRouter] Stream error:", typeof message === "string" ? message.slice(0, 2000) : "stream error");
-      throw new Error("AI provider request failed");
+      throw providerRequestError(model, null, text.length > 0);
     }
     const choice = Array.isArray(chunk.choices) ? chunk.choices[0] : undefined;
     if (typeof choice?.finish_reason === "string" && choice.finish_reason) finishReason = choice.finish_reason;
@@ -494,9 +502,6 @@ export async function readOpenRouterStream(
       textBytes += encoder.encode(content).byteLength;
       if (textBytes > MAX_PROVIDER_RESPONSE_BYTES) throw new Error(`Provider response exceeds ${MAX_PROVIDER_RESPONSE_BYTES} bytes`);
       stream.delta(content);
-    }
-    if (chunk.usage && typeof chunk.usage === "object" && !Array.isArray(chunk.usage)) {
-      usageRaw = { ...usageRaw, ...(chunk.usage as Record<string, unknown>) };
     }
   };
 

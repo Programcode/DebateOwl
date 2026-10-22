@@ -22,6 +22,8 @@ import {
   type SparringRequest,
 } from "./sparring-persistence.ts";
 import {
+  chargedAgainstCap,
+  excludeFromCap,
   mergeNormalizedUsage,
   selectObservedUsage,
   type NormalizedUsage,
@@ -57,7 +59,14 @@ import {
   checkUserBanned,
   logUsage,
   type RateLimitResult,
+  refundQuotaReservation,
 } from "../_shared/entitlements.ts";
+import {
+  CLAUDE_UNAVAILABLE_CODE,
+  CLAUDE_UNAVAILABLE_MESSAGE,
+  CLAUDE_UNAVAILABLE_STATUS,
+  ClaudeProviderUnavailableError,
+} from "../_shared/provider-routing.ts";
 import { isWorkspaceMember, loadAuthorizedWorkspaceContext } from "../_shared/workspace-context.ts";
 import { type DebateContextRequest, parseDebateContextRequest } from "../_shared/debate-context.ts";
 import {
@@ -632,6 +641,9 @@ export async function handleRequest(req: Request): Promise<Response> {
   // accounts for every token and every paid call.
   const researchUsage: NormalizedUsage[] = [];
   let researchAccountingIncomplete = false;
+  // A research step that finished, or failed after paid work. Claude refusing
+  // a research step outright (the same outage as the main call) does not count.
+  let researchDidWork = false;
   // Research sub-calls are small background steps, so they use the fixed
   // cheap model instead of the user's choice.
   const researchDeps: ResearchDeps = {
@@ -651,6 +663,7 @@ export async function handleRequest(req: Request): Promise<Response> {
         // A provider that ignores cancellation must not append usage after the
         // research timeout has already been finalized by the parent request.
         if (result.usage && !args.signal?.aborted) researchUsage.push(result.usage);
+        researchDidWork = true;
         return { output: result.output };
       } catch (err) {
         const usageError = err && typeof err === "object"
@@ -658,6 +671,9 @@ export async function handleRequest(req: Request): Promise<Response> {
           : undefined;
         const researchErrorUsage = selectObservedUsage(usageError, args.signal?.aborted === true);
         if (researchErrorUsage) researchUsage.push(researchErrorUsage);
+        const refusedForFree = err instanceof ClaudeProviderUnavailableError && !err.afterOutput &&
+          !usageError?.completedUsage && !chargedAgainstCap(researchErrorUsage);
+        if (!refusedForFree) researchDidWork = true;
         throw err;
       }
     },
@@ -804,19 +820,33 @@ export async function handleRequest(req: Request): Promise<Response> {
       // A successful main call takes precedence over usage attached to a later
       // post-processing error. This avoids counting its repair attempts twice.
       const mainErrorUsage = completedMainUsage ?? selectObservedUsage(usageError, workSignal?.aborted === true);
+      // Claude runs only on the Anthropic key, with no fallback provider. When
+      // it fails the student gets an outage message, and their request back
+      // if no provider call had finished or written anything yet.
+      const claudeUnavailable = err instanceof ClaudeProviderUnavailableError;
+      const errorUsage = mergeNormalizedUsage([
+        mainErrorUsage,
+        ...researchUsageForLog(),
+      ]);
+      // OpenRouter credits already spent on the request keep it counted.
+      // A cancelled request is never refunded, even when the refusal raced the abort.
+      const refundable = claudeUnavailable && !workSignal?.aborted && !err.afterOutput && !completedMainUsage && !usageError?.completedUsage &&
+        !researchDidWork && !researchAccountingIncomplete && !chargedAgainstCap(errorUsage);
       await logUsage(
         userId,
         feature,
         provider,
         model,
-        mergeNormalizedUsage([
-          mainErrorUsage,
-          ...researchUsageForLog(),
-        ]),
+        // A refunded request counts toward neither today's quota nor the weekly cap.
+        refundable ? excludeFromCap(errorUsage) : errorUsage,
         latencyMs,
         "error",
-        "ai_error",
+        claudeUnavailable ? "claude_unavailable" : "ai_error",
       );
+      if (claudeUnavailable) {
+        if (refundable) await refundQuotaReservation(userId, rateLimit);
+        return new Response(JSON.stringify({ error: CLAUDE_UNAVAILABLE_MESSAGE, code: CLAUDE_UNAVAILABLE_CODE }), { status: CLAUDE_UNAVAILABLE_STATUS, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
       return new Response(JSON.stringify({ error: "AI request failed. Please try again.", code: "provider_error" }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
   };

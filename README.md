@@ -24,7 +24,7 @@ Requirements:
 
 - Node.js 22.x and npm, using the committed `package-lock.json`
 - Deno 2.x for Edge Function tests
-- Docker and Supabase CLI 2.115 or newer for the local database gate
+- Docker and Supabase CLI 2.121.0, pinned in `package.json` (`npm ci` installs it) for the local database gate
 - Playwright browsers for browser tests
 
 ```bash

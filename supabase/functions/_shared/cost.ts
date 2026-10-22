@@ -274,6 +274,21 @@ export function selectObservedUsage(
     : usageError?.usage ?? usageError?.completedUsage;
 }
 
+/** True when the observed usage charged anything toward the weekly spend cap. */
+export function chargedAgainstCap(usage?: NormalizedUsage): boolean {
+  const cap = usage ? capCostOf(usage) : undefined;
+  return typeof cap === "number" && cap > 0;
+}
+
+/**
+ * Records a refunded request as adding nothing to the weekly spend cap. Only
+ * for usage that chargedAgainstCap() cleared: a request OpenRouter charged
+ * credits for is never refunded, so no real spend is hidden from the cap.
+ */
+export function excludeFromCap(usage?: NormalizedUsage): NormalizedUsage {
+  return { ...usage, capCostUsd: 0 };
+}
+
 /** Preserve observed fragments without treating partial provider work as a complete bill. */
 export function markIncompleteUsage(usage?: NormalizedUsage): NormalizedUsage {
   return { ...usage, incomplete: true };

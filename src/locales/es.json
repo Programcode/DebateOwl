@@ -837,7 +837,10 @@
   "footer": {
     "terms": "Términos",
     "privacy": "Privacidad",
-    "copyright": "© 2026 DebateLab by Pi-Stack. Todos los derechos reservados."
+    "copyright": "© 2026 DebateLab by Pi-Stack. Todos los derechos reservados.",
+    "navLabel": "Pie de página",
+    "pricingGuide": "Detalles de precios",
+    "compareTools": "Comparar herramientas de IA para debate"
   },
   "announcements": {
     "regionLabel": "Anuncio",
@@ -846,8 +849,8 @@
     "dismissError": "No se pudo descartar este anuncio."
   },
   "hero": {
-    "headline": "Prepárate más rápido. Argumenta mejor. Gana más rondas.",
-    "subheadline": "Preparación de debate impulsada por IA que te da ventaja en cada ronda.",
+    "headline": "Prepara casos y practica rondas con IA",
+    "subheadline": "DebateLab es una app de preparación y práctica de debate con IA para estudiantes y debatientes de competición que construye casos estructurados, encuentra los puntos débiles de los argumentos, investiga evidencia con citas y organiza rondas de práctica cronometradas contra un oponente de IA.",
     "trialBadge": "Prueba gratis de 3 días",
     "requestsBadge": "Preparación diaria con IA",
     "requestsBadgeValue": "Incluido",
@@ -970,12 +973,13 @@
     "trialBadge": "Usuarios nuevos",
     "trialDesc": "Usa el flujo de trabajo completo antes de decidirte por Pro.",
     "proBadge": "Usuarios avanzados",
-    "proDesc": "Para semanas de preparación intensiva, temas difíciles y límites diarios más altos."
+    "proDesc": "Para semanas de preparación intensiva, temas difíciles y límites diarios más altos.",
+    "asOf": "Precios vigentes en {{asOf}}."
   },
   "faq": {
     "title": "Preguntas frecuentes",
     "q1": "¿Cuánto cuesta DebateLab?",
-    "a1": "DebateLab ofrece una prueba gratis de 3 días. Después, Pro cuesta $5/mes + impuestos para acceso ampliado y los 10 modelos.",
+    "a1": "En {{asOf}}, DebateLab ofrece una prueba gratis de 3 días sin tarjeta de crédito. Después, Pro cuesta $5/mes + impuestos para acceso ampliado y los 10 modelos. No hay plan gratuito permanente.",
     "q2": "¿Qué obtengo con Pro?",
     "a2": "Acceso ampliado a preparación con IA, los 10 modelos incluidos Claude Opus y Sonnet, GPT-6.1 Sol y Gemini, investigación Active Grounding™ y soporte prioritario.",
     "q3": "¿Puedo cancelar mi suscripción?",
@@ -984,7 +988,9 @@
     "a4": "Usamos tecnología Active Grounding™ para verificar afirmaciones contra fuentes reales. Cualquier información no verificada se marca claramente como tal.",
     "q5": "¿Puedo guardar y exportar mi trabajo?",
     "a5": "¡Sí! Guarda casos, lluvias de ideas y chats en el Historial. Exporta a Word, PDF o Google Docs.",
-    "subtitle": "Precios, flujo de trabajo y detalles del producto de un vistazo."
+    "subtitle": "Precios, flujo de trabajo y detalles del producto de un vistazo.",
+    "q6": "¿Qué es DebateLab?",
+    "a6": "DebateLab es una app de preparación y práctica de debate con IA para estudiantes y debatientes de competición. Tiene 11 modos de preparación, entre ellos un generador de casos, un atacante de casos, investigación de evidencia con citas, un coach de IA, Interrogatorio y rondas de Sparring cronometradas contra un oponente de IA, y está disponible en inglés, español y húngaro."
   },
   "finalCta": {
     "title": "¿Listo para construir tu próximo caso ganador?",
@@ -2443,5 +2449,10 @@
   "clock": {
     "timeUp": "Se acabó el tiempo.",
     "remaining": "Queda {{time}}."
+  },
+  "shortAnswer": {
+    "question": "¿Cuál es la mejor herramienta de IA para practicar debate?",
+    "answer": "Depende de lo que necesites. En {{asOf}}, DebateLab encaja con estudiantes y debatientes de competición que quieren un solo lugar para construir casos, encontrar puntos débiles, comprobar evidencia y hacer rondas de práctica cronometradas, en inglés, español o húngaro: prueba gratis de 3 días sin tarjeta y después $5/mes + impuestos. Si quieres practicar gratis contra un oponente de IA en estilo World Schools o Parlamentario Asiático, debatelab.ai, un producto distinto, dice ser gratuito. Si sobre todo necesitas ideas o ayuda para escribir sobre cualquier tema, un asistente general como ChatGPT es más flexible.",
+    "compare": "Comparar herramientas de IA para debate"
   }
 }
