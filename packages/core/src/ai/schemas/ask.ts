@@ -53,6 +53,8 @@ export const AskOutputSchema = z.object({
     assumptions: z.array(z.string()),
   }).optional(),
   uncertainties: z.array(z.string()),
+  /** A streamed answer stopped at its length cap; the notice is translated when shown. */
+  replyTruncated: z.boolean().optional(),
 });
 
 export type AskOutput = z.infer<typeof AskOutputSchema>;

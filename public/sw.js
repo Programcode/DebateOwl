@@ -113,6 +113,9 @@ self.addEventListener('fetch', (event) => {
   const url = new URL(request.url);
   if (url.origin !== self.location.origin) return;
   if (API_PATH_PREFIXES.some((prefix) => url.pathname.startsWith(prefix))) return;
+  // Embeds are framed on other sites: never store one as the app shell, and
+  // never answer one with the cached shell, which refuses to be framed.
+  if (url.pathname.startsWith('/embed/')) return;
 
   if (request.mode === 'navigate') {
     event.respondWith(navigationFallback(request));

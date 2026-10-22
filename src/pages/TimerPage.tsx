@@ -10,6 +10,8 @@ import { ClockAnnouncer, RoundClock, clockTone } from '@/components/features/pra
 import { displaySeconds, pauseClock, remainingMs, startClock, type ClockState } from '@/lib/timer-clock';
 import { timerShortcutBlocked } from '@/lib/timer-shortcuts';
 import { toast } from '@/hooks/use-toast';
+import { useScreenWakeLock } from '@/hooks/use-screen-wake-lock';
+import { playSignal } from '@/lib/timer-signals';
 import {
   Select,
   SelectContent,
@@ -81,57 +83,6 @@ const FORMATS: DebateFormat[] = [
   }
 ];
 
-let audioContext: AudioContext | null = null;
-
-// Simple audio synth
-const playSignal = async (type: 'beep' | 'double-beep' | 'alarm') => {
-  try {
-    const AudioContextCtor = window.AudioContext || (window as unknown as { webkitAudioContext?: typeof window.AudioContext }).webkitAudioContext;
-    if (!AudioContextCtor) return;
-
-    audioContext ??= new AudioContextCtor();
-    const ctx = audioContext;
-    if (ctx.state === 'suspended') await ctx.resume();
-    const osc = ctx.createOscillator();
-    const gain = ctx.createGain();
-
-    osc.connect(gain);
-    gain.connect(ctx.destination);
-
-    const now = ctx.currentTime;
-
-    if (type === 'beep') {
-      osc.frequency.setValueAtTime(880, now); // A5
-      gain.gain.setValueAtTime(0.1, now);
-      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.5);
-      osc.start(now);
-      osc.stop(now + 0.5);
-    } else if (type === 'double-beep') {
-      // First beep
-      osc.frequency.setValueAtTime(880, now);
-      gain.gain.setValueAtTime(0.1, now);
-      gain.gain.setValueAtTime(0, now + 0.1);
-
-      // Second beep
-      osc.frequency.setValueAtTime(880, now + 0.15);
-      gain.gain.setValueAtTime(0.1, now + 0.15);
-      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.6);
-
-      osc.start(now);
-      osc.stop(now + 0.6);
-    } else if (type === 'alarm') {
-      osc.frequency.setValueAtTime(440, now);
-      osc.frequency.linearRampToValueAtTime(880, now + 0.3);
-      gain.gain.setValueAtTime(0.2, now);
-      gain.gain.linearRampToValueAtTime(0, now + 0.3);
-      osc.start(now);
-      osc.stop(now + 0.3);
-    }
-  } catch (e) {
-    console.error("Audio playback failed", e);
-  }
-};
-
 export default function TimerPage() {
   const { t } = useTranslation();
   const [formatId, setFormatId] = useState('standard');
@@ -189,26 +140,7 @@ export default function TimerPage() {
   }, [isRunning]);
 
   // Keep the screen awake while a speech runs.
-  useEffect(() => {
-    if (!isRunning || !('wakeLock' in navigator)) return;
-    let lock: WakeLockSentinel | null = null;
-    let released = false;
-    const acquire = () => {
-      if (document.visibilityState !== 'visible') return;
-      navigator.wakeLock.request('screen').then((sentinel) => {
-        if (released) void sentinel.release();
-        else lock = sentinel;
-      }).catch(() => { /* Not allowed here (battery saver, iframe): the timer still works. */ });
-    };
-    acquire();
-    // The browser drops the lock when the tab hides; take it again on return.
-    document.addEventListener('visibilitychange', acquire);
-    return () => {
-      released = true;
-      document.removeEventListener('visibilitychange', acquire);
-      void lock?.release().catch(() => {});
-    };
-  }, [isRunning]);
+  useScreenWakeLock(isRunning);
 
   // Signals and completion. The time-up sound and vibration fire in the same frame.
   useEffect(() => {

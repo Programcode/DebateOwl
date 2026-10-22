@@ -24,6 +24,12 @@ vi.mock('@/lib/supabase/client', () => ({
 vi.mock('@/lib/ai/client', () => ({
   generateSparringTurn: generateMock,
   judgeSparringSession: judgeMock,
+  isAISubscriptionError: () => false,
+  isAIModelRestrictionError: () => false,
+}));
+
+vi.mock('@/hooks/use-subscription', () => ({
+  useSubscription: () => ({ remainingToday: null as number | null }),
 }));
 
 vi.mock('@/lib/voice/opponent-voice', () => ({

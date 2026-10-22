@@ -14,7 +14,7 @@ for (const [key, value] of Object.entries({
 
 const { handleRequest } = await import("./index.ts");
 
-type Scenario = "complete" | "audit-error" | "truncated" | "provider-error" | "provider-error-after-finish" | "aborted" | "aborted-after-finish";
+type Scenario = "complete" | "audit-error" | "truncated" | "cut-off" | "cut-off-empty" | "provider-error" | "provider-error-after-finish" | "aborted" | "aborted-after-finish";
 
 const usage = {
   prompt_tokens: 12,
@@ -49,6 +49,15 @@ function framesFor(scenario: Exclude<Scenario, "aborted">): string {
     return [
       `data: ${JSON.stringify({ choices: [{ delta: { content: "Partial" } }] })}\n\n`,
       usageFrame,
+    ].join("");
+  }
+  // Stopped at max_tokens: after some text, or after reasoning only.
+  if (scenario === "cut-off" || scenario === "cut-off-empty") {
+    return [
+      ...(scenario === "cut-off" ? [`data: ${JSON.stringify({ choices: [{ delta: { content: "Partial" } }] })}\n\n`] : []),
+      `data: ${JSON.stringify({ choices: [{ delta: {}, finish_reason: "length" }] })}\n\n`,
+      usageFrame,
+      "data: [DONE]\n\n",
     ].join("");
   }
   if (scenario === "provider-error-after-finish") {
@@ -145,7 +154,7 @@ async function runScenario(scenario: Scenario) {
 }
 
 Deno.test("OpenRouter stream accounting bills only completed work", async () => {
-  for (const scenario of ["complete", "audit-error", "truncated", "provider-error", "provider-error-after-finish", "aborted", "aborted-after-finish"] as const) {
+  for (const scenario of ["complete", "audit-error", "cut-off", "truncated", "cut-off-empty", "provider-error", "provider-error-after-finish", "aborted", "aborted-after-finish"] as const) {
     const result = await runScenario(scenario);
     if (result.providerCalls !== 1) throw new Error(`${scenario}: expected one provider call, got ${result.providerCalls}`);
     if (result.rows.length !== 1) throw new Error(`${scenario}: expected one audit insert, got ${result.rows.length}`);
@@ -160,9 +169,13 @@ Deno.test("OpenRouter stream accounting bills only completed work", async () => 
       throw new Error(`${scenario}: raw provider usage was lost: ${JSON.stringify(row)}`);
     }
 
-    if (scenario === "complete" || scenario === "audit-error") {
+    if (scenario === "complete" || scenario === "audit-error" || scenario === "cut-off") {
       if (row.status !== "success" || row.cost_usd !== usage.cost || !result.body.includes("event: final")) {
         throw new Error(`complete stream was not billed: ${JSON.stringify(row)}\n${result.body}`);
+      }
+      // A partial answer is kept and flagged; a full one is not.
+      if (result.body.includes('"replyTruncated":true') !== (scenario === "cut-off")) {
+        throw new Error(`${scenario}: wrong cut-off flag\n${result.body}`);
       }
       continue;
     }

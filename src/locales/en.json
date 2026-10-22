@@ -419,6 +419,7 @@
     "streamInterruptedDesc": "You can ask again to get a complete answer.",
     "chatSaved": "Chat saved",
     "chatSavedDesc": "You can load it from History.",
+    "replyCutOff": "This answer hit its length limit and stops early. Ask a narrower question or ask it to continue.",
     "retryableFailedDesc": "Couldn't reach the AI. Check your connection and retry.",
     "saveFailed": "Save failed",
     "saveFailedDesc": "The chat could not be saved. Please try again.",
@@ -456,9 +457,13 @@
     "accessExpired": "Your access has expired. Upgrade to continue using AI tools.",
     "globalSettings": "Global Settings",
     "account": "Account",
-    "accountDesc": "Signed in with Google. API keys are managed securely on the server.",
+    "accountDesc": "API keys are managed securely on the server.",
     "signedInAs": "Signed in as",
     "unknownUser": "Unknown user",
+    "signInGoogle": "Sign-in: Google",
+    "signInEmail": "Sign-in: email code",
+    "signInGoogleOrEmail": "Sign-in: Google or email code",
+    "signInDemo": "Sign-in: demo code",
     "signOut": "Sign out",
     "signOutFailed": "Could not sign out. Please try again.",
     "aiModels": "AI Models",
@@ -545,6 +550,7 @@
     "failed": "Could not start sign in",
     "tryAgain": "Please try again.",
     "backHome": "Back to DebateLab",
+    "sessionExpired": "Your session expired. Sign in again.",
     "errors": {
       "demoNotFound": "Demo code not found.",
       "demoUnusable": "This demo code cannot be used.",
@@ -552,7 +558,7 @@
       "demoExpired": "This demo code has expired.",
       "demoUsedUp": "This demo code has no uses left.",
       "rateLimited": "Too many attempts. Try again later.",
-      "codeExpired": "That code has expired. Send a new one.",
+      "codeExpired": "That code is wrong or has expired. Check it or send a new one.",
       "network": "Can't reach DebateLab. Check your connection and try again."
     }
   },
@@ -1300,6 +1306,7 @@
     "pros": "Pros",
     "cons": "Cons",
     "placeholder": "Ask your debate coach...",
+    "inputLabel": "Message to your debate coach",
     "placeholderListening": "Listening...",
     "saveToLibrary": "Save to Library",
     "saveMessage": "Save message to library",
@@ -1354,6 +1361,11 @@
     "upgradeNote": "Upgrade to unlock high reasoning.",
     "upgrade": "Upgrade to Pro - $5/mo",
     "useFree": "Use low reasoning instead"
+  },
+  "dailyLimit": {
+    "usage": "Today: {{used}} of {{limit}} AI requests used. They refresh at midnight UTC ({{time}} your time).",
+    "sparringNone": "You have no AI requests left today, so the opponent can't answer. They refresh at midnight UTC.",
+    "sparringShort": "This round needs {{needed}} AI requests and you have {{remaining}} left today, so it would stop before the judge. They refresh at midnight UTC."
   },
   "pricingModal": {
     "title": "Upgrade to Pro",
@@ -1535,6 +1547,9 @@
     "fitView": "Fit view",
     "toggleInteractivity": "Lock or unlock the canvas",
     "miniMap": "Flowchart overview",
+    "edgeAriaLabel": "From {{source}} to {{target}}",
+    "a11yNodeHelp": "Press Enter or Space to select a node. You can then use the arrow keys to move it. Press Delete to remove it and Escape to cancel.",
+    "a11yEdgeHelp": "Press Enter or Space to select a link. You can then press Delete to remove it or Escape to cancel.",
     "deletedNamed": "Deleted {{title}}",
     "deleteNamed": "Delete {{title}}",
     "restoreFailed": "Could not restore the flowchart",

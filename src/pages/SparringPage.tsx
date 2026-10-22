@@ -25,6 +25,9 @@ import { OpponentVoiceBar } from '@/components/features/voice/OpponentVoiceBar';
 import { useVoiceAvailability } from '@/lib/voice/availability';
 import type { SpeechDelivery } from '@/lib/voice/delivery';
 import { opponentVoice } from '@/lib/voice/opponent-voice';
+import { useSubscription } from '@/hooks/use-subscription';
+import { useSubscriptionError } from '@/hooks/use-subscription-error';
+import { SubscriptionErrorModals } from '@/components/features/subscription';
 
 function readableError(error: unknown, fallback: string) {
   if (isAISubscriptionError(error)) return getUserFacingAIError(error);
@@ -43,6 +46,9 @@ export default function SparringPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const location = useLocation();
+  const { remainingToday } = useSubscription();
+  const subError = useSubscriptionError();
+  const { handleSubscriptionError } = subError;
   const workspaceLaunch = (location.state as { workspaceLaunch?: unknown } | null)?.workspaceLaunch === true;
   const workspaceArtifact = (location.state as { workspaceArtifact?: unknown } | null)?.workspaceArtifact;
   const storedSession = useSparringStore((state) => state.currentSession);
@@ -209,6 +215,7 @@ export default function SparringPage() {
       })
       .catch((error: unknown) => {
         if (aiRequestRef.current !== requestKey) return;
+        handleSubscriptionError(error);
         setAiError(readableError(error, t('sparring.round.aiRequestFailed', 'The AI request failed. Check your connection and try again.')));
       })
       .finally(() => {
@@ -218,7 +225,7 @@ export default function SparringPage() {
           setLiveSpeech('');
         }
       });
-  }, [appendAiSpeech, config, outputLanguage, pauseTimer, resumeTimer, retryNonce, session, t, voiceActive, workspace.context]);
+  }, [appendAiSpeech, config, handleSubscriptionError, outputLanguage, pauseTimer, resumeTimer, retryNonce, session, t, voiceActive, workspace.context]);
 
   useEffect(() => {
     if (!session || session.phase !== 'judging') return;
@@ -259,6 +266,7 @@ export default function SparringPage() {
       })
       .catch((error: unknown) => {
         if (judgeRequestRef.current !== requestKey) return;
+        handleSubscriptionError(error);
         setJudgingError(readableError(error, t('sparring.round.judgeRequestFailed', 'The judge request failed. Check your connection and try again.')));
       })
       .finally(() => {
@@ -267,7 +275,7 @@ export default function SparringPage() {
           setLiveJudging({});
         }
       });
-  }, [completeSession, config, outputLanguage, retryNonce, session, t, workspace.context]);
+  }, [completeSession, config, handleSubscriptionError, outputLanguage, retryNonce, session, t, workspace.context]);
 
   useEffect(() => {
     if (!workspace.context || !session) return;
@@ -335,11 +343,13 @@ export default function SparringPage() {
         <SparringSetup
           initialValues={workspace.context ? { motion: workspace.context.motion, userSide: workspace.context.side } : undefined}
           onStart={handleStart}
+          remainingRequests={remainingToday}
           debatePrefill={!workspace.context}
           voiceAllowed={!workspace.context}
           banner={<CurrentDebateStrip hidden={Boolean(workspace.context)} className="" />}
         />
         {debateGate.dialog}
+        <SubscriptionErrorModals subError={subError} />
       </div>
     );
   }
@@ -381,6 +391,7 @@ export default function SparringPage() {
         onRetryAi={retryAi}
         onRetryJudging={retryJudging}
       />
+      <SubscriptionErrorModals subError={subError} />
     </div>
   );
 }

@@ -5,10 +5,10 @@
     "actions": [
       {
         "name": "type",
-        "summary": "type \"How do I weigh access against cost in a…\" into textbox \"Ask your debate coach...\"",
+        "summary": "type \"How do I weigh access against cost in a…\" into textbox \"Message to your debate coach\"",
         "target": {
           "role": "textbox",
-          "name": "Ask your debate coach...",
+          "name": "Message to your debate coach",
           "placeholder": "Ask your debate coach..."
         },
         "value": "How do I weigh access against cost in a rebuttal?"
