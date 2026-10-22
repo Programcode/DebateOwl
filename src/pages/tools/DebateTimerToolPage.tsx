@@ -45,7 +45,9 @@ function EmbedSnippets() {
   const [formatId, setFormatId] = useState<BuiltInFormatId>('bp');
   const [copied, setCopied] = useState(false);
   const format = FORMATS[formatId];
-  const snippet = `<iframe src="${site.origin}/embed/debate-timer?format=${formatId}" title="${format.name} debate timer" width="100%" height="560" style="border:0;max-width:760px" allow="screen-wake-lock; fullscreen" allowfullscreen loading="lazy"></iframe>
+  // Tall enough that the attribution link shows without scrolling: prep banks and the POI strip add height.
+  const height = format.prepSeconds > 0 ? 700 : format.segments.some((segment) => segment.poi) ? 600 : 540;
+  const snippet = `<iframe src="${site.origin}/embed/debate-timer?format=${formatId}" title="${format.name} debate timer" width="100%" height="${height}" style="border:0;max-width:760px" allow="screen-wake-lock; fullscreen" allowfullscreen loading="lazy"></iframe>
 <p><a href="${site.origin}/tools/debate-timer">Free debate timer by DebateLab</a></p>`;
 
   return (
@@ -135,7 +137,7 @@ export default function DebateTimerToolPage() {
         <h2>Embed this timer on your club site</h2>
         <p>Pick a format and paste the snippet into any page that accepts HTML. The embedded timer is the same clock without the page around it, has a small link back here, and loads nothing but its own files: no ads, no tracking, no account.</p>
         <EmbedSnippets />
-        <p>For a custom format, set it up above, copy its link, and replace <code>/tools/debate-timer</code> with <code>/embed/debate-timer</code> in the iframe address.</p>
+        <p>For a custom format, set it up above, copy its link, and replace <code>/tools/debate-timer</code> with <code>/embed/debate-timer</code> in the iframe address. Use a height of 700 if it has prep time.</p>
       </section>
 
       <ToolFaq faq={FAQ} />
