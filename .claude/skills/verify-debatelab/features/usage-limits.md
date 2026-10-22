@@ -7,13 +7,15 @@ The daily AI allowance counts units, not requests. An expensive model uses sever
 - `usage-weighted`: with 4 units left, Opus is refused (`Daily Access Paused`, "This model counts as 5 uses, and you have 4 left today.") without a provider call or a counter change; switching to Claude Haiku 5.5 runs and uses 1 unit.
 - `usage-monthly`: with `ai_requests.cost_usd` for this month at or above the budget, the next request opens `Monthly AI Allowance Used` with an `OK` button and no upgrade offer, makes no provider call, and leaves the daily counter alone.
 
+- `usage-monthly-inline`: Sparring shows refusals inline rather than in the dialog. With the budget reached, the opponent's turn shows the translated monthly message from the catalog, not the server's English reason, and no provider call is made.
+
 ## How to get to it (user POV)
 
 - Any AI tool, for example `/app/generate`, once the day's allowance or the month's budget is used up. The dialog opens on submit.
 
 ## Driving it with verify.sh + Playwright
 
-- `bin/verify.sh drive recipes/usage-limits` covers both sub-features in one test.
+- `bin/verify.sh drive recipes/usage-limits` covers the dialog sub-features in one test and the Sparring inline message in a second.
 - The recipe sets `daily_limit_override: 7` on the demo user and inserts a `daily_usage_counters` row (`quota_key: "ai"`, today's UTC date, `request_count: 3`), then inserts an `ai_requests` row with `cost_usd: 3` for the monthly step.
 - End states are read from `daily_usage_counters.request_count` and from the recorded provider calls.
 

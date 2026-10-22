@@ -1,5 +1,5 @@
 import i18n from '@/i18n';
-import { AIProviderError } from './client';
+import { AIProviderError, isAISubscriptionError } from './client';
 
 const PROVIDER_LABELS: Record<string, string> = {
   openai: 'OpenAI',
@@ -16,7 +16,19 @@ function providerLabel(provider?: string, message = ''): string {
   return i18n.t('aiErrors.genericProvider', 'AI provider');
 }
 
+/** The limit dialog's explanation, also used where a page shows the error inline. */
+export function subscriptionLimitMessage({ code, limit, current, units }: { code?: string; limit?: number; current?: number; units?: number }): string {
+  if (code === 'trial_expired') return i18n.t('limitModal.trialEndedDesc');
+  if (code === 'monthly_budget_reached') return i18n.t('limitModal.monthlyReachedDesc');
+  const remaining = Math.max(0, (limit || 0) - (current || 0));
+  // A weighted model can be refused while lighter requests still fit today.
+  if ((units ?? 1) > 1 && remaining > 0) return i18n.t('limitModal.weightedDesc', { units, remaining });
+  return i18n.t('limitModal.limitReachedDesc', { current: current || 0, limit: limit || 0 });
+}
+
 export function getUserFacingAIError(error: unknown): string {
+  if (isAISubscriptionError(error)) return subscriptionLimitMessage(error);
+
   if (error instanceof AIProviderError || (error instanceof Error && error.name === 'AIProviderError')) {
     const provider = providerLabel((error as AIProviderError).provider, error.message);
     const raw = error.message;

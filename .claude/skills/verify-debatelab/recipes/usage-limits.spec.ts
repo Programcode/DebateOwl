@@ -1,5 +1,5 @@
 import type { Page } from "@playwright/test";
-import { admin, AI_TIMEOUT, aiResponse, expect, providerCalls, startDebate, test } from "./fixtures";
+import { admin, AI_TIMEOUT, aiResponse, chooseForMotion, expect, providerCalls, startDebate, test } from "./fixtures";
 
 // Feature map: features/usage-limits.md.
 const motion = "This House would make public transport free at the point of use";
@@ -69,4 +69,30 @@ test("usage-weighted: Opus counts as 5 requests, a lighter model still runs, and
   await evidence.step("Monthly cap refused the request; no provider call; daily counter unchanged");
   await monthly.getByRole("button", { name: "OK" }).click();
   await expect(monthly).toHaveCount(0);
+});
+
+test("usage-monthly-inline: Sparring shows the translated monthly-cap message, not the server's English reason", async ({ signedIn: page, user, evidence }) => {
+  const userId = await user.userId();
+  const { error } = await admin.from("ai_requests").insert({
+    user_id: userId, feature: "sparring", provider: "openrouter", model: "anthropic/claude-opus-5.5", status: "success", cost_usd: 3,
+  });
+  if (error) throw error;
+
+  await page.goto("/app/sparring");
+  await page.getByLabel("Motion").fill(motion);
+  await page.getByRole("combobox", { name: "Round format" }).click();
+  await page.getByRole("option", { name: /Lincoln-Douglas · 5 speeches/ }).click();
+  await page.getByRole("button", { name: "Start round" }).click();
+  await chooseForMotion(page, "create");
+  const draft = page.getByRole("textbox", { name: "Draft for Affirmative constructive" });
+  await expect(draft).toBeVisible({ timeout: AI_TIMEOUT });
+  await draft.fill("Universal access removes the direct price barrier to work, school, and civic life.");
+  await page.getByRole("button", { name: "Submit speech" }).click();
+
+  // The client's catalog copy ("You've used ...") differs from the server reason ("You've reached ...").
+  await expect(page.getByText("You've used this month's AI allowance.", { exact: false })).toBeVisible({ timeout: AI_TIMEOUT });
+  await expect(page.getByText("You've reached this month's AI usage allowance", { exact: false })).toHaveCount(0);
+  await evidence.shot("04-sparring-monthly-cap");
+  expect((await providerCalls()).filter((call) => call.feature === "sparring")).toEqual([]);
+  await evidence.step("Sparring opponent turn refused by the monthly cap with the translated message; no provider call");
 });

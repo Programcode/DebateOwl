@@ -2,6 +2,7 @@ import { useTranslation } from 'react-i18next';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { AlertTriangle, Zap, Clock } from 'lucide-react';
+import { subscriptionLimitMessage } from '@/lib/ai/error-display';
 
 export type LimitModalVariant = 'limit_reached' | 'trial_expired' | 'monthly_budget_reached';
 
@@ -20,22 +21,13 @@ export function LimitReachedModal({ open, onOpenChange, variant, limit, current,
   const { t } = useTranslation();
   const isTrialExpired = variant === 'trial_expired';
   const isMonthlyBudget = variant === 'monthly_budget_reached';
-  const remaining = Math.max(0, (limit || 0) - (current || 0));
-  // A weighted model can be refused while lighter requests still fit today.
-  const isWeightedRefusal = !isTrialExpired && !isMonthlyBudget && (units ?? 1) > 1 && remaining > 0;
 
   const title = isTrialExpired
     ? t('limitModal.trialEnded')
     : isMonthlyBudget
       ? t('limitModal.monthlyReached')
       : t('limitModal.limitReached');
-  const description = isTrialExpired
-    ? t('limitModal.trialEndedDesc')
-    : isMonthlyBudget
-      ? t('limitModal.monthlyReachedDesc')
-      : isWeightedRefusal
-        ? t('limitModal.weightedDesc', { units, remaining })
-        : t('limitModal.limitReachedDesc', { current: current || 0, limit: limit || 0 });
+  const description = subscriptionLimitMessage({ code: variant, limit, current, units });
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
