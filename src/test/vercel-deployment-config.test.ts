@@ -331,7 +331,7 @@ describe("Vercel frontend deployment configuration", () => {
 
   it("caches the unhashed public images for 30 days", () => {
     const config = loadConfig();
-    for (const path of ["/favicon.ico", "/favicon.png", "/favicon-72.png", "/hero-visual.png", "/placeholder.svg"]) {
+    for (const path of ["/favicon.ico", "/favicon.png", "/favicon-72.png", "/hero-visual.jpg", "/placeholder.svg"]) {
       expect(headersAt(config, path)["Cache-Control"]).toBe("public, max-age=2592000");
     }
     expect(headersAt(config, "/assets/index-abc123.js")["Cache-Control"]).toBe(
@@ -349,7 +349,7 @@ describe("Vercel frontend deployment configuration", () => {
     for (const path of ["/", "/app", "/login", "/share/abc", "/expocit/sources", "/terms", "/index.html", "/online-debate-timer"]) {
       expect(pattern.test(path), path).toBe(true);
     }
-    for (const path of ["/favicon.png", "/hero-visual.png", "/assets/main.js", "/theme-init.js", "/sw.js", "/robots.txt", "/_vercel/insights/script.js"]) {
+    for (const path of ["/favicon.png", "/hero-visual.jpg", "/assets/main.js", "/theme-init.js", "/sw.js", "/robots.txt", "/_vercel/insights/script.js"]) {
       expect(pattern.test(path), path).toBe(false);
     }
   });
