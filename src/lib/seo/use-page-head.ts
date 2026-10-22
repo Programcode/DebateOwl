@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { BRAND, PAGE_HEADS, SHELL_HEAD, SITE_ORIGIN, type PrerenderedRoute } from './pages';
+import { PAGE_HEADS, SHELL_HEAD, SITE_ORIGIN, type PrerenderedRoute } from './pages';
 
 function setMeta(name: string, content: string) {
   let meta = document.head.querySelector<HTMLMetaElement>(`meta[name="${name}"]`);
@@ -49,15 +49,15 @@ export function usePageHead(route: PrerenderedRoute) {
 const PRIVATE_ROUTE = /^\/(login|app|share)(\/|$)/;
 
 /**
- * Titles each private page "<page> · DebateLab" and marks it noindex while it
+ * Titles each private page "<page> · DebateLab" (the shell's title) and marks it noindex while it
  * is on screen. Every other route keeps the shell's head or sets its own.
  */
 export function usePrivateRouteHead(pathname: string, label: string) {
   const isPrivate = PRIVATE_ROUTE.test(pathname);
   useEffect(() => {
     if (!isPrivate) return;
-    // "Sign in to DebateLab" already names the brand.
-    document.title = label.includes(BRAND) ? label : `${label} · ${BRAND}`;
+    // "Sign in to DebateLab" already names the app.
+    document.title = label.includes(SHELL_HEAD.title) ? label : `${label} · ${SHELL_HEAD.title}`;
     setMeta('robots', 'noindex, nofollow');
     setCanonical(undefined);
     return () => {

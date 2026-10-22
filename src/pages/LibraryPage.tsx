@@ -146,14 +146,15 @@ function SourceRow({
           >
             <Trash2 className="h-4 w-4" />
           </Button>
-          {/* A label, so a tap anywhere in the 44px square flips the switch, not only the switch itself. */}
-          <label className="flex cursor-pointer items-center justify-center pointer-coarse:min-h-11 pointer-coarse:min-w-11" onClick={(event) => event.stopPropagation()}>
+          <div className="flex items-center justify-center pointer-coarse:min-h-11 pointer-coarse:min-w-11" onClick={(event) => event.stopPropagation()}>
+            {/* On touch the switch's own tap area grows to 44px tall, like the Checkbox's. */}
             <Switch
+              className="relative pointer-coarse:after:absolute pointer-coarse:after:-inset-2.5"
               checked={source.isActive}
               onCheckedChange={() => onToggle(source.id)}
               aria-label={t('libraryPage.toggleSourceLabel', { title: source.title })}
             />
-          </label>
+          </div>
         </div>
       </div>
     </div>
