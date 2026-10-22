@@ -792,7 +792,7 @@ export default function FlowchartPage() {
                                         <div className="min-w-0">
                                             <div className="flex flex-wrap items-center gap-2">
                                                 <Badge variant="secondary">{t('flowchart.selectedNode', 'Selected')}</Badge>
-                                                <h3 aria-level={2} className="truncate text-sm font-semibold">{node.data.label}</h3>
+                                                <h2 className="truncate text-sm font-semibold">{node.data.label}</h2>
                                             </div>
                                             {node.data.description && (
                                                 <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">{node.data.description}</p>
