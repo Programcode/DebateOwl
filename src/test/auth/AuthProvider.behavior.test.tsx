@@ -894,6 +894,66 @@ describe('AuthProvider behavior', () => {
     }
   });
 
+  it('after a timeout, still takes a sign-in made on /login, and a late failure does not undo it', async () => {
+    vi.useFakeTimers();
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    try {
+      window.history.replaceState({}, '', '/auth/callback?code=slow-code');
+      getSessionMock.mockResolvedValue({ data: { session: { user: { id: 'stored-user' }, access_token: 'stored' } }, error: null });
+      let finishExchange!: (value: unknown) => void;
+      exchangeCodeForSessionMock.mockReturnValue(new Promise((resolve) => { finishExchange = resolve; }));
+
+      render(
+        <AuthProvider>
+          <AuthConsumer />
+        </AuthProvider>
+      );
+
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(15_000);
+      });
+      // The user gave up on the link and signed in with a code instead.
+      await act(async () => {
+        callbackRef.current?.('SIGNED_IN', { user: { id: 'code-user' }, access_token: 'code-token' });
+        await vi.advanceTimersByTimeAsync(0);
+      });
+      expect(screen.getByTestId('user')).toHaveTextContent('code-user');
+
+      await act(async () => {
+        finishExchange({ data: { session: null }, error: Object.assign(new Error('expired'), { code: 'flow_state_expired' }) });
+        await vi.advanceTimersByTimeAsync(0);
+      });
+      expect(screen.getByTestId('user')).toHaveTextContent('code-user');
+      expect(prepareSessionStoreMock).not.toHaveBeenCalledWith('stored-user');
+    } finally {
+      warnSpy.mockRestore();
+      vi.useRealTimers();
+    }
+  });
+
+  it('does not restore the stored account over one signed in during its check', async () => {
+    getSessionMock.mockResolvedValue({ data: { session: { user: { id: 'stored-user' }, access_token: 'stored' } }, error: null });
+    let answerLookup!: (value: unknown) => void;
+    getUserMock.mockImplementationOnce(() => new Promise((resolve) => { answerLookup = resolve; }));
+
+    render(
+      <AuthProvider>
+        <AuthConsumer />
+      </AuthProvider>
+    );
+
+    await waitFor(() => expect(getUserMock).toHaveBeenCalled());
+    await act(async () => {
+      callbackRef.current?.('SIGNED_IN', { user: { id: 'new-user' }, access_token: 'new-token' });
+    });
+    await act(async () => {
+      answerLookup({ data: { user: { id: 'stored-user' } }, error: null });
+    });
+
+    await waitFor(() => expect(screen.getByTestId('loading')).toHaveTextContent('false'));
+    expect(screen.getByTestId('user')).toHaveTextContent('new-user');
+  });
+
   it('does not hold startup on a sign-out of a dead stored session that never answers', async () => {
     vi.useFakeTimers();
     try {

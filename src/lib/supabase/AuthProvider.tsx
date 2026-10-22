@@ -191,11 +191,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // while the code is still being exchanged, and that must not end loading.
     const callbackUrl = new URL(window.location.href);
     let callbackPending = callbackUrl.pathname === AUTH_CALLBACK_PATH;
-    // True while the callback's code exchange has no answer, even past the
-    // timeout. auth-js keeps announcing sessions meanwhile (the stored
-    // account, then the exchange's own); only the exchange's answer may
-    // sign an account in, so the listener ignores them all.
+    // True until the callback's code exchange answers or times out. auth-js
+    // announces sessions meanwhile (the stored account, then the exchange's
+    // own); only the exchange's answer may sign an account in, so the
+    // listener ignores them. After a timeout the user can act again, so the
+    // listener does too.
     let exchangeInFlight = false;
+    let callbackTimedOut = false;
     // The first account auth-js announced while the exchange ran: the one
     // this browser had before the callback ('' for none).
     let accountBeforeCallback: string | undefined;
@@ -231,6 +233,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return;
       }
       if (!mounted) return;
+      // Someone else signed in while this was checked: theirs stands.
+      const current = currentUserIdRef.current;
+      if (current && current !== data.session?.user.id) return;
       if (data.session) {
         applySession(data.session);
       } else {
@@ -270,31 +275,34 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       } catch (err) {
         // A timeout is not a final answer: the code may still be good.
         settled = !(err instanceof AuthTimeoutError);
-        if (settled) exchangeInFlight = false;
+        exchangeInFlight = false;
+        callbackTimedOut = !settled;
         // A session this browser already had still stands; init restores it.
         console.warn('[Auth] sign-in callback failed:', err);
         if (mounted) setCallbackError(settled ? authCallbackErrorFor(err) : 'timed-out');
         if (!settled) {
-          // The late answer is final: a success signs that account in, a
-          // failure gives its real reason and restores the stored session.
+          // The late answer is final. A success is announced by auth-js like
+          // any sign-in; a failure gives its real reason and, if nobody signed
+          // in meanwhile, restores the stored session.
           void exchange
             .then(
               ({ data, error: lateError }): LateAnswer => (lateError || !data.session ? { session: null, lateError } : { session: data.session, lateError: null }),
               (lateError: unknown): LateAnswer => ({ session: null, lateError }),
             )
             .then(async ({ session, lateError }) => {
-              exchangeInFlight = false;
               if (!mounted) return;
               const onCallbackPage = window.location.pathname === AUTH_CALLBACK_PATH;
               cleanUrl();
               if (session) {
                 setCallbackError(null);
-                applySession(session, accountBeforeCallback);
+                allowSessionsAfterSignIn();
+                // The listener applies it, unless a blocked restore dropped it.
+                if (currentUserIdRef.current !== session.user.id) applySession(session);
                 return;
               }
               // Only the callback page still shows this attempt's outcome.
               if (onCallbackPage) setCallbackError(authCallbackErrorFor(lateError));
-              await restoreStoredSession();
+              if (!currentUserIdRef.current) await restoreStoredSession();
             })
             .catch((lateError: unknown) => console.warn('[Auth] restoring the stored session failed:', lateError));
         }
@@ -315,8 +323,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           applySession(oauthSession, accountBeforeCallback);
           return;
         }
-        // Timed out: the late answer decides which account, if any, opens.
-        if (exchangeInFlight) return;
+        // Timed out: nothing is restored while the exchange may still sign
+        // someone in. Its late answer, or the user, decides.
+        if (callbackTimedOut) return;
 
         await restoreStoredSession();
       } catch (err) {
