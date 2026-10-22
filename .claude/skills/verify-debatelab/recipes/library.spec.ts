@@ -115,6 +115,36 @@ test("lib-offline: offline, the switch does not move and says the change was not
   await evidence.json("03-row-after-retry", await row());
 });
 
+test("lib-edit-while-switching: the editor follows a switch that rolls back, and Save sends only what was edited", async ({ signedIn: page, user, evidence }) => {
+  await startDebate(page, motion);
+  await page.goto("/app/library");
+  await addSource(page, "Race study", "Original text.");
+  // The switch write hangs, then fails, while the editor is open.
+  const failSwitch = async (route: import("@playwright/test").Route) => {
+    if (route.request().method() === "PATCH" && (route.request().postData() ?? "").includes("is_active")) {
+      await new Promise((resolve) => setTimeout(resolve, 1_500));
+      await route.abort("failed");
+      return;
+    }
+    await route.continue();
+  };
+  await page.route("**/rest/v1/sources?**", failSwitch);
+  await page.getByRole("switch", { name: "Toggle Race study" }).click();
+  await page.getByRole("button", { name: "Race study", exact: true }).click();
+  const sheet = page.getByRole("dialog");
+  await expect(page.getByText("Could not change this source")).toBeVisible();
+  // The switch went back on; the editor shows that, since it was not edited there.
+  await expect(sheet.getByRole("switch", { name: "Use for AI grounding" })).toBeChecked();
+  await page.unroute("**/rest/v1/sources?**", failSwitch);
+  await sheet.getByRole("textbox", { name: "Content" }).fill("Edited text.");
+  await sheet.getByRole("button", { name: "Save" }).click();
+  await expect(page.getByText("Source updated")).toBeVisible();
+  const row = async () => (await admin.from("sources").select("content,is_active").eq("user_id", await user.userId()).eq("title", "Race study")).data;
+  await expect.poll(row).toEqual([{ content: "Edited text.", is_active: true }]);
+  await evidence.shot("01-editor-after-rollback");
+  await evidence.json("02-row", await row());
+});
+
 test("lib-dedupe and lib-layout: a page saved once per debate, and long titles keep their room on a phone", async ({ signedIn: page, user, evidence }) => {
   await startDebate(page, motion);
   const userId = await user.userId();

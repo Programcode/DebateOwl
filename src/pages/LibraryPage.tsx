@@ -220,8 +220,9 @@ export default function LibraryPage() {
   const draftTitleRef = useRef<HTMLInputElement>(null);
   const draftContentRef = useRef<HTMLTextAreaElement>(null);
   const draftLoadedFor = useRef<string | null>(null);
-  // What the sheet loaded, so Save sends only the fields the student changed.
-  const draftBase = useRef<typeof sourceDraft | null>(null);
+  // Fields the student edited in the sheet. Save sends only these; the others
+  // follow the stored source while the sheet is open.
+  const touchedDraftFields = useRef(new Set<keyof typeof sourceDraft>());
   const [isSavingDraft, setIsSavingDraft] = useState(false);
   const [newSource, setNewSource] = useState({
     title: '',
@@ -507,15 +508,16 @@ export default function LibraryPage() {
   const selectedSource = selectedSourceId ? sourceLibrary.find((source) => source.id === selectedSourceId) || null : null;
 
   useEffect(() => {
-    // The draft loads once per opened source. A save that fails, or a change
-    // made elsewhere while the sheet is open, must not wipe what was typed.
+    // Opening a source loads every field. While it stays open, fields the
+    // student has not edited follow the stored source (a rolled-back switch,
+    // a research refresh), and edited ones keep what was typed, even when a
+    // save fails.
     if (!selectedSource) {
       draftLoadedFor.current = null;
+      touchedDraftFields.current.clear();
       return;
     }
-    if (draftLoadedFor.current === selectedSource.id) return;
-    draftLoadedFor.current = selectedSource.id;
-    const loaded = {
+    const stored = {
       title: selectedSource.title,
       content: selectedSource.content,
       type: selectedSource.type,
@@ -523,9 +525,21 @@ export default function LibraryPage() {
       folder: selectedSource.folder || 'General',
       isActive: selectedSource.isActive,
     };
-    draftBase.current = loaded;
-    setDraftErrors({});
-    setSourceDraft(loaded);
+    if (draftLoadedFor.current !== selectedSource.id) {
+      draftLoadedFor.current = selectedSource.id;
+      touchedDraftFields.current.clear();
+      setDraftErrors({});
+      setSourceDraft(stored);
+      return;
+    }
+    const touched = touchedDraftFields.current;
+    setSourceDraft((draft) => {
+      const next = { ...draft };
+      for (const key of Object.keys(stored) as Array<keyof typeof stored>) {
+        if (!touched.has(key)) (next as Record<string, unknown>)[key] = stored[key];
+      }
+      return next;
+    });
   }, [selectedSource]);
   useEffect(() => {
     setFolderRenameValue(selectedFolder === 'all' ? '' : selectedFolder);
@@ -603,6 +617,10 @@ export default function LibraryPage() {
       });
     }
   };
+  const editDraft = (patch: Partial<typeof sourceDraft>) => {
+    for (const key of Object.keys(patch) as Array<keyof typeof sourceDraft>) touchedDraftFields.current.add(key);
+    setSourceDraft((draft) => ({ ...draft, ...patch }));
+  };
   const handleSaveSourceDraft = async () => {
     if (!selectedSource || isSavingDraft) return;
     const errors = requiredErrors(sourceDraft.title, sourceDraft.content);
@@ -612,17 +630,14 @@ export default function LibraryPage() {
 
     // Only what was edited here is written, so a change that reached this
     // source while the sheet was open (a switch, research) is not overwritten.
-    const base = draftBase.current;
-    const draft = sourceDraft;
-    const patch = Object.fromEntries(
-      (Object.keys(draft) as Array<keyof typeof draft>)
-        .filter((key) => !base || draft[key] !== base[key])
-        .map((key) => [key, draft[key]]),
-    ) as Partial<typeof draft>;
+    const sourceId = selectedSource.id;
+    const sent = Array.from(touchedDraftFields.current);
+    const patch = Object.fromEntries(sent.map((key) => [key, sourceDraft[key]])) as Partial<typeof sourceDraft>;
     setIsSavingDraft(true);
     try {
-      await updateSource(selectedSource.id, patch);
-      draftBase.current = draft;
+      await updateSource(sourceId, patch);
+      // The sheet may show another source by now; its edits are its own.
+      if (draftLoadedFor.current === sourceId) for (const key of sent) touchedDraftFields.current.delete(key);
     } catch (error) {
       toast({
         title: t('libraryPage.saveFailed', 'Could not save this source.'),
@@ -1169,7 +1184,7 @@ export default function LibraryPage() {
                       aria-invalid={Boolean(draftErrors.title)}
                       aria-describedby={draftErrors.title ? 'source-detail-title-error' : undefined}
                       onChange={(event) => {
-                        setSourceDraft({ ...sourceDraft, title: event.target.value });
+                        editDraft({ title: event.target.value });
                         if (draftErrors.title) setDraftErrors({ ...draftErrors, title: undefined });
                       }}
                     />
@@ -1178,7 +1193,7 @@ export default function LibraryPage() {
                   <div className="grid gap-2 sm:grid-cols-2">
                     <div className="space-y-2">
                       <Label htmlFor="source-detail-folder">{t('libraryPage.folder', 'Folder')}</Label>
-                      <Select value={sourceDraft.folder || 'General'} onValueChange={(folder) => setSourceDraft({ ...sourceDraft, folder })}>
+                      <Select value={sourceDraft.folder || 'General'} onValueChange={(folder) => editDraft({ folder })}>
                         <SelectTrigger id="source-detail-folder">
                           <SelectValue />
                         </SelectTrigger>
@@ -1191,7 +1206,7 @@ export default function LibraryPage() {
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="source-detail-type">{t('libraryPage.typeLabel', 'Type')}</Label>
-                      <Select value={sourceDraft.type} onValueChange={(type) => setSourceDraft({ ...sourceDraft, type: type as Source['type'] })}>
+                      <Select value={sourceDraft.type} onValueChange={(type) => editDraft({ type: type as Source['type'] })}>
                         <SelectTrigger id="source-detail-type">
                           <SelectValue />
                         </SelectTrigger>
@@ -1209,7 +1224,7 @@ export default function LibraryPage() {
                       id="source-detail-origin"
                       value={sourceDraft.origin || ''}
                       placeholder={t('libraryPage.originPlaceholder', 'URL, file name, or citation note')}
-                      onChange={(event) => setSourceDraft({ ...sourceDraft, origin: event.target.value })}
+                      onChange={(event) => editDraft({ origin: event.target.value })}
                     />
                   </div>
                   <div className="flex items-center justify-between rounded-lg border bg-muted/30 px-3 py-2">
@@ -1219,7 +1234,7 @@ export default function LibraryPage() {
                     </div>
                     <Switch
                       checked={sourceDraft.isActive}
-                      onCheckedChange={(checked) => setSourceDraft({ ...sourceDraft, isActive: checked })}
+                      onCheckedChange={(checked) => editDraft({ isActive: checked })}
                       aria-label={t('libraryPage.useForGrounding', 'Use for AI grounding')}
                     />
                   </div>
@@ -1233,7 +1248,7 @@ export default function LibraryPage() {
                       aria-invalid={Boolean(draftErrors.content)}
                       aria-describedby={draftErrors.content ? 'source-detail-content-error' : undefined}
                       onChange={(event) => {
-                        setSourceDraft({ ...sourceDraft, content: event.target.value });
+                        editDraft({ content: event.target.value });
                         if (draftErrors.content) setDraftErrors({ ...draftErrors, content: undefined });
                       }}
                     />
