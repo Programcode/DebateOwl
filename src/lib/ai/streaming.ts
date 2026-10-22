@@ -1,3 +1,4 @@
+import i18n from '@/i18n';
 import { getActiveAccessToken, supabase, SUPABASE_URL } from '@/lib/supabase/client';
 import { captureProductEvent } from '@/lib/observability';
 import { AIAuthError, AIResponseError, REQUEST_TIMEOUT_MS, TimeoutError, boundAskHistory, boundAskMessage, debateContextForRequest, mapAIError, refreshDebatesIfMissing, reportAIFailure, withOutputLanguage } from './client';
@@ -212,8 +213,15 @@ export async function streamAskChat(
             contextStore.recordUsage('ask', parseDebateContextUsage(meta?.debateContext));
             contextStore.resetOverride('ask');
           }
-          const enrichedOutput = finalEvent.output && typeof finalEvent.output === 'object' && !Array.isArray(finalEvent.output)
-            ? { ...finalEvent.output, model: resolvedModel, provider }
+          const finalFields = finalEvent.output && typeof finalEvent.output === 'object' && !Array.isArray(finalEvent.output)
+            ? finalEvent.output as Record<string, unknown>
+            : undefined;
+          // The server flags an answer cut off at its length cap; say so under it.
+          const cutOff = meta?.replyTruncated === true && Array.isArray(finalFields?.uncertainties)
+            ? { uncertainties: [...finalFields.uncertainties, i18n.t('ask.replyCutOff')] }
+            : {};
+          const enrichedOutput = finalFields
+            ? { ...finalFields, ...cutOff, model: resolvedModel, provider }
             : finalEvent.output;
           finalOutput = acceptFinal(enrichedOutput, finalOutput);
         }

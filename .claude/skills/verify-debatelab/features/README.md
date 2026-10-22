@@ -40,9 +40,9 @@ Each feature file starts with an H1 title and one paragraph describing the user-
 ## Features
 
 - [Demo-code sign-in](./auth-demo-login.md): sign-in, reload, rejected code, sign-out (`e2e/full-stack/auth.spec.ts`), and email one-time-code sign-in through Mailpit (`recipes/auth.spec.ts`).
-- [Case generation](./case-generation.md): generate, web research, save and reopen from History on a fresh device, PDF and DOCX export, single-section regeneration, provider failure and retry, quota block (`recipes/case-generation.spec.ts`).
+- [Case generation](./case-generation.md): generate, web research, save and reopen from History on a fresh device, PDF and DOCX export, single-section regeneration, provider failure and retry, a reply cut off at its length cap, quota block (`recipes/case-generation.spec.ts`).
 - [Library sources](./library-sources.md): add, pause, delete, grounding, and URL import (`recipes/library.spec.ts`).
-- [AI tools](./ai-tools.md): Attack, Brainstorm, Factoids, and Ask streamed, cited, and with web search (`recipes/ai-tools.spec.ts`).
+- [AI tools](./ai-tools.md): Attack, Brainstorm, Factoids, and Ask streamed, cut off at its length cap, cited, and with web search (`recipes/ai-tools.spec.ts`).
 - [Live generation](./live-generation.md): every AI tool shows its answer while the model writes it, Cancel mid-stream, and the event stream's shape (`recipes/live-generation.spec.ts`); Crossfire and Sparring requests stream too (`recipes/practice.spec.ts`).
 - [Current Debate](./current-debate.md): start, the first-debate offer and the different-motion choice, sources and results scoped to a debate, switching, and the first onboarding step (`recipes/current-debate.spec.ts`); debate context review and pins (`e2e/full-stack/debate-context.spec.ts`).
 - [Model defaults](./model-defaults.md): Pro accounts start on Claude Opus 5.5, Basic accounts on Claude Haiku 5.5 with Pro models locked, and retired model IDs move to Opus 5.5 (`recipes/model-defaults.spec.ts`).
