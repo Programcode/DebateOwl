@@ -106,7 +106,7 @@ Deno.test("Auto Pro rejects Basic before calling Jev", async () => {
 });
 
 Deno.test("Auto Pro accepts only its approved smart-model pool", async () => {
-  for (const model of ["anthropic/claude-opus-5.5", "anthropic/claude-sonnet-5.5", "openai/gpt-6.1-sol"]) {
+  for (const model of ["anthropic/claude-sonnet-5.5", "openai/gpt-6.1-sol"]) {
     const resolved = await resolveModelSelection({
       requestedModel: AUTO_PRO,
       feature: "generate",
@@ -124,8 +124,32 @@ Deno.test("Auto Pro accepts only its approved smart-model pool", async () => {
     canAccessProModels: true,
     callJevImpl: jevReturning(choiceResult("z-ai/glm-5.3-flash")),
   });
-  if (outsidePool.resolvedModel !== "anthropic/claude-opus-5.5" || !outsidePool.usedFallback) {
+  if (outsidePool.resolvedModel !== "anthropic/claude-sonnet-5.5" || !outsidePool.usedFallback) {
     throw new Error("Auto Pro accepted a model outside its pool");
+  }
+});
+
+Deno.test("Auto Pro never routes or falls back to Opus", async () => {
+  const routedToOpus = await resolveModelSelection({
+    requestedModel: AUTO_PRO,
+    feature: "generate",
+    input: { motion: "Complex international law motion" },
+    canAccessProModels: true,
+    callJevImpl: jevReturning(choiceResult("anthropic/claude-opus-5.5")),
+  });
+  if (routedToOpus.resolvedModel !== "anthropic/claude-sonnet-5.5" || !routedToOpus.usedFallback) {
+    throw new Error(`Auto Pro accepted Opus: ${JSON.stringify(routedToOpus)}`);
+  }
+
+  const unavailable = await resolveModelSelection({
+    requestedModel: AUTO_PRO,
+    feature: "generate",
+    input: { motion: "Complex international law motion" },
+    canAccessProModels: true,
+    callJevImpl: () => Promise.reject(new Error("provider unavailable")),
+  });
+  if (unavailable.resolvedModel !== "anthropic/claude-sonnet-5.5" || !unavailable.usedFallback) {
+    throw new Error(`Auto Pro fell back to the wrong model: ${JSON.stringify(unavailable)}`);
   }
 });
 

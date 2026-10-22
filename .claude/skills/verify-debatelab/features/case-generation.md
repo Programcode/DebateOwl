@@ -43,5 +43,5 @@ Preconditions:
 - `Save` appears both on the result toolbar and in the dialog. Scope the second click to `getByRole("dialog")`. The toolbar `Save` exists only for one-off results.
 - A case filed in a debate is titled with the motion, which the header control also shows (truncated and hidden). Look for it inside the History panel, not with a page-wide `getByText`.
 - The client files a result after it renders. Wait for the result on screen (and the row, if the next step reloads) before a `page.goto`, or the reload can drop it.
-- The model label in the result header (for example `anthropic/claude-opus-5.5`) is the model the function requested. The answer itself came from the fake provider.
+- The model label in the result header (for example `anthropic/claude-sonnet-5.5`) is the model the function requested. The answer itself came from the fake provider.
 - `Google Docs` export needs Google OAuth and cannot be proven locally.
