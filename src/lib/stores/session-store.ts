@@ -470,10 +470,74 @@ const PENDING_SOURCE_PREFIX = 'pending-';
 
 /** Counts source switch writes, so a server reload can tell which ones it predates. */
 let sourceWriteSeq = 0;
-/** Switch writes still running for a source, and the last value the server accepted. */
+/** Writes to a source's switch still running, and the last value the server accepted. */
 const sourceToggles = new Map<string, { latest: number; confirmed: boolean; chain: Promise<void> }>();
 /** The newest switch value per source, kept so a reload that started earlier does not undo it. */
 const lastSourceToggle = new Map<string, { value: boolean; seq: number }>();
+
+interface SourceActiveWrite {
+  seq: number;
+  value: boolean;
+  entries: Array<[string, { latest: number; confirmed: boolean; chain: Promise<void> }]>;
+  done: Promise<void>;
+}
+
+/**
+ * Every write that changes whether sources are on (the switch, a folder's
+ * Activate or Deactivate, the editor's Save) joins each source's queue, so the
+ * server applies them in the order the student made them. Call it before
+ * showing the new value; finishSourceActiveWrite then decides what shows.
+ */
+function beginSourceActiveWrite(ids: string[], value: boolean, write: () => Promise<void>): SourceActiveWrite {
+  const seq = ++sourceWriteSeq;
+  const shown = useSessionStore.getState().sourceLibrary;
+  const entries = ids.map((id): SourceActiveWrite['entries'][number] => {
+    const entry = sourceToggles.get(id) ?? {
+      latest: 0,
+      confirmed: shown.find((source) => source.id === id)?.isActive ?? value,
+      chain: Promise.resolve(),
+    };
+    entry.latest = seq;
+    sourceToggles.set(id, entry);
+    lastSourceToggle.set(id, { value, seq });
+    return [id, entry];
+  });
+  const done = Promise.all(entries.map(([, entry]) => entry.chain)).then(write);
+  for (const [, entry] of entries) entry.chain = done.catch((): void => undefined);
+  return { seq, value, entries, done };
+}
+
+/** Shows the newest write's value once it lands, or the last value the server took if it fails. */
+async function finishSourceActiveWrite({ seq, value, entries, done }: SourceActiveWrite): Promise<void> {
+  const show = (values: Map<string, boolean>) => {
+    if (values.size === 0) return;
+    useSessionStore.setState((state) => ({
+      sourceLibrary: state.sourceLibrary.map((source) => values.has(source.id) ? { ...source, isActive: values.get(source.id)! } : source),
+    }));
+  };
+  try {
+    await done;
+  } catch (error) {
+    const fallback = new Map<string, boolean>();
+    for (const [id, entry] of entries) {
+      if (entry.latest !== seq) continue;
+      sourceToggles.delete(id);
+      lastSourceToggle.set(id, { value: entry.confirmed, seq });
+      fallback.set(id, entry.confirmed);
+    }
+    show(fallback);
+    throw error;
+  }
+  const settled = new Map<string, boolean>();
+  for (const [id, entry] of entries) {
+    entry.confirmed = value;
+    // A server reload while this ran may have put back the old value.
+    if (entry.latest !== seq) continue;
+    sourceToggles.delete(id);
+    settled.set(id, value);
+  }
+  show(settled);
+}
 
 /** A source shown before its row is saved; it has no server id to change yet. */
 export function isPendingSource(source: Pick<Source, 'id'>): boolean {
@@ -723,46 +787,55 @@ export const useSessionStore = create<SessionState>()(
         if (patch.origin !== undefined) {
           normalizedPatch.origin = patch.origin.trim() || undefined;
         }
-        const nextSource: Source = {
-          ...current,
-          ...normalizedPatch,
-          title: normalizedPatch.title?.trim() || current.title,
-          content: normalizedPatch.content?.trim() || current.content,
-        };
+        if (patch.title !== undefined) normalizedPatch.title = patch.title.trim() || current.title;
+        if (patch.content !== undefined) normalizedPatch.content = patch.content.trim() || current.content;
+        // Only what this edit changes is written. The switch is left alone unless
+        // the edit changes it, so a refresh of research metadata cannot save a
+        // switch value whose own write is still running or about to fail.
+        const changesActive = patch.isActive !== undefined && patch.isActive !== current.isActive;
+        delete normalizedPatch.isActive;
+        const row: Record<string, unknown> = {};
+        if (normalizedPatch.title !== undefined) row.title = normalizedPatch.title;
+        if (normalizedPatch.content !== undefined) row.content = normalizedPatch.content;
+        if (normalizedPatch.type !== undefined) row.type = normalizedPatch.type;
+        if ('origin' in normalizedPatch) row.origin = normalizedPatch.origin || null;
+        if (normalizedPatch.folder !== undefined) row.folder = normalizedPatch.folder;
+        if ('metadata' in normalizedPatch) row.metadata = normalizedPatch.metadata ?? null;
+        if (changesActive) row.is_active = patch.isActive;
+        if (Object.keys(row).length === 0) return;
 
+        const write = async () => {
+          const userId = await getUserId();
+          if (!userId) throw signInRequired('save this source');
+          if (normalizedPatch.folder) {
+            const folderResult = await supabase
+              .from('source_folders')
+              .upsert({ user_id: userId, name: normalizedPatch.folder }, { onConflict: 'user_id,name' });
+            throwOnWriteError(folderResult, 'save source folder');
+          }
+          throwOnWriteError(await applyUserScopedIdFilter(supabase.from('sources').update(row), userId, id), 'update source');
+        };
+        const activeWrite = changesActive ? beginSourceActiveWrite([id], patch.isActive!, write) : null;
         const previousFolders = get().sourceFolders;
+        // A failed save undoes only the fields it changed.
+        const undo: Partial<Source> = {};
+        for (const key of Object.keys(normalizedPatch) as Array<keyof typeof normalizedPatch>) {
+          (undo as Record<string, unknown>)[key] = current[key];
+        }
         set((state) => ({
-          sourceFolders: mergeSourceFolders(state.sourceFolders, [nextSource]),
-          sourceLibrary: state.sourceLibrary.map((source) => source.id === id ? nextSource : source),
+          sourceFolders: normalizedPatch.folder ? mergeSourceFolders(state.sourceFolders, [{ ...current, folder: normalizedPatch.folder }]) : state.sourceFolders,
+          sourceLibrary: state.sourceLibrary.map((source) => source.id === id
+            ? { ...source, ...normalizedPatch, ...(changesActive ? { isActive: patch.isActive! } : {}) }
+            : source),
         }));
 
         try {
-          const userId = await getUserId();
-          if (!userId) throw signInRequired('save this source');
-          if (nextSource.folder) {
-            const folderResult = await supabase
-              .from('source_folders')
-              .upsert({ user_id: userId, name: nextSource.folder }, { onConflict: 'user_id,name' });
-            throwOnWriteError(folderResult, 'save source folder');
-          }
-          const result = await applyUserScopedIdFilter(
-            supabase.from('sources').update({
-              title: nextSource.title,
-              content: nextSource.content,
-              type: nextSource.type,
-              origin: nextSource.origin || null,
-              folder: nextSource.folder || 'General',
-              is_active: nextSource.isActive,
-              metadata: nextSource.metadata ?? null,
-            }),
-            userId,
-            id,
-          );
-          throwOnWriteError(result, 'update source');
+          if (activeWrite) await finishSourceActiveWrite(activeWrite);
+          else await write();
         } catch (error) {
           set((state) => ({
-            sourceFolders: previousFolders,
-            sourceLibrary: state.sourceLibrary.map((source) => source.id === id ? current : source),
+            sourceFolders: normalizedPatch.folder ? previousFolders : state.sourceFolders,
+            sourceLibrary: state.sourceLibrary.map((source) => source.id === id ? { ...source, ...undo } : source),
           }));
           throw error;
         }
@@ -899,18 +972,20 @@ export const useSessionStore = create<SessionState>()(
         const normalized = normalizeFolder(folder);
         const debateId = useDebateStore.getState().currentDebateId;
         if (!debateId) throw new DebateRequiredError();
-        const userId = await getUserId();
-        if (!userId) throw signInRequired('update this folder');
-        throwOnWriteError(
-          await supabase.from('sources').update({ is_active: isActive })
-            .eq('user_id', userId).eq('debate_id', debateId).eq('folder', normalized),
-          'update source folder activity',
-        );
-        set((state) => ({
-          sourceLibrary: state.sourceLibrary.map((source) =>
-            source.debateId === debateId && normalizeFolder(source.folder) === normalized ? { ...source, isActive } : source
-          ),
-        }));
+        // Rows still saving are not on the server yet; they keep the value they are saved with.
+        const ids = get().sourceLibrary
+          .filter((source) => source.debateId === debateId && normalizeFolder(source.folder) === normalized && !isPendingSource(source))
+          .map((source) => source.id);
+        const activeWrite = beginSourceActiveWrite(ids, isActive, async () => {
+          const userId = await getUserId();
+          if (!userId) throw signInRequired('update this folder');
+          throwOnWriteError(
+            await supabase.from('sources').update({ is_active: isActive })
+              .eq('user_id', userId).eq('debate_id', debateId).eq('folder', normalized),
+            'update source folder activity',
+          );
+        });
+        await finishSourceActiveWrite(activeWrite);
       },
       removeSource: async (id) => {
         if (isPendingSource({ id })) throw new Error('[SessionStore] This source is still saving');
@@ -925,19 +1000,10 @@ export const useSessionStore = create<SessionState>()(
         if (!current) return;
         if (isPendingSource(current)) throw new Error('[SessionStore] This source is still saving');
         const nextValue = !current.isActive;
-        const setActive = (isActive: boolean) => set((state) => ({
-          sourceLibrary: state.sourceLibrary.map((source) => source.id === id ? { ...source, isActive } : source),
-        }));
-        // Writes for one source run in click order, and only the newest decides
-        // what the switch shows once they settle. A failed write falls back to
-        // the last value the server accepted, not to what was on screen.
-        const seq = ++sourceWriteSeq;
-        const toggles = sourceToggles.get(id) ?? { latest: 0, confirmed: current.isActive, chain: Promise.resolve() };
-        toggles.latest = seq;
-        sourceToggles.set(id, toggles);
-        lastSourceToggle.set(id, { value: nextValue, seq });
-        setActive(nextValue);
-        const write = toggles.chain.then(async () => {
+        // The switch moves at once. Writes for one source run in click order, and
+        // only the newest decides what shows once they settle; a failure falls
+        // back to the last value the server accepted, not to what was on screen.
+        const activeWrite = beginSourceActiveWrite([id], nextValue, async () => {
           const userId = await getUserId();
           if (!userId) throw signInRequired('update this source');
           throwOnWriteError(
@@ -945,23 +1011,10 @@ export const useSessionStore = create<SessionState>()(
             'toggle source activity',
           );
         });
-        toggles.chain = write.catch((): void => undefined);
-        try {
-          await write;
-          toggles.confirmed = nextValue;
-        } catch (error) {
-          if (toggles.latest === seq) {
-            sourceToggles.delete(id);
-            lastSourceToggle.set(id, { value: toggles.confirmed, seq });
-            setActive(toggles.confirmed);
-          }
-          throw error;
-        }
-        // A server reload while this ran may have put back the old value.
-        if (toggles.latest === seq) {
-          sourceToggles.delete(id);
-          setActive(nextValue);
-        }
+        set((state) => ({
+          sourceLibrary: state.sourceLibrary.map((source) => source.id === id ? { ...source, isActive: nextValue } : source),
+        }));
+        await finishSourceActiveWrite(activeWrite);
       },
       clearLibrary: async () => {
         // The Library belongs to the Current Debate; other debates keep their sources.

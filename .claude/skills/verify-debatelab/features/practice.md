@@ -9,7 +9,7 @@ Live practice modes. Sparring runs a multi-speech round against an AI opponent a
 - `cross-turn` answers a user question with an AI response and attaches a Jev `Direct answer` signal.
 - `cross-debrief` ends the session and shows the debrief. A `crossfires` row is filed in the debate for its resolution.
 - `cross-ai-questions` reverses the roles: the AI asks (`mode-ai-questions-user`), the user answers, and the AI follows up.
-- `cross-history` after leaving the page, `/app/history?tab=crossfire` lists the round (test id `history-crossfire-row`). `Open` shows test id `saved-crossfire` with the debrief (`saved-crossfire-debrief`) and transcript (`saved-crossfire-transcript`); `Delete Crossfire round: <resolution>` asks first and removes the row.
+- `cross-history` after leaving the page, `/app/history?tab=crossfire` lists the round (test id `history-crossfire-row`). `Open Crossfire round: <resolution>` shows test id `saved-crossfire` with the debrief (`saved-crossfire-debrief`) and transcript (`saved-crossfire-transcript`); `Delete Crossfire round: <resolution>` asks first and removes the row.
 - `cross-daily-limit` with no AI requests left, the first AI turn is refused: the daily-limit dialog opens and the page stays in setup with no clock and no `end-crossfire`.
 - `cross-end-early` ending a round before any exchange returns to setup with no error.
 - `spar-daily-limit` Sparring setup warns (test id `sparring-request-shortfall`) when today's remaining requests are fewer than the round needs.

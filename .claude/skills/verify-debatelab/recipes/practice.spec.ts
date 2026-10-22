@@ -90,7 +90,7 @@ test("cross-turn and cross-debrief: questioning the AI gets an answer, a Jev sig
   const row = page.getByTestId("history-crossfire-row");
   await expect(row).toHaveCount(1);
   await expect(row).toContainText(resolution);
-  await row.getByRole("button", { name: "Open" }).click();
+  await row.getByRole("button", { name: `Open Crossfire round: ${resolution}` }).click();
   const saved = page.getByTestId("saved-crossfire");
   await expect(saved.getByTestId("saved-crossfire-debrief")).toBeVisible();
   await expect(saved.getByTestId("saved-crossfire-transcript")).toContainText(text!.slice(0, 40));

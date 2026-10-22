@@ -1628,7 +1628,8 @@
     "crossfireDeleted": "Crossfire round deleted.",
     "crossfireDeleteFailed": "Could not delete the Crossfire round.",
     "crossfireUnreadable": "This round was saved in an older format and cannot be shown.",
-    "crossfireNoDebrief": "This round has no debrief."
+    "crossfireNoDebrief": "This round has no debrief.",
+    "openCrossfireAria": "Open Crossfire round: {{title}}"
   },
   "libraryPage": {
     "title": "Source Library",

@@ -1628,7 +1628,8 @@
     "crossfireDeleted": "Keresztkérdezési kör törölve.",
     "crossfireDeleteFailed": "Nem sikerült törölni a keresztkérdezési kört.",
     "crossfireUnreadable": "Ezt a kört régebbi formátumban mentették, ezért nem jeleníthető meg.",
-    "crossfireNoDebrief": "Ehhez a körhöz nincs értékelés."
+    "crossfireNoDebrief": "Ehhez a körhöz nincs értékelés.",
+    "openCrossfireAria": "Keresztkérdezési kör megnyitása: {{title}}"
   },
   "libraryPage": {
     "title": "Forráskönyvtár",

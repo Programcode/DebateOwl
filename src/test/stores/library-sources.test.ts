@@ -232,3 +232,57 @@ describe('toggleSource with writes in flight', () => {
 
   });
 });
+
+describe('other writes and the switch', () => {
+  /** A Supabase update whose filters can chain any number of times, answering with `result()`. */
+  function updateQuery(result: () => Promise<{ error: { message: string } | null }>) {
+    const query = { eq: () => query, then: (done: (value: unknown) => unknown, fail: (reason: unknown) => unknown) => result().then(done, fail) };
+    return query;
+  }
+
+  it('does not save a switch value with a metadata refresh while the switch write fails', async () => {
+    useSessionStore.setState({ sourceLibrary: [source({ isActive: true })] });
+    const toggleWrite = deferred();
+    const payloads: Record<string, unknown>[] = [];
+    vi.spyOn(supabase, 'from').mockImplementation(() => ({
+      update: (payload: Record<string, unknown>) => {
+        payloads.push(payload);
+        return updateQuery(async () => {
+          if ('is_active' in payload) { await toggleWrite.promise; return { error: { message: 'offline' } }; }
+          return { error: null };
+        });
+      },
+    }) as never);
+
+    const toggle = useSessionStore.getState().toggleSource(SAVED_ID);
+    await useSessionStore.getState().updateSource(SAVED_ID, { metadata: { url: PAGE, capturedVia: 'attack' } });
+    toggleWrite.resolve();
+    await expect(toggle).rejects.toThrow();
+
+    expect(payloads.filter((payload) => 'metadata' in payload)).toEqual([{ metadata: { url: PAGE, capturedVia: 'attack' } }]);
+    expect(useSessionStore.getState().sourceLibrary[0]).toMatchObject({ isActive: true, metadata: { capturedVia: 'attack' } });
+  });
+
+  it('keeps a folder switched on after a toggle when a reload that started earlier lands', async () => {
+    useSessionStore.setState({ sourceLibrary: [source({ isActive: true, folder: 'General' })] });
+    const read = deferred();
+    vi.spyOn(supabase, 'from').mockImplementation((table: string) => ({
+      update: () => updateQuery(async () => ({ error: null })),
+      select: () => ({
+        order: async () => {
+          if (table !== 'sources') return { data: [] as unknown[], error: null as null };
+          await read.promise;
+          return { data: [{ ...insertedRow(PAGE), is_active: true }], error: null as null };
+        },
+      }),
+    }) as never);
+
+    const hydrate = useSessionStore.getState().hydrateFromServer();
+    await useSessionStore.getState().toggleSource(SAVED_ID);
+    await useSessionStore.getState().setFolderActive('General', true);
+    read.resolve();
+    await hydrate;
+
+    expect(useSessionStore.getState().sourceLibrary.map((item) => item.isActive)).toEqual([true]);
+  });
+});

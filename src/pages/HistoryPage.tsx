@@ -420,7 +420,13 @@ export default function HistoryPage() {
                             </p>
                           </div>
                           <div className="flex shrink-0 gap-2">
-                            <Button variant="outline" size="sm" className="pointer-coarse:h-11" onClick={() => setOpenCrossfireId(item.id)}>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="pointer-coarse:h-11"
+                              onClick={() => setOpenCrossfireId(item.id)}
+                              aria-label={t('historyPage.openCrossfireAria', { title: item.title, defaultValue: 'Open Crossfire round: {{title}}' })}
+                            >
                               <Eye className="mr-2 h-4 w-4" /> {t('historyPage.open', 'Open')}
                             </Button>
                             <Button

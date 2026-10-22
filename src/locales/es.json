@@ -1628,7 +1628,8 @@
     "crossfireDeleted": "Ronda de interrogatorio eliminada.",
     "crossfireDeleteFailed": "No se pudo eliminar la ronda de interrogatorio.",
     "crossfireUnreadable": "Esta ronda se guardó en un formato antiguo y no se puede mostrar.",
-    "crossfireNoDebrief": "Esta ronda no tiene análisis."
+    "crossfireNoDebrief": "Esta ronda no tiene análisis.",
+    "openCrossfireAria": "Abrir ronda de interrogatorio: {{title}}"
   },
   "libraryPage": {
     "title": "Biblioteca de fuentes",
