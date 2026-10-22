@@ -79,12 +79,15 @@ function EmbedSnippets() {
 }
 
 export default function DebateTimerToolPage() {
+  const { t } = useTranslation('tools');
+  const shortAnswer = { question: t('shortAnswer.timer.question'), answer: t('shortAnswer.timer.answer') };
   return (
     <ToolPageLayout
       route="/tools/debate-timer"
       title="Free debate timer for every format"
       intro={<p>Choose a format and the timer already knows the speech order, the protected minutes and each side&apos;s prep time. It needs no account, runs entirely in this tab, and keeps your round if the page reloads.</p>}
-      structuredData={toolStructuredData('/tools/debate-timer', NAME, FAQ)}
+      shortAnswer={shortAnswer}
+      structuredData={toolStructuredData('/tools/debate-timer', NAME, [shortAnswer, ...FAQ])}
       tool={(
         <DebateTimer
           storageKey="debatelab-free-timer-v1"

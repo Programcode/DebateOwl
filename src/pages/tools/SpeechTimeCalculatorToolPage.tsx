@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { SpeechTimeCalculator } from '@/components/free-tools/SpeechTimeCalculator';
 import { ToolCta, ToolFaq, ToolPageLayout } from '@/components/free-tools/ToolPageLayout';
 import { BUILT_IN_FORMATS, formatDuration, segmentRole, speakingSegments } from '@/lib/free-tools/formats';
@@ -67,12 +68,15 @@ function TargetTable() {
 }
 
 export default function SpeechTimeCalculatorToolPage() {
+  const { t } = useTranslation('tools');
+  const shortAnswer = { question: t('shortAnswer.calc.question'), answer: t('shortAnswer.calc.answer') };
   return (
     <ToolPageLayout
       route="/tools/speech-time-calculator"
       title="How long is my speech? Speech time calculator"
       intro={<p>Paste a speech to see its word count, how long it takes to deliver at a slow, average or fast pace, and which debate speech slots it fits. Everything runs in your browser; the text never leaves this page.</p>}
-      structuredData={toolStructuredData('/tools/speech-time-calculator', NAME, FAQ)}
+      shortAnswer={shortAnswer}
+      structuredData={toolStructuredData('/tools/speech-time-calculator', NAME, [shortAnswer, ...FAQ])}
       tool={<SpeechTimeCalculator />}
     >
       <section>
