@@ -219,6 +219,7 @@ export default function LibraryPage() {
   const addContentRef = useRef<HTMLTextAreaElement>(null);
   const draftTitleRef = useRef<HTMLInputElement>(null);
   const draftContentRef = useRef<HTMLTextAreaElement>(null);
+  const draftLoadedFor = useRef<string | null>(null);
   const [newSource, setNewSource] = useState({
     title: '',
     content: '',
@@ -503,7 +504,14 @@ export default function LibraryPage() {
   const selectedSource = selectedSourceId ? sourceLibrary.find((source) => source.id === selectedSourceId) || null : null;
 
   useEffect(() => {
-    if (!selectedSource) return;
+    // The draft loads once per opened source. A save that fails, or a change
+    // made elsewhere while the sheet is open, must not wipe what was typed.
+    if (!selectedSource) {
+      draftLoadedFor.current = null;
+      return;
+    }
+    if (draftLoadedFor.current === selectedSource.id) return;
+    draftLoadedFor.current = selectedSource.id;
     setDraftErrors({});
     setSourceDraft({
       title: selectedSource.title,

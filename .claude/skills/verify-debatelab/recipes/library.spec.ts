@@ -97,10 +97,18 @@ test("lib-offline: offline, the switch does not move and says the change was not
   await expect(page.getByText("You are offline. Reconnect and try again.")).toBeVisible();
   await expect(page.getByRole("switch", { name: "Toggle Offline study" })).toBeChecked();
   await evidence.shot("01-offline-toggle");
+  // A save that fails keeps what the student typed, so they can retry.
+  await page.getByRole("button", { name: "Offline study", exact: true }).click();
+  const sheet = page.getByRole("dialog");
+  await sheet.getByRole("textbox", { name: "Content" }).fill("Fares, ridership and a rewritten note.");
+  await sheet.getByRole("button", { name: "Save" }).click();
+  await expect(page.getByText("Could not save this source.")).toBeVisible();
+  await expect(sheet.getByRole("textbox", { name: "Content" })).toHaveValue("Fares, ridership and a rewritten note.");
+  await evidence.shot("02-offline-edit-kept");
   await page.context().setOffline(false);
   const { data } = await admin.from("sources").select("is_active").eq("user_id", await user.userId()).eq("title", "Offline study");
   expect(data).toEqual([{ is_active: true }]);
-  await evidence.json("02-row-unchanged", data);
+  await evidence.json("03-row-unchanged", data);
 });
 
 test("lib-dedupe and lib-layout: a page saved once per debate, and long titles keep their room on a phone", async ({ signedIn: page, user, evidence }) => {

@@ -28,7 +28,7 @@ Preconditions:
 
 - **Add.** Click the button named `Add Source`. Fill the textbox named `Title` (exact), fill the textbox named `Content` (exact) with a unique marker, and click `Save to Library`. Leaving either empty shows an inline error under the field and moves focus to it. The switch named `Toggle <title>` is checked. `sources` has a row with `is_active: true` and the debate's `debate_id`.
 - **Toggle.** Click the switch named `Toggle <title>`. It becomes not checked.
-- **Offline toggle.** `page.context().setOffline(true)`, click the switch: the offline toast shows, the switch stays checked, and the row's `is_active` is unchanged. Set offline back to false.
+- **Offline toggle.** `page.context().setOffline(true)`, click the switch: the offline toast shows, the switch stays checked, and the row's `is_active` is unchanged. Still offline, open the source, change its `Content` and click `Save`: the toast `Could not save this source.` shows and the typed text stays in the sheet. Set offline back to false.
 - **Duplicate import.** Insert a URL source through `admin`, then import the same page with `?utm_source=x#top`: the duplicate warning shows and no `import-source` request is made.
 - **Phone layout.** At a 360px viewport the title button is wider than 200px and the page has no sideways scroll.
 - **Ground.** Go to `/app/brainstorm`; the motion is prefilled from the debate. Run it (see [ai-tools](./ai-tools.md)). `providerCall("brainstorm").system` contains the active marker and does not contain the paused marker.
