@@ -1332,7 +1332,8 @@
     "limitReachedDesc": "Ma {{current}} / {{limit}} benne foglalt MI használatot használtál fel. A hozzáférés éjfélkor (UTC) frissül.",
     "upgrade": "Frissítés Pro-ra - $5/hó",
     "upgradeNote": "Több MI felkészülési hozzáférés + magas szintű érvelés",
-    "notNow": "Most nem"
+    "notNow": "Most nem",
+    "gotIt": "Rendben"
   },
   "modelModal": {
     "title": "Pro érvelés",

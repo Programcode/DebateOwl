@@ -1332,7 +1332,8 @@
     "limitReachedDesc": "Has usado {{current}} de {{limit}} usos de IA incluidos hoy. El acceso se renueva a medianoche UTC.",
     "upgrade": "Actualizar a Pro - $5/mes",
     "upgradeNote": "Más acceso a preparación con IA + razonamiento alto",
-    "notNow": "Ahora no"
+    "notNow": "Ahora no",
+    "gotIt": "Entendido"
   },
   "modelModal": {
     "title": "Razonamiento Pro",
