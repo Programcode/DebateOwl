@@ -6,15 +6,15 @@ function fakeWindow() {
   const stored = new Map<string, string>();
   const reload = vi.fn();
   const target = {
-    addEventListener: (type: string, listener: EventListener) => {
+    addEventListener: (type: string, listener: EventListener): void => {
       listeners.set(type, listener as (event: Event) => void);
     },
     sessionStorage: {
-      getItem: (key: string) => stored.get(key) ?? null,
-      setItem: (key: string, value: string) => { stored.set(key, value); },
-      removeItem: (key: string) => { stored.delete(key); },
-      clear: () => { stored.clear(); },
-      key: () => null,
+      getItem: (key: string): string | null => stored.get(key) ?? null,
+      setItem: (key: string, value: string): void => { stored.set(key, value); },
+      removeItem: (key: string): void => { stored.delete(key); },
+      clear: (): void => { stored.clear(); },
+      key: (): string | null => null,
       length: 0,
     },
     location: { pathname: '/app/ask', reload },
