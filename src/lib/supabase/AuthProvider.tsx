@@ -227,15 +227,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (!mounted) return;
       const { data, error } = getSessionResult;
       if (error) console.warn('[Auth] getSession error:', error.message);
-      if (data.session?.access_token && !(await confirmRestoredSession(data.session.access_token))) {
-        if (!mounted) return;
+      const alive = data.session?.access_token ? await confirmRestoredSession(data.session.access_token) : true;
+      if (!mounted) return;
+      // Someone else signed in while this was checked: theirs stands, alive or not.
+      const current = currentUserIdRef.current;
+      if (current && current !== data.session?.user.id) return;
+      if (!alive) {
         dropRestoredSession();
         return;
       }
-      if (!mounted) return;
-      // Someone else signed in while this was checked: theirs stands.
-      const current = currentUserIdRef.current;
-      if (current && current !== data.session?.user.id) return;
       if (data.session) {
         applySession(data.session);
       } else {

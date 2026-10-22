@@ -954,6 +954,29 @@ describe('AuthProvider behavior', () => {
     expect(screen.getByTestId('user')).toHaveTextContent('new-user');
   });
 
+  it('does not drop an account signed in while a dead stored account was being checked', async () => {
+    getSessionMock.mockResolvedValue({ data: { session: { user: { id: 'stored-user' }, access_token: 'stored' } }, error: null });
+    let answerLookup!: (value: unknown) => void;
+    getUserMock.mockImplementationOnce(() => new Promise((resolve) => { answerLookup = resolve; }));
+
+    render(
+      <AuthProvider>
+        <AuthConsumer />
+      </AuthProvider>
+    );
+
+    await waitFor(() => expect(getUserMock).toHaveBeenCalled());
+    await act(async () => {
+      callbackRef.current?.('SIGNED_IN', { user: { id: 'new-user' }, access_token: 'new-token' });
+    });
+    await act(async () => {
+      answerLookup({ data: { user: null }, error: { status: 401, message: 'revoked' } });
+    });
+
+    await waitFor(() => expect(screen.getByTestId('loading')).toHaveTextContent('false'));
+    expect(screen.getByTestId('user')).toHaveTextContent('new-user');
+  });
+
   it('does not hold startup on a sign-out of a dead stored session that never answers', async () => {
     vi.useFakeTimers();
     try {
