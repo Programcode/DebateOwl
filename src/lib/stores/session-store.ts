@@ -170,6 +170,12 @@ export interface SessionState {
   setFactoidsForm: (data: Partial<FactoidsInput>) => void;
 
   setGenerateResult: (result: GenerateOutput | null) => void;
+  /**
+   * Debate the current Generate result belongs to. Null is one-off work.
+   * Undefined means a result restored before this was recorded.
+   */
+  generateResultDebateId: string | null | undefined;
+  setGenerateResultDebateId: (debateId: string | null) => void;
   setGenerateLoading: (loading: boolean) => void;
   setGenerateRegeneratingSection: (section: string | null) => void;
   saveCurrentCase: (title: string) => Promise<void>;
@@ -485,11 +491,13 @@ export const useSessionStore = create<SessionState>()(
       sourceLibrary: [] as Source[],
 
       generateForm: {},
+      generateResultDebateId: undefined as string | null | undefined,
       attackForm: {},
       brainstormForm: {},
       factoidsForm: {},
 
       setGenerateForm: (data) => set((state) => ({ generateForm: mergeFormState(state.generateForm, data) })),
+      setGenerateResultDebateId: (debateId) => set({ generateResultDebateId: debateId }),
       setAttackForm: (data) => set((state) => ({ attackForm: mergeFormState(state.attackForm, data) })),
       setBrainstormForm: (data) => set((state) => ({ brainstormForm: mergeFormState(state.brainstormForm, data) })),
       setFactoidsForm: (data) => set((state) => ({ factoidsForm: mergeFormState(state.factoidsForm, data) })),
@@ -856,7 +864,20 @@ export const useSessionStore = create<SessionState>()(
       },
       loadSavedCase: (id) => {
         const item = get().savedCases.find((c) => c.id === id);
-        if (item) set({ generateResult: item.data });
+        if (!item) return;
+        const motion = item.data.metadata?.motion?.trim();
+        const side = item.data.metadata?.side;
+        set({
+          generateResult: item.data,
+          // Null means this case is one-off, so a later regenerate does not
+          // borrow whichever debate happens to be open.
+          generateResultDebateId: item.debateId ?? null,
+          generateForm: {
+            ...get().generateForm,
+            ...(motion ? { motion } : {}),
+            ...(side ? { side } : {}),
+          },
+        });
       },
 
       setAttackResult: (result) => {
@@ -1272,6 +1293,7 @@ export const useSessionStore = create<SessionState>()(
         // browser must not see them prefilled.
         pendingFlowchartData: null,
         generateForm: {},
+        generateResultDebateId: undefined,
         attackForm: {},
         brainstormForm: {},
         factoidsForm: {},
@@ -1289,6 +1311,7 @@ export const useSessionStore = create<SessionState>()(
         askPersistedCount: 0,
         pendingFlowchartData: null,
         generateForm: {},
+        generateResultDebateId: undefined,
         attackForm: {},
         brainstormForm: {},
         factoidsForm: {},
