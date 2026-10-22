@@ -23,6 +23,9 @@ const Footer = () => {
                     </div>
 
                     <div className="flex items-center gap-4 text-sm">
+                        <Link to="/tools" className="inline-flex items-center text-muted-foreground hover:text-foreground transition-colors underline-offset-4 hover:underline pointer-coarse:min-h-11">
+                            {t('tools:footer.freeTools')}
+                        </Link>
                         <Link to="/terms" className="inline-flex items-center text-muted-foreground hover:text-foreground transition-colors underline-offset-4 hover:underline pointer-coarse:min-h-11">
                             {t('footer.terms')}
                         </Link>
