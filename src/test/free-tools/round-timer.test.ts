@@ -110,6 +110,16 @@ describe('round timer', () => {
     expect(prepRemainingMs(state, 'a', 10 * MIN)).toBe(210 * S);
   });
 
+  it('keeps the running speech when navigation is already at the first or last speech', () => {
+    // The arrow keys can ask for a speech past either end; that must not wipe the clock.
+    const running = toggleSpeech(initialRoundState(FORMATS.pf), 0);
+    expect(goToSegment(running, FORMATS.pf, -1, 30 * S)).toBe(running);
+    const last = toggleSpeech(goToSegment(running, FORMATS.pf, 10, 0), 0);
+    expect(last.segmentIndex).toBe(10);
+    expect(goToSegment(last, FORMATS.pf, 11, 30 * S)).toBe(last);
+    expect(elapsedMs(goToSegment(last, FORMATS.pf, 11, 30 * S).speech, 30 * S)).toBe(30 * S);
+  });
+
   it('restores a stored round only when it fits the format', () => {
     const running = toggleSpeech(goToSegment(initialRoundState(FORMATS.pf), FORMATS.pf, 4, 0), 1234);
     const stored = JSON.parse(JSON.stringify(running));

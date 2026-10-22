@@ -68,9 +68,14 @@ export function settlePrep(state: RoundState, now: number): RoundState {
   return a === state.prep.a && b === state.prep.b ? state : { ...state, prep: { a, b } };
 }
 
-/** Moves to another segment with a fresh, paused speech clock. Prep banks carry over. */
+/**
+ * Moves to another segment with a fresh, paused speech clock. Prep banks carry
+ * over. Asking for the segment already shown, including past either end of the
+ * round, changes nothing, so a stray arrow key never wipes a running speech.
+ */
 export function goToSegment(state: RoundState, format: RoundFormat, index: number, now: number): RoundState {
   const segmentIndex = Math.min(Math.max(0, index), format.segments.length - 1);
+  if (segmentIndex === state.segmentIndex) return state;
   return { segmentIndex, speech: PAUSED, prep: pausePrep(state.prep, now) };
 }
 
