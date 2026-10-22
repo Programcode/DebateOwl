@@ -36,16 +36,17 @@ function headersFor(config: VercelConfig, source: string) {
 
 /**
  * The headers Vercel sends for a path: every rule whose source matches it.
- * Sources here are anchored regular expressions in path-to-regexp's unnamed
- * group syntax, which Vercel matches case-insensitively. Vercel documents no
- * order between two rules that set the same header, so that is a test failure
- * rather than something this resolves.
+ * Vercel compiles a source with path-to-regexp, strict and case-sensitive
+ * (sourceToRegex in @vercel/routing-utils); for sources made of literals and
+ * unnamed groups, as all of these are, that is the source as an anchored
+ * regular expression. Vercel documents no order between two rules that set the
+ * same header, so that is a test failure rather than something this resolves.
  */
 function headersAt(config: VercelConfig, path: string): Record<string, string> {
   const headers: Record<string, string> = {};
   for (const rule of config.headers ?? []) {
     expect(rule.source, "a source this resolver can read").toMatch(/^\/[\w\-./()|*?!\\]*$/);
-    if (!new RegExp(`^${rule.source}$`, "i").test(path)) continue;
+    if (!new RegExp(`^${rule.source}$`).test(path)) continue;
     for (const { key, value } of rule.headers) {
       expect(headers, `${path}: two rules set ${key}`).not.toHaveProperty(key);
       headers[key] = value;
@@ -213,14 +214,14 @@ describe("Vercel frontend deployment configuration", () => {
 
   it.each([
     "/", "/index.html", "/app", "/app/settings", "/login", "/share/abc", "/tools", "/tools/debate-timer",
-    "/online-debate-timer", "/404.html", "/app-shell.html", "/embed", "/embedded/x", "/assets/index.js",
+    "/online-debate-timer", "/404.html", "/app-shell.html", "/embed", "/embedded/x", "/EMBED/debate-timer", "/assets/index.js",
   ])("refuses to be framed at %s", (path) => {
     const headers = headersAt(loadConfig(), path);
     expect(headers["X-Frame-Options"]).toBe("DENY");
     expect(cspDirective(headers["Content-Security-Policy"] ?? "", "frame-ancestors")).toBe("frame-ancestors 'none'");
   });
 
-  it.each(["/embed/debate-timer", "/EMBED/debate-timer"])("lets other sites frame the embed at %s, and nothing else", (path) => {
+  it.each(["/embed/debate-timer", "/embed/debate-timer/"])("lets other sites frame the embed at %s, and nothing else", (path) => {
     const config = loadConfig();
     const headers = headersAt(config, path);
     const site = headersAt(config, "/");
