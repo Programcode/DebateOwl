@@ -507,8 +507,12 @@ function beginSourceActiveWrite(ids: string[], value: boolean, write: () => Prom
   return { seq, value, entries, done };
 }
 
-/** Shows the newest write's value once it lands, or the last value the server took if it fails. */
-async function finishSourceActiveWrite({ seq, value, entries, done }: SourceActiveWrite): Promise<void> {
+/**
+ * Shows the newest write's value once it lands, or the last value the server
+ * took if it fails. With `quietWhenReplaced`, a failure is not reported when a
+ * newer write already owns every source: that write's outcome is what shows.
+ */
+async function finishSourceActiveWrite({ seq, value, entries, done }: SourceActiveWrite, quietWhenReplaced = false): Promise<void> {
   const show = (values: Map<string, boolean>) => {
     if (values.size === 0) return;
     useSessionStore.setState((state) => ({
@@ -526,6 +530,7 @@ async function finishSourceActiveWrite({ seq, value, entries, done }: SourceActi
       fallback.set(id, entry.confirmed);
     }
     show(fallback);
+    if (quietWhenReplaced && fallback.size === 0) return;
     throw error;
   }
   const settled = new Map<string, boolean>();
@@ -976,12 +981,15 @@ export const useSessionStore = create<SessionState>()(
         const ids = get().sourceLibrary
           .filter((source) => source.debateId === debateId && normalizeFolder(source.folder) === normalized && !isPendingSource(source))
           .map((source) => source.id);
+        if (ids.length === 0) return;
+        // Only the rows on screen: a row still saving could otherwise commit first
+        // and take the folder's value on the server but not in the Library.
         const activeWrite = beginSourceActiveWrite(ids, isActive, async () => {
           const userId = await getUserId();
           if (!userId) throw signInRequired('update this folder');
           throwOnWriteError(
             await supabase.from('sources').update({ is_active: isActive })
-              .eq('user_id', userId).eq('debate_id', debateId).eq('folder', normalized),
+              .eq('user_id', userId).eq('debate_id', debateId).in('id', ids),
             'update source folder activity',
           );
         });
@@ -1014,7 +1022,8 @@ export const useSessionStore = create<SessionState>()(
         set((state) => ({
           sourceLibrary: state.sourceLibrary.map((source) => source.id === id ? { ...source, isActive: nextValue } : source),
         }));
-        await finishSourceActiveWrite(activeWrite);
+        // A failure that a newer click already replaced changes nothing on screen, so it is not reported.
+        await finishSourceActiveWrite(activeWrite, true);
       },
       clearLibrary: async () => {
         // The Library belongs to the Current Debate; other debates keep their sources.
@@ -1333,6 +1342,8 @@ export const useSessionStore = create<SessionState>()(
       hydrateFromServer: async () => {
         if (restoredSessionsBlocked()) return;
         const hydrateSeq = sourceWriteSeq;
+        // A switch write already running may land after this read; keep its value too.
+        const writesInFlight = new Set(sourceToggles.keys());
         const results = await Promise.allSettled([
           supabase.from('cases').select('*').order('created_at', { ascending: false }),
           supabase.from('attacks').select('*').order('created_at', { ascending: false }),
@@ -1442,7 +1453,7 @@ export const useSessionStore = create<SessionState>()(
               ...state.sourceLibrary.filter(isPendingSource),
               ...serverSources.map((source) => {
                 const toggle = lastSourceToggle.get(source.id);
-                return toggle && toggle.seq > hydrateSeq ? { ...source, isActive: toggle.value } : source;
+                return toggle && (toggle.seq > hydrateSeq || writesInFlight.has(source.id)) ? { ...source, isActive: toggle.value } : source;
               }),
             ]
             : state.sourceLibrary,

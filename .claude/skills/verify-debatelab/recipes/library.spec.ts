@@ -22,6 +22,9 @@ test("lib-add, lib-toggle, lib-ground, lib-delete: only active sources ground AI
   await addSource(page, "Paused study", "PAUSED-SOURCE-MARKER congestion did not change.");
   await page.getByRole("switch", { name: "Toggle Paused study" }).click();
   await expect(page.getByRole("switch", { name: "Toggle Paused study" })).not.toBeChecked();
+  // The switch moves before its write lands; leaving the page first could cancel the write.
+  await expect.poll(async () => (await admin.from("sources").select("is_active").eq("user_id", await user.userId()).eq("title", "Paused study")).data)
+    .toEqual([{ is_active: false }]);
   await evidence.step("Added two sources and paused one");
   await evidence.shot("01-library");
 

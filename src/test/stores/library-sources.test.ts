@@ -9,6 +9,12 @@ function deferred() {
   return { promise, resolve };
 }
 
+/** A Supabase update whose filters can chain any number of times, answering with `result()`. */
+function updateQuery(result: () => Promise<{ error: { message: string } | null }>) {
+  const query = { eq: () => query, in: () => query, then: (done: (value: unknown) => unknown, fail: (reason: unknown) => unknown) => result().then(done, fail) };
+  return query;
+}
+
 const SAVED_ID = '33333333-3333-4333-8333-333333333333';
 const PAGE = 'https://www.motherly.com/homework-should-be-banned/';
 
@@ -159,19 +165,22 @@ describe('addSource keeps one row per web page in a debate', () => {
 
   it('keeps one row when another action copies the row while it saves', async () => {
     const landed = deferred();
+    const writeOk = (): Promise<{ error: null }> => Promise.resolve({ error: null });
     vi.spyOn(supabase, 'from').mockImplementation((table: string) => {
-      if (table === 'source_folders') return { upsert: async (): Promise<{ error: null }> => ({ error: null }) } as never;
+      if (table === 'source_folders') return { upsert: writeOk, delete: () => updateQuery(writeOk) } as never;
       return {
         select: () => ({ eq: () => ({ eq: async () => ({ data: [] as unknown[], error: null as null }) }) }),
-        insert: () => ({ select: () => ({ single: async (): Promise<{ data: ReturnType<typeof insertedRow>; error: null }> => { await landed.promise; return { data: insertedRow(PAGE), error: null }; } }) }),
-        // Switching the folder off rewrites every row in it, the saving one included.
-        update: () => ({ eq: () => ({ eq: () => ({ eq: async () => ({ error: null as null }) }) }) }),
+        insert: () => ({ select: () => ({ single: async (): Promise<{ data: ReturnType<typeof insertedRow>; error: null }> => { await landed.promise; return { data: { ...insertedRow(PAGE), folder: 'Research' }, error: null }; } }) }),
+        update: () => updateQuery(writeOk),
       } as never;
     });
 
-    const add = useSessionStore.getState().addSource({ title: 'Homework', content: 'Text', type: 'url', origin: PAGE, folder: 'General' });
+    const add = useSessionStore.getState().addSource({ title: 'Homework', content: 'Text', type: 'url', origin: PAGE, folder: 'Research' });
     await vi.waitFor(() => expect(useSessionStore.getState().sourceLibrary).toHaveLength(1));
-    await useSessionStore.getState().setFolderActive('General', false);
+    const shown = useSessionStore.getState().sourceLibrary[0];
+    // Renaming the folder rewrites every row in it, the one still saving included.
+    await useSessionStore.getState().renameSourceFolder('Research', 'Notes');
+    expect(useSessionStore.getState().sourceLibrary[0]).not.toBe(shown);
     landed.resolve();
     await add;
 
@@ -195,7 +204,8 @@ describe('toggleSource with writes in flight', () => {
 
     const off = useSessionStore.getState().toggleSource(SAVED_ID);
     const on = useSessionStore.getState().toggleSource(SAVED_ID);
-    await expect(off).rejects.toThrow();
+    // The first failure changed nothing on screen once the second click replaced it, so only the second reports.
+    await expect(off).resolves.toBeUndefined();
     await expect(on).rejects.toThrow();
 
     expect(useSessionStore.getState().sourceLibrary[0].isActive).toBe(true);
@@ -234,11 +244,6 @@ describe('toggleSource with writes in flight', () => {
 });
 
 describe('other writes and the switch', () => {
-  /** A Supabase update whose filters can chain any number of times, answering with `result()`. */
-  function updateQuery(result: () => Promise<{ error: { message: string } | null }>) {
-    const query = { eq: () => query, then: (done: (value: unknown) => unknown, fail: (reason: unknown) => unknown) => result().then(done, fail) };
-    return query;
-  }
 
   it('does not save a switch value with a metadata refresh while the switch write fails', async () => {
     useSessionStore.setState({ sourceLibrary: [source({ isActive: true })] });
@@ -285,4 +290,50 @@ describe('other writes and the switch', () => {
 
     expect(useSessionStore.getState().sourceLibrary.map((item) => item.isActive)).toEqual([true]);
   });
+
+  it('keeps a toggle that started before a reload and lands after the reload read the old value', async () => {
+    useSessionStore.setState({ sourceLibrary: [source({ isActive: true })] });
+    const written = deferred();
+    const read = deferred();
+    vi.spyOn(supabase, 'from').mockImplementation((table: string) => ({
+      update: () => updateQuery(async () => { await written.promise; return { error: null }; }),
+      select: () => ({
+        order: async () => {
+          if (table !== 'sources') return { data: [] as unknown[], error: null as null };
+          await read.promise;
+          return { data: [{ ...insertedRow(PAGE), is_active: true }], error: null as null };
+        },
+      }),
+    }) as never);
+
+    const toggle = useSessionStore.getState().toggleSource(SAVED_ID);
+    const hydrate = useSessionStore.getState().hydrateFromServer();
+    written.resolve();
+    await toggle;
+    read.resolve();
+    await hydrate;
+
+    expect(useSessionStore.getState().sourceLibrary.map((item) => item.isActive)).toEqual([false]);
+  });
+
+  it('switches a folder by the rows it shows, not every row the server has in it', async () => {
+    useSessionStore.setState({ sourceLibrary: [source({ isActive: true, folder: 'Auto-saved' })] });
+    const filters: Array<[string, unknown]> = [];
+    vi.spyOn(supabase, 'from').mockImplementation(() => ({
+      update: () => {
+        const query = {
+          eq: (column: string, value: unknown) => { filters.push([column, value]); return query; },
+          in: (column: string, value: unknown) => { filters.push([column, value]); return query; },
+          then: (done: (value: unknown) => unknown) => Promise.resolve({ error: null }).then(done),
+        };
+        return query;
+      },
+    }) as never);
+
+    await useSessionStore.getState().setFolderActive('Auto-saved', false);
+    // A row still saving into the folder must not take its value on the server alone.
+    expect(filters).toContainEqual(['id', [SAVED_ID]]);
+    expect(filters.map(([column]) => column)).not.toContain('folder');
+  });
 });
+

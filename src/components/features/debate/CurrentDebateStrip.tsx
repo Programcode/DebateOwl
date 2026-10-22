@@ -4,7 +4,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { shouldPrefillMotion } from '@/lib/debate/motion';
 import { useCurrentDebate, useDebateStore, type DebateSide } from '@/lib/stores/debate-store';
-import { useSessionStore } from '@/lib/stores/session-store';
+import { isPendingSource, useSessionStore } from '@/lib/stores/session-store';
 import { useSparringStore } from '@/lib/stores/sparring-store';
 
 // eslint-disable-next-line react-refresh/only-export-components
@@ -19,8 +19,9 @@ export function sideLabelKey(side: DebateSide): string {
  */
 // eslint-disable-next-line react-refresh/only-export-components
 export function useDebateCounts(debateId: string | null | undefined) {
-  const sources = useSessionStore((state) => debateId ? state.sourceLibrary.filter((source) => source.debateId === debateId).length : 0);
-  const activeSources = useSessionStore((state) => debateId ? state.sourceLibrary.filter((source) => source.debateId === debateId && source.isActive).length : 0);
+  // A row still saving is not counted until it is a source the tools can send.
+  const sources = useSessionStore((state) => debateId ? state.sourceLibrary.filter((source) => source.debateId === debateId && !isPendingSource(source)).length : 0);
+  const activeSources = useSessionStore((state) => debateId ? state.sourceLibrary.filter((source) => source.debateId === debateId && source.isActive && !isPendingSource(source)).length : 0);
   const outputs = useSessionStore((state) => debateId ? [
     state.savedCases, state.savedAttacks, state.savedBrainstorms, state.savedFactoids,
     state.savedChats, state.savedFlowcharts, state.savedCrossfires,
