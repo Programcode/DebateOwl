@@ -1,5 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 import { seedCurrentDebate, setLocale, stubSupabaseSession } from './helpers/auth';
+import { fulfillQuotaCheck } from './helpers/quota';
 
 const MOTION = 'Resolved: cities should ban private cars downtown.';
 const SEEDED_DEBATE_ID = '00000000-0000-4000-8000-00000000d001';
@@ -56,6 +57,7 @@ async function installDeterministicBackend(page: Page, requests: CrossfireReques
     }
 
     if (url.pathname.endsWith('/functions/v1/ai')) {
+      if (await fulfillQuotaCheck(route, {})) return;
       const body = route.request().postDataJSON() as CrossfireRequest;
       requests.push(body);
       if (body.input.operation === 'signal') {
