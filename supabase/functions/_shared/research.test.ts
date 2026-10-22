@@ -12,6 +12,7 @@ import {
   MAX_PROVIDER_RESPONSE_BYTES,
   type ResearchContext,
 } from "./research.ts";
+import type { NormalizedUsage } from "./cost.ts";
 
 function ctxWith(overrides: Partial<ResearchContext>): ResearchContext {
   return { ...emptyResearchContext(), ...overrides };
@@ -286,6 +287,61 @@ Deno.test("filtered research retries without domain filters when Exa returns no 
     if (!Array.isArray(bodies[0].includeDomains)) throw new Error("first request was not domain-filtered");
     if (bodies[1].includeDomains !== undefined) throw new Error("fallback retained includeDomains");
     if (!result.rankedResults.some((item) => item.url?.includes("gsa.gov"))) throw new Error("fallback result was lost");
+  } finally {
+    globalThis.fetch = originalFetch;
+    if (previousApiKey === undefined) Deno.env.delete("EXA_API_KEY");
+    else Deno.env.set("EXA_API_KEY", previousApiKey);
+  }
+});
+
+Deno.test("research reports the charge of every billed Exa call and none for failed ones", async () => {
+  const originalFetch = globalThis.fetch;
+  const previousApiKey = Deno.env.get("EXA_API_KEY");
+  Deno.env.set("EXA_API_KEY", "test-key");
+  const json = (body: unknown, status = 200) => Promise.resolve(new Response(JSON.stringify(body), {
+    status,
+    headers: { "Content-Type": "application/json" },
+  }));
+  globalThis.fetch = ((input: Request | URL | string, init?: RequestInit) => {
+    const body = JSON.parse(String(init?.body)) as Record<string, unknown>;
+    if (String(input).endsWith("/contents")) {
+      const [url] = body.urls as string[];
+      return url.includes("gsa.gov")
+        ? json({ requestId: "read-ok", results: [{ text: "page" }], costDollars: { total: 0.001 } })
+        : json({ error: "upstream" }, 500);
+    }
+    // The domain-filtered search finds nothing, so research pays for a fallback.
+    return Array.isArray(body.includeDomains)
+      ? json({ requestId: "filtered", results: [], costDollars: { total: 0.005 } })
+      : json({
+        requestId: "fallback",
+        results: [
+          { title: "Official guidance", url: "https://gsa.gov/policy", text: "Official government procurement policy with detailed methodology." },
+          { title: "Agency data", url: "https://data.gov/procurement", text: "Official government procurement data and supporting methodology." },
+        ],
+        costDollars: { total: 0.007 },
+      });
+  }) as typeof fetch;
+
+  const usages: NormalizedUsage[] = [];
+  try {
+    await deepResearch("federal procurement reform", "United States", {
+      provider: "openrouter",
+      model: "test-model",
+      reasoningEffort: "low",
+      callModel: async () => ({ output: { queries: [] } }),
+      onExaUsage: (usage) => usages.push(usage),
+    }, {
+      maxFollowUpQueries: 0,
+      maxUrlsToRead: 2,
+      maxSeedQueries: 1,
+      overallTimeoutMs: 1000,
+      preferredSourceType: "government",
+    });
+    const ids = usages.map((usage) => usage.raw?.request_id).sort();
+    if (ids.join(",") !== "fallback,filtered,read-ok") throw new Error(`unexpected billed Exa calls: ${ids.join(",")}`);
+    const total = usages.reduce((sum, usage) => sum + (usage.reportedCostUsd ?? 0), 0);
+    if (Math.abs(total - 0.013) > 1e-12) throw new Error(`Exa charges did not add up: ${total}`);
   } finally {
     globalThis.fetch = originalFetch;
     if (previousApiKey === undefined) Deno.env.delete("EXA_API_KEY");

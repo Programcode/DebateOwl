@@ -2,7 +2,11 @@
 // costUsd = null, never an invented estimate. Raw provider usage is preserved
 // so every billing-relevant field stays auditable.
 
-export const OPENROUTER_COST_CALCULATION_VERSION = "openrouter-usage-v1";
+// v2 adds the upstream charge OpenRouter reports for BYOK calls, which v1
+// logged as $0, and the Exa charges merged into a request's research.
+export const OPENROUTER_COST_CALCULATION_VERSION = "openrouter-usage-v2";
+
+export const EXA_PROVIDER = "exa";
 
 export const ELEVENLABS_PROVIDER = "elevenlabs";
 export const ELEVENLABS_COST_CALCULATION_VERSION = "elevenlabs-characters-v1";
@@ -67,6 +71,20 @@ function reportedCostOrUndefined(value: unknown): number | undefined {
   return typeof value === "number" && Number.isFinite(value) && value >= 0 ? value : undefined;
 }
 
+/**
+ * OpenRouter's `cost` is what it charged the account. With a provider key
+ * attached (BYOK, `is_byok: true`) that is only its fee, often 0, and the
+ * provider bills our own key for `cost_details.upstream_inference_cost`. The
+ * real cost is the sum. A BYOK response without the upstream figure stays
+ * unpriced rather than logging the fee alone as the whole bill.
+ */
+function openRouterCostOrUndefined(usage: Record<string, unknown>): number | undefined {
+  const fee = reportedCostOrUndefined(usage.cost);
+  if (usage.is_byok !== true || fee === undefined) return fee;
+  const upstream = reportedCostOrUndefined(asRecord(usage.cost_details)?.upstream_inference_cost);
+  return upstream === undefined ? undefined : fee + upstream;
+}
+
 export function normalizeOpenRouterUsage(usage: Record<string, unknown>): NormalizedUsage {
   const promptDetails = asRecord(usage.prompt_tokens_details);
   const completionDetails = asRecord(usage.completion_tokens_details);
@@ -76,8 +94,30 @@ export function normalizeOpenRouterUsage(usage: Record<string, unknown>): Normal
     cacheWriteTokens: intOrUndefined(promptDetails?.cache_write_tokens),
     outputTokens: intOrUndefined(usage.completion_tokens),
     reasoningOutputTokens: intOrUndefined(completionDetails?.reasoning_tokens),
-    reportedCostUsd: reportedCostOrUndefined(usage.cost),
+    reportedCostUsd: openRouterCostOrUndefined(usage),
     raw: usage,
+  };
+}
+
+/**
+ * Exa reports each call's charge as `costDollars.total`. The usage joins the
+ * request's research usage, so the parent ai_requests row carries the cost
+ * and `raw_usage.calls` keeps one entry per Exa call. A successful response
+ * without a charge is incomplete: the call was billed, the amount is unknown.
+ */
+export function normalizeExaUsage(endpoint: "search" | "contents", data: unknown): NormalizedUsage {
+  const body = asRecord(data);
+  const costDollars = asRecord(body?.costDollars);
+  const total = reportedCostOrUndefined(costDollars?.total);
+  return {
+    incomplete: total === undefined || undefined,
+    reportedCostUsd: total,
+    raw: {
+      provider: EXA_PROVIDER,
+      endpoint,
+      request_id: typeof body?.requestId === "string" ? body.requestId : null,
+      cost_dollars: costDollars ?? null,
+    },
   };
 }
 
