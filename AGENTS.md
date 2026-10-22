@@ -75,12 +75,12 @@ Database migrations and pgTAP policies use a separate Docker-backed gate. In Sup
 Outside Superset, run the underlying commands directly:
 
 ```bash
-supabase db start
+npx supabase db start
 npm run test:db
-supabase stop --no-backup
+npx supabase stop --no-backup
 ```
 
-Supabase CLI 2.115 or newer is required. Do not run this gate concurrently from multiple worktrees. If this task starts the stack, stop it before finishing, including after failures when safe.
+Use only the repo-pinned Supabase CLI (the exact `supabase` devDependency, 2.121.0). `npm run` scripts, `./.superset/db-gate.sh`, `scripts/agent-stack.sh`, and the verify harness already put it first on PATH; anywhere else, call `npx supabase`. Never use a global CLI or `npx supabase@latest`, and never bump the version in one worktree only: each CLI version pulls its own ~7 GB set of Docker images onto the shared VPS. Change it in `package.json`, `package-lock.json`, and the `setup-cli` steps in `.github/workflows/` together. Do not run this gate concurrently from multiple worktrees. If this task starts the stack, stop it before finishing, including after failures when safe.
 
 WebKit is a separate release smoke test:
 
