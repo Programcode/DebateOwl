@@ -158,7 +158,7 @@ async function main() {
     await activatedPage.waitForFunction(async () => {
       const keys = await caches.keys();
       return navigator.serviceWorker.controller !== null &&
-        keys.includes('debate-lab-v3-shell') &&
+        keys.includes('debate-lab-v5-shell') &&
         !keys.some((key) => key.startsWith('debate-lab-v2'));
     }, undefined, { timeout: CONTENT_TIMEOUT_MS });
     await activatedPage.close();

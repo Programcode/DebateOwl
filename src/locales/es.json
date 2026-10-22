@@ -231,6 +231,7 @@
     "openingPage": "Abriendo {{page}}",
     "page": "Página",
     "close": "Cerrar",
+    "notifications": "Notificaciones",
     "loading": "Cargando",
     "error": "Error",
     "logoAlt": "Logotipo de DebateLab",
@@ -1432,6 +1433,7 @@
   "timer": {
     "title": "Temporizador de debate",
     "displayLabel": "Pantalla del temporizador",
+    "speechProgress": "Progreso de {{speech}}",
     "selectFormat": "Seleccionar formato",
     "formatStandard": "Estándar (4-6-6-3)",
     "formatLD": "Lincoln-Douglas",
@@ -1551,6 +1553,7 @@
     "autoLayout": "Organizar automáticamente",
     "edgeAttack": "Ataque",
     "edgeRebuttal": "Refutación",
+    "edgeTypeLabel": "Tipo de enlace",
     "edgeSupport": "Apoyo",
     "exportFailedToast": "No se pudo exportar el diagrama.",
     "selectedNode": "Seleccionado",
@@ -1754,6 +1757,8 @@
   },
   "sharedPage": {
     "title": "Contenido compartido",
+    "notFoundTitle": "Enlace compartido no encontrado",
+    "backHome": "Volver al inicio",
     "noCode": "No se proporcionó código de compartir",
     "notFound": "Contenido no encontrado",
     "loadFailed": "Error al cargar contenido compartido",

@@ -300,7 +300,7 @@ export default function TimerPage() {
               </div>
             </div>
 
-            <Progress value={progress} className="h-2 w-full" />
+            <Progress value={progress} className="h-2 w-full" aria-label={t('timer.speechProgress', { speech: t(currentSpeech.labelKey) })} />
 
             {/* Controls */}
             <div className="flex justify-center gap-4">

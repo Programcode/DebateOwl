@@ -47,8 +47,8 @@ export function LanguageSwitcher() {
     <Popover>
       <HeaderTooltip label={t('langSwitcher.title', 'Language')}>
         <PopoverTrigger asChild>
-          <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground" aria-label={t('langSwitcher.label', 'Language settings')}>
-            <Globe className="h-5 w-5" />
+          <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground" aria-label={t('langSwitcher.label', 'Language')}>
+            <Globe className="h-5 w-5" aria-hidden="true" />
           </Button>
         </PopoverTrigger>
       </HeaderTooltip>

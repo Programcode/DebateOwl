@@ -106,23 +106,36 @@ export function getTitle(html: string, fallback: string): string {
 
 // Article roots we would rather keep. Everything else that looks like Wikipedia
 // chrome (edit links, the table of contents, navboxes, language lists) is dropped
-// before its text can reach the importer.
-const ARTICLE_ROOT = /(?:^|[\s_-])(?:mw-content-text|mw-parser-output)(?:$|[\s_-])/i;
-const WIKI_CHROME = /(?:^|[\s_-])(?:mw-editsection|mw-editsection-like|toc|navbox|interlanguage|vector-language|mw-portlet-lang|p-lang|sistersitebox|noprint|mw-jump-link|vector-page-toolbar|vector-sticky-header|vector-toc)(?:$|[\s_-])/i;
+// before its text can reach the importer. Both lists match whole id or class
+// tokens only: Wikipedia puts flags such as `vector-toc-available` and
+// `vector-feature-toc-pinned-clientpref-1` on <html>, so a hyphen-bounded match
+// for `toc` would strip the entire page.
+const ARTICLE_ROOT = new Set(["mw-content-text", "mw-parser-output"]);
+const WIKI_CHROME = new Set([
+  "mw-editsection", "mw-editsection-like", "toc", "navbox", "interlanguage", "vector-language", "mw-portlet-lang",
+  "p-lang", "sistersitebox", "noprint", "mw-jump-link", "vector-page-toolbar", "vector-sticky-header", "vector-toc",
+]);
+// Outer document elements are never chrome, whatever flags their classes carry.
+const NEVER_CHROME = new Set(["html", "body"]);
 
 function idClassOf(tag: string): string {
   return `${readAttr(tag, "id") || ""} ${readAttr(tag, "class") || ""}`;
 }
 
+function hasToken(idClass: string, tokens: Set<string>): boolean {
+  return idClass.toLowerCase().split(/\s+/).some((token) => tokens.has(token));
+}
+
 function isArticleRoot(name: string, idClass: string): boolean {
-  return name === "main" || name === "article" || ARTICLE_ROOT.test(idClass);
+  return name === "main" || name === "article" || hasToken(idClass, ARTICLE_ROOT);
 }
 
 function shouldStrip(name: string, tag: string): boolean {
   if (STRIP_TAGS.has(name)) return true;
   const idClass = idClassOf(tag);
   if (isArticleRoot(name, idClass)) return false;
-  if (WIKI_CHROME.test(idClass)) return true;
+  if (NEVER_CHROME.has(name)) return false;
+  if (hasToken(idClass, WIKI_CHROME)) return true;
   if (name !== "div" && name !== "section") return false;
   const role = readAttr(tag, "role")?.toLowerCase();
   if (role && ROLE_STRIP.has(role)) return true;
@@ -225,7 +238,7 @@ function collectContent(html: string): { cleaned: string; candidates: ContentCan
         const idClass = idClassOf(tag);
         candidates.push({
           html: html.slice(end + 1, close),
-          preferred: parsed.name === "main" || parsed.name === "article" || ARTICLE_ROOT.test(idClass),
+          preferred: parsed.name === "main" || parsed.name === "article" || hasToken(idClass, ARTICLE_ROOT),
         });
       }
     }
