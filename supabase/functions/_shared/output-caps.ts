@@ -37,24 +37,31 @@ export type ReplyCap = keyof typeof REPLY_TOKEN_CAPS;
 export const TRUNCATION_RETRY_FACTOR = 2;
 
 /**
- * The share of max_tokens a provider may spend on reasoning at each effort,
- * and the smallest reasoning budget it allows. These mirror OpenRouter's
- * conversion for budget-based models (Anthropic, Gemini):
- * budget = max(max_tokens * share, 1024).
+ * The share of max_tokens a budget-based model (Claude) may spend on
+ * reasoning at each effort. OpenRouter sets its budget to
+ * max(max_tokens * share, 1024).
  * https://openrouter.ai/docs/use-cases/reasoning-tokens
  */
 const REASONING_SHARE: Record<ReasoningEffort, number> = { low: 0.2, medium: 0.5, high: 0.8 };
-const MIN_REASONING_TOKENS = 1_024;
 
 /**
- * The max_tokens to send so the provider's full reasoning allowance still
- * leaves `replyTokens` for the visible reply, bounded by the model's limit.
+ * Reasoning room kept on top of the reply at each effort. Effort-based models
+ * (OpenAI, Gemini 3, DeepSeek) decide how long they think and take no budget,
+ * so this is a floor sized for them; a reply that still runs out is retried.
+ * The low floor also stays above Claude's 1024-token minimum budget.
+ */
+const REASONING_HEADROOM: Record<ReasoningEffort, number> = { low: 2_048, medium: 4_096, high: 8_192 };
+
+/**
+ * The max_tokens to send so the reply keeps `replyTokens` after reasoning:
+ * after Claude's full budget, and after the headroom for every other model.
+ * Bounded by the model's own limit.
  */
 export function outputTokenLimit(
   replyTokens: number,
   effort: ReasoningEffort,
   modelMaxTokens: number,
 ): number {
-  const withShare = Math.ceil(replyTokens / (1 - REASONING_SHARE[effort]));
-  return Math.min(modelMaxTokens, Math.max(withShare, replyTokens + MIN_REASONING_TOKENS));
+  const afterBudget = Math.ceil(replyTokens / (1 - REASONING_SHARE[effort]));
+  return Math.min(modelMaxTokens, Math.max(afterBudget, replyTokens + REASONING_HEADROOM[effort]));
 }

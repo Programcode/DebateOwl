@@ -345,7 +345,7 @@ export async function handleRequest(req: Request): Promise<Response> {
         }
 
         // The text already reached the reader, so a cut-off answer cannot be
-        // retried. The client tells the user it stopped short.
+        // retried. The flag tells the user it stopped short.
         const replyTruncated = streamFinishReason === "length";
         if (replyTruncated) {
           console.warn(`[AI_STREAM] Reply hit its ask cap (${REPLY_TOKEN_CAPS.ask} tokens, ${model}, effort ${reasoningEffort})`);
@@ -359,20 +359,11 @@ export async function handleRequest(req: Request): Promise<Response> {
           generatedAt: new Date().toISOString(),
           followUpQuestions: [],
           uncertainties: accumulated.trim() ? [] : ["The model returned an empty streamed response."],
+          ...(replyTruncated ? { replyTruncated: true } : {}),
         };
 
         if (!req.signal.aborted) {
-          try {
-            emit("final", {
-              output,
-              meta: {
-                requestedModel,
-                resolvedModel: model,
-                ...(replyTruncated ? { replyTruncated: true } : {}),
-                ...(debateMeta ? { debateContext: debateMeta } : {}),
-              },
-            });
-          } catch { /* client disconnected after provider completion */ }
+          try { emit("final", { output, meta: { requestedModel, resolvedModel: model, ...(debateMeta ? { debateContext: debateMeta } : {}) } }); } catch { /* client disconnected after provider completion */ }
         }
         await logUsage(user.id, "ask", OPENROUTER_PROVIDER, model, collectUsage(), Date.now() - startedAt);
       } catch (err) {
