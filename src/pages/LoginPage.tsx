@@ -9,6 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ArrowLeft } from 'lucide-react';
 import { useAuth } from '@/lib/supabase/AuthProvider';
 import { useToast } from '@/hooks/use-toast';
+import { useExternalRedirectPending } from '@/hooks/use-external-redirect-pending';
 import { consumeWorkspaceInvite } from '@/lib/workspace/invite-handoff';
 import { localizeAuthError } from '@/lib/auth-errors';
 import { clearSessionExpiredNotice, sessionExpiredNotice } from '@/lib/supabase/session-expiry';
@@ -31,7 +32,7 @@ function isAuthMode(value: string): value is AuthMode {
 
 export default function LoginPage() {
   const { user, signInWithGoogle, signInWithEmailOtp, verifyEmailOtp, signInWithDemoCode } = useAuth();
-  const [isRedirecting, setIsRedirecting] = useState(false);
+  const { pending: isRedirecting, run: runRedirect } = useExternalRedirectPending();
   const [authMode, setAuthMode] = useState<AuthMode>('email');
   const [authStatus, setAuthStatus] = useState<AuthStatus>('idle');
   const [email, setEmail] = useState('');
@@ -70,11 +71,9 @@ export default function LoginPage() {
   }, [authStatus, authMode, emailSent]);
 
   const handleGoogleSignIn = async () => {
-    setIsRedirecting(true);
     try {
-      await signInWithGoogle();
+      await runRedirect(() => signInWithGoogle());
     } catch (error) {
-      setIsRedirecting(false);
       toast({
         title: t('login.failed', 'Could not start sign in'),
         description: localizeAuthError(error, t, 'login.tryAgain', 'Please try again.'),

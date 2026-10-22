@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -8,6 +8,7 @@ import { Check, Sparkles, Zap, Crown } from 'lucide-react';
 import { redirectToCheckout, redeemPromoCode } from '@/lib/stripe';
 import { useToast } from '@/hooks/use-toast';
 import { useSubscription } from '@/hooks/use-subscription';
+import { useExternalRedirectPending } from '@/hooks/use-external-redirect-pending';
 
 interface PricingModalProps {
   open: boolean;
@@ -19,9 +20,15 @@ export function PricingModal({ open, onOpenChange, onPromoRedeemed }: PricingMod
   const { t } = useTranslation();
   const [promoCode, setPromoCode] = useState('');
   const [promoLoading, setPromoLoading] = useState(false);
-  const [checkoutLoading, setCheckoutLoading] = useState(false);
+  const { pending: checkoutLoading, run: runCheckout, reset: resetCheckout } = useExternalRedirectPending();
   const [showPromo, setShowPromo] = useState(false);
   const { toast } = useToast();
+
+  // The modal stays mounted while closed, so reopening it must not show a
+  // button still waiting on a checkout the user already left.
+  useEffect(() => {
+    if (!open) resetCheckout();
+  }, [open, resetCheckout]);
 
   const FREE_FEATURES = [
     t('pricingModal.freeFeature1'),
@@ -39,16 +46,14 @@ export function PricingModal({ open, onOpenChange, onPromoRedeemed }: PricingMod
   ];
 
   const handleUpgrade = async () => {
-    setCheckoutLoading(true);
     try {
-      await redirectToCheckout(promoCode || undefined);
+      await runCheckout(() => redirectToCheckout(promoCode || undefined));
     } catch (err) {
       toast({
         title: t('pricingModal.checkoutError'),
         description: err instanceof Error ? err.message : t('pricingModal.checkoutErrorDesc'),
         variant: 'destructive',
       });
-      setCheckoutLoading(false);
     }
   };
 
