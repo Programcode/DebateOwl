@@ -8,6 +8,7 @@ import { Progress } from '@/components/ui/progress';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { ClockAnnouncer, RoundClock, clockTone } from '@/components/features/practice/RoundClock';
 import { displaySeconds, pauseClock, remainingMs, startClock, type ClockState } from '@/lib/timer-clock';
+import { timerShortcutBlocked } from '@/lib/timer-shortcuts';
 import { toast } from '@/hooks/use-toast';
 import {
   Select,
@@ -272,7 +273,7 @@ export default function TimerPage() {
   // Keyboard shortcuts
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+      if (timerShortcutBlocked(e)) return;
 
       switch (e.code) {
         case 'Space':
