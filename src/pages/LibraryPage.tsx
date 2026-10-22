@@ -220,9 +220,11 @@ export default function LibraryPage() {
   const draftTitleRef = useRef<HTMLInputElement>(null);
   const draftContentRef = useRef<HTMLTextAreaElement>(null);
   const draftLoadedFor = useRef<string | null>(null);
-  // Fields the student edited in the sheet. Save sends only these; the others
-  // follow the stored source while the sheet is open.
-  const touchedDraftFields = useRef(new Set<keyof typeof sourceDraft>());
+  // Fields the student edited in the sheet, each with an edit count. Save sends
+  // only these; the others follow the stored source while the sheet is open.
+  const touchedDraftFields = useRef(new Map<keyof typeof sourceDraft, number>());
+  // Counts sheet openings, so a save that lands after a reopen leaves the new edits alone.
+  const draftOpening = useRef(0);
   const [isSavingDraft, setIsSavingDraft] = useState(false);
   const [newSource, setNewSource] = useState({
     title: '',
@@ -527,6 +529,7 @@ export default function LibraryPage() {
     };
     if (draftLoadedFor.current !== selectedSource.id) {
       draftLoadedFor.current = selectedSource.id;
+      draftOpening.current += 1;
       touchedDraftFields.current.clear();
       setDraftErrors({});
       setSourceDraft(stored);
@@ -618,7 +621,8 @@ export default function LibraryPage() {
     }
   };
   const editDraft = (patch: Partial<typeof sourceDraft>) => {
-    for (const key of Object.keys(patch) as Array<keyof typeof sourceDraft>) touchedDraftFields.current.add(key);
+    const touched = touchedDraftFields.current;
+    for (const key of Object.keys(patch) as Array<keyof typeof sourceDraft>) touched.set(key, (touched.get(key) ?? 0) + 1);
     setSourceDraft((draft) => ({ ...draft, ...patch }));
   };
   const handleSaveSourceDraft = async () => {
@@ -630,14 +634,18 @@ export default function LibraryPage() {
 
     // Only what was edited here is written, so a change that reached this
     // source while the sheet was open (a switch, research) is not overwritten.
-    const sourceId = selectedSource.id;
-    const sent = Array.from(touchedDraftFields.current);
-    const patch = Object.fromEntries(sent.map((key) => [key, sourceDraft[key]])) as Partial<typeof sourceDraft>;
+    const opening = draftOpening.current;
+    const sent = new Map(touchedDraftFields.current);
+    const patch = Object.fromEntries(Array.from(sent.keys(), (key) => [key, sourceDraft[key]])) as Partial<typeof sourceDraft>;
     setIsSavingDraft(true);
     try {
-      await updateSource(sourceId, patch);
-      // The sheet may show another source by now; its edits are its own.
-      if (draftLoadedFor.current === sourceId) for (const key of sent) touchedDraftFields.current.delete(key);
+      await updateSource(selectedSource.id, patch);
+      // A field counts as saved only if it was not edited again meanwhile and
+      // the sheet still shows the opening this save came from.
+      if (draftOpening.current === opening) {
+        const touched = touchedDraftFields.current;
+        for (const [key, edits] of sent) if (touched.get(key) === edits) touched.delete(key);
+      }
     } catch (error) {
       toast({
         title: t('libraryPage.saveFailed', 'Could not save this source.'),

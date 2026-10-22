@@ -132,6 +132,8 @@ test("lib-edit-while-switching: the editor follows a switch that rolls back, and
   await page.getByRole("switch", { name: "Toggle Race study" }).click();
   await page.getByRole("button", { name: "Race study", exact: true }).click();
   const sheet = page.getByRole("dialog");
+  // The editor opened while the write was still running, so it shows the switch off.
+  await expect(sheet.getByRole("switch", { name: "Use for AI grounding" })).not.toBeChecked();
   await expect(page.getByText("Could not change this source")).toBeVisible();
   // The switch went back on; the editor shows that, since it was not edited there.
   await expect(sheet.getByRole("switch", { name: "Use for AI grounding" })).toBeChecked();
@@ -142,6 +144,22 @@ test("lib-edit-while-switching: the editor follows a switch that rolls back, and
   const row = async () => (await admin.from("sources").select("content,is_active").eq("user_id", await user.userId()).eq("title", "Race study")).data;
   await expect.poll(row).toEqual([{ content: "Edited text.", is_active: true }]);
   await evidence.shot("01-editor-after-rollback");
+
+  // Typing on while a save runs keeps that text as an edit, so the next Save sends it.
+  const slowSave = async (route: import("@playwright/test").Route) => {
+    if (route.request().method() === "PATCH") await new Promise((resolve) => setTimeout(resolve, 1_500));
+    await route.continue();
+  };
+  await page.route("**/rest/v1/sources?**", slowSave);
+  const content = sheet.getByRole("textbox", { name: "Content" });
+  await content.fill("Second edit.");
+  await sheet.getByRole("button", { name: "Save" }).click();
+  await content.fill("Second edit, typed on.");
+  await expect.poll(row).toEqual([{ content: "Second edit.", is_active: true }]);
+  await expect(sheet.getByRole("button", { name: "Save" })).toBeEnabled();
+  await page.unroute("**/rest/v1/sources?**", slowSave);
+  await sheet.getByRole("button", { name: "Save" }).click();
+  await expect.poll(row).toEqual([{ content: "Second edit, typed on.", is_active: true }]);
   await evidence.json("02-row", await row());
 });
 

@@ -7,7 +7,7 @@ Users save reference texts to their Library. The Library belongs to the Current 
 - `lib-add` adds a source with a title and content. It shows at once while it saves, then a toast `Saved <title> to the Library`; its toggle is on, and the banner `Grounding Active` shows.
 - `lib-toggle` pauses a source through its switch, which keeps it out of prompts.
 - `lib-offline` offline, the switch does not move and a toast says `You are offline. Reconnect and try again.` A write that fails online puts the switch back with a toast.
-- `lib-edit-while-switching` the source editor's untouched fields follow the stored source while it is open (a switch that rolls back shows as rolled back), and `Save` sends only the fields edited in the sheet.
+- `lib-edit-while-switching` the source editor's untouched fields follow the stored source while it is open (a switch that rolls back shows as rolled back), and `Save` sends only the fields edited in the sheet. Text typed while a save runs stays an edit and goes out with the next `Save`.
 - `lib-dedupe` keeps one row per web page per debate. URLs match after normalizing (host without `www.`, no scheme, fragment, tracking parameters or trailing slash). Importing a page the debate has warns `This page is already in this debate's Library.` before any fetch; research refreshes the existing row instead of adding one.
 - `lib-layout` on a phone the row's controls take their own line, so a long title gets the row's width and two lines.
 - `lib-ground` includes only active sources' text in the `system` of later AI calls (Generate, Brainstorm, and others).
