@@ -1357,7 +1357,6 @@
     "useFree": "Alacsony szintű érvelés használata"
   },
   "dailyLimit": {
-    "reachedInline": "Elhasználtad a mai MI-kéréseidet. Éjfélkor (UTC) frissülnek.",
     "usage": "Ma: {{used}} / {{limit}} MI-kérés felhasználva. Éjfélkor (UTC) frissülnek (nálad {{time}}).",
     "sparringNone": "Mára nem maradt MI-kérésed, így az ellenfél nem tud válaszolni. Éjfélkor (UTC) frissülnek.",
     "sparringShort": "Ehhez a körhöz {{needed}} MI-kérés kell, de ma csak {{remaining}} maradt, így a bíró előtt megállna. Éjfélkor (UTC) frissülnek."

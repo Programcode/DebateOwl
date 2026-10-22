@@ -1357,7 +1357,6 @@
     "useFree": "Usar razonamiento bajo"
   },
   "dailyLimit": {
-    "reachedInline": "Has usado tus solicitudes de IA de hoy. Se renuevan a medianoche UTC.",
     "usage": "Hoy: {{used}} de {{limit}} solicitudes de IA usadas. Se renuevan a medianoche UTC ({{time}} en tu hora).",
     "sparringNone": "No te quedan solicitudes de IA hoy, así que el oponente no podrá responder. Se renuevan a medianoche UTC.",
     "sparringShort": "Esta ronda necesita {{needed}} solicitudes de IA y hoy te quedan {{remaining}}, así que se detendría antes del juez. Se renuevan a medianoche UTC."

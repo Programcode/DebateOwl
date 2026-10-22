@@ -6,6 +6,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { useSparringStore } from '@/lib/stores/sparring-store';
 import { useSettingsStore } from '@/lib/stores/settings-store';
 import { generateSparringTurn, isAISubscriptionError, judgeSparringSession } from '@/lib/ai/client';
+import { getUserFacingAIError } from '@/lib/ai/error-display';
 import type { SparringRespondInput, SparringScoreInput, SparringSpeech } from '@/lib/ai/schemas/sparring';
 import { SparringSetup, type SparringSetupValues } from '@/components/features/sparring/SparringSetup';
 import { SparringRound } from '@/components/features/sparring/SparringRound';
@@ -29,12 +30,9 @@ import { useSubscriptionError } from '@/hooks/use-subscription-error';
 import { SubscriptionErrorModals } from '@/components/features/subscription';
 
 function readableError(error: unknown, fallback: string) {
+  if (isAISubscriptionError(error)) return getUserFacingAIError(error);
   if (error instanceof Error && error.message.trim()) return error.message;
   return fallback;
-}
-
-function isDailyLimitError(error: unknown) {
-  return isAISubscriptionError(error) && error.code === 'limit_reached';
 }
 
 function estimateAiTimeUsedSeconds(content: string, limit: number) {
@@ -218,9 +216,7 @@ export default function SparringPage() {
       .catch((error: unknown) => {
         if (aiRequestRef.current !== requestKey) return;
         handleSubscriptionError(error);
-        setAiError(isDailyLimitError(error)
-          ? t('dailyLimit.reachedInline')
-          : readableError(error, t('sparring.round.aiRequestFailed', 'The AI request failed. Check your connection and try again.')));
+        setAiError(readableError(error, t('sparring.round.aiRequestFailed', 'The AI request failed. Check your connection and try again.')));
       })
       .finally(() => {
         if (aiRequestRef.current === requestKey) {
@@ -271,9 +267,7 @@ export default function SparringPage() {
       .catch((error: unknown) => {
         if (judgeRequestRef.current !== requestKey) return;
         handleSubscriptionError(error);
-        setJudgingError(isDailyLimitError(error)
-          ? t('dailyLimit.reachedInline')
-          : readableError(error, t('sparring.round.judgeRequestFailed', 'The judge request failed. Check your connection and try again.')));
+        setJudgingError(readableError(error, t('sparring.round.judgeRequestFailed', 'The judge request failed. Check your connection and try again.')));
       })
       .finally(() => {
         if (judgeRequestRef.current === requestKey) {

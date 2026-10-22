@@ -29,6 +29,7 @@ vi.mock('@/lib/ai/client', async () => {
   const errors = await vi.importActual<typeof import('@/lib/ai/errors')>('@/lib/ai/errors');
   return {
     AIResponseError: errors.AIResponseError,
+    AIProviderError: errors.AIProviderError,
     AISubscriptionError: errors.AISubscriptionError,
     isAISubscriptionError: errors.isAISubscriptionError,
     isAIModelRestrictionError: errors.isAIModelRestrictionError,
@@ -86,7 +87,11 @@ describe('Crossfire out of daily requests', () => {
     fireEvent.click(screen.getByTestId('submit-turn'));
 
     expect(await screen.findByRole('dialog')).toBeInTheDocument();
-    expect(screen.getByText("You've used today's AI requests. They refresh at midnight UTC.")).toBeInTheDocument();
+    // Inline too, in the dialog's words rather than the server's English.
+    // The open dialog hides the page from the accessibility tree.
+    const inline = screen.getAllByRole('alert', { hidden: true }).find((alert) => alert.textContent?.includes('5 of 5 included AI uses'));
+    expect(inline).toBeDefined();
+    expect(screen.queryByText(/Upgrade to Pro for 50 daily requests/)).not.toBeInTheDocument();
     expect(screen.getByTestId('end-crossfire')).toBeEnabled();
   });
 

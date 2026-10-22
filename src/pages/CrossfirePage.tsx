@@ -23,7 +23,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { crossfire, crossfireSignal, AIResponseError, isAISubscriptionError, isTimeoutError } from '@/lib/ai/client';
+import { crossfire, crossfireSignal, AIResponseError, isTimeoutError } from '@/lib/ai/client';
 import { getUserFacingAIError } from '@/lib/ai/error-display';
 import {
   canEndCrossfireSession,
@@ -185,7 +185,6 @@ function classifyError(error: unknown): {
 } {
   if (isTimeoutError(error)) return { kind: 'timeout', message: error.message };
   if (error instanceof AIResponseError) return { kind: 'response', message: error.message };
-  if (isAISubscriptionError(error) && error.code === 'limit_reached') return { kind: 'request', message: 'dailyLimit.reachedInline' };
   return { kind: 'request', message: getUserFacingAIError(error) };
 }
 
