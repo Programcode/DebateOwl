@@ -84,6 +84,24 @@ test("cross-turn and cross-debrief: questioning the AI gets an answer, a Jev sig
   await expectCrossfireSaved(await user.userId());
   // The turn and the debrief were shown live (features/live-generation.md).
   await expectStreamed(["crossfire"]);
+
+  // cross-history: after leaving the page, History reopens the round and can delete it.
+  await page.goto("/app/history?tab=crossfire");
+  const row = page.getByTestId("history-crossfire-row");
+  await expect(row).toHaveCount(1);
+  await expect(row).toContainText(resolution);
+  await row.getByRole("button", { name: "Open" }).click();
+  const saved = page.getByTestId("saved-crossfire");
+  await expect(saved.getByTestId("saved-crossfire-debrief")).toBeVisible();
+  await expect(saved.getByTestId("saved-crossfire-transcript")).toContainText(text!.slice(0, 40));
+  await evidence.shot("04-history-crossfire");
+  await evidence.aria("04-history-crossfire", saved);
+  await page.keyboard.press("Escape");
+  await page.getByRole("button", { name: `Delete Crossfire round: ${resolution}` }).click();
+  await page.getByRole("alertdialog").getByRole("button", { name: "Delete" }).click();
+  await expect(row).toHaveCount(0);
+  await expect.poll(async () => (await admin.from("crossfires").select("id").eq("user_id", await user.userId())).data).toEqual([]);
+  await evidence.step("Reopened the round from History, then deleted it");
 });
 
 test("cross-ai-questions: the AI questions the user, answers are judged, and the debrief completes", async ({ signedIn: page, user, evidence }) => {

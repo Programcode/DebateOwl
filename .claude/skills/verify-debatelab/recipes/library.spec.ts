@@ -83,3 +83,48 @@ test("lib-import: a web page imports into the Library", async ({ signedIn: page,
   const { data } = await admin.from("sources").select("title,origin").eq("user_id", await user.userId());
   await evidence.json("02-imported-row", data);
 });
+
+test("lib-offline: offline, the switch does not move and says the change was not saved", async ({ signedIn: page, user, evidence }) => {
+  await startDebate(page, motion);
+  await page.goto("/app/library");
+  await addSource(page, "Offline study", "Fares and ridership.");
+  await expect(page.getByText("Saved Offline study to the Library")).toBeVisible();
+  await page.context().setOffline(true);
+  await page.getByRole("switch", { name: "Toggle Offline study" }).click();
+  await expect(page.getByText("You are offline, so this change was not saved.")).toBeVisible();
+  await expect(page.getByRole("switch", { name: "Toggle Offline study" })).toBeChecked();
+  await evidence.shot("01-offline-toggle");
+  await page.context().setOffline(false);
+  const { data } = await admin.from("sources").select("is_active").eq("user_id", await user.userId()).eq("title", "Offline study");
+  expect(data).toEqual([{ is_active: true }]);
+  await evidence.json("02-row-unchanged", data);
+});
+
+test("lib-dedupe and lib-layout: a page saved once per debate, and long titles keep their room on a phone", async ({ signedIn: page, user, evidence }) => {
+  await startDebate(page, motion);
+  const userId = await user.userId();
+  const { data: debateRow } = await admin.from("debates").select("id").eq("user_id", userId).eq("motion", motion).single();
+  const title = "Por qué deberían prohibirse los deberes escolares en la educación primaria según los expertos";
+  const url = "https://www.example.org/estudios/deberes-escolares-primaria/";
+  await admin.from("sources").insert({ user_id: userId, debate_id: debateRow!.id, title, content: "Texto", type: "url", origin: url, folder: "General", is_active: true });
+  await page.setViewportSize({ width: 360, height: 780 });
+  await page.goto("/app/library");
+  const titleButton = page.getByRole("button", { name: title, exact: true });
+  await expect(titleButton).toBeVisible();
+  // Before, the controls shared the title's line and left it a few letters.
+  expect((await titleButton.boundingBox())!.width).toBeGreaterThan(200);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(360);
+  await evidence.shot("01-phone-row");
+
+  // The same page with tracking and a fragment is refused before any fetch.
+  let imported = false;
+  page.on("request", (request) => { if (request.url().includes("/functions/v1/import-source")) imported = true; });
+  await page.getByRole("button", { name: "Add Source" }).click();
+  await page.getByRole("textbox", { name: "Import from URL" }).fill("http://example.org/estudios/deberes-escolares-primaria?utm_source=x#top");
+  await page.getByRole("button", { name: "Import URL" }).click();
+  await expect(page.getByText("This page is already in this debate's Library.")).toBeVisible();
+  expect(imported).toBe(false);
+  await evidence.shot("02-duplicate-warning");
+  const { data } = await admin.from("sources").select("id").eq("user_id", userId);
+  expect(data).toHaveLength(1);
+});
