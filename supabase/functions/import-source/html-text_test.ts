@@ -36,3 +36,40 @@ Deno.test("a long run of unclosed nav tags stays fast", () => {
   if (Date.now() - started > 500) throw new Error("unclosed nav tags took too long");
   assertEquals(text.includes("evidence"), true);
 });
+
+// Pages up to the 1 MB import limit. Each case was quadratic in an earlier
+// version and took from seconds to many minutes at this size; linear code
+// takes well under 200 ms. The budget is loose so a busy machine does not flake.
+const PAGE = 1_000_000;
+const BUDGET_MS = 1500;
+const hostilePages: Record<string, string> = {
+  "unclosed nav tags with one far close": "<nav>".repeat(PAGE / 5) + "</nav>",
+  "stray < with no >": "<".repeat(PAGE),
+  "unclosed meta tags with no >": "<meta ".repeat(PAGE / 6),
+  "text full of '< a'": "< a ".repeat(PAGE / 4),
+  "overlong tags": ("<" + "a".repeat(9000)).repeat(Math.ceil(PAGE / 9001)) + ">",
+};
+for (const [name, html] of Object.entries(hostilePages)) {
+  Deno.test(`a 1 MB page of ${name} is parsed in linear time`, () => {
+    const started = performance.now();
+    stripHtml(html);
+    getTitle(html, "fallback");
+    getMeta(html, ["author"]);
+    const elapsed = performance.now() - started;
+    if (elapsed > BUDGET_MS) throw new Error(`${name}: ${Math.round(elapsed)} ms`);
+  });
+}
+
+Deno.test("a nested nav is dropped whole and the article survives the speed-ups", () => {
+  const words = "Lowering the voting age raises turnout among first-time voters.";
+  const html = `<nav><ul><li><nav>Inner</nav></li></ul>Outer</nav><article><p>${words} ${words} ${words}</p></article>`;
+  const text = stripHtml(html);
+  assertEquals(text.includes("Inner"), false);
+  assertEquals(text.includes("Outer"), false);
+  assertEquals(text.includes("voting age"), true);
+});
+
+Deno.test("text after the last > is kept, with no tag parsing", () => {
+  const html = `<p>${"word ".repeat(25)}</p> 3 < 5 and more words here`;
+  assertEquals(stripHtml(html).includes("3 < 5 and more words here"), true);
+});

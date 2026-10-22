@@ -1,6 +1,22 @@
 // HTML cleanup for URL import. Tag removal is a single forward scan: the old
 // regular expressions retried unclosed `<meta` and `<nav` until the import
 // timed out, and an out-of-range numeric entity threw before any text was saved.
+// Every search below remembers where it last found its needle and only searches
+// again once the scan has passed that point, so hostile pages (thousands of
+// unclosed tags, a stray `<` with no `>`) stay linear in the page size.
+
+/** indexOf for a forward scan: repeated calls with growing `from` cost O(n) in total. */
+function forwardFinder(haystack: string, needle: string): (from: number) => number {
+  let found = -2; // -2: not searched yet; -1: absent from `searchedFrom` on
+  let searchedFrom = 0;
+  return (from: number) => {
+    if (found === -1 && from >= searchedFrom) return -1;
+    if (found >= from && from >= searchedFrom) return found;
+    searchedFrom = from;
+    found = haystack.indexOf(needle, from);
+    return found;
+  };
+}
 
 const STRIP_TAGS = new Set([
   "script", "style", "template", "noscript", "nav", "footer", "header", "aside", "form", "svg", "iframe", "button",
@@ -47,18 +63,22 @@ function parseOpenTag(tag: string): { name: string; closing: boolean; selfClosin
 export function getMeta(html: string, names: string[]): string | undefined {
   const wanted = new Set(names.map((name) => name.toLowerCase()));
   const lower = html.toLowerCase();
+  const nextMeta = forwardFinder(lower, "<meta");
+  const nextGt = forwardFinder(html, ">");
   let i = 0;
   while (i < html.length) {
-    const start = lower.indexOf("<meta", i);
+    const start = nextMeta(i);
     if (start === -1) return undefined;
     const next = lower[start + 5];
     if (next && /[a-z0-9]/.test(next)) {
       i = start + 5;
       continue;
     }
-    const end = html.indexOf(">", start);
-    // An unclosed tag is skipped in one step. Searching it with a regex retried the whole page.
-    if (end === -1 || end - start > 4000) {
+    const end = nextGt(start);
+    // No `>` left means no complete tag left.
+    if (end === -1) return undefined;
+    // An overlong tag is skipped in one step. Searching it with a regex retried the whole page.
+    if (end - start > 4000) {
       i = start + 5;
       continue;
     }
@@ -106,11 +126,15 @@ function matchingClose(html: string, lower: string, tag: string, from: number, a
   if (known !== undefined && from >= known) return -1;
   const openNeedle = `<${tag}`;
   const closeNeedle = `</${tag}`;
+  // Each needle is searched once per occurrence, not once per nesting level:
+  // re-running indexOf for the far close tag at every level was quadratic.
+  const findOpen = forwardFinder(lower, openNeedle);
+  const findClose = forwardFinder(lower, closeNeedle);
   let depth = 1;
   let i = from;
   while (depth > 0) {
-    const nextOpen = lower.indexOf(openNeedle, i);
-    const nextClose = lower.indexOf(closeNeedle, i);
+    const nextOpen = findOpen(i);
+    const nextClose = findClose(i);
     if (nextClose === -1) {
       absentAfter.set(tag, from);
       return -1;
@@ -132,6 +156,7 @@ export function stripHtml(html: string): string {
   const lower = html.toLowerCase();
   const absentAfter = new Map<string, number>();
   const candidates: string[] = [];
+  const nextGt = forwardFinder(html, ">");
   let cleaned = "";
   let i = 0;
   while (i < html.length) {
@@ -147,8 +172,13 @@ export function stripHtml(html: string): string {
       i = end === -1 ? html.length : end + 3;
       continue;
     }
-    const end = html.indexOf(">", start + 1);
-    if (end === -1 || end - start > 8000) {
+    const end = nextGt(start + 1);
+    if (end === -1) {
+      // No `>` left, so nothing after this point can be a tag.
+      cleaned += html.slice(start);
+      break;
+    }
+    if (end - start > 8000) {
       cleaned += "<";
       i = start + 1;
       continue;
@@ -184,7 +214,8 @@ function htmlToText(html: string): string {
   return decodeEntities(html
     .replace(/<\/(p|div|section|article|main|h[1-6]|li|blockquote|tr)>/gi, "\n")
     .replace(/<br\s*\/?>/gi, "\n")
-    .replace(/<[^>]+>/g, " ")
+    // `[^<>]` keeps each attempt from rescanning to the end of a page full of stray `<`.
+    .replace(/<[^<>]+>/g, " ")
     .replace(/[ \t]+/g, " ")
     .replace(/\n{3,}/g, "\n\n")
     .trim());
