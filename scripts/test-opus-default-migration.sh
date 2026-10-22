@@ -30,7 +30,7 @@ CREATE FUNCTION pg_temp.tool(p_model text, p_effort text DEFAULT 'medium') RETUR
 LANGUAGE sql AS $$ SELECT jsonb_build_object('provider', 'openrouter', 'model', p_model, 'reasoningEffort', p_effort) $$;
 
 -- a: every tool on Opus (the old Pro default)
--- b: Opus on some tools, other models on the rest
+-- b: Opus on some tools, other models on the rest, one already on Sonnet
 -- c: a retired Opus ID, which the client already maps to Opus 5.5 as a pick
 -- d: never saved
 -- e: a lapsed Basic account with Opus still saved
@@ -52,6 +52,7 @@ INSERT INTO seeded VALUES
   ('b0000000-0000-4000-8000-00000000000b', jsonb_build_object(
     'generate', pg_temp.tool('anthropic/claude-opus-5.5', 'high'),
     'attack', pg_temp.tool('anthropic/claude-haiku-5.5', 'low'),
+    'brainstorm', pg_temp.tool('anthropic/claude-sonnet-5.5', 'low'),
     'ask', pg_temp.tool('auto-pro')
   )),
   ('c0000000-0000-4000-8000-00000000000c', jsonb_build_object('generate', pg_temp.tool('anthropic/claude-opus-5'))),
@@ -61,6 +62,7 @@ INSERT INTO seeded VALUES
 
 UPDATE public.user_settings AS settings
 SET feature_configs = seeded.feature_configs,
+    updated_at = '2026-01-01T00:00:00Z',
     subscription_tier = CASE WHEN settings.user_id = 'e0000000-0000-4000-8000-00000000000e' THEN 'trial' ELSE 'pro' END
 FROM seeded
 WHERE settings.user_id = seeded.user_id;
@@ -80,9 +82,19 @@ SELECT pg_temp.check(
   pg_temp.configs('b0000000-0000-4000-8000-00000000000b') = jsonb_build_object(
     'generate', pg_temp.tool('anthropic/claude-sonnet-5.5', 'high'),
     'attack', pg_temp.tool('anthropic/claude-haiku-5.5', 'low'),
+    'brainstorm', pg_temp.tool('anthropic/claude-sonnet-5.5', 'low'),
     'ask', pg_temp.tool('auto-pro')
   ),
   'b: only the Opus tool moves'
+);
+-- A client only saves its cleanup while updated_at is unchanged since its read,
+-- so the bump is what stops an older client writing Opus back.
+SELECT pg_temp.check(
+  (SELECT bool_and(updated_at > '2026-01-01T00:00:00Z') FROM public.user_settings
+   WHERE user_id IN ('a0000000-0000-4000-8000-00000000000a', 'b0000000-0000-4000-8000-00000000000b', 'e0000000-0000-4000-8000-00000000000e'))
+  AND (SELECT bool_and(updated_at = '2026-01-01T00:00:00Z') FROM public.user_settings
+   WHERE user_id IN ('c0000000-0000-4000-8000-00000000000c', 'd0000000-0000-4000-8000-00000000000d', 'f0000000-0000-4000-8000-00000000000f')),
+  'migrated rows get a new updated_at and the rest keep theirs'
 );
 SELECT pg_temp.check(pg_temp.model('e0000000-0000-4000-8000-00000000000e', 'ask') = 'anthropic/claude-sonnet-5.5', 'e: a Basic row with Opus moves too');
 SELECT pg_temp.check(
@@ -152,9 +164,10 @@ SELECT pg_temp.check(
   pg_temp.configs('b0000000-0000-4000-8000-00000000000b') = jsonb_build_object(
     'generate', pg_temp.tool('openai/gpt-6.1-sol', 'high'),
     'attack', pg_temp.tool('anthropic/claude-haiku-5.5', 'low'),
+    'brainstorm', pg_temp.tool('anthropic/claude-sonnet-5.5', 'low'),
     'ask', pg_temp.tool('auto-pro')
   ),
-  'b: a model picked after the migration is kept'
+  'b: a model picked after the migration and a tool already on Sonnet before it are kept'
 );
 SELECT pg_temp.check(
   pg_temp.configs('e0000000-0000-4000-8000-00000000000e') = (SELECT feature_configs FROM seeded WHERE user_id = 'e0000000-0000-4000-8000-00000000000e'),
