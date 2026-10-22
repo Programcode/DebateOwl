@@ -74,14 +74,15 @@ function SourceRow({
             {source.type === 'url' ? <Globe className="h-4 w-4" /> : <FileText className="h-4 w-4" />}
           </div>
           <div className="min-w-0">
-            <div className="flex items-center gap-1.5">
+            {/* On a phone the title gets two lines of its own; one truncated line left a few letters. */}
+            <div className="flex items-start gap-1.5 sm:items-center">
               <button
                 type="button"
                 onClick={(event) => {
                   event.stopPropagation();
                   onOpen(source);
                 }}
-                className="min-w-0 truncate rounded-sm text-left text-sm font-medium text-foreground transition-colors hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                className="line-clamp-2 min-w-0 break-words rounded-sm text-left text-sm font-medium text-foreground transition-colors hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:line-clamp-1"
               >
                 {source.title}
               </button>
@@ -91,13 +92,14 @@ function SourceRow({
                   target="_blank"
                   rel="noopener noreferrer"
                   onClick={(event) => event.stopPropagation()}
-                  className="shrink-0 rounded-sm text-muted-foreground transition-colors hover:text-primary"
+                  className="mt-0.5 shrink-0 rounded-sm text-muted-foreground transition-colors hover:text-primary sm:mt-0"
                   aria-label={t('libraryPage.openOrigin', { title: source.title, defaultValue: 'Open {{title}} in a new tab' })}
                 >
                   <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
                 </a>
               )}
-              <Badge variant="outline" className="shrink-0 py-0">
+              {/* The row icon already shows the type; on a phone the title needs the room. */}
+              <Badge variant="outline" className="hidden shrink-0 py-0 sm:inline-flex">
                 {t(`libraryPage.${source.type}Source`, source.type.toUpperCase())}
               </Badge>
             </div>
@@ -135,7 +137,7 @@ function SourceRow({
           <Button
             variant="ghost"
             size="icon"
-            className="h-9 w-9 text-destructive"
+            className="h-9 w-9 text-destructive pointer-coarse:h-11 pointer-coarse:w-11"
             onClick={(event) => {
               event.stopPropagation();
               onRemove(source);
@@ -144,13 +146,14 @@ function SourceRow({
           >
             <Trash2 className="h-4 w-4" />
           </Button>
-          <div className="flex items-center justify-center pointer-coarse:min-h-11 pointer-coarse:min-w-11" onClick={(event) => event.stopPropagation()}>
+          {/* A label, so a tap anywhere in the 44px square flips the switch, not only the switch itself. */}
+          <label className="flex cursor-pointer items-center justify-center pointer-coarse:min-h-11 pointer-coarse:min-w-11" onClick={(event) => event.stopPropagation()}>
             <Switch
               checked={source.isActive}
               onCheckedChange={() => onToggle(source.id)}
               aria-label={t('libraryPage.toggleSourceLabel', { title: source.title })}
             />
-          </div>
+          </label>
         </div>
       </div>
     </div>
