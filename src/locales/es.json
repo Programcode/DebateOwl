@@ -1728,6 +1728,8 @@
   },
   "sharedPage": {
     "title": "Contenido compartido",
+    "notFoundTitle": "Enlace compartido no encontrado",
+    "backHome": "Volver al inicio",
     "noCode": "No se proporcionó código de compartir",
     "notFound": "Contenido no encontrado",
     "loadFailed": "Error al cargar contenido compartido",

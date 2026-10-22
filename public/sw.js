@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'debate-lab-v4';
+const CACHE_VERSION = 'debate-lab-v5';
 const APP_SHELL_CACHE = `${CACHE_VERSION}-shell`;
 const RUNTIME_CACHE = `${CACHE_VERSION}-runtime`;
 
@@ -10,7 +10,10 @@ const APP_SHELL = [
   '/favicon.ico',
   '/favicon.png',
   '/favicon-72.png',
-  '/hero-visual.png',
+  '/apple-touch-icon.png',
+  '/icon-192.png',
+  '/icon-512.png',
+  '/icon-maskable-512.png',
 ];
 
 const API_PATH_PREFIXES = [

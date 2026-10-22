@@ -194,18 +194,34 @@ export function AppLayout() {
   }, [announcements, announcementsUserId, userId]);
 
   // The mobile menu opens just below the whole header (two rows on phones), whatever its height.
+  // Size comes from the observer's border box, which is already laid out. Reading
+  // getBoundingClientRect on scroll forced a layout on every frame of /app.
   useEffect(() => {
     const header = headerRef.current;
     if (!header || typeof ResizeObserver === 'undefined') return;
     const root = document.documentElement;
-    const update = () => root.style.setProperty('--app-header-bottom', `${header.getBoundingClientRect().bottom}px`);
-    update();
-    const observer = new ResizeObserver(update);
+    const bannerOffset = () => {
+      const raw = root.style.getPropertyValue('--staging-banner-height').trim();
+      if (!raw) return 0;
+      if (raw.endsWith('rem')) {
+        const rootFont = parseFloat(getComputedStyle(root).fontSize);
+        return (parseFloat(raw) || 0) * (Number.isFinite(rootFont) ? rootFont : 16);
+      }
+      return parseFloat(raw) || 0;
+    };
+    const apply = (height: number) => {
+      root.style.setProperty('--app-header-bottom', `${Math.round(height + bannerOffset())}px`);
+    };
+    const observer = new ResizeObserver((entries) => {
+      const entry = entries[0];
+      if (!entry) return;
+      const box = entry.borderBoxSize?.[0];
+      apply(box ? box.blockSize : header.offsetHeight);
+    });
     observer.observe(header);
-    window.addEventListener('scroll', update, { passive: true });
     return () => {
       observer.disconnect();
-      window.removeEventListener('scroll', update);
+      root.style.removeProperty('--app-header-bottom');
     };
   }, []);
 
