@@ -43,6 +43,60 @@ Deno.test("export-gdoc lets a valid token through to request validation", async 
   }]);
 });
 
+Deno.test("export-gdoc reports a failed content update instead of an empty success", async () => {
+  await runBearerCases(handleRequest, (authorization) => new Request("http://127.0.0.1/functions/v1/export-gdoc", {
+    method: "POST",
+    headers: { Authorization: authorization!, "Content-Type": "application/json" },
+    body: JSON.stringify({ mode: "brainstorm", data: { topFive: [{ rank: 1, idea: { title: "Buses" } }] }, accessToken: "test-google-token" }),
+  }), [{
+    label: "batch update failed",
+    authorization: `Bearer ${VALID_TOKEN}`,
+    status: 502,
+    body: {
+      success: false,
+      error: "The Google Doc was created, but its content could not be saved. Try the export again.",
+      code: "DOCUMENT_UPDATE_FAILED",
+      documentUrl: "https://docs.google.com/document/d/doc-1/edit",
+      documentId: "doc-1",
+    },
+    authCalls: 1,
+  }], (url) => {
+    if (url.href === "https://docs.googleapis.com/v1/documents") {
+      return Response.json({ documentId: "doc-1" });
+    }
+    if (url.href === "https://docs.googleapis.com/v1/documents/doc-1:batchUpdate") {
+      return Response.json({ error: { message: "PRIVATE_GOOGLE_BODY" } }, { status: 500 });
+    }
+    throw new Error(`Unexpected request: ${url}`);
+  });
+});
+
+Deno.test("export-gdoc returns the document when Google accepts the content", async () => {
+  await runBearerCases(handleRequest, (authorization) => new Request("http://127.0.0.1/functions/v1/export-gdoc", {
+    method: "POST",
+    headers: { Authorization: authorization!, "Content-Type": "application/json" },
+    body: JSON.stringify({ mode: "brainstorm", data: {}, accessToken: "test-google-token" }),
+  }), [{
+    label: "batch update succeeded",
+    authorization: `Bearer ${VALID_TOKEN}`,
+    status: 200,
+    body: {
+      success: true,
+      documentUrl: "https://docs.google.com/document/d/doc-2/edit",
+      documentId: "doc-2",
+    },
+    authCalls: 1,
+  }], (url) => {
+    if (url.href === "https://docs.googleapis.com/v1/documents") {
+      return Response.json({ documentId: "doc-2" });
+    }
+    if (url.href === "https://docs.googleapis.com/v1/documents/doc-2:batchUpdate") {
+      return Response.json({ documentId: "doc-2" });
+    }
+    throw new Error(`Unexpected request: ${url}`);
+  });
+});
+
 Deno.test("export-gdoc does not allow arbitrary LAN origins", async () => {
   const response = await handleRequest(new Request("http://127.0.0.1/functions/v1/export-gdoc", {
     method: "OPTIONS", headers: { Origin: "http://192.168.1.5:8080" },
