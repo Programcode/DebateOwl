@@ -82,6 +82,7 @@ export function DebateTimer({ storageKey, embedded = false, onFirstStart, footer
   const [poiMessage, setPoiMessage] = useState('');
   const [copied, setCopied] = useState(false);
   const panelRef = useRef<HTMLDivElement>(null);
+  const sectionRef = useRef<HTMLElement>(null);
   const startedOnce = useRef(false);
 
   const format = formatFor(session.choice);
@@ -166,6 +167,9 @@ export function DebateTimer({ storageKey, embedded = false, onFirstStart, footer
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.metaKey || event.ctrlKey || event.altKey || isTyping(event.target)) return;
+      // On the tool page the timer sits in a long article: keys act only once the timer has focus,
+      // so Space still scrolls the page. The embed is nothing but the timer.
+      if (!embedded && !(event.target instanceof Node && sectionRef.current?.contains(event.target))) return;
       switch (event.code) {
         case 'Space':
           // A focused button answers Space itself.
@@ -187,7 +191,7 @@ export function DebateTimer({ storageKey, embedded = false, onFirstStart, footer
     };
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [toggle, reset, go, speechRunning]);
+  }, [toggle, reset, go, speechRunning, embedded]);
 
   const toggleFullscreen = () => {
     if (document.fullscreenElement) void document.exitFullscreen();
@@ -211,7 +215,13 @@ export function DebateTimer({ storageKey, embedded = false, onFirstStart, footer
     : speechRunning ? t('timer.running') : elapsed > 0 ? t('timer.paused') : t('timer.ready');
 
   return (
-    <section aria-label={t('timer.region', { format: format.name })} className={cn('rounded-2xl border border-border bg-card text-card-foreground', embedded ? 'border-0 bg-transparent' : 'shadow-sm')}>
+    <section
+      ref={sectionRef}
+      // Clicking anywhere in the timer focuses it, which turns its keyboard shortcuts on.
+      tabIndex={-1}
+      aria-label={t('timer.region', { format: format.name })}
+      className={cn('rounded-2xl border border-border bg-card text-card-foreground focus:outline-none', embedded ? 'border-0 bg-transparent' : 'shadow-sm')}
+    >
       {!embedded && (
         <div className="flex flex-wrap items-end gap-3 border-b border-border p-4">
           <label className="flex flex-col gap-1 text-sm font-medium">

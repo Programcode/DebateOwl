@@ -45,7 +45,7 @@
     "pausePrep": "Detener preparación",
     "prepUsed": "Preparación agotada",
     "resetPrep": "Reiniciar ambas reservas de preparación",
-    "keyboardHint": "Espacio: iniciar o pausar. R: reiniciar un discurso en pausa. Flechas: cambiar de discurso."
+    "keyboardHint": "Haz clic en el cronómetro y usa Espacio para iniciar o pausar, R para reiniciar un discurso en pausa y las flechas para cambiar de discurso."
   },
   "custom": {
     "open": "Crear un formato personalizado",
@@ -70,7 +70,8 @@
     "remove": "Quitar {{label}}",
     "add": "Añadir un discurso",
     "apply": "Usar este formato",
-    "cancel": "Cancelar"
+    "cancel": "Cancelar",
+    "tooLong": "Este formato es demasiado largo para guardarlo o compartirlo. Acorta algunos nombres de discurso o quita un discurso."
   },
   "embed": {
     "format": "Formato",

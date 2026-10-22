@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ArrowDown, ArrowUp, Plus, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { CUSTOM_LIMITS, roundFormatToCustom, type CustomFormat, type CustomSegment } from '@/lib/free-tools/custom-format';
+import { CUSTOM_LIMITS, encodeCustomFormat, roundFormatToCustom, type CustomFormat, type CustomSegment } from '@/lib/free-tools/custom-format';
 import { formatFor, type FormatChoice } from './timer-session';
 
 const inputClass = 'h-10 rounded-md border border-input bg-background px-2 text-base';
@@ -11,10 +11,42 @@ function clamp(value: number, min: number, max: number) {
   return Number.isFinite(value) ? Math.min(max, Math.max(min, Math.round(value))) : min;
 }
 
+/**
+ * Minutes as typed. The field keeps its own text while it is edited (so it can
+ * be cleared and retyped) and reports whole seconds within bounds; there is no
+ * step check, so 4 or 2.5 minutes is always accepted.
+ */
+function MinutesInput({ seconds, min, max, onChange, className, label }: {
+  seconds: number; min: number; max: number; onChange: (seconds: number) => void; className: string; label?: string;
+}) {
+  const [text, setText] = useState(() => String(seconds / 60));
+  const [editing, setEditing] = useState(false);
+  return (
+    <input
+      className={className}
+      type="number"
+      inputMode="decimal"
+      step="any"
+      min={min / 60}
+      max={max / 60}
+      aria-label={label}
+      value={editing ? text : String(Math.round((seconds / 60) * 100) / 100)}
+      onFocus={() => { setText(String(Math.round((seconds / 60) * 100) / 100)); setEditing(true); }}
+      onBlur={() => setEditing(false)}
+      onChange={(event) => {
+        setText(event.target.value);
+        const minutes = Number(event.target.value);
+        if (event.target.value.trim() !== '' && Number.isFinite(minutes)) onChange(clamp(minutes * 60, min, max));
+      }}
+    />
+  );
+}
+
 /** Builds a custom round from the current format: add, remove, rename and reorder speeches. */
 export function CustomFormatEditor({ choice, onApply }: { choice: FormatChoice; onApply: (choice: FormatChoice) => void }) {
   const { t } = useTranslation('tools');
   const [open, setOpen] = useState(false);
+  const [tooLong, setTooLong] = useState(false);
   const [draft, setDraft] = useState<CustomFormat>(() => (choice.id === 'custom' ? choice.custom : roundFormatToCustom(formatFor(choice))));
 
   const begin = () => {
@@ -52,7 +84,14 @@ export function CustomFormatEditor({ choice, onApply }: { choice: FormatChoice; 
       onSubmit={(event) => {
         event.preventDefault();
         if (!valid) return;
-        onApply({ id: 'custom', custom: { ...draft, name: draft.name.trim() || t('custom.defaultName'), segments: draft.segments.map((segment) => ({ ...segment, label: segment.label.trim() })) } });
+        const custom = { ...draft, name: draft.name.trim() || t('custom.defaultName'), segments: draft.segments.map((segment) => ({ ...segment, label: segment.label.trim() })) };
+        // A format too long for its share link would also be lost on reload.
+        if (encodeCustomFormat(custom).length > CUSTOM_LIMITS.encoded) {
+          setTooLong(true);
+          return;
+        }
+        setTooLong(false);
+        onApply({ id: 'custom', custom });
         setOpen(false);
       }}
     >
@@ -64,14 +103,12 @@ export function CustomFormatEditor({ choice, onApply }: { choice: FormatChoice; 
         </label>
         <label className="flex flex-col gap-1 text-sm font-medium">
           {t('custom.prepMinutes')}
-          <input
+          <MinutesInput
             className={`${inputClass} w-24`}
-            type="number"
+            seconds={draft.prepSeconds}
             min={0}
-            max={CUSTOM_LIMITS.maxPrepSeconds / 60}
-            step={0.5}
-            value={draft.prepSeconds / 60}
-            onChange={(event) => setDraft({ ...draft, prepSeconds: clamp(Number(event.target.value) * 60, 0, CUSTOM_LIMITS.maxPrepSeconds) })}
+            max={CUSTOM_LIMITS.maxPrepSeconds}
+            onChange={(prepSeconds) => setDraft((current) => ({ ...current, prepSeconds }))}
           />
         </label>
       </div>
@@ -85,14 +122,12 @@ export function CustomFormatEditor({ choice, onApply }: { choice: FormatChoice; 
             </label>
             <label className="flex flex-col gap-1 text-xs font-medium">
               {t('custom.minutes')}
-              <input
+              <MinutesInput
                 className={`${inputClass} w-20`}
-                type="number"
-                min={CUSTOM_LIMITS.minSeconds / 60}
-                max={CUSTOM_LIMITS.maxSeconds / 60}
-                step={0.25}
-                value={segment.seconds / 60}
-                onChange={(event) => setSegment(index, { seconds: clamp(Number(event.target.value) * 60, CUSTOM_LIMITS.minSeconds, CUSTOM_LIMITS.maxSeconds) })}
+                seconds={segment.seconds}
+                min={CUSTOM_LIMITS.minSeconds}
+                max={CUSTOM_LIMITS.maxSeconds}
+                onChange={(seconds) => setSegment(index, { seconds })}
               />
             </label>
             <label className="flex flex-col gap-1 text-xs font-medium">
@@ -123,6 +158,7 @@ export function CustomFormatEditor({ choice, onApply }: { choice: FormatChoice; 
         ))}
       </ol>
       <p className="text-xs text-muted-foreground">{t('custom.poiHint')}</p>
+      {tooLong && <p role="alert" className="text-sm text-destructive">{t('custom.tooLong')}</p>}
       <div className="flex flex-wrap gap-2">
         <Button type="button" variant="outline" onClick={add} disabled={draft.segments.length >= CUSTOM_LIMITS.segments}>
           <Plus className="mr-2 h-4 w-4" />{t('custom.add')}

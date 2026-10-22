@@ -131,7 +131,7 @@
       ]
     },
     {
-      "source": "/((?!embed/).*)",
+      "source": "/((?!embed/debate-timer$).*)",
       "headers": [
         {
           "key": "Content-Security-Policy",
@@ -144,7 +144,7 @@
       ]
     },
     {
-      "source": "/embed/(.*)",
+      "source": "/embed/debate-timer",
       "headers": [
         {
           "key": "Content-Security-Policy",

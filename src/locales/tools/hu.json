@@ -45,7 +45,7 @@
     "pausePrep": "Felkészülés leállítása",
     "prepUsed": "Felkészülési idő elfogyott",
     "resetPrep": "Mindkét felkészülési keret nullázása",
-    "keyboardHint": "Szóköz: indítás vagy szünet. R: szüneteltetett beszéd nullázása. Nyilak: beszéd váltása."
+    "keyboardHint": "Kattints az időmérőre, majd: szóköz az indításhoz vagy szünethez, R a szüneteltetett beszéd nullázásához, a nyilak a beszéd váltásához."
   },
   "custom": {
     "open": "Saját formátum készítése",
@@ -70,7 +70,8 @@
     "remove": "{{label}} törlése",
     "add": "Beszéd hozzáadása",
     "apply": "Formátum használata",
-    "cancel": "Mégse"
+    "cancel": "Mégse",
+    "tooLong": "Ez a formátum túl hosszú a mentéshez vagy megosztáshoz. Rövidíts néhány beszédnevet, vagy törölj egy beszédet."
   },
   "embed": {
     "format": "Formátum",

@@ -134,7 +134,9 @@ export function MotionGenerator() {
         </div>
       </div>
 
-      <div className="mt-6" aria-live="polite">
+      {/* Announce only the drawn motions, not every card's buttons. */}
+      <p className="sr-only" aria-live="polite">{shown.map((motion) => motionText(motion, wording)).join('. ')}</p>
+      <div className="mt-6">
         {shown.length === 0 ? (
           <p className="rounded-lg border border-dashed border-border p-6 text-center text-muted-foreground">{t('motions.empty')}</p>
         ) : (

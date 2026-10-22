@@ -11,11 +11,13 @@ export function SpeechTimeCalculator() {
   const { t } = useTranslation('tools');
   const [text, setText] = useState('');
   const [customWpm, setCustomWpm] = useState(140);
-  const [fitPace, setFitPace] = useState<number>(130);
+  const [fitPaceId, setFitPaceId] = useState('average');
   const reported = useRef(false);
 
   const words = countWords(text);
   const wpm = Math.min(MAX_WPM, Math.max(MIN_WPM, customWpm || MIN_WPM));
+  const paceOptions = [...PACES.map((pace) => ({ id: pace.id as string, wpm: pace.wpm as number })), { id: 'custom', wpm }];
+  const fitPace = paceOptions.find((pace) => pace.id === fitPaceId)?.wpm ?? 130;
   const fits = words > 0 ? slotFits(words, fitPace, BUILT_IN_FORMATS) : [];
 
   useEffect(() => {
@@ -23,8 +25,6 @@ export function SpeechTimeCalculator() {
     reported.current = true;
     captureProductEvent('free_tool_used', { freeTool: 'speech-time-calculator', action: 'calculate' });
   }, [words]);
-
-  const paceOptions = [...PACES.map((pace) => ({ id: pace.id, wpm: pace.wpm })), { id: 'custom', wpm }];
 
   return (
     <section aria-label={t('calc.region')} className="rounded-2xl border border-border bg-card p-4 shadow-sm sm:p-6">
@@ -42,7 +42,7 @@ export function SpeechTimeCalculator() {
       <p className="mt-1 text-xs text-muted-foreground">{t('calc.privacy')}</p>
 
       <div className="mt-6 grid gap-4 sm:grid-cols-[auto_1fr]">
-        <div className="rounded-xl border border-border bg-background p-4 text-center sm:min-w-40" aria-live="polite">
+        <div className="rounded-xl border border-border bg-background p-4 text-center sm:min-w-40">
           <div className="text-4xl font-bold tabular-nums" data-testid="word-count">{words}</div>
           <div className="text-sm text-muted-foreground">{t('calc.words', { count: words })}</div>
         </div>
@@ -78,8 +78,8 @@ export function SpeechTimeCalculator() {
           <h2 className="text-lg font-semibold">{t('calc.fitsTitle')}</h2>
           <label className="flex items-center gap-2 text-sm">
             {t('calc.fitsAt')}
-            <select className="h-9 rounded-md border border-input bg-background px-2" value={fitPace} onChange={(event) => setFitPace(Number(event.target.value))}>
-              {paceOptions.map((pace) => <option key={pace.id} value={pace.wpm}>{t(`calc.pace.${pace.id}`)} ({pace.wpm} {t('calc.wpm')})</option>)}
+            <select className="h-9 rounded-md border border-input bg-background px-2" value={fitPaceId} onChange={(event) => setFitPaceId(event.target.value)}>
+              {paceOptions.map((pace) => <option key={pace.id} value={pace.id}>{t(`calc.pace.${pace.id}`)} ({pace.wpm} {t('calc.wpm')})</option>)}
             </select>
           </label>
         </div>

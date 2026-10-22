@@ -76,8 +76,27 @@ test.describe('free debate tools', { tag: '@smoke' }, () => {
     await page.reload();
     await expect(page.getByRole('timer', { name: 'Speech time remaining' })).toHaveText('5:59');
 
+    // Keys act once the timer has focus.
+    await page.getByRole('timer', { name: 'Speech time remaining' }).click();
     await page.keyboard.press('ArrowRight');
     await expect(page.getByRole('heading', { level: 2, name: 'Leader of the Opposition (Opening Opposition)' })).toBeVisible();
+  });
+
+  test('a custom format applies, lands in the share link, and survives a reload', async ({ page }) => {
+    await page.goto('/tools/debate-timer?format=wsdc');
+    await page.getByRole('button', { name: 'Build a custom format' }).click();
+    const editor = page.getByRole('form', { name: 'Custom format' });
+    await editor.getByLabel('Format name').fill('Club round');
+    // Whole and fractional minutes both submit; the browser's step check once blocked every value.
+    await editor.getByLabel('Minutes', { exact: true }).first().fill('5');
+    await editor.getByLabel('Minutes', { exact: true }).nth(1).fill('2.5');
+    await editor.getByRole('button', { name: 'Use this format' }).click();
+    await expect(editor).toHaveCount(0);
+    await expect(page).toHaveURL(/format=custom&custom=[A-Za-z0-9_-]+/);
+    await expect(page.getByRole('timer', { name: 'Speech time remaining' })).toHaveText('5:00');
+    await page.reload();
+    await expect(page.getByRole('region', { name: /round timer/ }).getByLabel('Format')).toHaveValue('custom');
+    await expect(page.getByRole('navigation', { name: 'Speeches' })).toContainText('2:30');
   });
 
   test('prep banks run down one side at a time', async ({ page }) => {

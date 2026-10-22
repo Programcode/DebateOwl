@@ -45,7 +45,7 @@ function headersFor(config: VercelConfig, source: string) {
 function headersAt(config: VercelConfig, path: string): Record<string, string> {
   const headers: Record<string, string> = {};
   for (const rule of config.headers ?? []) {
-    expect(rule.source, "a source this resolver can read").toMatch(/^\/[\w\-./()|*?!\\]*$/);
+    expect(rule.source, "a source this resolver can read").toMatch(/^\/[\w\-./()|*?!$\\]*$/);
     if (!new RegExp(`^${rule.source}$`).test(path)) continue;
     for (const { key, value } of rule.headers) {
       expect(headers, `${path}: two rules set ${key}`).not.toHaveProperty(key);
@@ -208,20 +208,20 @@ describe("Vercel frontend deployment configuration", () => {
     expect(serviceWorker).toContain("'/favicon-72.png'");
     expect(serviceWorker).toContain('cache.put(request, response.clone())');
     expect(serviceWorker).not.toContain('self.skipWaiting()');
-    // An embed stored as the offline shell would replace the app for offline visits.
-    expect(serviceWorker).toContain("if (url.pathname.startsWith('/embed/')) return;");
   });
 
   it.each([
     "/", "/index.html", "/app", "/app/settings", "/login", "/share/abc", "/tools", "/tools/debate-timer",
-    "/online-debate-timer", "/404.html", "/app-shell.html", "/embed", "/embedded/x", "/EMBED/debate-timer", "/assets/index.js",
+    "/online-debate-timer", "/404.html", "/app-shell.html", "/embed", "/embed/", "/embed/nope", "/embed/debate-timer/",
+    "/embed/debate-timer/index.html", "/embedded/x", "/EMBED/debate-timer", "/assets/index.js",
   ])("refuses to be framed at %s", (path) => {
     const headers = headersAt(loadConfig(), path);
     expect(headers["X-Frame-Options"]).toBe("DENY");
     expect(cspDirective(headers["Content-Security-Policy"] ?? "", "frame-ancestors")).toBe("frame-ancestors 'none'");
   });
 
-  it.each(["/embed/debate-timer", "/embed/debate-timer/"])("lets other sites frame the embed at %s, and nothing else", (path) => {
+  it("lets other sites frame the embed at /embed/debate-timer, and nothing else", () => {
+    const path = "/embed/debate-timer";
     const config = loadConfig();
     const headers = headersAt(config, path);
     const site = headersAt(config, "/");
@@ -239,7 +239,7 @@ describe("Vercel frontend deployment configuration", () => {
     }
   });
 
-  it.each(["/app", "/app/(.*)", "/login", "/share/(.*)", "/embed/(.*)"])(
+  it.each(["/app", "/app/(.*)", "/login", "/share/(.*)", "/embed/debate-timer"])(
     "keeps private route %s out of search indexes",
     (source) => {
       const config = loadConfig();

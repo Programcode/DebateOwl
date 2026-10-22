@@ -32,7 +32,7 @@ const FAQ: FaqEntry[] = [
   },
   {
     question: 'Will I lose the round if I reload the page?',
-    answer: 'No. The timer saves the format, the current speech and both prep banks in this browser, against the wall clock, so a running speech is still running at the right time after a reload. Nothing is sent to a server.',
+    answer: 'No. The timer saves the format, the current speech and both prep banks in this browser, against the wall clock, so a running speech is still running at the right time after a reload. The saved round stays in your browser; it is not uploaded.',
   },
   {
     question: 'Can I put this timer on my club or tournament website?',
@@ -102,7 +102,7 @@ export default function DebateTimerToolPage() {
           <li>Between speeches, tap a side&apos;s prep bank when that side starts preparing, and tap again when they stand up.</li>
           <li>Put the timer on a projector with Fullscreen, so speakers can read the clock from the front of the room.</li>
         </ol>
-        <p>Keyboard: space starts and stops, R resets a paused speech, and the left and right arrows change speech. The screen stays awake while a clock runs, where the browser allows it.</p>
+        <p>Keyboard: click the timer first, then space starts and stops, R resets a paused speech, and the left and right arrows change speech. The screen stays awake while a clock runs, where the browser allows it.</p>
       </section>
 
       <section>

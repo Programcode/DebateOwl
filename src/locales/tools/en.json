@@ -45,7 +45,7 @@
     "pausePrep": "Stop prep",
     "prepUsed": "Prep used up",
     "resetPrep": "Reset both prep banks",
-    "keyboardHint": "Space: start or pause. R: reset a paused speech. Arrow keys: change speech."
+    "keyboardHint": "Click the timer, then use Space to start or pause, R to reset a paused speech, and the arrow keys to change speech."
   },
   "custom": {
     "open": "Build a custom format",
@@ -70,7 +70,8 @@
     "remove": "Remove {{label}}",
     "add": "Add a speech",
     "apply": "Use this format",
-    "cancel": "Cancel"
+    "cancel": "Cancel",
+    "tooLong": "This format is too long to save or share. Shorten some speech names or remove a speech."
   },
   "embed": {
     "format": "Format",
