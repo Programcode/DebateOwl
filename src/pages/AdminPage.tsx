@@ -731,8 +731,8 @@ export default function AdminPage() {
             <div className="container py-8 px-4">
                 <Card className="max-w-md mx-auto">
                     <CardHeader>
-                        <CardTitle className="flex items-center gap-2">
-                            <Shield className="h-5 w-5 text-destructive" />
+                        <CardTitle as="h1" className="flex items-center gap-2">
+                            <Shield className="h-5 w-5 text-destructive" aria-hidden="true" />
                             {t('admin.dashboard.accessDenied')}
                         </CardTitle>
                         <CardDescription>

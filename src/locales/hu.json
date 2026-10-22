@@ -231,6 +231,7 @@
     "openingPage": "{{page}} megnyitása",
     "page": "Oldal",
     "close": "Bezárás",
+    "notifications": "Értesítések",
     "loading": "Betöltés",
     "error": "Hiba",
     "logoAlt": "DebateLab logó",
@@ -1429,6 +1430,7 @@
   "timer": {
     "title": "Vita időmérő",
     "displayLabel": "Időmérő kijelző",
+    "speechProgress": "{{speech}} előrehaladása",
     "selectFormat": "Formátum választása",
     "formatStandard": "Standard (4-6-6-3)",
     "formatLD": "Lincoln-Douglas",
@@ -1548,6 +1550,7 @@
     "autoLayout": "Automatikus elrendezés",
     "edgeAttack": "Támadás",
     "edgeRebuttal": "Cáfolat",
+    "edgeTypeLabel": "Kapcsolat típusa",
     "edgeSupport": "Alátámasztás",
     "exportFailedToast": "Nem sikerült exportálni a folyamatábrát.",
     "selectedNode": "Kiválasztva",

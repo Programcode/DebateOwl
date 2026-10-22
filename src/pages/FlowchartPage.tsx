@@ -634,8 +634,9 @@ export default function FlowchartPage() {
                                     </DialogHeader>
                                     <div className="space-y-4 py-4">
                                         <div className="space-y-2">
-                                            <Label>{t('flowchart.titleField')}</Label>
+                                            <Label htmlFor="flowchart-save-title">{t('flowchart.titleField')}</Label>
                                             <Input
+                                                id="flowchart-save-title"
                                                 placeholder={t('flowchart.titlePlaceholder')}
                                                 value={saveTitle}
                                                 onChange={(e) => setSaveTitle(e.target.value)}
@@ -664,25 +665,27 @@ export default function FlowchartPage() {
                                     </DialogHeader>
                                     <div className="space-y-4 py-4">
                                         <div className="space-y-2">
-                                            <Label>{t('flowchart.labelField')}</Label>
+                                            <Label htmlFor="flowchart-node-label">{t('flowchart.labelField')}</Label>
                                             <Input
+                                                id="flowchart-node-label"
                                                 placeholder={t('flowchart.labelPlaceholder')}
                                                 value={newNodeLabel}
                                                 onChange={(e) => setNewNodeLabel(e.target.value)}
                                             />
                                         </div>
                                         <div className="space-y-2">
-                                            <Label>{t('flowchart.descriptionField')}</Label>
+                                            <Label htmlFor="flowchart-node-description">{t('flowchart.descriptionField')}</Label>
                                             <Textarea
+                                                id="flowchart-node-description"
                                                 placeholder={t('flowchart.descPlaceholder')}
                                                 value={newNodeDescription}
                                                 onChange={(e) => setNewNodeDescription(e.target.value)}
                                             />
                                         </div>
                                         <div className="space-y-2">
-                                            <Label>{t('flowchart.typeField')}</Label>
+                                            <Label id="flowchart-node-type-label" htmlFor="flowchart-node-type">{t('flowchart.typeField')}</Label>
                                             <Select value={newNodeType} onValueChange={(v) => setNewNodeType(v as NodeType)}>
-                                                <SelectTrigger>
+                                                <SelectTrigger id="flowchart-node-type" aria-labelledby="flowchart-node-type-label">
                                                     <SelectValue />
                                                 </SelectTrigger>
                                                 <SelectContent>
@@ -695,9 +698,9 @@ export default function FlowchartPage() {
                                         </div>
                                         {newNodeType === 'contention' && (
                                             <div className="space-y-2">
-                                                <Label>{t('flowchart.strengthField')}</Label>
+                                                <Label id="flowchart-node-strength-label" htmlFor="flowchart-node-strength">{t('flowchart.strengthField')}</Label>
                                                 <Select value={newNodeStrength} onValueChange={(v) => setNewNodeStrength(v as 'strong' | 'moderate' | 'weak')}>
-                                                    <SelectTrigger>
+                                                    <SelectTrigger id="flowchart-node-strength" aria-labelledby="flowchart-node-strength-label">
                                                         <SelectValue />
                                                     </SelectTrigger>
                                                     <SelectContent>
@@ -736,7 +739,7 @@ export default function FlowchartPage() {
                             )}
 
                             <Select value={selectedEdgeType} onValueChange={(value) => setSelectedEdgeType(value as EdgeKind)}>
-                                <SelectTrigger className="h-9 w-[132px]">
+                                <SelectTrigger className="h-9 w-[132px]" aria-label={t('flowchart.edgeTypeLabel')}>
                                     <SelectValue />
                                 </SelectTrigger>
                                 <SelectContent>
@@ -789,7 +792,7 @@ export default function FlowchartPage() {
                                         <div className="min-w-0">
                                             <div className="flex flex-wrap items-center gap-2">
                                                 <Badge variant="secondary">{t('flowchart.selectedNode', 'Selected')}</Badge>
-                                                <h3 className="truncate text-sm font-semibold">{node.data.label}</h3>
+                                                <h3 aria-level={2} className="truncate text-sm font-semibold">{node.data.label}</h3>
                                             </div>
                                             {node.data.description && (
                                                 <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">{node.data.description}</p>

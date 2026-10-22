@@ -231,6 +231,7 @@
     "openingPage": "Opening {{page}}",
     "page": "Page",
     "close": "Close",
+    "notifications": "Notifications",
     "loading": "Loading",
     "error": "Error",
     "logoAlt": "DebateLab logo",
@@ -1429,6 +1430,7 @@
   "timer": {
     "title": "Debate Timer",
     "displayLabel": "Timer display",
+    "speechProgress": "{{speech}} progress",
     "selectFormat": "Select Format",
     "formatStandard": "Standard (4-6-6-3)",
     "formatLD": "Lincoln-Douglas",
@@ -1548,6 +1550,7 @@
     "autoLayout": "Auto layout",
     "edgeAttack": "Attack",
     "edgeRebuttal": "Rebuttal",
+    "edgeTypeLabel": "Link type",
     "edgeSupport": "Support",
     "exportFailedToast": "Could not export flowchart.",
     "selectedNode": "Selected",
