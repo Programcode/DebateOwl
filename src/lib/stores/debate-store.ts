@@ -3,6 +3,9 @@ import { createJSONStorage, persist } from 'zustand/middleware';
 import { supabase } from '@/lib/supabase/client';
 import { restoredSessionsBlocked } from '@/lib/supabase/session-expiry';
 import { currentUserId } from '@/lib/supabase/current-user';
+import { MAX_MOTION_LENGTH } from '@debatelab/core/validation/motion';
+
+export { MAX_MOTION_LENGTH };
 
 /** A favor, En contra, both sides, or not side-specific. */
 export type DebateSide = 'pro' | 'con' | 'both' | 'neutral';
@@ -26,7 +29,6 @@ export type DebateDialog = 'switch' | 'create' | null;
 
 /** How long a debate may sit without meaningful work before the app asks about it. */
 export const INACTIVE_DEBATE_MS = 5 * 24 * 60 * 60 * 1000;
-export const MAX_MOTION_LENGTH = 1200;
 export const MAX_INSTRUCTIONS_LENGTH = 2000;
 
 interface DebateRow {

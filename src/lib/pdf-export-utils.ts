@@ -388,9 +388,10 @@ export async function exportCaseToPdf(result: GenerateOutput): Promise<boolean> 
             addSeparator(COLORS.primary);
         }
 
-        // Case Structure
-        addSectionTitle(`${i18n.t('export.thesis')} & ${i18n.t('export.framework')}`);
-        addParagraph(result.caseStructure?.thesis || i18n.t('export.noThesis'));
+        // Case Structure: one section heading, then a label for each part, so no heading repeats.
+        addSectionTitle(i18n.t('export.caseStructure'));
+        addSubsectionLabel(i18n.t('export.thesis'));
+        addParagraph(result.caseStructure?.thesis || i18n.t('export.noThesis'), 2);
         if (result.caseStructure?.framework) {
             addSubsectionLabel(i18n.t('export.framework'));
             addParagraph(result.caseStructure.framework, 2);

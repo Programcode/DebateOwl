@@ -395,7 +395,9 @@
     "emptyTitle": "Kegyetlen mód",
     "emptyDesc": "Illeszd be az érvedet kíméletlen kritikáért, logikai hibák azonosításáért és megvalósítható javításokért.",
     "failed": "Támadás elemzés sikertelen",
-    "working": "Az eseted átnézése…"
+    "working": "Az eseted átnézése…",
+    "previousCritique": "Az előző érvelésed kritikája",
+    "previousCritiqueDesc": "A legutóbbi változatodat nem értékeltük, ezért ez a kritika eltérhet az űrlapban lévő szövegtől."
   },
   "brainstorm": {
     "emptyTitle": "Kreatív szögek feloldása",
@@ -2074,7 +2076,6 @@
       "draftSavedNotice": "A piszkozatok ezen a böngészőfülön mentődnek",
       "connected": "Csatlakozva",
       "offlineDraft": "Offline vagy. A piszkozat helyben mentve.",
-      "totalWords": "{{count}} szó",
       "complete": "Forduló véget ért",
       "turnOf": "{{current}}. kör a(z) {{total}} közül",
       "preparingResult": "Eredmény előkészítése",
@@ -2092,7 +2093,6 @@
       "judgeDescription": "Az állításokat, válaszokat és stratégiai döntéseket olvassa. Ehhez általában egy kérés kell.",
       "yourSpeech": "A te beszéded",
       "yourSpeechDescription": "Építsd fel az érvelést a rendelkezésedre álló időben. Az ellenfél erre a szövegre válaszol.",
-      "wordCount": "{{count}} szó",
       "speechPlaceholder": "Építsd fel az állítást, az indoklást és a hatást...",
       "draftFor": "Piszkozat: {{label}}",
       "toSubmit": "beküldéshez",
@@ -2119,12 +2119,15 @@
       "youAreCon": "Te vagy ellene",
       "submittedCount_one": "{{count}} beküldve",
       "submittedCount_other": "{{count}} beküldve",
-      "totalWords_one": "{{count}} szó",
-      "totalWords_other": "{{count}} szó",
-      "wordCount_one": "{{count}} szó",
-      "wordCount_other": "{{count}} szó",
+      "totalWords_one": "Eddig {{formatted}} szó",
+      "totalWords_other": "Eddig {{formatted}} szó",
+      "wordCount_one": "{{formatted}} szó",
+      "wordCount_other": "{{formatted}} szó",
       "latestOpponent": "Az ellenfél utolsó beszéde",
-      "opponentSpeaking": "Az ellenfél beszél"
+      "opponentSpeaking": "Az ellenfél beszél",
+      "startSpeaking": "Beszéd indítása",
+      "readyNote": "Az órád akkor indul, amikor elkezdesz beszélni vagy gépelni.",
+      "currentRound": "Aktuális forduló"
     },
     "scorecard": {
       "eyebrow": "Forduló értékelése",
@@ -2417,7 +2420,8 @@
     "itemCount_other": "{{count}} elem",
     "viewAll": "Összes megtekintése ({{total}})",
     "switching": "Váltás…",
-    "deleting": "Törlés…"
+    "deleting": "Törlés…",
+    "creating": "Létrehozás…"
   },
   "debateContext": {
     "using": "Felhasználva: {{list}}",
@@ -2428,8 +2432,6 @@
     "resultCount_other": "{{count}} mentett eredmény",
     "resultName": "{{side}}: {{kind}}",
     "resultMeta": "{{side}}: {{kind}}",
-    "leftOut_one": "{{count}} elem kimarad, hogy a kérés beleférjen a keretbe.",
-    "leftOut_other": "{{count}} elem kimarad, hogy a kérés beleférjen a keretbe.",
     "review": "Áttekintés",
     "oneOff": "Egyszeri mód: az aktuális vita anyagai nem kerülnek felhasználásra és mentésre.",
     "reviewTitle": "Mit használ ez a kérés",
@@ -2462,7 +2464,13 @@
     "lastShortened_one": "{{count}} forrást rövidítettünk, hogy beférjen.",
     "lastShortened_other": "{{count}} forrást rövidítettünk, hogy beférjen.",
     "lastUnavailable_one": "{{count}} elem már nem volt ebben a vitában.",
-    "lastUnavailable_other": "{{count}} elem már nem volt ebben a vitában."
+    "lastUnavailable_other": "{{count}} elem már nem volt ebben a vitában.",
+    "sourceCountOf_one": "{{count}} forrásból {{used}}",
+    "sourceCountOf_other": "{{count}} forrásból {{used}}",
+    "resultCountOf_one": "{{count}} mentett eredményből {{used}}",
+    "resultCountOf_other": "{{count}} mentett eredményből {{used}}",
+    "didntFit_one": "({{count}} nem fért bele)",
+    "didntFit_other": "({{count}} nem fért bele)"
   },
   "themeToggle": {
     "toggle": "Téma váltása",
@@ -2543,5 +2551,9 @@
     "cost_other": "Ez a kör {{count}} MI-kérésbe kerül, akárhány fordulóból áll.",
     "remaining_one": "Mára még {{count}} maradt.",
     "remaining_other": "Mára még {{count}} maradt."
+  },
+  "resultActions": {
+    "savedToHistory": "Mentve az előzményekbe",
+    "saveFailed": "Nem sikerült menteni. Próbáld újra."
   }
 }

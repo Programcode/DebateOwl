@@ -156,6 +156,7 @@ export function DebateDialogs() {
               idPrefix="new-debate"
               initial={{ motion: dialogMotion }}
               submitLabel={t('debate.startDebate', 'Start debate')}
+              pendingLabel={t('debate.creating', 'Creating…')}
               onCancel={close}
               onSubmit={async (values) => {
                 await create(values);
@@ -238,6 +239,7 @@ export function InactiveDebateGate() {
           <DebateForm
             idPrefix="gate-debate"
             submitLabel={t('debate.startDebate', 'Start debate')}
+            pendingLabel={t('debate.creating', 'Creating…')}
             onCancel={() => setMode('ask')}
             onSubmit={async (values) => {
               await create(values);

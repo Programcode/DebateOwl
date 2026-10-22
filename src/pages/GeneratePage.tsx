@@ -26,6 +26,7 @@ import { ToolRunErrorPanel, isCanceled, useRevealResults, useToolRun } from '@/c
 import { LiveToolRun } from '@/components/features/tools/live-draft';
 import { generateDraftSections } from '@/components/features/tools/live-sections';
 import { generateDiscussPrompt, openDiscussion } from '@/components/features/tools/discuss';
+import { markResultSaved, useResultSaved } from '@/components/features/tools/result-actions';
 import { prefillFromGenerate } from '@/lib/crossfire/prefill';
 import { WorkspaceToolScope, useWorkspaceToolScope } from '@/components/features/workspace/WorkspaceToolScope';
 import { workspaceRouteState } from '@/lib/workspace/tool-context';
@@ -77,6 +78,7 @@ export default function GeneratePage() {
   const lastRun = useRef<{ data: GenerateInput; debateId: string | null } | null>(null);
   const [saveTitle, setSaveTitle] = useState('');
   const [discoveredSources, setDiscoveredSources] = useState<DiscoveredSource[]>([]);
+  const resultSaved = useResultSaved(generateResult);
 
   const handleUndo = () => {
     const prev = (autosavedCases || []).find(item => item.data !== generateResult);
@@ -120,7 +122,9 @@ export default function GeneratePage() {
       setGenerateResultDebateId(target.debateId);
       await workspace.attach(data, result);
       if (target.debateId) {
-        setRecordedCaseId(await recordInDebate(() => recordResult('case', { title: data.motion, input: data, output: result, debateId: target.debateId, side: data.side })));
+        const recordedId = await recordInDebate(() => recordResult('case', { title: data.motion, input: data, output: result, debateId: target.debateId, side: data.side }));
+        setRecordedCaseId(recordedId);
+        if (recordedId) markResultSaved(result);
       }
       results.reveal();
     } catch (error) {
@@ -190,7 +194,10 @@ export default function GeneratePage() {
         setGenerateResult(regenerated);
         setDiscoveredSources(sources);
         await workspace.attach({ ...data, regeneratedSection: section }, regenerated);
-        if (recordedCaseId && !restoredSnapshot) await updateRecordedResult('case', recordedCaseId, regenerated);
+        if (recordedCaseId && !restoredSnapshot) {
+          await updateRecordedResult('case', recordedCaseId, regenerated);
+          markResultSaved(regenerated);
+        }
         toast({ title: t('generate.regenerated', 'Section regenerated'), description: t('generate.regeneratedDesc', 'The selected section has been refreshed.'), variant: 'success' });
       })
       .catch((error) => {
@@ -209,8 +216,11 @@ export default function GeneratePage() {
   const confirmSave = async () => {
     const title = saveTitle.trim();
     if (!title) return;
+    // The case on screen when Save was confirmed is the one saved, even if a regenerate lands meanwhile.
+    const saving = useSessionStore.getState().generateResult;
     try {
       await saveCurrentCase(title);
+      markResultSaved(saving);
       setSaveDialogOpen(false);
       toast({ title: t('generate.saved'), description: t('generate.savedDesc') });
     } catch (error) {
@@ -292,7 +302,8 @@ export default function GeneratePage() {
                   onRegenerateSection={handleRegenerateSection}
                   regeneratingSection={regeneratingSection}
                   onDiscuss={handleDiscuss}
-                  onSave={recordedCaseId ? undefined : handleSave}
+                  onSave={handleSave}
+                  saved={resultSaved}
                   onUndo={handleUndo}
                   onImportFlowchart={handleImportFlowchart}
                   onPracticeCrossfire={handlePracticeCrossfire}

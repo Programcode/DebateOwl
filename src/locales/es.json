@@ -395,7 +395,9 @@
     "emptyTitle": "Modo sin piedad",
     "emptyDesc": "Pega tu argumento para recibir críticas despiadadas, identificar falacias lógicas y obtener mejoras accionables.",
     "failed": "Error en el análisis de ataque",
-    "working": "Revisando tu caso…"
+    "working": "Revisando tu caso…",
+    "previousCritique": "Crítica de tu argumento anterior",
+    "previousCritiqueDesc": "Tu última versión no se revisó, así que esta crítica puede no coincidir con el texto del formulario."
   },
   "brainstorm": {
     "emptyTitle": "Desbloquea ángulos creativos",
@@ -2074,7 +2076,6 @@
       "draftSavedNotice": "Los borradores se guardan en esta pestaña",
       "connected": "Conectado",
       "offlineDraft": "Sin conexión. Borrador guardado localmente.",
-      "totalWords": "{{count}} palabras",
       "complete": "Ronda terminada",
       "turnOf": "Turno {{current}} de {{total}}",
       "preparingResult": "Preparando tu resultado",
@@ -2092,7 +2093,6 @@
       "judgeDescription": "Está leyendo las afirmaciones, respuestas y decisiones estratégicas. Esto suele requerir una solicitud.",
       "yourSpeech": "Tu intervención",
       "yourSpeechDescription": "Expón el caso con el tiempo que tienes. El oponente responderá a este texto.",
-      "wordCount": "{{count}} palabras",
       "speechPlaceholder": "Desarrolla tu afirmación, razonamiento e impacto...",
       "draftFor": "Borrador para {{label}}",
       "toSubmit": "para enviar",
@@ -2119,12 +2119,15 @@
       "youAreCon": "Estás en contra",
       "submittedCount_one": "{{count}} enviada",
       "submittedCount_other": "{{count}} enviadas",
-      "totalWords_one": "{{count}} palabra",
-      "totalWords_other": "{{count}} palabras",
-      "wordCount_one": "{{count}} palabra",
-      "wordCount_other": "{{count}} palabras",
+      "totalWords_one": "{{formatted}} palabra hasta ahora",
+      "totalWords_other": "{{formatted}} palabras hasta ahora",
+      "wordCount_one": "{{formatted}} palabra",
+      "wordCount_other": "{{formatted}} palabras",
       "latestOpponent": "Último discurso del oponente",
-      "opponentSpeaking": "El oponente está hablando"
+      "opponentSpeaking": "El oponente está hablando",
+      "startSpeaking": "Empezar a hablar",
+      "readyNote": "Tu cronómetro empieza cuando empiezas a hablar o a escribir.",
+      "currentRound": "Ronda actual"
     },
     "scorecard": {
       "eyebrow": "Revisión de la ronda",
@@ -2417,7 +2420,8 @@
     "itemCount_other": "{{count}} elementos",
     "viewAll": "Ver todo ({{total}})",
     "switching": "Cambiando…",
-    "deleting": "Eliminando…"
+    "deleting": "Eliminando…",
+    "creating": "Creando…"
   },
   "debateContext": {
     "using": "Usando {{list}}",
@@ -2428,8 +2432,6 @@
     "resultCount_other": "{{count}} resultados guardados",
     "resultName": "{{kind}} ({{side}})",
     "resultMeta": "{{kind}}, {{side}}",
-    "leftOut_one": "{{count}} elemento queda fuera para que la solicitud quepa.",
-    "leftOut_other": "{{count}} elementos quedan fuera para que la solicitud quepa.",
     "review": "Revisar",
     "oneOff": "Modo puntual: no se usará ni se guardará material del debate actual.",
     "reviewTitle": "Qué usará esta solicitud",
@@ -2462,7 +2464,13 @@
     "lastShortened_one": "{{count}} fuente se recortó para que cupiera.",
     "lastShortened_other": "{{count}} fuentes se recortaron para que cupieran.",
     "lastUnavailable_one": "{{count}} elemento ya no estaba en este debate.",
-    "lastUnavailable_other": "{{count}} elementos ya no estaban en este debate."
+    "lastUnavailable_other": "{{count}} elementos ya no estaban en este debate.",
+    "sourceCountOf_one": "{{used}} de {{count}} fuente",
+    "sourceCountOf_other": "{{used}} de {{count}} fuentes",
+    "resultCountOf_one": "{{used}} de {{count}} resultado guardado",
+    "resultCountOf_other": "{{used}} de {{count}} resultados guardados",
+    "didntFit_one": "({{count}} no cupo)",
+    "didntFit_other": "({{count}} no cupieron)"
   },
   "themeToggle": {
     "toggle": "Cambiar tema",
@@ -2543,5 +2551,9 @@
     "cost_other": "Esta ronda cuesta {{count}} solicitudes de IA, dure los turnos que dure.",
     "remaining_one": "Hoy te queda {{count}}.",
     "remaining_other": "Hoy te quedan {{count}}."
+  },
+  "resultActions": {
+    "savedToHistory": "Guardado en el historial",
+    "saveFailed": "No se pudo guardar. Inténtalo de nuevo."
   }
 }

@@ -20,11 +20,18 @@ import { LoadingSpinner } from '@/components/ui/loading-spinner';
 import { ListeningIndicator } from '@/components/features/voice/ListeningIndicator';
 import { useDebateMotionPrefill } from '@/components/features/debate/CurrentDebateStrip';
 import { useSessionStore } from '@/lib/stores/session-store';
+import { MAX_MOTION_LENGTH, selectCurrentDebate, useDebateStore } from '@/lib/stores/debate-store';
 import { useSpeechToText } from '@/hooks/use-speech-to-text';
 import { ModelSelector } from '@/components/ModelSelector';
 import { DebateContextControl } from '@/components/features/debate/DebateContextControl';
 import { requestSide } from '../../../../supabase/functions/_shared/debate-context';
 
+
+const GENERATE_ROLES: readonly string[] = GenerateInputSchema.shape.role.options;
+
+function isGenerateRole(value: unknown): value is GenerateInput['role'] {
+  return typeof value === 'string' && GENERATE_ROLES.includes(value);
+}
 
 interface GenerateFormProps {
   onSubmit: (data: GenerateInput) => void;
@@ -42,7 +49,9 @@ function OptionSelect<V extends string>({ id, labelId, value, onValueChange, opt
   triggerClassName?: string;
 }) {
   return (
-    <Select value={value} onValueChange={(next) => onValueChange(next as V)}>
+    // Radix's hidden native select reports '' when a value is set before its options exist
+    // (the debate's role on first render); no option is empty, so that is never a choice.
+    <Select value={value} onValueChange={(next) => { if (next) onValueChange(next as V); }}>
       <SelectTrigger id={id} aria-labelledby={labelId} className={triggerClassName}>
         <SelectValue />
       </SelectTrigger>
@@ -87,7 +96,12 @@ export function GenerateForm({ onSubmit, isLoading, debatePrefill = true }: Gene
     return () => subscription.unsubscribe();
   }, [watch, setGenerateForm]);
 
-  useDebateMotionPrefill(() => getValues('motion'), (motion) => setValue('motion', motion, { shouldValidate: true }), !debatePrefill);
+  // Filling in a debate's motion also takes its speaker role, including "Any role".
+  useDebateMotionPrefill(() => getValues('motion'), (motion) => {
+    setValue('motion', motion, { shouldValidate: true });
+    const role = selectCurrentDebate(useDebateStore.getState())?.settings.role;
+    if (isGenerateRole(role)) setValue('role', role);
+  }, !debatePrefill);
 
   // Voice input integration
   const { isListening, transcript, error: voiceError, startListening, stopListening, resetTranscript, hasSupport: hasVoiceSupport } = useSpeechToText();
@@ -123,6 +137,7 @@ export function GenerateForm({ onSubmit, isLoading, debatePrefill = true }: Gene
               <Input
                 id="motion"
                 {...register('motion')}
+                maxLength={MAX_MOTION_LENGTH}
                 placeholder={t('generateForm.motionPlaceholder')}
                 className="h-12 flex-1"
               />
@@ -181,6 +196,7 @@ export function GenerateForm({ onSubmit, isLoading, debatePrefill = true }: Gene
                 value={currentValues.role}
                 onValueChange={(value) => setValue('role', value)}
                 options={[
+                  { value: 'general', label: t('debate.roleAny', 'Any role') },
                   { value: 'intro', label: t('generateForm.roleIntro') },
                   { value: 'r1', label: t('generateForm.roleR1') },
                   { value: 'r2', label: t('generateForm.roleR2') },

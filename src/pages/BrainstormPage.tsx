@@ -19,6 +19,8 @@ import { ToolRunErrorPanel, isCanceled, useRevealResults, useToolRun } from '@/c
 import { LiveToolRun } from '@/components/features/tools/live-draft';
 import { brainstormDraftSections } from '@/components/features/tools/live-sections';
 import { brainstormDiscussPrompt, openDiscussion } from '@/components/features/tools/discuss';
+import { markResultSaved, useResultSaved } from '@/components/features/tools/result-actions';
+import { useToast } from '@/hooks/use-toast';
 import { WorkspaceToolScope, useWorkspaceToolScope } from '@/components/features/workspace/WorkspaceToolScope';
 import { recordInDebate } from '@/lib/debate/record';
 import { CurrentDebateStrip } from '@/components/features/debate/CurrentDebateStrip';
@@ -26,13 +28,14 @@ import { useDebateMotionGate } from '@/components/features/debate/DebateMotionGa
 
 export default function BrainstormPage() {
   const workspace = useWorkspaceToolScope('brainstorm');
-  const { brainstormResult, brainstormLoading, brainstormForm, setBrainstormResult, setBrainstormLoading, recordResult } = useSessionStore(useShallow((state) => ({
+  const { brainstormResult, brainstormLoading, brainstormForm, setBrainstormResult, setBrainstormLoading, recordResult, saveCurrentBrainstorm } = useSessionStore(useShallow((state) => ({
     brainstormResult: state.brainstormResult,
     brainstormLoading: state.brainstormLoading,
     brainstormForm: state.brainstormForm,
     setBrainstormResult: state.setBrainstormResult,
     setBrainstormLoading: state.setBrainstormLoading,
     recordResult: state.recordResult,
+    saveCurrentBrainstorm: state.saveCurrentBrainstorm,
   })));
   const debateGate = useDebateMotionGate({ disabled: Boolean(workspace.context) });
   const { getFeatureConfig } = useSettingsStore();
@@ -50,6 +53,9 @@ export default function BrainstormPage() {
   const subError = useSubscriptionError();
   const [discoveredSources, setDiscoveredSources] = useState<DiscoveredSource[]>([]);
   const { t } = useTranslation();
+  const { toast } = useToast();
+  const resultSaved = useResultSaved(brainstormResult);
+  const [saving, setSaving] = useState(false);
 
   const handleSubmit = (data: BrainstormInput) => debateGate.run(data.motion, (target) => void submitBrainstorm(data, target.debateId));
 
@@ -66,7 +72,7 @@ export default function BrainstormPage() {
       setBrainstormResult(result);
       await workspace.attach(data, result);
       if (target.debateId) {
-        await recordInDebate(() => recordResult('brainstorm', { title: data.motion, input: data, output: result, debateId: target.debateId, side: data.side }));
+        if (await recordInDebate(() => recordResult('brainstorm', { title: data.motion, input: data, output: result, debateId: target.debateId, side: data.side }))) markResultSaved(result);
       }
       results.reveal();
     } catch (error) {
@@ -77,6 +83,23 @@ export default function BrainstormPage() {
       }
     } finally {
       setBrainstormLoading(false);
+    }
+  };
+
+  // One-off results are not saved automatically; Save puts them in History.
+  const handleSave = async () => {
+    const result = brainstormResult;
+    if (!result || saving) return;
+    setSaving(true);
+    try {
+      await saveCurrentBrainstorm((lastRun.current?.data.motion || brainstormForm?.motion || t('generatedArtifacts.brainstormTitle')).slice(0, 300));
+      markResultSaved(result);
+      toast({ title: t('resultActions.savedToHistory', 'Saved to History') });
+    } catch (error) {
+      console.error('Failed to save brainstorm:', error);
+      toast({ title: t('resultActions.saveFailed', 'Could not save. Try again.'), variant: 'destructive' });
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -110,7 +133,7 @@ export default function BrainstormPage() {
               <LiveToolRun label={t('brainstorm.working', 'Finding angles…')} live={run.liveState} sections={run.liveState.draft ? brainstormDraftSections(run.liveState.draft, t) : []} onCancel={run.cancel} />
             ) : brainstormResult ? (
               <div key="brainstorm-results">
-                <BrainstormResults result={brainstormResult} discoveredSources={discoveredSources} onDiscuss={handleDiscuss} />
+                <BrainstormResults result={brainstormResult} discoveredSources={discoveredSources} onDiscuss={handleDiscuss} onSave={() => void handleSave()} saved={resultSaved} saving={saving} />
               </div>
             ) : (
               <EmptyState icon={Lightbulb} title={t('brainstorm.emptyTitle')} description={t('brainstorm.emptyDesc')} />

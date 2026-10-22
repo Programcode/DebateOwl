@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Target, Shield, Swords, AlertTriangle, MessageSquare, Save, GitBranch, Sparkles, Clipboard, Undo2, Flame } from 'lucide-react';
+import { Target, Shield, Swords, AlertTriangle, MessageSquare, GitBranch, Sparkles, Undo2, Flame } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { SectionCard } from '@/components/ui/section-card';
@@ -11,6 +11,8 @@ import { toast } from 'sonner';
 import { formatEuropeanDateTime } from '@/lib/date-format';
 import { ExportToolbar } from '@/components/features/ExportToolbar';
 import { ResultHeader } from '@/components/features/tools/ResultHeader';
+import { CopyResultButton, SaveResultAction } from '@/components/features/tools/result-actions';
+import { caseText } from '@/components/features/tools/result-text';
 import { ResearchedSources } from '@/components/features/tools/ResearchedSources';
 import { GoogleDriveAuthModal } from '@/components/features/export/GoogleDriveAuthModal';
 import { SourceQualityList } from '@/components/features/shared/SourceQualityList';
@@ -25,6 +27,8 @@ interface GenerateResultsProps {
   regeneratingSection?: string | null;
   onDiscuss?: () => void;
   onSave?: () => void;
+  /** The case is already in History; shows “Saved” instead of Save. */
+  saved?: boolean;
   onUndo?: () => void;
   onImportFlowchart?: () => void;
   onPracticeCrossfire?: () => void;
@@ -83,7 +87,7 @@ function formatDuration(ms: number | undefined, t: (key: string, options?: Recor
   return t('generateResults.durationS', { value });
 }
 
-export function GenerateResults({ result, discoveredSources, onRegenerateSection, regeneratingSection = null, onDiscuss, onSave, onUndo, onImportFlowchart, onPracticeCrossfire }: GenerateResultsProps) {
+export function GenerateResults({ result, discoveredSources, onRegenerateSection, regeneratingSection = null, onDiscuss, onSave, saved = false, onUndo, onImportFlowchart, onPracticeCrossfire }: GenerateResultsProps) {
   const { t } = useTranslation();
   const [isExportingGDocs, setIsExportingGDocs] = useState(false);
   const [showDriveAuth, setShowDriveAuth] = useState(false);
@@ -93,36 +97,6 @@ export function GenerateResults({ result, discoveredSources, onRegenerateSection
     isLoading: regeneratingSection === section,
     regenerateDisabled: regeneratingSection !== null,
   });
-
-  const handleCopyToClipboard = async () => {
-    const lines: string[] = [];
-    lines.push(`THESIS: ${result.caseStructure?.thesis || ''}`);
-    lines.push(`FRAMEWORK: ${result.caseStructure?.framework || ''}`);
-    lines.push('');
-    result.contentions?.forEach((c, i) => {
-      lines.push(`CONTENTION #${i + 1}: ${c.claim}`);
-      lines.push(`  Reasoning: ${c.reasoning}`);
-      lines.push(`  Evidence: ${c.evidence}`);
-      lines.push(`  Impact: ${c.impact}`);
-      lines.push('');
-    });
-    if (result.counters?.length) {
-      lines.push('PREPARED COUNTERS:');
-      result.counters.forEach(c => {
-        lines.push(`  vs "${c.targetArgument}": ${c.counterpoint}`);
-      });
-    }
-    if (!navigator.clipboard?.writeText) {
-      toast.error(t('generateResults.copyFailed', 'Unable to copy to clipboard'));
-      return;
-    }
-    try {
-      await navigator.clipboard.writeText(lines.join('\n'));
-      toast.success(t('generateResults.copiedToClipboard', 'Copied to clipboard'));
-    } catch {
-      toast.error(t('generateResults.copyFailed', 'Unable to copy to clipboard'));
-    }
-  };
 
   const handleGoogleDocsExport = async () => {
     setIsExportingGDocs(true);
@@ -208,13 +182,8 @@ export function GenerateResults({ result, discoveredSources, onRegenerateSection
             onDocx={handleDocxExport}
             onGoogleDocs={handleGoogleDocsExport}
             isExportingGDocs={isExportingGDocs}
-            extraExports={(
-              <Button variant="outline" size="sm" onClick={handleCopyToClipboard}>
-                <Clipboard className="mr-2 h-4 w-4" />
-                {t('generateResults.clipboard', 'Clipboard')}
-              </Button>
-            )}
-            secondaryActions={(onSave || onDiscuss || onImportFlowchart || onUndo || onPracticeCrossfire) ? (
+            extraExports={<CopyResultButton getText={() => caseText(result)} />}
+            secondaryActions={(onSave || saved || onDiscuss || onImportFlowchart || onUndo || onPracticeCrossfire) ? (
               <>
                 {onPracticeCrossfire && (
                   <Button variant="outline" size="sm" onClick={onPracticeCrossfire}>
@@ -222,12 +191,7 @@ export function GenerateResults({ result, discoveredSources, onRegenerateSection
                     {t('crossfire.openFromResult', 'Open in Crossfire')}
                   </Button>
                 )}
-                {onSave && (
-                  <Button variant="outline" size="sm" onClick={onSave}>
-                    <Save className="mr-2 h-4 w-4" />
-                    {t('generateResults.save')}
-                  </Button>
-                )}
+                <SaveResultAction saved={saved} onSave={onSave} />
                 {onDiscuss && (
                   <Button variant="outline" size="sm" onClick={onDiscuss}>
                     <MessageSquare className="mr-2 h-4 w-4" />
