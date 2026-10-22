@@ -878,8 +878,11 @@ export async function handleRequest(req: Request): Promise<Response> {
       // response that failed validation, the request budget running out, or
       // the browser leaving (reload, closed tab, Stop) before the student saw
       // a usable part of the answer. A run whose answer was saved, or that
-      // streamed REFUND_MAX_DELIVERED_CHARS or more, stays charged.
-      const refundable = !outputSaved && deliveredChars < REFUND_MAX_DELIVERED_CHARS;
+      // streamed REFUND_MAX_DELIVERED_CHARS or more, stays charged, and so
+      // does one the browser left after the model had finished: a short
+      // answer may already be on screen.
+      const leftAfterAnswer = aborted && !timedOut && Boolean(completedMainUsage);
+      const refundable = !outputSaved && !leftAfterAnswer && deliveredChars < REFUND_MAX_DELIVERED_CHARS;
       // Refund before answering, so a retry sent straight away sees it.
       const refunded = refundable && await refundQuotaReservation(userId, rateLimit);
       // The weekly cap counts real spend, so a refunded run's OpenRouter cost

@@ -24,6 +24,9 @@ CREATE TABLE IF NOT EXISTS public.ai_quota_sessions (
   -- them back to the day that paid.
   usage_date date,
   calls_used integer NOT NULL DEFAULT 0 CHECK (calls_used >= 0),
+  -- Counts the session's charges. A refund names the charge it gives back,
+  -- so a failed call can never refund a later charge made by another call.
+  charge_id integer NOT NULL DEFAULT 0 CHECK (charge_id >= 0),
   charged_at timestamptz,
   created_at timestamptz NOT NULL DEFAULT now(),
   updated_at timestamptz NOT NULL DEFAULT now(),
@@ -39,6 +42,7 @@ GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.ai_quota_sessions TO servic
 
 -- charged: this call reserved units (refund_ai_session_quota may give them back).
 -- units: the units reserved by this call, 0 when the session had already paid.
+-- charge_id: names this call's charge for refund_ai_session_quota; 0 when it did not charge.
 -- denied_by: 'daily' or 'weekly' when refused, NULL when allowed.
 CREATE FUNCTION public.claim_ai_session_quota(
   p_user_id uuid,
@@ -51,7 +55,7 @@ CREATE FUNCTION public.claim_ai_session_quota(
   p_ttl_seconds integer,
   p_quota_key text DEFAULT 'ai'
 )
-RETURNS TABLE (allowed boolean, charged boolean, units integer, current_count integer, denied_by text)
+RETURNS TABLE (allowed boolean, charged boolean, units integer, current_count integer, denied_by text, charge_id integer)
 LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path = public
@@ -92,7 +96,7 @@ BEGIN
     FROM public.daily_usage_counters c
     WHERE c.user_id = p_user_id AND c.usage_date = CURRENT_DATE AND c.quota_key = v_quota_key;
 
-    RETURN QUERY SELECT true, false, 0, COALESCE(v_current_count, 0), NULL::text;
+    RETURN QUERY SELECT true, false, 0, COALESCE(v_current_count, 0), NULL::text, 0;
     RETURN;
   END IF;
 
@@ -100,7 +104,7 @@ BEGIN
   FROM public.consume_ai_quota(p_user_id, p_limit, p_units, p_weekly_cap_usd, v_quota_key);
 
   IF NOT v_reserved.allowed THEN
-    RETURN QUERY SELECT false, false, p_units, v_reserved.current_count, v_reserved.denied_by;
+    RETURN QUERY SELECT false, false, p_units, v_reserved.current_count, v_reserved.denied_by, 0;
     RETURN;
   END IF;
 
@@ -110,22 +114,26 @@ BEGIN
       quota_key = v_quota_key,
       usage_date = CURRENT_DATE,
       calls_used = 1,
+      charge_id = v_session.charge_id + 1,
       charged_at = now(),
       updated_at = now()
   WHERE s.user_id = p_user_id AND s.feature = p_feature AND s.session_key = p_session_key;
 
-  RETURN QUERY SELECT true, true, p_units, v_reserved.current_count, NULL::text;
+  RETURN QUERY SELECT true, true, p_units, v_reserved.current_count, NULL::text, v_session.charge_id + 1;
 END;
 $$;
 
 -- Gives back the units a session's charging call reserved, when that call
--- produced nothing. Refuses (returns 0) once any other call has run in the
--- session since the charge, because that call may have delivered output. The
--- session is left unpaid, so its next call charges again.
+-- produced nothing. p_charge_id is the charge_id claim_ai_session_quota
+-- returned to that call. Refuses (returns 0) when the session has been charged
+-- again since, or when any other call has run on the charge, because that call
+-- may have delivered output. The session is left unpaid, so its next call
+-- charges again.
 CREATE FUNCTION public.refund_ai_session_quota(
   p_user_id uuid,
   p_feature text,
-  p_session_key text
+  p_session_key text,
+  p_charge_id integer
 )
 RETURNS integer
 LANGUAGE plpgsql
@@ -135,7 +143,8 @@ AS $$
 DECLARE
   v_session public.ai_quota_sessions%ROWTYPE;
 BEGIN
-  IF auth.role() <> 'service_role' OR p_user_id IS NULL OR p_feature IS NULL OR p_session_key IS NULL THEN
+  IF auth.role() <> 'service_role' OR p_user_id IS NULL OR p_feature IS NULL OR p_session_key IS NULL
+    OR p_charge_id IS NULL OR p_charge_id < 1 THEN
     RAISE EXCEPTION 'session quota refunds are restricted to trusted server code';
   END IF;
 
@@ -144,7 +153,8 @@ BEGIN
   WHERE s.user_id = p_user_id AND s.feature = p_feature AND s.session_key = p_session_key
   FOR UPDATE;
 
-  IF NOT FOUND OR NOT v_session.charged OR v_session.calls_used <> 1 OR v_session.units < 1 THEN
+  IF NOT FOUND OR NOT v_session.charged OR v_session.charge_id <> p_charge_id
+    OR v_session.calls_used <> 1 OR v_session.units < 1 THEN
     RETURN 0;
   END IF;
 
@@ -197,9 +207,9 @@ REVOKE ALL ON FUNCTION public.claim_ai_session_quota(uuid, text, text, integer, 
   FROM PUBLIC, anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.claim_ai_session_quota(uuid, text, text, integer, integer, numeric, integer, integer, text)
   TO service_role;
-REVOKE ALL ON FUNCTION public.refund_ai_session_quota(uuid, text, text)
+REVOKE ALL ON FUNCTION public.refund_ai_session_quota(uuid, text, text, integer)
   FROM PUBLIC, anon, authenticated;
-GRANT EXECUTE ON FUNCTION public.refund_ai_session_quota(uuid, text, text)
+GRANT EXECUTE ON FUNCTION public.refund_ai_session_quota(uuid, text, text, integer)
   TO service_role;
 REVOKE ALL ON FUNCTION public.peek_ai_quota(uuid, text)
   FROM PUBLIC, anon, authenticated;

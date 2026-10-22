@@ -15,6 +15,7 @@ for (const [key, value] of Object.entries({
 })) Deno.env.set(key, value);
 
 const { handleRequest } = await import("./index.ts");
+const { handleRequest: handleStream } = await import("../ai-stream/index.ts");
 const { REFUND_MAX_DELIVERED_CHARS } = await import("../_shared/usage-limits.ts");
 
 const SPARRING_SESSION = "5e551000-0000-4000-8000-000000000009";
@@ -24,8 +25,8 @@ interface Harness {
   usageRows: Array<Record<string, unknown>>;
   /** What claim_ai_session_quota answers. */
   claim: Record<string, unknown>;
-  /** The provider's reply: text, an HTTP failure, or text then a stream that never ends. */
-  reply: { content: string } | { status: number } | { hangAfter: string };
+  /** The provider's reply: text, an HTTP failure, or text then a stream that never ends (optionally after finishing the answer). */
+  reply: { content: string } | { status: number } | { hangAfter: string; finished?: boolean };
 }
 
 const harness: Harness = { rpcs: [], usageRows: [], claim: {}, reply: { content: "" } };
@@ -34,13 +35,14 @@ function json(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), { status, headers: { "Content-Type": "application/json" } });
 }
 
-function hangingStream(text: string, signal: AbortSignal | null | undefined): ReadableStream<Uint8Array> {
+function hangingStream(text: string, finished: boolean, signal: AbortSignal | null | undefined): ReadableStream<Uint8Array> {
   const encoder = new TextEncoder();
   return new ReadableStream({
     start(controller) {
       for (let index = 0; index < text.length; index += 20) {
         controller.enqueue(encoder.encode(`data: ${JSON.stringify({ choices: [{ delta: { content: text.slice(index, index + 20) } }] })}\n\n`));
       }
+      if (finished) controller.enqueue(encoder.encode(`data: ${JSON.stringify({ choices: [{ delta: {}, finish_reason: "stop" }] })}\n\n`));
       // The model keeps "thinking" until the request is cancelled.
       signal?.addEventListener("abort", () => controller.error(new DOMException("Aborted", "AbortError")), { once: true });
     },
@@ -78,7 +80,7 @@ function install() {
       const body = JSON.parse(String(init?.body));
       const reply = harness.reply;
       if ("status" in reply) return json({ error: { message: "Provider overloaded" } }, reply.status);
-      if ("hangAfter" in reply) return new Response(hangingStream(reply.hangAfter, init?.signal), { headers: { "Content-Type": "text/event-stream" } });
+      if ("hangAfter" in reply) return new Response(hangingStream(reply.hangAfter, reply.finished === true, init?.signal), { headers: { "Content-Type": "text/event-stream" } });
       if (body.stream) {
         const usage = { prompt_tokens: 10, completion_tokens: 5, cost: 0.000001 };
         return new Response(
@@ -92,7 +94,7 @@ function install() {
   }) as typeof fetch;
 }
 
-function reset(reply: Harness["reply"], claim: Record<string, unknown> = { allowed: true, charged: true, units: 1, current_count: 1, denied_by: null }) {
+function reset(reply: Harness["reply"], claim: Record<string, unknown> = { allowed: true, charged: true, units: 1, current_count: 1, denied_by: null, charge_id: 1 }) {
   harness.rpcs.length = 0;
   harness.usageRows.length = 0;
   harness.reply = reply;
@@ -193,10 +195,12 @@ Deno.test("a failed call refunds the session only when it was the call that paid
     assertEquals(paid.status, 500);
     assertEquals((await paid.json()).charged, false);
     assertEquals(rpcNames(), ["claim_ai_session_quota", "refund_ai_session_quota"]);
+    // The refund names the charge it gives back, so it can never return a later one.
+    assertEquals(harness.rpcs.at(-1)!.body.p_charge_id, 1);
 
     // A later call ran on a session that had already paid: nothing to give back,
     // and the student was not charged for it either.
-    reset({ status: 500 }, { allowed: true, charged: false, units: 0, current_count: 1, denied_by: null });
+    reset({ status: 500 }, { allowed: true, charged: false, units: 0, current_count: 1, denied_by: null, charge_id: 0 });
     const free = await send({ feature: "sparring", input: sparringInput });
     assertEquals(free.status, 500);
     assertEquals((await free.json()).charged, false);
@@ -256,5 +260,41 @@ Deno.test("a quota check reports a round's cost and what is left without reservi
     assertEquals(rpcNames(), []);
   } finally {
     globalThis.fetch = originalFetch;
+  }
+});
+
+Deno.test("a streamed Ask answer the browser leaves after it finished stays charged", async () => {
+  const originalError = console.error;
+  console.error = () => undefined;
+  install();
+  try {
+    for (const [label, finished, refunded] of [
+      ["left mid-answer", false, true],
+      ["left after a short, finished answer", true, false],
+    ] as const) {
+      reset({ hangAfter: "Yes: fares are a small share of cost.", finished });
+      const browser = new AbortController();
+      const response = await handleStream(new Request("http://127.0.0.1/functions/v1/ai-stream", {
+        method: "POST",
+        headers: { Authorization: "Bearer test-token", "Content-Type": "application/json" },
+        body: JSON.stringify({ feature: "ask", model: "openai/gpt-6-luna", input: { message: "A question", mode: "general" } }),
+        signal: browser.signal,
+      }));
+      const reader = response.body!.getReader();
+      let seen = "";
+      while (!seen.includes("of cost.")) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        seen += new TextDecoder().decode(value);
+      }
+      // The browser goes away: ai-stream sees it on the request's signal.
+      browser.abort();
+      await reader.cancel().catch(() => undefined);
+      for (let wait = 0; wait < 50 && harness.usageRows.length === 0; wait += 1) await new Promise((resolve) => setTimeout(resolve, 10));
+      assertEquals(rpcNames(), refunded ? ["consume_ai_quota", "refund_daily_quota"] : ["consume_ai_quota"], label);
+    }
+  } finally {
+    globalThis.fetch = originalFetch;
+    console.error = originalError;
   }
 });

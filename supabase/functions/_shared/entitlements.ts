@@ -31,6 +31,8 @@ export interface RateLimitResult {
   charged?: boolean;
   /** The Crossfire or Sparring session this request was charged under. */
   session?: QuotaSession;
+  /** Names this request's session charge, so a refund gives back only that charge. */
+  sessionChargeId?: number;
 }
 
 /** One Crossfire or Sparring round, charged once (see SESSION_QUOTA). */
@@ -266,7 +268,8 @@ export async function checkRateLimit(userId: string | null, model?: ModelSelecti
     if (!quotaRow?.allowed) return quotaDenial(quotaRow?.denied_by, tier, dailyLimit, current, units);
 
     const charged = session ? quotaRow.charged === true : true;
-    return { allowed: true, limit: dailyLimit, current, units, canAccessProModels, charged, ...(session ? { session } : {}) };
+    const sessionCharge = session && charged && typeof quotaRow.charge_id === "number" ? { sessionChargeId: quotaRow.charge_id } : {};
+    return { allowed: true, limit: dailyLimit, current, units, canAccessProModels, charged, ...(session ? { session } : {}), ...sessionCharge };
   } catch (err) {
     console.error("[RATE LIMIT] Check failed:", err);
     return { allowed: false, reason: "Unable to verify your account access. Please try again.", statusCode: 500 };
@@ -307,14 +310,16 @@ export async function peekRateLimit(userId: string, model?: ModelSelection): Pro
  * other call has run on it. Returns whether units went back. A failed refund
  * is logged, never thrown, so the student still gets the error.
  */
-export async function refundQuotaReservation(userId: string, reservation: Pick<RateLimitResult, "allowed" | "units" | "charged" | "session">): Promise<boolean> {
+export async function refundQuotaReservation(userId: string, reservation: Pick<RateLimitResult, "allowed" | "units" | "charged" | "session" | "sessionChargeId">): Promise<boolean> {
   if (!reservation.allowed || !reservation.units || reservation.charged === false) return false;
   try {
     if (reservation.session) {
+      if (!reservation.sessionChargeId) return false;
       const { data, error } = await supabase.rpc("refund_ai_session_quota", {
         p_user_id: userId,
         p_feature: reservation.session.feature,
         p_session_key: reservation.session.key,
+        p_charge_id: reservation.sessionChargeId,
       });
       if (error) throw error;
       return typeof data === "number" && data > 0;

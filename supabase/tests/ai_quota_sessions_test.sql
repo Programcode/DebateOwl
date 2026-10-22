@@ -1,5 +1,5 @@
 BEGIN;
-SELECT plan(19);
+SELECT plan(20);
 
 INSERT INTO auth.users (id)
 VALUES
@@ -13,10 +13,10 @@ SELECT ok(
 );
 SELECT ok(
   NOT has_function_privilege('authenticated', 'public.claim_ai_session_quota(uuid, text, text, integer, integer, numeric, integer, integer, text)', 'EXECUTE')
-    AND NOT has_function_privilege('authenticated', 'public.refund_ai_session_quota(uuid, text, text)', 'EXECUTE')
+    AND NOT has_function_privilege('authenticated', 'public.refund_ai_session_quota(uuid, text, text, integer)', 'EXECUTE')
     AND NOT has_function_privilege('authenticated', 'public.peek_ai_quota(uuid, text)', 'EXECUTE')
     AND NOT has_function_privilege('anon', 'public.claim_ai_session_quota(uuid, text, text, integer, integer, numeric, integer, integer, text)', 'EXECUTE')
-    AND NOT has_function_privilege('anon', 'public.refund_ai_session_quota(uuid, text, text)', 'EXECUTE')
+    AND NOT has_function_privilege('anon', 'public.refund_ai_session_quota(uuid, text, text, integer)', 'EXECUTE')
     AND NOT has_function_privilege('anon', 'public.peek_ai_quota(uuid, text)', 'EXECUTE'),
   'clients cannot claim, refund, or peek session quota'
 );
@@ -86,28 +86,33 @@ SELECT results_eq(
 
 -- Refunds: the second user opens a session and the opening call fails.
 SELECT results_eq(
-  $$SELECT charged, current_count FROM public.claim_ai_session_quota('99999999-9999-4999-8999-999999999999', 'sparring', 'sp-1', 5, 2, NULL, 10, 3600)$$,
-  $$VALUES (true, 2)$$,
-  'setup: the opening call reserves two units'
+  $$SELECT charged, current_count, charge_id FROM public.claim_ai_session_quota('99999999-9999-4999-8999-999999999999', 'sparring', 'sp-1', 5, 2, NULL, 10, 3600)$$,
+  $$VALUES (true, 2, 1)$$,
+  'setup: the opening call reserves two units as charge 1'
 );
 SELECT is(
-  public.refund_ai_session_quota('99999999-9999-4999-8999-999999999999', 'sparring', 'sp-1'),
+  public.refund_ai_session_quota('99999999-9999-4999-8999-999999999999', 'sparring', 'sp-1', 1),
   2,
   'a failed opening call gives back what it reserved'
 );
 SELECT is(
-  public.refund_ai_session_quota('99999999-9999-4999-8999-999999999999', 'sparring', 'sp-1'),
+  public.refund_ai_session_quota('99999999-9999-4999-8999-999999999999', 'sparring', 'sp-1', 1),
   0,
   'a second refund for the same charge gives nothing back'
 );
 SELECT results_eq(
-  $$SELECT charged, current_count FROM public.claim_ai_session_quota('99999999-9999-4999-8999-999999999999', 'sparring', 'sp-1', 5, 2, NULL, 10, 3600)$$,
-  $$VALUES (true, 2)$$,
-  'the retry after a refund pays again'
+  $$SELECT charged, current_count, charge_id FROM public.claim_ai_session_quota('99999999-9999-4999-8999-999999999999', 'sparring', 'sp-1', 5, 2, NULL, 10, 3600)$$,
+  $$VALUES (true, 2, 2)$$,
+  'the retry after a refund pays again, as a new charge'
+);
+SELECT is(
+  public.refund_ai_session_quota('99999999-9999-4999-8999-999999999999', 'sparring', 'sp-1', 1),
+  0,
+  'a stale refund never gives back a later charge'
 );
 SELECT public.claim_ai_session_quota('99999999-9999-4999-8999-999999999999', 'sparring', 'sp-1', 5, 2, NULL, 10, 3600);
 SELECT is(
-  public.refund_ai_session_quota('99999999-9999-4999-8999-999999999999', 'sparring', 'sp-1'),
+  public.refund_ai_session_quota('99999999-9999-4999-8999-999999999999', 'sparring', 'sp-1', 2),
   0,
   'no refund once another call has run on the charge'
 );
@@ -120,7 +125,7 @@ UPDATE public.ai_quota_sessions SET usage_date = CURRENT_DATE - 1, calls_used = 
 WHERE user_id = '99999999-9999-4999-8999-999999999999';
 SET LOCAL ROLE service_role;
 SELECT set_config('request.jwt.claim.role', 'service_role', true);
-SELECT public.refund_ai_session_quota('99999999-9999-4999-8999-999999999999', 'sparring', 'sp-1');
+SELECT public.refund_ai_session_quota('99999999-9999-4999-8999-999999999999', 'sparring', 'sp-1', 2);
 RESET ROLE;
 SELECT results_eq(
   $$SELECT usage_date = CURRENT_DATE - 1, request_count FROM public.daily_usage_counters
