@@ -9,6 +9,7 @@ import { Card, IconTile } from '@/components/card';
 import { Chip } from '@/components/chip';
 import { Icon } from '@/components/icon';
 import { LibraryHeader, type AddSourceKind } from '@/components/library-header';
+import { OfflineNotice } from '@/components/offline-notice';
 import { OneOffNotice } from '@/components/one-off-notice';
 import { Screen } from '@/components/screen';
 import { SearchField } from '@/components/search-field';
@@ -19,7 +20,9 @@ import { useAuth } from '@/lib/auth';
 import { confirmDestructive } from '@/lib/confirm';
 import { useDebates } from '@/lib/debate-context';
 import { LIBRARY_ROOMY_WIDTH, LIST_WIDTH, SIDEBAR_WIDTH, useLayoutClass } from '@/lib/layout';
+import { openRowId } from '@/lib/open-pane';
 import { fetchSources, removeSource, subscribeSourcesChanged, type Source, type SourceType } from '@/lib/sources';
+import { useCopyHolder } from '@/lib/use-copy-holder';
 import { useTheme } from '@/theme/use-theme';
 
 type Filter = 'all' | SourceType;
@@ -85,6 +88,9 @@ function LibrarySplit({ wide, onAdd }: { wide: boolean; onAdd: (kind: AddSourceK
   // The selection belongs to the account and debate it was made in; switching either clears it.
   const [selected, setSelected] = useState<{ userId: string; debateId: string; id: string } | null>(null);
   const shown = selected && selected.userId === userId && selected.debateId === debateId ? selected.id : null;
+  const clearSelected = useCallback((id: string) => {
+    setSelected((previous) => (previous?.id === id ? null : previous));
+  }, []);
   const listWidth = width - (wide ? SIDEBAR_WIDTH : 0) >= LIBRARY_ROOMY_WIDTH ? LIST_WIDTH.libraryRoomy : LIST_WIDTH.library;
 
   return (
@@ -93,6 +99,7 @@ function LibrarySplit({ wide, onAdd }: { wide: boolean; onAdd: (kind: AddSourceK
         style={[styles.listPane, { width: listWidth, borderRightColor: colors.line }]}
         contentInsetAdjustmentBehavior="automatic"
         contentContainerStyle={styles.listContent}>
+        <OfflineNotice />
         <LibraryHeader title={t('mobile.tabs.library')} onAdd={onAdd} disabled={!debateId} />
         <OneOffNotice message="debate.oneOffActive" />
         {status === 'loading' ? <ActivityIndicator style={styles.loading} /> : null}
@@ -110,7 +117,7 @@ function LibrarySplit({ wide, onAdd }: { wide: boolean; onAdd: (kind: AddSourceK
             debateId={debateId}
             selectedId={shown}
             onOpen={(source) => setSelected({ userId, debateId, id: source.id })}
-            onRemoved={(id) => setSelected((previous) => (previous?.id === id ? null : previous))}
+            onRemoved={clearSelected}
           />
         ) : null}
       </ScrollView>
@@ -153,13 +160,14 @@ function SourceList({
   const [query, setQuery] = useState('');
   const [filter, setFilter] = useState<Filter>('all');
   const loads = useRef(0);
+  const copies = useCopyHolder();
   const userId = session?.user.id ?? null;
 
   const load = useCallback(async () => {
     if (!userId) return;
     const load = ++loads.current;
     try {
-      const next = await fetchSources(userId, debateId);
+      const next = await fetchSources(userId, debateId, copies.mark());
       if (load !== loads.current) return;
       setSources(next);
       setFailed(false);
@@ -168,15 +176,23 @@ function SourceList({
       console.warn('Could not load sources:', cause instanceof Error ? cause.message : cause);
       setFailed(true);
     }
-  }, [userId, debateId]);
+  }, [userId, debateId, copies]);
 
   // Sources added on the website show up when the tab comes back into view.
+  // Out of view, its saved copies no longer count for the offline notice.
   useFocusEffect(
     useCallback(() => {
       void load();
-    }, [load]),
+      return () => copies.release();
+    }, [load, copies]),
   );
   useEffect(() => subscribeSourcesChanged(() => void load()), [load]);
+
+  // A refresh that no longer has the open source closes the detail pane. Searching does not: `sources` is the full list.
+  useEffect(() => {
+    if (!selectedId || sources === null) return;
+    if (openRowId(selectedId, sources) === null) onRemoved?.(selectedId);
+  }, [sources, selectedId, onRemoved]);
 
   const visible = useMemo(
     () => (sources ?? []).filter((source) => (filter === 'all' || source.type === filter) && matches(source, query)),

@@ -29,7 +29,8 @@ describe('security hardening regressions', () => {
     expect(migration).toContain('REVOKE INSERT, UPDATE, DELETE ON public.user_settings');
     expect(migration).toContain('GRANT UPDATE (language, theme, feature_configs, custom_system_prompt, updated_at)');
     expect(migration).toContain('REVOKE INSERT, UPDATE, DELETE ON public.ai_requests');
-    expect(entitlements).toContain('if (!user) return { tier: "expired", dailyLimit: 0');
+    expect(entitlements).toContain('const NO_ACCESS: SubscriptionInfo = { tier: "expired", dailyLimit: 0');
+    expect(entitlements).toContain('if (error || !row || typeof row.tier !== "string" || typeof row.daily_limit !== "number") return NO_ACCESS;');
     for (const source of [ai, stream]) expect(source).toContain('from "../_shared/entitlements.ts"');
   });
 

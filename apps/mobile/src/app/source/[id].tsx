@@ -10,7 +10,7 @@ export default function SourceSheet() {
   const { id } = useLocalSearchParams<{ id: string }>();
   return (
     <SheetScrollView contentContainerStyle={styles.content} testID="source-sheet">
-      <SourceView id={id} onDone={() => router.back()} />
+      <SourceView key={id} id={id} onDone={() => router.back()} />
     </SheetScrollView>
   );
 }

@@ -26,6 +26,7 @@ import {
 } from '@/lib/debates';
 import { HOME_COLUMNS_WIDTH, useLayoutClass } from '@/lib/layout';
 import { fetchSources, type Source } from '@/lib/sources';
+import { useCopyHolder } from '@/lib/use-copy-holder';
 import { mainActionGradient, radius } from '@/theme/colors';
 import { useTheme } from '@/theme/use-theme';
 
@@ -151,17 +152,19 @@ function DebateDetails({ debateId, dashboard = false }: { debateId: string; dash
   const [sources, setSources] = useState<Source[] | null>(null);
   const [failed, setFailed] = useState(false);
   const [width, setWidth] = useState(0);
+  const copies = useCopyHolder();
 
   // Both sides load together, so switching the view is instant.
   const load = useCallback(async (isCurrent: () => boolean) => {
     if (!userId) return;
     const limit = dashboard ? DASHBOARD_RECENT_LIMIT : RECENT_LIMIT;
+    const mark = copies.mark();
     try {
       const [nextCounts, pro, con, nextSources] = await Promise.all([
-        fetchDebateCounts(userId, debateId),
-        fetchRecentWork(userId, debateId, 'pro', limit),
-        fetchRecentWork(userId, debateId, 'con', limit),
-        dashboard ? fetchSources(userId, debateId) : null,
+        fetchDebateCounts(userId, debateId, mark),
+        fetchRecentWork(userId, debateId, 'pro', limit, mark),
+        fetchRecentWork(userId, debateId, 'con', limit, mark),
+        dashboard ? fetchSources(userId, debateId, mark) : null,
       ]);
       if (!isCurrent()) return;
       setCounts(nextCounts);
@@ -173,17 +176,18 @@ function DebateDetails({ debateId, dashboard = false }: { debateId: string; dash
       console.warn('Could not load the debate:', cause instanceof Error ? cause.message : cause);
       setFailed(true);
     }
-  }, [userId, debateId, dashboard]);
+  }, [userId, debateId, dashboard, copies]);
 
-  // Reload on focus, so work saved on the website shows up.
+  // Reload on focus, so work saved on the website shows up. Out of view, its saved copies no longer count.
   useFocusEffect(
     useCallback(() => {
       let active = true;
       void load(() => active);
       return () => {
         active = false;
+        copies.release();
       };
-    }, [load]),
+    }, [load, copies]),
   );
 
   const results = counts?.results[view];

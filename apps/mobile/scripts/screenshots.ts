@@ -9,9 +9,10 @@
  *
  * ONLY=iphone-light-en limits a run to the combinations whose name starts with it;
  * separate several with commas (ONLY=iphone-light-en,ipad-dark-hu).
- * SCREENS=library,ask limits it to those groups of screens: sign-in, debate,
- * library, tabs (Prepare, Practice, You), ask, results (Generate and Attack),
- * tools (Brainstorm and Factoids), timer, crossfire, sparring, flowchart.
+ * SCREENS=you,timer limits the signed-in screens to those groups: debate,
+ * library, prepare, practice, you, empty, ask, results, brainstorm, factoids,
+ * timer, crossfire, sparring, flowchart, one-off. Sign-in screens are always shot.
+ * ONLY=offline runs only the offline reading check (see shootOfflineScreens).
  *
  * The iPad sizes are portrait (1024x1366), landscape (1366x1024) and a 600-point
  * window (Split View or Slide Over), which takes the phone layout.
@@ -70,7 +71,7 @@ import { chromium, type Browser, type BrowserContext, type BrowserContextOptions
 import { createReadStream, existsSync, statSync } from 'node:fs';
 import { mkdir, writeFile } from 'node:fs/promises';
 import { createServer, type Server } from 'node:http';
-import { extname, join, normalize } from 'node:path';
+import { dirname, extname, join, normalize } from 'node:path';
 
 import { SUPABASE_PROJECTS } from '../../../src/lib/supabase/projects';
 
@@ -80,9 +81,10 @@ const DIST = join(__dirname, '../dist');
 const OUT = join(__dirname, '../../../.verify/mobile-shots');
 const PORT = Number(process.env.PORT);
 const DEMO_CODE = process.env.STAGING_DEMO_CODE?.trim();
-const ONLY = (process.env.ONLY ?? '').split(',').map((value) => value.trim());
-const SCREENS = process.env.SCREENS?.split(',').map((value) => value.trim()).filter(Boolean) ?? null;
-const wants = (group: string) => !SCREENS || SCREENS.includes(group);
+const ONLY = (process.env.ONLY ?? '').split(',').map((value) => value.trim()).filter((value) => value.length > 0);
+const offlineOnly = ONLY.length === 1 && ONLY[0] === 'offline';
+const SCREENS = process.env.SCREENS?.split(',').map((name) => name.trim()).filter(Boolean);
+const want = (group: string) => !SCREENS?.length || SCREENS.includes(group);
 const ORIGIN = `http://127.0.0.1:${PORT}`;
 const STAGING_HOST = new URL(SUPABASE_PROJECTS.staging.url).host;
 const SESSION_KEY = `sb-${STAGING_HOST.split('.')[0]}-auth-token`;
@@ -96,6 +98,7 @@ const DEVICES = {
 const SCHEMES = ['light', 'dark'] as const;
 const LOCALES = { en: 'en-GB', hu: 'hu-HU' } as const;
 const SIGNED_IN_ROUTES = { prepare: '/prepare', practice: '/practice', you: '/you' };
+const NOTIFICATIONS = { en: 'Notifications', hu: 'Értesítések' } as const;
 const REST = `https://${STAGING_HOST}/rest/v1`;
 
 const TYPES: Record<string, string> = {
@@ -112,7 +115,8 @@ const TYPES: Record<string, string> = {
 function serve(): Promise<Server> {
   const server = createServer((req, res) => {
     const path = normalize(decodeURIComponent(new URL(req.url ?? '/', ORIGIN).pathname)).replace(/^(\.\.[/\\])+/, '');
-    const candidates = [join(DIST, path), join(DIST, `${path}.html`), join(DIST, path, 'index.html')];
+    // A dynamic route such as /case/<id> is exported once, as case/[id].html.
+    const candidates = [join(DIST, path), join(DIST, `${path}.html`), join(DIST, path, 'index.html'), join(DIST, dirname(path), '[id].html')];
     const file = candidates.find((candidate) => candidate.startsWith(DIST) && existsSync(candidate) && statSync(candidate).isFile());
     if (!file) {
       res.writeHead(404).end('Not found');
@@ -127,11 +131,16 @@ function serve(): Promise<Server> {
   });
 }
 
-/** Fails the run on page errors and console errors, which leave plausible-looking but broken screenshots. */
-function watchErrors(page: Page, problems: string[], label: string) {
+/**
+ * Fails the run on page errors and console errors, which leave plausible-looking but broken screenshots.
+ * While `offline()` is true, the browser's own "Failed to load resource" errors are expected.
+ */
+function watchErrors(page: Page, problems: string[], label: string, offline = () => false) {
   page.on('pageerror', (error) => problems.push(`${label}: ${error.message}`));
   page.on('console', (message) => {
-    if (message.type() === 'error') problems.push(`${label}: ${message.text()}`);
+    if (message.type() !== 'error') return;
+    if (offline() && message.text().startsWith('Failed to load resource')) return;
+    problems.push(`${label}: ${message.text()}`);
   });
 }
 
@@ -1098,7 +1107,13 @@ async function signIn(browser: Browser, problems: string[]): Promise<StorageStat
   await page.getByRole('tab', { name: 'Demo code' }).click();
   await page.getByRole('textbox').fill(DEMO_CODE ?? '');
   await page.getByRole('button', { name: 'Sign in with demo code' }).click();
-  await page.getByRole('tab', { name: 'Debate' }).waitFor({ timeout: 30_000 });
+  await page.getByRole('tab', { name: 'Debate' }).waitFor({ timeout: 30_000 }).catch(async (error: unknown) => {
+    const alert = await page.getByRole('alert').first().textContent({ timeout: 1_000 }).catch(() => null);
+    // The field shows the code in plain text; empty it so the screenshot never holds it.
+    await page.getByRole('textbox').fill('');
+    await shoot(page, 'sign-in-failed');
+    throw new Error(`Demo-code sign-in did not finish${alert ? `: ${alert}` : ''}`, { cause: error });
+  });
   if (authHosts.length === 0 || authHosts.some((host) => host !== STAGING_HOST)) {
     throw new Error(`Sign-in reached ${[...new Set(authHosts)].join(', ') || 'no backend'}, expected ${STAGING_HOST}`);
   }
@@ -1154,6 +1169,203 @@ async function checkOfflineColdStart(browser: Browser, state: StorageState, prob
   if (!tabsShown || signInShown || !stored || !refreshed) throw new Error('Offline cold start signed the user out');
 }
 
+const OFFLINE_RUNS = [
+  { prefix: 'iphone-light-en', scheme: 'light', language: 'en' },
+  { prefix: 'iphone-dark-hu', scheme: 'dark', language: 'hu' },
+] as const;
+const TABS = {
+  debate: /^(Debate|Vita)$/,
+  prepare: /^(Prepare|Felkészülés)$/,
+  library: /^(Library|Könyvtár)$/,
+  you: /^(You|Profil)$/,
+};
+const CACHE_PREFIX = 'debatelab.cache.v1';
+const SAVED_CASE_ID = '00000000-0000-4000-8000-0000000ca5ed';
+// Stands in for another account whose saved copies are still on the device.
+const OTHER_USER_ID = '00000000-0000-4000-8000-0000000a11ce';
+
+/** Answers the read of one made-up saved case (FAKE_CASE). Nothing is written. */
+async function fakeSavedCase(page: Page) {
+  await page.route(`${REST}/cases*`, (route) => {
+    const request = route.request();
+    if (request.method() !== 'GET' || new URL(request.url()).searchParams.get('id') !== `eq.${SAVED_CASE_ID}`) return route.continue();
+    const row = { id: SAVED_CASE_ID, title: 'Car-free city centres', side: 'pro', debate_id: null, created_at: FAKE_CASE.metadata.generatedAt, input: {}, output: FAKE_CASE };
+    const single = (request.headers().accept ?? '').includes('vnd.pgrst.object');
+    return route.fulfill({ status: 200, json: single ? row : [row] });
+  });
+}
+
+// Screens under the current one stay mounted on web, with their own notice.
+const shownNotice = (page: Page) => page.locator('[data-testid="offline-notice"]:visible').first();
+const cacheKeys = (page: Page) => page.evaluate((prefix) => Object.keys(localStorage).filter((key) => key.startsWith(prefix)), CACHE_PREFIX);
+
+async function openFlowchart(page: Page) {
+  await page.getByTestId('prepare-tool-flowchart').waitFor({ timeout: 30_000 });
+  await settle(page);
+  await page.getByTestId('prepare-tool-flowchart').click();
+  await page.getByTestId('flow-card').first().waitFor({ timeout: 30_000 });
+}
+
+/**
+ * Offline reading (ONLY=offline). Online, the run reads the Debate tab, the
+ * Library and a source, a saved case and a flowchart, so the app keeps
+ * copies. Then, first with the device offline (expo-network sees
+ * navigator.onLine turn false) and navigating inside the app, and then
+ * online but with every staging request failing and the page reloaded, the
+ * same screens must show the same data under the offline notice. The case
+ * and the maps are made up (FAKE_CASE, FAKE_FLOWCHART_ROWS); the debate and
+ * the Library are the account's own. Nothing is written to staging.
+ * Playwright's offline mode also blocks the local server, so the reload
+ * fails staging requests instead.
+ */
+async function shootOfflineScreens(browser: Browser, state: StorageState, problems: string[], run: (typeof OFFLINE_RUNS)[number], isolation: boolean) {
+  const { prefix, scheme, language } = run;
+  const context = await browser.newContext({ ...DEVICES.iphone, colorScheme: scheme, locale: LOCALES[language], storageState: state });
+  const page = await context.newPage();
+  try {
+    return await readOffline(context, page, problems, run, isolation);
+  } catch (error) {
+    await shoot(page, `${prefix}-offline-failed`);
+    const spinners = await page.evaluate(() => Array.from(document.querySelectorAll('[role="progressbar"]'), (node) => node.getAttribute('aria-label') ?? ''));
+    console.error(`${prefix}: failed at ${page.url()} with ${spinners.length} progress indicators ${JSON.stringify(spinners)}`);
+    throw error;
+  } finally {
+    await context.close();
+  }
+}
+
+async function readOffline(context: BrowserContext, page: Page, problems: string[], run: (typeof OFFLINE_RUNS)[number], isolation: boolean) {
+  const { prefix, language } = run;
+  let offline = false;
+  watchErrors(page, problems, `${prefix} offline`, () => offline);
+  page.on('dialog', (dialog) => void dialog.dismiss());
+  await pinSettings(page, language);
+  await fakeSavedCase(page);
+  await fakeFlowcharts(page);
+
+  // Online: read each screen once.
+  await page.goto(`${ORIGIN}/`);
+  await page.getByTestId('current-debate-motion').waitFor({ timeout: 30_000 });
+  await page.waitForFunction(() => !document.querySelector('[data-testid="debate-counts"]')?.textContent?.includes('–'));
+  await settle(page);
+  const motion = await page.getByTestId('current-debate-motion').textContent();
+  const counts = await page.getByTestId('debate-counts').textContent();
+  await page.getByRole('tab', { name: TABS.library }).click();
+  await page.getByTestId('source-row').first().waitFor({ timeout: 30_000 });
+  await settle(page);
+  const firstSource = await page.getByTestId('source-row').first().textContent();
+  await page.getByTestId('source-row').first().click();
+  await page.getByTestId('source-sheet').getByRole('heading').waitFor({ timeout: 30_000 });
+  await settle(page);
+  await page.goto(`${ORIGIN}/case/${SAVED_CASE_ID}`);
+  await page.getByTestId('case-document').waitFor({ timeout: 30_000 });
+  await settle(page);
+  await page.goto(`${ORIGIN}/prepare`);
+  await openFlowchart(page);
+  await settle(page);
+  if (await page.getByTestId('offline-notice').count()) throw new Error('The offline notice showed while online');
+
+  const userId = await page.evaluate((key) => (JSON.parse(localStorage.getItem(key) ?? '{}') as { user?: { id?: string } }).user?.id ?? '', SESSION_KEY);
+  const kept = await cacheKeys(page);
+  const foreign = kept.filter((key) => key !== `${CACHE_PREFIX}.owner` && !key.includes(userId));
+  console.log(`${prefix}: ${kept.length} saved-copy keys after reading online, ${foreign.length} not under the signed-in account`);
+  if (!userId || kept.length < 5 || foreign.length > 0) throw new Error('The app did not keep its saved copies under the signed-in account');
+
+  const sameData = async (label: string) => {
+    await page.waitForFunction(() => !document.querySelector('[data-testid="debate-counts"]')?.textContent?.includes('–'), undefined, { timeout: 30_000 });
+    await settle(page);
+    if ((await page.getByTestId('current-debate-motion').textContent()) !== motion) throw new Error(`${label}: the motion differs from the online read`);
+    if ((await page.getByTestId('debate-counts').textContent()) !== counts) throw new Error(`${label}: the counts differ from the online read`);
+  };
+
+  // The device goes offline; the app navigates without reloading.
+  offline = true;
+  await context.setOffline(true);
+  await shownNotice(page).waitFor({ timeout: 10_000 });
+  await page.goBack();
+  await page.getByRole('tab', { name: TABS.debate }).click();
+  await page.getByTestId('current-debate-motion').waitFor({ timeout: 15_000 });
+  await shownNotice(page).waitFor();
+  await sameData('device offline');
+  await shoot(page, `${prefix}-offline-debate`);
+  await page.getByRole('tab', { name: TABS.library }).click();
+  await page.getByTestId('source-row').first().waitFor({ timeout: 15_000 });
+  if ((await page.getByTestId('source-row').first().textContent()) !== firstSource) throw new Error('device offline: the Library differs');
+  await shoot(page, `${prefix}-offline-library`);
+  await page.getByTestId('source-row').first().click();
+  await page.getByTestId('source-sheet').getByRole('heading').waitFor({ timeout: 15_000 });
+  await page.waitForTimeout(700);
+  await shoot(page, `${prefix}-offline-source`);
+
+  // Back online, but staging cannot be reached, and the page reloads.
+  await context.setOffline(false);
+  const toBackend = (url: URL) => url.host === STAGING_HOST;
+  await page.route(toBackend, (route) => route.abort('internetdisconnected'));
+  await page.goto(`${ORIGIN}/`);
+  await page.getByTestId('current-debate-motion').waitFor({ timeout: 30_000 });
+  await shownNotice(page).waitFor({ timeout: 15_000 });
+  await sameData('staging unreachable');
+  await shoot(page, `${prefix}-offline-reload-debate`);
+  await page.getByRole('tab', { name: TABS.library }).click();
+  await page.getByTestId('source-row').first().waitFor({ timeout: 15_000 });
+  await shoot(page, `${prefix}-offline-reload-library`);
+  await page.goto(`${ORIGIN}/case/${SAVED_CASE_ID}`);
+  await page.getByTestId('case-document').waitFor({ timeout: 30_000 });
+  await shownNotice(page).waitFor();
+  await page.waitForTimeout(400);
+  await shoot(page, `${prefix}-offline-case`);
+  await page.goto(`${ORIGIN}/prepare`);
+  await openFlowchart(page);
+  await page.getByTestId('flowchart-screen').locator('[data-testid="offline-notice"]:visible').waitFor();
+  await shoot(page, `${prefix}-offline-flowchart`);
+  let shots = 7;
+
+  if (isolation) {
+    // Another account's copies on this device: move every copy to OTHER_USER_ID and make it the owner.
+    await page.evaluate(({ prefix: cachePrefix, from, to }) => {
+      for (const key of Object.keys(localStorage)) {
+        if (!key.startsWith(cachePrefix) || !key.includes(from)) continue;
+        const value = localStorage.getItem(key) ?? '';
+        localStorage.setItem(key.replaceAll(from, to), value.replaceAll(from, to));
+        localStorage.removeItem(key);
+      }
+      localStorage.setItem(`${cachePrefix}.owner`, to);
+    }, { prefix: CACHE_PREFIX, from: userId, to: OTHER_USER_ID });
+    const planted = (await cacheKeys(page)).filter((key) => key.includes(OTHER_USER_ID)).length;
+    await page.goto(`${ORIGIN}/`);
+    await page.getByTestId('auth-settled').waitFor({ state: 'attached', timeout: 60_000 });
+    await settle(page);
+    await page.waitForFunction(
+      ({ prefix: cachePrefix, other }) => !Object.keys(localStorage).some((key) => key.startsWith(cachePrefix) && key.includes(other)),
+      { prefix: CACHE_PREFIX, other: OTHER_USER_ID },
+      { timeout: 15_000 },
+    );
+    const leaked = (await page.locator('body').innerText()).includes(motion ?? '\u0000');
+    const motionShown = await page.getByTestId('current-debate-motion').count();
+    await shoot(page, `${prefix}-offline-other-account`);
+    shots += 1;
+    console.log(`${prefix}: planted ${planted} copies for another account; after a start as this account: left ${(await cacheKeys(page)).filter((key) => key.includes(OTHER_USER_ID)).length}, motion shown ${motionShown > 0}`);
+    if (planted === 0 || leaked || motionShown > 0) throw new Error("This account was shown another account's saved copies");
+
+    // Signing out removes every copy. The logout request is answered here, so the staging session stays valid for other runs.
+    await page.unroute(toBackend);
+    offline = false;
+    await page.route(`https://${STAGING_HOST}/auth/v1/logout*`, (route) => route.fulfill({ status: 204 }));
+    await page.goto(`${ORIGIN}/`);
+    await page.getByTestId('current-debate-motion').waitFor({ timeout: 30_000 });
+    await settle(page);
+    const before = (await cacheKeys(page)).length;
+    await page.getByRole('tab', { name: TABS.you }).click();
+    await page.getByRole('button', { name: /^(Sign out|Kijelentkezés)$/ }).click();
+    await page.waitForURL('**/sign-in', { timeout: 30_000 });
+    await page.waitForFunction((prefix) => !Object.keys(localStorage).some((key) => key.startsWith(prefix)), CACHE_PREFIX, { timeout: 15_000 });
+    console.log(`${prefix}: ${before} saved-copy keys before sign-out, 0 after`);
+    if (before === 0) throw new Error('No saved copies to clear before sign-out');
+  }
+
+  return shots;
+}
+
 async function main() {
   if (!Number.isInteger(PORT) || PORT <= 0) throw new Error('Set PORT to a free port');
   if (!existsSync(join(DIST, 'index.html'))) throw new Error('Run `npm run -w @debatelab/mobile export:web` first');
@@ -1165,93 +1377,104 @@ async function main() {
   let shots = 0;
   try {
     const session = DEMO_CODE ? await signIn(browser, problems) : null;
-    if (!session) console.log('STAGING_DEMO_CODE is not set: signed-in screens skipped');
-    else if (wants('sign-in')) await checkOfflineColdStart(browser, session, problems);
+    if (session && offlineOnly) {
+      for (const [index, run] of OFFLINE_RUNS.entries()) shots += await shootOfflineScreens(browser, session, problems, run, index === 0);
+    } else if (session) await checkOfflineColdStart(browser, session, problems);
+    else console.log('STAGING_DEMO_CODE is not set: signed-in screens skipped');
 
     for (const [device, options] of Object.entries(DEVICES)) {
       for (const scheme of SCHEMES) {
         for (const [language, locale] of Object.entries(LOCALES)) {
           const prefix = `${device}-${scheme}-${language}`;
-          if (!ONLY.some((only) => prefix.startsWith(only))) continue;
-          if (wants('sign-in')) {
-            const signedOut = await browser.newContext({ ...options, colorScheme: scheme, locale });
-            const page = await signedOut.newPage();
-            watchErrors(page, problems, prefix);
-            await page.goto(`${ORIGIN}/sign-in`);
-            await page.getByRole('tablist').waitFor();
-            await shoot(page, `${prefix}-sign-in`);
-            await page.getByRole('button').first().click();
-            await page.getByRole('alert').waitFor();
-            await shoot(page, `${prefix}-sign-in-error`);
-            await page.getByRole('tab').nth(1).click();
-            await shoot(page, `${prefix}-sign-in-demo`);
-            shots += 3;
-            await signedOut.close();
-          }
+          if (ONLY.length > 0 && !ONLY.some((only) => prefix.startsWith(only))) continue;
+          const signedOut = await browser.newContext({ ...options, colorScheme: scheme, locale });
+          const page = await signedOut.newPage();
+          watchErrors(page, problems, prefix);
+          await page.goto(`${ORIGIN}/sign-in`);
+          await page.getByRole('tablist').waitFor();
+          await shoot(page, `${prefix}-sign-in`);
+          await page.getByRole('button').first().click();
+          await page.getByRole('alert').waitFor();
+          await shoot(page, `${prefix}-sign-in-error`);
+          await page.getByRole('tab').nth(1).click();
+          await shoot(page, `${prefix}-sign-in-demo`);
+          shots += 3;
+          await signedOut.close();
 
           if (!session) continue;
           const signedIn = await browser.newContext({ ...options, colorScheme: scheme, locale, storageState: session });
           const tabPage = await signedIn.newPage();
           watchErrors(tabPage, problems, `${prefix} signed in`);
           await pinSettings(tabPage, language);
-          if (wants('debate')) {
+          if (want('debate')) {
             await shootDebateScreens(tabPage, prefix).catch(async (error: unknown) => {
               await shoot(tabPage, `${prefix}-failed`);
               throw error;
             });
             shots += 6;
           }
-          if (wants('library')) {
+          if (want('library')) {
             await shootLibraryScreens(tabPage, prefix).catch(async (error: unknown) => {
               await shoot(tabPage, `${prefix}-failed`);
               throw error;
             });
             shots += 5;
           }
-          for (const [name, route] of wants('tabs') ? Object.entries(SIGNED_IN_ROUTES) : []) {
+          for (const [name, route] of Object.entries(SIGNED_IN_ROUTES)) {
+            if (!want(name)) continue;
             await tabPage.goto(`${ORIGIN}${route}`);
             await tabPage.getByRole('tablist').first().waitFor();
             if (name === 'you') await tabPage.getByTestId('subscription-tier').waitFor({ timeout: 30_000 });
             await settle(tabPage);
             await shoot(tabPage, `${prefix}-${name}`);
             shots += 1;
+            if (name === 'you') {
+              // The web preview turns notifications on without registering anything (push.web.ts).
+              const notifications = tabPage.getByRole('switch', { name: NOTIFICATIONS[language as keyof typeof NOTIFICATIONS] });
+              await notifications.scrollIntoViewIfNeeded();
+              await notifications.click();
+              await tabPage.waitForFunction(() => document.querySelector('[role="switch"]:checked') !== null);
+              await shoot(tabPage, `${prefix}-you-notifications-on`);
+              shots += 1;
+            }
           }
-          if (wants('debate')) {
+          if (want('empty')) {
             const emptyPage = await signedIn.newPage();
             watchErrors(emptyPage, problems, `${prefix} empty`);
             await pinSettings(emptyPage, language);
             await shootEmptyDebate(emptyPage, prefix);
             shots += 2;
           }
-          if (wants('ask')) {
+          if (want('ask')) {
             await shootAskScreens(signedIn, prefix, language, problems);
             shots += 3;
           }
-          if (wants('results')) {
+          if (want('results')) {
             await shootResultScreens(signedIn, prefix, language, problems);
             shots += 9;
           }
-          for (const tool of wants('tools') ? (['brainstorm', 'factoids'] as const) : []) {
+          for (const tool of ['brainstorm', 'factoids'] as const) {
+            if (!want(tool)) continue;
             await shootTool(signedIn, prefix, language, problems, tool);
             shots += 6;
           }
-          if (wants('timer')) {
+          if (want('timer')) {
             await shootTimerScreens(signedIn, prefix, language, problems);
             shots += 3;
           }
-          if (wants('crossfire')) {
+          if (want('crossfire')) {
             await shootCrossfireScreens(signedIn, prefix, language, problems);
             shots += 3;
           }
-          if (wants('sparring')) {
+          if (want('sparring')) {
             await shootSparringScreens(signedIn, prefix, language, problems);
             shots += 6;
           }
-          if (wants('flowchart')) {
+          if (want('flowchart')) {
             await shootFlowchart(signedIn, prefix, language, problems);
             shots += 10;
           }
-          if (wants('tools')) {
+          if (want('one-off')) {
             const oneOffPage = await signedIn.newPage();
             watchErrors(oneOffPage, problems, `${prefix} one-off tools`);
             await pinSettings(oneOffPage, language);

@@ -2,6 +2,8 @@ import type { Session } from '@supabase/supabase-js';
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 
 import { getInstallId, sessionStorage } from './device-storage';
+import { setCacheOwner } from './offline-cache';
+import { forgetPushOnSignOut } from './push';
 import { setSessionOwner } from './session-memory';
 import { supabase } from './supabase';
 import { sessionStorageKey } from './supabase-config';
@@ -78,10 +80,11 @@ async function signOutError(scope: 'global' | 'local'): Promise<string | null> {
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSessionState] = useState<Session | null>(null);
-  // The session memory is cleared before an account change renders, so no
-  // screen ever shows the previous account's forms or results.
+  // The session memory and the saved copies are cleared before an account
+  // change renders, so no screen ever shows the previous account's work.
   const setSession = useCallback((next: Session | null) => {
     setSessionOwner(next?.user.id ?? null);
+    setCacheOwner(next?.user.id ?? null);
     setSessionState(next);
   }, []);
   const [loading, setLoading] = useState(true);
@@ -143,6 +146,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (verificationError) throw verificationError;
     },
     signOut: async () => {
+      // While the session still works, so the next person on this phone gets none of this account's notifications.
+      if (session) await forgetPushOnSignOut(session.user.id, session.access_token);
       // supabase-js loads the session before signing out. Offline with an
       // expired access token that refresh fails, and it returns the error
       // without removing the stored session. Signing out must still sign out

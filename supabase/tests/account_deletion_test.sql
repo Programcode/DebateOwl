@@ -107,6 +107,8 @@ INSERT INTO public.sparring_sessions (user_id, debate_id, motion, user_side, per
   VALUES ('ac000000-0000-4000-8000-00000000000a', 'ac100000-0000-4000-8000-00000000000a', 'Motion', 'pro', 'coach');
 INSERT INTO public.debate_context_pins (user_id, debate_id, item_kind, item_id)
   VALUES ('ac000000-0000-4000-8000-00000000000a', 'ac100000-0000-4000-8000-00000000000a', 'chat', 'ac300000-0000-4000-8000-00000000000a');
+INSERT INTO public.push_tokens (token, user_id, platform)
+  VALUES ('ExponentPushToken[leaverphonetoken00000]', 'ac000000-0000-4000-8000-00000000000a', 'ios');
 INSERT INTO public.ai_requests (user_id, feature, provider, model)
   VALUES ('ac000000-0000-4000-8000-00000000000a', 'brainstorm', 'openrouter', 'model');
 INSERT INTO public.daily_usage_counters (user_id, usage_date) VALUES ('ac000000-0000-4000-8000-00000000000a', current_date);
@@ -118,6 +120,12 @@ INSERT INTO public.subscriptions (user_id, stripe_customer_id, stripe_subscripti
   VALUES ('ac000000-0000-4000-8000-00000000000a', 'cus_leaver', 'sub_leaver', 'active', now(), now() + interval '30 days');
 -- A checkout customer whose subscription the webhook has not recorded yet.
 INSERT INTO public.stripe_customers (user_id, customer_id) VALUES ('ac000000-0000-4000-8000-00000000000a', 'cus_leaver_checkout');
+-- An App Store subscription. Deletion cannot cancel it; Apple keeps billing
+-- until the user cancels in their Apple account settings.
+INSERT INTO public.app_store_subscriptions (original_transaction_id, user_id, product_id, transaction_id, environment,
+    purchased_at, expires_at, transaction_signed_at)
+  VALUES ('leaver-original', 'ac000000-0000-4000-8000-00000000000a', 'com.adam.debatelab.pro.monthly', 'leaver-transaction',
+    'Production', now(), now() + interval '30 days', now());
 
 -- Admin-authored rows: the leaver is an admin whose catalog work must survive.
 INSERT INTO public.promo_codes (id, code, type, created_by)
@@ -260,9 +268,10 @@ SELECT is(
     'stripe_customer_ids', jsonb_build_array('cus_leaver', 'cus_leaver_checkout'),
     'storage_objects', jsonb_build_array(
       jsonb_build_object('bucket_id', 'account-test', 'name', 'leaver/notes.txt')
-    )
+    ),
+    'app_store_subscription_active', true
   ),
-  'the plan lists every Stripe customer and only Storage objects the leaver uploaded, not one a source_files key names'
+  'the plan lists every Stripe customer and only Storage objects the leaver uploaded, not one a source_files key names, and flags the App Store subscription Apple keeps billing'
 );
 RESET ROLE;
 

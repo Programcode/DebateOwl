@@ -12,6 +12,7 @@ import { Text } from '@/components/text';
 import { useAuth } from '@/lib/auth';
 import { useDebates } from '@/lib/debate-context';
 import { addSource, fetchSources, importSourceFromUrl, isDuplicateOrigin } from '@/lib/sources';
+import { useCopyHolder } from '@/lib/use-copy-holder';
 import { useTheme } from '@/theme/use-theme';
 
 /**
@@ -30,6 +31,7 @@ export default function AddLinkSheet() {
   const [title, setTitle] = useState('');
   const [busy, setBusy] = useState<'import' | 'save' | null>(null);
   const [error, setError] = useState('');
+  const copies = useCopyHolder();
 
   const runImport = async () => {
     const trimmed = url.trim();
@@ -57,7 +59,7 @@ export default function AddLinkSheet() {
     setBusy('save');
     setError('');
     try {
-      if (isDuplicateOrigin(await fetchSources(userId, current.id), draft.url)) {
+      if (isDuplicateOrigin(await fetchSources(userId, current.id, copies.mark()), draft.url)) {
         setError(`${t('libraryPage.duplicateSource')}. ${t('libraryPage.duplicateSourceDesc')}`);
         setBusy(null);
         return;

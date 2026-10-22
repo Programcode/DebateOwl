@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react';
+import { useFocusEffect } from 'expo-router';
+import { useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -10,6 +11,7 @@ import { Text } from './text';
 import { useAuth } from '@/lib/auth';
 import { fetchChats, type ChatSummary } from '@/lib/chats';
 import { formatDate } from '@/lib/dates';
+import { useCopyHolder } from '@/lib/use-copy-holder';
 import { useTheme } from '@/theme/use-theme';
 
 /** Saved chats as rows, with their loading, failed and empty states. */
@@ -112,24 +114,31 @@ export function AskChatPane({
   const userId = session?.user.id ?? null;
   const identity = userId ? `${userId}:${debateId ?? ''}` : null;
   const [state, setState] = useState<{ identity: string | null; chats: ChatSummary[] | null; failed: boolean }>({ identity: null, chats: null, failed: false });
+  const copies = useCopyHolder();
 
-  useEffect(() => {
-    if (!userId) return;
-    const key = `${userId}:${debateId ?? ''}`;
-    let active = true;
-    fetchChats(userId, debateId)
-      .then((chats) => {
-        if (active) setState({ identity: key, chats, failed: false });
-      })
-      .catch((cause: unknown) => {
-        console.warn('Could not load chats:', cause instanceof Error ? cause.message : cause);
-        // A reload that fails keeps the list it already shows for this debate.
-        if (active) setState((previous) => ({ identity: key, chats: previous.identity === key ? previous.chats : null, failed: true }));
-      });
-    return () => {
-      active = false;
-    };
-  }, [userId, debateId, reloadKey]);
+  // Leaving Ask drops the saved copies this list is showing, the same as the phone's history sheet.
+  useFocusEffect(
+    useCallback(() => {
+      if (!userId) return;
+      // A new reloadKey means the open chat was saved, so this list loads again.
+      void reloadKey;
+      const key = `${userId}:${debateId ?? ''}`;
+      let active = true;
+      fetchChats(userId, debateId, copies.mark())
+        .then((chats) => {
+          if (active) setState({ identity: key, chats, failed: false });
+        })
+        .catch((cause: unknown) => {
+          console.warn('Could not load chats:', cause instanceof Error ? cause.message : cause);
+          // A reload that fails keeps the list it already shows for this debate.
+          if (active) setState((previous) => ({ identity: key, chats: previous.identity === key ? previous.chats : null, failed: true }));
+        });
+      return () => {
+        active = false;
+        copies.release();
+      };
+    }, [userId, debateId, reloadKey, copies]),
+  );
 
   const mine = state.identity === identity;
   return (

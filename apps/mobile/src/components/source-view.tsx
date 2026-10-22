@@ -1,5 +1,6 @@
+import { useFocusEffect } from 'expo-router';
 import * as WebBrowser from 'expo-web-browser';
-import { useEffect, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
 
@@ -11,6 +12,7 @@ import { Text } from './text';
 
 import { useAuth } from '@/lib/auth';
 import { fetchSource, type Source } from '@/lib/sources';
+import { useCopyHolder } from '@/lib/use-copy-holder';
 import { useTheme } from '@/theme/use-theme';
 
 function webUrl(origin: string | null): string | null {
@@ -29,22 +31,30 @@ export function SourceView({ id, onDone }: { id: string; onDone?: () => void }) 
   const userId = session?.user.id ?? null;
   const [source, setSource] = useState<Source | null | undefined>(undefined);
   const [failed, setFailed] = useState(false);
+  const copies = useCopyHolder();
 
-  useEffect(() => {
-    if (!userId) return;
-    let active = true;
-    fetchSource(userId, id)
-      .then((next) => {
-        if (active) setSource(next);
-      })
-      .catch((cause: unknown) => {
-        console.warn('Could not load the source:', cause instanceof Error ? cause.message : cause);
-        if (active) setFailed(true);
-      });
-    return () => {
-      active = false;
-    };
-  }, [userId, id]);
+  // The same read as the source sheet. Leaving the screen drops the saved copy it is showing.
+  useFocusEffect(
+    useCallback(() => {
+      if (!userId) return;
+      let active = true;
+      setFailed(false);
+      fetchSource(userId, id, copies.mark())
+        .then((next) => {
+          if (!active) return;
+          setSource(next);
+          setFailed(false);
+        })
+        .catch((cause: unknown) => {
+          console.warn('Could not load the source:', cause instanceof Error ? cause.message : cause);
+          if (active) setFailed(true);
+        });
+      return () => {
+        active = false;
+        copies.release();
+      };
+    }, [userId, id, copies]),
+  );
 
   const url = webUrl(source?.origin ?? null);
 

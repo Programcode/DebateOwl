@@ -1,5 +1,7 @@
 import { readFlowchart, type FlowchartDocument } from '@debatelab/core/flowchart';
 
+import { debateListScopes, deletedListScopes } from './debates';
+import { afterWrite, cachedRead, CopyHolder, readFailed, updateCopy, type CopyMark } from './offline-cache';
 import { supabase } from './supabase';
 
 /**
@@ -44,10 +46,14 @@ function fromRow(row: FlowchartRow): SavedFlowchart {
 }
 
 /** The maps saved in one debate, or one-off maps for null, newest first, as the website's saved list shows them. */
-export async function fetchFlowchartList(userId: string, debateId: string | null): Promise<FlowchartSummary[]> {
+export function fetchFlowchartList(userId: string, debateId: string | null, mark?: CopyMark): Promise<FlowchartSummary[]> {
+  return cachedRead(userId, 'flowcharts', debateId ?? 'one-off', () => loadFlowchartList(userId, debateId), mark);
+}
+
+async function loadFlowchartList(userId: string, debateId: string | null): Promise<FlowchartSummary[]> {
   const query = supabase.from('flowcharts').select('id,title,created_at').eq('user_id', userId);
-  const { data, error } = await (debateId ? query.eq('debate_id', debateId) : query.is('debate_id', null)).order('created_at', { ascending: false });
-  if (error) throw new Error(error.message);
+  const { data, error, status } = await (debateId ? query.eq('debate_id', debateId) : query.is('debate_id', null)).order('created_at', { ascending: false });
+  if (error) throw readFailed(error, status);
   return ((data ?? []) as { id: string; title: string; created_at: string }[]).map((row) => ({
     id: row.id,
     title: row.title,
@@ -55,9 +61,16 @@ export async function fetchFlowchartList(userId: string, debateId: string | null
   }));
 }
 
-export async function fetchFlowchart(userId: string, id: string): Promise<SavedFlowchart | null> {
-  const { data, error } = await supabase.from('flowcharts').select(COLUMNS).eq('user_id', userId).eq('id', id).maybeSingle();
-  if (error) throw new Error(error.message);
+/** The copies the Flowchart screen shows, including a map the saved maps sheet opened for it. */
+export const flowchartScreenCopies = new CopyHolder();
+
+export function fetchFlowchart(userId: string, id: string, mark?: CopyMark): Promise<SavedFlowchart | null> {
+  return cachedRead(userId, 'flowchart', id, () => loadFlowchart(userId, id), mark);
+}
+
+async function loadFlowchart(userId: string, id: string): Promise<SavedFlowchart | null> {
+  const { data, error, status } = await supabase.from('flowcharts').select(COLUMNS).eq('user_id', userId).eq('id', id).maybeSingle();
+  if (error) throw readFailed(error, status);
   return data ? fromRow(data as FlowchartRow) : null;
 }
 
@@ -69,7 +82,10 @@ export async function insertFlowchart(userId: string, input: { title: string; de
     .select(COLUMNS)
     .single();
   if (error || !data) throw new Error(error?.message ?? 'Could not save the flowchart');
-  return fromRow(data as FlowchartRow);
+  const saved = fromRow(data as FlowchartRow);
+  afterWrite(userId, [{ group: 'flowcharts', key: saved.debateId ?? 'one-off' }, ...debateListScopes(saved.debateId, 'flowchart')]);
+  updateCopy(userId, 'flowchart', saved.id, () => saved);
+  return saved;
 }
 
 /** Saves over a map the app opened. Resolves false when the row is gone, for example deleted on the website. */
@@ -79,12 +95,22 @@ export async function updateFlowchart(userId: string, id: string, doc: Flowchart
     .update({ nodes: doc.nodes, edges: doc.edges, updated_at: new Date().toISOString() })
     .eq('user_id', userId)
     .eq('id', id)
-    .select('id');
+    .select(COLUMNS);
   if (error) throw new Error(error.message);
-  return (data ?? []).length > 0;
+  const row = ((data ?? []) as FlowchartRow[])[0];
+  // The saved copy becomes the map as saved, so offline it opens this version; a gone row drops it.
+  updateCopy(userId, 'flowchart', id, () => (row ? fromRow(row) : undefined));
+  return Boolean(row);
 }
 
 export async function deleteFlowchart(userId: string, id: string): Promise<void> {
-  const { error } = await supabase.from('flowcharts').delete().eq('user_id', userId).eq('id', id);
+  const { data, error } = await supabase.from('flowcharts').delete().eq('user_id', userId).eq('id', id).select('debate_id');
   if (error) throw new Error(error.message);
+  const deletedFrom = ((data ?? []) as { debate_id: string | null }[]).map((row) => row.debate_id);
+  // With no row, it was already gone and any debate's list, or the one-off list, may still hold it.
+  afterWrite(userId, [
+    { group: 'flowchart', key: id },
+    ...(deletedFrom.length > 0 ? deletedFrom.map((debate) => ({ group: 'flowcharts' as const, key: debate ?? 'one-off' })) : [{ group: 'flowcharts' as const }]),
+    ...deletedListScopes(deletedFrom, 'flowchart'),
+  ]);
 }

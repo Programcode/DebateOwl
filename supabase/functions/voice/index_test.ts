@@ -1,3 +1,4 @@
+import { entitlementRows, type TestTier } from "../_shared/testing/entitlement.ts";
 for (const [key, value] of Object.entries({
   SUPABASE_URL: "https://supabase.test",
   SUPABASE_ANON_KEY: "test-anon-key",
@@ -9,7 +10,6 @@ const { createVoiceToken, VOICE_TOKEN_TTL_MS } = await import("../_shared/voice-
 
 const USER_ID = "11111111-1111-4111-8111-111111111111";
 const TEXT = "[sighs] That is one reading of the evidence. ... It is not the only one.";
-const FUTURE = new Date(Date.now() + 86_400_000).toISOString();
 
 interface Harness {
   /** Every outbound request, in order, as "HOST PATH". */
@@ -25,7 +25,7 @@ interface Options {
   apiKey?: string | null;
   user?: Record<string, unknown> | null;
   role?: string;
-  settings?: Record<string, unknown> | null;
+  tier?: TestTier;
   rateLimit?: { limit_value: number } | null;
   quota?: { allowed: boolean; current_count: number };
   /** The clip counter row a refund would read. */
@@ -58,13 +58,7 @@ async function withVoice(options: Options, run: (harness: Harness) => Promise<vo
       return user ? Response.json(user) : Response.json({ message: "invalid JWT" }, { status: 401 });
     }
     if (url.pathname.endsWith("/rest/v1/user_roles")) return Response.json({ role: options.role ?? "user" });
-    if (url.pathname.endsWith("/rest/v1/user_settings")) {
-      const settings = options.settings === undefined
-        ? { subscription_tier: "pro", daily_limit_override: null, trial_ends_at: null, grace_period_ends_at: FUTURE }
-        : options.settings;
-      return Response.json(settings);
-    }
-    if (url.pathname.endsWith("/rest/v1/subscriptions")) return Response.json([]);
+    if (url.pathname.endsWith("/rest/v1/rpc/effective_entitlement")) return Response.json(entitlementRows(options.tier ?? "pro"));
     if (url.pathname.endsWith("/rest/v1/rate_limits")) {
       if (url.searchParams.get("limit_type") !== "eq.daily_voice_clips") throw new Error(`Wrong limit type: ${url.search}`);
       return Response.json(options.rateLimit ?? null);
@@ -222,20 +216,18 @@ Deno.test("over the daily cap the provider is not called", async () => {
 });
 
 Deno.test("trial users get the smaller cap and an operator override wins", async () => {
-  const trial = { subscription_tier: "trial", daily_limit_override: null, trial_ends_at: FUTURE, grace_period_ends_at: null };
-  await withVoice({ settings: trial }, async (harness) => {
+  await withVoice({ tier: "trial" }, async (harness) => {
     await handleRequest(await voiceRequest());
     assertEquals(harness.quotaRequests[0].p_limit, 12, "trial clip limit");
   });
-  await withVoice({ settings: trial, rateLimit: { limit_value: 3 } }, async (harness) => {
+  await withVoice({ tier: "trial", rateLimit: { limit_value: 3 } }, async (harness) => {
     await handleRequest(await voiceRequest());
     assertEquals(harness.quotaRequests[0].p_limit, 3, "overridden clip limit");
   });
 });
 
 Deno.test("expired and banned accounts get no provider voice", async () => {
-  const expired = { subscription_tier: "trial", daily_limit_override: null, trial_ends_at: "2026-01-01T00:00:00Z", grace_period_ends_at: null };
-  await withVoice({ settings: expired }, async (harness) => {
+  await withVoice({ tier: "expired" }, async (harness) => {
     const response = await handleRequest(await voiceRequest());
     assertEquals(response.status, 402, "expired status");
     assertEquals((await response.json()).code, "voice_limit_reached", "expired code");

@@ -22,6 +22,8 @@ export interface SparringHandlerOptions {
   claimToken: string | undefined;
   /** Called once the scorecard is saved, so the claim is not released. */
   onScoreSaved: () => void;
+  /** Tells the scorer's phones that the round is scored. Must not throw. */
+  notifyScored: (userId: string, sessionId: string) => Promise<void>;
 }
 
 // SPARRING: transcript-only opponent replies and scorecards. No research
@@ -60,6 +62,7 @@ export async function handleSparring(ctx: FeatureContext, options: SparringHandl
       parsedOutput.scorecard,
     );
     options.onScoreSaved();
+    await options.notifyScored(userId, sparringRequest.sessionId);
   }
 
   const responseOutput = parsedOutput.action === "respond"

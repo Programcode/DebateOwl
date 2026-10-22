@@ -11,6 +11,7 @@ import { ClaimInspector } from '@/components/claim-panel';
 import { DocumentHeader, type HeaderAction } from '@/components/document-header';
 import { FlowColumnsView, FlowLegend, MapTreeView } from '@/components/flowchart-views';
 import { Icon } from '@/components/icon';
+import { OfflineNotice } from '@/components/offline-notice';
 import { OneOffNotice } from '@/components/one-off-notice';
 import { SegmentedControl } from '@/components/segmented-control';
 import { Text } from '@/components/text';
@@ -35,8 +36,10 @@ import {
   type FlowchartDraft,
 } from '@/lib/flowchart-drafts';
 import { flowchartToText } from '@/lib/flowchart-text';
-import { deleteFlowchart, fetchFlowchart, fetchFlowchartList, insertFlowchart, updateFlowchart } from '@/lib/flowcharts';
+import { deleteFlowchart, fetchFlowchart, fetchFlowchartList, flowchartScreenCopies, insertFlowchart, updateFlowchart } from '@/lib/flowcharts';
 import { PANE_WIDTH, useLayoutClass } from '@/lib/layout';
+import { openClaim } from '@/lib/open-pane';
+import { useCopyHolder } from '@/lib/use-copy-holder';
 import { useTheme } from '@/theme/use-theme';
 
 const NOTICE_MS = 3500;
@@ -76,6 +79,7 @@ export default function FlowchartScreen() {
 
   const live = useRef(true);
   const owner = useRef(userId);
+  const copies = useCopyHolder(flowchartScreenCopies);
   owner.current = userId;
   const loads = useRef(0);
   const noticeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -103,6 +107,7 @@ export default function FlowchartScreen() {
     if (!userId) return;
     const forUser = userId;
     const isCurrent = () => loads.current === request && live.current && owner.current === forUser;
+    const mark = copies.mark();
     setFailure(null);
     const run = async () => {
       if (requestedId) {
@@ -112,7 +117,7 @@ export default function FlowchartScreen() {
           setFound({ id: requestedId, scope: held.scope });
           return;
         }
-        const row = await fetchFlowchart(forUser, requestedId);
+        const row = await fetchFlowchart(forUser, requestedId, mark);
         if (!isCurrent()) return;
         if (!row) {
           setFailure({ scope: null, kind: 'missing' });
@@ -125,9 +130,9 @@ export default function FlowchartScreen() {
       }
       const target = scopeKey(activeDebateId);
       if (openDraft(target)) return;
-      const list = await fetchFlowchartList(forUser, activeDebateId);
+      const list = await fetchFlowchartList(forUser, activeDebateId, mark);
       if (!isCurrent() || openDraft(target)) return;
-      const row = list.length > 0 ? await fetchFlowchart(forUser, list[0].id) : null;
+      const row = list.length > 0 ? await fetchFlowchart(forUser, list[0].id, mark) : null;
       if (!isCurrent() || openDraft(target)) return;
       showDraft(target, row ? savedDraft(row) : newDraft(activeDebateId, starterFlowchart(tRef.current)));
     };
@@ -136,7 +141,7 @@ export default function FlowchartScreen() {
       console.warn('Could not load flowcharts:', cause instanceof Error ? cause.message : cause);
       setFailure({ scope: requestedId ? null : scopeKey(activeDebateId), kind: 'failed' });
     });
-  }, [userId, activeDebateId, requestedId, attempt]);
+  }, [userId, activeDebateId, requestedId, attempt, copies]);
 
   const open = scope ? openDraft(scope) : null;
   const draft = open?.draft ?? null;
@@ -151,8 +156,13 @@ export default function FlowchartScreen() {
     }
     router.push({ pathname: '/flowchart/claim', params: { scope, map: open.draft.handle, node: node.id } });
   };
-  // The inspector shows only a card of the map on screen; another account, map or debate closes it.
-  const docked = layout !== 'phone' && claim && claim.userId === userId && claim.scope === scope && claim.map === open?.draft.handle ? claim : null;
+  const mapHandle = open?.draft.handle ?? null;
+  // Switching maps, debates or accounts drops the docked card, so coming back does not reopen it.
+  // A narrower window only hides it; widening again keeps the card the student had open.
+  useEffect(() => {
+    setClaim((current) => openClaim(current, { userId, scope, map: mapHandle }));
+  }, [userId, scope, mapHandle]);
+  const docked = layout !== 'phone' ? openClaim(claim, { userId, scope, map: mapHandle }) : null;
 
   /** Runs a save or delete for the map on screen, as the account and map were when the student chose it. */
   const act = async (work: (forUser: string, at: { scope: string; key: string; draft: FlowchartDraft }) => Promise<void>) => {
@@ -309,6 +319,7 @@ export default function FlowchartScreen() {
           </Pressable>
         ) : null}
         {oneOff ? <OneOffNotice /> : null}
+        <OfflineNotice />
         <SegmentedControl
           options={[
             { value: 'flow', label: t('mobile.flowchart.flow') },

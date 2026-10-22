@@ -27,7 +27,7 @@ export interface RateLimitResult {
 }
 
 export interface SubscriptionInfo {
-  tier: string; // 'trial' | 'pro' | 'legacy_free' | 'expired'
+  tier: string; // 'trial' | 'basic' | 'pro' | 'legacy_free' | 'expired'
   dailyLimit: number;
   canAccessProModels: boolean;
   trialEndsAt: string | null;
@@ -43,82 +43,27 @@ export async function checkUserBanned(userId: string): Promise<boolean> {
   return data?.role === "banned";
 }
 
+// A missing or unreadable plan is untrusted, not a new user: fail closed
+// instead of granting a fresh trial.
+const NO_ACCESS: SubscriptionInfo = { tier: "expired", dailyLimit: 0, canAccessProModels: false, trialEndsAt: null, gracePeriodEndsAt: null };
+
+/**
+ * The user's plan from effective_entitlement() (migration
+ * 20261014123154_app_store_entitlements.sql), which merges Stripe, App Store,
+ * promo, trial and legacy access into the highest active tier.
+ */
 export async function getSubscriptionInfo(userId: string): Promise<SubscriptionInfo> {
-  const { data: user } = await supabase
-    .from("user_settings")
-    .select("subscription_tier, daily_limit_override, trial_ends_at, grace_period_ends_at")
-    .eq("user_id", userId)
-    .single();
-
-  // A settings row is provisioned for every account by the on_auth_user_created
-  // trigger and can no longer be deleted by the client (see 20260819000000
-  // security_hardening.sql). A missing row is therefore untrusted, not a new
-  // user — fail closed instead of granting a fresh trial.
-  if (!user) return { tier: "expired", dailyLimit: 0, canAccessProModels: false, trialEndsAt: null, gracePeriodEndsAt: null };
-
-  const tier = user.subscription_tier || "trial";
-  const limitOrDefault = (defaultLimit: number) => user.daily_limit_override ?? defaultLimit;
-  const now = new Date();
-  const expired = { tier: "expired", dailyLimit: limitOrDefault(0), canAccessProModels: false, trialEndsAt: user.trial_ends_at, gracePeriodEndsAt: user.grace_period_ends_at };
-  const activeGiftTrial = user.trial_ends_at ? new Date(user.trial_ends_at) : null;
-  const giftTrialInfo = activeGiftTrial && now < activeGiftTrial
-    ? { tier: "trial", dailyLimit: limitOrDefault(5), canAccessProModels: false, trialEndsAt: user.trial_ends_at, gracePeriodEndsAt: user.grace_period_ends_at }
-    : null;
-
-  // Legacy free users in grace period get pro-level access
-  if (tier === "legacy_free") {
-    const graceEnd = user.grace_period_ends_at ? new Date(user.grace_period_ends_at) : null;
-    if (graceEnd && now < graceEnd) {
-      return { tier: "legacy_free", dailyLimit: limitOrDefault(50), canAccessProModels: true, trialEndsAt: user.trial_ends_at, gracePeriodEndsAt: user.grace_period_ends_at };
-    }
-    if (giftTrialInfo) return giftTrialInfo;
-    // Grace period expired — treat as expired
-    return expired;
-  }
-
-  // Pro subscribers or promo Pro access. Stripe Pro must have an active
-  // subscription period; promo Pro uses grace_period_ends_at, with lifetime
-  // promo codes represented by a far-future date.
-  if (tier === "pro") {
-    const promoEnd = user.grace_period_ends_at ? new Date(user.grace_period_ends_at) : null;
-    if (promoEnd && now < promoEnd) {
-      return { tier: "pro", dailyLimit: limitOrDefault(50), canAccessProModels: true, trialEndsAt: user.trial_ends_at, gracePeriodEndsAt: user.grace_period_ends_at };
-    }
-
-    const { data: subscriptions } = await supabase
-      .from("subscriptions")
-      .select("status, current_period_end")
-      .eq("user_id", userId)
-      .in("status", ["active", "trialing"])
-      .order("current_period_end", { ascending: false })
-      .limit(1);
-
-    const activeSubscription = subscriptions?.find((sub) =>
-      sub.current_period_end && new Date(sub.current_period_end) > now
-    );
-
-    if (activeSubscription) {
-      return { tier: "pro", dailyLimit: limitOrDefault(50), canAccessProModels: true, trialEndsAt: user.trial_ends_at, gracePeriodEndsAt: user.grace_period_ends_at };
-    }
-
-    if (giftTrialInfo) return giftTrialInfo;
-    return expired;
-  }
-
-  // Trial users
-  if (tier === "trial") {
-    const trialEnd = user.trial_ends_at ? new Date(user.trial_ends_at) : null;
-    if (trialEnd && now < trialEnd) {
-      return { tier: "trial", dailyLimit: limitOrDefault(5), canAccessProModels: false, trialEndsAt: user.trial_ends_at, gracePeriodEndsAt: user.grace_period_ends_at };
-    }
-    // Trial expired
-    return expired;
-  }
-
-  if (giftTrialInfo) return giftTrialInfo;
-
-  // Expired
-  return expired;
+  const { data, error } = await supabase.rpc("effective_entitlement", { p_user_id: userId });
+  if (error) console.error("[ENTITLEMENT] Plan lookup failed:", error.code ?? error.message);
+  const row = Array.isArray(data) ? data[0] : data;
+  if (error || !row || typeof row.tier !== "string" || typeof row.daily_limit !== "number") return NO_ACCESS;
+  return {
+    tier: row.tier,
+    dailyLimit: row.daily_limit,
+    canAccessProModels: row.can_access_pro_models === true,
+    trialEndsAt: row.trial_ends_at ?? null,
+    gracePeriodEndsAt: row.grace_period_ends_at ?? null,
+  };
 }
 
 export async function getConfiguredDailyLimit(userId: string, fallbackLimit: number, limitType = "daily_requests"): Promise<number> {

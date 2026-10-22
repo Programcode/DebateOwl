@@ -14,6 +14,8 @@ import * as Crypto from 'expo-crypto';
 import { AIError, functionOutput, postFunction, PROVIDER } from './ai-request';
 import type { FeatureConfig } from './feature-config';
 import { sessionSlot } from './session-memory';
+import { debateListScopes, deletedListScopes } from './debates';
+import { afterWrite, cachedRead, readFailed, type CopyMark, type CopyScope } from './offline-cache';
 import { supabase } from './supabase';
 
 /**
@@ -81,16 +83,33 @@ export function judgeSparring(input: SparringScoreInput, options: RequestOptions
   });
 }
 
-/** Files a judged round in its debate under the side the student spoke, as the store's attachSessionToDebate. */
-export async function attachSparring(id: string, debateId: string, side: SparringSide): Promise<void> {
-  const { error } = await supabase.rpc('attach_to_debate', { p_kind: 'sparring', p_id: id, p_debate_id: debateId, p_side: side });
-  if (error) throw new Error(error.message);
+/** The saved lists a judged round appears in, or leaves, in this debate or outside every debate. */
+const roundListScopes = (debateId: string | null): CopyScope[] => [{ group: 'sparring-rounds', prefix: `${debateId ?? 'one-off'}:` }];
+
+/**
+ * Called once the judge answered: the server saved the round as judged, so it
+ * now shows in the lists of the debate it was started in, or outside every debate.
+ */
+export function noteJudgedRound(userId: string, id: string, debateId: string | null) {
+  afterWrite(userId, [{ group: 'sparring', key: id }, ...roundListScopes(debateId), ...debateListScopes(debateId, 'sparring')]);
 }
 
-/** A saved, judged round; null when there is none or it does not check out. */
-export async function fetchSparringRound(userId: string, id: string): Promise<SparringSession | null> {
-  const { data, error } = await supabase.from('sparring_sessions').select(SPARRING_SESSION_COLUMNS).eq('user_id', userId).eq('id', id).maybeSingle();
+/** Files a judged round in its debate under the side the student spoke, as the store's attachSessionToDebate. */
+export async function attachSparring(userId: string, id: string, debateId: string, side: SparringSide): Promise<void> {
+  const { error } = await supabase.rpc('attach_to_debate', { p_kind: 'sparring', p_id: id, p_debate_id: debateId, p_side: side });
   if (error) throw new Error(error.message);
+  // The round may have been outside every debate until now.
+  afterWrite(userId, [{ group: 'sparring', key: id }, ...roundListScopes(debateId), ...roundListScopes(null), ...debateListScopes(debateId, 'sparring')]);
+}
+
+/** A saved, judged round; null when there is none or it does not check out. Offline, the saved copy. */
+export async function fetchSparringRound(userId: string, id: string, mark?: CopyMark): Promise<SparringSession | null> {
+  return cachedRead(userId, 'sparring', id, () => loadSparringRound(userId, id), mark);
+}
+
+async function loadSparringRound(userId: string, id: string): Promise<SparringSession | null> {
+  const { data, error, status } = await supabase.from('sparring_sessions').select(SPARRING_SESSION_COLUMNS).eq('user_id', userId).eq('id', id).maybeSingle();
+  if (error) throw readFailed(error, status);
   return data ? parseSavedSparringRows([data])[0] ?? null : null;
 }
 
@@ -105,11 +124,15 @@ export interface SparringRoundSummary {
  * The judged rounds in one debate, or outside every debate when `debateId` is
  * null, newest first, as the website's history lists them.
  */
-export async function fetchSparringRounds(userId: string, debateId: string | null, limit: number): Promise<SparringRoundSummary[]> {
+export async function fetchSparringRounds(userId: string, debateId: string | null, limit: number, mark?: CopyMark): Promise<SparringRoundSummary[]> {
+  return cachedRead(userId, 'sparring-rounds', `${debateId ?? 'one-off'}:${limit}`, () => loadSparringRounds(userId, debateId, limit), mark);
+}
+
+async function loadSparringRounds(userId: string, debateId: string | null, limit: number): Promise<SparringRoundSummary[]> {
   let query = supabase.from('sparring_sessions').select('id,motion,user_side,updated_at').eq('user_id', userId).eq('status', 'complete');
   query = debateId ? query.eq('debate_id', debateId) : query.is('debate_id', null);
-  const { data, error } = await query.order('updated_at', { ascending: false }).limit(limit);
-  if (error) throw new Error(error.message);
+  const { data, error, status } = await query.order('updated_at', { ascending: false }).limit(limit);
+  if (error) throw readFailed(error, status);
   return ((data ?? []) as { id: string; motion: string; user_side: SparringSide; updated_at: string }[]).map((row) => ({
     id: row.id,
     motion: row.motion,
@@ -119,8 +142,12 @@ export async function fetchSparringRounds(userId: string, debateId: string | nul
 }
 
 export async function deleteSparringRound(userId: string, id: string): Promise<void> {
-  const { error } = await supabase.from('sparring_sessions').delete().eq('user_id', userId).eq('id', id);
+  const { data, error } = await supabase.from('sparring_sessions').delete().eq('user_id', userId).eq('id', id).select('debate_id');
   if (error) throw new Error(error.message);
+  const deletedFrom = ((data ?? []) as { debate_id: string | null }[]).map((row) => row.debate_id);
+  // With no row, it was already gone and any debate's rounds, or the one-off rounds, may still list it.
+  const roundLists: CopyScope[] = deletedFrom.length > 0 ? deletedFrom.flatMap(roundListScopes) : [{ group: 'sparring-rounds' }];
+  afterWrite(userId, [{ group: 'sparring', key: id }, ...roundLists, ...deletedListScopes(deletedFrom, 'sparring')]);
 }
 
 /** A new round's id. The server takes it as the saved row's id, so it must be a UUID. */
