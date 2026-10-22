@@ -1599,6 +1599,7 @@
     "newFolderPlaceholder": "Mappa neve...",
     "newFolderHint": "Új mappára van szükség? Használd a felső „Új mappa” gombot.",
     "createFolder": "Mappa létrehozása",
+    "saveFailed": "Ezt a forrást nem sikerült menteni.",
     "sortBy": "Rendezés",
     "sortSmart": "Intelligens",
     "sortMostUsed": "Legtöbbet használt",

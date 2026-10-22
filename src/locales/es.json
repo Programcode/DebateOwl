@@ -1599,6 +1599,7 @@
     "newFolderPlaceholder": "Nombre de carpeta...",
     "newFolderHint": "¿Necesitas una carpeta nueva? Usa el botón \"Nueva carpeta\" arriba.",
     "createFolder": "Crear carpeta",
+    "saveFailed": "No se pudo guardar esta fuente.",
     "sortBy": "Ordenar por",
     "sortSmart": "Inteligente",
     "sortMostUsed": "Más usadas",

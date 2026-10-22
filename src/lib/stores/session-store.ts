@@ -7,6 +7,7 @@ import type { BrainstormOutput, BrainstormInput } from '../ai/schemas/brainstorm
 import type { FactoidsOutput, FactoidsInput } from '../ai/schemas/factoids';
 import type { AskOutput } from '../ai/schemas/ask';
 import { supabase } from '@/lib/supabase/client';
+import { currentUserId } from '@/lib/supabase/current-user';
 import i18n from '@/i18n';
 import { activeDebateId, useDebateStore, type DebateSide } from './debate-store';
 
@@ -288,8 +289,11 @@ function mergeSourceFolders(currentFolders: string[], sources: Source[] = []) {
 }
 
 async function getUserId() {
-  const { data } = await supabase.auth.getUser();
-  return data.user?.id || null;
+  return await currentUserId();
+}
+
+function signInRequired(action: string): Error {
+  return new Error(`Sign in to ${action}`);
 }
 
 type EqQuery = {
@@ -509,13 +513,7 @@ export const useSessionStore = create<SessionState>()(
         const place = (list: Source[], item: Source) =>
           restoredId ? [...list, item].sort((x, y) => y.createdAt - x.createdAt) : [item, ...list];
         const userId = await getUserId();
-        if (!userId) {
-          set((state) => ({
-            sourceFolders: mergeSourceFolders(state.sourceFolders, [localItem]),
-            sourceLibrary: place(state.sourceLibrary, localItem),
-          }));
-          return;
-        }
+        if (!userId) throw signInRequired('save this source');
 
         const folderResult = await supabase
           .from('source_folders')
@@ -560,14 +558,17 @@ export const useSessionStore = create<SessionState>()(
       },
       createSourceFolder: async (folder) => {
         const normalized = normalizeFolder(folder);
+        const userId = await getUserId();
+        if (!userId) throw signInRequired('save this folder');
+        throwOnWriteError(
+          await supabase
+            .from('source_folders')
+            .upsert({ user_id: userId, name: normalized }, { onConflict: 'user_id,name' }),
+          'save source folder',
+        );
         set((state) => ({
           sourceFolders: mergeSourceFolders([...state.sourceFolders, normalized], state.sourceLibrary),
         }));
-        const userId = await getUserId();
-        if (!userId) return;
-        await supabase
-          .from('source_folders')
-          .upsert({ user_id: userId, name: normalized }, { onConflict: 'user_id,name' });
       },
       updateSource: async (id, patch) => {
         const current = get().sourceLibrary.find((s) => s.id === id);
@@ -595,7 +596,7 @@ export const useSessionStore = create<SessionState>()(
 
         try {
           const userId = await getUserId();
-          if (!userId) return;
+          if (!userId) throw signInRequired('save this source');
           if (nextSource.folder) {
             const folderResult = await supabase
               .from('source_folders')
@@ -660,7 +661,7 @@ export const useSessionStore = create<SessionState>()(
         set((state) => ({ sourceLibrary: state.sourceLibrary.map((source) => updates.get(source.id) ?? source) }));
         try {
           const userId = await getUserId();
-          if (!userId) return;
+          if (!userId) throw signInRequired('save this source');
           await Promise.all(Array.from(updates.values()).map(async (source) => {
             const result = await applyUserScopedIdFilter(
               supabase.from('sources').update({ metadata: source.metadata ?? null }),
@@ -696,7 +697,7 @@ export const useSessionStore = create<SessionState>()(
         };
 
         const userId = await getUserId();
-        if (!userId) return applyRename();
+        if (!userId) throw signInRequired('rename this folder');
         const folderResult = await supabase
           .from('source_folders')
           .upsert({ user_id: userId, name: to }, { onConflict: 'user_id,name' });
@@ -737,7 +738,7 @@ export const useSessionStore = create<SessionState>()(
         };
 
         const userId = await getUserId();
-        if (!userId) return applyDelete();
+        if (!userId) throw signInRequired('delete this folder');
         if (affected.length > 0) {
           throwOnWriteError(
             await supabase.from('sources').update({ folder: 'General' }).eq('user_id', userId).eq('debate_id', debateId).eq('folder', folder),
@@ -757,13 +758,12 @@ export const useSessionStore = create<SessionState>()(
         const debateId = useDebateStore.getState().currentDebateId;
         if (!debateId) throw new DebateRequiredError();
         const userId = await getUserId();
-        if (userId) {
-          throwOnWriteError(
-            await supabase.from('sources').update({ is_active: isActive })
-              .eq('user_id', userId).eq('debate_id', debateId).eq('folder', normalized),
-            'update source folder activity',
-          );
-        }
+        if (!userId) throw signInRequired('update this folder');
+        throwOnWriteError(
+          await supabase.from('sources').update({ is_active: isActive })
+            .eq('user_id', userId).eq('debate_id', debateId).eq('folder', normalized),
+          'update source folder activity',
+        );
         set((state) => ({
           sourceLibrary: state.sourceLibrary.map((source) =>
             source.debateId === debateId && normalizeFolder(source.folder) === normalized ? { ...source, isActive } : source
@@ -772,10 +772,9 @@ export const useSessionStore = create<SessionState>()(
       },
       removeSource: async (id) => {
         const userId = await getUserId();
-        if (userId) {
-          const result = await applyUserScopedIdFilter(supabase.from('sources').delete(), userId, id);
-          throwOnWriteError(result, 'delete source');
-        }
+        if (!userId) throw signInRequired('delete this source');
+        const result = await applyUserScopedIdFilter(supabase.from('sources').delete(), userId, id);
+        throwOnWriteError(result, 'delete source');
         set((state) => ({ sourceLibrary: state.sourceLibrary.filter((source) => source.id !== id) }));
       },
       toggleSource: async (id) => {
@@ -783,12 +782,11 @@ export const useSessionStore = create<SessionState>()(
         if (!current) return;
         const nextValue = !current.isActive;
         const userId = await getUserId();
-        if (userId) {
-          throwOnWriteError(
-            await applyUserScopedIdFilter(supabase.from('sources').update({ is_active: nextValue }), userId, id),
-            'toggle source activity',
-          );
-        }
+        if (!userId) throw signInRequired('update this source');
+        throwOnWriteError(
+          await applyUserScopedIdFilter(supabase.from('sources').update({ is_active: nextValue }), userId, id),
+          'toggle source activity',
+        );
         set((state) => ({
           sourceLibrary: state.sourceLibrary.map((source) => source.id === id ? { ...source, isActive: nextValue } : source),
         }));
@@ -822,12 +820,8 @@ export const useSessionStore = create<SessionState>()(
       saveCurrentCase: async (title) => {
         const current = get().generateResult;
         if (!current) return;
-        const localItem = { id: generateId(), data: current, createdAt: Date.now(), title };
         const userId = await getUserId();
-        if (!userId) {
-          set((state) => ({ savedCases: [localItem, ...state.savedCases] }));
-          return;
-        }
+        if (!userId) throw signInRequired('save this case');
         const { data, error } = await supabase
           .from('cases')
           .insert({ user_id: userId, title, input: {}, output: current })
@@ -839,9 +833,13 @@ export const useSessionStore = create<SessionState>()(
         set((state) => ({ savedCases: [savedItem, ...state.savedCases] }));
       },
       deleteSavedCase: async (id) => {
-        set((state) => ({ savedCases: state.savedCases.filter((c) => c.id !== id) }));
         const userId = await getUserId();
-        await applyUserScopedIdFilter(supabase.from('cases').delete(), userId, id);
+        if (!userId) throw signInRequired('delete this case');
+        throwOnWriteError(
+          await applyUserScopedIdFilter(supabase.from('cases').delete(), userId, id),
+          'delete case',
+        );
+        set((state) => ({ savedCases: state.savedCases.filter((c) => c.id !== id) }));
       },
       loadSavedCase: (id) => {
         const item = get().savedCases.find((c) => c.id === id);
@@ -859,12 +857,8 @@ export const useSessionStore = create<SessionState>()(
       saveCurrentAttack: async (title) => {
         const current = get().attackResult;
         if (!current) return;
-        const localItem = { id: generateId(), data: current, createdAt: Date.now(), title };
         const userId = await getUserId();
-        if (!userId) {
-          set((state) => ({ savedAttacks: [localItem, ...state.savedAttacks] }));
-          return;
-        }
+        if (!userId) throw signInRequired('save this attack');
         const { data, error } = await supabase
           .from('attacks')
           .insert({ user_id: userId, title, input: {}, output: current })
@@ -891,12 +885,8 @@ export const useSessionStore = create<SessionState>()(
       saveCurrentBrainstorm: async (title) => {
         const current = get().brainstormResult;
         if (!current) return;
-        const localItem = { id: generateId(), data: current, createdAt: Date.now(), title };
         const userId = await getUserId();
-        if (!userId) {
-          set((state) => ({ savedBrainstorms: [localItem, ...state.savedBrainstorms] }));
-          return;
-        }
+        if (!userId) throw signInRequired('save this brainstorm');
         const { data, error } = await supabase
           .from('brainstorms')
           .insert({ user_id: userId, title, input: {}, output: current })
@@ -923,12 +913,8 @@ export const useSessionStore = create<SessionState>()(
       saveCurrentFactoids: async (title) => {
         const current = get().factoidsResult;
         if (!current) return;
-        const localItem = { id: generateId(), data: current, createdAt: Date.now(), title };
         const userId = await getUserId();
-        if (!userId) {
-          set((state) => ({ savedFactoids: [localItem, ...state.savedFactoids] }));
-          return;
-        }
+        if (!userId) throw signInRequired('save these factoids');
         const { data, error } = await supabase
           .from('factoids')
           .insert({ user_id: userId, title, input: {}, output: current })
@@ -961,12 +947,8 @@ export const useSessionStore = create<SessionState>()(
       saveCurrentChat: async (title) => {
         const current = get().askMessages;
         if (current.length === 0) return;
-        const localItem = { id: generateId(), data: current, createdAt: Date.now(), title };
         const userId = await getUserId();
-        if (!userId) {
-          set((state) => ({ savedChats: [localItem, ...state.savedChats] }));
-          return;
-        }
+        if (!userId) throw signInRequired('save this chat');
         const { data: chat, error } = await supabase
           .from('chats')
           .insert({ user_id: userId, title })
@@ -995,12 +977,8 @@ export const useSessionStore = create<SessionState>()(
       },
 
       saveFlowchart: async (title, data, debateId = activeDebateId()) => {
-        const localItem = { id: generateId(), data, createdAt: Date.now(), title, debateId, side: 'neutral' as const };
         const userId = await getUserId();
-        if (!userId) {
-          set((state) => ({ savedFlowcharts: [localItem, ...state.savedFlowcharts] }));
-          return;
-        }
+        if (!userId) throw signInRequired('save this flowchart');
         const { data: saved, error } = await supabase
           .from('flowcharts')
           .insert({
@@ -1029,7 +1007,7 @@ export const useSessionStore = create<SessionState>()(
 
       recordResult: async (kind, { title, input, output, debateId, side }) => {
         const userId = await getUserId();
-        if (!userId) throw new Error('[SessionStore] Sign in to save results to a debate');
+        if (!userId) throw signInRequired('save results to a debate');
         const { data, error } = await supabase
           .from(RESULT_TABLES[kind])
           .insert({ user_id: userId, debate_id: debateId, side, title: title.slice(0, 300) || 'Untitled', input: input ?? {}, output })
@@ -1046,7 +1024,7 @@ export const useSessionStore = create<SessionState>()(
 
       updateRecordedResult: async (kind, id, output) => {
         const userId = await getUserId();
-        if (!userId) return;
+        if (!userId) throw signInRequired('update this result');
         throwOnWriteError(
           await applyUserScopedIdFilter(supabase.from(RESULT_TABLES[kind]).update({ output }), userId, id),
           `update ${kind}`,
@@ -1325,7 +1303,7 @@ async function syncAskChatNow(debateId: string | null): Promise<void> {
   if (askMessages.length === 0 || askPersistedCount >= askMessages.length) return;
   if (!askChatId && !debateId) return;
   const userId = await getUserId();
-  if (!userId) return;
+  if (!userId) throw signInRequired('save this chat');
   // Clearing or replacing the conversation while a write is in flight must not
   // hand this chat or its count to the next conversation.
   const sameConversation = () => {
