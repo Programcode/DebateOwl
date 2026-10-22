@@ -79,10 +79,11 @@ class SourceTimeoutError extends Error {
 
 // The caller's signal is the import's one deadline: it covers DNS, every
 // redirect hop and the body read that follows.
-async function fetchWithRedirects(initialUrl: URL, signal: AbortSignal) {
+async function fetchWithRedirects(initialUrl: URL, signal: AbortSignal, onOutboundRequest?: () => void) {
   let currentUrl = initialUrl;
   for (let hop = 0; hop <= MAX_REDIRECTS; hop += 1) {
     await validateResolvedPublicHost(currentUrl, signal);
+    onOutboundRequest?.();
     const response = await untilAborted(fetch(currentUrl.toString(), {
       headers: {
         "Accept": "text/html, text/plain;q=0.9, application/xhtml+xml;q=0.8",
@@ -198,11 +199,15 @@ export async function handleRequest(req: Request): Promise<Response> {
   const startedAt = Date.now();
   const deadline = new AbortController();
   const deadlineTimer = setTimeout(() => deadline.abort(new SourceTimeoutError()), FETCH_TIMEOUT_MS);
-  // A reserved slot is given back unless the import actually succeeds. Upstream
-  // 4xx/5xx, timeouts and unreadable pages must not spend the daily 50.
+  // A reserved slot is given back only when the import fails before any request
+  // leaves for the source URL (for example the host fails the SSRF re-check, or
+  // our own code throws). Once a request has been sent the slot stays spent,
+  // whatever the outcome: refunding upstream errors, unsupported or too-short
+  // pages would let a user make unlimited fetches of any URL.
   let quotaReserved = false;
-  const releaseQuota = async () => {
-    if (!quotaReserved) return;
+  let outboundRequestSent = false;
+  const releaseQuotaIfNotFetched = async () => {
+    if (!quotaReserved || outboundRequestSent) return;
     quotaReserved = false;
     await refundDailyImportQuota(user.id);
   };
@@ -245,11 +250,12 @@ export async function handleRequest(req: Request): Promise<Response> {
     }
     quotaReserved = true;
 
-    const { response, finalUrl } = await fetchWithRedirects(parsedUrl, deadline.signal);
+    const { response, finalUrl } = await fetchWithRedirects(parsedUrl, deadline.signal, () => {
+      outboundRequestSent = true;
+    });
 
     if (!response.ok) {
       await response.body?.cancel().catch(() => undefined);
-      await releaseQuota();
       await logImport(user.id, "error", `upstream_${response.status}`, Date.now() - startedAt);
       return jsonResponse({ error: `Could not fetch source (${response.status}).` }, 502, corsHeaders);
     }
@@ -257,7 +263,6 @@ export async function handleRequest(req: Request): Promise<Response> {
     const contentType = response.headers.get("content-type") || "";
     if (!contentType.includes("text/html") && !contentType.includes("text/plain") && !contentType.includes("application/xhtml+xml")) {
       await response.body?.cancel().catch(() => undefined);
-      await releaseQuota();
       await logImport(user.id, "error", "unsupported_type", Date.now() - startedAt);
       return jsonResponse({ error: "Only HTML and plain text pages can be imported from a URL." }, 415, corsHeaders);
     }
@@ -267,7 +272,6 @@ export async function handleRequest(req: Request): Promise<Response> {
     const { content, truncated } = normalizeText(isHtml ? stripHtml(raw) : raw);
 
     if (content.split(/\s+/).filter(Boolean).length < 20) {
-      await releaseQuota();
       await logImport(user.id, "error", "too_short", Date.now() - startedAt);
       return jsonResponse({ error: "This page did not contain enough readable text to import." }, 422, corsHeaders);
     }
@@ -290,7 +294,7 @@ export async function handleRequest(req: Request): Promise<Response> {
       url: finalUrl.toString(),
     }, 200, corsHeaders);
   } catch (error) {
-    await releaseQuota();
+    await releaseQuotaIfNotFetched();
     if (deadline.signal.aborted) {
       await logImport(user.id, "error", "timeout", Date.now() - startedAt);
       return jsonResponse({ error: new SourceTimeoutError().message }, 504, corsHeaders);

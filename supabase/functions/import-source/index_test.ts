@@ -106,14 +106,25 @@ Deno.test("import-source rejects invalid bodies and private URLs without spendin
   } finally { globalThis.fetch = originalFetch; Deno.resolveDns = originalResolveDns; }
 });
 
-Deno.test("import-source refunds the slot when the upstream page fails", async () => {
+async function importWithStubs(
+  upstream: () => Response,
+  resolveDns: (host: string, type: string, call: number) => string[],
+) {
   const originalFetch = globalThis.fetch;
   const originalResolveDns = Deno.resolveDns;
   const refunds: Record<string, unknown>[] = [];
-  Deno.resolveDns = ((_host: string, type: string) => Promise.resolve(type === "A" ? ["93.184.216.34"] : [])) as typeof Deno.resolveDns;
+  let upstreamCalls = 0;
+  let dnsCalls = 0;
+  Deno.resolveDns = ((host: string, type: string) => {
+    if (type === "A") dnsCalls++;
+    return Promise.resolve(resolveDns(host, type, dnsCalls));
+  }) as typeof Deno.resolveDns;
   globalThis.fetch = (async (input: Request | URL | string, init?: RequestInit) => {
     const url = new URL(input instanceof Request ? input.url : String(input));
-    if (url.origin === "https://example.com") return new Response("nope", { status: 503 });
+    if (url.origin === "https://example.com") {
+      upstreamCalls++;
+      return upstream();
+    }
     if (url.pathname === "/auth/v1/user") return jsonResponse({ id: "user-1", aud: "authenticated" });
     if (url.pathname.endsWith("/user_roles")) return jsonResponse({ role: "user" });
     if (url.pathname.endsWith("/ai_requests")) return new Response(null, { status: 201 });
@@ -128,14 +139,50 @@ Deno.test("import-source refunds the slot when the upstream page fails", async (
     const response = await handleRequest(new Request("http://127.0.0.1/functions/v1/import-source", {
       method: "POST",
       headers: { Authorization: "Bearer test-token", "Content-Type": "application/json" },
-      body: JSON.stringify({ url: "https://example.com/missing" }),
+      body: JSON.stringify({ url: "https://example.com/page" }),
     }));
-    if (response.status !== 502) throw new Error(`upstream failure returned ${response.status}`);
-    if (refunds.length !== 1 || refunds[0]?.p_quota_key !== "import_source" || refunds[0]?.p_units !== 1) {
-      throw new Error(`quota was not refunded: ${JSON.stringify(refunds)}`);
-    }
+    await response.body?.cancel();
+    return { status: response.status, refunds, upstreamCalls };
   } finally {
     globalThis.fetch = originalFetch;
     Deno.resolveDns = originalResolveDns;
+  }
+}
+
+const publicDns = (_host: string, type: string) => type === "A" ? ["93.184.216.34"] : [];
+
+Deno.test("import-source keeps the slot spent once the source was fetched", async () => {
+  const cases: Array<[string, () => Response, number]> = [
+    ["upstream error", () => new Response("nope", { status: 503 }), 502],
+    ["unsupported type", () => new Response("%PDF", { headers: { "content-type": "application/pdf" } }), 415],
+    ["too short", () => new Response("<p>too short</p>", { headers: { "content-type": "text/html" } }), 422],
+    ["network failure", () => {
+      throw new TypeError("connection reset");
+    }, 400],
+  ];
+  for (const [name, upstream, expected] of cases) {
+    const result = await importWithStubs(upstream, publicDns);
+    if (result.status !== expected) throw new Error(`${name} returned ${result.status}`);
+    if (result.upstreamCalls !== 1) throw new Error(`${name} fetched ${result.upstreamCalls} times`);
+    if (result.refunds.length !== 0) {
+      throw new Error(`${name} refunded a fetched import: ${JSON.stringify(result.refunds)}`);
+    }
+  }
+});
+
+Deno.test("import-source refunds the slot when it fails before fetching the source", async () => {
+  // The handler checks the host before reserving and again right before the
+  // request. A host that turns private in between is refused without a fetch.
+  const result = await importWithStubs(
+    () => new Response("unreachable", { status: 200 }),
+    (_host, type, call) => type === "A" ? [call === 1 ? "93.184.216.34" : "10.0.0.5"] : [],
+  );
+  if (result.status !== 400) throw new Error(`pre-fetch failure returned ${result.status}`);
+  if (result.upstreamCalls !== 0) throw new Error("the source was fetched");
+  if (
+    result.refunds.length !== 1 || result.refunds[0]?.p_quota_key !== "import_source" ||
+    result.refunds[0]?.p_units !== 1
+  ) {
+    throw new Error(`quota was not refunded: ${JSON.stringify(result.refunds)}`);
   }
 });
