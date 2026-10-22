@@ -98,9 +98,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
   const hydrateSessionStore = useSessionStore((state) => state.hydrateFromServer);
+  const prepareSessionStore = useSessionStore((state) => state.prepareForUser);
   const hydrateSettingsStore = useSettingsStore((state) => state.hydrateFromServer);
+  const prepareSettingsStore = useSettingsStore((state) => state.prepareForUser);
   const hydrateSparringStore = useSparringStore((state) => state.hydrateSavedSessions);
   const prepareSparringStore = useSparringStore((state) => state.prepareForUser);
+  const prepareDebateStore = useDebateStore((state) => state.prepareForUser);
   const resetSessionData = useSessionStore((state) => state.resetLocalData);
   // A tool still writing for the previous account stops with its data.
   const resetSessionStore = useCallback(() => {
@@ -120,7 +123,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const hydrateStores = (userId?: string) => {
       if (!userId || hydratedUserId === userId) return;
       hydratedUserId = userId;
+      // Bind before any paint of protected pages. A full-page sign-in (magic
+      // link, Google) never sees the previous account's in-tab sign-out, so
+      // the persisted snapshot has to be checked against this user here.
+      prepareSessionStore(userId);
+      prepareSettingsStore(userId);
       prepareSparringStore(userId);
+      prepareDebateStore(userId);
       Promise.resolve(hydrateSessionStore()).catch((err) => console.warn('[Auth] hydrateSessionStore failed:', err));
       Promise.resolve(hydrateSettingsStore()).catch((err) => console.warn('[Auth] hydrateSettingsStore failed:', err));
       Promise.resolve(hydrateSparringStore()).catch((err) => console.warn('[Auth] hydrateSparringStore failed:', err));
@@ -176,7 +185,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setSession(oauthSession);
           currentUserIdRef.current = oauthSession.user?.id;
           setJamUserId(oauthSession.user?.id);
-          setLoading(false);
           hydrateStores(oauthSession.user?.id);
           return;
         }
@@ -224,7 +232,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setJamUserId(nextUserId);
       setActiveAccessToken(newSession?.access_token ?? null, newSession?.user.id ?? null);
       setSession(newSession);
-      setLoading(false);
 
       // Provider access tokens are short-lived. Keep them only for this browser
       // session; a later export must reauthorize if no fresh token is available.
@@ -241,6 +248,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         resetDebateStore();
         useDebateContextStore.getState().resetLocalData();
         clearGoogleTokens();
+        setLoading(false);
         return;
       }
 
@@ -254,13 +262,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
 
       hydrateStores(nextUserId);
+      setLoading(false);
     });
 
     return () => {
       mounted = false;
       authListener.subscription.unsubscribe();
     };
-  }, [hydrateDebateStore, hydrateSessionStore, hydrateSettingsStore, hydrateSparringStore, prepareSparringStore, resetDebateStore, resetSessionStore, resetSettingsStore, resetSparringStore]);
+  }, [hydrateDebateStore, hydrateSessionStore, hydrateSettingsStore, hydrateSparringStore, prepareDebateStore, prepareSessionStore, prepareSettingsStore, prepareSparringStore, resetDebateStore, resetSessionStore, resetSettingsStore, resetSparringStore]);
 
   // sessionStorage holds this tab's Google token and sparring state.
   const discardTabState = useCallback(() => {

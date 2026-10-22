@@ -445,6 +445,13 @@
     "manageSubscription": "Gestionar suscripción",
     "setUpBilling": "Configurar facturación",
     "upgradeToPro": "Mejorar a Pro",
+    "confirmingSubscription": "Confirmando tu suscripción Pro…",
+    "checkoutCanceled": "Pago cancelado",
+    "checkoutCanceledDesc": "No se hizo ningún cargo.",
+    "checkoutConfirmed": "Ya tienes Pro",
+    "checkoutConfirmedDesc": "Tu suscripción está activa.",
+    "checkoutConfirmSlowTitle": "Seguimos esperando a Stripe",
+    "checkoutConfirmSlow": "Stripe todavía no ha confirmado el pago. Esta página se actualizará al recargar.",
     "accessActive": "El acceso a la IA está activo. Pueden aplicarse límites de uso.",
     "accessExpired": "Tu acceso ha caducado. Mejora el plan para seguir usando las herramientas de IA.",
     "globalSettings": "Ajustes globales",
@@ -1336,7 +1343,8 @@
     "ok": "Entendido",
     "upgrade": "Actualizar a Pro - $5/mes",
     "upgradeNote": "Más acceso a preparación con IA + razonamiento alto",
-    "notNow": "Ahora no"
+    "notNow": "Ahora no",
+    "gotIt": "Entendido"
   },
   "modelModal": {
     "title": "Razonamiento Pro",
@@ -1603,6 +1611,7 @@
     "newFolderPlaceholder": "Nombre de carpeta...",
     "newFolderHint": "¿Necesitas una carpeta nueva? Usa el botón \"Nueva carpeta\" arriba.",
     "createFolder": "Crear carpeta",
+    "saveFailed": "No se pudo guardar esta fuente.",
     "sortBy": "Ordenar por",
     "sortSmart": "Inteligente",
     "sortMostUsed": "Más usadas",

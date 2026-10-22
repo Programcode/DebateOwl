@@ -2,6 +2,7 @@ import { useTranslation } from 'react-i18next';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { AlertTriangle, Zap, Clock } from 'lucide-react';
+import { useSubscription } from '@/hooks/use-subscription';
 import { subscriptionLimitMessage } from '@/lib/ai/error-display';
 
 export type LimitModalVariant = 'limit_reached' | 'trial_expired' | 'monthly_budget_reached';
@@ -19,8 +20,11 @@ interface LimitReachedModalProps {
 
 export function LimitReachedModal({ open, onOpenChange, variant, limit, current, units, onUpgrade }: LimitReachedModalProps) {
   const { t } = useTranslation();
+  const { isPro } = useSubscription();
   const isTrialExpired = variant === 'trial_expired';
   const isMonthlyBudget = variant === 'monthly_budget_reached';
+  // A Pro student who used today's included requests already pays. Selling Pro again is the wrong next step.
+  const paidDailyCap = isPro && !isTrialExpired;
 
   const title = isTrialExpired
     ? t('limitModal.trialEnded')
@@ -44,26 +48,27 @@ export function LimitReachedModal({ open, onOpenChange, variant, limit, current,
           <DialogDescription className="text-center">{description}</DialogDescription>
         </DialogHeader>
 
-        {isMonthlyBudget ? (
-          <div className="flex flex-col gap-2 mt-4">
-            <Button size="lg" className="w-full" onClick={() => onOpenChange(false)}>
-              {t('limitModal.ok')}
+        <div className="flex flex-col gap-2 mt-4">
+          {isMonthlyBudget || paidDailyCap ? (
+            // Upgrading does not lift the spend cap, and a paid plan already has Pro.
+            <Button onClick={() => onOpenChange(false)} size="lg" className="w-full">
+              {isMonthlyBudget ? t('limitModal.ok') : t('limitModal.gotIt')}
             </Button>
-          </div>
-        ) : (
-          <div className="flex flex-col gap-2 mt-4">
-            <Button onClick={onUpgrade} size="lg" className="w-full">
-              <Zap className="h-4 w-4 mr-2" />
-              {t('limitModal.upgrade')}
-            </Button>
-            <Button variant="ghost" className="w-full" onClick={() => onOpenChange(false)}>
-              {t('limitModal.notNow', 'Not now')}
-            </Button>
-            <p className="text-xs text-muted-foreground text-center mt-1">
-              {t('limitModal.upgradeNote')}
-            </p>
-          </div>
-        )}
+          ) : (
+            <>
+              <Button onClick={onUpgrade} size="lg" className="w-full">
+                <Zap className="h-4 w-4 mr-2" />
+                {t('limitModal.upgrade')}
+              </Button>
+              <Button variant="ghost" className="w-full" onClick={() => onOpenChange(false)}>
+                {t('limitModal.notNow', 'Not now')}
+              </Button>
+              <p className="text-xs text-muted-foreground text-center mt-1">
+                {t('limitModal.upgradeNote')}
+              </p>
+            </>
+          )}
+        </div>
       </DialogContent>
     </Dialog>
   );

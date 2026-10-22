@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { supabase } from '@/lib/supabase/client';
+import { currentUserId } from '@/lib/supabase/current-user';
 import type {
   DebateContextFeature,
   DebateContextOutputKind,
@@ -118,8 +119,7 @@ export const useDebateContextStore = create<DebateContextState>()((set, get) => 
     set((state) => ({ pins: { ...state.pins, [debateId]: withPin(state.pins[debateId] ?? [], ref, !pinned) } }));
     const save = async (): Promise<{ error: { message?: string; code?: string } | null }> => {
       if (generation !== pinGeneration) return { error: null };
-      const { data } = await supabase.auth.getUser();
-      const userId = data.user?.id;
+      const userId = await currentUserId();
       if (generation !== pinGeneration) return { error: null };
       if (!userId) return { error: { message: 'Sign in to pin results' } };
       return pinned

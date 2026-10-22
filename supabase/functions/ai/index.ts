@@ -27,6 +27,8 @@ import {
   type NormalizedUsage,
 } from "../_shared/cost.ts";
 import {
+  BACKGROUND_MODEL,
+  BACKGROUND_REASONING_EFFORT,
   DEFAULT_MODEL,
   effectiveReasoningEffort,
   isModelSelection,
@@ -629,10 +631,12 @@ export async function handleRequest(req: Request): Promise<Response> {
   // collected here so the parent request's row accounts for every token.
   const researchUsage: NormalizedUsage[] = [];
   let researchAccountingIncomplete = false;
+  // Research sub-calls are small background steps, so they use the fixed
+  // cheap model instead of the user's choice.
   const researchDeps: ResearchDeps = {
     provider,
-    model,
-    reasoningEffort,
+    model: BACKGROUND_MODEL,
+    reasoningEffort: BACKGROUND_REASONING_EFFORT,
     signal: workSignal,
     onTimeout: () => {
       researchAccountingIncomplete = true;
