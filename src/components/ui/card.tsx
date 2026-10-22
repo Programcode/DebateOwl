@@ -14,9 +14,16 @@ const CardHeader = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDiv
 );
 CardHeader.displayName = "CardHeader";
 
-const CardTitle = React.forwardRef<HTMLParagraphElement, React.HTMLAttributes<HTMLHeadingElement>>(
-  ({ className, ...props }, ref) => (
-    <h3 ref={ref} className={cn("text-lg font-semibold leading-tight tracking-[-0.014em]", className)} {...props} />
+type HeadingLevel = "h1" | "h2" | "h3" | "h4" | "h5" | "h6";
+
+type CardTitleProps = React.HTMLAttributes<HTMLHeadingElement> & {
+  /** Heading level. h2 sits directly under a page h1 without skipping a level. */
+  as?: HeadingLevel;
+};
+
+const CardTitle = React.forwardRef<HTMLHeadingElement, CardTitleProps>(
+  ({ className, as: Heading = "h2", ...props }, ref) => (
+    <Heading ref={ref} className={cn("text-lg font-semibold leading-tight tracking-[-0.014em]", className)} {...props} />
   ),
 );
 CardTitle.displayName = "CardTitle";

@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test';
 import { setLocale, stubSupabaseSession } from './helpers/auth';
+import { fulfillQuotaCheck } from './helpers/quota';
 
 const corsHeaders = {
   'access-control-allow-origin': '*',
@@ -50,6 +51,7 @@ test('completes an LD sparring round through mocked opponent turns and judging',
       await route.fulfill({ status: 200, headers: corsHeaders, body: 'ok' });
       return;
     }
+    if (await fulfillQuotaCheck(route, corsHeaders)) return;
 
     const body = route.request().postDataJSON() as { input?: { action?: string } };
     const action = body.input?.action ?? 'unknown';
@@ -106,6 +108,7 @@ test('uses the school 4-6-6-3 roles and coaching in the default round', async ({
       await route.fulfill({ status: 200, headers: corsHeaders, body: 'ok' });
       return;
     }
+    if (await fulfillQuotaCheck(route, corsHeaders)) return;
     const body = route.request().postDataJSON() as { input?: { action?: string } };
     actions.push(body.input?.action ?? 'unknown');
     await route.fulfill({ status: 200, headers: corsHeaders, body: JSON.stringify({ output: opponentSpeech(1) }) });

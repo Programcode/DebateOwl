@@ -21,6 +21,7 @@ import {
 import type { SparringDifficulty, SparringFormat, SparringSide } from '@/lib/ai/schemas/sparring';
 import { VoiceModeToggle } from '@/components/features/voice/VoiceModeToggle';
 import { useVoiceAvailability } from '@/lib/voice/availability';
+import { SessionCostNote } from '@/components/features/subscription/SessionCostNote';
 
 export interface SparringSetupValues {
   motion: string;
@@ -39,8 +40,15 @@ interface SparringSetupProps {
   /** Fill the motion from the Current Debate. */
   debatePrefill?: boolean;
   onStart: (values: SparringSetupValues) => void;
-  /** AI requests left today, or null when unknown. A round short of requests gets a warning. */
+  /**
+   * AI requests the whole round costs (every reply and the judge), from the
+   * server. Null when unknown: an older server charges each reply and the judge.
+   */
+  roundCost?: number | null;
+  /** AI requests left today, or null when unknown. A round that does not fit gets a warning. */
   remainingRequests?: number | null;
+  /** Why the server would refuse a new round (weekly allowance, trial ended), translated. */
+  blockedReason?: string | null;
   isStarting?: boolean;
   initialValues?: Partial<SparringSetupValues>;
 }
@@ -51,7 +59,7 @@ const DIFFICULTIES: Array<{ id: SparringDifficulty; name: string }> = [
   { id: 'hard', name: 'Ruthless' },
 ];
 
-export function SparringSetup({ onStart, remainingRequests = null, isStarting = false, initialValues, banner, debatePrefill = false, voiceAllowed = true }: SparringSetupProps) {
+export function SparringSetup({ onStart, roundCost = null, remainingRequests = null, blockedReason = null, isStarting = false, initialValues, banner, debatePrefill = false, voiceAllowed = true }: SparringSetupProps) {
   const { t } = useTranslation();
   const [motion, setMotion] = useState(initialValues?.motion ?? '');
   const motionRef = useRef(motion);
@@ -67,9 +75,10 @@ export function SparringSetup({ onStart, remainingRequests = null, isStarting = 
   const selectedFormat = useMemo(() => SPARRING_FORMATS.find((item) => item.id === format) ?? SPARRING_FORMATS[0], [format]);
   const plannedTurns = useMemo(() => buildSparringTurns(format, userSide), [format, userSide]);
   const aiRequests = plannedTurns.filter((turn) => turn.speaker === 'ai').length;
-  const totalRequests = aiRequests + 1;
-  // An estimate (the server can raise a limit the browser cannot see), so it warns rather than blocks.
-  const requestShortfall = remainingRequests !== null && remainingRequests < totalRequests;
+  // The whole round (every reply and the judge) is charged once, by model weight.
+  // Unknown means an older server may be charging per call, so count that way.
+  const cost = roundCost ?? aiRequests + 1;
+  const requestShortfall = remainingRequests !== null && remainingRequests < cost;
   const canStart = motion.trim().length >= 8 && !isStarting && isOnline;
 
   const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
@@ -243,8 +252,8 @@ export function SparringSetup({ onStart, remainingRequests = null, isStarting = 
                 </div>
                 <div className="rounded-lg border border-border/70 bg-background/70 p-3">
                   <p className="text-xs text-muted-foreground">{t('sparring.setup.aiRequests', 'AI requests')}</p>
-                  <p className="mt-1 text-xl font-semibold tabular-nums">{totalRequests}</p>
-                  <p className="mt-0.5 text-xs text-muted-foreground">{t('sparring.setup.aiRequestBreakdown', '{{count}} replies + 1 judge', { count: aiRequests })}</p>
+                  <p className="mt-1 text-xl font-semibold tabular-nums">{cost}</p>
+                  <p className="mt-0.5 text-xs text-muted-foreground">{t('sparring.setup.aiRequestBreakdown', { count: aiRequests })}</p>
                 </div>
               </div>
 
@@ -263,9 +272,11 @@ export function SparringSetup({ onStart, remainingRequests = null, isStarting = 
                 <p data-testid="sparring-request-shortfall" role="status" className="rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-xs leading-5 text-amber-800 dark:text-amber-200">
                   {remainingRequests === 0
                     ? t('dailyLimit.sparringNone')
-                    : t('dailyLimit.sparringShort', { needed: totalRequests, remaining: remainingRequests })}
+                    : t('dailyLimit.sparringShort', { needed: cost, remaining: remainingRequests })}
                 </p>
               )}
+              {/* The shortfall note above already explains a day that is used up. */}
+              <SessionCostNote units={roundCost} remaining={remainingRequests} blocked={requestShortfall ? null : blockedReason} className="text-center" />
               {!isOnline && <p className="text-center text-xs leading-5 text-amber-700 dark:text-amber-300">{t('sparring.setup.offlineCannotStart', 'Reconnect to start a round. Your setup is kept while you are offline.')}</p>}
               <p className="text-center text-xs leading-5 text-muted-foreground">{t('sparring.setup.draftNotice', 'Your draft is saved locally as you type. You can pause without losing your place.')}</p>
             </CardContent>

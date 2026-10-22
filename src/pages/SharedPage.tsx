@@ -89,6 +89,29 @@ export default function SharedPage() {
     const [loading, setLoading] = useState(true);
     const [item, setItem] = useState<SharedItem | null>(null);
     const [error, setError] = useState<string | null>(null);
+    const missing = !loading && (!item || error !== null);
+
+    // The route shell titles every share the same. A missing link names itself.
+    // The response stays HTTP 200; this meta keeps it out of the index.
+    useEffect(() => {
+        if (!missing) return;
+        const previousTitle = document.title;
+        document.title = `${t('sharedPage.notFoundTitle')} · DebateLab`;
+        let robots = document.head.querySelector<HTMLMetaElement>('meta[name="robots"]');
+        const created = !robots;
+        if (!robots) {
+            robots = document.createElement('meta');
+            robots.name = 'robots';
+            document.head.appendChild(robots);
+        }
+        const previousRobots = robots.content;
+        robots.content = 'noindex, nofollow';
+        return () => {
+            document.title = previousTitle;
+            if (created) robots.remove();
+            else robots.content = previousRobots;
+        };
+    }, [missing, t]);
 
     useEffect(() => {
         const loadSharedItem = async () => {
@@ -133,10 +156,10 @@ export default function SharedPage() {
         return (
             <PublicPageShell className="max-w-[65ch] text-center">
                 <Share2 className="mx-auto mb-4 h-8 w-8 text-muted-foreground" aria-hidden="true" />
-                <h1 className="text-2xl font-bold tracking-tight">{t('sharedPage.title')}</h1>
+                <h1 className="text-2xl font-bold tracking-tight">{t('sharedPage.notFoundTitle')}</h1>
                 <p className="mt-2 text-muted-foreground">{error || t('sharedPage.notFound')}</p>
                 <Button asChild className="mt-6">
-                    <Link to={home}>{t('sharedPage.goToApp')}</Link>
+                    <Link to={home}>{t('sharedPage.backHome')}</Link>
                 </Button>
             </PublicPageShell>
         );

@@ -9,9 +9,10 @@ Live practice modes. Sparring runs a multi-speech round against an AI opponent a
 - `cross-turn` answers a user question with an AI response and attaches a Jev `Direct answer` signal.
 - `cross-debrief` ends the session and shows the debrief. A `crossfires` row is filed in the debate for its resolution.
 - `cross-ai-questions` reverses the roles: the AI asks (`mode-ai-questions-user`), the user answers, and the AI follows up.
+- `cross-history` after leaving the page, `/app/history?tab=crossfire` lists the round (test id `history-crossfire-row`). `Open Crossfire round: <resolution>` shows test id `saved-crossfire` with the debrief (`saved-crossfire-debrief`) and transcript (`saved-crossfire-transcript`); `Delete Crossfire round: <resolution>` asks first and removes the row.
 - `cross-daily-limit` with no AI requests left, the first AI turn is refused: the daily-limit dialog opens and the page stays in setup with no clock and no `end-crossfire`.
 - `cross-end-early` ending a round before any exchange returns to setup with no error.
-- `spar-daily-limit` Sparring setup warns (test id `sparring-request-shortfall`) when today's remaining requests are fewer than the round needs.
+- `spar-daily-limit` Sparring setup warns (test id `sparring-request-shortfall`) when today's remaining requests, as the server reports them, are fewer than the round costs. A round costs one use (by model weight) however many replies it takes; `session-cost` says so before Start.
 
 ## How to get to it (user POV)
 
@@ -30,7 +31,7 @@ Preconditions:
 - **Start Crossfire.** On `/app/crossfire`, fill test id `crossfire-resolution` and `crossfire-argument`. Click `mode-question-ai` (or `mode-ai-questions-user`), then `start-crossfire`, then `chooseForMotion(page, "create")`.
 - **Crossfire turn.** Fill `crossfire-input` and click `submit-turn`. The text `FAKE-PROVIDER crossfire answer` and `Direct answer` appear. `providerCall("crossfire")` and `providerCall("jev")` both fired.
 - **Debrief.** Click `end-crossfire`. Test id `crossfire-debrief` is visible. `crossfires` for the user equals `[{title: <resolution>, debates: {motion: <resolution>}}]`.
-- **Out of requests.** Through `admin`, set `user_settings.daily_limit_override` to N, upsert today's `daily_usage_counters` row (`quota_key: "ai"`, `request_count: N`; what the `ai` function checks), and insert N `ai_requests` rows (what the browser counts). Start Crossfire in `mode-ai-questions-user`: a `dialog` containing `N of N` opens and `start-crossfire` is back. On `/app/sparring`, `sparring-request-shortfall` says `You have no AI requests left today`.
+- **Out of requests.** Through `admin`, set `user_settings.daily_limit_override` to N, upsert today's `daily_usage_counters` row (`quota_key: "ai"`, `request_count: N`; what the `ai` function checks), and insert N `ai_requests` rows (the fallback the Settings usage line counts against a database without `ai_usage_today`; Crossfire and Sparring ask the server). Start Crossfire in `mode-ai-questions-user`: a `dialog` containing `N of N` opens and `start-crossfire` is back. On `/app/sparring`, `sparring-request-shortfall` says `You have no AI requests left today`.
 
 ## Gotchas
 

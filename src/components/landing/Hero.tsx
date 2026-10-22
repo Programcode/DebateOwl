@@ -163,7 +163,7 @@ const HeroPreview = () => {
                             </div>
                         </div>
 
-                        <div className="space-y-3">
+                        <div className="space-y-3" aria-hidden="true" {...{ inert: '' }}>
                             <div className="space-y-1.5">
                                 <label htmlFor="hero-motion" className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
                                     {t('hero.preview.topicLabel')}
@@ -173,6 +173,7 @@ const HeroPreview = () => {
                                     type="text"
                                     value={motionText}
                                     readOnly
+                                    tabIndex={-1}
                                     className="w-full rounded-md border border-border/70 bg-background px-3 py-2 text-sm text-foreground outline-none transition-colors placeholder:text-muted-foreground focus:border-primary focus:ring-2 focus:ring-primary/20"
                                 />
                             </div>
@@ -191,7 +192,7 @@ const HeroPreview = () => {
                         </div>
                     </div>
 
-                    <div className="space-y-3 rounded-xl border border-border/70 bg-card p-4">
+                    <div className="space-y-3 rounded-xl border border-border/70 bg-card p-4" aria-hidden="true">
                         <div>
                             <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{sample.title}</p>
                         </div>

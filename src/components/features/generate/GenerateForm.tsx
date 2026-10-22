@@ -33,7 +33,9 @@ interface GenerateFormProps {
   debatePrefill?: boolean;
 }
 
-function OptionSelect<V extends string>({ value, onValueChange, options, triggerClassName }: {
+function OptionSelect<V extends string>({ id, labelId, value, onValueChange, options, triggerClassName }: {
+  id: string;
+  labelId: string;
   value: V;
   onValueChange: (value: V) => void;
   options: { value: V; label: string }[];
@@ -41,7 +43,7 @@ function OptionSelect<V extends string>({ value, onValueChange, options, trigger
 }) {
   return (
     <Select value={value} onValueChange={(next) => onValueChange(next as V)}>
-      <SelectTrigger className={triggerClassName}>
+      <SelectTrigger id={id} aria-labelledby={labelId} className={triggerClassName}>
         <SelectValue />
       </SelectTrigger>
       <SelectContent>
@@ -157,8 +159,10 @@ export function GenerateForm({ onSubmit, isLoading, debatePrefill = true }: Gene
           <div className="grid gap-4 sm:grid-cols-2">
             {/* Side */}
             <div className="space-y-2">
-              <Label className="text-sm font-medium">{t('generateForm.side')}</Label>
+              <Label id="generate-side-label" htmlFor="generate-side" className="text-sm font-medium">{t('generateForm.side')}</Label>
               <OptionSelect
+                id="generate-side"
+                labelId="generate-side-label"
                 value={currentValues.side}
                 onValueChange={(value) => setValue('side', value)}
                 options={[
@@ -170,8 +174,10 @@ export function GenerateForm({ onSubmit, isLoading, debatePrefill = true }: Gene
 
             {/* Role */}
             <div className="space-y-2">
-              <Label className="text-sm font-medium">{t('generateForm.role')}</Label>
+              <Label id="generate-role-label" htmlFor="generate-role" className="text-sm font-medium">{t('generateForm.role')}</Label>
               <OptionSelect
+                id="generate-role"
+                labelId="generate-role-label"
                 value={currentValues.role}
                 onValueChange={(value) => setValue('role', value)}
                 options={[
@@ -215,8 +221,10 @@ export function GenerateForm({ onSubmit, isLoading, debatePrefill = true }: Gene
             <div className="grid gap-4 pt-1 sm:grid-cols-3">
               {/* Length */}
               <div className="space-y-2 min-w-0">
-                <Label className="text-sm font-medium truncate block">{t('generateForm.length')}</Label>
+                <Label id="generate-length-label" htmlFor="generate-length" className="text-sm font-medium truncate block">{t('generateForm.length')}</Label>
                 <OptionSelect
+                  id="generate-length"
+                  labelId="generate-length-label"
                   value={currentValues.length}
                   onValueChange={(value) => setValue('length', value)}
                   triggerClassName="min-w-0"
@@ -230,8 +238,10 @@ export function GenerateForm({ onSubmit, isLoading, debatePrefill = true }: Gene
 
               {/* Audience */}
               <div className="space-y-2 min-w-0">
-                <Label className="text-sm font-medium truncate block">{t('generateForm.audience')}</Label>
+                <Label id="generate-audience-label" htmlFor="generate-audience" className="text-sm font-medium truncate block">{t('generateForm.audience')}</Label>
                 <OptionSelect
+                  id="generate-audience"
+                  labelId="generate-audience-label"
                   value={currentValues.audience}
                   onValueChange={(value) => setValue('audience', value)}
                   triggerClassName="min-w-0"
@@ -245,8 +255,10 @@ export function GenerateForm({ onSubmit, isLoading, debatePrefill = true }: Gene
 
               {/* Tone */}
               <div className="space-y-2 min-w-0">
-                <Label className="text-sm font-medium truncate block">{t('generateForm.tone')}</Label>
+                <Label id="generate-tone-label" htmlFor="generate-tone" className="text-sm font-medium truncate block">{t('generateForm.tone')}</Label>
                 <OptionSelect
+                  id="generate-tone"
+                  labelId="generate-tone-label"
                   value={currentValues.tone}
                   onValueChange={(value) => setValue('tone', value)}
                   triggerClassName="min-w-0"

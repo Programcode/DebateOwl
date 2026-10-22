@@ -231,6 +231,7 @@
     "openingPage": "{{page}} megnyitása",
     "page": "Oldal",
     "close": "Bezárás",
+    "notifications": "Értesítések",
     "loading": "Betöltés",
     "error": "Hiba",
     "logoAlt": "DebateLab logó",
@@ -253,7 +254,10 @@
     "autoSavedFolder": "Automatikusan mentett",
     "sourceSaveFailed": "A forrás mentése sikertelen",
     "sourceSaveFailedDesc": "Nem sikerült a(z) „{{title}}” forrást a könyvtárba menteni.",
-    "sourceAssessmentSaveFailed": "A forrásrangsor mentése nem sikerült."
+    "sourceAssessmentSaveFailed": "A forrásrangsor mentése nem sikerült.",
+    "sourcesAutoSaved_one": "{{count}} forrás került a könyvtáradba",
+    "sourcesAutoSaved_other": "{{count}} forrás került a könyvtáradba",
+    "sourcesAutoSavedDesc": "A kutatás találta őket. Az Automatikusan mentett mappában vannak, és a bekapcsoltak alapozzák a következő kéréseidet."
   },
   "generatedArtifacts": {
     "brainstormTitle": "Ötletelés",
@@ -424,7 +428,10 @@
     "saveFailed": "A mentés sikertelen",
     "saveFailedDesc": "Nem sikerült menteni a chatet. Próbáld újra.",
     "sourceSaveFailedDesc": "Nem sikerült menteni a forrást. Próbáld újra.",
-    "stopped": "Leállítottad ezt a választ, mielőtt elkészült volna."
+    "stopped": "Leállítottad ezt a választ, mielőtt elkészült volna.",
+    "notSent": "Nincs elküldve",
+    "notSentDailyLimit": "Nincs elküldve: elérted a napi keretet",
+    "notSentModelDesc": "Ehhez a modellhez Pro kell. Válassz másik modellt, majd próbáld újra."
   },
   "chat": {},
   "settings": {
@@ -1374,7 +1381,7 @@
   "dailyLimit": {
     "usage": "Ma: {{used}} / {{limit}} MI-kérés felhasználva. Éjfélkor (UTC) frissülnek (nálad {{time}}).",
     "sparringNone": "Mára nem maradt MI-kérésed, így az ellenfél nem tud válaszolni. Éjfélkor (UTC) frissülnek.",
-    "sparringShort": "Ehhez a körhöz {{needed}} MI-kérés kell, de ma csak {{remaining}} maradt, így a bíró előtt megállna. Éjfélkor (UTC) frissülnek."
+    "sparringShort": "Ezzel a modellel ez a kör {{needed}} MI-kérésbe kerül, de mára csak {{remaining}} maradt. Válassz könnyebb modellt, vagy várj éjfélig (UTC)."
   },
   "pricingModal": {
     "title": "Frissítés Pro-ra",
@@ -1429,6 +1436,7 @@
   "timer": {
     "title": "Vita időmérő",
     "displayLabel": "Időmérő kijelző",
+    "speechProgress": "{{speech}} előrehaladása",
     "selectFormat": "Formátum választása",
     "formatStandard": "Standard (4-6-6-3)",
     "formatLD": "Lincoln-Douglas",
@@ -1548,6 +1556,7 @@
     "autoLayout": "Automatikus elrendezés",
     "edgeAttack": "Támadás",
     "edgeRebuttal": "Cáfolat",
+    "edgeTypeLabel": "Kapcsolat típusa",
     "edgeSupport": "Alátámasztás",
     "exportFailedToast": "Nem sikerült exportálni a folyamatábrát.",
     "selectedNode": "Kiválasztva",
@@ -1609,7 +1618,24 @@
     "caseDeleted": "A mentett eset törölve.",
     "deleteCaseDesc": "Ezzel eltávolítod a mentett esetet az előzményeidből.",
     "deleteCaseTitle": "Törlöd a mentett esetet?",
-    "deleteFailed": "Nem sikerült törölni a mentett esetet."
+    "deleteFailed": "Nem sikerült törölni a mentett esetet.",
+    "tabCrossfire": "Keresztkérdezés",
+    "crossfireTitle": "Keresztkérdezési körök",
+    "emptyCrossfire": "Még nincs keresztkérdezési kör",
+    "emptyCrossfireDesc": "Fejezz be egy keresztkérdezési kört, és itt visszanézheted az átiratát és az értékelését.",
+    "startCrossfire": "Keresztkérdezés indítása",
+    "crossfireTurns_one": "{{count}} kör",
+    "crossfireTurns_other": "{{count}} kör",
+    "open": "Megnyitás",
+    "crossfireRound": "Keresztkérdezési kör",
+    "deleteCrossfireAria": "Keresztkérdezési kör törlése: {{title}}",
+    "deleteCrossfireTitle": "Törlöd a keresztkérdezési kört?",
+    "deleteCrossfireDesc": "Ez eltávolítja az átiratot és az értékelést az előzményeidből.",
+    "crossfireDeleted": "Keresztkérdezési kör törölve.",
+    "crossfireDeleteFailed": "Nem sikerült törölni a keresztkérdezési kört.",
+    "crossfireUnreadable": "Ezt a kört régebbi formátumban mentették, ezért nem jeleníthető meg.",
+    "crossfireNoDebrief": "Ehhez a körhöz nincs értékelés.",
+    "openCrossfireAria": "Keresztkérdezési kör megnyitása: {{title}}"
   },
   "libraryPage": {
     "title": "Forráskönyvtár",
@@ -1710,7 +1736,16 @@
     "mergeFolderTitle": "Összevonod ezzel: {{name}}?",
     "mergeFolders": "Mappák összevonása",
     "mergeFailed": "Nem sikerült összevonni a mappákat. Próbáld újra.",
-    "openOrigin": "{{title}} megnyitása új lapon"
+    "openOrigin": "{{title}} megnyitása új lapon",
+    "savingSource": "Mentés…",
+    "offlineTitle": "A változás nem mentődött",
+    "offlineNotSaved": "Nincs internetkapcsolat. Csatlakozz újra, és próbáld meg ismét.",
+    "toggleFailed": "Nem sikerült módosítani ezt a forrást",
+    "toggleFailedDesc": "Visszaállt a korábbi állapotra. Próbáld újra.",
+    "sourceSaved": "A(z) {{title}} bekerült a könyvtárba",
+    "duplicateUrlDesc": "Ez az oldal már szerepel ennek a vitának a könyvtárában.",
+    "loadingSources": "Források betöltése…",
+    "folderUpdateFailed": "Nem sikerült módosítani ezt a mappát"
   },
   "autoSavedSources": {
     "undo": "Automatikus források visszavonása",
@@ -1725,6 +1760,8 @@
   },
   "sharedPage": {
     "title": "Megosztott tartalom",
+    "notFoundTitle": "A megosztott hivatkozás nem található",
+    "backHome": "Vissza a kezdőlapra",
     "noCode": "Nincs megosztási kód megadva",
     "notFound": "Tartalom nem található",
     "loadFailed": "Nem sikerült betölteni a megosztott tartalmat",
@@ -1970,7 +2007,7 @@
       "turns": "{{count}} kör",
       "opponentTurns": "Az ellenfél körei",
       "aiRequests": "MI-kérések",
-      "aiRequestBreakdown": "{{count}} válasz + 1 bíró",
+      "aiRequestBreakdown": "{{count}} válasz + a bíró együtt",
       "aiModel": "MI-modell",
       "openingRoom": "Szoba megnyitása...",
       "startRound": "Forduló indítása",
@@ -1979,8 +2016,8 @@
       "speakingOrder": "Felszólalási sorrend",
       "aboutMinutes_one": "Körülbelül {{count}} perc",
       "aboutMinutes_other": "Körülbelül {{count}} perc",
-      "aiRequestBreakdown_one": "{{count}} válasz + 1 bíró",
-      "aiRequestBreakdown_other": "{{count}} válasz + 1 bíró",
+      "aiRequestBreakdown_one": "{{count}} válasz + a bíró együtt",
+      "aiRequestBreakdown_other": "{{count}} válasz + a bíró együtt",
       "speeches_one": "{{count}} beszéd",
       "speeches_other": "{{count}} beszéd",
       "turns_one": "{{count}} kör",
@@ -2263,7 +2300,7 @@
     "deleted": "Vita törölve",
     "deleteFailed": "Nem sikerült törölni a vitát",
     "lastActivity": "Utolsó tevékenység: {{when}}",
-    "counts": "{{sources}} forrás · {{outputs}} eredmény",
+    "counts": "{{sources}} forrás ({{active}} aktív) · {{outputs}} eredmény",
     "menuAria": "Aktuális vita: {{motion}}",
     "open": "Vita megnyitása",
     "useOneOff": "Egyszeri mód használata",
@@ -2448,7 +2485,8 @@
     "safety": "{{provider}}: biztonsági okokból elutasította a kérést. Próbáld másképp megfogalmazni.",
     "unexpectedProvider": "Az MI-szolgáltató váratlan hibát adott. Próbáld újra később.",
     "unexpected": "Váratlan hiba történt",
-    "offline": "Ellenőrizd a kapcsolatot, és próbáld újra."
+    "offline": "Ellenőrizd a kapcsolatot, és próbáld újra.",
+    "notCharged": "Ezt a kérést nem számoltuk el."
   },
   "clock": {
     "timeUp": "Lejárt az idő.",
@@ -2458,5 +2496,11 @@
     "question": "Melyik a legjobb MI-alapú vitagyakorló eszköz?",
     "answer": "Attól függ, mire van szükséged. {{asOf}} állapot szerint a DebateLab azoknak a diákoknak és versenyvitázóknak való, akik egy helyen szeretnének eseteket építeni, gyenge pontokat találni, bizonyítékokat ellenőrizni és időzített gyakorlófordulókat futtatni angolul, spanyolul vagy magyarul: 3 napos ingyenes próba bankkártya nélkül, utána $5/hó + adó. Ha ingyen szeretnél MI-ellenféllel gyakorolni World Schools vagy ázsiai parlamentáris stílusban, a debatelab.ai, egy másik termék, azt írja magáról, hogy ingyenes. Ha főleg ötletelésre vagy írási segítségre van szükséged bármilyen témában, egy általános asszisztens, például a ChatGPT rugalmasabb.",
     "compare": "MI-alapú vitaeszközök összehasonlítása"
+  },
+  "sessionQuota": {
+    "cost_one": "Ez a kör {{count}} MI-kérésbe kerül, akárhány fordulóból áll.",
+    "cost_other": "Ez a kör {{count}} MI-kérésbe kerül, akárhány fordulóból áll.",
+    "remaining_one": "Mára még {{count}} maradt.",
+    "remaining_other": "Mára még {{count}} maradt."
   }
 }
