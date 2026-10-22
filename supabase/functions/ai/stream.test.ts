@@ -14,6 +14,7 @@ for (const [key, value] of Object.entries(environment)) Deno.env.set(key, value)
 
 const { handleRequest } = await import("./index.ts");
 const { readOpenRouterStream } = await import("./provider.ts");
+const { outputTokenLimit, REPLY_TOKEN_CAPS, TRUNCATION_RETRY_FACTOR } = await import("../_shared/output-caps.ts");
 
 const USER = "user-1";
 const SESSION = "5e551000-0000-4000-8000-000000000002";
@@ -29,7 +30,7 @@ function jsonResponse(body: unknown, status = 200): Response {
 const USAGE = { prompt_tokens: 10, completion_tokens: 5, total_tokens: 15, cost: 0.000001 };
 
 /** One provider reply: text to stream (or return whole), or an HTTP failure. */
-type ProviderReply = { content: string } | { status: number };
+type ProviderReply = { content: string; finishReason?: string } | { status: number };
 
 interface Harness {
   providerBodies: Array<Record<string, unknown>>;
@@ -37,13 +38,13 @@ interface Harness {
   restore: () => void;
 }
 
-function sseBody(content: string): ReadableStream<Uint8Array> {
+function sseBody(content: string, finishReason = "stop"): ReadableStream<Uint8Array> {
   const encoder = new TextEncoder();
   const chunks: string[] = [": OPENROUTER PROCESSING\n\n"];
   for (let index = 0; index < content.length; index += 7) {
     chunks.push(`data: ${JSON.stringify({ choices: [{ delta: { content: content.slice(index, index + 7) } }] })}\n\n`);
   }
-  chunks.push(`data: ${JSON.stringify({ choices: [{ delta: {}, finish_reason: "stop" }] })}\n\n`);
+  chunks.push(`data: ${JSON.stringify({ choices: [{ delta: {}, finish_reason: finishReason }] })}\n\n`);
   chunks.push(`data: ${JSON.stringify({ choices: [], usage: USAGE })}\n\n`, "data: [DONE]\n\n");
   return new ReadableStream({
     start(controller) {
@@ -66,7 +67,7 @@ function install(replies: ProviderReply[]): Harness {
       if (url.pathname.includes("/rest/v1/user_settings")) return jsonResponse({ subscription_tier: "trial", daily_limit_override: 50, trial_ends_at: "2099-01-01T00:00:00.000Z", grace_period_ends_at: null });
       if (url.pathname.includes("/rest/v1/subscriptions")) return jsonResponse([]);
       if (url.pathname.includes("/rest/v1/rate_limits")) return jsonResponse({ limit_value: 50 });
-      if (url.pathname.includes("/rest/v1/rpc/consume_daily_quota")) return jsonResponse([{ allowed: true, current_count: 1 }]);
+      if (/\/rest\/v1\/rpc\/consume_(daily|ai)_quota$/.test(url.pathname)) return jsonResponse([{ allowed: true, current_count: 1 }]);
       if (url.pathname.includes("/rest/v1/global_prompts")) return jsonResponse({ prompt_text: null });
       if (url.pathname.includes("/rest/v1/ai_requests")) {
         const row = JSON.parse(String(init?.body));
@@ -80,8 +81,8 @@ function install(replies: ProviderReply[]): Harness {
       harness.providerBodies.push(body);
       const reply = replies[Math.min(harness.providerBodies.length - 1, replies.length - 1)];
       if ("status" in reply) return jsonResponse({ error: { message: "Provider overloaded" } }, reply.status);
-      if (body.stream === true) return new Response(sseBody(reply.content), { headers: { "Content-Type": "text/event-stream" } });
-      return jsonResponse({ choices: [{ message: { content: reply.content } }], usage: USAGE });
+      if (body.stream === true) return new Response(sseBody(reply.content, reply.finishReason), { headers: { "Content-Type": "text/event-stream" } });
+      return jsonResponse({ choices: [{ message: { content: reply.content }, finish_reason: reply.finishReason ?? "stop" }], usage: USAGE });
     }
     throw new Error(`Unhandled request: ${url}`);
   }) as typeof fetch;
@@ -184,6 +185,42 @@ Deno.test("a repair retry voids the streamed text and bills both attempts", asyn
     assert(harness.providerBodies.length === 2, "expected one repair retry");
     const usage = harness.usageRows.find((row) => row.feature === "sparring");
     assert(usage?.input_tokens === 20 && usage.output_tokens === 10, `both attempts were not billed: ${JSON.stringify(usage)}`);
+  } finally {
+    harness.restore();
+  }
+});
+
+Deno.test("a reply cut off at its cap is retried once with a larger cap and both attempts are billed", async () => {
+  const cutOff = { content: REPLY.slice(0, 60), finishReason: "length" };
+  // Basic accounts always reason at low effort.
+  const firstCap = outputTokenLimit(REPLY_TOKEN_CAPS.sparringSpeech, "low", 128_000);
+  const retryCap = outputTokenLimit(REPLY_TOKEN_CAPS.sparringSpeech * TRUNCATION_RETRY_FACTOR, "low", 128_000);
+  for (const stream of [false, true]) {
+    const harness = install([cutOff, { content: REPLY }]);
+    try {
+      const response = await handleRequest(aiRequest(stream));
+      if (stream) {
+        const events = await readEvents(response);
+        assert(events.some((event) => event.event === "reset"), "the cut-off text was not voided");
+        assert(events.at(-1)?.event === "result" && events.at(-1)?.data.status === 200, "the retried stream did not succeed");
+      } else {
+        assert(response.status === 200, `the retried request returned ${response.status}`);
+      }
+      const caps = harness.providerBodies.map((body) => body.max_tokens);
+      assert(caps.length === 2 && caps[0] === firstCap && caps[1] === retryCap, `unexpected caps: ${JSON.stringify(caps)}`);
+      const usage = harness.usageRows.find((row) => row.feature === "sparring");
+      assert(usage?.input_tokens === 20 && usage.output_tokens === 10, `both attempts were not billed: ${JSON.stringify(usage)}`);
+    } finally {
+      harness.restore();
+    }
+  }
+
+  // A second cut-off fails the request instead of retrying again.
+  const harness = install([cutOff, cutOff, { content: REPLY }]);
+  try {
+    const response = await handleRequest(aiRequest(false));
+    assert(response.status >= 500, `a twice cut-off reply returned ${response.status}`);
+    assert(harness.providerBodies.length === 2, `expected one retry, got ${harness.providerBodies.length - 1}`);
   } finally {
     harness.restore();
   }

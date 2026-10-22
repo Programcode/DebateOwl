@@ -1,11 +1,13 @@
 import { useState, useCallback } from 'react';
 import { isAISubscriptionError, isAIModelRestrictionError, type AISubscriptionError } from '@/lib/ai/client';
+import type { LimitModalVariant } from '@/components/features/subscription/LimitReachedModal';
 
 interface SubscriptionErrorState {
   limitModalOpen: boolean;
-  limitModalVariant: 'limit_reached' | 'trial_expired';
+  limitModalVariant: LimitModalVariant;
   limitModalLimit?: number;
   limitModalCurrent?: number;
+  limitModalUnits?: number;
   modelModalOpen: boolean;
   pricingModalOpen: boolean;
   setLimitModalOpen: (open: boolean) => void;
@@ -20,22 +22,24 @@ interface SubscriptionErrorState {
  */
 export function useSubscriptionError(): SubscriptionErrorState {
   const [limitModalOpen, setLimitModalOpen] = useState(false);
-  const [limitModalVariant, setLimitModalVariant] = useState<'limit_reached' | 'trial_expired'>('limit_reached');
+  const [limitModalVariant, setLimitModalVariant] = useState<LimitModalVariant>('limit_reached');
   const [limitModalLimit, setLimitModalLimit] = useState<number>();
   const [limitModalCurrent, setLimitModalCurrent] = useState<number>();
+  const [limitModalUnits, setLimitModalUnits] = useState<number>();
   const [modelModalOpen, setModelModalOpen] = useState(false);
   const [pricingModalOpen, setPricingModalOpen] = useState(false);
 
   const handleSubscriptionError = useCallback((error: unknown): boolean => {
     if (isAISubscriptionError(error)) {
       const subError = error as AISubscriptionError;
-      if (subError.code === 'trial_expired') {
-        setLimitModalVariant('trial_expired');
+      if (subError.code === 'trial_expired' || subError.code === 'weekly_budget_reached') {
+        setLimitModalVariant(subError.code);
       } else {
         setLimitModalVariant('limit_reached');
       }
       setLimitModalLimit(subError.limit);
       setLimitModalCurrent(subError.current);
+      setLimitModalUnits(subError.units);
       setLimitModalOpen(true);
       return true;
     }
@@ -53,6 +57,7 @@ export function useSubscriptionError(): SubscriptionErrorState {
     limitModalVariant,
     limitModalLimit,
     limitModalCurrent,
+    limitModalUnits,
     modelModalOpen,
     pricingModalOpen,
     setLimitModalOpen,

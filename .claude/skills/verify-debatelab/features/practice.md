@@ -9,6 +9,9 @@ Live practice modes. Sparring runs a multi-speech round against an AI opponent a
 - `cross-turn` answers a user question with an AI response and attaches a Jev `Direct answer` signal.
 - `cross-debrief` ends the session and shows the debrief. A `crossfires` row is filed in the debate for its resolution.
 - `cross-ai-questions` reverses the roles: the AI asks (`mode-ai-questions-user`), the user answers, and the AI follows up.
+- `cross-daily-limit` with no AI requests left, the first AI turn is refused: the daily-limit dialog opens and the page stays in setup with no clock and no `end-crossfire`.
+- `cross-end-early` ending a round before any exchange returns to setup with no error.
+- `spar-daily-limit` Sparring setup warns (test id `sparring-request-shortfall`) when today's remaining requests are fewer than the round needs.
 
 ## How to get to it (user POV)
 
@@ -27,10 +30,12 @@ Preconditions:
 - **Start Crossfire.** On `/app/crossfire`, fill test id `crossfire-resolution` and `crossfire-argument`. Click `mode-question-ai` (or `mode-ai-questions-user`), then `start-crossfire`, then `chooseForMotion(page, "create")`.
 - **Crossfire turn.** Fill `crossfire-input` and click `submit-turn`. The text `FAKE-PROVIDER crossfire answer` and `Direct answer` appear. `providerCall("crossfire")` and `providerCall("jev")` both fired.
 - **Debrief.** Click `end-crossfire`. Test id `crossfire-debrief` is visible. `crossfires` for the user equals `[{title: <resolution>, debates: {motion: <resolution>}}]`.
+- **Out of requests.** Through `admin`, set `user_settings.daily_limit_override` to N, upsert today's `daily_usage_counters` row (`quota_key: "ai"`, `request_count: N`; what the `ai` function checks), and insert N `ai_requests` rows (what the browser counts). Start Crossfire in `mode-ai-questions-user`: a `dialog` containing `N of N` opens and `start-crossfire` is back. On `/app/sparring`, `sparring-request-shortfall` says `You have no AI requests left today`.
 
 ## Gotchas
 
 - Opponent speeches carry a server-signed integrity token. Scoring fails if the client drops it, so a verdict proves the round-trip.
 - Jev is faked with a fixed confident answer. `Direct answer` proves the wiring, not the quality of the judgement.
 - Sparring AI calls happen once per opponent turn. Keep the per-step wait near 30 s rather than one long wait for the verdict.
+- The browser's remaining-requests count leaves out `rate_limited` and `jev_*` rows and cannot see global `rate_limits` rows, so it warns and never blocks. The `ai` function's 402 decides.
 - In `mode-ai-questions-user` the opening question is requested as soon as the round starts, after the motion dialog. Create the `aiResponse(page, "crossfire", "next-turn")` promise before clicking `start-crossfire`.

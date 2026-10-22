@@ -288,13 +288,14 @@ const MessageBubble = React.memo(function MessageBubble({ message, onSave }: { m
         )}
 
         {/* Uncertainties */}
-        {output?.uncertainties && output.uncertainties.length > 0 && (
+        {output && (output.uncertainties?.length > 0 || output.replyTruncated) && (
           <div className="space-y-1 pt-2 border-t border-border/50">
             <span className="text-xs font-medium text-muted-foreground">{t('askChat.uncertainties')}</span>
             <ul className="space-y-1">
-              {output.uncertainties.map((uncertainty: string, i: number) => (
+              {output.uncertainties?.map((uncertainty: string, i: number) => (
                 <li key={i} className="text-xs text-muted-foreground">• {uncertainty}</li>
               ))}
+              {output.replyTruncated && <li className="text-xs text-muted-foreground">• {t('ask.replyCutOff')}</li>}
             </ul>
           </div>
         )}
@@ -778,6 +779,7 @@ export function AskChat({ messages, streamingMessage, isLoading, error, onDismis
             value={input}
             onChange={(e) => setInput(e.target.value)}
             placeholder={isListening ? t('askChat.placeholderListening') : t('askChat.placeholder')}
+            aria-label={t('askChat.inputLabel')}
             className="flex-1"
           />
           {isLoading && onStop ? (

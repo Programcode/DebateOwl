@@ -36,22 +36,27 @@ If Actions jobs fail within 2 to 5 seconds with no runner and no logs, the accou
 
 ## Frontend hosting on Vercel
 
-Vercel builds and serves the frontend from the Git repository. Merging to `main` starts a production deployment to `https://debate.pi-stack.org`; pull requests get two preview deployments (see [Per-PR previews](#per-pr-previews)). For a staging-pinned preview on the tailnet, use `npm run dev:preview` (see [development.md](development.md#preview-on-the-tailnet)). The production canary runs after each successful Vercel `Production` deployment.
+Vercel builds and serves the frontend from the Git repository. A push to `main` deploys both projects: `debate-navigator` to `https://debate.pi-stack.org`, and `debatelab-staging` to `https://debatelab-staging.vercel.app`. Any other branch waits for an explicit preview (see [Opt-in previews](#opt-in-previews)). For a staging-pinned preview on the tailnet, use `npm run dev:preview` (see [development.md](development.md#preview-on-the-tailnet)). The production canary runs after each successful Vercel `Production` deployment of `debate-navigator`.
 
 [`vercel.json`](../vercel.json) owns:
 
+- automatic Git deployments: `main` only. `git.deploymentEnabled` sets `main` to true and `**` to false. A branch deploys when any matching rule is true, and a branch that matches nothing defaults to true, so the `**` rule has to stay. `*` does not match a slash, which would leave branches such as `cursor/…` deploying. A push that matches no true rule creates no deployment and does not count toward the 100-deployments-per-day cap;
 - the Vite build command and `dist` output;
 - rewrites of the app routes (`/app`, `/login`, `/share`, `/expocit/sources`) to `app-shell.html`; any other path that is not a file gets `404.html` with a real 404 status;
 - `trailingSlash: false`, which 308-redirects `/app/settings/` to `/app/settings` before routing, since rewrite and redirect sources match exactly;
 - 301 redirects from the retired brand pages (`/debatelab`, `/debatelab-by-programcode`, and the rest) to `/`;
 - 301 redirects from retired guide slugs to the guide that replaced them, such as `/debate-weighing-guide` to `/how-to-weigh-in-debate`. The `trailingSlash` 308 runs first, so `/debate-weighing-guide/` reaches the same page in two permanent hops and needs no rule of its own;
 - no-cache headers for `/`, `index.html`, `app-shell.html`, `theme-init.js`, and `sw.js`, and immutable caching for hashed `/assets/`;
-- `noindex` headers for `/app`, `/login`, and `/share` routes;
-- Content Security Policy and the other response security headers, including the `Permissions-Policy` that allows the microphone for the app's own origin only.
+- `noindex` headers for `/app`, `/login`, `/share` and `/embed/debate-timer`;
+- Content Security Policy and the other response security headers, including the `Permissions-Policy` that allows the microphone for the app's own origin only. Every path except `/embed/debate-timer` refuses to be framed (`X-Frame-Options: DENY` and `frame-ancestors 'none'`). `/embed/debate-timer` allows any site to frame it and gets its own CSP, which permits only same-origin scripts and requests. The two rules use complementary sources (`/((?!embed/debate-timer$).*)` and `/embed/debate-timer`) so no path gets both, a new embed needs its path added to both, and `src/test/vercel-deployment-config.test.ts` fails if two matching rules ever set the same header.
 
 After `vite build`, [`scripts/prerender.mjs`](../scripts/prerender.mjs) renders the landing page, `/terms`, `/privacy`, and the 404 page in Node through [`src/prerender/entry.tsx`](../src/prerender/entry.tsx). It writes them to `dist/index.html`, `dist/terms/index.html`, `dist/privacy/index.html`, and `dist/404.html`, each with its own title, description, and canonical URL from [`src/lib/seo/pages.ts`](../src/lib/seo/pages.ts); the landing page also carries the Organization and SoftwareApplication JSON-LD. The built shell is kept as `dist/app-shell.html`. On load, the client replaces the prerendered HTML with the same page. A new public SPA page needs an entry in `PAGE_HEADS`, in the prerender entry, and a route kept out of the 404.
 
-[`scripts/sitemap.mjs`](../scripts/sitemap.mjs) then writes `dist/sitemap.xml` from every page in `dist/` that names itself as canonical and is not `noindex`. Each `<lastmod>` is the `dateModified` the page declares in its JSON-LD: the guide pages' `CONTENT_DATE` in [`scripts/generate_seo_content.py`](../scripts/generate_seo_content.py), the legal pages' "last updated" dates, and the landing page's last source commit. A page without a date is listed without `<lastmod>`.
+The free tools under `/tools` ([`src/pages/tools/`](../src/pages/tools/)) are prerendered the same way, listed in [`src/prerender/tool-pages.tsx`](../src/prerender/tool-pages.tsx) with heads in [`src/lib/seo/tool-pages.ts`](../src/lib/seo/tool-pages.ts). They render their own JSON-LD in the page body, so the dev server and the prerendered HTML carry the same structured data, and their `dateModified` is `TOOL_PAGES_MODIFIED` in that file: bump it with a substantive content change. Their speech times come from [`src/lib/free-tools/formats.ts`](../src/lib/free-tools/formats.ts), which cites a league source per format.
+
+`/embed/debate-timer` is a second Vite HTML entry ([`embed/debate-timer/index.html`](../embed/debate-timer/index.html)), not an app route: it loads only the timer, never the app shell, Jam, analytics or the service worker, so a site that frames it sees no third-party request. It is `noindex` with its canonical URL on `/tools/debate-timer`, and the service worker leaves `/embed/` alone.
+
+[`scripts/sitemap.mjs`](../scripts/sitemap.mjs) then writes `dist/sitemap.xml` from every page in `dist/` that names itself as canonical and is not `noindex`. Each `<lastmod>` is the `dateModified` the page declares in its JSON-LD: the guide pages' `CONTENT_DATE` in [`scripts/generate_seo_content.py`](../scripts/generate_seo_content.py), the legal pages' "last updated" dates, the tool pages' `TOOL_PAGES_MODIFIED`, and the landing page's last source commit. A page without a date is listed without `<lastmod>`.
 
 The guide pages in `public/<slug>/index.html` are generated, not hand-edited: run `python3 scripts/generate_seo_content.py` and commit its output. Short pages live in its `PAGES` list; pages with long-form copy, their own highlight-card descriptions, and their own FAQs (which also feed the page's FAQPage JSON-LD) live in [`scripts/seo_guides.py`](../scripts/seo_guides.py). Keep `PAGES` in order, because each page's related-guide links are picked by position. A guide entry can set its own `modified` date, which overrides `CONTENT_DATE` for that page alone.
 
@@ -95,13 +100,30 @@ Before a production backend deploy, check that the commit's `staging-sync` statu
 
 Admins see a **Developer** card in Settings that signs out, sets the key, and reloads. The app's persisted stores are shared by both projects, so the switch also clears this project's stored session, its Google token, and all user-specific local data, including saved results and form drafts. It waits at most 4 seconds for the sign-out request, so an unresponsive project cannot block it. Other open tabs clear their own session storage, including their Google token, and reload as soon as the key changes, so no tab keeps talking to the old project while sharing stores with the new one. The strip publishes its height as `--staging-banner-height`, and the landing navigation and app header sit below it. While staging is active, every page shows a staging strip with **Switch to Production**, and the Settings card is shown to everyone. A new staging session starts signed out, and an admin on production may not be an admin on staging, so the way back cannot depend on that role. The switch is a convenience, not an access control. Staging RLS and its separate user accounts are the boundary.
 
-A build can pin one project with the `VITE_SUPABASE_ENV` build variable (`production` or `staging`; any other non-empty value fails the build). A pinned build ignores the localStorage key, hides the Settings card and the strip's **Switch to Production** button, and does not reload when another tab switches. The strip still shows on a pinned staging build. The staging Vercel project uses this so each PR gets a staging preview; see [Per-PR previews](#per-pr-previews).
+A build can pin one project with the `VITE_SUPABASE_ENV` build variable (`production` or `staging`; any other non-empty value fails the build). A pinned build ignores the localStorage key, hides the Settings card and the strip's **Switch to Production** button, and does not reload when another tab switches. The strip still shows on a pinned staging build. The staging Vercel project uses this so a requested preview is pinned to staging; see [Opt-in previews](#opt-in-previews).
 
 The switch only works while the `connect-src` directive in [`vercel.json`](../vercel.json) allows the staging project origin. It lists exactly the two project origins from [`src/lib/supabase/projects.ts`](../src/lib/supabase/projects.ts), and `src/test/vercel-deployment-config.test.ts` fails if they drift apart.
 
-## Per-PR previews
+## Opt-in previews
 
-Each pull request gets two Vercel previews, one per Supabase project, and both rebuild on every push:
+A push to a branch other than `main` does not deploy. Both Vercel projects read this `vercel.json`, so neither builds a preview on its own. There is no long-lived staging git branch: `debatelab-staging`'s production deployment tracks `main` and stays at `https://debatelab-staging.vercel.app`.
+
+Request a preview only when a real UI change needs a hosted URL. `npm run dev:preview` and the `verify-debatelab` skill do not spend a Vercel deployment.
+
+From the repo root, with the CLI logged in (`vercel login`, or `VERCEL_TOKEN` in the environment; never commit a token):
+
+```bash
+npx vercel link --yes --non-interactive --scope adam-gaborjanis-projects --project debatelab-staging
+npx vercel deploy --yes --non-interactive --scope adam-gaborjanis-projects
+```
+
+Leave off `--prod`. Do not run `vercel --yes` before the link: the first deployment of a new project is production. The command above is one preview on `debatelab-staging`, pinned to staging by that project's `VITE_SUPABASE_ENV`. Linking `debate-navigator` instead builds a preview with no `VITE_SUPABASE_ENV`, so it uses production data unless the saved toggle says staging. One preview is enough, and the staging project is the one to use unless the change needs production data.
+
+Adam can do the same from the Vercel dashboard: Create Deployment, pick the branch, leave the target as Preview. That needs no project setting change.
+
+A commit message cannot turn a deployment back on. `git.deploymentEnabled` is decided before a build exists, which is what keeps the skipped push off the daily cap. An Ignored Build Step (`ignoreCommand`) runs only after a deployment is created, and that skip still counts, so this repo does not use one.
+
+The preview hosts are unchanged:
 
 - `debate-navigator` (the production Vercel project) builds previews with no `VITE_SUPABASE_ENV`, so they use production unless the saved toggle says staging. Production's Auth redirect allowlist must include `https://debate-navigator-*-adam-gaborjanis-projects.vercel.app/**` for Google sign-in to return to the preview.
 - `debatelab-staging` builds the same repository with `VITE_SUPABASE_ENV=staging`. Staging's Auth redirect allowlist must include `https://debatelab-staging-*-adam-gaborjanis-projects.vercel.app/**`. Its production deployment tracks `main`.
@@ -109,6 +131,8 @@ Each pull request gets two Vercel previews, one per Supabase project, and both r
 Edge Function CORS and the demo-code sign-in redirect accept these hosts through `isAllowedOrigin()` in [`supabase/functions/_shared/cors.ts`](../supabase/functions/_shared/cors.ts). Previews can call functions only after both projects run a function build that includes it.
 
 The staging project's name must not start with `debate-navigator-`, or production's allowlist pattern would also match it. A production preview runs unmerged frontend code with real production sessions and data, so use the staging preview unless the change needs production data. A staging preview runs against whatever backend staging has; if the PR changes migrations or Edge Functions, sync staging first (see [Staging sync](#staging-sync)).
+
+A branch that does not contain this `vercel.json` still deploys on push. After the change is on `main`, branches cut from `main` inherit it.
 
 ## Backend drift check
 

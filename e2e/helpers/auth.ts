@@ -43,6 +43,16 @@ export async function stubSupabaseSession(page: Page, opts: StubAuthOptions = {}
     }
   }, { key: `debate-auth-${env}`, value: session });
 
+  // The bogus JWT makes data requests fail with 401, and the client then
+  // forces a token refresh to tell a revoked session from a stale one. Accept
+  // that refresh with the same stub session, so a render check keeps its
+  // session and never asks the real Auth server about it.
+  await page.route((url) => url.pathname.endsWith('/auth/v1/token') && url.searchParams.get('grant_type') === 'refresh_token', (route) => route.fulfill({
+    status: 200,
+    contentType: 'application/json',
+    body: JSON.stringify({ ...session, expires_at: Math.floor(Date.now() / 1000) + HOUR_SECONDS }),
+  }));
+
   // Credential-free render checks must not call the production announcement
   // function. Tests that exercise announcements register a more specific
   // route after this default.

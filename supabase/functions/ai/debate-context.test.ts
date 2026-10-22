@@ -73,7 +73,7 @@ function install(options: { stream?: boolean; tables?: typeof tables; reply?: un
       if (url.pathname.includes("/rest/v1/user_settings")) return jsonResponse({ subscription_tier: "trial", daily_limit_override: 50, trial_ends_at: "2099-01-01T00:00:00.000Z", grace_period_ends_at: null });
       if (url.pathname.includes("/rest/v1/subscriptions")) return jsonResponse([]);
       if (url.pathname.includes("/rest/v1/rate_limits")) return jsonResponse({ limit_value: 50 });
-      if (url.pathname.includes("/rest/v1/rpc/consume_daily_quota")) return jsonResponse([{ allowed: true, current_count: 1 }]);
+      if (/\/rest\/v1\/rpc\/consume_(daily|ai)_quota$/.test(url.pathname)) return jsonResponse([{ allowed: true, current_count: 1 }]);
       if (url.pathname.includes("/rest/v1/global_prompts")) return jsonResponse({ prompt_text: null });
       if (url.pathname.includes("/rest/v1/ai_requests")) return new Response(null, { status: 201 });
       throw new Error(`Unhandled Supabase request: ${url}`);
@@ -197,7 +197,7 @@ Deno.test("a forged debate is rejected before quota, routing, or provider work",
         debateContext: { debateId, side: "pro", sourceIds: [SOURCE], outputs: [{ kind: "case", id: CASE }] },
       }));
       assert(response.status === 404, `forged debate returned ${response.status}`);
-      assert(!harness.calls.some((path) => path.includes("consume_daily_quota") || path.includes("/chat/completions") || path.includes("/decisions")), `forged debate reached paid work: ${harness.calls.join(", ")}`);
+      assert(!harness.calls.some((path) => /consume_(daily|ai)_quota/.test(path) || path.includes("/chat/completions") || path.includes("/decisions")), `forged debate reached paid work: ${harness.calls.join(", ")}`);
     } finally {
       harness.restore();
     }
@@ -262,7 +262,7 @@ Deno.test("streamed Ask receives the same debate context and rejects a foreign d
       debateContext: { debateId: FOREIGN_DEBATE, side: "pro", sourceIds: [], outputs: [] },
     }, "ai-stream"));
     assert(response.status === 404, `foreign stream returned ${response.status}`);
-    assert(!foreign.calls.some((path) => path.includes("consume_daily_quota") || path.includes("/chat/completions")), "foreign stream reached paid work");
+    assert(!foreign.calls.some((path) => /consume_(daily|ai)_quota/.test(path) || path.includes("/chat/completions")), "foreign stream reached paid work");
   } finally {
     foreign.restore();
   }

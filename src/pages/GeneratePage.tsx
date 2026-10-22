@@ -36,14 +36,16 @@ import { useDebateMotionGate } from '@/components/features/debate/DebateMotionGa
 
 export default function GeneratePage() {
   const workspace = useWorkspaceToolScope('generate');
-  const { generateResult, generateLoading, generateRegeneratingSection: regeneratingSection, generateForm, setGenerateResult, setGenerateLoading, setGenerateRegeneratingSection, saveCurrentCase, setPendingFlowchartData, autosavedCases, recordResult, updateRecordedResult } = useSessionStore(useShallow((state) => ({
+  const { generateResult, generateLoading, generateRegeneratingSection: regeneratingSection, generateForm, generateResultDebateId, setGenerateResult, setGenerateLoading, setGenerateRegeneratingSection, setGenerateResultDebateId, saveCurrentCase, setPendingFlowchartData, autosavedCases, recordResult, updateRecordedResult } = useSessionStore(useShallow((state) => ({
     generateResult: state.generateResult,
     generateLoading: state.generateLoading,
     generateRegeneratingSection: state.generateRegeneratingSection,
     generateForm: state.generateForm,
+    generateResultDebateId: state.generateResultDebateId,
     setGenerateResult: state.setGenerateResult,
     setGenerateLoading: state.setGenerateLoading,
     setGenerateRegeneratingSection: state.setGenerateRegeneratingSection,
+    setGenerateResultDebateId: state.setGenerateResultDebateId,
     saveCurrentCase: state.saveCurrentCase,
     setPendingFlowchartData: state.setPendingFlowchartData,
     autosavedCases: state.autosavedCases,
@@ -107,6 +109,7 @@ export default function GeneratePage() {
       setGenerateResult(result);
       setRecordedCaseId(null);
       setResultDebateId(target.debateId);
+      setGenerateResultDebateId(target.debateId);
       await workspace.attach(data, result);
       if (target.debateId) {
         setRecordedCaseId(await recordInDebate(() => recordResult('case', { title: data.motion, input: data, output: result, debateId: target.debateId, side: data.side })));
@@ -135,26 +138,31 @@ export default function GeneratePage() {
 
   const handleRegenerateSection = (section: string) => {
     if (generateLoading || regeneratingSection) return;
-    if (!generateForm?.motion || !generateResult) {
+    const motion = generateResult?.metadata?.motion?.trim() || generateForm?.motion;
+    if (!motion || !generateResult) {
       toast({ title: t('generate.regenerateUnavailable', 'Cannot regenerate yet'), description: t('generate.regenerateUnavailableDesc', 'Generate a case first, then retry a section.'), variant: 'destructive' });
       return;
     }
 
     const data: GenerateInput = {
-      motion: generateForm.motion,
-      side: generateForm.side || 'pro',
-      format: generateForm.format || 'custom',
-      role: generateForm.role || 'r1',
-      length: generateForm.length || 'standard',
-      audience: generateForm.audience || 'intermediate',
-      tone: generateForm.tone || 'formal',
+      motion,
+      side: generateResult.metadata?.side || generateForm?.side || 'pro',
+      format: generateForm?.format || 'custom',
+      role: generateForm?.role || 'r1',
+      length: generateForm?.length || 'standard',
+      audience: generateForm?.audience || 'intermediate',
+      tone: generateForm?.tone || 'formal',
     };
 
     // Regenerate against the result's own debate, never whichever is current now.
+    // A loaded case records that debate on the store; this page's state only
+    // knows it until the student leaves and comes back.
     const current = selectCurrentDebate(useDebateStore.getState());
     const debateId = resultDebateId !== undefined
       ? resultDebateId
-      : sameMotion(current?.motion, data.motion) ? activeDebateId() : null;
+      : generateResultDebateId !== undefined
+        ? generateResultDebateId
+        : sameMotion(current?.motion, data.motion) ? activeDebateId() : null;
     // One section at a time: each regeneration merges into the result it started from.
     const base = generateResult;
     setGenerateRegeneratingSection(section);
@@ -396,6 +404,7 @@ export default function GeneratePage() {
       variant={subError.limitModalVariant}
       limit={subError.limitModalLimit}
       current={subError.limitModalCurrent}
+      units={subError.limitModalUnits}
       onUpgrade={() => { subError.setLimitModalOpen(false); subError.setPricingModalOpen(true); }}
     />
     <ModelRestrictedModal

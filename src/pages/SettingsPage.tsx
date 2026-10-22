@@ -1,9 +1,10 @@
 // src/pages/SettingsPage.tsx
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Settings, Lock, Trash2, Crown, CreditCard, Zap, Shield, Download, UserX } from 'lucide-react';
+import type { User } from '@supabase/supabase-js';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
@@ -33,6 +34,11 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Input } from '@/components/ui/input';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { APP_LANGUAGES, isAppLanguage } from '@/lib/languages';
+import {
+  CHECKOUT_CONFIRM_INTERVAL_MS,
+  nextCheckoutConfirmation,
+  stripCheckoutParams,
+} from '@/lib/billing/checkout-return';
 
 
 // Tinted badges keep their label readable (white on amber or green was about 2:1).
@@ -43,13 +49,35 @@ const tierLabels: Record<string, { labelKey: string; color: string }> = {
   expired: { labelKey: 'settings.tierExpired', color: 'border-destructive/30 bg-destructive/10 text-destructive' },
 };
 
+/** How this account signs in, from what Auth recorded for it (not only this session). */
+function signInMethodKey(user: User | null): string | null {
+  const meta = user?.app_metadata;
+  if (!meta) return null;
+  if (typeof meta.demo_access_code_id === 'string') return 'settings.signInDemo';
+  const providers: unknown[] = Array.isArray(meta.providers) ? meta.providers : [meta.provider];
+  const google = providers.includes('google');
+  const email = providers.includes('email');
+  if (google && email) return 'settings.signInGoogleOrEmail';
+  if (google) return 'settings.signInGoogle';
+  if (email) return 'settings.signInEmail';
+  return null;
+}
+
+/** The next midnight UTC, when the daily AI requests refresh, on the reader's clock. */
+function dailyResetTime(locale: string): string {
+  const now = new Date();
+  const reset = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1));
+  return reset.toLocaleTimeString(locale, { hour: 'numeric', minute: '2-digit' });
+}
+
 export default function SettingsPage() {
   const { language, setLanguage, outputLanguage, setOutputLanguage, theme, setTheme } = useSettingsStore();
   const { clearSession, clearAllData } = useSessionStore();
   const resetSparringLocalData = useSparringStore((state) => state.resetLocalData);
   const { user, signOut } = useAuth();
   const { toast } = useToast();
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const signInMethod = signInMethodKey(user);
   const subscription = useSubscription();
   const [pricingOpen, setPricingOpen] = useState(false);
   const [portalLoading, setPortalLoading] = useState(false);
@@ -62,6 +90,45 @@ export default function SettingsPage() {
   const [deletingData, setDeletingData] = useState(false);
   const [signingOut, setSigningOut] = useState(false);
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const checkout = searchParams.get('checkout');
+  const refreshSubscription = useRef(subscription.refresh);
+  refreshSubscription.current = subscription.refresh;
+  const checkoutStarted = useRef<number | null>(null);
+  const checkoutSettled = useRef(false);
+  const [checkoutPoll, setCheckoutPoll] = useState(0);
+  const confirmingCheckout = checkout === 'success'
+    && subscription.tier !== 'pro'
+    && subscription.tier !== 'legacy_free';
+
+  useEffect(() => {
+    const elapsed = checkoutStarted.current === null ? 0 : Date.now() - checkoutStarted.current;
+    const action = nextCheckoutConfirmation({
+      checkout,
+      tier: subscription.tier,
+      elapsedMs: elapsed,
+      loading: subscription.loading,
+    });
+    if (action === 'ignore' || action === 'wait' || checkoutSettled.current) return;
+
+    if (action === 'canceled' || action === 'confirmed' || action === 'slow') {
+      checkoutSettled.current = true;
+      const notice = action === 'canceled'
+        ? { title: t('settings.checkoutCanceled'), description: t('settings.checkoutCanceledDesc') }
+        : action === 'confirmed'
+          ? { title: t('settings.checkoutConfirmed'), description: t('settings.checkoutConfirmedDesc') }
+          : { title: t('settings.checkoutConfirmSlowTitle'), description: t('settings.checkoutConfirmSlow') };
+      toast(notice);
+      setSearchParams(stripCheckoutParams(searchParams), { replace: true });
+      return;
+    }
+
+    if (checkoutStarted.current === null) checkoutStarted.current = Date.now();
+    const timer = window.setTimeout(() => {
+      void refreshSubscription.current().finally(() => setCheckoutPoll((count) => count + 1));
+    }, CHECKOUT_CONFIRM_INTERVAL_MS);
+    return () => window.clearTimeout(timer);
+  }, [checkout, checkoutPoll, searchParams, setSearchParams, subscription.loading, subscription.tier, t, toast]);
   // Must match deletionConfirmation in supabase/functions/account/index.ts.
   const expectedAccountConfirmation = user?.email || 'DELETE';
 
@@ -199,8 +266,10 @@ export default function SettingsPage() {
             </div>
           </CardHeader>
           <CardContent className="space-y-4">
-            {subscription.loading ? (
-              <p role="status" className="text-sm text-muted-foreground">{t('settings.loading')}</p>
+            {subscription.loading || confirmingCheckout ? (
+              <p role="status" className="text-sm text-muted-foreground">
+                {confirmingCheckout ? t('settings.confirmingSubscription') : t('settings.loading')}
+              </p>
             ) : (
               <>
                 <div className="flex items-center justify-between">
@@ -233,6 +302,15 @@ export default function SettingsPage() {
                 <p className="text-sm text-muted-foreground">
                   {t(subscription.tier === 'expired' ? 'settings.accessExpired' : 'settings.accessActive')}
                 </p>
+                {subscription.remainingToday !== null && subscription.dailyLimit > 0 && (
+                  <p data-testid="daily-usage" className="text-sm text-muted-foreground">
+                    {t('dailyLimit.usage', {
+                      used: Math.min(subscription.dailyUsed, subscription.dailyLimit),
+                      limit: subscription.dailyLimit,
+                      time: dailyResetTime(i18n.language),
+                    })}
+                  </p>
+                )}
               </>
             )}
           </CardContent>
@@ -305,6 +383,7 @@ export default function SettingsPage() {
               <div className="min-w-0">
                 <p className="text-sm text-muted-foreground">{t('settings.signedInAs')}</p>
                 <p className="font-medium break-all">{user?.email || t('settings.unknownUser')}</p>
+                {signInMethod && <p data-testid="sign-in-method" className="text-xs text-muted-foreground">{t(signInMethod)}</p>}
               </div>
               <Button variant="outline" className="shrink-0" onClick={handleSignOut} disabled={signingOut}>
                 {signingOut ? t('settings.signingOut', 'Signing out…') : t('settings.signOut')}

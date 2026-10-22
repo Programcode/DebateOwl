@@ -23,9 +23,9 @@ const FAST_CANDIDATES = {
   "meta/muse-spark-1.3-contributor": "Best for very long input, multilingual output, or broad context handling.",
 } as const;
 
+// Opus is opt-in only: Auto Pro never routes or falls back to it.
 const PRO_CANDIDATES = {
-  "anthropic/claude-opus-5.5": "Default for professional DebateLab work: nuanced rhetoric, adversarial critique, and long-form writing.",
-  "anthropic/claude-sonnet-5.5": "Best for quick, simpler Pro requests where speed matters more than depth.",
+  "anthropic/claude-sonnet-5.5": "Default for professional DebateLab work: nuanced rhetoric, adversarial critique, and long-form writing.",
   "openai/gpt-6.1-sol": "Best for complex structured reasoning and reliable multi-part analysis.",
 } as const;
 
@@ -72,7 +72,7 @@ function routingState(args: ResolveModelSelectionArgs) {
 }
 
 function fallbackFor(selection: typeof AUTO_FAST | typeof AUTO_PRO): AutoCandidate {
-  return selection === AUTO_FAST ? "anthropic/claude-haiku-5.5" : "anthropic/claude-opus-5.5";
+  return selection === AUTO_FAST ? "anthropic/claude-haiku-5.5" : "anthropic/claude-sonnet-5.5";
 }
 
 function isAbort(error: unknown, signal?: AbortSignal): boolean {

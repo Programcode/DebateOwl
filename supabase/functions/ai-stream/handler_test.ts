@@ -76,7 +76,7 @@ Deno.test("streaming Ask forwards the shared prompt and returns provider SSE", a
           headers: { "Content-Type": "application/json" },
         });
       }
-      if (url.pathname.includes("/rest/v1/rpc/consume_daily_quota")) {
+      if (/\/rest\/v1\/rpc\/consume_(daily|ai)_quota$/.test(url.pathname)) {
         return new Response(JSON.stringify([{ allowed: true, current_count: 1 }]), {
           headers: { "Content-Type": "application/json" },
         });
@@ -155,7 +155,10 @@ Deno.test("streaming Ask forwards the shared prompt and returns provider SSE", a
     assertIncludes(body, '"requestedModel":"auto-fast"');
     assertIncludes(body, '"resolvedModel":"anthropic/claude-haiku-5.5"');
 
-    const messages = providerRequest?.messages as Array<{ role: string; content: string }> | undefined;
+    const messages = providerRequest?.messages as Array<{
+      role: string;
+      content: string | Array<{ text: string; cache_control?: unknown }>;
+    }> | undefined;
     if (providerRequest?.model !== "anthropic/claude-haiku-5.5") {
       throw new Error(`unexpected OpenRouter model: ${String(providerRequest?.model)}`);
     }
@@ -170,7 +173,11 @@ Deno.test("streaming Ask forwards the shared prompt and returns provider SSE", a
     if ("sort" in preferences || "order" in preferences) {
       throw new Error(`sort/order disables OpenRouter balanced routing: ${JSON.stringify(preferences)}`);
     }
-    const system = messages?.find((message) => message.role === "system")?.content ?? "";
+    const systemContent = messages?.find((message) => message.role === "system")?.content;
+    if (!Array.isArray(systemContent) || !systemContent.some((part) => part.cache_control)) {
+      throw new Error("Anthropic system prompt was sent without a cache breakpoint");
+    }
+    const system = systemContent.map((part) => part.text).join("");
     assertIncludes(system, "Answer in clear Markdown that can stream smoothly token by token.");
     assertIncludes(system, "Follow any explicit output-language instruction.");
     assertIncludes(system, "Otherwise match the language used by the user.");

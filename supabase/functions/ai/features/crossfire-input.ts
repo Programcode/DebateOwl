@@ -15,6 +15,7 @@ import {
   type PromptSource,
 } from "../../_shared/prompts.ts";
 import { MAX_CROSSFIRE_REPLY_CHARS } from "../../_shared/crossfire-response.ts";
+import type { JsonOutputSchema } from "../../_shared/research.ts";
 import { hasOnlyKeys, isRecord, sanitizePromptInput } from "../request.ts";
 import { sparringIntegritySecret, supabase } from "../runtime.ts";
 
@@ -288,6 +289,19 @@ export function boundCrossfireSources(value: unknown, enabled: boolean): { value
   const bounded = boundPromptSources(normalized);
   truncated = truncated || bounded.length < normalized.length || bounded.some((source, index) => source.content.length !== normalized[index].content.length);
   return { value: bounded, truncated };
+}
+
+/** The provider-side shape of a next turn, mirroring crossfireReplyOutput. */
+export function crossfireReplySchema(expectedReply: "question" | "answer"): JsonOutputSchema {
+  return {
+    name: "crossfire_turn",
+    schema: {
+      type: "object",
+      properties: { type: { type: "string", enum: [expectedReply] }, text: { type: "string" } },
+      required: ["type", "text"],
+      additionalProperties: false,
+    },
+  };
 }
 
 export function crossfireReplyOutput(value: unknown, expectedReply: "question" | "answer"): { value: { type: "question" | "answer"; text: string } } | { error: string } {
