@@ -52,7 +52,7 @@ function CurrentDebateSummary({ t }: { t: TFunction }) {
           <p className="text-sm text-muted-foreground">
             {t('debate.lastActivity', { when: formatRelativeDate(debate.lastActivityAt), defaultValue: 'Last activity {{when}}' })}
             {' · '}
-            {t('debate.counts', { sources: counts.sources, outputs: counts.outputs, defaultValue: '{{sources}} sources · {{outputs}} outputs' })}
+            {t('debate.counts', { sources: counts.sources, active: counts.activeSources, outputs: counts.outputs, defaultValue: '{{sources}} sources ({{active}} active) · {{outputs}} outputs' })}
           </p>
           {oneOff && <p className="text-sm font-medium text-primary">{t('debate.oneOffActive', 'One-off mode is on')}</p>}
         </div>

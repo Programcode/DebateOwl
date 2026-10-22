@@ -11,6 +11,7 @@ import { supabase } from '@/lib/supabase/client';
 import { restoredSessionsBlocked } from '@/lib/supabase/session-expiry';
 import { currentUserId } from '@/lib/supabase/current-user';
 import i18n from '@/i18n';
+import { findSavedPage, normalizeSourceUrl, savedSourceUrl } from '@/lib/source-url';
 import { activeDebateId, useDebateStore, type DebateSide } from './debate-store';
 
 interface Message {
@@ -215,12 +216,17 @@ export interface SessionState {
 
   recordResult: (kind: ResultKind, input: RecordResultInput) => Promise<string>;
   updateRecordedResult: (kind: ResultKind, id: string, output: unknown) => Promise<void>;
+  deleteRecordedResult: (kind: ResultKind, id: string) => Promise<void>;
   attachItem: (kind: AttachKind, id: string, debateId: string, side?: DebateSide) => Promise<void>;
   /** Records new Ask messages: into the loaded chat, or a new chat in `debateId`. */
   syncAskChat: (debateId: string | null) => Promise<void>;
   deleteSavedFlowchart: (id: string) => Promise<void>;
 
-  /** `id` and `createdAt` are only for Undo, which puts a deleted source back exactly. */
+  /**
+   * Shows the source at once and saves it. `id` and `createdAt` are only for
+   * Undo, which puts a deleted source back exactly. Throws DuplicateSourceError
+   * when the debate already holds the same web page.
+   */
   addSource: (source: Omit<Source, 'id' | 'createdAt' | 'isActive'> & { isActive?: boolean; id?: string; createdAt?: number }) => Promise<void>;
   createSourceFolder: (folder: string) => Promise<void>;
   updateSource: (id: string, patch: Partial<Omit<Source, 'id' | 'createdAt'>>) => Promise<void>;
@@ -452,6 +458,21 @@ export class DebateRequiredError extends Error {
   }
 }
 
+/** Thrown when the debate already has a source for the same web page. */
+export class DuplicateSourceError extends Error {
+  constructor(readonly existingId: string) {
+    super('This page is already in the debate\'s Library');
+    this.name = 'DuplicateSourceError';
+  }
+}
+
+const PENDING_SOURCE_PREFIX = 'pending-';
+
+/** A source shown before its row is saved; it has no server id to change yet. */
+export function isPendingSource(source: Pick<Source, 'id'>): boolean {
+  return source.id.startsWith(PENDING_SOURCE_PREFIX);
+}
+
 function savedFromRow<T>(row: SupabaseSavedRow<T>): SavedItem<T> {
   return {
     id: row.id,
@@ -575,51 +596,92 @@ export const useSessionStore = create<SessionState>()(
         // An omitted debate means the tool's scope, which is none in one-off mode.
         const debateId = source.debateId !== undefined ? source.debateId : activeDebateId();
         if (!debateId) throw new DebateRequiredError();
-        const localItem: Source = { ...source, folder, debateId, id: restoredId ?? generateId(), createdAt: restoredAt ?? Date.now(), isActive };
+        // One row per web page per debate. Undo puts back a row that was just deleted.
+        const url = source.metadata?.url ?? source.origin;
+        if (!restoredId) {
+          const known = findSavedPage(get().sourceLibrary, debateId, url);
+          if (known) throw new DuplicateSourceError(known.id);
+        }
+        const localItem: Source = {
+          ...source, folder, debateId, isActive,
+          id: restoredId ?? `${PENDING_SOURCE_PREFIX}${generateId()}`,
+          createdAt: restoredAt ?? Date.now(),
+        };
         // The library is newest first; a restored source goes back to its old place.
         const place = (list: Source[], item: Source) =>
           restoredId ? [...list, item].sort((x, y) => y.createdAt - x.createdAt) : [item, ...list];
-        const userId = await getUserId();
-        if (!userId) throw signInRequired('save this source');
+        // The row shows while it saves, and leaves again if the save fails.
+        set((state) => ({ sourceLibrary: place(state.sourceLibrary, localItem) }));
+        const withoutLocal = () => set((state) => ({ sourceLibrary: state.sourceLibrary.filter((item) => item !== localItem) }));
 
-        const folderResult = await supabase
-          .from('source_folders')
-          .upsert({ user_id: userId, name: folder }, { onConflict: 'user_id,name' });
-        throwOnWriteError(folderResult, 'save source folder');
-        const { data, error } = await supabase
-          .from('sources')
-          .insert({
-            ...(restoredId ? { id: restoredId, created_at: new Date(localItem.createdAt).toISOString() } : {}),
-            user_id: userId,
-            debate_id: debateId,
-            title: source.title,
-            content: source.content,
-            type: source.type,
-            origin: source.origin || null,
-            folder,
-            is_active: isActive,
-            metadata: source.metadata ?? null,
-          })
-          .select('*')
-          .single();
-        throwOnWriteError({ error }, 'save source');
-        if (!data) throw new Error('[SessionStore] Failed to save source: No record returned');
+        let savedSource: Source;
+        try {
+          const userId = await getUserId();
+          if (!userId) throw signInRequired('save this source');
 
-        const savedSource: Source = {
-          id: data.id,
-          title: data.title,
-          content: data.content,
-          type: data.type,
-          origin: data.origin || undefined,
-          folder: normalizeFolder(data.folder || localItem.folder),
-          metadata: parseSourceProvenance(data.metadata),
-          debateId: data.debate_id ?? debateId,
-          isActive: data.is_active,
-          createdAt: toTimestamp(data.created_at),
-        };
+          const key = !restoredId && url ? normalizeSourceUrl(url) : null;
+          if (key) {
+            // Another tab, or a list that failed to load, may hold the page already.
+            const { data: rows, error: lookupError } = await supabase
+              .from('sources')
+              .select('id,origin,metadata')
+              .eq('user_id', userId)
+              .eq('debate_id', debateId);
+            throwOnWriteError({ error: lookupError }, 'check for a saved copy of this page');
+            const match = (rows ?? []).find((row) => savedSourceUrl({
+              origin: row.origin ?? undefined,
+              metadata: parseSourceProvenance(row.metadata),
+            }) === key);
+            if (match) throw new DuplicateSourceError(match.id);
+          }
+
+          const folderResult = await supabase
+            .from('source_folders')
+            .upsert({ user_id: userId, name: folder }, { onConflict: 'user_id,name' });
+          throwOnWriteError(folderResult, 'save source folder');
+          const { data, error } = await supabase
+            .from('sources')
+            .insert({
+              ...(restoredId ? { id: restoredId, created_at: new Date(localItem.createdAt).toISOString() } : {}),
+              user_id: userId,
+              debate_id: debateId,
+              title: source.title,
+              content: source.content,
+              type: source.type,
+              origin: source.origin || null,
+              folder,
+              is_active: isActive,
+              metadata: source.metadata ?? null,
+            })
+            .select('*')
+            .single();
+          throwOnWriteError({ error }, 'save source');
+          if (!data) throw new Error('[SessionStore] Failed to save source: No record returned');
+
+          savedSource = {
+            id: data.id,
+            title: data.title,
+            content: data.content,
+            type: data.type,
+            origin: data.origin || undefined,
+            folder: normalizeFolder(data.folder || localItem.folder),
+            metadata: parseSourceProvenance(data.metadata),
+            debateId: data.debate_id ?? debateId,
+            isActive: data.is_active,
+            createdAt: toTimestamp(data.created_at),
+          };
+        } catch (error) {
+          withoutLocal();
+          throw error;
+        }
         set((state) => ({
           sourceFolders: mergeSourceFolders(state.sourceFolders, [savedSource]),
-          sourceLibrary: place(state.sourceLibrary, savedSource),
+          // A reload from the server while this saved may already list the row.
+          sourceLibrary: state.sourceLibrary.includes(localItem)
+            ? state.sourceLibrary.map((item) => item === localItem ? savedSource : item)
+            : state.sourceLibrary.some((item) => item.id === savedSource.id)
+              ? state.sourceLibrary
+              : place(state.sourceLibrary, savedSource),
         }));
         markDebateActivity(debateId);
       },
@@ -848,15 +910,22 @@ export const useSessionStore = create<SessionState>()(
         const current = get().sourceLibrary.find((source) => source.id === id);
         if (!current) return;
         const nextValue = !current.isActive;
-        const userId = await getUserId();
-        if (!userId) throw signInRequired('update this source');
-        throwOnWriteError(
-          await applyUserScopedIdFilter(supabase.from('sources').update({ is_active: nextValue }), userId, id),
-          'toggle source activity',
-        );
-        set((state) => ({
-          sourceLibrary: state.sourceLibrary.map((source) => source.id === id ? { ...source, isActive: nextValue } : source),
+        const setActive = (isActive: boolean) => set((state) => ({
+          sourceLibrary: state.sourceLibrary.map((source) => source.id === id ? { ...source, isActive } : source),
         }));
+        // The switch moves at once; a failed write puts it back and the caller says why.
+        setActive(nextValue);
+        try {
+          const userId = await getUserId();
+          if (!userId) throw signInRequired('update this source');
+          throwOnWriteError(
+            await applyUserScopedIdFilter(supabase.from('sources').update({ is_active: nextValue }), userId, id),
+            'toggle source activity',
+          );
+        } catch (error) {
+          setActive(current.isActive);
+          throw error;
+        }
       },
       clearLibrary: async () => {
         // The Library belongs to the Current Debate; other debates keep their sources.
@@ -1122,6 +1191,19 @@ export const useSessionStore = create<SessionState>()(
         }) as Partial<SessionState>);
       },
 
+      deleteRecordedResult: async (kind, id) => {
+        const userId = await getUserId();
+        if (!userId) throw signInRequired('delete this result');
+        throwOnWriteError(
+          await applyUserScopedIdFilter(supabase.from(RESULT_TABLES[kind]).delete(), userId, id),
+          `delete ${kind}`,
+        );
+        const list = RESULT_LISTS[kind];
+        set((state) => ({
+          [list]: (state[list] as SavedItem<unknown>[]).filter((item) => item.id !== id),
+        }) as Partial<SessionState>);
+      },
+
       attachItem: async (kind, id, debateId, side) => {
         const { error } = await supabase.rpc('attach_to_debate', {
           p_kind: kind,
@@ -1352,7 +1434,11 @@ export const useSessionStore = create<SessionState>()(
         pendingFlowchartData,
         serverHydration,
         ...persisted
-      }) => persisted,
+      }) => ({
+        ...persisted,
+        // A row still saving is not a source yet; the server list has it once it is.
+        sourceLibrary: persisted.sourceLibrary.filter((source) => !isPendingSource(source)),
+      }),
     }
   )
 );

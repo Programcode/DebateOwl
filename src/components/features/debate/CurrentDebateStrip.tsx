@@ -12,16 +12,21 @@ export function sideLabelKey(side: DebateSide): string {
   return `debate.side.${side}`;
 }
 
-/** Sources and saved outputs that belong to one debate. */
+/**
+ * Sources and saved outputs that belong to one debate. `activeSources` counts
+ * the sources switched on, the ones a request can use, so every page that
+ * names a count agrees with what Ask, Generate and the others say they use.
+ */
 // eslint-disable-next-line react-refresh/only-export-components
 export function useDebateCounts(debateId: string | null | undefined) {
   const sources = useSessionStore((state) => debateId ? state.sourceLibrary.filter((source) => source.debateId === debateId).length : 0);
+  const activeSources = useSessionStore((state) => debateId ? state.sourceLibrary.filter((source) => source.debateId === debateId && source.isActive).length : 0);
   const outputs = useSessionStore((state) => debateId ? [
     state.savedCases, state.savedAttacks, state.savedBrainstorms, state.savedFactoids,
     state.savedChats, state.savedFlowcharts, state.savedCrossfires,
   ].reduce((count, list) => count + list.filter((item) => item.debateId === debateId).length, 0) : 0);
   const sparring = useSparringStore((state) => debateId ? state.savedSessions.filter((session) => session.debateId === debateId).length : 0);
-  return { sources, outputs: outputs + sparring };
+  return { sources, activeSources, outputs: outputs + sparring };
 }
 
 /**
