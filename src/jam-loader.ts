@@ -15,8 +15,11 @@ const JAM_SCRIPT_TIMEOUT_MS = 3_000;
  * whole page. `pagehide` removes the frame first (it does not block the cache
  * the way `unload` and `beforeunload` do). The frame is not put back when the
  * page is restored: a re-added frame reloads and starts a new handshake, which
- * Jam's already-initialized parent script rejects. Jam stays off on a page
- * restored from the back/forward cache and returns on the next full load.
+ * Jam's already-initialized parent script rejects. So once Jam has loaded, it
+ * stays off on a page restored from the back/forward cache and returns on the
+ * next full load. If it had not started before the page was hidden, the
+ * pending trigger may still start it after the restore; that is a clean first
+ * load, not a reconnect.
  */
 export const JAM_PASSIVE_DELAY_MS = 8_000;
 

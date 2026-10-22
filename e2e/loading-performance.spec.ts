@@ -22,7 +22,7 @@ test('a stalled Jam recorder cannot delay the real application', async ({ page, 
   await expect(page.getByText('DebateLab by Pi-Stack is the official')).toHaveCount(0);
 });
 
-test('a page restored from the back/forward cache leaves Jam off instead of re-adding its frame', async ({ page, browserName }) => {
+test('pagehide removes the Jam frame and a persisted pageshow does not re-add it (synthetic events, stubbed Jam)', async ({ page, browserName }) => {
   test.skip(browserName === 'webkit', 'Jam recording requires MediaRecorder, which this WebKit runtime does not expose.');
   await page.route('https://js.jam.dev/**', (route) => route.fulfill({ status: 200, contentType: 'text/javascript', body: '' }));
 
