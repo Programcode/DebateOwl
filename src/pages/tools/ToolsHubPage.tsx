@@ -8,7 +8,7 @@ export default function ToolsHubPage() {
     <ToolPageLayout
       route="/tools"
       title="Free debate tools"
-      intro={<p>Tools for debate practice that work in any browser and need no account. Your rounds and drafts are saved in your browser, not on a server. Use them in a club session, on a projector in class, or embedded on your own site.</p>}
+      intro={<p>Tools for debate practice that work in any browser and need no account. The timer saves your round in this browser, not on a server. Use them in a club session, on a projector in class, or embedded on your own site.</p>}
       structuredData={hubStructuredData(FREE_TOOLS.map(({ route, name }) => ({ route, name })))}
       tool={(
         <ul className="grid gap-4 sm:grid-cols-2">
