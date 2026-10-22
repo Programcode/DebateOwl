@@ -9,6 +9,7 @@ import { AskAnswer } from '@/components/ask-answer';
 import { AskHistory } from '@/components/ask-history';
 import { TextButton } from '@/components/buttons';
 import { Chip } from '@/components/chip';
+import { ModelChips } from '@/components/model-picker';
 import { Icon } from '@/components/icon';
 import type { IconName } from '@/components/icon-paths';
 import { OneOffNotice } from '@/components/one-off-notice';
@@ -16,7 +17,7 @@ import { Text } from '@/components/text';
 import { AIError, isAbortError, type AIErrorKind, type ResponseExtras } from '@/lib/ai-request';
 import { askOnce, canStream, isFinalAskError, isMessageWithinBudget, streamAsk, type AskOptions } from '@/lib/ask';
 import { buildDebateContext } from '@/lib/context-request';
-import { fetchFeatureConfig, type FeatureConfig } from '@/lib/feature-config';
+import type { FeatureConfig } from '@/lib/feature-config';
 import { useAuth } from '@/lib/auth';
 import { ChatSaveError, fetchChat, saveChat, type ChatMessage, type ChatRecord } from '@/lib/chats';
 import { useDebates } from '@/lib/debate-context';
@@ -51,13 +52,13 @@ const nextId = () => `local-${Date.now()}-${(localId += 1)}`;
 export default function AskScreen() {
   const { t } = useTranslation();
   const router = useRouter();
-  const { prompt } = useLocalSearchParams<{ prompt?: string }>();
+  const { prompt, chat: resumeChatId } = useLocalSearchParams<{ prompt?: string; chat?: string }>();
   const insets = useSafeAreaInsets();
   const { colors } = useTheme();
   const { session } = useAuth();
   const userId = session?.user.id ?? null;
   const { current, oneOff, activeDebateId, refresh } = useDebates();
-  const { outputLanguage } = useSettings();
+  const { outputLanguage, readFeatureConfig } = useSettings();
 
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [streaming, setStreaming] = useState<string | null>(null);
@@ -90,7 +91,7 @@ export default function AskScreen() {
   };
 
   const askConfig = () => {
-    if (!config.current && userId) config.current = fetchFeatureConfig(userId, 'ask');
+    if (!config.current && userId) config.current = readFeatureConfig(userId, 'ask');
     return config.current!;
   };
 
@@ -326,6 +327,16 @@ export default function AskScreen() {
     }
   };
 
+  // A chat picked in History opens here, as the website's Resume loads it into Ask. Once per opening.
+  const resumed = useRef(false);
+  useEffect(() => {
+    if (resumed.current || !resumeChatId || !userId) return;
+    resumed.current = true;
+    void openChat(resumeChatId);
+    // openChat reads refs and state setters; it runs once per opening.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [resumeChatId, userId]);
+
   const subtitle = oneOff ? t('debate.oneOffActive') : current?.motion ?? '';
   const busy = loading || opening;
 
@@ -427,6 +438,8 @@ export default function AskScreen() {
                 onPress={() => setOptions((previous) => ({ ...previous, [chip.key]: !previous[chip.key] }))}
               />
             ))}
+            {/* The next question reads the model again, after this change is saved. */}
+            <ModelChips feature="ask" onChange={() => (config.current = null)} />
           </ScrollView>
           <View style={[styles.inputRow, { borderColor: colors.border, backgroundColor: colors.input }]}>
             <TextInput

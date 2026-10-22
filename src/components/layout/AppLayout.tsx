@@ -26,6 +26,7 @@ import {
   listActiveAnnouncements,
   type UserAnnouncement,
 } from '@/lib/announcements';
+import { filterVisibleAnnouncements } from '@debatelab/core/announcements';
 
 // Features live on Home and the Current Debate dashboard, not in the header.
 const libraryNavItems = [
@@ -46,14 +47,6 @@ const desktopLinkClass = cn(
 );
 
 const ANNOUNCEMENTS_STALE_MS = 60_000;
-
-function filterVisibleAnnouncements(announcements: UserAnnouncement[], now: number) {
-  return announcements.filter((announcement) => {
-    const startsAt = new Date(announcement.startsAt).getTime();
-    const expiresAt = announcement.expiresAt ? new Date(announcement.expiresAt).getTime() : Infinity;
-    return startsAt <= now && expiresAt > now;
-  });
-}
 
 export function AppLayout() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);

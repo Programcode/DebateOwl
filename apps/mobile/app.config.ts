@@ -92,6 +92,9 @@ export default ({ projectRoot }: ConfigContext): ExpoConfig => {
         },
       ],
     ],
+    extra: {
+      websiteUrl: 'https://debate.pi-stack.org',
+    },
     experiments: {
       typedRoutes: true,
       reactCompiler: true,

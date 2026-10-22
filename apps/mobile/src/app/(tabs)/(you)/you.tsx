@@ -1,6 +1,7 @@
 import { APP_LANGUAGES, type AppLanguage } from '@debatelab/core/languages';
 import { useFocusEffect, useRouter } from 'expo-router';
-import { useCallback, useEffect, useState, type ReactNode } from 'react';
+import * as WebBrowser from 'expo-web-browser';
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, AppState, Linking, Pressable, StyleSheet, View } from 'react-native';
 
@@ -8,17 +9,22 @@ import { TextButton } from '@/components/buttons';
 import { Card, IconTile } from '@/components/card';
 import { SwitchRow } from '@/components/form-rows';
 import { Icon } from '@/components/icon';
+import type { IconName } from '@/components/icon-paths';
 import { ScreenTitle } from '@/components/screen-title';
 import { Screen } from '@/components/screen';
 import { SegmentedControl } from '@/components/segmented-control';
 import { Text } from '@/components/text';
+import { exportAccountData } from '@/lib/account';
 import { useAuth } from '@/lib/auth';
+import { showNotice } from '@/lib/confirm';
 import { formatDate } from '@/lib/dates';
+import { shareJson } from '@/lib/export';
 import { disablePush, enablePush, readPushState, type PushState } from '@/lib/push';
 import { createPushSwitch, type PushSwitchView } from '@/lib/push-switch';
 import { useSettings, type ThemePreference } from '@/lib/settings';
 import { fetchSubscription, type Subscription, type SubscriptionTier } from '@/lib/subscription';
 import { supabaseEnv } from '@/lib/supabase-config';
+import { websitePage } from '@/lib/website';
 import { useTheme } from '@/theme/use-theme';
 
 const TIER_LABELS: Record<SubscriptionTier, string> = {
@@ -34,7 +40,7 @@ const LANGUAGE_OPTIONS = (Object.keys(APP_LANGUAGES) as AppLanguage[]).map((valu
   label: APP_LANGUAGES[value].label,
 }));
 
-/** Plan, settings shared with the website, and the account. Download my data is not in the app yet. */
+/** Plan, History, settings shared with the website, the account and its data, and the website's Terms and Privacy. */
 export default function YouScreen() {
   const { t } = useTranslation();
   const router = useRouter();
@@ -42,6 +48,34 @@ export default function YouScreen() {
   const { session, signOut } = useAuth();
   const settings = useSettings();
   const [saveFailed, setSaveFailed] = useState(false);
+
+  const [exporting, setExporting] = useState(false);
+  // A download started for one account is not shared after an account change or after leaving.
+  const owner = useRef(session?.user.id ?? null);
+  const live = useRef(true);
+  useEffect(() => {
+    owner.current = session?.user.id ?? null;
+  }, [session?.user.id]);
+  useEffect(() => () => {
+    live.current = false;
+  }, []);
+
+  // The website's Download my data: the account function's export, as debatelab-data-<date>.json, to the share sheet.
+  const download = async () => {
+    const forUser = owner.current;
+    if (!forUser || exporting) return;
+    setExporting(true);
+    try {
+      const { fileName, json } = await exportAccountData();
+      if (!live.current || owner.current !== forUser) return;
+      await shareJson(json, fileName, t('settings.downloadData'));
+    } catch (cause) {
+      console.warn('Could not download the data:', cause instanceof Error ? cause.message : cause);
+      if (live.current && owner.current === forUser) showNotice(t('settings.downloadDataFailed'));
+    } finally {
+      if (live.current) setExporting(false);
+    }
+  };
 
   const save = (change: () => Promise<void>) => {
     setSaveFailed(false);
@@ -56,6 +90,25 @@ export default function YouScreen() {
       <ScreenTitle title={t('mobile.tabs.you')} />
 
       <SubscriptionCard userId={session?.user.id} />
+
+      <Card style={styles.list}>
+        <Pressable
+          accessibilityRole="button"
+          onPress={() => router.push({ pathname: '/history', params: { from: 'you' } })}
+          testID="you-history"
+          style={({ pressed }) => [styles.row, pressed && styles.pressed]}>
+          <IconTile name="history" />
+          <View style={styles.rowText}>
+            <Text weight="semibold" style={styles.rowTitle}>
+              {t('nav.history')}
+            </Text>
+            <Text tone="faint" style={styles.small}>
+              {t('mobile.you.historyDesc')}
+            </Text>
+          </View>
+          <Icon name="chevronRight" color={colors.tabInactive} size={20} />
+        </Pressable>
+      </Card>
 
       <Text accessibilityRole="header" weight="bold" style={styles.section}>
         {t('settings.globalSettings')}
@@ -119,6 +172,45 @@ export default function YouScreen() {
         </View>
         <Pressable
           accessibilityRole="button"
+          accessibilityState={{ busy: exporting }}
+          disabled={exporting}
+          onPress={() => void download()}
+          testID="you-download-data"
+          style={({ pressed }) => [styles.row, { borderTopWidth: 1, borderTopColor: colors.line }, pressed && styles.pressed]}>
+          <IconTile name="download" />
+          <View style={styles.rowText}>
+            <Text weight="semibold" style={styles.rowTitle}>
+              {exporting ? t('settings.downloadingData') : t('settings.downloadData')}
+            </Text>
+            <Text tone="faint" style={styles.small}>
+              {t('settings.yourDataDesc')}
+            </Text>
+          </View>
+          {exporting ? <ActivityIndicator /> : null}
+        </Pressable>
+      </Card>
+
+      <Text accessibilityRole="header" weight="bold" style={styles.section}>
+        {t('settings.dangerZone')}
+      </Text>
+      <Card style={styles.list}>
+        <Pressable
+          accessibilityRole="button"
+          onPress={() => router.push('/delete-data')}
+          testID="you-delete-data"
+          style={({ pressed }) => [styles.row, pressed && styles.pressed]}>
+          <View style={styles.rowText}>
+            <Text weight="semibold" style={[styles.rowTitle, { color: colors.destructive }]}>
+              {t('settings.deleteAllData')}
+            </Text>
+            <Text tone="faint" style={styles.small}>
+              {t('mobile.you.deleteDataDesc')}
+            </Text>
+          </View>
+          <Icon name="chevronRight" color={colors.tabInactive} size={20} />
+        </Pressable>
+        <Pressable
+          accessibilityRole="button"
           onPress={() => router.push('/delete-account')}
           style={({ pressed }) => [styles.row, { borderTopWidth: 1, borderTopColor: colors.line }, pressed && styles.pressed]}>
           <View style={styles.rowText}>
@@ -133,8 +225,30 @@ export default function YouScreen() {
         </Pressable>
       </Card>
 
+      <Card style={styles.list}>
+        <LinkRow icon="shield" label={t('footer.privacy')} url={websitePage('/privacy')} first />
+        <LinkRow icon="file" label={t('footer.terms')} url={websitePage('/terms')} />
+      </Card>
+
       <TextButton label={t('settings.signOut')} destructive onPress={() => void signOut()} />
     </Screen>
+  );
+}
+
+/** A page of the website, opened in the in-app browser. */
+function LinkRow({ icon, label, url, first }: { icon: IconName; label: string; url: string; first?: boolean }) {
+  const { colors } = useTheme();
+  return (
+    <Pressable
+      accessibilityRole="link"
+      onPress={() => void WebBrowser.openBrowserAsync(url)}
+      style={({ pressed }) => [styles.row, !first && { borderTopWidth: 1, borderTopColor: colors.line }, pressed && styles.pressed]}>
+      <IconTile name={icon} />
+      <Text weight="semibold" style={[styles.rowTitle, styles.rowText]}>
+        {label}
+      </Text>
+      <Icon name="externalLink" color={colors.tabInactive} size={19} />
+    </Pressable>
   );
 }
 

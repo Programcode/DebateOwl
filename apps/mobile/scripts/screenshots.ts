@@ -10,7 +10,8 @@
  * ONLY=iphone-light-en limits a run to the combinations whose name starts with it.
  * SCREENS=you,timer limits the signed-in screens to those groups: debate,
  * library, prepare, practice, you, empty, ask, results, brainstorm, factoids,
- * timer, crossfire, sparring, flowchart, one-off. Sign-in screens are always shot.
+ * timer, crossfire, sparring, flowchart, one-off, history, announcements,
+ * account, model. Sign-in screens are always shot.
  * ONLY=offline runs only the offline reading check (see shootOfflineScreens).
  *
  * Signed-in screens need a staging session. With STAGING_DEMO_CODE set, the
@@ -62,6 +63,17 @@
  * none for one-off work, which shows the starter map) and answers writes
  * locally. The one-off shot turns one-off mode on in memory, as the switcher
  * does, and never taps a debate row.
+ *
+ * History reads the account's real saved work for the Current Debate and
+ * another debate, and the unsorted view answers its reads (rows with no debate)
+ * with made-up work, one item suggesting the Current Debate. Add to debate is
+ * shown, never pressed. The announcement banner comes from two made-up
+ * announcements answered inside the page; its dismissal is answered locally.
+ * You is shot down to its data rows; Download my data reads the account's real
+ * export once (iphone-light-en) and writes only its top-level keys next to the
+ * screenshots. The Delete all my data sheet is shot empty and never confirmed.
+ * The model picker in Generate is shot with its menu open; no model is chosen,
+ * so feature_configs is never written.
  */
 import { chromium, type Browser, type BrowserContext, type BrowserContextOptions, type Page } from '@playwright/test';
 import { createReadStream, existsSync, statSync } from 'node:fs';
@@ -140,7 +152,8 @@ function watchErrors(page: Page, problems: string[], label: string, offline = ()
 async function shoot(page: Page, name: string) {
   // Let fonts and the colour scheme settle after hydration.
   await page.evaluate(() => document.fonts.ready);
-  await page.screenshot({ path: join(OUT, `${name}.png`), mask: [page.getByTestId('account-email')] });
+  // The Delete all my data field shows the email as its placeholder, as on the website.
+  await page.screenshot({ path: join(OUT, `${name}.png`), mask: [page.getByTestId('account-email'), page.getByTestId('delete-data-confirmation')] });
 }
 
 /** Answers user_settings reads with the run's language and the System theme (see the header). */
@@ -1071,6 +1084,183 @@ async function shootEmptyDebate(page: Page, prefix: string) {
   await shoot(page, `${prefix}-debate-empty-oneoff`);
 }
 
+const CORS = { 'access-control-allow-origin': '*', 'access-control-allow-headers': '*', 'access-control-allow-methods': 'GET, POST, PATCH, OPTIONS' };
+const iso = (offsetMs: number) => new Date(Date.now() + offsetMs).toISOString();
+
+/** Made-up work outside every debate, answered to the unsorted view's reads; the case suggests the Current Debate. */
+async function fakeUnsorted(page: Page, motion: string) {
+  const rows: Record<string, unknown[]> = {
+    cases: [{ id: '00000000-0000-4000-8000-0000000c0001', title: motion, created_at: iso(-2 * 3600_000), motion, case_side: 'pro' }],
+    brainstorms: [{ id: '00000000-0000-4000-8000-0000000b0001', title: 'School uniforms should be optional', created_at: iso(-26 * 3600_000), motion: 'School uniforms should be optional' }],
+    chats: [{ id: '00000000-0000-4000-8000-0000000a0001', title: 'How long should a rebuttal be?', created_at: iso(-50 * 3600_000), messages: [{ count: 4 }] }],
+    sources: [{ id: '00000000-0000-4000-8000-0000000d0001', title: 'City air quality report 2025', created_at: iso(-80 * 3600_000) }],
+  };
+  await page.route((url) => url.href.startsWith(REST) && url.search.includes('debate_id=is.null'), (route) => {
+    if (route.request().method() !== 'GET') return route.abort();
+    const table = new URL(route.request().url()).pathname.split('/').pop() ?? '';
+    return route.fulfill({ status: 200, headers: CORS, json: rows[table] ?? [] });
+  });
+}
+
+/** History from the Debate tab's See all: the Current Debate, its chats, the scope menu, another debate and the unsorted view. */
+async function shootHistory(context: BrowserContext, prefix: string, language: string, problems: string[]) {
+  const page = await context.newPage();
+  watchErrors(page, problems, `${prefix} history`);
+  await pinSettings(page, language);
+  await page.goto(`${ORIGIN}/`);
+  await page.getByTestId('current-debate-motion').waitFor({ timeout: 30_000 });
+  const motion = (await page.getByTestId('current-debate-motion').textContent())?.trim() ?? '';
+  await fakeUnsorted(page, motion);
+  // The Debate tab stays in the page under History; let its recent work finish loading first.
+  await settle(page);
+  await page.getByRole('button', { name: /^(See all|Összes|Ver todo)$/ }).click();
+  await page.getByTestId('history-scope').waitFor({ timeout: 30_000 });
+  await settle(page);
+  await shoot(page, `${prefix}-history`);
+  await page.getByTestId('history-tab-chats').click();
+  await shoot(page, `${prefix}-history-chats`);
+  await page.getByTestId('history-tab-sparring').click();
+  await shoot(page, `${prefix}-history-sparring`);
+
+  await page.getByTestId('history-scope').click();
+  const menu = page.getByTestId('history-scope-menu');
+  await menu.waitFor();
+  await shoot(page, `${prefix}-history-scope-menu`);
+  const items = menu.getByRole('menuitem');
+  // The last item is one-off and unsorted work; the others are debates, the current one named with its motion.
+  const others = (await items.count()) - 1;
+  let other = -1;
+  for (let index = 0; index < others; index += 1) {
+    if (!(await items.nth(index).innerText()).includes(motion)) {
+      other = index;
+      break;
+    }
+  }
+  if (other >= 0) {
+    await items.nth(other).click();
+    await settle(page);
+    await shoot(page, `${prefix}-history-other`);
+    await page.getByTestId('history-scope').click();
+    await menu.waitFor();
+  } else {
+    console.log(`${prefix}: the account has one debate, so History shows no other debate`);
+  }
+  await items.last().click();
+  await page.getByTestId('unsorted-target').first().waitFor({ timeout: 30_000 });
+  await settle(page);
+  await shoot(page, `${prefix}-history-unsorted`);
+  await page.close();
+}
+
+const ANNOUNCEMENT_TEXT: Record<string, { title: string; body: string }[]> = {
+  en: [
+    { title: 'Practice rounds this Saturday', body: 'Sign up with your coach by Friday for a mixed-school practice round.' },
+    { title: 'Your saved work, in one place', body: 'Every case, chat and brainstorm now opens from History.' },
+  ],
+  hu: [
+    { title: 'Gyakorló fordulók szombaton', body: 'Péntekig jelentkezz az edződnél egy vegyes iskolai gyakorló fordulóra.' },
+    { title: 'Mentett munkáid egy helyen', body: 'Minden eseted, beszélgetésed és ötletelésed az Előzményekből nyílik meg.' },
+  ],
+};
+
+/** Answers the announcements function with two made-up announcements; a dismissal is answered locally. */
+async function fakeAnnouncements(page: Page, language: string) {
+  const announcements = (ANNOUNCEMENT_TEXT[language] ?? ANNOUNCEMENT_TEXT.en).map((text, index) => ({
+    id: `00000000-0000-4000-8000-0000000e000${index + 1}`,
+    title: text.title,
+    body: text.body,
+    starts_at: iso(-3600_000),
+    expires_at: index === 0 ? iso(7 * 86_400_000) : null,
+    created_at: iso(-3600_000),
+  }));
+  const dismissed = new Set<string>();
+  await page.route(`https://${STAGING_HOST}/functions/v1/announcements*`, (route) => {
+    const request = route.request();
+    if (request.method() === 'POST') {
+      const id = (request.postDataJSON() as { announcementId?: string } | null)?.announcementId;
+      if (id) dismissed.add(id);
+      return route.fulfill({ status: 200, headers: CORS, json: { success: true } });
+    }
+    if (request.method() === 'GET') {
+      return route.fulfill({ status: 200, headers: CORS, json: { announcements: announcements.filter((item) => !dismissed.has(item.id)) } });
+    }
+    return route.fulfill({ status: 204, headers: CORS });
+  });
+}
+
+async function shootAnnouncements(context: BrowserContext, prefix: string, language: string, problems: string[]) {
+  const page = await context.newPage();
+  watchErrors(page, problems, `${prefix} announcements`);
+  await pinSettings(page, language);
+  await fakeAnnouncements(page, language);
+  await page.goto(`${ORIGIN}/`);
+  const banner = page.getByTestId('announcement-banner');
+  await banner.waitFor({ timeout: 30_000 });
+  await settle(page);
+  await shoot(page, `${prefix}-announcement`);
+  const second = (ANNOUNCEMENT_TEXT[language] ?? ANNOUNCEMENT_TEXT.en)[1].title;
+  await page.getByTestId('announcement-dismiss').click();
+  await banner.getByText(second).waitFor({ timeout: 15_000 });
+  await shoot(page, `${prefix}-announcement-next`);
+  await page.close();
+}
+
+/** You down to its data rows, Download my data (once, read-only) and the Delete all my data sheet, never confirmed. */
+async function shootAccount(context: BrowserContext, prefix: string, language: string, problems: string[]) {
+  const page = await context.newPage();
+  watchErrors(page, problems, `${prefix} account`);
+  await pinSettings(page, language);
+  await page.goto(`${ORIGIN}/you`);
+  await page.getByTestId('subscription-tier').waitFor({ timeout: 30_000 });
+  await settle(page);
+  await page.getByTestId('you-delete-data').scrollIntoViewIfNeeded();
+  await shoot(page, `${prefix}-you-account`);
+
+  if (prefix === 'iphone-light-en') {
+    await page.getByTestId('you-download-data').click();
+    const exported = await page.waitForFunction(
+      () => (window as unknown as { __debatelabExport?: { json?: string; fileName?: string } }).__debatelabExport?.json ? (window as unknown as { __debatelabExport: { json: string; fileName: string } }).__debatelabExport : null,
+      undefined,
+      { timeout: 60_000 },
+    ).then((handle) => handle.jsonValue() as Promise<{ json: string; fileName: string }>);
+    const data = JSON.parse(exported.json) as Record<string, unknown>;
+    const shape = Object.fromEntries(Object.entries(data).map(([key, value]) => [key, Array.isArray(value) ? `array(${value.length})` : typeof value]));
+    await writeFile(join(OUT, `${prefix}-download-data-shape.json`), JSON.stringify({ fileName: exported.fileName, keys: shape }, null, 2));
+    console.log(`${prefix}: Download my data gave ${exported.fileName} with keys ${Object.keys(shape).join(', ')}`);
+  }
+
+  await page.getByTestId('you-delete-data').click();
+  await page.getByTestId('delete-data-confirmation').waitFor({ timeout: 15_000 });
+  await page.waitForTimeout(700);
+  await shoot(page, `${prefix}-delete-data`);
+  await page.close();
+}
+
+/** The model picker in Generate, and its menu; nothing is chosen. */
+async function shootModelPicker(context: BrowserContext, prefix: string, language: string, problems: string[]) {
+  const page = await context.newPage();
+  watchErrors(page, problems, `${prefix} model picker`);
+  await pinSettings(page, language);
+  await page.goto(`${ORIGIN}/generate?from=prepare`);
+  await page.getByTestId('generate-motion').waitFor({ timeout: 30_000 });
+  await page.locator('[data-testid="model-picker-generate"]:not([aria-disabled="true"])').waitFor({ timeout: 30_000 });
+  await page.getByTestId('model-picker-generate').scrollIntoViewIfNeeded();
+  await shoot(page, `${prefix}-generate-model`);
+  await page.getByTestId('model-picker-generate').click();
+  await page.getByRole('menu').waitFor();
+  await shoot(page, `${prefix}-model-menu`);
+  await page.close();
+}
+
+/** Shoots whatever page of the group is open when it fails, and names the group in the error. */
+function failedIn(context: BrowserContext, prefix: string, group: string) {
+  return async (error: unknown) => {
+    const page = context.pages().at(-1);
+    if (page) await shoot(page, `${prefix}-failed-${group}`).catch(() => undefined);
+    throw new Error(`${group}: ${error instanceof Error ? error.message : String(error)}`);
+  };
+}
+
 async function signIn(browser: Browser, problems: string[]): Promise<StorageState> {
   const context = await browser.newContext({ ...DEVICES.iphone, locale: LOCALES.en });
   const page = await context.newPage();
@@ -1355,10 +1545,10 @@ async function main() {
   let shots = 0;
   try {
     const session = DEMO_CODE ? await signIn(browser, problems) : null;
-    if (session && ONLY === 'offline') {
+    if (!session) console.log('STAGING_DEMO_CODE is not set: signed-in screens skipped');
+    else if (ONLY === 'offline') {
       for (const [index, run] of OFFLINE_RUNS.entries()) shots += await shootOfflineScreens(browser, session, problems, run, index === 0);
-    } else if (session) await checkOfflineColdStart(browser, session, problems);
-    else console.log('STAGING_DEMO_CODE is not set: signed-in screens skipped');
+    } else await checkOfflineColdStart(browser, session, problems);
 
     for (const [device, options] of Object.entries(DEVICES)) {
       for (const scheme of SCHEMES) {
@@ -1458,6 +1648,22 @@ async function main() {
             await pinSettings(oneOffPage, language);
             await shootOneOffTools(oneOffPage, prefix);
             await oneOffPage.close();
+            shots += 2;
+          }
+          if (want('history')) {
+            await shootHistory(signedIn, prefix, language, problems).catch(failedIn(signedIn, prefix, 'history'));
+            shots += 7;
+          }
+          if (want('announcements')) {
+            await shootAnnouncements(signedIn, prefix, language, problems).catch(failedIn(signedIn, prefix, 'announcements'));
+            shots += 2;
+          }
+          if (want('account')) {
+            await shootAccount(signedIn, prefix, language, problems).catch(failedIn(signedIn, prefix, 'account'));
+            shots += 2;
+          }
+          if (want('model')) {
+            await shootModelPicker(signedIn, prefix, language, problems).catch(failedIn(signedIn, prefix, 'model'));
             shots += 2;
           }
           await signedIn.close();

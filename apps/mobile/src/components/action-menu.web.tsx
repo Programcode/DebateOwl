@@ -23,12 +23,14 @@ export function ActionMenu({ visible, title, items, cancelLabel, onSelect, onClo
             <Pressable
               key={item.key}
               accessibilityRole="menuitem"
+              accessibilityState={{ disabled: Boolean(item.disabled) }}
+              disabled={item.disabled}
               onPress={() => {
                 onClose();
                 onSelect(item.key);
               }}
               style={({ pressed }) => [styles.item, (index > 0 || title) && { borderTopWidth: 1, borderTopColor: colors.line }, pressed && { backgroundColor: colors.line }]}>
-              <Text style={[styles.label, item.destructive && { color: colors.destructive }]}>{item.label}</Text>
+              <Text style={[styles.label, item.destructive && { color: colors.destructive }, item.disabled && { color: colors.tabInactive }]}>{item.label}</Text>
               {item.icon ? <Icon name={item.icon} color={item.destructive ? colors.destructive : colors.foreground} size={21} /> : null}
             </Pressable>
           ))}

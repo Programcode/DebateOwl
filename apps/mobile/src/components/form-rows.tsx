@@ -46,7 +46,7 @@ export function SelectRow<T extends string>({
 }: {
   label: string;
   value: T;
-  options: { value: T; label: string }[];
+  options: { value: T; label: string; disabled?: boolean }[];
   onChange: (value: T) => void;
   first?: boolean;
   disabled?: boolean;
@@ -61,10 +61,11 @@ export function SelectRow<T extends string>({
       <Pressable
         accessibilityRole="button"
         accessibilityLabel={`${label}: ${chosen}`}
+        accessibilityState={{ disabled: Boolean(disabled) }}
         disabled={disabled}
         onPress={() => setOpen(true)}
         testID={testID}
-        style={({ pressed }) => [pressed && styles.pressed]}>
+        style={({ pressed }) => [pressed && styles.pressed, disabled && styles.disabled]}>
         <RowFrame first={first}>
           <Text style={styles.rowLabel} numberOfLines={1}>
             {label}
@@ -78,7 +79,7 @@ export function SelectRow<T extends string>({
       <ActionMenu
         visible={open}
         title={label}
-        items={options.map((option) => ({ key: option.value, label: option.label, icon: option.value === value ? 'check' : undefined }))}
+        items={options.map((option) => ({ key: option.value, label: option.label, icon: option.value === value ? 'check' : undefined, disabled: option.disabled }))}
         cancelLabel={t('common.cancel')}
         onClose={() => setOpen(false)}
         onSelect={(key) => onChange(key as T)}
@@ -122,4 +123,5 @@ const styles = StyleSheet.create({
   switchText: { flex: 1, gap: 2 },
   description: { fontSize: 13.5, lineHeight: 18 },
   pressed: { opacity: 0.7 },
+  disabled: { opacity: 0.45 },
 });

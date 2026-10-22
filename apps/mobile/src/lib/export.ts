@@ -16,6 +16,14 @@ export async function sharePdf(html: string, fileName: string, dialogTitle: stri
   await Sharing.shareAsync(target.uri, { mimeType: 'application/pdf', UTI: 'com.adobe.pdf', dialogTitle });
 }
 
+/** A JSON file, as the website downloads it, handed to the share sheet so it can be saved to Files or sent. */
+export async function shareJson(json: string, fileName: string, dialogTitle: string): Promise<void> {
+  const target = new File(Paths.cache, fileName);
+  target.create({ overwrite: true });
+  target.write(json);
+  await Sharing.shareAsync(target.uri, { mimeType: 'application/json', UTI: 'public.json', dialogTitle });
+}
+
 export async function copyText(text: string): Promise<void> {
   await Clipboard.setStringAsync(text);
 }
