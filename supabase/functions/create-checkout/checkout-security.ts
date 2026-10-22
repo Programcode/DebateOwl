@@ -24,6 +24,13 @@ export function isAllowedCheckoutRedirectUrl(value: string): boolean {
   }
 }
 
+const OPEN_SUBSCRIPTION_STATUSES = new Set(["active", "trialing", "past_due", "unpaid", "paused"]);
+
+/** True when this user already has a Stripe subscription that can still bill them. */
+export function hasOpenSubscription(rows: Array<{ status?: string | null }> | null | undefined): boolean {
+  return (rows ?? []).some((row) => typeof row.status === "string" && OPEN_SUBSCRIPTION_STATUSES.has(row.status));
+}
+
 export function findCustomerOwnedByUser(
   customers: StripeCustomerLike[],
   userId: string,
