@@ -1,6 +1,6 @@
 # Usage limits: weighted daily quota and monthly AI budget
 
-The daily AI allowance counts units, not requests. An expensive model uses several units per request (Claude Opus 5.5 counts as 5, Sonnet 5.5 as 2, cheap models as 1), so a request that does not fit in what is left today is refused with a message that names the model's weight and the units left, while a lighter model still runs. Separately, once a user's logged AI spend for the current UTC month reaches the monthly budget ($3 by default), every AI request is refused with its own dialog until the 1st of next month. The weights, the budget and the tier defaults live in `supabase/functions/_shared/usage-limits.ts`; the reservation is `consume_daily_quota` in `supabase/migrations/20261022120001_weighted_quota_monthly_budget.sql`.
+The daily AI allowance counts units, not requests. An expensive model uses several units per request (Claude Opus 5.5 counts as 5, Sonnet 5.5 as 2, cheap models as 1), so a request that does not fit in what is left today is refused with a message that names the model's weight and the units left, while a lighter model still runs. Separately, once a user's logged AI spend for the current UTC month reaches the monthly budget ($3 by default), every AI request is refused with its own dialog until the 1st of next month. The weights, the budget and the tier defaults live in `supabase/functions/_shared/usage-limits.ts`; the reservation is `consume_daily_quota` in `supabase/migrations/20261022130001_weighted_quota_monthly_budget.sql`.
 
 ## Sub-features
 

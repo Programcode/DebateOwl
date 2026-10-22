@@ -12,7 +12,7 @@
 -- denied_by reports which limit refused the call: 'daily' or 'monthly'.
 -- The weights and the cap live in supabase/functions/_shared/usage-limits.ts.
 -- The month's spend is read through idx_ai_requests_user_created
--- (20261022120000_index_ai_requests_user_created.sql).
+-- (20261022130000_index_ai_requests_user_created.sql).
 
 -- New parameters and a new result column change the signature, so remove the
 -- old overload first and keep exactly one. Only service-role Edge Functions

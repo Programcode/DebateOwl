@@ -177,7 +177,7 @@ export async function checkRateLimit(userId: string | null, model?: ModelSelecti
     // Atomically reserve today's quota units server-side so concurrent requests
     // can't race past the limit. Expensive models reserve several units, and
     // the same call refuses users over the monthly AI budget (see
-    // 20261022120001_weighted_quota_monthly_budget.sql).
+    // 20261022130001_weighted_quota_monthly_budget.sql).
     const units = quotaUnitsFor(model);
     const { data: quota, error: quotaError } = await supabase.rpc("consume_daily_quota", {
       p_user_id: userId,
