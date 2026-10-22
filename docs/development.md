@@ -21,7 +21,7 @@ Never overwrite unrelated changes. Do not switch to the primary checkout because
 - Node.js 22.x
 - npm and `package-lock.json`
 - Deno 2.x for Edge Function tests
-- Docker and Supabase CLI 2.115 or newer for database work
+- Docker and Supabase CLI 2.121.0, pinned in `package.json` (`npm ci` installs it) for database work
 - Playwright browser binaries for browser gates
 
 Install the locked JavaScript tree with the Node version from `.nvmrc`:
@@ -132,9 +132,9 @@ In a Superset workspace, use the repository's locking wrapper:
 Outside Superset, run the underlying commands directly:
 
 ```bash
-supabase db start
+npx supabase db start
 npm run test:db
-supabase stop --no-backup
+npx supabase stop --no-backup
 ```
 
 The default local stack begins at port `54321` and uses shared container names, so it is not parallel-safe across worktrees. The wrapper holds `~/.superset/debatelab-db.lock` through database tests and the real-Auth collaboration browser journey, and stops the stack and owned processes on exit. Outside Superset, coordinate ownership before starting it. The agent that starts the stack stops it before finishing, including after failures when safe.

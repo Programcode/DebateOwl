@@ -64,7 +64,7 @@ const Navbar = () => {
                         <LanguageSwitcher />
                         <Link to="/app" {...appPrefetch} className="btn-primary-gradient inline-flex items-center gap-2 text-sm">
                             <span className="relative z-10">{t('nav.startTrial')}</span>
-                            <ArrowRight className="relative z-10 h-4 w-4" />
+                            <ArrowRight aria-hidden="true" className="relative z-10 h-4 w-4" />
                         </Link>
                     </div>
 
@@ -75,7 +75,7 @@ const Navbar = () => {
                         aria-label={isOpen ? t('nav.closeMenu') : t('nav.openMenu')}
                         aria-expanded={isOpen}
                     >
-                        {isOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+                        {isOpen ? <X aria-hidden="true" className="h-6 w-6" /> : <Menu aria-hidden="true" className="h-6 w-6" />}
                     </button>
                 </div>
             </div>
@@ -101,7 +101,7 @@ const Navbar = () => {
                             className="btn-primary-gradient mt-2 inline-flex items-center justify-center gap-2"
                         >
                             <span className="relative z-10">{t('nav.startTrial')}</span>
-                            <ArrowRight className="relative z-10 h-4 w-4" />
+                            <ArrowRight aria-hidden="true" className="relative z-10 h-4 w-4" />
                         </Link>
                         <LanguageSwitcher />
                     </div>

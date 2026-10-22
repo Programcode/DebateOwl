@@ -30,7 +30,7 @@ const WhatsNew = () => {
                             <div className="h-full rounded-2xl border border-border/70 bg-card p-6 shadow-sm transition-[border-color,box-shadow] duration-200 hover:border-primary/30 hover:shadow-lg">
                                 <div className="mb-4 flex items-center justify-between">
                                     <div className="flex h-11 w-11 items-center justify-center rounded-xl border border-primary/20 bg-primary/10">
-                                        <update.icon className="h-5 w-5 text-primary" />
+                                        <update.icon aria-hidden="true" className="h-5 w-5 text-primary" />
                                     </div>
                                     <span className="rounded-full border border-border/70 bg-secondary/60 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                                         {update.badge}

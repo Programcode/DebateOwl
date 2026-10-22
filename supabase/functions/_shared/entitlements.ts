@@ -214,6 +214,22 @@ export async function checkRateLimit(userId: string | null, model?: ModelSelecti
   }
 }
 
+/**
+ * Gives back exactly what checkRateLimit reserved through consume_ai_quota for
+ * a request the provider could not serve: the same `units`, which follow the
+ * requested selection (Auto Pro reserves 5 even when it resolves to Haiku). A
+ * failed refund is logged, never thrown, so the student still gets the error.
+ */
+export async function refundQuotaReservation(userId: string, reservation: Pick<RateLimitResult, "allowed" | "units">) {
+  if (!reservation.allowed || !reservation.units) return;
+  try {
+    const { error } = await supabase.rpc("refund_daily_quota", { p_user_id: userId, p_units: reservation.units });
+    if (error) throw error;
+  } catch (err) {
+    console.error("[RATE LIMIT] Quota refund failed:", err);
+  }
+}
+
 export async function logUsage(
   userId: string | null,
   feature: string,
