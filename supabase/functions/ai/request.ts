@@ -8,7 +8,6 @@ export const PROMPT_INJECTION_PATTERNS = [
   /ignore\s+(all\s+)?(previous|prior|above)\s+(instructions|prompts|text)/i,
   /disregard\s+(all\s+)?(previous|prior|above)/i,
   /forget\s+(all\s+)?(previous|prior|above)/i,
-  /you\s+are\s+now\s+(a|an)\s+/i,
   /new\s+instruction[s]?\s*:/i,
   /system\s*:\s*\[/i,
   /<!--\s*system\s*:/i,
@@ -20,7 +19,6 @@ export const PROMPT_INJECTION_PATTERNS = [
   /<system>/i,
   /###\s*instruction/i,
   /\bDAN\s+mode\b/i,
-  /jailbreak/i,
 ];
 
 export function sanitizePromptInput(input: string, fieldName: string): { sanitized: string; truncated: boolean } | { rejected: string } {

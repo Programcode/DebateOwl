@@ -18,6 +18,7 @@ import {
 export type { ExaResult, RankedSearchResult, ResearchSource };
 
 import type { ReasoningEffort } from "./model-catalog.ts";
+import { MAX_FETCHED_PAGE_CHARS, MAX_RESEARCH_SNIPPETS } from "./prompt-budget.ts";
 
 export type Provider = "openrouter";
 
@@ -35,7 +36,7 @@ export type Source = {
 };
 
 export interface ResearchContext {
-  searches: Array<{ query: string; results: string }>;
+  searches: Array<{ query: string; results: RankedSearchResult[] }>;
   rankedResults: RankedSearchResult[];
   readContent: Array<{ url: string; title: string; content: string; result?: RankedSearchResult }>;
   verifiedUrls: Set<string>;
@@ -298,8 +299,8 @@ export async function exaSearch(search: string | ExaSearchRequest, signal?: Abor
   }
 }
 
-// exaGetContents: extract full text from a specific URL using Exa's /contents endpoint
-export async function exaGetContents(url: string, signal?: AbortSignal): Promise<string> {
+// exaGetContents: extract a page's text, up to maxChars, using Exa's /contents endpoint
+export async function exaGetContents(url: string, signal?: AbortSignal, maxChars = MAX_FETCHED_PAGE_CHARS): Promise<string> {
   const apiKey = Deno.env.get("EXA_API_KEY");
   if (!apiKey) {
     console.warn("[EXA] EXA_API_KEY not configured");
@@ -310,7 +311,7 @@ export async function exaGetContents(url: string, signal?: AbortSignal): Promise
     const { response, data } = await fetchJsonWithTimeout<{ results?: unknown }>("https://api.exa.ai/contents", {
       method: "POST",
       headers: { "Content-Type": "application/json", "x-api-key": apiKey },
-      body: JSON.stringify({ urls: [url], text: { maxCharacters: 8000 } }),
+      body: JSON.stringify({ urls: [url], text: { maxCharacters: maxChars } }),
     }, 30000, signal);
     throwIfAborted(signal);
     if (!response.ok) {
@@ -318,7 +319,7 @@ export async function exaGetContents(url: string, signal?: AbortSignal): Promise
       return "";
     }
     if (!data?.results || !Array.isArray(data.results) || data.results.length === 0) return "";
-    return (data.results[0]?.text || "").slice(0, 8000);
+    return (data.results[0]?.text || "").slice(0, maxChars);
   } catch (err) {
     if (signal?.aborted) throw err;
     console.warn(`[EXA] Contents fetch failed urlLength=${url.length}`);
@@ -464,7 +465,7 @@ async function deepResearchInner(
     throwIfAborted(signal);
     const ranked = rankSearchResults(results.map((result) => ({ ...result, query })), claim, preferredSourceType);
     const visibleRanked = preferredSourceType === "any" ? ranked : ranked.filter(matchesPreferredSourceType);
-    context.searches.push({ query, results: formatRankedSearchResults(visibleRanked) });
+    context.searches.push({ query, results: visibleRanked });
     console.log(`[RESEARCH] Seed queryLength=${query.length}: ${results.length} results`);
     return results.map((result) => ({ ...result, query }));
   }));
@@ -484,7 +485,7 @@ async function deepResearchInner(
       throwIfAborted(signal);
       const ranked = rankSearchResults(results.map((result) => ({ ...result, query })), claim, preferredSourceType);
       const visibleRanked = preferredSourceType === "any" ? ranked : ranked.filter(matchesPreferredSourceType);
-      context.searches.push({ query, results: formatRankedSearchResults(visibleRanked) });
+      context.searches.push({ query, results: visibleRanked });
       allResults.push(...results.map((result) => ({ ...result, query })));
       return results.length;
     });
@@ -574,9 +575,24 @@ export function buildResearchContext(research: ResearchContext): string {
   let ctx = "=== WEB RESEARCH RESULTS ===\n\n";
   ctx += "IMPORTANT: Only cite sources marked 'strong' or 'moderate'. Sources marked 'weak' are fallback context only, do NOT cite them as evidence. If only weak sources are available, state that evidence is limited.\n\n";
 
-  // Add search results
-  for (const search of research.searches) {
-    ctx += `--- Search: "${search.query}" ---\n${search.results}\n\n`;
+  // Each source appears once. A page read in full is not repeated as a search
+  // snippet, and a URL several queries found is listed a single time.
+  const listed = new Set(research.readContent.map((page) => page.url));
+  const snippets = research.searches
+    .flatMap((search) => search.results)
+    .sort((a, b) => b.qualityScore - a.qualityScore)
+    .filter((result) => {
+      if (!result.url || listed.has(result.url)) return false;
+      listed.add(result.url);
+      return true;
+    })
+    .slice(0, MAX_RESEARCH_SNIPPETS);
+
+  if (research.searches.length > 0) {
+    ctx += `Searches run: ${research.searches.map((search) => `"${search.query}"`).join("; ")}\n\n`;
+  }
+  if (snippets.length > 0) {
+    ctx += `--- Search results ---\n${formatRankedSearchResults(snippets)}\n\n`;
   }
 
   // Add full page content
@@ -585,7 +601,7 @@ export function buildResearchContext(research: ResearchContext): string {
     for (const page of research.readContent) {
       const quality = page.result ? `${page.result.sourceType}, ${page.result.qualityLabel}, ${page.result.qualityScore}/100` : "verified";
       const warning = page.result?.qualityLabel === "weak" ? " [WEAK, do not cite as evidence]" : "";
-      ctx += `--- From: ${page.title} (${page.url}) ---\nSource quality: ${quality}${warning}\n${page.content.slice(0, 4000)}\n\n`;
+      ctx += `--- From: ${page.title} (${page.url}) ---\nSource quality: ${quality}${warning}\n${page.content.slice(0, MAX_FETCHED_PAGE_CHARS)}\n\n`;
     }
   }
 
