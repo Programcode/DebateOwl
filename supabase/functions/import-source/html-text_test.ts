@@ -69,6 +69,40 @@ Deno.test("a nested nav is dropped whole and the article survives the speed-ups"
   assertEquals(text.includes("voting age"), true);
 });
 
+Deno.test("Wikipedia chrome, menus and CSS stay out of the article text", () => {
+  const article = "Debate is a structured exchange of arguments about a resolution. " +
+    "Competitors speak for and against the motion under timed speeches. ".repeat(8);
+  const css = ".mw-parser-output{font-size:1em} " + ".mw-parser-output a{color:blue} ".repeat(40);
+  const html = `<!DOCTYPE html><html><body>
+    <header><button>Toggle the table of contents</button><a>Debate</a><button>62 languages</button></header>
+    <nav id="p-lang" class="vector-menu-content"><ul><li class="interlanguage-link">Deutsch</li><li>Español</li></ul></nav>
+    <main id="content">
+      <div id="mw-content-text" class="mw-body-content">
+        <div class="mw-parser-output">
+          <style>${css}</style>
+          <div id="toc" class="toc"><div class="toctitle">Contents</div><ul><li>History</li></ul></div>
+          <p>${article}</p>
+          <h2>History <span class="mw-editsection"><a href="/w/index.php?title=Debate&amp;action=edit">edit</a></span></h2>
+          <p>${article}</p>
+          <table class="navbox"><tr><td>Debate series · Related pages · Categories</td></tr></table>
+        </div>
+      </div>
+    </main>
+  </body></html>`;
+  const text = stripHtml(html);
+  if (text.includes("Toggle the table of contents")) throw new Error("table of contents toggle leaked");
+  if (text.includes("62 languages") || text.includes("Deutsch") || text.includes("Español")) {
+    throw new Error(`language list leaked: ${text.slice(0, 240)}`);
+  }
+  if (text.includes("[ edit ]") || text.includes(" edit") || /\bedit\b/.test(text)) throw new Error("edit link leaked");
+  if (text.includes("mw-parser-output") || text.includes("font-size")) throw new Error("CSS leaked");
+  if (text.includes("navbox") || text.includes("Related pages")) throw new Error("navbox leaked");
+  if (text.includes("Contents") && text.includes("History") && !text.includes("structured exchange")) {
+    throw new Error("table of contents leaked");
+  }
+  if (!text.includes("structured exchange")) throw new Error("article text was dropped");
+});
+
 Deno.test("text after the last > is kept, with no tag parsing", () => {
   const html = `<p>${"word ".repeat(25)}</p> 3 < 5 and more words here`;
   assertEquals(stripHtml(html).includes("3 < 5 and more words here"), true);
