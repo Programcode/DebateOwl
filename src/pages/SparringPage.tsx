@@ -25,7 +25,7 @@ import { OpponentVoiceBar } from '@/components/features/voice/OpponentVoiceBar';
 import { useVoiceAvailability } from '@/lib/voice/availability';
 import type { SpeechDelivery } from '@/lib/voice/delivery';
 import { opponentVoice } from '@/lib/voice/opponent-voice';
-import { useSubscription } from '@/hooks/use-subscription';
+import { useSessionQuota } from '@/hooks/use-session-quota';
 import { useSubscriptionError } from '@/hooks/use-subscription-error';
 import { SubscriptionErrorModals } from '@/components/features/subscription';
 
@@ -46,7 +46,6 @@ export default function SparringPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const location = useLocation();
-  const { remainingToday } = useSubscription();
   const subError = useSubscriptionError();
   const { handleSubscriptionError } = subError;
   const workspaceLaunch = (location.state as { workspaceLaunch?: unknown } | null)?.workspaceLaunch === true;
@@ -131,6 +130,9 @@ export default function SparringPage() {
   }, [session?.id]);
 
   const config = useMemo(() => getFeatureConfig('sparring'), [getFeatureConfig]);
+  // A round costs one use however many replies it takes; the setup says so.
+  const sessionQuota = useSessionQuota('sparring', config, !session);
+  const [checkingQuota, setCheckingQuota] = useState(false);
 
   const retryAi = useCallback(() => {
     aiRequestRef.current = null;
@@ -292,9 +294,18 @@ export default function SparringPage() {
     });
   }, [saveArtifact, session, workspace.context]);
 
-  const handleStart = (values: SparringSetupValues) => debateGate.run(values.motion, (target) => beginRound(values, target.debateId));
+  const handleStart = (values: SparringSetupValues) => debateGate.run(values.motion, (target) => void beginRound(values, target.debateId));
 
-  const beginRound = (values: SparringSetupValues, debateId: string | null) => {
+  const beginRound = async (values: SparringSetupValues, debateId: string | null) => {
+    if (checkingQuota) return;
+    // Check today's quota before the round opens, so a speech is never
+    // written for a round the server would refuse. An unknown answer does not block.
+    setCheckingQuota(true);
+    const refusal = await sessionQuota.checkBeforeStart().finally(() => setCheckingQuota(false));
+    if (refusal) {
+      handleSubscriptionError(refusal);
+      return;
+    }
     const target = { debateId };
     artifactRequestIdRef.current = crypto.randomUUID();
     opponentVoice.beginRound();
@@ -343,7 +354,10 @@ export default function SparringPage() {
         <SparringSetup
           initialValues={workspace.context ? { motion: workspace.context.motion, userSide: workspace.context.side } : undefined}
           onStart={handleStart}
-          remainingRequests={remainingToday}
+          roundCost={sessionQuota.units}
+          remainingRequests={sessionQuota.remaining}
+          blockedReason={sessionQuota.blocked}
+          isStarting={checkingQuota}
           debatePrefill={!workspace.context}
           voiceAllowed={!workspace.context}
           banner={<CurrentDebateStrip hidden={Boolean(workspace.context)} className="" />}

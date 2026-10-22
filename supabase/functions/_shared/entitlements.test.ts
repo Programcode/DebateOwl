@@ -6,7 +6,7 @@ for (const [key, value] of Object.entries({
   SUPABASE_SERVICE_ROLE_KEY: "test-service-role-key",
 })) Deno.env.set(key, value);
 
-const { getSubscriptionInfo, checkRateLimit, getConfiguredDailyLimit, checkUserBanned } = await import("./entitlements.ts");
+const { getSubscriptionInfo, checkRateLimit, getConfiguredDailyLimit, checkUserBanned, normalizeErrorCode } = await import("./entitlements.ts");
 const { MODEL_QUOTA_UNITS, WEEKLY_AI_BUDGET_USD } = await import("./usage-limits.ts");
 
 function json(body: unknown, status = 200): Response {
@@ -260,4 +260,24 @@ Deno.test("a model heavier than the whole daily limit is not told to wait", asyn
     assertEquals(result.reason?.includes("more than your daily limit of 3"), true, `reason: ${result.reason}`);
     assertEquals(result.reason?.includes("midnight"), false, "reason must not suggest waiting");
   });
+});
+
+Deno.test("ai_requests.error_code keeps codes and never stores raw provider text", () => {
+  const warn = console.warn;
+  console.warn = () => undefined;
+  try {
+    for (const [raw, code] of [
+      [undefined, undefined],
+      ["claude_unavailable", "claude_unavailable"],
+      ["elevenlabs_503", "elevenlabs_503"],
+      ["AbortError", "aborted"],
+      ["Request timed out after 120s", "timeout"],
+      ["Rate limit exceeded: too many requests for model x", "rate_limited"],
+      ["OpenRouter error: {\"message\":\"Provider returned error\",\"metadata\":{\"raw\":\"...\"}}", "provider_error"],
+    ] as const) {
+      assertEquals(normalizeErrorCode(raw), code, `normalizeErrorCode(${raw})`);
+    }
+  } finally {
+    console.warn = warn;
+  }
 });

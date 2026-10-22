@@ -23,6 +23,7 @@ import {
 import { HttpError, jsonError, requireUser } from "../_shared/auth.ts";
 import { getCorsHeaders } from "../_shared/cors.ts";
 import { checkRateLimit, logUsage, refundQuotaReservation } from "../_shared/entitlements.ts";
+import { REFUND_MAX_DELIVERED_CHARS } from "../_shared/usage-limits.ts";
 import {
   CLAUDE_UNAVAILABLE_CODE,
   CLAUDE_UNAVAILABLE_MESSAGE,
@@ -228,6 +229,8 @@ export async function handleRequest(req: Request): Promise<Response> {
     }
   } catch (error) {
     const message = error instanceof Error ? error.message : "Model routing failed";
+    // Nothing ran, so nothing is charged.
+    await refundQuotaReservation(user.id, rateLimit);
     return jsonResponse({ error: message.includes("Pro") ? message : "Unable to route this request" }, message.includes("Pro") ? 403 : 500, corsHeaders);
   }
 
@@ -392,30 +395,34 @@ export async function handleRequest(req: Request): Promise<Response> {
         console.error("[AI_STREAM] Stream failed:", (err instanceof Error ? err.message : String(err)).slice(0, 2000));
         const isAbort = req.signal.aborted || (err instanceof DOMException && err.name === "AbortError");
         // Claude runs only on the Anthropic key, with no fallback provider.
-        // When it fails the student gets an outage message, and their request
-        // back if the model had written nothing yet.
+        // When it fails the student gets an outage message.
         const claudeUnavailable = !isAbort && err instanceof ClaudeProviderUnavailableError;
         const observedUsage = collectUsage();
-        // OpenRouter credits already spent on the request keep it counted.
-        const refunded = claudeUnavailable && !err.afterOutput && !accumulated && !chargedAgainstCap(observedUsage);
+        // A run that produced nothing costs nothing: a provider failure, an
+        // empty reply, or the browser leaving (reload, closed tab, Stop)
+        // before the student read a usable part of the answer. One that
+        // streamed REFUND_MAX_DELIVERED_CHARS or more stays charged. Refund
+        // before the client hears of the failure, so a retry it sends
+        // straight away sees the request already given back.
+        const refunded = accumulated.length < REFUND_MAX_DELIVERED_CHARS && await refundQuotaReservation(user.id, rateLimit);
+        // The weekly cap counts real spend, so a refunded run's OpenRouter
+        // cost still counts. Only a Claude refusal that cost nothing is logged at 0.
+        const freeRefusal = claudeUnavailable && !err.afterOutput && !accumulated && !chargedAgainstCap(observedUsage);
+        const notCharged = refunded ? { charged: false } : {};
         if (claudeUnavailable) {
-          // Refund before the client hears of the failure, so a retry it
-          // sends straight away sees the request already given back.
-          if (refunded) await refundQuotaReservation(user.id, rateLimit);
-          try { emit("error", { message: CLAUDE_UNAVAILABLE_MESSAGE, code: CLAUDE_UNAVAILABLE_CODE, status: CLAUDE_UNAVAILABLE_STATUS }); } catch { /* client disconnected */ }
+          try { emit("error", { message: CLAUDE_UNAVAILABLE_MESSAGE, code: CLAUDE_UNAVAILABLE_CODE, status: CLAUDE_UNAVAILABLE_STATUS, ...notCharged }); } catch { /* client disconnected */ }
         } else if (!isAbort) {
-          try { emit("error", { message: "AI streaming failed. Please try again.", code: "provider_error" }); } catch { /* client disconnected */ }
+          try { emit("error", { message: "AI streaming failed. Please try again.", code: "provider_error", ...notCharged }); } catch { /* client disconnected */ }
         }
         await logUsage(
           user.id,
           "ask",
           OPENROUTER_PROVIDER,
           model,
-          // A refunded request counts toward neither today's quota nor the weekly cap.
-          refunded ? excludeFromCap(markIncompleteUsage(observedUsage)) : markIncompleteUsage(observedUsage),
+          freeRefusal ? excludeFromCap(markIncompleteUsage(observedUsage)) : markIncompleteUsage(observedUsage),
           Date.now() - startedAt,
           isAbort ? "cancelled" : "error",
-          isAbort ? "client_abort" : claudeUnavailable ? "claude_unavailable" : "stream_error",
+          isAbort ? "aborted" : claudeUnavailable ? "claude_unavailable" : "provider_error",
         );
       } finally {
         req.signal.removeEventListener("abort", clientAbortHandler);

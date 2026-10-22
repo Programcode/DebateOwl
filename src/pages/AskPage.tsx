@@ -4,7 +4,7 @@ import { useSessionStore } from '@/lib/stores/session-store';
 import { useAuth } from '@/lib/supabase/AuthProvider';
 import { useSettingsStore } from '@/lib/stores/settings-store';
 import { AskChat } from '@/components/features/ask/AskChat';
-import { askChat, isAIProviderError, isAskMessageWithinBudget, isTimeoutError } from '@/lib/ai/client';
+import { askChat, isAIModelRestrictionError, isAIProviderError, isAISubscriptionError, isAskMessageWithinBudget, isTimeoutError } from '@/lib/ai/client';
 import { isAskStreamingSupported, streamAskChat } from '@/lib/ai/streaming';
 import { useSubscriptionError } from '@/hooks/use-subscription-error';
 import { getUserFacingAIError } from '@/lib/ai/error-display';
@@ -293,9 +293,13 @@ export default function AskPage() {
               followUpQuestions: [],
               uncertainties: [t('ask.streamInterrupted', 'The streamed response was interrupted before completion.')],
             };
-          } else if (isAIProviderError(streamError) && streamError.details?.code === 'provider_unavailable') {
-            // The model's provider is down, not the stream: asking again
-            // through the plain endpoint would only fail the same way.
+          } else if (
+            (isAIProviderError(streamError) && streamError.details?.code === 'provider_unavailable') ||
+            isAISubscriptionError(streamError) || isAIModelRestrictionError(streamError)
+          ) {
+            // The model's provider is down or the account may not send this,
+            // not the stream: asking again through the plain endpoint would
+            // only fail the same way.
             throw streamError;
           } else {
             result = await askChat(fullMessage, history, mode, config, options);
@@ -369,7 +373,13 @@ export default function AskPage() {
       // Failures stay in the chat with a Retry that re-asks without duplicating the question.
       const retryAsk = (): void => { void handleSend(message, mode, citationMode, webSearch, prosConsMode, argumentMapMode, files, true); };
       if (subError.handleSubscriptionError(error)) {
-        // Subscription error handled by modal
+        // The dialog explains the limit; the question stays in the chat, marked
+        // as not sent, with a Retry for once there is room again.
+        setChatError({
+          title: isAISubscriptionError(error) && error.code === 'limit_reached' ? t('ask.notSentDailyLimit') : t('ask.notSent'),
+          description: isAIModelRestrictionError(error) ? t('ask.notSentModelDesc') : getUserFacingAIError(error),
+          onRetry: retryAsk,
+        });
       } else if (isTimeoutError(error)) {
         setChatError({ title: t('ask.timeout'), description: t('ask.timeoutDesc'), onRetry: retryAsk });
       } else {

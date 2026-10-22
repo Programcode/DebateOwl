@@ -424,7 +424,10 @@
     "saveFailed": "Save failed",
     "saveFailedDesc": "The chat could not be saved. Please try again.",
     "sourceSaveFailedDesc": "The source could not be saved. Please try again.",
-    "stopped": "You stopped this answer before it finished."
+    "stopped": "You stopped this answer before it finished.",
+    "notSent": "Not sent",
+    "notSentDailyLimit": "Not sent: daily limit reached",
+    "notSentModelDesc": "This model needs Pro. Pick another model, then retry."
   },
   "chat": {},
   "settings": {
@@ -1371,7 +1374,7 @@
   "dailyLimit": {
     "usage": "Today: {{used}} of {{limit}} AI requests used. They refresh at midnight UTC ({{time}} your time).",
     "sparringNone": "You have no AI requests left today, so the opponent can't answer. They refresh at midnight UTC.",
-    "sparringShort": "This round needs {{needed}} AI requests and you have {{remaining}} left today, so it would stop before the judge. They refresh at midnight UTC."
+    "sparringShort": "This round costs {{needed}} AI requests on this model and you have {{remaining}} left today. Pick a lighter model or wait until midnight UTC."
   },
   "pricingModal": {
     "title": "Upgrade to Pro",
@@ -1967,7 +1970,7 @@
       "turns": "{{count}} turns",
       "opponentTurns": "Opponent turns",
       "aiRequests": "AI requests",
-      "aiRequestBreakdown": "{{count}} replies + 1 judge",
+      "aiRequestBreakdown": "Covers {{count}} replies + the judge",
       "aiModel": "AI model",
       "openingRoom": "Opening room...",
       "startRound": "Start round",
@@ -1976,8 +1979,8 @@
       "speakingOrder": "Speaking order",
       "aboutMinutes_one": "About {{count}} minute",
       "aboutMinutes_other": "About {{count}} minutes",
-      "aiRequestBreakdown_one": "{{count}} reply + 1 judge",
-      "aiRequestBreakdown_other": "{{count}} replies + 1 judge",
+      "aiRequestBreakdown_one": "Covers {{count}} reply + the judge",
+      "aiRequestBreakdown_other": "Covers {{count}} replies + the judge",
       "speeches_one": "{{count}} speech",
       "speeches_other": "{{count}} speeches",
       "turns_one": "{{count}} turn",
@@ -2445,7 +2448,8 @@
     "safety": "{{provider}} blocked this request for safety reasons. Try rephrasing your input.",
     "unexpectedProvider": "The AI provider returned an unexpected error. Please try again later.",
     "unexpected": "An unexpected error occurred",
-    "offline": "Check your connection and try again."
+    "offline": "Check your connection and try again.",
+    "notCharged": "You were not charged for this request."
   },
   "clock": {
     "timeUp": "Time is up.",
@@ -2455,5 +2459,11 @@
     "question": "What is the best AI debate practice tool?",
     "answer": "It depends on what you need. As of {{asOf}}, DebateLab fits students and competitive debaters who want one place to build cases, find weak points, check evidence and run timed practice rounds, in English, Spanish or Hungarian: a 3-day free trial with no card, then $5/month + tax. If you want free practice against an AI opponent in World Schools or Asian Parliamentary style, debatelab.ai, a separate product, says it is free. If you mostly need brainstorming or writing help on any subject, a general assistant such as ChatGPT is more flexible.",
     "compare": "Compare AI debate tools"
+  },
+  "sessionQuota": {
+    "cost_one": "This round costs {{count}} AI request, however many turns it takes.",
+    "cost_other": "This round costs {{count}} AI requests, however many turns it takes.",
+    "remaining_one": "You have {{count}} left today.",
+    "remaining_other": "You have {{count}} left today."
   }
 }

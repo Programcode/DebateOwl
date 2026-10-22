@@ -32,6 +32,10 @@ vi.mock('@/hooks/use-subscription', () => ({
   useSubscription: () => ({ remainingToday: null as number | null }),
 }));
 
+vi.mock('@/hooks/use-session-quota', () => ({
+  useSessionQuota: () => ({ units: null as number | null, remaining: null as number | null, blocked: null as string | null, checkBeforeStart: async (): Promise<null> => null }),
+}));
+
 vi.mock('@/lib/voice/opponent-voice', () => ({
   opponentVoice: {
     speak: voiceMock.speak,

@@ -4,10 +4,16 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({
   crossfire: vi.fn<(input: { operation: string }) => Promise<unknown>>(),
+  // The pre-start quota check: the refusal a new round would meet, or null.
+  checkBeforeStart: vi.fn<() => Promise<unknown>>(async () => null),
 }));
 
 vi.mock('@/lib/supabase/AuthProvider', () => ({
   useAuth: () => ({ user: { id: 'user-a' } }),
+}));
+
+vi.mock('@/hooks/use-session-quota', () => ({
+  useSessionQuota: () => ({ units: 1, remaining: 0, blocked: null as string | null, checkBeforeStart: mocks.checkBeforeStart }),
 }));
 
 vi.mock('@/hooks/use-subscription', () => ({
@@ -75,6 +81,28 @@ describe('Crossfire out of daily requests', () => {
     expect(screen.queryByTestId('end-crossfire')).not.toBeInTheDocument();
     expect(screen.getByTestId('start-crossfire')).toBeInTheDocument();
     expect(screen.getByTestId('crossfire-resolution')).toHaveValue('Resolved: test');
+  });
+
+  it('checks the quota before the clock starts, so a round that would not fit never starts', async () => {
+    mocks.checkBeforeStart.mockResolvedValueOnce(outOfRequests());
+    startRound('ai-questions-user');
+
+    expect(await screen.findByRole('dialog')).toHaveTextContent('5 of 5');
+    expect(mocks.crossfire).not.toHaveBeenCalled();
+    expect(screen.queryByTestId('end-crossfire')).not.toBeInTheDocument();
+    expect(screen.getByTestId('crossfire-resolution')).toHaveValue('Resolved: test');
+  });
+
+  it('names the round on every turn so the server charges it once', async () => {
+    mocks.crossfire.mockResolvedValueOnce({ type: 'question', text: 'Who pays the cost?' });
+    startRound('ai-questions-user');
+    fireEvent.change(await screen.findByTestId('crossfire-input'), { target: { value: 'The travellers do.' } });
+    fireEvent.click(screen.getByTestId('submit-turn'));
+
+    await vi.waitFor(() => expect(mocks.crossfire).toHaveBeenCalledTimes(2));
+    const sessions = mocks.crossfire.mock.calls.map((call) => (call as unknown[])[2] as { quotaSession?: string });
+    expect(sessions[0].quotaSession).toMatch(/^crossfire-\d+$/);
+    expect(sessions[1].quotaSession).toBe(sessions[0].quotaSession);
   });
 
   it('keeps a round that already has an exchange, so it can still be ended and debriefed', async () => {

@@ -76,7 +76,8 @@ import { useVoiceAvailability } from '@/lib/voice/availability';
 import { combineDelivery, measureDelivery } from '@/lib/voice/delivery';
 import { opponentVoice } from '@/lib/voice/opponent-voice';
 import { useSubscriptionError } from '@/hooks/use-subscription-error';
-import { SubscriptionErrorModals } from '@/components/features/subscription';
+import { SessionCostNote, SubscriptionErrorModals } from '@/components/features/subscription';
+import { useSessionQuota } from '@/hooks/use-session-quota';
 
 const SESSION_ID_PREFIX = 'crossfire';
 
@@ -383,6 +384,9 @@ export default function CrossfirePage() {
   );
   const { getFeatureConfig, outputLanguage } = useSettingsStore();
   const modelConfig = getFeatureConfig('ask');
+  // A round costs one use however many turns it takes; the setup says so.
+  const sessionQuota = useSessionQuota('crossfire', modelConfig, state.phase === 'setup');
+  const [checkingQuota, setCheckingQuota] = useState(false);
   const voiceLanguage = isAppLanguage(outputLanguage) ? outputLanguage : 'en';
   const voiceAvailability = useVoiceAvailability();
   // A voice round falls back to typing when the microphone is lost.
@@ -476,6 +480,7 @@ export default function CrossfirePage() {
         signal: controller.signal,
         workspaceContext: workspace.context ?? undefined,
         debateId: workspace.context ? undefined : roundDebateId(snapshot.config.resolution),
+        quotaSession: snapshot.sessionId,
         voice: voiceActive,
         live: {
           onDraft: (draft) => {
@@ -553,6 +558,7 @@ export default function CrossfirePage() {
         signal: controller.signal,
         workspaceContext: workspace.context ?? undefined,
         debateId: workspace.context ? undefined : roundDebateId(snapshot.config.resolution),
+        quotaSession: snapshot.sessionId,
         live: {
           onDraft: (draft) => {
             if (ownsRequest()) setLiveDebrief({ phase: 'writing', draft });
@@ -610,11 +616,21 @@ export default function CrossfirePage() {
       return;
     }
     setFormError('');
-    debateGate.run(parsed.data.resolution, (target) => beginSession(target.debateId));
+    debateGate.run(parsed.data.resolution, (target) => void beginSession(target.debateId));
   };
 
-  const beginSession = (debateId: string | null) => {
-    if (state.phase !== 'setup') return;
+  const beginSession = async (debateId: string | null) => {
+    if (stateRef.current.phase !== 'setup' || checkingQuota) return;
+    // Check today's quota before the clock starts, so a round the server
+    // would refuse never starts. An unknown answer does not block.
+    setCheckingQuota(true);
+    const refusal = await sessionQuota.checkBeforeStart().finally(() => setCheckingQuota(false));
+    if (refusal) {
+      handleSubscriptionError(refusal);
+      return;
+    }
+    const current = stateRef.current;
+    if (current.phase !== 'setup') return;
     debateTargetRef.current = debateId;
     artifactRequestIdRef.current = crypto.randomUUID();
     opponentVoice.beginRound();
@@ -623,7 +639,7 @@ export default function CrossfirePage() {
       sessionId: `${SESSION_ID_PREFIX}-${Date.now()}`,
       now: Date.now(),
     };
-    const next = crossfireReducer(state, action);
+    const next = crossfireReducer(current, action);
     dispatch(action);
     if (next.phase === 'active' && next.request.status === 'pending') {
       void runNextTurn(next, next.request.expectedReply);
@@ -918,10 +934,13 @@ export default function CrossfirePage() {
                 hidden={Boolean(workspace.context)}
               />
 
-              <Button data-testid="start-crossfire" size="lg" onClick={startSession} className="w-full sm:w-auto">
-                <Flame className="mr-2 h-4 w-4" />
-                {t('crossfire.start')}
-              </Button>
+              <div className="space-y-2">
+                <Button data-testid="start-crossfire" size="lg" onClick={startSession} disabled={checkingQuota} className="w-full sm:w-auto">
+                  <Flame className="mr-2 h-4 w-4" />
+                  {t('crossfire.start')}
+                </Button>
+                <SessionCostNote units={sessionQuota.units} remaining={sessionQuota.remaining} blocked={sessionQuota.blocked} />
+              </div>
             </CardContent>
           </Card>
         </div>
@@ -1008,7 +1027,7 @@ export default function CrossfirePage() {
           </div>
         </header>
 
-        <Transcript turns={state.turns} reduceMotion={shouldReduceMotion} />
+        <Transcript turns={state.turns} reduceMotion={shouldReduceMotion} live />
 
         {state.voice && !workspace.context && !voiceAvailability.available && (
           <p data-testid="voice-unavailable" className="text-xs leading-5 text-muted-foreground">
@@ -1089,7 +1108,8 @@ export default function CrossfirePage() {
 
 const NEW_TURN_MS = 1_000;
 
-function Transcript({ turns, reduceMotion }: { turns: CrossfireTurn[]; reduceMotion: boolean | null }) {
+// `live`: the round is running, so the setup hint never shows; the first turn is on its way or the student's to write.
+function Transcript({ turns, reduceMotion, live = false }: { turns: CrossfireTurn[]; reduceMotion: boolean | null; live?: boolean }) {
   const { t } = useTranslation();
   return (
     <section data-testid="crossfire-transcript" aria-label={t('crossfire.transcript')} className="space-y-3">
@@ -1098,7 +1118,7 @@ function Transcript({ turns, reduceMotion }: { turns: CrossfireTurn[]; reduceMot
         <h2 className="font-semibold">{t('crossfire.transcript')}</h2>
       </div>
       {turns.length === 0 ? (
-        <div className="rounded-lg border border-dashed border-border p-8 text-center text-sm text-muted-foreground">{t('crossfire.emptyDesc')}</div>
+        live ? null : <div className="rounded-lg border border-dashed border-border p-8 text-center text-sm text-muted-foreground">{t('crossfire.emptyDesc')}</div>
       ) : (
         <div className="space-y-3" aria-live="polite">
           {turns.map((turn) => (

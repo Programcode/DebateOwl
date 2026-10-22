@@ -49,6 +49,8 @@ function install(reply: unknown): Harness {
         return jsonResponse({ limit_value: 50 });
       }
       if (/\/rest\/v1\/rpc\/consume_(daily|ai)_quota$/.test(url.pathname)) return jsonResponse([{ allowed: true, current_count: 1 }]);
+      if (url.pathname.endsWith("/rest/v1/rpc/claim_ai_session_quota")) return jsonResponse([{ allowed: true, charged: true, units: 1, current_count: 1 }]);
+      if (/\/rest\/v1\/rpc\/refund_(daily_quota|ai_session_quota)$/.test(url.pathname)) return jsonResponse(1);
       if (url.pathname.includes("/rest/v1/rpc/sparring_request_started_at")) return jsonResponse(new Date().toISOString());
       if (url.pathname.includes("/rest/v1/rpc/claim_sparring_score_session")) {
         const payload = (JSON.parse(String(init?.body)) as { p_payload: { claim_token: string } }).p_payload;

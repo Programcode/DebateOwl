@@ -8,6 +8,8 @@ export class AIError extends Error {
   readonly statusCode?: number;
   readonly requestId?: string;
   readonly details?: Record<string, unknown>;
+  /** The server gave this failed request's quota back, or it ran in a session that had already paid. */
+  notCharged = false;
 
   constructor(
     message: string,
@@ -290,6 +292,19 @@ function getSupabaseErrorStatus(error: { context?: unknown }): number | undefine
 }
 
 export function mapAIError(
+  error: { message: string; context?: unknown },
+  requestId: string,
+  provider: string,
+  model: string,
+  payload?: Record<string, unknown> | null
+): AIError {
+  const mapped = mapAIErrorPayload(error, requestId, provider, model, payload);
+  // The server says when a failed request cost nothing (it gave the quota back).
+  if (payload?.charged === false) mapped.notCharged = true;
+  return mapped;
+}
+
+function mapAIErrorPayload(
   error: { message: string; context?: unknown },
   requestId: string,
   provider: string,
