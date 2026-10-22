@@ -237,7 +237,6 @@ export default function AskPage() {
       const askStartTime = Date.now();
 
       if (!workspace.context && isAskStreamingSupported(config, { ...options, mode })) {
-        let receivedStreamText = false;
         let partialResponse = '';
         const streamingMessage = {
           // The stored reply reuses this id, so the bubble the user is reading never remounts.
@@ -258,7 +257,6 @@ export default function AskPage() {
           result = await streamAskChat(fullMessage, history, mode, config, options, {
             onDelta: (text) => {
               if (!isCurrentRequest()) return;
-              receivedStreamText = true;
               partialResponse += text;
               pendingText += text;
               if (!flushTimer) {
@@ -282,7 +280,9 @@ export default function AskPage() {
             // A newer request or Stop replaced this one; Stop keeps the partial itself.
             return true;
           }
-          if (receivedStreamText) {
+          // Whitespace alone is not an answer: a model that spent its cap on
+          // reasoning may send a newline first. Ask the structured endpoint then.
+          if (partialResponse.trim()) {
             toast({
               title: t('ask.streamInterrupted', 'Response was interrupted'),
               description: t('ask.streamInterruptedDesc', 'You can ask again to get a complete answer.'),
