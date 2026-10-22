@@ -47,6 +47,11 @@ export const routeLoaders = {
   "/app/flowchart": cacheLoader(() => import("@/pages/FlowchartPage")),
   "/app/settings": cacheLoader(() => import("@/pages/SettingsPage")),
   "/app/admin": cacheLoader(() => import("@/pages/AdminPage")),
+  "/tools": cacheLoader(() => import("@/pages/tools/ToolsHubPage")),
+  "/tools/debate-timer": cacheLoader(() => import("@/pages/tools/DebateTimerToolPage")),
+  "/tools/debate-motion-generator": cacheLoader(() => import("@/pages/tools/MotionGeneratorToolPage")),
+  "/tools/debate-flow-sheet": cacheLoader(() => import("@/pages/tools/FlowSheetToolPage")),
+  "/tools/speech-time-calculator": cacheLoader(() => import("@/pages/tools/SpeechTimeCalculatorToolPage")),
   "*": cacheLoader(() => import("@/pages/NotFound")),
 } as const;
 
