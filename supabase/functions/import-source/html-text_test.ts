@@ -118,9 +118,10 @@ Deno.test("a real Wikipedia page keeps its article text and drops the chrome", a
   const words = text.split(/\s+/).filter(Boolean).length;
   if (words < 1_000) throw new Error(`expected the article body, got ${words} words`);
   assertEquals(/free public transport/i.test(text.slice(0, 600)), true);
-  assertEquals(text.includes("Toggle the table of contents"), false);
-  assertEquals(text.includes("[edit]"), false);
-  assertEquals(text.includes("Asturianu"), false);
+  // Each of these leaked into imports before #195 (language menu, edit links).
+  assertEquals(text.includes("18 languages"), false);
+  assertEquals(text.includes("Čeština"), false);
+  assertEquals(/\[\s*edit\s*\]/.test(text), false);
 });
 
 Deno.test("chrome rules match whole class tokens, not fragments of page flags", () => {
