@@ -22,6 +22,7 @@ import { HttpError, jsonError, requireUser } from "../_shared/auth.ts";
 import { getCorsHeaders } from "../_shared/cors.ts";
 import { checkRateLimit, logUsage } from "../_shared/entitlements.ts";
 import { OPENROUTER_API_URL } from "../_shared/research.ts";
+import { MAX_ASK_HISTORY_MESSAGE_CHARS, MAX_ASK_HISTORY_MESSAGES, withPromptCaching } from "../_shared/prompt-budget.ts";
 import {
   AUTO_PRO,
   DEFAULT_MODEL,
@@ -51,7 +52,6 @@ const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
 const MAX_INPUT_LENGTH = 50000;
-const MAX_HISTORY_ITEMS = 8;
 const OPENROUTER_PROVIDER = "openrouter" as const;
 
 function jsonResponse(body: Record<string, unknown>, status: number, corsHeaders: Record<string, string>) {
@@ -73,10 +73,10 @@ function sanitizeText(value: unknown, limit: number) {
 
 function normalizeHistory(value: unknown): ChatMessage[] {
   if (!Array.isArray(value)) return [];
-  return value.slice(-MAX_HISTORY_ITEMS).flatMap((item) => {
+  return value.slice(-MAX_ASK_HISTORY_MESSAGES).flatMap((item) => {
     if (!item || typeof item !== "object") return [];
     const role = (item as Record<string, unknown>).role;
-    const content = sanitizeText((item as Record<string, unknown>).content, 6000);
+    const content = sanitizeText((item as Record<string, unknown>).content, MAX_ASK_HISTORY_MESSAGE_CHARS);
     if ((role === "user" || role === "assistant") && content) return [{ role, content }];
     return [];
   });
@@ -264,7 +264,7 @@ export async function handleRequest(req: Request): Promise<Response> {
 
         const payload: Record<string, unknown> = {
           model,
-          messages,
+          messages: withPromptCaching(model, messages),
           max_tokens: Math.min(modelEntry.maxTokens, MAX_REQUEST_OUTPUT_TOKENS),
           reasoning: { effort: reasoningEffort, exclude: true },
           // Omitting sort and order keeps OpenRouter's balanced provider load balancing.
