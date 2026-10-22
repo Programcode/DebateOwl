@@ -35,7 +35,7 @@ const Hero = () => {
                         <Reveal onLoad className="mb-6">
                             {/* rounded-2xl, not a pill: long Spanish and Hungarian copy wraps cleanly. */}
                             <span className="inline-flex items-start gap-2 rounded-2xl border border-primary/30 bg-primary/10 px-4 py-2 text-sm text-foreground/80">
-                                <Sparkles className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+                                <Sparkles aria-hidden="true" className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
                                 {t('hero.announcement')}
                             </span>
                         </Reveal>
@@ -59,7 +59,7 @@ const Hero = () => {
                                 className="btn-primary-gradient inline-flex items-center justify-center gap-2 px-8 py-4 text-lg"
                             >
                                 <span className="relative z-10">{t('hero.cta')}</span>
-                                <ArrowRight className="relative z-10 h-5 w-5" />
+                                <ArrowRight aria-hidden="true" className="relative z-10 h-5 w-5" />
                             </Link>
                             <a
                                 href="#pricing"
@@ -81,7 +81,7 @@ const Hero = () => {
                         <ul className="mt-8 space-y-3">
                             {trustBullets.map((item) => (
                                 <li key={item} className="flex items-start gap-3 text-sm text-foreground/85">
-                                    <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+                                    <CheckCircle2 aria-hidden="true" className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
                                     <span>{item}</span>
                                 </li>
                             ))}
@@ -147,7 +147,7 @@ const HeroPreview = () => {
                 <div className="grid grid-cols-1 gap-4 bg-background p-5 lg:grid-cols-[1.05fr_0.95fr]">
                     <div className="space-y-4 rounded-xl border border-border/70 bg-card p-4">
                         <div className="flex items-center justify-between gap-3">
-                            <h3 className="text-base font-semibold text-foreground">{t(`features.${mode}`)}</h3>
+                            <p className="text-base font-semibold text-foreground">{t(`features.${mode}`)}</p>
                             <div className="flex rounded-lg border border-border/70 bg-background p-1" role="group" aria-label={t('hero.preview.modeLabel')}>
                                 {modes.map((item) => (
                                     <button
