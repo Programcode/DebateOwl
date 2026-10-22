@@ -39,6 +39,10 @@ The repository is an npm workspace. The web app is the root package and still li
 
 [`src/lib/supabase/AuthProvider.tsx`](../src/lib/supabase/AuthProvider.tsx) coordinates store hydration and reset across authentication changes. Store code is not the database schema source of truth; migrations are.
 
+Discovered-source autosave in [`src/lib/ai/sources.ts`](../src/lib/ai/sources.ts) keeps one Library row per page per debate. It matches on a normalized URL (host without `www.`, no scheme, fragment, tracking parameters or trailing slash) and refreshes the existing row's research metadata instead of inserting a second one. Batches run one at a time within a tab; two tabs can still race, which only a unique index would stop.
+
+[`src/hooks/use-subscription.ts`](../src/hooks/use-subscription.ts) estimates today's remaining AI requests from the account's `ai_requests` rows (refused calls and `jev_*` helper rows excluded) and its own `rate_limits` override. Global `rate_limits` rows are server-only, so the estimate only warns (Sparring setup) and informs (Settings); it is null, never blocking, when any read fails. The `ai` function's 402 stays the decision, and every tool shows it with the same daily-limit dialog.
+
 ## Language behavior
 
 [`packages/core/src/languages.ts`](../packages/core/src/languages.ts) is the shared catalog for English, Spanish, and Hungarian language codes, labels, and Intl locales. [`src/i18n.ts`](../src/i18n.ts) owns the locale resources and applies the selected interface language to i18next, document metadata, and `<html lang>`. Logged-out startup preserves local language preferences; authenticated hydration accepts only catalog languages.
@@ -49,7 +53,7 @@ Interface language and AI-output language are separate settings. Interface langu
 
 [`src/lib/supabase/env.ts`](../src/lib/supabase/env.ts) resolves production or staging client configuration. Public URLs and anon keys are browser configuration. Do not copy their values into docs. Admins switch projects from Settings; see [operations.md](operations.md#switching-the-frontend-to-staging).
 
-[`src/lib/supabase/client.ts`](../src/lib/supabase/client.ts) creates the client with persistent sessions, automatic refresh, PKCE, and environment-specific storage keys.
+[`src/lib/supabase/client.ts`](../src/lib/supabase/client.ts) creates the client with persistent sessions, automatic refresh, PKCE, and environment-specific storage keys. Its fetch notices when a signed-in request is refused (401 from REST or Functions, 401 or 403 from Auth's user lookup). [`session-expiry.ts`](../src/lib/supabase/session-expiry.ts) then forces a token refresh outside that request: if Auth refuses the refresh too, the session was revoked, so the browser signs out locally and the login page says the session expired. A network failure, 5xx or rate limit keeps the session.
 
 Client-side environment selection is a developer convenience, not authorization. Edge Functions and database policies must enforce access independently.
 
