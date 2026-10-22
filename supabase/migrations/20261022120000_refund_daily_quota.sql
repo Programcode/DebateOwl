@@ -1,9 +1,11 @@
 -- Give back a reserved daily request when the provider could not serve it.
 -- Edge Functions call this only after a Claude call failed on the Anthropic
 -- key, so the student is not charged for an answer they never got. It only
--- lowers today's existing counter and never below zero.
+-- lowers today's existing counter and never below zero. p_units is what the
+-- request reserved: 1 today, the model's weight once the quota is weighted.
 CREATE FUNCTION public.refund_daily_quota(
   p_user_id uuid,
+  p_units integer DEFAULT 1,
   p_quota_key text DEFAULT 'ai'
 )
 RETURNS integer
@@ -15,12 +17,13 @@ DECLARE
   v_quota_key text := nullif(trim(p_quota_key), '');
   v_current_count integer;
 BEGIN
-  IF auth.role() <> 'service_role' OR p_user_id IS NULL OR v_quota_key IS NULL THEN
+  IF auth.role() <> 'service_role' OR p_user_id IS NULL OR v_quota_key IS NULL
+    OR p_units IS NULL OR p_units < 1 THEN
     RAISE EXCEPTION 'quota refunds are restricted to trusted server code';
   END IF;
 
   UPDATE public.daily_usage_counters
-  SET request_count = request_count - 1
+  SET request_count = GREATEST(request_count - p_units, 0)
   WHERE user_id = p_user_id
     AND usage_date = CURRENT_DATE
     AND quota_key = v_quota_key
@@ -41,7 +44,7 @@ BEGIN
 END;
 $$;
 
-REVOKE ALL ON FUNCTION public.refund_daily_quota(uuid, text)
+REVOKE ALL ON FUNCTION public.refund_daily_quota(uuid, integer, text)
   FROM PUBLIC, anon, authenticated;
-GRANT EXECUTE ON FUNCTION public.refund_daily_quota(uuid, text)
+GRANT EXECUTE ON FUNCTION public.refund_daily_quota(uuid, integer, text)
   TO service_role;

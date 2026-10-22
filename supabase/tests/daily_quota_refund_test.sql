@@ -1,5 +1,5 @@
 BEGIN;
-SELECT plan(9);
+SELECT plan(11);
 
 INSERT INTO auth.users (id)
 VALUES
@@ -7,11 +7,11 @@ VALUES
   ('77777777-7777-4777-8777-777777777777');
 
 SELECT ok(
-  NOT has_function_privilege('anon', 'public.refund_daily_quota(uuid, text)', 'EXECUTE'),
+  NOT has_function_privilege('anon', 'public.refund_daily_quota(uuid, integer, text)', 'EXECUTE'),
   'anonymous callers cannot refund quota'
 );
 SELECT ok(
-  NOT has_function_privilege('authenticated', 'public.refund_daily_quota(uuid, text)', 'EXECUTE'),
+  NOT has_function_privilege('authenticated', 'public.refund_daily_quota(uuid, integer, text)', 'EXECUTE'),
   'authenticated callers cannot refund quota'
 );
 
@@ -56,6 +56,17 @@ SELECT is(
   public.refund_daily_quota('77777777-7777-4777-8777-777777777777'),
   0,
   'a refund without a reservation today creates nothing'
+);
+SELECT throws_ok(
+  $$SELECT public.refund_daily_quota('66666666-6666-4666-8666-666666666666', 0)$$,
+  'P0001',
+  NULL,
+  'a refund must give back at least one unit'
+);
+SELECT is(
+  public.refund_daily_quota('66666666-6666-4666-8666-666666666666', 5),
+  0,
+  'a weighted refund gives back its units and stops at zero'
 );
 
 RESET ROLE;
