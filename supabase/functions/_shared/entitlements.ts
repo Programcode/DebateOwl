@@ -237,7 +237,7 @@ export async function checkRateLimit(userId: string | null, model?: ModelSelecti
     // can't race past the limit. Expensive models reserve several units, and
     // the same call refuses users over the weekly AI budget (see
     // 20261022130001_weighted_quota_weekly_budget.sql). Sessions go through
-    // the ledger in 20261022190000_ai_quota_sessions.sql.
+    // the ledger in 20261022220000_ai_quota_sessions.sql.
     const units = quotaUnitsFor(model);
     const { data: quota, error: quotaError } = session
       ? await supabase.rpc("claim_ai_session_quota", {
