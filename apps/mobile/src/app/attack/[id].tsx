@@ -69,6 +69,7 @@ export default function AttackResultScreen() {
   return (
     <DocumentScreen
       testID="attack-document"
+      outline
       notice={doc.notice}
       header={<DocumentHeader backLabel={back} onShare={() => run(() => shareText(title, text()))} actions={actions} />}
       actions={

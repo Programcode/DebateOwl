@@ -46,7 +46,7 @@ const SIDE = 16;
 /** From this width every column fits, as on iPad. */
 const WIDE = 600;
 
-export function FlowCard({ node, meta, onPress, testID }: { node: FlowNode; meta: string | null; onPress: () => void; testID?: string }) {
+export function FlowCard({ node, meta, onPress, testID, selected = false }: { node: FlowNode; meta: string | null; onPress: () => void; testID?: string; selected?: boolean }) {
   const { t } = useTranslation();
   const { colors } = useTheme();
   const flow = useFlowColors();
@@ -54,11 +54,14 @@ export function FlowCard({ node, meta, onPress, testID }: { node: FlowNode; meta
     <Pressable
       accessibilityRole="button"
       accessibilityLabel={`${typeLabel(t, node.data.type)}: ${node.data.label}`}
+      accessibilityState={selected ? { selected } : undefined}
       onPress={onPress}
       testID={testID}
       style={({ pressed }) => [
         styles.card,
         { backgroundColor: flow.cardFill, borderColor: colors.border, borderLeftColor: flow.type[node.data.type] },
+        // The card open in the iPad inspector.
+        selected && { backgroundColor: colors.tile, borderColor: colors.chipSelectedBorder, borderLeftColor: flow.type[node.data.type] },
         pressed && styles.pressed,
       ]}>
       <Text weight="medium" style={styles.cardLabel}>
@@ -98,7 +101,7 @@ export function FlowLegend() {
 }
 
 /** The Flow tab: your case, their attacks and your rebuttals side by side, snapping column by column on a phone. */
-export function FlowColumnsView({ doc, onOpen }: { doc: FlowchartDocument; onOpen: (node: FlowNode) => void }) {
+export function FlowColumnsView({ doc, onOpen, selectedId }: { doc: FlowchartDocument; onOpen: (node: FlowNode) => void; selectedId?: string }) {
   const { t } = useTranslation();
   const flow = useFlowColors();
   const { width } = useWindowDimensions();
@@ -119,7 +122,7 @@ export function FlowColumnsView({ doc, onOpen }: { doc: FlowchartDocument; onOpe
           {t('mobile.flowchart.emptyColumn')}
         </Text>
       ) : (
-        column.cards.map((node, index) => <FlowCard key={index} node={node} meta={flowMeta(t, doc, node)} onPress={() => onOpen(node)} testID="flow-card" />)
+        column.cards.map((node, index) => <FlowCard key={index} node={node} meta={flowMeta(t, doc, node)} onPress={() => onOpen(node)} testID="flow-card" selected={node.id === selectedId} />)
       )}
     </View>
   ));
@@ -141,7 +144,7 @@ const INDENT = 18;
 const MAX_INDENT = 4;
 
 /** The Map tab: from the thesis down through what supports, attacks and rebuts it. */
-export function MapTreeView({ doc, onOpen }: { doc: FlowchartDocument; onOpen: (node: FlowNode) => void }) {
+export function MapTreeView({ doc, onOpen, selectedId }: { doc: FlowchartDocument; onOpen: (node: FlowNode) => void; selectedId?: string }) {
   const { t } = useTranslation();
   const flow = useFlowColors();
   return (
@@ -153,7 +156,7 @@ export function MapTreeView({ doc, onOpen }: { doc: FlowchartDocument; onOpen: (
               {`↳ ${viaLabel(t, via)}`}
             </Text>
           ) : null}
-          <FlowCard node={node} meta={mapMeta(t, doc, node)} onPress={() => onOpen(node)} testID="map-card" />
+          <FlowCard node={node} meta={mapMeta(t, doc, node)} onPress={() => onOpen(node)} testID="map-card" selected={node.id === selectedId} />
         </View>
       ))}
     </View>

@@ -119,6 +119,7 @@ export default function FactoidsResultScreen() {
   return (
     <DocumentScreen
       testID="factoids-document"
+      outline
       notice={doc.notice}
       header={<DocumentHeader backLabel={back} onShare={() => run(() => shareText(title, factoidsToText(output, t)))} actions={actions} />}
       actions={

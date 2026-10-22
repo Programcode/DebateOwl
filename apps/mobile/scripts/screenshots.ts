@@ -7,12 +7,16 @@
  *   npm run -w @debatelab/mobile export:web
  *   PORT=<free port> npx tsx apps/mobile/scripts/screenshots.ts
  *
- * ONLY=iphone-light-en limits a run to the combinations whose name starts with it.
+ * ONLY=iphone-light-en limits a run to the combinations whose name starts with it;
+ * separate several with commas (ONLY=iphone-light-en,ipad-dark-hu).
  * SCREENS=you,timer limits the signed-in screens to those groups: debate,
  * library, prepare, practice, you, empty, ask, results, brainstorm, factoids,
  * timer, crossfire, sparring, flowchart, one-off, history, announcements,
  * account, model. Sign-in screens are always shot.
  * ONLY=offline runs only the offline reading check (see shootOfflineScreens).
+ *
+ * The iPad sizes are portrait (1024x1366), landscape (1366x1024) and a 600-point
+ * window (Split View or Slide Over), which takes the phone layout.
  *
  * Signed-in screens need a staging session. With STAGING_DEMO_CODE set, the
  * script signs in once through the real sign-in screen and also checks that a
@@ -89,7 +93,8 @@ const DIST = join(__dirname, '../dist');
 const OUT = join(__dirname, '../../../.verify/mobile-shots');
 const PORT = Number(process.env.PORT);
 const DEMO_CODE = process.env.STAGING_DEMO_CODE?.trim();
-const ONLY = process.env.ONLY?.trim() ?? '';
+const ONLY = (process.env.ONLY ?? '').split(',').map((value) => value.trim()).filter((value) => value.length > 0);
+const offlineOnly = ONLY.length === 1 && ONLY[0] === 'offline';
 const SCREENS = process.env.SCREENS?.split(',').map((name) => name.trim()).filter(Boolean);
 const want = (group: string) => !SCREENS?.length || SCREENS.includes(group);
 const ORIGIN = `http://127.0.0.1:${PORT}`;
@@ -98,7 +103,9 @@ const SESSION_KEY = `sb-${STAGING_HOST.split('.')[0]}-auth-token`;
 
 const DEVICES = {
   iphone: { viewport: { width: 390, height: 844 }, deviceScaleFactor: 3, isMobile: true, hasTouch: true },
-  ipad: { viewport: { width: 820, height: 1180 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true },
+  ipad: { viewport: { width: 1024, height: 1366 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true },
+  'ipad-landscape': { viewport: { width: 1366, height: 1024 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true },
+  'ipad-narrow': { viewport: { width: 600, height: 1366 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true },
 } as const;
 const SCHEMES = ['light', 'dark'] as const;
 const LOCALES = { en: 'en-GB', hu: 'hu-HU' } as const;
@@ -447,6 +454,18 @@ async function shootResultScreens(context: BrowserContext, prefix: string, langu
   await page.getByTestId('case-document').waitFor({ timeout: 30_000 });
   await page.waitForTimeout(400);
   await shoot(page, `${prefix}-case`);
+  // A wide iPad shows the outline rail: jumping to a part scrolls that part's heading to the top of the case.
+  const outline = page.getByTestId('document-outline');
+  if (await outline.isVisible()) {
+    const part = /^(Case Structure|Eset Struktúra|Estructura del Caso)$/;
+    const heading = page.getByTestId('case-document').getByRole('heading', { name: part });
+    const before = (await heading.boundingBox())?.y ?? 0;
+    await outline.getByRole('menuitem').filter({ hasText: part }).click();
+    await page.waitForTimeout(800);
+    const after = (await heading.boundingBox())?.y ?? 0;
+    if (!(after < before && after < 200)) throw new Error(`The outline did not scroll to Case Structure (heading at ${before}, then ${after})`);
+    await shoot(page, `${prefix}-case-outline`);
+  }
   // Close the open argument, so every argument shows collapsed.
   await page.getByTestId('document-item').first().click();
   await shoot(page, `${prefix}-case-collapsed`);
@@ -618,7 +637,10 @@ async function shootFlowchart(context: BrowserContext, prefix: string, language:
   await page.getByTestId('claim-link').click();
   await page.getByTestId('link-targets').waitFor();
   await shoot(page, `${prefix}-flowchart-link`);
-  await page.goBack();
+  // On iPad the claim is docked beside the map, so it closes instead of going back.
+  const docked = page.getByTestId('claim-close');
+  if (await docked.isVisible()) await docked.click();
+  else await page.goBack();
   await page.getByTestId('flowchart-screen').waitFor();
 
   await page.getByTestId('document-add').click();
@@ -1546,7 +1568,7 @@ async function main() {
   try {
     const session = DEMO_CODE ? await signIn(browser, problems) : null;
     if (!session) console.log('STAGING_DEMO_CODE is not set: signed-in screens skipped');
-    else if (ONLY === 'offline') {
+    else if (offlineOnly) {
       for (const [index, run] of OFFLINE_RUNS.entries()) shots += await shootOfflineScreens(browser, session, problems, run, index === 0);
     } else await checkOfflineColdStart(browser, session, problems);
 
@@ -1554,7 +1576,7 @@ async function main() {
       for (const scheme of SCHEMES) {
         for (const [language, locale] of Object.entries(LOCALES)) {
           const prefix = `${device}-${scheme}-${language}`;
-          if (!prefix.startsWith(ONLY)) continue;
+          if (ONLY.length > 0 && !ONLY.some((only) => prefix.startsWith(only))) continue;
           const signedOut = await browser.newContext({ ...options, colorScheme: scheme, locale });
           const page = await signedOut.newPage();
           watchErrors(page, problems, prefix);

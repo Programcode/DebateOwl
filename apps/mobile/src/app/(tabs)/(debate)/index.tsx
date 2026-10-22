@@ -13,6 +13,7 @@ import { OneOffNotice } from '@/components/one-off-notice';
 import { PREPARE_TOOLS, prepareToolHref } from '@/components/prepare-tools';
 import { Screen } from '@/components/screen';
 import { SegmentedControl } from '@/components/segmented-control';
+import { SOURCE_ICONS, sourceMeta } from '@/components/source-display';
 import { Text } from '@/components/text';
 import { WorkRow, workHref } from '@/components/work-row';
 import { useAuth } from '@/lib/auth';
@@ -24,19 +25,25 @@ import {
   type DebateItem,
   type DebateSide,
 } from '@/lib/debates';
+import { HOME_COLUMNS_WIDTH, useLayoutClass } from '@/lib/layout';
+import { fetchSources, type Source } from '@/lib/sources';
 import { useAnnouncements } from '@/lib/use-announcements';
 import { useCopyHolder } from '@/lib/use-copy-holder';
 import { mainActionGradient, radius } from '@/theme/colors';
 import { useTheme } from '@/theme/use-theme';
 
 const RECENT_LIMIT = 3;
+/** The iPad dashboard lists more work, and the newest sources beside it (iPad mock A). */
+const DASHBOARD_RECENT_LIMIT = 5;
+const DASHBOARD_SOURCES = 3;
 
 /** Home: the Current Debate, as in mock 01. */
 export default function DebateScreen() {
   const { t } = useTranslation();
   const router = useRouter();
   const { status, current, refresh } = useDebates();
-  // The website's announcement banner, at the top of the Debate tab.
+  const dashboard = useLayoutClass() !== 'phone';
+  // The website's announcement banner, at the top of the Debate tab, including the iPad dashboard.
   const announcements = useAnnouncements();
   const refreshAnnouncements = announcements.refresh;
 
@@ -93,6 +100,20 @@ export default function DebateScreen() {
     );
   }
 
+  if (dashboard) {
+    return (
+      <Screen safeTop gap={0} wide>
+        <AnnouncementBanner announcements={announcements} style={styles.banner} />
+        <SwitcherPill onPress={openSwitcher} />
+        <OneOffNotice style={styles.notice} />
+        <Text accessibilityRole="header" weight="bold" style={[styles.motion, styles.motionWide]} testID="current-debate-motion">
+          {current.motion}
+        </Text>
+        <DebateDetails key={current.id} debateId={current.id} dashboard />
+      </Screen>
+    );
+  }
+
   return (
     <Screen safeTop gap={0}>
       <AnnouncementBanner announcements={announcements} style={styles.banner} />
@@ -128,8 +149,9 @@ function SwitcherPill({ onPress }: { onPress: () => void }) {
  * Counts, the main action, the Prepare tools and recent work for one debate.
  * Students prepare both sides, so the toggle only chooses which side's work is
  * shown. It starts on In favor for each debate and is never stored.
+ * On iPad (`dashboard`) they sit in two columns, with the newest sources.
  */
-function DebateDetails({ debateId }: { debateId: string }) {
+function DebateDetails({ debateId, dashboard = false }: { debateId: string; dashboard?: boolean }) {
   const { t } = useTranslation();
   const router = useRouter();
   const { session } = useAuth();
@@ -137,29 +159,34 @@ function DebateDetails({ debateId }: { debateId: string }) {
   const [view, setView] = useState<DebateSide>('pro');
   const [counts, setCounts] = useState<DebateCounts | null>(null);
   const [recent, setRecent] = useState<Record<DebateSide, DebateItem[]> | null>(null);
+  const [sources, setSources] = useState<Source[] | null>(null);
   const [failed, setFailed] = useState(false);
+  const [width, setWidth] = useState(0);
   const copies = useCopyHolder();
 
   // Both sides load together, so switching the view is instant.
   const load = useCallback(async (isCurrent: () => boolean) => {
     if (!userId) return;
+    const limit = dashboard ? DASHBOARD_RECENT_LIMIT : RECENT_LIMIT;
     const mark = copies.mark();
     try {
-      const [nextCounts, pro, con] = await Promise.all([
+      const [nextCounts, pro, con, nextSources] = await Promise.all([
         fetchDebateCounts(userId, debateId, mark),
-        fetchRecentWork(userId, debateId, 'pro', RECENT_LIMIT, mark),
-        fetchRecentWork(userId, debateId, 'con', RECENT_LIMIT, mark),
+        fetchRecentWork(userId, debateId, 'pro', limit, mark),
+        fetchRecentWork(userId, debateId, 'con', limit, mark),
+        dashboard ? fetchSources(userId, debateId, mark) : null,
       ]);
       if (!isCurrent()) return;
       setCounts(nextCounts);
       setRecent({ pro, con });
+      setSources(nextSources?.slice(0, DASHBOARD_SOURCES) ?? null);
       setFailed(false);
     } catch (cause) {
       if (!isCurrent()) return;
       console.warn('Could not load the debate:', cause instanceof Error ? cause.message : cause);
       setFailed(true);
     }
-  }, [userId, debateId, copies]);
+  }, [userId, debateId, dashboard, copies]);
 
   // Reload on focus, so work saved on the website shows up. Out of view, its saved copies no longer count.
   useFocusEffect(
@@ -176,7 +203,7 @@ function DebateDetails({ debateId }: { debateId: string }) {
   const results = counts?.results[view];
   const items = recent?.[view] ?? null;
 
-  return (
+  const sideAndStats = (
     <>
       <View accessibilityLabel={t('mobile.debate.viewAria')}>
         <SegmentedControl<DebateSide>
@@ -195,8 +222,11 @@ function DebateDetails({ debateId }: { debateId: string }) {
         <Stat value={counts?.rounds} label={t('mobile.debate.statRounds', { count: counts?.rounds ?? 0 })} />
       </View>
 
-      <SparCard onPress={() => router.push({ pathname: '/sparring', params: { from: 'debate' } })} />
-
+    </>
+  );
+  const spar = <SparCard onPress={() => router.push({ pathname: '/sparring', params: { from: 'debate' } })} />;
+  const prepare = (
+    <>
       <Text accessibilityRole="header" weight="bold" style={styles.section}>
         {t('mobile.tabs.prepare')}
       </Text>
@@ -210,8 +240,12 @@ function DebateDetails({ debateId }: { debateId: string }) {
           />
         ))}
       </View>
-
-      <View style={styles.sectionRow}>
+    </>
+  );
+  const twoColumns = dashboard && width >= HOME_COLUMNS_WIDTH;
+  const pickUp = (
+    <>
+      <View style={[styles.sectionRow, twoColumns && styles.columnTop]}>
         <Text accessibilityRole="header" weight="bold" style={[styles.section, styles.sectionTitle]}>
           {t('mobile.debate.pickUp')}
         </Text>
@@ -243,6 +277,78 @@ function DebateDetails({ debateId }: { debateId: string }) {
         </Card>
       )}
     </>
+  );
+
+  if (!dashboard) {
+    return (
+      <>
+        {sideAndStats}
+        {spar}
+        {prepare}
+        {pickUp}
+      </>
+    );
+  }
+
+  const recentSources = failed ? null : sources === null ? (
+    <ActivityIndicator style={styles.loading} />
+  ) : sources.length === 0 ? (
+    <Card>
+      <Text tone="secondary" style={styles.body}>
+        {t('libraryPage.emptyDesc')}
+      </Text>
+    </Card>
+  ) : (
+    <Card style={styles.list}>
+      {sources.map((source, index) => (
+        <RecentSource key={source.id} source={source} first={index === 0} onPress={() => router.push({ pathname: '/source/[id]', params: { id: source.id } })} />
+      ))}
+    </Card>
+  );
+
+  return (
+    <View style={twoColumns ? styles.columns : undefined} onLayout={(event) => setWidth(event.nativeEvent.layout.width)} testID="debate-dashboard">
+      <View style={twoColumns ? styles.column : undefined}>
+        <View style={styles.sideColumn}>{sideAndStats}</View>
+        {spar}
+        {prepare}
+      </View>
+      <View style={twoColumns ? styles.column : undefined}>
+        {pickUp}
+        {failed ? null : (
+          <>
+            <Text accessibilityRole="header" weight="bold" style={styles.section}>
+              {t('mobile.debate.recentSources')}
+            </Text>
+            {recentSources}
+          </>
+        )}
+      </View>
+    </View>
+  );
+}
+
+/** A source in the dashboard's Recent sources; it opens in the source sheet. */
+function RecentSource({ source, first, onPress }: { source: Source; first: boolean; onPress: () => void }) {
+  const { t } = useTranslation();
+  const { colors } = useTheme();
+  return (
+    <Pressable
+      accessibilityRole="button"
+      onPress={onPress}
+      testID="recent-source"
+      style={({ pressed }) => [styles.sourceRow, !first && { borderTopWidth: 1, borderTopColor: colors.line }, pressed && styles.pressed]}>
+      <IconTile name={SOURCE_ICONS[source.type]} size={42} />
+      <View style={styles.sourceText}>
+        <Text weight="semibold" style={styles.sourceTitle} numberOfLines={1}>
+          {source.title || t('libraryPage.untitledSource')}
+        </Text>
+        <Text tone="faint" style={styles.sourceMeta} numberOfLines={1}>
+          {sourceMeta(t, source)}
+        </Text>
+      </View>
+      <Icon name="chevronRight" color={colors.tabInactive} size={20} />
+    </Pressable>
   );
 }
 
@@ -366,4 +472,13 @@ const styles = StyleSheet.create({
   },
   tileLabel: { flex: 1, fontSize: 15.5 },
   list: { padding: 0, gap: 0 },
+  motionWide: { fontSize: 34, lineHeight: 40, letterSpacing: -0.9 },
+  columns: { flexDirection: 'row', alignItems: 'flex-start', gap: 32 },
+  column: { flex: 1, minWidth: 0 },
+  columnTop: { marginTop: 0 },
+  sideColumn: { maxWidth: 420 },
+  sourceRow: { flexDirection: 'row', alignItems: 'center', gap: 13, paddingVertical: 12, paddingHorizontal: 14 },
+  sourceText: { flex: 1, gap: 2 },
+  sourceTitle: { fontSize: 16 },
+  sourceMeta: { fontSize: 14 },
 });

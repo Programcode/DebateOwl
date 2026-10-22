@@ -97,6 +97,7 @@ export function SparringScorecardScreen({
   return (
     <DocumentScreen
       testID="sparring-complete"
+      outline
       header={
         <DocumentHeader
           backLabel={backLabel(t, from, 'practice')}

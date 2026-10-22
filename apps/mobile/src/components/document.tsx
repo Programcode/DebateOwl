@@ -1,5 +1,5 @@
-import { Children, Fragment, isValidElement, useState, type ReactNode } from 'react';
-import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { Children, Fragment, isValidElement, useRef, useState, type ReactNode } from 'react';
+import { Pressable, ScrollView, StyleSheet, View, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Chip, CiteBadge } from './chip';
@@ -7,8 +7,10 @@ import type { CitationTarget } from './citation-target';
 import { Icon } from './icon';
 import { MarkdownView } from './markdown-view';
 import { OfflineNotice } from './offline-notice';
+import { OutlineProvider, OutlineRail, useOutlineAnchor, useOutlineItems, useOutlineRail } from './outline';
 import { Text } from './text';
 
+import { RAIL_MIN_WIDTH, RAIL_WIDTH, useHeaderCover, useLayoutClass } from '@/lib/layout';
 import { radius } from '@/theme/colors';
 import { useTheme } from '@/theme/use-theme';
 
@@ -30,6 +32,7 @@ export function DocumentScreen({
   actionWidths,
   notice,
   testID,
+  outline = false,
 }: {
   header: ReactNode;
   children: ReactNode;
@@ -38,10 +41,21 @@ export function DocumentScreen({
   actionWidths?: number[];
   notice?: string;
   testID?: string;
+  /** A saved document: on a wide iPad window its headed parts are listed in a rail beside it (iPad mock A). */
+  outline?: boolean;
 }) {
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
+  const layout = useLayoutClass();
+  const { width } = useWindowDimensions();
   const bottom = Math.max(insets.bottom - 6, 14);
+  if (outline && layout !== 'phone' && width >= RAIL_MIN_WIDTH) {
+    return (
+      <RailDocument header={header} actions={actions} actionWidths={actionWidths} notice={notice} testID={testID}>
+        {children}
+      </RailDocument>
+    );
+  }
   return (
     <View style={[styles.root, { backgroundColor: colors.card }]} testID={testID}>
       {header}
@@ -72,6 +86,69 @@ export function DocumentScreen({
   );
 }
 
+/** The document with its outline rail on the left, the readable column beside it. */
+function RailDocument({
+  header,
+  children,
+  actions,
+  actionWidths,
+  notice,
+  testID,
+}: {
+  header: ReactNode;
+  children: ReactNode;
+  actions?: ReactNode;
+  actionWidths?: number[];
+  notice?: string;
+  testID?: string;
+}) {
+  const { colors } = useTheme();
+  const insets = useSafeAreaInsets();
+  const bottom = Math.max(insets.bottom - 6, 14);
+  const scroll = useRef<ScrollView>(null);
+  const content = useRef<View>(null);
+  const rail = useOutlineRail(content, scroll, useHeaderCover());
+  return (
+    <View style={[styles.root, { backgroundColor: colors.card }]} testID={testID}>
+      {header}
+      <View style={styles.railRow}>
+        <ScrollView style={styles.railPane} contentInsetAdjustmentBehavior="automatic">
+          <OutlineRail entries={rail.entries} current={rail.current} onJump={rail.jump} />
+        </ScrollView>
+        <View style={styles.railDocument}>
+          <ScrollView
+            ref={scroll}
+            contentInsetAdjustmentBehavior="automatic"
+            scrollEventThrottle={32}
+            onScroll={(event) => rail.onScroll(event.nativeEvent.contentOffset.y)}
+            onContentSizeChange={rail.measure}>
+            <View ref={content} style={[styles.content, styles.contentRail, { paddingBottom: (actions ? PINNED_HEIGHT + 24 : 16) + bottom }]}>
+              <OfflineNotice />
+              <OutlineProvider outline={rail.outline}>{children}</OutlineProvider>
+            </View>
+          </ScrollView>
+          {notice ? (
+            <View
+              accessibilityRole="alert"
+              accessibilityLiveRegion="polite"
+              style={[styles.notice, { bottom: bottom + (actions ? PINNED_HEIGHT + 12 : 0), backgroundColor: colors.foreground }]}
+              testID="document-notice">
+              <Text style={[styles.noticeText, { color: colors.background }]}>{notice}</Text>
+            </View>
+          ) : null}
+          {actions ? (
+            <View style={[styles.pinned, styles.pinnedRail, { bottom }]}>
+              <View style={[styles.pinnedRow, styles.pinnedRowRail]}>
+                {Children.map(unwrapFragment(actions), (action, index) => (action ? <View style={[styles.pinnedItem, actionWidths?.[index] ? { flex: actionWidths[index] } : null]}>{action}</View> : null))}
+              </View>
+            </View>
+          ) : null}
+        </View>
+      </View>
+    </View>
+  );
+}
+
 function unwrapFragment(node: ReactNode): ReactNode {
   return isValidElement<{ children?: ReactNode }>(node) && node.type === Fragment ? node.props.children : node;
 }
@@ -94,8 +171,9 @@ export function DocumentTitle({ title, meta }: { title: string; meta?: string })
 /** The pale-blue card the document opens with. */
 export function FramingCard({ blocks }: { blocks: { label: string; text: string }[] }) {
   const { colors } = useTheme();
+  const anchor = useOutlineAnchor(blocks[0]?.label);
   return (
-    <View style={[styles.framing, { backgroundColor: colors.tile, borderColor: colors.tileBorder }]} testID="document-framing">
+    <View ref={anchor} style={[styles.framing, { backgroundColor: colors.tile, borderColor: colors.tileBorder }]} testID="document-framing">
       {blocks.map((block, index) => (
         <View key={index} style={styles.framingBlock}>
           <Text weight="semibold" style={[styles.framingLabel, { color: colors.chipSelectedForeground }]}>
@@ -121,9 +199,11 @@ export interface NumberedItem {
 /**
  * Numbered items that open one at a time or together. The first is open. An
  * open item gets its own card; neighbouring closed items share one, as in the mock.
+ * With `outline`, each item is listed in the iPad document rail.
  */
-export function NumberedItems({ items, testID }: { items: NumberedItem[]; testID?: string }) {
+export function NumberedItems({ items, testID, outline = false }: { items: NumberedItem[]; testID?: string; outline?: boolean }) {
   const { colors } = useTheme();
+  const anchorFor = useOutlineItems(items, outline);
   const [open, setOpen] = useState<ReadonlySet<string>>(() => new Set(items[0] ? [items[0].key] : []));
   const toggle = (key: string) =>
     setOpen((previous) => {
@@ -150,6 +230,7 @@ export function NumberedItems({ items, testID }: { items: NumberedItem[]; testID
             <Fragment key={item.key}>
               {index > 0 ? <View style={[styles.divider, { backgroundColor: colors.line }]} /> : null}
               <Pressable
+                ref={anchorFor?.(item.key)}
                 accessibilityRole="button"
                 accessibilityState={{ expanded: group.open }}
                 onPress={() => toggle(item.key)}
@@ -229,8 +310,9 @@ export function SourceChips({ chips, onCite }: { chips: CitationTarget[]; onCite
 }
 
 export function SectionHeading({ title, description }: { title: string; description?: string }) {
+  const anchor = useOutlineAnchor(title);
   return (
-    <View style={[styles.sectionHead, styles.sectionHeading]}>
+    <View ref={anchor} style={[styles.sectionHead, styles.sectionHeading]}>
       <Text accessibilityRole="header" weight="bold" style={styles.sectionTitle}>
         {title}
       </Text>
@@ -246,8 +328,9 @@ export function SectionHeading({ title, description }: { title: string; descript
 /** A titled part of the document, in the same card style as the arguments. */
 export function DocSection({ title, description, children, testID }: { title: string; description?: string; children: ReactNode; testID?: string }) {
   const { colors } = useTheme();
+  const anchor = useOutlineAnchor(title);
   return (
-    <View style={styles.section} testID={testID}>
+    <View ref={anchor} style={styles.section} testID={testID}>
       <View style={styles.sectionHead}>
         <Text accessibilityRole="header" weight="bold" style={styles.sectionTitle}>
           {title}
@@ -329,6 +412,12 @@ const styles = StyleSheet.create({
   pinned: { position: 'absolute', left: 0, right: 0, alignItems: 'center' },
   pinnedRow: { flexDirection: 'row', gap: 10, width: '100%', maxWidth: 680, paddingHorizontal: 14 },
   pinnedItem: { flex: 1 },
+  railRow: { flex: 1, flexDirection: 'row' },
+  railPane: { width: RAIL_WIDTH, flexGrow: 0, flexShrink: 0 },
+  railDocument: { flex: 1 },
+  contentRail: { alignSelf: 'flex-start', paddingLeft: 20, paddingRight: 28 },
+  pinnedRail: { alignItems: 'flex-start' },
+  pinnedRowRail: { paddingLeft: 16, paddingRight: 24 },
   pressed: { opacity: 0.7 },
   notice: { position: 'absolute', left: 24, right: 24, borderRadius: 14, paddingHorizontal: 16, paddingVertical: 11, alignSelf: 'center', maxWidth: 560 },
   noticeText: { fontSize: 15, lineHeight: 20, textAlign: 'center' },

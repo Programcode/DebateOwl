@@ -6,6 +6,7 @@ import { ActivityIndicator, KeyboardAvoidingView, Platform, Pressable, ScrollVie
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AskAnswer } from '@/components/ask-answer';
+import { AskChatPane } from '@/components/ask-chat-list';
 import { AskHistory } from '@/components/ask-history';
 import { TextButton } from '@/components/buttons';
 import { Chip } from '@/components/chip';
@@ -21,6 +22,7 @@ import type { FeatureConfig } from '@/lib/feature-config';
 import { useAuth } from '@/lib/auth';
 import { ChatSaveError, fetchChat, saveChat, type ChatMessage, type ChatRecord } from '@/lib/chats';
 import { useDebates } from '@/lib/debate-context';
+import { LIST_WIDTH, useLayoutClass } from '@/lib/layout';
 import { keepSourceAssessments } from '@/lib/results';
 import { useSettings } from '@/lib/settings';
 import { fetchSources, type Source } from '@/lib/sources';
@@ -48,9 +50,13 @@ const RETRYABLE_ERRORS = new Set<AIErrorKind>(['network', 'timeout', 'failed', '
 let localId = 0;
 const nextId = () => `local-${Date.now()}-${(localId += 1)}`;
 
-/** Ask, as in mock 07: a coaching chat that streams, grounded in the Current Debate. */
+/**
+ * Ask, as in mock 07: a coaching chat that streams, grounded in the Current Debate.
+ * On iPad the debate's conversations stay listed beside the chat (iPad mock A).
+ */
 export default function AskScreen() {
   const { t } = useTranslation();
+  const split = useLayoutClass() !== 'phone';
   const router = useRouter();
   const { prompt, chat: resumeChatId } = useLocalSearchParams<{ prompt?: string; chat?: string }>();
   const insets = useSafeAreaInsets();
@@ -339,16 +345,23 @@ export default function AskScreen() {
 
   const subtitle = oneOff ? t('debate.oneOffActive') : current?.motion ?? '';
   const busy = loading || opening;
+  // Beside the list, the chat is titled by its first question, as its saved row is.
+  const question = messages.find((message) => message.role === 'user')?.content;
+  const title = split ? question ?? t('askChat.newChat') : t('nav.ask');
 
-  return (
-    <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={[styles.root, { backgroundColor: colors.card }]}>
+  const chat = (
+    <>
       <View style={[styles.header, { paddingTop: insets.top + 6, borderBottomColor: colors.line }]}>
-        <Pressable accessibilityRole="button" accessibilityLabel={t('common.back')} hitSlop={8} onPress={() => router.back()} style={styles.headerButton}>
-          <Icon name="chevronLeft" color={colors.primary} size={28} />
-        </Pressable>
+        {split ? (
+          <View style={styles.headerButton} />
+        ) : (
+          <Pressable accessibilityRole="button" accessibilityLabel={t('common.back')} hitSlop={8} onPress={() => router.back()} style={styles.headerButton}>
+            <Icon name="chevronLeft" color={colors.primary} size={28} />
+          </Pressable>
+        )}
         <View style={styles.headerText}>
-          <Text accessibilityRole="header" weight="bold" style={styles.headerTitle}>
-            {t('nav.ask')}
+          <Text accessibilityRole="header" weight="bold" style={styles.headerTitle} numberOfLines={split ? 1 : undefined}>
+            {title}
           </Text>
           {subtitle ? (
             <Text tone="faint" style={styles.headerSubtitle} numberOfLines={1}>
@@ -356,15 +369,19 @@ export default function AskScreen() {
             </Text>
           ) : null}
         </View>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel={t('askChat.openSavedChats')}
-          hitSlop={8}
-          onPress={() => setHistoryOpen(true)}
-          style={styles.headerButton}
-          testID="ask-history-button">
-          <Icon name="history" color={colors.primary} size={26} />
-        </Pressable>
+        {split ? (
+          <View style={styles.headerButton} />
+        ) : (
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={t('askChat.openSavedChats')}
+            hitSlop={8}
+            onPress={() => setHistoryOpen(true)}
+            style={styles.headerButton}
+            testID="ask-history-button">
+            <Icon name="history" color={colors.primary} size={26} />
+          </Pressable>
+        )}
       </View>
 
       <ScrollView
@@ -467,17 +484,43 @@ export default function AskScreen() {
           </View>
         </View>
       </View>
+    </>
+  );
 
+  const newChat = () => {
+    setHistoryOpen(false);
+    startConversation([], NEW_CHAT);
+  };
+
+  if (split) {
+    return (
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={[styles.root, { backgroundColor: colors.card }]}>
+        <View style={styles.split}>
+          <AskChatPane
+            debateId={scope}
+            openChatId={record.chatId}
+            reloadKey={`${record.chatId ?? ''}:${record.persisted}`}
+            width={LIST_WIDTH.ask}
+            onBack={() => router.back()}
+            onPick={(chatId) => void openChat(chatId)}
+            onNewChat={newChat}
+          />
+          <View style={styles.chatPane}>{chat}</View>
+        </View>
+      </KeyboardAvoidingView>
+    );
+  }
+
+  return (
+    <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={[styles.root, { backgroundColor: colors.card }]}>
+      {chat}
       <AskHistory
         visible={historyOpen}
         debateId={scope}
         openChatId={record.chatId}
         onClose={() => setHistoryOpen(false)}
         onPick={(chatId) => void openChat(chatId)}
-        onNewChat={() => {
-          setHistoryOpen(false);
-          startConversation([], NEW_CHAT);
-        }}
+        onNewChat={newChat}
       />
     </KeyboardAvoidingView>
   );
@@ -503,6 +546,8 @@ function Thinking() {
 
 const styles = StyleSheet.create({
   root: { flex: 1 },
+  split: { flex: 1, flexDirection: 'row' },
+  chatPane: { flex: 1 },
   header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, paddingBottom: 10, borderBottomWidth: StyleSheet.hairlineWidth },
   headerButton: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
   headerText: { flex: 1, alignItems: 'center' },

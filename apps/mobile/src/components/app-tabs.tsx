@@ -10,7 +10,9 @@ export default function AppTabs() {
   const { t } = useTranslation();
   const { colors } = useTheme();
   return (
+    // On iPad (iPadOS 18+) the tabs become the system sidebar; iPhone keeps the tab bar.
     <NativeTabs
+      sidebarAdaptable
       tintColor={colors.primary}
       iconColor={{ default: colors.tabInactive, selected: colors.primary }}
       labelStyle={{

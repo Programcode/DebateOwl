@@ -2424,6 +2424,7 @@
       "itemMeta": "{{kind}}, {{when}}",
       "loadFailed": "Nem sikerült betölteni a vitát.",
       "viewAria": "Felkészülés megjelenítése",
+      "recentSources": "Legutóbbi források",
       "seeAll": "Összes"
     },
     "common": {
@@ -2486,7 +2487,8 @@
       "deleteFailed": "Nem sikerült törölni a forrást. Próbáld újra.",
       "saveFailed": "Nem sikerült menteni a forrást. Próbáld újra.",
       "sourceMissing": "Ez a forrás már nincs a könyvtáradban.",
-      "openPage": "Megnyitja az oldalt a böngészőben"
+      "openPage": "Megnyitja az oldalt a böngészőben",
+      "pickSource": "Válassz egy forrást, hogy itt elolvasd."
     },
     "ask": {
       "placeholder": "Kérdezd az edződet",
@@ -2644,6 +2646,9 @@
       "discardTitle": "Új térképet kezdesz?",
       "discardDesc": "A mentetlen térképed helyére a kezdő térkép kerül.",
       "startNew": "Új kezdése"
+    },
+    "document": {
+      "onThisPage": "Ezen az oldalon"
     },
     "history": {
       "loadFailed": "Nem sikerült betölteni az előzményeidet."
