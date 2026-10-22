@@ -839,9 +839,20 @@ export const useSessionStore = create<SessionState>()(
         set((state) => ({ savedCases: [savedItem, ...state.savedCases] }));
       },
       deleteSavedCase: async (id) => {
-        set((state) => ({ savedCases: state.savedCases.filter((c) => c.id !== id) }));
-        const userId = await getUserId();
-        await applyUserScopedIdFilter(supabase.from('cases').delete(), userId, id);
+        const previous = get().savedCases;
+        set({ savedCases: previous.filter((item) => item.id !== id) });
+        try {
+          const userId = await getUserId();
+          // A missing session must not report success for a row the server still has.
+          if (!userId) throw new Error('[SessionStore] Could not confirm the signed-in user to delete a case');
+          throwOnWriteError(
+            await applyUserScopedIdFilter(supabase.from('cases').delete(), userId, id),
+            'delete case',
+          );
+        } catch (error) {
+          set({ savedCases: previous });
+          throw error;
+        }
       },
       loadSavedCase: (id) => {
         const item = get().savedCases.find((c) => c.id === id);
