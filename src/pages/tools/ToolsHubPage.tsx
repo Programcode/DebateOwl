@@ -1,14 +1,17 @@
 import { Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { FREE_TOOLS, ToolCta, ToolPageLayout } from '@/components/free-tools/ToolPageLayout';
 import { PRACTICE_MOTIONS } from '@/lib/free-tools/practice-motions';
 import { hubStructuredData } from '@/lib/seo/tool-pages';
 
 export default function ToolsHubPage() {
+  const { t } = useTranslation('tools');
   return (
     <ToolPageLayout
       route="/tools"
       title="Free debate tools"
       intro={<p>Tools for debate practice that work in any browser and need no account. The timer saves your round in this browser, not on a server. Use them in a club session, on a projector in class, or embedded on your own site.</p>}
+      shortAnswer={{ question: t('shortAnswer.hub.question'), answer: t('shortAnswer.hub.answer', { total: PRACTICE_MOTIONS.length }) }}
       structuredData={hubStructuredData(FREE_TOOLS.map(({ route, name }) => ({ route, name })))}
       tool={(
         <ul className="grid gap-4 sm:grid-cols-2">

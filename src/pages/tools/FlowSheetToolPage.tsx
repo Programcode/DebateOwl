@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { FlowSheet } from '@/components/free-tools/FlowSheet';
 import { ToolCta, ToolFaq, ToolPageLayout } from '@/components/free-tools/ToolPageLayout';
 import { FORMATS, questioningSegments, speakingSegments } from '@/lib/free-tools/formats';
@@ -30,13 +31,16 @@ const FAQ: FaqEntry[] = [
 ];
 
 export default function FlowSheetToolPage() {
+  const { t } = useTranslation('tools');
+  const shortAnswer = { question: t('shortAnswer.flow.question'), answer: t('shortAnswer.flow.answer') };
   const pf = FORMATS.pf;
   return (
     <ToolPageLayout
       route="/tools/debate-flow-sheet"
       title="Printable debate flow sheet"
       intro={<p>Pick your format and paper, and print a one-page flow with a column for every speech, labelled by speaker and coloured by side, plus a strip for cross-examination notes. Nothing to install; your browser&apos;s print dialog makes the PDF.</p>}
-      structuredData={toolStructuredData('/tools/debate-flow-sheet', NAME, FAQ)}
+      shortAnswer={shortAnswer}
+      structuredData={toolStructuredData('/tools/debate-flow-sheet', NAME, [shortAnswer, ...FAQ])}
       tool={<FlowSheet />}
     >
       <section>

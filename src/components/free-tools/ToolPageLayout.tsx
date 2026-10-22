@@ -82,6 +82,8 @@ interface ToolPageLayoutProps {
   /** The visible h1. */
   title: string;
   intro: ReactNode;
+  /** The reader's question and a direct answer: the first H2, which answer engines quote. */
+  shortAnswer: FaqEntry;
   /** The working tool, shown right under the intro. */
   tool?: ReactNode;
   /** Long-form sections, FAQ and CTA. */
@@ -89,7 +91,7 @@ interface ToolPageLayoutProps {
   structuredData: object;
 }
 
-export function ToolPageLayout({ route, title, intro, tool, children, structuredData }: ToolPageLayoutProps) {
+export function ToolPageLayout({ route, title, intro, shortAnswer, tool, children, structuredData }: ToolPageLayoutProps) {
   const { t } = useTranslation('tools');
   usePageHead(route);
   const crumb = FREE_TOOLS.find((entry) => entry.route === route)?.name;
@@ -128,6 +130,11 @@ export function ToolPageLayout({ route, title, intro, tool, children, structured
         <div className="mx-auto mt-6 max-w-[68ch] print:hidden">
           <h1 className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl">{title}</h1>
           <div className="mt-3 text-lg leading-8 text-muted-foreground">{intro}</div>
+          {/* Before the tool: the timer, calculator and hub cards carry H2s of their own. */}
+          <section aria-labelledby="short-answer" className="mt-8">
+            <h2 id="short-answer" className="text-xl font-semibold tracking-tight text-foreground">{shortAnswer.question}</h2>
+            <p className="mt-2 leading-7 text-foreground">{shortAnswer.answer}</p>
+          </section>
         </div>
         {tool && <div className="mx-auto mt-8 max-w-5xl">{tool}</div>}
         <ToolArticle className="mt-14 print:hidden">
