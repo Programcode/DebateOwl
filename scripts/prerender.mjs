@@ -74,9 +74,12 @@ function pageHtml(shell, page, assets) {
     [/<meta name="twitter:title" content="[^"]*" \/>/, `<meta name="twitter:title" content="${escapeAttribute(head.title)}" />`, 'twitter:title'],
     [/<meta name="twitter:description" content="[^"]*" \/>/, `<meta name="twitter:description" content="${escapeAttribute(head.description)}" />`, 'twitter:description'],
   ]) html = replaceOnce(html, pattern, value, label);
-  if (!head.canonicalPath) {
-    html = replaceOnce(html, /<meta name="robots" content="[^"]*" \/>/, '<meta name="robots" content="noindex" />', 'robots');
-  }
+  // The shell document is noindex (app, login, share). A public page puts the
+  // index directive back; a page without a canonical URL stays noindex.
+  const robots = head.canonicalPath
+    ? 'index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1'
+    : 'noindex, nofollow';
+  html = replaceOnce(html, /<meta name="robots" content="[^"]*" \/>/, `<meta name="robots" content="${robots}" />`, 'robots');
 
   const added = [];
   if (head.canonicalPath) {

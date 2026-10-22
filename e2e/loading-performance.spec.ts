@@ -4,13 +4,47 @@ import { setLocale, stubSupabaseSession } from './helpers/auth';
 test('a stalled Jam recorder cannot delay the real application', async ({ page, browserName }) => {
   test.skip(browserName === 'webkit', 'Jam recording requires MediaRecorder, which this WebKit runtime does not expose.');
   await page.route('https://js.jam.dev/**', async () => new Promise(() => undefined));
-  const jamRequest = page.waitForRequest('https://js.jam.dev/**');
+  const jamRequests: string[] = [];
+  page.on('request', (request) => {
+    if (request.url().startsWith('https://js.jam.dev/')) jamRequests.push(request.url());
+  });
 
   await page.goto('/', { waitUntil: 'domcontentloaded' });
 
-  await jamRequest;
+  // Jam waits for an interaction, so the landing page is up before any recorder request.
   await expect(page.getByRole('heading', { name: /Prepare Cases and Practice Rounds/ })).toBeVisible({ timeout: 2_000 });
+  expect(jamRequests).toEqual([]);
+
+  const jamRequest = page.waitForRequest('https://js.jam.dev/**');
+  await page.evaluate(() => window.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true })));
+  await jamRequest;
+  await expect(page.getByRole('heading', { name: /Prepare Cases and Practice Rounds/ })).toBeVisible();
   await expect(page.getByText('DebateLab by Pi-Stack is the official')).toHaveCount(0);
+});
+
+test('pagehide removes the Jam frame and a persisted pageshow does not re-add it (synthetic events, stubbed Jam)', async ({ page, browserName }) => {
+  test.skip(browserName === 'webkit', 'Jam recording requires MediaRecorder, which this WebKit runtime does not expose.');
+  await page.route('https://js.jam.dev/**', (route) => route.fulfill({ status: 200, contentType: 'text/javascript', body: '' }));
+
+  await page.goto('/', { waitUntil: 'load' });
+  const heading = page.getByRole('heading', { name: /Prepare Cases and Practice Rounds/ });
+  await expect(heading).toBeVisible();
+  const jamRequest = page.waitForRequest('https://js.jam.dev/**');
+  await page.evaluate(() => window.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true })));
+  await jamRequest;
+
+  // Stand-in for the capture frame Jam injects; the real one is cross-origin.
+  const frames = await page.evaluate(() => {
+    const frame = document.createElement('iframe');
+    frame.dataset.jamCapture = 'true';
+    document.body.append(frame);
+    window.dispatchEvent(new PageTransitionEvent('pagehide', { persisted: true }));
+    const afterHide = document.querySelectorAll('iframe[data-jam-capture]').length;
+    window.dispatchEvent(new PageTransitionEvent('pageshow', { persisted: true }));
+    return { afterHide, afterShow: document.querySelectorAll('iframe[data-jam-capture]').length };
+  });
+  expect(frames).toEqual({ afterHide: 0, afterShow: 0 });
+  await expect(heading).toBeVisible();
 });
 
 test('public routes keep the real UI after refresh', async ({ page }) => {

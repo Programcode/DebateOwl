@@ -20,8 +20,18 @@
 
   try {
     var pathname = window.location.pathname;
+    var privateRoute = pathname === '/app' || pathname.indexOf('/app/') === 0
+      || pathname === '/login'
+      || pathname === '/share' || pathname.indexOf('/share/') === 0;
     if (pathname === '/app' || pathname.indexOf('/app/') === 0 || pathname === '/login') {
       document.documentElement.classList.add('app-shell');
+    }
+    // The shell HTML is noindex. Private routes keep that. The sources page is
+    // public, including when the app-shell rewrite serves this document.
+    var robots = document.querySelector('meta[name="robots"]');
+    if (robots && privateRoute) robots.setAttribute('content', 'noindex, nofollow');
+    else if (robots && pathname === '/expocit/sources') {
+      robots.setAttribute('content', 'index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1');
     }
   } catch {
     // Ignore unavailable location or document globals.

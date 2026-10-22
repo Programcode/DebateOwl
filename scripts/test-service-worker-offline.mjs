@@ -132,7 +132,7 @@ async function main() {
       headers: { 'Cache-Control': 'no-store' },
       body: V2_WORKER,
     }));
-    await upgradePage.goto(origin, { waitUntil: 'networkidle' });
+    await upgradePage.goto(origin, { waitUntil: 'load' });
     await upgradePage.evaluate(async () => navigator.serviceWorker.ready);
     await upgradePage.waitForFunction(async () => {
       const registration = await navigator.serviceWorker.getRegistration();
@@ -153,7 +153,7 @@ async function main() {
 
     const activatedPage = await context.newPage();
     await prepare(activatedPage);
-    await activatedPage.goto(origin, { waitUntil: 'networkidle' });
+    await activatedPage.goto(origin, { waitUntil: 'load' });
     await activatedPage.evaluate(async () => navigator.serviceWorker.ready);
     await activatedPage.waitForFunction(async () => {
       const keys = await caches.keys();
@@ -167,7 +167,7 @@ async function main() {
 
     const page = await context.newPage();
     await prepare(page);
-    await page.goto(`${origin}/app`, { waitUntil: 'networkidle' });
+    await page.goto(`${origin}/app`, { waitUntil: 'load' });
     await page.locator('main h1', { hasText: 'What are you working on?' }).waitFor({ timeout: CONTENT_TIMEOUT_MS });
     await page.evaluate(async () => navigator.serviceWorker.ready);
     await page.waitForFunction(async (paths) => {
@@ -192,7 +192,7 @@ async function main() {
     await context.setOffline(false);
     const prefetchedPage = await context.newPage();
     await prepare(prefetchedPage);
-    await prefetchedPage.goto(`${origin}/app`, { waitUntil: 'networkidle' });
+    await prefetchedPage.goto(`${origin}/app`, { waitUntil: 'load' });
     await prefetchedPage.locator('main h1', { hasText: 'What are you working on?' }).waitFor({ timeout: CONTENT_TIMEOUT_MS });
     const attackLink = prefetchedPage.locator('main [data-tour="mode-attack"]');
     await attackLink.hover();
