@@ -127,6 +127,8 @@ Pull requests run only tests tagged `@smoke` on desktop Chromium (`npm run test:
 
 The server is never reused. CI uses retries and two workers. On failure, traces, screenshots, videos, and the HTML report stay in ignored `test-results/` and `playwright-report/` directories. CI may upload those credential-free artifacts for diagnosis.
 
+Playwright starts that server with `VITE_E2E=1`. The client then keeps the environment switcher, but the production fallback is `http://e2e.invalid` instead of the production Supabase project, and a request that still names that project is refused in the browser. `playwright.config.ts` also refuses to start when `VITE_SUPABASE_ENV` or `SUPABASE_URL` already points at production. `E2E_ALLOW_PROD=1` is the explicit override. The production canary uses `playwright.production.config.ts` and does not set `VITE_E2E`. Plain `npm run dev` is unchanged and still defaults to production.
+
 `e2e/hungarian-parity.spec.ts` is the focused Hungarian browser contract. On desktop and mobile Chromium it checks persisted `<html lang="hu">`, public and authenticated page chrome, route titles, onboarding, saved-chat empty state, Library controls, Timer semantics, localized close labels, and runtime errors. It deliberately does not reject arbitrary English text because source titles, user content, model names, and citations may legitimately remain in their source language.
 
 `e2e/first-run.spec.ts` drives the same first run against stubbed Supabase routes in English and Hungarian, so it proves the client flow only.

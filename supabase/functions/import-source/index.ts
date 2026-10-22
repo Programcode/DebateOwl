@@ -46,6 +46,15 @@ async function consumeDailyImportQuota(userId: string): Promise<{ allowed: boole
   return { allowed: Boolean(row?.allowed), currentCount: row?.current_count ?? 0 };
 }
 
+async function refundDailyImportQuota(userId: string): Promise<void> {
+  const { error } = await supabase.rpc("refund_daily_quota", {
+    p_user_id: userId,
+    p_units: 1,
+    p_quota_key: "import_source",
+  });
+  if (error) console.warn("[IMPORT_SOURCE] quota refund failed", error.message);
+}
+
 async function logImport(userId: string, status: "success" | "error", errorCode?: string, latencyMs?: number) {
   try {
     await supabase.from("ai_requests").insert({
@@ -143,14 +152,22 @@ function stripLeadingUiPhrases(text: string) {
   return result;
 }
 
+const TRUNCATION_NOTE = "\n\n[Truncated: this import kept the first part of the page.]";
+
+/** Hard-cap imported text and say so when the page was longer than the cap. */
+export function limitImportedText(text: string, max = MAX_CONTENT_CHARS): { content: string; truncated: boolean } {
+  if (text.length <= max) return { content: text, truncated: false };
+  const room = Math.max(0, max - TRUNCATION_NOTE.length);
+  return { content: `${text.slice(0, room).trimEnd()}${TRUNCATION_NOTE}`, truncated: true };
+}
+
 function normalizeText(text: string) {
-  return stripLeadingUiPhrases(text)
+  return limitImportedText(stripLeadingUiPhrases(text)
     .replace(/\r/g, "\n")
     .replace(/[ \t]+/g, " ")
     .replace(/\n[ \t]+/g, "\n")
     .replace(/\n{3,}/g, "\n\n")
-    .trim()
-    .slice(0, MAX_CONTENT_CHARS);
+    .trim());
 }
 
 export async function handleRequest(req: Request): Promise<Response> {
@@ -181,6 +198,14 @@ export async function handleRequest(req: Request): Promise<Response> {
   const startedAt = Date.now();
   const deadline = new AbortController();
   const deadlineTimer = setTimeout(() => deadline.abort(new SourceTimeoutError()), FETCH_TIMEOUT_MS);
+  // A reserved slot is given back unless the import actually succeeds. Upstream
+  // 4xx/5xx, timeouts and unreadable pages must not spend the daily 50.
+  let quotaReserved = false;
+  const releaseQuota = async () => {
+    if (!quotaReserved) return;
+    quotaReserved = false;
+    await refundDailyImportQuota(user.id);
+  };
   try {
     let body: { url?: unknown } | null = null;
     try {
@@ -218,11 +243,13 @@ export async function handleRequest(req: Request): Promise<Response> {
         current: quota.currentCount,
       }, 429, corsHeaders);
     }
+    quotaReserved = true;
 
     const { response, finalUrl } = await fetchWithRedirects(parsedUrl, deadline.signal);
 
     if (!response.ok) {
       await response.body?.cancel().catch(() => undefined);
+      await releaseQuota();
       await logImport(user.id, "error", `upstream_${response.status}`, Date.now() - startedAt);
       return jsonResponse({ error: `Could not fetch source (${response.status}).` }, 502, corsHeaders);
     }
@@ -230,15 +257,17 @@ export async function handleRequest(req: Request): Promise<Response> {
     const contentType = response.headers.get("content-type") || "";
     if (!contentType.includes("text/html") && !contentType.includes("text/plain") && !contentType.includes("application/xhtml+xml")) {
       await response.body?.cancel().catch(() => undefined);
+      await releaseQuota();
       await logImport(user.id, "error", "unsupported_type", Date.now() - startedAt);
       return jsonResponse({ error: "Only HTML and plain text pages can be imported from a URL." }, 415, corsHeaders);
     }
 
     const raw = await readBoundedText(response, deadline.signal);
     const isHtml = contentType.includes("html") || /<html|<article|<main|<p[\s>]/i.test(raw);
-    const content = normalizeText(isHtml ? stripHtml(raw) : raw);
+    const { content, truncated } = normalizeText(isHtml ? stripHtml(raw) : raw);
 
     if (content.split(/\s+/).filter(Boolean).length < 20) {
+      await releaseQuota();
       await logImport(user.id, "error", "too_short", Date.now() - startedAt);
       return jsonResponse({ error: "This page did not contain enough readable text to import." }, 422, corsHeaders);
     }
@@ -252,6 +281,7 @@ export async function handleRequest(req: Request): Promise<Response> {
     return jsonResponse({
       title,
       content,
+      truncated,
       wordCount: content.split(/\s+/).filter(Boolean).length,
       author,
       publishedDate,
@@ -260,6 +290,7 @@ export async function handleRequest(req: Request): Promise<Response> {
       url: finalUrl.toString(),
     }, 200, corsHeaders);
   } catch (error) {
+    await releaseQuota();
     if (deadline.signal.aborted) {
       await logImport(user.id, "error", "timeout", Date.now() - startedAt);
       return jsonResponse({ error: new SourceTimeoutError().message }, 504, corsHeaders);

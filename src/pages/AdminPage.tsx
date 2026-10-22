@@ -442,6 +442,9 @@ export default function AdminPage() {
     const [loading, setLoading] = useState(true);
     const [stats, setStats] = useState<UsageStats | null>(null);
     const [users, setUsers] = useState<User[]>([]);
+    const [usersPage, setUsersPage] = useState(1);
+    const [usersHasMore, setUsersHasMore] = useState(false);
+    const [loadingMoreUsers, setLoadingMoreUsers] = useState(false);
     const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
     const [promoCodes, setPromoCodes] = useState<PromoCode[]>([]);
     const [subscribers, setSubscribers] = useState<Subscriber[]>([]);
@@ -467,12 +470,13 @@ export default function AdminPage() {
         return '$0.0000';
     };
 
-    const fetchAdminData = useCallback(async (action: string) => {
+    const fetchAdminData = useCallback(async (action: string, params?: Record<string, string>) => {
         const { data: { session } } = await supabase.auth.getSession();
         if (!session) throw new Error(t('admin.errors.notAuthenticated'));
 
+        const query = new URLSearchParams({ action, ...params });
         const response = await fetch(
-            `${SUPABASE_URL}/functions/v1/admin?action=${action}`,
+            `${SUPABASE_URL}/functions/v1/admin?${query}`,
             {
                 headers: {
                     'Authorization': `Bearer ${session.access_token}`,
@@ -572,6 +576,8 @@ export default function AdminPage() {
 
                 setStats(enrichedStats);
                 setUsers(loadedUsers);
+                setUsersPage(typeof usersData.page === 'number' ? usersData.page : 1);
+                setUsersHasMore(Boolean(usersData.hasMore));
                 setPromoCodes(promoData.codes || []);
                 setSubscribers(subData.subscribers || []);
                 setDemoCodes(getDemoCodes(demoData.data));
@@ -600,6 +606,30 @@ export default function AdminPage() {
     useEffect(() => {
         if (isAdmin === true) captureProductEvent('tool_opened', { tool: 'admin' });
     }, [isAdmin]);
+
+    const loadMoreUsers = async () => {
+        if (loadingMoreUsers) return;
+        setLoadingMoreUsers(true);
+        try {
+            const nextPage = usersPage + 1;
+            const data = await fetchAdminData('users', { page: String(nextPage), perPage: '50' });
+            const incoming = (data.users || []) as User[];
+            setUsers((current) => {
+                const seen = new Set(current.map((listed) => listed.id));
+                return [...current, ...incoming.filter((listed) => !seen.has(listed.id))];
+            });
+            setUsersPage(typeof data.page === 'number' ? data.page : nextPage);
+            setUsersHasMore(Boolean(data.hasMore));
+        } catch (err) {
+            toast({
+                title: t('admin.error'),
+                description: err instanceof Error ? err.message : t('admin.users.loadMoreFailed'),
+                variant: 'destructive',
+            });
+        } finally {
+            setLoadingMoreUsers(false);
+        }
+    };
 
     /** Resolves true once the role is saved; failures are reported here and leave the caller's dialog open. */
     const handleSetUserRole = async (userId: string, role: string) => {
@@ -1032,6 +1062,14 @@ export default function AdminPage() {
                                         ))}
                                     </div>
                                 </ScrollArea>
+                                {usersHasMore && (
+                                    <div className="mt-4 flex justify-center">
+                                        <Button variant="outline" onClick={() => void loadMoreUsers()} disabled={loadingMoreUsers}>
+                                            {loadingMoreUsers && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                                            {loadingMoreUsers ? t('admin.users.loadingMore') : t('admin.users.loadMore')}
+                                        </Button>
+                                    </div>
+                                )}
                             </CardContent>
                         </Card>
                     </TabsContent>
