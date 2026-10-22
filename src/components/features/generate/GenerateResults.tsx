@@ -35,10 +35,10 @@ function ArgumentCard({ contention, index, unverified }: { contention: Contentio
   return (
     <div className="rounded-lg border border-border bg-card p-4 space-y-3 motion-list-item">
       <div className="flex items-start justify-between gap-2">
-        <h4 className="font-semibold text-foreground">
+        <h3 className="font-semibold text-foreground">
           <span className="text-primary mr-2">#{index + 1}</span>
           {contention.claim}
-        </h4>
+        </h3>
         {contention.needsSource && (
           <Badge variant="outline" className="shrink-0 border-amber-500 text-amber-600">
             <AlertTriangle className="mr-1 h-3 w-3" />
@@ -173,7 +173,7 @@ export function GenerateResults({ result, discoveredSources, onRegenerateSection
   if (!result?.caseStructure || !result?.contentions || !result?.predictedOpponentCase || !result?.counters) {
     return (
       <div className="rounded-lg border border-destructive/50 bg-destructive/5 p-6 text-center">
-        <h3 className="text-lg font-semibold text-destructive mb-2">{t('generateResults.incomplete')}</h3>
+        <h2 className="text-lg font-semibold text-destructive mb-2">{t('generateResults.incomplete')}</h2>
         <p className="text-sm text-muted-foreground">
           {t('generateResults.incompleteDesc')}
         </p>
@@ -265,12 +265,12 @@ export function GenerateResults({ result, discoveredSources, onRegenerateSection
         >
           <div className="space-y-4">
             <div>
-              <h4 className="text-sm font-medium text-muted-foreground mb-1">{t('generateResults.hook')}</h4>
+              <h3 className="text-sm font-medium text-muted-foreground mb-1">{t('generateResults.hook')}</h3>
               <p className="text-foreground italic">{result.exordio.hook}</p>
             </div>
             <Separator />
             <div>
-              <h4 className="text-sm font-medium text-muted-foreground mb-1">{t('generateResults.transition')}</h4>
+              <h3 className="text-sm font-medium text-muted-foreground mb-1">{t('generateResults.transition')}</h3>
               <p className="text-foreground">{result.exordio.transition}</p>
             </div>
           </div>
@@ -287,21 +287,21 @@ export function GenerateResults({ result, discoveredSources, onRegenerateSection
       >
         <div className="space-y-4">
           <div>
-            <h4 className="text-sm font-medium text-muted-foreground mb-1">{t('generateResults.thesis')}</h4>
+            <h3 className="text-sm font-medium text-muted-foreground mb-1">{t('generateResults.thesis')}</h3>
             <Markdown>{result.caseStructure.thesis}</Markdown>
           </div>
           <Separator />
           <div>
-            <h4 className="text-sm font-medium text-muted-foreground mb-1">{t('generateResults.framework')}</h4>
+            <h3 className="text-sm font-medium text-muted-foreground mb-1">{t('generateResults.framework')}</h3>
             <Markdown>{result.caseStructure.framework}</Markdown>
           </div>
           <Separator />
           <div>
-            <h4 className="text-sm font-medium text-muted-foreground mb-1">{t('generateResults.burdenOfProof')}</h4>
+            <h3 className="text-sm font-medium text-muted-foreground mb-1">{t('generateResults.burdenOfProof')}</h3>
             <Markdown>{result.caseStructure.burdenOfProof}</Markdown>
           </div>
           <div>
-            <h4 className="text-sm font-medium text-muted-foreground mb-2">{t('generateResults.keyDefinitions')}</h4>
+            <h3 className="text-sm font-medium text-muted-foreground mb-2">{t('generateResults.keyDefinitions')}</h3>
             <ul className="list-disc list-inside space-y-1 text-sm text-foreground">
               {result.caseStructure.keyDefinitions?.map((def, i) => (
                 <li key={i}>{def}</li>
@@ -336,7 +336,7 @@ export function GenerateResults({ result, discoveredSources, onRegenerateSection
       >
         <div className="space-y-4">
           <div>
-            <h4 className="text-sm font-medium text-muted-foreground mb-2">{t('generateResults.likelyArguments')}</h4>
+            <h3 className="text-sm font-medium text-muted-foreground mb-2">{t('generateResults.likelyArguments')}</h3>
             <ul className="space-y-2">
               {result.predictedOpponentCase?.likelyArguments?.map((arg, i) => (
                 <li key={i} className="flex items-start gap-2 text-sm">
@@ -348,7 +348,7 @@ export function GenerateResults({ result, discoveredSources, onRegenerateSection
           </div>
           <Separator />
           <div>
-            <h4 className="text-sm font-medium text-muted-foreground mb-2">{t('generateResults.strategicWeaknesses')}</h4>
+            <h3 className="text-sm font-medium text-muted-foreground mb-2">{t('generateResults.strategicWeaknesses')}</h3>
             <ul className="space-y-2">
               {result.predictedOpponentCase?.strategicWeaknesses?.map((weakness, i) => (
                 <li key={i} className="flex items-start gap-2 text-sm">
@@ -360,7 +360,7 @@ export function GenerateResults({ result, discoveredSources, onRegenerateSection
           </div>
           <Separator />
           <div>
-            <h4 className="text-sm font-medium text-muted-foreground mb-2">{t('generateResults.keyClashes')}</h4>
+            <h3 className="text-sm font-medium text-muted-foreground mb-2">{t('generateResults.keyClashes')}</h3>
             <div className="flex flex-wrap gap-2">
               {result.predictedOpponentCase?.keyClashes?.map((clash, i) => (
                 <Badge key={i} variant="outline">{clash}</Badge>

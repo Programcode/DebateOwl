@@ -44,7 +44,7 @@ function IdeaCard({ idea }: { idea: Idea }) {
   return (
     <div className={cn('rounded-lg border p-4 space-y-3 motion-list-item', strengthColors[strength] || strengthColors.moderate)}>
       <div className="flex items-start justify-between gap-2">
-        <h4 className="font-semibold text-foreground">{idea.title || t('brainstormResults.untitled')}</h4>
+        <h3 className="font-semibold text-foreground">{idea.title || t('brainstormResults.untitled')}</h3>
         <div className="flex gap-1 shrink-0">
           <Badge className={cn('text-xs', sideColors[side] || sideColors.neutral)}>
             {side === 'pro' ? t('brainstormResults.pro') : side === 'con' ? t('brainstormResults.con') : t('brainstormResults.neutral')}
@@ -203,10 +203,10 @@ export function BrainstormResults({ result, discoveredSources, onDiscuss }: Brai
           <div className="space-y-6">
             {result.mindmap.map((category, i) => (
               <div key={i}>
-                <h4 className="text-lg font-semibold text-foreground mb-3 flex items-center gap-2">
+                <h3 className="text-lg font-semibold text-foreground mb-3 flex items-center gap-2">
                   <div className="h-2 w-2 rounded-full bg-primary" />
                   {category.category}
-                </h4>
+                </h3>
                 <div className="grid gap-3 sm:grid-cols-2">
                   {category.items && Array.isArray(category.items) && category.items.map((idea) => (
                     <IdeaCard key={idea.id} idea={idea} />
