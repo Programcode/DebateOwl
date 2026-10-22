@@ -33,7 +33,7 @@ export function usePageHead(route: PrerenderedRoute) {
     const head: { title: string; description: string; canonicalPath?: string } = PAGE_HEADS[route];
     document.title = head.title;
     setMeta('description', head.description);
-    setMeta('robots', head.canonicalPath ? SHELL_HEAD.robots : 'noindex');
+    setMeta('robots', head.canonicalPath ? SHELL_HEAD.robots : 'noindex, nofollow');
     setCanonical(head.canonicalPath);
     return () => {
       document.title = SHELL_HEAD.title;

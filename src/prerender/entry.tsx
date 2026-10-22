@@ -11,6 +11,7 @@ import LandingPage from '@/pages/LandingPage';
 import TermsPage from '@/pages/TermsPage';
 import PrivacyPage from '@/pages/PrivacyPage';
 import NotFound from '@/pages/NotFound';
+import SourcesPage from '@/pages/SourcesPage';
 import { TOOL_PAGES } from './tool-pages';
 
 const unavailable = () => Promise.reject(new Error('Not available while prerendering'));
@@ -204,6 +205,13 @@ export async function prerenderPages({ landingModified }: { landingModified?: st
       head: PAGE_HEADS[route],
       body: render(route, Page),
     })),
+    {
+      route: '/expocit/sources',
+      file: 'expocit/sources/index.html',
+      module: 'src/pages/SourcesPage.tsx',
+      head: PAGE_HEADS['/expocit/sources'],
+      body: render('/expocit/sources', SourcesPage),
+    },
     {
       route: '*',
       file: '404.html',

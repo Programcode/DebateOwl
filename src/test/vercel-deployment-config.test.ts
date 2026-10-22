@@ -16,6 +16,11 @@ type VercelConfig = {
   redirects?: Array<{ source: string; destination: string; statusCode?: number }>;
   rewrites?: Array<{ source: string; destination: string }>;
   headers?: HeaderRule[];
+  routes?: Array<{
+    src?: string;
+    continue?: boolean;
+    transforms?: Array<{ op?: string; target?: { key?: string } }>;
+  }>;
 };
 
 function loadConfig(): VercelConfig {
@@ -175,6 +180,8 @@ describe("Vercel frontend deployment configuration", () => {
     expect(indexHtml).not.toContain('// Prevent flash of wrong theme');
     expect(themeBootstrap).toContain("document.documentElement.classList.add('app-shell')");
     expect(themeBootstrap).toContain("pathname === '/login'");
+    expect(themeBootstrap).toContain("pathname === '/expocit/sources'");
+    expect(themeBootstrap).toContain("noindex, nofollow");
     expect(themeBootstrap).toContain('window.__showDebateBootstrapError = showBootstrapError');
     expect(themeBootstrap).toContain("debate-trainer-settings");
   });
@@ -185,11 +192,23 @@ describe("Vercel frontend deployment configuration", () => {
     const indexHtml = readProjectFile("index.html");
     const bootstrap = readProjectFile("src/bootstrap.ts");
     const jamLoader = readProjectFile("src/jam-loader.ts");
+    const directive = (name: string) => cspDirective(csp, name);
 
-    expect(csp).toContain("script-src 'self' https://*.jam.dev");
-    expect(csp).toContain("frame-src 'self' https://accounts.google.com https://*.jam.dev");
-    // Loading the recorder is useless if it cannot upload the capture.
-    expect(csp).toContain("connect-src 'self' https://*.jam.dev");
+    // The parent page loads js.jam.dev and frames recorder.jam.dev. A wildcard
+    // would allow every other host on that domain. Jam's rspack runtime contains
+    // Function("return this"); do not allow unsafe-eval for that fallback.
+    expect(directive("script-src")).toBe("script-src 'self' https://js.jam.dev");
+    expect(directive("frame-src")).toBe("frame-src 'self' https://accounts.google.com https://recorder.jam.dev");
+    expect(directive("connect-src")).toContain("https://js.jam.dev");
+    expect(directive("connect-src")).toContain("https://recorder.jam.dev");
+    expect(directive("img-src")).toContain("https://js.jam.dev");
+    expect(directive("img-src")).toContain("https://recorder.jam.dev");
+    expect(csp).not.toContain("*.jam.dev");
+    expect(csp).not.toContain("unsafe-eval");
+    // Web Analytics and Speed Insights are same-origin (/_vercel/insights and
+    // /_vercel/speed-insights), so script-src and connect-src 'self' allow them.
+    expect(directive("script-src")).toContain("'self'");
+    expect(directive("connect-src")).toContain("'self'");
     expect(indexHtml).toContain('<script src="/src/bootstrap.ts" type="module"></script>');
     expect(indexHtml).toContain('<link rel="stylesheet" href="/src/index.css" />');
     expect(indexHtml).toContain('data-startup-shell');
@@ -263,19 +282,66 @@ describe("Vercel frontend deployment configuration", () => {
     },
   );
 
-  it.each(["/", "/index.html", "/app-shell.html", "/theme-init.js", "/sw.js"])(
-    "prevents stale caching for %s",
+  it("indexes the public sources page and noindexes the app shell document", () => {
+    const config = loadConfig();
+    const indexHtml = readProjectFile("index.html");
+    const prerender = readProjectFile("scripts/prerender.mjs");
+    const publicRobots = "index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1";
+
+    expect(headersAt(config, "/expocit/sources")).not.toHaveProperty("X-Robots-Tag");
+    expect(headersAt(config, "/")).not.toHaveProperty("X-Robots-Tag");
+    expect(headersAt(config, "/app")).toMatchObject({ "X-Robots-Tag": "noindex, nofollow" });
+    expect(indexHtml).toContain('<meta name="robots" content="noindex, nofollow" />');
+    expect(prerender).toContain(publicRobots);
+    expect(prerender).toContain("noindex, nofollow");
+    expect(readProjectFile("src/lib/seo/pages.ts")).toContain(`robots: '${publicRobots}'`);
+  });
+
+  it.each(["/", "/index.html", "/app-shell.html", "/theme-init.js"])(
+    "revalidates %s without no-store, so the back/forward cache can keep the document",
     (source) => {
-      const config = loadConfig();
-      expect(headersFor(config, source)["Cache-Control"]).toContain("no-cache");
-      expect(headersFor(config, source)["Cache-Control"]).toContain("max-age=0");
+      const cache = headersFor(loadConfig(), source)["Cache-Control"];
+      expect(cache).toContain("max-age=0");
+      expect(cache).toContain("must-revalidate");
+      expect(cache).not.toContain("no-store");
     },
   );
+
+  it("does not cache the service worker, so an update is not stuck", () => {
+    const cache = headersFor(loadConfig(), "/sw.js")["Cache-Control"];
+    expect(cache).toContain("no-store");
+    expect(cache).toContain("max-age=0");
+  });
 
   it("caches hashed Vite assets immutably", () => {
     const config = loadConfig();
     expect(headersFor(config, "/assets/(.*)")["Cache-Control"]).toBe(
       "public, max-age=31536000, immutable",
     );
+  });
+
+  it("caches the unhashed public images for 30 days", () => {
+    const config = loadConfig();
+    for (const path of ["/favicon.ico", "/favicon.png", "/favicon-72.png", "/hero-visual.png", "/placeholder.svg"]) {
+      expect(headersAt(config, path)["Cache-Control"]).toBe("public, max-age=2592000");
+    }
+    expect(headersAt(config, "/assets/index-abc123.js")["Cache-Control"]).toBe(
+      "public, max-age=31536000, immutable",
+    );
+  });
+
+  it("strips the platform Access-Control-Allow-Origin header from HTML and not from assets", () => {
+    const routes = loadConfig().routes ?? [];
+    const html = routes.find((route) => route.transforms?.some((transform) => transform.op === "delete"));
+    expect(html?.continue).toBe(true);
+    const deleted = html?.transforms?.filter((transform) => transform.op === "delete").map((transform) => transform.target?.key);
+    expect(deleted).toEqual(["access-control-allow-origin", "Access-Control-Allow-Origin"]);
+    const pattern = new RegExp(html?.src ?? "$^");
+    for (const path of ["/", "/app", "/login", "/share/abc", "/expocit/sources", "/terms", "/index.html", "/online-debate-timer"]) {
+      expect(pattern.test(path), path).toBe(true);
+    }
+    for (const path of ["/favicon.png", "/hero-visual.png", "/assets/main.js", "/theme-init.js", "/sw.js", "/robots.txt", "/_vercel/insights/script.js"]) {
+      expect(pattern.test(path), path).toBe(false);
+    }
   });
 });

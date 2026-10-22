@@ -4,6 +4,27 @@ const JAM_SCRIPT_URLS = [
 ] as const;
 const JAM_SCRIPT_TIMEOUT_MS = 3_000;
 
+/**
+ * Jam stays off the critical path. The capture iframe at recorder.jam.dev
+ * keeps a worker request open, so the network never goes idle once the
+ * scripts run. Load on the first interaction, and otherwise only after the
+ * page has had this long to paint. Callers must not wait for `networkidle`.
+ *
+ * That iframe is cross-origin. Chrome cannot tell whether it is eligible for
+ * the back/forward cache, and an `unload` listener inside it would block the
+ * whole page. `pagehide` removes the frame first (it does not block the cache
+ * the way `unload` and `beforeunload` do). The frame is not put back when the
+ * page is restored: a re-added frame reloads and starts a new handshake, which
+ * Jam's already-initialized parent script rejects. So once Jam has loaded, it
+ * stays off on a page restored from the back/forward cache and returns on the
+ * next full load. If it had not started before the page was hidden, the
+ * pending trigger may still start it after the restore; that is a clean first
+ * load, not a reconnect.
+ */
+export const JAM_PASSIVE_DELAY_MS = 8_000;
+
+const JAM_FRAME_SELECTOR = 'iframe[data-jam-capture], iframe[data-jam-recorder], iframe[src*="jam.dev"]';
+
 interface JamLoaderOptions {
   documentRef?: Document;
   mediaRecorderAvailable?: boolean;
@@ -49,23 +70,46 @@ export async function loadJamRecorder(options: JamLoaderOptions = {}): Promise<v
   await Promise.all(JAM_SCRIPT_URLS.map((source) => appendJamModule(documentRef, source)));
 }
 
+function detachJamFrames(documentRef: Document): void {
+  for (const frame of documentRef.querySelectorAll<HTMLIFrameElement>(JAM_FRAME_SELECTOR)) frame.remove();
+}
+
 export function scheduleJamRecorder(options: JamLoaderOptions = {}): void {
   const documentRef = options.documentRef ?? document;
   const windowRef = documentRef.defaultView ?? window;
-  const loadWhenIdle = (): void => {
+  let started = false;
+
+  // pagehide, not unload: unload listeners make the page ineligible for bfcache.
+  // Nothing is restored on pageshow; see the note on JAM_PASSIVE_DELAY_MS.
+  windowRef.addEventListener('pagehide', () => {
+    detachJamFrames(documentRef);
+  }, { capture: true });
+
+  const start = (): void => {
+    if (started) return;
+    started = true;
+    windowRef.removeEventListener('pointerdown', onInteract, true);
+    windowRef.removeEventListener('keydown', onInteract, true);
     const load = (): void => {
       void loadJamRecorder(options).catch((): undefined => undefined);
     };
     if (typeof windowRef.requestIdleCallback === 'function') {
-      windowRef.requestIdleCallback(load);
+      windowRef.requestIdleCallback(load, { timeout: 2_000 });
     } else {
       windowRef.setTimeout(load, 0);
     }
   };
 
-  if (documentRef.readyState === 'complete') {
-    loadWhenIdle();
-  } else {
-    windowRef.addEventListener('load', loadWhenIdle, { once: true });
-  }
+  const onInteract = (): void => {
+    start();
+  };
+
+  const arm = (): void => {
+    windowRef.addEventListener('pointerdown', onInteract, { capture: true, passive: true });
+    windowRef.addEventListener('keydown', onInteract, true);
+    windowRef.setTimeout(start, JAM_PASSIVE_DELAY_MS);
+  };
+
+  if (documentRef.readyState === 'complete') arm();
+  else windowRef.addEventListener('load', arm, { once: true });
 }

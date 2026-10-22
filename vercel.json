@@ -145,7 +145,7 @@
       "headers": [
         {
           "key": "Content-Security-Policy",
-          "value": "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; form-action 'self'; img-src 'self' data: blob: https://*.jam.dev; font-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self' https://*.jam.dev; worker-src 'self' blob:; frame-src 'self' https://accounts.google.com https://*.jam.dev; connect-src 'self' https://*.jam.dev https://uziwdtkzofptihahfooo.supabase.co https://brifeyypjauyusmkptkx.supabase.co https://*.ingest.sentry.io https://*.sentry.io https://eu.i.posthog.com https://*.posthog.com;"
+          "value": "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; form-action 'self'; img-src 'self' data: blob: https://js.jam.dev https://recorder.jam.dev; font-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self' https://js.jam.dev; worker-src 'self' blob:; frame-src 'self' https://accounts.google.com https://recorder.jam.dev; connect-src 'self' https://js.jam.dev https://recorder.jam.dev https://uziwdtkzofptihahfooo.supabase.co https://brifeyypjauyusmkptkx.supabase.co https://*.ingest.sentry.io https://*.sentry.io https://eu.i.posthog.com https://*.posthog.com;"
         },
         {
           "key": "X-Frame-Options",
@@ -225,7 +225,7 @@
       "headers": [
         {
           "key": "Cache-Control",
-          "value": "no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0"
+          "value": "public, max-age=0, must-revalidate"
         }
       ]
     },
@@ -234,7 +234,7 @@
       "headers": [
         {
           "key": "Cache-Control",
-          "value": "no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0"
+          "value": "public, max-age=0, must-revalidate"
         }
       ]
     },
@@ -243,7 +243,7 @@
       "headers": [
         {
           "key": "Cache-Control",
-          "value": "no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0"
+          "value": "public, max-age=0, must-revalidate"
         }
       ]
     },
@@ -252,7 +252,7 @@
       "headers": [
         {
           "key": "Cache-Control",
-          "value": "no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0"
+          "value": "public, max-age=0, must-revalidate"
         }
       ]
     },
@@ -271,6 +271,33 @@
         {
           "key": "Cache-Control",
           "value": "public, max-age=31536000, immutable"
+        }
+      ]
+    },
+    {
+      "source": "/(favicon\\.ico|favicon\\.png|favicon-72\\.png|hero-visual\\.png|placeholder\\.svg)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=2592000"
+        }
+      ]
+    }
+  ],
+  "routes": [
+    {
+      "src": "^/(?!assets(?:/|$)|_vercel(?:/|$)|.*\\.(?:js|mjs|css|png|jpe?g|gif|webp|avif|svg|ico|txt|xml|json|map|webmanifest|woff2?)$).*$",
+      "continue": true,
+      "transforms": [
+        {
+          "type": "response.headers",
+          "op": "delete",
+          "target": { "key": "access-control-allow-origin" }
+        },
+        {
+          "type": "response.headers",
+          "op": "delete",
+          "target": { "key": "Access-Control-Allow-Origin" }
         }
       ]
     }
