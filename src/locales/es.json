@@ -231,6 +231,7 @@
     "openingPage": "Abriendo {{page}}",
     "page": "Página",
     "close": "Cerrar",
+    "notifications": "Notificaciones",
     "loading": "Cargando",
     "error": "Error",
     "logoAlt": "Logotipo de DebateLab",
@@ -424,7 +425,10 @@
     "saveFailed": "No se pudo guardar",
     "saveFailedDesc": "No se pudo guardar el chat. Inténtalo de nuevo.",
     "sourceSaveFailedDesc": "No se pudo guardar la fuente. Inténtalo de nuevo.",
-    "stopped": "Detuviste esta respuesta antes de que terminara."
+    "stopped": "Detuviste esta respuesta antes de que terminara.",
+    "notSent": "No enviado",
+    "notSentDailyLimit": "No enviado: has alcanzado el límite diario",
+    "notSentModelDesc": "Este modelo requiere Pro. Elige otro modelo y vuelve a intentarlo."
   },
   "chat": {},
   "settings": {
@@ -1381,7 +1385,7 @@
   "dailyLimit": {
     "usage": "Hoy: {{used}} de {{limit}} solicitudes de IA usadas. Se renuevan a medianoche UTC ({{time}} en tu hora).",
     "sparringNone": "No te quedan solicitudes de IA hoy, así que el oponente no podrá responder. Se renuevan a medianoche UTC.",
-    "sparringShort": "Esta ronda necesita {{needed}} solicitudes de IA y hoy te quedan {{remaining}}, así que se detendría antes del juez. Se renuevan a medianoche UTC."
+    "sparringShort": "Con este modelo, esta ronda cuesta {{needed}} solicitudes de IA y hoy te quedan {{remaining}}. Elige un modelo más ligero o espera a la medianoche UTC."
   },
   "pricingModal": {
     "title": "Actualizar a Pro",
@@ -1436,6 +1440,7 @@
   "timer": {
     "title": "Temporizador de debate",
     "displayLabel": "Pantalla del temporizador",
+    "speechProgress": "Progreso de {{speech}}",
     "selectFormat": "Seleccionar formato",
     "formatStandard": "Estándar (4-6-6-3)",
     "formatLD": "Lincoln-Douglas",
@@ -1555,6 +1560,7 @@
     "autoLayout": "Organizar automáticamente",
     "edgeAttack": "Ataque",
     "edgeRebuttal": "Refutación",
+    "edgeTypeLabel": "Tipo de enlace",
     "edgeSupport": "Apoyo",
     "exportFailedToast": "No se pudo exportar el diagrama.",
     "selectedNode": "Seleccionado",
@@ -1732,6 +1738,8 @@
   },
   "sharedPage": {
     "title": "Contenido compartido",
+    "notFoundTitle": "Enlace compartido no encontrado",
+    "backHome": "Volver al inicio",
     "noCode": "No se proporcionó código de compartir",
     "notFound": "Contenido no encontrado",
     "loadFailed": "Error al cargar contenido compartido",
@@ -1977,7 +1985,7 @@
       "turns": "{{count}} turnos",
       "opponentTurns": "Turnos del oponente",
       "aiRequests": "Solicitudes a la IA",
-      "aiRequestBreakdown": "{{count}} respuestas + 1 juez",
+      "aiRequestBreakdown": "Cubre {{count}} respuestas + el juez",
       "aiModel": "Modelo de IA",
       "openingRoom": "Abriendo la sala...",
       "startRound": "Iniciar ronda",
@@ -1986,8 +1994,8 @@
       "speakingOrder": "Orden de intervención",
       "aboutMinutes_one": "Aproximadamente {{count}} minuto",
       "aboutMinutes_other": "Aproximadamente {{count}} minutos",
-      "aiRequestBreakdown_one": "{{count}} respuesta + 1 juez",
-      "aiRequestBreakdown_other": "{{count}} respuestas + 1 juez",
+      "aiRequestBreakdown_one": "Cubre {{count}} respuesta + el juez",
+      "aiRequestBreakdown_other": "Cubre {{count}} respuestas + el juez",
       "speeches_one": "{{count}} intervención",
       "speeches_other": "{{count}} intervenciones",
       "turns_one": "{{count}} turno",
@@ -2455,7 +2463,8 @@
     "safety": "{{provider}} bloqueó esta solicitud por seguridad. Prueba a reformularla.",
     "unexpectedProvider": "El proveedor de IA devolvió un error inesperado. Inténtalo más tarde.",
     "unexpected": "Se produjo un error inesperado",
-    "offline": "Comprueba tu conexión e inténtalo de nuevo."
+    "offline": "Comprueba tu conexión e inténtalo de nuevo.",
+    "notCharged": "No se te ha cobrado esta solicitud."
   },
   "clock": {
     "timeUp": "Se acabó el tiempo.",
@@ -2465,5 +2474,11 @@
     "question": "¿Cuál es la mejor herramienta de IA para practicar debate?",
     "answer": "Depende de lo que necesites. En {{asOf}}, DebateLab encaja con estudiantes y debatientes de competición que quieren un solo lugar para construir casos, encontrar puntos débiles, comprobar evidencia y hacer rondas de práctica cronometradas, en inglés, español o húngaro: prueba gratis de 3 días sin tarjeta y después $5/mes + impuestos. Si quieres practicar gratis contra un oponente de IA en estilo World Schools o Parlamentario Asiático, debatelab.ai, un producto distinto, dice ser gratuito. Si sobre todo necesitas ideas o ayuda para escribir sobre cualquier tema, un asistente general como ChatGPT es más flexible.",
     "compare": "Comparar herramientas de IA para debate"
+  },
+  "sessionQuota": {
+    "cost_one": "Esta ronda cuesta {{count}} solicitud de IA, dure los turnos que dure.",
+    "cost_other": "Esta ronda cuesta {{count}} solicitudes de IA, dure los turnos que dure.",
+    "remaining_one": "Hoy te queda {{count}}.",
+    "remaining_other": "Hoy te quedan {{count}}."
   }
 }

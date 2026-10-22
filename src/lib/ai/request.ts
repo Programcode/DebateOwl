@@ -41,6 +41,8 @@ import { readLiveResponse, type LiveGeneration } from './live';
 export const REQUEST_TIMEOUT_MS = 200 * 1000;
 const MAX_CLIENT_ERROR_BODY_BYTES = 16_000;
 const MAX_CLIENT_REQUEST_BODY_BYTES = 190_000;
+// The session ids the ai function accepts (parseQuotaSessionKey).
+const QUOTA_SESSION_KEY = /^[A-Za-z0-9._:-]{1,128}$/;
 
 export interface AIRequestOptions<T = unknown> {
   includeActiveSources?: boolean;
@@ -60,6 +62,12 @@ export interface AIRequestOptions<T = unknown> {
   voice?: boolean;
   /** Show the answer while the model writes it. */
   live?: LiveGeneration;
+  /**
+   * The Crossfire round this request belongs to. The server charges a round
+   * once, however many turns it takes (Sparring rounds are named by their
+   * input's sessionId instead).
+   */
+  quotaSession?: string;
 }
 
 /**
@@ -184,6 +192,8 @@ export async function callSupabaseAI<T = unknown>(
     });
   };
 
+  // The server said this failure cost nothing (refunded, or a paid session).
+  let notCharged = false;
   const controller = new AbortController();
   const timeoutId = setTimeout(() => {
     controller.abort();
@@ -222,6 +232,10 @@ export async function callSupabaseAI<T = unknown>(
       workspaceContext: options.workspaceContext,
       // Beside `input`, so a server from before voice rounds ignores it.
       ...(options.voice ? { voice: true } : {}),
+      // Beside `input` for the same reason: older servers charge per call. An id
+      // the server would reject (a round restored from an old draft) is left
+      // out, and that round is charged per call.
+      ...(options.quotaSession && QUOTA_SESSION_KEY.test(options.quotaSession) ? { quotaSession: options.quotaSession } : {}),
     };
 
     if (utf8ByteLength(JSON.stringify(requestBody)) > MAX_CLIENT_REQUEST_BODY_BYTES) {
@@ -262,6 +276,7 @@ export async function callSupabaseAI<T = unknown>(
 
     // Handle response with error field (from edge function)
     if (data?.error) {
+      notCharged = data.charged === false;
       const errorMessage = data.error as string;
       const errorCode = data.code as string | undefined;
 
@@ -353,6 +368,7 @@ export async function callSupabaseAI<T = unknown>(
   } catch (err) {
     // Re-throw our custom errors
     if (err instanceof AIError) {
+      if (notCharged) err.notCharged = true;
       refreshDebatesIfMissing(err, debateContext);
       reportFailure(err);
       throw err;

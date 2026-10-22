@@ -139,11 +139,17 @@ async function fetchSubscription(userId: string): Promise<SubscriptionSnapshot> 
       else if (typeof ownLimit?.limit_value === 'number') snapshot.dailyLimit = ownLimit.limit_value;
     }
 
+    // The server's own counter: model-weighted units, one charge per Crossfire
+    // or Sparring round, refunds given back.
+    const counted = await readAIUsageToday();
+    if (counted !== null) {
+      return { ...snapshot, dailyUsed: counted, usageKnown: limitKnown && Boolean(data) };
+    }
+
+    // A server from before ai_usage_today: count today's usage rows. Refused
+    // calls and the jev_* helper steps inside a call log rows too, but use no quota.
     const todayStart = new Date();
     todayStart.setUTCHours(0, 0, 0, 0);
-    // The server counts one request per AI call it lets through (consume_daily_quota).
-    // Each of those logs one row under its feature; refused calls and the
-    // jev_* helper steps inside a call log rows too, but use no quota.
     const { count, error: usageError } = await supabase
       .from('ai_requests')
       .select('*', { count: 'exact', head: true })
@@ -159,6 +165,16 @@ async function fetchSubscription(userId: string): Promise<SubscriptionSnapshot> 
   } catch (error) {
     console.warn('[useSubscription] Failed to load:', error);
     throw error;
+  }
+}
+
+/** Today's charged AI units from the server's counter, or null when it cannot be read. */
+async function readAIUsageToday(): Promise<number | null> {
+  try {
+    const { data, error } = await supabase.rpc('ai_usage_today');
+    return !error && typeof data === 'number' ? data : null;
+  } catch {
+    return null;
   }
 }
 

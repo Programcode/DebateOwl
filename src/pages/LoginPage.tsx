@@ -203,7 +203,7 @@ export default function LoginPage() {
           <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center overflow-hidden rounded-lg bg-white dark:bg-slate-800">
             <img src="/favicon-72.png" alt="" width={48} height={48} className="h-full w-full object-cover" />
           </div>
-          {/* The page heading, styled like CardTitle (which renders an h3). */}
+          {/* The page heading, styled like CardTitle (which renders an h2 by default). */}
           <h1 className="text-2xl font-semibold leading-none tracking-tight">{t('login.title')}</h1>
           <CardDescription>{t('login.subtitle')}</CardDescription>
         </CardHeader>

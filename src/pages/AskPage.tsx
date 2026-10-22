@@ -4,7 +4,7 @@ import { useSessionStore } from '@/lib/stores/session-store';
 import { useAuth } from '@/lib/supabase/AuthProvider';
 import { useSettingsStore } from '@/lib/stores/settings-store';
 import { AskChat } from '@/components/features/ask/AskChat';
-import { askChat, isAIProviderError, isAskMessageWithinBudget, isTimeoutError } from '@/lib/ai/client';
+import { askChat, isAIModelRestrictionError, isAIProviderError, isAISubscriptionError, isAskMessageWithinBudget, isTimeoutError } from '@/lib/ai/client';
 import { isAskStreamingSupported, streamAskChat } from '@/lib/ai/streaming';
 import { useSubscriptionError } from '@/hooks/use-subscription-error';
 import { getUserFacingAIError } from '@/lib/ai/error-display';
@@ -148,6 +148,9 @@ export default function AskPage() {
       toast({ title: t('debate.recordFailed', 'Could not save this result to the debate'), variant: 'destructive' });
     });
   }, [askChatId, askLoading, askMessages.length, askPersistedCount, lastRole, syncAskChat, t, toast, workspace.context]);
+
+  // The latest handleSend, for Retry and Discuss, which outlive the render that made them.
+  const sendRef = useRef<(...args: Parameters<typeof handleSend>) => ReturnType<typeof handleSend>>(async () => false);
 
   /**
    * Sends a question. Returns false when the message is rejected before sending, so the
@@ -293,9 +296,13 @@ export default function AskPage() {
               followUpQuestions: [],
               uncertainties: [t('ask.streamInterrupted', 'The streamed response was interrupted before completion.')],
             };
-          } else if (isAIProviderError(streamError) && streamError.details?.code === 'provider_unavailable') {
-            // The model's provider is down, not the stream: asking again
-            // through the plain endpoint would only fail the same way.
+          } else if (
+            (isAIProviderError(streamError) && streamError.details?.code === 'provider_unavailable') ||
+            isAISubscriptionError(streamError) || isAIModelRestrictionError(streamError)
+          ) {
+            // The model's provider is down or the account may not send this,
+            // not the stream: asking again through the plain endpoint would
+            // only fail the same way.
             throw streamError;
           } else {
             result = await askChat(fullMessage, history, mode, config, options);
@@ -367,9 +374,16 @@ export default function AskPage() {
       console.error(error);
 
       // Failures stay in the chat with a Retry that re-asks without duplicating the question.
-      const retryAsk = (): void => { void handleSend(message, mode, citationMode, webSearch, prosConsMode, argumentMapMode, files, true); };
+      // Retry runs the latest handler, so a model picked after the failure is used.
+      const retryAsk = (): void => { void sendRef.current(message, mode, citationMode, webSearch, prosConsMode, argumentMapMode, files, true); };
       if (subError.handleSubscriptionError(error)) {
-        // Subscription error handled by modal
+        // The dialog explains the limit; the question stays in the chat, marked
+        // as not sent, with a Retry for once there is room again.
+        setChatError({
+          title: isAISubscriptionError(error) && error.code === 'limit_reached' ? t('ask.notSentDailyLimit') : t('ask.notSent'),
+          description: isAIModelRestrictionError(error) ? t('ask.notSentModelDesc') : getUserFacingAIError(error),
+          onRetry: retryAsk,
+        });
       } else if (isTimeoutError(error)) {
         setChatError({ title: t('ask.timeout'), description: t('ask.timeoutDesc'), onRetry: retryAsk });
       } else {
@@ -405,7 +419,6 @@ export default function AskPage() {
   // "Discuss" on a tool result opens Ask with its prompt, sent here like a typed question.
   const location = useLocation();
   const discussPrompt = (location.state as { discussPrompt?: string } | null)?.discussPrompt;
-  const sendRef = useRef(handleSend);
   sendRef.current = handleSend;
   const discussedKey = useRef<string | null>(null);
   useEffect(() => {

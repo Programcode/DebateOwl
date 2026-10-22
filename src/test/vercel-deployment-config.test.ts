@@ -240,6 +240,9 @@ describe("Vercel frontend deployment configuration", () => {
     expect(serviceWorker).not.toContain("'/app/crossfire'");
     expect(serviceWorker).not.toContain("'/app/sparring'");
     expect(serviceWorker).toContain("'/favicon-72.png'");
+    expect(serviceWorker).toContain("'/icon-192.png'");
+    expect(serviceWorker).toContain("'/icon-512.png'");
+    expect(serviceWorker).toContain("'/icon-maskable-512.png'");
     expect(serviceWorker).toContain('cache.put(request, response.clone())');
     expect(serviceWorker).toContain('htmlMislabeledAsAsset');
     expect(serviceWorker).not.toContain('self.skipWaiting()');
@@ -292,6 +295,12 @@ describe("Vercel frontend deployment configuration", () => {
     expect(headersAt(config, "/")).not.toHaveProperty("X-Robots-Tag");
     expect(headersAt(config, "/app")).toMatchObject({ "X-Robots-Tag": "noindex, nofollow" });
     expect(indexHtml).toContain('<meta name="robots" content="noindex, nofollow" />');
+    expect(indexHtml).toContain('<meta property="og:image:width" content="1200" />');
+    expect(indexHtml).toContain('<meta property="og:image:height" content="630" />');
+    expect(indexHtml).toContain('<meta property="og:image:alt" content="DebateLab debate prep workspace preview" />');
+    expect(indexHtml).toContain('<meta name="twitter:image:alt" content="DebateLab debate prep workspace preview" />');
+    expect(indexHtml).toContain('<link rel="icon" href="/favicon.ico" sizes="48x48" />');
+    expect(indexHtml).toContain('<link rel="apple-touch-icon" href="/apple-touch-icon.png" sizes="180x180" />');
     expect(prerender).toContain(publicRobots);
     expect(prerender).toContain("noindex, nofollow");
     expect(readProjectFile("src/lib/seo/pages.ts")).toContain(`robots: '${publicRobots}'`);
@@ -322,7 +331,7 @@ describe("Vercel frontend deployment configuration", () => {
 
   it("caches the unhashed public images for 30 days", () => {
     const config = loadConfig();
-    for (const path of ["/favicon.ico", "/favicon.png", "/favicon-72.png", "/hero-visual.png", "/placeholder.svg"]) {
+    for (const path of ["/favicon.ico", "/favicon.png", "/favicon-72.png", "/hero-visual.jpg", "/placeholder.svg"]) {
       expect(headersAt(config, path)["Cache-Control"]).toBe("public, max-age=2592000");
     }
     expect(headersAt(config, "/assets/index-abc123.js")["Cache-Control"]).toBe(
@@ -340,7 +349,7 @@ describe("Vercel frontend deployment configuration", () => {
     for (const path of ["/", "/app", "/login", "/share/abc", "/expocit/sources", "/terms", "/index.html", "/online-debate-timer"]) {
       expect(pattern.test(path), path).toBe(true);
     }
-    for (const path of ["/favicon.png", "/hero-visual.png", "/assets/main.js", "/theme-init.js", "/sw.js", "/robots.txt", "/_vercel/insights/script.js"]) {
+    for (const path of ["/favicon.png", "/hero-visual.jpg", "/assets/main.js", "/theme-init.js", "/sw.js", "/robots.txt", "/_vercel/insights/script.js"]) {
       expect(pattern.test(path), path).toBe(false);
     }
   });

@@ -39,3 +39,25 @@ export function quotaUnitsFor(model: ModelSelection | string | undefined): numbe
   if (!model) return DEFAULT_QUOTA_UNITS;
   return MODEL_QUOTA_UNITS[model] ?? DEFAULT_QUOTA_UNITS;
 }
+
+/**
+ * Features charged once per session instead of once per AI call: one
+ * Crossfire round (opening turn, every answer, the debrief) or one Sparring
+ * round (every opponent reply and the judge) costs the model's units once.
+ * A session that runs past maxCalls calls or ttlSeconds since it paid is
+ * charged again, so a reused session id cannot buy unlimited AI. A Crossfire
+ * transcript holds at most 20 AI turns plus the debrief; a Sparring round has
+ * at most 4 opponent replies plus the judge. The rest is room for retries.
+ * Sparring rounds can be paused for hours, so they live longer.
+ */
+export const SESSION_QUOTA: Readonly<Record<"crossfire" | "sparring", { maxCalls: number; ttlSeconds: number }>> = {
+  crossfire: { maxCalls: 30, ttlSeconds: 2 * 60 * 60 },
+  sparring: { maxCalls: 12, ttlSeconds: 12 * 60 * 60 },
+};
+
+/**
+ * A failed or cancelled run is refunded unless the user already saw this many
+ * characters of its streamed output. Below it the run produced nothing usable;
+ * at or above it the user may have read an answer, so it stays charged.
+ */
+export const REFUND_MAX_DELIVERED_CHARS = 200;

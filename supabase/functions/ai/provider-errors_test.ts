@@ -21,6 +21,7 @@ Deno.test("AI JSON and SSE failures never expose provider response bodies", asyn
       }
       if (url.pathname.endsWith("/global_prompts")) return Response.json({ prompt_text: null });
       if (/\/consume_(daily|ai)_quota$/.test(url.pathname)) return Response.json([{ allowed: true, current_count: 1 }]);
+      if (url.pathname.endsWith("/refund_daily_quota")) return Response.json(0);
       if (url.pathname.endsWith("/ai_requests")) return new Response(null, { status: 201 });
     }
     if (url.href === "https://openrouter.ai/api/v1/chat/completions") return new Response("PRIVATE_PROVIDER_BODY", { status: 400 });
@@ -144,14 +145,14 @@ Deno.test("a refused Claude call is not retried elsewhere, shows an outage, and 
       assertEquals(text.includes("PRIVATE_PROVIDER_BODY"), false, label);
       assertEquals(text.includes("Anthropic Claude is temporarily unavailable. Please try again later."), true, label);
       assertEquals(text.includes('"code":"provider_unavailable"'), true, label);
-      // A failure after the model wrote text keeps the request: the key already paid for it.
-      // The repair case already completed a paid attempt before the retry failed.
-      // OpenRouter credits already charged also keep the request counted.
-      const refunded = !(kind === "chunk-after-text" || kind === "chunk-charged" || kind === "error-frame-charged" || kind === "repair" || kind === "after-research");
-      assertEquals(refundedUnits, refunded ? [1] : [], `${label} refunds only a failure before output`);
+      // None of these left the student a usable answer (a few characters at
+      // most), so each gives its daily request back.
+      assertEquals(refundedUnits, [1], `${label} refunds a failure that delivered nothing usable`);
       assertEquals(usageRows.map((row) => row.error_code), ["claude_unavailable"], label);
-      // A refunded request adds nothing to the weekly cap; a charged one keeps its charge.
-      if (refunded) assertEquals(usageRows[0].cap_cost_usd, 0, label);
+      // The weekly cap still sees real spend. Only a refusal before any paid
+      // work (no text, no completed attempt or research, no credits) is logged at 0.
+      const freeRefusal = !(kind === "chunk-after-text" || kind === "chunk-charged" || kind === "error-frame-charged" || kind === "repair" || kind === "after-research");
+      if (freeRefusal) assertEquals(usageRows[0].cap_cost_usd, 0, label);
       if (kind === "chunk-charged" || kind === "error-frame-charged") assertEquals(usageRows[0].cap_cost_usd, 0.25, label);
       // Every attempt stays on the Anthropic route; nothing is retried on another model or provider.
       assertEquals(providerBodies.length > 0, true, label);
@@ -161,17 +162,22 @@ Deno.test("a refused Claude call is not retried elsewhere, shows an outage, and 
       }
     }
 
-    // Neither a successful Claude answer nor a failure on another model gives a request back.
+    // A successful Claude answer keeps its request; a failure on another model gives it back too.
     refundedUnits.length = 0;
     failure = "ok";
     assertEquals((await send(ai)).status, 200);
     assertEquals((await (await send(stream)).text()).includes("event: final"), true);
-    failure = "http";
-    assertEquals((await send(ai, {}, "openai/gpt-6-luna")).status, 500);
     assertEquals(refundedUnits, []);
+    failure = "http";
+    const otherModel = await send(ai, {}, "openai/gpt-6-luna");
+    assertEquals(otherModel.status, 500);
+    assertEquals((await otherModel.json()).charged, false);
+    assertEquals(refundedUnits, [1]);
+    assertEquals(usageRows.at(-1)?.error_code, "provider_error");
 
-    // A cancelled request is never refunded, even when the refusal raced the abort:
-    // the client goes away after the 402 was read, as the handler starts its error path.
+    // A request the client cancelled before any output is refunded as well:
+    // the client goes away as the handler starts its error path.
+    refundedUnits.length = 0;
     failure = "http";
     clientAbort = new AbortController();
     const originalError = console.error;
@@ -187,7 +193,8 @@ Deno.test("a refused Claude call is not retried elsewhere, shows an outage, and 
     console.error = originalError;
     assertEquals(clientAbort.signal.aborted, true);
     assertEquals(usageRows.at(-1)?.error_code, "claude_unavailable");
-    assertEquals(refundedUnits, []);
+    assertEquals(usageRows.at(-1)?.status, "cancelled");
+    assertEquals(refundedUnits, [1]);
     clientAbort = undefined;
 
     // The refund gives back exactly the weighted units consume_ai_quota reserved.

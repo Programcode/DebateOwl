@@ -54,13 +54,13 @@ function FactoidCard({ factoid, onSave }: { factoid: Factoid, onSave?: FactoidsR
               rel="noopener noreferrer"
               className="group flex items-center gap-2"
             >
-              <h4 className="font-semibold text-foreground group-hover:text-primary transition-colors underline-offset-4 group-hover:underline text-left">
+              <h3 className="font-semibold text-foreground group-hover:text-primary transition-colors underline-offset-4 group-hover:underline text-left">
                 {factoid.shortClaim}
-              </h4>
+              </h3>
               <ExternalLink className="h-3 w-3 shrink-0 opacity-60 transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100" aria-hidden="true" />
             </a>
           ) : (
-            <h4 className="font-semibold text-foreground">{factoid.shortClaim}</h4>
+            <h3 className="font-semibold text-foreground">{factoid.shortClaim}</h3>
           )}
           <div className="flex items-center gap-2 mt-1">
             <Badge className={cn('text-xs', config.bg, config.color)}>

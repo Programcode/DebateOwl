@@ -105,7 +105,7 @@ function landingStructuredData(dateModified: string | undefined) {
         applicationCategory: 'EducationalApplication',
         operatingSystem: 'Web',
         url: `${SITE_ORIGIN}/`,
-        image: `${SITE_ORIGIN}/hero-visual.png`,
+        image: `${SITE_ORIGIN}/hero-visual.jpg`,
         description: DEFINITION,
         inLanguage: ['en', 'es', 'hu'],
         featureList: PREP_MODES.map((mode) => i18n.t(`features.${mode}`)),

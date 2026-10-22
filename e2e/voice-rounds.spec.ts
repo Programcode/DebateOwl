@@ -1,5 +1,6 @@
 import { expect, test, type Page, type Route } from '@playwright/test';
 import { setLocale, stubSupabaseSession } from './helpers/auth';
+import { fulfillQuotaCheck } from './helpers/quota';
 import { say, spokenByBrowser, stubSpeech } from './helpers/voice';
 
 // Voice rounds without a microphone, a speech service, or an ElevenLabs key.
@@ -81,6 +82,7 @@ async function routeSparring(page: Page, bodies: SparringBody[]) {
       await route.fulfill({ status: 200, headers: corsHeaders, body: 'ok' });
       return;
     }
+    if (await fulfillQuotaCheck(route, corsHeaders)) return;
     const body = route.request().postDataJSON() as SparringBody;
     bodies.push(body);
     if (body.input.action === 'score') {
@@ -193,6 +195,7 @@ test('a spoken Crossfire exchange plays ElevenLabs audio through the voice funct
       await route.fulfill({ status: 200, headers: corsHeaders, body: 'ok' });
       return;
     }
+    if (await fulfillQuotaCheck(route, corsHeaders)) return;
     const body = route.request().postDataJSON() as { voice?: boolean; input: { transcript: Array<Record<string, unknown>> } };
     aiVoiceFlags.push(body.voice);
     // The server accepts only the turn fields it knows; measurements stay in the browser.

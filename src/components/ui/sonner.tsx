@@ -28,6 +28,7 @@ const Toaster = ({ ...props }: ToasterProps) => {
         },
       }}
       {...props}
+      containerAriaLabel={t("common.notifications")}
     />
   );
 };
