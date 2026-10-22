@@ -1,8 +1,10 @@
 import { useTranslation } from 'react-i18next';
 import { PublicPageShell } from '@/components/layout/PublicPageShell';
+import { usePageHead } from '@/lib/seo/use-page-head';
 
 export default function SourcesPage() {
   const { t } = useTranslation();
+  usePageHead('/expocit/sources');
   const sources = [
     {
       authors: "AITHAL, V.; SILVER, J.",

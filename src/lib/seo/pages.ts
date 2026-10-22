@@ -44,6 +44,11 @@ export const PAGE_HEADS = {
     description: `How ${BRAND} collects, uses, stores, and shares your information, how AI requests are processed, and the rights you have over your data.`,
     canonicalPath: '/privacy',
   },
+  '/expocit/sources': {
+    title: `Sources | ${BRAND}`,
+    description: `The sources consulted during the research and development of ${BRAND}, listed alphabetically by author surname or institutional name.`,
+    canonicalPath: '/expocit/sources',
+  },
   ...TOOL_PAGE_HEADS,
   '*': {
     title: `Page not found | ${BRAND}`,
@@ -53,7 +58,12 @@ export const PAGE_HEADS = {
 
 export type PrerenderedRoute = keyof typeof PAGE_HEADS;
 
-/** What index.html, the shell for every other route, says. */
+/**
+ * Head the client restores for a public page. index.html itself (the app
+ * shell copied to app-shell.html) says `noindex, nofollow`, matching the
+ * X-Robots-Tag on /app, /login and /share. Prerender writes `robots` onto
+ * every page that has a canonical URL.
+ */
 export const SHELL_HEAD = {
   title: 'DebateLab',
   description: PAGE_HEADS['/'].description,
