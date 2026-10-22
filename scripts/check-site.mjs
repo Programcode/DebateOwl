@@ -13,7 +13,7 @@ const DIST = 'dist';
 const SITE_ORIGIN = JSON.parse(readFileSync('src/config/site.json', 'utf8')).origin;
 const vercel = JSON.parse(readFileSync('vercel.json', 'utf8'));
 // Indexed pages that answer no question of their own.
-const NO_SHORT_ANSWER = new Set(['/terms', '/privacy']);
+const NO_SHORT_ANSWER = new Set(['/terms', '/privacy', '/expocit/sources']);
 
 const problems = [];
 const report = (where, message) => problems.push(`${where}: ${message}`);
