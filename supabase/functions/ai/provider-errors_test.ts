@@ -45,7 +45,10 @@ Deno.test("a refused Claude call is not retried elsewhere, shows an outage, and 
   const originalFetch = globalThis.fetch;
   const originalWarn = console.warn;
   let failure: "http" | "chunk" | "chunk-after-text" | "repair" | "after-research" | "ok" = "http";
-  let refunds = 0;
+  let tier = "trial";
+  // consume_ai_quota reservations and refund_daily_quota refunds, in units.
+  const reservedUnits: number[] = [];
+  const refundedUnits: number[] = [];
   const usageRows: Array<Record<string, unknown>> = [];
   const providerBodies: Array<Record<string, unknown>> = [];
   console.warn = () => undefined;
@@ -54,13 +57,16 @@ Deno.test("a refused Claude call is not retried elsewhere, shows an outage, and 
     if (url.origin === "https://supabase.test") {
       if (url.pathname === "/auth/v1/user") return Response.json({ id: "user-1", aud: "authenticated" });
       if (url.pathname.endsWith("/user_roles")) return Response.json({ role: "user" });
-      if (url.pathname.endsWith("/user_settings")) return Response.json({ subscription_tier: "trial", daily_limit_override: 50, trial_ends_at: "2099-01-01", grace_period_ends_at: null });
-      if (url.pathname.endsWith("/subscriptions")) return Response.json([]);
+      if (url.pathname.endsWith("/user_settings")) return Response.json({ subscription_tier: tier, daily_limit_override: 50, trial_ends_at: "2099-01-01", grace_period_ends_at: null });
+      if (url.pathname.endsWith("/subscriptions")) return Response.json(tier === "pro" ? [{ status: "active", current_period_end: "2099-01-01T00:00:00.000Z" }] : []);
       if (url.pathname.endsWith("/rate_limits")) return Response.json({ limit_value: 50 });
       if (url.pathname.endsWith("/global_prompts")) return Response.json({ prompt_text: null });
-      if (url.pathname.endsWith("/consume_daily_quota")) return Response.json([{ allowed: true, current_count: 1 }]);
+      if (url.pathname.endsWith("/consume_ai_quota")) {
+        reservedUnits.push(JSON.parse(String(init?.body)).p_units);
+        return Response.json([{ allowed: true, current_count: 1, denied_by: null }]);
+      }
       if (url.pathname.endsWith("/refund_daily_quota")) {
-        refunds += 1;
+        refundedUnits.push(JSON.parse(String(init?.body)).p_units);
         return Response.json(0);
       }
       if (url.pathname.endsWith("/ai_requests")) {
@@ -84,7 +90,9 @@ Deno.test("a refused Claude call is not retried elsewhere, shows an outage, and 
       if (failure === "after-research" && searchDecision) return Response.json({ choices: [{ message: { content: JSON.stringify({ shouldSearch: false, query: "" }) } }], usage });
       if (failure === "http" || failure === "repair" || failure === "after-research") return new Response("PRIVATE_PROVIDER_BODY", { status: 402 });
       const text = failure === "chunk-after-text" ? 'data: {"choices":[{"delta":{"content":"{\\"resp"}}]}\n\n' : "";
-      return new Response(`${text}data: {"error":{"message":"PRIVATE_PROVIDER_BODY"}}\n\n`, { headers: { "Content-Type": "text/event-stream" } });
+      // OpenRouter reported a charge before the stream failed.
+      const charge = 'data: {"choices":[],"usage":{"prompt_tokens":10,"completion_tokens":0,"cost":0.25}}\n\n';
+      return new Response(`${text}${charge}data: {"error":{"message":"PRIVATE_PROVIDER_BODY"}}\n\n`, { headers: { "Content-Type": "text/event-stream" } });
     }
     throw new Error(`Unexpected request: ${url}`);
   }) as typeof fetch;
@@ -118,7 +126,8 @@ Deno.test("a refused Claude call is not retried elsewhere, shows an outage, and 
       ] as const),
     ] as const) {
       failure = kind;
-      refunds = 0;
+      reservedUnits.length = 0;
+      refundedUnits.length = 0;
       usageRows.length = 0;
       providerBodies.length = 0;
       const text = await run();
@@ -127,8 +136,12 @@ Deno.test("a refused Claude call is not retried elsewhere, shows an outage, and 
       assertEquals(text.includes('"code":"provider_unavailable"'), true, label);
       // A failure after the model wrote text keeps the request: the key already paid for it.
       // The repair case already completed a paid attempt before the retry failed.
-      assertEquals(refunds, kind === "chunk-after-text" || kind === "repair" || kind === "after-research" ? 0 : 1, `${label} refunds only a failure before output`);
+      const refunded = !(kind === "chunk-after-text" || kind === "repair" || kind === "after-research");
+      assertEquals(refundedUnits, refunded ? [1] : [], `${label} refunds only a failure before output`);
       assertEquals(usageRows.map((row) => row.error_code), ["claude_unavailable"], label);
+      // A refunded request stays out of the weekly cap even when OpenRouter reported a charge.
+      if (refunded) assertEquals(usageRows[0].cap_cost_usd, 0, label);
+      if (kind === "chunk-after-text") assertEquals(usageRows[0].cap_cost_usd, 0.25, label);
       // Every attempt stays on the Anthropic route; nothing is retried on another model or provider.
       assertEquals(providerBodies.length > 0, true, label);
       for (const body of providerBodies) {
@@ -138,13 +151,25 @@ Deno.test("a refused Claude call is not retried elsewhere, shows an outage, and 
     }
 
     // Neither a successful Claude answer nor a failure on another model gives a request back.
-    refunds = 0;
+    refundedUnits.length = 0;
     failure = "ok";
     assertEquals((await send(ai)).status, 200);
     assertEquals((await (await send(stream)).text()).includes("event: final"), true);
     failure = "http";
     assertEquals((await send(ai, {}, "openai/gpt-6-luna")).status, 500);
-    assertEquals(refunds, 0);
+    assertEquals(refundedUnits, []);
+
+    // The refund gives back exactly the weighted units consume_ai_quota reserved.
+    tier = "pro";
+    for (const [model, units] of [["anthropic/claude-haiku-5.5", 1], ["anthropic/claude-sonnet-5.5", 2], ["anthropic/claude-opus-5.5", 5]] as const) {
+      for (const [label, handle] of [["ai", ai], ["ai-stream", stream]] as const) {
+        reservedUnits.length = 0;
+        refundedUnits.length = 0;
+        await (await send(handle, {}, model)).text();
+        assertEquals(reservedUnits, [units], `${label} ${model} reserves its weight`);
+        assertEquals(refundedUnits, [units], `${label} ${model} refunds what it reserved`);
+      }
+    }
   } finally {
     globalThis.fetch = originalFetch;
     console.warn = originalWarn;

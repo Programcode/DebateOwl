@@ -232,6 +232,11 @@ export function selectObservedUsage(
     : usageError?.usage ?? usageError?.completedUsage;
 }
 
+/** Keeps a refunded request out of the weekly spend cap; its cost stays for audit. */
+export function excludeFromCap(usage?: NormalizedUsage): NormalizedUsage {
+  return { ...usage, capCostUsd: 0 };
+}
+
 /** Preserve observed fragments without treating partial provider work as a complete bill. */
 export function markIncompleteUsage(usage?: NormalizedUsage): NormalizedUsage {
   return { ...usage, incomplete: true };

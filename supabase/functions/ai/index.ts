@@ -22,6 +22,7 @@ import {
   type SparringRequest,
 } from "./sparring-persistence.ts";
 import {
+  excludeFromCap,
   mergeNormalizedUsage,
   selectObservedUsage,
   type NormalizedUsage,
@@ -57,7 +58,7 @@ import {
   checkUserBanned,
   logUsage,
   type RateLimitResult,
-  refundDailyQuota,
+  refundQuotaReservation,
 } from "../_shared/entitlements.ts";
 import {
   CLAUDE_UNAVAILABLE_CODE,
@@ -813,21 +814,23 @@ export async function handleRequest(req: Request): Promise<Response> {
       const claudeUnavailable = err instanceof ClaudeProviderUnavailableError;
       const refundable = claudeUnavailable && !err.afterOutput && !completedMainUsage && !usageError?.completedUsage &&
         researchUsage.length === 0 && !researchAccountingIncomplete;
+      const errorUsage = mergeNormalizedUsage([
+        mainErrorUsage,
+        ...researchUsageForLog(),
+      ]);
       await logUsage(
         userId,
         feature,
         provider,
         model,
-        mergeNormalizedUsage([
-          mainErrorUsage,
-          ...researchUsageForLog(),
-        ]),
+        // A refunded request counts toward neither today's quota nor the weekly cap.
+        refundable ? excludeFromCap(errorUsage) : errorUsage,
         latencyMs,
         "error",
         claudeUnavailable ? "claude_unavailable" : "ai_error",
       );
       if (claudeUnavailable) {
-        if (refundable) await refundDailyQuota(userId);
+        if (refundable) await refundQuotaReservation(userId, rateLimit);
         return new Response(JSON.stringify({ error: CLAUDE_UNAVAILABLE_MESSAGE, code: CLAUDE_UNAVAILABLE_CODE }), { status: CLAUDE_UNAVAILABLE_STATUS, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
       return new Response(JSON.stringify({ error: "AI request failed. Please try again.", code: "provider_error" }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });

@@ -14,13 +14,14 @@ import {
   loadDebateContext,
 } from "../_shared/debate-context-loader.ts";
 import {
+  excludeFromCap,
   markIncompleteUsage,
   normalizeOpenRouterUsage,
   type NormalizedUsage,
 } from "../_shared/cost.ts";
 import { HttpError, jsonError, requireUser } from "../_shared/auth.ts";
 import { getCorsHeaders } from "../_shared/cors.ts";
-import { checkRateLimit, logUsage, refundDailyQuota } from "../_shared/entitlements.ts";
+import { checkRateLimit, logUsage, refundQuotaReservation } from "../_shared/entitlements.ts";
 import {
   CLAUDE_UNAVAILABLE_CODE,
   CLAUDE_UNAVAILABLE_MESSAGE,
@@ -392,10 +393,11 @@ export async function handleRequest(req: Request): Promise<Response> {
         // When it fails the student gets an outage message, and their request
         // back if the model had written nothing yet.
         const claudeUnavailable = !isAbort && err instanceof ClaudeProviderUnavailableError;
+        const refunded = claudeUnavailable && !err.afterOutput && !accumulated;
         if (claudeUnavailable) {
           // Refund before the client hears of the failure, so a retry it
           // sends straight away sees the request already given back.
-          if (!err.afterOutput && !accumulated) await refundDailyQuota(user.id);
+          if (refunded) await refundQuotaReservation(user.id, rateLimit);
           try { emit("error", { message: CLAUDE_UNAVAILABLE_MESSAGE, code: CLAUDE_UNAVAILABLE_CODE, status: CLAUDE_UNAVAILABLE_STATUS }); } catch { /* client disconnected */ }
         } else if (!isAbort) {
           try { emit("error", { message: "AI streaming failed. Please try again.", code: "provider_error" }); } catch { /* client disconnected */ }
@@ -406,7 +408,8 @@ export async function handleRequest(req: Request): Promise<Response> {
           "ask",
           OPENROUTER_PROVIDER,
           model,
-          markIncompleteUsage(observedUsage),
+          // A refunded request counts toward neither today's quota nor the weekly cap.
+          refunded ? excludeFromCap(markIncompleteUsage(observedUsage)) : markIncompleteUsage(observedUsage),
           Date.now() - startedAt,
           isAbort ? "cancelled" : "error",
           isAbort ? "client_abort" : claudeUnavailable ? "claude_unavailable" : "stream_error",
