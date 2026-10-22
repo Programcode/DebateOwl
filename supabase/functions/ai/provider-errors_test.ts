@@ -61,6 +61,11 @@ Deno.test("common JSON slips are repaired locally instead of paying for a retry"
   assertThrows(() => parse("{note} ".repeat(9) + '{"response":"example"} {"response":"final"}'));
   // Past the span limit the reply is rejected, never accepted early.
   assertThrows(() => parse("{note} ".repeat(20) + '{"response":"only"}'));
+  // A JSON-looking span that fails to parse may be the real answer, so no other span is trusted.
+  assertThrows(() => parse('Example: {"type":"question","text":"example"}\n\nAnswer: {"type":"question","text":"Why "this"?"}'));
+  assertThrows(() => parse('Note: {} means omitted. Answer: {"response": "Use evidence." oops}'));
+  // An unescaped quote that closes the outer span early does not yield the nested object.
+  assertThrows(() => parse('{"response": "He wrote "x} and left", "data": {"k": 1}}'));
   // An unclosed brace leaves the rest unread, so an earlier object is not trusted.
   assertThrows(() => parse('{"response":"example"} then { {"response":"final"}'));
   // Fence-like text inside valid JSON parses at once.

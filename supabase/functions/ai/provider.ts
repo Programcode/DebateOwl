@@ -112,7 +112,8 @@ function parseOrRepair(text: string): Parsed {
  * The one top-level `{...}` span in the text that parses, string-aware. The
  * scan resumes after a span, never inside it, so a nested object is never
  * taken for the answer, and each character is read once. It fails when two
- * spans parse (the answer is ambiguous), when an unclosed `{` leaves the rest
+ * spans parse (the answer is ambiguous), when a span that looks like JSON (it
+ * holds a `"` or `:`) does not parse, when an unclosed `{` leaves the rest
  * of the text unread, or past MAX_OBJECT_SPANS, which bounds the parse work
  * on a reply full of braces. Failing sends the reply to the paid retry.
  */
@@ -140,10 +141,17 @@ function onlyObject(text: string): Parsed {
       }
     }
     if (end === -1) return { ok: false };
-    const parsed = parseOrRepair(text.slice(start, end + 1));
+    const span = text.slice(start, end + 1);
+    const parsed = parseOrRepair(span);
     if (parsed.ok) {
       if (found.ok) return { ok: false };
       found = parsed;
+    } else if (/[":]/.test(span)) {
+      // A span that looks like JSON but does not parse may be the real answer
+      // with a slip (an unescaped quote can even close it early, so the scan
+      // resumes inside it). Trusting another span then returns the wrong
+      // object, so the reply goes to the retry. Prose like {braces} is skipped.
+      return { ok: false };
     }
     start = text.indexOf("{", end + 1);
   }
