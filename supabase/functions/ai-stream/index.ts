@@ -31,13 +31,13 @@ import {
   isAutoModelSelection,
   isModelSelection,
   isReasoningEffort,
-  MAX_REQUEST_OUTPUT_TOKENS,
   retiredModelSuccessor,
   type ModelCatalogEntry,
   type ModelSelection,
   type ReasoningEffort,
 } from "../_shared/model-catalog.ts";
 import { resolveModelSelection } from "../_shared/auto-model-router.ts";
+import { outputTokenLimit, REPLY_TOKEN_CAPS } from "../_shared/output-caps.ts";
 import { JEV_MODEL } from "../_shared/jev.ts";
 
 type ChatRole = "user" | "assistant";
@@ -239,6 +239,7 @@ export async function handleRequest(req: Request): Promise<Response> {
       let streamUsageRaw: Record<string, unknown> | undefined;
       let streamSawDone = false;
       let streamSawFinishReason = false;
+      let streamFinishReason: string | undefined;
       const collectUsage = (): NormalizedUsage => {
         return streamUsageRaw
           ? normalizeOpenRouterUsage(streamUsageRaw)
@@ -265,7 +266,7 @@ export async function handleRequest(req: Request): Promise<Response> {
         const payload: Record<string, unknown> = {
           model,
           messages: withPromptCaching(model, messages),
-          max_tokens: Math.min(modelEntry.maxTokens, MAX_REQUEST_OUTPUT_TOKENS),
+          max_tokens: outputTokenLimit(REPLY_TOKEN_CAPS.ask, reasoningEffort, modelEntry.maxTokens),
           reasoning: { effort: reasoningEffort, exclude: true },
           // Omitting sort and order keeps OpenRouter's balanced provider load balancing.
           provider: { require_parameters: true },
@@ -305,7 +306,10 @@ export async function handleRequest(req: Request): Promise<Response> {
             throw new Error(typeof message === "string" ? message : "OpenRouter stream error");
           }
           const delta = (Array.isArray(parsed.choices) ? parsed.choices[0] : undefined) as { delta?: { content?: string }; finish_reason?: unknown } | undefined;
-          if (typeof delta?.finish_reason === "string" && delta.finish_reason) streamSawFinishReason = true;
+          if (typeof delta?.finish_reason === "string" && delta.finish_reason) {
+            streamSawFinishReason = true;
+            streamFinishReason = delta.finish_reason;
+          }
           if (typeof delta?.delta?.content === "string" && delta.delta.content) {
             accumulated += delta.delta.content;
             emit("delta", { text: delta.delta.content });
@@ -340,6 +344,16 @@ export async function handleRequest(req: Request): Promise<Response> {
           throw new Error("OpenRouter stream ended before completion");
         }
 
+        // A cut-off answer that already reached the reader cannot be retried;
+        // the flag tells the user it stopped short. One that spent the whole
+        // cap on reasoning sent nothing, so it fails and the client asks the
+        // structured endpoint, which retries with a larger cap.
+        const replyTruncated = streamFinishReason === "length";
+        if (replyTruncated) {
+          console.warn(`[AI_STREAM] Reply hit its ask cap (${REPLY_TOKEN_CAPS.ask} tokens, ${model}, effort ${reasoningEffort})`);
+          if (!accumulated.trim()) throw new Error("OpenRouter reply was cut off before any text");
+        }
+
         const output = {
           response: accumulated.trim(),
           model,
@@ -348,6 +362,7 @@ export async function handleRequest(req: Request): Promise<Response> {
           generatedAt: new Date().toISOString(),
           followUpQuestions: [],
           uncertainties: accumulated.trim() ? [] : ["The model returned an empty streamed response."],
+          ...(replyTruncated ? { replyTruncated: true } : {}),
         };
 
         if (!req.signal.aborted) {

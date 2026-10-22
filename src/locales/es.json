@@ -419,6 +419,7 @@
     "streamInterruptedDesc": "Puedes preguntar de nuevo para obtener una respuesta completa.",
     "chatSaved": "Chat guardado",
     "chatSavedDesc": "Puedes abrirlo desde el Historial.",
+    "replyCutOff": "Esta respuesta alcanzó su límite de longitud y termina antes de tiempo. Haz una pregunta más concreta o pide que continúe.",
     "retryableFailedDesc": "No se pudo conectar con la IA. Comprueba tu conexión e inténtalo de nuevo.",
     "saveFailed": "No se pudo guardar",
     "saveFailedDesc": "No se pudo guardar el chat. Inténtalo de nuevo.",

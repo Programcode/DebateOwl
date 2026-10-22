@@ -419,6 +419,7 @@
     "streamInterruptedDesc": "You can ask again to get a complete answer.",
     "chatSaved": "Chat saved",
     "chatSavedDesc": "You can load it from History.",
+    "replyCutOff": "This answer hit its length limit and stops early. Ask a narrower question or ask it to continue.",
     "retryableFailedDesc": "Couldn't reach the AI. Check your connection and retry.",
     "saveFailed": "Save failed",
     "saveFailedDesc": "The chat could not be saved. Please try again.",
