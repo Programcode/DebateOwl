@@ -4,6 +4,7 @@ import {
   FunctionsHttpError,
   FunctionsRelayError,
 } from '@supabase/supabase-js';
+import { e2eRefusesProductionRequest } from './e2e-guard';
 import { getActiveEnv, SUPABASE_URL, SUPABASE_ANON_KEY } from './env';
 import { verifySessionAfterRejection } from './session-expiry';
 
@@ -43,6 +44,16 @@ function requestUrl(input: RequestInfo | URL): string {
 // holds its session lock while some of these requests run, so the check (which
 // takes that lock) is queued for after the request instead of run inside it.
 const watchedFetch: typeof fetch = async (input, init) => {
+  if (e2eRefusesProductionRequest({
+    allowProduction: import.meta.env.VITE_E2E_ALLOW_PROD === "1",
+    e2e: import.meta.env.VITE_E2E === "1",
+    url: requestUrl(input),
+  })) {
+    return new Response(JSON.stringify({ error: "e2e_refused_production" }), {
+      status: 403,
+      headers: { "content-type": "application/json" },
+    });
+  }
   const response = await globalThis.fetch(input, init);
   const url = requestUrl(input);
   if (activeAccessToken && isAuthRejection(url, response.status)) {

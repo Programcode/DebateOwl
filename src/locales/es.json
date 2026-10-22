@@ -702,7 +702,10 @@
       "confirmBanDesc": "No podrá usar DebateLab hasta que lo desbloquees.",
       "confirmUnban": "¿Desbloquear a {{email}}?",
       "confirmRemoveAdmin": "¿Quitar el rol de administrador a {{email}}?",
-      "confirmRoleDesc": "Pasará a ser un usuario normal."
+      "confirmRoleDesc": "Pasará a ser un usuario normal.",
+      "loadMore": "Cargar más usuarios",
+      "loadingMore": "Cargando más usuarios",
+      "loadMoreFailed": "No se pudieron cargar más usuarios"
     },
     "promos": {
       "createTitle": "Crear código promocional",

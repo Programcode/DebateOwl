@@ -97,7 +97,7 @@ async function installDeterministicBackend(page: Page, requests: CrossfireReques
 
       const output = {
         concessionsSecured: [{ turnIds: ['T2'], claim: 'The answer accepts that the safety link depends on traffic exposure.' }],
-        controlledQuestions: [{ turnIds: ['T1', 'T2'], claim: 'The opening exchange keeps the discussion on the central causal warrant.' }],
+        controlledQuestions: [{ turnIds: ['T1'], claim: 'The opening question keeps the discussion on the central causal warrant.' }],
         weakOrRepetitiveQuestions: [{ turnIds: ['T1'], claim: 'The question could identify the type of evidence required more precisely.' }],
         evasiveOrIncompleteAnswers: [{ turnIds: ['T2'], claim: 'The answer does not name a study or traffic count.' }],
         missedFollowUps: [{ turnIds: ['T2'], claim: 'The next question should test the missing evidence.' }],

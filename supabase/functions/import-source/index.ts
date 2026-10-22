@@ -46,6 +46,15 @@ async function consumeDailyImportQuota(userId: string): Promise<{ allowed: boole
   return { allowed: Boolean(row?.allowed), currentCount: row?.current_count ?? 0 };
 }
 
+async function refundDailyImportQuota(userId: string): Promise<void> {
+  const { error } = await supabase.rpc("refund_daily_quota", {
+    p_user_id: userId,
+    p_units: 1,
+    p_quota_key: "import_source",
+  });
+  if (error) console.warn("[IMPORT_SOURCE] quota refund failed", error.message);
+}
+
 async function logImport(userId: string, status: "success" | "error", errorCode?: string, latencyMs?: number) {
   try {
     await supabase.from("ai_requests").insert({
@@ -70,10 +79,11 @@ class SourceTimeoutError extends Error {
 
 // The caller's signal is the import's one deadline: it covers DNS, every
 // redirect hop and the body read that follows.
-async function fetchWithRedirects(initialUrl: URL, signal: AbortSignal) {
+async function fetchWithRedirects(initialUrl: URL, signal: AbortSignal, onOutboundRequest?: () => void) {
   let currentUrl = initialUrl;
   for (let hop = 0; hop <= MAX_REDIRECTS; hop += 1) {
     await validateResolvedPublicHost(currentUrl, signal);
+    onOutboundRequest?.();
     const response = await untilAborted(fetch(currentUrl.toString(), {
       headers: {
         "Accept": "text/html, text/plain;q=0.9, application/xhtml+xml;q=0.8",
@@ -143,14 +153,22 @@ function stripLeadingUiPhrases(text: string) {
   return result;
 }
 
+const TRUNCATION_NOTE = "\n\n[Truncated: this import kept the first part of the page.]";
+
+/** Hard-cap imported text and say so when the page was longer than the cap. */
+export function limitImportedText(text: string, max = MAX_CONTENT_CHARS): { content: string; truncated: boolean } {
+  if (text.length <= max) return { content: text, truncated: false };
+  const room = Math.max(0, max - TRUNCATION_NOTE.length);
+  return { content: `${text.slice(0, room).trimEnd()}${TRUNCATION_NOTE}`, truncated: true };
+}
+
 function normalizeText(text: string) {
-  return stripLeadingUiPhrases(text)
+  return limitImportedText(stripLeadingUiPhrases(text)
     .replace(/\r/g, "\n")
     .replace(/[ \t]+/g, " ")
     .replace(/\n[ \t]+/g, "\n")
     .replace(/\n{3,}/g, "\n\n")
-    .trim()
-    .slice(0, MAX_CONTENT_CHARS);
+    .trim());
 }
 
 export async function handleRequest(req: Request): Promise<Response> {
@@ -181,6 +199,18 @@ export async function handleRequest(req: Request): Promise<Response> {
   const startedAt = Date.now();
   const deadline = new AbortController();
   const deadlineTimer = setTimeout(() => deadline.abort(new SourceTimeoutError()), FETCH_TIMEOUT_MS);
+  // A reserved slot is given back only when the import fails before any request
+  // leaves for the source URL (for example the host fails the SSRF re-check, or
+  // our own code throws). Once a request has been sent the slot stays spent,
+  // whatever the outcome: refunding upstream errors, unsupported or too-short
+  // pages would let a user make unlimited fetches of any URL.
+  let quotaReserved = false;
+  let outboundRequestSent = false;
+  const releaseQuotaIfNotFetched = async () => {
+    if (!quotaReserved || outboundRequestSent) return;
+    quotaReserved = false;
+    await refundDailyImportQuota(user.id);
+  };
   try {
     let body: { url?: unknown } | null = null;
     try {
@@ -218,8 +248,11 @@ export async function handleRequest(req: Request): Promise<Response> {
         current: quota.currentCount,
       }, 429, corsHeaders);
     }
+    quotaReserved = true;
 
-    const { response, finalUrl } = await fetchWithRedirects(parsedUrl, deadline.signal);
+    const { response, finalUrl } = await fetchWithRedirects(parsedUrl, deadline.signal, () => {
+      outboundRequestSent = true;
+    });
 
     if (!response.ok) {
       await response.body?.cancel().catch(() => undefined);
@@ -236,7 +269,7 @@ export async function handleRequest(req: Request): Promise<Response> {
 
     const raw = await readBoundedText(response, deadline.signal);
     const isHtml = contentType.includes("html") || /<html|<article|<main|<p[\s>]/i.test(raw);
-    const content = normalizeText(isHtml ? stripHtml(raw) : raw);
+    const { content, truncated } = normalizeText(isHtml ? stripHtml(raw) : raw);
 
     if (content.split(/\s+/).filter(Boolean).length < 20) {
       await logImport(user.id, "error", "too_short", Date.now() - startedAt);
@@ -252,6 +285,7 @@ export async function handleRequest(req: Request): Promise<Response> {
     return jsonResponse({
       title,
       content,
+      truncated,
       wordCount: content.split(/\s+/).filter(Boolean).length,
       author,
       publishedDate,
@@ -260,6 +294,7 @@ export async function handleRequest(req: Request): Promise<Response> {
       url: finalUrl.toString(),
     }, 200, corsHeaders);
   } catch (error) {
+    await releaseQuotaIfNotFetched();
     if (deadline.signal.aborted) {
       await logImport(user.id, "error", "timeout", Date.now() - startedAt);
       return jsonResponse({ error: new SourceTimeoutError().message }, 504, corsHeaders);

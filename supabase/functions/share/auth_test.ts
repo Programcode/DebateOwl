@@ -45,3 +45,31 @@ Deno.test("share records the token's user as the creator", async () => {
   });
   if (JSON.stringify(creators) !== JSON.stringify([TEST_USER.id])) throw new Error(`creators: ${JSON.stringify(creators)}`);
 });
+
+Deno.test("share builds the link from an allowed request origin", async () => {
+  const sendFromStaging = (authorization?: string) =>
+    new Request("http://127.0.0.1/functions/v1/share", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Origin: "https://debatelab-staging.vercel.app",
+        ...(authorization === undefined ? {} : { Authorization: authorization }),
+      },
+      body: JSON.stringify({ itemType: "case", itemData: { motion: "This house would test" } }),
+    });
+  await runBearerCases(handleRequest, sendFromStaging, [{
+    label: "staging origin",
+    authorization: `Bearer ${VALID_TOKEN}`,
+    status: 200,
+    body: {
+      shareCode: "abc123",
+      shareUrl: "https://debatelab-staging.vercel.app/share/abc123",
+      expiresAt: "2026-01-01T00:00:00.000Z",
+    },
+    authCalls: 1,
+  }], (url) => {
+    if (url.pathname === "/rest/v1/rpc/consume_daily_quota") return Response.json([{ allowed: true, current_count: 1 }]);
+    if (url.pathname !== "/rest/v1/shared_items") throw new Error(`Unexpected request: ${url}`);
+    return Response.json({ share_code: "abc123", expires_at: "2026-01-01T00:00:00.000Z" }, { status: 201 });
+  });
+});

@@ -104,12 +104,28 @@ export function getTitle(html: string, fallback: string): string {
   return text || fallback;
 }
 
+// Article roots we would rather keep. Everything else that looks like Wikipedia
+// chrome (edit links, the table of contents, navboxes, language lists) is dropped
+// before its text can reach the importer.
+const ARTICLE_ROOT = /(?:^|[\s_-])(?:mw-content-text|mw-parser-output)(?:$|[\s_-])/i;
+const WIKI_CHROME = /(?:^|[\s_-])(?:mw-editsection|mw-editsection-like|toc|navbox|interlanguage|vector-language|mw-portlet-lang|p-lang|sistersitebox|noprint|mw-jump-link|vector-page-toolbar|vector-sticky-header|vector-toc)(?:$|[\s_-])/i;
+
+function idClassOf(tag: string): string {
+  return `${readAttr(tag, "id") || ""} ${readAttr(tag, "class") || ""}`;
+}
+
+function isArticleRoot(name: string, idClass: string): boolean {
+  return name === "main" || name === "article" || ARTICLE_ROOT.test(idClass);
+}
+
 function shouldStrip(name: string, tag: string): boolean {
   if (STRIP_TAGS.has(name)) return true;
+  const idClass = idClassOf(tag);
+  if (isArticleRoot(name, idClass)) return false;
+  if (WIKI_CHROME.test(idClass)) return true;
   if (name !== "div" && name !== "section") return false;
   const role = readAttr(tag, "role")?.toLowerCase();
   if (role && ROLE_STRIP.has(role)) return true;
-  const idClass = `${readAttr(tag, "id") || ""} ${readAttr(tag, "class") || ""}`;
   return CLASS_HINT.test(idClass);
 }
 
@@ -152,10 +168,17 @@ function matchingClose(html: string, lower: string, tag: string, from: number, a
   return end === -1 ? html.length : end + 1;
 }
 
-export function stripHtml(html: string): string {
+type ContentCandidate = { html: string; preferred: boolean };
+
+/**
+ * One forward pass. `cleaned` has chrome elements removed. `candidates` are the
+ * raw insides of article roots, still containing nested chrome: the caller runs
+ * this pass again on each candidate before turning it into text.
+ */
+function collectContent(html: string): { cleaned: string; candidates: ContentCandidate[] } {
   const lower = html.toLowerCase();
   const absentAfter = new Map<string, number>();
-  const candidates: string[] = [];
+  const candidates: ContentCandidate[] = [];
   const nextGt = forwardFinder(html, ">");
   let cleaned = "";
   let i = 0;
@@ -198,16 +221,37 @@ export function stripHtml(html: string): string {
     }
     if (isContentBlock(parsed.name, tag) && candidates.length < 8) {
       const close = matchingClose(html, lower, parsed.name, end + 1, absentAfter);
-      if (close !== -1) candidates.push(html.slice(end + 1, close));
+      if (close !== -1) {
+        const idClass = idClassOf(tag);
+        candidates.push({
+          html: html.slice(end + 1, close),
+          preferred: parsed.name === "main" || parsed.name === "article" || ARTICLE_ROOT.test(idClass),
+        });
+      }
     }
     cleaned += tag;
     i = end + 1;
   }
 
-  const textCandidates = [...candidates, cleaned]
-    .map((candidate) => htmlToText(candidate))
-    .filter((text) => text.split(/\s+/).filter(Boolean).length >= 20);
-  return textCandidates.sort((a, b) => scoreReadableText(b) - scoreReadableText(a))[0] || htmlToText(cleaned);
+  return { cleaned, candidates };
+}
+
+export function stripHtml(html: string): string {
+  const { cleaned, candidates } = collectContent(html);
+  // The first pass records article HTML before nested style, nav and edit
+  // links are removed. Strip that chrome, then prefer the article root.
+  const texts = [
+    ...candidates.map((candidate) => ({
+      text: htmlToText(collectContent(candidate.html).cleaned),
+      preferred: candidate.preferred,
+    })),
+    { text: htmlToText(cleaned), preferred: false },
+  ].filter((item) => item.text.split(/\s+/).filter(Boolean).length >= 20);
+  texts.sort((a, b) => {
+    const bonus = (item: { preferred: boolean }) => item.preferred ? 10_000 : 0;
+    return scoreReadableText(b.text) + bonus(b) - (scoreReadableText(a.text) + bonus(a));
+  });
+  return texts[0]?.text || htmlToText(cleaned);
 }
 
 function htmlToText(html: string): string {
