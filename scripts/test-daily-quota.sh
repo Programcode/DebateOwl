@@ -29,7 +29,7 @@ trap cleanup EXIT
 BEGIN;
 INSERT INTO auth.users (id)
 VALUES ('77777777-7777-4777-8777-777777777777');
-DROP FUNCTION public.consume_daily_quota(uuid, integer, text);
+DROP FUNCTION public.consume_daily_quota(uuid, integer, text, integer, numeric);
 CREATE FUNCTION public.consume_daily_quota(uuid, integer)
 RETURNS TABLE (allowed boolean, current_count integer)
 LANGUAGE sql
