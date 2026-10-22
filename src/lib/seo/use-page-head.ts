@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { PAGE_HEADS, SHELL_HEAD, SITE_ORIGIN, type PrerenderedRoute } from './pages';
+import { BRAND, PAGE_HEADS, SHELL_HEAD, SITE_ORIGIN, type PrerenderedRoute } from './pages';
 
 function setMeta(name: string, content: string) {
   let meta = document.head.querySelector<HTMLMetaElement>(`meta[name="${name}"]`);
@@ -43,4 +43,26 @@ export function usePageHead(route: PrerenderedRoute) {
       document.head.querySelectorAll('script[type="application/ld+json"], meta[property="og:url"]').forEach((node) => node.remove());
     };
   }, [route]);
+}
+
+/** Sign-in, the signed-in app and share links: never indexed (vercel.json sends the same X-Robots-Tag). */
+const PRIVATE_ROUTE = /^\/(login|app|share)(\/|$)/;
+
+/**
+ * Titles each private page "<page> · DebateLab" and marks it noindex while it
+ * is on screen. Every other route keeps the shell's head or sets its own.
+ */
+export function usePrivateRouteHead(pathname: string, label: string) {
+  const isPrivate = PRIVATE_ROUTE.test(pathname);
+  useEffect(() => {
+    if (!isPrivate) return;
+    // "Sign in to DebateLab" already names the brand.
+    document.title = label.includes(BRAND) ? label : `${label} · ${BRAND}`;
+    setMeta('robots', 'noindex, nofollow');
+    setCanonical(undefined);
+    return () => {
+      document.title = SHELL_HEAD.title;
+      setMeta('robots', SHELL_HEAD.robots);
+    };
+  }, [isPrivate, label]);
 }
