@@ -6,6 +6,7 @@ import "./i18n";
 import "@fontsource-variable/inter";
 import "./index.css";
 import { registerServiceWorker } from "./register-service-worker";
+import { installStaleChunkReload } from "./lib/reload-stale-chunk";
 import { initializeObservability } from "./lib/observability";
 import { preloadRoute } from "./lib/route-modules";
 
@@ -23,6 +24,8 @@ function prerenderedRoute(container: HTMLElement): string | undefined {
   const route = container.dataset.prerendered;
   return route === "*" || route === window.location.pathname ? route : undefined;
 }
+
+installStaleChunkReload();
 
 export function mountApp(): void {
   const container = document.getElementById("root")!;
