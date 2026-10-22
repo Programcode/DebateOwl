@@ -2,6 +2,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { Session } from '@supabase/supabase-js';
 import { AUTH_STORAGE_KEY, setActiveAccessToken, supabase } from './client';
+import { allowSessionsAfterSignIn, rejectDeadSession, restoredSessionsBlocked } from './session-expiry';
 import { AuthContext, useAuth, type AuthContextValue } from './auth-context';
 import { useSessionStore } from '@/lib/stores/session-store';
 import { useSettingsStore } from '@/lib/stores/settings-store';
@@ -86,6 +87,12 @@ function withAuthTimeout<T>(operation: Promise<T>, message: string, timeoutMs = 
   ]);
 }
 
+function isDeadUserLookup(error: unknown): boolean {
+  if (!error || typeof error !== 'object' || !('status' in error)) return false;
+  const status = (error as { status?: unknown }).status;
+  return status === 401 || status === 403;
+}
+
 function clearGoogleTokens() {
   sessionStorage.removeItem('google_provider_token');
   localStorage.removeItem('google_provider_token');
@@ -120,6 +127,32 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     let mounted = true;
     let hydratedUserId: string | undefined;
+    const confirmations = new Map<string, Promise<boolean>>();
+    const confirmRestoredSession = (accessToken: string): Promise<boolean> => {
+      const cached = confirmations.get(accessToken);
+      if (cached) return cached;
+      const pending = (async () => {
+        if (restoredSessionsBlocked()) return false;
+        if (typeof supabase.auth.getUser !== 'function') return true;
+        try {
+          const { error } = await supabase.auth.getUser();
+          if (!isDeadUserLookup(error)) return true;
+          await rejectDeadSession(supabase.auth);
+          return false;
+        } catch {
+          // Auth did not answer. Keep the local session; this is an outage, not a dead login.
+          return true;
+        }
+      })();
+      confirmations.set(accessToken, pending);
+      return pending;
+    };
+    const dropRestoredSession = () => {
+      setActiveAccessToken(null);
+      setSession(null);
+      currentUserIdRef.current = undefined;
+      setJamUserId(undefined);
+    };
     const hydrateStores = (userId?: string) => {
       if (!userId || hydratedUserId === userId) return;
       hydratedUserId = userId;
@@ -201,6 +234,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (!mounted) return;
         const { data, error } = getSessionResult;
         if (error) console.warn('[Auth] getSession error:', error.message);
+        if (data.session?.access_token && !(await confirmRestoredSession(data.session.access_token))) {
+          if (!mounted) return;
+          dropRestoredSession();
+          return;
+        }
+        if (!mounted) return;
         setActiveAccessToken(data.session?.access_token ?? null, data.session?.user.id ?? null);
         setSession(data.session ?? null);
         currentUserIdRef.current = data.session?.user?.id;
@@ -224,6 +263,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     const { data: authListener } = supabase.auth.onAuthStateChange((event, newSession) => {
       if (import.meta.env.DEV) console.log('[Auth] Event:', event, 'Provider Token:', newSession?.provider_token ? 'present' : 'null');
+
+      if (newSession && restoredSessionsBlocked()) {
+        dropRestoredSession();
+        setLoading(false);
+        return;
+      }
 
       const prevUserId = currentUserIdRef.current;
       const nextUserId = newSession?.user?.id;
@@ -261,7 +306,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         useDebateContextStore.getState().resetLocalData();
       }
 
-      hydrateStores(nextUserId);
+      if (newSession?.access_token) {
+        void confirmRestoredSession(newSession.access_token).then((alive) => {
+          if (!mounted || !alive || restoredSessionsBlocked()) {
+            if (mounted && !alive) dropRestoredSession();
+            return;
+          }
+          hydrateStores(newSession.user?.id);
+        });
+      } else {
+        hydrateStores(nextUserId);
+      }
       setLoading(false);
     });
 
@@ -296,6 +351,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     user: session?.user ?? null,
     loading,
     signInWithGoogle: async ({ driveAccess = false } = {}) => {
+      allowSessionsAfterSignIn();
       // Always use the SDK-generated URL so PKCE's code_verifier is written
       // to storage before redirect. The previous Promise.race against a 1200ms
       // timeout could fall back to a hand-built URL that skipped PKCE — Google
@@ -317,6 +373,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       await openExternalUrl(data.url);
     },
     signInWithEmailOtp: async (email) => {
+      allowSessionsAfterSignIn();
       const normalizedEmail = email.trim();
       if (!normalizedEmail) throw new Error('Email is required.');
 
@@ -327,6 +384,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (error) throw error;
     },
     verifyEmailOtp: async (email, token) => {
+      allowSessionsAfterSignIn();
       const normalizedEmail = email.trim();
       const normalizedToken = token.trim();
       if (!normalizedEmail) throw new Error('Email is required.');
@@ -340,6 +398,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (error) throw error;
     },
     signInWithDemoCode: async (code) => {
+      allowSessionsAfterSignIn();
       const normalizedCode = code.trim().toUpperCase().replace(/\s+/g, '');
       if (!normalizedCode) throw new Error('Demo code is required.');
 

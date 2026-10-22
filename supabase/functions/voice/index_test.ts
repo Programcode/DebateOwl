@@ -67,6 +67,9 @@ async function withVoice(options: Options, run: (harness: Harness) => Promise<vo
     if (url.pathname.endsWith("/rest/v1/subscriptions")) return Response.json([]);
     if (url.pathname.endsWith("/rest/v1/rate_limits")) {
       if (url.searchParams.get("limit_type") !== "eq.daily_voice_clips") throw new Error(`Wrong limit type: ${url.search}`);
+      if ((url.searchParams.get("order") ?? "").includes("updated_at")) {
+        throw new Error(`rate_limits must not order by updated_at: ${url.search}`);
+      }
       return Response.json(options.rateLimit ?? null);
     }
     if (url.pathname.endsWith("/rest/v1/rpc/consume_daily_quota")) {

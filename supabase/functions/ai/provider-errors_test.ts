@@ -15,7 +15,10 @@ Deno.test("AI JSON and SSE failures never expose provider response bodies", asyn
       if (url.pathname.endsWith("/user_roles")) return Response.json({ role: "user" });
       if (url.pathname.endsWith("/user_settings")) return Response.json({ subscription_tier: "trial", daily_limit_override: 50, trial_ends_at: "2099-01-01", grace_period_ends_at: null });
       if (url.pathname.endsWith("/subscriptions")) return Response.json([]);
-      if (url.pathname.endsWith("/rate_limits")) return Response.json({ limit_value: 50 });
+      if (url.pathname.endsWith("/rate_limits")) {
+        if ((url.searchParams.get("order") ?? "").includes("updated_at")) throw new Error(`rate_limits must not order by updated_at: ${url.search}`);
+        return Response.json({ limit_value: 50 });
+      }
       if (url.pathname.endsWith("/global_prompts")) return Response.json({ prompt_text: null });
       if (/\/consume_(daily|ai)_quota$/.test(url.pathname)) return Response.json([{ allowed: true, current_count: 1 }]);
       if (url.pathname.endsWith("/ai_requests")) return new Response(null, { status: 201 });

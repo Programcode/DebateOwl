@@ -1,6 +1,8 @@
 type StripeCustomerLike = {
   id: string;
-  deleted?: boolean;
+  // The npm Stripe types mark a live customer's `deleted` as `void`, and a
+  // removed customer's as `true`. Accept both.
+  deleted?: boolean | void;
   metadata?: Record<string, string> | null;
 };
 
@@ -35,5 +37,5 @@ export function findCustomerOwnedByUser(
   customers: StripeCustomerLike[],
   userId: string,
 ): string | null {
-  return customers.find((customer) => !customer.deleted && customer.metadata?.user_id === userId)?.id ?? null;
+  return customers.find((customer) => customer.deleted !== true && customer.metadata?.user_id === userId)?.id ?? null;
 }

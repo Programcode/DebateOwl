@@ -1,3 +1,4 @@
+import i18n from '@/i18n';
 import { localizedLimitMessage } from './limit-message';
 
 /**
@@ -123,6 +124,93 @@ export class TimeoutError extends AIError {
   }
 }
 
+const NETWORK_MARKERS = [
+  'failed to fetch',
+  'networkerror when attempting to fetch resource',
+  'load failed',
+  'network error',
+];
+
+function readErrorMessage(error: unknown): string {
+  if (error instanceof Error) return error.message;
+  if (error && typeof error === 'object' && 'message' in error && typeof error.message === 'string') return error.message;
+  return '';
+}
+
+function looksLikeFetchTypeError(error: unknown): boolean {
+  if (!(error instanceof TypeError) && !(error instanceof Error && error.name === 'TypeError')) return false;
+  const message = readErrorMessage(error).toLowerCase();
+  return NETWORK_MARKERS.some((marker) => message.includes(marker));
+}
+
+/** A browser fetch that never reached the server, including the error supabase-js wraps around it. */
+export function isBrowserNetworkFailure(error: unknown): boolean {
+  if (looksLikeFetchTypeError(error)) return true;
+  if (error && typeof error === 'object' && 'context' in error) {
+    const context = (error as { context?: unknown }).context;
+    if (context && context !== error && looksLikeFetchTypeError(context)) return true;
+  }
+  return false;
+}
+
+export function browserIsOffline(): boolean {
+  return typeof navigator !== 'undefined' && navigator.onLine === false;
+}
+
+function safeIdentifier(value: string): string {
+  const cleaned = value.replace(/[^A-Za-z0-9_]/g, '');
+  return cleaned.slice(0, 40) || 'Error';
+}
+
+/** Name and constructor only. The message can carry request text and stays out of telemetry. */
+export function privacySafeCauseType(error: unknown): string {
+  const nested = error && typeof error === 'object' && 'context' in error
+    ? (error as { context?: unknown }).context
+    : undefined;
+  const source = nested instanceof Error ? nested : error;
+  if (!(source instanceof Error)) return 'Unknown:Unknown';
+  return `${safeIdentifier(source.name || 'Error')}:${safeIdentifier(source.constructor?.name || 'Error')}`;
+}
+
+export function offlineAIMessage(): string {
+  return i18n.t('aiErrors.offline');
+}
+
+/** The browser could not reach the AI function. Not an application failure. */
+export class AINetworkError extends AIError {
+  constructor(message: string = offlineAIMessage(), options?: { requestId?: string }) {
+    super(message, { requestId: options?.requestId });
+    this.name = 'AINetworkError';
+  }
+}
+
+/**
+ * The function answered with a 5xx that is not a recognized provider failure.
+ * Kept separate from a plain AIError so a server failure is not grouped with
+ * a request that never left the browser.
+ */
+export class AIServerError extends AIError {
+  constructor(message: string, options?: { statusCode?: number; requestId?: string }) {
+    super(message, { statusCode: options?.statusCode ?? 500, requestId: options?.requestId });
+    this.name = 'AIServerError';
+  }
+}
+
+/** A failure that is not one of the known AI errors. Captured under its own name. */
+export class AIUnknownError extends AIError {
+  readonly causeType: string;
+
+  constructor(message: string, options?: { requestId?: string; causeType?: string }) {
+    super(message, { requestId: options?.requestId });
+    this.name = 'AIUnknownError';
+    this.causeType = options?.causeType ?? 'Error:Error';
+  }
+}
+
+export function isAINetworkError(error: unknown): error is AINetworkError {
+  return error instanceof AINetworkError || (error instanceof Error && error.name === 'AINetworkError');
+}
+
 /**
  * Type guards for error checking.
  */
@@ -154,6 +242,8 @@ export interface AIErrorClassification {
   errorName: string;
   statusCode?: number;
   shouldCaptureException: boolean;
+  /** Privacy-safe origin of an unknown failure: `name:Constructor`. Never the message. */
+  causeType?: string;
 }
 
 /** Classifies AI failures into stable, privacy-safe telemetry fields. */
@@ -171,6 +261,18 @@ export function classifyAIError(error: unknown, userInitiatedAbort = false): AIE
     return { errorName: 'AIResponseError', statusCode, shouldCaptureException: true };
   }
   if (isAIProviderError(error)) return { errorName: 'AIProviderError', statusCode, shouldCaptureException: true };
+  if (error instanceof AIServerError || (error instanceof Error && error.name === 'AIServerError')) {
+    return { errorName: 'AIServerError', statusCode, shouldCaptureException: true };
+  }
+  if (isAINetworkError(error) || isBrowserNetworkFailure(error) || (browserIsOffline() && !(error instanceof AIError))) {
+    return { errorName: 'AINetworkError', shouldCaptureException: false };
+  }
+  if (error instanceof AIUnknownError) {
+    return { errorName: 'AIUnknownError', statusCode, shouldCaptureException: true, causeType: error.causeType };
+  }
+  if (!(error instanceof AIError)) {
+    return { errorName: 'AIUnknownError', shouldCaptureException: true, causeType: privacySafeCauseType(error) };
+  }
 
   return { errorName, statusCode, shouldCaptureException: true };
 }
@@ -271,10 +373,24 @@ export function mapAIError(
     });
   }
 
-  // Default: return generic error with helpful message
+  // No HTTP status: the function was never reached, or the failure is not one we know.
+  // A real 5xx stays AIServerError. Paid, auth, and timeout responses are classified above.
+  if (!statusCode && (isBrowserNetworkFailure(error) || browserIsOffline())) {
+    return new AINetworkError(offlineAIMessage(), { requestId });
+  }
+  if (!statusCode) {
+    return new AIUnknownError(i18n.t('aiErrors.unexpected'), { requestId, causeType: privacySafeCauseType(error) });
+  }
+  if (statusCode >= 500) {
+    return new AIServerError(
+      `AI service error: ${message}. Please try again.`,
+      { statusCode, requestId }
+    );
+  }
+
   return new AIError(
     `AI service error: ${message}. Please try again.`,
-    { statusCode: statusCode || 500, requestId }
+    { statusCode, requestId }
   );
 }
 

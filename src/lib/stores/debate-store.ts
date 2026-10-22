@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 import { supabase } from '@/lib/supabase/client';
+import { restoredSessionsBlocked } from '@/lib/supabase/session-expiry';
 import { currentUserId } from '@/lib/supabase/current-user';
 
 /** A favor, En contra, both sides, or not side-specific. */
@@ -125,6 +126,7 @@ export const useDebateStore = create<DebateState>()(
       dialogMotion: '',
 
       hydrate: async () => {
+        if (restoredSessionsBlocked()) return;
         const epoch = hydrationEpoch;
         const userId = await currentUserId();
         if (epoch !== hydrationEpoch || !userId) return;

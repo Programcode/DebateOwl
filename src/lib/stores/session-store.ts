@@ -8,6 +8,7 @@ import type { BrainstormOutput, BrainstormInput } from '../ai/schemas/brainstorm
 import type { FactoidsOutput, FactoidsInput } from '../ai/schemas/factoids';
 import type { AskOutput } from '../ai/schemas/ask';
 import { supabase } from '@/lib/supabase/client';
+import { restoredSessionsBlocked } from '@/lib/supabase/session-expiry';
 import { currentUserId } from '@/lib/supabase/current-user';
 import i18n from '@/i18n';
 import { activeDebateId, useDebateStore, type DebateSide } from './debate-store';
@@ -1159,6 +1160,7 @@ export const useSessionStore = create<SessionState>()(
       },
 
       hydrateFromServer: async () => {
+        if (restoredSessionsBlocked()) return;
         const results = await Promise.allSettled([
           supabase.from('cases').select('*').order('created_at', { ascending: false }),
           supabase.from('attacks').select('*').order('created_at', { ascending: false }),

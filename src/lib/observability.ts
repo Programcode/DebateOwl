@@ -85,8 +85,11 @@ const STRING_PROPERTY_VALUES: Record<string, ReadonlySet<string>> = {
   action: new Set(["calculate", "draw", "print", "start"]),
   errorName: new Set([
     "AIAuthError",
+    "AINetworkError",
+    "AIUnknownError",
     "AIModelRestrictionError",
     "AIProviderError",
+    "AIServerError",
     "AIRateLimitError",
     "AIResponseError",
     "AISubscriptionError",

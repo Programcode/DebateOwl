@@ -21,8 +21,15 @@ import {
   AIProviderError,
   AIResponseError,
   TimeoutError,
+  AINetworkError,
+  AIServerError,
+  AIUnknownError,
   classifyAIError,
   mapAIError,
+  isBrowserNetworkFailure,
+  browserIsOffline,
+  privacySafeCauseType,
+  offlineAIMessage,
   isProviderErrorMessage,
   isProviderErrorCode,
 } from './errors';
@@ -130,7 +137,11 @@ export function reportAIFailure(report: AIFailureReport): void {
   if (classification.shouldCaptureException) {
     const safeError = new Error(classification.errorName);
     safeError.name = classification.errorName;
-    captureException(safeError, { ...properties, requestId: report.requestId });
+    captureException(safeError, {
+      ...properties,
+      requestId: report.requestId,
+      ...(classification.causeType ? { causeType: classification.causeType } : {}),
+    });
   }
 }
 
@@ -289,8 +300,8 @@ export async function callSupabaseAI<T = unknown>(
         });
       }
 
-      // Generic error from edge function
-      throw new AIError(errorMessage, { statusCode: 500, requestId });
+      // The function reported a failure that is not a limit, auth, or provider error.
+      throw new AIServerError(errorMessage, { statusCode: 500, requestId });
     }
 
     // Validate response has expected output
@@ -378,7 +389,9 @@ export async function callSupabaseAI<T = unknown>(
       throw timeoutError;
     }
 
-    const wrappedError = new AIError(message, { requestId });
+    const wrappedError = isBrowserNetworkFailure(err) || browserIsOffline()
+      ? new AINetworkError(offlineAIMessage(), { requestId })
+      : new AIUnknownError(i18n.t('aiErrors.unexpected'), { requestId, causeType: privacySafeCauseType(err) });
     reportFailure(wrappedError);
     throw wrappedError;
   } finally {

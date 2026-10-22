@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 import { z } from 'zod';
 import { supabase } from '@/lib/supabase/client';
+import { restoredSessionsBlocked } from '@/lib/supabase/session-expiry';
 import { currentUserId } from '@/lib/supabase/current-user';
 import {
   SparringScorecardSchema,
@@ -477,6 +478,7 @@ export const useSparringStore = create<SparringStoreState>()(
       },
 
       hydrateSavedSessions: async () => {
+        if (restoredSessionsBlocked()) return;
         if (get().hydrated) return;
         const epoch = hydrationEpoch;
         const userId = await currentUserId();

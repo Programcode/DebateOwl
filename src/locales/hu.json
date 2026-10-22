@@ -2438,7 +2438,8 @@
     "unavailable": "{{provider}}: átmenetileg nem érhető el. Próbáld újra később.",
     "safety": "{{provider}}: biztonsági okokból elutasította a kérést. Próbáld másképp megfogalmazni.",
     "unexpectedProvider": "Az MI-szolgáltató váratlan hibát adott. Próbáld újra később.",
-    "unexpected": "Váratlan hiba történt"
+    "unexpected": "Váratlan hiba történt",
+    "offline": "Ellenőrizd a kapcsolatot, és próbáld újra."
   },
   "clock": {
     "timeUp": "Lejárt az idő.",

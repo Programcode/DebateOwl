@@ -5,6 +5,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const {
   getSessionMock,
+  getUserMock,
   onAuthStateChangeMock,
   signInWithOAuthMock,
   signInWithOtpMock,
@@ -28,6 +29,7 @@ const {
   openExternalUrlMock,
 } = vi.hoisted(() => {
   const getSessionMock = vi.fn();
+  const getUserMock = vi.fn();
   const onAuthStateChangeMock = vi.fn();
   const signInWithOAuthMock = vi.fn();
   const signInWithOtpMock = vi.fn();
@@ -57,6 +59,7 @@ const {
 
   return {
     getSessionMock,
+    getUserMock,
     onAuthStateChangeMock,
     signInWithOAuthMock,
     signInWithOtpMock,
@@ -88,6 +91,7 @@ vi.mock('@/lib/supabase/client', () => ({
   supabase: {
     auth: {
       getSession: getSessionMock,
+      getUser: getUserMock,
       onAuthStateChange: onAuthStateChangeMock,
       signInWithOAuth: signInWithOAuthMock,
       signInWithOtp: signInWithOtpMock,
@@ -133,6 +137,7 @@ vi.mock('@/lib/stores/sparring-store', () => ({
 }));
 
 import { AuthProvider, useAuth } from '@/lib/supabase/AuthProvider';
+import { resetSessionExpiryCheck } from '@/lib/supabase/session-expiry';
 import { crossfireStorageKey } from '@/lib/crossfire/storage';
 import { useDebateStore } from '@/lib/stores/debate-store';
 
@@ -187,6 +192,10 @@ describe('AuthProvider behavior', () => {
     hydrateSessionStoreMock.mockResolvedValue(undefined);
     hydrateSettingsStoreMock.mockResolvedValue(undefined);
     hydrateSparringStoreMock.mockResolvedValue(undefined);
+    resetSessionExpiryCheck();
+    // No status: a lookup that did not answer is an outage, so the local session stands.
+    // A user id here would also win currentUserId() over the session the test arranged.
+    getUserMock.mockResolvedValue({ data: { user: null }, error: { message: 'unavailable' } });
     getSessionMock.mockResolvedValue({ data: { session: null }, error: null });
     setSessionMock.mockResolvedValue({ data: { session: null }, error: null });
     exchangeCodeForSessionMock.mockResolvedValue({ data: { session: null }, error: null });
@@ -194,6 +203,41 @@ describe('AuthProvider behavior', () => {
     verifyOtpMock.mockResolvedValue({ data: { user: null, session: null }, error: null });
     functionsInvokeMock.mockResolvedValue({ data: { email: 'demo@example.com', tokenHash: 'hash', type: 'magiclink' }, error: null });
     openExternalUrlMock.mockResolvedValue(undefined);
+  });
+
+  it('signs out once and does not load data when the user lookup is refused', async () => {
+    getSessionMock.mockResolvedValue({
+      data: { session: { user: { id: 'user_1' }, access_token: 'token' } },
+      error: null,
+    });
+    getUserMock.mockResolvedValue({ data: { user: null }, error: { status: 403, message: 'Forbidden' } });
+
+    render(
+      <AuthProvider>
+        <AuthConsumer />
+      </AuthProvider>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByTestId('loading')).toHaveTextContent('false');
+    });
+
+    expect(screen.getByTestId('user')).toHaveTextContent('none');
+    expect(signOutMock).toHaveBeenCalledTimes(1);
+    expect(signOutMock).toHaveBeenCalledWith({ scope: 'local' });
+    expect(hydrateSessionStoreMock).not.toHaveBeenCalled();
+    expect(hydrateSettingsStoreMock).not.toHaveBeenCalled();
+    expect(hydrateSparringStoreMock).not.toHaveBeenCalled();
+
+    await act(async () => {
+      callbackRef.current?.('SIGNED_IN', { user: { id: 'user_1' }, access_token: 'token' });
+    });
+
+    expect(signOutMock).toHaveBeenCalledTimes(1);
+    expect(hydrateSessionStoreMock).not.toHaveBeenCalled();
+    expect(hydrateSettingsStoreMock).not.toHaveBeenCalled();
+    expect(hydrateSparringStoreMock).not.toHaveBeenCalled();
+    expect(screen.getByTestId('user')).toHaveTextContent('none');
   });
 
   it('hydrates stores when an initial session exists', async () => {

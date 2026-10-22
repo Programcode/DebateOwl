@@ -72,6 +72,7 @@ Deno.test("streaming Ask forwards the shared prompt and returns provider SSE", a
         }), { headers: { "Content-Type": "application/json" } });
       }
       if (url.pathname.includes("/rest/v1/rate_limits")) {
+        if ((url.searchParams.get("order") ?? "").includes("updated_at")) throw new Error(`rate_limits must not order by updated_at: ${url.search}`);
         return new Response(JSON.stringify({ limit_value: 50 }), {
           headers: { "Content-Type": "application/json" },
         });

@@ -129,10 +129,13 @@ async function fetchSubscription(userId: string): Promise<SubscriptionSnapshot> 
         .select('limit_value')
         .eq('user_id', userId)
         .eq('limit_type', 'daily_requests')
-        .order('updated_at', { ascending: false })
+        .order('created_at', { ascending: false })
         .limit(1)
         .maybeSingle();
-      if (limitError) limitKnown = false;
+      if (limitError) {
+        console.warn('[useSubscription] rate_limits lookup failed:', limitError.message);
+        limitKnown = false;
+      }
       else if (typeof ownLimit?.limit_value === 'number') snapshot.dailyLimit = ownLimit.limit_value;
     }
 

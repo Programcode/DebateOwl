@@ -47,7 +47,7 @@ export async function getGlobalPrompt(feature: string): Promise<string | null> {
     .select("prompt_text")
     .eq("feature", feature)
     .eq("is_active", true)
-    .single();
+    .maybeSingle();
 
   if (featurePrompt?.prompt_text) {
     return featurePrompt.prompt_text;
@@ -59,7 +59,7 @@ export async function getGlobalPrompt(feature: string): Promise<string | null> {
     .select("prompt_text")
     .eq("feature", "all")
     .eq("is_active", true)
-    .single();
+    .maybeSingle();
 
   return allPrompt?.prompt_text || null;
 }

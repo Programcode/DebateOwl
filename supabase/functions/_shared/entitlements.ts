@@ -38,11 +38,13 @@ export interface SubscriptionInfo {
 }
 
 export async function checkUserBanned(userId: string): Promise<boolean> {
+  // maybeSingle: a user with no role row is not banned. .single() asks PostgREST
+  // for exactly one object and logs a 406 when the row is absent.
   const { data } = await supabase
     .from("user_roles")
     .select("role")
     .eq("user_id", userId)
-    .single();
+    .maybeSingle();
   return data?.role === "banned";
 }
 
@@ -124,28 +126,35 @@ export async function getSubscriptionInfo(userId: string): Promise<SubscriptionI
   return expired;
 }
 
+async function readRateLimit(userId: string | null, limitType: string): Promise<number | null> {
+  // Production rate_limits has id, user_id, limit_type, limit_value, created_at.
+  // Ordering by updated_at is a 400, and the client used to ignore that error,
+  // so every per-account and global override was silently dropped.
+  const query = supabase
+    .from("rate_limits")
+    .select("limit_value")
+    .eq("limit_type", limitType);
+  const scoped = userId === null ? query.is("user_id", null) : query.eq("user_id", userId);
+  const { data, error } = await scoped
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (error) {
+    console.warn("[RATE LIMIT] rate_limits lookup failed:", error.message);
+    return null;
+  }
+  return typeof data?.limit_value === "number" ? data.limit_value : null;
+}
+
 export async function getConfiguredDailyLimit(userId: string, fallbackLimit: number, limitType = "daily_requests"): Promise<number> {
-  const { data: userLimit } = await supabase
-    .from("rate_limits")
-    .select("limit_value")
-    .eq("user_id", userId)
-    .eq("limit_type", limitType)
-    .order("updated_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
+  const userLimit = await readRateLimit(userId, limitType);
+  if (userLimit !== null) return userLimit;
 
-  if (typeof userLimit?.limit_value === "number") return userLimit.limit_value;
+  const globalLimit = await readRateLimit(null, limitType);
+  if (globalLimit !== null) return globalLimit;
 
-  const { data: globalLimit } = await supabase
-    .from("rate_limits")
-    .select("limit_value")
-    .is("user_id", null)
-    .eq("limit_type", limitType)
-    .order("updated_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-
-  return typeof globalLimit?.limit_value === "number" ? globalLimit.limit_value : fallbackLimit;
+  return fallbackLimit;
 }
 
 export async function checkRateLimit(userId: string | null, model?: ModelSelection): Promise<RateLimitResult> {

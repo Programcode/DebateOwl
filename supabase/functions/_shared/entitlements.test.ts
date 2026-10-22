@@ -6,7 +6,7 @@ for (const [key, value] of Object.entries({
   SUPABASE_SERVICE_ROLE_KEY: "test-service-role-key",
 })) Deno.env.set(key, value);
 
-const { getSubscriptionInfo, checkRateLimit } = await import("./entitlements.ts");
+const { getSubscriptionInfo, checkRateLimit, getConfiguredDailyLimit, checkUserBanned } = await import("./entitlements.ts");
 const { MODEL_QUOTA_UNITS, WEEKLY_AI_BUDGET_USD } = await import("./usage-limits.ts");
 
 function json(body: unknown, status = 200): Response {
@@ -21,9 +21,10 @@ interface Routes {
   user_settings?: unknown;
   user_roles?: unknown;
   subscriptions?: unknown;
-  rate_limits?: unknown;
+  rate_limits?: unknown | ((url: URL) => Response);
   quota?: unknown;
   onQuota?: (body: Record<string, unknown>) => void;
+  requests?: string[];
 }
 
 async function withSupabase<T>(routes: Routes, run: () => Promise<T>): Promise<T> {
@@ -33,7 +34,15 @@ async function withSupabase<T>(routes: Routes, run: () => Promise<T>): Promise<T
     if (url.pathname.includes("/rest/v1/user_settings")) return json(routes.user_settings ?? null);
     if (url.pathname.includes("/rest/v1/user_roles")) return json(routes.user_roles ?? { role: "user" });
     if (url.pathname.includes("/rest/v1/subscriptions")) return json(routes.subscriptions ?? []);
-    if (url.pathname.includes("/rest/v1/rate_limits")) return json(routes.rate_limits ?? null);
+    if (url.pathname.includes("/rest/v1/rate_limits")) {
+      routes.requests?.push(`${url.pathname}${url.search}`);
+      const order = url.searchParams.get("order") ?? "";
+      if (order.includes("updated_at")) {
+        return json({ message: "column rate_limits.updated_at does not exist", code: "42703" }, 400);
+      }
+      if (typeof routes.rate_limits === "function") return routes.rate_limits(url);
+      return json(routes.rate_limits ?? null);
+    }
     if (url.pathname.includes("/rpc/consume_ai_quota")) {
       routes.onQuota?.(JSON.parse(String(init?.body ?? "{}")));
       return json(routes.quota ?? [{ allowed: true, current_count: 1 }]);
@@ -178,6 +187,68 @@ Deno.test("the weekly budget refusal has its own code", async () => {
     assertEquals(result.code, "weekly_budget_reached", "code");
     assertEquals(result.statusCode, 402, "statusCode");
   });
+});
+
+Deno.test("configured daily limits prefer the account row, then the global row", async () => {
+  const requests: string[] = [];
+  const limits = (url: URL) => {
+    if (url.searchParams.get("user_id") === "eq.user-1") return json({ limit_value: 12 });
+    if (url.searchParams.get("user_id") === "is.null") return json({ limit_value: 7 });
+    return json(null);
+  };
+  await withSupabase({ requests, rate_limits: limits }, async () => {
+    assertEquals(await getConfiguredDailyLimit("user-1", 5), 12, "per-user row");
+  });
+  assertEquals(requests.some((query) => query.includes("updated_at")), false, "never orders by updated_at");
+  assertEquals(requests.some((query) => query.includes("order=created_at.desc")), true, "orders by created_at");
+
+  await withSupabase({
+    rate_limits: (url: URL) => url.searchParams.get("user_id") === "is.null" ? json({ limit_value: 7 }) : json(null),
+  }, async () => {
+    assertEquals(await getConfiguredDailyLimit("user-1", 5), 7, "global row");
+  });
+
+  await withSupabase({ rate_limits: null }, async () => {
+    assertEquals(await getConfiguredDailyLimit("user-1", 5), 5, "fallback");
+  });
+});
+
+Deno.test("a rate_limits lookup error is logged and does not invent a limit", async () => {
+  const warnings: string[] = [];
+  const original = console.warn;
+  console.warn = (...args: unknown[]) => {
+    warnings.push(args.map((part) => typeof part === "string" ? part : JSON.stringify(part)).join(" "));
+  };
+  try {
+    await withSupabase({
+      rate_limits: () => json({ message: "column rate_limits.updated_at does not exist", code: "42703" }, 400),
+    }, async () => {
+      assertEquals(await getConfiguredDailyLimit("user-1", 5), 5, "fallback after the error");
+    });
+  } finally {
+    console.warn = original;
+  }
+  assertEquals(warnings.some((line) => line.includes("[RATE LIMIT]") && line.includes("updated_at")), true, "server warning");
+  assertEquals(warnings.some((line) => line.includes("user-1")), false, "warning omits the user id");
+});
+
+Deno.test("a user with no role row is not banned and the lookup does not demand one object", async () => {
+  let accept = "";
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = (async (input: Request | URL | string, init?: RequestInit) => {
+    const request = input instanceof Request ? input : new Request(String(input), init);
+    if (request.url.includes("/rest/v1/user_roles")) {
+      accept = request.headers.get("Accept") ?? request.headers.get("accept") ?? "";
+      return json([]);
+    }
+    throw new Error(`Unexpected request: ${request.url}`);
+  }) as typeof fetch;
+  try {
+    assertEquals(await checkUserBanned("user-1"), false, "not banned");
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+  assertEquals(accept.includes("vnd.pgrst.object"), false, "Accept must not require a single object");
 });
 
 Deno.test("a model heavier than the whole daily limit is not told to wait", async () => {

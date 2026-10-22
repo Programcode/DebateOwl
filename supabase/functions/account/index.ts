@@ -11,8 +11,8 @@
 // subscriptions are canceled immediately, without a refund. If Stripe cannot be
 // reached, nothing is deleted and the user can try again.
 
-import Stripe from "https://esm.sh/stripe@14.10.0?target=deno";
 import { createAdminClient, HttpError, jsonError, requireUser } from "../_shared/auth.ts";
+import { createEdgeStripe } from "../_shared/stripe.ts";
 import { getCorsHeaders } from "../_shared/cors.ts";
 
 export type AccountUser = { id: string; email?: string | null };
@@ -40,7 +40,7 @@ export function deletionConfirmation(user: AccountUser) {
 const ENDED_SUBSCRIPTION_STATUSES = new Set(["canceled", "incomplete_expired"]);
 
 export type BillingApi = {
-  searchCustomers: (userId: string) => AsyncIterable<{ id: string; deleted?: boolean; metadata?: Record<string, string> | null }>;
+  searchCustomers: (userId: string) => AsyncIterable<{ id: string; deleted?: boolean | void; metadata?: Record<string, string> | null }>;
   listOpenCheckouts: (customerId: string) => AsyncIterable<{ id: string }>;
   expireCheckout: (sessionId: string) => Promise<unknown>;
   listSubscriptions: (customerId: string) => AsyncIterable<{ id: string; status: string }>;
@@ -178,17 +178,7 @@ function liveDeps(): AccountDeps {
       const secretKey = Deno.env.get("STRIPE_SECRET_KEY");
       if (!secretKey) throw billingError;
       // Only the local full-stack gate sets this, to reach its fake Stripe.
-      const apiUrl = Deno.env.get("STRIPE_API_URL");
-      const endpoint = apiUrl ? new URL(apiUrl) : null;
-      const stripe = new Stripe(secretKey, {
-        apiVersion: "2023-10-16",
-        httpClient: Stripe.createFetchHttpClient(),
-        ...(endpoint && {
-          host: endpoint.hostname,
-          port: endpoint.port || (endpoint.protocol === "http:" ? "80" : "443"),
-          protocol: endpoint.protocol.replace(":", "") as "http" | "https",
-        }),
-      });
+      const stripe = createEdgeStripe(secretKey, Deno.env.get("STRIPE_API_URL"));
       try {
         return await stopBillingFor({
           searchCustomers: (user) => stripe.customers.search({ query: `metadata['user_id']:'${user}'`, limit: 100 }),

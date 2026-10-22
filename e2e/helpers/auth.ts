@@ -53,6 +53,17 @@ export async function stubSupabaseSession(page: Page, opts: StubAuthOptions = {}
     body: JSON.stringify({ ...session, expires_at: Math.floor(Date.now() / 1000) + HOUR_SECONDS }),
   }));
 
+  // A restored session is confirmed with GET /user. A 401 or 403 signs the tab
+  // out, so the stub user has to answer that call or the page returns to /login.
+  await page.route((url) => url.pathname.endsWith('/auth/v1/user'), (route) => {
+    if (route.request().method() !== 'GET') return route.fallback();
+    return route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify(session.user),
+    });
+  });
+
   // Credential-free render checks must not call the production announcement
   // function. Tests that exercise announcements register a more specific
   // route after this default.
