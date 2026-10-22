@@ -1738,7 +1738,8 @@
     "toggleFailedDesc": "Visszaállt a korábbi állapotra. Próbáld újra.",
     "sourceSaved": "A(z) {{title}} bekerült a könyvtárba",
     "duplicateUrlDesc": "Ez az oldal már szerepel ennek a vitának a könyvtárában.",
-    "loadingSources": "Források betöltése…"
+    "loadingSources": "Források betöltése…",
+    "folderUpdateFailed": "Nem sikerült módosítani ezt a mappát"
   },
   "autoSavedSources": {
     "undo": "Automatikus források visszavonása",

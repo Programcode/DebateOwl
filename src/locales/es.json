@@ -1738,7 +1738,8 @@
     "toggleFailedDesc": "Volvió a como estaba. Inténtalo de nuevo.",
     "sourceSaved": "{{title}} se guardó en la biblioteca",
     "duplicateUrlDesc": "Esta página ya está en la biblioteca de este debate.",
-    "loadingSources": "Cargando fuentes…"
+    "loadingSources": "Cargando fuentes…",
+    "folderUpdateFailed": "No se pudo cambiar esta carpeta"
   },
   "autoSavedSources": {
     "undo": "Deshacer fuentes autoguardadas",

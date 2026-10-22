@@ -1738,7 +1738,8 @@
     "toggleFailedDesc": "It is back to how it was. Try again.",
     "sourceSaved": "Saved {{title}} to the Library",
     "duplicateUrlDesc": "This page is already in this debate's Library.",
-    "loadingSources": "Loading sources…"
+    "loadingSources": "Loading sources…",
+    "folderUpdateFailed": "Could not change this folder"
   },
   "autoSavedSources": {
     "undo": "Undo auto-saved sources",

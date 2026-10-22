@@ -578,7 +578,17 @@ export default function LibraryPage() {
   };
   const handleSetSelectedFolderActive = async (isActive: boolean) => {
     if (selectedFolder === 'all') return;
-    await setFolderActive(selectedFolder, isActive);
+    try {
+      await setFolderActive(selectedFolder, isActive);
+    } catch (error) {
+      toast({
+        title: t('libraryPage.folderUpdateFailed', 'Could not change this folder'),
+        description: browserIsOffline() || isBrowserNetworkFailure(error)
+          ? t('libraryPage.offlineNotSaved', 'You are offline. Reconnect and try again.')
+          : t('libraryPage.toggleFailedDesc', 'It is back to how it was. Try again.'),
+        variant: 'destructive',
+      });
+    }
   };
   const handleSaveSourceDraft = async () => {
     if (!selectedSource) return;
@@ -587,14 +597,25 @@ export default function LibraryPage() {
     if (errors.title) return draftTitleRef.current?.focus();
     if (errors.content) return draftContentRef.current?.focus();
 
-    await updateSource(selectedSource.id, {
-      title: sourceDraft.title,
-      content: sourceDraft.content,
-      type: sourceDraft.type,
-      origin: sourceDraft.origin,
-      folder: sourceDraft.folder,
-      isActive: sourceDraft.isActive,
-    });
+    try {
+      await updateSource(selectedSource.id, {
+        title: sourceDraft.title,
+        content: sourceDraft.content,
+        type: sourceDraft.type,
+        origin: sourceDraft.origin,
+        folder: sourceDraft.folder,
+        isActive: sourceDraft.isActive,
+      });
+    } catch (error) {
+      toast({
+        title: t('libraryPage.saveFailed', 'Could not save this source.'),
+        description: browserIsOffline() || isBrowserNetworkFailure(error)
+          ? t('libraryPage.offlineNotSaved', 'You are offline. Reconnect and try again.')
+          : undefined,
+        variant: 'destructive',
+      });
+      return;
+    }
     toast({ title: t('libraryPage.sourceUpdated', 'Source updated'), description: t('libraryPage.sourceUpdatedDesc', 'Your source changes were saved.') });
   };
   const handleCopySource = async () => {
