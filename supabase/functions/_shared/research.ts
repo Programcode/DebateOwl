@@ -18,6 +18,7 @@ import {
 export type { ExaResult, RankedSearchResult, ResearchSource };
 
 import type { ReasoningEffort } from "./model-catalog.ts";
+import { normalizeExaUsage, type NormalizedUsage } from "./cost.ts";
 import { MAX_FETCHED_PAGE_CHARS, MAX_RESEARCH_SNIPPETS } from "./prompt-budget.ts";
 
 export type Provider = "openrouter";
@@ -73,6 +74,8 @@ export interface ResearchDeps {
   signal?: AbortSignal;
   /** Called synchronously when the overall research timeout fires. */
   onTimeout?: () => void;
+  /** Receives the charge of every paid Exa call made for the request. */
+  onExaUsage?: ExaUsageSink;
   /** Injected model caller; returns the parsed JSON output of a provider call. */
   callModel: (args: {
     provider: Provider;
@@ -292,8 +295,41 @@ export async function fetchJsonWithTimeout<T = unknown>(
 
 // ============== EXA FUNCTIONS ==============
 
+export type ExaUsageSink = (usage: NormalizedUsage) => void;
+
+// Reports each sent Exa call once. A successful response was billed at the
+// charge it reports; an error status was not. A call that was sent but never
+// settled (cancelled, timed out, unreadable body) may still have been billed,
+// so it makes the request's cost unknown instead of quietly lowering it.
+function exaUsageReporter(endpoint: "search" | "contents", onUsage: ExaUsageSink | undefined) {
+  let sent = false;
+  let reported = false;
+  const report = (usage: NormalizedUsage) => {
+    if (reported || !onUsage) return;
+    reported = true;
+    onUsage(usage);
+  };
+  return {
+    sent: () => { sent = true; },
+    response: (ok: boolean, data: unknown) => {
+      if (!ok) {
+        reported = true;
+        return;
+      }
+      report(normalizeExaUsage(endpoint, data));
+    },
+    unsettled: () => {
+      if (sent) report({ incomplete: true, raw: { provider: "exa", endpoint, unsettled: true } });
+    },
+  };
+}
+
 // exaSearch: web search using Exa's neural search (type "auto" = balanced relevance & speed)
-export async function exaSearch(search: string | ExaSearchRequest, signal?: AbortSignal): Promise<ExaResult[]> {
+export async function exaSearch(
+  search: string | ExaSearchRequest,
+  signal?: AbortSignal,
+  onUsage?: ExaUsageSink,
+): Promise<ExaResult[]> {
   const request = typeof search === "string" ? { query: search } : search;
   const query = request.query;
   const apiKey = Deno.env.get("EXA_API_KEY");
@@ -301,8 +337,10 @@ export async function exaSearch(search: string | ExaSearchRequest, signal?: Abor
     console.warn("[EXA] EXA_API_KEY not configured");
     return [];
   }
+  const usage = exaUsageReporter("search", onUsage);
   try {
     throwIfAborted(signal);
+    usage.sent();
     const { response, data } = await fetchJsonWithTimeout<{ results?: unknown }>("https://api.exa.ai/search", {
       method: "POST",
       headers: { "Content-Type": "application/json", "x-api-key": apiKey },
@@ -313,6 +351,7 @@ export async function exaSearch(search: string | ExaSearchRequest, signal?: Abor
         contents: { text: { maxCharacters: 10000 } },
       }),
     }, 30000, signal);
+    usage.response(response.ok, data);
     throwIfAborted(signal);
     if (!response.ok) {
       console.warn(`[EXA] Search failed (${response.status}) queryLength=${query.length}`);
@@ -326,6 +365,7 @@ export async function exaSearch(search: string | ExaSearchRequest, signal?: Abor
       publishedDate: r.publishedDate,
     }));
   } catch (err) {
+    usage.unsettled();
     if (signal?.aborted) throw err;
     console.warn(`[EXA] Search failed queryLength=${query.length}`);
     return [];
@@ -333,19 +373,27 @@ export async function exaSearch(search: string | ExaSearchRequest, signal?: Abor
 }
 
 // exaGetContents: extract a page's text, up to maxChars, using Exa's /contents endpoint
-export async function exaGetContents(url: string, signal?: AbortSignal, maxChars = MAX_FETCHED_PAGE_CHARS): Promise<string> {
+export async function exaGetContents(
+  url: string,
+  signal?: AbortSignal,
+  onUsage?: ExaUsageSink,
+  maxChars = MAX_FETCHED_PAGE_CHARS,
+): Promise<string> {
   const apiKey = Deno.env.get("EXA_API_KEY");
   if (!apiKey) {
     console.warn("[EXA] EXA_API_KEY not configured");
     return "";
   }
+  const usage = exaUsageReporter("contents", onUsage);
   try {
     throwIfAborted(signal);
+    usage.sent();
     const { response, data } = await fetchJsonWithTimeout<{ results?: unknown }>("https://api.exa.ai/contents", {
       method: "POST",
       headers: { "Content-Type": "application/json", "x-api-key": apiKey },
       body: JSON.stringify({ urls: [url], text: { maxCharacters: maxChars } }),
     }, 30000, signal);
+    usage.response(response.ok, data);
     throwIfAborted(signal);
     if (!response.ok) {
       console.warn(`[EXA] Contents fetch failed (${response.status}) urlLength=${url.length}`);
@@ -354,6 +402,7 @@ export async function exaGetContents(url: string, signal?: AbortSignal, maxChars
     if (!data?.results || !Array.isArray(data.results) || data.results.length === 0) return "";
     return (data.results[0]?.text || "").slice(0, maxChars);
   } catch (err) {
+    usage.unsettled();
     if (signal?.aborted) throw err;
     console.warn(`[EXA] Contents fetch failed urlLength=${url.length}`);
     return "";
@@ -484,14 +533,14 @@ async function deepResearchInner(
   );
 
   const searchWithFallback = async (request: ExaSearchRequest) => {
-    const filtered = await exaSearch(request, signal);
+    const filtered = await exaSearch(request, signal, deps.onExaUsage);
     if (filtered.length > 0 || (!request.includeDomains && !request.category)) return filtered;
     const {
       includeDomains: _includeDomains,
       category: _category,
       ...fallbackRequest
     } = request;
-    return exaSearch(fallbackRequest, signal);
+    return exaSearch(fallbackRequest, signal, deps.onExaUsage);
   };
 
   const seedResults = await Promise.all(seedRequests.map(async (request) => {
@@ -539,7 +588,7 @@ async function deepResearchInner(
 
   const readPromises = urlsToRead.map(async (result) => {
     const url = result.url || "";
-    const content = await exaGetContents(url, signal);
+    const content = await exaGetContents(url, signal, deps.onExaUsage);
     throwIfAborted(signal);
     if (content) {
       context.readContent.push({ url, title: result.title || sourceTitleFromUrl(url), content, result });

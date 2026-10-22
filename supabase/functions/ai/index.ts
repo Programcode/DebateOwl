@@ -627,8 +627,9 @@ export async function handleRequest(req: Request): Promise<Response> {
   });
 
   const startTime = Date.now();
-  // Usage from research sub-calls (search decision, follow-up queries) is
-  // collected here so the parent request's row accounts for every token.
+  // Usage from research sub-calls (search decision, follow-up queries, Exa
+  // searches and page reads) is collected here so the parent request's row
+  // accounts for every token and every paid call.
   const researchUsage: NormalizedUsage[] = [];
   let researchAccountingIncomplete = false;
   // Research sub-calls are small background steps, so they use the fixed
@@ -640,6 +641,9 @@ export async function handleRequest(req: Request): Promise<Response> {
     signal: workSignal,
     onTimeout: () => {
       researchAccountingIncomplete = true;
+    },
+    onExaUsage: (usage) => {
+      researchUsage.push(usage);
     },
     callModel: async (args) => {
       try {
