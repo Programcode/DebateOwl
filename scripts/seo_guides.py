@@ -8,6 +8,7 @@ paragraph string or a dict with one of: h3, steps, list, example.
 
 GUIDES = {
     "ai-debate-practice": {
+        "modified": "2026-10-21",
         "features": [
             ("Practice against AI opponents", "Run a full Sparring round in School 4-6-6-3, Lincoln-Douglas or Public Forum, type or speak each speech, and finish with a judged verdict."),
             ("Turn feedback into drills", "Take the weakest point from a verdict or a Crossfire debrief, rebuild it with Attack or Ask, and run that speech again."),
@@ -17,7 +18,7 @@ GUIDES = {
             ("What a useful AI practice session looks like", [
                 "Most debaters improve through repetitions with feedback: give a speech, find out what failed, fix one thing, give it again. AI practice is valuable when it shortens that loop, not when it hands you a finished speech to read.",
                 "A chat window can produce arguments on request, but it does not hold a round together. It forgets which side you are on, does not time you, and rarely tells you which of your points the judge would have dropped. Practice needs a motion, a side, a format with real speech times, an opponent that responds to what you actually said, and a verdict that names the reason you lost or won.",
-                "{product} is built around that loop. You start a Current Debate for one motion, and every case, source, round and debrief you create stays filed under it. That means the AI opponent in your third practice round can see the same Library sources you used to write your case, and your History shows how the debate developed across sessions.",
+                "{product} is built around that loop. You start a Current Debate for one motion, and every case, source, round and debrief you create stays filed under it. That means the AI opponent in your third practice round argues the same motion you wrote your case for, and your History shows how the debate developed across sessions.",
             ]),
             ("A 45-minute practice session, step by step", [
                 "This plan fits a weeknight. It assumes you have a motion but no case yet.",
@@ -47,14 +48,14 @@ GUIDES = {
                 {"h3": "World Schools (WSDC)"},
                 "WSDC rounds reward a consistent team line, so practise as a team even when you use AI. Agree the line in one sentence, then have each speaker run their own section against the AI and check that the line survives. Points of Information matter in every substantive speech: use Crossfire with the AI asking the questions to rehearse taking a POI, answering in under fifteen seconds, and returning to your structure. Sparring does not run a WSDC round, so time the eight-minute substantives and four-minute reply yourself.",
                 {"h3": "British Parliamentary (BP)"},
-                "In BP, two teams on each bench compete with each other as well as with the other side. Practise both halves. For opening, generate a case with the format set to British Parliamentary and drill a clear definition and model in the first two minutes. For closing, take an opening case you have already generated and practise finding an extension it does not contain, then deliver it in seven minutes without repeating opening material.",
+                "In BP, two teams on each bench compete with each other as well as with the other side. Practise both halves. For opening, generate a case with the Current Debate's format set to British Parliamentary and drill a clear definition and model in the first two minutes. For closing, take an opening case you have already generated and practise finding an extension it does not contain, then deliver it in seven minutes without repeating opening material.",
                 {"h3": "Public Forum (PF)"},
                 "Sparring runs Public Forum with four-minute constructives and rebuttals, three-minute summaries and two-minute final focuses. Use the round to practise the hardest skill in PF: keeping summary and final focus consistent. Before each summary, write the two issues you will collapse on, and check after the round whether your final focus extended exactly those issues and nothing new.",
                 {"h3": "Lincoln-Douglas (LD)"},
                 "The Lincoln-Douglas round follows the standard times: six-minute affirmative constructive, seven-minute negative constructive, four-minute first affirmative rebuttal, six-minute negative rebuttal and three-minute second affirmative rebuttal. The 1AR is where most affirmatives lose. Run it repeatedly against the same negative constructive and practise grouping responses and cross-applying your framework, so four minutes covers seven.",
             ]),
             ("How to tell whether practice is working", [
-                "Keep a short log for each session in the debate's notes or on paper. Track the same four things every time:",
+                "Keep a short log for each session on paper or in a document. Track the same four things every time:",
                 {"list": [
                     "Arguments you dropped: anything the opponent said that you never answered. This number should fall first.",
                     "Time use: whether you finished each speech within ten seconds of the limit without rushing the last point.",
@@ -76,6 +77,7 @@ GUIDES = {
         ],
     },
     "ai-debate-coach": {
+        "modified": "2026-10-21",
         "features": [
             ("Strategy help", "Ask which clash decides the round, what your burden is and where to spend your speaking time, with answers that use your debate's motion and sources."),
             ("Speech structure", "Get an outline for a constructive, rebuttal, summary or reply speech: the order of points and how long to give each one."),
@@ -124,7 +126,7 @@ GUIDES = {
                 "LD coaching is often framework coaching. Ask the coach whether your criterion actually measures your value, how your contentions link back to the criterion, and when it is safer to concede the opponent's framework and show that you win under it anyway.",
             ]),
             ("Getting answers with sources", [
-                "When a coaching answer depends on facts, turn on citation mode in Ask. The coach then answers with sources you can open. Treat those as leads: read the original, confirm it says what the answer claims, and only then use it in a speech. Adding your own trusted articles to the Library has the same effect from the other direction, because active sources are included in every answer for that debate.",
+                "When a coaching answer depends on facts, turn on Citations in Ask. The coach then answers with sources you can open. Treat those as leads: read the original, confirm it says what the answer claims, and only then use it in a speech. Adding your own trusted articles to the Library has the same effect from the other direction, because active sources that fit the question are used in its answers for that debate.",
             ]),
             ("What an AI coach cannot do", [
                 "It has not watched you speak, it does not know the judges at your tournament, and it cannot tell you how your partner works under pressure. Bring the conclusions from AI coaching sessions to your human coach or team, and let them correct the advice that does not fit the people in the room.",
@@ -133,16 +135,17 @@ GUIDES = {
         "faqs": [
             ("What can I ask the AI debate coach?", "Anything you would ask a coach between rounds: burdens, clash, weighing, speech structure, how to answer a specific argument, or why a practice speech did not land. Specific questions with format, side and speaker role get the best answers."),
             ("Does the coach know my case?", "It knows your Current Debate: the motion, and the Library sources you have marked active. Paste a speech or a case section into the question when you want feedback on that exact text."),
-            ("Can the AI coach cite sources?", "Yes. Turn on citation mode in Ask and the answer includes sources you can open. Check each one against the original before using it in a round."),
+            ("Can the AI coach cite sources?", "Yes. Turn on Citations in Ask and the answer includes sources you can open. Check each one against the original before using it in a round."),
             ("Will the coach write my speeches for me?", "It can draft an outline or a passage, but you will speak better from structure you understand. Use it to find what is missing, then write the speech in your own words."),
-            ("How is this different from a general AI chatbot?", "The coach works inside one debate at a time, so it keeps your motion, side and sources in context, and it is set up for debate questions rather than essays."),
+            ("How is this different from a general AI chatbot?", "The coach works inside one debate at a time, so it keeps your motion, debate settings and sources in context, and it is set up for debate questions rather than essays."),
         ],
     },
     "ai-debate-case-generator": {
+        "modified": "2026-10-21",
         "features": [
             ("Structured case drafts", "Each draft has a thesis, a framework, contentions with warrants and impacts, the case the other side is likely to run, and counters to it."),
-            ("Evidence leads", "Turn on web research to get sources alongside the draft, then check each one against the original before it goes on a card."),
-            ("Format templates", "Set the format and your role so the draft fits British Parliamentary, Policy, a classroom debate or a custom structure."),
+            ("Evidence leads", "Every draft is researched on the web and lists the sources it found. Check each one against the original before it goes on a card."),
+            ("Roles and length", "Pick your side and speaker role, then set the case length, the audience level and the tone of the draft."),
         ],
         "sections": [
             ("What the case generator produces", [
@@ -160,8 +163,8 @@ GUIDES = {
                 {"steps": [
                     "Start a Current Debate with the exact motion wording. Small wording changes, such as should against would, change the burden.",
                     "Add the sources you already trust to the Library. Active sources are used when the case is generated, so the draft builds on your research instead of ignoring it.",
-                    "Set the format and your role, and add instructions if you need a particular angle, for example a principled argument or an economic one.",
-                    "Turn on web research if you want evidence leads, and generate the case.",
+                    "Choose your side and speaker role: introductor, R1, R2 or conclusor. Under More options, set the length (two, three or four contentions), the audience level and the tone. If you need a particular angle, for example a principled argument or an economic one, put it in the Current Debate's Instructions.",
+                    "Generate the case. Generate researches the motion on the web every time, lists the sources it found under the draft, and saves the relevant ones to the debate's Library.",
                     "Read the predicted opponent case first and decide which of your contentions actually answers it. Cut contentions that do not clash with anything.",
                     "Regenerate any section that is vague, then verify every evidence lead against its original source.",
                     "Rewrite the final case in your own words and time a full reading of it before you call it ready.",
@@ -193,13 +196,13 @@ GUIDES = {
             ]),
             ("Adapting a generated case to your format", [
                 {"h3": "World Schools (WSDC)"},
-                "A WSDC case is split between the first and second speakers, with a team line both can repeat. Use the thesis as the team line, give the first speaker the framework and the first contention, and keep the strongest contention for the second speaker so the case builds rather than front-loads. Generate with the custom format and say this in the instructions.",
+                "A WSDC case is split between the first and second speakers, with a team line both can repeat. Use the thesis as the team line, give the first speaker the framework and the first contention, and keep the strongest contention for the second speaker so the case builds rather than front-loads. Leave the Current Debate's format on Custom and describe this split in its Instructions.",
                 {"h3": "British Parliamentary (BP)"},
-                "Set the format to British Parliamentary and choose your role. Opening government needs a clear definition and mechanism in the draft. Closing teams should treat the generated case as material the opening half will probably use, and look in the predicted opponent case for an extension nobody else in the room is likely to run.",
+                "Set the Current Debate's format to British Parliamentary and name your team position in its Instructions; Generate's own role options follow the School 4-6-6-3 speakers. Opening government needs a clear definition and mechanism in the draft. Closing teams should treat the generated case as material the opening half will probably use, and look in the predicted opponent case for an extension nobody else in the room is likely to run.",
                 {"h3": "Public Forum (PF)"},
                 "A PF constructive is four minutes, which usually means two contentions with evidence, not four. Since PF teams often find out their side shortly before the round, generate both sides of the resolution in the same debate and prepare the counters for each.",
                 {"h3": "Lincoln-Douglas (LD)"},
-                "In LD, the framework section becomes your value and criterion. Check that every contention explicitly links back to the criterion; if one does not, regenerate it with an instruction to tie it to the standard you chose. Prepare a short defence of the criterion itself, because the negative will often attack it first.",
+                "In LD, the framework section becomes your value and criterion. Check that every contention explicitly links back to the criterion; if one does not, add your criterion to the Current Debate's Instructions and regenerate the contentions. Prepare a short defence of the criterion itself, because the negative will often attack it first.",
             ]),
             ("Mistakes to avoid with generated cases", [
                 {"list": [
@@ -212,15 +215,15 @@ GUIDES = {
         ],
         "faqs": [
             ("Does the case generator write a complete case?", "It writes a complete draft: thesis, framework, contentions with warrants and impacts, the likely opposing case and counters. Treat it as a structure to cut, verify and rewrite in your own words."),
-            ("Are the generated citations reliable?", "They are research leads. With web research on, the draft includes sources, but you should open every one, confirm the exact claim and record the full citation before using it."),
-            ("Which debate formats does the generator support?", "You can set the format to British Parliamentary, Policy, Classroom or Custom and choose your role. For WSDC, Public Forum and Lincoln-Douglas, use Custom and describe the structure in the instructions."),
+            ("Are the generated citations reliable?", "They are research leads. Every draft is researched on the web and lists the sources it found, and a contention that still needs evidence is marked Needs Source. Open every source, confirm the exact claim and record the full citation before using it."),
+            ("Which debate formats does the generator support?", "Set the Current Debate's format to British Parliamentary, Policy, Classroom or Custom, and Generate reads it along with the debate's Instructions. Generate's own speaker roles (introductor, R1, R2 and conclusor) follow the School 4-6-6-3 format. For WSDC, Public Forum and Lincoln-Douglas, use Custom and describe the structure in the Instructions."),
             ("Can I change one part of a case without starting over?", "Yes. Regenerate a single section and the rest of the case stays on screen unchanged."),
             ("Can I export a generated case?", "Yes. Cases export to PDF and DOCX, and cases created in a Current Debate are saved to it automatically."),
         ],
     },
     "best-ai-debate-tools": {
         "software": True,
-        "modified": "2026-10-20",
+        "modified": "2026-10-21",
         "features": [
             ("Feature comparison", "What each kind of tool does well: general chatbots, research assistants, dedicated debate platforms, and timers or flowing tools."),
             ("Format coverage", "Which formats a tool actually models, from Public Forum and Lincoln-Douglas to WSDC and British Parliamentary, and where you still prep by hand."),
@@ -283,7 +286,7 @@ GUIDES = {
                 "LD needs tools that handle value and criterion, not just policy arguments. Test whether a tool can defend a framework and link contentions to it, and whether it can practise the time-pressured 1AR.",
             ]),
             ("Where {product} fits", [
-                "{product} is a dedicated debate platform that keeps every case, source, round and debrief inside one Current Debate. It covers case generation with a predicted opponent case, Library sources that ground every answer, Attack for finding weak links, Brainstorm, Factoids for checking claims, an Ask coaching chat with optional citations, Crossfire and full Sparring rounds with a verdict, a speech timer and an argument flowchart.",
+                "{product} is a dedicated debate platform that keeps every case, source, round and debrief inside one Current Debate. It covers case generation with a predicted opponent case, Library sources that ground its answers, Attack for finding weak links, Brainstorm, Factoids for checking claims, an Ask coaching chat with optional citations, Crossfire and full Sparring rounds with a verdict, a speech timer and an argument flowchart.",
                 "Its limits are worth stating plainly. Sparring currently runs School 4-6-6-3, Lincoln-Douglas and Public Forum rounds, so WSDC and BP practice uses the prep and coaching tools rather than a full simulated round. Like every AI tool, its evidence leads need checking against the original source. Run the one-hour test above and decide on your own results.",
             ]),
         ],
@@ -297,9 +300,10 @@ GUIDES = {
         ],
     },
     "debate-rebuttal-practice": {
+        "modified": "2026-10-21",
         "features": [
             ("Find weak warrants", "Paste an argument into Attack and get the links that fail: missing warrants, overclaimed impacts and assumptions the other side never proved."),
-            ("Build targeted blocks", "Turn each weakness into a short block with a tag line, the response and why it matters, kept in your Current Debate."),
+            ("Build targeted blocks", "Each weakness comes with why it is weak, how the other side will attack it and a stronger version. Turn that into a short block; the analysis stays in your Current Debate."),
             ("Practice weighing and collapse", "Deliver rebuttals in a Sparring round and see in the verdict whether your weighing changed the outcome."),
         ],
         "sections": [
@@ -323,7 +327,7 @@ GUIDES = {
                     "Ask the coach for the best answer to your block, and add a one-sentence reply to the bottom.",
                     "Repeat with the next most likely argument. Three tested blocks per session is a good pace.",
                 ]},
-                "File each block in the same Current Debate so your rebuttals sit next to the case they answer.",
+                "Your Attack analyses stay in the same Current Debate, so your rebuttals sit next to the case they answer.",
             ]),
             ("Worked example: rebutting one argument", [
                 {"example": {"title": "Motion: This house would ban zoos", "rows": [
@@ -770,6 +774,7 @@ GUIDES = {
     },
     "debatelab-vs-chatgpt": {
         "software": True,
+        "modified": "2026-10-21",
         "features": [
             ("A general assistant", "ChatGPT can brainstorm, explain, draft and revise on any subject, including debate."),
             ("A debate workspace", "{product} organises prep around one motion at a time, with structured cases, an AI opponent, a timer and judged practice rounds."),
@@ -791,13 +796,13 @@ GUIDES = {
             ]),
             ("What a debate workspace adds", [
                 {"h3": "One motion, one place"},
-                "In {product}, everything belongs to a Current Debate: the motion, the Library sources you have added, generated cases, Attack analyses, practice rounds and debriefs. Each tool reads the same context, so you never paste the motion and your research into a new conversation.",
+                "In {product}, everything belongs to a Current Debate: the motion, the Library sources you have added, generated cases, Attack analyses, practice rounds and debriefs. The prep tools read that context, so you never paste the motion and your research into a new conversation.",
                 {"h3": "Structured output"},
                 "Generated cases always have the same parts: thesis, framework, contentions with warrants and impacts, the case the other side is likely to run, and counters to it. Attack always returns ranked weaknesses that quote the attacked words, with a response to say in round, cross-examination questions and a weighing analysis. Fixed structure makes the output easier to check and to turn into speeches.",
                 {"h3": "Timed practice rounds"},
                 "Sparring runs full rounds against an AI opponent in School 4-6-6-3, Lincoln-Douglas and Public Forum, with each speech timed, and ends with a verdict that names the reason for the decision. Crossfire drills cross-examination in either direction. A speech timer covers Standard, Lincoln-Douglas, Public Forum and Policy speech orders.",
                 {"h3": "Sources you control"},
-                "Sources you add to the Library and mark active are used across the tools for that debate. Ask can answer with citations, and Factoids researches a single claim. Evidence still needs checking against the original, as with any AI tool.",
+                "Sources you add to the Library and mark active are given to the prep tools for that debate, which use the ones that fit each request. Ask can answer with citations, and Factoids researches a single claim. Evidence still needs checking against the original, as with any AI tool.",
             ]),
             ("Worked example: the same task in both tools", [
                 {"example": {"title": "Task: prepare to answer the opposition on This house would make voting compulsory", "rows": [
@@ -829,7 +834,7 @@ GUIDES = {
         ],
     },
     "online-debate-timer": {
-        "modified": "2026-10-20",
+        "modified": "2026-10-21",
         "features": [
             ("Format presets", "Speech orders and times for Standard 4-6-6-3, Lincoln-Douglas, Public Forum and Policy, so each speech starts with the right clock."),
             ("Signals you can hear", "One beep at one minute remaining and two beeps at time up, so you can practise without watching the screen."),
@@ -874,7 +879,7 @@ GUIDES = {
         ],
     },
     "argument-flowchart": {
-        "modified": "2026-10-20",
+        "modified": "2026-10-21",
         "features": [
             ("Visual clash maps", "Put the thesis, each argument, the attacks on it and your rebuttals on one canvas, so you can see where the round will be decided."),
             ("Link and strength tracking", "Mark each argument strong, moderate or weak, and connect nodes with support, attack and rebuttal links."),
@@ -886,7 +891,7 @@ GUIDES = {
                 "A map also shows what a written case hides. Two contentions that rely on the same assumption look independent on paper; on a map they share a node, and one good response takes out both.",
             ]),
             ("How the {product} flowchart works", [
-                "A new flowchart starts with a thesis and three example arguments you can edit or delete. Each node has a label, a description and a type:",
+                "A new flowchart starts with a thesis, three example arguments, an opponent attack and a rebuttal, all of which you can edit or delete. Each node has a label, a description and a type:",
                 {"list": [
                     "Thesis: the position your side has to prove.",
                     "Argument: a contention, rated strong, moderate or weak.",
@@ -902,7 +907,7 @@ GUIDES = {
                     "Add each contention as an argument node and link it to the thesis. Rate it honestly; a weak node is one to fix or cut.",
                     "For each contention, add the strongest attack you expect. If you have generated a case, the predicted opponent case is the place to find them.",
                     "Add your rebuttal to each attack. Where you cannot write one, the map has found your gap.",
-                    "Mark weighing at each clash: a note on why your side of that clash matters more.",
+                    "Mark weighing at each clash in a node's description: why your side of that clash matters more.",
                 ]},
                 "Build the opposing case the same way on a second chart. Most rounds turn on two or three clashes, and the two maps side by side show which ones.",
             ]),
@@ -1145,7 +1150,7 @@ GUIDES = {
         ],
     },
     "debate-evidence-finder": {
-        "modified": "2026-10-20",
+        "modified": "2026-10-21",
         "features": [
             ("Evidence leads", "Research directions for a claim: the kinds of sources that could support it and searches you can run to confirm it."),
             ("Citation checks", "A checklist for each source before it goes on a card: author, date, method and whether the quote says what you claim."),
@@ -1164,7 +1169,7 @@ GUIDES = {
                 {"steps": [
                     "Give Factoids a single statement from your case. It researches that statement and returns supporting factoids with citations, context and suggestions for how to use them.",
                     "Generate a case. {product} researches the motion before it writes, so the draft comes with sources for its claims.",
-                    "Save the sources you trust to the Library. Active Library sources ground the other tools for that debate, so later answers draw on material you have checked.",
+                    "Save the sources you trust to the Library. Active Library sources that fit a request are used by the other prep tools for that debate, so later answers draw on material you have checked.",
                     "Ask for counter-evidence too. Attack runs research on an argument and can point to sources that cut against it, which tells you what the other side may read.",
                 ]},
             ]),
