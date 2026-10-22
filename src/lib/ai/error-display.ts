@@ -1,5 +1,6 @@
 import i18n from '@/i18n';
-import { AIProviderError } from './client';
+import { AIProviderError, isAISubscriptionError } from './client';
+import { subscriptionLimitMessage } from './limit-message';
 
 const PROVIDER_LABELS: Record<string, string> = {
   openai: 'OpenAI',
@@ -16,7 +17,12 @@ function providerLabel(provider?: string, message = ''): string {
   return i18n.t('aiErrors.genericProvider', 'AI provider');
 }
 
+/** The limit dialog's explanation, also used where a page shows the error inline. */
+export { subscriptionLimitMessage };
+
 export function getUserFacingAIError(error: unknown): string {
+  if (isAISubscriptionError(error)) return subscriptionLimitMessage(error);
+
   if (error instanceof AIProviderError || (error instanceof Error && error.name === 'AIProviderError')) {
     const provider = providerLabel((error as AIProviderError).provider, error.message);
     const raw = error.message;

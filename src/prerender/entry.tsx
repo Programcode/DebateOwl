@@ -11,6 +11,7 @@ import LandingPage from '@/pages/LandingPage';
 import TermsPage from '@/pages/TermsPage';
 import PrivacyPage from '@/pages/PrivacyPage';
 import NotFound from '@/pages/NotFound';
+import { TOOL_PAGES } from './tool-pages';
 
 const unavailable = () => Promise.reject(new Error('Not available while prerendering'));
 
@@ -193,6 +194,14 @@ export async function prerenderPages({ landingModified }: { landingModified?: st
       body: render('/privacy', PrivacyPage),
       structuredData: legalStructuredData('/privacy', 'privacyPage.date'),
     },
+    // The tool pages render their own JSON-LD in the body.
+    ...TOOL_PAGES.map(({ route, module, Page }) => ({
+      route,
+      file: `${route.slice(1)}/index.html`,
+      module,
+      head: PAGE_HEADS[route],
+      body: render(route, Page),
+    })),
     {
       route: '*',
       file: '404.html',

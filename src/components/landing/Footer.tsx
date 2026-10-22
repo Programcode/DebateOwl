@@ -23,6 +23,9 @@ const Footer = () => {
                     </div>
 
                     <nav aria-label={t('footer.navLabel')} className="flex flex-wrap items-center justify-center gap-4 text-sm">
+                        <Link to="/tools" className="inline-flex items-center text-muted-foreground hover:text-foreground transition-colors underline-offset-4 hover:underline pointer-coarse:min-h-11">
+                            {t('tools:footer.freeTools')}
+                        </Link>
                         {/* Static guide pages, not app routes: plain links load them from the server. */}
                         <a href="/debatelab-pricing" className="inline-flex items-center text-muted-foreground hover:text-foreground transition-colors underline-offset-4 hover:underline pointer-coarse:min-h-11">
                             {t('footer.pricingGuide')}

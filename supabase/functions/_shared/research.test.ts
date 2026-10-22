@@ -12,6 +12,8 @@ import {
   MAX_PROVIDER_RESPONSE_BYTES,
   type ResearchContext,
 } from "./research.ts";
+import type { NormalizedUsage } from "./cost.ts";
+import { MAX_FETCHED_PAGE_CHARS } from "./prompt-budget.ts";
 
 function ctxWith(overrides: Partial<ResearchContext>): ResearchContext {
   return { ...emptyResearchContext(), ...overrides };
@@ -19,9 +21,30 @@ function ctxWith(overrides: Partial<ResearchContext>): ResearchContext {
 
 Deno.test("empty research does not render a research context block", () => {
   const rendered = buildResearchContext(ctxWith({
-    searches: [{ query: "empty search", results: "" }],
+    searches: [{ query: "empty search", results: [] }],
   }));
   if (rendered !== "") throw new Error(`empty research rendered unexpected context: ${rendered}`);
+});
+
+Deno.test("research context lists each source once and caps page text", () => {
+  const ranked = (url: string, query: string, qualityScore: number) => ({
+    url, query, title: `Title ${qualityScore}`, content: "snippet", sourceType: "news" as const, qualityScore, qualityLabel: "strong" as const, qualityReasons: [],
+  });
+  const read = ranked("https://news.example/read", "first", 90);
+  const shared = ranked("https://news.example/shared", "first", 80);
+  const rendered = buildResearchContext(ctxWith({
+    searches: [
+      { query: "first", results: [read, shared] },
+      { query: "second", results: [{ ...shared, query: "second" }, ranked("https://news.example/other", "second", 60)] },
+    ],
+    rankedResults: [read, shared],
+    readContent: [{ url: read.url, title: "Read", content: "p".repeat(MAX_FETCHED_PAGE_CHARS + 500), result: read }],
+  }));
+  const count = (needle: string) => rendered.split(needle).length - 1;
+  if (count(read.url) !== 1) throw new Error("a page read in full was repeated as a search snippet");
+  if (count(shared.url) !== 1) throw new Error("a URL found by two searches was listed twice");
+  if (count("https://news.example/other") !== 1) throw new Error("a distinct search result was dropped");
+  if (count("p".repeat(MAX_FETCHED_PAGE_CHARS + 1)) !== 0) throw new Error("page text exceeded the configured cap");
 });
 
 Deno.test("factoid citations backed by strong or moderate fetched sources stay verified", () => {
@@ -242,7 +265,7 @@ Deno.test("Exa contents sends the documented maxCharacters field", async () => {
   try {
     await exaGetContents("https://example.com/report");
     const text = requestBody?.text as { maxCharacters?: number; max_characters?: number } | undefined;
-    if (text?.maxCharacters !== 8000) throw new Error("contents maxCharacters was not sent");
+    if (text?.maxCharacters !== MAX_FETCHED_PAGE_CHARS) throw new Error("contents maxCharacters was not sent");
     if (text?.max_characters !== undefined) throw new Error("legacy contents casing leaked into request");
   } finally {
     globalThis.fetch = originalFetch;
@@ -286,6 +309,68 @@ Deno.test("filtered research retries without domain filters when Exa returns no 
     if (!Array.isArray(bodies[0].includeDomains)) throw new Error("first request was not domain-filtered");
     if (bodies[1].includeDomains !== undefined) throw new Error("fallback retained includeDomains");
     if (!result.rankedResults.some((item) => item.url?.includes("gsa.gov"))) throw new Error("fallback result was lost");
+  } finally {
+    globalThis.fetch = originalFetch;
+    if (previousApiKey === undefined) Deno.env.delete("EXA_API_KEY");
+    else Deno.env.set("EXA_API_KEY", previousApiKey);
+  }
+});
+
+Deno.test("research reports every billed Exa call, none for error statuses, and unknown for unsettled ones", async () => {
+  const originalFetch = globalThis.fetch;
+  const previousApiKey = Deno.env.get("EXA_API_KEY");
+  Deno.env.set("EXA_API_KEY", "test-key");
+  const json = (body: unknown, status = 200) => Promise.resolve(new Response(JSON.stringify(body), {
+    status,
+    headers: { "Content-Type": "application/json" },
+  }));
+  globalThis.fetch = ((input: Request | URL | string, init?: RequestInit) => {
+    const body = JSON.parse(String(init?.body)) as Record<string, unknown>;
+    if (String(input).endsWith("/contents")) {
+      const [url] = body.urls as string[];
+      if (url.includes("energy.gov")) return Promise.reject(new TypeError("connection reset"));
+      return url.includes("gsa.gov")
+        ? json({ requestId: "read-ok", results: [{ text: "page" }], costDollars: { total: 0.001 } })
+        : json({ error: "upstream" }, 500);
+    }
+    // The domain-filtered search finds nothing, so research pays for a fallback.
+    return Array.isArray(body.includeDomains)
+      ? json({ requestId: "filtered", results: [], costDollars: { total: 0.005 } })
+      : json({
+        requestId: "fallback",
+        results: [
+          { title: "Official guidance", url: "https://gsa.gov/policy", text: "Official government procurement policy with detailed methodology." },
+          { title: "Agency data", url: "https://data.gov/procurement", text: "Official government procurement data and supporting methodology." },
+          { title: "Energy procurement", url: "https://energy.gov/procurement", text: "Official government procurement rules and supporting methodology." },
+        ],
+        costDollars: { total: 0.007 },
+      });
+  }) as typeof fetch;
+
+  const usages: NormalizedUsage[] = [];
+  try {
+    await deepResearch("federal procurement reform", "United States", {
+      provider: "openrouter",
+      model: "test-model",
+      reasoningEffort: "low",
+      callModel: async () => ({ output: { queries: [] } }),
+      onExaUsage: (usage) => usages.push(usage),
+    }, {
+      maxFollowUpQueries: 0,
+      maxUrlsToRead: 3,
+      maxSeedQueries: 1,
+      overallTimeoutMs: 1000,
+      preferredSourceType: "government",
+    });
+    const billed = usages.filter((usage) => !usage.incomplete);
+    const ids = billed.map((usage) => usage.raw?.request_id).sort();
+    if (ids.join(",") !== "fallback,filtered,read-ok") throw new Error(`unexpected billed Exa calls: ${ids.join(",")}`);
+    const total = billed.reduce((sum, usage) => sum + (usage.reportedCostUsd ?? 0), 0);
+    if (Math.abs(total - 0.013) > 1e-12) throw new Error(`Exa charges did not add up: ${total}`);
+    const unsettled = usages.filter((usage) => usage.incomplete);
+    if (unsettled.length !== 1 || unsettled[0].raw?.endpoint !== "contents") {
+      throw new Error(`the reset page read was not reported as unknown: ${JSON.stringify(unsettled)}`);
+    }
   } finally {
     globalThis.fetch = originalFetch;
     if (previousApiKey === undefined) Deno.env.delete("EXA_API_KEY");

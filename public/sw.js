@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'debate-lab-v3';
+const CACHE_VERSION = 'debate-lab-v4';
 const APP_SHELL_CACHE = `${CACHE_VERSION}-shell`;
 const RUNTIME_CACHE = `${CACHE_VERSION}-runtime`;
 
@@ -47,13 +47,22 @@ self.addEventListener('activate', (event) => {
   );
 });
 
+function htmlMislabeledAsAsset(response, request) {
+  const type = (response.headers.get('content-type') || '').toLowerCase();
+  if (!type.includes('text/html')) return false;
+  const path = new URL(request.url).pathname;
+  return request.destination === 'script'
+    || request.destination === 'style'
+    || path.startsWith('/assets/');
+}
+
 async function cacheFirst(request) {
   const cached = await caches.match(request, { ignoreVary: true });
-  if (cached) return cached;
+  if (cached && !htmlMislabeledAsAsset(cached, request)) return cached;
 
   try {
     const response = await fetch(request);
-    if (response.ok) {
+    if (response.ok && !htmlMislabeledAsAsset(response, request)) {
       const cache = await caches.open(RUNTIME_CACHE);
       await cache.put(request, response.clone());
     }
@@ -104,6 +113,9 @@ self.addEventListener('fetch', (event) => {
   const url = new URL(request.url);
   if (url.origin !== self.location.origin) return;
   if (API_PATH_PREFIXES.some((prefix) => url.pathname.startsWith(prefix))) return;
+  // Embeds are framed on other sites: never store one as the app shell, and
+  // never answer one with the cached shell, which refuses to be framed.
+  if (url.pathname.startsWith('/embed/')) return;
 
   if (request.mode === 'navigate') {
     event.respondWith(navigationFallback(request));

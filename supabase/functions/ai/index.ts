@@ -27,6 +27,8 @@ import {
   type NormalizedUsage,
 } from "../_shared/cost.ts";
 import {
+  BACKGROUND_MODEL,
+  BACKGROUND_REASONING_EFFORT,
   DEFAULT_MODEL,
   effectiveReasoningEffort,
   isModelSelection,
@@ -538,7 +540,8 @@ export async function handleRequest(req: Request): Promise<Response> {
       error: rateLimit.reason,
       code: rateLimit.code,
       limit: rateLimit.limit,
-      current: rateLimit.current
+      current: rateLimit.current,
+      units: rateLimit.units,
     }), {
       status: rateLimit.statusCode || 429,
       headers: { ...corsHeaders, "Content-Type": "application/json" }
@@ -624,21 +627,27 @@ export async function handleRequest(req: Request): Promise<Response> {
   });
 
   const startTime = Date.now();
-  // Usage from research sub-calls (search decision, follow-up queries) is
-  // collected here so the parent request's row accounts for every token.
+  // Usage from research sub-calls (search decision, follow-up queries, Exa
+  // searches and page reads) is collected here so the parent request's row
+  // accounts for every token and every paid call.
   const researchUsage: NormalizedUsage[] = [];
   let researchAccountingIncomplete = false;
+  // Research sub-calls are small background steps, so they use the fixed
+  // cheap model instead of the user's choice.
   const researchDeps: ResearchDeps = {
     provider,
-    model,
-    reasoningEffort,
+    model: BACKGROUND_MODEL,
+    reasoningEffort: BACKGROUND_REASONING_EFFORT,
     signal: workSignal,
     onTimeout: () => {
       researchAccountingIncomplete = true;
     },
+    onExaUsage: (usage) => {
+      researchUsage.push(usage);
+    },
     callModel: async (args) => {
       try {
-        const result = await callAI(args.provider, args.model, args.systemPrompt, args.messages, args.reasoningEffort, args.signal);
+        const result = await callAI(args.provider, args.model, args.systemPrompt, args.messages, args.reasoningEffort, "research", args.signal, undefined, args.outputSchema);
         // A provider that ignores cancellation must not append usage after the
         // research timeout has already been finalized by the parent request.
         if (result.usage && !args.signal?.aborted) researchUsage.push(result.usage);
@@ -755,11 +764,12 @@ export async function handleRequest(req: Request): Promise<Response> {
           return await handleAttack(ctx);
       }
 
-      // Fallback for any other feature
+      // Fallback for any other feature. Without its own cap it gets the
+      // largest one, a full case.
       const systemPrompt = await buildSystemPromptFor(feature);
       const userPrompt = buildUserPrompt(feature, sanitizedInput, "");
       const messages = [{ role: "user", content: userPrompt }];
-      const fallbackResult = recordMainResult(await callAI(provider, model, systemPrompt, messages, reasoningEffort, workSignal, stream));
+      const fallbackResult = recordMainResult(await callAI(provider, model, systemPrompt, messages, reasoningEffort, "generate", workSignal, stream));
       const output = cleanGeneratedText(fallbackResult.output);
 
       const latencyMs = Date.now() - startTime;

@@ -1,4 +1,4 @@
-import { defineConfig, loadEnv, type Plugin, type PluginOption } from "vite";
+import { defineConfig, loadEnv, type Connect, type Plugin, type PluginOption } from "vite";
 import react from "@vitejs/plugin-react-swc";
 import { sentryVitePlugin } from "@sentry/vite-plugin";
 import { execSync } from "node:child_process";
@@ -55,6 +55,24 @@ function bundleGraph(): Plugin {
 }
 
 /**
+ * Vercel serves dist/embed/debate-timer/index.html at /embed/debate-timer. The
+ * dev and preview servers would answer that path with the SPA shell instead,
+ * so they get the same mapping.
+ */
+function embedPages(): Plugin {
+  const toIndex: Connect.NextHandleFunction = (req, _res, next) => {
+    const match = req.url?.match(/^(\/embed\/[\w-]+)\/?(\?.*)?$/);
+    if (match) req.url = `${match[1]}/index.html${match[2] ?? ''}`;
+    next();
+  };
+  return {
+    name: 'embed-pages',
+    configureServer: (server) => { server.middlewares.use(toIndex); },
+    configurePreviewServer: (server) => { server.middlewares.use(toIndex); },
+  };
+}
+
+/**
  * `npm run dev:preview` sets VITE_STAGING_PREVIEW=true, which makes the app call
  * Supabase at /__staging-supabase on its own origin (see src/lib/supabase/env.ts). Forward
  * that path to the staging project. Other builds get no proxy.
@@ -104,7 +122,7 @@ export default defineConfig(({ mode }) => {
     proxy,
     allowedHosts,
   },
-  plugins: [react(), bundleGraph(), ...uploadSourceMaps],
+  plugins: [react(), bundleGraph(), embedPages(), ...uploadSourceMaps],
   define: {
     "import.meta.env.VITE_SENTRY_RELEASE": JSON.stringify(release ?? ""),
     "import.meta.env.VITE_SENTRY_ENVIRONMENT": JSON.stringify(process.env.VERCEL_ENV ?? ""),
@@ -112,7 +130,7 @@ export default defineConfig(({ mode }) => {
   optimizeDeps: {
     // Narrows dev prebundling to the SPA entry. Without this, Vite crawls every
     // HTML file under the root, including the static guide pages in public/.
-    entries: ['index.html'],
+    entries: ['index.html', 'embed/debate-timer/index.html'],
   },
   resolve: {
     alias: {
@@ -121,6 +139,10 @@ export default defineConfig(({ mode }) => {
   },
   build: {
     manifest: true,
+    rollupOptions: {
+      // The embeddable timer is its own page, so it never loads the app's entry.
+      input: { main: path.resolve(__dirname, 'index.html'), embedTimer: path.resolve(__dirname, 'embed/debate-timer/index.html') },
+    },
     chunkSizeWarningLimit: 700,
     sourcemap: uploadSourceMaps.length > 0 ? "hidden" : false,
   },

@@ -1,4 +1,5 @@
 import site from '@/config/site.json';
+import { TOOL_PAGE_HEADS } from './tool-pages';
 
 /** Brand and domain strings live in src/config/site.json; nothing else should hardcode them. */
 export const SITE_ORIGIN = site.origin;
@@ -43,6 +44,7 @@ export const PAGE_HEADS = {
     description: `How ${BRAND} collects, uses, stores, and shares your information, how AI requests are processed, and the rights you have over your data.`,
     canonicalPath: '/privacy',
   },
+  ...TOOL_PAGE_HEADS,
   '*': {
     title: `Page not found | ${BRAND}`,
     description: `This page does not exist on ${BRAND}.`,

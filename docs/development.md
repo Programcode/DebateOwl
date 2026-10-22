@@ -53,7 +53,7 @@ Automated browser tests always start a fresh server. `npm run verify` puts it on
 
 ## Preview on the tailnet
 
-A plain `npm run dev` talks to the production Supabase project unless the browser toggle says staging. For anything Adam opens from another device, run the staging preview instead:
+A plain `npm run dev` talks to the production Supabase project unless the browser toggle says staging. For anything Adam opens from another device, run the staging preview instead. This local server is not a Vercel deployment. Hosted Vercel previews are opt-in; [operations.md](operations.md#opt-in-previews) has the command.
 
 ```bash
 npm run dev:preview -- --port 9201 --strictPort

@@ -117,18 +117,90 @@ export function parseSourceAssessments(value: unknown): SourceAssessmentUpdate[]
 
 type AutosaveFeature = 'generate' | 'attack' | 'brainstorm' | 'factoids';
 
-export async function autosaveDiscoveredSources(sources: DiscoveredSource[], capturedVia: AutosaveFeature, debateId: string | null | undefined): Promise<void> {
+// Query parameters that only say where a click came from. Two links that differ
+// only in these open the same page.
+const TRACKING_PARAMS = /^(utm_.+|fbclid|gclid|dclid|gbraid|wbraid|msclkid|yclid|mc_cid|mc_eid|igshid|_ga|_gl|ref_src)$/i;
+
+/**
+ * One key per web page: the host lower-cased without "www.", no scheme, no
+ * fragment, no tracking parameters, no trailing slash. Null when it is not a URL.
+ */
+export function normalizeSourceUrl(url: string): string | null {
+  let parsed: URL;
+  try {
+    parsed = new URL(url.trim());
+  } catch {
+    return null;
+  }
+  if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') return null;
+  const host = parsed.host.toLowerCase().replace(/^www\./, '');
+  const params = new URLSearchParams();
+  parsed.searchParams.forEach((value, key) => {
+    if (!TRACKING_PARAMS.test(key)) params.append(key, value);
+  });
+  const query = params.toString();
+  const path = parsed.pathname.replace(/\/+$/, '');
+  return `${host}${path}${query ? `?${query}` : ''}`;
+}
+
+function savedSourceUrl(source: { origin?: string; metadata?: { url?: string } }): string | null {
+  const url = source.metadata?.url ?? source.origin;
+  return url ? normalizeSourceUrl(url) : null;
+}
+
+// Generate, Attack, Brainstorm and Factoids can finish at the same time. Each
+// batch waits for the one before it, so it sees the rows that batch saved.
+let autosaveQueue: Promise<void> = Promise.resolve();
+
+export function autosaveDiscoveredSources(sources: DiscoveredSource[], capturedVia: AutosaveFeature, debateId: string | null | undefined): Promise<void> {
   const targetDebateId = debateId !== undefined ? debateId : activeDebateId();
+  const run = autosaveQueue.then(() => autosaveBatch(sources, capturedVia, targetDebateId));
+  autosaveQueue = run.catch((): void => undefined);
+  return run;
+}
+
+async function autosaveBatch(sources: DiscoveredSource[], capturedVia: AutosaveFeature, targetDebateId: string | null): Promise<void> {
   // Every source belongs to one debate, so one-off research is not kept.
   if (!targetDebateId) return;
-  const retainedSources = sources.filter((source) => !source.semantic ||
-    (source.qualityLabel !== 'weak' && source.semantic.relevance >= 0.45) ||
-    source.semantic.lastUsedInCase === true);
+  const seen = new Set<string>();
+  const retainedSources = sources.filter((source) => {
+    const keep = !source.semantic ||
+      (source.qualityLabel !== 'weak' && source.semantic.relevance >= 0.45) ||
+      source.semantic.lastUsedInCase === true;
+    if (!keep) return false;
+    // The same page twice in one answer is saved once.
+    const key = normalizeSourceUrl(source.url) ?? source.url;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
   if (retainedSources.length === 0) return;
 
-  const session = useSessionStore.getState();
   for (const source of retainedSources) {
+    const session = useSessionStore.getState();
+    const metadata = {
+      url: source.url,
+      ...(source.sourceType !== undefined ? { sourceType: source.sourceType } : {}),
+      ...(source.qualityScore !== undefined ? { qualityScore: source.qualityScore } : {}),
+      ...(source.qualityLabel !== undefined ? { qualityLabel: source.qualityLabel } : {}),
+      ...(source.query !== undefined ? { query: source.query } : {}),
+      ...(source.semantic !== undefined ? { semantic: source.semantic } : {}),
+      capturedVia,
+    };
+    const key = normalizeSourceUrl(source.url);
+    const existing = key
+      ? session.sourceLibrary.find((saved) => saved.debateId === targetDebateId && savedSourceUrl(saved) === key)
+      : undefined;
     try {
+      if (existing) {
+        // Already in this debate's Library: refresh what research learned about
+        // it, and keep the student's title, folder and on/off choice.
+        await session.updateSource(existing.id, {
+          metadata: { ...existing.metadata, ...metadata },
+          ...(!existing.content.trim() && source.content ? { content: source.content } : {}),
+        });
+        continue;
+      }
       await session.addSource({
         title: source.title,
         content: source.content ?? '',
@@ -137,15 +209,7 @@ export async function autosaveDiscoveredSources(sources: DiscoveredSource[], cap
         folder: 'Auto-saved',
         debateId: targetDebateId,
         isActive: source.qualityLabel === 'strong' || source.qualityLabel === 'moderate',
-        metadata: {
-          url: source.url,
-          ...(source.sourceType !== undefined ? { sourceType: source.sourceType } : {}),
-          ...(source.qualityScore !== undefined ? { qualityScore: source.qualityScore } : {}),
-          ...(source.qualityLabel !== undefined ? { qualityLabel: source.qualityLabel } : {}),
-          ...(source.query !== undefined ? { query: source.query } : {}),
-          ...(source.semantic !== undefined ? { semantic: source.semantic } : {}),
-          capturedVia,
-        },
+        metadata,
       });
     } catch {
       toast({

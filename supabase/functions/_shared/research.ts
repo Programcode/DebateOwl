@@ -18,6 +18,8 @@ import {
 export type { ExaResult, RankedSearchResult, ResearchSource };
 
 import type { ReasoningEffort } from "./model-catalog.ts";
+import { normalizeExaUsage, type NormalizedUsage } from "./cost.ts";
+import { MAX_FETCHED_PAGE_CHARS, MAX_RESEARCH_SNIPPETS } from "./prompt-budget.ts";
 
 export type Provider = "openrouter";
 
@@ -35,7 +37,7 @@ export type Source = {
 };
 
 export interface ResearchContext {
-  searches: Array<{ query: string; results: string }>;
+  searches: Array<{ query: string; results: RankedSearchResult[] }>;
   rankedResults: RankedSearchResult[];
   readContent: Array<{ url: string; title: string; content: string; result?: RankedSearchResult }>;
   verifiedUrls: Set<string>;
@@ -72,6 +74,8 @@ export interface ResearchDeps {
   signal?: AbortSignal;
   /** Called synchronously when the overall research timeout fires. */
   onTimeout?: () => void;
+  /** Receives the charge of every paid Exa call made for the request. */
+  onExaUsage?: ExaUsageSink;
   /** Injected model caller; returns the parsed JSON output of a provider call. */
   callModel: (args: {
     provider: Provider;
@@ -80,8 +84,41 @@ export interface ResearchDeps {
     messages: Array<{ role: string; content: string }>;
     reasoningEffort: ReasoningEffort;
     signal?: AbortSignal;
+    outputSchema?: JsonOutputSchema;
   }) => Promise<{ output: unknown }>;
 }
+
+/**
+ * A JSON Schema the provider must hold the reply to. Only for outputs the
+ * server already validates in code: with `strict` every property is required,
+ * so the schema has to match that validator exactly. Keep to keywords every
+ * routed provider accepts: type, properties, required, items, enum, anyOf,
+ * and additionalProperties false.
+ */
+export interface JsonOutputSchema {
+  name: string;
+  schema: Record<string, unknown>;
+}
+
+const QUERIES_SCHEMA: JsonOutputSchema = {
+  name: "follow_up_queries",
+  schema: {
+    type: "object",
+    properties: { queries: { type: "array", items: { type: "string" } } },
+    required: ["queries"],
+    additionalProperties: false,
+  },
+};
+
+const SEARCH_DECISION_SCHEMA: JsonOutputSchema = {
+  name: "search_decision",
+  schema: {
+    type: "object",
+    properties: { shouldSearch: { type: "boolean" }, query: { type: "string" } },
+    required: ["shouldSearch", "query"],
+    additionalProperties: false,
+  },
+};
 
 export function emptyResearchContext(): ResearchContext {
   return { searches: [], rankedResults: [], readContent: [], verifiedUrls: new Set() };
@@ -258,8 +295,41 @@ export async function fetchJsonWithTimeout<T = unknown>(
 
 // ============== EXA FUNCTIONS ==============
 
+export type ExaUsageSink = (usage: NormalizedUsage) => void;
+
+// Reports each sent Exa call once. A successful response was billed at the
+// charge it reports; an error status was not. A call that was sent but never
+// settled (cancelled, timed out, unreadable body) may still have been billed,
+// so it makes the request's cost unknown instead of quietly lowering it.
+function exaUsageReporter(endpoint: "search" | "contents", onUsage: ExaUsageSink | undefined) {
+  let sent = false;
+  let reported = false;
+  const report = (usage: NormalizedUsage) => {
+    if (reported || !onUsage) return;
+    reported = true;
+    onUsage(usage);
+  };
+  return {
+    sent: () => { sent = true; },
+    response: (ok: boolean, data: unknown) => {
+      if (!ok) {
+        reported = true;
+        return;
+      }
+      report(normalizeExaUsage(endpoint, data));
+    },
+    unsettled: () => {
+      if (sent) report({ incomplete: true, raw: { provider: "exa", endpoint, unsettled: true } });
+    },
+  };
+}
+
 // exaSearch: web search using Exa's neural search (type "auto" = balanced relevance & speed)
-export async function exaSearch(search: string | ExaSearchRequest, signal?: AbortSignal): Promise<ExaResult[]> {
+export async function exaSearch(
+  search: string | ExaSearchRequest,
+  signal?: AbortSignal,
+  onUsage?: ExaUsageSink,
+): Promise<ExaResult[]> {
   const request = typeof search === "string" ? { query: search } : search;
   const query = request.query;
   const apiKey = Deno.env.get("EXA_API_KEY");
@@ -267,8 +337,10 @@ export async function exaSearch(search: string | ExaSearchRequest, signal?: Abor
     console.warn("[EXA] EXA_API_KEY not configured");
     return [];
   }
+  const usage = exaUsageReporter("search", onUsage);
   try {
     throwIfAborted(signal);
+    usage.sent();
     const { response, data } = await fetchJsonWithTimeout<{ results?: unknown }>("https://api.exa.ai/search", {
       method: "POST",
       headers: { "Content-Type": "application/json", "x-api-key": apiKey },
@@ -279,6 +351,7 @@ export async function exaSearch(search: string | ExaSearchRequest, signal?: Abor
         contents: { text: { maxCharacters: 10000 } },
       }),
     }, 30000, signal);
+    usage.response(response.ok, data);
     throwIfAborted(signal);
     if (!response.ok) {
       console.warn(`[EXA] Search failed (${response.status}) queryLength=${query.length}`);
@@ -292,34 +365,44 @@ export async function exaSearch(search: string | ExaSearchRequest, signal?: Abor
       publishedDate: r.publishedDate,
     }));
   } catch (err) {
+    usage.unsettled();
     if (signal?.aborted) throw err;
     console.warn(`[EXA] Search failed queryLength=${query.length}`);
     return [];
   }
 }
 
-// exaGetContents: extract full text from a specific URL using Exa's /contents endpoint
-export async function exaGetContents(url: string, signal?: AbortSignal): Promise<string> {
+// exaGetContents: extract a page's text, up to maxChars, using Exa's /contents endpoint
+export async function exaGetContents(
+  url: string,
+  signal?: AbortSignal,
+  onUsage?: ExaUsageSink,
+  maxChars = MAX_FETCHED_PAGE_CHARS,
+): Promise<string> {
   const apiKey = Deno.env.get("EXA_API_KEY");
   if (!apiKey) {
     console.warn("[EXA] EXA_API_KEY not configured");
     return "";
   }
+  const usage = exaUsageReporter("contents", onUsage);
   try {
     throwIfAborted(signal);
+    usage.sent();
     const { response, data } = await fetchJsonWithTimeout<{ results?: unknown }>("https://api.exa.ai/contents", {
       method: "POST",
       headers: { "Content-Type": "application/json", "x-api-key": apiKey },
-      body: JSON.stringify({ urls: [url], text: { maxCharacters: 8000 } }),
+      body: JSON.stringify({ urls: [url], text: { maxCharacters: maxChars } }),
     }, 30000, signal);
+    usage.response(response.ok, data);
     throwIfAborted(signal);
     if (!response.ok) {
       console.warn(`[EXA] Contents fetch failed (${response.status}) urlLength=${url.length}`);
       return "";
     }
     if (!data?.results || !Array.isArray(data.results) || data.results.length === 0) return "";
-    return (data.results[0]?.text || "").slice(0, 8000);
+    return (data.results[0]?.text || "").slice(0, maxChars);
   } catch (err) {
+    usage.unsettled();
     if (signal?.aborted) throw err;
     console.warn(`[EXA] Contents fetch failed urlLength=${url.length}`);
     return "";
@@ -377,6 +460,7 @@ export async function decideAskSearch(
       messages: [{ role: "user", content: prompt }],
       reasoningEffort: deps.reasoningEffort,
       signal: deps.signal,
+      outputSchema: SEARCH_DECISION_SCHEMA,
     });
     const decision = decisionResult.output;
     if (decision && typeof decision === "object") {
@@ -415,6 +499,7 @@ async function generateFollowUpQueries(
       messages: [{ role: "user", content: prompt }],
       reasoningEffort: deps.reasoningEffort,
       signal: deps.signal,
+      outputSchema: QUERIES_SCHEMA,
     });
     const parsed = typeof result.output === "object" && result.output !== null ? result.output : {};
     if (Array.isArray((parsed as { queries?: string[] }).queries)) {
@@ -448,14 +533,14 @@ async function deepResearchInner(
   );
 
   const searchWithFallback = async (request: ExaSearchRequest) => {
-    const filtered = await exaSearch(request, signal);
+    const filtered = await exaSearch(request, signal, deps.onExaUsage);
     if (filtered.length > 0 || (!request.includeDomains && !request.category)) return filtered;
     const {
       includeDomains: _includeDomains,
       category: _category,
       ...fallbackRequest
     } = request;
-    return exaSearch(fallbackRequest, signal);
+    return exaSearch(fallbackRequest, signal, deps.onExaUsage);
   };
 
   const seedResults = await Promise.all(seedRequests.map(async (request) => {
@@ -464,7 +549,7 @@ async function deepResearchInner(
     throwIfAborted(signal);
     const ranked = rankSearchResults(results.map((result) => ({ ...result, query })), claim, preferredSourceType);
     const visibleRanked = preferredSourceType === "any" ? ranked : ranked.filter(matchesPreferredSourceType);
-    context.searches.push({ query, results: formatRankedSearchResults(visibleRanked) });
+    context.searches.push({ query, results: visibleRanked });
     console.log(`[RESEARCH] Seed queryLength=${query.length}: ${results.length} results`);
     return results.map((result) => ({ ...result, query }));
   }));
@@ -484,7 +569,7 @@ async function deepResearchInner(
       throwIfAborted(signal);
       const ranked = rankSearchResults(results.map((result) => ({ ...result, query })), claim, preferredSourceType);
       const visibleRanked = preferredSourceType === "any" ? ranked : ranked.filter(matchesPreferredSourceType);
-      context.searches.push({ query, results: formatRankedSearchResults(visibleRanked) });
+      context.searches.push({ query, results: visibleRanked });
       allResults.push(...results.map((result) => ({ ...result, query })));
       return results.length;
     });
@@ -503,7 +588,7 @@ async function deepResearchInner(
 
   const readPromises = urlsToRead.map(async (result) => {
     const url = result.url || "";
-    const content = await exaGetContents(url, signal);
+    const content = await exaGetContents(url, signal, deps.onExaUsage);
     throwIfAborted(signal);
     if (content) {
       context.readContent.push({ url, title: result.title || sourceTitleFromUrl(url), content, result });
@@ -574,9 +659,24 @@ export function buildResearchContext(research: ResearchContext): string {
   let ctx = "=== WEB RESEARCH RESULTS ===\n\n";
   ctx += "IMPORTANT: Only cite sources marked 'strong' or 'moderate'. Sources marked 'weak' are fallback context only, do NOT cite them as evidence. If only weak sources are available, state that evidence is limited.\n\n";
 
-  // Add search results
-  for (const search of research.searches) {
-    ctx += `--- Search: "${search.query}" ---\n${search.results}\n\n`;
+  // Each source appears once. A page read in full is not repeated as a search
+  // snippet, and a URL several queries found is listed a single time.
+  const listed = new Set(research.readContent.map((page) => page.url));
+  const snippets = research.searches
+    .flatMap((search) => search.results)
+    .sort((a, b) => b.qualityScore - a.qualityScore)
+    .filter((result) => {
+      if (!result.url || listed.has(result.url)) return false;
+      listed.add(result.url);
+      return true;
+    })
+    .slice(0, MAX_RESEARCH_SNIPPETS);
+
+  if (research.searches.length > 0) {
+    ctx += `Searches run: ${research.searches.map((search) => `"${search.query}"`).join("; ")}\n\n`;
+  }
+  if (snippets.length > 0) {
+    ctx += `--- Search results ---\n${formatRankedSearchResults(snippets)}\n\n`;
   }
 
   // Add full page content
@@ -585,7 +685,7 @@ export function buildResearchContext(research: ResearchContext): string {
     for (const page of research.readContent) {
       const quality = page.result ? `${page.result.sourceType}, ${page.result.qualityLabel}, ${page.result.qualityScore}/100` : "verified";
       const warning = page.result?.qualityLabel === "weak" ? " [WEAK, do not cite as evidence]" : "";
-      ctx += `--- From: ${page.title} (${page.url}) ---\nSource quality: ${quality}${warning}\n${page.content.slice(0, 4000)}\n\n`;
+      ctx += `--- From: ${page.title} (${page.url}) ---\nSource quality: ${quality}${warning}\n${page.content.slice(0, MAX_FETCHED_PAGE_CHARS)}\n\n`;
     }
   }
 

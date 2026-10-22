@@ -39,6 +39,8 @@ interface SparringSetupProps {
   /** Fill the motion from the Current Debate. */
   debatePrefill?: boolean;
   onStart: (values: SparringSetupValues) => void;
+  /** AI requests left today, or null when unknown. A round short of requests gets a warning. */
+  remainingRequests?: number | null;
   isStarting?: boolean;
   initialValues?: Partial<SparringSetupValues>;
 }
@@ -49,7 +51,7 @@ const DIFFICULTIES: Array<{ id: SparringDifficulty; name: string }> = [
   { id: 'hard', name: 'Ruthless' },
 ];
 
-export function SparringSetup({ onStart, isStarting = false, initialValues, banner, debatePrefill = false, voiceAllowed = true }: SparringSetupProps) {
+export function SparringSetup({ onStart, remainingRequests = null, isStarting = false, initialValues, banner, debatePrefill = false, voiceAllowed = true }: SparringSetupProps) {
   const { t } = useTranslation();
   const [motion, setMotion] = useState(initialValues?.motion ?? '');
   const motionRef = useRef(motion);
@@ -66,6 +68,8 @@ export function SparringSetup({ onStart, isStarting = false, initialValues, bann
   const plannedTurns = useMemo(() => buildSparringTurns(format, userSide), [format, userSide]);
   const aiRequests = plannedTurns.filter((turn) => turn.speaker === 'ai').length;
   const totalRequests = aiRequests + 1;
+  // An estimate (the server can raise a limit the browser cannot see), so it warns rather than blocks.
+  const requestShortfall = remainingRequests !== null && remainingRequests < totalRequests;
   const canStart = motion.trim().length >= 8 && !isStarting && isOnline;
 
   const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
@@ -255,6 +259,13 @@ export function SparringSetup({ onStart, isStarting = false, initialValues, bann
                 {isStarting ? t('sparring.setup.openingRoom', 'Opening room…') : t('sparring.setup.startRound', 'Start round')}
                 {!isStarting && <ArrowRight className="h-4 w-4" aria-hidden="true" />}
               </Button>
+              {requestShortfall && (
+                <p data-testid="sparring-request-shortfall" role="status" className="rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-xs leading-5 text-amber-800 dark:text-amber-200">
+                  {remainingRequests === 0
+                    ? t('dailyLimit.sparringNone')
+                    : t('dailyLimit.sparringShort', { needed: totalRequests, remaining: remainingRequests })}
+                </p>
+              )}
               {!isOnline && <p className="text-center text-xs leading-5 text-amber-700 dark:text-amber-300">{t('sparring.setup.offlineCannotStart', 'Reconnect to start a round. Your setup is kept while you are offline.')}</p>}
               <p className="text-center text-xs leading-5 text-muted-foreground">{t('sparring.setup.draftNotice', 'Your draft is saved locally as you type. You can pause without losing your place.')}</p>
             </CardContent>

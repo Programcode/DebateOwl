@@ -131,6 +131,8 @@ The server is never reused. CI uses retries and two workers. On failure, traces,
 
 `e2e/first-run.spec.ts` drives the same first run against stubbed Supabase routes in English and Hungarian, so it proves the client flow only.
 
+`e2e/free-tools.spec.ts` (tag `@smoke`) opens every `/tools` page signed out and checks its heading, canonical URL and JSON-LD, and that it makes no Supabase request. On a paused Playwright clock it runs the timer past the BP protected minute, through a reload, and runs the two Public Forum prep banks; it also draws a motion set and reloads its permalink, times a pasted speech, lays out a BP flow sheet under print media, and checks that `/embed/debate-timer` is `noindex` and requests nothing from another origin. The format data, timer transitions, custom-format links, motion filters and speech-time arithmetic have unit tests in `src/test/free-tools/`. The dev server cannot prove the response headers: `src/test/vercel-deployment-config.test.ts` checks which paths may be framed.
+
 `src/test/i18n-keys.test.ts` fails when a literal `t()` key in `src/` is missing from `en.json`, or when a call that passes `count` lacks its `_one` and `_other` forms. Dynamic keys such as ``t(`nav.${key}`)`` are out of its reach. `src/test/i18n.test.ts` requires the same keys in all three catalogs. Together they prove every literal key has a Spanish and Hungarian entry, not that the translation is natural.
 
 The speech unit test proves that Hungarian selects `recognition.lang = 'hu-HU'`. Credential-free browser automation has no real microphone or speech service, so it does not prove recognition accuracy or hardware support.

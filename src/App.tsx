@@ -17,6 +17,7 @@ import { StagingBanner } from "@/components/StagingBanner";
 import { captureException, captureProductEvent, toTelemetrySafeError } from "@/lib/observability";
 import { routeLoaders, type RouteLoader } from "@/lib/route-modules";
 import type { PrerenderedRoute } from "@/lib/seo/pages";
+import { usePrivateRouteHead } from "@/lib/seo/use-page-head";
 import { RouteSkeleton, type RouteSkeletonVariant } from "@/components/loading/RouteSkeleton";
 import { useTranslation } from "react-i18next";
 import { COLLABORATION_URL } from "@/lib/workspace/collaboration-config";
@@ -61,6 +62,11 @@ const FlowchartPage = lazy(routeLoaders["/app/flowchart"]);
 const LoginPage = lazy(routeLoaders["/login"]);
 const SourcesPage = lazy(routeLoaders["/expocit/sources"]);
 const NotFound = prerenderedPage("*");
+const ToolsHubPage = prerenderedPage("/tools");
+const DebateTimerToolPage = prerenderedPage("/tools/debate-timer");
+const MotionGeneratorToolPage = prerenderedPage("/tools/debate-motion-generator");
+const FlowSheetToolPage = prerenderedPage("/tools/debate-flow-sheet");
+const SpeechTimeCalculatorToolPage = prerenderedPage("/tools/speech-time-calculator");
 const OnboardingTour = lazy(() => import("@/components/features/onboarding/OnboardingTour")
   .then(({ OnboardingTour: Tour }) => ({ default: Tour })));
 
@@ -212,6 +218,7 @@ function RouteContent({ children }: { children: ReactNode }) {
   const fallback = getRouteFallback(location.pathname);
   const label = fallback.labelKey ? t(fallback.labelKey, fallback.label) : fallback.label;
   const statusText = t("common.openingPage", { page: label });
+  usePrivateRouteHead(location.pathname, label);
 
   return (
     <LocalizedRouteErrorBoundary key={location.pathname}>
@@ -274,6 +281,11 @@ function AppRoutes() {
           <Route path="/expocit/sources" element={<RouteContent><SourcesPage /></RouteContent>} />
           <Route path="/login" element={<RouteContent><LoginPage /></RouteContent>} />
           <Route path="/share/:code" element={<RouteContent><SharedPage /></RouteContent>} />
+          <Route path="/tools" element={<RouteContent><ToolsHubPage /></RouteContent>} />
+          <Route path="/tools/debate-timer" element={<RouteContent><DebateTimerToolPage /></RouteContent>} />
+          <Route path="/tools/debate-motion-generator" element={<RouteContent><MotionGeneratorToolPage /></RouteContent>} />
+          <Route path="/tools/debate-flow-sheet" element={<RouteContent><FlowSheetToolPage /></RouteContent>} />
+          <Route path="/tools/speech-time-calculator" element={<RouteContent><SpeechTimeCalculatorToolPage /></RouteContent>} />
 
           {/* Protected App Routes */}
           <Route
