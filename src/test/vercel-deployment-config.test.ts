@@ -34,6 +34,29 @@ function headersFor(config: VercelConfig, source: string) {
   );
 }
 
+/**
+ * The headers Vercel sends for a path: every rule whose source matches it.
+ * Sources here are anchored regular expressions in path-to-regexp's unnamed
+ * group syntax, which Vercel matches case-insensitively. Vercel documents no
+ * order between two rules that set the same header, so that is a test failure
+ * rather than something this resolves.
+ */
+function headersAt(config: VercelConfig, path: string): Record<string, string> {
+  const headers: Record<string, string> = {};
+  for (const rule of config.headers ?? []) {
+    expect(rule.source, "a source this resolver can read").toMatch(/^\/[\w\-./()|*?!\\]*$/);
+    if (!new RegExp(`^${rule.source}$`, "i").test(path)) continue;
+    for (const { key, value } of rule.headers) {
+      expect(headers, `${path}: two rules set ${key}`).not.toHaveProperty(key);
+      headers[key] = value;
+    }
+  }
+  return headers;
+}
+
+const cspDirective = (csp: string, name: string) =>
+  csp.split(";").map((part) => part.trim()).find((part) => part.startsWith(`${name} `)) ?? "";
+
 describe("Vercel frontend deployment configuration", () => {
   it("serves the SPA shell for app routes only, so unknown paths get the real 404", () => {
     const config = loadConfig();
@@ -98,7 +121,7 @@ describe("Vercel frontend deployment configuration", () => {
 
   it("preserves the production security headers", () => {
     const config = loadConfig();
-    const headers = headersFor(config, "/(.*)");
+    const headers = headersAt(config, "/");
 
     expect(headers["Content-Security-Policy"]).toContain("default-src 'self'");
     expect(headers["Content-Security-Policy"]).toContain("frame-ancestors 'none'");
@@ -114,8 +137,8 @@ describe("Vercel frontend deployment configuration", () => {
   });
 
   it("lets the page load images and call Supabase only where the app needs to", () => {
-    const csp = headersFor(loadConfig(), "/(.*)")["Content-Security-Policy"];
-    const directive = (name: string) => csp.split(";").map((part) => part.trim()).find((part) => part.startsWith(`${name} `)) ?? "";
+    const csp = headersAt(loadConfig(), "/")["Content-Security-Policy"];
+    const directive = (name: string) => cspDirective(csp, name);
 
     // Any-host images let prompt-injected Markdown send student work to a third party.
     expect(directive("img-src").split(" ")).not.toContain("https:");
@@ -126,7 +149,7 @@ describe("Vercel frontend deployment configuration", () => {
 
   it("loads the theme bootstrap from a CSP-compatible external script", () => {
     const config = loadConfig();
-    const csp = headersFor(config, "/(.*)")["Content-Security-Policy"];
+    const csp = headersAt(config, "/")["Content-Security-Policy"];
     const indexHtml = readProjectFile("index.html");
     const themeBootstrap = readProjectFile("public/theme-init.js");
 
@@ -142,7 +165,7 @@ describe("Vercel frontend deployment configuration", () => {
 
   it("allows the installed Jam scripts and recorder frames in production", () => {
     const config = loadConfig();
-    const csp = headersFor(config, "/(.*)")["Content-Security-Policy"];
+    const csp = headersAt(config, "/")["Content-Security-Policy"];
     const indexHtml = readProjectFile("index.html");
     const bootstrap = readProjectFile("src/bootstrap.ts");
     const jamLoader = readProjectFile("src/jam-loader.ts");
@@ -184,9 +207,38 @@ describe("Vercel frontend deployment configuration", () => {
     expect(serviceWorker).toContain("'/favicon-72.png'");
     expect(serviceWorker).toContain('cache.put(request, response.clone())');
     expect(serviceWorker).not.toContain('self.skipWaiting()');
+    // An embed stored as the offline shell would replace the app for offline visits.
+    expect(serviceWorker).toContain("if (url.pathname.startsWith('/embed/')) return;");
   });
 
-  it.each(["/app", "/app/(.*)", "/login", "/share/(.*)"])(
+  it.each([
+    "/", "/index.html", "/app", "/app/settings", "/login", "/share/abc", "/tools", "/tools/debate-timer",
+    "/online-debate-timer", "/404.html", "/app-shell.html", "/embed", "/embedded/x", "/assets/index.js",
+  ])("refuses to be framed at %s", (path) => {
+    const headers = headersAt(loadConfig(), path);
+    expect(headers["X-Frame-Options"]).toBe("DENY");
+    expect(cspDirective(headers["Content-Security-Policy"] ?? "", "frame-ancestors")).toBe("frame-ancestors 'none'");
+  });
+
+  it.each(["/embed/debate-timer", "/EMBED/debate-timer"])("lets other sites frame the embed at %s, and nothing else", (path) => {
+    const config = loadConfig();
+    const headers = headersAt(config, path);
+    const site = headersAt(config, "/");
+    const csp = headers["Content-Security-Policy"];
+
+    expect(headers).not.toHaveProperty("X-Frame-Options");
+    expect(cspDirective(csp, "frame-ancestors")).toBe("frame-ancestors *");
+    expect(headers["X-Robots-Tag"]).toBe("noindex, nofollow");
+    // The embed runs only its own static assets: no third-party script, no API.
+    for (const name of ["default-src", "script-src", "connect-src"]) expect(cspDirective(csp, name)).toBe(`${name} 'self'`);
+    for (const name of ["frame-src", "worker-src"]) expect(cspDirective(csp, name)).toBe(`${name} 'none'`);
+    expect(cspDirective(csp, "object-src")).toBe("object-src 'none'");
+    for (const key of ["X-Content-Type-Options", "Referrer-Policy", "Permissions-Policy", "Strict-Transport-Security"]) {
+      expect(headers[key]).toBe(site[key]);
+    }
+  });
+
+  it.each(["/app", "/app/(.*)", "/login", "/share/(.*)", "/embed/(.*)"])(
     "keeps private route %s out of search indexes",
     (source) => {
       const config = loadConfig();

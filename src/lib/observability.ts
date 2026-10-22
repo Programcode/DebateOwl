@@ -75,12 +75,14 @@ const PRODUCT_EVENT_NAMES = new Set([
   "ai_request_started",
   "ai_request_succeeded",
   "content_exported",
+  "free_tool_used",
   "sparring_round_completed",
   "sparring_session_judged",
   "tool_opened",
 ]);
 
 const STRING_PROPERTY_VALUES: Record<string, ReadonlySet<string>> = {
+  action: new Set(["calculate", "draw", "print", "start"]),
   errorName: new Set([
     "AIAuthError",
     "AIModelRestrictionError",
@@ -94,7 +96,8 @@ const STRING_PROPERTY_VALUES: Record<string, ReadonlySet<string>> = {
     "UnknownError",
   ]),
   feature: new Set(["ask", "attack", "brainstorm", "crossfire", "factoids", "generate", "sparring"]),
-  format: new Set(["docx", "google_docs", "ld", "pdf", "pf", "standard"]),
+  format: new Set(["ap", "bp", "custom", "docx", "google_docs", "ld", "pdf", "pf", "policy", "school", "standard", "wsdc"]),
+  freeTool: new Set(["debate-flow-sheet", "debate-motion-generator", "debate-timer", "speech-time-calculator"]),
   model: new Set(AVAILABLE_MODELS.map((model) => model.id)),
   provider: new Set([PROVIDER_ID]),
   tool: new Set([

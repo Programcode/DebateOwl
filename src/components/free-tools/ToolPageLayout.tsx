@@ -1,0 +1,143 @@
+import type { ReactNode } from 'react';
+import { Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
+import Footer from '@/components/landing/Footer';
+import { usePageHead } from '@/lib/seo/use-page-head';
+import { jsonLd, type FaqEntry, type ToolRoute } from '@/lib/seo/tool-pages';
+import { cn } from '@/lib/utils';
+
+export const FREE_TOOLS = [
+  { route: '/tools/debate-timer', name: 'Debate timer', blurb: 'Round timer with presets for six formats, protected time, POI knocks and prep banks for each side.' },
+  { route: '/tools/debate-motion-generator', name: 'Debate motion generator', blurb: 'Draw one practice motion or three for a veto drill, from 300 original motions sorted by topic and difficulty.' },
+  { route: '/tools/debate-flow-sheet', name: 'Debate flow sheet', blurb: 'A printable one-page flow with a column for every speech in your format, on A4 or Letter.' },
+  { route: '/tools/speech-time-calculator', name: 'Speech time calculator', blurb: 'Paste a speech to see how long it takes to deliver and which speech slots it fits.' },
+] as const;
+
+/** Long-form copy under a tool: a readable measure and plain headings. */
+export function ToolArticle({ children, className }: { children: ReactNode; className?: string }) {
+  return (
+    <div className={cn('mx-auto max-w-[68ch] space-y-10 text-base leading-7 text-foreground [&_a]:text-primary [&_a]:underline [&_a]:underline-offset-4 [&_h2]:text-2xl [&_h2]:font-semibold [&_h2]:tracking-tight [&_h3]:text-lg [&_h3]:font-semibold [&_li]:mt-1 [&_ol]:list-decimal [&_ol]:space-y-1 [&_ol]:pl-6 [&_p]:mt-3 [&_ul]:list-disc [&_ul]:pl-6', className)}>
+      {children}
+    </div>
+  );
+}
+
+export function ToolFaq({ faq }: { faq: readonly FaqEntry[] }) {
+  const { t } = useTranslation('tools');
+  return (
+    <section aria-labelledby="faq-heading">
+      <h2 id="faq-heading">{t('layout.faq')}</h2>
+      {/* Native disclosure: every answer is in the HTML, open or not. */}
+      <div className="mt-4 divide-y divide-border border-y border-border">
+        {faq.map((entry) => (
+          <details key={entry.question} className="group py-3">
+            <summary className="cursor-pointer list-none font-medium marker:hidden focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-sm [&::-webkit-details-marker]:hidden">
+              <span className="mr-2 inline-block text-muted-foreground transition-transform group-open:rotate-90 motion-reduce:transition-none" aria-hidden="true">›</span>
+              {entry.question}
+            </summary>
+            <p className="!mt-2 pl-5 text-muted-foreground">{entry.answer}</p>
+          </details>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+/** The one call to action on a tool page. Pricing facts only: 3-day trial, no card, then $5 a month. */
+export function ToolCta({ title, children }: { title: string; children: ReactNode }) {
+  const { t } = useTranslation('tools');
+  return (
+    <aside className="rounded-xl border border-primary/30 bg-primary/5 p-6" aria-labelledby="cta-heading">
+      <h2 id="cta-heading" className="!text-xl">{title}</h2>
+      <div className="!mt-2 text-muted-foreground">{children}</div>
+      <p className="!mt-2 text-sm text-muted-foreground">{t('layout.ctaPricing')}</p>
+      <Link to="/login" className="!mt-4 inline-flex min-h-11 items-center rounded-md bg-primary px-4 font-medium text-primary-foreground !no-underline hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
+        {t('layout.ctaButton')}
+      </Link>
+    </aside>
+  );
+}
+
+function OtherTools({ current }: { current: ToolRoute }) {
+  const { t } = useTranslation('tools');
+  const others = FREE_TOOLS.filter((tool) => tool.route !== current);
+  if (others.length === FREE_TOOLS.length) return null;
+  return (
+    <nav aria-labelledby="other-tools-heading">
+      <h2 id="other-tools-heading">{t('layout.otherTools')}</h2>
+      <ul className="!list-none !pl-0 mt-4 grid gap-4 sm:grid-cols-3">
+        {others.map((tool) => (
+          <li key={tool.route} className="!mt-0">
+            <Link to={tool.route} className="font-medium">{tool.name}</Link>
+            <p className="!mt-1 text-sm text-muted-foreground">{tool.blurb}</p>
+          </li>
+        ))}
+      </ul>
+    </nav>
+  );
+}
+
+interface ToolPageLayoutProps {
+  route: ToolRoute;
+  /** The visible h1. */
+  title: string;
+  intro: ReactNode;
+  /** The working tool, shown right under the intro. */
+  tool?: ReactNode;
+  /** Long-form sections, FAQ and CTA. */
+  children: ReactNode;
+  structuredData: object;
+}
+
+export function ToolPageLayout({ route, title, intro, tool, children, structuredData }: ToolPageLayoutProps) {
+  const { t } = useTranslation('tools');
+  usePageHead(route);
+  const crumb = FREE_TOOLS.find((entry) => entry.route === route)?.name;
+
+  return (
+    <div className="min-h-screen bg-background">
+      <header className="border-b border-border/60 print:hidden">
+        <div className="container flex h-14 items-center justify-between gap-4 px-4">
+          <Link to="/" className="flex items-center gap-2 rounded-md pointer-coarse:min-h-11">
+            <span className="flex h-8 w-8 items-center justify-center overflow-hidden rounded-md bg-white dark:bg-slate-800">
+              <img src="/favicon-72.png" alt="" width={32} height={32} className="h-full w-full object-cover" />
+            </span>
+            <span className="font-semibold tracking-tight text-foreground">DebateLab</span>
+          </Link>
+          <Link to="/tools" className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground pointer-coarse:min-h-11">
+            {t('layout.allTools')}
+          </Link>
+        </div>
+      </header>
+      <main className="container mx-auto px-4 pb-16 pt-6">
+        <nav aria-label={t('layout.breadcrumb')} className="text-sm text-muted-foreground print:hidden">
+          <ol className="flex flex-wrap items-center gap-1">
+            <li><Link to="/" className="hover:text-foreground">DebateLab</Link></li>
+            <li aria-hidden="true">/</li>
+            {crumb ? (
+              <>
+                <li><Link to="/tools" className="hover:text-foreground">{t('layout.allTools')}</Link></li>
+                <li aria-hidden="true">/</li>
+                <li aria-current="page" className="text-foreground">{crumb}</li>
+              </>
+            ) : (
+              <li aria-current="page" className="text-foreground">{t('layout.allTools')}</li>
+            )}
+          </ol>
+        </nav>
+        <div className="mx-auto mt-6 max-w-[68ch] print:hidden">
+          <h1 className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl">{title}</h1>
+          <div className="mt-3 text-lg leading-8 text-muted-foreground">{intro}</div>
+        </div>
+        {tool && <div className="mx-auto mt-8 max-w-5xl">{tool}</div>}
+        <ToolArticle className="mt-14 print:hidden">
+          {children}
+          <OtherTools current={route} />
+        </ToolArticle>
+      </main>
+      <div className="print:hidden"><Footer /></div>
+      {/* In the body, so the dev server and the prerendered HTML carry the same JSON-LD. */}
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd(structuredData) }} />
+    </div>
+  );
+}

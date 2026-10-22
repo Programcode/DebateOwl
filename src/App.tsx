@@ -61,6 +61,11 @@ const FlowchartPage = lazy(routeLoaders["/app/flowchart"]);
 const LoginPage = lazy(routeLoaders["/login"]);
 const SourcesPage = lazy(routeLoaders["/expocit/sources"]);
 const NotFound = prerenderedPage("*");
+const ToolsHubPage = prerenderedPage("/tools");
+const DebateTimerToolPage = prerenderedPage("/tools/debate-timer");
+const MotionGeneratorToolPage = prerenderedPage("/tools/debate-motion-generator");
+const FlowSheetToolPage = prerenderedPage("/tools/debate-flow-sheet");
+const SpeechTimeCalculatorToolPage = prerenderedPage("/tools/speech-time-calculator");
 const OnboardingTour = lazy(() => import("@/components/features/onboarding/OnboardingTour")
   .then(({ OnboardingTour: Tour }) => ({ default: Tour })));
 
@@ -274,6 +279,11 @@ function AppRoutes() {
           <Route path="/expocit/sources" element={<RouteContent><SourcesPage /></RouteContent>} />
           <Route path="/login" element={<RouteContent><LoginPage /></RouteContent>} />
           <Route path="/share/:code" element={<RouteContent><SharedPage /></RouteContent>} />
+          <Route path="/tools" element={<RouteContent><ToolsHubPage /></RouteContent>} />
+          <Route path="/tools/debate-timer" element={<RouteContent><DebateTimerToolPage /></RouteContent>} />
+          <Route path="/tools/debate-motion-generator" element={<RouteContent><MotionGeneratorToolPage /></RouteContent>} />
+          <Route path="/tools/debate-flow-sheet" element={<RouteContent><FlowSheetToolPage /></RouteContent>} />
+          <Route path="/tools/speech-time-calculator" element={<RouteContent><SpeechTimeCalculatorToolPage /></RouteContent>} />
 
           {/* Protected App Routes */}
           <Route
