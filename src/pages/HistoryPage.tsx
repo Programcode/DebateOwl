@@ -4,7 +4,7 @@ import { useSessionStore } from '@/lib/stores/session-store';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button, buttonVariants } from '@/components/ui/button';
-import { Trash2, Eye, MessageCircle, FileText, Zap, Brain, BookOpen, Dumbbell, Flame } from 'lucide-react';
+import { Trash2, Eye, MessageCircle, FileText, Zap, Brain, BookOpen, Dumbbell, Flame, Loader2 } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Badge } from '@/components/ui/badge';
 import { formatEuropeanDateTime } from '@/lib/date-format';
@@ -78,6 +78,8 @@ export default function HistoryPage() {
   const [sparringSessionToDelete, setSparringSessionToDelete] = useState<{ id: string; motion: string } | null>(null);
   const [openCrossfireId, setOpenCrossfireId] = useState<string | null>(null);
   const [crossfireToDelete, setCrossfireToDelete] = useState<{ id: string; title: string } | null>(null);
+  const [deletingCrossfire, setDeletingCrossfire] = useState(false);
+  const [crossfireDeleteError, setCrossfireDeleteError] = useState(false);
   const openCrossfire = openCrossfireId ? store.savedCrossfires.find((item) => item.id === openCrossfireId) ?? null : null;
 
   useEffect(() => {
@@ -138,18 +140,20 @@ export default function HistoryPage() {
     setSparringSessionToDelete(null);
   };
 
+  // The dialog stays open while the delete runs and closes only once it lands.
   const confirmDeleteCrossfire = () => {
-    if (!crossfireToDelete) return;
+    if (!crossfireToDelete || deletingCrossfire) return;
     const { id } = crossfireToDelete;
-    void store.deleteRecordedResult('crossfire', id)
+    setDeletingCrossfire(true);
+    setCrossfireDeleteError(false);
+    store.deleteRecordedResult('crossfire', id)
       .then(() => {
-        if (openCrossfireId === id) setOpenCrossfireId(null);
+        setCrossfireToDelete(null);
+        setOpenCrossfireId((open) => open === id ? null : open);
         toast({ title: t('common.deleted', 'Deleted'), description: t('historyPage.crossfireDeleted', 'Crossfire round deleted.') });
       })
-      .catch(() => {
-        toast({ title: t('common.error', 'Error'), description: t('historyPage.crossfireDeleteFailed', 'Could not delete the Crossfire round.'), variant: 'destructive' });
-      });
-    setCrossfireToDelete(null);
+      .catch(() => setCrossfireDeleteError(true))
+      .finally(() => setDeletingCrossfire(false));
   };
 
   return (
@@ -454,7 +458,14 @@ export default function HistoryPage() {
             )}
           </SheetContent>
         </Sheet>
-        <AlertDialog open={Boolean(crossfireToDelete)} onOpenChange={(open) => !open && setCrossfireToDelete(null)}>
+        <AlertDialog
+          open={Boolean(crossfireToDelete)}
+          onOpenChange={(open) => {
+            if (open || deletingCrossfire) return;
+            setCrossfireToDelete(null);
+            setCrossfireDeleteError(false);
+          }}
+        >
           <AlertDialogContent>
             <AlertDialogHeader>
               <AlertDialogTitle>{t('historyPage.deleteCrossfireTitle', 'Delete Crossfire round?')}</AlertDialogTitle>
@@ -462,9 +473,22 @@ export default function HistoryPage() {
                 {t('historyPage.deleteCrossfireDesc', 'This removes the transcript and debrief from your history.')}
               </AlertDialogDescription>
             </AlertDialogHeader>
+            {crossfireDeleteError && (
+              <p role="alert" className="text-sm text-destructive">{t('historyPage.crossfireDeleteFailed', 'Could not delete the Crossfire round.')}</p>
+            )}
             <AlertDialogFooter>
-              <AlertDialogCancel>{t('common.cancel', 'Cancel')}</AlertDialogCancel>
-              <AlertDialogAction className={buttonVariants({ variant: 'destructive' })} onClick={confirmDeleteCrossfire}>{t('common.delete', 'Delete')}</AlertDialogAction>
+              <AlertDialogCancel disabled={deletingCrossfire}>{t('common.cancel', 'Cancel')}</AlertDialogCancel>
+              <AlertDialogAction
+                className={buttonVariants({ variant: 'destructive' })}
+                disabled={deletingCrossfire}
+                onClick={(event) => {
+                  event.preventDefault();
+                  confirmDeleteCrossfire();
+                }}
+              >
+                {deletingCrossfire && <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" />}
+                {t('common.delete', 'Delete')}
+              </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>

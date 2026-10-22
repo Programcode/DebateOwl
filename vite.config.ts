@@ -115,6 +115,11 @@ export default defineConfig(({ mode }) => {
     hmr: {
       overlay: false,
     },
+    // Playwright writes trace pages (.html) under .verify/ while a recipe runs;
+    // watching them reloaded the app in the middle of tests.
+    watch: {
+      ignored: ['**/.verify/**', '**/.ci-failures/**'],
+    },
     proxy,
     allowedHosts,
   },

@@ -275,7 +275,7 @@ export default function LibraryPage() {
       description: error instanceof DebateRequiredError
         ? t('debate.sourceNeedsDebate', 'Start or select a debate before saving sources.')
         : browserIsOffline() || isBrowserNetworkFailure(error)
-          ? t('libraryPage.offlineNotSaved', 'You are offline, so this change was not saved.')
+          ? t('libraryPage.offlineNotSaved', 'You are offline. Reconnect and try again.')
           : undefined,
       variant: 'destructive',
     });
@@ -411,8 +411,8 @@ export default function LibraryPage() {
   const handleToggleSource = (id: string) => {
     if (browserIsOffline()) {
       toast({
-        title: t('libraryPage.offlineTitle', 'You are offline'),
-        description: t('libraryPage.offlineNotSaved', 'You are offline, so this change was not saved.'),
+        title: t('libraryPage.offlineTitle', 'Change not saved'),
+        description: t('libraryPage.offlineNotSaved', 'You are offline. Reconnect and try again.'),
         variant: 'destructive',
       });
       return;
@@ -421,7 +421,7 @@ export default function LibraryPage() {
       toast({
         title: t('libraryPage.toggleFailed', 'Could not change this source'),
         description: isBrowserNetworkFailure(error)
-          ? t('libraryPage.offlineNotSaved', 'You are offline, so this change was not saved.')
+          ? t('libraryPage.offlineNotSaved', 'You are offline. Reconnect and try again.')
           : t('libraryPage.toggleFailedDesc', 'It is back to how it was. Try again.'),
         variant: 'destructive',
       });

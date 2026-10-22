@@ -468,6 +468,13 @@ export class DuplicateSourceError extends Error {
 
 const PENDING_SOURCE_PREFIX = 'pending-';
 
+/** Counts source switch writes, so a server reload can tell which ones it predates. */
+let sourceWriteSeq = 0;
+/** Switch writes still running for a source, and the last value the server accepted. */
+const sourceToggles = new Map<string, { latest: number; confirmed: boolean; chain: Promise<void> }>();
+/** The newest switch value per source, kept so a reload that started earlier does not undo it. */
+const lastSourceToggle = new Map<string, { value: boolean; seq: number }>();
+
 /** A source shown before its row is saved; it has no server id to change yet. */
 export function isPendingSource(source: Pick<Source, 'id'>): boolean {
   return source.id.startsWith(PENDING_SOURCE_PREFIX);
@@ -602,17 +609,16 @@ export const useSessionStore = create<SessionState>()(
           const known = findSavedPage(get().sourceLibrary, debateId, url);
           if (known) throw new DuplicateSourceError(known.id);
         }
-        const localItem: Source = {
-          ...source, folder, debateId, isActive,
-          id: restoredId ?? `${PENDING_SOURCE_PREFIX}${generateId()}`,
-          createdAt: restoredAt ?? Date.now(),
-        };
+        // Other actions copy rows as they change them, so the shown row is found
+        // again by its id. A restored row is pending too until its insert lands.
+        const localId = `${PENDING_SOURCE_PREFIX}${restoredId ?? generateId()}`;
+        const localItem: Source = { ...source, folder, debateId, isActive, id: localId, createdAt: restoredAt ?? Date.now() };
         // The library is newest first; a restored source goes back to its old place.
         const place = (list: Source[], item: Source) =>
           restoredId ? [...list, item].sort((x, y) => y.createdAt - x.createdAt) : [item, ...list];
         // The row shows while it saves, and leaves again if the save fails.
         set((state) => ({ sourceLibrary: place(state.sourceLibrary, localItem) }));
-        const withoutLocal = () => set((state) => ({ sourceLibrary: state.sourceLibrary.filter((item) => item !== localItem) }));
+        const withoutLocal = () => set((state) => ({ sourceLibrary: state.sourceLibrary.filter((item) => item.id !== localId) }));
 
         let savedSource: Source;
         try {
@@ -674,15 +680,21 @@ export const useSessionStore = create<SessionState>()(
           withoutLocal();
           throw error;
         }
-        set((state) => ({
-          sourceFolders: mergeSourceFolders(state.sourceFolders, [savedSource]),
+        set((state) => {
+          const shown = state.sourceLibrary.some((item) => item.id === localId);
           // A reload from the server while this saved may already list the row.
-          sourceLibrary: state.sourceLibrary.includes(localItem)
-            ? state.sourceLibrary.map((item) => item === localItem ? savedSource : item)
-            : state.sourceLibrary.some((item) => item.id === savedSource.id)
+          const listed = state.sourceLibrary.some((item) => item.id === savedSource.id);
+          // A debate deleted meanwhile took its sources with it.
+          const debateGone = !useDebateStore.getState().debates.some((debate) => debate.id === debateId);
+          const sourceLibrary = shown
+            ? listed
+              ? state.sourceLibrary.filter((item) => item.id !== localId)
+              : state.sourceLibrary.map((item) => item.id === localId ? savedSource : item)
+            : listed || debateGone
               ? state.sourceLibrary
-              : place(state.sourceLibrary, savedSource),
-        }));
+              : place(state.sourceLibrary, savedSource);
+          return { sourceFolders: mergeSourceFolders(state.sourceFolders, [savedSource]), sourceLibrary };
+        });
         markDebateActivity(debateId);
       },
       createSourceFolder: async (folder) => {
@@ -701,7 +713,8 @@ export const useSessionStore = create<SessionState>()(
       },
       updateSource: async (id, patch) => {
         const current = get().sourceLibrary.find((s) => s.id === id);
-        if (!current) return;
+        // A row still saving has nothing on the server to update yet.
+        if (!current || isPendingSource(current)) return;
 
         const normalizedPatch: Partial<Omit<Source, 'id' | 'createdAt'>> = { ...patch };
         if (patch.folder !== undefined) {
@@ -900,6 +913,7 @@ export const useSessionStore = create<SessionState>()(
         }));
       },
       removeSource: async (id) => {
+        if (isPendingSource({ id })) throw new Error('[SessionStore] This source is still saving');
         const userId = await getUserId();
         if (!userId) throw signInRequired('delete this source');
         const result = await applyUserScopedIdFilter(supabase.from('sources').delete(), userId, id);
@@ -909,22 +923,44 @@ export const useSessionStore = create<SessionState>()(
       toggleSource: async (id) => {
         const current = get().sourceLibrary.find((source) => source.id === id);
         if (!current) return;
+        if (isPendingSource(current)) throw new Error('[SessionStore] This source is still saving');
         const nextValue = !current.isActive;
         const setActive = (isActive: boolean) => set((state) => ({
           sourceLibrary: state.sourceLibrary.map((source) => source.id === id ? { ...source, isActive } : source),
         }));
-        // The switch moves at once; a failed write puts it back and the caller says why.
+        // Writes for one source run in click order, and only the newest decides
+        // what the switch shows once they settle. A failed write falls back to
+        // the last value the server accepted, not to what was on screen.
+        const seq = ++sourceWriteSeq;
+        const toggles = sourceToggles.get(id) ?? { latest: 0, confirmed: current.isActive, chain: Promise.resolve() };
+        toggles.latest = seq;
+        sourceToggles.set(id, toggles);
+        lastSourceToggle.set(id, { value: nextValue, seq });
         setActive(nextValue);
-        try {
+        const write = toggles.chain.then(async () => {
           const userId = await getUserId();
           if (!userId) throw signInRequired('update this source');
           throwOnWriteError(
             await applyUserScopedIdFilter(supabase.from('sources').update({ is_active: nextValue }), userId, id),
             'toggle source activity',
           );
+        });
+        toggles.chain = write.catch((): void => undefined);
+        try {
+          await write;
+          toggles.confirmed = nextValue;
         } catch (error) {
-          setActive(current.isActive);
+          if (toggles.latest === seq) {
+            sourceToggles.delete(id);
+            lastSourceToggle.set(id, { value: toggles.confirmed, seq });
+            setActive(toggles.confirmed);
+          }
           throw error;
+        }
+        // A server reload while this ran may have put back the old value.
+        if (toggles.latest === seq) {
+          sourceToggles.delete(id);
+          setActive(nextValue);
         }
       },
       clearLibrary: async () => {
@@ -1243,6 +1279,7 @@ export const useSessionStore = create<SessionState>()(
 
       hydrateFromServer: async () => {
         if (restoredSessionsBlocked()) return;
+        const hydrateSeq = sourceWriteSeq;
         const results = await Promise.allSettled([
           supabase.from('cases').select('*').order('created_at', { ascending: false }),
           supabase.from('attacks').select('*').order('created_at', { ascending: false }),
@@ -1320,7 +1357,7 @@ export const useSessionStore = create<SessionState>()(
 
         const sourceRows = sourcesData || [];
         const sourceFolderRows = sourceFoldersData || [];
-        const serverSources = sourceRows.map((row) => ({
+        const serverSources = sourceRows.map((row): Source => ({
           id: row.id,
           title: row.title,
           content: row.content,
@@ -1346,7 +1383,16 @@ export const useSessionStore = create<SessionState>()(
           savedChats: chatsData ? serverChats : state.savedChats,
           savedFlowcharts: flowchartsData ? serverFlowcharts : state.savedFlowcharts,
           sourceFolders: mergeSourceFolders([...(sourceFoldersData ? [] : state.sourceFolders), ...serverSourceFolders], sourcesData ? serverSources : state.sourceLibrary),
-          sourceLibrary: sourcesData ? serverSources : state.sourceLibrary,
+          // Rows still saving stay, and a switch flipped after this read began keeps its value.
+          sourceLibrary: sourcesData
+            ? [
+              ...state.sourceLibrary.filter(isPendingSource),
+              ...serverSources.map((source) => {
+                const toggle = lastSourceToggle.get(source.id);
+                return toggle && toggle.seq > hydrateSeq ? { ...source, isActive: toggle.value } : source;
+              }),
+            ]
+            : state.sourceLibrary,
           serverHydration: casesData && attacksData && brainstormsData && factoidsData && chatsData && crossfiresData ? 'complete' : 'partial',
         }));
       },

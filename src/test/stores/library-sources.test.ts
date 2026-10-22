@@ -3,6 +3,12 @@ import { setActiveAccessToken, supabase } from '@/lib/supabase/client';
 import { DuplicateSourceError, isPendingSource, useSessionStore, type Source } from '@/lib/stores/session-store';
 import { resetDebates, seedCurrentDebate, TEST_DEBATE_ID } from '@/test/helpers/debate';
 
+function deferred() {
+  let resolve!: () => void;
+  const promise = new Promise<void>((done) => { resolve = done; });
+  return { promise, resolve };
+}
+
 const SAVED_ID = '33333333-3333-4333-8333-333333333333';
 const PAGE = 'https://www.motherly.com/homework-should-be-banned/';
 
@@ -131,15 +137,98 @@ describe('addSource keeps one row per web page in a debate', () => {
     expect(useSessionStore.getState().sourceLibrary.map((item) => item.id)).toEqual([SAVED_ID]);
   });
 
-  it('puts back a deleted page with Undo without calling it a duplicate', async () => {
-    const insert = vi.fn(() => ({ select: () => ({ single: async (): Promise<{ data: ReturnType<typeof insertedRow>; error: null }> => ({ data: insertedRow(PAGE), error: null }) }) }));
+  it('puts back a deleted page with Undo, as a row that cannot be changed until it lands', async () => {
+    const landed = deferred();
+    const insert = vi.fn(() => ({ select: () => ({ single: async (): Promise<{ data: ReturnType<typeof insertedRow>; error: null }> => { await landed.promise; return { data: insertedRow(PAGE), error: null }; } }) }));
     vi.spyOn(supabase, 'from').mockImplementation((table: string) => {
       if (table === 'source_folders') return { upsert: async (): Promise<{ error: null }> => ({ error: null }) } as never;
       return { insert } as never;
     });
 
-    await useSessionStore.getState().addSource({ id: SAVED_ID, createdAt: 1, title: 'Homework', content: 'Text', type: 'url', origin: PAGE });
-    expect(insert).toHaveBeenCalledOnce();
+    const restore = useSessionStore.getState().addSource({ id: SAVED_ID, createdAt: 1, title: 'Homework', content: 'Text', type: 'url', origin: PAGE });
+    await vi.waitFor(() => expect(insert).toHaveBeenCalledOnce());
+    // Deleting it again now would race the restore and bring it back afterwards.
+    const shown = useSessionStore.getState().sourceLibrary[0];
+    expect(isPendingSource(shown)).toBe(true);
+    await expect(useSessionStore.getState().removeSource(shown.id)).rejects.toThrow(/still saving/);
+
+    landed.resolve();
+    await restore;
     expect(useSessionStore.getState().sourceLibrary.map((item) => item.id)).toEqual([SAVED_ID]);
+  });
+
+  it('keeps one row when another action copies the row while it saves', async () => {
+    const landed = deferred();
+    vi.spyOn(supabase, 'from').mockImplementation((table: string) => {
+      if (table === 'source_folders') return { upsert: async (): Promise<{ error: null }> => ({ error: null }) } as never;
+      return {
+        select: () => ({ eq: () => ({ eq: async () => ({ data: [] as unknown[], error: null as null }) }) }),
+        insert: () => ({ select: () => ({ single: async (): Promise<{ data: ReturnType<typeof insertedRow>; error: null }> => { await landed.promise; return { data: insertedRow(PAGE), error: null }; } }) }),
+        // Switching the folder off rewrites every row in it, the saving one included.
+        update: () => ({ eq: () => ({ eq: () => ({ eq: async () => ({ error: null as null }) }) }) }),
+      } as never;
+    });
+
+    const add = useSessionStore.getState().addSource({ title: 'Homework', content: 'Text', type: 'url', origin: PAGE, folder: 'General' });
+    await vi.waitFor(() => expect(useSessionStore.getState().sourceLibrary).toHaveLength(1));
+    await useSessionStore.getState().setFolderActive('General', false);
+    landed.resolve();
+    await add;
+
+    expect(useSessionStore.getState().sourceLibrary.map((item) => item.id)).toEqual([SAVED_ID]);
+  });
+});
+
+describe('toggleSource with writes in flight', () => {
+  function stubSources(update: () => Promise<{ error: { message: string } | null }>, staleRows: () => Promise<unknown[]> = async () => []) {
+    vi.spyOn(supabase, 'from').mockImplementation((table: string) => ({
+      update: () => ({ eq: () => ({ eq: update }) }),
+      select: () => ({
+        order: async () => ({ data: table === 'sources' ? await staleRows() : [], error: null as null }),
+      }),
+    }) as never);
+  }
+
+  it('ends on what the server holds when two quick toggles both fail', async () => {
+    useSessionStore.setState({ sourceLibrary: [source({ isActive: true })] });
+    stubSources(async () => ({ error: { message: 'offline' } }));
+
+    const off = useSessionStore.getState().toggleSource(SAVED_ID);
+    const on = useSessionStore.getState().toggleSource(SAVED_ID);
+    await expect(off).rejects.toThrow();
+    await expect(on).rejects.toThrow();
+
+    expect(useSessionStore.getState().sourceLibrary[0].isActive).toBe(true);
+  });
+
+  it('keeps a toggle that lands after a reload started but before it answers', async () => {
+    useSessionStore.setState({ sourceLibrary: [source({ isActive: true })] });
+    const read = deferred();
+    stubSources(async () => ({ error: null }), async () => { await read.promise; return [{ ...insertedRow(PAGE), is_active: true }]; });
+
+    const hydrate = useSessionStore.getState().hydrateFromServer();
+    await useSessionStore.getState().toggleSource(SAVED_ID);
+    read.resolve();
+    await hydrate;
+    expect(useSessionStore.getState().sourceLibrary.map((item) => item.isActive)).toEqual([false]);
+  });
+
+  it('keeps a saved toggle when a server reload that read the old value lands', async () => {
+    useSessionStore.setState({ sourceLibrary: [source({ isActive: true })] });
+    const written = deferred();
+    const read = deferred();
+    stubSources(async () => { await written.promise; return { error: null }; }, async () => { await read.promise; return [{
+      ...insertedRow(PAGE), is_active: true,
+    }]; });
+
+    // The reload starts first and reads before the write lands.
+    const hydrate = useSessionStore.getState().hydrateFromServer();
+    const toggle = useSessionStore.getState().toggleSource(SAVED_ID);
+    read.resolve();
+    await hydrate;
+    written.resolve();
+    await toggle;
+    expect(useSessionStore.getState().sourceLibrary.map((item) => item.isActive)).toEqual([false]);
+
   });
 });

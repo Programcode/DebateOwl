@@ -91,7 +91,7 @@ test("lib-offline: offline, the switch does not move and says the change was not
   await expect(page.getByText("Saved Offline study to the Library")).toBeVisible();
   await page.context().setOffline(true);
   await page.getByRole("switch", { name: "Toggle Offline study" }).click();
-  await expect(page.getByText("You are offline, so this change was not saved.")).toBeVisible();
+  await expect(page.getByText("You are offline. Reconnect and try again.")).toBeVisible();
   await expect(page.getByRole("switch", { name: "Toggle Offline study" })).toBeChecked();
   await evidence.shot("01-offline-toggle");
   await page.context().setOffline(false);
