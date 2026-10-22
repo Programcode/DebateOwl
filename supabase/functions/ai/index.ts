@@ -642,7 +642,7 @@ export async function handleRequest(req: Request): Promise<Response> {
     },
     callModel: async (args) => {
       try {
-        const result = await callAI(args.provider, args.model, args.systemPrompt, args.messages, args.reasoningEffort, "research", args.signal);
+        const result = await callAI(args.provider, args.model, args.systemPrompt, args.messages, args.reasoningEffort, "research", args.signal, undefined, args.outputSchema);
         // A provider that ignores cancellation must not append usage after the
         // research timeout has already been finalized by the parent request.
         if (result.usage && !args.signal?.aborted) researchUsage.push(result.usage);

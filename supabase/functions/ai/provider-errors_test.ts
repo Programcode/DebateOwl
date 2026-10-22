@@ -1,4 +1,4 @@
-import { assertEquals } from "jsr:@std/assert@1.0.19";
+import { assertEquals, assertRejects, assertThrows } from "jsr:@std/assert@1.0.19";
 for (const [key, value] of Object.entries({
   SUPABASE_URL: "https://supabase.test", SUPABASE_ANON_KEY: "test-anon-key",
   SUPABASE_SERVICE_ROLE_KEY: "test-service-key", OPENROUTER_API_KEY: "test-provider-key",
@@ -38,5 +38,65 @@ Deno.test("AI JSON and SSE failures never expose provider response bodies", asyn
       assertEquals(text.includes(expected), true);
       assertEquals(text.includes('"code":"provider_error"'), true);
     }
+  } finally { globalThis.fetch = originalFetch; }
+});
+
+Deno.test("common JSON slips are repaired locally instead of paying for a retry", async () => {
+  const { parseJsonFromText } = await import("./provider.ts");
+  const parse = (text: string) => parseJsonFromText(text, "OpenRouter");
+  assertEquals(parse('```JSON\n{"a":1}\n```'), { a: 1 });
+  assertEquals(parse('```\n{"a":1}\n```'), { a: 1 });
+  assertEquals(parse('Here you go: {"a":"x"} Note: {not json}'), { a: "x" });
+  assertEquals(parse('Use {braces} like so. {"a":[1,2,],}'), { a: [1, 2] });
+  assertEquals(parse('{"a":"line one\nline two\t!"}'), { a: "line one\nline two\t!" });
+  assertEquals(parse('{"a":"keep , ] inside strings",}'), { a: "keep , ] inside strings" });
+  // A broken outer object never yields one of its nested objects.
+  assertThrows(() => parse('{"case": {"title": "x"}, oops}'));
+  // A reply cut off mid-object is not completed, even around a fenced example.
+  assertThrows(() => parse('{"contentions": [{"title": "x"}, {"title": "y"'));
+  assertThrows(() => parse('{"response":"Example:\n```\n{"response":"inner"}\n```\nunfinished'));
+  // Two objects that both parse leave the answer ambiguous.
+  assertThrows(() => parse('Note: {} means omitted. Answer: {"response":"Use evidence."}'));
+  assertThrows(() => parse('```\n{"response":"example"}\n```\nActually: {"response":"final"}'));
+  assertThrows(() => parse("{note} ".repeat(9) + '{"response":"example"} {"response":"final"}'));
+  // Past the span limit the reply is rejected, never accepted early.
+  assertThrows(() => parse("{note} ".repeat(20) + '{"response":"only"}'));
+  // A JSON-looking span that fails to parse may be the real answer, so no other span is trusted.
+  assertThrows(() => parse('Example: {"type":"question","text":"example"}\n\nAnswer: {"type":"question","text":"Why "this"?"}'));
+  assertThrows(() => parse('Note: {} means omitted. Answer: {"response": "Use evidence." oops}'));
+  // An unescaped quote that closes the outer span early does not yield the nested object.
+  assertThrows(() => parse('{"response": "He wrote "x} and left", "data": {"k": 1}}'));
+  // An unclosed brace leaves the rest unread, so an earlier object is not trusted.
+  assertThrows(() => parse('{"response":"example"} then { {"response":"final"}'));
+  // Fence-like text inside valid JSON parses at once.
+  const started = performance.now();
+  assertEquals(parse(JSON.stringify({ a: "```" + " ".repeat(20_000) + "x" })), { a: "```" + " ".repeat(20_000) + "x" });
+  assertEquals(performance.now() - started < 1_000, true);
+});
+
+Deno.test("a reply cut at its cap is retried once with a larger cap, keeping the strict json_schema", async () => {
+  const { callAI } = await import("./provider.ts");
+  const originalFetch = globalThis.fetch;
+  const bodies: Array<Record<string, unknown>> = [];
+  globalThis.fetch = (async (_input: Request | URL | string, init?: RequestInit) => {
+    bodies.push(JSON.parse(String(init?.body)));
+    return Response.json({
+      choices: [{ message: { content: '{"queries": ["a", "b' }, finish_reason: "length" }],
+      usage: { prompt_tokens: 10, completion_tokens: 5, cost: 0.01 },
+    });
+  }) as typeof fetch;
+  try {
+    const schema = { name: "follow_up_queries", schema: { type: "object" } };
+    const error = await assertRejects(() =>
+      callAI("openrouter", "openai/gpt-6-luna", "system", [{ role: "user", content: "hi" }], "low", "research", undefined, undefined, schema)
+    ) as { usage?: { inputTokens?: number } };
+    // One cut-off retry with a larger cap, never a repair-prompt retry on top.
+    assertEquals(bodies.length, 2);
+    for (const body of bodies) {
+      assertEquals(body.response_format, { type: "json_schema", json_schema: { name: "follow_up_queries", strict: true, schema: { type: "object" } } });
+    }
+    assertEquals((bodies[1].max_tokens as number) > (bodies[0].max_tokens as number), true);
+    // Both attempts are billed.
+    assertEquals(error.usage?.inputTokens, 20);
   } finally { globalThis.fetch = originalFetch; }
 });
