@@ -160,6 +160,6 @@ The service worker and manifest provide installable web assets and an offline ap
 
 ## Deployment boundary
 
-Vercel builds `dist/` with Node 22 and serves it. [`vercel.json`](../vercel.json) owns the app-route rewrites, the 404 for everything else, cache policy, crawler restrictions, and response security headers. Merging to `main` deploys the frontend to production; Supabase migrations and Edge Functions deploy separately. GitHub workflow files own quality, live-provider, staging, and canary automation.
+Vercel builds `dist/` with Node 22 and serves it. [`vercel.json`](../vercel.json) owns the app-route rewrites, the 404 for everything else, cache policy, crawler restrictions, response security headers, and which Git branches deploy. A push to `main` deploys production; any other branch does not until someone requests a preview ([operations.md](operations.md#opt-in-previews)). Supabase migrations and Edge Functions deploy separately. GitHub workflow files own quality, live-provider, staging, and canary automation.
 
 Read [operations.md](operations.md) before changing deployment behavior and [testing.md](testing.md) before claiming a boundary works.
