@@ -121,6 +121,8 @@ export interface FlowchartData {
 }
 
 export interface SessionState {
+  /** Account these persisted drafts belong to. Null until sign-in binds them. */
+  ownerUserId: string | null;
   generateResult: GenerateOutput | null;
   generateLoading: boolean;
   /** The Generate section being regenerated; kept here so it survives leaving the page. */
@@ -235,6 +237,12 @@ export interface SessionState {
   serverHydration: 'pending' | 'partial' | 'complete';
   clearAllData: () => Promise<void>;
   resetLocalData: () => void;
+  /**
+   * Binds persisted drafts to the signed-in account. A different account, or
+   * drafts saved before accounts were recorded, is cleared first so one
+   * browser cannot show the previous person's work.
+   */
+  prepareForUser: (userId: string) => void;
   clearSession: () => void;
 
   pendingFlowchartData: FlowchartData | null;
@@ -283,6 +291,54 @@ function settledData<T>(label: string, result: PromiseSettledResult<{ data?: T |
 function normalizeFolder(folder?: string | null) {
   const trimmed = folder?.trim();
   return trimmed || 'General';
+}
+
+/** Device-only work that must not cross accounts. Server lists reload after this. */
+function sessionWorkForAccount(ownerUserId: string | null): Partial<SessionState> {
+  return {
+    ownerUserId,
+    serverHydration: 'pending',
+    savedCases: [],
+    savedAttacks: [],
+    savedBrainstorms: [],
+    savedFactoids: [],
+    savedChats: [],
+    savedFlowcharts: [],
+    savedCrossfires: [],
+    autosavedCases: [],
+    autosavedAttacks: [],
+    autosavedBrainstorms: [],
+    autosavedFactoids: [],
+    askChatId: null,
+    askChatDebateId: null,
+    askPersistedCount: 0,
+    sourceFolders: ['General'],
+    sourceLibrary: [],
+    generateResult: null,
+    attackResult: null,
+    brainstormResult: null,
+    factoidsResult: null,
+    askMessages: [],
+    askStreamingAssistant: null,
+    pendingFlowchartData: null,
+    generateForm: {},
+    generateResultDebateId: undefined,
+    attackForm: {},
+    brainstormForm: {},
+    factoidsForm: {},
+  };
+}
+
+/**
+ * Keeps a rehydrate that finishes after sign-in from putting another account's
+ * snapshot back. Drafts with no owner are kept only while nobody is bound yet;
+ * binding then clears them.
+ */
+export function mergePersistedSessionState(persistedState: unknown, currentState: SessionState): SessionState {
+  const saved = persistedState && typeof persistedState === 'object' ? persistedState as Partial<SessionState> : {};
+  const savedOwner = typeof saved.ownerUserId === 'string' ? saved.ownerUserId : null;
+  if (currentState.ownerUserId && savedOwner !== currentState.ownerUserId) return currentState;
+  return { ...currentState, ...saved, ownerUserId: savedOwner ?? currentState.ownerUserId };
 }
 
 function mergeSourceFolders(currentFolders: string[], sources: Source[] = []) {
@@ -460,6 +516,7 @@ export function parseSourceProvenance(value: unknown): SourceProvenance | undefi
 export const useSessionStore = create<SessionState>()(
   persist(
     (set, get) => ({
+      ownerUserId: null as string | null,
       generateResult: null as GenerateOutput | null,
       generateLoading: false,
       generateRegeneratingSection: null as string | null,
@@ -1265,39 +1322,11 @@ export const useSessionStore = create<SessionState>()(
           askPersistedCount: 0,
         });
       },
-      resetLocalData: () => set({
-        serverHydration: 'pending',
-        savedCases: [],
-        savedAttacks: [],
-        savedBrainstorms: [],
-        savedFactoids: [],
-        savedChats: [],
-        savedFlowcharts: [],
-        savedCrossfires: [],
-        autosavedCases: [],
-        autosavedAttacks: [],
-        autosavedBrainstorms: [],
-        autosavedFactoids: [],
-        askChatId: null,
-        askChatDebateId: null,
-        askPersistedCount: 0,
-        sourceFolders: ['General'],
-        sourceLibrary: [],
-        generateResult: null,
-        attackResult: null,
-        brainstormResult: null,
-        factoidsResult: null,
-        askMessages: [],
-        askStreamingAssistant: null,
-        // Drafts belong to the signed-in user too; the next person on this
-        // browser must not see them prefilled.
-        pendingFlowchartData: null,
-        generateForm: {},
-        generateResultDebateId: undefined,
-        attackForm: {},
-        brainstormForm: {},
-        factoidsForm: {},
-      }),
+      resetLocalData: () => set(sessionWorkForAccount(null)),
+      prepareForUser: (userId) => {
+        if (get().ownerUserId === userId) return;
+        set(sessionWorkForAccount(userId));
+      },
 
       clearSession: () => set({
         generateResult: null,
@@ -1324,6 +1353,7 @@ export const useSessionStore = create<SessionState>()(
       // older clients: the server replaces them on hydrate, and keeping them
       // would resurrect purged legacy rows and debate-less sources.
       version: 1,
+      merge: mergePersistedSessionState,
       migrate: (persistedState) => {
         const state = { ...(persistedState as Record<string, unknown>) };
         for (const key of [
