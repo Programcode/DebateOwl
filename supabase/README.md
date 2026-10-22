@@ -110,15 +110,15 @@ When creating a table, sequence or function in `public`, grant only the Data API
 Local gate:
 
 ```bash
-supabase db start
+npx supabase db start
 npm run test:db
-supabase stop --no-backup
+npx supabase stop --no-backup
 ```
 
 Requirements:
 
 - Docker
-- Supabase CLI 2.115 or newer
+- Supabase CLI 2.121.0, pinned in `package.json` (`npm ci` installs it)
 - exclusive ownership of the default local ports and containers
 
 The stack begins at port `54321` and is not parallel-safe across worktrees. Coordinate before starting it. Stop the stack before finishing, including after failures when safe.

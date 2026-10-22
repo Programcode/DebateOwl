@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # A private, Docker-free local Supabase project for one agent or worktree.
 #
-# Uses the Supabase CLI's experimental stack engine (CLI 2.121 or newer) with
+# Uses the Supabase CLI's experimental stack engine (the repo-pinned CLI, 2.121 or newer) with
 # the native runtime, so several agents can each run migrations, pgTAP, and
 # real RLS queries at once without sharing ports, containers, or the
 # ~/.superset/debatelab-db.lock that ./.superset/db-gate.sh holds.
@@ -39,6 +39,8 @@ cmd="${1:-}"
 shift || true
 
 root="$(git rev-parse --show-toplevel)"
+source "$root/.superset/lib/supabase-cli.sh"
+use_pinned_supabase_cli "$root"
 name="${name:-$(basename "$root")}"
 case "$name" in
   *[!A-Za-z0-9._-]*|"") echo "invalid stack name: $name" >&2; exit 2 ;;
