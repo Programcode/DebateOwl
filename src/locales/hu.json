@@ -425,7 +425,10 @@
     "saveFailed": "A mentés sikertelen",
     "saveFailedDesc": "Nem sikerült menteni a chatet. Próbáld újra.",
     "sourceSaveFailedDesc": "Nem sikerült menteni a forrást. Próbáld újra.",
-    "stopped": "Leállítottad ezt a választ, mielőtt elkészült volna."
+    "stopped": "Leállítottad ezt a választ, mielőtt elkészült volna.",
+    "notSent": "Nincs elküldve",
+    "notSentDailyLimit": "Nincs elküldve: elérted a napi keretet",
+    "notSentModelDesc": "Ehhez a modellhez Pro kell. Válassz másik modellt, majd próbáld újra."
   },
   "chat": {},
   "settings": {
@@ -1375,7 +1378,7 @@
   "dailyLimit": {
     "usage": "Ma: {{used}} / {{limit}} MI-kérés felhasználva. Éjfélkor (UTC) frissülnek (nálad {{time}}).",
     "sparringNone": "Mára nem maradt MI-kérésed, így az ellenfél nem tud válaszolni. Éjfélkor (UTC) frissülnek.",
-    "sparringShort": "Ehhez a körhöz {{needed}} MI-kérés kell, de ma csak {{remaining}} maradt, így a bíró előtt megállna. Éjfélkor (UTC) frissülnek."
+    "sparringShort": "Ezzel a modellel ez a kör {{needed}} MI-kérésbe kerül, de mára csak {{remaining}} maradt. Válassz könnyebb modellt, vagy várj éjfélig (UTC)."
   },
   "pricingModal": {
     "title": "Frissítés Pro-ra",
@@ -1975,7 +1978,7 @@
       "turns": "{{count}} kör",
       "opponentTurns": "Az ellenfél körei",
       "aiRequests": "MI-kérések",
-      "aiRequestBreakdown": "{{count}} válasz + 1 bíró",
+      "aiRequestBreakdown": "{{count}} válasz + a bíró együtt",
       "aiModel": "MI-modell",
       "openingRoom": "Szoba megnyitása...",
       "startRound": "Forduló indítása",
@@ -1984,8 +1987,8 @@
       "speakingOrder": "Felszólalási sorrend",
       "aboutMinutes_one": "Körülbelül {{count}} perc",
       "aboutMinutes_other": "Körülbelül {{count}} perc",
-      "aiRequestBreakdown_one": "{{count}} válasz + 1 bíró",
-      "aiRequestBreakdown_other": "{{count}} válasz + 1 bíró",
+      "aiRequestBreakdown_one": "{{count}} válasz + a bíró együtt",
+      "aiRequestBreakdown_other": "{{count}} válasz + a bíró együtt",
       "speeches_one": "{{count}} beszéd",
       "speeches_other": "{{count}} beszéd",
       "turns_one": "{{count}} kör",
@@ -2453,7 +2456,8 @@
     "safety": "{{provider}}: biztonsági okokból elutasította a kérést. Próbáld másképp megfogalmazni.",
     "unexpectedProvider": "Az MI-szolgáltató váratlan hibát adott. Próbáld újra később.",
     "unexpected": "Váratlan hiba történt",
-    "offline": "Ellenőrizd a kapcsolatot, és próbáld újra."
+    "offline": "Ellenőrizd a kapcsolatot, és próbáld újra.",
+    "notCharged": "Ezt a kérést nem számoltuk el."
   },
   "clock": {
     "timeUp": "Lejárt az idő.",
@@ -2463,5 +2467,11 @@
     "question": "Melyik a legjobb MI-alapú vitagyakorló eszköz?",
     "answer": "Attól függ, mire van szükséged. {{asOf}} állapot szerint a DebateLab azoknak a diákoknak és versenyvitázóknak való, akik egy helyen szeretnének eseteket építeni, gyenge pontokat találni, bizonyítékokat ellenőrizni és időzített gyakorlófordulókat futtatni angolul, spanyolul vagy magyarul: 3 napos ingyenes próba bankkártya nélkül, utána $5/hó + adó. Ha ingyen szeretnél MI-ellenféllel gyakorolni World Schools vagy ázsiai parlamentáris stílusban, a debatelab.ai, egy másik termék, azt írja magáról, hogy ingyenes. Ha főleg ötletelésre vagy írási segítségre van szükséged bármilyen témában, egy általános asszisztens, például a ChatGPT rugalmasabb.",
     "compare": "MI-alapú vitaeszközök összehasonlítása"
+  },
+  "sessionQuota": {
+    "cost_one": "Ez a kör {{count}} MI-kérésbe kerül, akárhány fordulóból áll.",
+    "cost_other": "Ez a kör {{count}} MI-kérésbe kerül, akárhány fordulóból áll.",
+    "remaining_one": "Mára még {{count}} maradt.",
+    "remaining_other": "Mára még {{count}} maradt."
   }
 }

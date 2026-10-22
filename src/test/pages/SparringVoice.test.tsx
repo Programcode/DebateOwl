@@ -32,6 +32,14 @@ vi.mock('@/hooks/use-subscription', () => ({
   useSubscription: () => ({ remainingToday: null as number | null }),
 }));
 
+vi.mock('@/lib/supabase/AuthProvider', () => ({
+  useAuth: () => ({ user: { id: 'user-a' } }),
+}));
+
+vi.mock('@/hooks/use-session-quota', () => ({
+  useSessionQuota: () => ({ units: null as number | null, remaining: null as number | null, blocked: null as string | null, checkBeforeStart: async (): Promise<null> => null }),
+}));
+
 vi.mock('@/lib/voice/opponent-voice', () => ({
   opponentVoice: {
     speak: voiceMock.speak,
@@ -44,7 +52,7 @@ vi.mock('@/lib/voice/opponent-voice', () => ({
 }));
 
 const CONFIG: ProviderConfig = { provider: 'mock', model: 'local' };
-const SETTINGS = { outputLanguage: 'en' as const, getFeatureConfig: vi.fn((): ProviderConfig => CONFIG) };
+const SETTINGS = { outputLanguage: 'en' as const, featureConfigs: {} as Record<string, ProviderConfig | undefined>, getFeatureConfig: vi.fn((): ProviderConfig => CONFIG) };
 
 vi.mock('@/lib/stores/settings-store', () => ({
   useSettingsStore: (selector: (state: typeof SETTINGS) => unknown) => selector(SETTINGS),

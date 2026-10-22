@@ -31,7 +31,7 @@ function validateCrossfireTurnReferences(input: CrossfireAIInput, debrief: Cross
 export async function crossfire(
   rawInput: CrossfireAIInput,
   config: ProviderConfig,
-  options: Pick<AIRequestOptions, 'signal' | 'workspaceContext' | 'debateId' | 'voice' | 'live'> = {},
+  options: Pick<AIRequestOptions, 'signal' | 'workspaceContext' | 'debateId' | 'voice' | 'live' | 'quotaSession'> = {},
 ): Promise<(CrossfireReply & { signalToken?: string; voice?: VoicePayload }) | CrossfireDebrief> {
   const input = CrossfireAIInputSchema.safeParse(rawInput);
   if (!input.success) {
@@ -52,6 +52,8 @@ export async function crossfire(
       debateId: options.debateId,
       voice: options.voice && input.data.operation === 'next-turn',
       live: options.live,
+      // The round is charged once: every turn and the debrief name it.
+      quotaSession: options.quotaSession,
       // Turns keep the round's Review choices; the debrief ends the round.
       keepContextChoices: input.data.operation === 'next-turn',
       transformResponse: (rawData) => {
