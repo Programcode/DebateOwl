@@ -684,6 +684,8 @@ describe('AuthProvider behavior', () => {
     // auth-js announces the empty stored session while the code is still being exchanged.
     act(() => callbackRef.current?.('INITIAL_SESSION', null));
     expect(screen.getByTestId('loading')).toHaveTextContent('true');
+    // A reload during the spinner must still find the unused code and its flow.
+    expect(window.location.search).toBe('?code=pkce-code');
 
     await act(async () => {
       finishExchange({ data: { session: { user: { id: 'pkce-user' }, access_token: 'token' } }, error: null });

@@ -190,12 +190,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const hydrateOAuthCallbackSession = async (): Promise<Session | null> => {
       if (!callbackPending) return null;
       const { code, flowId, error } = readAuthCallbackParams(callbackUrl);
-      window.history.replaceState(window.history.state, '', withoutCallbackParams(callbackUrl));
-      if (error) {
-        setCallbackError(error);
+      const cleanUrl = () => window.history.replaceState(window.history.state, '', withoutCallbackParams(callbackUrl));
+      if (error || !code) {
+        cleanUrl();
+        if (error) setCallbackError(error);
         return null;
       }
-      if (!code) return null;
 
       // Finishing a sign-in is as explicit as pressing a sign-in button.
       allowSessionsAfterSignIn();
@@ -214,6 +214,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         console.warn('[Auth] sign-in callback failed:', err);
         if (mounted) setCallbackError(authCallbackErrorFor(err));
         return null;
+      } finally {
+        // Only once the exchange settles: a reload during the spinner must
+        // still find the unused code and its flow id.
+        if (mounted) cleanUrl();
       }
     };
 
