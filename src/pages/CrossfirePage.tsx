@@ -75,6 +75,8 @@ import { VoiceModeToggle } from '@/components/features/voice/VoiceModeToggle';
 import { useVoiceAvailability } from '@/lib/voice/availability';
 import { combineDelivery, measureDelivery } from '@/lib/voice/delivery';
 import { opponentVoice } from '@/lib/voice/opponent-voice';
+import { useSubscriptionError } from '@/hooks/use-subscription-error';
+import { SubscriptionErrorModals } from '@/components/features/subscription';
 
 const SESSION_ID_PREFIX = 'crossfire';
 
@@ -314,6 +316,8 @@ export default function CrossfirePage() {
   const workspace = useWorkspaceToolScope('crossfire');
   const { t } = useTranslation();
   const { user } = useAuth();
+  const subError = useSubscriptionError();
+  const { handleSubscriptionError } = subError;
   const location = useLocation();
   const navigate = useNavigate();
   const workspaceLaunch = (location.state as { workspaceLaunch?: unknown } | null)?.workspaceLaunch === true;
@@ -512,12 +516,27 @@ export default function CrossfirePage() {
       }
     } catch (error) {
       if (controller.signal.aborted) return;
+      // Out of requests or not allowed this model: the same dialog every tool uses.
+      if (handleSubscriptionError(error) && snapshot.turns.length === 0) {
+        // Nothing was exchanged, so the round never really started: no clock, back to setup.
+        opponentVoice.stop();
+        useDebateContextStore.getState().resetOverride('crossfire');
+        dispatch({
+          type: 'session-reset',
+          prefill: {
+            resolution: snapshot.config.resolution,
+            argument: snapshot.config.argument,
+            seedQuestions: snapshot.config.seedQuestions,
+          },
+        });
+        return;
+      }
       const classified = classifyError(error);
       dispatch({ type: 'request-failed', expectedReply, errorKind: classified.kind, message: classified.message });
     } finally {
       if (requestRef.current === controller) setLiveReply('');
     }
-  }, [modelConfig, roundDebateId, voiceActive, voiceLanguage, workspace.context]);
+  }, [handleSubscriptionError, modelConfig, roundDebateId, voiceActive, voiceLanguage, workspace.context]);
 
   const runDebrief = useCallback(async (snapshot: Extract<CrossfireState, { phase: 'debriefing' }>) => {
     requestRef.current?.abort();
@@ -573,7 +592,8 @@ export default function CrossfirePage() {
           seedQuestions: state.config.seedQuestions,
         },
       });
-      setFormError(t('crossfire.debriefEmptyDesc'));
+      // Ending by hand before any exchange just leaves; only the clock running out needs explaining.
+      setFormError(reason === 'timer' ? t('crossfire.debriefEmptyDesc') : '');
       return;
     }
     const next = crossfireReducer(state, { type: 'session-ended', now: Date.now(), reason });
@@ -697,6 +717,7 @@ export default function CrossfirePage() {
           </header>
           <CurrentDebateStrip hidden={Boolean(workspace.context)} />
           {debateGate.dialog}
+          <SubscriptionErrorModals subError={subError} />
 
           {(formError || storageError) && (
             <Alert variant="destructive">
@@ -1061,6 +1082,7 @@ export default function CrossfirePage() {
           </Card>
         )}
       </div>
+      <SubscriptionErrorModals subError={subError} />
     </div>
   );
 }

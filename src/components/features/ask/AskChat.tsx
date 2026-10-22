@@ -779,6 +779,7 @@ export function AskChat({ messages, streamingMessage, isLoading, error, onDismis
             value={input}
             onChange={(e) => setInput(e.target.value)}
             placeholder={isListening ? t('askChat.placeholderListening') : t('askChat.placeholder')}
+            aria-label={t('askChat.inputLabel')}
             className="flex-1"
           />
           {isLoading && onStop ? (

@@ -34,6 +34,8 @@ vi.mock('@/lib/ai/client', () => ({
   crossfire: mocks.crossfire,
   crossfireSignal: mocks.crossfireSignal,
   isTimeoutError: () => false,
+  isAISubscriptionError: () => false,
+  isAIModelRestrictionError: () => false,
 }));
 
 vi.mock('@/lib/voice/opponent-voice', () => ({

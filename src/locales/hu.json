@@ -457,9 +457,13 @@
     "accessExpired": "A hozzáférésed lejárt. Válts magasabb csomagra az MI-eszközök további használatához.",
     "globalSettings": "Globális beállítások",
     "account": "Fiók",
-    "accountDesc": "Google-fiókkal vagy bejelentkezve. Az API-kulcsokat biztonságosan a szerver kezeli.",
+    "accountDesc": "Az API-kulcsokat biztonságosan a szerver kezeli.",
     "signedInAs": "Bejelentkezve mint",
     "unknownUser": "Ismeretlen felhasználó",
+    "signInGoogle": "Bejelentkezés: Google",
+    "signInEmail": "Bejelentkezés: e-mailes kód",
+    "signInGoogleOrEmail": "Bejelentkezés: Google vagy e-mailes kód",
+    "signInDemo": "Bejelentkezés: demókód",
     "signOut": "Kijelentkezés",
     "signOutFailed": "Nem sikerült kijelentkezni. Próbáld újra.",
     "aiModels": "MI modellek",
@@ -546,6 +550,7 @@
     "failed": "Nem sikerült elindítani a bejelentkezést",
     "tryAgain": "Próbáld újra.",
     "backHome": "Vissza a DebateLabhez",
+    "sessionExpired": "A munkameneted lejárt. Jelentkezz be újra.",
     "errors": {
       "demoNotFound": "Nincs ilyen demókód.",
       "demoUnusable": "Ez a demókód nem használható.",
@@ -553,7 +558,7 @@
       "demoExpired": "Ez a demókód lejárt.",
       "demoUsedUp": "Ezzel a demókóddal már nem lehet többször belépni.",
       "rateLimited": "Túl sok próbálkozás. Próbáld újra később.",
-      "codeExpired": "Ez a kód lejárt. Kérj újat.",
+      "codeExpired": "Ez a kód hibás vagy lejárt. Ellenőrizd, vagy kérj újat.",
       "network": "A DebateLab nem érhető el. Ellenőrizd a kapcsolatot, és próbáld újra."
     }
   },
@@ -1301,6 +1306,7 @@
     "pros": "Mellette",
     "cons": "Ellene",
     "placeholder": "Kérdezd a vitaedződ...",
+    "inputLabel": "Üzenet a vitaedződnek",
     "placeholderListening": "Hallgatás...",
     "saveToLibrary": "Mentés a könyvtárba",
     "saveMessage": "Üzenet mentése a könyvtárba",
@@ -1350,6 +1356,11 @@
     "upgradeNote": "Frissíts a magas szintű érvelés feloldásához.",
     "upgrade": "Frissítés Pro-ra - $5/hó",
     "useFree": "Alacsony szintű érvelés használata"
+  },
+  "dailyLimit": {
+    "usage": "Ma: {{used}} / {{limit}} MI-kérés felhasználva. Éjfélkor (UTC) frissülnek (nálad {{time}}).",
+    "sparringNone": "Mára nem maradt MI-kérésed, így az ellenfél nem tud válaszolni. Éjfélkor (UTC) frissülnek.",
+    "sparringShort": "Ehhez a körhöz {{needed}} MI-kérés kell, de ma csak {{remaining}} maradt, így a bíró előtt megállna. Éjfélkor (UTC) frissülnek."
   },
   "pricingModal": {
     "title": "Frissítés Pro-ra",
@@ -1531,6 +1542,9 @@
     "fitView": "Teljes nézet",
     "toggleInteractivity": "Vászon zárolása vagy feloldása",
     "miniMap": "Folyamatábra áttekintése",
+    "edgeAriaLabel": "Kapcsolat: {{source}} → {{target}}",
+    "a11yNodeHelp": "Csomópont kijelöléséhez nyomd meg az Entert vagy a szóközt. Utána a nyílbillentyűkkel mozgathatod. A Delete törli, az Escape megszakítja.",
+    "a11yEdgeHelp": "Kapcsolat kijelöléséhez nyomd meg az Entert vagy a szóközt. Utána a Delete törli, az Escape megszakítja.",
     "deletedNamed": "Törölve: {{title}}",
     "deleteNamed": "{{title}} törlése",
     "restoreFailed": "Nem sikerült visszaállítani a folyamatábrát",

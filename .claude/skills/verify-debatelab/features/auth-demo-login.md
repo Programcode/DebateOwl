@@ -9,6 +9,7 @@ A visitor signs in with a demo access code on the Login page. The `demo-code-log
 - `auth-reject` shows the alert `Demo code not found.` for an unknown code and stays on `/login`.
 - `auth-signout` signs out from Settings, after which `/app/generate` redirects to `/login`.
 - `auth-refresh` refreshes an expired access token before an AI request.
+- `auth-session-expired` signs out a session the server revoked: the stored tokens are refused, so the app goes to `/login` and shows `Your session expired. Sign in again.` once (`recipes/auth.spec.ts`).
 
 ## How to get to it (user POV)
 
@@ -26,9 +27,11 @@ Preconditions:
 - **Persist.** Reload the page. The URL stays `/app`. On `/app/settings`, the page shows `user.email`.
 - **Reject.** On a signed-out page, submit `DEMO-ZZZZ-ZZZZ`. The element with role `alert` has the text `Demo code not found.`, and the URL still matches `/login`.
 - **Sign out.** On `/app/settings`, click the button named `Sign out`, then go to `/app/generate`. The URL matches `/login`.
+- **Revoked session.** Signed in on `/app`, replace `access_token` in the `debate-auth-local` localStorage entry with a JWT the server refuses, `refresh_token` with `x`, and `expires_at` with now + 3000 s, then reload. Within a few seconds the URL matches `/login` and a `status` element says `Your session expired. Sign in again.`. A second reload no longer shows it.
 
 ## Gotchas
 
 - A first sign-in on a new account starts the onboarding tour on `/app`. Its first step (`Welcome to DebateLab!`, `Start your first debate here.`) offers `Start debate`. The fixtures pre-seed `debate-trainer-onboarding` to skip it. Interactive runs click `Skip Tour` (`[data-test-id="button-skip"]`). The tour itself is covered in [current-debate](./current-debate.md).
 - Sessions are stored under the `debate-auth-local` localStorage key in local-preview mode. Don't reuse stub-session helpers (`e2e/helpers/auth.ts`). They fake auth and prove rendering only.
 - Google sign-in is not wired to the local stack. Only demo codes work here.
+- The revoked-session check forces one token refresh before it signs out. An Auth outage (network error, 5xx, 429) keeps the session, and that path is covered by `src/test/auth/session-expiry.test.ts`, not by a recipe.
