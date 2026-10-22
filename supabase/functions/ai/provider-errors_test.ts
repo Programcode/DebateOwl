@@ -52,8 +52,15 @@ Deno.test("common JSON slips are repaired locally instead of paying for a retry"
   assertEquals(parse('{"a":"keep , ] inside strings",}'), { a: "keep , ] inside strings" });
   // A broken outer object never yields one of its nested objects.
   assertThrows(() => parse('{"case": {"title": "x"}, oops}'));
-  // A reply cut off mid-object is not completed.
+  // A reply cut off mid-object is not completed, even around a fenced example.
   assertThrows(() => parse('{"contentions": [{"title": "x"}, {"title": "y"'));
+  assertThrows(() => parse('{"response":"Example:\n```\n{"response":"inner"}\n```\nunfinished'));
+  // Two objects that both parse leave the answer ambiguous.
+  assertThrows(() => parse('Note: {} means omitted. Answer: {"response":"Use evidence."}'));
+  // Fence-like text inside valid JSON parses at once.
+  const started = performance.now();
+  assertEquals(parse(JSON.stringify({ a: "```" + " ".repeat(20_000) + "x" })), { a: "```" + " ".repeat(20_000) + "x" });
+  assertEquals(performance.now() - started < 1_000, true);
 });
 
 Deno.test("a reply cut at the output cap is not retried, and a schema is sent as strict json_schema", async () => {

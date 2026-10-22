@@ -74,19 +74,32 @@ export function parseProviderContent(
  * second answer, so the common slips are fixed here first: markdown fences,
  * prose around the object, trailing commas, and raw line breaks inside
  * strings. A reply cut off mid-object is not completed: that would ship a
- * partial result as if it were whole.
+ * partial result as if it were whole. When prose holds more than one object
+ * that parses, the answer is ambiguous and the reply is rejected.
  */
 export function parseJsonFromText(text: string, providerName: string) {
   if (!text) throw new Error(`${providerName} returned empty response content`);
-  const candidates = [text];
-  const fenced = text.match(/```[a-z]*\s*([\s\S]*?)\s*```/i)?.[1];
-  if (fenced) candidates.push(fenced);
-  candidates.push(...balancedObjects(text));
-  for (const candidate of candidates) {
-    try { return JSON.parse(candidate); } catch { /* try the repaired text */ }
-    try { return JSON.parse(repairJsonText(candidate)); } catch { /* next candidate */ }
+  const whole = parseOrRepair(text);
+  if (whole.ok) return whole.value;
+  // A fence counts only when it wraps the reply. One inside a string of an
+  // unfinished object is an example, not the answer.
+  const trimmed = text.trim();
+  if (trimmed.startsWith("```")) {
+    const open = trimmed.indexOf("\n");
+    const close = trimmed.lastIndexOf("```");
+    if (open !== -1 && close > open) {
+      const fenced = parseOrRepair(trimmed.slice(open + 1, close));
+      if (fenced.ok) return fenced.value;
+    }
   }
+  const parsed = balancedObjects(text).map(parseOrRepair).filter((result): result is { ok: true; value: unknown } => result.ok);
+  if (parsed.length === 1) return parsed[0].value;
   throw new InvalidJsonResponseError(providerName, text);
+}
+
+function parseOrRepair(text: string): { ok: true; value: unknown } | { ok: false } {
+  try { return { ok: true, value: JSON.parse(text) }; } catch { /* try the repaired text */ }
+  try { return { ok: true, value: JSON.parse(repairJsonText(text)) }; } catch { return { ok: false }; }
 }
 
 // Prose before the answer may itself hold braces, so a few starts are tried.
