@@ -1332,7 +1332,8 @@
     "limitReachedDesc": "You've used {{current}} of {{limit}} included AI uses today. Access refreshes at midnight UTC.",
     "upgrade": "Upgrade to Pro - $5/mo",
     "upgradeNote": "More AI prep access + high reasoning",
-    "notNow": "Not now"
+    "notNow": "Not now",
+    "gotIt": "OK"
   },
   "modelModal": {
     "title": "Pro Reasoning",
