@@ -12,6 +12,10 @@
 -- a usable upstream charge). Repaired rows get their own calculation version,
 -- so the update cannot apply twice and stays auditable. raw_usage is not
 -- touched.
+--
+-- Deploy order: deploy the new ai and ai-stream functions (each bundles its
+-- own copy of _shared/cost.ts) before applying this migration. It runs once,
+-- so v1 rows that the old functions write after it has run stay at $0.
 
 with leaves as (
   -- One row per provider call. raw_usage is either a single OpenRouter usage
