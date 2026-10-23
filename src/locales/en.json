@@ -518,7 +518,20 @@
     "deleteAccountSuccessDesc": "Your account and all of its data have been permanently deleted.",
     "deleteAccountFailed": "Account not deleted",
     "signingOut": "Signing out…",
-    "deletingData": "Deleting…"
+    "deletingData": "Deleting…",
+    "tierExtended": "Extended access",
+    "tierPaymentFailed": "Payment failed",
+    "extendedAccessDesc_one": "Extended access is active: {{count}} AI use a day.",
+    "extendedAccessDesc_other": "Extended access is active: {{count}} AI uses a day.",
+    "renewsOn": "Renews on {{date}}",
+    "cancelsOn": "Cancels on {{date}}",
+    "endsOn": "Ends on {{date}}",
+    "paymentFailedDesc": "Payment failed: update your payment method to keep Pro.",
+    "paymentGraceUntil": "Pro access continues until {{date}} while we retry the payment.",
+    "paymentFailedNoAccess": "Payment failed: update your payment method to restore AI access.",
+    "subscriptionEndedOn": "Your Pro subscription ended on {{date}}. Resubscribe to keep using AI tools.",
+    "subscriptionEnded": "Your Pro subscription has ended. Resubscribe to keep using AI tools.",
+    "resubscribe": "Resubscribe"
   },
   "login": {
     "title": "Sign in to DebateLab",
@@ -1375,7 +1388,14 @@
     "upgrade": "Upgrade to Pro - $5/mo",
     "upgradeNote": "More AI prep access + high reasoning",
     "notNow": "Not now",
-    "gotIt": "OK"
+    "gotIt": "OK",
+    "paymentFailed": "Payment Failed",
+    "paymentFailedDesc": "Your last payment failed. Update your payment method in Settings to keep using DebateLab.",
+    "subscriptionEnded": "Pro Subscription Ended",
+    "subscriptionEndedDesc": "Your Pro subscription has ended. Resubscribe to keep using DebateLab.",
+    "subscriptionEndedOnDesc": "Your Pro subscription ended on {{date}}. Resubscribe to keep using DebateLab.",
+    "updatePayment": "Update payment method",
+    "resubscribe": "Resubscribe"
   },
   "modelModal": {
     "title": "Pro Reasoning",

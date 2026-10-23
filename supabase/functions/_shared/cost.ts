@@ -39,11 +39,11 @@ export interface NormalizedUsage {
   /** OpenRouter's authoritative account charge, in USD. */
   reportedCostUsd?: number;
   /**
-   * The part of reportedCostUsd that counts toward the weekly spend cap. For
-   * OpenRouter it is `usage.cost`, what OpenRouter took from our credits; a
-   * BYOK call billed to our own provider key adds only OpenRouter's fee.
-   * Undefined means "same as reportedCostUsd" (Exa, ElevenLabs, merged calls
-   * that did not set it).
+   * What counts toward the weekly spend cap. For OpenRouter it is the full
+   * charge (reportedCostUsd), BYOK provider charges included; only when a BYOK
+   * response lacks the upstream figure does it fall back to OpenRouter's fee,
+   * the known lower bound. Undefined means "same as reportedCostUsd" (Exa,
+   * ElevenLabs, merged calls that did not set it).
    */
   capCostUsd?: number;
   /** Characters ElevenLabs billed for a speech request. */
@@ -107,10 +107,11 @@ export function normalizeOpenRouterUsage(usage: Record<string, unknown>): Normal
     // The logged charge: for a BYOK call, OpenRouter's fee plus what the
     // provider billed our key (calculator v2).
     reportedCostUsd: openRouterCostOrUndefined(usage),
-    // usage.cost is OpenRouter's credit charge. For a BYOK call it is only the
-    // OpenRouter fee, so Claude on our own Anthropic key stays out of the cap,
-    // and a call that fell back to OpenRouter credits counts in full.
-    capCostUsd: reportedCostOrUndefined(usage.cost),
+    // The weekly cap counts the same charge, so it is never lower than the
+    // logged cost (QB-17: counting only OpenRouter's fee left Claude's BYOK
+    // provider charge out, so a call logged at $0.037-0.042 added $0.033).
+    // A BYOK response without the upstream figure counts the fee alone.
+    capCostUsd: openRouterCostOrUndefined(usage) ?? reportedCostOrUndefined(usage.cost),
     raw: usage,
   };
 }
@@ -282,8 +283,9 @@ export function chargedAgainstCap(usage?: NormalizedUsage): boolean {
 
 /**
  * Records a refunded request as adding nothing to the weekly spend cap. Only
- * for usage that chargedAgainstCap() cleared: a request OpenRouter charged
- * credits for is never refunded, so no real spend is hidden from the cap.
+ * for usage that chargedAgainstCap() cleared: a request with any known charge
+ * (OpenRouter credits or our BYOK provider key) keeps it, so no real spend is
+ * hidden from the cap.
  */
 export function excludeFromCap(usage?: NormalizedUsage): NormalizedUsage {
   return { ...usage, capCostUsd: 0 };

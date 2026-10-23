@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { applyAppLanguage } from '@/i18n';
 import { isAppLanguage, type AppLanguage } from '@/lib/languages';
+import { resolveBillingState, type BillingSettingsRow } from '../../../supabase/functions/_shared/billing-state';
 import {
   AUTO_FAST,
   AUTO_PRO,
@@ -143,26 +144,22 @@ function featureConfigsAreCanonical(value: unknown, expected: Record<FeatureTab,
   });
 }
 
+/**
+ * Whether this account may keep Pro-only model choices, by the same resolver
+ * the AI functions use (billing-state.ts): a past-due payer in the grace or a
+ * paid period behind a lagging tier keeps them. Null when it cannot be read.
+ */
 async function canAccessProModels(settings: Record<string, unknown>): Promise<boolean | null> {
-  const tier = settings.subscription_tier;
-  const graceEnd = typeof settings.grace_period_ends_at === 'string'
-    ? new Date(settings.grace_period_ends_at)
-    : null;
-  if ((tier === 'pro' || tier === 'legacy_free') && graceEnd && graceEnd > new Date()) return true;
-  if (tier !== 'pro') return false;
-
   const userId = await getUserId();
   if (!userId) return null;
+  // `*` so the read works before and after 20261023020000 (payment_failed_at).
   const { data, error } = await supabase
     .from('subscriptions')
-    .select('status, current_period_end')
+    .select('*')
     .eq('user_id', userId);
-  if (error) return null;
-  return Boolean(data?.some((subscription) =>
-    (subscription.status === 'active' || subscription.status === 'trialing')
-    && subscription.current_period_end
-    && new Date(subscription.current_period_end) > new Date()
-  ));
+  // Settings alone can prove Pro (promo, legacy grace); without the rows, a "no" is unknown.
+  if (resolveBillingState(settings as BillingSettingsRow, error ? [] : data).plan === 'pro') return true;
+  return error ? null : false;
 }
 
 async function getUserId() {

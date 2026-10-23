@@ -518,7 +518,20 @@
     "deleteAccountSuccessDesc": "A fiókodat és minden adatát véglegesen töröltük.",
     "deleteAccountFailed": "A fiók nem lett törölve",
     "signingOut": "Kijelentkezés…",
-    "deletingData": "Törlés…"
+    "deletingData": "Törlés…",
+    "tierExtended": "Bővített hozzáférés",
+    "tierPaymentFailed": "Sikertelen fizetés",
+    "extendedAccessDesc_one": "Bővített hozzáférésed van: napi {{count}} MI-használat.",
+    "extendedAccessDesc_other": "Bővített hozzáférésed van: napi {{count}} MI-használat.",
+    "renewsOn": "Megújul: {{date}}",
+    "cancelsOn": "Lemondva, lejár: {{date}}",
+    "endsOn": "Vége: {{date}}",
+    "paymentFailedDesc": "Sikertelen fizetés: frissítsd a fizetési módodat, hogy megtartsd a Pro-t.",
+    "paymentGraceUntil": "Amíg újrapróbáljuk a terhelést, a Pro-hozzáférésed megmarad eddig: {{date}}.",
+    "paymentFailedNoAccess": "Sikertelen fizetés: frissítsd a fizetési módodat az MI-hozzáférés visszaállításához.",
+    "subscriptionEndedOn": "A Pro-előfizetésed véget ért ({{date}}). Fizess elő újra az MI-eszközök további használatához.",
+    "subscriptionEnded": "A Pro-előfizetésed véget ért. Fizess elő újra az MI-eszközök további használatához.",
+    "resubscribe": "Újra előfizetek"
   },
   "login": {
     "title": "Bejelentkezés a DebateLab-ba",
@@ -1375,7 +1388,14 @@
     "upgrade": "Frissítés Pro-ra - $5/hó",
     "upgradeNote": "Több MI felkészülési hozzáférés + magas szintű érvelés",
     "notNow": "Most nem",
-    "gotIt": "Rendben"
+    "gotIt": "Rendben",
+    "paymentFailed": "Sikertelen fizetés",
+    "paymentFailedDesc": "Az utolsó fizetésed sikertelen volt. Frissítsd a fizetési módodat a Beállításokban a DebateLab további használatához.",
+    "subscriptionEnded": "A Pro-előfizetés véget ért",
+    "subscriptionEndedDesc": "A Pro-előfizetésed véget ért. Fizess elő újra a DebateLab további használatához.",
+    "subscriptionEndedOnDesc": "A Pro-előfizetésed véget ért ({{date}}). Fizess elő újra a DebateLab további használatához.",
+    "updatePayment": "Fizetési mód frissítése",
+    "resubscribe": "Újra előfizetek"
   },
   "modelModal": {
     "title": "Pro érvelés",

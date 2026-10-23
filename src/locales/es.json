@@ -518,7 +518,20 @@
     "deleteAccountSuccessDesc": "Tu cuenta y todos sus datos se han eliminado para siempre.",
     "deleteAccountFailed": "La cuenta no se eliminó",
     "signingOut": "Cerrando sesión…",
-    "deletingData": "Eliminando…"
+    "deletingData": "Eliminando…",
+    "tierExtended": "Acceso ampliado",
+    "tierPaymentFailed": "Pago fallido",
+    "extendedAccessDesc_one": "Tienes acceso ampliado: {{count}} uso de IA al día.",
+    "extendedAccessDesc_other": "Tienes acceso ampliado: {{count}} usos de IA al día.",
+    "renewsOn": "Se renueva el {{date}}",
+    "cancelsOn": "Se cancela el {{date}}",
+    "endsOn": "Termina el {{date}}",
+    "paymentFailedDesc": "El pago falló: actualiza tu método de pago para conservar Pro.",
+    "paymentGraceUntil": "Conservas el acceso Pro hasta el {{date}} mientras reintentamos el cobro.",
+    "paymentFailedNoAccess": "El pago falló: actualiza tu método de pago para recuperar el acceso a la IA.",
+    "subscriptionEndedOn": "Tu suscripción Pro terminó el {{date}}. Vuelve a suscribirte para seguir usando las herramientas de IA.",
+    "subscriptionEnded": "Tu suscripción Pro ha terminado. Vuelve a suscribirte para seguir usando las herramientas de IA.",
+    "resubscribe": "Volver a suscribirme"
   },
   "login": {
     "title": "Iniciar sesión en DebateLab",
@@ -1375,7 +1388,14 @@
     "upgrade": "Actualizar a Pro - $5/mes",
     "upgradeNote": "Más acceso a preparación con IA + razonamiento alto",
     "notNow": "Ahora no",
-    "gotIt": "Entendido"
+    "gotIt": "Entendido",
+    "paymentFailed": "Pago fallido",
+    "paymentFailedDesc": "Tu último pago falló. Actualiza tu método de pago en Ajustes para seguir usando DebateLab.",
+    "subscriptionEnded": "Suscripción Pro finalizada",
+    "subscriptionEndedDesc": "Tu suscripción Pro ha terminado. Vuelve a suscribirte para seguir usando DebateLab.",
+    "subscriptionEndedOnDesc": "Tu suscripción Pro terminó el {{date}}. Vuelve a suscribirte para seguir usando DebateLab.",
+    "updatePayment": "Actualizar método de pago",
+    "resubscribe": "Volver a suscribirme"
   },
   "modelModal": {
     "title": "Razonamiento Pro",

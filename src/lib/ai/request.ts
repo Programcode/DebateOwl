@@ -10,7 +10,7 @@ import { toast } from '@/hooks/use-toast';
 import { captureException, captureProductEvent } from '@/lib/observability';
 import { isAppLanguage, type AppLanguage } from '@/lib/languages';
 import i18n from '@/i18n';
-import { localizedLimitMessage } from './limit-message';
+import { isSubscriptionRefusalCode, localizedLimitMessage } from './limit-message';
 import type { WorkspaceToolContext } from '@/lib/workspace/tool-context';
 import {
   AIError,
@@ -281,7 +281,7 @@ export async function callSupabaseAI<T = unknown>(
       const errorCode = data.code as string | undefined;
 
       // Subscription errors (402 / trial expired / limit reached)
-      if (errorCode === 'trial_expired' || errorCode === 'limit_reached' || errorCode === 'weekly_budget_reached') {
+      if (isSubscriptionRefusalCode(errorCode)) {
         const details = {
           code: errorCode,
           limit: typeof data.limit === 'number' ? data.limit : undefined,

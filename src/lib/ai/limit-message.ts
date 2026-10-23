@@ -8,12 +8,32 @@ export interface LimitDetails {
 }
 
 /**
+ * Codes the AI functions refuse an account's access or quota with. trial_expired
+ * is what functions deployed before trial_ended, payment_failed and
+ * subscription_ended sent for all three; it reads as trial_ended.
+ */
+const SUBSCRIPTION_REFUSAL_CODES = new Set([
+  'limit_reached',
+  'weekly_budget_reached',
+  'trial_ended',
+  'trial_expired',
+  'payment_failed',
+  'subscription_ended',
+]);
+
+export function isSubscriptionRefusalCode(code: unknown): code is string {
+  return typeof code === 'string' && SUBSCRIPTION_REFUSAL_CODES.has(code);
+}
+
+/**
  * The translated explanation of a quota refusal. AISubscriptionError carries it
  * as its message, so a page that shows error.message directly is translated too;
  * the server's own reason is English only.
  */
 export function subscriptionLimitMessage({ code, limit, current, units }: LimitDetails): string {
-  if (code === 'trial_expired') return i18n.t('limitModal.trialEndedDesc');
+  if (code === 'trial_ended' || code === 'trial_expired') return i18n.t('limitModal.trialEndedDesc');
+  if (code === 'payment_failed') return i18n.t('limitModal.paymentFailedDesc');
+  if (code === 'subscription_ended') return i18n.t('limitModal.subscriptionEndedDesc');
   if (code === 'weekly_budget_reached') return i18n.t('limitModal.weeklyReachedDesc');
   const weight = units ?? 1;
   // A model heavier than the whole daily limit never fits, so waiting does not help.

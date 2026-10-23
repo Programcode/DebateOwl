@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  discountPromoRefusal,
   findCustomerOwnedByUser,
   hasOpenSubscription,
   isAllowedCheckoutRedirectUrl,
@@ -39,5 +40,14 @@ describe("checkout security", () => {
     expect(hasOpenSubscription([{ status: "canceled" }, { status: "incomplete" }, { status: "incomplete_expired" }])).toBe(false);
     expect(hasOpenSubscription([])).toBe(false);
     expect(hasOpenSubscription(null)).toBe(false);
+  });
+
+  it("refuses a discount promo past its expiry or its redemption cap (QB-08)", () => {
+    const now = new Date("2026-10-22T12:00:00.000Z");
+    expect(discountPromoRefusal({ expires_at: "2026-10-21T00:00:00.000Z" }, now)).toBe("expired");
+    expect(discountPromoRefusal({ max_redemptions: 10, redemptions_count: 10 }, now)).toBe("exhausted");
+    expect(discountPromoRefusal({ max_redemptions: 0, redemptions_count: null }, now)).toBe("exhausted");
+    expect(discountPromoRefusal({ expires_at: "2026-10-23T00:00:00.000Z", max_redemptions: 10, redemptions_count: 9 }, now)).toBeNull();
+    expect(discountPromoRefusal({ expires_at: null, max_redemptions: null }, now)).toBeNull();
   });
 });

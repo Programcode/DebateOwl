@@ -16,6 +16,14 @@ interface SubscriptionErrorState {
   handleSubscriptionError: (error: unknown) => boolean;
 }
 
+const ACCESS_VARIANTS: ReadonlySet<string> = new Set(['trial_ended', 'payment_failed', 'subscription_ended', 'weekly_budget_reached']);
+
+function variantForCode(code: string | undefined): LimitModalVariant {
+  // Functions deployed before the separate access codes send trial_expired.
+  if (code === 'trial_expired') return 'trial_ended';
+  return code && ACCESS_VARIANTS.has(code) ? code as LimitModalVariant : 'limit_reached';
+}
+
 /**
  * Hook that detects subscription/model errors and opens the appropriate modal.
  * Returns true if the error was a subscription error (handled), false otherwise.
@@ -32,11 +40,7 @@ export function useSubscriptionError(): SubscriptionErrorState {
   const handleSubscriptionError = useCallback((error: unknown): boolean => {
     if (isAISubscriptionError(error)) {
       const subError = error as AISubscriptionError;
-      if (subError.code === 'trial_expired' || subError.code === 'weekly_budget_reached') {
-        setLimitModalVariant(subError.code);
-      } else {
-        setLimitModalVariant('limit_reached');
-      }
+      setLimitModalVariant(variantForCode(subError.code));
       setLimitModalLimit(subError.limit);
       setLimitModalCurrent(subError.current);
       setLimitModalUnits(subError.units);
