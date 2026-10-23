@@ -41,13 +41,13 @@ export function billingAction({ billingState, hasOpenSubscription, hasStripeBill
 }
 
 /**
- * The plan the account is served on now, for the pricing dialog's Current
- * badge: a payment grace and legacy free still get Pro; extended access and
- * ended plans are on neither card.
+ * The plan the account is on now, for the pricing dialog's Current badge: Pro
+ * includes a payment grace. Legacy free, extended access and ended plans are
+ * on neither card, since each is offered Upgrade to Pro.
  */
 export function currentPlan(tier: SubscriptionTier): 'trial' | 'pro' | null {
   if (tier === 'trial') return 'trial';
-  if (tier === 'pro' || tier === 'legacy_free') return 'pro';
+  if (tier === 'pro') return 'pro';
   return null;
 }
 

@@ -1015,6 +1015,7 @@ export default function CrossfirePage() {
             </CardContent>
           </Card>
           )}
+          <SubscriptionErrorModals subError={subError} />
         </div>
       </div>
     );

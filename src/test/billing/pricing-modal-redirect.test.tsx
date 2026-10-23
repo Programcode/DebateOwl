@@ -82,6 +82,7 @@ describe('PricingModal per billing state', () => {
     { name: 'past due in the grace', state: stateOf({ tier: 'pro', billingState: 'payment_failed', hasOpenSubscription: true, hasStripeBilling: true }), button: 'Manage Subscription', current: 'plan-pro', portal: true },
     { name: 'past due after the grace', state: stateOf({ tier: 'expired', billingState: 'payment_failed', hasOpenSubscription: true, hasStripeBilling: true }), button: 'Manage Subscription', current: null, portal: true },
     { name: 'subscription ended', state: stateOf({ tier: 'expired', billingState: 'subscription_ended', hasStripeBilling: true }), button: 'Resubscribe', current: null, portal: false },
+    { name: 'legacy free in its grace', state: stateOf({ tier: 'legacy_free', billingState: 'legacy_free' }), button: 'Upgrade to Pro', current: null, portal: false },
     { name: 'promo Pro without Stripe', state: stateOf({ tier: 'pro', billingState: 'pro' }), button: 'Set Up Billing', current: 'plan-pro', portal: false },
   ];
 

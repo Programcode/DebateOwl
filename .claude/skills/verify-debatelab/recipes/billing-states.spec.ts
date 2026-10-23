@@ -240,6 +240,29 @@ for (const language of ["en", "hu"] as const) {
   });
 }
 
+// VS-06: the Spanish card at phone widths too (the matrix above covers EN and HU).
+test("bill-states-es: the Spanish subscription card wraps instead of squeezing", async ({ signedIn: page, user, evidence }, testInfo) => {
+  const userId = await user.userId();
+  await page.goto("/app/settings");
+  await page.getByLabel("Interface Language").click();
+  await page.getByRole("option", { name: "Español" }).click();
+  await expect(page.getByText("Suscripción", { exact: true })).toBeVisible();
+  const ES: Record<string, { badge: string; button: string }> = {
+    "trial": { badge: "Prueba gratis", button: "Mejorar a Pro" },
+    "pro-canceling": { badge: "Pro", button: "Gestionar suscripción" },
+    "past-due-grace": { badge: "Pago fallido", button: "Gestionar suscripción" },
+  };
+  for (const state of STATES.filter((candidate) => candidate.name in ES)) {
+    await setState(userId, state);
+    await page.goto("/app/settings");
+    const card = page.getByTestId("subscription-card");
+    await expect(card.getByText(ES[state.name].badge, { exact: true })).toBeVisible();
+    await expect(card.getByRole("button", { name: ES[state.name].button })).toBeVisible();
+    await shots(page, evidence, testInfo, `es-${state.name}-settings`, () => card);
+  }
+  await evidence.step("es: trial, cancelling and past-due cards");
+});
+
 test("bill-usage: the tool pages show the server's weighted count, and it updates after a run", async ({ signedIn: page, user, evidence }) => {
   const userId = await user.userId();
   await setState(userId, STATES[0]);

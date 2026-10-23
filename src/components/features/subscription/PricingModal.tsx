@@ -51,8 +51,8 @@ export function PricingModal({ open, onOpenChange, onPromoRedeemed }: PricingMod
   // Checkout needs the network; offline the button would only fail.
   const online = useOnlineStatus();
 
-  // The modal stays mounted while closed, so reopening it must not show a
-  // button still waiting on a checkout the user already left.
+  // Settings keeps the modal mounted while closed, so reopening it must not
+  // show a button still waiting on a checkout the user already left.
   useEffect(() => {
     if (!open) resetRedirect();
   }, [open, resetRedirect]);
