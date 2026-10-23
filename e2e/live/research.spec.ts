@@ -1,4 +1,4 @@
-import { admin, expect, stackReady, startDebate, test, chooseOneOff } from "../full-stack/stack";
+import { admin, chooseForMotion, expect, stackReady, startDebate, test } from "../full-stack/stack";
 import { aiResponse, expectProviderCallsHealthy, LIVE_TIMEOUT } from "./live";
 
 test.skip(!stackReady, "Live gate is required (LIVE_PROVIDERS=1 ./.superset/db-gate.sh)");
@@ -9,10 +9,9 @@ const httpLink = /^https?:\/\//;
 test("case generation researches the web and cites what it found", async ({ signedIn: page, user }) => {
   await page.goto("/app/generate");
   await page.getByRole("textbox", { name: "Motion / Topic *" }).fill("This House would make public transport free at the point of use");
-  // Generate starts a debate for a new motion, so choose one-off before submitting.
-  await chooseOneOff(page);
   const response = aiResponse(page, "generate");
   await page.getByRole("button", { name: "Generate Debate Case" }).click();
+  await chooseForMotion(page, "once");
   const body = await response;
 
   // Standard length asks for exactly three contentions.

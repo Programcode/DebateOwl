@@ -53,8 +53,7 @@ export default function GeneratePage() {
     recordResult: state.recordResult,
     updateRecordedResult: state.updateRecordedResult,
   })));
-  // Design choice (MD-10): the first Generate starts a debate for its motion instead of asking.
-  const debateGate = useDebateMotionGate({ disabled: Boolean(workspace.context), startImplicitly: true });
+  const debateGate = useDebateMotionGate({ disabled: Boolean(workspace.context) });
   // The debate row this page's current result was recorded into, if any.
   const [recordedCaseId, setRecordedCaseId] = useState<string | null>(null);
   // Undo shows an autosaved snapshot, which is not the recorded case.
@@ -276,12 +275,12 @@ export default function GeneratePage() {
       <WorkspaceToolScope context={workspace.context} />
       <div className="max-w-6xl mx-auto">
         <PageHeader title={t('nav.generate')} />
-        <CurrentDebateStrip side={generateForm?.side} hidden={Boolean(workspace.context)} autoStart />
+        <CurrentDebateStrip side={generateForm?.side} hidden={Boolean(workspace.context)} />
 
         <div className="grid gap-8 grid-cols-1 lg:grid-cols-[440px_minmax(0,1fr)]">
           {/* Form */}
           <div className="lg:sticky lg:top-24 lg:self-start">
-            <GenerateForm onSubmit={handleSubmit} isLoading={generateLoading || regeneratingSection !== null || debateGate.busy} debatePrefill={!workspace.context} />
+            <GenerateForm onSubmit={handleSubmit} isLoading={generateLoading || regeneratingSection !== null} debatePrefill={!workspace.context} />
           </div>
 
           {/* Results */}

@@ -46,16 +46,6 @@ export async function startDebate(page: Page, motion: string) {
 }
 
 /**
- * Chooses one-off mode from the debate strip before submitting. Generate starts
- * a debate for a new motion without asking, so "use once" is chosen up front.
- */
-export async function chooseOneOff(page: Page) {
-  const strip = page.getByTestId("current-debate-strip");
-  await strip.getByRole("button", { name: "Use once", exact: true }).click();
-  await expect(strip).toContainText("One-off mode");
-}
-
-/**
  * Answers the motion check after submitting a motion that is not the Current
  * Debate: the first-debate offer when none is current, otherwise the switch choice.
  */

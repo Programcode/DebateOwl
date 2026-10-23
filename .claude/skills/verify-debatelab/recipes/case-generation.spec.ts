@@ -1,5 +1,5 @@
 import { readFile } from "node:fs/promises";
-import { admin, AI_TIMEOUT, aiResponse, type Evidence, expect, expectProviderCalls, fake, LIVE, signIn, startDebate, test, chooseOneOff } from "./fixtures";
+import { admin, AI_TIMEOUT, aiResponse, chooseForMotion, type Evidence, expect, expectProviderCalls, fake, LIVE, signIn, startDebate, test } from "./fixtures";
 
 // Feature map: features/case-generation.md.
 const motion = "This House would make public transport free at the point of use";
@@ -94,11 +94,11 @@ test("gen-save: a one-off case is saved under a title and reopens from History o
   await page.goto("/app/generate");
   await expect(page.getByRole("heading", { name: "Ready to Generate" })).toBeVisible();
   await page.getByRole("textbox", { name: "Motion / Topic *" }).fill(motion);
-  // No Current Debate: use the motion once, so the case belongs to no debate until saved.
-  await chooseOneOff(page);
   const response = aiResponse(page, "generate");
   await page.getByRole("button", { name: "Generate Debate Case" }).click();
-  await evidence.step(`Generate: motion "${motion}", chose Use once`);
+  // No Current Debate: decline the offer, so the case belongs to no debate until saved.
+  await chooseForMotion(page, "once");
+  await evidence.step(`Generate: motion "${motion}", chose Not now, use it once`);
   const output = (await response).output as unknown as CaseOutput;
   await expect(page.getByText(output.caseStructure.thesis).first()).toBeVisible();
   await evidence.shot("01-generated-one-off");

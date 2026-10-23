@@ -1,4 +1,4 @@
-import { admin, expect, expectResult, MARK, stackReady, test, chooseOneOff } from "./stack";
+import { admin, chooseForMotion, expect, expectResult, MARK, stackReady, test } from "./stack";
 
 test.skip(!stackReady, "Local full stack is required (run ./.superset/db-gate.sh)");
 
@@ -39,8 +39,7 @@ test("an expired access token refreshes before an AI request", async ({ signedIn
   });
   await page.goto("/app/generate");
   await page.getByRole("textbox", { name: "Motion / Topic *" }).fill("This House would make public transport free");
-  // Generate starts a debate for a new motion, so choose one-off before submitting.
-  await chooseOneOff(page);
   await page.getByRole("button", { name: "Generate Debate Case" }).click();
+  await chooseForMotion(page, "once");
   await expectResult(page, `${MARK} case thesis`);
 });

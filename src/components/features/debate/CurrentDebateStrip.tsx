@@ -51,13 +51,7 @@ export function useDebateMotionPrefill(getMotion: () => string | undefined, setM
 }
 
 /** Compact “Working in” line directly below each feature title. */
-export function CurrentDebateStrip({ side, hidden = false, autoStart = false, className = 'mb-6' }: {
-  side?: DebateSide;
-  hidden?: boolean;
-  /** This tool starts a debate for its motion on first use, so one-off is a choice made here. */
-  autoStart?: boolean;
-  className?: string;
-}) {
+export function CurrentDebateStrip({ side, hidden = false, className = 'mb-6' }: { side?: DebateSide; hidden?: boolean; className?: string }) {
   const { t } = useTranslation();
   const debate = useCurrentDebate();
   const oneOff = useDebateStore((state) => state.oneOff);
@@ -71,9 +65,7 @@ export function CurrentDebateStrip({ side, hidden = false, autoStart = false, cl
     return (
       <div className={`${base} border-dashed border-border bg-muted/40`} data-testid="current-debate-strip">
         <span className="min-w-0 flex-1 basis-48 text-muted-foreground">{t('debate.oneOffStrip', 'One-off mode: nothing here uses or saves to a debate.')}</span>
-        {debate
-          ? <Button size="sm" variant="outline" onClick={() => setOneOff(false)}>{t('debate.returnToDebate', 'Return to debate')}</Button>
-          : <Button size="sm" variant="outline" onClick={() => setOneOff(false)}>{t('debate.leaveOneOff', 'Turn off one-off mode')}</Button>}
+        {debate && <Button size="sm" variant="outline" onClick={() => setOneOff(false)}>{t('debate.returnToDebate', 'Return to debate')}</Button>}
       </div>
     );
   }
@@ -81,15 +73,8 @@ export function CurrentDebateStrip({ side, hidden = false, autoStart = false, cl
   if (!debate) {
     return (
       <div className={`${base} border-border bg-card/60`} data-testid="current-debate-strip">
-        <span className="min-w-0 flex-1 basis-48 text-muted-foreground">
-          {autoStart
-            ? t('debate.noCurrentAutoStrip', 'No current debate. Your first result starts one for its motion.')
-            : t('debate.noCurrentStrip', 'No current debate. Results stay one-off until you start one.')}
-        </span>
-        <div className="flex gap-2">
-          {autoStart && <Button size="sm" variant="ghost" onClick={() => setOneOff(true)}>{t('debate.useOnceShort', 'Use once')}</Button>}
-          <Button size="sm" onClick={() => openDialog('create')}>{t('debate.startDebate', 'Start debate')}</Button>
-        </div>
+        <span className="min-w-0 flex-1 basis-48 text-muted-foreground">{t('debate.noCurrentStrip', 'No current debate. Results stay one-off until you start one.')}</span>
+        <Button size="sm" onClick={() => openDialog('create')}>{t('debate.startDebate', 'Start debate')}</Button>
       </div>
     );
   }
