@@ -139,7 +139,7 @@ test.describe('Hungarian parity', () => {
     await expect(page.getByRole('alert').filter({ hasText: 'Adj meg egy címet.' })).toBeVisible();
 
     await page.goto('/app/flowchart', { waitUntil: 'domcontentloaded' });
-    await page.getByRole('button', { name: 'Megnyitás' }).click();
+    await page.getByRole('button', { name: 'Megnyitás', exact: true }).click();
     await expect(page.getByRole('dialog', { name: 'Mentett folyamatábrák' }).getByRole('button', { name: 'Bezárás' })).toBeVisible();
     await page.keyboard.press('Escape');
     // Deleting a node raises a toast, whose close button is localized too.
