@@ -1,10 +1,5 @@
-import { useState, type ReactNode } from "react";
-import { motion, useReducedMotion } from "framer-motion";
-
-// Full transform strings run on the compositor; the x/y shorthands animate on the main thread.
-const HIDDEN = { opacity: 0, transform: "translateY(12px)" };
-const SHOWN = { opacity: 1, transform: "translateY(0px)" };
-const EASE_OUT_STRONG = [0.23, 1, 0.32, 1] as const;
+import { useEffect, useRef, useState, type ReactNode } from "react";
+import { cn } from "@/lib/utils";
 
 interface RevealProps {
     children: ReactNode;
@@ -18,27 +13,41 @@ interface RevealProps {
 /**
  * The one landing reveal: a short fade-up the first time content scrolls into view.
  * Hover effects belong on an inner element, never on this one, so the two never fight.
+ * A CSS transition (.landing-reveal), so the landing page loads no animation library.
  */
 export function Reveal({ children, className, delay = 0, onLoad = false }: RevealProps) {
-    const reduceMotion = useReducedMotion();
     // Prerendered HTML already shows this content. Running the entrance on the
     // render that replaces it would hide it for a moment, so only later mounts animate.
     const [prerendered] = useState(() => typeof document === "undefined" || document.getElementById("root")?.dataset.prerendered !== undefined);
-    if (reduceMotion || prerendered) return <div className={className}>{children}</div>;
-    const transition = { duration: 0.35, ease: EASE_OUT_STRONG, delay: Math.min(delay, 0.2) };
-    return onLoad ? (
-        <motion.div className={className} initial={HIDDEN} animate={SHOWN} transition={transition}>
-            {children}
-        </motion.div>
-    ) : (
-        <motion.div
-            className={className}
-            initial={HIDDEN}
-            whileInView={SHOWN}
-            transition={transition}
-            viewport={{ once: true, margin: "0px 0px -15% 0px" }}
+    const [shown, setShown] = useState(prerendered);
+    const ref = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        const element = ref.current;
+        if (shown || !element) return;
+        if (onLoad || typeof IntersectionObserver === "undefined") {
+            // One frame at the hidden state first, so the transition has somewhere to start.
+            const frame = requestAnimationFrame(() => setShown(true));
+            return () => cancelAnimationFrame(frame);
+        }
+        const observer = new IntersectionObserver((entries) => {
+            if (!entries.some((entry) => entry.isIntersecting)) return;
+            setShown(true);
+            observer.disconnect();
+        }, { rootMargin: "0px 0px -15% 0px" });
+        observer.observe(element);
+        return () => observer.disconnect();
+    }, [onLoad, shown]);
+
+    if (prerendered) return <div className={className}>{children}</div>;
+    return (
+        <div
+            ref={ref}
+            className={cn("landing-reveal", className)}
+            data-shown={shown || undefined}
+            style={{ transitionDelay: `${Math.min(delay, 0.2)}s` }}
         >
             {children}
-        </motion.div>
+        </div>
     );
 }

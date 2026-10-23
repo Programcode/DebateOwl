@@ -56,6 +56,10 @@ export const routeLoaders = {
   "*": cacheLoader(() => import("@/pages/NotFound")),
 } as const;
 
+/** The signed-in header and navigation around every /app page. */
+export const appLayoutLoader = cacheLoader(() => import("@/components/layout/AppLayout")
+  .then(({ AppLayout }) => ({ default: AppLayout })));
+
 type RoutePath = keyof typeof routeLoaders;
 
 function isRoutePath(pathname: string): pathname is RoutePath {
@@ -64,4 +68,17 @@ function isRoutePath(pathname: string): pathname is RoutePath {
 
 export function preloadRoute(pathname: string): Promise<unknown> | undefined {
   return isRoutePath(pathname) ? routeLoaders[pathname]() : undefined;
+}
+
+/**
+ * Starts fetching the page being opened (and the signed-in layout under /app)
+ * while the entry is still starting up, instead of when React first reaches it.
+ */
+export function preloadStartupRoute(pathname: string): Promise<unknown> | undefined {
+  const normalized = pathname.length > 1 ? pathname.replace(/\/+$/, "") : pathname;
+  if (normalized === "/app" || normalized.startsWith("/app/")) void appLayoutLoader().catch((): void => undefined);
+  const page = preloadRoute(normalized);
+  // A failed load is reported by the route's own lazy load when it renders.
+  page?.catch((): void => undefined);
+  return page;
 }

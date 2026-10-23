@@ -2,13 +2,13 @@ import { createRoot } from "react-dom/client";
 import { flushSync } from "react-dom";
 import App from "./App.tsx";
 import { WebTelemetry } from "./components/WebTelemetry";
-import "./i18n";
+import { appLanguageReady } from "./i18n";
 import "@fontsource-variable/inter";
 import "./index.css";
 import { registerServiceWorker } from "./register-service-worker";
 import { installStaleChunkReload } from "./lib/reload-stale-chunk";
 import { initializeObservability } from "./lib/observability";
-import { preloadRoute } from "./lib/route-modules";
+import { preloadStartupRoute } from "./lib/route-modules";
 import { legacyCallbackPath } from "./lib/auth-callback";
 
 const initializeTelemetry = (): void => {
@@ -44,6 +44,9 @@ export function mountApp(): void {
     </>
   );
   const prerendered = prerenderedRoute(container);
+  const page = preloadStartupRoute(prerendered === "*" ? "*" : window.location.pathname);
+  // The first render waits for the chosen language's strings, so a Spanish or
+  // Hungarian visitor never sees the English text first.
   if (prerendered) {
     // The prerendered page stays on screen until its module is loaded, then one
     // synchronous render replaces it with the same page. A failed load renders
@@ -52,11 +55,11 @@ export function mountApp(): void {
       flushSync(() => root.render(app));
       delete container.dataset.prerendered;
     };
-    void Promise.resolve(preloadRoute(prerendered)).then(render, render);
+    void Promise.all([page, appLanguageReady()]).then(render, render);
   } else {
     // HTML prerendered for another route (an offline copy, say) is replaced like the startup shell.
     delete container.dataset.prerendered;
-    root.render(app);
+    void appLanguageReady().then(() => root.render(app));
   }
   registerServiceWorker();
 

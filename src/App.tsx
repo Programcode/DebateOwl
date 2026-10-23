@@ -5,7 +5,6 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, useLocation, useNavigationType } from "react-router-dom";
 import { MotionConfig } from "framer-motion";
-import { AppLayout } from "@/components/layout/AppLayout";
 import { AuthProvider, useAuth } from "@/lib/supabase/AuthProvider";
 import { RequireAuth } from "@/components/auth/RequireAuth";
 import { AccountQueryCache } from "@/components/auth/AccountQueryCache";
@@ -15,7 +14,7 @@ import { hasCompletedOnboarding, useOnboardingStore } from "@/hooks/use-onboardi
 import { OfflineIndicator } from "@/components/OfflineIndicator";
 import { StagingBanner } from "@/components/StagingBanner";
 import { captureException, captureProductEvent, toTelemetrySafeError } from "@/lib/observability";
-import { routeLoaders, type RouteLoader } from "@/lib/route-modules";
+import { appLayoutLoader, routeLoaders, type RouteLoader } from "@/lib/route-modules";
 import type { PrerenderedRoute } from "@/lib/seo/pages";
 import { usePrivateRouteHead } from "@/lib/seo/use-page-head";
 import { RouteSkeleton, type RouteSkeletonVariant } from "@/components/loading/RouteSkeleton";
@@ -69,6 +68,8 @@ const DebateTimerToolPage = prerenderedPage("/tools/debate-timer");
 const MotionGeneratorToolPage = prerenderedPage("/tools/debate-motion-generator");
 const FlowSheetToolPage = prerenderedPage("/tools/debate-flow-sheet");
 const SpeechTimeCalculatorToolPage = prerenderedPage("/tools/speech-time-calculator");
+// Public pages never load the signed-in header, navigation and debate dialogs.
+const AppLayout = lazy(appLayoutLoader);
 const OnboardingTour = lazy(() => import("@/components/features/onboarding/OnboardingTour")
   .then(({ OnboardingTour: Tour }) => ({ default: Tour })));
 
@@ -215,17 +216,37 @@ export function ToolRouteAnalytics(): null {
   return null;
 }
 
+function useRouteLabel(pathname: string): { fallback: RouteFallback; label: string } {
+  const { t } = useTranslation();
+  const fallback = getRouteFallback(pathname);
+  return { fallback, label: fallback.labelKey ? t(fallback.labelKey, fallback.label) : fallback.label };
+}
+
+/** The skeleton of the page being opened, shown while its session, layout or code loads. */
+function PendingRoute() {
+  const { pathname } = useLocation();
+  const { t } = useTranslation();
+  const { fallback, label } = useRouteLabel(pathname);
+  return <RouteSkeleton variant={fallback.variant} label={label} statusText={t("common.openingPage", { page: label })} />;
+}
+
+/** The pending page before the signed-in layout exists, so it is the page's one <main>. */
+function PendingAppRoute() {
+  return (
+    <main className="min-h-screen bg-background">
+      <PendingRoute />
+    </main>
+  );
+}
+
 function RouteContent({ children }: { children: ReactNode }) {
   const location = useLocation();
-  const { t } = useTranslation();
-  const fallback = getRouteFallback(location.pathname);
-  const label = fallback.labelKey ? t(fallback.labelKey, fallback.label) : fallback.label;
-  const statusText = t("common.openingPage", { page: label });
+  const { label } = useRouteLabel(location.pathname);
   usePrivateRouteHead(location.pathname, label);
 
   return (
     <LocalizedRouteErrorBoundary key={location.pathname}>
-      <Suspense fallback={<RouteSkeleton variant={fallback.variant} label={label} statusText={statusText} />}>
+      <Suspense fallback={<PendingRoute />}>
         {children}
       </Suspense>
     </LocalizedRouteErrorBoundary>
@@ -302,10 +323,12 @@ function AppRoutes() {
           {/* Protected App Routes */}
           <Route
             element={
-              <RequireAuth>
+              <RequireAuth fallback={<PendingAppRoute />}>
                 <ToolRouteAnalytics />
                 <OptionalOnboardingTour />
-                <AppLayout />
+                <Suspense fallback={<PendingAppRoute />}>
+                  <AppLayout />
+                </Suspense>
               </RequireAuth>
             }
           >
