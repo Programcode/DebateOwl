@@ -12,6 +12,7 @@ import TermsPage from '@/pages/TermsPage';
 import PrivacyPage from '@/pages/PrivacyPage';
 import NotFound from '@/pages/NotFound';
 import SourcesPage from '@/pages/SourcesPage';
+import { PRACTICE_TOOLS, PREPARE_TOOLS, PREP_MODE_COUNT, UTILITY_TOOLS } from '@/components/features/tools/tool-links';
 import { TOOL_PAGES } from './tool-pages';
 
 const unavailable = () => Promise.reject(new Error('Not available while prerendering'));
@@ -71,13 +72,13 @@ function landingQuestions(): Array<[string, string]> {
   const asOf = factsAsOf('en');
   return [
     [i18n.t('shortAnswer.question'), i18n.t('shortAnswer.answer', { asOf })],
-    [i18n.t('faq.q6'), i18n.t('faq.a6')],
+    [i18n.t('faq.q6'), i18n.t('faq.a6', { modes: PREP_MODE_COUNT })],
     [i18n.t('faq.q1'), i18n.t('faq.a1', { asOf })],
     ...[2, 3, 4, 5].map((n): [string, string] => [i18n.t(`faq.q${n}`), i18n.t(`faq.a${n}`)]),
   ];
 }
 
-const PREP_MODES = ['generate', 'attack', 'brainstorm', 'factoids', 'ask', 'crossfire', 'sparring', 'library', 'timer', 'flowchart', 'history'];
+const APP_TOOLS = [...PREPARE_TOOLS, ...PRACTICE_TOOLS, ...UTILITY_TOOLS];
 
 function landingStructuredData(dateModified: string | undefined) {
   return {
@@ -88,7 +89,7 @@ function landingStructuredData(dateModified: string | undefined) {
         '@id': ORGANIZATION_ID,
         name: ORGANIZATION,
         url: `${SITE_ORIGIN}/`,
-        logo: `${SITE_ORIGIN}/favicon.png`,
+        logo: `${SITE_ORIGIN}/icon-1024.png`,
       },
       {
         '@type': 'WebSite',
@@ -108,7 +109,7 @@ function landingStructuredData(dateModified: string | undefined) {
         image: `${SITE_ORIGIN}/hero-visual.jpg`,
         description: DEFINITION,
         inLanguage: ['en', 'es', 'hu'],
-        featureList: PREP_MODES.map((mode) => i18n.t(`features.${mode}`)),
+        featureList: APP_TOOLS.map((tool) => i18n.t(`features.${tool.key}`)),
         offers: [
           {
             '@type': 'Offer',
