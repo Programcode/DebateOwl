@@ -6,6 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader } from '@/components/ui/
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { LanguageSwitcher } from '@/components/LanguageSwitcher';
 import { ArrowLeft, Loader2 } from 'lucide-react';
 import { useAuth } from '@/lib/supabase/AuthProvider';
 import { useToast } from '@/hooks/use-toast';
@@ -320,11 +321,12 @@ export default function LoginPage() {
   return (
     // Below md (768 px), phones included, the card starts near the top; from md up it sits in the middle.
     <main className="min-h-screen flex flex-col items-center justify-start gap-4 bg-background px-4 py-4 md:justify-center md:py-8">
-      <div className="w-full max-w-md">
+      <div className="flex w-full max-w-md items-center justify-between gap-4">
         <Link to="/" className="inline-flex items-center gap-1.5 rounded-sm text-sm text-muted-foreground transition-colors hover:text-foreground pointer-coarse:min-h-11">
           <ArrowLeft className="h-4 w-4" aria-hidden="true" />
           {t('login.backHome', 'Back to DebateLab')}
         </Link>
+        <LanguageSwitcher />
       </div>
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">

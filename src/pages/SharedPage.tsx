@@ -7,6 +7,7 @@ import { supabase } from '@/lib/supabase/client';
 import { Loader2, Share2 } from 'lucide-react';
 import { formatEuropeanDate } from '@/lib/date-format';
 import { PublicPageShell, useHomePath } from '@/components/layout/PublicPageShell';
+import { usePageLabel } from '@/lib/seo/use-page-head';
 import { GenerateOutputSchema } from '@/lib/ai/schemas/generate';
 import { AttackOutputSchema } from '@/lib/ai/schemas/attack';
 import { BrainstormOutputSchema } from '@/lib/ai/schemas/brainstorm';
@@ -92,11 +93,11 @@ export default function SharedPage() {
     const missing = !loading && (!item || error !== null);
 
     // The route shell titles every share the same. A missing link names itself.
+    usePageLabel(missing ? t('sharedPage.notFoundTitle') : null);
+
     // The response stays HTTP 200; this meta keeps it out of the index.
     useEffect(() => {
         if (!missing) return;
-        const previousTitle = document.title;
-        document.title = `${t('sharedPage.notFoundTitle')} · DebateLab`;
         let robots = document.head.querySelector<HTMLMetaElement>('meta[name="robots"]');
         const created = !robots;
         if (!robots) {
@@ -107,11 +108,10 @@ export default function SharedPage() {
         const previousRobots = robots.content;
         robots.content = 'noindex, nofollow';
         return () => {
-            document.title = previousTitle;
             if (created) robots.remove();
             else robots.content = previousRobots;
         };
-    }, [missing, t]);
+    }, [missing]);
 
     useEffect(() => {
         const loadSharedItem = async () => {

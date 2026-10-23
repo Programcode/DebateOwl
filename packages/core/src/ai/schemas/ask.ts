@@ -3,7 +3,8 @@ import { z } from 'zod';
 import { SafeWebUrlSchema } from './url';
 
 export const AskInputSchema = z.object({
-  message: z.string().min(1, 'Message is required'),
+  // A catalog key, not text: the form shows it in the interface language.
+  message: z.string().min(1, 'validation.messageRequired'),
   mode: z.enum(['general', 'clarify', 'summarize', 'proscons', 'argumentmap']),
   citationMode: z.boolean(),
   webSearch: z.boolean().optional(),

@@ -25,7 +25,7 @@ import { getActiveEnv } from '@/lib/supabase/env';
 import { useToast } from '@/hooks/use-toast';
 import { useSubscription } from '@/hooks/use-subscription';
 import { useExternalRedirectPending } from '@/hooks/use-external-redirect-pending';
-import { redirectToPortal } from '@/lib/stripe';
+import { isNoActiveSubscription, redirectToPortal } from '@/lib/stripe';
 import { deleteAccount, downloadAccountData } from '@/lib/account';
 import { PricingModal } from '@/components/features/subscription/PricingModal';
 import { SubscriptionStatus } from '@/components/features/subscription/SubscriptionStatus';
@@ -222,8 +222,7 @@ export default function SettingsPage() {
     try {
       await runPortalRedirect(redirectToPortal);
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to open billing portal';
-      if (message.toLowerCase().includes('no active subscription')) {
+      if (isNoActiveSubscription(err)) {
         toast({
           title: t('settings.noSubscription'),
           description: t('settings.noSubscriptionDesc'),
@@ -232,7 +231,8 @@ export default function SettingsPage() {
       } else {
         toast({
           title: t('settings.portalError'),
-          description: message,
+          // redirectToPortal's errors are translated when the server's code is known.
+          description: err instanceof Error ? err.message : t('serverErrors.portalFailed'),
           variant: 'destructive',
         });
       }

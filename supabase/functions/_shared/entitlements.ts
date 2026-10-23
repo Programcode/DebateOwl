@@ -28,8 +28,10 @@ export interface RateLimitResult {
    * trial_ended, payment_failed and subscription_ended replace the single
    * trial_expired code older builds sent for every account without access.
    * The client still accepts trial_expired from functions deployed before them.
+   * usage_check_failed and access_check_failed name a check that could not run
+   * (500); they avoid "quota", which browsers read as a provider failure.
    */
-  code?: "limit_reached" | "weekly_budget_reached" | AccessRefusalCode | "banned" | "upgrade_required" | "unauthenticated";
+  code?: "limit_reached" | "weekly_budget_reached" | AccessRefusalCode | "banned" | "upgrade_required" | "unauthenticated" | "usage_check_failed" | "access_check_failed";
   /** Quota units this request needed; more than 1 for expensive models. */
   units?: number;
   statusCode?: number;
@@ -254,7 +256,7 @@ export async function checkRateLimit(userId: string | null, model?: ModelSelecti
 
     if (quotaError) {
       console.error("[RATE LIMIT] Quota reservation failed:", quotaError);
-      return { allowed: false, reason: "Unable to verify your quota. Please try again.", statusCode: 500 };
+      return { allowed: false, reason: "Unable to verify your quota. Please try again.", code: "usage_check_failed", statusCode: 500 };
     }
 
     const quotaRow = Array.isArray(quota) ? quota[0] : quota;
@@ -267,7 +269,7 @@ export async function checkRateLimit(userId: string | null, model?: ModelSelecti
     return { allowed: true, limit: dailyLimit, current, units, canAccessProModels, charged, ...(session ? { session } : { reservedOn: utcDay() }), ...sessionCharge };
   } catch (err) {
     console.error("[RATE LIMIT] Check failed:", err);
-    return { allowed: false, reason: "Unable to verify your account access. Please try again.", statusCode: 500 };
+    return { allowed: false, reason: "Unable to verify your account access. Please try again.", code: "access_check_failed", statusCode: 500 };
   }
 }
 
@@ -293,7 +295,7 @@ export async function peekRateLimit(userId: string, model?: ModelSelection): Pro
     return { allowed: true, limit: dailyLimit, current, units };
   } catch (err) {
     console.error("[RATE LIMIT] Quota peek failed:", err);
-    return { allowed: false, reason: "Unable to verify your quota. Please try again.", statusCode: 500 };
+    return { allowed: false, reason: "Unable to verify your quota. Please try again.", code: "usage_check_failed", statusCode: 500 };
   }
 }
 

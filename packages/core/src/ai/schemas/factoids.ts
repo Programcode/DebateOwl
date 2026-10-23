@@ -3,7 +3,8 @@ import { z } from 'zod';
 import { SafeWebUrlSchema } from './url';
 
 export const FactoidsInputSchema = z.object({
-  claim: z.string().min(1, 'Claim is required'),
+  // A catalog key, not text: the form shows it in the interface language.
+  claim: z.string().min(1, 'validation.claimRequired'),
   direction: z.enum(['for', 'against']).default('for'),
   region: z.string().optional(),
   sourceType: z.enum(['academic', 'government', 'news', 'any']),

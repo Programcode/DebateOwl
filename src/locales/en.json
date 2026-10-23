@@ -2581,5 +2581,76 @@
     "daysLeft_other": "Free trial: {{count}} days left.",
     "endsToday": "Your free trial ends today.",
     "dismiss": "Hide the trial reminder"
+  },
+  "pageHead": {
+    "home": {
+      "title": "{{brand}} | AI Debate Prep, Cases & Rebuttals",
+      "description": "{{product}} is an AI debate prep and practice app for students and debaters: cases, rebuttals, evidence, coaching and timed rounds against an AI opponent."
+    },
+    "terms": {
+      "title": "Terms of Service | {{brand}}",
+      "description": "The terms for using {{brand}}: accounts, subscriptions and billing, acceptable use, AI-generated content, intellectual property, and liability."
+    },
+    "privacy": {
+      "title": "Privacy Policy | {{brand}}",
+      "description": "How {{brand}} collects, uses, stores, and shares your information, how AI requests are processed, and the rights you have over your data."
+    },
+    "sources": {
+      "title": "Sources | {{brand}}",
+      "description": "The sources consulted during the research and development of {{brand}}, listed alphabetically by author surname or institutional name."
+    },
+    "notFound": {
+      "title": "Page not found | {{brand}}",
+      "description": "This page does not exist on {{brand}}."
+    },
+    "tools": {
+      "title": "Free Debate Tools: Timer, Motions, Flow Sheets | {{brand}}",
+      "description": "Free debate tools that need no account: a format-aware round timer, a practice motion generator, printable flow sheets and a speech time calculator."
+    },
+    "debateTimer": {
+      "title": "Free Debate Timer for PF, LD, Policy, BP & World Schools | {{brand}}",
+      "description": "A free debate timer with presets for Public Forum, LD, Policy, BP, World Schools and Asian Parliamentary: protected time, POI knocks and prep banks."
+    },
+    "motionGenerator": {
+      "title": "Debate Motion Generator: 300 Practice Motions | {{brand}}",
+      "description": "Draw a random debate motion, or three for a veto drill, from 300 original practice motions sorted by topic, difficulty and type. THW and Resolved wording."
+    },
+    "flowSheet": {
+      "title": "Printable Debate Flow Sheet Generator | {{brand}}",
+      "description": "Print a one-page debate flow sheet with a column for every speech in PF, LD, Policy, BP, World Schools or Asian Parliamentary, on A4 or Letter."
+    },
+    "speechTimeCalculator": {
+      "title": "Speech Time Calculator for Debate Speeches | {{brand}}",
+      "description": "Paste a speech to see its word count, how long it takes to deliver at slow, average and fast pace, and which debate speech slots it fits. Runs in your browser."
+    }
+  },
+  "validation": {
+    "caseTextRequired": "Case text is required",
+    "motionRequired": "Motion is required",
+    "claimRequired": "Claim is required",
+    "messageRequired": "Message is required"
+  },
+  "serverErrors": {
+    "signInRequired": "Please sign in to continue.",
+    "sessionExpired": "Authentication failed. Your session may have expired. Please sign in again.",
+    "accessDenied": "Access denied. Your session may have expired. Please sign in again.",
+    "banned": "Your account has been suspended. Please contact support.",
+    "requestTooLarge": "Request is too large. Shorten the input and try again.",
+    "messageTooLarge": "Message is too large. Shorten it before sending.",
+    "usageCheckFailed": "Unable to verify your quota. Please try again.",
+    "accessCheckFailed": "Unable to verify your account access. Please try again.",
+    "aiService": "AI service error: {{message}}. Please try again.",
+    "portalFailed": "Could not open the billing portal. Please try again.",
+    "alreadySubscribed": "You already have a subscription. Manage it from Settings.",
+    "promoExpired": "This promo code has expired",
+    "promoExhausted": "This promo code has reached its usage limit",
+    "promoApplied": "Promo code applied!",
+    "promoDiscountNoted": "Discount code noted! Apply it at checkout for a discount.",
+    "promoInvalid": "Invalid or expired promo code",
+    "promoAlreadyRedeemed": "You've already redeemed this code",
+    "promoTooManyAttempts": "Too many promo code attempts. Try again in 15 minutes.",
+    "promoUnsupported": "Unsupported promo code type",
+    "promoMissing": "Please enter a promo code",
+    "promoFailed": "Unable to redeem promo code. Please try again."
   }
 }

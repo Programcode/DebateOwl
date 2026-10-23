@@ -11,6 +11,7 @@ import { captureException, captureProductEvent } from '@/lib/observability';
 import { isAppLanguage, type AppLanguage } from '@/lib/languages';
 import i18n from '@/i18n';
 import { isSubscriptionRefusalCode, subscriptionLimitMessage } from './limit-message';
+import { serverErrorMessage } from '@/lib/server-errors';
 import type { WorkspaceToolContext } from '@/lib/workspace/tool-context';
 import {
   AIError,
@@ -219,7 +220,7 @@ export async function callSupabaseAI<T = unknown>(
     }
 
     if (!accessToken) {
-      throw new AIAuthError('Please sign in to use AI features', { requestId });
+      throw new AIAuthError(i18n.t('serverErrors.signInRequired'), { requestId });
     }
 
     const requestBody = {
@@ -240,7 +241,7 @@ export async function callSupabaseAI<T = unknown>(
     };
 
     if (utf8ByteLength(JSON.stringify(requestBody)) > MAX_CLIENT_REQUEST_BODY_BYTES) {
-      throw new AIError('Request is too large. Shorten the input and try again.', { statusCode: 413, requestId });
+      throw new AIError(i18n.t('serverErrors.requestTooLarge'), { statusCode: 413, requestId });
     }
 
     const live = options.live;
@@ -317,7 +318,7 @@ export async function callSupabaseAI<T = unknown>(
       }
 
       // The function reported a failure that is not a limit, auth, or provider error.
-      throw new AIServerError(errorMessage, { statusCode: 500, requestId });
+      throw new AIServerError(serverErrorMessage(errorCode, errorMessage), { statusCode: 500, requestId });
     }
 
     // Validate response has expected output

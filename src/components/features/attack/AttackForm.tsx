@@ -86,7 +86,7 @@ export function AttackForm({ onSubmit, isLoading, importedCase, debateContext = 
               className="min-h-[200px] resize-y"
             />
             {errors.caseText && (
-              <p className="text-sm text-destructive">{errors.caseText.message}</p>
+              <p className="text-sm text-destructive">{t(errors.caseText.message ?? '')}</p>
             )}
           </div>
 

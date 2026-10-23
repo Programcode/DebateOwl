@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Check, CreditCard, Sparkles, Zap, Crown } from 'lucide-react';
-import { redirectToCheckout, redirectToPortal, redeemPromoCode } from '@/lib/stripe';
+import { isNoActiveSubscription, redirectToCheckout, redirectToPortal, redeemPromoCode } from '@/lib/stripe';
 import { useToast } from '@/hooks/use-toast';
 import { useSubscription } from '@/hooks/use-subscription';
 import { useExternalRedirectPending } from '@/hooks/use-external-redirect-pending';
@@ -81,8 +81,8 @@ export function PricingModal({ open, onOpenChange, onPromoRedeemed }: PricingMod
     try {
       await runRedirect(() => action === 'manage' ? redirectToPortal() : redirectToCheckout(promoCode || undefined));
     } catch (err) {
-      // The portal's own refusal is English; say it the way Settings does.
-      if (action === 'manage' && err instanceof Error && err.message.toLowerCase().includes('no active subscription')) {
+      // Say the portal's refusal the way Settings does.
+      if (action === 'manage' && isNoActiveSubscription(err)) {
         toast({ title: t('settings.noSubscription'), description: t('settings.noSubscriptionDesc') });
         return;
       }
