@@ -128,7 +128,7 @@ async function setState(userId: string, state: State) {
   }
 }
 
-async function useAIUnits(userId: string, units: number) {
+async function chargeAIUnits(userId: string, units: number) {
   await admin.from("daily_usage_counters").delete().eq("user_id", userId);
   const { error } = await admin.from("daily_usage_counters").insert({ user_id: userId, usage_date: today(), quota_key: "ai", request_count: units });
   if (error) throw error;
@@ -227,7 +227,7 @@ for (const language of ["en", "hu"] as const) {
       await expect(pricing).toBeHidden();
 
       // QB-06: a refused request opens the same dialog in every state's own words.
-      if (state.dailyLimit) await useAIUnits(userId, state.dailyLimit);
+      if (state.dailyLimit) await chargeAIUnits(userId, state.dailyLimit);
       await brainstorm(page, language);
       const refused = page.getByRole("dialog");
       await expect(refused.getByText(state.refusal.title[language], { exact: true })).toBeVisible({ timeout: AI_TIMEOUT });
@@ -244,7 +244,7 @@ test("bill-usage: the tool pages show the server's weighted count, and it update
   const userId = await user.userId();
   await setState(userId, STATES[0]);
   // Three units already charged today, as a weighted model or a Sparring round leaves them.
-  await useAIUnits(userId, 3);
+  await chargeAIUnits(userId, 3);
 
   await page.goto("/app/settings");
   await expect(page.getByTestId("daily-usage")).toContainText("2 of 5 AI uses left today");
