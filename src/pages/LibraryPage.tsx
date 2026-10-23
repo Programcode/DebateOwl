@@ -975,7 +975,7 @@ export default function LibraryPage() {
                     <Button
                       key={folder}
                       type="button"
-                      variant={selectedFolder === folder ? 'default' : 'outline-solid'}
+                      variant={selectedFolder === folder ? 'default' : 'outline'}
                       size="sm"
                       aria-pressed={selectedFolder === folder}
                       className="max-w-full shrink-0 truncate"

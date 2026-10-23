@@ -174,7 +174,7 @@ const MessageBubble = React.memo(function MessageBubble({ message, onSave }: { m
                   </div>
                   {citation.source && getFirstUrl(citation.source) ? (
                     <a
-                      className="mt-1 block wrap-break-word text-primary hover:underline wrap-anywhere"
+                      className="mt-1 block text-primary hover:underline wrap-anywhere"
                       href={getFirstUrl(citation.source)}
                       target="_blank"
                       rel="noreferrer"
@@ -182,7 +182,7 @@ const MessageBubble = React.memo(function MessageBubble({ message, onSave }: { m
                       {citation.source}
                     </a>
                   ) : citation.source ? (
-                    <div className="mt-1 wrap-break-word wrap-anywhere text-muted-foreground">{citation.source}</div>
+                    <div className="mt-1 wrap-anywhere text-muted-foreground">{citation.source}</div>
                   ) : null}
                   {citation.note && (
                     <div className="mt-1 text-muted-foreground">{citation.note}</div>
@@ -224,11 +224,11 @@ const MessageBubble = React.memo(function MessageBubble({ message, onSave }: { m
                       </span>
                     </div>
                     {safeUrl ? (
-                      <a className="mt-1 block text-primary hover:underline wrap-break-word wrap-anywhere" href={safeUrl} target="_blank" rel="noreferrer">
+                      <a className="mt-1 block text-primary hover:underline wrap-anywhere" href={safeUrl} target="_blank" rel="noreferrer">
                         {source.title || source.url}
                       </a>
                     ) : (
-                      <span className="mt-1 block wrap-break-word text-muted-foreground wrap-anywhere">{source.title || source.url}</span>
+                      <span className="mt-1 block text-muted-foreground wrap-anywhere">{source.title || source.url}</span>
                     )}
                   </li>
                   );
@@ -763,7 +763,7 @@ export function AskChat({ messages, streamingMessage, isLoading, error, onDismis
           {hasSupport && (
             <Button
               type="button"
-              variant={isListening ? "destructive" : "outline-solid"}
+              variant={isListening ? "destructive" : "outline"}
               size="icon"
               onClick={toggleListening}
               title={isListening ? t('askChat.stopListening') : t('askChat.startVoice')}

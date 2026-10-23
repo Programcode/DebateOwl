@@ -11,7 +11,7 @@ interface MarkdownProps {
 export function Markdown({ children, className, inline = false }: MarkdownProps) {
   return (
     <ReactMarkdown
-      className={cn(inline ? 'inline wrap-anywhere' : 'prose prose-sm dark:prose-invert max-w-none wrap-break-word wrap-anywhere', className)}
+      className={cn(inline ? 'inline wrap-anywhere' : 'prose prose-sm dark:prose-invert max-w-none wrap-anywhere', className)}
       components={{
         p: ({ children }) => inline ? <span>{children}</span> : <p className="mb-2 last:mb-0">{children}</p>,
         strong: ({ children }) => <strong className="font-semibold">{children}</strong>,

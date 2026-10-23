@@ -144,7 +144,7 @@ export function GenerateForm({ onSubmit, isLoading, debatePrefill = true }: Gene
               {hasVoiceSupport && (
                 <Button
                   type="button"
-                  variant={isListening ? "destructive" : "outline-solid"}
+                  variant={isListening ? "destructive" : "outline"}
                   size="icon"
                   className="h-12 w-12 shrink-0"
                   onClick={toggleVoice}

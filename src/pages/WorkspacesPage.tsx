@@ -129,7 +129,7 @@ export default function WorkspacesPage() {
                     </span>
                   )}
                 </span>
-                <Badge variant={workspace.status === "active" ? "secondary" : "outline-solid"}>
+                <Badge variant={workspace.status === "active" ? "secondary" : "outline"}>
                   {t(`workspaces.${workspace.status}`, workspace.status)}
                 </Badge>
               </Link>

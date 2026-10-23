@@ -114,7 +114,7 @@ export function SparringSetup({ onStart, roundCost = null, remainingRequests = n
                 value={motion}
                 onChange={(event) => setMotion(event.target.value)}
                 placeholder={t('sparring.setup.motionPlaceholder', 'This house would require social media companies to verify the age of every user.')}
-                className="min-h-[132px] resize-y text-base leading-7"
+                className="min-h-[132px] resize-y text-base leading-7 md:leading-5"
                 maxLength={MAX_MOTION_LENGTH}
                 autoFocus
                 aria-describedby="sparring-motion-count"

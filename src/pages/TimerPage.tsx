@@ -268,7 +268,7 @@ export default function TimerPage() {
               {currentFormat.speeches.map((s, idx) => (
                 <Button
                   key={s.id}
-                  variant={idx === currentSpeechIdx ? "default" : "outline-solid"}
+                  variant={idx === currentSpeechIdx ? "default" : "outline"}
                   data-state={idx === currentSpeechIdx ? "active" : "inactive"}
                   onClick={() => handleSpeechSelect(idx)}
                   className={`transition-all data-[state=active]:ring-2 data-[state=active]:ring-primary data-[state=active]:ring-offset-2 ${idx === currentSpeechIdx ? `${s.color} text-white` : "opacity-70 hover:opacity-100"}`}

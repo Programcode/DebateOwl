@@ -29,7 +29,7 @@ export function VoiceMicControl({ capture, onStart, onStop, disabled = false, cl
         <Button
           type="button"
           data-testid="voice-mic"
-          variant={capture.listening ? 'destructive' : 'outline-solid'}
+          variant={capture.listening ? 'destructive' : 'outline'}
           aria-pressed={capture.listening}
           onClick={capture.listening ? onStop : onStart}
           disabled={disabled}
