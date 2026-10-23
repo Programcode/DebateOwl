@@ -1,7 +1,8 @@
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeAll, describe, expect, it } from 'vitest';
 import { act, fireEvent, render, screen, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
-import i18n from '@/i18n';
+import { applyAppLanguage } from '@/i18n';
+import { routeLoaders } from '@/lib/route-modules';
 import FlowchartPage from '@/pages/FlowchartPage';
 import { useSessionStore } from '@/lib/stores/session-store';
 import { useDebateStore } from '@/lib/stores/debate-store';
@@ -15,8 +16,11 @@ function renderPage() {
     );
 }
 
+// Rendered as the route does: its loader fetches every language first.
+beforeAll(async () => { await routeLoaders['/app/flowchart'](); });
+
 afterEach(async () => {
-    await act(() => i18n.changeLanguage('en'));
+    await act(() => applyAppLanguage('en'));
     useSessionStore.setState({ generateResult: null, generateResultDebateId: undefined });
     useDebateStore.setState({ currentDebateId: null, oneOff: false });
 });
@@ -25,7 +29,7 @@ describe('FlowchartPage', () => {
     it('shows the starter nodes in the language the student switches to', async () => {
         renderPage();
         expect(screen.getByText('Your Thesis')).toBeInTheDocument();
-        await act(() => i18n.changeLanguage('hu'));
+        await act(() => applyAppLanguage('hu'));
         expect(screen.getByText('A tézised')).toBeInTheDocument();
         expect(screen.getByText('1. érv')).toBeInTheDocument();
         expect(screen.queryByText('Your Thesis')).not.toBeInTheDocument();
@@ -33,7 +37,7 @@ describe('FlowchartPage', () => {
 
     it('says inline that a node needs a label and a saved chart needs a title', async () => {
         renderPage();
-        await act(() => i18n.changeLanguage('hu'));
+        await act(() => applyAppLanguage('hu'));
 
         fireEvent.click(screen.getByRole('button', { name: 'Csomópont hozzáadása' }));
         const nodeDialog = screen.getByRole('dialog');

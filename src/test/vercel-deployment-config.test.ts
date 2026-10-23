@@ -234,9 +234,10 @@ describe("Vercel frontend deployment configuration", () => {
     expect(packageJson.scripts?.build).toBe("vite build && node scripts/prerender.mjs && node scripts/sitemap.mjs && node scripts/check-site.mjs && node scripts/check-build-boundaries.mjs");
   });
 
-  it("caches the offline shell and only caches feature assets after they are visited", () => {
+  it("answers app routes with the cached shell and never stores a navigation as another page", () => {
     const serviceWorker = readProjectFile("public/sw.js");
-    expect(serviceWorker).toContain("cache.put('/index.html', response.clone())");
+    expect(serviceWorker).toContain("caches.match('/app-shell.html', { cacheName: APP_SHELL_CACHE })");
+    expect(serviceWorker).not.toContain("cache.put('/index.html'");
     expect(serviceWorker).not.toContain("'/app/crossfire'");
     expect(serviceWorker).not.toContain("'/app/sparring'");
     expect(serviceWorker).toContain("'/favicon-72.png'");
@@ -331,7 +332,12 @@ describe("Vercel frontend deployment configuration", () => {
 
   it("caches the unhashed public images for 30 days", () => {
     const config = loadConfig();
-    for (const path of ["/favicon.ico", "/favicon.png", "/favicon-72.png", "/hero-visual.jpg", "/placeholder.svg"]) {
+    // Every icon in public/, so a new size or a renamed file can't fall back to Vercel's default revalidate-every-time.
+    const icons = readdirSync(resolve(process.cwd(), "public"))
+      .filter((name) => /^(?:favicon|apple-touch-icon|icon)[\w-]*\.(?:ico|png)$/.test(name))
+      .map((name) => `/${name}`);
+    expect(icons).toEqual(expect.arrayContaining(["/icon-1024.png", "/icon-maskable-512.png", "/apple-touch-icon.png"]));
+    for (const path of [...icons, "/hero-visual.jpg", "/placeholder.svg"]) {
       expect(headersAt(config, path)["Cache-Control"]).toBe("public, max-age=2592000");
     }
     expect(headersAt(config, "/assets/index-abc123.js")["Cache-Control"]).toBe(

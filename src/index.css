@@ -375,6 +375,21 @@ All colors MUST be HSL.
     animation: motion-swap var(--motion-duration-normal) var(--motion-ease-fluid) both;
   }
 
+  /* Landing sections fade up once as they scroll in (components/landing/Reveal.tsx).
+     Full transform strings run on the compositor. */
+  .landing-reveal {
+    opacity: 0;
+    transform: translateY(12px);
+    transition-property: opacity, transform;
+    transition-duration: 350ms;
+    transition-timing-function: var(--motion-ease-out-strong);
+  }
+
+  .landing-reveal[data-shown] {
+    opacity: 1;
+    transform: translateY(0px);
+  }
+
 
   .motion-expand {
     display: grid;
@@ -654,6 +669,10 @@ All colors MUST be HSL.
 
   [data-state='closed'][class*='animate-out'] {
     animation-name: motion-fade-out !important;
+  }
+
+  .landing-reveal {
+    transform: none;
   }
 
   /* Spinners and live indicators become a slow opacity pulse so they never look hung. */

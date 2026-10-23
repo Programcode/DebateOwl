@@ -1445,6 +1445,7 @@
     "proFeature5": "Minden vitafunkció",
     "redirecting": "Átirányítás...",
     "upgradeNow": "Frissítés most",
+    "offlineUpgrade": "Nincs internetkapcsolat. A váltáshoz csatlakozz az internethez.",
     "applying": "Alkalmazás...",
     "apply": "Alkalmaz",
     "promoCode": "Van promóciós kódod?",

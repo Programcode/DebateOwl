@@ -1,7 +1,7 @@
 import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { MemoryRouter } from 'react-router-dom';
-import i18n from '@/i18n';
+import { applyAppLanguage } from '@/i18n';
 import { CardTitle } from '@/components/ui/card';
 import { Toaster } from '@/components/ui/sonner';
 import { LanguageSwitcher } from '@/components/LanguageSwitcher';
@@ -33,7 +33,7 @@ beforeEach(() => {
 
 afterEach(async () => {
   cleanup();
-  await i18n.changeLanguage('en');
+  await applyAppLanguage('en');
 });
 
 describe('accessible names and headings', () => {
@@ -54,11 +54,11 @@ describe('accessible names and headings', () => {
     // Sonner appends the focus shortcut to containerAriaLabel.
     expect(screen.getByRole('region', { name: 'Notifications alt+T' })).toBeInTheDocument();
 
-    await act(async () => { await i18n.changeLanguage('es'); });
+    await act(async () => { await applyAppLanguage('es'); });
     rerender(<Toaster />);
     expect(screen.getByRole('region', { name: 'Notificaciones alt+T' })).toBeInTheDocument();
 
-    await act(async () => { await i18n.changeLanguage('hu'); });
+    await act(async () => { await applyAppLanguage('hu'); });
     rerender(<Toaster />);
     expect(screen.getByRole('region', { name: 'Értesítések alt+T' })).toBeInTheDocument();
   });
@@ -69,13 +69,13 @@ describe('accessible names and headings', () => {
     expect(screen.getByRole('radiogroup', { name: 'Interface language' })).toBeInTheDocument();
     expect(screen.getByRole('radiogroup', { name: 'AI output language' })).toBeInTheDocument();
 
-    await act(async () => { await i18n.changeLanguage('es'); });
+    await act(async () => { await applyAppLanguage('es'); });
     rerender(<LanguageSwitcher />);
     expect(screen.getByRole('button', { name: 'Idioma' })).toBeInTheDocument();
     expect(screen.getByRole('radiogroup', { name: 'Idioma de la interfaz' })).toBeInTheDocument();
     expect(screen.getByRole('radiogroup', { name: 'Idioma de salida de IA' })).toBeInTheDocument();
 
-    await act(async () => { await i18n.changeLanguage('hu'); });
+    await act(async () => { await applyAppLanguage('hu'); });
     rerender(<LanguageSwitcher />);
     expect(screen.getByRole('button', { name: 'Nyelv' })).toBeInTheDocument();
     expect(screen.getByRole('radiogroup', { name: 'Felület nyelve' })).toBeInTheDocument();
@@ -108,11 +108,11 @@ describe('accessible names and headings', () => {
     expect(bar).toHaveAttribute('aria-valuenow', '0');
     expect(bar).not.toHaveAttribute('data-state', 'indeterminate');
 
-    await act(async () => { await i18n.changeLanguage('es'); });
+    await act(async () => { await applyAppLanguage('es'); });
     rerender(<TimerPage />);
     expect(screen.getByRole('progressbar', { name: 'Progreso de Introductor' })).toBeInTheDocument();
 
-    await act(async () => { await i18n.changeLanguage('hu'); });
+    await act(async () => { await applyAppLanguage('hu'); });
     rerender(<TimerPage />);
     expect(screen.getByRole('progressbar', { name: 'Bevezető előrehaladása' })).toBeInTheDocument();
   });
