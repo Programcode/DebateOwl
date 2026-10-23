@@ -99,9 +99,17 @@ export function formatNumber(value: number, language: AppLanguage = activeLangua
   return FORMATTERS[language].number.format(value);
 }
 
+const DECIMAL_FORMATTERS = new Map<string, Intl.NumberFormat>();
+
 /** A number with exactly `digits` decimals in the language's notation: "1.5" in English, "1,5" in Spanish and Hungarian. */
 export function formatDecimal(value: number, digits: number, language: AppLanguage = activeLanguage()): string {
-  return new Intl.NumberFormat(toIntlLocale(language), { minimumFractionDigits: digits, maximumFractionDigits: digits }).format(value);
+  const key = `${language}:${digits}`;
+  let formatter = DECIMAL_FORMATTERS.get(key);
+  if (!formatter) {
+    formatter = new Intl.NumberFormat(toIntlLocale(language), { minimumFractionDigits: digits, maximumFractionDigits: digits });
+    DECIMAL_FORMATTERS.set(key, formatter);
+  }
+  return formatter.format(value);
 }
 
 export function formatRelativeDate(

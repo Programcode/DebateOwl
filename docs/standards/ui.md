@@ -20,7 +20,7 @@ Part of the [coding standards](../../CODING_STANDARDS.md). [docs/architecture.md
 | Case | Case | Caso | Eset (Vitaeset in titles) |
 | Ruthless (difficulty, intensity) | Ruthless | Despiadado | Kíméletlen |
 | School format | School 4-6-6-3 | Formato escolar 4-6-6-3 | Iskolai 4-6-6-3 |
-| School-format roles | Introductor, R1, R2, Conclusor | Introductor, R1, R2, Conclusor | Bevezető, R1, R2, Záró |
+| School-format roles (the Timer spells out R1 and R2) | Introductor, R1, R2, Conclusor | Introductor, R1, R2, Conclusor | Bevezető, R1, R2, Záró |
 | Sides in a Sparring turn | Pro, Con | a favor, en contra | Pro, Kontra |
 | Competition formats | Public Forum, Lincoln-Douglas, Policy, British Parliamentary, World Schools, Asian Parliamentary | same as English | same as English |
 | Load (button) / Loading | Load / Loading | Cargar / Cargando | Megnyitás / Betöltés |
