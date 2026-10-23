@@ -45,6 +45,10 @@ export const UTILITY_TOOLS = [
   { key: 'history', href: '/app/history', icon: Clock },
 ] satisfies readonly Tool[];
 
+// Copy that states how many modes there are reads these, so it cannot drift from the lists.
+export const PREP_MODE_COUNT = PREPARE_TOOLS.length + PRACTICE_TOOLS.length;
+export const UTILITY_COUNT = UTILITY_TOOLS.length;
+
 /**
  * A link to a tool. `row` shows the description (Tools page lists); `tile` shows only
  * the label (the debate dashboard and the utility strip).

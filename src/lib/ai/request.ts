@@ -10,7 +10,7 @@ import { toast } from '@/hooks/use-toast';
 import { captureException, captureProductEvent } from '@/lib/observability';
 import { isAppLanguage, type AppLanguage } from '@/lib/languages';
 import i18n from '@/i18n';
-import { isSubscriptionRefusalCode, localizedLimitMessage } from './limit-message';
+import { isSubscriptionRefusalCode, subscriptionLimitMessage } from './limit-message';
 import type { WorkspaceToolContext } from '@/lib/workspace/tool-context';
 import {
   AIError,
@@ -36,6 +36,7 @@ import {
 import { parseSourceAssessments } from './sources';
 import { utf8ByteLength } from './text';
 import { readLiveResponse, type LiveGeneration } from './live';
+import { refreshAIUsage } from '@/lib/query-client';
 
 // Request timeout in milliseconds (200 seconds)
 export const REQUEST_TIMEOUT_MS = 200 * 1000;
@@ -288,7 +289,7 @@ export async function callSupabaseAI<T = unknown>(
           current: typeof data.current === 'number' ? data.current : undefined,
           units: typeof data.units === 'number' ? data.units : undefined,
         };
-        throw new AISubscriptionError(localizedLimitMessage(errorMessage, details), { statusCode: 402, requestId, ...details });
+        throw new AISubscriptionError(subscriptionLimitMessage(details), { statusCode: 402, requestId, ...details });
       }
 
       // Model restriction (403 / upgrade_required)
@@ -413,6 +414,7 @@ export async function callSupabaseAI<T = unknown>(
   } finally {
     clearTimeout(timeoutId);
     options.signal?.removeEventListener('abort', abortFromCaller);
+    refreshAIUsage();
   }
 }
 

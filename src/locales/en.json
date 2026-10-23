@@ -454,9 +454,6 @@
     "tierExpired": "Expired",
     "ends": "Ends",
     "loading": "Loading...",
-    "manageSubscription": "Manage Subscription",
-    "setUpBilling": "Set Up Billing",
-    "upgradeToPro": "Upgrade to Pro",
     "confirmingSubscription": "Confirming your Pro subscription…",
     "checkoutCanceled": "Checkout canceled",
     "checkoutCanceledDesc": "No charge was made.",
@@ -534,8 +531,7 @@
     "paymentGraceUntil": "Pro access continues until {{date}} while we retry the payment.",
     "paymentFailedNoAccess": "Payment failed: update your payment method to restore AI access.",
     "subscriptionEndedOn": "Your Pro subscription ended on {{date}}. Resubscribe to keep using AI tools.",
-    "subscriptionEnded": "Your Pro subscription has ended. Resubscribe to keep using AI tools.",
-    "resubscribe": "Resubscribe"
+    "subscriptionEnded": "Your Pro subscription has ended. Resubscribe to keep using AI tools."
   },
   "login": {
     "title": "Sign in to DebateLab",
@@ -935,7 +931,6 @@
   },
   "features": {
     "title": "Everything You Need to Win",
-    "subtitle": "Eleven debate tools for competitive preparation.",
     "generate": "Case Generator",
     "generateDesc": "Build complete cases with structured arguments, evidence, and counter-strategies.",
     "attack": "Case Attacker",
@@ -1002,11 +997,11 @@
     "proPeriod": "/month + tax",
     "recommended": "Recommended",
     "trialFeature1": "Starter AI prep access",
-    "trialFeature2": "All 11 prep modes",
+    "trialFeature2": "All {{modes}} prep modes and {{utilities}} utilities",
     "trialFeature3": "Starter models",
     "trialFeature4": "3-day access",
     "proFeature1": "Expanded AI prep access",
-    "proFeature2": "All 11 prep modes",
+    "proFeature2": "All {{modes}} prep modes and {{utilities}} utilities",
     "proFeature3": "All 10 models, including Claude Opus and Sonnet, GPT-6.1 Sol, and Gemini",
     "proFeature4": "Priority support",
     "proFeature5": "Active Grounding™ research",
@@ -1033,7 +1028,7 @@
     "a5": "Yes! Save cases, brainstorms, and chats to History. Export to Word, PDF, or Google Docs.",
     "subtitle": "Pricing, workflow, and product details at a glance.",
     "q6": "What is DebateLab?",
-    "a6": "DebateLab is an AI debate prep and practice app for students and competitive debaters. It has 11 prep modes, including a case generator, a case attacker, evidence research with citations, an AI coach, Crossfire and timed Sparring rounds against an AI opponent, and it is available in English, Spanish and Hungarian."
+    "a6": "DebateLab is an AI debate prep and practice app for students and competitive debaters. It has {{modes}} prep modes, including a case generator, a case attacker, evidence research with citations, an AI coach, Crossfire and timed Sparring rounds against an AI opponent, and it is available in English, Spanish and Hungarian."
   },
   "finalCta": {
     "title": "Ready to Build Your Next Winning Case?",
@@ -1390,7 +1385,7 @@
   },
   "limitModal": {
     "trialEnded": "Free Trial Ended",
-    "trialEndedDesc": "Your 3-day free trial has ended. Upgrade to Pro to keep using DebateLab.",
+    "trialEndedDesc": "Your {{days}}-day free trial has ended. Upgrade to Pro to keep using DebateLab.",
     "limitReached": "Daily Access Paused",
     "limitReachedDesc": "You've used {{current}} of {{limit}} included AI uses today. Access refreshes at midnight UTC.",
     "weightedDesc": "This model counts as {{units}} uses, and you have {{remaining}} left today. Pick a lighter model or wait until midnight UTC.",
@@ -1398,7 +1393,6 @@
     "weeklyReached": "Weekly AI Allowance Used",
     "weeklyReachedDesc": "You've used this week's AI allowance. It refreshes on Monday at 00:00 UTC. Contact support if you need more.",
     "ok": "OK",
-    "upgrade": "Upgrade to Pro - $5/mo",
     "upgradeNote": "More AI prep access + high reasoning",
     "notNow": "Not now",
     "gotIt": "OK",
@@ -1408,43 +1402,42 @@
     "subscriptionEndedDesc": "Your Pro subscription has ended. Resubscribe to keep using DebateLab.",
     "subscriptionEndedOnDesc": "Your Pro subscription ended on {{date}}. Resubscribe to keep using DebateLab.",
     "updatePayment": "Update payment method",
-    "resubscribe": "Resubscribe"
+    "limitReachedGenericDesc": "You've used today's included AI uses. Access refreshes at midnight UTC.",
+    "zeroLimitDesc": "This account has no daily AI uses right now. Contact support if this seems wrong.",
+    "roundShortDesc": "This round needs {{units}} AI uses and you have {{remaining}} left today. Pick a lighter model or wait until midnight UTC."
   },
   "modelModal": {
     "title": "Pro Reasoning",
     "description": "High reasoning is reserved for Pro members.",
     "descriptionWithModel": "High reasoning with {{model}} is reserved for Pro members.",
     "upgradeNote": "Upgrade to unlock high reasoning.",
-    "upgrade": "Upgrade to Pro - $5/mo",
-    "useFree": "Use low reasoning instead"
+    "useFree": "Use low reasoning instead",
+    "restrictedDesc": "This model or reasoning level needs Pro."
   },
   "dailyLimit": {
-    "usage": "Today: {{used}} of {{limit}} AI requests used. They refresh at midnight UTC ({{time}} your time).",
-    "sparringNone": "You have no AI requests left today, so the opponent can't answer. They refresh at midnight UTC.",
-    "sparringShort": "This round costs {{needed}} AI requests on this model and you have {{remaining}} left today. Pick a lighter model or wait until midnight UTC."
+    "remaining_one": "{{count}} of {{limit}} AI uses left today",
+    "remaining_other": "{{count}} of {{limit}} AI uses left today",
+    "remainingWithReset_one": "{{count}} of {{limit}} AI uses left today. They refresh at midnight UTC ({{time}} your time).",
+    "remainingWithReset_other": "{{count}} of {{limit}} AI uses left today. They refresh at midnight UTC ({{time}} your time)."
   },
   "pricingModal": {
     "title": "Upgrade to Pro",
-    "subtitle": "Unlock higher usage limits, all 10 models, and configurable reasoning.",
-    "free": "Free",
+    "subtitle": "Unlock higher usage limits, every model, and configurable reasoning.",
+    "free": "Free trial",
     "pro": "Pro",
     "current": "Current",
     "recommended": "Recommended",
-    "freePrice": "$0",
-    "proPrice": "$5",
-    "freePeriod": "/mo",
     "proPeriod": "/mo + tax",
     "freeFeature1": "Starter AI prep access",
     "freeFeature2": "Starter models",
     "freeFeature3": "All debate features",
-    "freeFeature4": "3-day free trial",
+    "freeFeature4": "No credit card needed",
     "proFeature1": "Expanded AI prep access",
-    "proFeature2": "All 10 models, including Claude Opus and Sonnet, GPT-6.1 Sol, and Gemini",
+    "proFeature2": "Every model, including Claude Opus and Sonnet, GPT-6.1 Sol, and Gemini",
     "proFeature3": "Deep research with Exa",
     "proFeature4": "Priority processing",
     "proFeature5": "All debate features",
     "redirecting": "Redirecting...",
-    "upgradeNow": "Upgrade Now",
     "offlineUpgrade": "You are offline. Connect to the internet to upgrade.",
     "applying": "Applying...",
     "apply": "Apply",
@@ -1455,7 +1448,15 @@
     "codeRedeemed": "Code Redeemed",
     "invalidCode": "Invalid Code",
     "redeemError": "Error",
-    "redeemErrorDesc": "Failed to redeem code"
+    "redeemErrorDesc": "Failed to redeem code",
+    "titleYourPlan": "Your plan",
+    "titleResubscribe": "Resubscribe to Pro",
+    "subtitleManage": "Change your payment method, see invoices or cancel in the billing portal.",
+    "subtitleCanceling": "Your Pro plan is set to cancel on {{date}}. You can keep it in the billing portal.",
+    "subtitlePaymentFailed": "Your last payment failed. Update your payment method in the billing portal to keep Pro.",
+    "subtitleSetUpBilling": "Your Pro access comes from a promotion. Set up billing to keep Pro after it ends.",
+    "freePeriod_one": "for {{count}} day",
+    "freePeriod_other": "for {{count}} days"
   },
   "onboarding": {
     "welcome": "Welcome to DebateLab! 🎉",
@@ -1828,7 +1829,7 @@
   "privacyPage": {
     "title": "Privacy Policy",
     "lastUpdated": "Last updated",
-    "date": "October 1, 2026",
+    "date": "October 23, 2026",
     "s1": "Information We Collect",
     "p1": "We collect information you provide when creating an account, including your name and email from Google sign-in or email sign-in, plus usage data such as generated content, saved items, and interaction patterns. If you use an admin-issued demo code, we process that code to authenticate your demo account.",
     "s2": "How We Use Your Information",
@@ -1838,17 +1839,19 @@
     "s4": "Data Storage",
     "p4": "Your data is stored securely using Supabase infrastructure with encryption at rest and in transit.",
     "s5": "Data Sharing",
-    "p5": "We do not sell your personal data. We share data only with OpenRouter for AI processing, ElevenLabs for the opponent's voice in voice rounds, and payment processors for billing.",
+    "p5": "We do not sell your personal data. We share data only with OpenRouter for AI processing, ElevenLabs for the opponent's voice in voice rounds, Exa for web research, PostHog and Sentry for analytics and error monitoring (see Cookies and Tracking), Jam for bug reports (see Bug Reports with Jam), and payment processors for billing.",
     "s6": "Your Rights",
     "p6": "In Settings you can download a copy of your data as a JSON file, erase your saved work, or delete your account. Deleting your account permanently removes it and all data stored with it, and cancels any Pro subscription immediately. Stripe keeps its own billing records, such as invoices and payments, as required for tax and accounting.",
     "s7": "Cookies and Tracking",
     "p7": "We use essential cookies and browser storage for authentication and preferences. We use PostHog for product analytics and Sentry for error monitoring, structured logs, application metrics, performance tracing, and error-only Session Replay. Sentry does not record ordinary sessions. It records sessions containing captured errors; all replay text and inputs are masked and media is blocked. Sentry receives technical metadata such as routes, browser details, request URLs, methods and status codes, stack traces, timings, and safe event classifications. Automatic collection of user identity, cookies, headers, HTTP bodies, query parameters, AI inputs and outputs, and stack-frame variables is disabled. PostHog autocapture, pageview capture, session recording, and persistent browser storage are disabled. We do not send debate content, chat messages, source titles, or email addresses in analytics events or structured logs.",
-    "s8": "Children's Privacy",
-    "p8": "DebateLab is designed for users 13 and older. We do not knowingly collect data from children under 13.",
-    "s9": "Changes to This Policy",
-    "p9": "We may update this policy periodically. Significant changes will be communicated via email or in-app notification.",
-    "s10": "Contact Us",
-    "p10": "For privacy questions or data requests, contact us at privacy@debatelab.app."
+    "s8": "Bug Reports with Jam",
+    "p8": "We use Jam, a bug-reporting service run by We are Jam, Inc., so that you can show us a problem by recording it. Jam's scripts load for every visitor to DebateLab, after your first click, tap or key press, or 8 seconds after the page loads, whichever comes first. They open a frame from recorder.jam.dev, which receives the address of the page you are on, your browser and device details and page load timings, and they collect the page's console logs, its network requests and your clicks and key presses so these can be attached to a recording. A recording is made when you open a Jam recording link we sent you and press Start Recording. It contains a video of the screen, window or tab you choose to share, together with that technical data, so it can include anything shown on the page or exchanged with our servers, such as your debate content. While you are signed in, your DebateLab account ID is available to Jam and is attached to any recording you make, which links the recording to your account. Jam processes this data as our service provider and keeps it until it is no longer needed to provide its service; it does not state a fixed retention period. To ask us to delete a recording, or to object to this processing, contact privacy@debatelab.app.",
+    "s9": "Children's Privacy",
+    "p9": "DebateLab is designed for users 13 and older. We do not knowingly collect data from children under 13.",
+    "s10": "Changes to This Policy",
+    "p10": "We may update this policy periodically. Significant changes will be communicated via email or in-app notification.",
+    "s11": "Contact Us",
+    "p11": "For privacy questions or data requests, contact us at privacy@debatelab.app."
   },
   "termsPage": {
     "title": "Terms of Service",
@@ -2558,13 +2561,25 @@
     "compare": "Compare AI debate tools"
   },
   "sessionQuota": {
-    "cost_one": "This round costs {{count}} AI request, however many turns it takes.",
-    "cost_other": "This round costs {{count}} AI requests, however many turns it takes.",
+    "cost_one": "This round costs {{count}} AI use, however many turns it takes.",
+    "cost_other": "This round costs {{count}} AI uses, however many turns it takes.",
     "remaining_one": "You have {{count}} left today.",
     "remaining_other": "You have {{count}} left today."
   },
   "resultActions": {
     "savedToHistory": "Saved to History",
     "saveFailed": "Could not save. Try again."
+  },
+  "billing": {
+    "upgradeToPro": "Upgrade to Pro",
+    "manageSubscription": "Manage Subscription",
+    "setUpBilling": "Set Up Billing",
+    "resubscribe": "Resubscribe"
+  },
+  "trialBanner": {
+    "daysLeft_one": "Free trial: {{count}} day left.",
+    "daysLeft_other": "Free trial: {{count}} days left.",
+    "endsToday": "Your free trial ends today.",
+    "dismiss": "Hide the trial reminder"
   }
 }

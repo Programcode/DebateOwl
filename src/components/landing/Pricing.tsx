@@ -3,22 +3,25 @@ import { Reveal } from "./Reveal";
 import { Check, Crown, Sparkles, Zap } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useRoutePrefetch } from "@/hooks/use-route-prefetch";
+import { PREP_MODE_COUNT, UTILITY_COUNT } from "@/components/features/tools/tool-links";
 import { factsAsOf } from "@/lib/seo/pages";
 
 const Pricing = () => {
     const { t, i18n } = useTranslation();
     const appPrefetch = useRoutePrefetch("/app");
 
+    const modeCounts = { modes: PREP_MODE_COUNT, utilities: UTILITY_COUNT };
+
     const TRIAL_FEATURES = [
         t('pricing.trialFeature1'),
-        t('pricing.trialFeature2'),
+        t('pricing.trialFeature2', modeCounts),
         t('pricing.trialFeature3'),
         t('pricing.trialFeature4'),
     ];
 
     const PRO_FEATURES = [
         t('pricing.proFeature1'),
-        t('pricing.proFeature2'),
+        t('pricing.proFeature2', modeCounts),
         t('pricing.proFeature3'),
         t('pricing.proFeature4'),
         t('pricing.proFeature5'),

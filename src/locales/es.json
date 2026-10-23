@@ -454,9 +454,6 @@
     "tierExpired": "Caducado",
     "ends": "Termina",
     "loading": "Cargando...",
-    "manageSubscription": "Gestionar suscripción",
-    "setUpBilling": "Configurar facturación",
-    "upgradeToPro": "Mejorar a Pro",
     "confirmingSubscription": "Confirmando tu suscripción Pro…",
     "checkoutCanceled": "Pago cancelado",
     "checkoutCanceledDesc": "No se hizo ningún cargo.",
@@ -534,8 +531,7 @@
     "paymentGraceUntil": "Conservas el acceso Pro hasta el {{date}} mientras reintentamos el cobro.",
     "paymentFailedNoAccess": "El pago falló: actualiza tu método de pago para recuperar el acceso a la IA.",
     "subscriptionEndedOn": "Tu suscripción Pro terminó el {{date}}. Vuelve a suscribirte para seguir usando las herramientas de IA.",
-    "subscriptionEnded": "Tu suscripción Pro ha terminado. Vuelve a suscribirte para seguir usando las herramientas de IA.",
-    "resubscribe": "Volver a suscribirme"
+    "subscriptionEnded": "Tu suscripción Pro ha terminado. Vuelve a suscribirte para seguir usando las herramientas de IA."
   },
   "login": {
     "title": "Iniciar sesión en DebateLab",
@@ -935,7 +931,6 @@
   },
   "features": {
     "title": "Todo lo que necesitas para ganar",
-    "subtitle": "Once herramientas de debate para una preparación competitiva.",
     "generate": "Generador de casos",
     "generateDesc": "Construye casos completos con argumentos estructurados, evidencia y contra-estrategias.",
     "attack": "Atacante de casos",
@@ -1002,11 +997,11 @@
     "proPeriod": "/mes + impuestos",
     "recommended": "Recomendado",
     "trialFeature1": "Acceso inicial a preparación con IA",
-    "trialFeature2": "Las 11 herramientas de preparación",
+    "trialFeature2": "Los {{modes}} modos de preparación y las {{utilities}} utilidades",
     "trialFeature3": "Modelos iniciales",
     "trialFeature4": "Acceso por 3 días",
     "proFeature1": "Acceso ampliado a preparación con IA",
-    "proFeature2": "Las 11 herramientas de preparación",
+    "proFeature2": "Los {{modes}} modos de preparación y las {{utilities}} utilidades",
     "proFeature3": "Los 10 modelos, incluidos Claude Opus y Sonnet, GPT-6.1 Sol y Gemini",
     "proFeature4": "Soporte prioritario",
     "proFeature5": "Investigación Active Grounding™",
@@ -1033,7 +1028,7 @@
     "a5": "¡Sí! Guarda casos, lluvias de ideas y chats en el Historial. Exporta a Word, PDF o Google Docs.",
     "subtitle": "Precios, flujo de trabajo y detalles del producto de un vistazo.",
     "q6": "¿Qué es DebateLab?",
-    "a6": "DebateLab es una app de preparación y práctica de debate con IA para estudiantes y debatientes de competición. Tiene 11 modos de preparación, entre ellos un generador de casos, un atacante de casos, investigación de evidencia con citas, un coach de IA, Interrogatorio y rondas de Sparring cronometradas contra un oponente de IA, y está disponible en inglés, español y húngaro."
+    "a6": "DebateLab es una app de preparación y práctica de debate con IA para estudiantes y debatientes de competición. Tiene {{modes}} modos de preparación, entre ellos un generador de casos, un atacante de casos, investigación de evidencia con citas, un coach de IA, Interrogatorio y rondas de Sparring cronometradas contra un oponente de IA, y está disponible en inglés, español y húngaro."
   },
   "finalCta": {
     "title": "¿Listo para construir tu próximo caso ganador?",
@@ -1390,7 +1385,7 @@
   },
   "limitModal": {
     "trialEnded": "Prueba gratuita finalizada",
-    "trialEndedDesc": "Tu prueba gratuita de 3 días ha terminado. Actualiza a Pro para seguir usando DebateLab.",
+    "trialEndedDesc": "Tu prueba gratuita de {{days}} días ha terminado. Mejora a Pro para seguir usando DebateLab.",
     "limitReached": "Acceso diario pausado",
     "limitReachedDesc": "Has usado {{current}} de {{limit}} usos de IA incluidos hoy. El acceso se renueva a medianoche UTC.",
     "weightedDesc": "Este modelo cuenta como {{units}} usos y te quedan {{remaining}} hoy. Elige un modelo más ligero o espera a la medianoche UTC.",
@@ -1398,7 +1393,6 @@
     "weeklyReached": "Asignación semanal de IA agotada",
     "weeklyReachedDesc": "Has usado la asignación de IA de esta semana. Se renueva el lunes a las 00:00 UTC. Contacta con soporte si necesitas más.",
     "ok": "Entendido",
-    "upgrade": "Actualizar a Pro - $5/mes",
     "upgradeNote": "Más acceso a preparación con IA + razonamiento alto",
     "notNow": "Ahora no",
     "gotIt": "Entendido",
@@ -1408,43 +1402,42 @@
     "subscriptionEndedDesc": "Tu suscripción Pro ha terminado. Vuelve a suscribirte para seguir usando DebateLab.",
     "subscriptionEndedOnDesc": "Tu suscripción Pro terminó el {{date}}. Vuelve a suscribirte para seguir usando DebateLab.",
     "updatePayment": "Actualizar método de pago",
-    "resubscribe": "Volver a suscribirme"
+    "limitReachedGenericDesc": "Has usado los usos de IA incluidos hoy. El acceso se renueva a medianoche UTC.",
+    "zeroLimitDesc": "Esta cuenta no tiene usos diarios de IA ahora mismo. Contacta con soporte si crees que es un error.",
+    "roundShortDesc": "Esta ronda necesita {{units}} usos de IA y hoy te quedan {{remaining}}. Elige un modelo más ligero o espera a la medianoche UTC."
   },
   "modelModal": {
     "title": "Razonamiento Pro",
     "description": "El razonamiento alto está reservado para miembros Pro.",
     "descriptionWithModel": "El razonamiento alto con {{model}} está reservado para miembros Pro.",
     "upgradeNote": "Actualiza para desbloquear el razonamiento alto.",
-    "upgrade": "Actualizar a Pro - $5/mes",
-    "useFree": "Usar razonamiento bajo"
+    "useFree": "Usar razonamiento bajo",
+    "restrictedDesc": "Este modelo o nivel de razonamiento requiere Pro."
   },
   "dailyLimit": {
-    "usage": "Hoy: {{used}} de {{limit}} solicitudes de IA usadas. Se renuevan a medianoche UTC ({{time}} en tu hora).",
-    "sparringNone": "No te quedan solicitudes de IA hoy, así que el oponente no podrá responder. Se renuevan a medianoche UTC.",
-    "sparringShort": "Con este modelo, esta ronda cuesta {{needed}} solicitudes de IA y hoy te quedan {{remaining}}. Elige un modelo más ligero o espera a la medianoche UTC."
+    "remaining_one": "Te queda {{count}} de {{limit}} usos de IA hoy",
+    "remaining_other": "Te quedan {{count}} de {{limit}} usos de IA hoy",
+    "remainingWithReset_one": "Te queda {{count}} de {{limit}} usos de IA hoy. Se renuevan a medianoche UTC ({{time}} en tu hora).",
+    "remainingWithReset_other": "Te quedan {{count}} de {{limit}} usos de IA hoy. Se renuevan a medianoche UTC ({{time}} en tu hora)."
   },
   "pricingModal": {
-    "title": "Actualizar a Pro",
-    "subtitle": "Desbloquea límites de uso más altos, los 10 modelos y razonamiento configurable.",
-    "free": "Gratis",
+    "title": "Mejorar a Pro",
+    "subtitle": "Desbloquea límites de uso más altos, todos los modelos y razonamiento configurable.",
+    "free": "Prueba gratis",
     "pro": "Pro",
     "current": "Actual",
     "recommended": "Recomendado",
-    "freePrice": "$0",
-    "proPrice": "$5",
-    "freePeriod": "/mes",
     "proPeriod": "/mes + impuestos",
     "freeFeature1": "Acceso inicial a preparación con IA",
     "freeFeature2": "Modelos iniciales",
     "freeFeature3": "Todas las funciones de debate",
-    "freeFeature4": "Prueba gratis de 3 días",
+    "freeFeature4": "Sin tarjeta de crédito",
     "proFeature1": "Acceso ampliado a preparación con IA",
-    "proFeature2": "Los 10 modelos, incluidos Claude Opus y Sonnet, GPT-6.1 Sol y Gemini",
+    "proFeature2": "Todos los modelos, incluidos Claude Opus y Sonnet, GPT-6.1 Sol y Gemini",
     "proFeature3": "Investigación profunda con Exa",
     "proFeature4": "Procesamiento prioritario",
     "proFeature5": "Todas las funciones de debate",
     "redirecting": "Redirigiendo...",
-    "upgradeNow": "Actualizar ahora",
     "offlineUpgrade": "Estás sin conexión. Conéctate a internet para mejorar tu plan.",
     "applying": "Aplicando...",
     "apply": "Aplicar",
@@ -1455,7 +1448,15 @@
     "codeRedeemed": "Código canjeado",
     "invalidCode": "Código inválido",
     "redeemError": "Error",
-    "redeemErrorDesc": "No se pudo canjear el código"
+    "redeemErrorDesc": "No se pudo canjear el código",
+    "titleYourPlan": "Tu plan",
+    "titleResubscribe": "Vuelve a Pro",
+    "subtitleManage": "Cambia tu método de pago, consulta tus facturas o cancela en el portal de facturación.",
+    "subtitleCanceling": "Tu plan Pro se cancelará el {{date}}. Puedes mantenerlo desde el portal de facturación.",
+    "subtitlePaymentFailed": "Tu último pago falló. Actualiza tu método de pago en el portal de facturación para mantener Pro.",
+    "subtitleSetUpBilling": "Tu acceso Pro viene de una promoción. Configura la facturación para mantener Pro cuando termine.",
+    "freePeriod_one": "durante {{count}} día",
+    "freePeriod_other": "durante {{count}} días"
   },
   "onboarding": {
     "welcome": "¡Bienvenido a DebateLab! 🎉",
@@ -1828,7 +1829,7 @@
   "privacyPage": {
     "title": "Política de privacidad",
     "lastUpdated": "Última actualización",
-    "date": "1 de octubre de 2026",
+    "date": "23 de octubre de 2026",
     "s1": "Información que recopilamos",
     "p1": "Recopilamos la información que proporcionas al crear una cuenta, incluido tu nombre y correo electrónico, que pueden proceder del inicio de sesión con Google o por email, además de datos de uso como contenido generado, elementos guardados y patrones de interacción. Si usas un código demo emitido por un administrador, procesamos ese código para autenticar tu cuenta demo.",
     "s2": "Cómo usamos tu información",
@@ -1838,17 +1839,19 @@
     "s4": "Almacenamiento de datos",
     "p4": "Tus datos se almacenan de forma segura usando infraestructura de Supabase con cifrado en reposo y en tránsito.",
     "s5": "Compartir datos",
-    "p5": "No vendemos tus datos personales. Solo compartimos datos con OpenRouter para el procesamiento de IA, con ElevenLabs para la voz del oponente en las rondas con voz y con procesadores de pago para la facturación.",
+    "p5": "No vendemos tus datos personales. Solo compartimos datos con OpenRouter para el procesamiento de IA, con ElevenLabs para la voz del oponente en las rondas con voz, con Exa para la búsqueda web, con PostHog y Sentry para la analítica y la monitorización de errores (consulta Cookies y seguimiento), con Jam para los informes de errores (consulta Informes de errores con Jam) y con procesadores de pago para la facturación.",
     "s6": "Tus derechos",
     "p6": "En Configuración puedes descargar una copia de tus datos en un archivo JSON, borrar tu trabajo guardado o eliminar tu cuenta. Eliminar la cuenta la borra para siempre junto con todos los datos guardados en ella y cancela de inmediato cualquier suscripción Pro. Stripe conserva sus propios registros de facturación, como facturas y pagos, según exigen las normas fiscales y contables.",
     "s7": "Cookies y seguimiento",
     "p7": "Usamos cookies y almacenamiento del navegador esenciales para la autenticación y las preferencias. Usamos PostHog para analítica de producto y Sentry para monitorización de errores, registros estructurados, métricas de la aplicación, seguimiento del rendimiento y reproducción de sesiones solo cuando hay errores. Sentry no registra sesiones normales. Registra sesiones que contienen errores capturados; todo el texto y los campos de entrada se ocultan en las reproducciones y el contenido multimedia se bloquea. Sentry recibe metadatos técnicos como rutas, datos del navegador, URL, métodos y códigos de estado de solicitudes, trazas de pila, tiempos y clasificaciones seguras de eventos. La recopilación automática de identidad del usuario, cookies, cabeceras, cuerpos HTTP, parámetros de consulta, entradas y salidas de IA y variables de marcos de pila está desactivada. La captura automática, el registro de páginas vistas, la grabación de sesiones y el almacenamiento persistente de PostHog están desactivados. No enviamos contenido de debates, mensajes de chat, títulos de fuentes ni direcciones de correo electrónico en eventos analíticos o registros estructurados.",
-    "s8": "Privacidad de menores",
-    "p8": "DebateLab está diseñado para usuarios de 13 años o más. No recopilamos datos de menores de 13 años conscientemente.",
-    "s9": "Cambios a esta política",
-    "p9": "Podemos actualizar esta política periódicamente. Los cambios significativos se comunicarán por email o notificación en la app.",
-    "s10": "Contáctanos",
-    "p10": "Para preguntas de privacidad o solicitudes de datos, contáctanos en privacy@debatelab.app."
+    "s8": "Informes de errores con Jam",
+    "p8": "Usamos Jam, un servicio de informes de errores de We are Jam, Inc., para que puedas mostrarnos un problema grabándolo. Los scripts de Jam se cargan para todas las personas que visitan DebateLab, tras tu primer clic, toque o pulsación de tecla, o 8 segundos después de que cargue la página, lo que ocurra primero. Abren un marco de recorder.jam.dev, que recibe la dirección de la página en la que estás, datos de tu navegador y dispositivo y los tiempos de carga de la página, y recopilan los registros de la consola de la página, sus solicitudes de red y tus clics y pulsaciones de teclas para poder adjuntarlos a una grabación. Una grabación se crea cuando abres un enlace de grabación de Jam que te hemos enviado y pulsas «Start Recording». Contiene un vídeo de la pantalla, ventana o pestaña que elijas compartir junto con esos datos técnicos, por lo que puede incluir todo lo que se muestre en la página o se intercambie con nuestros servidores, como el contenido de tus debates. Mientras tienes la sesión iniciada, el ID de tu cuenta de DebateLab está disponible para Jam y se adjunta a cualquier grabación que hagas, lo que vincula la grabación con tu cuenta. Jam trata estos datos como nuestro proveedor de servicios y los conserva hasta que dejan de ser necesarios para prestar su servicio; no indica un plazo de conservación fijo. Para pedirnos que eliminemos una grabación u oponerte a este tratamiento, escríbenos a privacy@debatelab.app.",
+    "s9": "Privacidad de menores",
+    "p9": "DebateLab está diseñado para usuarios de 13 años o más. No recopilamos datos de menores de 13 años conscientemente.",
+    "s10": "Cambios a esta política",
+    "p10": "Podemos actualizar esta política periódicamente. Los cambios significativos se comunicarán por email o notificación en la app.",
+    "s11": "Contáctanos",
+    "p11": "Para preguntas de privacidad o solicitudes de datos, contáctanos en privacy@debatelab.app."
   },
   "termsPage": {
     "title": "Términos de servicio",
@@ -2558,13 +2561,25 @@
     "compare": "Comparar herramientas de IA para debate"
   },
   "sessionQuota": {
-    "cost_one": "Esta ronda cuesta {{count}} solicitud de IA, dure los turnos que dure.",
-    "cost_other": "Esta ronda cuesta {{count}} solicitudes de IA, dure los turnos que dure.",
+    "cost_one": "Esta ronda cuesta {{count}} uso de IA, dure los turnos que dure.",
+    "cost_other": "Esta ronda cuesta {{count}} usos de IA, dure los turnos que dure.",
     "remaining_one": "Hoy te queda {{count}}.",
     "remaining_other": "Hoy te quedan {{count}}."
   },
   "resultActions": {
     "savedToHistory": "Guardado en el historial",
     "saveFailed": "No se pudo guardar. Inténtalo de nuevo."
+  },
+  "billing": {
+    "upgradeToPro": "Mejorar a Pro",
+    "manageSubscription": "Gestionar suscripción",
+    "setUpBilling": "Configurar facturación",
+    "resubscribe": "Volver a suscribirme"
+  },
+  "trialBanner": {
+    "daysLeft_one": "Prueba gratis: queda {{count}} día.",
+    "daysLeft_other": "Prueba gratis: quedan {{count}} días.",
+    "endsToday": "Tu prueba gratis termina hoy.",
+    "dismiss": "Ocultar el aviso de la prueba"
   }
 }
