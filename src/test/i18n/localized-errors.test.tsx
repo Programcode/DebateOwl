@@ -5,7 +5,7 @@ import es from '@/locales/es.json';
 import hu from '@/locales/hu.json';
 import { AttackForm } from '@/components/features/attack/AttackForm';
 import { useSessionStore } from '@/lib/stores/session-store';
-import { mapAIError } from '@/lib/ai/errors';
+import { mapAIError } from '@/lib/ai/client';
 import { serverErrorMessage } from '@/lib/server-errors';
 import { promoResultCode } from '../../../supabase/functions/_shared/promo-result';
 
