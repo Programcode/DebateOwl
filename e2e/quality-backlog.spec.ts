@@ -133,7 +133,7 @@ for (const locale of locales) {
     await page.goto('/app/debate');
     await expect(page.getByTestId('debate-sources').getByText(`${motion} source 0`)).toBeVisible();
     // The Load button stays on screen beside its truncated title.
-    const load = await page.getByTestId('debate-side-pro').getByRole('button', { name: new RegExp(`${motion} case 0`) }).boundingBox();
+    const load = await page.getByTestId('debate-side-pro').getByRole('button', { name: `${motion} case 0` }).boundingBox();
     expect(load).not.toBeNull();
     expect(load!.x + load!.width).toBeLessThanOrEqual(360);
 
@@ -142,12 +142,12 @@ for (const locale of locales) {
 }
 
 // VS-09: picking a language closes the menu; the choice already persists.
-test('language menu closes once a language is chosen', { tag: '@smoke' }, async ({ page }, testInfo) => {
+test('language menu closes once a language is chosen', { tag: '@smoke' }, async ({ page }) => {
   await setLocale(page, 'en');
   await page.goto('/');
-  if (testInfo.project.name === 'mobile-chromium') {
-    await page.getByRole('button', { name: 'Open menu' }).click();
-  }
+  // Below lg the section links and the language control sit in the menu.
+  const openMenu = page.getByRole('button', { name: 'Open menu' });
+  if (await openMenu.isVisible()) await openMenu.click();
   await page.getByRole('button', { name: 'Language' }).click();
   const menu = page.getByRole('radiogroup', { name: 'Interface language' });
   await expect(menu).toBeVisible();

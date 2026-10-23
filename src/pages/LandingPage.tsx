@@ -21,7 +21,7 @@ const LandingPage = () => {
             <header>
                 <Navbar />
             </header>
-            <main id={MAIN_CONTENT_ID} tabIndex={-1} className="focus-visible:outline-none">
+            <main id={MAIN_CONTENT_ID} className="focus-visible:outline-none">
                 <Hero />
                 <ShortAnswer />
                 <WhatsNew />

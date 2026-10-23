@@ -5,6 +5,7 @@ import Footer from '@/components/landing/Footer';
 import { usePageHead } from '@/lib/seo/use-page-head';
 import { jsonLd, type FaqEntry, type ToolRoute } from '@/lib/seo/tool-pages';
 import { cn } from '@/lib/utils';
+import { MAIN_CONTENT_ID, SkipLink } from '@/components/layout/SkipLink';
 
 export const FREE_TOOLS = [
   { route: '/tools/debate-timer', name: 'Debate timer', blurb: 'Round timer for PF, LD, Policy, BP, World Schools and Asian Parliamentary, with protected time, POI knocks and prep banks.' },
@@ -98,6 +99,7 @@ export function ToolPageLayout({ route, title, intro, shortAnswer, tool, childre
 
   return (
     <div className="min-h-screen bg-background">
+      <SkipLink />
       <header className="border-b border-border/60 print:hidden">
         <div className="container flex h-14 items-center justify-between gap-4 px-4">
           <Link to="/" className="flex items-center gap-2 rounded-md pointer-coarse:min-h-11">
@@ -111,7 +113,7 @@ export function ToolPageLayout({ route, title, intro, shortAnswer, tool, childre
           </Link>
         </div>
       </header>
-      <main className="container mx-auto px-4 pb-16 pt-6">
+      <main id={MAIN_CONTENT_ID} className="container mx-auto px-4 pb-16 pt-6 focus-visible:outline-none">
         <nav aria-label={t('layout.breadcrumb')} className="text-sm text-muted-foreground print:hidden">
           <ol className="flex flex-wrap items-center gap-1">
             <li><Link to="/" className="hover:text-foreground">DebateLab</Link></li>

@@ -4,7 +4,8 @@ export const MAIN_CONTENT_ID = 'main-content';
 
 /**
  * The first Tab stop on a page: hidden until focused, then it jumps past the header.
- * Focus moves to the main landmark without adding a hash route to the URL.
+ * Focus moves to the main landmark without adding a hash route to the URL. The landmark
+ * is focusable only for that jump, so a click elsewhere in it still leaves focus on body.
  */
 export function SkipLink() {
   const { t } = useTranslation();
@@ -15,6 +16,10 @@ export function SkipLink() {
         const target = document.getElementById(MAIN_CONTENT_ID);
         if (!target) return;
         event.preventDefault();
+        if (!target.hasAttribute('tabindex')) {
+          target.setAttribute('tabindex', '-1');
+          target.addEventListener('blur', () => target.removeAttribute('tabindex'), { once: true });
+        }
         target.focus({ preventScroll: true });
         target.scrollIntoView({ block: 'start' });
       }}

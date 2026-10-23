@@ -32,7 +32,7 @@ export function PublicPageShell({ children, className }: { children: ReactNode; 
           </Link>
         </div>
       </header>
-      <main id={MAIN_CONTENT_ID} tabIndex={-1} className={cn('container mx-auto px-4 py-10 focus-visible:outline-none', className)}>{children}</main>
+      <main id={MAIN_CONTENT_ID} className={cn('container mx-auto px-4 py-10 focus-visible:outline-none', className)}>{children}</main>
     </div>
   );
 }

@@ -314,6 +314,10 @@ export default function FlowchartPage() {
     // A new chart remounts the canvas element, so the observer follows the key.
     const canvasRef = useRef<HTMLDivElement>(null);
     const canvasSize = useRef({ width: 0, height: 0 });
+    // Edge tap strokes are sized in screen pixels from this (see index.css).
+    const writeFlowZoom = useCallback((_: unknown, viewport: { zoom: number }) => {
+        canvasRef.current?.style.setProperty('--flow-zoom', String(viewport.zoom));
+    }, []);
     useEffect(() => {
         const canvas = canvasRef.current;
         if (!canvas) return;
@@ -907,7 +911,7 @@ export default function FlowchartPage() {
                     <div ref={canvasRef} className={`h-[50vh] min-h-[400px] w-full${layoutAnimating ? ' flow-layout-animating' : ''}`}>
                         <ReactFlow
                             onInit={setFlowInstance}
-                            onMove={(_, viewport) => canvasRef.current?.style.setProperty('--flow-zoom', String(viewport.zoom))}
+                            onMove={writeFlowZoom}
                             // The page scrolls under the wheel; zoom uses pinch, the controls, or Ctrl+wheel.
                             zoomOnScroll={false}
                             preventScrolling={false}
