@@ -9,6 +9,7 @@ import { redirectToCheckout, redeemPromoCode } from '@/lib/stripe';
 import { useToast } from '@/hooks/use-toast';
 import { useSubscription } from '@/hooks/use-subscription';
 import { useExternalRedirectPending } from '@/hooks/use-external-redirect-pending';
+import { useOnlineStatus } from '@/hooks/use-online-status';
 
 interface PricingModalProps {
   open: boolean;
@@ -23,6 +24,8 @@ export function PricingModal({ open, onOpenChange, onPromoRedeemed }: PricingMod
   const { pending: checkoutLoading, run: runCheckout, reset: resetCheckout } = useExternalRedirectPending();
   const [showPromo, setShowPromo] = useState(false);
   const { toast } = useToast();
+  // Checkout needs the network; offline the button would only fail.
+  const online = useOnlineStatus();
 
   // The modal stays mounted while closed, so reopening it must not show a
   // button still waiting on a checkout the user already left.
@@ -143,13 +146,19 @@ export function PricingModal({ open, onOpenChange, onPromoRedeemed }: PricingMod
             </ul>
             <Button
               onClick={() => void handleUpgrade()}
-              disabled={checkoutLoading}
+              disabled={checkoutLoading || !online}
+              aria-describedby={online ? undefined : 'pricing-offline-upgrade'}
               className="w-full"
               size="lg"
             >
               <Zap className="h-4 w-4 mr-2" />
               {checkoutLoading ? t('pricingModal.redirecting') : t('pricingModal.upgradeNow')}
             </Button>
+            {!online && (
+              <p id="pricing-offline-upgrade" role="status" className="text-sm text-muted-foreground">
+                {t('pricingModal.offlineUpgrade')}
+              </p>
+            )}
           </div>
         </div>
 
