@@ -22,6 +22,7 @@ supabase/functions/        Deno Edge Functions
 supabase/functions/_shared shared auth, validation, prompts, research, and cost logic
 supabase/migrations/       ordered database history
 supabase/rollbacks/        down scripts for data migrations; never applied by db push
+supabase/proposed/         destructive SQL awaiting authorization; never applied by db push
 supabase/tests/            pgTAP database and policy tests
 ```
 
@@ -108,6 +109,7 @@ Do not use wildcard origins to hide a failed browser test. Before protected stag
 
 Migration filenames define execution order. Never edit an applied migration to change production history; add a new forward migration.
 When creating a table, sequence or function in `public`, grant only the Data API roles and operations it needs in the same migration, alongside RLS and its policies. Since `20261016120000_security_preship_hardening.sql`, tables and sequences that `postgres` creates in `public` grant `anon` and `authenticated` nothing by default, so a missing grant shows up as `permission denied`, not as an open table. Functions still get Postgres's global `PUBLIC EXECUTE`, so every new function needs its own `REVOKE ... FROM PUBLIC`. `supabase/tests/client_grants_test.sql` checks both.
+Anything destructive (dropping a policy, function, index or column, deleting rows, or a constraint existing rows might break) goes in `supabase/proposed/` instead, with a header saying what it removes and what covers it; see [proposed/README.md](proposed/README.md).
 
 Local gate:
 

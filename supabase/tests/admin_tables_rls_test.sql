@@ -118,8 +118,10 @@ RESET ROLE;
 SET LOCAL ROLE anon;
 SELECT set_config('request.jwt.claim.sub', '', true);
 SELECT set_config('request.jwt.claim.role', 'anon', true);
-SELECT is_empty(
+SELECT throws_ok(
   $$SELECT 1 FROM public.admin_grants$$,
+  '42501',
+  NULL,
   'anonymous callers cannot read the grant log'
 );
 SELECT throws_ok(

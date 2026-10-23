@@ -10,7 +10,7 @@
 # project it starts is an overlay directory: symlinks to this checkout's
 # migrations, tests, and templates, a copy of its functions (the stack does
 # not find functions behind a symlink), and a copy of config.toml without the
-# magic-link template block. Run `reset` after changing migrations and
+# auth email template blocks. Run `reset` after changing migrations and
 # `serve` again after changing functions.
 #
 # usage: scripts/agent-stack.sh [--name NAME] start|env|reset|test|advisors|psql|serve|stop|destroy
@@ -57,7 +57,7 @@ prepare_overlay() {
   if [ -L "$dir/supabase/functions" ]; then rm "$dir/supabase/functions"; fi
   mkdir -p "$dir/supabase/functions"
   rsync -a --delete --exclude .env "$root/supabase/functions/" "$dir/supabase/functions/"
-  awk '/^\[/ { skip = ($0 == "[auth.email.template.magic_link]") } !skip' \
+  awk '/^\[/ { skip = ($0 ~ /^\[auth\.email\.template\./) } !skip' \
     "$root/supabase/config.toml" > "$dir/supabase/config.toml"
 }
 
