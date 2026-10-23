@@ -302,7 +302,7 @@ cmd_e2e() {
     [ -n "$key" ] && export OPENROUTER_API_KEY="$key"
   fi
   if [ -n "${OPENROUTER_API_KEY:-}" ]; then
-    say "info testing agent: OpenRouter actor ${E2E_AGENT_MODEL:-anthropic/claude-haiku-5.5}, judge ${E2E_JUDGE_MODEL:-anthropic/claude-haiku-5.5}, Anthropic BYOK only (replayed steps make no model call)"
+    say "info testing agent: OpenRouter actor ${E2E_AGENT_MODEL:-anthropic/claude-haiku-5.5}, judge ${E2E_JUDGE_MODEL:-anthropic/claude-sonnet-5.5}, Anthropic BYOK only (replayed steps make no model call)"
   else
     say "info no OpenRouter key: tests with agent steps will skip"
   fi

@@ -21,12 +21,16 @@ const live = process.env.VERIFY_MODE === "live";
 // recorded flows replay with no model call, so it runs only on a cache miss
 // and in explorations. The judge answers every agent.assert, waitFor and
 // extract on every run.
-// Both run on Claude Haiku pinned to the Anthropic provider with fallbacks off,
+// The actor runs on Claude Haiku and the judge on Claude Sonnet: with Haiku
+// judging, about one in eight page checks failed on screens Sonnet passes
+// (content below the fold read as "cut off", verdicts that contradict their
+// own reasoning). Both are pinned to the Anthropic provider with fallbacks off,
 // so they bill DebateLab's Anthropic key (BYOK in OpenRouter), never OpenRouter
 // credits. Any other family would bill credits, so a non-Claude override fails
 // here instead (src/test/ai/anthropic-only-guard.test.ts checks this file).
 // `||`, not `??`: an unset Actions variable arrives as an empty string.
-const E2E_DEFAULT_MODEL = "anthropic/claude-haiku-5.5";
+const E2E_ACTOR_DEFAULT = "anthropic/claude-haiku-5.5";
+const E2E_JUDGE_DEFAULT = "anthropic/claude-sonnet-5.5";
 function claudeOnly(id: string) {
   if (!id.startsWith("anthropic/")) {
     throw new Error(`The testing agent runs only on Claude through the Anthropic BYOK key; ${id} would bill OpenRouter credits`);
@@ -34,8 +38,8 @@ function claudeOnly(id: string) {
   // Anthropic allows four prompt-cache breakpoints; see agentic/support/anthropic-cache.ts.
   return withAnthropicCacheLimit(openrouter(id, { provider: { only: ["anthropic"], allow_fallbacks: false } }));
 }
-const model = claudeOnly(process.env.E2E_AGENT_MODEL || E2E_DEFAULT_MODEL);
-const judge = claudeOnly(process.env.E2E_JUDGE_MODEL || E2E_DEFAULT_MODEL);
+const model = claudeOnly(process.env.E2E_AGENT_MODEL || E2E_ACTOR_DEFAULT);
+const judge = claudeOnly(process.env.E2E_JUDGE_MODEL || E2E_JUDGE_DEFAULT);
 
 // `context` reaches every model call, judges included: what the app calls things.
 const context = [

@@ -53,11 +53,12 @@ describe('Anthropic BYOK only', () => {
     expect(router).toMatch(/fallbackFor[\s\S]*?"anthropic\/claude-haiku-5\.5" : "anthropic\/claude-sonnet-5\.5"/);
   });
 
-  it('the agentic testing agent (actor and judge) runs on Claude pinned to Anthropic', () => {
+  it('the agentic testing agent runs on Claude pinned to Anthropic: Haiku acts, Sonnet judges', () => {
     const config = read('e2e.config.ts');
-    expect(config).toMatch(/const E2E_DEFAULT_MODEL = "anthropic\/[^"]+";/);
-    expect(config).toContain('claudeOnly(process.env.E2E_AGENT_MODEL || E2E_DEFAULT_MODEL)');
-    expect(config).toContain('claudeOnly(process.env.E2E_JUDGE_MODEL || E2E_DEFAULT_MODEL)');
+    expect(config).toContain('const E2E_ACTOR_DEFAULT = "anthropic/claude-haiku-5.5";');
+    expect(config).toContain('const E2E_JUDGE_DEFAULT = "anthropic/claude-sonnet-5.5";');
+    expect(config).toContain('claudeOnly(process.env.E2E_AGENT_MODEL || E2E_ACTOR_DEFAULT)');
+    expect(config).toContain('claudeOnly(process.env.E2E_JUDGE_MODEL || E2E_JUDGE_DEFAULT)');
     expect(config).toContain('provider: { only: ["anthropic"], allow_fallbacks: false }');
     expect(config).toContain('if (!id.startsWith("anthropic/"))');
     // No other model ID literal can slip in as a default.
