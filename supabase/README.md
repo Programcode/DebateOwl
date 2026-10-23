@@ -135,6 +135,8 @@ The database gate proves migration replay and pgTAP assertions locally. It does 
 
 `20261022120000_opus_default_to_sonnet.sql` moves every saved Claude Opus 5.5 tool setting in `user_settings.feature_configs` to Claude Sonnet 5.5, because Opus was the Pro default and a saved row cannot tell a default from a pick. It first copies each changed row into `private.opus_default_backup` and skips users already there, so a second run changes nothing. Apply it only after the frontend that makes Sonnet the Pro default is live; otherwise an account that never saved settings still gets Opus on its first load. `supabase/rollbacks/20261022120000_opus_default_to_sonnet.down.sql` restores Opus wherever a tool still holds the Sonnet the migration wrote, and empties the backup. To roll back, copy it into `supabase/migrations` under a new timestamp. `scripts/test-opus-default-migration.sh`, part of `npm run test:db`, runs both twice against seeded rows.
 
+`20261023120000_reconcile_admin_table_drift.sql` adds what the `admin` function writes to production's legacy `rate_limits` and `global_prompts` tables, which predate `20260204000000_admin_improvements.sql`: `updated_at` (backfilled from `created_at` only when the column is missing), `is_active` and `created_by` on `global_prompts`, and the unique keys the Set limit and Set prompt upserts infer. A key is skipped with a warning when duplicate rows would block it; the migration deletes nothing and a rerun changes nothing. `scripts/test-admin-table-drift-migration.sh`, part of `npm run test:db`, rebuilds the legacy shape in a rolled-back transaction and runs both admin writes against it.
+
 ## Adding an Edge Function
 
 A new function needs more than its own folder. In the same PR:

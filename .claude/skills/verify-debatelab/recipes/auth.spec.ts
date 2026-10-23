@@ -253,3 +253,26 @@ test("auth-switch-account: the next account on this browser starts on /app, gets
     await deleteDemoUser(second);
   }
 });
+
+// QA round 3: Sign out lives on Settings, and the same account signing back in by
+// email code landed on /app/settings ("Opening Settings") instead of /app.
+test("auth-same-account-after-sign-out: signing back in by email code after Sign out on Settings opens /app", async ({ signedIn: page, user, request, evidence }) => {
+  test.skip(!mailer, "WORKSPACE_TEST_MAILER_URL is missing; run through verify.sh drive");
+  await page.goto("/app/settings");
+  await page.getByRole("button", { name: "Sign out" }).click();
+  await expect(page).toHaveURL(/\/login$/);
+  await evidence.step("Signed out from /app/settings");
+
+  const sentAfter = Date.now();
+  await page.getByRole("tab", { name: "Email" }).click();
+  await page.getByLabel("Email address").fill(user.email);
+  await page.getByRole("button", { name: "Send code" }).click();
+  await expect(page.getByText("Code sent").first()).toBeVisible();
+  const otp = await readOtp(request, user.email, sentAfter);
+  await page.getByRole("textbox", { name: "Verification code" }).fill(otp);
+  await page.getByRole("button", { name: "Verify code" }).click();
+  await expect(page).toHaveURL(/\/app$/, { timeout: 20_000 });
+  await expect(page.getByText("Opening Settings")).toHaveCount(0);
+  await evidence.shot("01-landed-on-app");
+  await evidence.step("The same account signed back in by email code and landed on /app");
+});

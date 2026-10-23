@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useOnlineStatus } from '@/hooks/use-online-status';
-import { ArrowRight, Check, ChevronDown, Cpu, Gauge, Swords } from 'lucide-react';
+import { ArrowRight, Check, ChevronDown, Cpu, Gauge, Loader2, Swords } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { DebateContextControl } from '@/components/features/debate/DebateContextControl';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -54,6 +54,8 @@ interface SparringSetupProps {
   /** Why the server would refuse a new round (weekly allowance, trial ended), translated. */
   blockedReason?: string | null;
   isStarting?: boolean;
+  /** Why the last Start did not open a round, translated. */
+  startError?: string | null;
   initialValues?: Partial<SparringSetupValues>;
 }
 
@@ -63,7 +65,7 @@ const DIFFICULTIES: Array<{ id: SparringDifficulty; name: string }> = [
   { id: 'hard', name: 'Ruthless' },
 ];
 
-export function SparringSetup({ onStart, roundCost = null, remainingRequests = null, blockedReason = null, isStarting = false, initialValues, banner, debatePrefill = false, voiceAllowed = true }: SparringSetupProps) {
+export function SparringSetup({ onStart, roundCost = null, remainingRequests = null, blockedReason = null, isStarting = false, startError = null, initialValues, banner, debatePrefill = false, voiceAllowed = true }: SparringSetupProps) {
   const { t } = useTranslation();
   const [motion, setMotion] = useState(initialValues?.motion ?? '');
   const motionRef = useRef(motion);
@@ -255,8 +257,11 @@ export function SparringSetup({ onStart, roundCost = null, remainingRequests = n
                   <p className="mt-1 text-xl font-semibold tabular-nums">{aiRequests}</p>
                 </div>
                 <div className="rounded-lg border border-border/70 bg-background/70 p-3">
-                  <p className="text-xs text-muted-foreground">{t('sparring.setup.aiRequests', 'AI requests')}</p>
-                  <p className="mt-1 text-xl font-semibold tabular-nums">{cost}</p>
+                  <p className="text-xs text-muted-foreground">{t('sparring.setup.aiRequests', 'Round cost')}</p>
+                  {/* The whole round is one charge (QA bug 7): the number is uses, not one per reply. */}
+                  <p data-testid="sparring-round-cost" className="mt-1 text-xl font-semibold tabular-nums">
+                    {formatNumber(cost)} <span className="text-sm font-medium text-muted-foreground">{t('sparring.setup.roundCostUnit', { count: cost })}</span>
+                  </p>
                   <p className="mt-0.5 text-xs text-muted-foreground">{t('sparring.setup.aiRequestBreakdown', { count: aiRequests })}</p>
                 </div>
               </div>
@@ -268,10 +273,22 @@ export function SparringSetup({ onStart, roundCost = null, remainingRequests = n
 
               <DebateContextControl feature="sparring" side={userSide} hidden={!debatePrefill} />
 
-              <Button type="submit" className="h-12 w-full" disabled={!canStart}>
+              <Button type="submit" className="h-12 w-full" disabled={!canStart} aria-busy={isStarting}>
+                {isStarting && <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />}
                 {isStarting ? t('sparring.setup.openingRoom', 'Opening room…') : t('sparring.setup.startRound', 'Start round')}
                 {!isStarting && <ArrowRight className="h-4 w-4" aria-hidden="true" />}
               </Button>
+              {/* The quota check can take a few seconds; say what the wait is for. */}
+              {isStarting && (
+                <p data-testid="sparring-starting" role="status" className="text-center text-xs leading-5 text-muted-foreground">
+                  {t('sparring.setup.checkingQuota', 'Checking your AI uses for today…')}
+                </p>
+              )}
+              {startError && !isStarting && (
+                <p data-testid="sparring-start-error" role="alert" className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-xs leading-5 text-destructive">
+                  {startError}
+                </p>
+              )}
               {requestShortfall && (
                 <p data-testid="sparring-request-shortfall" role="status" className="rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-xs leading-5 text-amber-800 dark:text-amber-200">
                   {/* The server's refusal when it answered, else the same words from the browser's count (QB-06). */}

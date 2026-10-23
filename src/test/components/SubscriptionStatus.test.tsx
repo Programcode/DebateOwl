@@ -97,7 +97,16 @@ const CASES: Array<{
     props: { billingState: 'pro', dailyLimit: 50 },
     badge: 'Pro',
     date: null,
-    text: /AI access is active/,
+    text: /^Your Pro access comes from a promo code, so billing is optional\.$/,
+    button: 'Set Up Billing',
+  },
+  {
+    // QA round 3: a dated promo said nothing about where Pro came from.
+    name: 'promo Pro with an end date',
+    props: { billingState: 'pro', billingDate: DATE, billingDateKind: 'ends', dailyLimit: 50 },
+    badge: 'Pro',
+    date: 'Ends on 22 Nov 2026',
+    text: /comes from a promo code and runs until 22 Nov 2026\. Billing is optional until then/,
     button: 'Set Up Billing',
   },
 ];

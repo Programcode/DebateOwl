@@ -104,6 +104,8 @@ function sourceQualityClass(label?: string) {
   return 'bg-amber-500/10 text-amber-600 dark:text-amber-400';
 }
 
+const USER_BUBBLE_MARKDOWN = 'text-current [&_*]:text-current [&_li::marker]:text-current [&_a]:decoration-current [&_code]:bg-primary-foreground/15 [&_blockquote]:border-current/40';
+
 const MessageBubble = React.memo(function MessageBubble({ message, onSave }: { message: Message, onSave?: (title: string, content: string) => void }) {
   const { t } = useTranslation();
   const isUser = message.role === 'user';
@@ -138,7 +140,10 @@ const MessageBubble = React.memo(function MessageBubble({ message, onSave }: { m
           </Button>
         )}
         <div className="text-sm">
-          {message.content ? <Markdown>{message.content}</Markdown> : null}
+          {/* prose paints its own gray text, which was about 2:1 on the blue user bubble; take the bubble's color instead. */}
+          {message.content ? (
+            <Markdown className={isUser ? USER_BUBBLE_MARKDOWN : undefined}>{message.content}</Markdown>
+          ) : null}
           {message.isStreaming && (
             <span className="streaming-caret" aria-hidden="true" />
           )}
@@ -300,7 +305,8 @@ const MessageBubble = React.memo(function MessageBubble({ message, onSave }: { m
           </div>
         )}
 
-        <span className="text-xs text-muted-foreground">
+        {/* Muted gray is unreadable on the blue user bubble; the bubble's own color is 5:1 or better. */}
+        <span data-testid="message-meta" className={cn('text-xs', isUser ? 'text-current' : 'text-muted-foreground')}>
           {(() => {
             try {
               const parts: string[] = [];
@@ -564,12 +570,13 @@ export function AskChat({ messages, streamingMessage, isLoading, error, onDismis
 
     <Card className="flex flex-col h-[calc(100dvh-14rem)] min-h-[400px] max-h-[800px] border-primary/20">
       <CardHeader className="bg-linear-to-br from-primary/5 to-transparent shrink-0">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
+        {/* Wraps on a phone: the Hungarian title and two buttons do not fit one 375 px row. */}
+        <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
+          <div className="flex min-w-0 items-center gap-3">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10">
               <MessageCircle className="h-5 w-5 text-primary" />
             </div>
-            <div>
+            <div className="min-w-0">
               <CardTitle>{t('askChat.title')}</CardTitle>
               <CardDescription>{t('askChat.subtitle')}</CardDescription>
             </div>
