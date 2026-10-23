@@ -11,12 +11,12 @@ import { usePageHead, usePrivateRouteHead } from '@/lib/seo/use-page-head';
 
 // IN-01, SE-01: every page's tab title and description follow the interface language.
 
-function PublicPage({ route }: { route: PrerenderedRoute }) {
+function PublicPage({ route }: { route: PrerenderedRoute }): null {
   usePageHead(route);
   return null;
 }
 
-function GeneratePage() {
+function GeneratePage(): null {
   const { t } = useTranslation();
   usePrivateRouteHead('/app/generate', t('nav.generate'));
   return null;
