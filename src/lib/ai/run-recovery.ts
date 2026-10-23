@@ -23,8 +23,8 @@ export const RUN_RESULT_MISSING_MS = 8_000;
  * A run that loses its browser is cancelled and stores its outcome within
  * seconds, and one still running stores it when it ends. A row still without
  * a result this long after the drop is a run whose worker is gone. A stalled
- * stream may be a proxy holding bytes of a run that is still writing, so it
- * waits the whole window instead.
+ * stream is left open (live.ts), so its run is still writing and stores its
+ * result when it ends; it waits the whole window instead.
  */
 export const RUN_RESULT_RUNNING_MS = 30_000;
 

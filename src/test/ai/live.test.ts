@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { FunctionsFetchError, FunctionsHttpError } from '@supabase/supabase-js';
-import { LIVE_STREAM_DRAIN_MS, LIVE_STREAM_STALL_MS, LiveStreamError, readLiveResponse } from '@/lib/ai/live';
+import { LIVE_STREAM_DRAIN_MS, LIVE_STREAM_STALL_MS, LIVE_STREAM_STALLED_OPEN_MS, LiveStreamError, readLiveResponse } from '@/lib/ai/live';
 
 function eventStream(chunks: string[]): Response {
   const encoder = new TextEncoder();
@@ -219,6 +219,9 @@ describe('draining the body after result', () => {
     await vi.advanceTimersByTimeAsync(LIVE_STREAM_STALL_MS);
     const stalled = await pending;
     expect((stalled as FunctionsFetchError).context).toMatchObject({ reason: 'stalled' });
+    // Left open, so the function does not cancel the run being recovered.
+    expect(cancelled).toBe(false);
+    await vi.advanceTimersByTimeAsync(LIVE_STREAM_STALLED_OPEN_MS);
     expect(cancelled).toBe(true);
   });
 });

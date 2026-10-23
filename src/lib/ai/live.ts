@@ -32,6 +32,14 @@ export const LIVE_STREAM_DRAIN_MS = 2_000;
 export const LIVE_STREAM_STALL_MS = 45_000;
 
 /**
+ * A stalled stream is left open, not cancelled: closing it would make the
+ * function cancel the run whose stored result the caller is about to read.
+ * It is cancelled after this long, past any run's wall clock, or when the
+ * caller aborts.
+ */
+export const LIVE_STREAM_STALLED_OPEN_MS = 160_000;
+
+/**
  * Why a live stream ended without its answer: the body ended, the
  * connection dropped, nothing arrived for LIVE_STREAM_STALL_MS, or the
  * `result` event arrived but could not be read. The caller can still recover
@@ -176,10 +184,16 @@ export async function readLiveResponse<T>(
   // before the server closes, aborts the fetch and drops the body.
   let streamEnded = false;
   let draining = false;
+  let stalled = false;
   const release = () => {
-    signal?.removeEventListener('abort', stopReading);
     if (timer) clearTimeout(timer);
     timer = null;
+    if (stalled) {
+      // Keep the connection, so the run keeps going and stores its result.
+      setTimeout(stopReading, LIVE_STREAM_STALLED_OPEN_MS);
+      return;
+    }
+    signal?.removeEventListener('abort', stopReading);
     if (!streamEnded) reader.cancel().catch((): undefined => undefined);
   };
 
@@ -198,6 +212,7 @@ export async function readLiveResponse<T>(
       }
       if (signal?.aborted) throw new DOMException('The request was canceled.', 'AbortError');
       if (chunk === 'stalled') {
+        stalled = true;
         failure = new LiveStreamError('stalled');
         break;
       }
