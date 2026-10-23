@@ -45,7 +45,7 @@ async function ask(streamed: string) {
   enableOneOffMode();
   useSessionStore.getState().clearAskMessages();
   render(<MemoryRouter initialEntries={['/app/ask']}><AskPage /></MemoryRouter>);
-  fireEvent.change(screen.getByPlaceholderText('Ask your debate coach...'), { target: { value: 'How do I weigh cost?' } });
+  fireEvent.change(screen.getByRole('textbox', { name: 'Message to your debate coach' }), { target: { value: 'How do I weigh cost?' } });
   fireEvent.click(screen.getByRole('button', { name: 'Send message' }));
   await waitFor(() => expect(useSessionStore.getState().askLoading).toBe(false));
 }

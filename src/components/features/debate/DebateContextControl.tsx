@@ -60,23 +60,27 @@ export function DebateContextControl({ feature, side, includeSources = true, deb
 
   const summary = useMemo(() => {
     if (!plan) return null;
-    const sentSources = plan.sources.filter((source) => source.included && !source.overLimit).length;
-    const sentOutputs = plan.outputs.filter((output) => output.included && !output.overLimit && !output.empty);
+    // "Sent" means it reaches the model; anything chosen but over the limit or too large did not fit.
+    const sent = (item: { included: boolean; overLimit: boolean; omittedForSize: boolean }) => item.included && !item.overLimit && !item.omittedForSize;
+    const chosenSources = plan.sources.filter((source) => source.included).length;
+    const sentSources = plan.sources.filter(sent).length;
+    const chosenOutputs = plan.outputs.filter((output) => output.included && !output.empty);
+    const sentOutputs = chosenOutputs.filter(sent);
+    const count = (key: 'sourceCount' | 'resultCount', used: number, chosen: number) => used === chosen
+      ? t(`debateContext.${key}`, { count: used })
+      : `${t(`debateContext.${key}Of`, { used, count: chosen })} ${t('debateContext.didntFit', { count: chosen - used })}`;
     const parts = [
-      sentSources > 0 && t('debateContext.sourceCount', { count: sentSources }),
-      sentOutputs.length > 0 && t('debateContext.resultCount', { count: sentOutputs.length }),
+      chosenSources > 0 && count('sourceCount', sentSources, chosenSources),
+      chosenOutputs.length > 0 && count('resultCount', sentOutputs.length, chosenOutputs.length),
     ].filter((part): part is string => Boolean(part));
     const names = sentOutputs.map((output) => output.side === 'pro' || output.side === 'con'
       ? t('debateContext.resultName', { kind: t(`debate.kinds.${output.ref.kind}`), side: t(`debate.side.${output.side}`) })
       : t(`debate.kinds.${output.ref.kind}`));
-    const leftOut = plan.sources.filter((source) => source.omittedForSize || source.overLimit).length
-      + plan.outputs.filter((output) => output.omittedForSize || output.overLimit).length;
     return {
       text: parts.length > 0
         ? t('debateContext.using', { list: listFormat(i18n.resolvedLanguage ?? 'en', parts) })
         : t('debateContext.usingMotionOnly'),
       names: names.join(', '),
-      leftOut,
     };
   }, [i18n.resolvedLanguage, plan, t]);
 
@@ -98,9 +102,6 @@ export function DebateContextControl({ feature, side, includeSources = true, deb
       <p className="min-w-0 flex-1 basis-56">
         <span className="font-medium text-foreground">{summary.text}</span>
         {summary.names && <span className="text-muted-foreground">: {summary.names}</span>}
-        {summary.leftOut > 0 && (
-          <span className="block text-xs text-muted-foreground">{t('debateContext.leftOut', { count: summary.leftOut })}</span>
-        )}
       </p>
       <Button type="button" size="sm" variant="ghost" onClick={() => setOpen(true)} aria-haspopup="dialog">
         {t('debateContext.review', 'Review')}

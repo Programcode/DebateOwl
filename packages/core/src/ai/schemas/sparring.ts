@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { SpeechDeliverySchema } from '../../voice/delivery';
+import { MAX_MOTION_LENGTH } from '../../validation/motion';
 
 export const SparringSideSchema = z.enum(['pro', 'con']);
 export const SparringFormatSchema = z.enum(['standard', 'ld', 'pf']);
@@ -44,7 +45,7 @@ export const SparringSpeechSchema = z.object({
 /** Shared, bounded session context carried by both sparring actions. */
 export const SparringSessionSchema = z.object({
   sessionId: z.string().uuid(),
-  motion: z.string().trim().min(1).max(1_200),
+  motion: z.string().trim().min(1).max(MAX_MOTION_LENGTH),
   userSide: SparringSideSchema,
   format: SparringFormatSchema,
   difficulty: SparringDifficultySchema,

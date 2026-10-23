@@ -27,7 +27,25 @@ function CurrentDebateSummary({ t }: { t: TFunction }) {
   const debate = useCurrentDebate();
   const openDialog = useDebateStore((state) => state.openDialog);
   const oneOff = useDebateStore((state) => state.oneOff);
+  // Until the server answers, an empty list means "not loaded yet", not "no debate".
+  const loading = useDebateStore((state) => !state.hydrated && !state.loadFailed);
   const counts = useDebateCounts(debate?.id);
+
+  if (!debate && loading) {
+    return (
+      <Card className="mb-6 border-border/70 bg-card/60" data-testid="home-current-debate-loading" data-tour="current-debate" aria-busy="true">
+        <CardContent className="flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between">
+          <div className="min-w-0 flex-1 space-y-2" aria-hidden="true">
+            <div className="h-3 w-28 animate-pulse rounded bg-muted" />
+            <div className="h-5 w-3/4 animate-pulse rounded bg-muted" />
+            <div className="h-4 w-1/2 animate-pulse rounded bg-muted" />
+          </div>
+          <div className="h-10 w-32 shrink-0 animate-pulse rounded-md bg-muted" aria-hidden="true" />
+          <span className="sr-only" role="status">{t('debate.loadingCurrent', 'Loading your current debate…')}</span>
+        </CardContent>
+      </Card>
+    );
+  }
 
   if (!debate) {
     return (

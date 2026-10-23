@@ -395,7 +395,9 @@
     "emptyTitle": "No Mercy Mode",
     "emptyDesc": "Paste your argument to receive ruthless criticism, identify logical fallacies, and get actionable improvements.",
     "failed": "Attack Analysis Failed",
-    "working": "Reviewing your case…"
+    "working": "Reviewing your case…",
+    "previousCritique": "Critique of your previous argument",
+    "previousCritiqueDesc": "Your latest version was not reviewed, so this critique may not match the text in the form."
   },
   "brainstorm": {
     "emptyTitle": "Unlock Creative Angles",
@@ -2083,7 +2085,6 @@
       "draftSavedNotice": "Drafts save in this tab",
       "connected": "Connected",
       "offlineDraft": "Offline. Draft saved locally.",
-      "totalWords": "{{count}} words",
       "complete": "Round complete",
       "turnOf": "Turn {{current}} of {{total}}",
       "preparingResult": "Preparing your result",
@@ -2101,7 +2102,6 @@
       "judgeDescription": "Reading the claims, responses, and strategic choices. This usually takes one request.",
       "yourSpeech": "Your speech",
       "yourSpeechDescription": "Make the case in the time you have. The opponent will respond to this text.",
-      "wordCount": "{{count}} words",
       "speechPlaceholder": "Build your claim, warrant, and impact...",
       "draftFor": "Draft for {{label}}",
       "toSubmit": "to submit",
@@ -2128,12 +2128,15 @@
       "youAreCon": "You are Con",
       "submittedCount_one": "{{count}} submitted",
       "submittedCount_other": "{{count}} submitted",
-      "totalWords_one": "{{count}} word",
-      "totalWords_other": "{{count}} words",
-      "wordCount_one": "{{count}} word",
-      "wordCount_other": "{{count}} words",
+      "totalWords_one": "{{formatted}} word so far",
+      "totalWords_other": "{{formatted}} words so far",
+      "wordCount_one": "{{formatted}} word",
+      "wordCount_other": "{{formatted}} words",
       "latestOpponent": "Opponent’s last speech",
-      "opponentSpeaking": "Opponent is speaking"
+      "opponentSpeaking": "Opponent is speaking",
+      "startSpeaking": "Start speaking",
+      "readyNote": "Your clock starts when you start speaking or typing.",
+      "currentRound": "Current round"
     },
     "scorecard": {
       "eyebrow": "Round review",
@@ -2426,7 +2429,9 @@
     "itemCount_other": "{{count}} items",
     "viewAll": "View all ({{total}})",
     "switching": "Switching…",
-    "deleting": "Deleting…"
+    "deleting": "Deleting…",
+    "creating": "Creating…",
+    "loadingCurrent": "Loading your current debate…"
   },
   "debateContext": {
     "using": "Using {{list}}",
@@ -2437,8 +2442,6 @@
     "resultCount_other": "{{count}} saved results",
     "resultName": "{{kind}} ({{side}})",
     "resultMeta": "{{kind}}, {{side}}",
-    "leftOut_one": "{{count}} item is left out to fit the request.",
-    "leftOut_other": "{{count}} items are left out to fit the request.",
     "review": "Review",
     "oneOff": "One-off mode: no Current Debate material will be used or saved.",
     "reviewTitle": "What this request will use",
@@ -2471,7 +2474,13 @@
     "lastShortened_one": "{{count}} source was shortened to fit.",
     "lastShortened_other": "{{count}} sources were shortened to fit.",
     "lastUnavailable_one": "{{count}} item was no longer in this debate.",
-    "lastUnavailable_other": "{{count}} items were no longer in this debate."
+    "lastUnavailable_other": "{{count}} items were no longer in this debate.",
+    "sourceCountOf_one": "{{used}} of {{count}} source",
+    "sourceCountOf_other": "{{used}} of {{count}} sources",
+    "resultCountOf_one": "{{used}} of {{count}} saved result",
+    "resultCountOf_other": "{{used}} of {{count}} saved results",
+    "didntFit_one": "({{count}} didn’t fit)",
+    "didntFit_other": "({{count}} didn’t fit)"
   },
   "themeToggle": {
     "toggle": "Toggle theme",
@@ -2552,5 +2561,9 @@
     "cost_other": "This round costs {{count}} AI requests, however many turns it takes.",
     "remaining_one": "You have {{count}} left today.",
     "remaining_other": "You have {{count}} left today."
+  },
+  "resultActions": {
+    "savedToHistory": "Saved to History",
+    "saveFailed": "Could not save. Try again."
   }
 }

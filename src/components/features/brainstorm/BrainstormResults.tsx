@@ -10,6 +10,8 @@ import { toast } from 'sonner';
 import { EmptyState } from '@/components/ui/empty-state';
 import { ExportToolbar } from '@/components/features/ExportToolbar';
 import { ResultHeader } from '@/components/features/tools/ResultHeader';
+import { CopyResultButton, SaveResultAction } from '@/components/features/tools/result-actions';
+import { brainstormText } from '@/components/features/tools/result-text';
 import { ResearchedSources } from '@/components/features/tools/ResearchedSources';
 import { GoogleDriveAuthModal } from '@/components/features/export/GoogleDriveAuthModal';
 import { SourceQualityList } from '@/components/features/shared/SourceQualityList';
@@ -20,6 +22,10 @@ interface BrainstormResultsProps {
   result: BrainstormOutput;
   discoveredSources?: DiscoveredSource[];
   onDiscuss?: () => void;
+  onSave?: () => void;
+  /** The result is already in History; shows “Saved” instead of Save. */
+  saved?: boolean;
+  saving?: boolean;
 }
 
 const strengthColors = {
@@ -65,7 +71,7 @@ function IdeaCard({ idea }: { idea: Idea }) {
   );
 }
 
-export function BrainstormResults({ result, discoveredSources, onDiscuss }: BrainstormResultsProps) {
+export function BrainstormResults({ result, discoveredSources, onDiscuss, onSave, saved = false, saving = false }: BrainstormResultsProps) {
   const { t } = useTranslation();
   const [isExportingGDocs, setIsExportingGDocs] = useState(false);
   const [showDriveAuth, setShowDriveAuth] = useState(false);
@@ -155,6 +161,8 @@ export function BrainstormResults({ result, discoveredSources, onDiscuss }: Brai
             isExportingGDocs={isExportingGDocs}
             onDiscuss={onDiscuss}
             discussLabel={t('brainstormResults.discuss')}
+            extraExports={<CopyResultButton getText={() => brainstormText(result, t)} />}
+            secondaryActions={onSave || saved ? <SaveResultAction saved={saved} onSave={onSave} disabled={saving} /> : undefined}
           />
         )}
       />

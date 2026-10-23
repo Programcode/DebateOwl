@@ -12,6 +12,8 @@ import { useDebateMotionPrefill } from '@/components/features/debate/CurrentDeba
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ModelSelector } from '@/components/ModelSelector';
 import { cn } from '@/lib/utils';
+import { formatNumber } from '@/lib/date-format';
+import { MAX_MOTION_LENGTH } from '@/lib/stores/debate-store';
 import { PageHeader } from '@/components/layout/PageHeader';
 import {
   SPARRING_FORMATS,
@@ -113,12 +115,12 @@ export function SparringSetup({ onStart, roundCost = null, remainingRequests = n
                 onChange={(event) => setMotion(event.target.value)}
                 placeholder={t('sparring.setup.motionPlaceholder', 'This house would require social media companies to verify the age of every user.')}
                 className="min-h-[132px] resize-y text-base leading-7"
-                maxLength={1200}
+                maxLength={MAX_MOTION_LENGTH}
                 autoFocus
                 aria-describedby="sparring-motion-count"
               />
               <div className="flex items-center justify-between gap-4 text-xs text-muted-foreground">
-                <span id="sparring-motion-count" className="shrink-0 tabular-nums">{motion.length}/1,200</span>
+                <span id="sparring-motion-count" className="shrink-0 tabular-nums">{formatNumber(motion.length)}/{formatNumber(MAX_MOTION_LENGTH)}</span>
               </div>
               {motion.length > 0 && motion.trim().length < 8 && (
                 <p className="text-sm text-destructive" role="alert">{t('sparring.setup.motionTooShort', 'Add a little more detail so the motion is judgeable.')}</p>

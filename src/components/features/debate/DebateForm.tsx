@@ -1,10 +1,12 @@
-import { useState, type FormEvent } from 'react';
+import { useRef, useState, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
+import { Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { MAX_INSTRUCTIONS_LENGTH, MAX_MOTION_LENGTH, type DebateSettings } from '@/lib/stores/debate-store';
+import { formatNumber } from '@/lib/date-format';
 
 export interface DebateFormValues {
   motion: string;
@@ -25,6 +27,8 @@ const ROLE_LABEL_KEYS: Record<(typeof ROLES)[number], string> = {
 interface DebateFormProps {
   initial?: Partial<DebateFormValues>;
   submitLabel: string;
+  /** Shown on the submit button while `onSubmit` runs, such as “Creating…”. */
+  pendingLabel?: string;
   onSubmit: (values: DebateFormValues) => Promise<void>;
   onCancel?: () => void;
   /** Motion is fixed when editing only settings. */
@@ -32,13 +36,15 @@ interface DebateFormProps {
   idPrefix?: string;
 }
 
-export function DebateForm({ initial, submitLabel, onSubmit, onCancel, showDetails = true, idPrefix = 'debate' }: DebateFormProps) {
+export function DebateForm({ initial, submitLabel, pendingLabel, onSubmit, onCancel, showDetails = true, idPrefix = 'debate' }: DebateFormProps) {
   const { t } = useTranslation();
   const [motion, setMotion] = useState(initial?.motion ?? '');
   const [format, setFormat] = useState(initial?.settings?.format ?? 'custom');
   const [role, setRole] = useState(initial?.settings?.role ?? 'general');
   const [instructions, setInstructions] = useState(initial?.instructions ?? '');
   const [saving, setSaving] = useState(false);
+  // One click is one create: a second submit before the button re-renders disabled is ignored.
+  const savingRef = useRef(false);
   const [error, setError] = useState('');
 
   const submit = async (event: FormEvent) => {
@@ -47,6 +53,8 @@ export function DebateForm({ initial, submitLabel, onSubmit, onCancel, showDetai
       setError(t('debate.motionRequired', 'Enter the motion you are preparing.'));
       return;
     }
+    if (savingRef.current) return;
+    savingRef.current = true;
     setSaving(true);
     setError('');
     try {
@@ -54,6 +62,7 @@ export function DebateForm({ initial, submitLabel, onSubmit, onCancel, showDetai
     } catch (submitError) {
       setError(submitError instanceof Error ? submitError.message : t('debate.saveFailed', 'Could not save the debate.'));
     } finally {
+      savingRef.current = false;
       setSaving(false);
     }
   };
@@ -70,7 +79,11 @@ export function DebateForm({ initial, submitLabel, onSubmit, onCancel, showDetai
           rows={3}
           placeholder={t('debate.motionPlaceholder', 'This House would…')}
           autoFocus
+          aria-describedby={`${idPrefix}-motion-count`}
         />
+        <p id={`${idPrefix}-motion-count`} className="text-right text-xs tabular-nums text-muted-foreground">
+          {formatNumber(motion.length)}/{formatNumber(MAX_MOTION_LENGTH)}
+        </p>
       </div>
       {showDetails && (
         <>
@@ -108,14 +121,17 @@ export function DebateForm({ initial, submitLabel, onSubmit, onCancel, showDetai
               rows={3}
               placeholder={t('debate.instructionsPlaceholder', 'Roles, judge expectations, agreed definitions, school conventions, writing preferences…')}
             />
-            <p className="text-right text-xs tabular-nums text-muted-foreground">{instructions.length}/{MAX_INSTRUCTIONS_LENGTH}</p>
+            <p className="text-right text-xs tabular-nums text-muted-foreground">{formatNumber(instructions.length)}/{formatNumber(MAX_INSTRUCTIONS_LENGTH)}</p>
           </div>
         </>
       )}
       {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
       <div className="flex flex-wrap justify-end gap-2">
         {onCancel && <Button type="button" variant="outline" onClick={onCancel}>{t('common.cancel', 'Cancel')}</Button>}
-        <Button type="submit" disabled={saving || !motion.trim()}>{submitLabel}</Button>
+        <Button type="submit" disabled={saving || !motion.trim()} aria-busy={saving}>
+          {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" />}
+          {saving ? pendingLabel ?? submitLabel : submitLabel}
+        </Button>
       </div>
     </form>
   );

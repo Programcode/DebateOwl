@@ -107,8 +107,9 @@ test("ws-sparring-autosave: a slow Sparring save does not overwrite a newer draf
   const draft = page.getByRole("textbox", { name: /^Draft for / });
   await expect(draft).toBeVisible({ timeout: AI_TIMEOUT });
   // A running clock saves the session every tick, which would hide a stale save.
-  const pause = page.getByRole("button", { name: "Pause clock" });
-  if (await pause.isVisible()) await pause.click();
+  // The turn opens on its ready step; start it, then pause, so typing does not restart the clock.
+  await page.getByRole("button", { name: "Start speaking" }).click();
+  await page.getByRole("button", { name: "Pause clock" }).click();
   await expect(page.getByRole("button", { name: "Resume clock" })).toBeVisible();
 
   const saves = await holdSave(page, (progress) => progress.draft === "Coding");

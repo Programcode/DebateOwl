@@ -11,6 +11,8 @@ import { cn } from '@/lib/utils';
 import { validateUrl } from '@/lib/validation/url';
 import { toast } from 'sonner';
 import { ExportToolbar } from '@/components/features/ExportToolbar';
+import { CopyResultButton, SaveResultAction } from '@/components/features/tools/result-actions';
+import { factoidsText } from '@/components/features/tools/result-text';
 import { ResultHeader } from '@/components/features/tools/ResultHeader';
 import { ResearchedSources } from '@/components/features/tools/ResearchedSources';
 import { GoogleDriveAuthModal } from '@/components/features/export/GoogleDriveAuthModal';
@@ -23,6 +25,10 @@ interface FactoidsResultsProps {
   result: FactoidsOutput;
   discoveredSources?: DiscoveredSource[];
   onDiscuss?: () => void;
+  onSave?: () => void;
+  /** The result is already in History; shows “Saved” instead of Save. */
+  saved?: boolean;
+  saving?: boolean;
   onSaveSource?: (title: string, content: string, url?: string) => void;
   onUseSuggestion?: (query: string) => void;
 }
@@ -140,7 +146,7 @@ function FactoidCard({ factoid, onSave }: { factoid: Factoid, onSave?: FactoidsR
   );
 }
 
-export function FactoidsResults({ result, discoveredSources, onDiscuss, onSaveSource, onUseSuggestion }: FactoidsResultsProps) {
+export function FactoidsResults({ result, discoveredSources, onDiscuss, onSave, saved = false, saving = false, onSaveSource, onUseSuggestion }: FactoidsResultsProps) {
   const { t } = useTranslation();
   const [isExportingGDocs, setIsExportingGDocs] = useState(false);
   const [showDriveAuth, setShowDriveAuth] = useState(false);
@@ -214,6 +220,8 @@ export function FactoidsResults({ result, discoveredSources, onDiscuss, onSaveSo
             isExportingGDocs={isExportingGDocs}
             onDiscuss={onDiscuss}
             discussLabel={t('factoidsResults.discuss')}
+            extraExports={<CopyResultButton getText={() => factoidsText(result, t)} />}
+            secondaryActions={onSave || saved ? <SaveResultAction saved={saved} onSave={onSave} disabled={saving} /> : undefined}
           />
         )}
       />
