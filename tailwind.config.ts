@@ -1,7 +1,6 @@
 import type { Config } from "tailwindcss";
 import tailwindcssAnimate from "tailwindcss-animate";
 import typography from "@tailwindcss/typography";
-import plugin from "tailwindcss/plugin";
 
 export default {
   darkMode: ["class"],
@@ -111,9 +110,5 @@ export default {
   plugins: [
     tailwindcssAnimate,
     typography,
-    // Touch-sized hit areas only where the primary pointer is a finger.
-    plugin(({ addVariant }) => {
-      addVariant("pointer-coarse", "@media (pointer: coarse)");
-    }),
   ],
 } satisfies Config;
