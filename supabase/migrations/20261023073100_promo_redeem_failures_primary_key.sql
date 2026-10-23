@@ -11,5 +11,7 @@
 -- IF NOT EXISTS skips the whole statement, primary key included; check with
 -- `\d private.promo_redeem_failures` first.
 
-ALTER TABLE private.promo_redeem_failures
-  ADD COLUMN IF NOT EXISTS id bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY;
+-- The rewrite and lock are accepted: the table holds a handful of rows
+-- (1 on production on 23 Oct 2026) and only promo redemption writes to it.
+-- squawk-ignore adding-field-with-default,adding-serial-primary-key-field
+ALTER TABLE private.promo_redeem_failures ADD COLUMN IF NOT EXISTS id bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY;
