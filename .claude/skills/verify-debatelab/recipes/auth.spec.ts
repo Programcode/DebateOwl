@@ -8,8 +8,8 @@ import { createDemoUser, debateControl, deleteDemoUser, expect, test } from "./f
 const mailer = process.env.WORKSPACE_TEST_MAILER_URL;
 const supabaseUrl = process.env.LOCAL_SUPABASE_URL;
 
-/** Reads the six-digit code sent to `email` after `sentAfter` from the local Mailpit inbox. */
-async function readOtp(request: APIRequestContext, email: string, sentAfter: number) {
+/** Reads the six-digit code sent to `email` after `sentAfter` from the local Mailpit inbox; `not` skips an older code. */
+async function readOtp(request: APIRequestContext, email: string, sentAfter: number, not?: string) {
   let otp = "";
   await expect.poll(async () => {
     const payload = await (await request.get(`${mailer}/api/v1/messages`)).json() as { messages?: Array<Record<string, unknown>> };
@@ -18,11 +18,23 @@ async function readOtp(request: APIRequestContext, email: string, sentAfter: num
       if (Date.parse(String(message.Created ?? 0)) < sentAfter - 5_000) continue;
       const detail = await (await request.get(`${mailer}/api/v1/message/${message.ID}`)).text();
       otp = detail.match(/\b(\d{6})\b/)?.[1] ?? "";
+      if (otp === not) otp = "";
       if (otp) break;
     }
     return otp;
   }, { timeout: 30_000 }).toMatch(/^\d{6}$/);
   return otp;
+}
+
+/**
+ * Ends the Resend countdown (AUTH-04) without waiting a minute. LoginPage reads
+ * the stored deadline every second, so the button turns back within one tick.
+ */
+async function expireResendCooldown(page: Page) {
+  await page.evaluate(() => {
+    for (const key of Object.keys(sessionStorage)) if (key.startsWith("debatelab:otp-resend-until:")) sessionStorage.setItem(key, "0");
+  });
+  await expect(page.getByRole("button", { name: "Resend code" })).toBeEnabled({ timeout: 3_000 });
 }
 
 /** Every path this tab shows, kept across reloads, so a flash of /login is caught. */
@@ -114,6 +126,8 @@ test("auth-email-link: the emailed sign-in link signs in after a failed resend, 
   await evidence.step(`Sent a code; the link returns to ${redirectTo.replace(/sb_flow_id=.*/, "sb_flow_id=<flow>")}`);
 
   // AUTH-01: the resend hits Auth's rate limit, and auth-js drops that resend's verifier.
+  await expect(page.getByRole("button", { name: /^Resend in 0:\d\d$/ })).toBeDisabled();
+  await expireResendCooldown(page);
   await page.route("**/auth/v1/otp**", (route) => route.fulfill({
     status: 429,
     contentType: "application/json",
@@ -154,6 +168,46 @@ test("auth-email-link: the emailed sign-in link signs in after a failed resend, 
   await evidence.shot("03-used-link-message");
   await evidence.aria("03-used-link-message");
   await evidence.step("Opened the used link again; /login says it expired or was used");
+});
+
+test("auth-deep-link-email-code: a signed-out deep link signs in by email code and returns to the page", async ({ page, user, request, evidence }) => {
+  test.skip(!mailer, "WORKSPACE_TEST_MAILER_URL is missing; run through verify.sh drive");
+  // AUTH-14 and AX-06: the deep link goes to /login, which has one <main> and an <h1>.
+  await page.goto("/app/generate");
+  await expect(page).toHaveURL(/\/login$/);
+  await expect(page.getByRole("main")).toHaveCount(1);
+  await expect(page.getByRole("heading", { level: 1, name: "Sign in to DebateLab" })).toBeVisible();
+  await evidence.aria("01-login-from-deep-link");
+
+  let sentAfter = Date.now();
+  await page.getByLabel("Email address").fill(user.email);
+  await page.getByRole("button", { name: "Send code" }).click();
+  await expect(page.getByText("Code sent", { exact: true })).toBeVisible();
+  // AUTH-04: Resend waits out Auth's minimum gap, and says how long.
+  await expect(page.getByRole("button", { name: /^Resend in 0:\d\d$/ })).toBeDisabled();
+  await evidence.shot("02-code-sent-countdown");
+  const firstOtp = await readOtp(request, user.email, sentAfter);
+
+  // AUTH-03: real Auth answers otp_expired for a wrong code; the message says it may be wrong.
+  await page.getByRole("textbox", { name: "Verification code" }).fill(firstOtp === "000000" ? "111111" : "000000");
+  await page.getByRole("button", { name: "Verify code" }).click();
+  await expect(page.getByRole("alert")).toHaveText("That code is wrong or has expired. Check it or send a new one.");
+  await evidence.shot("03-wrong-code");
+
+  // AUTH-05: a new send clears the old error.
+  await expireResendCooldown(page);
+  sentAfter = Date.now();
+  await page.getByRole("button", { name: "Resend code" }).click();
+  await expect(page.getByText("New code sent", { exact: true })).toBeVisible();
+  await expect(page.getByRole("alert")).toHaveCount(0);
+  const otp = await readOtp(request, user.email, sentAfter, firstOtp);
+  await evidence.step("Wrong code refused, countdown ended, a new code sent");
+
+  await page.getByRole("textbox", { name: "Verification code" }).fill(otp);
+  await page.getByRole("button", { name: "Verify code" }).click();
+  await expect(page).toHaveURL(/\/app\/generate$/, { timeout: 20_000 });
+  await evidence.shot("04-back-on-generate");
+  await evidence.step("Signed in by email code and returned to /app/generate");
 });
 
 test("auth-switch-account: the next account on this browser starts on /app, gets its own tour, and sign-out stays local", async ({ signedIn: page, evidence }, testInfo) => {
