@@ -528,7 +528,7 @@
     "cancelsOn": "Lemondva, lejár: {{date}}",
     "endsOn": "Vége: {{date}}",
     "paymentFailedDesc": "Sikertelen fizetés: frissítsd a fizetési módodat, hogy megtartsd a Pro-t.",
-    "paymentGraceUntil": "Amíg újrapróbáljuk a terhelést, a Pro-hozzáférésed megmarad eddig: {{date}}.",
+    "paymentGraceUntil": "Amíg újrapróbáljuk a terhelést, a Pro-hozzáférésed {{date}} napjáig megmarad.",
     "paymentFailedNoAccess": "Sikertelen fizetés: frissítsd a fizetési módodat az MI-hozzáférés visszaállításához.",
     "subscriptionEndedOn": "A Pro-előfizetésed véget ért ({{date}}). Fizess elő újra az MI-eszközök további használatához.",
     "subscriptionEnded": "A Pro-előfizetésed véget ért. Fizess elő újra az MI-eszközök további használatához."
@@ -1450,7 +1450,7 @@
     "titleYourPlan": "A csomagod",
     "titleResubscribe": "Fizess elő újra a Pro-ra",
     "subtitleManage": "A számlázási portálon módosíthatod a fizetési módot, megnézheted a számláidat, vagy lemondhatod az előfizetést.",
-    "subtitleCanceling": "A Pro-csomagodat lemondtad, lejár: {{date}}. A számlázási portálon megtarthatod.",
+    "subtitleCanceling": "A Pro-csomagodat lemondtad, {{date}} napján lejár. A számlázási portálon megtarthatod.",
     "subtitlePaymentFailed": "Az utolsó fizetésed sikertelen volt. Frissítsd a fizetési módodat a számlázási portálon, hogy megtartsd a Pro-t.",
     "subtitleSetUpBilling": "A Pro-hozzáférésed promócióból származik. Állítsd be a számlázást, hogy utána is megmaradjon a Pro.",
     "freePeriod_one": "{{count}} napig",

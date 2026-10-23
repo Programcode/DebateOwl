@@ -121,7 +121,7 @@ test("usage-session-sparring: with one request left, a whole Sparring round (eve
   await page.getByRole("combobox", { name: "Select AI model for sparring" }).click();
   await page.getByRole("option", { name: /Claude Haiku 5\.5/ }).click();
   const cost = page.getByTestId("session-cost");
-  await expect(cost).toHaveText("This round costs 1 AI request, however many turns it takes. You have 1 left today.", { timeout: AI_TIMEOUT });
+  await expect(cost).toHaveText("This round costs 1 AI use, however many turns it takes. You have 1 left today.", { timeout: AI_TIMEOUT });
   await evidence.shot("01-sparring-cost-before-start");
   await page.getByRole("button", { name: "Start round" }).click();
   await chooseForMotion(page, "create");
