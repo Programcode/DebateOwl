@@ -1,5 +1,5 @@
 import i18n from '@/i18n';
-import { AIError, AIProviderError, isAINetworkError, isAISubscriptionError } from './errors';
+import { AIError, AIProviderError, isAIModelRestrictionError, isAINetworkError, isAISubscriptionError } from './errors';
 import { subscriptionLimitMessage } from './limit-message';
 
 const PROVIDER_LABELS: Record<string, string> = {
@@ -29,6 +29,8 @@ export function getUserFacingAIError(error: unknown): string {
 function describeAIError(error: unknown): string {
   if (isAINetworkError(error)) return i18n.t('aiErrors.offline');
   if (isAISubscriptionError(error)) return subscriptionLimitMessage(error);
+  // The server's reason is English only; the Pro dialog explains the rest.
+  if (isAIModelRestrictionError(error)) return i18n.t('modelModal.restrictedDesc');
 
   if (error instanceof AIProviderError || (error instanceof Error && error.name === 'AIProviderError')) {
     const provider = providerLabel((error as AIProviderError).provider, error.message);

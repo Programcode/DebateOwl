@@ -1,5 +1,5 @@
 import i18n from '@/i18n';
-import { localizedLimitMessage } from './limit-message';
+import { subscriptionLimitMessage } from './limit-message';
 
 /**
  * Base class for AI-related errors with structured information.
@@ -355,7 +355,7 @@ function mapAIErrorPayload(
       current: typeof payload?.current === 'number' ? payload.current : undefined,
       units: typeof payload?.units === 'number' ? payload.units : undefined,
     };
-    return new AISubscriptionError(localizedLimitMessage(message, details), { statusCode, requestId, ...details });
+    return new AISubscriptionError(subscriptionLimitMessage(details), { statusCode, requestId, ...details });
   }
 
   if (statusCode === 403) {

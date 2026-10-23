@@ -454,9 +454,6 @@
     "tierExpired": "Lejárt",
     "ends": "Vége",
     "loading": "Betöltés...",
-    "manageSubscription": "Előfizetés kezelése",
-    "setUpBilling": "Számlázás beállítása",
-    "upgradeToPro": "Váltás Pro-ra",
     "confirmingSubscription": "A Pro előfizetés megerősítése…",
     "checkoutCanceled": "Fizetés megszakítva",
     "checkoutCanceledDesc": "Nem történt terhelés.",
@@ -534,8 +531,7 @@
     "paymentGraceUntil": "Amíg újrapróbáljuk a terhelést, a Pro-hozzáférésed megmarad eddig: {{date}}.",
     "paymentFailedNoAccess": "Sikertelen fizetés: frissítsd a fizetési módodat az MI-hozzáférés visszaállításához.",
     "subscriptionEndedOn": "A Pro-előfizetésed véget ért ({{date}}). Fizess elő újra az MI-eszközök további használatához.",
-    "subscriptionEnded": "A Pro-előfizetésed véget ért. Fizess elő újra az MI-eszközök további használatához.",
-    "resubscribe": "Újra előfizetek"
+    "subscriptionEnded": "A Pro-előfizetésed véget ért. Fizess elő újra az MI-eszközök további használatához."
   },
   "login": {
     "title": "Bejelentkezés a DebateLab-ba",
@@ -1391,13 +1387,12 @@
     "trialEnded": "Ingyenes próba lejárt",
     "trialEndedDesc": "A 3 napos ingyenes próbaidőszakod lejárt. Frissíts Pro-ra a DebateLab további használatához.",
     "limitReached": "Napi hozzáférés szünetel",
-    "limitReachedDesc": "Ma {{current}} / {{limit}} benne foglalt MI használatot használtál fel. A hozzáférés éjfélkor (UTC) frissül.",
+    "limitReachedDesc": "Elérted a mai keretet: {{current}} / {{limit}} MI-használatot vettél igénybe. A hozzáférés éjfélkor (UTC) frissül.",
     "weightedDesc": "Ez a modell {{units}} használatnak számít, és ma még {{remaining}} maradt. Válassz könnyebb modellt, vagy várj éjfélig (UTC).",
     "weightedTooLargeDesc": "Ez a modell {{units}} használatnak számít, ami több, mint a napi {{limit}} kereted. Válassz könnyebb modellt.",
     "weeklyReached": "Elfogyott a heti MI keret",
     "weeklyReachedDesc": "Felhasználtad az e heti MI keretet. Hétfőn 00:00-kor (UTC) frissül. Ha többre van szükséged, írj az ügyfélszolgálatnak.",
     "ok": "Rendben",
-    "upgrade": "Frissítés Pro-ra - $5/hó",
     "upgradeNote": "Több MI felkészülési hozzáférés + magas szintű érvelés",
     "notNow": "Most nem",
     "gotIt": "Rendben",
@@ -1407,43 +1402,40 @@
     "subscriptionEndedDesc": "A Pro-előfizetésed véget ért. Fizess elő újra a DebateLab további használatához.",
     "subscriptionEndedOnDesc": "A Pro-előfizetésed véget ért ({{date}}). Fizess elő újra a DebateLab további használatához.",
     "updatePayment": "Fizetési mód frissítése",
-    "resubscribe": "Újra előfizetek"
+    "limitReachedGenericDesc": "Elfogyott a mai MI-használati kereted. A hozzáférés éjfélkor (UTC) frissül.",
+    "zeroLimitDesc": "Ennek a fióknak most nincs napi MI-használati kerete. Ha szerinted ez hiba, írj az ügyfélszolgálatnak."
   },
   "modelModal": {
     "title": "Pro érvelés",
     "description": "A magas szintű érvelés csak Pro tagoknak érhető el.",
     "descriptionWithModel": "A magas szintű érvelés a {{model}} modellel csak Pro tagoknak érhető el.",
     "upgradeNote": "Frissíts a magas szintű érvelés feloldásához.",
-    "upgrade": "Frissítés Pro-ra - $5/hó",
-    "useFree": "Alacsony szintű érvelés használata"
+    "useFree": "Alacsony szintű érvelés használata",
+    "restrictedDesc": "Ehhez a modellhez vagy érvelési szinthez Pro kell."
   },
   "dailyLimit": {
-    "usage": "Ma: {{used}} / {{limit}} MI-kérés felhasználva. Éjfélkor (UTC) frissülnek (nálad {{time}}).",
-    "sparringNone": "Mára nem maradt MI-kérésed, így az ellenfél nem tud válaszolni. Éjfélkor (UTC) frissülnek.",
-    "sparringShort": "Ezzel a modellel ez a kör {{needed}} MI-kérésbe kerül, de mára csak {{remaining}} maradt. Válassz könnyebb modellt, vagy várj éjfélig (UTC)."
+    "remaining_one": "Mára {{count}} / {{limit}} MI-használat maradt",
+    "remaining_other": "Mára {{count}} / {{limit}} MI-használat maradt",
+    "resets": "Éjfélkor (UTC) frissül (nálad {{time}})."
   },
   "pricingModal": {
-    "title": "Frissítés Pro-ra",
-    "subtitle": "Oldd fel a magasabb használati keretet, mind a 10 modellt és a beállítható érvelést.",
-    "free": "Ingyenes",
+    "title": "Váltás Pro-ra",
+    "subtitle": "Magasabb használati keret, az összes modell és beállítható érvelés.",
+    "free": "Ingyenes próba",
     "pro": "Pro",
     "current": "Jelenlegi",
     "recommended": "Ajánlott",
-    "freePrice": "$0",
-    "proPrice": "$5",
-    "freePeriod": "/hó",
     "proPeriod": "/hó + adó",
     "freeFeature1": "Kezdő MI felkészülési hozzáférés",
     "freeFeature2": "Kezdő modellek",
     "freeFeature3": "Minden vitafunkció",
-    "freeFeature4": "3 napos ingyenes próba",
+    "freeFeature4": "Bankkártya nélkül",
     "proFeature1": "Bővített MI felkészülési hozzáférés",
-    "proFeature2": "Mind a 10 modell, köztük a Claude Opus és Sonnet, a GPT-6.1 Sol és a Gemini",
+    "proFeature2": "Az összes modell, köztük a Claude Opus és Sonnet, a GPT-6.1 Sol és a Gemini",
     "proFeature3": "Mélyreható kutatás Exa-val",
     "proFeature4": "Elsőbbségi feldolgozás",
     "proFeature5": "Minden vitafunkció",
     "redirecting": "Átirányítás...",
-    "upgradeNow": "Frissítés most",
     "offlineUpgrade": "Nincs internetkapcsolat. A váltáshoz csatlakozz az internethez.",
     "applying": "Alkalmazás...",
     "apply": "Alkalmaz",
@@ -1454,7 +1446,15 @@
     "codeRedeemed": "Kód beváltva",
     "invalidCode": "Érvénytelen kód",
     "redeemError": "Hiba",
-    "redeemErrorDesc": "Nem sikerült beváltani a kódot"
+    "redeemErrorDesc": "Nem sikerült beváltani a kódot",
+    "titleYourPlan": "A csomagod",
+    "titleResubscribe": "Fizess elő újra a Pro-ra",
+    "subtitleManage": "A számlázási portálon módosíthatod a fizetési módot, megnézheted a számláidat, vagy lemondhatod az előfizetést.",
+    "subtitleCanceling": "A Pro-csomagodat lemondtad, lejár: {{date}}. A számlázási portálon megtarthatod.",
+    "subtitlePaymentFailed": "Az utolsó fizetésed sikertelen volt. Frissítsd a fizetési módodat a számlázási portálon, hogy megtartsd a Pro-t.",
+    "subtitleSetUpBilling": "A Pro-hozzáférésed promócióból származik. Állítsd be a számlázást, hogy utána is megmaradjon a Pro.",
+    "freePeriod_one": "{{count}} napig",
+    "freePeriod_other": "{{count}} napig"
   },
   "onboarding": {
     "welcome": "Üdvözlünk a DebateLab-ban! 🎉",
@@ -2559,13 +2559,25 @@
     "compare": "MI-alapú vitaeszközök összehasonlítása"
   },
   "sessionQuota": {
-    "cost_one": "Ez a kör {{count}} MI-kérésbe kerül, akárhány fordulóból áll.",
-    "cost_other": "Ez a kör {{count}} MI-kérésbe kerül, akárhány fordulóból áll.",
+    "cost_one": "Ez a kör {{count}} MI-használatba kerül, akárhány fordulóból áll.",
+    "cost_other": "Ez a kör {{count}} MI-használatba kerül, akárhány fordulóból áll.",
     "remaining_one": "Mára még {{count}} maradt.",
     "remaining_other": "Mára még {{count}} maradt."
   },
   "resultActions": {
     "savedToHistory": "Mentve az előzményekbe",
     "saveFailed": "Nem sikerült menteni. Próbáld újra."
+  },
+  "billing": {
+    "upgradeToPro": "Váltás Pro-ra",
+    "manageSubscription": "Előfizetés kezelése",
+    "setUpBilling": "Számlázás beállítása",
+    "resubscribe": "Újra előfizetek"
+  },
+  "trialBanner": {
+    "daysLeft_one": "Ingyenes próba: még {{count}} nap van hátra.",
+    "daysLeft_other": "Ingyenes próba: még {{count}} nap van hátra.",
+    "endsToday": "Az ingyenes próbád ma lejár.",
+    "dismiss": "Próbaidő-emlékeztető elrejtése"
   }
 }

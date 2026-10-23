@@ -12,7 +12,7 @@ import type { GenerateInput } from '@/lib/ai/schemas/generate';
 import { useToast } from '@/hooks/use-toast';
 import { useSubscriptionError } from '@/hooks/use-subscription-error';
 import { getUserFacingAIError } from '@/lib/ai/error-display';
-import { LimitReachedModal, ModelRestrictedModal, PricingModal } from '@/components/features/subscription';
+import { DailyUsage, SubscriptionErrorModals } from '@/components/features/subscription';
 import { caseHasFlowchart, flowchartFromCase } from '@/lib/flowchart';
 
 import { Button } from '@/components/ui/button';
@@ -201,6 +201,8 @@ export default function GeneratePage() {
         toast({ title: t('generate.regenerated', 'Section regenerated'), description: t('generate.regeneratedDesc', 'The selected section has been refreshed.'), variant: 'success' });
       })
       .catch((error) => {
+        // Out of uses: the same dialog as a full generation, not a toast.
+        if (subError.handleSubscriptionError(error)) return;
         console.error('Failed to regenerate section:', error);
         toast({ title: t('generate.failed'), description: getUserFacingAIError(error), variant: 'destructive' });
       })
@@ -274,7 +276,7 @@ export default function GeneratePage() {
     <div className="container py-8 px-4">
       <WorkspaceToolScope context={workspace.context} />
       <div className="max-w-6xl mx-auto">
-        <PageHeader title={t('nav.generate')} />
+        <PageHeader title={t('nav.generate')} meta={<DailyUsage />} />
         <CurrentDebateStrip side={generateForm?.side} hidden={Boolean(workspace.context)} />
 
         <div className="grid gap-8 grid-cols-1 lg:grid-cols-[440px_minmax(0,1fr)]">
@@ -318,27 +320,7 @@ export default function GeneratePage() {
     </div>
 
     {debateGate.dialog}
-    <LimitReachedModal
-      open={subError.limitModalOpen}
-      onOpenChange={subError.setLimitModalOpen}
-      variant={subError.limitModalVariant}
-      limit={subError.limitModalLimit}
-      current={subError.limitModalCurrent}
-      units={subError.limitModalUnits}
-      onUpgrade={() => { subError.setLimitModalOpen(false); subError.setPricingModalOpen(true); }}
-    />
-    <ModelRestrictedModal
-      open={subError.modelModalOpen}
-      onOpenChange={subError.setModelModalOpen}
-      onUpgrade={() => {
-        subError.setModelModalOpen(false);
-        subError.setPricingModalOpen(true);
-      }}
-    />
-    <PricingModal
-      open={subError.pricingModalOpen}
-      onOpenChange={subError.setPricingModalOpen}
-    />
+    <SubscriptionErrorModals subError={subError} />
     <Dialog open={saveDialogOpen} onOpenChange={setSaveDialogOpen}>
       <DialogContent>
         <DialogHeader>

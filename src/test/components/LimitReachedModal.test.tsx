@@ -2,6 +2,9 @@ import { fireEvent, render, screen } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { LimitReachedModal, type LimitModalVariant } from '@/components/features/subscription/LimitReachedModal';
+import { SubscriptionErrorModals } from '@/components/features/subscription/SubscriptionErrorModals';
+import type { useSubscriptionError } from '@/hooks/use-subscription-error';
+import i18n from '@/i18n';
 
 const subscription = vi.hoisted(() => ({
   isPro: false,
@@ -51,13 +54,13 @@ describe('LimitReachedModal', () => {
 
   it('offers Pro when a free plan hits the daily cap', () => {
     renderModal();
-    expect(screen.getByRole('button', { name: 'Upgrade to Pro - $5/mo' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Upgrade to Pro' })).toBeInTheDocument();
   });
 
   it('does not sell Pro again when a paying student hits the daily cap', async () => {
     subscription.isPro = true;
     const { onUpgrade, onOpenChange } = renderModal();
-    expect(screen.queryByRole('button', { name: 'Upgrade to Pro - $5/mo' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Upgrade to Pro' })).not.toBeInTheDocument();
     expect(screen.queryByText('More AI prep access + high reasoning')).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'OK' }));
     expect(onOpenChange).toHaveBeenCalledWith(false);
@@ -67,7 +70,7 @@ describe('LimitReachedModal', () => {
   it.each(['trial_expired', 'trial_ended'] as const)('still offers Pro when the trial has ended (%s)', (variant) => {
     renderModal(variant);
     expect(screen.getByRole('heading', { name: 'Free Trial Ended' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Upgrade to Pro - $5/mo' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Upgrade to Pro' })).toBeInTheDocument();
   });
 
   it('sends a failed payment to Settings instead of a second Checkout', () => {
@@ -93,5 +96,28 @@ describe('LimitReachedModal', () => {
     expect(screen.getByText(/Your Pro subscription ended on 01\/10\/2026/)).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Resubscribe' }));
     expect(onUpgrade).toHaveBeenCalled();
+  });
+});
+
+// QB-06: Crossfire and Sparring open the dialog through SubscriptionErrorModals,
+// which dropped the request's weight, so they said "50 of 50 used" where the
+// other tools said the model counts as 5 uses.
+describe('SubscriptionErrorModals', () => {
+  it('tells a weighted refusal the same way every tool does', () => {
+    const subError = {
+      limitModalOpen: true,
+      limitModalVariant: 'limit_reached',
+      limitModalLimit: 50,
+      limitModalCurrent: 47,
+      limitModalUnits: 5,
+      modelModalOpen: false,
+      pricingModalOpen: false,
+      setLimitModalOpen: vi.fn(),
+      setModelModalOpen: vi.fn(),
+      setPricingModalOpen: vi.fn(),
+      handleSubscriptionError: vi.fn(),
+    } satisfies ReturnType<typeof useSubscriptionError>;
+    render(<MemoryRouter><SubscriptionErrorModals subError={subError} /></MemoryRouter>);
+    expect(screen.getByRole('dialog')).toHaveTextContent(i18n.t('limitModal.weightedDesc', { units: 5, remaining: 3 }));
   });
 });

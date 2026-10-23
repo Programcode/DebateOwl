@@ -1,0 +1,87 @@
+import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import { Clock, X } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { useSubscription } from '@/hooks/use-subscription';
+import { useAuth } from '@/lib/supabase/AuthProvider';
+import { BILLING_ACTION_LABELS } from '@/lib/billing/plan';
+import { PricingModal } from './PricingModal';
+
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+/** Calendar days from today to the trial's end on the reader's clock; 0 on its last day. */
+function trialDaysLeft(endsAt: string, now = new Date()): number | null {
+  const end = new Date(endsAt);
+  if (Number.isNaN(end.getTime()) || end.getTime() <= now.getTime()) return null;
+  const startOfDay = (date: Date) => new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime();
+  return Math.round((startOfDay(end) - startOfDay(now)) / DAY_MS);
+}
+
+function dismissedKey(userId: string, endsAt: string) {
+  return `debatelab:trial-banner-dismissed:${userId}:${endsAt}`;
+}
+
+function readDismissed(key: string): boolean {
+  try {
+    return localStorage.getItem(key) === '1';
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * "Free trial: 2 days left." A slim line under the header while a trial runs
+ * (QB-09). Dismissing it hides it for this trial on this browser; a new trial
+ * end date shows it again.
+ */
+export function TrialBanner() {
+  const { t } = useTranslation();
+  const { user } = useAuth();
+  const { billingState, billingDate, billingDateKind } = useSubscription();
+  const [dismissed, setDismissed] = useState<string | null>(null);
+  const [pricingOpen, setPricingOpen] = useState(false);
+
+  const key = user && billingState === 'trial' && billingDateKind === 'ends' && billingDate
+    ? dismissedKey(user.id, billingDate)
+    : null;
+  const daysLeft = billingDate ? trialDaysLeft(billingDate) : null;
+  if (!key || daysLeft === null || dismissed === key || readDismissed(key)) return null;
+
+  const dismiss = () => {
+    try {
+      localStorage.setItem(key, '1');
+    } catch {
+      // Private browsing: hidden until the next page load.
+    }
+    setDismissed(key);
+  };
+
+  return (
+    <section
+      data-testid="trial-banner"
+      aria-label={t('settings.tierTrial')}
+      className="border-b border-blue-500/20 bg-blue-500/[0.06]"
+    >
+      <div className="container flex items-center gap-2 px-4 text-sm">
+        <Clock className="h-4 w-4 shrink-0 text-blue-700 dark:text-blue-300" aria-hidden="true" />
+        <p className="min-w-0 flex-1 py-2 text-foreground">
+          {daysLeft === 0 ? t('trialBanner.endsToday') : t('trialBanner.daysLeft', { count: daysLeft })}
+        </p>
+        <Button variant="link" size="sm" className="h-11 shrink-0 px-2" onClick={() => setPricingOpen(true)}>
+          {t(BILLING_ACTION_LABELS.upgrade)}
+        </Button>
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          className="h-11 w-11 shrink-0"
+          onClick={dismiss}
+          aria-label={t('trialBanner.dismiss')}
+        >
+          <X className="h-4 w-4" aria-hidden="true" />
+        </Button>
+      </div>
+      {pricingOpen && <PricingModal open onOpenChange={setPricingOpen} />}
+    </section>
+  );
+}

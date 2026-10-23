@@ -76,7 +76,7 @@ import { useVoiceAvailability } from '@/lib/voice/availability';
 import { combineDelivery, measureDelivery } from '@/lib/voice/delivery';
 import { opponentVoice } from '@/lib/voice/opponent-voice';
 import { useSubscriptionError } from '@/hooks/use-subscription-error';
-import { SessionCostNote, SubscriptionErrorModals } from '@/components/features/subscription';
+import { DailyUsage, SessionCostNote, SubscriptionErrorModals } from '@/components/features/subscription';
 import { useSessionQuota } from '@/hooks/use-session-quota';
 
 const SESSION_ID_PREFIX = 'crossfire';
@@ -583,12 +583,14 @@ export default function CrossfirePage() {
       dispatch({ type: 'debrief-received', debrief: result });
     } catch (error) {
       if (controller.signal.aborted) return;
+      // The same limit dialog as a turn; the inline error stays so the debrief can be retried.
+      handleSubscriptionError(error);
       const classified = classifyError(error);
       dispatch({ type: 'debrief-failed', errorKind: classified.kind, message: classified.message });
     } finally {
       if (requestRef.current === controller) setLiveDebrief({});
     }
-  }, [modelConfig, roundDebateId, workspace.context]);
+  }, [handleSubscriptionError, modelConfig, roundDebateId, workspace.context]);
 
   const endSession = useCallback((reason: 'manual' | 'timer') => {
     if (state.phase !== 'active') return;
@@ -744,6 +746,7 @@ export default function CrossfirePage() {
               <Flame className="h-5 w-5" />
             </div>
             <h1 className="text-3xl font-bold tracking-tight">{t('crossfire.title')}</h1>
+            <DailyUsage className="mt-1" />
           </header>
           <CurrentDebateStrip hidden={Boolean(workspace.context)} />
           {debateGate.dialog}

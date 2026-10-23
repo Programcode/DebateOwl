@@ -19,6 +19,7 @@ import { cn } from '@/lib/utils';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { LanguageSwitcher } from '@/components/LanguageSwitcher';
 import { AnnouncementBanner } from '@/components/layout/AnnouncementBanner';
+import { TrialBanner } from '@/components/features/subscription/TrialBanner';
 import { useRoutePrefetch } from '@/hooks/use-route-prefetch';
 import { useAuth } from '@/lib/supabase/AuthProvider';
 import { CurrentDebateMenu } from '@/components/features/debate/CurrentDebateMenu';
@@ -387,6 +388,7 @@ export function AppLayout() {
           onDismiss={() => handleDismissAnnouncement(announcements[0].id)}
         />
       )}
+      <TrialBanner />
 
       <DebateDialogs />
       <InactiveDebateGate />
