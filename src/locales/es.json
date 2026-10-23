@@ -2421,7 +2421,8 @@
     "viewAll": "Ver todo ({{total}})",
     "switching": "Cambiando…",
     "deleting": "Eliminando…",
-    "creating": "Creando…"
+    "creating": "Creando…",
+    "loadingCurrent": "Cargando tu debate actual…"
   },
   "debateContext": {
     "using": "Usando {{list}}",

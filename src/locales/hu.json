@@ -2421,7 +2421,8 @@
     "viewAll": "Összes megtekintése ({{total}})",
     "switching": "Váltás…",
     "deleting": "Törlés…",
-    "creating": "Létrehozás…"
+    "creating": "Létrehozás…",
+    "loadingCurrent": "Az aktuális vitád betöltése…"
   },
   "debateContext": {
     "using": "Felhasználva: {{list}}",

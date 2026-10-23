@@ -47,6 +47,8 @@ interface DebateState {
   /** Session-only: tools run without reading from or saving to any debate. */
   oneOff: boolean;
   hydrated: boolean;
+  /** The last load from the server failed, so `hydrated` may stay false; pages stop waiting for it. */
+  loadFailed: boolean;
   dialog: DebateDialog;
   /** Motion to prefill when the create dialog opens from a feature. */
   dialogMotion: string;
@@ -124,6 +126,7 @@ export const useDebateStore = create<DebateState>()(
       currentDebateId: null as string | null,
       oneOff: false,
       hydrated: false,
+      loadFailed: false,
       dialog: null as DebateDialog,
       dialogMotion: '',
 
@@ -136,10 +139,17 @@ export const useDebateStore = create<DebateState>()(
           set({ ownerUserId: userId, debates: [], currentDebateId: null, oneOff: false, hydrated: false });
         }
         const writesBefore = debateWrites;
-        const [debatesResult, currentResult] = await Promise.all([
-          supabase.from('debates').select('id,motion,settings,instructions,last_activity_at,created_at').order('last_activity_at', { ascending: false }),
-          supabase.from('current_debates').select('debate_id').maybeSingle(),
-        ]);
+        if (get().loadFailed) set({ loadFailed: false });
+        let debatesResult, currentResult;
+        try {
+          [debatesResult, currentResult] = await Promise.all([
+            supabase.from('debates').select('id,motion,settings,instructions,last_activity_at,created_at').order('last_activity_at', { ascending: false }),
+            supabase.from('current_debates').select('debate_id').maybeSingle(),
+          ]);
+        } catch (error) {
+          if (epoch === hydrationEpoch) set({ loadFailed: true });
+          throw error;
+        }
         if (epoch !== hydrationEpoch) return;
         if (writesBefore !== debateWrites) {
           // A create, switch, edit or delete landed mid-load; this snapshot is older than it.
@@ -148,6 +158,7 @@ export const useDebateStore = create<DebateState>()(
         }
         if (debatesResult.error || currentResult.error) {
           console.warn('[DebateStore] Failed to hydrate debates:', debatesResult.error?.message ?? currentResult.error?.message);
+          set({ loadFailed: true });
           return;
         }
         const debates = ((debatesResult.data ?? []) as DebateRow[]).map(fromRow);
@@ -248,13 +259,13 @@ export const useDebateStore = create<DebateState>()(
 
       resetLocalData: () => {
         hydrationEpoch += 1;
-        set({ ownerUserId: null, debates: [], currentDebateId: null, oneOff: false, hydrated: false, dialog: null, dialogMotion: '' });
+        set({ ownerUserId: null, debates: [], currentDebateId: null, oneOff: false, hydrated: false, loadFailed: false, dialog: null, dialogMotion: '' });
       },
 
       prepareForUser: (userId) => {
         if (get().ownerUserId === userId) return;
         hydrationEpoch += 1;
-        set({ ownerUserId: userId, debates: [], currentDebateId: null, oneOff: false, hydrated: false, dialog: null, dialogMotion: '' });
+        set({ ownerUserId: userId, debates: [], currentDebateId: null, oneOff: false, hydrated: false, loadFailed: false, dialog: null, dialogMotion: '' });
       },
     }),
     {
