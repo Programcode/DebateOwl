@@ -208,15 +208,15 @@ export function AttackResults({ result, discoveredSources, onDiscuss, onPractice
           <div className="flex gap-4 text-sm">
             <div className="flex items-center gap-1">
               <div className="h-3 w-3 rounded-full bg-destructive" />
-              <span>{criticalCount} {t('attackResults.critical')}</span>
+              <span>{t('attackResults.criticalCount', { count: criticalCount })}</span>
             </div>
             <div className="flex items-center gap-1">
               <div className="h-3 w-3 rounded-full bg-amber-500" />
-              <span>{majorCount} {t('attackResults.major')}</span>
+              <span>{t('attackResults.majorCount', { count: majorCount })}</span>
             </div>
             <div className="flex items-center gap-1">
               <div className="h-3 w-3 rounded-full bg-primary" />
-              <span>{minorCount} {t('attackResults.minor')}</span>
+              <span>{t('attackResults.minorCount', { count: minorCount })}</span>
             </div>
           </div>
 

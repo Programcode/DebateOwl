@@ -247,7 +247,8 @@
     "deleted": "Eliminado",
     "discuss": "Discutir",
     "retry": "Reintentar",
-    "undo": "Deshacer"
+    "undo": "Deshacer",
+    "notAvailable": "N/D"
   },
   "aiClient": {
     "inputShortened": "La entrada se acortó",
@@ -476,7 +477,7 @@
     "signOutFailed": "No se pudo cerrar la sesión. Inténtalo de nuevo.",
     "aiModels": "Modelos de IA",
     "aiModelsDesc": "Selecciona tu modelo preferido desde cada página de función usando el selector del encabezado.",
-    "admin": "Admin",
+    "admin": "Administración",
     "adminDesc": "Abre el panel de administración para uso, usuarios, límites y códigos promocionales.",
     "openAdmin": "Abrir panel de admin",
     "developer": "Desarrollador",
@@ -603,7 +604,7 @@
     "createDemoCode": "Crear código demo",
     "createDemoCodeDescription": "Emite un código de un solo uso para una cuenta demo. El código solo aparece después de crearlo.",
     "label": "Etiqueta",
-    "labelPlaceholder": "p. ej., Demo escolar de septiembre",
+    "labelPlaceholder": "p. ej. Demo escolar de septiembre",
     "emailOptional": "Email asignado (opcional)",
     "expiryOptional": "Caducidad (opcional)",
     "maxUsesOptional": "Usos máximos (opcional)",
@@ -743,7 +744,7 @@
     "promos": {
       "createTitle": "Crear código promocional",
       "code": "Código",
-      "codePlaceholder": "p. ej., CIT2026",
+      "codePlaceholder": "p. ej. CIT2026",
       "type": "Tipo",
       "types": {
         "extended_trial": "Prueba ampliada",
@@ -794,7 +795,7 @@
       "currentEnds": "La prueba actual termina el {{date}}",
       "days": "Días",
       "notes": "Notas (opcional)",
-      "notesPlaceholder": "p. ej., socio de torneo o solicitud de soporte",
+      "notesPlaceholder": "p. ej. socio de torneo o solicitud de soporte",
       "cancel": "Cancelar",
       "action_one": "Regalar {{count}} día",
       "action_other": "Regalar {{count}} días",
@@ -925,7 +926,7 @@
       "sampleSparringTitle": "Plan de la ronda",
       "sampleOpeningLabel": "Apertura",
       "sampleOpening": "Expón la regla, la excepción y la medida del éxito.",
-      "sampleResponseLabel": "Respuesta",
+      "sampleResponseLabel": "Réplica",
       "sampleResponse": "Compara el tiempo de aprendizaje con el coste de hacer cumplir la regla."
     }
   },
@@ -944,7 +945,7 @@
     "crossfire": "Interrogatorio",
     "crossfireDesc": "Practica preguntas y respuestas precisas en un intercambio cronometrado.",
     "sparring": "Sparring",
-    "sparringDesc": "Practica una ronda cronometrada contra una oponente y revisa la tarjeta de puntuación.",
+    "sparringDesc": "Practica una ronda cronometrada contra un oponente y revisa la tarjeta de puntuación.",
     "library": "Biblioteca de fuentes",
     "libraryDesc": "Gestiona fuentes que fundamentan las respuestas de IA con evidencia real.",
     "timer": "Cronómetro de debate",
@@ -1085,7 +1086,7 @@
   },
   "generateForm": {
     "motion": "Moción / tema",
-    "motionPlaceholder": "ej., Esta cámara cree que la inteligencia artificial creará más empleos de los que destruirá",
+    "motionPlaceholder": "p. ej. Esta cámara cree que la inteligencia artificial creará más empleos de los que destruirá",
     "side": "Lado",
     "sidePro": "A favor",
     "sideCon": "En contra",
@@ -1229,11 +1230,17 @@
     "exportError": "Ocurrió un error inesperado durante la exportación",
     "weaknessesCount_one": "{{count}} problema encontrado, ordenado por gravedad",
     "weaknessesCount_other": "{{count}} problemas encontrados, ordenados por gravedad",
-    "resultTitle": "Crítica"
+    "resultTitle": "Crítica",
+    "criticalCount_one": "{{count}} crítico",
+    "criticalCount_other": "{{count}} críticos",
+    "majorCount_one": "{{count}} mayor",
+    "majorCount_other": "{{count}} mayores",
+    "minorCount_one": "{{count}} menor",
+    "minorCount_other": "{{count}} menores"
   },
   "brainstormForm": {
     "motion": "Moción / tema",
-    "motionPlaceholder": "ej., La Renta Básica Universal debería implementarse globalmente",
+    "motionPlaceholder": "p. ej. La Renta Básica Universal debería implementarse globalmente",
     "side": "Lado a explorar",
     "sideBoth": "Explorar ambos lados",
     "sidePro": "Solo a favor",
@@ -1274,7 +1281,7 @@
   },
   "factoidsForm": {
     "claim": "Declaración",
-    "claimPlaceholder": "ej., La energía renovable es más rentable que los combustibles fósiles",
+    "claimPlaceholder": "p. ej. La energía renovable es más rentable que los combustibles fósiles",
     "direction": "Postura",
     "directionFor": "A favor",
     "directionAgainst": "En contra",
@@ -1282,7 +1289,7 @@
     "regionPlaceholder": "Global por defecto",
     "sourceCount": "Fuentes",
     "timeframe": "Período (opcional)",
-    "timeframePlaceholder": "ej., 2020-2024, Última década",
+    "timeframePlaceholder": "p. ej. 2020-2024, Última década",
     "sourceType": "Tipo de fuente",
     "sourceAny": "Cualquier fuente confiable",
     "sourceAcademic": "Solo académicas",
@@ -1297,7 +1304,6 @@
     "unverified": "No verificado",
     "pending": "Pendiente",
     "importantNotes": "Notas importantes",
-    "found": "Encontrados",
     "factoids": "Datos",
     "factoidsDesc": "Puntos de evidencia con citas",
     "findMore": "Buscar más evidencia",
@@ -1322,7 +1328,11 @@
     "exportError": "Ocurrió un error inesperado durante la exportación",
     "noVerified": "No se encontraron fuentes verificadas que coincidan. Prueba con otro tipo de fuente o un período más amplio.",
     "useSuggestion": "Buscar esto",
-    "resultTitle": "Evidencia"
+    "resultTitle": "Evidencia",
+    "foundCount_one": "{{count}} dato encontrado",
+    "foundCount_other": "{{count}} datos encontrados",
+    "verifiedCount_one": "{{count}} verificado",
+    "verifiedCount_other": "{{count}} verificados"
   },
   "askChat": {
     "title": "Pregunta a tu coach",
@@ -1349,7 +1359,7 @@
     "followUp": "Preguntas de seguimiento:",
     "pros": "Pros",
     "cons": "Contras",
-    "placeholder": "Pregunta a tu coach de debate...",
+    "placeholder": "Pregunta al coach…",
     "inputLabel": "Mensaje para tu coach de debate",
     "placeholderListening": "Escuchando...",
     "saveToLibrary": "Guardar en biblioteca",
@@ -1476,14 +1486,14 @@
     "debateCurrentDesc": "Todo en DebateLab pertenece a tu debate actual: su moción, sus fuentes y tus resultados. Ábrelo o cámbialo aquí."
   },
   "timer": {
-    "title": "Temporizador de debate",
-    "displayLabel": "Pantalla del temporizador",
+    "title": "Cronómetro de debate",
+    "displayLabel": "Pantalla del cronómetro",
     "speechProgress": "Progreso de {{speech}}",
     "selectFormat": "Seleccionar formato",
-    "formatStandard": "Estándar (4-6-6-3)",
+    "formatStandard": "Formato escolar 4-6-6-3",
     "formatLD": "Lincoln-Douglas",
-    "formatPF": "Foro público",
-    "formatPolicy": "Política",
+    "formatPF": "Public Forum",
+    "formatPolicy": "Policy",
     "timeUp": "¡Se acabó el tiempo!",
     "speaking": "Hablando",
     "paused": "Pausado",
@@ -1495,7 +1505,7 @@
     "timeUpSignal": "Señal de tiempo agotado",
     "twoBeeps": "Dos pitidos",
     "spaceStartStop": "Espacio para iniciar/detener",
-    "reset": "Reiniciar temporizador",
+    "reset": "Reiniciar cronómetro",
     "resetKey": "R para reiniciar",
     "arrowsChange": "Flechas para cambiar orador",
     "speeches": {
@@ -1535,7 +1545,7 @@
     },
     "disableSound": "Desactivar sonido",
     "enableSound": "Activar sonido",
-    "resetDone": "Temporizador reiniciado"
+    "resetDone": "Cronómetro reiniciado"
   },
   "flowchart": {
     "title": "Diagrama de argumentos",
@@ -1669,7 +1679,6 @@
     "deleteCaseLabel": "Eliminar {{title}}",
     "load": "Cargar",
     "resume": "Reanudar",
-    "messages": "mensajes",
     "caseDeleted": "Se eliminó el caso guardado.",
     "deleteCaseDesc": "Esto eliminará el caso guardado de tu historial.",
     "deleteCaseTitle": "¿Eliminar el caso guardado?",
@@ -1705,7 +1714,6 @@
     "chooseFile": "Elegir archivo",
     "importPreview": "Vista previa de importación",
     "saveImported": "Guardar fuente importada",
-    "words": "palabras",
     "folder": "Carpeta",
     "generalFolder": "General",
     "textSource": "Texto",
@@ -1743,7 +1751,6 @@
     "titlePlaceholder": "Título de la fuente...",
     "originPlaceholder": "URL o referencia...",
     "contentPlaceholder": "Pega el contenido de la fuente...",
-    "sourcesCount": "fuentes",
     "emptyTitle": "Sin fuentes aún",
     "emptyDesc": "Añade fuentes para fundamentar las respuestas de IA con evidencia real.",
     "manualEntry": "Entrada manual",
@@ -1787,7 +1794,7 @@
     "restoreFailed": "No se pudo restaurar la fuente",
     "deleteFailed": "No se pudo eliminar la fuente.",
     "readingFile": "Leyendo el archivo…",
-    "summary": "{{total}} fuentes · {{active}} activas · {{folders}} carpetas",
+    "summary": "{{sources}} · {{active}} · {{folders}}",
     "mergeFolderTitle": "¿Fusionar con {{name}}?",
     "mergeFolders": "Fusionar carpetas",
     "mergeFailed": "No se pudieron fusionar las carpetas. Inténtalo de nuevo.",
@@ -1800,7 +1807,15 @@
     "sourceSaved": "{{title}} se guardó en la biblioteca",
     "duplicateUrlDesc": "Esta página ya está en la biblioteca de este debate.",
     "loadingSources": "Cargando fuentes…",
-    "folderUpdateFailed": "No se pudo cambiar esta carpeta"
+    "folderUpdateFailed": "No se pudo cambiar esta carpeta",
+    "sourceCount_one": "{{count}} fuente",
+    "sourceCount_other": "{{count}} fuentes",
+    "activeCount_one": "{{count}} activa",
+    "activeCount_other": "{{count}} activas",
+    "folderCount_one": "{{count}} carpeta",
+    "folderCount_other": "{{count}} carpetas",
+    "wordCount_one": "{{formatted}} palabra",
+    "wordCount_other": "{{formatted}} palabras"
   },
   "autoSavedSources": {
     "undo": "Deshacer fuentes autoguardadas",
@@ -1824,7 +1839,8 @@
     "goToApp": "Ir a la app",
     "openApp": "Abrir app",
     "sharedOn": "Compartido el",
-    "views": "vistas"
+    "viewCount_one": "{{count}} vista",
+    "viewCount_other": "{{count}} vistas"
   },
   "privacyPage": {
     "title": "Política de privacidad",
@@ -1862,7 +1878,7 @@
     "s2": "Descripción del servicio",
     "p2": "DebateLab es una herramienta de preparación de debates impulsada por IA que proporciona generación de argumentos, análisis y funciones de coaching.",
     "s3": "Requisitos de cuenta",
-    "p3": "Puedes iniciar sesión con Google, mediante un enlace enviado por email o con un código demo emitido por un administrador. Los códigos demo proporcionan acceso temporal a una cuenta designada. Eres responsable de toda la actividad de tu cuenta.",
+    "p3": "Puedes iniciar sesión con Google, con un código de seis dígitos enviado por email o con un código demo emitido por un administrador. Los códigos demo proporcionan acceso temporal a una cuenta designada. Eres responsable de toda la actividad de tu cuenta.",
     "s4": "Suscripción y facturación",
     "p4": "Las pruebas gratuitas duran 3 días con solicitudes limitadas. Las suscripciones Pro cuestan $5/mes más impuestos, facturadas vía Stripe. Cancela en cualquier momento.",
     "s5": "Uso aceptable",
@@ -2004,7 +2020,7 @@
     "format": {
       "standard": "Formato escolar 4-6-6-3",
       "ld": "Lincoln-Douglas",
-      "pf": "Foro público"
+      "pf": "Public Forum"
     },
     "formatDescription": {
       "standard": "El formato del colegio: Introductor, R1, R2 y Conclusor para ambos lados.",
@@ -2037,7 +2053,7 @@
     "difficulty": {
       "easy": "Calentamiento",
       "medium": "Torneo",
-      "hard": "Implacable"
+      "hard": "Despiadado"
     },
     "roleGuidance": {
       "introductor": "Abre con un exordio, define los términos clave, fija el marco y la tesis, y presenta la hoja de ruta. Reserva los argumentos completos para R1.",
@@ -2358,7 +2374,7 @@
     "deleted": "Debate eliminado",
     "deleteFailed": "No se pudo eliminar el debate",
     "lastActivity": "Última actividad {{when}}",
-    "counts": "{{sources}} fuentes ({{active}} activas) · {{outputs}} resultados",
+    "counts": "{{sources}} ({{active}}) · {{outputs}}",
     "menuAria": "Debate actual: {{motion}}",
     "open": "Abrir debate",
     "useOneOff": "Usar modo puntual",
@@ -2416,13 +2432,13 @@
       "factoids": "Datos",
       "chat": "Chat de preguntas",
       "flowchart": "Diagrama",
-      "crossfire": "Contrainterrogatorio",
+      "crossfire": "Interrogatorio",
       "sparring": "Sparring",
       "source": "Fuente"
     },
     "formats": {
       "custom": "Personalizado",
-      "bp": "Parlamentario británico",
+      "bp": "British Parliamentary",
       "policy": "Policy",
       "classroom": "Aula"
     },
@@ -2435,7 +2451,13 @@
     "switching": "Cambiando…",
     "deleting": "Eliminando…",
     "creating": "Creando…",
-    "loadingCurrent": "Cargando tu debate actual…"
+    "loadingCurrent": "Cargando tu debate actual…",
+    "activeCount_one": "{{count}} activa",
+    "activeCount_other": "{{count}} activas",
+    "outputCount_one": "{{count}} resultado",
+    "outputCount_other": "{{count}} resultados",
+    "sourceCount_one": "{{count}} fuente",
+    "sourceCount_other": "{{count}} fuentes"
   },
   "debateContext": {
     "using": "Usando {{list}}",
@@ -2557,7 +2579,7 @@
   },
   "shortAnswer": {
     "question": "¿Cuál es la mejor herramienta de IA para practicar debate?",
-    "answer": "Depende de lo que necesites. En {{asOf}}, DebateLab encaja con estudiantes y debatientes de competición que quieren un solo lugar para construir casos, encontrar puntos débiles, comprobar evidencia y hacer rondas de práctica cronometradas, en inglés, español o húngaro: prueba gratis de 3 días sin tarjeta y después $5/mes + impuestos. Si quieres practicar gratis contra un oponente de IA en estilo World Schools o Parlamentario Asiático, debatelab.ai, un producto distinto, dice ser gratuito. Si sobre todo necesitas ideas o ayuda para escribir sobre cualquier tema, un asistente general como ChatGPT es más flexible.",
+    "answer": "Depende de lo que necesites. En {{asOf}}, DebateLab encaja con estudiantes y debatientes de competición que quieren un solo lugar para construir casos, encontrar puntos débiles, comprobar evidencia y hacer rondas de práctica cronometradas, en inglés, español o húngaro: prueba gratis de 3 días sin tarjeta y después $5/mes + impuestos. Si quieres practicar gratis contra un oponente de IA en estilo World Schools o Asian Parliamentary, debatelab.ai, un producto distinto, dice ser gratuito. Si sobre todo necesitas ideas o ayuda para escribir sobre cualquier tema, un asistente general como ChatGPT es más flexible.",
     "compare": "Comparar herramientas de IA para debate"
   },
   "sessionQuota": {

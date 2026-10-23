@@ -30,7 +30,7 @@ const CASES: Array<{
   text: RegExp;
   button: string;
 }> = [
-  { name: 'trial', props: { billingState: 'trial', billingDate: DATE, billingDateKind: 'ends' }, badge: 'Free Trial', date: 'Ends on 22/11/2026', text: /AI access is active/, button: 'Upgrade to Pro' },
+  { name: 'trial', props: { billingState: 'trial', billingDate: DATE, billingDateKind: 'ends' }, badge: 'Free Trial', date: 'Ends on 22 Nov 2026', text: /AI access is active/, button: 'Upgrade to Pro' },
   {
     // QB-02: an override on an expired trial works, so it is not "Expired".
     name: 'extended access',
@@ -44,7 +44,7 @@ const CASES: Array<{
     name: 'Pro renewing',
     props: { billingState: 'pro', billingDate: DATE, billingDateKind: 'renews', hasOpenSubscription: true, hasStripeBilling: true, dailyLimit: 50 },
     badge: 'Pro',
-    date: 'Renews on 22/11/2026',
+    date: 'Renews on 22 Nov 2026',
     text: /AI access is active/,
     button: 'Manage Subscription',
   },
@@ -53,7 +53,7 @@ const CASES: Array<{
     name: 'Pro set to cancel',
     props: { billingState: 'pro_canceling', billingDate: DATE, billingDateKind: 'cancels', hasOpenSubscription: true, hasStripeBilling: true, dailyLimit: 50 },
     badge: 'Pro',
-    date: 'Cancels on 22/11/2026',
+    date: 'Cancels on 22 Nov 2026',
     text: /AI access is active/,
     button: 'Manage Subscription',
   },
@@ -63,7 +63,7 @@ const CASES: Array<{
     props: { billingState: 'payment_failed', billingDate: DATE, billingDateKind: 'grace_ends', hasOpenSubscription: true, hasStripeBilling: true, dailyLimit: 50 },
     badge: 'Payment failed',
     date: null,
-    text: /Payment failed: update your payment method to keep Pro\. Pro access continues until 22\/11\/2026/,
+    text: /Payment failed: update your payment method to keep Pro\. Pro access continues until 22 Nov 2026/,
     button: 'Manage Subscription',
   },
   {
@@ -80,7 +80,7 @@ const CASES: Array<{
     props: { billingState: 'subscription_ended', billingDate: DATE, billingDateKind: 'ended', hasStripeBilling: true, dailyLimit: 0 },
     badge: 'Expired',
     date: null,
-    text: /Your Pro subscription ended on 22\/11\/2026\. Resubscribe/,
+    text: /Your Pro subscription ended on 22 Nov 2026\. Resubscribe/,
     button: 'Resubscribe',
   },
   { name: 'trial ended', props: { billingState: 'trial_ended', dailyLimit: 0 }, badge: 'Expired', date: null, text: /Your access has expired/, button: 'Upgrade to Pro' },
@@ -88,7 +88,7 @@ const CASES: Array<{
     name: 'legacy free',
     props: { billingState: 'legacy_free', billingDate: DATE, billingDateKind: 'ends', dailyLimit: 50 },
     badge: 'Legacy Free',
-    date: 'Ends on 22/11/2026',
+    date: 'Ends on 22 Nov 2026',
     text: /AI access is active/,
     button: 'Upgrade to Pro',
   },

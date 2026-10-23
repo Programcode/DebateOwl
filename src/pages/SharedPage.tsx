@@ -174,7 +174,7 @@ export default function SharedPage() {
                 <p className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
                     <Badge variant="secondary">{item.item_type}</Badge>
                     {t('sharedPage.sharedOn')} {formatEuropeanDate(item.created_at)}
-                    <span>• {item.view_count} {t('sharedPage.views')}</span>
+                    <span>• {t('sharedPage.viewCount', { count: item.view_count })}</span>
                 </p>
             </header>
             {result ?? (

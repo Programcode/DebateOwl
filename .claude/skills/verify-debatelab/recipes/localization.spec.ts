@@ -94,7 +94,7 @@ test("loc-switcher: sign-in and not-found pages carry the language switcher", as
   await evidence.shot("01-login-en");
   await chooseLanguage(page, "hu");
   await expect(page.getByRole("heading", { level: 1, name: hu.login.title })).toBeVisible();
-  // "Bejelentkezés a DebateLab-ba" already names the app, so it gets no suffix.
+  // "Bejelentkezés a DebateLabba" already names the app, so it gets no suffix.
   await expect(page).toHaveTitle(hu.login.title);
   await evidence.shot("02-login-hu");
 

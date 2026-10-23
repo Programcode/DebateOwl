@@ -6,7 +6,26 @@ Part of the [coding standards](../../CODING_STANDARDS.md). [docs/architecture.md
 
 - Every user-facing string, including toasts, errors, and accessible names, goes through `t()`. `src/test/i18n-keys.test.ts` fails when a literal key is missing from the catalogs or a `count` call lacks its plural forms. It cannot see dynamic keys (``t(`nav.${key}`)``) or raw values rendered as text, so check those by hand: an English word in a Hungarian screen is the usual sign ([#11](https://github.com/Programcode/DebateLab/pull/11#discussion_r3872004217), [#43](https://github.com/Programcode/DebateLab/pull/43#discussion_r4048412531)).
 - Store a translation key or error kind in state and translate at render time. English strings stored in state stay English after a reload ([#12](https://github.com/Programcode/DebateLab/pull/12#discussion_r3893641290)).
-- Use the localized feature name everywhere in a catalog: "Interrogatorio", "Keresztkérdezés" ([#12](https://github.com/Programcode/DebateLab/pull/12#discussion_r3893641268), [#13 review](https://github.com/Programcode/DebateLab/pull/13#issuecomment-5477866033)).
+- Use the localized feature name everywhere in a catalog: "Interrogatorio", "Keresztkérdezés" ([#12](https://github.com/Programcode/DebateLab/pull/12#discussion_r3893641268), [#13 review](https://github.com/Programcode/DebateLab/pull/13#issuecomment-5477866033)). The glossary below is the one name per language for each tool, role, and format.
+- A count goes into the string as `count`, so i18next picks the plural form: `t('libraryPage.sourceCount', { count })`, never `` `${n} ${t('sources')}` ``. Format numbers and dates with `src/lib/date-format.ts`, which follows the interface language.
+- `src/test/i18n-untranslated.test.ts` fails when a Spanish or Hungarian value is identical to English. When that is intended, such as a product or format name, add it to the test's list under a reason.
+
+### Glossary
+
+| Concept | English | Spanish | Hungarian |
+| --- | --- | --- | --- |
+| Crossfire (tool and saved round) | Crossfire | Interrogatorio | Keresztkérdezés |
+| Sparring (tool and saved round) | Sparring | Sparring | Vitapárbaj |
+| Timer | Timer | Cronómetro | Időmérő |
+| Case | Case | Caso | Eset (Vitaeset in titles) |
+| Ruthless (difficulty, intensity) | Ruthless | Despiadado | Kíméletlen |
+| School format | School 4-6-6-3 | Formato escolar 4-6-6-3 | Iskolai 4-6-6-3 |
+| School-format roles | Introductor, R1, R2, Conclusor | Introductor, R1, R2, Conclusor | Bevezető, R1, R2, Záró |
+| Sides in a Sparring turn | Pro, Con | a favor, en contra | Pro, Kontra |
+| Competition formats | Public Forum, Lincoln-Douglas, Policy, British Parliamentary, World Schools, Asian Parliamentary | same as English | same as English |
+| Load (button) / Loading | Load / Loading | Cargar / Cargando | Megnyitás / Betöltés |
+| AI | AI | IA | MI |
+| DebateLab with a suffix | | | DebateLabba, DebateLabban, DebateLabhoz, DebateLabot (no hyphen, back vowels) |
 
 ## Accessible names
 

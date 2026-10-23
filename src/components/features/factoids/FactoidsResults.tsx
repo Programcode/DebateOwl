@@ -230,7 +230,7 @@ export function FactoidsResults({ result, discoveredSources, onDiscuss, onSave, 
       {/* Verification Status */}
       <SectionCard
         title={t('factoidsResults.verificationStatus')}
-        description={`${verifiedCount} ${t('factoidsResults.verified')}`}
+        description={t('factoidsResults.verifiedCount', { count: verifiedCount })}
       >
         <div className="space-y-4">
           <div className="flex items-center gap-4">
@@ -264,7 +264,7 @@ export function FactoidsResults({ result, discoveredSources, onDiscuss, onSave, 
 
       {/* Factoids */}
       <SectionCard
-        title={`${t('factoidsResults.found')} ${displayFactoids.length} ${t('factoidsResults.factoids')}`}
+        title={t('factoidsResults.foundCount', { count: displayFactoids.length })}
         description={t('factoidsResults.factoidsDesc')}
       >
         <div className="space-y-4">

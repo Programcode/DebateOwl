@@ -8,7 +8,7 @@ import { Separator } from '@/components/ui/separator';
 import { Markdown } from '@/components/ui/markdown';
 import type { GenerateOutput, Contention } from '@/lib/ai/schemas/generate';
 import { toast } from 'sonner';
-import { formatEuropeanDateTime } from '@/lib/date-format';
+import { formatDecimal, formatEuropeanDateTime } from '@/lib/date-format';
 import { ExportToolbar } from '@/components/features/ExportToolbar';
 import { ResultHeader } from '@/components/features/tools/ResultHeader';
 import { CopyResultButton, SaveResultAction } from '@/components/features/tools/result-actions';
@@ -83,7 +83,7 @@ function ArgumentCard({ contention, index, unverified }: { contention: Contentio
 function formatDuration(ms: number | undefined, t: (key: string, options?: Record<string, unknown>) => string) {
   if (!ms || ms < 0) return null;
   if (ms < 1000) return t('generateResults.durationMs', { value: ms });
-  const value = (ms / 1000).toFixed(ms < 10000 ? 1 : 0);
+  const value = formatDecimal(ms / 1000, ms < 10000 ? 1 : 0);
   return t('generateResults.durationS', { value });
 }
 

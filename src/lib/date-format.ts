@@ -10,17 +10,23 @@ interface LocaleFormatters {
   number: Intl.NumberFormat;
 }
 
+// Spanish and Hungarian leave four-digit numbers ungrouped by default; group
+// them too so a limit reads "1.200" or "1 200", never "1200". The ES2021 lib
+// types `useGrouping` as a boolean only.
+const ALWAYS_GROUP = { useGrouping: 'always' } as unknown as Intl.NumberFormatOptions;
+
 function createFormatters(language: AppLanguage): LocaleFormatters {
   const locale = toIntlLocale(language);
   return {
+    // A month name keeps the date unambiguous: "23 Oct 2026", not "23/10/2026".
     date: new Intl.DateTimeFormat(locale, {
-      day: '2-digit',
-      month: '2-digit',
+      day: 'numeric',
+      month: 'short',
       year: 'numeric',
     }),
     dateTime: new Intl.DateTimeFormat(locale, {
-      day: '2-digit',
-      month: '2-digit',
+      day: 'numeric',
+      month: 'short',
       year: 'numeric',
       hour: '2-digit',
       minute: '2-digit',
@@ -31,7 +37,7 @@ function createFormatters(language: AppLanguage): LocaleFormatters {
       minute: '2-digit',
       hour12: false,
     }),
-    number: new Intl.NumberFormat(locale),
+    number: new Intl.NumberFormat(locale, ALWAYS_GROUP),
   };
 }
 
@@ -47,6 +53,10 @@ function activeLanguage(): AppLanguage {
   return isAppLanguage(i18n.resolvedLanguage) ? i18n.resolvedLanguage : 'en';
 }
 
+function notAvailable(language: AppLanguage): string {
+  return i18n.t('common.notAvailable', { lng: language });
+}
+
 function toValidDate(value: Date | number | string): Date | null {
   if (value instanceof Date) return Number.isNaN(value.getTime()) ? null : value;
   // Date-only strings (e.g. "2026-05-20") are parsed as UTC midnight by spec.
@@ -60,20 +70,20 @@ function toValidDate(value: Date | number | string): Date | null {
 
 export function formatEuropeanDate(
   value: Date | number | string,
-  fallback = 'N/A',
+  fallback?: string,
   language: AppLanguage = activeLanguage(),
 ): string {
   const date = toValidDate(value);
-  return date ? FORMATTERS[language].date.format(date) : fallback;
+  return date ? FORMATTERS[language].date.format(date) : fallback ?? notAvailable(language);
 }
 
 export function formatEuropeanDateTime(
   value: Date | number | string,
-  fallback = 'N/A',
+  fallback?: string,
   language: AppLanguage = activeLanguage(),
 ): string {
   const date = toValidDate(value);
-  return date ? FORMATTERS[language].dateTime.format(date) : fallback;
+  return date ? FORMATTERS[language].dateTime.format(date) : fallback ?? notAvailable(language);
 }
 
 export function formatEuropeanTime(
@@ -89,11 +99,16 @@ export function formatNumber(value: number, language: AppLanguage = activeLangua
   return FORMATTERS[language].number.format(value);
 }
 
+/** A number with exactly `digits` decimals in the language's notation: "1.5" in English, "1,5" in Spanish and Hungarian. */
+export function formatDecimal(value: number, digits: number, language: AppLanguage = activeLanguage()): string {
+  return new Intl.NumberFormat(toIntlLocale(language), { minimumFractionDigits: digits, maximumFractionDigits: digits }).format(value);
+}
+
 export function formatRelativeDate(
   value: Date | number | string,
   language: AppLanguage = activeLanguage(),
-  fallback = 'N/A',
+  fallback?: string,
 ): string {
   const date = toValidDate(value);
-  return date ? formatDistanceToNow(date, { addSuffix: true, locale: DATE_FNS_LOCALES[language] }) : fallback;
+  return date ? formatDistanceToNow(date, { addSuffix: true, locale: DATE_FNS_LOCALES[language] }) : fallback ?? notAvailable(language);
 }

@@ -20,7 +20,7 @@ import {
     DialogHeader,
     DialogTitle,
 } from '@/components/ui/dialog';
-import { formatEuropeanDate, formatEuropeanDateTime, formatNumber } from '@/lib/date-format';
+import { formatDecimal, formatEuropeanDate, formatEuropeanDateTime, formatNumber } from '@/lib/date-format';
 import { captureProductEvent } from '@/lib/observability';
 import { AdminAnnouncements } from '@/components/admin/AdminAnnouncements';
 
@@ -463,9 +463,9 @@ export default function AdminPage() {
     const { t } = useTranslation();
     const formatKnownCost = (cost: number, unknownCostRequests = 0) => {
         if (cost > 0 && unknownCostRequests > 0) {
-            return t('admin.dashboard.knownPlusUnknownCost', { cost: cost.toFixed(4), count: unknownCostRequests });
+            return t('admin.dashboard.knownPlusUnknownCost', { cost: formatDecimal(cost, 4), count: unknownCostRequests });
         }
-        if (cost > 0) return `$${cost.toFixed(4)}`;
+        if (cost > 0) return `$${formatDecimal(cost, 4)}`;
         if (unknownCostRequests > 0) return t('admin.dashboard.unknownCost');
         return '$0.0000';
     };
@@ -798,7 +798,7 @@ export default function AdminPage() {
                             <AlertCircle className="h-4 w-4 text-muted-foreground" />
                         </CardHeader>
                         <CardContent>
-                            <div className="text-2xl font-bold">{stats?.totals.successRate.toFixed(1) || 100}%</div>
+                            <div className="text-2xl font-bold">{stats ? formatDecimal(stats.totals.successRate, 1) : 100}%</div>
                             <p className="text-xs text-muted-foreground">{t('admin.dashboard.successRateDescription')}</p>
                         </CardContent>
                     </Card>
