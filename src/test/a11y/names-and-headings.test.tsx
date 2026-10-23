@@ -79,7 +79,7 @@ describe('accessible names and headings', () => {
     rerender(<LanguageSwitcher />);
     expect(screen.getByRole('button', { name: 'Nyelv' })).toBeInTheDocument();
     expect(screen.getByRole('radiogroup', { name: 'Felület nyelve' })).toBeInTheDocument();
-    expect(screen.getByRole('radiogroup', { name: 'AI kimenet nyelve' })).toBeInTheDocument();
+    expect(screen.getByRole('radiogroup', { name: 'MI-kimenet nyelve' })).toBeInTheDocument();
   });
 
   it('names Generate selects from their visible labels', () => {

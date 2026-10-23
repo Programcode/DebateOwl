@@ -104,7 +104,7 @@ test('sign-in and not-found pages carry the language switcher', async ({ page })
   await shot(page, '01-login-en');
   await choose(page, 'hu');
   await expect(page.getByRole('heading', { level: 1, name: hu.login.title })).toBeVisible();
-  // "Bejelentkezés a DebateLab-ba" already names the app, so it gets no suffix.
+  // "Bejelentkezés a DebateLabba" already names the app, so it gets no suffix.
   await expect(page).toHaveTitle(hu.login.title);
   await shot(page, '02-login-hu');
 

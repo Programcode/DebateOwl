@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { DebateRequiredError, DuplicateSourceError, isPendingSource, useSessionStore, type Source } from '@/lib/stores/session-store';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -10,7 +10,7 @@ import { Trash2, Plus, Globe, FileText, Database, ShieldCheck, ShieldAlert, Exte
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
-import { formatEuropeanDate } from '@/lib/date-format';
+import { formatEuropeanDate, formatNumber } from '@/lib/date-format';
 import { importSourceFromUrl } from '@/lib/source-import';
 import { findSavedPage } from '@/lib/source-url';
 import { validateUrl } from '@/lib/validation/url';
@@ -250,6 +250,7 @@ export default function LibraryPage() {
     folder: 'General',
     isActive: true,
   });
+  const draftWordCount = useMemo(() => sourceDraft.content.trim().split(/\s+/).filter(Boolean).length, [sourceDraft.content]);
   const [importPreview, setImportPreview] = useState<{
     title: string;
     content: string;
@@ -688,7 +689,11 @@ export default function LibraryPage() {
                   <Button variant="link" size="sm" className="h-auto p-0" onClick={() => openDebateDialog('switch')}>{t('debate.change', 'Change')}</Button>
                 </p>
                 <p className="mt-1 text-sm text-muted-foreground">
-                  {t('libraryPage.summary', { total: sourceLibrary.length, active: activeSourceCount, folders: folders.length, defaultValue: '{{total}} sources · {{active}} active · {{folders}} folders' })}
+                  {t('libraryPage.summary', {
+                    sources: t('libraryPage.sourceCount', { count: sourceLibrary.length }),
+                    active: t('libraryPage.activeCount', { count: activeSourceCount }),
+                    folders: t('libraryPage.folderCount', { count: folders.length }),
+                  })}
                 </p>
               </>
             ) : (
@@ -846,7 +851,7 @@ export default function LibraryPage() {
                     <div>
                       <p className="text-sm font-medium">{t('libraryPage.importPreview')}</p>
                       <p className="text-xs text-muted-foreground">
-                        {[importPreview.domain || importPreview.fileType || importPreview.origin, importPreview.wordCount ? `${importPreview.wordCount} ${t('libraryPage.words')}` : null].filter(Boolean).join(' • ')}
+                        {[importPreview.domain || importPreview.fileType || importPreview.origin, importPreview.wordCount ? t('libraryPage.wordCount', { count: importPreview.wordCount, formatted: formatNumber(importPreview.wordCount) }) : null].filter(Boolean).join(' • ')}
                       </p>
                     </div>
                     <Button type="button" size="sm" disabled={isSavingSource} onClick={() => void handleSavePreview()}>
@@ -942,7 +947,7 @@ export default function LibraryPage() {
                 {!firstLoadPending && (
                   <Badge variant="secondary" className="bg-primary/10 text-primary border-primary/20">
                     <Database className="h-3 w-3 mr-1" />
-                    {visibleSources.length} {t('libraryPage.sourcesCount')}
+                    {t('libraryPage.sourceCount', { count: visibleSources.length })}
                   </Badge>
                 )}
               </div>
@@ -1160,7 +1165,7 @@ export default function LibraryPage() {
                   <div className="min-w-0 flex-1">
                     <SheetTitle className="truncate">{sourceDraft.title || t('libraryPage.untitledSource', 'Untitled source')}</SheetTitle>
                     <SheetDescription className="mt-1">
-                      {[getFolderName(sourceDraft.folder || 'General'), formatEuropeanDate(selectedSource.createdAt), `${sourceDraft.content.trim().split(/\s+/).filter(Boolean).length} ${t('libraryPage.words')}`].join(' • ')}
+                      {[getFolderName(sourceDraft.folder || 'General'), formatEuropeanDate(selectedSource.createdAt), t('libraryPage.wordCount', { count: draftWordCount, formatted: formatNumber(draftWordCount) })].join(' • ')}
                     </SheetDescription>
                   </div>
                 </div>

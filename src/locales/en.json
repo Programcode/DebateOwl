@@ -247,7 +247,8 @@
     "deleted": "Deleted",
     "discuss": "Discuss",
     "retry": "Retry",
-    "undo": "Undo"
+    "undo": "Undo",
+    "notAvailable": "N/A"
   },
   "aiClient": {
     "inputShortened": "Input was shortened",
@@ -1229,7 +1230,13 @@
     "exportError": "An unexpected error occurred during export",
     "weaknessesCount_one": "{{count}} issue found, sorted by severity",
     "weaknessesCount_other": "{{count}} issues found, sorted by severity",
-    "resultTitle": "Critique"
+    "resultTitle": "Critique",
+    "criticalCount_one": "{{count}} Critical",
+    "criticalCount_other": "{{count}} Critical",
+    "majorCount_one": "{{count}} Major",
+    "majorCount_other": "{{count}} Major",
+    "minorCount_one": "{{count}} Minor",
+    "minorCount_other": "{{count}} Minor"
   },
   "brainstormForm": {
     "motion": "Motion / Topic",
@@ -1297,7 +1304,6 @@
     "unverified": "Unverified",
     "pending": "Pending",
     "importantNotes": "Important Notes",
-    "found": "Found",
     "factoids": "Factoids",
     "factoidsDesc": "Evidence points with citations",
     "findMore": "Find More Evidence",
@@ -1322,7 +1328,11 @@
     "exportError": "An unexpected error occurred during export",
     "noVerified": "No verified matching sources were found. Try a broader source type or timeframe.",
     "useSuggestion": "Search this",
-    "resultTitle": "Evidence"
+    "resultTitle": "Evidence",
+    "foundCount_one": "Found {{count}} factoid",
+    "foundCount_other": "Found {{count}} factoids",
+    "verifiedCount_one": "{{count}} Verified",
+    "verifiedCount_other": "{{count}} Verified"
   },
   "askChat": {
     "title": "Ask Your Coach",
@@ -1480,7 +1490,7 @@
     "displayLabel": "Timer display",
     "speechProgress": "{{speech}} progress",
     "selectFormat": "Select Format",
-    "formatStandard": "Standard (4-6-6-3)",
+    "formatStandard": "School 4-6-6-3",
     "formatLD": "Lincoln-Douglas",
     "formatPF": "Public Forum",
     "formatPolicy": "Policy",
@@ -1669,7 +1679,6 @@
     "deleteCaseLabel": "Delete {{title}}",
     "load": "Load",
     "resume": "Resume",
-    "messages": "messages",
     "caseDeleted": "Saved case deleted.",
     "deleteCaseDesc": "This removes the saved case from your history.",
     "deleteCaseTitle": "Delete saved case?",
@@ -1707,7 +1716,6 @@
     "unsupportedFile": "Unsupported file",
     "importPreview": "Import preview",
     "saveImported": "Save imported source",
-    "words": "words",
     "folder": "Folder",
     "generalFolder": "General",
     "textSource": "Text",
@@ -1748,7 +1756,6 @@
     "titlePlaceholder": "Source title...",
     "originPlaceholder": "URL or reference...",
     "contentPlaceholder": "Paste source content...",
-    "sourcesCount": "sources",
     "emptyTitle": "No Sources Yet",
     "emptyDesc": "Add sources to ground AI responses in real evidence.",
     "manualEntry": "Manual Entry",
@@ -1787,7 +1794,7 @@
     "restoreFailed": "Could not restore the source",
     "deleteFailed": "Could not delete the source.",
     "readingFile": "Reading file…",
-    "summary": "{{total}} sources · {{active}} active · {{folders}} folders",
+    "summary": "{{sources}} · {{active}} · {{folders}}",
     "mergeFolderTitle": "Merge into {{name}}?",
     "mergeFolders": "Merge folders",
     "mergeFailed": "Could not merge the folders. Try again.",
@@ -1800,7 +1807,15 @@
     "sourceSaved": "Saved {{title}} to the Library",
     "duplicateUrlDesc": "This page is already in this debate's Library.",
     "loadingSources": "Loading sources…",
-    "folderUpdateFailed": "Could not change this folder"
+    "folderUpdateFailed": "Could not change this folder",
+    "sourceCount_one": "{{count}} source",
+    "sourceCount_other": "{{count}} sources",
+    "activeCount_one": "{{count}} active",
+    "activeCount_other": "{{count}} active",
+    "folderCount_one": "{{count}} folder",
+    "folderCount_other": "{{count}} folders",
+    "wordCount_one": "{{formatted}} word",
+    "wordCount_other": "{{formatted}} words"
   },
   "autoSavedSources": {
     "undo": "Undo auto-saved sources",
@@ -1824,7 +1839,8 @@
     "goToApp": "Go to App",
     "openApp": "Open App",
     "sharedOn": "Shared on",
-    "views": "views"
+    "viewCount_one": "{{count}} view",
+    "viewCount_other": "{{count}} views"
   },
   "privacyPage": {
     "title": "Privacy Policy",
@@ -2358,7 +2374,7 @@
     "deleted": "Debate deleted",
     "deleteFailed": "Could not delete the debate",
     "lastActivity": "Last activity {{when}}",
-    "counts": "{{sources}} sources ({{active}} active) · {{outputs}} outputs",
+    "counts": "{{sources}} ({{active}}) · {{outputs}}",
     "menuAria": "Current debate: {{motion}}",
     "open": "Open debate",
     "useOneOff": "Use one-off mode",
@@ -2435,7 +2451,13 @@
     "switching": "Switching…",
     "deleting": "Deleting…",
     "creating": "Creating…",
-    "loadingCurrent": "Loading your current debate…"
+    "loadingCurrent": "Loading your current debate…",
+    "activeCount_one": "{{count}} active",
+    "activeCount_other": "{{count}} active",
+    "outputCount_one": "{{count}} output",
+    "outputCount_other": "{{count}} outputs",
+    "sourceCount_one": "{{count}} source",
+    "sourceCount_other": "{{count}} sources"
   },
   "debateContext": {
     "using": "Using {{list}}",

@@ -13,7 +13,7 @@ import { cn } from '@/lib/utils';
 import { useSpeechToText } from '@/hooks/use-speech-to-text';
 import { useToast } from '@/hooks/use-toast';
 import { validateFileUpload, MAX_FILE_COUNT, formatFileSize } from '@/lib/validation/file';
-import { formatEuropeanDate, formatEuropeanTime } from '@/lib/date-format';
+import { formatDecimal, formatEuropeanDate, formatEuropeanTime } from '@/lib/date-format';
 import { ModelSelector } from '@/components/ModelSelector';
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -311,7 +311,7 @@ const MessageBubble = React.memo(function MessageBubble({ message, onSave }: { m
                 parts.push(message.output.provider);
               }
               if (message.role === 'assistant' && message.output?.durationMs) {
-                parts.push(`${(message.output.durationMs / 1000).toFixed(1)}s`);
+                parts.push(t('askChat.elapsed', { seconds: formatDecimal(message.output.durationMs / 1000, 1) }));
               }
               return parts.join(' • ');
             } catch (e) {

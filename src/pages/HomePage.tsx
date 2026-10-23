@@ -8,7 +8,7 @@ import { PageHeader } from '@/components/layout/PageHeader';
 import { PRACTICE_TOOLS, PREPARE_TOOLS, ToolLink, UTILITY_TOOLS, type Tool } from '@/components/features/tools/tool-links';
 import { formatRelativeDate } from '@/lib/date-format';
 import { useCurrentDebate, useDebateStore } from '@/lib/stores/debate-store';
-import { useDebateCounts } from '@/components/features/debate/CurrentDebateStrip';
+import { debateCountsLabel, useDebateCounts } from '@/components/features/debate/CurrentDebateStrip';
 
 function ToolGroup({ title, tools }: { title: string; tools: readonly Tool[] }) {
   return (
@@ -70,7 +70,7 @@ function CurrentDebateSummary({ t }: { t: TFunction }) {
           <p className="text-sm text-muted-foreground">
             {t('debate.lastActivity', { when: formatRelativeDate(debate.lastActivityAt), defaultValue: 'Last activity {{when}}' })}
             {' · '}
-            {t('debate.counts', { sources: counts.sources, active: counts.activeSources, outputs: counts.outputs, defaultValue: '{{sources}} sources ({{active}} active) · {{outputs}} outputs' })}
+            {debateCountsLabel(t, counts)}
           </p>
           {oneOff && <p className="text-sm font-medium text-primary">{t('debate.oneOffActive', 'One-off mode is on')}</p>}
         </div>

@@ -101,7 +101,7 @@ describe('LimitReachedModal', () => {
     subscription.billingDate = '2026-10-01T12:00:00.000Z';
     const { onUpgrade } = renderModal('subscription_ended');
     expect(screen.getByRole('heading', { name: 'Pro Subscription Ended' })).toBeInTheDocument();
-    expect(screen.getByText(/Your Pro subscription ended on 01\/10\/2026/)).toBeInTheDocument();
+    expect(screen.getByText(/Your Pro subscription ended on 1 Oct 2026/)).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Resubscribe' }));
     expect(onUpgrade).toHaveBeenCalled();
   });

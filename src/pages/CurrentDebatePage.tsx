@@ -9,7 +9,7 @@ import { EmptyState } from '@/components/ui/empty-state';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { PRACTICE_TOOLS, PREPARE_TOOLS, ToolLink } from '@/components/features/tools/tool-links';
 import { DebateForm } from '@/components/features/debate/DebateForm';
-import { sideLabelKey, useDebateCounts } from '@/components/features/debate/CurrentDebateStrip';
+import { debateCountsLabel, sideLabelKey, useDebateCounts } from '@/components/features/debate/CurrentDebateStrip';
 import { useAllDebateItems, useOpenDebateItem, type DebateItem } from '@/components/features/debate/debate-items';
 import { useToast } from '@/hooks/use-toast';
 import { formatEuropeanDateTime, formatRelativeDate } from '@/lib/date-format';
@@ -110,7 +110,7 @@ export default function CurrentDebatePage() {
           meta={<>
             {t('debate.lastActivity', { when: formatRelativeDate(debate.lastActivityAt), defaultValue: 'Last activity {{when}}' })}
             {' · '}
-            {t('debate.counts', { sources: sourceCounts.sources, active: sourceCounts.activeSources, outputs: items.length, defaultValue: '{{sources}} sources ({{active}} active) · {{outputs}} outputs' })}
+            {debateCountsLabel(t, { ...sourceCounts, outputs: items.length })}
           </>}
           actions={<>
             <Button variant="ghost" size="sm" onClick={() => setEditing((value) => !value)}>

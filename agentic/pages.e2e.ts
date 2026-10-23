@@ -30,7 +30,7 @@ const PUBLIC_PAGES = ["/", "/login", "/terms", "/privacy", "/expocit/sources"];
 const NAMES: Record<Language, string> = { en: "English", es: "Spanish", hu: "Hungarian" };
 
 const EXEMPT =
-  "Product names such as DebateLab and ExpoCit, AI model names (Claude Sonnet 5), plan names (Pro), debate format codes, language names offered as choices (English, Español, Magyar), and user content do not count. Technical loanwords the app uses on purpose, such as email, chat, prompt and token, count as translated.";
+  "Product names such as DebateLab and ExpoCit, AI model names (Claude Sonnet 5), plan names (Pro), debate format codes and the competition format names kept in English in every language (Public Forum, Lincoln-Douglas, Policy, British Parliamentary, World Schools, Asian Parliamentary), language names offered as choices (English, Español, Magyar), and user content do not count. Technical loanwords the app uses on purpose, such as email, chat, prompt and token, count as translated.";
 
 async function checkPage(browser: Browser, agent: Agent, language: Language) {
   await expect(browser.locator("html")).toHaveAttribute("lang", language);

@@ -204,7 +204,7 @@ export default function HistoryPage() {
                           <div className="space-y-1">
                             <h4 className="font-semibold">{item.title}</h4>
                             <div className="flex gap-2 text-xs text-muted-foreground">
-                              <Badge variant="outline">{item.data.metadata?.side?.toUpperCase() || 'N/A'}</Badge>
+                              <Badge variant="outline">{item.data.metadata?.side ? t(`debate.side.${item.data.metadata.side}`, item.data.metadata.side.toUpperCase()) : t('common.notAvailable')}</Badge>
                               <span>{formatEuropeanDateTime(item.createdAt)}</span>
                             </div>
                           </div>
@@ -239,7 +239,7 @@ export default function HistoryPage() {
                       <div key={item.id} className="flex items-center justify-between p-4 border rounded-lg bg-card hover:bg-accent/5">
                         <div className="space-y-1">
                           <h4 className="font-semibold">{item.title}</h4>
-                          <p className="text-xs text-muted-foreground">{item.data.length} {t('historyPage.messages')} • {formatEuropeanDateTime(item.createdAt)}</p>
+                          <p className="text-xs text-muted-foreground">{t('askChat.messageCount', { count: item.data.length })} • {formatEuropeanDateTime(item.createdAt)}</p>
                         </div>
                         <Button variant="outline" size="sm" onClick={() => handleLoadChat(item.id)}>
                           <Eye className="h-4 w-4 mr-2" /> {t('historyPage.resume')}

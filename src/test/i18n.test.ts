@@ -1,5 +1,7 @@
 import { expect, test } from 'vitest';
 import i18n, { applyAppLanguage } from '../i18n';
+import { debateCountsLabel } from '../components/features/debate/CurrentDebateStrip';
+import type { AppLanguage } from '../lib/languages';
 import en from '../locales/en.json';
 import es from '../locales/es.json';
 import hu from '../locales/hu.json';
@@ -24,6 +26,21 @@ test('Spanish and Hungarian free-tools catalogs match English keys', () => {
   const english = keys(toolsEn).sort();
   expect(keys(toolsEs).sort()).toEqual(english);
   expect(keys(toolsHu).sort()).toEqual(english);
+});
+
+test('count strings take the plural form of their count in every language', async () => {
+  const expected = {
+    en: ['1 source', '2 sources', '1 source (1 active) · 2 outputs'],
+    es: ['1 fuente', '2 fuentes', '1 fuente (1 activa) · 2 resultados'],
+    hu: ['1 forrás', '2 forrás', '1 forrás (1 aktív) · 2 eredmény'],
+  };
+  for (const [language, [one, two, counts]] of Object.entries(expected) as [AppLanguage, string[]][]) {
+    await applyAppLanguage(language);
+    expect(i18n.t('libraryPage.sourceCount', { count: 1 })).toBe(one);
+    expect(i18n.t('libraryPage.sourceCount', { count: 2 })).toBe(two);
+    expect(debateCountsLabel(i18n.t, { sources: 1, activeSources: 1, outputs: 2 })).toBe(counts);
+  }
+  await applyAppLanguage('en');
 });
 
 test('a later language choice wins over one whose strings are still loading', async () => {

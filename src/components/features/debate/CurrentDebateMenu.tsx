@@ -7,7 +7,7 @@ import { Popover, PopoverAnchor, PopoverContent, PopoverTrigger } from '@/compon
 import { formatRelativeDate } from '@/lib/date-format';
 import { cn } from '@/lib/utils';
 import { useCurrentDebate, useDebateStore } from '@/lib/stores/debate-store';
-import { useDebateCounts } from './CurrentDebateStrip';
+import { debateCountsLabel, useDebateCounts } from './CurrentDebateStrip';
 import { navSectionFor } from '@/components/layout/nav-sections';
 
 /**
@@ -81,7 +81,7 @@ export function CurrentDebateMenu({ variant }: { variant: 'desktop' | 'mobile' }
             {t('debate.lastActivity', { when: formatRelativeDate(debate.lastActivityAt), defaultValue: 'Last activity {{when}}' })}
           </p>
           <p className="text-xs text-muted-foreground">
-            {t('debate.counts', { sources: counts.sources, active: counts.activeSources, outputs: counts.outputs, defaultValue: '{{sources}} sources ({{active}} active) · {{outputs}} outputs' })}
+            {debateCountsLabel(t, counts)}
           </p>
           {oneOff && <p className="text-xs font-medium text-primary">{t('debate.oneOffActive', 'One-off mode is on')}</p>}
         </div>

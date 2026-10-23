@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
+import type { TFunction } from 'i18next';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { shouldPrefillMotion } from '@/lib/debate/motion';
@@ -28,6 +29,16 @@ export function useDebateCounts(debateId: string | null | undefined) {
   ].reduce((count, list) => count + list.filter((item) => item.debateId === debateId).length, 0) : 0);
   const sparring = useSparringStore((state) => debateId ? state.savedSessions.filter((session) => session.debateId === debateId).length : 0);
   return { sources, activeSources, outputs: outputs + sparring };
+}
+
+/** "3 sources (2 active) · 1 output", with each count in its own plural form. */
+// eslint-disable-next-line react-refresh/only-export-components
+export function debateCountsLabel(t: TFunction, counts: { sources: number; activeSources: number; outputs: number }): string {
+  return t('debate.counts', {
+    sources: t('debate.sourceCount', { count: counts.sources }),
+    active: t('debate.activeCount', { count: counts.activeSources }),
+    outputs: t('debate.outputCount', { count: counts.outputs }),
+  });
 }
 
 /**
