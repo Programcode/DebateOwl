@@ -11,15 +11,17 @@ import WhatsNew from "@/components/landing/WhatsNew";
 import Pricing from "@/components/landing/Pricing";
 import ShortAnswer from "@/components/landing/ShortAnswer";
 import { usePageHead } from "@/lib/seo/use-page-head";
+import { MAIN_CONTENT_ID, SkipLink } from "@/components/layout/SkipLink";
 
 const LandingPage = () => {
     usePageHead("/");
     return (
         <div className="min-h-screen overflow-x-hidden bg-background">
+            <SkipLink />
             <header>
                 <Navbar />
             </header>
-            <main>
+            <main id={MAIN_CONTENT_ID} className="focus-visible:outline-none">
                 <Hero />
                 <ShortAnswer />
                 <WhatsNew />

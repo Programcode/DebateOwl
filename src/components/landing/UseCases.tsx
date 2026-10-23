@@ -44,7 +44,7 @@ const UseCases = () => {
                                 <persona.icon aria-hidden="true" className="w-7 h-7 text-primary" />
                             </div>
                             <h3 className="text-2xl font-bold mb-1">{persona.title}</h3>
-                            <p className="text-primary/80 font-medium mb-6">{persona.subtitle}</p>
+                            <p className="text-primary font-medium mb-6">{persona.subtitle}</p>
 
                             <ul className="space-y-3">
                                 {persona.points.map((point, i) => (
