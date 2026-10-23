@@ -46,7 +46,7 @@ export function usePageHead(route: PrerenderedRoute) {
 }
 
 /** Sign-in, the signed-in app and share links: never indexed (vercel.json sends the same X-Robots-Tag). */
-const PRIVATE_ROUTE = /^\/(login|app|share)(\/|$)/;
+const PRIVATE_ROUTE = /^\/(login|auth|app|share)(\/|$)/;
 
 /**
  * Titles each private page "<page> · DebateLab" (the shell's title) and marks it noindex while it

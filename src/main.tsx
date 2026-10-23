@@ -9,6 +9,7 @@ import { registerServiceWorker } from "./register-service-worker";
 import { installStaleChunkReload } from "./lib/reload-stale-chunk";
 import { initializeObservability } from "./lib/observability";
 import { preloadRoute } from "./lib/route-modules";
+import { legacyCallbackPath } from "./lib/auth-callback";
 
 const initializeTelemetry = (): void => {
   const run = (): void => { void initializeObservability(); };
@@ -28,6 +29,12 @@ function prerenderedRoute(container: HTMLElement): string | undefined {
 installStaleChunkReload();
 
 export function mountApp(): void {
+  // Sign-in links already in inboxes return to / or /app. Move them onto the
+  // callback route before the first render, so the prerendered landing page
+  // is replaced and AuthProvider exchanges the code there.
+  const callbackPath = legacyCallbackPath(window.location);
+  if (callbackPath) window.history.replaceState(window.history.state, "", callbackPath);
+
   const container = document.getElementById("root")!;
   const root = createRoot(container);
   const app = (

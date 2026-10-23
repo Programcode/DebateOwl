@@ -9,7 +9,15 @@ import { useSettingsStore } from '@/lib/stores/settings-store';
 import { useSparringStore } from '@/lib/stores/sparring-store';
 import { useDebateStore } from '@/lib/stores/debate-store';
 import { useDebateContextStore } from '@/lib/stores/debate-context-store';
-import { getOAuthRedirectUrl, openExternalUrl } from '@/lib/native';
+import { openExternalUrl } from '@/lib/native';
+import {
+  AUTH_CALLBACK_PATH,
+  authCallbackErrorFor,
+  authCallbackUrl,
+  readAuthCallbackParams,
+  withoutCallbackParams,
+  type AuthCallbackError,
+} from '@/lib/auth-callback';
 import { setJamUserId } from '@/lib/jam-metadata';
 import { clearCrossfireDraftOnAuthChange } from '@/lib/crossfire/storage';
 import { abortToolRuns } from '@/components/features/tools/tool-run';
@@ -80,6 +88,9 @@ class AuthTimeoutError extends Error {
   }
 }
 
+/** What a code exchange that outlived its timeout finally answered. */
+type LateAnswer = { session: Session | null; lateError: unknown };
+
 function withAuthTimeout<T>(operation: Promise<T>, message: string, timeoutMs = AUTH_OPERATION_TIMEOUT_MS): Promise<T> {
   return Promise.race([
     operation,
@@ -104,6 +115,7 @@ function clearGoogleTokens() {
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
+  const [callbackError, setCallbackError] = useState<AuthCallbackError | null>(null);
   const hydrateSessionStore = useSessionStore((state) => state.hydrateFromServer);
   const prepareSessionStore = useSessionStore((state) => state.prepareForUser);
   const hydrateSettingsStore = useSettingsStore((state) => state.hydrateFromServer);
@@ -135,14 +147,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (restoredSessionsBlocked()) return false;
         if (typeof supabase.auth.getUser !== 'function') return true;
         try {
-          const { error } = await supabase.auth.getUser();
+          // Bounded: during a sign-in callback nothing else ends the wait.
+          const { error } = await withAuthTimeout(supabase.auth.getUser(), 'User lookup timeout');
           if (!isDeadUserLookup(error)) return true;
-          await rejectDeadSession(supabase.auth);
-          return false;
         } catch {
           // Auth did not answer. Keep the local session; this is an outage, not a dead login.
           return true;
         }
+        // The server refused this user. A sign-out that never answers must not hold startup either.
+        await withAuthTimeout(rejectDeadSession(supabase.auth), 'Sign-out timeout').catch((): void => undefined);
+        return false;
       })();
       confirmations.set(accessToken, pending);
       return pending;
@@ -173,39 +187,131 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     localStorage.removeItem('google_provider_token');
     localStorage.removeItem('google_provider_refresh_token');
 
-    const hydrateOAuthCallbackSession = async () => {
-      const code = new URLSearchParams(window.location.search).get('code');
-      if (code) {
-        const cleanupOAuthParams = () => {
-          const nextUrl = new URL(window.location.href);
-          nextUrl.searchParams.delete('code');
-          nextUrl.searchParams.delete('state');
-          nextUrl.searchParams.delete('error');
-          nextUrl.searchParams.delete('error_description');
-          window.history.replaceState(window.history.state, '', `${nextUrl.pathname}${nextUrl.search}`);
-        };
+    // Set before the first await: auth-js announces the empty stored session
+    // while the code is still being exchanged, and that must not end loading.
+    const callbackUrl = new URL(window.location.href);
+    let callbackPending = callbackUrl.pathname === AUTH_CALLBACK_PATH;
+    // True until the callback's code exchange answers or times out. auth-js
+    // announces sessions meanwhile (the stored account, then the exchange's
+    // own); only the exchange's answer may sign an account in, so the
+    // listener ignores them. After a timeout the user can act again, so the
+    // listener does too.
+    let exchangeInFlight = false;
+    let callbackTimedOut = false;
+    // The first account auth-js announced while the exchange ran: the one
+    // this browser had before the callback ('' for none).
+    let accountBeforeCallback: string | undefined;
 
-        let result: Awaited<ReturnType<typeof supabase.auth.exchangeCodeForSession>>;
-        let preserveOAuthParams = false;
-        try {
-          result = await withAuthTimeout(
-            supabase.auth.exchangeCodeForSession(code),
-            'OAuth code exchange timeout',
-            OAUTH_CODE_EXCHANGE_TIMEOUT_MS,
-          );
-        } catch (error) {
-          preserveOAuthParams = error instanceof AuthTimeoutError;
-          throw error;
-        } finally {
-          if (!preserveOAuthParams) cleanupOAuthParams();
-        }
+    const applySession = (session: Session, previousUserId = currentUserIdRef.current) => {
+      // What the listener does for any other sign-in.
+      clearCrossfireDraftOnAuthChange(previousUserId || undefined, session.user?.id);
+      if (session.provider_token) sessionStorage.setItem('google_provider_token', session.provider_token);
+      setActiveAccessToken(session.access_token, session.user.id);
+      setSession(session);
+      currentUserIdRef.current = session.user?.id;
+      setJamUserId(session.user?.id);
+      hydrateStores(session.user?.id);
+    };
 
-        const { data, error } = result;
-        if (error) throw error;
-        return data.session;
+    // The session this browser already had, checked with the server first.
+    const restoreStoredSession = async () => {
+      // In some browser states (stalled locks, blocked storage, extensions),
+      // getSession() can hang long enough to look like a frozen app. If it
+      // doesn't resolve quickly, fail open to the login route and rely on
+      // onAuthStateChange to populate the session when available.
+      const getSessionResult = await Promise.race([
+        supabase.auth.getSession(),
+        new Promise<never>((_, reject) => setTimeout(() => reject(new Error('getSession timeout')), AUTH_OPERATION_TIMEOUT_MS)),
+      ]);
+
+      if (!mounted) return;
+      const { data, error } = getSessionResult;
+      if (error) console.warn('[Auth] getSession error:', error.message);
+      const alive = data.session?.access_token ? await confirmRestoredSession(data.session.access_token) : true;
+      if (!mounted) return;
+      // Someone else signed in while this was checked: theirs stands, alive or not.
+      const current = currentUserIdRef.current;
+      if (current && current !== data.session?.user.id) return;
+      if (!alive) {
+        dropRestoredSession();
+        return;
+      }
+      if (data.session) {
+        applySession(data.session);
+      } else {
+        setActiveAccessToken(null);
+        setSession(null);
+        currentUserIdRef.current = undefined;
+        setJamUserId(undefined);
+      }
+    };
+
+    const hydrateOAuthCallbackSession = async (): Promise<Session | null> => {
+      if (!callbackPending) return null;
+      const { code, flowId, error } = readAuthCallbackParams(callbackUrl);
+      const cleanUrl = () => {
+        // A late answer can arrive after the user left the callback page.
+        if (window.location.pathname !== AUTH_CALLBACK_PATH) return;
+        window.history.replaceState(window.history.state, '', withoutCallbackParams(callbackUrl));
+      };
+      if (error || !code) {
+        cleanUrl();
+        if (error) setCallbackError(error);
+        return null;
       }
 
-      return null;
+      // Finishing a sign-in is as explicit as pressing a sign-in button.
+      allowSessionsAfterSignIn();
+      // The flow id picks this sign-in's own verifier, so another tab's
+      // sign-in or a failed resend can't break the link.
+      exchangeInFlight = true;
+      const exchange = supabase.auth.exchangeCodeForSession(code, flowId ? { flowId } : undefined);
+      let settled = true;
+      try {
+        const { data, error: exchangeError } = await withAuthTimeout(exchange, 'OAuth code exchange timeout', OAUTH_CODE_EXCHANGE_TIMEOUT_MS);
+        exchangeInFlight = false;
+        if (exchangeError) throw exchangeError;
+        return data.session;
+      } catch (err) {
+        // A timeout is not a final answer: the code may still be good.
+        settled = !(err instanceof AuthTimeoutError);
+        exchangeInFlight = false;
+        callbackTimedOut = !settled;
+        // A session this browser already had still stands; init restores it.
+        console.warn('[Auth] sign-in callback failed:', err);
+        if (mounted) setCallbackError(settled ? authCallbackErrorFor(err) : 'timed-out');
+        if (!settled) {
+          // The late answer is final. A success is announced by auth-js like
+          // any sign-in; a failure gives its real reason and, if nobody signed
+          // in meanwhile, restores the stored session.
+          void exchange
+            .then(
+              ({ data, error: lateError }): LateAnswer => (lateError || !data.session ? { session: null, lateError } : { session: data.session, lateError: null }),
+              (lateError: unknown): LateAnswer => ({ session: null, lateError }),
+            )
+            .then(async ({ session, lateError }) => {
+              if (!mounted) return;
+              const onCallbackPage = window.location.pathname === AUTH_CALLBACK_PATH;
+              cleanUrl();
+              if (session) {
+                setCallbackError(null);
+                allowSessionsAfterSignIn();
+                // The listener applies it, unless a blocked restore dropped it.
+                if (currentUserIdRef.current !== session.user.id) applySession(session);
+                return;
+              }
+              // Only the callback page still shows this attempt's outcome.
+              if (onCallbackPage) setCallbackError(authCallbackErrorFor(lateError));
+              if (!currentUserIdRef.current) await restoreStoredSession();
+            })
+            .catch((lateError: unknown) => console.warn('[Auth] restoring the stored session failed:', lateError));
+        }
+        return null;
+      } finally {
+        // Only once the exchange has an answer: a reload during the spinner,
+        // or after a timeout, must still find the unused code and its flow id.
+        if (mounted && settled) cleanUrl();
+      }
     };
 
     const init = async () => {
@@ -214,39 +320,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (!mounted) return;
 
         if (oauthSession) {
-          setActiveAccessToken(oauthSession.access_token, oauthSession.user.id);
-          setSession(oauthSession);
-          currentUserIdRef.current = oauthSession.user?.id;
-          setJamUserId(oauthSession.user?.id);
-          hydrateStores(oauthSession.user?.id);
+          applySession(oauthSession, accountBeforeCallback);
           return;
         }
+        // Timed out: nothing is restored while the exchange may still sign
+        // someone in. Its late answer, or the user, decides.
+        if (callbackTimedOut) return;
 
-        // In some browser states (stalled locks, blocked storage, extensions),
-        // getSession() can hang long enough to look like a frozen app. If it
-        // doesn't resolve quickly, fail open to the login route and rely on
-        // onAuthStateChange to populate the session when available.
-        const getSessionResult = await Promise.race([
-          supabase.auth.getSession(),
-          new Promise<never>((_, reject) => setTimeout(() => reject(new Error('getSession timeout')), AUTH_OPERATION_TIMEOUT_MS)),
-        ]);
-
-        if (!mounted) return;
-        const { data, error } = getSessionResult;
-        if (error) console.warn('[Auth] getSession error:', error.message);
-        if (data.session?.access_token && !(await confirmRestoredSession(data.session.access_token))) {
-          if (!mounted) return;
-          dropRestoredSession();
-          return;
-        }
-        if (!mounted) return;
-        setActiveAccessToken(data.session?.access_token ?? null, data.session?.user.id ?? null);
-        setSession(data.session ?? null);
-        currentUserIdRef.current = data.session?.user?.id;
-        setJamUserId(data.session?.user?.id);
-        if (data.session) {
-          hydrateStores(data.session.user?.id);
-        }
+        await restoreStoredSession();
       } catch (err) {
         console.warn('[Auth] init failed:', err);
         if (!mounted) return;
@@ -255,6 +336,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         currentUserIdRef.current = undefined;
         setJamUserId(undefined);
       } finally {
+        callbackPending = false;
         if (mounted) setLoading(false);
       }
     };
@@ -263,10 +345,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     const { data: authListener } = supabase.auth.onAuthStateChange((event, newSession) => {
       if (import.meta.env.DEV) console.log('[Auth] Event:', event, 'Provider Token:', newSession?.provider_token ? 'present' : 'null');
+      if (exchangeInFlight) {
+        accountBeforeCallback ??= newSession?.user?.id ?? '';
+        return;
+      }
 
       if (newSession && restoredSessionsBlocked()) {
         dropRestoredSession();
-        setLoading(false);
+        if (!callbackPending) setLoading(false);
         return;
       }
 
@@ -293,7 +379,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         resetDebateStore();
         useDebateContextStore.getState().resetLocalData();
         clearGoogleTokens();
-        setLoading(false);
+        if (!callbackPending) setLoading(false);
         return;
       }
 
@@ -305,6 +391,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         resetDebateStore();
         useDebateContextStore.getState().resetLocalData();
       }
+
+      // While a callback signs an account in, init checks and loads the
+      // outcome: the new account on success, the stored one only if the
+      // callback fails. Checking a stored account here could sign out, or
+      // block, the account being signed in.
+      if (callbackPending) return;
 
       if (newSession?.access_token) {
         void confirmRestoredSession(newSession.access_token).then((alive) => {
@@ -350,7 +442,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     session,
     user: session?.user ?? null,
     loading,
-    signInWithGoogle: async ({ driveAccess = false } = {}) => {
+    callbackError,
+    clearCallbackError: () => setCallbackError(null),
+    signInWithGoogle: async ({ driveAccess = false, next } = {}) => {
       allowSessionsAfterSignIn();
       // Always use the SDK-generated URL so PKCE's code_verifier is written
       // to storage before redirect. The previous Promise.race against a 1200ms
@@ -360,7 +454,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: getOAuthRedirectUrl(),
+          redirectTo: authCallbackUrl(window.location.origin, next),
           skipBrowserRedirect: true,
           ...(driveAccess ? { scopes: 'https://www.googleapis.com/auth/drive.file' } : {}),
           queryParams: undefined,
@@ -372,14 +466,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       await openExternalUrl(data.url);
     },
-    signInWithEmailOtp: async (email) => {
+    signInWithEmailOtp: async (email, { next } = {}) => {
       allowSessionsAfterSignIn();
       const normalizedEmail = email.trim();
       if (!normalizedEmail) throw new Error('Email is required.');
 
       const { error } = await supabase.auth.signInWithOtp({
         email: normalizedEmail,
-        options: { shouldCreateUser: true },
+        // Prod's email also carries a link. It must open the callback, not the landing page.
+        options: { shouldCreateUser: true, emailRedirectTo: authCallbackUrl(window.location.origin, next) },
       });
       if (error) throw error;
     },
@@ -418,7 +513,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (verificationError) throw verificationError;
     },
     signOut: async () => {
-      await supabase.auth.signOut();
+      // Local scope: signing out here must not sign the account out on other devices.
+      await supabase.auth.signOut({ scope: 'local' });
       clearCrossfireDraftOnAuthChange(session?.user?.id, undefined);
       resetSessionStore();
       resetSettingsStore();
@@ -435,7 +531,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       discardLocalState();
     },
     discardTabState,
-  }), [session, loading, discardLocalState, discardTabState, resetSessionStore, resetSettingsStore, resetSparringStore]);
+  }), [session, loading, callbackError, discardLocalState, discardTabState, resetSessionStore, resetSettingsStore, resetSparringStore]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

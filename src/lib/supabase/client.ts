@@ -76,6 +76,10 @@ export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
     detectSessionInUrl: false,
     flowType: 'pkce',
     storageKey: AUTH_STORAGE_KEY,
+    // Each sign-in keeps its own PKCE verifier and its redirect carries
+    // `sb_flow_id`, so a second sign-in (another tab, a resend) can't
+    // overwrite or delete the verifier an emailed link needs.
+    experimental: { appendPkceFlowIdToRedirects: true },
   },
   global: { fetch: watchedFetch },
 });

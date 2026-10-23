@@ -21,6 +21,8 @@ const SIGNED_OUT: AuthContextValue = {
   session: null,
   user: null,
   loading: false,
+  callbackError: null,
+  clearCallbackError: () => undefined,
   signInWithGoogle: unavailable,
   signInWithEmailOtp: unavailable,
   verifyEmailOtp: unavailable,

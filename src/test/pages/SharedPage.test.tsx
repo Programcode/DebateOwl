@@ -16,6 +16,8 @@ const signedOut: AuthContextValue = {
   session: null,
   user: null,
   loading: false,
+  callbackError: null,
+  clearCallbackError: () => undefined,
   signInWithGoogle: async () => undefined,
   signInWithEmailOtp: async () => undefined,
   verifyEmailOtp: async () => undefined,
