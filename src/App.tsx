@@ -2,25 +2,27 @@
 import { Component, Suspense, lazy, useEffect, useRef, useState, type ComponentType, type ErrorInfo, type ReactNode } from "react";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, useLocation, useNavigationType } from "react-router-dom";
+import { QueryClientProvider } from "@tanstack/react-query";
+import { queryClient } from "@/lib/query-client";
+import { BrowserRouter, Navigate, Routes, Route, useLocation, useNavigate, useNavigationType } from "react-router-dom";
 import { MotionConfig } from "framer-motion";
-import { AppLayout } from "@/components/layout/AppLayout";
 import { AuthProvider, useAuth } from "@/lib/supabase/AuthProvider";
 import { RequireAuth } from "@/components/auth/RequireAuth";
 import { AccountQueryCache } from "@/components/auth/AccountQueryCache";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { useSessionStorageSync } from "@/hooks/use-session-storage-sync";
-import { useOnboardingStore } from "@/hooks/use-onboarding";
+import { hasCompletedOnboarding, useOnboardingStore } from "@/hooks/use-onboarding";
 import { OfflineIndicator } from "@/components/OfflineIndicator";
 import { StagingBanner } from "@/components/StagingBanner";
 import { captureException, captureProductEvent, toTelemetrySafeError } from "@/lib/observability";
-import { routeLoaders, type RouteLoader } from "@/lib/route-modules";
+import { appLayoutLoader, preloadStartupRoute, routeLoaders, type RouteLoader } from "@/lib/route-modules";
 import type { PrerenderedRoute } from "@/lib/seo/pages";
-import { usePrivateRouteHead } from "@/lib/seo/use-page-head";
+import { PageLabelProvider, usePrivateRouteHead } from "@/lib/seo/use-page-head";
 import { RouteSkeleton, type RouteSkeletonVariant } from "@/components/loading/RouteSkeleton";
 import { useTranslation } from "react-i18next";
 import { COLLABORATION_URL } from "@/lib/workspace/collaboration-config";
+import { AUTH_CALLBACK_PATH } from "@/lib/auth-callback";
+import { chooseUrlLanguage, searchWithoutLanguage } from "@/lib/url-language";
 
 /**
  * A page the build prerenders. mountApp loads its module before the first
@@ -60,6 +62,7 @@ const AdminPage = lazy(routeLoaders["/app/admin"]);
 const SharedPage = lazy(routeLoaders["/share/:code"]);
 const FlowchartPage = lazy(routeLoaders["/app/flowchart"]);
 const LoginPage = lazy(routeLoaders["/login"]);
+const AuthCallbackPage = lazy(routeLoaders["/auth/callback"]);
 const SourcesPage = lazy(routeLoaders["/expocit/sources"]);
 const NotFound = prerenderedPage("*");
 const ToolsHubPage = prerenderedPage("/tools");
@@ -67,10 +70,24 @@ const DebateTimerToolPage = prerenderedPage("/tools/debate-timer");
 const MotionGeneratorToolPage = prerenderedPage("/tools/debate-motion-generator");
 const FlowSheetToolPage = prerenderedPage("/tools/debate-flow-sheet");
 const SpeechTimeCalculatorToolPage = prerenderedPage("/tools/speech-time-calculator");
+// Public pages never load the signed-in header, navigation and debate dialogs.
+// Arriving from sign-in, the page being opened loads alongside the layout
+// instead of after it.
+const AppLayout = lazy(() => {
+  void preloadStartupRoute(window.location.pathname);
+  return appLayoutLoader();
+});
 const OnboardingTour = lazy(() => import("@/components/features/onboarding/OnboardingTour")
   .then(({ OnboardingTour: Tour }) => ({ default: Tour })));
 
-const queryClient = new QueryClient();
+// TanStack Query refetches after an `offline` then `online` pair, but a page
+// opened offline never sees `offline`. Retry whatever failed once the
+// connection returns, such as Settings' admin-role check.
+if (typeof window !== "undefined") {
+  window.addEventListener("online", () => {
+    void queryClient.refetchQueries({ type: "active", predicate: (query) => query.state.status === "error" });
+  });
+}
 
 type ToolName =
   | "generate"
@@ -119,6 +136,7 @@ const ROUTE_FALLBACKS: Record<string, RouteFallback> = {
   "/privacy": { variant: "public", label: "Privacy", labelKey: "footer.privacy" },
   "/expocit/sources": { variant: "public", label: "Sources", labelKey: "crossfire.sources" },
   "/login": { variant: "public", label: "Sign in", labelKey: "login.title" },
+  "/auth/callback": { variant: "public", label: "Sign in", labelKey: "login.title" },
   "/app": { variant: "home-grid", label: "Tools", labelKey: "nav.tools" },
   "/app/debate": { variant: "settings/list", label: "Current debate", labelKey: "nav.currentDebate" },
   "/app/workspaces": { variant: "settings/list", label: "Workspaces", labelKey: "nav.workspaces" },
@@ -212,40 +230,72 @@ export function ToolRouteAnalytics(): null {
   return null;
 }
 
-function RouteContent({ children }: { children: ReactNode }) {
-  const location = useLocation();
+function useRouteLabel(pathname: string): { fallback: RouteFallback; label: string } {
   const { t } = useTranslation();
-  const fallback = getRouteFallback(location.pathname);
-  const label = fallback.labelKey ? t(fallback.labelKey, fallback.label) : fallback.label;
-  const statusText = t("common.openingPage", { page: label });
-  usePrivateRouteHead(location.pathname, label);
+  const fallback = getRouteFallback(pathname);
+  return { fallback, label: fallback.labelKey ? t(fallback.labelKey, fallback.label) : fallback.label };
+}
+
+/** The skeleton of the page being opened, shown while its session, layout or code loads. */
+function PendingRoute() {
+  const { pathname } = useLocation();
+  const { t } = useTranslation();
+  const { fallback, label } = useRouteLabel(pathname);
+  return <RouteSkeleton variant={fallback.variant} label={label} statusText={t("common.openingPage", { page: label })} />;
+}
+
+/** The pending page before the signed-in layout exists, so it is the page's one <main>. */
+function PendingAppRoute() {
+  return (
+    <main className="min-h-screen bg-background">
+      <PendingRoute />
+    </main>
+  );
+}
+
+export function RouteContent({ children }: { children: ReactNode }) {
+  const location = useLocation();
+  const { label } = useRouteLabel(location.pathname);
+  // A page that names itself better than its route (usePageLabel).
+  const [pageLabel, setPageLabel] = useState<string | null>(null);
+  usePrivateRouteHead(location.pathname, pageLabel ?? label);
 
   return (
-    <LocalizedRouteErrorBoundary key={location.pathname}>
-      <Suspense fallback={<RouteSkeleton variant={fallback.variant} label={label} statusText={statusText} />}>
-        {children}
-      </Suspense>
-    </LocalizedRouteErrorBoundary>
+    <PageLabelProvider value={setPageLabel}>
+      <LocalizedRouteErrorBoundary key={location.pathname}>
+        <Suspense fallback={<PendingRoute />}>
+          {children}
+        </Suspense>
+      </LocalizedRouteErrorBoundary>
+    </PageLabelProvider>
   );
 }
 
 function OptionalOnboardingTour() {
   const location = useLocation();
-  const hasCompletedOnboarding = useOnboardingStore((state) => state.hasCompletedOnboarding);
+  const userId = useAuth().user?.id;
+  const completed = useOnboardingStore((state) => hasCompletedOnboarding(state, userId));
   const isTourRunning = useOnboardingStore((state) => state.isTourRunning);
-  const shouldLoadTour = isTourRunning || (location.pathname === "/app" && !hasCompletedOnboarding);
+  const claimLegacyCompletion = useOnboardingStore((state) => state.claimLegacyCompletion);
+  // A tour left running by the previous account never opens for one that finished it.
+  const shouldLoadTour = !completed && (isTourRunning || location.pathname === "/app");
 
-  if (!shouldLoadTour) return null;
+  useEffect(() => {
+    if (userId) claimLegacyCompletion(userId);
+  }, [claimLegacyCompletion, userId]);
 
-  return <TimedOnboardingTour />;
+  if (!userId || !shouldLoadTour) return null;
+
+  // Keyed by account, so one account's half-finished tour never carries into the next.
+  return <TimedOnboardingTour key={userId} userId={userId} />;
 }
 
-function TimedOnboardingTour() {
+function TimedOnboardingTour({ userId }: { userId: string }) {
   const [eligibleAt] = useState(() => typeof performance === "undefined" ? 0 : performance.now());
 
   return (
     <Suspense fallback={null}>
-      <OnboardingTour eligibleAt={eligibleAt} />
+      <OnboardingTour eligibleAt={eligibleAt} userId={userId} />
     </Suspense>
   );
 }
@@ -269,6 +319,19 @@ function ScrollToTopOnNavigate(): null {
   return null;
 }
 
+/**
+ * A ?lang= reached inside the app (the /es and /hu redirects): switch to it and
+ * drop it from the address. mountApp handles the one a page opens with.
+ */
+export function UrlLanguage(): null {
+  const { pathname, search, hash } = useLocation();
+  const navigate = useNavigate();
+  useEffect(() => {
+    if (chooseUrlLanguage(search)) navigate({ pathname, search: searchWithoutLanguage(search), hash }, { replace: true });
+  }, [hash, navigate, pathname, search]);
+  return null;
+}
+
 function AppRoutes() {
   useSessionStorageSync();
 
@@ -276,10 +339,14 @@ function AppRoutes() {
     <Routes>
           {/* Public Routes */}
           <Route path="/" element={<RouteContent><LandingPage /></RouteContent>} />
+          {/* Language home pages; vercel.json redirects them on a full load too. */}
+          <Route path="/es" element={<Navigate to="/?lang=es" replace />} />
+          <Route path="/hu" element={<Navigate to="/?lang=hu" replace />} />
           <Route path="/terms" element={<RouteContent><TermsPage /></RouteContent>} />
           <Route path="/privacy" element={<RouteContent><PrivacyPage /></RouteContent>} />
           <Route path="/expocit/sources" element={<RouteContent><SourcesPage /></RouteContent>} />
           <Route path="/login" element={<RouteContent><LoginPage /></RouteContent>} />
+          <Route path={AUTH_CALLBACK_PATH} element={<RouteContent><AuthCallbackPage /></RouteContent>} />
           <Route path="/share/:code" element={<RouteContent><SharedPage /></RouteContent>} />
           <Route path="/tools" element={<RouteContent><ToolsHubPage /></RouteContent>} />
           <Route path="/tools/debate-timer" element={<RouteContent><DebateTimerToolPage /></RouteContent>} />
@@ -290,10 +357,12 @@ function AppRoutes() {
           {/* Protected App Routes */}
           <Route
             element={
-              <RequireAuth>
+              <RequireAuth fallback={<PendingAppRoute />}>
                 <ToolRouteAnalytics />
                 <OptionalOnboardingTour />
-                <AppLayout />
+                <Suspense fallback={<PendingAppRoute />}>
+                  <AppLayout />
+                </Suspense>
               </RequireAuth>
             }
           >
@@ -318,6 +387,8 @@ function AppRoutes() {
             <Route path="/app/sparring" element={<RouteContent><SparringPage /></RouteContent>} />
             <Route path="/app/flowchart" element={<RouteContent><FlowchartPage /></RouteContent>} />
             <Route path="/app/settings" element={<RouteContent><SettingsPage /></RouteContent>} />
+            {/* Billing lives in Settings (QB-12). */}
+            <Route path="/app/billing" element={<Navigate to="/app/settings#subscription" replace />} />
             <Route path="/app/admin" element={<RouteContent><AdminPage /></RouteContent>} />
           </Route>
           <Route path="*" element={<RouteContent><NotFound /></RouteContent>} />
@@ -337,6 +408,7 @@ const App = () => (
             <StagingBanner />
             <BrowserRouter useTransitions={false}>
               <ScrollToTopOnNavigate />
+              <UrlLanguage />
               <LocalizedRouteErrorBoundary>
                 <AppRoutes />
               </LocalizedRouteErrorBoundary>

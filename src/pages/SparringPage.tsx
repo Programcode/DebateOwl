@@ -25,7 +25,9 @@ import { OpponentVoiceBar } from '@/components/features/voice/OpponentVoiceBar';
 import { useVoiceAvailability } from '@/lib/voice/availability';
 import type { SpeechDelivery } from '@/lib/voice/delivery';
 import { opponentVoice } from '@/lib/voice/opponent-voice';
+import { useSessionQuota } from '@/hooks/use-session-quota';
 import { useSubscription } from '@/hooks/use-subscription';
+import { useAuth } from '@/lib/supabase/AuthProvider';
 import { useSubscriptionError } from '@/hooks/use-subscription-error';
 import { SubscriptionErrorModals } from '@/components/features/subscription';
 
@@ -46,7 +48,6 @@ export default function SparringPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const location = useLocation();
-  const { remainingToday } = useSubscription();
   const subError = useSubscriptionError();
   const { handleSubscriptionError } = subError;
   const workspaceLaunch = (location.state as { workspaceLaunch?: unknown } | null)?.workspaceLaunch === true;
@@ -66,8 +67,6 @@ export default function SparringPage() {
   const appendAiSpeech = useSparringStore((state) => state.appendAiSpeech);
   const completeSession = useSparringStore((state) => state.completeSession);
   const abandonSession = useSparringStore((state) => state.abandonSession);
-  const pauseTimer = useSparringStore((state) => state.pauseTimer);
-  const resumeTimer = useSparringStore((state) => state.resumeTimer);
   const beginWorkspaceSession = useSparringStore((state) => state.beginWorkspaceSession);
   const endWorkspaceSession = useSparringStore((state) => state.endWorkspaceSession);
   const getFeatureConfig = useSettingsStore((state) => state.getFeatureConfig);
@@ -94,10 +93,17 @@ export default function SparringPage() {
 
   // A reply that arrives after the student left is saved but not spoken.
   const mountedRef = useRef(true);
+  // Names the latest Start; a newer Start, leaving the page, or switching
+  // accounts makes an earlier one that is still checking quota stale.
+  const startRequestRef = useRef(0);
+  const { user } = useAuth();
+  const userId = user?.id;
+  const userIdRef = useRef(userId);
   useEffect(() => {
     mountedRef.current = true;
     return () => {
       mountedRef.current = false;
+      startRequestRef.current += 1;
       opponentVoice.stop();
     };
   }, []);
@@ -130,7 +136,27 @@ export default function SparringPage() {
     if (session?.id) window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
   }, [session?.id]);
 
-  const config = useMemo(() => getFeatureConfig('sparring'), [getFeatureConfig]);
+  // Follows the model picked in setup; getFeatureConfig alone never changes identity.
+  const sparringConfig = useSettingsStore((state) => state.featureConfigs.sparring);
+  const config = useMemo(() => sparringConfig ?? getFeatureConfig('sparring'), [getFeatureConfig, sparringConfig]);
+  // A round costs one use however many replies it takes; the setup says so.
+  const sessionQuota = useSessionQuota('sparring', config, !session);
+  // While the server's answer is unknown (an older server, a timeout), warn
+  // from the browser's own estimate, as before session charging.
+  const { remainingToday } = useSubscription();
+  const [checkingQuota, setCheckingQuota] = useState(false);
+  const [startError, setStartError] = useState<string | null>(null);
+  // Set in the click itself, before React re-renders the disabled button, so a
+  // second click (or Enter) during the quota check never starts a second check.
+  const startingRef = useRef(false);
+  useEffect(() => {
+    if (userIdRef.current === userId) return;
+    userIdRef.current = userId;
+    // A Start pressed by the previous account never opens a round for this one.
+    startRequestRef.current += 1;
+    startingRef.current = false;
+    setCheckingQuota(false);
+  }, [userId]);
 
   const retryAi = useCallback(() => {
     aiRequestRef.current = null;
@@ -203,15 +229,9 @@ export default function SparringPage() {
         };
         const next = appendAiSpeech(speech);
         if (!next || !voiceActive || !mountedRef.current) return;
-        // The student's clock waits while the opponent is speaking.
-        const userIsNext = next.phase === 'round';
-        if (userIsNext) pauseTimer();
-        opponentVoice.speak({ feature: 'sparring', text: generated.content, voice: result.voice, language: outputLanguage }, () => {
-          // Resume only the turn this reply paused. A reply still playing when
-          // the next one arrives ends after that one has paused a later turn.
-          const current = useSparringStore.getState().currentSession;
-          if (userIsNext && current?.id === session.id && current.currentTurnIndex === next.currentTurnIndex) resumeTimer();
-        });
+        // The student's next turn opens with a stopped clock, so the opponent can finish
+        // first; it runs once the student starts speaking or typing.
+        opponentVoice.speak({ feature: 'sparring', text: generated.content, voice: result.voice, language: outputLanguage });
       })
       .catch((error: unknown) => {
         if (aiRequestRef.current !== requestKey) return;
@@ -225,7 +245,7 @@ export default function SparringPage() {
           setLiveSpeech('');
         }
       });
-  }, [appendAiSpeech, config, handleSubscriptionError, outputLanguage, pauseTimer, resumeTimer, retryNonce, session, t, voiceActive, workspace.context]);
+  }, [appendAiSpeech, config, handleSubscriptionError, outputLanguage, retryNonce, session, t, voiceActive, workspace.context]);
 
   useEffect(() => {
     if (!session || session.phase !== 'judging') return;
@@ -292,13 +312,53 @@ export default function SparringPage() {
     });
   }, [saveArtifact, session, workspace.context]);
 
-  const handleStart = (values: SparringSetupValues) => debateGate.run(values.motion, (target) => beginRound(values, target.debateId));
+  const handleStart = (values: SparringSetupValues) => {
+    if (startingRef.current) return;
+    debateGate.run(values.motion, (target) => void beginRound(values, target.debateId));
+  };
 
-  const beginRound = (values: SparringSetupValues, debateId: string | null) => {
+  const beginRound = async (values: SparringSetupValues, debateId: string | null) => {
+    if (startingRef.current) return;
+    startingRef.current = true;
+    const owner = userIdRef.current;
+    const roundBefore = useSparringStore.getState().currentSession;
+    const startRequest = startRequestRef.current + 1;
+    startRequestRef.current = startRequest;
+    const current = () => startRequestRef.current === startRequest && mountedRef.current && userIdRef.current === owner;
+    // Check today's quota before the round opens, so a speech is never
+    // written for a round the server would refuse. An unknown answer does not block.
+    setStartError(null);
+    setCheckingQuota(true);
+    let refusal: Awaited<ReturnType<typeof sessionQuota.checkBeforeStart>>;
+    try {
+      refusal = await sessionQuota.checkBeforeStart();
+    } catch {
+      // A check that fails outright is unknown, like a timeout: it does not block.
+      refusal = null;
+    } finally {
+      // Never leave the button spinning, whatever the check did.
+      if (current()) {
+        startingRef.current = false;
+        setCheckingQuota(false);
+      }
+    }
+    if (!current()) return;
+    if (refusal) {
+      handleSubscriptionError(refusal);
+      return;
+    }
+    // A round was restored or started elsewhere while the check ran: never replace it.
+    if (useSparringStore.getState().currentSession !== roundBefore) return;
     const target = { debateId };
     artifactRequestIdRef.current = crypto.randomUUID();
-    opponentVoice.beginRound();
-    startSession({ ...values, debateId: target.debateId });
+    try {
+      opponentVoice.beginRound();
+      startSession({ ...values, debateId: target.debateId });
+    } catch (error) {
+      console.warn('[Sparring] Could not open the round:', error);
+      setStartError(t('sparring.setup.startFailed', 'Could not open the round. Try again.'));
+      return;
+    }
     setAiError(null);
     setJudgingError(null);
     setRetryNonce(0);
@@ -343,7 +403,11 @@ export default function SparringPage() {
         <SparringSetup
           initialValues={workspace.context ? { motion: workspace.context.motion, userSide: workspace.context.side } : undefined}
           onStart={handleStart}
-          remainingRequests={remainingToday}
+          roundCost={sessionQuota.units}
+          remainingRequests={sessionQuota.remaining ?? remainingToday}
+          blockedReason={sessionQuota.blocked}
+          isStarting={checkingQuota}
+          startError={startError}
           debatePrefill={!workspace.context}
           voiceAllowed={!workspace.context}
           banner={<CurrentDebateStrip hidden={Boolean(workspace.context)} className="" />}

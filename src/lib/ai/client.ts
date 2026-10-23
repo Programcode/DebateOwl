@@ -43,4 +43,6 @@ export { factoids } from './features/factoids';
 export { askChat, boundAskMessage, boundAskHistory, isAskMessageWithinBudget } from './features/ask';
 export type { AskChatOptions } from './features/ask';
 export { generateSparringTurn, judgeSparringSession } from './features/sparring';
+export { checkSessionQuota, sessionQuotaError, sessionQuotaRemaining } from './features/session-quota';
+export type { SessionQuota } from './features/session-quota';
 export type { SparringTurnResult } from './features/sparring';

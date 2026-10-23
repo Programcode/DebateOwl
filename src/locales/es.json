@@ -231,9 +231,11 @@
     "openingPage": "Abriendo {{page}}",
     "page": "Página",
     "close": "Cerrar",
+    "notifications": "Notificaciones",
     "loading": "Cargando",
     "error": "Error",
     "logoAlt": "Logotipo de DebateLab",
+    "skipToContent": "Saltar al contenido principal",
     "or": "o",
     "back": "Atrás",
     "cancel": "Cancelar",
@@ -245,7 +247,8 @@
     "deleted": "Eliminado",
     "discuss": "Discutir",
     "retry": "Reintentar",
-    "undo": "Deshacer"
+    "undo": "Deshacer",
+    "notAvailable": "N/D"
   },
   "aiClient": {
     "inputShortened": "La entrada se acortó",
@@ -253,7 +256,10 @@
     "autoSavedFolder": "Guardado automáticamente",
     "sourceSaveFailed": "No se pudo guardar la fuente",
     "sourceSaveFailedDesc": "No se pudo guardar “{{title}}” en tu biblioteca.",
-    "sourceAssessmentSaveFailed": "No se pudo guardar la clasificación de fuentes."
+    "sourceAssessmentSaveFailed": "No se pudo guardar la clasificación de fuentes.",
+    "sourcesAutoSaved_one": "Se añadió {{count}} fuente a tu biblioteca",
+    "sourcesAutoSaved_other": "Se añadieron {{count}} fuentes a tu biblioteca",
+    "sourcesAutoSavedDesc": "Las encontró la investigación. Están en la carpeta Guardado automáticamente, y las activadas fundamentan tus próximas solicitudes."
   },
   "generatedArtifacts": {
     "brainstormTitle": "Lluvia de ideas",
@@ -384,13 +390,16 @@
     "undone": "Cambio deshecho",
     "undoneDesc": "Se cargó la generación anterior.",
     "saveFailedDesc": "No se pudo guardar el caso. Inténtalo de nuevo.",
-    "working": "Escribiendo tu caso…"
+    "working": "Escribiendo tu caso…",
+    "flowchartOtherDebate": "El diagrama solo acepta un caso generado en el debate actual. Genera el caso aquí para enviarlo."
   },
   "attack": {
     "emptyTitle": "Modo sin piedad",
     "emptyDesc": "Pega tu argumento para recibir críticas despiadadas, identificar falacias lógicas y obtener mejoras accionables.",
     "failed": "Error en el análisis de ataque",
-    "working": "Revisando tu caso…"
+    "working": "Revisando tu caso…",
+    "previousCritique": "Crítica de tu argumento anterior",
+    "previousCritiqueDesc": "Tu última versión no se revisó, así que esta crítica puede no coincidir con el texto del formulario."
   },
   "brainstorm": {
     "emptyTitle": "Desbloquea ángulos creativos",
@@ -424,7 +433,10 @@
     "saveFailed": "No se pudo guardar",
     "saveFailedDesc": "No se pudo guardar el chat. Inténtalo de nuevo.",
     "sourceSaveFailedDesc": "No se pudo guardar la fuente. Inténtalo de nuevo.",
-    "stopped": "Detuviste esta respuesta antes de que terminara."
+    "stopped": "Detuviste esta respuesta antes de que terminara.",
+    "notSent": "No enviado",
+    "notSentDailyLimit": "No enviado: has alcanzado el límite diario",
+    "notSentModelDesc": "Este modelo requiere Pro. Elige otro modelo y vuelve a intentarlo."
   },
   "chat": {},
   "settings": {
@@ -443,9 +455,6 @@
     "tierExpired": "Caducado",
     "ends": "Termina",
     "loading": "Cargando...",
-    "manageSubscription": "Gestionar suscripción",
-    "setUpBilling": "Configurar facturación",
-    "upgradeToPro": "Mejorar a Pro",
     "confirmingSubscription": "Confirmando tu suscripción Pro…",
     "checkoutCanceled": "Pago cancelado",
     "checkoutCanceledDesc": "No se hizo ningún cargo.",
@@ -454,10 +463,12 @@
     "checkoutConfirmSlowTitle": "Seguimos esperando a Stripe",
     "checkoutConfirmSlow": "Stripe todavía no ha confirmado el pago. Esta página se actualizará al recargar.",
     "accessActive": "El acceso a la IA está activo. Pueden aplicarse límites de uso.",
+    "promoAccessUntil": "Tu acceso Pro viene de un código promocional y dura hasta el {{date}}. Hasta entonces la facturación es opcional; configúrala solo si quieres seguir en Pro después de esa fecha.",
+    "promoAccess": "Tu acceso Pro viene de un código promocional, así que la facturación es opcional.",
     "accessExpired": "Tu acceso ha caducado. Mejora el plan para seguir usando las herramientas de IA.",
     "globalSettings": "Ajustes globales",
     "account": "Cuenta",
-    "accountDesc": "Las claves API se gestionan de forma segura en el servidor.",
+    "accountDesc": "Cómo inicias sesión y una copia de todo lo guardado en tu cuenta.",
     "signedInAs": "Sesión iniciada como",
     "unknownUser": "Usuario desconocido",
     "signInGoogle": "Acceso: Google",
@@ -468,7 +479,7 @@
     "signOutFailed": "No se pudo cerrar la sesión. Inténtalo de nuevo.",
     "aiModels": "Modelos de IA",
     "aiModelsDesc": "Selecciona tu modelo preferido desde cada página de función usando el selector del encabezado.",
-    "admin": "Admin",
+    "admin": "Administración",
     "adminDesc": "Abre el panel de administración para uso, usuarios, límites y códigos promocionales.",
     "openAdmin": "Abrir panel de admin",
     "developer": "Desarrollador",
@@ -511,7 +522,19 @@
     "deleteAccountSuccessDesc": "Tu cuenta y todos sus datos se han eliminado para siempre.",
     "deleteAccountFailed": "La cuenta no se eliminó",
     "signingOut": "Cerrando sesión…",
-    "deletingData": "Eliminando…"
+    "deletingData": "Eliminando…",
+    "tierExtended": "Acceso ampliado",
+    "tierPaymentFailed": "Pago fallido",
+    "extendedAccessDesc_one": "Tienes acceso ampliado: {{count}} uso de IA al día.",
+    "extendedAccessDesc_other": "Tienes acceso ampliado: {{count}} usos de IA al día.",
+    "renewsOn": "Se renueva el {{date}}",
+    "cancelsOn": "Se cancela el {{date}}",
+    "endsOn": "Termina el {{date}}",
+    "paymentFailedDesc": "El pago falló: actualiza tu método de pago para conservar Pro.",
+    "paymentGraceUntil": "Conservas el acceso Pro hasta el {{date}} mientras reintentamos el cobro.",
+    "paymentFailedNoAccess": "El pago falló: actualiza tu método de pago para recuperar el acceso a la IA.",
+    "subscriptionEndedOn": "Tu suscripción Pro terminó el {{date}}. Vuelve a suscribirte para seguir usando las herramientas de IA.",
+    "subscriptionEnded": "Tu suscripción Pro ha terminado. Vuelve a suscribirte para seguir usando las herramientas de IA."
   },
   "login": {
     "title": "Iniciar sesión en DebateLab",
@@ -525,9 +548,13 @@
     "emailHint": "Te enviaremos un código de seis dígitos.",
     "sendCode": "Enviar código",
     "sendingCode": "Enviando código...",
+    "slowSend": "Esto puede tardar unos segundos.",
     "resendCode": "Reenviar código",
     "resendingCode": "Reenviando código...",
+    "resendIn": "Reenviar en {{time}}",
     "codeSent": "Código enviado",
+    "codeResent": "Nuevo código enviado",
+    "codeRecentlySent": "Hace un momento enviamos un código a esta dirección. Introdúcelo abajo o pide uno nuevo cuando termine la cuenta atrás.",
     "codeSentDesc": "Revisa tu email para encontrar el código de seis dígitos.",
     "useDifferentEmail": "Usar otro email",
     "otpLabel": "Código de verificación",
@@ -539,9 +566,16 @@
     "demoCodePlaceholder": "DEMO-AB12-CD34",
     "signInWithDemoCode": "Iniciar sesión con código demo",
     "signingIn": "Iniciando sesión...",
+    "finishingSignIn": "Iniciando sesión…",
+    "retrySignIn": "Reintentar",
+    "backToSignIn": "Volver al inicio de sesión",
     "invalidEmail": "Introduce una dirección de email válida.",
+    "emailRequired": "El email es obligatorio.",
+    "emailTooLong": "Esa dirección de email es demasiado larga. Usa una de {{max}} caracteres como máximo.",
     "invalidCode": "Introduce un código válido de seis dígitos.",
     "invalidDemoCode": "Introduce un código demo válido.",
+    "demoCodeRequired": "Introduce tu código demo.",
+    "invalidDemoCodeFormat": "Los códigos demo tienen este formato: DEMO-AB12-CD34.",
     "emailOtpError": "No se pudo enviar el código.",
     "verifyOtpError": "No se pudo verificar el código.",
     "demoError": "No se pudo iniciar sesión con el código demo.",
@@ -558,8 +592,13 @@
       "demoExpired": "Este código de demostración ha caducado.",
       "demoUsedUp": "Este código de demostración ya no tiene usos.",
       "rateLimited": "Demasiados intentos. Inténtalo más tarde.",
+      "rateLimitedWait": "Demasiados intentos. Inténtalo de nuevo en {{time}}.",
       "codeExpired": "Ese código es incorrecto o ha caducado. Revísalo o solicita uno nuevo.",
-      "network": "No se puede conectar con DebateLab. Revisa tu conexión e inténtalo de nuevo."
+      "network": "No se puede conectar con DebateLab. Revisa tu conexión e inténtalo de nuevo.",
+      "linkExpired": "Este enlace de inicio de sesión ha caducado o ya se usó. Solicita un código nuevo.",
+      "linkOtherBrowser": "Este enlace de inicio de sesión solo funciona en el navegador donde lo pediste. Solicita aquí un código nuevo.",
+      "callbackFailed": "No se completó el inicio de sesión. Inténtalo de nuevo.",
+      "callbackTimedOut": "El inicio de sesión está tardando más de lo normal. Inténtalo de nuevo."
     }
   },
   "admin": {
@@ -567,7 +606,7 @@
     "createDemoCode": "Crear código demo",
     "createDemoCodeDescription": "Emite un código de un solo uso para una cuenta demo. El código solo aparece después de crearlo.",
     "label": "Etiqueta",
-    "labelPlaceholder": "p. ej., Demo escolar de septiembre",
+    "labelPlaceholder": "p. ej. Demo escolar de septiembre",
     "emailOptional": "Email asignado (opcional)",
     "expiryOptional": "Caducidad (opcional)",
     "maxUsesOptional": "Usos máximos (opcional)",
@@ -707,7 +746,7 @@
     "promos": {
       "createTitle": "Crear código promocional",
       "code": "Código",
-      "codePlaceholder": "p. ej., CIT2026",
+      "codePlaceholder": "p. ej. CIT2026",
       "type": "Tipo",
       "types": {
         "extended_trial": "Prueba ampliada",
@@ -758,7 +797,7 @@
       "currentEnds": "La prueba actual termina el {{date}}",
       "days": "Días",
       "notes": "Notas (opcional)",
-      "notesPlaceholder": "p. ej., socio de torneo o solicitud de soporte",
+      "notesPlaceholder": "p. ej. socio de torneo o solicitud de soporte",
       "cancel": "Cancelar",
       "action_one": "Regalar {{count}} día",
       "action_other": "Regalar {{count}} días",
@@ -889,13 +928,12 @@
       "sampleSparringTitle": "Plan de la ronda",
       "sampleOpeningLabel": "Apertura",
       "sampleOpening": "Expón la regla, la excepción y la medida del éxito.",
-      "sampleResponseLabel": "Respuesta",
+      "sampleResponseLabel": "Réplica",
       "sampleResponse": "Compara el tiempo de aprendizaje con el coste de hacer cumplir la regla."
     }
   },
   "features": {
     "title": "Todo lo que necesitas para ganar",
-    "subtitle": "Once herramientas de debate para una preparación competitiva.",
     "generate": "Generador de casos",
     "generateDesc": "Construye casos completos con argumentos estructurados, evidencia y contra-estrategias.",
     "attack": "Atacante de casos",
@@ -909,7 +947,7 @@
     "crossfire": "Interrogatorio",
     "crossfireDesc": "Practica preguntas y respuestas precisas en un intercambio cronometrado.",
     "sparring": "Sparring",
-    "sparringDesc": "Practica una ronda cronometrada contra una oponente y revisa la tarjeta de puntuación.",
+    "sparringDesc": "Practica una ronda cronometrada contra un oponente y revisa la tarjeta de puntuación.",
     "library": "Biblioteca de fuentes",
     "libraryDesc": "Gestiona fuentes que fundamentan las respuestas de IA con evidencia real.",
     "timer": "Cronómetro de debate",
@@ -962,11 +1000,11 @@
     "proPeriod": "/mes + impuestos",
     "recommended": "Recomendado",
     "trialFeature1": "Acceso inicial a preparación con IA",
-    "trialFeature2": "Las 11 herramientas de preparación",
+    "trialFeature2": "Los {{modes}} modos de preparación y las {{utilities}} utilidades",
     "trialFeature3": "Modelos iniciales",
     "trialFeature4": "Acceso por 3 días",
     "proFeature1": "Acceso ampliado a preparación con IA",
-    "proFeature2": "Las 11 herramientas de preparación",
+    "proFeature2": "Los {{modes}} modos de preparación y las {{utilities}} utilidades",
     "proFeature3": "Los 10 modelos, incluidos Claude Opus y Sonnet, GPT-6.1 Sol y Gemini",
     "proFeature4": "Soporte prioritario",
     "proFeature5": "Investigación Active Grounding™",
@@ -993,7 +1031,7 @@
     "a5": "¡Sí! Guarda casos, lluvias de ideas y chats en el Historial. Exporta a Word, PDF o Google Docs.",
     "subtitle": "Precios, flujo de trabajo y detalles del producto de un vistazo.",
     "q6": "¿Qué es DebateLab?",
-    "a6": "DebateLab es una app de preparación y práctica de debate con IA para estudiantes y debatientes de competición. Tiene 11 modos de preparación, entre ellos un generador de casos, un atacante de casos, investigación de evidencia con citas, un coach de IA, Interrogatorio y rondas de Sparring cronometradas contra un oponente de IA, y está disponible en inglés, español y húngaro."
+    "a6": "DebateLab es una app de preparación y práctica de debate con IA para estudiantes y debatientes de competición. Tiene {{modes}} modos de preparación, entre ellos un generador de casos, un atacante de casos, investigación de evidencia con citas, un coach de IA, Interrogatorio y rondas de Sparring cronometradas contra un oponente de IA, y está disponible en inglés, español y húngaro."
   },
   "finalCta": {
     "title": "¿Listo para construir tu próximo caso ganador?",
@@ -1050,7 +1088,7 @@
   },
   "generateForm": {
     "motion": "Moción / tema",
-    "motionPlaceholder": "ej., Esta cámara cree que la inteligencia artificial creará más empleos de los que destruirá",
+    "motionPlaceholder": "p. ej. Esta cámara cree que la inteligencia artificial creará más empleos de los que destruirá",
     "side": "Lado",
     "sidePro": "A favor",
     "sideCon": "En contra",
@@ -1194,11 +1232,17 @@
     "exportError": "Ocurrió un error inesperado durante la exportación",
     "weaknessesCount_one": "{{count}} problema encontrado, ordenado por gravedad",
     "weaknessesCount_other": "{{count}} problemas encontrados, ordenados por gravedad",
-    "resultTitle": "Crítica"
+    "resultTitle": "Crítica",
+    "criticalCount_one": "{{count}} crítico",
+    "criticalCount_other": "{{count}} críticos",
+    "majorCount_one": "{{count}} mayor",
+    "majorCount_other": "{{count}} mayores",
+    "minorCount_one": "{{count}} menor",
+    "minorCount_other": "{{count}} menores"
   },
   "brainstormForm": {
     "motion": "Moción / tema",
-    "motionPlaceholder": "ej., La Renta Básica Universal debería implementarse globalmente",
+    "motionPlaceholder": "p. ej. La Renta Básica Universal debería implementarse globalmente",
     "side": "Lado a explorar",
     "sideBoth": "Explorar ambos lados",
     "sidePro": "Solo a favor",
@@ -1239,7 +1283,7 @@
   },
   "factoidsForm": {
     "claim": "Declaración",
-    "claimPlaceholder": "ej., La energía renovable es más rentable que los combustibles fósiles",
+    "claimPlaceholder": "p. ej. La energía renovable es más rentable que los combustibles fósiles",
     "direction": "Postura",
     "directionFor": "A favor",
     "directionAgainst": "En contra",
@@ -1247,7 +1291,7 @@
     "regionPlaceholder": "Global por defecto",
     "sourceCount": "Fuentes",
     "timeframe": "Período (opcional)",
-    "timeframePlaceholder": "ej., 2020-2024, Última década",
+    "timeframePlaceholder": "p. ej. 2020-2024, Última década",
     "sourceType": "Tipo de fuente",
     "sourceAny": "Cualquier fuente confiable",
     "sourceAcademic": "Solo académicas",
@@ -1262,7 +1306,6 @@
     "unverified": "No verificado",
     "pending": "Pendiente",
     "importantNotes": "Notas importantes",
-    "found": "Encontrados",
     "factoids": "Datos",
     "factoidsDesc": "Puntos de evidencia con citas",
     "findMore": "Buscar más evidencia",
@@ -1287,7 +1330,11 @@
     "exportError": "Ocurrió un error inesperado durante la exportación",
     "noVerified": "No se encontraron fuentes verificadas que coincidan. Prueba con otro tipo de fuente o un período más amplio.",
     "useSuggestion": "Buscar esto",
-    "resultTitle": "Evidencia"
+    "resultTitle": "Evidencia",
+    "foundCount_one": "{{count}} dato encontrado",
+    "foundCount_other": "{{count}} datos encontrados",
+    "verifiedCount_one": "{{count}} verificado",
+    "verifiedCount_other": "{{count}} verificados"
   },
   "askChat": {
     "title": "Pregunta a tu coach",
@@ -1314,7 +1361,7 @@
     "followUp": "Preguntas de seguimiento:",
     "pros": "Pros",
     "cons": "Contras",
-    "placeholder": "Pregunta a tu coach de debate...",
+    "placeholder": "Pregunta algo…",
     "inputLabel": "Mensaje para tu coach de debate",
     "placeholderListening": "Escuchando...",
     "saveToLibrary": "Guardar en biblioteca",
@@ -1350,7 +1397,7 @@
   },
   "limitModal": {
     "trialEnded": "Prueba gratuita finalizada",
-    "trialEndedDesc": "Tu prueba gratuita de 3 días ha terminado. Actualiza a Pro para seguir usando DebateLab.",
+    "trialEndedDesc": "Tu prueba gratuita de {{days}} días ha terminado. Mejora a Pro para seguir usando DebateLab.",
     "limitReached": "Acceso diario pausado",
     "limitReachedDesc": "Has usado {{current}} de {{limit}} usos de IA incluidos hoy. El acceso se renueva a medianoche UTC.",
     "weightedDesc": "Este modelo cuenta como {{units}} usos y te quedan {{remaining}} hoy. Elige un modelo más ligero o espera a la medianoche UTC.",
@@ -1358,46 +1405,52 @@
     "weeklyReached": "Asignación semanal de IA agotada",
     "weeklyReachedDesc": "Has usado la asignación de IA de esta semana. Se renueva el lunes a las 00:00 UTC. Contacta con soporte si necesitas más.",
     "ok": "Entendido",
-    "upgrade": "Actualizar a Pro - $5/mes",
     "upgradeNote": "Más acceso a preparación con IA + razonamiento alto",
     "notNow": "Ahora no",
-    "gotIt": "Entendido"
+    "gotIt": "Entendido",
+    "paymentFailed": "Pago fallido",
+    "paymentFailedDesc": "Tu último pago falló. Actualiza tu método de pago en Ajustes para seguir usando DebateLab.",
+    "subscriptionEnded": "Suscripción Pro finalizada",
+    "subscriptionEndedDesc": "Tu suscripción Pro ha terminado. Vuelve a suscribirte para seguir usando DebateLab.",
+    "subscriptionEndedOnDesc": "Tu suscripción Pro terminó el {{date}}. Vuelve a suscribirte para seguir usando DebateLab.",
+    "updatePayment": "Actualizar método de pago",
+    "limitReachedGenericDesc": "Has usado los usos de IA incluidos hoy. El acceso se renueva a medianoche UTC.",
+    "zeroLimitDesc": "Esta cuenta no tiene usos diarios de IA ahora mismo. Contacta con soporte si crees que es un error.",
+    "roundShortDesc": "Esta ronda necesita {{units}} usos de IA y hoy te quedan {{remaining}}. Elige un modelo más ligero o espera a la medianoche UTC."
   },
   "modelModal": {
     "title": "Razonamiento Pro",
     "description": "El razonamiento alto está reservado para miembros Pro.",
     "descriptionWithModel": "El razonamiento alto con {{model}} está reservado para miembros Pro.",
     "upgradeNote": "Actualiza para desbloquear el razonamiento alto.",
-    "upgrade": "Actualizar a Pro - $5/mes",
-    "useFree": "Usar razonamiento bajo"
+    "useFree": "Usar razonamiento bajo",
+    "restrictedDesc": "Este modelo o nivel de razonamiento requiere Pro."
   },
   "dailyLimit": {
-    "usage": "Hoy: {{used}} de {{limit}} solicitudes de IA usadas. Se renuevan a medianoche UTC ({{time}} en tu hora).",
-    "sparringNone": "No te quedan solicitudes de IA hoy, así que el oponente no podrá responder. Se renuevan a medianoche UTC.",
-    "sparringShort": "Esta ronda necesita {{needed}} solicitudes de IA y hoy te quedan {{remaining}}, así que se detendría antes del juez. Se renuevan a medianoche UTC."
+    "remaining_one": "Te queda {{count}} de {{limit}} usos de IA hoy",
+    "remaining_other": "Te quedan {{count}} de {{limit}} usos de IA hoy",
+    "remainingWithReset_one": "Te queda {{count}} de {{limit}} usos de IA hoy. Se renuevan a medianoche UTC ({{time}} en tu hora).",
+    "remainingWithReset_other": "Te quedan {{count}} de {{limit}} usos de IA hoy. Se renuevan a medianoche UTC ({{time}} en tu hora)."
   },
   "pricingModal": {
-    "title": "Actualizar a Pro",
-    "subtitle": "Desbloquea límites de uso más altos, los 10 modelos y razonamiento configurable.",
-    "free": "Gratis",
+    "title": "Mejorar a Pro",
+    "subtitle": "Desbloquea límites de uso más altos, todos los modelos y razonamiento configurable.",
+    "free": "Prueba gratis",
     "pro": "Pro",
     "current": "Actual",
     "recommended": "Recomendado",
-    "freePrice": "$0",
-    "proPrice": "$5",
-    "freePeriod": "/mes",
     "proPeriod": "/mes + impuestos",
     "freeFeature1": "Acceso inicial a preparación con IA",
     "freeFeature2": "Modelos iniciales",
     "freeFeature3": "Todas las funciones de debate",
-    "freeFeature4": "Prueba gratis de 3 días",
+    "freeFeature4": "Sin tarjeta de crédito",
     "proFeature1": "Acceso ampliado a preparación con IA",
-    "proFeature2": "Los 10 modelos, incluidos Claude Opus y Sonnet, GPT-6.1 Sol y Gemini",
+    "proFeature2": "Todos los modelos, incluidos Claude Opus y Sonnet, GPT-6.1 Sol y Gemini",
     "proFeature3": "Investigación profunda con Exa",
     "proFeature4": "Procesamiento prioritario",
     "proFeature5": "Todas las funciones de debate",
     "redirecting": "Redirigiendo...",
-    "upgradeNow": "Actualizar ahora",
+    "offlineUpgrade": "Estás sin conexión. Conéctate a internet para mejorar tu plan.",
     "applying": "Aplicando...",
     "apply": "Aplicar",
     "promoCode": "¿Tienes un código promocional?",
@@ -1407,12 +1460,20 @@
     "codeRedeemed": "Código canjeado",
     "invalidCode": "Código inválido",
     "redeemError": "Error",
-    "redeemErrorDesc": "No se pudo canjear el código"
+    "redeemErrorDesc": "No se pudo canjear el código",
+    "titleYourPlan": "Tu plan",
+    "titleResubscribe": "Vuelve a Pro",
+    "subtitleManage": "Cambia tu método de pago, consulta tus facturas o cancela en el portal de facturación.",
+    "subtitleCanceling": "Tu plan Pro se cancelará el {{date}}. Puedes mantenerlo desde el portal de facturación.",
+    "subtitlePaymentFailed": "Tu último pago falló. Actualiza tu método de pago en el portal de facturación para mantener Pro.",
+    "subtitleSetUpBilling": "Tu acceso Pro viene de una promoción. Configura la facturación para mantener Pro cuando termine.",
+    "freePeriod_one": "durante {{count}} día",
+    "freePeriod_other": "durante {{count}} días"
   },
   "onboarding": {
     "welcome": "¡Bienvenido a DebateLab! 🎉",
     "ready": "¡Estás listo! 🚀",
-    "readyDesc": "Explora las otras funciones: Atacar argumentos, Chat con Coach e Investigar datos.",
+    "readyDesc": "Elige el modo que se ajuste a lo que necesitas para la próxima ronda.",
     "back": "Atrás",
     "close": "Cerrar",
     "getStarted": "¡Comenzar!",
@@ -1427,13 +1488,14 @@
     "debateCurrentDesc": "Todo en DebateLab pertenece a tu debate actual: su moción, sus fuentes y tus resultados. Ábrelo o cámbialo aquí."
   },
   "timer": {
-    "title": "Temporizador de debate",
-    "displayLabel": "Pantalla del temporizador",
+    "title": "Cronómetro de debate",
+    "displayLabel": "Pantalla del cronómetro",
+    "speechProgress": "Progreso de {{speech}}",
     "selectFormat": "Seleccionar formato",
-    "formatStandard": "Estándar (4-6-6-3)",
+    "formatStandard": "Formato escolar 4-6-6-3",
     "formatLD": "Lincoln-Douglas",
-    "formatPF": "Foro público",
-    "formatPolicy": "Política",
+    "formatPF": "Public Forum",
+    "formatPolicy": "Policy",
     "timeUp": "¡Se acabó el tiempo!",
     "speaking": "Hablando",
     "paused": "Pausado",
@@ -1445,7 +1507,7 @@
     "timeUpSignal": "Señal de tiempo agotado",
     "twoBeeps": "Dos pitidos",
     "spaceStartStop": "Espacio para iniciar/detener",
-    "reset": "Reiniciar temporizador",
+    "reset": "Reiniciar cronómetro",
     "resetKey": "R para reiniciar",
     "arrowsChange": "Flechas para cambiar orador",
     "speeches": {
@@ -1485,7 +1547,7 @@
     },
     "disableSound": "Desactivar sonido",
     "enableSound": "Activar sonido",
-    "resetDone": "Temporizador reiniciado"
+    "resetDone": "Cronómetro reiniciado"
   },
   "flowchart": {
     "title": "Diagrama de argumentos",
@@ -1512,7 +1574,7 @@
     "typeField": "Tipo",
     "strengthField": "Fuerza",
     "labelPlaceholder": "Etiqueta corta...",
-    "titlePlaceholder": "Título del nodo...",
+    "titlePlaceholder": "Título del diagrama...",
     "descPlaceholder": "Descripción...",
     "typeArgument": "Argumento",
     "typeAttack": "Ataque",
@@ -1548,6 +1610,7 @@
     "autoLayout": "Organizar automáticamente",
     "edgeAttack": "Ataque",
     "edgeRebuttal": "Refutación",
+    "edgeTypeLabel": "Tipo de enlace",
     "edgeSupport": "Apoyo",
     "exportFailedToast": "No se pudo exportar el diagrama.",
     "selectedNode": "Seleccionado",
@@ -1562,7 +1625,20 @@
     "deletedNamed": "Se eliminó {{title}}",
     "deleteNamed": "Eliminar {{title}}",
     "restoreFailed": "No se pudo restaurar el diagrama",
-    "nodeDeletedNamed": "Se eliminó {{label}}"
+    "nodeDeletedNamed": "Se eliminó {{label}}",
+    "titleRequired": "Añade un título.",
+    "labelRequired": "Añade una etiqueta.",
+    "buildFromCase": "Crear desde el caso actual",
+    "builtFromCase": "Creado a partir de tu caso actual",
+    "canvasControls": "Controles del lienzo",
+    "attribution": "Atribución de React Flow",
+    "fromCase": {
+      "thesis": "Tesis",
+      "argument": "Argumento {{n}}",
+      "attack": "Ataque {{n}}",
+      "rebuttal": "Refutación {{n}}"
+    },
+    "resetForDebate": "Cambiaste de debate, así que el diagrama volvió a la plantilla. Los cambios sin guardar no se conservaron."
   },
   "historyPage": {
     "title": "Historial",
@@ -1605,11 +1681,27 @@
     "deleteCaseLabel": "Eliminar {{title}}",
     "load": "Cargar",
     "resume": "Reanudar",
-    "messages": "mensajes",
     "caseDeleted": "Se eliminó el caso guardado.",
     "deleteCaseDesc": "Esto eliminará el caso guardado de tu historial.",
     "deleteCaseTitle": "¿Eliminar el caso guardado?",
-    "deleteFailed": "No se pudo eliminar el caso guardado."
+    "deleteFailed": "No se pudo eliminar el caso guardado.",
+    "tabCrossfire": "Interrogatorio",
+    "crossfireTitle": "Rondas de interrogatorio",
+    "emptyCrossfire": "Aún no hay rondas de interrogatorio",
+    "emptyCrossfireDesc": "Termina una ronda de interrogatorio para revisar aquí su transcripción y su análisis.",
+    "startCrossfire": "Empezar interrogatorio",
+    "crossfireTurns_one": "{{count}} turno",
+    "crossfireTurns_other": "{{count}} turnos",
+    "open": "Abrir",
+    "crossfireRound": "Ronda de interrogatorio",
+    "deleteCrossfireAria": "Eliminar ronda de interrogatorio: {{title}}",
+    "deleteCrossfireTitle": "¿Eliminar la ronda de interrogatorio?",
+    "deleteCrossfireDesc": "Esto elimina la transcripción y el análisis de tu historial.",
+    "crossfireDeleted": "Ronda de interrogatorio eliminada.",
+    "crossfireDeleteFailed": "No se pudo eliminar la ronda de interrogatorio.",
+    "crossfireUnreadable": "Esta ronda se guardó en un formato antiguo y no se puede mostrar.",
+    "crossfireNoDebrief": "Esta ronda no tiene análisis.",
+    "openCrossfireAria": "Abrir ronda de interrogatorio: {{title}}"
   },
   "libraryPage": {
     "title": "Biblioteca de fuentes",
@@ -1624,7 +1716,6 @@
     "chooseFile": "Elegir archivo",
     "importPreview": "Vista previa de importación",
     "saveImported": "Guardar fuente importada",
-    "words": "palabras",
     "folder": "Carpeta",
     "generalFolder": "General",
     "textSource": "Texto",
@@ -1662,7 +1753,6 @@
     "titlePlaceholder": "Título de la fuente...",
     "originPlaceholder": "URL o referencia...",
     "contentPlaceholder": "Pega el contenido de la fuente...",
-    "sourcesCount": "fuentes",
     "emptyTitle": "Sin fuentes aún",
     "emptyDesc": "Añade fuentes para fundamentar las respuestas de IA con evidencia real.",
     "manualEntry": "Entrada manual",
@@ -1706,11 +1796,28 @@
     "restoreFailed": "No se pudo restaurar la fuente",
     "deleteFailed": "No se pudo eliminar la fuente.",
     "readingFile": "Leyendo el archivo…",
-    "summary": "{{total}} fuentes · {{active}} activas · {{folders}} carpetas",
+    "summary": "{{sources}} · {{active}} · {{folders}}",
     "mergeFolderTitle": "¿Fusionar con {{name}}?",
     "mergeFolders": "Fusionar carpetas",
     "mergeFailed": "No se pudieron fusionar las carpetas. Inténtalo de nuevo.",
-    "openOrigin": "Abrir {{title}} en una pestaña nueva"
+    "openOrigin": "Abrir {{title}} en una pestaña nueva",
+    "savingSource": "Guardando…",
+    "offlineTitle": "Cambio no guardado",
+    "offlineNotSaved": "Estás sin conexión. Vuelve a conectarte e inténtalo de nuevo.",
+    "toggleFailed": "No se pudo cambiar esta fuente",
+    "toggleFailedDesc": "Volvió a como estaba. Inténtalo de nuevo.",
+    "sourceSaved": "{{title}} se guardó en la biblioteca",
+    "duplicateUrlDesc": "Esta página ya está en la biblioteca de este debate.",
+    "loadingSources": "Cargando fuentes…",
+    "folderUpdateFailed": "No se pudo cambiar esta carpeta",
+    "sourceCount_one": "{{count}} fuente",
+    "sourceCount_other": "{{count}} fuentes",
+    "activeCount_one": "{{count}} activa",
+    "activeCount_other": "{{count}} activas",
+    "folderCount_one": "{{count}} carpeta",
+    "folderCount_other": "{{count}} carpetas",
+    "wordCount_one": "{{formatted}} palabra",
+    "wordCount_other": "{{formatted}} palabras"
   },
   "autoSavedSources": {
     "undo": "Deshacer fuentes autoguardadas",
@@ -1725,6 +1832,8 @@
   },
   "sharedPage": {
     "title": "Contenido compartido",
+    "notFoundTitle": "Enlace compartido no encontrado",
+    "backHome": "Volver al inicio",
     "noCode": "No se proporcionó código de compartir",
     "notFound": "Contenido no encontrado",
     "loadFailed": "Error al cargar contenido compartido",
@@ -1732,12 +1841,13 @@
     "goToApp": "Ir a la app",
     "openApp": "Abrir app",
     "sharedOn": "Compartido el",
-    "views": "vistas"
+    "viewCount_one": "{{count}} vista",
+    "viewCount_other": "{{count}} vistas"
   },
   "privacyPage": {
     "title": "Política de privacidad",
     "lastUpdated": "Última actualización",
-    "date": "1 de octubre de 2026",
+    "date": "23 de octubre de 2026",
     "s1": "Información que recopilamos",
     "p1": "Recopilamos la información que proporcionas al crear una cuenta, incluido tu nombre y correo electrónico, que pueden proceder del inicio de sesión con Google o por email, además de datos de uso como contenido generado, elementos guardados y patrones de interacción. Si usas un código demo emitido por un administrador, procesamos ese código para autenticar tu cuenta demo.",
     "s2": "Cómo usamos tu información",
@@ -1747,17 +1857,19 @@
     "s4": "Almacenamiento de datos",
     "p4": "Tus datos se almacenan de forma segura usando infraestructura de Supabase con cifrado en reposo y en tránsito.",
     "s5": "Compartir datos",
-    "p5": "No vendemos tus datos personales. Solo compartimos datos con OpenRouter para el procesamiento de IA, con ElevenLabs para la voz del oponente en las rondas con voz y con procesadores de pago para la facturación.",
+    "p5": "No vendemos tus datos personales. Solo compartimos datos con OpenRouter para el procesamiento de IA, con ElevenLabs para la voz del oponente en las rondas con voz, con Exa para la búsqueda web, con PostHog y Sentry para la analítica y la monitorización de errores (consulta Cookies y seguimiento), con Jam para los informes de errores (consulta Informes de errores con Jam) y con procesadores de pago para la facturación.",
     "s6": "Tus derechos",
     "p6": "En Configuración puedes descargar una copia de tus datos en un archivo JSON, borrar tu trabajo guardado o eliminar tu cuenta. Eliminar la cuenta la borra para siempre junto con todos los datos guardados en ella y cancela de inmediato cualquier suscripción Pro. Stripe conserva sus propios registros de facturación, como facturas y pagos, según exigen las normas fiscales y contables.",
     "s7": "Cookies y seguimiento",
     "p7": "Usamos cookies y almacenamiento del navegador esenciales para la autenticación y las preferencias. Usamos PostHog para analítica de producto y Sentry para monitorización de errores, registros estructurados, métricas de la aplicación, seguimiento del rendimiento y reproducción de sesiones solo cuando hay errores. Sentry no registra sesiones normales. Registra sesiones que contienen errores capturados; todo el texto y los campos de entrada se ocultan en las reproducciones y el contenido multimedia se bloquea. Sentry recibe metadatos técnicos como rutas, datos del navegador, URL, métodos y códigos de estado de solicitudes, trazas de pila, tiempos y clasificaciones seguras de eventos. La recopilación automática de identidad del usuario, cookies, cabeceras, cuerpos HTTP, parámetros de consulta, entradas y salidas de IA y variables de marcos de pila está desactivada. La captura automática, el registro de páginas vistas, la grabación de sesiones y el almacenamiento persistente de PostHog están desactivados. No enviamos contenido de debates, mensajes de chat, títulos de fuentes ni direcciones de correo electrónico en eventos analíticos o registros estructurados.",
-    "s8": "Privacidad de menores",
-    "p8": "DebateLab está diseñado para usuarios de 13 años o más. No recopilamos datos de menores de 13 años conscientemente.",
-    "s9": "Cambios a esta política",
-    "p9": "Podemos actualizar esta política periódicamente. Los cambios significativos se comunicarán por email o notificación en la app.",
-    "s10": "Contáctanos",
-    "p10": "Para preguntas de privacidad o solicitudes de datos, contáctanos en privacy@debatelab.app."
+    "s8": "Informes de errores con Jam",
+    "p8": "Usamos Jam, un servicio de informes de errores de We are Jam, Inc., para que puedas mostrarnos un problema grabándolo. Los scripts de Jam se cargan para todas las personas que visitan DebateLab, tras tu primer clic, toque o pulsación de tecla, o 8 segundos después de que cargue la página, lo que ocurra primero. Abren un marco de recorder.jam.dev, que recibe la dirección de la página en la que estás, datos de tu navegador y dispositivo y los tiempos de carga de la página, y recopilan los registros de la consola de la página, sus solicitudes de red y tus clics y pulsaciones de teclas para poder adjuntarlos a una grabación. Una grabación se crea cuando abres un enlace de grabación de Jam que te hemos enviado y pulsas «Start Recording». Contiene un vídeo de la pantalla, ventana o pestaña que elijas compartir junto con esos datos técnicos, por lo que puede incluir todo lo que se muestre en la página o se intercambie con nuestros servidores, como el contenido de tus debates. Mientras tienes la sesión iniciada, el ID de tu cuenta de DebateLab está disponible para Jam y se adjunta a cualquier grabación que hagas, lo que vincula la grabación con tu cuenta. Jam trata estos datos como nuestro proveedor de servicios y los conserva hasta que dejan de ser necesarios para prestar su servicio; no indica un plazo de conservación fijo. Para pedirnos que eliminemos una grabación u oponerte a este tratamiento, escríbenos a privacy@debatelab.app.",
+    "s9": "Privacidad de menores",
+    "p9": "DebateLab está diseñado para usuarios de 13 años o más. No recopilamos datos de menores de 13 años conscientemente.",
+    "s10": "Cambios a esta política",
+    "p10": "Podemos actualizar esta política periódicamente. Los cambios significativos se comunicarán por email o notificación en la app.",
+    "s11": "Contáctanos",
+    "p11": "Para preguntas de privacidad o solicitudes de datos, contáctanos en privacy@debatelab.app."
   },
   "termsPage": {
     "title": "Términos de servicio",
@@ -1768,7 +1880,7 @@
     "s2": "Descripción del servicio",
     "p2": "DebateLab es una herramienta de preparación de debates impulsada por IA que proporciona generación de argumentos, análisis y funciones de coaching.",
     "s3": "Requisitos de cuenta",
-    "p3": "Puedes iniciar sesión con Google, mediante un enlace enviado por email o con un código demo emitido por un administrador. Los códigos demo proporcionan acceso temporal a una cuenta designada. Eres responsable de toda la actividad de tu cuenta.",
+    "p3": "Puedes iniciar sesión con Google, con un código de seis dígitos enviado por email o con un código demo emitido por un administrador. Los códigos demo proporcionan acceso temporal a una cuenta designada. Eres responsable de toda la actividad de tu cuenta.",
     "s4": "Suscripción y facturación",
     "p4": "Las pruebas gratuitas duran 3 días con solicitudes limitadas. Las suscripciones Pro cuestan $5/mes más impuestos, facturadas vía Stripe. Cancela en cualquier momento.",
     "s5": "Uso aceptable",
@@ -1910,7 +2022,7 @@
     "format": {
       "standard": "Formato escolar 4-6-6-3",
       "ld": "Lincoln-Douglas",
-      "pf": "Foro público"
+      "pf": "Public Forum"
     },
     "formatDescription": {
       "standard": "El formato del colegio: Introductor, R1, R2 y Conclusor para ambos lados.",
@@ -1943,7 +2055,7 @@
     "difficulty": {
       "easy": "Calentamiento",
       "medium": "Torneo",
-      "hard": "Implacable"
+      "hard": "Despiadado"
     },
     "roleGuidance": {
       "introductor": "Abre con un exordio, define los términos clave, fija el marco y la tesis, y presenta la hoja de ruta. Reserva los argumentos completos para R1.",
@@ -1969,18 +2081,22 @@
       "aboutMinutes": "Unos {{count}} minutos",
       "turns": "{{count}} turnos",
       "opponentTurns": "Turnos del oponente",
-      "aiRequests": "Solicitudes a la IA",
-      "aiRequestBreakdown": "{{count}} respuestas + 1 juez",
+      "aiRequests": "Coste de la ronda",
+      "aiRequestBreakdown": "Por toda la ronda: {{count}} respuestas + el juez",
+      "roundCostUnit_one": "uso de IA",
+      "roundCostUnit_other": "usos de IA",
       "aiModel": "Modelo de IA",
       "openingRoom": "Abriendo la sala...",
       "startRound": "Iniciar ronda",
+      "checkingQuota": "Comprobando tus usos de IA de hoy…",
+      "startFailed": "No se pudo abrir la ronda. Inténtalo de nuevo.",
       "draftNotice": "Tu borrador se guarda en esta pestaña mientras escribes. Puedes pausar sin perder tu lugar.",
       "offlineCannotStart": "Vuelve a conectarte para iniciar una ronda. La configuración se conserva mientras estás sin conexión.",
       "speakingOrder": "Orden de intervención",
       "aboutMinutes_one": "Aproximadamente {{count}} minuto",
       "aboutMinutes_other": "Aproximadamente {{count}} minutos",
-      "aiRequestBreakdown_one": "{{count}} respuesta + 1 juez",
-      "aiRequestBreakdown_other": "{{count}} respuestas + 1 juez",
+      "aiRequestBreakdown_one": "Por toda la ronda: {{count}} respuesta + el juez",
+      "aiRequestBreakdown_other": "Por toda la ronda: {{count}} respuestas + el juez",
       "speeches_one": "{{count}} intervención",
       "speeches_other": "{{count}} intervenciones",
       "turns_one": "{{count}} turno",
@@ -1996,7 +2112,6 @@
       "draftSavedNotice": "Los borradores se guardan en esta pestaña",
       "connected": "Conectado",
       "offlineDraft": "Sin conexión. Borrador guardado localmente.",
-      "totalWords": "{{count}} palabras",
       "complete": "Ronda terminada",
       "turnOf": "Turno {{current}} de {{total}}",
       "preparingResult": "Preparando tu resultado",
@@ -2014,7 +2129,6 @@
       "judgeDescription": "Está leyendo las afirmaciones, respuestas y decisiones estratégicas. Esto suele requerir una solicitud.",
       "yourSpeech": "Tu intervención",
       "yourSpeechDescription": "Expón el caso con el tiempo que tienes. El oponente responderá a este texto.",
-      "wordCount": "{{count}} palabras",
       "speechPlaceholder": "Desarrolla tu afirmación, razonamiento e impacto...",
       "draftFor": "Borrador para {{label}}",
       "toSubmit": "para enviar",
@@ -2041,12 +2155,15 @@
       "youAreCon": "Estás en contra",
       "submittedCount_one": "{{count}} enviada",
       "submittedCount_other": "{{count}} enviadas",
-      "totalWords_one": "{{count}} palabra",
-      "totalWords_other": "{{count}} palabras",
-      "wordCount_one": "{{count}} palabra",
-      "wordCount_other": "{{count}} palabras",
+      "totalWords_one": "{{formatted}} palabra hasta ahora",
+      "totalWords_other": "{{formatted}} palabras hasta ahora",
+      "wordCount_one": "{{formatted}} palabra",
+      "wordCount_other": "{{formatted}} palabras",
       "latestOpponent": "Último discurso del oponente",
-      "opponentSpeaking": "El oponente está hablando"
+      "opponentSpeaking": "El oponente está hablando",
+      "startSpeaking": "Empezar a hablar",
+      "readyNote": "Tu cronómetro empieza cuando empiezas a hablar o a escribir.",
+      "currentRound": "Ronda actual"
     },
     "scorecard": {
       "eyebrow": "Revisión de la ronda",
@@ -2263,7 +2380,7 @@
     "deleted": "Debate eliminado",
     "deleteFailed": "No se pudo eliminar el debate",
     "lastActivity": "Última actividad {{when}}",
-    "counts": "{{sources}} fuentes · {{outputs}} resultados",
+    "counts": "{{sources}} ({{active}}) · {{outputs}}",
     "menuAria": "Debate actual: {{motion}}",
     "open": "Abrir debate",
     "useOneOff": "Usar modo puntual",
@@ -2293,7 +2410,6 @@
     "recentWork": "Trabajo reciente",
     "noWork": "Los resultados de cualquier herramienta aparecen aquí automáticamente.",
     "tools": "Preparar y practicar",
-    "openItemAria": "Abrir {{title}}",
     "recordFailed": "No se pudo guardar este resultado en el debate",
     "sourceNeedsDebate": "Inicia o elige un debate antes de guardar fuentes.",
     "librarySources": "Fuentes de",
@@ -2322,13 +2438,13 @@
       "factoids": "Datos",
       "chat": "Chat de preguntas",
       "flowchart": "Diagrama",
-      "crossfire": "Contrainterrogatorio",
+      "crossfire": "Interrogatorio",
       "sparring": "Sparring",
       "source": "Fuente"
     },
     "formats": {
       "custom": "Personalizado",
-      "bp": "Parlamentario británico",
+      "bp": "British Parliamentary",
       "policy": "Policy",
       "classroom": "Aula"
     },
@@ -2339,7 +2455,15 @@
     "itemCount_other": "{{count}} elementos",
     "viewAll": "Ver todo ({{total}})",
     "switching": "Cambiando…",
-    "deleting": "Eliminando…"
+    "deleting": "Eliminando…",
+    "creating": "Creando…",
+    "loadingCurrent": "Cargando tu debate actual…",
+    "activeCount_one": "{{count}} activa",
+    "activeCount_other": "{{count}} activas",
+    "outputCount_one": "{{count}} resultado",
+    "outputCount_other": "{{count}} resultados",
+    "sourceCount_one": "{{count}} fuente",
+    "sourceCount_other": "{{count}} fuentes"
   },
   "debateContext": {
     "using": "Usando {{list}}",
@@ -2350,8 +2474,6 @@
     "resultCount_other": "{{count}} resultados guardados",
     "resultName": "{{kind}} ({{side}})",
     "resultMeta": "{{kind}}, {{side}}",
-    "leftOut_one": "{{count}} elemento queda fuera para que la solicitud quepa.",
-    "leftOut_other": "{{count}} elementos quedan fuera para que la solicitud quepa.",
     "review": "Revisar",
     "oneOff": "Modo puntual: no se usará ni se guardará material del debate actual.",
     "reviewTitle": "Qué usará esta solicitud",
@@ -2384,7 +2506,13 @@
     "lastShortened_one": "{{count}} fuente se recortó para que cupiera.",
     "lastShortened_other": "{{count}} fuentes se recortaron para que cupieran.",
     "lastUnavailable_one": "{{count}} elemento ya no estaba en este debate.",
-    "lastUnavailable_other": "{{count}} elementos ya no estaban en este debate."
+    "lastUnavailable_other": "{{count}} elementos ya no estaban en este debate.",
+    "sourceCountOf_one": "{{used}} de {{count}} fuente",
+    "sourceCountOf_other": "{{used}} de {{count}} fuentes",
+    "resultCountOf_one": "{{used}} de {{count}} resultado guardado",
+    "resultCountOf_other": "{{used}} de {{count}} resultados guardados",
+    "didntFit_one": "({{count}} no cupo)",
+    "didntFit_other": "({{count}} no cupieron)"
   },
   "themeToggle": {
     "toggle": "Cambiar tema",
@@ -2448,7 +2576,8 @@
     "safety": "{{provider}} bloqueó esta solicitud por seguridad. Prueba a reformularla.",
     "unexpectedProvider": "El proveedor de IA devolvió un error inesperado. Inténtalo más tarde.",
     "unexpected": "Se produjo un error inesperado",
-    "offline": "Comprueba tu conexión e inténtalo de nuevo."
+    "offline": "Comprueba tu conexión e inténtalo de nuevo.",
+    "notCharged": "No se te ha cobrado esta solicitud."
   },
   "clock": {
     "timeUp": "Se acabó el tiempo.",
@@ -2456,7 +2585,100 @@
   },
   "shortAnswer": {
     "question": "¿Cuál es la mejor herramienta de IA para practicar debate?",
-    "answer": "Depende de lo que necesites. En {{asOf}}, DebateLab encaja con estudiantes y debatientes de competición que quieren un solo lugar para construir casos, encontrar puntos débiles, comprobar evidencia y hacer rondas de práctica cronometradas, en inglés, español o húngaro: prueba gratis de 3 días sin tarjeta y después $5/mes + impuestos. Si quieres practicar gratis contra un oponente de IA en estilo World Schools o Parlamentario Asiático, debatelab.ai, un producto distinto, dice ser gratuito. Si sobre todo necesitas ideas o ayuda para escribir sobre cualquier tema, un asistente general como ChatGPT es más flexible.",
+    "answer": "Depende de lo que necesites. En {{asOf}}, DebateLab encaja con estudiantes y debatientes de competición que quieren un solo lugar para construir casos, encontrar puntos débiles, comprobar evidencia y hacer rondas de práctica cronometradas, en inglés, español o húngaro: prueba gratis de 3 días sin tarjeta y después $5/mes + impuestos. Si quieres practicar gratis contra un oponente de IA en estilo World Schools o Asian Parliamentary, debatelab.ai, un producto distinto, dice ser gratuito. Si sobre todo necesitas ideas o ayuda para escribir sobre cualquier tema, un asistente general como ChatGPT es más flexible.",
     "compare": "Comparar herramientas de IA para debate"
+  },
+  "sessionQuota": {
+    "cost_one": "Esta ronda cuesta {{count}} uso de IA, dure los turnos que dure.",
+    "cost_other": "Esta ronda cuesta {{count}} usos de IA, dure los turnos que dure.",
+    "remaining_one": "Hoy te queda {{count}}.",
+    "remaining_other": "Hoy te quedan {{count}}."
+  },
+  "resultActions": {
+    "savedToHistory": "Guardado en el historial",
+    "saveFailed": "No se pudo guardar. Inténtalo de nuevo."
+  },
+  "billing": {
+    "upgradeToPro": "Mejorar a Pro",
+    "manageSubscription": "Gestionar suscripción",
+    "setUpBilling": "Configurar facturación",
+    "resubscribe": "Volver a suscribirme"
+  },
+  "trialBanner": {
+    "daysLeft_one": "Prueba gratis: queda {{count}} día.",
+    "daysLeft_other": "Prueba gratis: quedan {{count}} días.",
+    "endsToday": "Tu prueba gratis termina hoy.",
+    "dismiss": "Ocultar el aviso de la prueba"
+  },
+  "pageHead": {
+    "home": {
+      "title": "{{brand}} | Preparación de debates con IA: casos y refutaciones",
+      "description": "{{product}} es una app con IA para preparar y practicar debates: casos, refutaciones, evidencia, coaching y rondas cronometradas contra un oponente de IA."
+    },
+    "terms": {
+      "title": "Términos del servicio | {{brand}}",
+      "description": "Las condiciones de uso de {{brand}}: cuentas, suscripciones, uso aceptable, contenido generado por IA, propiedad intelectual y responsabilidad."
+    },
+    "privacy": {
+      "title": "Política de privacidad | {{brand}}",
+      "description": "Cómo {{brand}} recopila, usa, guarda y comparte tu información, cómo se procesan las solicitudes de IA y qué derechos tienes sobre tus datos."
+    },
+    "sources": {
+      "title": "Fuentes | {{brand}}",
+      "description": "Las fuentes consultadas para investigar y desarrollar {{brand}}, por orden alfabético del apellido del autor o del nombre de la institución."
+    },
+    "notFound": {
+      "title": "Página no encontrada | {{brand}}",
+      "description": "Esta página no existe en {{brand}}."
+    },
+    "tools": {
+      "title": "Herramientas de debate gratis: cronómetro, mociones, hojas de flujo | {{brand}}",
+      "description": "Herramientas de debate gratis y sin cuenta: cronómetro por formato, generador de mociones, hojas de flujo imprimibles y calculadora de tiempo de discurso."
+    },
+    "debateTimer": {
+      "title": "Cronómetro de debate gratis para PF, LD, Policy, BP y World Schools | {{brand}}",
+      "description": "Cronómetro de debate gratis con ajustes para PF, LD, Policy, BP, World Schools y Asian Parliamentary: tiempo protegido, avisos de POI y preparación."
+    },
+    "motionGenerator": {
+      "title": "Generador de mociones de debate: 300 mociones de práctica | {{brand}}",
+      "description": "Saca una moción de debate al azar, o tres para practicar el veto, de entre 300 mociones originales ordenadas por tema, dificultad y tipo."
+    },
+    "flowSheet": {
+      "title": "Generador de hojas de flujo de debate imprimibles | {{brand}}",
+      "description": "Imprime una hoja de flujo de una página con una columna por discurso en PF, LD, Policy, BP, World Schools o Asian Parliamentary, en A4 o Carta."
+    },
+    "speechTimeCalculator": {
+      "title": "Calculadora de tiempo para discursos de debate | {{brand}}",
+      "description": "Pega un discurso para ver cuántas palabras tiene, cuánto dura a ritmo lento, medio o rápido y en qué turnos de debate cabe. Funciona en tu navegador."
+    }
+  },
+  "validation": {
+    "caseTextRequired": "El texto del argumento es obligatorio",
+    "motionRequired": "La moción es obligatoria",
+    "claimRequired": "La declaración es obligatoria",
+    "messageRequired": "El mensaje es obligatorio"
+  },
+  "serverErrors": {
+    "signInRequired": "Inicia sesión para continuar.",
+    "sessionExpired": "No se pudo verificar tu sesión. Puede que haya caducado. Vuelve a iniciar sesión.",
+    "accessDenied": "Acceso denegado. Puede que tu sesión haya caducado. Vuelve a iniciar sesión.",
+    "banned": "Tu cuenta está suspendida. Ponte en contacto con soporte.",
+    "requestTooLarge": "La solicitud es demasiado grande. Acorta el texto e inténtalo de nuevo.",
+    "messageTooLarge": "El mensaje es demasiado largo. Acórtalo antes de enviarlo.",
+    "usageCheckFailed": "No se pudo comprobar tu cuota. Inténtalo de nuevo.",
+    "accessCheckFailed": "No se pudo comprobar el acceso de tu cuenta. Inténtalo de nuevo.",
+    "aiService": "Error del servicio de IA: {{message}}. Inténtalo de nuevo.",
+    "portalFailed": "No se pudo abrir el portal de facturación. Inténtalo de nuevo.",
+    "alreadySubscribed": "Ya tienes una suscripción. Gestiónala desde Ajustes.",
+    "promoExpired": "Este código promocional ha caducado",
+    "promoExhausted": "Este código promocional ha alcanzado su límite de usos",
+    "promoApplied": "¡Código promocional aplicado!",
+    "promoDiscountNoted": "¡Código de descuento guardado! Aplícalo al pagar para obtener el descuento.",
+    "promoInvalid": "Código promocional no válido o caducado",
+    "promoAlreadyRedeemed": "Ya has canjeado este código",
+    "promoTooManyAttempts": "Demasiados intentos con códigos promocionales. Vuelve a intentarlo en 15 minutos.",
+    "promoUnsupported": "Tipo de código promocional no compatible",
+    "promoMissing": "Introduce un código promocional",
+    "promoFailed": "No se pudo canjear el código promocional. Inténtalo de nuevo."
   }
 }

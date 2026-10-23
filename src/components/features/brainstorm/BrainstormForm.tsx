@@ -74,7 +74,7 @@ export function BrainstormForm({ onSubmit, isLoading, debatePrefill = true }: Br
               className="h-12"
             />
             {errors.motion && (
-              <p className="text-sm text-destructive">{errors.motion.message}</p>
+              <p className="text-sm text-destructive">{t(errors.motion.message ?? '')}</p>
             )}
           </div>
 

@@ -19,12 +19,14 @@ import { cn } from '@/lib/utils';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { LanguageSwitcher } from '@/components/LanguageSwitcher';
 import { AnnouncementBanner } from '@/components/layout/AnnouncementBanner';
+import { TrialBanner } from '@/components/features/subscription/TrialBanner';
 import { useRoutePrefetch } from '@/hooks/use-route-prefetch';
 import { useAuth } from '@/lib/supabase/AuthProvider';
 import { CurrentDebateMenu } from '@/components/features/debate/CurrentDebateMenu';
 import { useCurrentDebate } from '@/lib/stores/debate-store';
 import { navSectionFor } from '@/components/layout/nav-sections';
 import { DebateDialogs, InactiveDebateGate } from '@/components/features/debate/DebateDialogs';
+import { MAIN_CONTENT_ID, SkipLink } from '@/components/layout/SkipLink';
 import {
   dismissAnnouncement,
   listActiveAnnouncements,
@@ -48,7 +50,8 @@ const desktopLinkClass = cn(
   "flex items-center gap-1.5 px-2 xl:px-3 py-2 rounded-md text-sm font-medium whitespace-nowrap transition-colors",
   "text-muted-foreground hover:text-foreground hover:bg-accent"
 );
-const activeLinkClass = "bg-primary/10 text-primary hover:bg-primary/10 hover:text-primary";
+// A 5% tint keeps primary text above 4.5:1; at 10% it measured 4.45.
+const activeLinkClass = "bg-primary/5 text-primary hover:bg-primary/5 hover:text-primary";
 
 const ANNOUNCEMENT_CACHE_KEY = 'debatelab-announcements';
 
@@ -194,18 +197,34 @@ export function AppLayout() {
   }, [announcements, announcementsUserId, userId]);
 
   // The mobile menu opens just below the whole header (two rows on phones), whatever its height.
+  // Size comes from the observer's border box, which is already laid out. Reading
+  // getBoundingClientRect on scroll forced a layout on every frame of /app.
   useEffect(() => {
     const header = headerRef.current;
     if (!header || typeof ResizeObserver === 'undefined') return;
     const root = document.documentElement;
-    const update = () => root.style.setProperty('--app-header-bottom', `${header.getBoundingClientRect().bottom}px`);
-    update();
-    const observer = new ResizeObserver(update);
+    const bannerOffset = () => {
+      const raw = root.style.getPropertyValue('--staging-banner-height').trim();
+      if (!raw) return 0;
+      if (raw.endsWith('rem')) {
+        const rootFont = parseFloat(getComputedStyle(root).fontSize);
+        return (parseFloat(raw) || 0) * (Number.isFinite(rootFont) ? rootFont : 16);
+      }
+      return parseFloat(raw) || 0;
+    };
+    const apply = (height: number) => {
+      root.style.setProperty('--app-header-bottom', `${Math.round(height + bannerOffset())}px`);
+    };
+    const observer = new ResizeObserver((entries) => {
+      const entry = entries[0];
+      if (!entry) return;
+      const box = entry.borderBoxSize?.[0];
+      apply(box ? box.blockSize : header.offsetHeight);
+    });
     observer.observe(header);
-    window.addEventListener('scroll', update, { passive: true });
     return () => {
       observer.disconnect();
-      window.removeEventListener('scroll', update);
+      root.style.removeProperty('--app-header-bottom');
     };
   }, []);
 
@@ -239,11 +258,12 @@ export function AppLayout() {
 
   return (
     <div className="native-safe-screen flex flex-col bg-background">
+      <SkipLink />
       {/* Header: the edge appears once content scrolls under it. */}
       <header
         ref={headerRef}
         className={cn(
-          "native-safe-top sticky top-[var(--staging-banner-height,0px)] z-50 border-b bg-card/80 backdrop-blur-xl transition-colors",
+          "native-safe-top sticky top-(--staging-banner-height,0px) z-50 border-b bg-card/80 backdrop-blur-xl transition-colors",
           scrolled ? "border-border/60" : "border-transparent",
         )}
       >
@@ -293,7 +313,7 @@ export function AppLayout() {
                 to="/app/settings"
                 aria-label={t('nav.settings', 'Settings')}
                 data-tour="nav-settings"
-                className="hidden lg:inline-flex h-10 w-10 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                className="hidden lg:inline-flex h-10 w-10 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                 activeClassName={activeLinkClass}
               >
                 <Settings className="h-5 w-5" aria-hidden="true" />
@@ -317,11 +337,11 @@ export function AppLayout() {
                 <DialogPrimitive.Overlay className="fixed inset-0 z-40 bg-black/40 lg:hidden data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=open]:fade-in-0 data-[state=closed]:fade-out-0 ease-out-strong data-[state=open]:duration-180 data-[state=closed]:duration-120" />
                 <DialogPrimitive.Content
                   aria-describedby={undefined}
-                  className="native-scroll-y native-mobile-menu fixed inset-x-0 top-[var(--app-header-bottom,8rem)] z-40 overflow-y-auto border-b border-border bg-card p-4 shadow-lg lg:hidden data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=open]:fade-in-0 data-[state=closed]:fade-out-0 data-[state=open]:slide-in-from-top-1 data-[state=closed]:slide-out-to-top-1 ease-out-strong data-[state=open]:duration-180 data-[state=closed]:duration-120"
+                  className="native-scroll-y native-mobile-menu fixed inset-x-0 top-(--app-header-bottom,8rem) z-40 overflow-y-auto border-b border-border bg-card p-4 shadow-lg lg:hidden data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=open]:fade-in-0 data-[state=closed]:fade-out-0 data-[state=open]:slide-in-from-top-1 data-[state=closed]:slide-out-to-top-1 ease-out-strong data-[state=open]:duration-180 data-[state=closed]:duration-120"
                 >
                   <DialogPrimitive.Title className="sr-only">{t('nav.mobileNavigation')}</DialogPrimitive.Title>
                   <nav aria-label={t('nav.mobileNavigation')}>
-                    <div className="grid gap-1 pb-[var(--native-safe-bottom,0px)]">
+                    <div className="grid gap-1 pb-(--native-safe-bottom,0px)">
                       {mobileNavItems.map((item) => {
                         const active = item.key === 'tools' ? section === 'tools'
                           : item.key === 'currentDebate' ? section === 'debate'
@@ -334,7 +354,7 @@ export function AppLayout() {
                             onClick={() => setMobileMenuOpen(false)}
                             className={cn(
                               "flex min-h-11 items-center gap-3 px-3 py-2.5 rounded-lg transition-colors",
-                              active ? "bg-primary/10 text-primary font-semibold" : "text-muted-foreground hover:text-foreground hover:bg-accent",
+                              active ? "bg-primary/5 text-primary font-semibold" : "text-muted-foreground hover:text-foreground hover:bg-accent",
                             )}
                           >
                             <item.icon className="h-5 w-5" aria-hidden="true" />
@@ -368,12 +388,13 @@ export function AppLayout() {
           onDismiss={() => handleDismissAnnouncement(announcements[0].id)}
         />
       )}
+      <TrialBanner />
 
       <DebateDialogs />
       <InactiveDebateGate />
 
       {/* Main Content */}
-      <main className="native-main-content flex-1">
+      <main id={MAIN_CONTENT_ID} className="native-main-content flex-1 focus-visible:outline-hidden">
         <Outlet />
       </main>
 
@@ -382,8 +403,8 @@ export function AppLayout() {
         <div className="container flex flex-col items-center justify-between gap-2 px-4 text-sm text-muted-foreground md:flex-row">
           <p className="font-medium">DebateLab</p>
           <div className="flex items-center gap-4">
-            <Link to="/terms" {...termsPrefetch} className="inline-flex items-center justify-center rounded-sm transition-colors hover:text-foreground pointer-coarse:min-h-11 pointer-coarse:min-w-11">{t('footer.terms')}</Link>
-            <Link to="/privacy" {...privacyPrefetch} className="inline-flex items-center rounded-sm transition-colors hover:text-foreground pointer-coarse:min-h-11">{t('footer.privacy')}</Link>
+            <Link to="/terms" {...termsPrefetch} className="inline-flex min-h-6 items-center justify-center rounded-sm transition-colors hover:text-foreground pointer-coarse:min-h-11 pointer-coarse:min-w-11">{t('footer.terms')}</Link>
+            <Link to="/privacy" {...privacyPrefetch} className="inline-flex min-h-6 items-center rounded-sm transition-colors hover:text-foreground pointer-coarse:min-h-11">{t('footer.privacy')}</Link>
           </div>
         </div>
       </footer>

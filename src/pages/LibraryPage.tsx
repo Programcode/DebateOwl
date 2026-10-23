@@ -1,6 +1,6 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { DebateRequiredError, useSessionStore, type Source } from '@/lib/stores/session-store';
+import { DebateRequiredError, DuplicateSourceError, isPendingSource, useSessionStore, type Source } from '@/lib/stores/session-store';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button, buttonVariants } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -10,8 +10,11 @@ import { Trash2, Plus, Globe, FileText, Database, ShieldCheck, ShieldAlert, Exte
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
-import { formatEuropeanDate } from '@/lib/date-format';
+import { formatEuropeanDate, formatNumber } from '@/lib/date-format';
 import { importSourceFromUrl } from '@/lib/source-import';
+import { findSavedPage } from '@/lib/source-url';
+import { validateUrl } from '@/lib/validation/url';
+import { browserIsOffline, isBrowserNetworkFailure } from '@/lib/ai/client';
 import { useCurrentDebate, useDebateStore } from '@/lib/stores/debate-store';
 import { importSourceFile, SourceFileImportError } from '@/lib/source-file-import';
 import {
@@ -62,53 +65,54 @@ function SourceRow({
       : sourceFolder;
 
 
+  const pending = isPendingSource(source);
+  // A row still saving has no server id yet, so it cannot be opened, changed or deleted.
+  const open = () => {
+    if (!pending) onOpen(source);
+  };
+
   return (
     <div className="px-1 pb-2">
       {/* The row is clickable for pointers; the title button is the keyboard and screen-reader target. */}
       <div
-        onClick={() => onOpen(source)}
-        className={`flex min-h-[84px] cursor-pointer items-center justify-between gap-3 rounded-lg border px-3 py-2.5 text-left transition-colors motion-list-item hover:border-primary/40 hover:bg-accent/40 ${source.isActive ? 'bg-card' : 'bg-muted/30 opacity-60'}`}
+        onClick={open}
+        aria-busy={pending || undefined}
+        data-testid="library-source-row"
+        className={`flex min-h-[84px] flex-col gap-2 rounded-lg border px-3 py-2.5 text-left transition-colors motion-list-item sm:flex-row sm:items-center sm:justify-between sm:gap-3 ${pending ? 'cursor-progress' : 'cursor-pointer hover:border-primary/40 hover:bg-accent/40'} ${source.isActive ? 'bg-card' : 'bg-muted/30 opacity-60'}`}
       >
-        <div className="flex min-w-0 flex-1 items-center gap-3">
+        <div className="flex min-w-0 flex-1 items-start gap-3 sm:items-center">
           <div className={`shrink-0 rounded-md p-1.5 ${source.isActive ? 'bg-primary/10 text-primary' : 'bg-muted text-muted-foreground'}`}>
-            {source.type === 'url' ? <Globe className="h-4 w-4" /> : <FileText className="h-4 w-4" />}
+            {pending
+              ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+              : source.type === 'url' ? <Globe className="h-4 w-4" /> : <FileText className="h-4 w-4" />}
           </div>
-          <div className="min-w-0">
-            {/* On a phone the title gets two lines of its own; one truncated line left a few letters. */}
-            <div className="flex items-start gap-1.5 sm:items-center">
+          <div className="min-w-0 flex-1">
+            {/* On a phone the controls sit on their own line, so the title has the row's width and two lines. */}
+            <div className="flex min-w-0 items-start gap-1.5 sm:items-center">
               <button
                 type="button"
+                disabled={pending}
                 onClick={(event) => {
                   event.stopPropagation();
-                  onOpen(source);
+                  open();
                 }}
-                className="line-clamp-2 min-w-0 break-words rounded-sm text-left text-sm font-medium text-foreground transition-colors hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:line-clamp-1"
+                className="line-clamp-2 min-w-0 wrap-break-word rounded-sm text-left text-sm font-medium text-foreground transition-colors hover:text-primary focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-progress sm:line-clamp-1"
               >
                 {source.title}
               </button>
-              {source.origin?.startsWith('http') && (
-                <a
-                  href={source.origin}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  onClick={(event) => event.stopPropagation()}
-                  className="mt-0.5 shrink-0 rounded-sm text-muted-foreground transition-colors hover:text-primary sm:mt-0"
-                  aria-label={t('libraryPage.openOrigin', { title: source.title, defaultValue: 'Open {{title}} in a new tab' })}
-                >
-                  <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
-                </a>
-              )}
               {/* The row icon already shows the type; on a phone the title needs the room. */}
               <Badge variant="outline" className="hidden shrink-0 py-0 sm:inline-flex">
                 {t(`libraryPage.${source.type}Source`, source.type.toUpperCase())}
               </Badge>
             </div>
-            <p className="mt-0.5 truncate text-xs text-muted-foreground">{formatEuropeanDate(source.createdAt)} • {source.origin || manualEntryLabel}</p>
+            <p className="mt-0.5 line-clamp-2 break-all text-xs text-muted-foreground sm:line-clamp-1">
+              {pending ? t('libraryPage.savingSource', 'Saving…') : formatEuropeanDate(source.createdAt)} • {source.origin || manualEntryLabel}
+            </p>
             {/* Badges wrap on narrow rows; the text preview only fits beside them on wider screens. */}
             <div className="mt-1 flex min-w-0 flex-wrap items-center gap-1.5">
               <Badge
                 variant="secondary"
-                className="max-w-[200px] shrink-0 truncate py-0 font-medium"
+                className="max-w-full shrink-0 truncate py-0 font-medium sm:max-w-[200px]"
                 title={`${folderLabel}: ${sourceFolderLabel}`}
               >
                 <Folder className="mr-1 h-3 w-3 shrink-0" />
@@ -133,11 +137,24 @@ function SourceRow({
             </div>
           </div>
         </div>
-        <div className="flex shrink-0 items-center gap-1">
+        <div className="-mr-1 flex shrink-0 items-center justify-end gap-1 sm:mr-0">
+          {source.origin?.startsWith('http') && (
+            <a
+              href={source.origin}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={(event) => event.stopPropagation()}
+              className={`${buttonVariants({ variant: 'ghost', size: 'icon' })} h-9 w-9 text-muted-foreground hover:text-primary pointer-coarse:h-11 pointer-coarse:w-11`}
+              aria-label={t('libraryPage.openOrigin', { title: source.title, defaultValue: 'Open {{title}} in a new tab' })}
+            >
+              <ExternalLink className="h-4 w-4" aria-hidden="true" />
+            </a>
+          )}
           <Button
             variant="ghost"
             size="icon"
             className="h-9 w-9 text-destructive pointer-coarse:h-11 pointer-coarse:w-11"
+            disabled={pending}
             onClick={(event) => {
               event.stopPropagation();
               onRemove(source);
@@ -151,6 +168,7 @@ function SourceRow({
             <Switch
               className="relative pointer-coarse:after:absolute pointer-coarse:after:-inset-2.5"
               checked={source.isActive}
+              disabled={pending}
               onCheckedChange={() => onToggle(source.id)}
               aria-label={t('libraryPage.toggleSourceLabel', { title: source.title })}
             />
@@ -181,6 +199,7 @@ export default function LibraryPage() {
     toggleSource,
     clearLibrary,
   } = useSessionStore();
+  const serverHydration = useSessionStore((state) => state.serverHydration);
   const { toast } = useToast();
   // The Library shows only the Current Debate's sources; switching debates switches the Library.
   const currentDebate = useCurrentDebate();
@@ -188,6 +207,7 @@ export default function LibraryPage() {
   const sourceLibrary = currentDebate ? allSources.filter((source) => source.debateId === currentDebate.id) : [];
 
   const [isAdding, setIsAdding] = useState(false);
+  const [isSavingSource, setIsSavingSource] = useState(false);
   const [isClearing, setIsClearing] = useState(false);
   const [isImportingFile, setIsImportingFile] = useState(false);
   const [addErrors, setAddErrors] = useState<{ title?: string; content?: string }>({});
@@ -199,6 +219,13 @@ export default function LibraryPage() {
   const addContentRef = useRef<HTMLTextAreaElement>(null);
   const draftTitleRef = useRef<HTMLInputElement>(null);
   const draftContentRef = useRef<HTMLTextAreaElement>(null);
+  const draftLoadedFor = useRef<string | null>(null);
+  // Fields the student edited in the sheet, each with an edit count. Save sends
+  // only these; the others follow the stored source while the sheet is open.
+  const touchedDraftFields = useRef(new Map<keyof typeof sourceDraft, number>());
+  // Counts sheet openings, so a save that lands after a reopen leaves the new edits alone.
+  const draftOpening = useRef(0);
+  const [isSavingDraft, setIsSavingDraft] = useState(false);
   const [newSource, setNewSource] = useState({
     title: '',
     content: '',
@@ -223,6 +250,7 @@ export default function LibraryPage() {
     folder: 'General',
     isActive: true,
   });
+  const draftWordCount = useMemo(() => sourceDraft.content.trim().split(/\s+/).filter(Boolean).length, [sourceDraft.content]);
   const [importPreview, setImportPreview] = useState<{
     title: string;
     content: string;
@@ -241,24 +269,46 @@ export default function LibraryPage() {
     content: content.trim() ? undefined : t('libraryPage.contentRequired', 'Add the source text.'),
   });
 
+  const showSaveError = (error: unknown) => {
+    if (error instanceof DuplicateSourceError) {
+      toast({
+        title: t('libraryPage.duplicateSource', 'Source already in library'),
+        description: t('libraryPage.duplicateSourceDesc', 'This URL or file is already saved.'),
+        variant: 'destructive',
+      });
+      return;
+    }
+    toast({
+      title: t('libraryPage.saveFailed', 'Could not save this source.'),
+      description: error instanceof DebateRequiredError
+        ? t('debate.sourceNeedsDebate', 'Start or select a debate before saving sources.')
+        : browserIsOffline() || isBrowserNetworkFailure(error)
+          ? t('libraryPage.offlineNotSaved', 'You are offline. Reconnect and try again.')
+          : undefined,
+      variant: 'destructive',
+    });
+  };
+  const showSaved = (title: string) => {
+    toast({ title: t('libraryPage.sourceSaved', { title, defaultValue: 'Saved {{title}} to the Library' }) });
+  };
+
   const handleAdd = async () => {
+    if (isSavingSource) return;
     const errors = requiredErrors(newSource.title, newSource.content);
     setAddErrors(errors);
     if (errors.title) return addTitleRef.current?.focus();
     if (errors.content) return addContentRef.current?.focus();
     // The Library always shows the Current Debate, even while tools run one-off.
+    setIsSavingSource(true);
     try {
       await addSource({ ...newSource, debateId: currentDebate?.id ?? null });
     } catch (error) {
-      toast({
-        title: t('libraryPage.saveFailed', 'Could not save this source.'),
-        description: error instanceof DebateRequiredError
-          ? t('debate.sourceNeedsDebate', 'Start or select a debate before saving sources.')
-          : undefined,
-        variant: 'destructive',
-      });
+      showSaveError(error);
       return;
+    } finally {
+      setIsSavingSource(false);
     }
+    showSaved(newSource.title.trim());
     setNewSource({ title: '', content: '', type: 'text', origin: '', folder: newSource.folder });
     setIsAdding(false);
   };
@@ -267,6 +317,16 @@ export default function LibraryPage() {
     const trimmedUrl = importUrl.trim();
     if (!trimmedUrl) {
       toast({ title: t('libraryPage.importUrlRequired'), variant: "destructive" });
+      return;
+    }
+
+    // Warn before fetching a page this debate already has.
+    if (findSavedPage(sourceLibrary, currentDebate?.id, validateUrl(trimmedUrl))) {
+      toast({
+        title: t('libraryPage.duplicateSource', 'Source already in library'),
+        description: t('libraryPage.duplicateUrlDesc', 'This page is already in this debate\'s Library.'),
+        variant: 'destructive',
+      });
       return;
     }
 
@@ -325,27 +385,55 @@ export default function LibraryPage() {
   };
 
   const handleSavePreview = async () => {
-    if (!importPreview?.title || !importPreview.content) return;
+    if (!importPreview?.title || !importPreview.content || isSavingSource) return;
     const trimmedOrigin = importPreview.origin?.trim();
-    if (trimmedOrigin && sourceLibrary.some(existing => existing.origin?.trim().toLowerCase() === trimmedOrigin.toLowerCase())) {
+    // Web pages are matched by their normalized URL in the store; files by name here.
+    if (importPreview.type === 'file' && trimmedOrigin && sourceLibrary.some(existing => existing.origin?.trim().toLowerCase() === trimmedOrigin.toLowerCase())) {
+      showSaveError(new DuplicateSourceError(''));
+      return;
+    }
+    setIsSavingSource(true);
+    try {
+      await addSource({
+        title: importPreview.title.trim(),
+        content: importPreview.content.trim(),
+        type: importPreview.type,
+        origin: importPreview.origin,
+        folder: newSource.folder,
+        debateId: currentDebate?.id ?? null,
+      });
+    } catch (error) {
+      showSaveError(error);
+      return;
+    } finally {
+      setIsSavingSource(false);
+    }
+    showSaved(importPreview.title.trim());
+    setImportPreview(null);
+    setImportUrl('');
+    setIsAdding(false);
+  };
+
+  // Turning a source on or off changes what grounds the AI, so a change that
+  // does not reach the server must never look saved.
+  const handleToggleSource = (id: string) => {
+    if (browserIsOffline()) {
       toast({
-        title: t('libraryPage.duplicateSource', 'Source already in library'),
-        description: t('libraryPage.duplicateSourceDesc', 'This URL or file is already saved.'),
+        title: t('libraryPage.offlineTitle', 'Change not saved'),
+        description: t('libraryPage.offlineNotSaved', 'You are offline. Reconnect and try again.'),
         variant: 'destructive',
       });
       return;
     }
-    await addSource({
-      title: importPreview.title.trim(),
-      content: importPreview.content.trim(),
-      type: importPreview.type,
-      origin: importPreview.origin,
-      folder: newSource.folder,
-      debateId: currentDebate?.id ?? null,
+    void toggleSource(id).catch((error: unknown) => {
+      toast({
+        title: t('libraryPage.toggleFailed', 'Could not change this source'),
+        description: isBrowserNetworkFailure(error)
+          ? t('libraryPage.offlineNotSaved', 'You are offline. Reconnect and try again.')
+          : t('libraryPage.toggleFailedDesc', 'It is back to how it was. Try again.'),
+        variant: 'destructive',
+      });
     });
-    setImportPreview(null);
-    setImportUrl('');
-    setIsAdding(false);
   };
 
   const handleClearLibrary = async () => {
@@ -363,6 +451,8 @@ export default function LibraryPage() {
   };
 
   const activeSourceCount = sourceLibrary.filter(source => source.isActive).length;
+  // Until the server list arrives, an empty Library may just not be loaded yet.
+  const firstLoadPending = serverHydration === 'pending' && sourceLibrary.length === 0;
   const hasActiveSources = activeSourceCount > 0;
   // Folder names are account-wide; hide the ones only other debates use, but keep new empty ones.
   const otherDebateFolders = new Set(allSources.filter((source) => source.debateId !== currentDebate?.id).map((source) => source.folder || 'General'));
@@ -421,15 +511,38 @@ export default function LibraryPage() {
   const selectedSource = selectedSourceId ? sourceLibrary.find((source) => source.id === selectedSourceId) || null : null;
 
   useEffect(() => {
-    if (!selectedSource) return;
-    setDraftErrors({});
-    setSourceDraft({
+    // Opening a source loads every field. While it stays open, fields the
+    // student has not edited follow the stored source (a rolled-back switch,
+    // a research refresh), and edited ones keep what was typed, even when a
+    // save fails.
+    if (!selectedSource) {
+      draftLoadedFor.current = null;
+      touchedDraftFields.current.clear();
+      return;
+    }
+    const stored = {
       title: selectedSource.title,
       content: selectedSource.content,
       type: selectedSource.type,
       origin: selectedSource.origin || '',
       folder: selectedSource.folder || 'General',
       isActive: selectedSource.isActive,
+    };
+    if (draftLoadedFor.current !== selectedSource.id) {
+      draftLoadedFor.current = selectedSource.id;
+      draftOpening.current += 1;
+      touchedDraftFields.current.clear();
+      setDraftErrors({});
+      setSourceDraft(stored);
+      return;
+    }
+    const touched = touchedDraftFields.current;
+    setSourceDraft((draft) => {
+      const next = { ...draft };
+      for (const key of Object.keys(stored) as Array<keyof typeof stored>) {
+        if (!touched.has(key)) (next as Record<string, unknown>)[key] = stored[key];
+      }
+      return next;
     });
   }, [selectedSource]);
   useEffect(() => {
@@ -496,23 +609,56 @@ export default function LibraryPage() {
   };
   const handleSetSelectedFolderActive = async (isActive: boolean) => {
     if (selectedFolder === 'all') return;
-    await setFolderActive(selectedFolder, isActive);
+    try {
+      await setFolderActive(selectedFolder, isActive);
+    } catch (error) {
+      toast({
+        title: t('libraryPage.folderUpdateFailed', 'Could not change this folder'),
+        description: browserIsOffline() || isBrowserNetworkFailure(error)
+          ? t('libraryPage.offlineNotSaved', 'You are offline. Reconnect and try again.')
+          : t('libraryPage.toggleFailedDesc', 'It is back to how it was. Try again.'),
+        variant: 'destructive',
+      });
+    }
+  };
+  const editDraft = (patch: Partial<typeof sourceDraft>) => {
+    const touched = touchedDraftFields.current;
+    for (const key of Object.keys(patch) as Array<keyof typeof sourceDraft>) touched.set(key, (touched.get(key) ?? 0) + 1);
+    setSourceDraft((draft) => ({ ...draft, ...patch }));
   };
   const handleSaveSourceDraft = async () => {
-    if (!selectedSource) return;
+    if (!selectedSource || isSavingDraft) return;
     const errors = requiredErrors(sourceDraft.title, sourceDraft.content);
     setDraftErrors(errors);
     if (errors.title) return draftTitleRef.current?.focus();
     if (errors.content) return draftContentRef.current?.focus();
 
-    await updateSource(selectedSource.id, {
-      title: sourceDraft.title,
-      content: sourceDraft.content,
-      type: sourceDraft.type,
-      origin: sourceDraft.origin,
-      folder: sourceDraft.folder,
-      isActive: sourceDraft.isActive,
-    });
+    // Only what was edited here is written, so a change that reached this
+    // source while the sheet was open (a switch, research) is not overwritten.
+    const opening = draftOpening.current;
+    const sent = new Map(touchedDraftFields.current);
+    const patch = Object.fromEntries(Array.from(sent.keys(), (key) => [key, sourceDraft[key]])) as Partial<typeof sourceDraft>;
+    setIsSavingDraft(true);
+    try {
+      await updateSource(selectedSource.id, patch);
+      // A field counts as saved only if it was not edited again meanwhile and
+      // the sheet still shows the opening this save came from.
+      if (draftOpening.current === opening) {
+        const touched = touchedDraftFields.current;
+        for (const [key, edits] of sent) if (touched.get(key) === edits) touched.delete(key);
+      }
+    } catch (error) {
+      toast({
+        title: t('libraryPage.saveFailed', 'Could not save this source.'),
+        description: browserIsOffline() || isBrowserNetworkFailure(error)
+          ? t('libraryPage.offlineNotSaved', 'You are offline. Reconnect and try again.')
+          : undefined,
+        variant: 'destructive',
+      });
+      return;
+    } finally {
+      setIsSavingDraft(false);
+    }
     toast({ title: t('libraryPage.sourceUpdated', 'Source updated'), description: t('libraryPage.sourceUpdatedDesc', 'Your source changes were saved.') });
   };
   const handleCopySource = async () => {
@@ -539,11 +685,15 @@ export default function LibraryPage() {
               <>
                 <p className="mt-2 text-sm text-muted-foreground" data-testid="library-debate">
                   {t('debate.librarySources', 'Sources for')}{' '}
-                  <span className="break-words font-medium text-foreground">{currentDebate.motion}</span>{' '}
+                  <span className="wrap-break-word font-medium text-foreground">{currentDebate.motion}</span>{' '}
                   <Button variant="link" size="sm" className="h-auto p-0" onClick={() => openDebateDialog('switch')}>{t('debate.change', 'Change')}</Button>
                 </p>
                 <p className="mt-1 text-sm text-muted-foreground">
-                  {t('libraryPage.summary', { total: sourceLibrary.length, active: activeSourceCount, folders: folders.length, defaultValue: '{{total}} sources · {{active}} active · {{folders}} folders' })}
+                  {t('libraryPage.summary', {
+                    sources: t('libraryPage.sourceCount', { count: sourceLibrary.length }),
+                    active: t('libraryPage.activeCount', { count: activeSourceCount }),
+                    folders: t('libraryPage.folderCount', { count: folders.length }),
+                  })}
                 </p>
               </>
             ) : (
@@ -679,7 +829,7 @@ export default function LibraryPage() {
               <div className="space-y-2">
                 <Label htmlFor="source-file">{t('libraryPage.importFileLabel')}</Label>
                 {/* The real input is invisible, so the label shows its focus ring. */}
-                <Button asChild type="button" variant="outline" className="relative w-full justify-start overflow-hidden has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-ring has-[:focus-visible]:ring-offset-2">
+                <Button asChild type="button" variant="outline" className="relative w-full justify-start overflow-hidden has-focus-visible:ring-2 has-focus-visible:ring-ring has-focus-visible:ring-offset-2">
                   <label htmlFor="source-file" className="cursor-pointer" aria-busy={isImportingFile}>
                     {isImportingFile ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Upload className="h-4 w-4 mr-2" />}
                     {isImportingFile ? t('libraryPage.readingFile', 'Reading file…') : t('libraryPage.chooseFile')}
@@ -701,10 +851,11 @@ export default function LibraryPage() {
                     <div>
                       <p className="text-sm font-medium">{t('libraryPage.importPreview')}</p>
                       <p className="text-xs text-muted-foreground">
-                        {[importPreview.domain || importPreview.fileType || importPreview.origin, importPreview.wordCount ? `${importPreview.wordCount} ${t('libraryPage.words')}` : null].filter(Boolean).join(' • ')}
+                        {[importPreview.domain || importPreview.fileType || importPreview.origin, importPreview.wordCount ? t('libraryPage.wordCount', { count: importPreview.wordCount, formatted: formatNumber(importPreview.wordCount) }) : null].filter(Boolean).join(' • ')}
                       </p>
                     </div>
-                    <Button type="button" size="sm" onClick={() => void handleSavePreview()}>
+                    <Button type="button" size="sm" disabled={isSavingSource} onClick={() => void handleSavePreview()}>
+                      {isSavingSource && <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" />}
                       {t('libraryPage.saveImported')}
                     </Button>
                   </div>
@@ -777,7 +928,10 @@ export default function LibraryPage() {
                 />
                 {addErrors.content && <p id="new-source-content-error" role="alert" className="text-sm text-destructive">{addErrors.content}</p>}
               </div>
-              <Button onClick={() => void handleAdd()} className="w-full">{t('libraryPage.saveToLibrary')}</Button>
+              <Button onClick={() => void handleAdd()} className="w-full" disabled={isSavingSource}>
+                {isSavingSource && <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" />}
+                {t('libraryPage.saveToLibrary')}
+              </Button>
             </CardContent>
           </Card>
         )}
@@ -790,10 +944,12 @@ export default function LibraryPage() {
                 <CardTitle>{t('libraryPage.yourKBTitle')}</CardTitle>
               </div>
               <div className="flex items-center gap-2">
-                <Badge variant="secondary" className="bg-primary/10 text-primary border-primary/20">
-                  <Database className="h-3 w-3 mr-1" />
-                  {visibleSources.length} {t('libraryPage.sourcesCount')}
-                </Badge>
+                {!firstLoadPending && (
+                  <Badge variant="secondary" className="bg-primary/10 text-primary border-primary/20">
+                    <Database className="h-3 w-3 mr-1" />
+                    {t('libraryPage.sourceCount', { count: visibleSources.length })}
+                  </Badge>
+                )}
               </div>
               </div>
               <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
@@ -803,7 +959,7 @@ export default function LibraryPage() {
                     className="pl-9 pr-9"
                     value={searchQuery}
                     onChange={(event) => setSearchQuery(event.target.value)}
-                    placeholder={t('libraryPage.searchPlaceholder', 'Search sources, folders, or content...')}
+                    placeholder={t('libraryPage.searchSources', 'Search sources')}
                     aria-label={t('libraryPage.searchSources', 'Search sources')}
                   />
                   {searchQuery && (
@@ -819,7 +975,7 @@ export default function LibraryPage() {
                     </Button>
                   )}
                 </div>
-                <div className="flex gap-1 overflow-x-auto pb-1" role="group" aria-label={t('libraryPage.folder', 'Folder')}>
+                <div className="flex flex-wrap gap-1 pb-1 lg:flex-nowrap lg:overflow-x-auto" role="group" aria-label={t('libraryPage.folder', 'Folder')}>
                   {['all', ...folders].map((folder) => (
                     <Button
                       key={folder}
@@ -827,7 +983,7 @@ export default function LibraryPage() {
                       variant={selectedFolder === folder ? 'default' : 'outline'}
                       size="sm"
                       aria-pressed={selectedFolder === folder}
-                      className="shrink-0"
+                      className="max-w-full shrink-0 truncate"
                       onClick={() => setSelectedFolder(folder)}
                     >
                       {folder === 'all' ? t('libraryPage.allFolders', 'All folders') : getFolderName(folder)}
@@ -905,8 +1061,13 @@ export default function LibraryPage() {
                 </div>
               )}
             </CardHeader>
-            <CardContent>
-              {sourceLibrary.length === 0 ? (
+            <CardContent className="px-3 sm:px-6">
+              {firstLoadPending ? (
+                <div className="flex items-center justify-center gap-2 py-12 text-sm text-muted-foreground" role="status">
+                  <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+                  {t('libraryPage.loadingSources', 'Loading sources…')}
+                </div>
+              ) : sourceLibrary.length === 0 ? (
                 <div className="text-center py-12 border-2 border-dashed rounded-lg">
                   <Database className="h-12 w-12 text-muted-foreground/20 mx-auto mb-4" />
                   <h3 className="text-lg font-medium">{t('libraryPage.emptyTitle')}</h3>
@@ -930,7 +1091,7 @@ export default function LibraryPage() {
                       key={source.id}
                       source={source}
                       onRemove={handleRemoveSource}
-                      onToggle={toggleSource}
+                      onToggle={handleToggleSource}
                       onOpen={(item: Source) => setSelectedSourceId(item.id)}
                       manualEntryLabel={t('libraryPage.manualEntry')}
                       folderLabel={t('libraryPage.folder', 'Folder')}
@@ -1004,7 +1165,7 @@ export default function LibraryPage() {
                   <div className="min-w-0 flex-1">
                     <SheetTitle className="truncate">{sourceDraft.title || t('libraryPage.untitledSource', 'Untitled source')}</SheetTitle>
                     <SheetDescription className="mt-1">
-                      {[getFolderName(sourceDraft.folder || 'General'), formatEuropeanDate(selectedSource.createdAt), `${sourceDraft.content.trim().split(/\s+/).filter(Boolean).length} ${t('libraryPage.words')}`].join(' • ')}
+                      {[getFolderName(sourceDraft.folder || 'General'), formatEuropeanDate(selectedSource.createdAt), t('libraryPage.wordCount', { count: draftWordCount, formatted: formatNumber(draftWordCount) })].join(' • ')}
                     </SheetDescription>
                   </div>
                 </div>
@@ -1036,7 +1197,7 @@ export default function LibraryPage() {
                       aria-invalid={Boolean(draftErrors.title)}
                       aria-describedby={draftErrors.title ? 'source-detail-title-error' : undefined}
                       onChange={(event) => {
-                        setSourceDraft({ ...sourceDraft, title: event.target.value });
+                        editDraft({ title: event.target.value });
                         if (draftErrors.title) setDraftErrors({ ...draftErrors, title: undefined });
                       }}
                     />
@@ -1045,7 +1206,7 @@ export default function LibraryPage() {
                   <div className="grid gap-2 sm:grid-cols-2">
                     <div className="space-y-2">
                       <Label htmlFor="source-detail-folder">{t('libraryPage.folder', 'Folder')}</Label>
-                      <Select value={sourceDraft.folder || 'General'} onValueChange={(folder) => setSourceDraft({ ...sourceDraft, folder })}>
+                      <Select value={sourceDraft.folder || 'General'} onValueChange={(folder) => editDraft({ folder })}>
                         <SelectTrigger id="source-detail-folder">
                           <SelectValue />
                         </SelectTrigger>
@@ -1058,7 +1219,7 @@ export default function LibraryPage() {
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="source-detail-type">{t('libraryPage.typeLabel', 'Type')}</Label>
-                      <Select value={sourceDraft.type} onValueChange={(type) => setSourceDraft({ ...sourceDraft, type: type as Source['type'] })}>
+                      <Select value={sourceDraft.type} onValueChange={(type) => editDraft({ type: type as Source['type'] })}>
                         <SelectTrigger id="source-detail-type">
                           <SelectValue />
                         </SelectTrigger>
@@ -1076,7 +1237,7 @@ export default function LibraryPage() {
                       id="source-detail-origin"
                       value={sourceDraft.origin || ''}
                       placeholder={t('libraryPage.originPlaceholder', 'URL, file name, or citation note')}
-                      onChange={(event) => setSourceDraft({ ...sourceDraft, origin: event.target.value })}
+                      onChange={(event) => editDraft({ origin: event.target.value })}
                     />
                   </div>
                   <div className="flex items-center justify-between rounded-lg border bg-muted/30 px-3 py-2">
@@ -1086,7 +1247,7 @@ export default function LibraryPage() {
                     </div>
                     <Switch
                       checked={sourceDraft.isActive}
-                      onCheckedChange={(checked) => setSourceDraft({ ...sourceDraft, isActive: checked })}
+                      onCheckedChange={(checked) => editDraft({ isActive: checked })}
                       aria-label={t('libraryPage.useForGrounding', 'Use for AI grounding')}
                     />
                   </div>
@@ -1100,7 +1261,7 @@ export default function LibraryPage() {
                       aria-invalid={Boolean(draftErrors.content)}
                       aria-describedby={draftErrors.content ? 'source-detail-content-error' : undefined}
                       onChange={(event) => {
-                        setSourceDraft({ ...sourceDraft, content: event.target.value });
+                        editDraft({ content: event.target.value });
                         if (draftErrors.content) setDraftErrors({ ...draftErrors, content: undefined });
                       }}
                     />
@@ -1119,8 +1280,8 @@ export default function LibraryPage() {
                     {t('common.delete', 'Delete')}
                   </Button>
                 </div>
-                <Button type="button" onClick={() => void handleSaveSourceDraft()}>
-                  <Save className="mr-2 h-4 w-4" />
+                <Button type="button" disabled={isSavingDraft} onClick={() => void handleSaveSourceDraft()}>
+                  {isSavingDraft ? <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" /> : <Save className="mr-2 h-4 w-4" />}
                   {t('common.save', 'Save')}
                 </Button>
               </SheetFooter>

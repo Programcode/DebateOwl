@@ -36,49 +36,49 @@ const FORMATS: DebateFormat[] = [
     id: 'standard',
     nameKey: 'timer.formatStandard',
     speeches: [
-      { id: 'intro', labelKey: 'timer.speeches.standard.intro', minutes: 4, color: 'bg-blue-500' },
-      { id: 'r1', labelKey: 'timer.speeches.standard.r1', minutes: 6, color: 'bg-orange-500' },
-      { id: 'r2', labelKey: 'timer.speeches.standard.r2', minutes: 6, color: 'bg-red-500' },
-      { id: 'conc', labelKey: 'timer.speeches.standard.conc', minutes: 3, color: 'bg-green-500' },
+      { id: 'intro', labelKey: 'timer.speeches.standard.intro', minutes: 4, color: 'bg-blue-700' },
+      { id: 'r1', labelKey: 'timer.speeches.standard.r1', minutes: 6, color: 'bg-orange-700' },
+      { id: 'r2', labelKey: 'timer.speeches.standard.r2', minutes: 6, color: 'bg-red-700' },
+      { id: 'conc', labelKey: 'timer.speeches.standard.conc', minutes: 3, color: 'bg-green-700' },
     ]
   },
   {
     id: 'ld',
     nameKey: 'timer.formatLD',
     speeches: [
-      { id: 'ac', labelKey: 'timer.speeches.ld.ac', minutes: 6, color: 'bg-blue-500' },
-      { id: 'nc', labelKey: 'timer.speeches.ld.nc', minutes: 7, color: 'bg-red-500' },
-      { id: 'ar1', labelKey: 'timer.speeches.ld.ar1', minutes: 4, color: 'bg-blue-400' },
-      { id: 'nr', labelKey: 'timer.speeches.ld.nr', minutes: 6, color: 'bg-red-400' },
-      { id: 'ar2', labelKey: 'timer.speeches.ld.ar2', minutes: 3, color: 'bg-blue-600' },
+      { id: 'ac', labelKey: 'timer.speeches.ld.ac', minutes: 6, color: 'bg-blue-700' },
+      { id: 'nc', labelKey: 'timer.speeches.ld.nc', minutes: 7, color: 'bg-red-700' },
+      { id: 'ar1', labelKey: 'timer.speeches.ld.ar1', minutes: 4, color: 'bg-blue-600' },
+      { id: 'nr', labelKey: 'timer.speeches.ld.nr', minutes: 6, color: 'bg-red-600' },
+      { id: 'ar2', labelKey: 'timer.speeches.ld.ar2', minutes: 3, color: 'bg-blue-800' },
     ]
   },
   {
     id: 'pf',
     nameKey: 'timer.formatPF',
     speeches: [
-      { id: 'team1_c', labelKey: 'timer.speeches.pf.team1c', minutes: 4, color: 'bg-blue-500' },
-      { id: 'team2_c', labelKey: 'timer.speeches.pf.team2c', minutes: 4, color: 'bg-red-500' },
-      { id: 'team1_r', labelKey: 'timer.speeches.pf.team1r', minutes: 4, color: 'bg-blue-400' },
-      { id: 'team2_r', labelKey: 'timer.speeches.pf.team2r', minutes: 4, color: 'bg-red-400' },
-      { id: 'team1_s', labelKey: 'timer.speeches.pf.team1s', minutes: 3, color: 'bg-blue-600' },
-      { id: 'team2_s', labelKey: 'timer.speeches.pf.team2s', minutes: 3, color: 'bg-red-600' },
-      { id: 'team1_ff', labelKey: 'timer.speeches.pf.team1ff', minutes: 2, color: 'bg-blue-700' },
-      { id: 'team2_ff', labelKey: 'timer.speeches.pf.team2ff', minutes: 2, color: 'bg-red-700' },
+      { id: 'team1_c', labelKey: 'timer.speeches.pf.team1c', minutes: 4, color: 'bg-blue-700' },
+      { id: 'team2_c', labelKey: 'timer.speeches.pf.team2c', minutes: 4, color: 'bg-red-700' },
+      { id: 'team1_r', labelKey: 'timer.speeches.pf.team1r', minutes: 4, color: 'bg-blue-600' },
+      { id: 'team2_r', labelKey: 'timer.speeches.pf.team2r', minutes: 4, color: 'bg-red-600' },
+      { id: 'team1_s', labelKey: 'timer.speeches.pf.team1s', minutes: 3, color: 'bg-blue-800' },
+      { id: 'team2_s', labelKey: 'timer.speeches.pf.team2s', minutes: 3, color: 'bg-red-800' },
+      { id: 'team1_ff', labelKey: 'timer.speeches.pf.team1ff', minutes: 2, color: 'bg-blue-900' },
+      { id: 'team2_ff', labelKey: 'timer.speeches.pf.team2ff', minutes: 2, color: 'bg-red-900' },
     ]
   },
   {
     id: 'policy',
     nameKey: 'timer.formatPolicy',
     speeches: [
-      { id: '1ac', labelKey: 'timer.speeches.policy.1ac', minutes: 8, color: 'bg-blue-500' },
-      { id: '1nc', labelKey: 'timer.speeches.policy.1nc', minutes: 8, color: 'bg-red-500' },
-      { id: '2ac', labelKey: 'timer.speeches.policy.2ac', minutes: 8, color: 'bg-blue-400' },
-      { id: '2nc', labelKey: 'timer.speeches.policy.2nc', minutes: 8, color: 'bg-red-400' },
-      { id: '1nr', labelKey: 'timer.speeches.policy.1nr', minutes: 5, color: 'bg-red-600' },
-      { id: '1ar', labelKey: 'timer.speeches.policy.1ar', minutes: 5, color: 'bg-blue-600' },
-      { id: '2nr', labelKey: 'timer.speeches.policy.2nr', minutes: 5, color: 'bg-red-700' },
-      { id: '2ar', labelKey: 'timer.speeches.policy.2ar', minutes: 5, color: 'bg-blue-700' },
+      { id: '1ac', labelKey: 'timer.speeches.policy.1ac', minutes: 8, color: 'bg-blue-700' },
+      { id: '1nc', labelKey: 'timer.speeches.policy.1nc', minutes: 8, color: 'bg-red-700' },
+      { id: '2ac', labelKey: 'timer.speeches.policy.2ac', minutes: 8, color: 'bg-blue-600' },
+      { id: '2nc', labelKey: 'timer.speeches.policy.2nc', minutes: 8, color: 'bg-red-600' },
+      { id: '1nr', labelKey: 'timer.speeches.policy.1nr', minutes: 5, color: 'bg-red-800' },
+      { id: '1ar', labelKey: 'timer.speeches.policy.1ar', minutes: 5, color: 'bg-blue-800' },
+      { id: '2nr', labelKey: 'timer.speeches.policy.2nr', minutes: 5, color: 'bg-red-900' },
+      { id: '2ar', labelKey: 'timer.speeches.policy.2ar', minutes: 5, color: 'bg-blue-900' },
     ]
   }
 ];
@@ -271,7 +271,7 @@ export default function TimerPage() {
                   variant={idx === currentSpeechIdx ? "default" : "outline"}
                   data-state={idx === currentSpeechIdx ? "active" : "inactive"}
                   onClick={() => handleSpeechSelect(idx)}
-                  className={`transition-all data-[state=active]:ring-2 data-[state=active]:ring-primary data-[state=active]:ring-offset-2 ${idx === currentSpeechIdx ? s.color : "opacity-70 hover:opacity-100"}`}
+                  className={`transition-all data-[state=active]:ring-2 data-[state=active]:ring-primary data-[state=active]:ring-offset-2 ${idx === currentSpeechIdx ? `${s.color} text-white` : "opacity-70 hover:opacity-100"}`}
                   size="sm"
                 >
                   {t(s.labelKey)} ({s.minutes}m)
@@ -300,7 +300,7 @@ export default function TimerPage() {
               </div>
             </div>
 
-            <Progress value={progress} className="h-2 w-full" />
+            <Progress value={progress} className="h-2 w-full" aria-label={t('timer.speechProgress', { speech: t(currentSpeech.labelKey) })} />
 
             {/* Controls */}
             <div className="flex justify-center gap-4">

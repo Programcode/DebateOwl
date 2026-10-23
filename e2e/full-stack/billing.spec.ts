@@ -127,6 +127,24 @@ test("signed Stripe webhooks grant and revoke Pro, and forged ones change nothin
   await page.goto("/app/settings");
   await expect(page.getByText("Pro", { exact: true })).toBeVisible();
   await expect(page.getByRole("button", { name: "Manage Subscription" })).toBeVisible();
+  await expect(page.getByTestId("billing-date")).toContainText("Renews on");
+
+  // A failed renewal keeps Pro while Stripe retries, and Settings asks for a
+  // new payment method instead of selling a second subscription (QB-13).
+  await fake.stripeSubscription(subscriptionObject(subscriptionId, "past_due"));
+  const failed = await sendWebhook({
+    id: `evt_${randomUUID()}`,
+    object: "event",
+    type: "invoice.payment_failed",
+    data: { object: { id: `in_e2e_${randomUUID()}`, object: "invoice", subscription: subscriptionId } },
+  });
+  expect(failed.status).toBe(200);
+  expect(await tier(userId)).toBe("pro");
+  await page.reload();
+  await expect(page.getByText("Payment failed", { exact: true })).toBeVisible();
+  await expect(page.getByText(/Pro access continues until/)).toBeVisible();
+  await expect(page.getByRole("button", { name: "Manage Subscription" })).toBeVisible();
+  await expect(page.getByRole("button", { name: /Upgrade to Pro/ })).toHaveCount(0);
 
   await fake.stripeSubscription(subscriptionObject(subscriptionId, "canceled"));
   const canceled = await sendWebhook(subscriptionEvent("customer.subscription.deleted", subscriptionId, "canceled"));
@@ -141,4 +159,7 @@ test("signed Stripe webhooks grant and revoke Pro, and forged ones change nothin
 
   await page.reload();
   await expect(page.getByText("Expired", { exact: true })).toBeVisible();
+  // A former subscriber is told the subscription ended, not that a free trial did (QB-14).
+  await expect(page.getByText(/Your Pro subscription ended on/)).toBeVisible();
+  await expect(page.getByRole("button", { name: "Resubscribe" })).toBeVisible();
 });

@@ -107,7 +107,6 @@ vi.mock('@/lib/supabase/client', () => ({
 }));
 
 vi.mock('@/lib/native', () => ({
-  getOAuthRedirectUrl: () => `${window.location.origin}/app`,
   openExternalUrl: openExternalUrlMock,
 }));
 
@@ -142,12 +141,13 @@ import { crossfireStorageKey } from '@/lib/crossfire/storage';
 import { useDebateStore } from '@/lib/stores/debate-store';
 
 function AuthConsumer() {
-  const { loading, user, signInWithGoogle, signOut } = useAuth();
+  const { loading, user, callbackError, signInWithGoogle, signOut } = useAuth();
 
   return (
     <div>
       <div data-testid="loading">{String(loading)}</div>
       <div data-testid="user">{user?.id ?? 'none'}</div>
+      <div data-testid="callback-error">{callbackError ?? 'none'}</div>
       <button onClick={() => void signInWithGoogle()} type="button">sign-in</button>
       <button onClick={() => void signInWithGoogle({ driveAccess: true })} type="button">sign-in-with-drive</button>
       <button onClick={() => void signOut()} type="button">sign-out</button>
@@ -507,7 +507,7 @@ describe('AuthProvider behavior', () => {
       expect(signInWithOAuthMock).toHaveBeenCalledWith({
         provider: 'google',
         options: {
-          redirectTo: `${window.location.origin}/app`,
+          redirectTo: `${window.location.origin}/auth/callback`,
           skipBrowserRedirect: true,
           queryParams: undefined,
         },
@@ -533,7 +533,7 @@ describe('AuthProvider behavior', () => {
       expect(signInWithOAuthMock).toHaveBeenCalledWith({
         provider: 'google',
         options: {
-          redirectTo: `${window.location.origin}/app`,
+          redirectTo: `${window.location.origin}/auth/callback`,
           skipBrowserRedirect: true,
           scopes: 'https://www.googleapis.com/auth/drive.file',
           queryParams: undefined,
@@ -554,7 +554,7 @@ describe('AuthProvider behavior', () => {
     await waitFor(() => {
       expect(signInWithOtpMock).toHaveBeenCalledWith({
         email: 'student@example.com',
-        options: { shouldCreateUser: true },
+        options: { shouldCreateUser: true, emailRedirectTo: `${window.location.origin}/auth/callback` },
       });
     });
   });
@@ -629,8 +629,8 @@ describe('AuthProvider behavior', () => {
     await waitFor(() => expect(screen.getByTestId('passwordless-error')).toHaveTextContent('invalid session handoff'));
   });
 
-  it('exchanges PKCE codes from the callback URL and clears the query string', async () => {
-    window.history.replaceState({}, '', '/app?code=pkce-code');
+  it('exchanges the callback code with its own flow verifier and keeps the deep link', async () => {
+    window.history.replaceState({}, '', '/auth/callback?code=pkce-code&sb_flow_id=0123456789abcdef&next=%2Fapp%2Fhistory');
     exchangeCodeForSessionMock.mockResolvedValue({
       data: { session: { user: { id: 'pkce-user' } } },
       error: null,
@@ -646,14 +646,432 @@ describe('AuthProvider behavior', () => {
       expect(screen.getByTestId('user')).toHaveTextContent('pkce-user');
     });
 
-    expect(exchangeCodeForSessionMock).toHaveBeenCalledWith('pkce-code');
+    expect(exchangeCodeForSessionMock).toHaveBeenCalledWith('pkce-code', { flowId: '0123456789abcdef' });
+    expect(window.location.search).toBe('?next=%2Fapp%2Fhistory');
+  });
+
+  it('keeps Google\'s provider token and drops the previous account\'s draft after a callback sign-in', async () => {
+    sessionStorage.removeItem('google_provider_token');
+    localStorage.setItem(crossfireStorageKey('stored-user'), '{"draft":true}');
+    window.history.replaceState({}, '', '/auth/callback?code=pkce-code');
+    let finishExchange!: (value: unknown) => void;
+    exchangeCodeForSessionMock.mockReturnValue(new Promise((resolve) => { finishExchange = resolve; }));
+
+    render(
+      <AuthProvider>
+        <AuthConsumer />
+      </AuthProvider>
+    );
+
+    act(() => callbackRef.current?.('INITIAL_SESSION', { user: { id: 'stored-user' }, access_token: 'stored' }));
+    await act(async () => {
+      finishExchange({ data: { session: { user: { id: 'google-user' }, access_token: 'token', provider_token: 'google-access' } }, error: null });
+    });
+
+    await waitFor(() => expect(screen.getByTestId('user')).toHaveTextContent('google-user'));
+    expect(sessionStorage.getItem('google_provider_token')).toBe('google-access');
+    expect(localStorage.getItem(crossfireStorageKey('stored-user'))).toBeNull();
+  });
+
+  it('exchanges a callback code without a flow id the old way', async () => {
+    window.history.replaceState({}, '', '/auth/callback?code=pkce-code');
+    exchangeCodeForSessionMock.mockResolvedValue({
+      data: { session: { user: { id: 'pkce-user' } } },
+      error: null,
+    });
+
+    render(
+      <AuthProvider>
+        <AuthConsumer />
+      </AuthProvider>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByTestId('user')).toHaveTextContent('pkce-user');
+    });
+    expect(exchangeCodeForSessionMock).toHaveBeenCalledWith('pkce-code', undefined);
     expect(window.location.search).toBe('');
   });
 
-  it('fails open when PKCE callback exchange hangs', async () => {
+  it('stays loading while the callback exchange runs, even when auth reports no session yet', async () => {
+    window.history.replaceState({}, '', '/auth/callback?code=pkce-code');
+    let finishExchange!: (value: unknown) => void;
+    exchangeCodeForSessionMock.mockReturnValue(new Promise((resolve) => { finishExchange = resolve; }));
+
+    render(
+      <AuthProvider>
+        <AuthConsumer />
+      </AuthProvider>
+    );
+
+    // auth-js announces the empty stored session while the code is still being exchanged.
+    act(() => callbackRef.current?.('INITIAL_SESSION', null));
+    expect(screen.getByTestId('loading')).toHaveTextContent('true');
+    // A reload during the spinner must still find the unused code and its flow.
+    expect(window.location.search).toBe('?code=pkce-code');
+
+    await act(async () => {
+      finishExchange({ data: { session: { user: { id: 'pkce-user' }, access_token: 'token' } }, error: null });
+    });
+
+    await waitFor(() => expect(screen.getByTestId('user')).toHaveTextContent('pkce-user'));
+    expect(screen.getByTestId('loading')).toHaveTextContent('false');
+  });
+
+  it('stays loading through the stored session\'s events until another account\'s callback exchange settles', async () => {
+    window.history.replaceState({}, '', '/auth/callback?code=pkce-code');
+    let finishExchange!: (value: unknown) => void;
+    exchangeCodeForSessionMock.mockReturnValue(new Promise((resolve) => { finishExchange = resolve; }));
+
+    render(
+      <AuthProvider>
+        <AuthConsumer />
+      </AuthProvider>
+    );
+
+    // auth-js restores the account already stored in this browser while B's code is exchanged.
+    act(() => callbackRef.current?.('INITIAL_SESSION', { user: { id: 'stored-user' }, access_token: 'stored' }));
+    expect(screen.getByTestId('loading')).toHaveTextContent('true');
+
+    await act(async () => {
+      finishExchange({ data: { session: { user: { id: 'callback-user' }, access_token: 'token' } }, error: null });
+    });
+    await waitFor(() => expect(screen.getByTestId('loading')).toHaveTextContent('false'));
+    expect(screen.getByTestId('user')).toHaveTextContent('callback-user');
+  });
+
+  it('ends the callback wait when the stored session\'s user lookup never answers', async () => {
+    vi.useFakeTimers();
+    try {
+      window.history.replaceState({}, '', '/auth/callback?error=access_denied&error_code=otp_expired');
+      getSessionMock.mockResolvedValue({ data: { session: { user: { id: 'stored-user' }, access_token: 'stored' } }, error: null });
+      getUserMock.mockReturnValue(new Promise(() => {}));
+
+      render(
+        <AuthProvider>
+          <AuthConsumer />
+        </AuthProvider>
+      );
+
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(4_000);
+      });
+      // Auth did not answer: an outage keeps the stored session, and the page moves on.
+      expect(screen.getByTestId('loading')).toHaveTextContent('false');
+      expect(screen.getByTestId('user')).toHaveTextContent('stored-user');
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('never lets a dead stored account sign out or block the account a callback signs in', async () => {
+    window.history.replaceState({}, '', '/auth/callback?code=pkce-code');
+    let finishExchange!: (value: unknown) => void;
+    exchangeCodeForSessionMock.mockReturnValue(new Promise((resolve) => { finishExchange = resolve; }));
+    // The stored account was revoked elsewhere: its lookup is refused.
+    getUserMock.mockResolvedValue({ data: { user: null }, error: { status: 401, message: 'revoked' } });
+
+    render(
+      <AuthProvider>
+        <AuthConsumer />
+      </AuthProvider>
+    );
+
+    act(() => callbackRef.current?.('INITIAL_SESSION', { user: { id: 'stored-user' }, access_token: 'stored' }));
+    await act(async () => {
+      finishExchange({ data: { session: { user: { id: 'callback-user' }, access_token: 'token' } }, error: null });
+    });
+
+    await waitFor(() => expect(screen.getByTestId('loading')).toHaveTextContent('false'));
+    expect(screen.getByTestId('user')).toHaveTextContent('callback-user');
+    expect(signOutMock).not.toHaveBeenCalled();
+    expect(prepareSessionStoreMock).toHaveBeenCalledWith('callback-user');
+    expect(hydrateSessionStoreMock).toHaveBeenCalled();
+  });
+
+  it.each([
+    ['opens the account and drops the timeout notice on a late success', { data: { session: { user: { id: 'late-user' }, access_token: 'token' } }, error: null }, 'none'],
+    ['gives the real reason on a late failure', { data: { session: null }, error: Object.assign(new Error('expired'), { code: 'flow_state_expired' }) }, 'link-expired'],
+  ])('after a callback timeout, %s', async (_name, lateResult, expectedError) => {
     vi.useFakeTimers();
     const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
-    window.history.replaceState({}, '', '/app?code=stalled-code');
+    try {
+      window.history.replaceState({}, '', '/auth/callback?code=slow-code&sb_flow_id=0123456789abcdef');
+      let finishExchange!: (value: unknown) => void;
+      exchangeCodeForSessionMock.mockReturnValue(new Promise((resolve) => { finishExchange = resolve; }));
+
+      render(
+        <AuthProvider>
+          <AuthConsumer />
+        </AuthProvider>
+      );
+
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(15_000);
+      });
+      expect(screen.getByTestId('callback-error')).toHaveTextContent('timed-out');
+      expect(window.location.search).toBe('?code=slow-code&sb_flow_id=0123456789abcdef');
+
+      await act(async () => {
+        finishExchange(lateResult);
+        await vi.advanceTimersByTimeAsync(0);
+      });
+      expect(screen.getByTestId('callback-error')).toHaveTextContent(expectedError);
+      // The answer is final now, so the used code leaves the URL.
+      expect(window.location.search).toBe('');
+    } finally {
+      warnSpy.mockRestore();
+      vi.useRealTimers();
+    }
+  });
+
+  it('after a timeout, leaves the stored account alone until the exchange answers, then opens the new one', async () => {
+    vi.useFakeTimers();
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    try {
+      window.history.replaceState({}, '', '/auth/callback?code=slow-code');
+      getSessionMock.mockResolvedValue({ data: { session: { user: { id: 'stored-user' }, access_token: 'stored' } }, error: null });
+      let finishExchange!: (value: unknown) => void;
+      exchangeCodeForSessionMock.mockReturnValue(new Promise((resolve) => { finishExchange = resolve; }));
+
+      render(
+        <AuthProvider>
+          <AuthConsumer />
+        </AuthProvider>
+      );
+
+      act(() => callbackRef.current?.('INITIAL_SESSION', { user: { id: 'stored-user' }, access_token: 'stored' }));
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(15_000);
+      });
+      // Nothing is restored or checked while the slow exchange may still sign someone in.
+      expect(screen.getByTestId('loading')).toHaveTextContent('false');
+      expect(screen.getByTestId('user')).toHaveTextContent('none');
+      expect(getSessionMock).not.toHaveBeenCalled();
+      expect(getUserMock).not.toHaveBeenCalled();
+
+      await act(async () => {
+        finishExchange({ data: { session: { user: { id: 'callback-user' }, access_token: 'token' } }, error: null });
+        await vi.advanceTimersByTimeAsync(0);
+      });
+      expect(screen.getByTestId('user')).toHaveTextContent('callback-user');
+      expect(prepareSessionStoreMock).toHaveBeenCalledWith('callback-user');
+      expect(prepareSessionStoreMock).not.toHaveBeenCalledWith('stored-user');
+    } finally {
+      warnSpy.mockRestore();
+      vi.useRealTimers();
+    }
+  });
+
+  it('after a timeout and a late failure, restores the stored account through the usual check', async () => {
+    vi.useFakeTimers();
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    try {
+      window.history.replaceState({}, '', '/auth/callback?code=slow-code');
+      getSessionMock.mockResolvedValue({ data: { session: { user: { id: 'stored-user' }, access_token: 'stored' } }, error: null });
+      let finishExchange!: (value: unknown) => void;
+      exchangeCodeForSessionMock.mockReturnValue(new Promise((resolve) => { finishExchange = resolve; }));
+
+      render(
+        <AuthProvider>
+          <AuthConsumer />
+        </AuthProvider>
+      );
+
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(15_000);
+      });
+      await act(async () => {
+        finishExchange({ data: { session: null }, error: Object.assign(new Error('expired'), { code: 'flow_state_expired' }) });
+        await vi.advanceTimersByTimeAsync(0);
+      });
+      expect(screen.getByTestId('callback-error')).toHaveTextContent('link-expired');
+      expect(getUserMock).toHaveBeenCalled();
+      expect(screen.getByTestId('user')).toHaveTextContent('stored-user');
+    } finally {
+      warnSpy.mockRestore();
+      vi.useRealTimers();
+    }
+  });
+
+  it('after a timeout, still takes a sign-in made on /login, and a late failure does not undo it', async () => {
+    vi.useFakeTimers();
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    try {
+      window.history.replaceState({}, '', '/auth/callback?code=slow-code');
+      getSessionMock.mockResolvedValue({ data: { session: { user: { id: 'stored-user' }, access_token: 'stored' } }, error: null });
+      let finishExchange!: (value: unknown) => void;
+      exchangeCodeForSessionMock.mockReturnValue(new Promise((resolve) => { finishExchange = resolve; }));
+
+      render(
+        <AuthProvider>
+          <AuthConsumer />
+        </AuthProvider>
+      );
+
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(15_000);
+      });
+      // The user gave up on the link and signed in with a code instead.
+      await act(async () => {
+        callbackRef.current?.('SIGNED_IN', { user: { id: 'code-user' }, access_token: 'code-token' });
+        await vi.advanceTimersByTimeAsync(0);
+      });
+      expect(screen.getByTestId('user')).toHaveTextContent('code-user');
+
+      await act(async () => {
+        finishExchange({ data: { session: null }, error: Object.assign(new Error('expired'), { code: 'flow_state_expired' }) });
+        await vi.advanceTimersByTimeAsync(0);
+      });
+      expect(screen.getByTestId('user')).toHaveTextContent('code-user');
+      expect(prepareSessionStoreMock).not.toHaveBeenCalledWith('stored-user');
+    } finally {
+      warnSpy.mockRestore();
+      vi.useRealTimers();
+    }
+  });
+
+  it('does not restore the stored account over one signed in during its check', async () => {
+    getSessionMock.mockResolvedValue({ data: { session: { user: { id: 'stored-user' }, access_token: 'stored' } }, error: null });
+    let answerLookup!: (value: unknown) => void;
+    getUserMock.mockImplementationOnce(() => new Promise((resolve) => { answerLookup = resolve; }));
+
+    render(
+      <AuthProvider>
+        <AuthConsumer />
+      </AuthProvider>
+    );
+
+    await waitFor(() => expect(getUserMock).toHaveBeenCalled());
+    await act(async () => {
+      callbackRef.current?.('SIGNED_IN', { user: { id: 'new-user' }, access_token: 'new-token' });
+    });
+    await act(async () => {
+      answerLookup({ data: { user: { id: 'stored-user' } }, error: null });
+    });
+
+    await waitFor(() => expect(screen.getByTestId('loading')).toHaveTextContent('false'));
+    expect(screen.getByTestId('user')).toHaveTextContent('new-user');
+  });
+
+  it('does not drop an account signed in while a dead stored account was being checked', async () => {
+    getSessionMock.mockResolvedValue({ data: { session: { user: { id: 'stored-user' }, access_token: 'stored' } }, error: null });
+    let answerLookup!: (value: unknown) => void;
+    getUserMock.mockImplementationOnce(() => new Promise((resolve) => { answerLookup = resolve; }));
+
+    render(
+      <AuthProvider>
+        <AuthConsumer />
+      </AuthProvider>
+    );
+
+    await waitFor(() => expect(getUserMock).toHaveBeenCalled());
+    await act(async () => {
+      callbackRef.current?.('SIGNED_IN', { user: { id: 'new-user' }, access_token: 'new-token' });
+    });
+    await act(async () => {
+      answerLookup({ data: { user: null }, error: { status: 401, message: 'revoked' } });
+    });
+
+    await waitFor(() => expect(screen.getByTestId('loading')).toHaveTextContent('false'));
+    expect(screen.getByTestId('user')).toHaveTextContent('new-user');
+  });
+
+  it('does not hold startup on a sign-out of a dead stored session that never answers', async () => {
+    vi.useFakeTimers();
+    try {
+      getSessionMock.mockResolvedValue({ data: { session: { user: { id: 'stored-user' }, access_token: 'stored' } }, error: null });
+      getUserMock.mockResolvedValue({ data: { user: null }, error: { status: 401, message: 'revoked' } });
+      signOutMock.mockReturnValue(new Promise(() => {}));
+
+      render(
+        <AuthProvider>
+          <AuthConsumer />
+        </AuthProvider>
+      );
+
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(4_000);
+      });
+      expect(screen.getByTestId('loading')).toHaveTextContent('false');
+      expect(screen.getByTestId('user')).toHaveTextContent('none');
+    } finally {
+      signOutMock.mockReset();
+      vi.useRealTimers();
+    }
+  });
+
+  it('keeps a callback error when the stored session is restored afterwards', async () => {
+    window.history.replaceState({}, '', '/auth/callback?error=access_denied&error_code=otp_expired');
+    getSessionMock.mockResolvedValue({ data: { session: { user: { id: 'stored-user' }, access_token: 'stored' } }, error: null });
+
+    render(
+      <AuthProvider>
+        <AuthConsumer />
+      </AuthProvider>
+    );
+
+    await waitFor(() => expect(screen.getByTestId('loading')).toHaveTextContent('false'));
+    act(() => callbackRef.current?.('SIGNED_IN', { user: { id: 'stored-user' }, access_token: 'stored' }));
+    expect(screen.getByTestId('callback-error')).toHaveTextContent('link-expired');
+  });
+
+  it('says why a callback exchange failed and keeps any session the browser already had', async () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    window.history.replaceState({}, '', '/auth/callback?code=pkce-code&sb_flow_id=0123456789abcdef');
+    exchangeCodeForSessionMock.mockResolvedValue({
+      data: { session: null },
+      error: Object.assign(new Error('PKCE code verifier not found in storage.'), { code: 'pkce_code_verifier_not_found' }),
+    });
+    getSessionMock.mockResolvedValue({ data: { session: { user: { id: 'existing-user' }, access_token: 'token' } }, error: null });
+
+    render(
+      <AuthProvider>
+        <AuthConsumer />
+      </AuthProvider>
+    );
+
+    await waitFor(() => expect(screen.getByTestId('loading')).toHaveTextContent('false'));
+    expect(screen.getByTestId('callback-error')).toHaveTextContent('other-browser');
+    expect(screen.getByTestId('user')).toHaveTextContent('existing-user');
+    expect(window.location.search).toBe('');
+    warnSpy.mockRestore();
+  });
+
+  it('reads an expired-link error from the callback URL without exchanging anything', async () => {
+    window.history.replaceState({}, '', '/auth/callback?error=access_denied&error_code=otp_expired&error_description=Email+link+is+invalid+or+has+expired');
+
+    render(
+      <AuthProvider>
+        <AuthConsumer />
+      </AuthProvider>
+    );
+
+    await waitFor(() => expect(screen.getByTestId('loading')).toHaveTextContent('false'));
+    expect(screen.getByTestId('callback-error')).toHaveTextContent('link-expired');
+    expect(screen.getByTestId('user')).toHaveTextContent('none');
+    expect(exchangeCodeForSessionMock).not.toHaveBeenCalled();
+    expect(window.location.search).toBe('');
+  });
+
+  it('ignores a code query parameter outside the callback route', async () => {
+    window.history.replaceState({}, '', '/app/history?code=not-ours');
+
+    render(
+      <AuthProvider>
+        <AuthConsumer />
+      </AuthProvider>
+    );
+
+    await waitFor(() => expect(screen.getByTestId('loading')).toHaveTextContent('false'));
+    expect(exchangeCodeForSessionMock).not.toHaveBeenCalled();
+    expect(window.location.search).toBe('?code=not-ours');
+  });
+
+  it('stops waiting and reports a failed sign-in when the callback exchange hangs', async () => {
+    vi.useFakeTimers();
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    window.history.replaceState({}, '', '/auth/callback?code=stalled-code');
     exchangeCodeForSessionMock.mockReturnValue(new Promise(() => {}));
 
     render(
@@ -662,14 +1080,21 @@ describe('AuthProvider behavior', () => {
       </AuthProvider>
     );
 
+    act(() => callbackRef.current?.('INITIAL_SESSION', null));
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(14_000);
+    });
+    expect(screen.getByTestId('loading')).toHaveTextContent('true');
+
     await act(async () => {
       // Keep this in sync with the OAuth code-exchange timeout in AuthProvider.
-      await vi.advanceTimersByTimeAsync(15_000);
+      await vi.advanceTimersByTimeAsync(1_000);
     });
 
     expect(screen.getByTestId('loading')).toHaveTextContent('false');
     expect(screen.getByTestId('user')).toHaveTextContent('none');
-    expect(warnSpy).toHaveBeenCalledWith('[Auth] init failed:', expect.any(Error));
+    expect(screen.getByTestId('callback-error')).toHaveTextContent('timed-out');
+    // A timeout is not a final answer: the code may still be good, so a reload can retry it.
     expect(window.location.search).toBe('?code=stalled-code');
 
     warnSpy.mockRestore();
@@ -696,7 +1121,7 @@ describe('AuthProvider behavior', () => {
     });
   });
 
-  it('signOut delegates to Supabase and resets both stores', async () => {
+  it('signOut ends only this device\'s session and resets both stores', async () => {
     render(
       <AuthProvider>
         <AuthConsumer />
@@ -706,7 +1131,7 @@ describe('AuthProvider behavior', () => {
     fireEvent.click(screen.getByRole('button', { name: 'sign-out' }));
 
     await waitFor(() => {
-      expect(signOutMock).toHaveBeenCalled();
+      expect(signOutMock).toHaveBeenCalledWith({ scope: 'local' });
     });
 
     expect(resetSessionStoreMock).toHaveBeenCalled();

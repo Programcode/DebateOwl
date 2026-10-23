@@ -1,5 +1,6 @@
 import { useCallback, useRef, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
+import { Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
@@ -33,7 +34,8 @@ export function useDebateMotionGate(options: { disabled?: boolean } = {}): {
   const { toast } = useToast();
   const current = useCurrentDebate();
   const [pending, setPending] = useState<PendingChoice | null>(null);
-  const [busy, setBusy] = useState(false);
+  // Which choice is in flight; every choice waits for it, so one click is one create.
+  const [busy, setBusy] = useState<'switch' | 'create' | null>(null);
   const pendingRef = useRef<PendingChoice | null>(null);
   const disabled = Boolean(options.disabled);
 
@@ -53,14 +55,15 @@ export function useDebateMotionGate(options: { disabled?: boolean } = {}): {
     setPending(null);
   };
 
-  const choose = async (action: () => Promise<DebateTarget>) => {
-    setBusy(true);
+  const choose = async (kind: 'switch' | 'create', action: () => Promise<DebateTarget>) => {
+    if (busy) return;
+    setBusy(kind);
     try {
       finish(await action());
     } catch {
       toast({ title: t('debate.saveFailed', 'Could not save the debate.'), variant: 'destructive' });
     } finally {
-      setBusy(false);
+      setBusy(null);
     }
   };
 
@@ -73,8 +76,8 @@ export function useDebateMotionGate(options: { disabled?: boolean } = {}): {
           </DialogTitle>
           <DialogDescription asChild>
             <div className="space-y-2">
-              <p className="break-words border-l-2 border-primary pl-3 text-left font-medium text-foreground">{pending?.motion}</p>
-              <p className="break-words">
+              <p className="wrap-break-word border-l-2 border-primary pl-3 text-left font-medium text-foreground">{pending?.motion}</p>
+              <p className="wrap-break-word">
                 {current
                   ? t('debate.mismatchDesc', { motion: current.motion, defaultValue: 'Your Current Debate is “{{motion}}”.' })
                   : t('debate.offerDesc', 'A debate keeps this motion, its sources, and your results together, and every tool uses it.')}
@@ -87,9 +90,9 @@ export function useDebateMotionGate(options: { disabled?: boolean } = {}): {
             <Button
               key={debate.id}
               variant="outline"
-              disabled={busy}
+              disabled={busy !== null}
               className="h-auto justify-start whitespace-normal py-2 text-left"
-              onClick={() => void choose(async () => {
+              onClick={() => void choose('switch', async () => {
                 await useDebateStore.getState().switchDebate(debate.id);
                 return { debateId: debate.id };
               })}
@@ -98,15 +101,19 @@ export function useDebateMotionGate(options: { disabled?: boolean } = {}): {
             </Button>
           ))}
           <Button
-            disabled={busy}
-            onClick={() => void choose(async () => {
+            disabled={busy !== null}
+            aria-busy={busy === 'create'}
+            onClick={() => void choose('create', async () => {
               const debate = await useDebateStore.getState().createDebate({ motion: pending?.motion ?? '' });
               return { debateId: debate.id };
             })}
           >
-            {current ? t('debate.createFromMotion', 'Create a new debate for this motion') : t('debate.startDebate', 'Start debate')}
+            {busy === 'create' && <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" />}
+            {busy === 'create'
+              ? t('debate.creating', 'Creating…')
+              : current ? t('debate.createFromMotion', 'Create a new debate for this motion') : t('debate.startDebate', 'Start debate')}
           </Button>
-          <Button variant="ghost" disabled={busy} onClick={() => finish({ debateId: null })}>
+          <Button variant="ghost" disabled={busy !== null} onClick={() => finish({ debateId: null })}>
             {current ? t('debate.useOnce', 'Use once without saving to a debate') : t('debate.offerNotNow', 'Not now, use it once')}
           </Button>
         </div>

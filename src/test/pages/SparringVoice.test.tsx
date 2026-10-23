@@ -32,6 +32,14 @@ vi.mock('@/hooks/use-subscription', () => ({
   useSubscription: () => ({ remainingToday: null as number | null }),
 }));
 
+vi.mock('@/lib/supabase/AuthProvider', () => ({
+  useAuth: () => ({ user: { id: 'user-a' } }),
+}));
+
+vi.mock('@/hooks/use-session-quota', () => ({
+  useSessionQuota: () => ({ units: null as number | null, remaining: null as number | null, blocked: null as string | null, checkBeforeStart: async (): Promise<null> => null }),
+}));
+
 vi.mock('@/lib/voice/opponent-voice', () => ({
   opponentVoice: {
     speak: voiceMock.speak,
@@ -44,7 +52,7 @@ vi.mock('@/lib/voice/opponent-voice', () => ({
 }));
 
 const CONFIG: ProviderConfig = { provider: 'mock', model: 'local' };
-const SETTINGS = { outputLanguage: 'en' as const, getFeatureConfig: vi.fn((): ProviderConfig => CONFIG) };
+const SETTINGS = { outputLanguage: 'en' as const, featureConfigs: {} as Record<string, ProviderConfig | undefined>, getFeatureConfig: vi.fn((): ProviderConfig => CONFIG) };
 
 vi.mock('@/lib/stores/settings-store', () => ({
   useSettingsStore: (selector: (state: typeof SETTINGS) => unknown) => selector(SETTINGS),
@@ -235,7 +243,7 @@ describe('SparringPage voice rounds', () => {
     // The request asks for a spoken reply.
     expect(generateMock.mock.calls[0][4]).toBe(true);
     await waitFor(() => expect(voiceMock.speak).toHaveBeenCalledTimes(1));
-    const [utterance, onEnd] = voiceMock.speak.mock.calls[0];
+    const [utterance] = voiceMock.speak.mock.calls[0];
     expect(utterance).toEqual({ feature: 'sparring', text: 'A narrower policy does the same for less.', voice: VOICE_PAYLOAD, language: 'en' });
 
     // The transcript shows and stores the reply without its audio tag.
@@ -247,10 +255,9 @@ describe('SparringPage voice rounds', () => {
     expect(within(screen.getByRole('article', { name: 'Opponent’s last speech' })).getByText('A narrower policy does the same for less.')).toBeInTheDocument();
     expect(screen.queryByText(/\[sighs\]/)).not.toBeInTheDocument();
 
-    // The student's clock waits for the opponent to finish, then runs.
+    // The student's next turn waits on the ready step, not on the opponent's audio.
     expect(useSparringStore.getState().currentSession?.timerRunning).toBe(false);
-    act(() => onEnd());
-    expect(useSparringStore.getState().currentSession?.timerRunning).toBe(true);
+    expect(screen.getByTestId('sparring-ready')).toHaveTextContent('Your clock starts when you start speaking or typing.');
   });
 
   it('saves but does not speak a reply that arrives after the student left the page', async () => {
@@ -273,29 +280,23 @@ describe('SparringPage voice rounds', () => {
     expect(voiceMock.beginRound).toHaveBeenCalledTimes(1);
   });
 
-  it('keeps the clock paused while a later reply plays, even when an earlier reply ends under it', async () => {
-    // Like the real voice: a new reply stops the one still playing, which ends it.
-    let playing: (() => void) | undefined;
-    voiceMock.speak.mockImplementation((_utterance: unknown, onEnd?: () => void) => {
-      const previous = playing;
-      playing = onEnd;
-      previous?.();
-    });
+  it('opens each turn with a stopped clock that starts when the student speaks or types', async () => {
     await startVoiceRound();
-    fireEvent.change(screen.getByRole('textbox', { name: /Draft for Pro Introductor/i }), { target: { value: 'The first speech.' } });
+    // The round opens on the ready step: nothing runs until the student starts.
+    expect(useSparringStore.getState().currentSession?.timerRunning).toBe(false);
+    expect(screen.getByTestId('sparring-ready')).toBeInTheDocument();
+    fireEvent.click(screen.getByTestId('voice-mic'));
+    expect(useSparringStore.getState().currentSession?.timerRunning).toBe(true);
+    expect(screen.queryByTestId('sparring-ready')).not.toBeInTheDocument();
+
+    act(() => MockRecognition.instances[0].say('The first speech.'));
     fireEvent.click(screen.getByRole('button', { name: 'Submit speech' }));
     await waitFor(() => expect(voiceMock.speak).toHaveBeenCalledTimes(1));
-    expect(useSparringStore.getState().currentSession?.timerRunning).toBe(false);
 
-    // The student types and sends the next speech while the first reply is still playing.
-    generateMock.mockResolvedValue({ ...OPPONENT_RESPONSE, speech: { ...OPPONENT_RESPONSE.speech, content: 'A second reply.' } });
-    fireEvent.change(await screen.findByRole('textbox', { name: /Draft for Pro R1/i }), { target: { value: 'The second speech.' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Submit speech' }));
-    await waitFor(() => expect(voiceMock.speak).toHaveBeenCalledTimes(2));
-
-    // The first reply's end must not start the clock while the second reply plays.
+    // The next turn waits again; typing starts it.
+    const draft = await screen.findByRole('textbox', { name: /Draft for Pro R1/i });
     expect(useSparringStore.getState().currentSession?.timerRunning).toBe(false);
-    act(() => playing?.());
+    fireEvent.change(draft, { target: { value: 'T' } });
     expect(useSparringStore.getState().currentSession?.timerRunning).toBe(true);
   });
 

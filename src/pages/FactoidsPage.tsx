@@ -10,7 +10,7 @@ import { FactoidsResults } from '@/components/features/factoids/FactoidsResults'
 import { factoids, type DiscoveredSource } from '@/lib/ai/client';
 import { useSubscriptionError } from '@/hooks/use-subscription-error';
 import { getUserFacingAIError } from '@/lib/ai/error-display';
-import { LimitReachedModal, ModelRestrictedModal, PricingModal } from '@/components/features/subscription';
+import { DailyUsage, SubscriptionErrorModals } from '@/components/features/subscription';
 import type { FactoidsInput } from '@/lib/ai/schemas/factoids';
 import { useToast } from '@/hooks/use-toast';
 import { EmptyState } from '@/components/ui/empty-state';
@@ -19,6 +19,7 @@ import { ToolRunErrorPanel, isCanceled, useRevealResults, useToolRun } from '@/c
 import { LiveToolRun } from '@/components/features/tools/live-draft';
 import { factoidsDraftSections } from '@/components/features/tools/live-sections';
 import { factoidsDiscussPrompt, openDiscussion } from '@/components/features/tools/discuss';
+import { markResultSaved, useResultSaved } from '@/components/features/tools/result-actions';
 import { WorkspaceToolScope, useWorkspaceToolScope } from '@/components/features/workspace/WorkspaceToolScope';
 import { recordInDebate } from '@/lib/debate/record';
 import { CurrentDebateStrip } from '@/components/features/debate/CurrentDebateStrip';
@@ -27,7 +28,7 @@ import { DebateRequiredError } from '@/lib/stores/session-store';
 
 export default function FactoidsPage() {
   const workspace = useWorkspaceToolScope('factoids');
-  const { factoidsResult, factoidsLoading, factoidsForm, setFactoidsResult, setFactoidsLoading, addSource, setFactoidsForm, recordResult } = useSessionStore(useShallow((state) => ({
+  const { factoidsResult, factoidsLoading, factoidsForm, setFactoidsResult, setFactoidsLoading, addSource, setFactoidsForm, recordResult, saveCurrentFactoids } = useSessionStore(useShallow((state) => ({
     factoidsResult: state.factoidsResult,
     factoidsLoading: state.factoidsLoading,
     factoidsForm: state.factoidsForm,
@@ -36,6 +37,7 @@ export default function FactoidsPage() {
     addSource: state.addSource,
     setFactoidsForm: state.setFactoidsForm,
     recordResult: state.recordResult,
+    saveCurrentFactoids: state.saveCurrentFactoids,
   })));
   const { getFeatureConfig } = useSettingsStore();
   const config = getFeatureConfig('factoids');
@@ -53,6 +55,8 @@ export default function FactoidsPage() {
   const subError = useSubscriptionError();
   const { t } = useTranslation();
   const [discoveredSources, setDiscoveredSources] = useState<DiscoveredSource[]>([]);
+  const resultSaved = useResultSaved(factoidsResult);
+  const [saving, setSaving] = useState(false);
 
   const handleSubmit = async (data: FactoidsInput) => {
     lastInput.current = data;
@@ -69,7 +73,7 @@ export default function FactoidsPage() {
       setFactoidsResult(result);
       await workspace.attach(data, result);
       if (debateId) {
-        await recordInDebate(() => recordResult('factoids', { title: data.claim, input: data, output: result, debateId, side: 'neutral' }));
+        if (await recordInDebate(() => recordResult('factoids', { title: data.claim, input: data, output: result, debateId, side: 'neutral' }))) markResultSaved(result);
       }
       results.reveal();
     } catch (error) {
@@ -109,6 +113,23 @@ export default function FactoidsPage() {
     }
   };
 
+  // Results outside a debate are not saved automatically; Save puts them in History.
+  const handleSave = async () => {
+    const result = factoidsResult;
+    if (!result || saving) return;
+    setSaving(true);
+    try {
+      await saveCurrentFactoids((lastInput.current?.claim || factoidsForm?.claim || t('generatedArtifacts.factoidsTitle')).slice(0, 300));
+      markResultSaved(result);
+      toast({ title: t('resultActions.savedToHistory', 'Saved to History') });
+    } catch (error) {
+      console.error('Failed to save factoids:', error);
+      toast({ title: t('resultActions.saveFailed', 'Could not save. Try again.'), variant: 'destructive' });
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const handleDiscuss = () => {
     if (factoidsResult) openDiscussion(navigate, factoidsDiscussPrompt(factoidsResult, t));
   };
@@ -117,7 +138,7 @@ export default function FactoidsPage() {
     <div className="container py-8 px-4">
       <WorkspaceToolScope context={workspace.context} />
       <div className="max-w-6xl mx-auto">
-        <PageHeader title={t('nav.factoids')} />
+        <PageHeader title={t('nav.factoids')} meta={<DailyUsage />} />
         <CurrentDebateStrip hidden={Boolean(workspace.context)} />
 
         <div className="grid gap-8 lg:grid-cols-[400px_minmax(0,1fr)]">
@@ -143,6 +164,9 @@ export default function FactoidsPage() {
                   result={factoidsResult}
                   discoveredSources={discoveredSources}
                   onDiscuss={handleDiscuss}
+                  onSave={() => void handleSave()}
+                  saved={resultSaved}
+                  saving={saving}
                   onSaveSource={handleSaveToLibrary}
                   onUseSuggestion={handleUseSuggestion}
                 />
@@ -154,27 +178,7 @@ export default function FactoidsPage() {
         </div>
       </div>
 
-      <LimitReachedModal
-        open={subError.limitModalOpen}
-        onOpenChange={subError.setLimitModalOpen}
-        variant={subError.limitModalVariant}
-        limit={subError.limitModalLimit}
-        current={subError.limitModalCurrent}
-        units={subError.limitModalUnits}
-        onUpgrade={() => { subError.setLimitModalOpen(false); subError.setPricingModalOpen(true); }}
-      />
-      <ModelRestrictedModal
-        open={subError.modelModalOpen}
-        onOpenChange={subError.setModelModalOpen}
-        onUpgrade={() => {
-          subError.setModelModalOpen(false);
-          subError.setPricingModalOpen(true);
-        }}
-      />
-      <PricingModal
-        open={subError.pricingModalOpen}
-        onOpenChange={subError.setPricingModalOpen}
-      />
+      <SubscriptionErrorModals subError={subError} />
     </div>
   );
 }

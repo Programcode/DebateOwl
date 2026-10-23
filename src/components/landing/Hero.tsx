@@ -22,12 +22,12 @@ const Hero = () => {
     ];
 
     return (
-        <section className="relative min-h-[100dvh] overflow-hidden pt-24 pb-20 md:pt-32">
+        <section className="relative min-h-dvh overflow-hidden pt-24 pb-20 md:pt-32">
             <div className="absolute inset-0 aurora-bg opacity-80" />
             <div className="absolute inset-0 animated-grid opacity-50" />
             <div className="orb orb-primary w-[420px] h-[420px] -top-44 -left-44 opacity-70" />
             <div className="orb orb-accent w-[520px] h-[520px] -right-32 top-1/3 opacity-60" />
-            <div className="absolute inset-0 bg-gradient-to-b from-background/40 via-background/75 to-background pointer-events-none" />
+            <div className="absolute inset-0 bg-linear-to-b from-background/40 via-background/75 to-background pointer-events-none" />
 
             <div className="section-container relative z-10">
                 <div className="grid grid-cols-1 items-center gap-14 lg:grid-cols-[1.05fr_0.95fr]">
@@ -133,7 +133,7 @@ const HeroPreview = () => {
 
     return (
         <Reveal onLoad delay={0.1} className="relative">
-            <div className="absolute -inset-8 bg-gradient-to-r from-primary/20 via-cyan-400/20 to-emerald-400/20 blur-3xl" />
+            <div className="absolute -inset-8 bg-linear-to-r from-primary/20 via-cyan-400/20 to-emerald-400/20 blur-3xl" />
             <div className="relative overflow-hidden rounded-2xl border border-border/70 bg-card shadow-2xl">
                 {/* Browser chrome */}
                 <div className="flex items-center border-b border-border/60 px-5 py-3">
@@ -155,7 +155,7 @@ const HeroPreview = () => {
                                         type="button"
                                         aria-pressed={mode === item.key}
                                         onClick={() => setMode(item.key)}
-                                        className={`rounded-md px-2 py-1 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring pointer-coarse:min-h-11 ${mode === item.key ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}
+                                        className={`rounded-md px-2 py-1 text-xs font-medium transition-colors focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring pointer-coarse:min-h-11 ${mode === item.key ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}
                                     >
                                         {item.label}
                                     </button>
@@ -163,7 +163,7 @@ const HeroPreview = () => {
                             </div>
                         </div>
 
-                        <div className="space-y-3">
+                        <div className="space-y-3" aria-hidden="true" {...{ inert: '' }}>
                             <div className="space-y-1.5">
                                 <label htmlFor="hero-motion" className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
                                     {t('hero.preview.topicLabel')}
@@ -173,7 +173,8 @@ const HeroPreview = () => {
                                     type="text"
                                     value={motionText}
                                     readOnly
-                                    className="w-full rounded-md border border-border/70 bg-background px-3 py-2 text-sm text-foreground outline-none transition-colors placeholder:text-muted-foreground focus:border-primary focus:ring-2 focus:ring-primary/20"
+                                    tabIndex={-1}
+                                    className="w-full rounded-md border border-border/70 bg-background px-3 py-2 text-sm text-foreground outline-hidden transition-colors placeholder:text-muted-foreground focus:border-primary focus:ring-2 focus:ring-primary/20"
                                 />
                             </div>
                             <div className="grid grid-cols-2 gap-2">
@@ -191,7 +192,7 @@ const HeroPreview = () => {
                         </div>
                     </div>
 
-                    <div className="space-y-3 rounded-xl border border-border/70 bg-card p-4">
+                    <div className="space-y-3 rounded-xl border border-border/70 bg-card p-4" aria-hidden="true">
                         <div>
                             <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{sample.title}</p>
                         </div>

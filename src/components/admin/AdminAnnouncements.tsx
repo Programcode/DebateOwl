@@ -349,7 +349,7 @@ export function AdminAnnouncements({ users }: AdminAnnouncementsProps) {
                             : t('admin.announcements.userCount', { count: announcement.targetUserIds?.length ?? 0 })}
                         </Badge>
                       </div>
-                      <p className="mt-2 whitespace-pre-wrap break-words text-sm text-muted-foreground">
+                      <p className="mt-2 whitespace-pre-wrap wrap-break-word text-sm text-muted-foreground">
                         {announcement.body}
                       </p>
                       <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">

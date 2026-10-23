@@ -1,7 +1,7 @@
 // src/pages/AttackPage.tsx
 import { useEffect, useRef, useState } from 'react';
 import { useShallow } from 'zustand/react/shallow';
-import { Swords } from 'lucide-react';
+import { History, Swords } from 'lucide-react';
 import { useSessionStore } from '@/lib/stores/session-store';
 import { useSettingsStore } from '@/lib/stores/settings-store';
 import { useTranslation } from 'react-i18next';
@@ -10,7 +10,7 @@ import { AttackResults } from '@/components/features/attack/AttackResults';
 import { attackCase, type DiscoveredSource } from '@/lib/ai/client';
 import { useSubscriptionError } from '@/hooks/use-subscription-error';
 import { getUserFacingAIError } from '@/lib/ai/error-display';
-import { LimitReachedModal, ModelRestrictedModal, PricingModal } from '@/components/features/subscription';
+import { DailyUsage, SubscriptionErrorModals } from '@/components/features/subscription';
 import type { AttackInput } from '@/lib/ai/schemas/attack';
 import { useNavigate } from 'react-router-dom';
 import { EmptyState } from '@/components/ui/empty-state';
@@ -51,6 +51,13 @@ export default function AttackPage() {
   const subError = useSubscriptionError();
   const { t } = useTranslation();
   const [discoveredSources, setDiscoveredSources] = useState<DiscoveredSource[]>([]);
+  // The text the critique on screen was written for. A critique restored with the page
+  // belongs to the text restored with it.
+  const critiquedText = useRef<string | null>(attackResult ? attackForm?.caseText ?? null : null);
+  // The critique that a later run, for different text, failed or was refused to replace.
+  const [staleCritique, setStaleCritique] = useState<object | null>(null);
+  // Only that exact critique is labelled; one reopened from History is not.
+  const critiqueIsStale = staleCritique !== null && staleCritique === attackResult;
 
   const handleSubmit = async (data: AttackInput) => {
     lastInput.current = data;
@@ -64,6 +71,8 @@ export default function AttackPage() {
       if (signal.aborted) return;
       setDiscoveredSources(discoveredSources);
       setAttackResult(result);
+      critiquedText.current = data.caseText;
+      setStaleCritique(null);
       await workspace.attach(data, result);
       if (debateId) {
         const title = result.overallAssessment?.summary?.slice(0, 80) || data.caseText.slice(0, 80);
@@ -71,6 +80,8 @@ export default function AttackPage() {
       }
       results.reveal();
     } catch (error) {
+      const shown = useSessionStore.getState().attackResult;
+      setStaleCritique(shown && critiquedText.current !== null && data.caseText !== critiquedText.current ? shown : null);
       if (isCanceled(error, signal)) return;
       console.error('Failed to attack case:', error);
       if (!subError.handleSubscriptionError(error)) {
@@ -99,7 +110,7 @@ export default function AttackPage() {
     <div className="container py-8 px-4">
       <WorkspaceToolScope context={workspace.context} />
       <div className="max-w-6xl mx-auto">
-        <PageHeader title={t('nav.attack')} />
+        <PageHeader title={t('nav.attack')} meta={<DailyUsage />} />
         <CurrentDebateStrip hidden={Boolean(workspace.context)} />
 
         <div className="grid gap-8 lg:grid-cols-[400px_minmax(0,1fr)]">
@@ -121,6 +132,15 @@ export default function AttackPage() {
               <LiveToolRun label={t('attack.working', 'Reviewing your case…')} live={run.liveState} sections={run.liveState.draft ? attackDraftSections(run.liveState.draft, t) : []} onCancel={run.cancel} />
             ) : attackResult ? (
               <div key="attack-results">
+                {critiqueIsStale && (
+                  <div className="mb-4 flex items-start gap-2 rounded-lg border border-dashed border-border bg-muted/40 px-3 py-2 text-sm" data-testid="attack-stale-critique">
+                    <History className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />
+                    <p>
+                      <span className="font-medium text-foreground">{t('attack.previousCritique', 'Critique of your previous argument')}</span>
+                      <span className="block text-muted-foreground">{t('attack.previousCritiqueDesc', 'Your latest version was not reviewed, so this critique may not match the text in the form.')}</span>
+                    </p>
+                  </div>
+                )}
                 <AttackResults
                   result={attackResult}
                   discoveredSources={discoveredSources}
@@ -135,27 +155,7 @@ export default function AttackPage() {
         </div>
       </div>
 
-      <LimitReachedModal
-        open={subError.limitModalOpen}
-        onOpenChange={subError.setLimitModalOpen}
-        variant={subError.limitModalVariant}
-        limit={subError.limitModalLimit}
-        current={subError.limitModalCurrent}
-        units={subError.limitModalUnits}
-        onUpgrade={() => { subError.setLimitModalOpen(false); subError.setPricingModalOpen(true); }}
-      />
-      <ModelRestrictedModal
-        open={subError.modelModalOpen}
-        onOpenChange={subError.setModelModalOpen}
-        onUpgrade={() => {
-          subError.setModelModalOpen(false);
-          subError.setPricingModalOpen(true);
-        }}
-      />
-      <PricingModal
-        open={subError.pricingModalOpen}
-        onOpenChange={subError.setPricingModalOpen}
-      />
+      <SubscriptionErrorModals subError={subError} />
     </div>
   );
 }

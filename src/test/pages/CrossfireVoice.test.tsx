@@ -38,6 +38,14 @@ vi.mock('@/lib/ai/client', () => ({
   isAIModelRestrictionError: () => false,
 }));
 
+vi.mock('@/hooks/use-subscription', () => ({
+  useSubscription: () => ({ remainingToday: null as number | null, dailyLimit: 5 }),
+}));
+
+vi.mock('@/hooks/use-session-quota', () => ({
+  useSessionQuota: () => ({ units: null as number | null, remaining: null as number | null, blocked: null as string | null, checkBeforeStart: async (): Promise<null> => null }),
+}));
+
 vi.mock('@/lib/voice/opponent-voice', () => ({
   opponentVoice: {
     speak: mocks.voice.speak,
@@ -105,6 +113,12 @@ function fillSetup() {
   fireEvent.change(screen.getByTestId('crossfire-argument'), { target: { value: 'Case text' } });
 }
 
+/** Start checks today's quota first, so the round opens a moment after the click. */
+async function clickStart() {
+  fireEvent.click(screen.getByTestId('start-crossfire'));
+  await screen.findByTestId('end-crossfire');
+}
+
 describe('CrossfirePage voice rounds', () => {
   beforeEach(() => {
     enableOneOffMode();
@@ -125,7 +139,7 @@ describe('CrossfirePage voice rounds', () => {
     expect(screen.getByTestId('voice-unavailable')).toHaveTextContent('Typing works as usual.');
 
     fillSetup();
-    fireEvent.click(screen.getByTestId('start-crossfire'));
+    await clickStart();
     expect(screen.queryByTestId('voice-mic')).not.toBeInTheDocument();
     fireEvent.change(screen.getByTestId('crossfire-input'), { target: { value: 'What is the mechanism?' } });
     fireEvent.click(screen.getByTestId('submit-turn'));
@@ -140,7 +154,7 @@ describe('CrossfirePage voice rounds', () => {
     fillSetup();
     fireEvent.click(screen.getByTestId('voice-mode'));
     expect(screen.getByTestId('voice-mode')).toHaveAttribute('aria-checked', 'true');
-    fireEvent.click(screen.getByTestId('start-crossfire'));
+    await clickStart();
     // Each new round gives ElevenLabs a fresh chance.
     expect(mocks.voice.beginRound).toHaveBeenCalledTimes(1);
 
@@ -186,7 +200,7 @@ describe('CrossfirePage voice rounds', () => {
     fillSetup();
     fireEvent.click(screen.getByTestId('mode-ai-questions-user'));
     fireEvent.click(screen.getByTestId('voice-mode'));
-    fireEvent.click(screen.getByTestId('start-crossfire'));
+    await clickStart();
 
     // With no segments from the server, the browser voice still reads the clean text.
     await waitFor(() => expect(mocks.voice.speak).toHaveBeenCalledTimes(1));
@@ -215,7 +229,7 @@ describe('CrossfirePage voice rounds', () => {
       .mockResolvedValueOnce(DEBRIEF);
     renderPage();
     fillSetup();
-    fireEvent.click(screen.getByTestId('start-crossfire'));
+    await clickStart();
     fireEvent.change(screen.getByTestId('crossfire-input'), { target: { value: 'What is the mechanism?' } });
     fireEvent.click(screen.getByTestId('submit-turn'));
     await screen.findByText('A typed answer.');
@@ -229,7 +243,7 @@ describe('CrossfirePage voice rounds', () => {
     renderPage();
     fillSetup();
     fireEvent.click(screen.getByTestId('voice-mode'));
-    fireEvent.click(screen.getByTestId('start-crossfire'));
+    await clickStart();
 
     // Spoken, never sent: the student leaves the round instead.
     fireEvent.click(screen.getByTestId('voice-mic'));
@@ -240,7 +254,7 @@ describe('CrossfirePage voice rounds', () => {
     // A new voice round on the same page, with a typed turn.
     fillSetup();
     fireEvent.click(screen.getByTestId('voice-mode'));
-    fireEvent.click(screen.getByTestId('start-crossfire'));
+    await clickStart();
     // An unsent draft stays in the box, as it does in a typed round. The student replaces it.
     fireEvent.change(screen.getByTestId('crossfire-input'), { target: { value: 'A new typed question?' } });
     fireEvent.click(screen.getByTestId('submit-turn'));
@@ -261,7 +275,7 @@ describe('CrossfirePage voice rounds', () => {
       renderPage();
       fillSetup();
       fireEvent.click(screen.getByTestId('voice-mode'));
-      fireEvent.click(screen.getByTestId('start-crossfire'));
+      await clickStart();
 
       // The permission prompt is open; the student types and sends instead.
       fireEvent.click(screen.getByTestId('voice-mic'));
@@ -282,7 +296,7 @@ describe('CrossfirePage voice rounds', () => {
     renderPage();
     fillSetup();
     fireEvent.click(screen.getByTestId('voice-mode'));
-    fireEvent.click(screen.getByTestId('start-crossfire'));
+    await clickStart();
     fireEvent.click(screen.getByTestId('voice-mic'));
     await waitFor(() => expect(MockRecognition.instances).toHaveLength(1));
     act(() => MockRecognition.instances[0].onerror({ error: 'not-allowed' }));

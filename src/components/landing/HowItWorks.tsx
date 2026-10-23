@@ -22,7 +22,7 @@ const HowItWorks = () => {
                 </Reveal>
 
                 <div className="relative">
-                    <div className="hidden lg:block absolute top-1/2 left-0 right-0 h-px bg-gradient-to-r from-transparent via-primary/30 to-transparent -translate-y-1/2" />
+                    <div className="hidden lg:block absolute top-1/2 left-0 right-0 h-px bg-linear-to-r from-transparent via-primary/30 to-transparent -translate-y-1/2" />
 
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 lg:gap-4">
                         {steps.map((step, index) => (

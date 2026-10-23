@@ -6,6 +6,7 @@ import {
 } from '@supabase/supabase-js';
 import { e2eRefusesProductionRequest } from './e2e-guard';
 import { getActiveEnv, SUPABASE_URL, SUPABASE_ANON_KEY } from './env';
+import { STAGING_PREVIEW_PROXY_PATH } from './projects';
 import { verifySessionAfterRejection } from './session-expiry';
 
 export { SUPABASE_URL };
@@ -40,6 +41,23 @@ function requestUrl(input: RequestInfo | URL): string {
   return input.url;
 }
 
+/**
+ * A Supabase read whose failure supabase-js would retry three more times (1, 2
+ * and 4 seconds apart). Offline that turned every query into a burst of
+ * doomed requests. Auth is left out: its own client decides how to retry.
+ */
+function isRetriedRead(url: string, method: string): boolean {
+  if (method !== 'GET' && method !== 'HEAD') return false;
+  try {
+    // `npm run dev:preview` reaches Supabase through a proxy path on its own origin.
+    const fullPath = new URL(url, SUPABASE_URL).pathname;
+    const path = fullPath.startsWith(`${STAGING_PREVIEW_PROXY_PATH}/`) ? fullPath.slice(STAGING_PREVIEW_PROXY_PATH.length) : fullPath;
+    return path.startsWith('/rest/v1/') || path.startsWith('/functions/v1/') || path.startsWith('/storage/v1/');
+  } catch {
+    return false;
+  }
+}
+
 // A signed-in request the server refused may mean a revoked session. supabase-js
 // holds its session lock while some of these requests run, so the check (which
 // takes that lock) is queued for after the request instead of run inside it.
@@ -54,8 +72,18 @@ const watchedFetch: typeof fetch = async (input, init) => {
       headers: { "content-type": "application/json" },
     });
   }
-  const response = await globalThis.fetch(input, init);
   const url = requestUrl(input);
+  const method = (init?.method ?? (input instanceof Request ? input.method : 'GET')).toUpperCase();
+  // Every request is sent, so a browser that wrongly reports offline still works.
+  // A read that fails while the browser is offline is ended as an abort, the one
+  // failure postgrest-js does not retry.
+  const response = await globalThis.fetch(input, init).catch((error: unknown) => {
+    const aborted = error instanceof Error && error.name === 'AbortError';
+    if (!aborted && navigator.onLine === false && isRetriedRead(url, method)) {
+      throw new DOMException('Offline: the request was not retried.', 'AbortError');
+    }
+    throw error;
+  });
   if (activeAccessToken && isAuthRejection(url, response.status)) {
     let userLookup = false;
     try {
@@ -76,6 +104,10 @@ export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
     detectSessionInUrl: false,
     flowType: 'pkce',
     storageKey: AUTH_STORAGE_KEY,
+    // Each sign-in keeps its own PKCE verifier and its redirect carries
+    // `sb_flow_id`, so a second sign-in (another tab, a resend) can't
+    // overwrite or delete the verifier an emailed link needs.
+    experimental: { appendPkceFlowIdToRedirects: true },
   },
   global: { fetch: watchedFetch },
 });

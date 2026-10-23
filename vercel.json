@@ -27,6 +27,11 @@
       "statusCode": 301
     },
     {
+      "source": "/:lang(es|hu)",
+      "destination": "/?lang=:lang",
+      "statusCode": 302
+    },
+    {
       "source": "/online-debate-timer-tool",
       "destination": "/online-debate-timer",
       "statusCode": 301
@@ -103,6 +108,10 @@
     },
     {
       "source": "/login",
+      "destination": "/app-shell.html"
+    },
+    {
+      "source": "/auth/callback",
       "destination": "/app-shell.html"
     },
     {
@@ -190,6 +199,15 @@
       ]
     },
     {
+      "source": "/auth/callback",
+      "headers": [
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex, nofollow"
+        }
+      ]
+    },
+    {
       "source": "/share/(.*)",
       "headers": [
         {
@@ -262,7 +280,7 @@
       ]
     },
     {
-      "source": "/(favicon\\.ico|favicon\\.png|favicon-72\\.png|hero-visual\\.png|placeholder\\.svg)",
+      "source": "/(favicon\\.ico|favicon\\.png|favicon-72\\.png|apple-touch-icon\\.png|icon-192\\.png|icon-512\\.png|icon-1024\\.png|icon-maskable-512\\.png|hero-visual\\.jpg|placeholder\\.svg)",
       "headers": [
         {
           "key": "Cache-Control",

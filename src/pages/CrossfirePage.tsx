@@ -76,7 +76,8 @@ import { useVoiceAvailability } from '@/lib/voice/availability';
 import { combineDelivery, measureDelivery } from '@/lib/voice/delivery';
 import { opponentVoice } from '@/lib/voice/opponent-voice';
 import { useSubscriptionError } from '@/hooks/use-subscription-error';
-import { SubscriptionErrorModals } from '@/components/features/subscription';
+import { DailyUsage, SessionCostNote, SubscriptionErrorModals } from '@/components/features/subscription';
+import { useSessionQuota } from '@/hooks/use-session-quota';
 
 const SESSION_ID_PREFIX = 'crossfire';
 
@@ -212,7 +213,7 @@ function TurnReferences({ turnIds }: { turnIds: string[] }) {
         <a
           key={turnId}
           href={`#crossfire-turn-${turnId}`}
-          className="rounded-md border border-primary/25 bg-primary/10 px-2 py-1 text-xs font-semibold text-primary hover:bg-primary/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          className="rounded-md border border-primary/25 bg-primary/10 px-2 py-1 text-xs font-semibold text-primary hover:bg-primary/15 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring"
         >
           {turnId}
         </a>
@@ -383,6 +384,12 @@ export default function CrossfirePage() {
   );
   const { getFeatureConfig, outputLanguage } = useSettingsStore();
   const modelConfig = getFeatureConfig('ask');
+  // A round costs one use however many turns it takes; the setup says so.
+  const sessionQuota = useSessionQuota('crossfire', modelConfig, state.phase === 'setup');
+  const [checkingQuota, setCheckingQuota] = useState(false);
+  // Names the latest Start; a newer Start, leaving the page, or switching
+  // accounts makes an earlier one that is still checking quota stale.
+  const startRequestRef = useRef(0);
   const voiceLanguage = isAppLanguage(outputLanguage) ? outputLanguage : 'en';
   const voiceAvailability = useVoiceAvailability();
   // A voice round falls back to typing when the microphone is lost.
@@ -403,6 +410,7 @@ export default function CrossfirePage() {
   }, []);
 
   useEffect(() => () => {
+    startRequestRef.current += 1;
     requestRef.current?.abort();
     abortSignalRequests();
     opponentVoice.stop();
@@ -410,6 +418,8 @@ export default function CrossfirePage() {
 
   useEffect(() => {
     if (stateOwnerId === user?.id) return;
+    startRequestRef.current += 1;
+    setCheckingQuota(false);
     requestRef.current?.abort();
     abortSignalRequests();
     dispatch({ type: 'state-restored', state: restoreState(user?.id, undefined) });
@@ -476,6 +486,7 @@ export default function CrossfirePage() {
         signal: controller.signal,
         workspaceContext: workspace.context ?? undefined,
         debateId: workspace.context ? undefined : roundDebateId(snapshot.config.resolution),
+        quotaSession: snapshot.sessionId,
         voice: voiceActive,
         live: {
           onDraft: (draft) => {
@@ -553,6 +564,7 @@ export default function CrossfirePage() {
         signal: controller.signal,
         workspaceContext: workspace.context ?? undefined,
         debateId: workspace.context ? undefined : roundDebateId(snapshot.config.resolution),
+        quotaSession: snapshot.sessionId,
         live: {
           onDraft: (draft) => {
             if (ownsRequest()) setLiveDebrief({ phase: 'writing', draft });
@@ -571,12 +583,14 @@ export default function CrossfirePage() {
       dispatch({ type: 'debrief-received', debrief: result });
     } catch (error) {
       if (controller.signal.aborted) return;
+      // The same limit dialog as a turn; the inline error stays so the debrief can be retried.
+      handleSubscriptionError(error);
       const classified = classifyError(error);
       dispatch({ type: 'debrief-failed', errorKind: classified.kind, message: classified.message });
     } finally {
       if (requestRef.current === controller) setLiveDebrief({});
     }
-  }, [modelConfig, roundDebateId, workspace.context]);
+  }, [handleSubscriptionError, modelConfig, roundDebateId, workspace.context]);
 
   const endSession = useCallback((reason: 'manual' | 'timer') => {
     if (state.phase !== 'active') return;
@@ -610,11 +624,29 @@ export default function CrossfirePage() {
       return;
     }
     setFormError('');
-    debateGate.run(parsed.data.resolution, (target) => beginSession(target.debateId));
+    debateGate.run(parsed.data.resolution, (target) => void beginSession(target.debateId));
   };
 
-  const beginSession = (debateId: string | null) => {
-    if (state.phase !== 'setup') return;
+  const beginSession = async (debateId: string | null) => {
+    // The round starts from the setup as it was when Start was pressed, with
+    // the debate chosen for that motion.
+    const target = stateRef.current;
+    if (target.phase !== 'setup') return;
+    const startRequest = startRequestRef.current + 1;
+    startRequestRef.current = startRequest;
+    // Check today's quota before the clock starts, so a round the server
+    // would refuse never starts. An unknown answer does not block.
+    setCheckingQuota(true);
+    const refusal = await sessionQuota.checkBeforeStart();
+    if (startRequestRef.current !== startRequest) return;
+    setCheckingQuota(false);
+    if (refusal) {
+      handleSubscriptionError(refusal);
+      return;
+    }
+    // Edited, restarted, or restored while the check ran: this Start is stale.
+    if (stateRef.current !== target) return;
+    const current = target;
     debateTargetRef.current = debateId;
     artifactRequestIdRef.current = crypto.randomUUID();
     opponentVoice.beginRound();
@@ -623,7 +655,7 @@ export default function CrossfirePage() {
       sessionId: `${SESSION_ID_PREFIX}-${Date.now()}`,
       now: Date.now(),
     };
-    const next = crossfireReducer(state, action);
+    const next = crossfireReducer(current, action);
     dispatch(action);
     if (next.phase === 'active' && next.request.status === 'pending') {
       void runNextTurn(next, next.request.expectedReply);
@@ -714,6 +746,7 @@ export default function CrossfirePage() {
               <Flame className="h-5 w-5" />
             </div>
             <h1 className="text-3xl font-bold tracking-tight">{t('crossfire.title')}</h1>
+            <DailyUsage className="mt-1" />
           </header>
           <CurrentDebateStrip hidden={Boolean(workspace.context)} />
           {debateGate.dialog}
@@ -793,7 +826,7 @@ export default function CrossfirePage() {
                           (nextMode) => dispatch({ type: 'config-patched', patch: { mode: nextMode } }),
                         )}
                         className={cn(
-                          'rounded-lg border p-4 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+                          'rounded-lg border p-4 text-left transition-colors focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring',
                           selected ? 'border-primary bg-primary/5' : 'border-border hover:bg-muted/50',
                         )}
                       >
@@ -832,7 +865,7 @@ export default function CrossfirePage() {
                           (nextStyle) => dispatch({ type: 'config-patched', patch: { style: nextStyle } }),
                         )}
                         className={cn(
-                          'rounded-lg border p-4 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+                          'rounded-lg border p-4 text-left transition-colors focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring',
                           selected ? 'border-primary bg-primary/5' : 'border-border hover:bg-muted/50',
                         )}
                       >
@@ -869,7 +902,7 @@ export default function CrossfirePage() {
                         }),
                       )}
                       className={cn(
-                        'min-h-11 rounded-md border px-4 text-sm font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+                        'min-h-11 rounded-md border px-4 text-sm font-medium focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring',
                         state.config.durationSeconds === duration ? 'border-primary bg-primary text-primary-foreground' : 'border-border hover:bg-muted',
                       )}
                     >
@@ -918,10 +951,13 @@ export default function CrossfirePage() {
                 hidden={Boolean(workspace.context)}
               />
 
-              <Button data-testid="start-crossfire" size="lg" onClick={startSession} className="w-full sm:w-auto">
-                <Flame className="mr-2 h-4 w-4" />
-                {t('crossfire.start')}
-              </Button>
+              <div className="space-y-2">
+                <Button data-testid="start-crossfire" size="lg" onClick={startSession} disabled={checkingQuota} className="w-full sm:w-auto">
+                  <Flame className="mr-2 h-4 w-4" />
+                  {t('crossfire.start')}
+                </Button>
+                <SessionCostNote units={sessionQuota.units} remaining={sessionQuota.remaining} blocked={sessionQuota.blocked} />
+              </div>
             </CardContent>
           </Card>
         </div>
@@ -979,6 +1015,7 @@ export default function CrossfirePage() {
             </CardContent>
           </Card>
           )}
+          <SubscriptionErrorModals subError={subError} />
         </div>
       </div>
     );
@@ -998,7 +1035,7 @@ export default function CrossfirePage() {
               <Badge variant="secondary">{t(`crossfire.style${state.config.style[0].toUpperCase()}${state.config.style.slice(1)}`)}</Badge>
             </div>
             <h1 className="mt-3 text-2xl font-bold tracking-tight">{t('crossfire.title')}</h1>
-            <p className="mt-1 max-w-3xl break-words text-sm text-muted-foreground">{state.config.resolution}</p>
+            <p className="mt-1 max-w-3xl wrap-break-word text-sm text-muted-foreground">{state.config.resolution}</p>
           </div>
           <div className="flex items-center gap-3">
             <CrossfireClock endsAt={state.endsAt} onExpire={() => endSession('timer')} />
@@ -1008,7 +1045,7 @@ export default function CrossfirePage() {
           </div>
         </header>
 
-        <Transcript turns={state.turns} reduceMotion={shouldReduceMotion} />
+        <Transcript turns={state.turns} reduceMotion={shouldReduceMotion} live />
 
         {state.voice && !workspace.context && !voiceAvailability.available && (
           <p data-testid="voice-unavailable" className="text-xs leading-5 text-muted-foreground">
@@ -1089,7 +1126,8 @@ export default function CrossfirePage() {
 
 const NEW_TURN_MS = 1_000;
 
-function Transcript({ turns, reduceMotion }: { turns: CrossfireTurn[]; reduceMotion: boolean | null }) {
+// `live`: the round is running, so the setup hint never shows; the first turn is on its way or the student's to write.
+function Transcript({ turns, reduceMotion, live = false }: { turns: CrossfireTurn[]; reduceMotion: boolean | null; live?: boolean }) {
   const { t } = useTranslation();
   return (
     <section data-testid="crossfire-transcript" aria-label={t('crossfire.transcript')} className="space-y-3">
@@ -1098,7 +1136,7 @@ function Transcript({ turns, reduceMotion }: { turns: CrossfireTurn[]; reduceMot
         <h2 className="font-semibold">{t('crossfire.transcript')}</h2>
       </div>
       {turns.length === 0 ? (
-        <div className="rounded-lg border border-dashed border-border p-8 text-center text-sm text-muted-foreground">{t('crossfire.emptyDesc')}</div>
+        live ? null : <div className="rounded-lg border border-dashed border-border p-8 text-center text-sm text-muted-foreground">{t('crossfire.emptyDesc')}</div>
       ) : (
         <div className="space-y-3" aria-live="polite">
           {turns.map((turn) => (

@@ -26,7 +26,7 @@ const privateRoutes = [
   ['/app/attack', { selector: 'main h1', text: 'Attack' }],
   ['/app/flowchart', { selector: 'main h1', text: 'Argument Flowchart' }],
   ['/app/history', { selector: 'main h1', text: 'History' }],
-  ['/app/admin', { selector: 'main h3', text: 'Access Denied' }],
+  ['/app/admin', { selector: 'main h1', text: 'Access Denied' }],
 ] as const;
 
 const attackContent: ContentMarker = { selector: 'main h1', text: 'Attack' };

@@ -7,7 +7,7 @@ import { Popover, PopoverAnchor, PopoverContent, PopoverTrigger } from '@/compon
 import { formatRelativeDate } from '@/lib/date-format';
 import { cn } from '@/lib/utils';
 import { useCurrentDebate, useDebateStore } from '@/lib/stores/debate-store';
-import { useDebateCounts } from './CurrentDebateStrip';
+import { debateCountsLabel, useDebateCounts } from './CurrentDebateStrip';
 import { navSectionFor } from '@/components/layout/nav-sections';
 
 /**
@@ -28,8 +28,8 @@ export function CurrentDebateMenu({ variant }: { variant: 'desktop' | 'mobile' }
   const active = navSectionFor(pathname, Boolean(debate)) === 'debate';
 
   const itemClass = cn(
-    'flex min-w-0 items-center gap-1.5 rounded-md py-2 text-sm font-medium transition-colors pointer-coarse:min-h-11 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
-    active ? 'bg-primary/10 text-primary' : 'text-muted-foreground hover:bg-accent hover:text-foreground',
+    'flex min-w-0 items-center gap-1.5 rounded-md py-2 text-sm font-medium transition-colors pointer-coarse:min-h-11 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring',
+    active ? 'bg-primary/5 text-primary' : 'text-muted-foreground hover:bg-accent hover:text-foreground',
   );
 
   if (!debate) {
@@ -76,12 +76,12 @@ export function CurrentDebateMenu({ variant }: { variant: 'desktop' | 'mobile' }
       </PopoverAnchor>
       <PopoverContent align="start" className="w-[min(22rem,calc(100vw-2rem))] space-y-3">
         <div className="space-y-1">
-          <p className="break-words font-semibold leading-snug">{debate.motion}</p>
+          <p className="wrap-break-word font-semibold leading-snug">{debate.motion}</p>
           <p className="text-xs text-muted-foreground">
             {t('debate.lastActivity', { when: formatRelativeDate(debate.lastActivityAt), defaultValue: 'Last activity {{when}}' })}
           </p>
           <p className="text-xs text-muted-foreground">
-            {t('debate.counts', { sources: counts.sources, outputs: counts.outputs, defaultValue: '{{sources}} sources · {{outputs}} outputs' })}
+            {debateCountsLabel(t, counts)}
           </p>
           {oneOff && <p className="text-xs font-medium text-primary">{t('debate.oneOffActive', 'One-off mode is on')}</p>}
         </div>

@@ -3,6 +3,7 @@
 
 import { type AuthContext, HttpError, requireUser } from "../_shared/auth.ts";
 import { getCorsHeaders } from "../_shared/cors.ts";
+import { PROMO_RESULT_MESSAGES, promoResultCode } from "../_shared/promo-result.ts";
 
 export async function handleRequest(req: Request): Promise<Response> {
   const origin = req.headers.get("origin");
@@ -37,7 +38,7 @@ export async function handleRequest(req: Request): Promise<Response> {
       : "";
 
     if (!code || code.length > 64) {
-      return new Response(JSON.stringify({ success: false, message: "Please enter a promo code" }), {
+      return new Response(JSON.stringify({ success: false, code: "promo_missing", message: PROMO_RESULT_MESSAGES.promo_missing }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -51,9 +52,12 @@ export async function handleRequest(req: Request): Promise<Response> {
 
     console.log(`[PROMO] Redemption ${result?.success ? "succeeded" : "failed"}`);
 
+    const message = result?.message || PROMO_RESULT_MESSAGES.promo_applied;
     return new Response(JSON.stringify({
       success: Boolean(result?.success),
-      message: result?.message || "Promo code applied!",
+      // The browser translates the code; the English message stays for older browsers.
+      code: promoResultCode({ code: result?.code, message }),
+      message,
     }), {
       status: 200,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -61,7 +65,7 @@ export async function handleRequest(req: Request): Promise<Response> {
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";
     console.error("[PROMO] Error:", message.slice(0, 2000));
-    return new Response(JSON.stringify({ success: false, message: "Unable to redeem promo code. Please try again." }), {
+    return new Response(JSON.stringify({ success: false, code: "promo_failed", message: PROMO_RESULT_MESSAGES.promo_failed }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });

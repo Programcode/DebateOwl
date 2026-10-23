@@ -7,6 +7,7 @@ import { supabase } from '@/lib/supabase/client';
 import { Loader2, Share2 } from 'lucide-react';
 import { formatEuropeanDate } from '@/lib/date-format';
 import { PublicPageShell, useHomePath } from '@/components/layout/PublicPageShell';
+import { usePageLabel } from '@/lib/seo/use-page-head';
 import { GenerateOutputSchema } from '@/lib/ai/schemas/generate';
 import { AttackOutputSchema } from '@/lib/ai/schemas/attack';
 import { BrainstormOutputSchema } from '@/lib/ai/schemas/brainstorm';
@@ -58,7 +59,7 @@ function renderSharedResult(item: SharedItem): ReactNode | null {
 function PlainValue({ value }: { value: unknown }): ReactNode {
     if (value === null || value === undefined || value === '') return null;
     if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
-        return <p className="whitespace-pre-wrap break-words">{String(value)}</p>;
+        return <p className="whitespace-pre-wrap wrap-break-word">{String(value)}</p>;
     }
     if (Array.isArray(value)) {
         return (
@@ -89,6 +90,28 @@ export default function SharedPage() {
     const [loading, setLoading] = useState(true);
     const [item, setItem] = useState<SharedItem | null>(null);
     const [error, setError] = useState<string | null>(null);
+    const missing = !loading && (!item || error !== null);
+
+    // The route shell titles every share the same. A missing link names itself.
+    usePageLabel(missing ? t('sharedPage.notFoundTitle') : null);
+
+    // The response stays HTTP 200; this meta keeps it out of the index.
+    useEffect(() => {
+        if (!missing) return;
+        let robots = document.head.querySelector<HTMLMetaElement>('meta[name="robots"]');
+        const created = !robots;
+        if (!robots) {
+            robots = document.createElement('meta');
+            robots.name = 'robots';
+            document.head.appendChild(robots);
+        }
+        const previousRobots = robots.content;
+        robots.content = 'noindex, nofollow';
+        return () => {
+            if (created) robots.remove();
+            else robots.content = previousRobots;
+        };
+    }, [missing]);
 
     useEffect(() => {
         const loadSharedItem = async () => {
@@ -133,10 +156,10 @@ export default function SharedPage() {
         return (
             <PublicPageShell className="max-w-[65ch] text-center">
                 <Share2 className="mx-auto mb-4 h-8 w-8 text-muted-foreground" aria-hidden="true" />
-                <h1 className="text-2xl font-bold tracking-tight">{t('sharedPage.title')}</h1>
+                <h1 className="text-2xl font-bold tracking-tight">{t('sharedPage.notFoundTitle')}</h1>
                 <p className="mt-2 text-muted-foreground">{error || t('sharedPage.notFound')}</p>
                 <Button asChild className="mt-6">
-                    <Link to={home}>{t('sharedPage.goToApp')}</Link>
+                    <Link to={home}>{t('sharedPage.backHome')}</Link>
                 </Button>
             </PublicPageShell>
         );
@@ -147,11 +170,11 @@ export default function SharedPage() {
     return (
         <PublicPageShell className="max-w-4xl">
             <header className="mb-6 space-y-2">
-                <h1 className="break-words text-3xl font-bold leading-tight tracking-tight">{item.title || t('sharedPage.title')}</h1>
+                <h1 className="wrap-break-word text-3xl font-bold leading-tight tracking-tight">{item.title || t('sharedPage.title')}</h1>
                 <p className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
                     <Badge variant="secondary">{item.item_type}</Badge>
                     {t('sharedPage.sharedOn')} {formatEuropeanDate(item.created_at)}
-                    <span>• {item.view_count} {t('sharedPage.views')}</span>
+                    <span>• {t('sharedPage.viewCount', { count: item.view_count })}</span>
                 </p>
             </header>
             {result ?? (

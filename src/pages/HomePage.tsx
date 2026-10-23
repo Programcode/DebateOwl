@@ -8,7 +8,7 @@ import { PageHeader } from '@/components/layout/PageHeader';
 import { PRACTICE_TOOLS, PREPARE_TOOLS, ToolLink, UTILITY_TOOLS, type Tool } from '@/components/features/tools/tool-links';
 import { formatRelativeDate } from '@/lib/date-format';
 import { useCurrentDebate, useDebateStore } from '@/lib/stores/debate-store';
-import { useDebateCounts } from '@/components/features/debate/CurrentDebateStrip';
+import { debateCountsLabel, useDebateCounts } from '@/components/features/debate/CurrentDebateStrip';
 
 function ToolGroup({ title, tools }: { title: string; tools: readonly Tool[] }) {
   return (
@@ -27,7 +27,25 @@ function CurrentDebateSummary({ t }: { t: TFunction }) {
   const debate = useCurrentDebate();
   const openDialog = useDebateStore((state) => state.openDialog);
   const oneOff = useDebateStore((state) => state.oneOff);
+  // Until the server answers, an empty list means "not loaded yet", not "no debate".
+  const loading = useDebateStore((state) => !state.hydrated && !state.loadFailed);
   const counts = useDebateCounts(debate?.id);
+
+  if (!debate && loading) {
+    return (
+      <Card className="mb-6 border-border/70 bg-card/60" data-testid="home-current-debate-loading" data-tour="current-debate" aria-busy="true">
+        <CardContent className="flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between">
+          <div className="min-w-0 flex-1 space-y-2" aria-hidden="true">
+            <div className="h-3 w-28 animate-pulse rounded bg-muted" />
+            <div className="h-5 w-3/4 animate-pulse rounded bg-muted" />
+            <div className="h-4 w-1/2 animate-pulse rounded bg-muted" />
+          </div>
+          <div className="h-10 w-32 shrink-0 animate-pulse rounded-md bg-muted" aria-hidden="true" />
+          <span className="sr-only" role="status">{t('debate.loadingCurrent', 'Loading your current debate…')}</span>
+        </CardContent>
+      </Card>
+    );
+  }
 
   if (!debate) {
     return (
@@ -48,11 +66,11 @@ function CurrentDebateSummary({ t }: { t: TFunction }) {
       <CardContent className="flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between">
         <div className="min-w-0 space-y-1">
           <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">{t('nav.currentDebate', 'Current debate')}</p>
-          <p className="break-words text-lg font-semibold leading-snug">{debate.motion}</p>
+          <p className="wrap-break-word text-lg font-semibold leading-snug">{debate.motion}</p>
           <p className="text-sm text-muted-foreground">
             {t('debate.lastActivity', { when: formatRelativeDate(debate.lastActivityAt), defaultValue: 'Last activity {{when}}' })}
             {' · '}
-            {t('debate.counts', { sources: counts.sources, outputs: counts.outputs, defaultValue: '{{sources}} sources · {{outputs}} outputs' })}
+            {debateCountsLabel(t, counts)}
           </p>
           {oneOff && <p className="text-sm font-medium text-primary">{t('debate.oneOffActive', 'One-off mode is on')}</p>}
         </div>

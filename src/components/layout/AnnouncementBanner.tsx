@@ -24,7 +24,7 @@ export function AnnouncementBanner({
     <section
       aria-live="polite"
       aria-label={t('announcements.regionLabel')}
-      className="border-b border-primary/20 bg-primary/[0.06]"
+      className="border-b border-primary/20 bg-primary/6"
     >
       <div className="container flex items-start gap-3 px-4 py-3 sm:items-center">
         <Megaphone className="mt-0.5 h-5 w-5 shrink-0 text-primary sm:mt-0" aria-hidden="true" />
@@ -37,7 +37,7 @@ export function AnnouncementBanner({
               </span>
             )}
           </div>
-          <p className="whitespace-pre-wrap break-words text-sm text-muted-foreground">
+          <p className="whitespace-pre-wrap wrap-break-word text-sm text-muted-foreground">
             {announcement.body}
           </p>
           {error && <p className="mt-1 text-sm text-destructive">{error}</p>}

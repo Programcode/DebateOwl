@@ -1,4 +1,5 @@
 import site from '@/config/site.json';
+import { englishHead, type PageHeadId } from './head-text';
 
 /**
  * Heads and structured data for the free tools under /tools. pages.ts spreads
@@ -9,35 +10,20 @@ import site from '@/config/site.json';
 const BRAND = site.brand;
 const ORIGIN = site.origin;
 
-export const TOOL_PAGE_HEADS = {
-  '/tools': {
-    title: `Free Debate Tools: Timer, Motions, Flow Sheets | ${BRAND}`,
-    description: 'Free debate tools that need no account: a format-aware round timer, a practice motion generator, printable flow sheets and a speech time calculator.',
-    canonicalPath: '/tools',
-  },
-  '/tools/debate-timer': {
-    title: `Free Debate Timer for PF, LD, Policy, BP & World Schools | ${BRAND}`,
-    description: 'A free debate round timer with presets for Public Forum, Lincoln-Douglas, Policy, British Parliamentary, World Schools and Asian Parliamentary: protected time, POI knocks and prep banks.',
-    canonicalPath: '/tools/debate-timer',
-  },
-  '/tools/debate-motion-generator': {
-    title: `Debate Motion Generator: 300 Practice Motions | ${BRAND}`,
-    description: 'Draw a random debate motion, or three for a veto drill, from 300 original practice motions sorted by topic, difficulty and motion type. THW and Resolved wording.',
-    canonicalPath: '/tools/debate-motion-generator',
-  },
-  '/tools/debate-flow-sheet': {
-    title: `Printable Debate Flow Sheet Generator | ${BRAND}`,
-    description: 'Print a one-page debate flow sheet with a column for every speech in PF, LD, Policy, BP, World Schools or Asian Parliamentary, on A4 or Letter.',
-    canonicalPath: '/tools/debate-flow-sheet',
-  },
-  '/tools/speech-time-calculator': {
-    title: `Speech Time Calculator for Debate Speeches | ${BRAND}`,
-    description: 'Paste a speech to see its word count, how long it takes to deliver at slow, average and fast pace, and which debate speech slots it fits. Runs in your browser.',
-    canonicalPath: '/tools/speech-time-calculator',
-  },
-} as const;
+/** Each tool page's `pageHead.<id>` catalog section, where its title and description live. */
+export const TOOL_PAGE_HEAD_IDS = {
+  '/tools': 'tools',
+  '/tools/debate-timer': 'debateTimer',
+  '/tools/debate-motion-generator': 'motionGenerator',
+  '/tools/debate-flow-sheet': 'flowSheet',
+  '/tools/speech-time-calculator': 'speechTimeCalculator',
+} as const satisfies Record<string, PageHeadId>;
 
-export type ToolRoute = keyof typeof TOOL_PAGE_HEADS;
+export type ToolRoute = keyof typeof TOOL_PAGE_HEAD_IDS;
+
+export const TOOL_PAGE_HEADS = Object.fromEntries(
+  Object.entries(TOOL_PAGE_HEAD_IDS).map(([route, id]) => [route, { ...englishHead(id), canonicalPath: route }]),
+) as Record<ToolRoute, { title: string; description: string; canonicalPath: ToolRoute }>;
 export type ToolPageRoute = Exclude<ToolRoute, '/tools'>;
 
 /** The last time each page's content changed in substance; bump it with the change. */

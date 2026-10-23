@@ -83,7 +83,7 @@ describe("Vercel frontend deployment configuration", () => {
     const config = loadConfig();
 
     expect(config.rewrites).toEqual(
-      ["/app", "/app/:path*", "/login", "/share/:path*", "/expocit/sources"]
+      ["/app", "/app/:path*", "/login", "/auth/callback", "/share/:path*", "/expocit/sources"]
         .map((source) => ({ source, destination: "/app-shell.html" })),
     );
     // Rewrite sources match exactly, so /app/settings/ must first lose its slash.
@@ -100,6 +100,11 @@ describe("Vercel frontend deployment configuration", () => {
       destination: "/",
       statusCode: 301,
     })));
+  });
+
+  it("sends /es and /hu to the landing page in that language, not a 404 (IN-04)", () => {
+    // Temporary: the language is the visitor's choice, not a moved page.
+    expect(loadConfig().redirects).toContainEqual({ source: "/:lang(es|hu)", destination: "/?lang=:lang", statusCode: 302 });
   });
 
   it("redirects each retired guide to a live guide that no page links past", () => {
@@ -119,7 +124,8 @@ describe("Vercel frontend deployment configuration", () => {
       "/debatelab-alternatives": "/best-ai-debate-tools",
       "/ai-tools-for-debate-students": "/best-ai-debate-tools",
     };
-    const guideRedirects = (loadConfig().redirects ?? []).filter((rule) => !rule.source.startsWith("/:page("));
+    const guideRedirects = (loadConfig().redirects ?? [])
+      .filter((rule) => !rule.source.startsWith("/:page(") && !rule.source.startsWith("/:lang("));
     const retired = new Set(Object.keys(retiredGuides));
     const pages = readdirSync(resolve(process.cwd(), "public"), { withFileTypes: true })
       .filter((entry) => entry.isDirectory() && existsSync(resolve(process.cwd(), "public", entry.name, "index.html")))
@@ -234,12 +240,16 @@ describe("Vercel frontend deployment configuration", () => {
     expect(packageJson.scripts?.build).toBe("vite build && node scripts/prerender.mjs && node scripts/sitemap.mjs && node scripts/check-site.mjs && node scripts/check-build-boundaries.mjs");
   });
 
-  it("caches the offline shell and only caches feature assets after they are visited", () => {
+  it("answers app routes with the cached shell and never stores a navigation as another page", () => {
     const serviceWorker = readProjectFile("public/sw.js");
-    expect(serviceWorker).toContain("cache.put('/index.html', response.clone())");
+    expect(serviceWorker).toContain("caches.match('/app-shell.html', { cacheName: APP_SHELL_CACHE })");
+    expect(serviceWorker).not.toContain("cache.put('/index.html'");
     expect(serviceWorker).not.toContain("'/app/crossfire'");
     expect(serviceWorker).not.toContain("'/app/sparring'");
     expect(serviceWorker).toContain("'/favicon-72.png'");
+    expect(serviceWorker).toContain("'/icon-192.png'");
+    expect(serviceWorker).toContain("'/icon-512.png'");
+    expect(serviceWorker).toContain("'/icon-maskable-512.png'");
     expect(serviceWorker).toContain('cache.put(request, response.clone())');
     expect(serviceWorker).toContain('htmlMislabeledAsAsset');
     expect(serviceWorker).not.toContain('self.skipWaiting()');
@@ -274,7 +284,7 @@ describe("Vercel frontend deployment configuration", () => {
     }
   });
 
-  it.each(["/app", "/app/(.*)", "/login", "/share/(.*)", "/embed/debate-timer"])(
+  it.each(["/app", "/app/(.*)", "/login", "/auth/callback", "/share/(.*)", "/embed/debate-timer"])(
     "keeps private route %s out of search indexes",
     (source) => {
       const config = loadConfig();
@@ -292,6 +302,12 @@ describe("Vercel frontend deployment configuration", () => {
     expect(headersAt(config, "/")).not.toHaveProperty("X-Robots-Tag");
     expect(headersAt(config, "/app")).toMatchObject({ "X-Robots-Tag": "noindex, nofollow" });
     expect(indexHtml).toContain('<meta name="robots" content="noindex, nofollow" />');
+    expect(indexHtml).toContain('<meta property="og:image:width" content="1200" />');
+    expect(indexHtml).toContain('<meta property="og:image:height" content="630" />');
+    expect(indexHtml).toContain('<meta property="og:image:alt" content="DebateLab debate prep workspace preview" />');
+    expect(indexHtml).toContain('<meta name="twitter:image:alt" content="DebateLab debate prep workspace preview" />');
+    expect(indexHtml).toContain('<link rel="icon" href="/favicon.ico" sizes="48x48" />');
+    expect(indexHtml).toContain('<link rel="apple-touch-icon" href="/apple-touch-icon.png" sizes="180x180" />');
     expect(prerender).toContain(publicRobots);
     expect(prerender).toContain("noindex, nofollow");
     expect(readProjectFile("src/lib/seo/pages.ts")).toContain(`robots: '${publicRobots}'`);
@@ -322,7 +338,12 @@ describe("Vercel frontend deployment configuration", () => {
 
   it("caches the unhashed public images for 30 days", () => {
     const config = loadConfig();
-    for (const path of ["/favicon.ico", "/favicon.png", "/favicon-72.png", "/hero-visual.png", "/placeholder.svg"]) {
+    // Every icon in public/, so a new size or a renamed file can't fall back to Vercel's default revalidate-every-time.
+    const icons = readdirSync(resolve(process.cwd(), "public"))
+      .filter((name) => /^(?:favicon|apple-touch-icon|icon)[\w-]*\.(?:ico|png)$/.test(name))
+      .map((name) => `/${name}`);
+    expect(icons).toEqual(expect.arrayContaining(["/icon-1024.png", "/icon-maskable-512.png", "/apple-touch-icon.png"]));
+    for (const path of [...icons, "/hero-visual.jpg", "/placeholder.svg"]) {
       expect(headersAt(config, path)["Cache-Control"]).toBe("public, max-age=2592000");
     }
     expect(headersAt(config, "/assets/index-abc123.js")["Cache-Control"]).toBe(
@@ -340,7 +361,7 @@ describe("Vercel frontend deployment configuration", () => {
     for (const path of ["/", "/app", "/login", "/share/abc", "/expocit/sources", "/terms", "/index.html", "/online-debate-timer"]) {
       expect(pattern.test(path), path).toBe(true);
     }
-    for (const path of ["/favicon.png", "/hero-visual.png", "/assets/main.js", "/theme-init.js", "/sw.js", "/robots.txt", "/_vercel/insights/script.js"]) {
+    for (const path of ["/favicon.png", "/hero-visual.jpg", "/assets/main.js", "/theme-init.js", "/sw.js", "/robots.txt", "/_vercel/insights/script.js"]) {
       expect(pattern.test(path), path).toBe(false);
     }
   });

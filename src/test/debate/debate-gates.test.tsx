@@ -60,6 +60,19 @@ describe('five-day Current Debate gate', () => {
     expect(supabaseMock.from).toHaveBeenCalledWith('debates');
     expect(Date.now() - useDebateStore.getState().debates[0].lastActivityAt).toBeLessThan(1000);
   });
+
+  it('marks a failed debate load so Home stops showing it as loading', async () => {
+    const failing = () => ({
+      select: () => ({
+        order: async () => ({ data: null as unknown, error: { message: 'unavailable' } }),
+        maybeSingle: async () => ({ data: null as unknown, error: null as unknown }),
+      }),
+    }) as unknown as ReturnType<typeof supabaseMock.from>;
+    supabaseMock.from.mockImplementationOnce(failing).mockImplementationOnce(failing);
+    useDebateStore.setState({ hydrated: false, loadFailed: false });
+    await useDebateStore.getState().hydrate();
+    expect(useDebateStore.getState()).toMatchObject({ hydrated: false, loadFailed: true });
+  });
 });
 
 function GateHarness({ motion, onTarget }: { motion: string; onTarget: (target: DebateTarget) => void }) {

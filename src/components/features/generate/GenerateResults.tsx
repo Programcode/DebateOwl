@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Target, Shield, Swords, AlertTriangle, MessageSquare, Save, GitBranch, Sparkles, Clipboard, Undo2, Flame } from 'lucide-react';
+import { Target, Shield, Swords, AlertTriangle, MessageSquare, GitBranch, Sparkles, Undo2, Flame } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { SectionCard } from '@/components/ui/section-card';
@@ -8,9 +8,11 @@ import { Separator } from '@/components/ui/separator';
 import { Markdown } from '@/components/ui/markdown';
 import type { GenerateOutput, Contention } from '@/lib/ai/schemas/generate';
 import { toast } from 'sonner';
-import { formatEuropeanDateTime } from '@/lib/date-format';
+import { formatDecimal, formatEuropeanDateTime } from '@/lib/date-format';
 import { ExportToolbar } from '@/components/features/ExportToolbar';
 import { ResultHeader } from '@/components/features/tools/ResultHeader';
+import { CopyResultButton, SaveResultAction } from '@/components/features/tools/result-actions';
+import { caseText } from '@/components/features/tools/result-text';
 import { ResearchedSources } from '@/components/features/tools/ResearchedSources';
 import { GoogleDriveAuthModal } from '@/components/features/export/GoogleDriveAuthModal';
 import { SourceQualityList } from '@/components/features/shared/SourceQualityList';
@@ -25,6 +27,8 @@ interface GenerateResultsProps {
   regeneratingSection?: string | null;
   onDiscuss?: () => void;
   onSave?: () => void;
+  /** The case is already in History; shows “Saved” instead of Save. */
+  saved?: boolean;
   onUndo?: () => void;
   onImportFlowchart?: () => void;
   onPracticeCrossfire?: () => void;
@@ -35,10 +39,10 @@ function ArgumentCard({ contention, index, unverified }: { contention: Contentio
   return (
     <div className="rounded-lg border border-border bg-card p-4 space-y-3 motion-list-item">
       <div className="flex items-start justify-between gap-2">
-        <h4 className="font-semibold text-foreground">
+        <h3 className="font-semibold text-foreground">
           <span className="text-primary mr-2">#{index + 1}</span>
           {contention.claim}
-        </h4>
+        </h3>
         {contention.needsSource && (
           <Badge variant="outline" className="shrink-0 border-amber-500 text-amber-600">
             <AlertTriangle className="mr-1 h-3 w-3" />
@@ -79,11 +83,11 @@ function ArgumentCard({ contention, index, unverified }: { contention: Contentio
 function formatDuration(ms: number | undefined, t: (key: string, options?: Record<string, unknown>) => string) {
   if (!ms || ms < 0) return null;
   if (ms < 1000) return t('generateResults.durationMs', { value: ms });
-  const value = (ms / 1000).toFixed(ms < 10000 ? 1 : 0);
+  const value = formatDecimal(ms / 1000, ms < 10000 ? 1 : 0);
   return t('generateResults.durationS', { value });
 }
 
-export function GenerateResults({ result, discoveredSources, onRegenerateSection, regeneratingSection = null, onDiscuss, onSave, onUndo, onImportFlowchart, onPracticeCrossfire }: GenerateResultsProps) {
+export function GenerateResults({ result, discoveredSources, onRegenerateSection, regeneratingSection = null, onDiscuss, onSave, saved = false, onUndo, onImportFlowchart, onPracticeCrossfire }: GenerateResultsProps) {
   const { t } = useTranslation();
   const [isExportingGDocs, setIsExportingGDocs] = useState(false);
   const [showDriveAuth, setShowDriveAuth] = useState(false);
@@ -93,36 +97,6 @@ export function GenerateResults({ result, discoveredSources, onRegenerateSection
     isLoading: regeneratingSection === section,
     regenerateDisabled: regeneratingSection !== null,
   });
-
-  const handleCopyToClipboard = async () => {
-    const lines: string[] = [];
-    lines.push(`THESIS: ${result.caseStructure?.thesis || ''}`);
-    lines.push(`FRAMEWORK: ${result.caseStructure?.framework || ''}`);
-    lines.push('');
-    result.contentions?.forEach((c, i) => {
-      lines.push(`CONTENTION #${i + 1}: ${c.claim}`);
-      lines.push(`  Reasoning: ${c.reasoning}`);
-      lines.push(`  Evidence: ${c.evidence}`);
-      lines.push(`  Impact: ${c.impact}`);
-      lines.push('');
-    });
-    if (result.counters?.length) {
-      lines.push('PREPARED COUNTERS:');
-      result.counters.forEach(c => {
-        lines.push(`  vs "${c.targetArgument}": ${c.counterpoint}`);
-      });
-    }
-    if (!navigator.clipboard?.writeText) {
-      toast.error(t('generateResults.copyFailed', 'Unable to copy to clipboard'));
-      return;
-    }
-    try {
-      await navigator.clipboard.writeText(lines.join('\n'));
-      toast.success(t('generateResults.copiedToClipboard', 'Copied to clipboard'));
-    } catch {
-      toast.error(t('generateResults.copyFailed', 'Unable to copy to clipboard'));
-    }
-  };
 
   const handleGoogleDocsExport = async () => {
     setIsExportingGDocs(true);
@@ -173,7 +147,7 @@ export function GenerateResults({ result, discoveredSources, onRegenerateSection
   if (!result?.caseStructure || !result?.contentions || !result?.predictedOpponentCase || !result?.counters) {
     return (
       <div className="rounded-lg border border-destructive/50 bg-destructive/5 p-6 text-center">
-        <h3 className="text-lg font-semibold text-destructive mb-2">{t('generateResults.incomplete')}</h3>
+        <h2 className="text-lg font-semibold text-destructive mb-2">{t('generateResults.incomplete')}</h2>
         <p className="text-sm text-muted-foreground">
           {t('generateResults.incompleteDesc')}
         </p>
@@ -208,13 +182,8 @@ export function GenerateResults({ result, discoveredSources, onRegenerateSection
             onDocx={handleDocxExport}
             onGoogleDocs={handleGoogleDocsExport}
             isExportingGDocs={isExportingGDocs}
-            extraExports={(
-              <Button variant="outline" size="sm" onClick={handleCopyToClipboard}>
-                <Clipboard className="mr-2 h-4 w-4" />
-                {t('generateResults.clipboard', 'Clipboard')}
-              </Button>
-            )}
-            secondaryActions={(onSave || onDiscuss || onImportFlowchart || onUndo || onPracticeCrossfire) ? (
+            extraExports={<CopyResultButton getText={() => caseText(result)} />}
+            secondaryActions={(onSave || saved || onDiscuss || onImportFlowchart || onUndo || onPracticeCrossfire) ? (
               <>
                 {onPracticeCrossfire && (
                   <Button variant="outline" size="sm" onClick={onPracticeCrossfire}>
@@ -222,12 +191,7 @@ export function GenerateResults({ result, discoveredSources, onRegenerateSection
                     {t('crossfire.openFromResult', 'Open in Crossfire')}
                   </Button>
                 )}
-                {onSave && (
-                  <Button variant="outline" size="sm" onClick={onSave}>
-                    <Save className="mr-2 h-4 w-4" />
-                    {t('generateResults.save')}
-                  </Button>
-                )}
+                <SaveResultAction saved={saved} onSave={onSave} />
                 {onDiscuss && (
                   <Button variant="outline" size="sm" onClick={onDiscuss}>
                     <MessageSquare className="mr-2 h-4 w-4" />
@@ -265,12 +229,12 @@ export function GenerateResults({ result, discoveredSources, onRegenerateSection
         >
           <div className="space-y-4">
             <div>
-              <h4 className="text-sm font-medium text-muted-foreground mb-1">{t('generateResults.hook')}</h4>
+              <h3 className="text-sm font-medium text-muted-foreground mb-1">{t('generateResults.hook')}</h3>
               <p className="text-foreground italic">{result.exordio.hook}</p>
             </div>
             <Separator />
             <div>
-              <h4 className="text-sm font-medium text-muted-foreground mb-1">{t('generateResults.transition')}</h4>
+              <h3 className="text-sm font-medium text-muted-foreground mb-1">{t('generateResults.transition')}</h3>
               <p className="text-foreground">{result.exordio.transition}</p>
             </div>
           </div>
@@ -287,21 +251,21 @@ export function GenerateResults({ result, discoveredSources, onRegenerateSection
       >
         <div className="space-y-4">
           <div>
-            <h4 className="text-sm font-medium text-muted-foreground mb-1">{t('generateResults.thesis')}</h4>
+            <h3 className="text-sm font-medium text-muted-foreground mb-1">{t('generateResults.thesis')}</h3>
             <Markdown>{result.caseStructure.thesis}</Markdown>
           </div>
           <Separator />
           <div>
-            <h4 className="text-sm font-medium text-muted-foreground mb-1">{t('generateResults.framework')}</h4>
+            <h3 className="text-sm font-medium text-muted-foreground mb-1">{t('generateResults.framework')}</h3>
             <Markdown>{result.caseStructure.framework}</Markdown>
           </div>
           <Separator />
           <div>
-            <h4 className="text-sm font-medium text-muted-foreground mb-1">{t('generateResults.burdenOfProof')}</h4>
+            <h3 className="text-sm font-medium text-muted-foreground mb-1">{t('generateResults.burdenOfProof')}</h3>
             <Markdown>{result.caseStructure.burdenOfProof}</Markdown>
           </div>
           <div>
-            <h4 className="text-sm font-medium text-muted-foreground mb-2">{t('generateResults.keyDefinitions')}</h4>
+            <h3 className="text-sm font-medium text-muted-foreground mb-2">{t('generateResults.keyDefinitions')}</h3>
             <ul className="list-disc list-inside space-y-1 text-sm text-foreground">
               {result.caseStructure.keyDefinitions?.map((def, i) => (
                 <li key={i}>{def}</li>
@@ -336,7 +300,7 @@ export function GenerateResults({ result, discoveredSources, onRegenerateSection
       >
         <div className="space-y-4">
           <div>
-            <h4 className="text-sm font-medium text-muted-foreground mb-2">{t('generateResults.likelyArguments')}</h4>
+            <h3 className="text-sm font-medium text-muted-foreground mb-2">{t('generateResults.likelyArguments')}</h3>
             <ul className="space-y-2">
               {result.predictedOpponentCase?.likelyArguments?.map((arg, i) => (
                 <li key={i} className="flex items-start gap-2 text-sm">
@@ -348,7 +312,7 @@ export function GenerateResults({ result, discoveredSources, onRegenerateSection
           </div>
           <Separator />
           <div>
-            <h4 className="text-sm font-medium text-muted-foreground mb-2">{t('generateResults.strategicWeaknesses')}</h4>
+            <h3 className="text-sm font-medium text-muted-foreground mb-2">{t('generateResults.strategicWeaknesses')}</h3>
             <ul className="space-y-2">
               {result.predictedOpponentCase?.strategicWeaknesses?.map((weakness, i) => (
                 <li key={i} className="flex items-start gap-2 text-sm">
@@ -360,7 +324,7 @@ export function GenerateResults({ result, discoveredSources, onRegenerateSection
           </div>
           <Separator />
           <div>
-            <h4 className="text-sm font-medium text-muted-foreground mb-2">{t('generateResults.keyClashes')}</h4>
+            <h3 className="text-sm font-medium text-muted-foreground mb-2">{t('generateResults.keyClashes')}</h3>
             <div className="flex flex-wrap gap-2">
               {result.predictedOpponentCase?.keyClashes?.map((clash, i) => (
                 <Badge key={i} variant="outline">{clash}</Badge>

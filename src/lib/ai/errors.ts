@@ -1,5 +1,6 @@
 import i18n from '@/i18n';
-import { localizedLimitMessage } from './limit-message';
+import { serverErrorMessage } from '@/lib/server-errors';
+import { subscriptionLimitMessage } from './limit-message';
 
 /**
  * Base class for AI-related errors with structured information.
@@ -8,6 +9,8 @@ export class AIError extends Error {
   readonly statusCode?: number;
   readonly requestId?: string;
   readonly details?: Record<string, unknown>;
+  /** The server gave this failed request's quota back, or it ran in a session that had already paid. */
+  notCharged = false;
 
   constructor(
     message: string,
@@ -296,6 +299,19 @@ export function mapAIError(
   model: string,
   payload?: Record<string, unknown> | null
 ): AIError {
+  const mapped = mapAIErrorPayload(error, requestId, provider, model, payload);
+  // The server says when a failed request cost nothing (it gave the quota back).
+  if (payload?.charged === false) mapped.notCharged = true;
+  return mapped;
+}
+
+function mapAIErrorPayload(
+  error: { message: string; context?: unknown },
+  requestId: string,
+  provider: string,
+  model: string,
+  payload?: Record<string, unknown> | null
+): AIError {
   const payloadMessage = typeof payload?.error === 'string' ? payload.error : undefined;
   const message = payloadMessage || error.message || 'Unknown error';
   const errorCode = typeof payload?.code === 'string' ? payload.code : undefined;
@@ -327,10 +343,7 @@ export function mapAIError(
 
   // Return appropriate error type based on status code
   if (statusCode === 401) {
-    return new AIAuthError(
-      'Authentication failed. Your session may have expired. Please sign in again.',
-      { statusCode, requestId }
-    );
+    return new AIAuthError(i18n.t('serverErrors.sessionExpired'), { statusCode, requestId });
   }
 
   if (statusCode === 402) {
@@ -340,7 +353,7 @@ export function mapAIError(
       current: typeof payload?.current === 'number' ? payload.current : undefined,
       units: typeof payload?.units === 'number' ? payload.units : undefined,
     };
-    return new AISubscriptionError(localizedLimitMessage(message, details), { statusCode, requestId, ...details });
+    return new AISubscriptionError(subscriptionLimitMessage(details), { statusCode, requestId, ...details });
   }
 
   if (statusCode === 403) {
@@ -349,8 +362,9 @@ export function mapAIError(
     if (code === 'upgrade_required' || message.includes('model') || message.includes('upgrade')) {
       return new AIModelRestrictionError(message, { requestId });
     }
+    // A suspended account says so; another refusal keeps the server's text.
     return new AIAuthError(
-      message || 'Access denied. Your session may have expired. Please sign in again.',
+      serverErrorMessage(code, payloadMessage || i18n.t('serverErrors.accessDenied')),
       { statusCode, requestId }
     );
   }
@@ -381,17 +395,13 @@ export function mapAIError(
   if (!statusCode) {
     return new AIUnknownError(i18n.t('aiErrors.unexpected'), { requestId, causeType: privacySafeCauseType(error) });
   }
+  // A known code reads in the interface language; anything else keeps the server's text.
+  const serviceMessage = serverErrorMessage(errorCode, i18n.t('serverErrors.aiService', { message }));
   if (statusCode >= 500) {
-    return new AIServerError(
-      `AI service error: ${message}. Please try again.`,
-      { statusCode, requestId }
-    );
+    return new AIServerError(serviceMessage, { statusCode, requestId });
   }
 
-  return new AIError(
-    `AI service error: ${message}. Please try again.`,
-    { statusCode, requestId }
-  );
+  return new AIError(serviceMessage, { statusCode, requestId });
 }
 
 export function isProviderErrorMessage(message: string): boolean {

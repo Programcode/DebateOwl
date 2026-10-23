@@ -91,6 +91,76 @@ test("ask-stream: Ask streams a coaching answer and records usage", async ({ sig
   }, { timeout: AI_TIMEOUT }).toContainEqual(expect.objectContaining({ feature: "ask", status: "success" }));
 });
 
+/** WCAG contrast of an element's text against the first painted background behind it. */
+async function textContrast(page: import("@playwright/test").Page, text: string) {
+  return page.evaluate((needle) => {
+    // "meta" is the first message's time line, the student's own bubble.
+    const target = (needle === "meta"
+      ? document.querySelector("[data-testid=message-meta]")
+      : [...document.querySelectorAll("p, li, strong")].find((element) => element.textContent?.trim() === needle)) as HTMLElement | null | undefined;
+    if (!target) throw new Error(`no element with text ${needle}`);
+    const rgb = (value: string) => {
+      const ctx = document.createElement("canvas").getContext("2d")!;
+      ctx.fillStyle = value;
+      ctx.fillRect(0, 0, 1, 1);
+      return [...ctx.getImageData(0, 0, 1, 1).data].slice(0, 4);
+    };
+    let node: HTMLElement | null = target;
+    let background = "rgba(0, 0, 0, 0)";
+    while (node) {
+      const color = getComputedStyle(node).backgroundColor;
+      if (rgb(color)[3] > 0) { background = color; break; }
+      node = node.parentElement;
+    }
+    const luminance = ([r, g, b]: number[]) => [r, g, b]
+      .map((channel) => { const c = channel / 255; return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4; })
+      .reduce((sum, c, i) => sum + c * [0.2126, 0.7152, 0.0722][i], 0);
+    const [fg, bg] = [luminance(rgb(getComputedStyle(target).color)), luminance(rgb(background))];
+    return { color: getComputedStyle(target).color, background, ratio: (Math.max(fg, bg) + 0.05) / (Math.min(fg, bg) + 0.05) };
+  }, text);
+}
+
+// QA round 3: the student's own message was gray on blue (about 2:1), and the
+// Hungarian placeholder was cut off at 375 px.
+test("ask-bubble: the student's message meets WCAG AA in light and dark, and the placeholder fits at 375 px", async ({ signedIn: page, evidence }, testInfo) => {
+  if (testInfo.project.name === "mobile-chromium") await page.setViewportSize({ width: 375, height: 812 });
+  const question = "How should I weigh **access** against cost?";
+  await page.goto("/app/ask");
+  await page.getByPlaceholder("Ask your debate coach...").fill(question);
+  const stream = page.waitForResponse((response) => response.url().endsWith("/functions/v1/ai-stream"), { timeout: AI_TIMEOUT });
+  await page.getByRole("button", { name: "Send message" }).click();
+  await stream;
+  const ratios: Record<string, unknown> = {};
+  for (const colorScheme of ["light", "dark"] as const) {
+    await page.emulateMedia({ colorScheme });
+    await expect(page.locator("html")).toHaveClass(colorScheme === "dark" ? /\bdark\b/ : /^(?!.*\bdark\b)/);
+    for (const [part, text] of [["body", "How should I weigh access against cost?"], ["bold", "access"], ["time", "meta"]] as const) {
+      const measured = await textContrast(page, text);
+      ratios[`${colorScheme}-${part}`] = measured;
+      expect(measured.ratio, `${colorScheme} ${part} contrast`).toBeGreaterThanOrEqual(4.5);
+    }
+    await evidence.shot(`01-user-bubble-${colorScheme}`);
+  }
+  await evidence.json("02-contrast", ratios);
+  await page.emulateMedia({ colorScheme: "light" });
+
+  await page.getByRole("button", { name: "Language", exact: true }).click();
+  await page.getByRole("radio", { name: "Magyar" }).first().click();
+  const box = page.getByPlaceholder("Mit kérdeznél?");
+  await expect(box).toBeVisible();
+  // The whole placeholder fits the field's text area.
+  const fits = await box.evaluate((input: HTMLTextAreaElement | HTMLInputElement) => {
+    const style = getComputedStyle(input);
+    const ctx = document.createElement("canvas").getContext("2d")!;
+    ctx.font = `${style.fontWeight} ${style.fontSize} ${style.fontFamily}`;
+    const room = input.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight);
+    return { text: ctx.measureText(input.placeholder).width, room };
+  });
+  await evidence.json("03-hu-placeholder", fits);
+  expect(fits.text).toBeLessThanOrEqual(fits.room);
+  await evidence.shot("03-hu-placeholder");
+});
+
 test("ask-cutoff: a streamed answer cut off at its length cap says so under the answer", async ({ signedIn: page, evidence }) => {
   test.skip(LIVE, "only the fake provider can force a cut-off reply");
   await fake.truncate("ask-stream");

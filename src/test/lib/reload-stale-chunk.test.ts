@@ -18,6 +18,7 @@ function fakeWindow() {
       length: 0,
     },
     location: { pathname: '/app/ask', reload },
+    navigator: { onLine: true },
   };
   return { target, listeners, reload };
 }
@@ -38,5 +39,16 @@ describe('stale chunk reload', () => {
     handler!(second);
     expect(second.defaultPrevented).toBe(false);
     expect(reload).toHaveBeenCalledTimes(1);
+  });
+
+  it('never reloads while offline, where a missing chunk is unreachable rather than stale', () => {
+    const { target, listeners, reload } = fakeWindow();
+    target.navigator.onLine = false;
+    installStaleChunkReload(target as unknown as Window);
+
+    const offline = new Event('vite:preloadError', { cancelable: true });
+    listeners.get('vite:preloadError')!(offline);
+    expect(offline.defaultPrevented).toBe(false);
+    expect(reload).not.toHaveBeenCalled();
   });
 });

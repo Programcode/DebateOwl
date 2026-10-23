@@ -21,9 +21,9 @@
   try {
     var pathname = window.location.pathname;
     var privateRoute = pathname === '/app' || pathname.indexOf('/app/') === 0
-      || pathname === '/login'
+      || pathname === '/login' || pathname === '/auth/callback'
       || pathname === '/share' || pathname.indexOf('/share/') === 0;
-    if (pathname === '/app' || pathname.indexOf('/app/') === 0 || pathname === '/login') {
+    if (pathname === '/app' || pathname.indexOf('/app/') === 0 || pathname === '/login' || pathname === '/auth/callback') {
       document.documentElement.classList.add('app-shell');
     }
     // The shell HTML is noindex. Private routes keep that. The sources page is

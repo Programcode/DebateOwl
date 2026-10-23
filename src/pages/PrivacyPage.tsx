@@ -6,7 +6,7 @@ export default function PrivacyPage() {
   const { t } = useTranslation();
   usePageHead('/privacy');
 
-  const sections = Array.from({ length: 10 }, (_, i) => i + 1);
+  const sections = Array.from({ length: 11 }, (_, i) => i + 1);
 
   return (
     <PublicPageShell className="max-w-[65ch]">

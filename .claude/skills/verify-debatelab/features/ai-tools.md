@@ -8,6 +8,7 @@ The single-shot coaching tools: Attack finds weaknesses in a pasted argument, Br
 - `brainstorm-run` returns ranked ideas for a motion. Provider feature: `brainstorm`.
 - `factoids-run` finishes research and shows search suggestions. It drops unverified sources because there is no web key locally. Provider feature: `factoids`.
 - `ask-stream` streams a coaching answer through `ai-stream`. Provider feature: `ask-stream`, recorded as an `ask` usage row.
+- `ask-bubble` measures the student's own message (body, bold, and its time line, test id `message-meta`) against the blue bubble in light and dark: each is at least 4.5:1 (about 5.1 light, 6.7 dark). At 375 px in Hungarian the placeholder `Mit kérdeznél?` fits the field and the chat header wraps instead of overflowing (`recipes/ai-tools.spec.ts`).
 - `ask-cited` uses the structured endpoint when citation mode is on. Provider feature: `ask`.
 
 ## How to get to it (user POV)

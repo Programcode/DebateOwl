@@ -5,6 +5,7 @@ import { PricingModal } from './PricingModal';
 
 /**
  * The daily-limit, Pro-model and pricing dialogs a tool opens from useSubscriptionError.
+ * Every tool mounts these, so a refusal reads the same in every mode (QB-06).
  * Each mounts only while open, so a tool that never hits a limit never loads plan data for them.
  */
 export function SubscriptionErrorModals({ subError }: { subError: ReturnType<typeof useSubscriptionError> }) {
@@ -16,6 +17,7 @@ export function SubscriptionErrorModals({ subError }: { subError: ReturnType<typ
         variant={subError.limitModalVariant}
         limit={subError.limitModalLimit}
         current={subError.limitModalCurrent}
+        units={subError.limitModalUnits}
         onUpgrade={() => { subError.setLimitModalOpen(false); subError.setPricingModalOpen(true); }}
       />}
       {subError.modelModalOpen && <ModelRestrictedModal

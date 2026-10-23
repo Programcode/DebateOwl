@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { applyAppLanguage } from '@/i18n';
 import { isAppLanguage, type AppLanguage } from '@/lib/languages';
+import { resolveBillingState, type BillingSettingsRow } from '../../../supabase/functions/_shared/billing-state';
 import {
   AUTO_FAST,
   AUTO_PRO,
@@ -32,6 +33,8 @@ interface SettingsState {
   wikiResearchEnabled: boolean;
 
   setLanguage: (lang: AppLanguage) => void;
+  /** A ?lang= link's choice, which may arrive before the account's settings load. */
+  chooseLinkedLanguage: (lang: AppLanguage) => void;
   setOutputLanguage: (lang: AppLanguage) => void;
   setTheme: (theme: 'light' | 'dark' | 'system') => void;
   setFeatureConfig: (feature: FeatureTab, config: Partial<ProviderConfig>) => void;
@@ -143,26 +146,22 @@ function featureConfigsAreCanonical(value: unknown, expected: Record<FeatureTab,
   });
 }
 
+/**
+ * Whether this account may keep Pro-only model choices, by the same resolver
+ * the AI functions use (billing-state.ts): a past-due payer in the grace or a
+ * paid period behind a lagging tier keeps them. Null when it cannot be read.
+ */
 async function canAccessProModels(settings: Record<string, unknown>): Promise<boolean | null> {
-  const tier = settings.subscription_tier;
-  const graceEnd = typeof settings.grace_period_ends_at === 'string'
-    ? new Date(settings.grace_period_ends_at)
-    : null;
-  if ((tier === 'pro' || tier === 'legacy_free') && graceEnd && graceEnd > new Date()) return true;
-  if (tier !== 'pro') return false;
-
   const userId = await getUserId();
   if (!userId) return null;
+  // `*` so the read works before and after 20261023020000 (payment_failed_at).
   const { data, error } = await supabase
     .from('subscriptions')
-    .select('status, current_period_end')
+    .select('*')
     .eq('user_id', userId);
-  if (error) return null;
-  return Boolean(data?.some((subscription) =>
-    (subscription.status === 'active' || subscription.status === 'trialing')
-    && subscription.current_period_end
-    && new Date(subscription.current_period_end) > new Date()
-  ));
+  // Settings alone can prove Pro (promo, legacy grace); without the rows, a "no" is unknown.
+  if (resolveBillingState(settings as BillingSettingsRow, error ? [] : data).plan === 'pro') return true;
+  return error ? null : false;
 }
 
 async function getUserId() {
@@ -186,6 +185,22 @@ async function updateSettings(payload: {
   }).eq('user_id', userId);
   if (error) {
     console.warn('[SettingsStore] Failed to persist settings:', error.message);
+  }
+}
+
+/** A ?lang= link's language, until the account's settings load and take it. */
+let linkedLanguage: AppLanguage | null = null;
+
+/** Saves only the interface language, so it can never overwrite settings this device has not loaded. */
+async function updateLanguage(language: AppLanguage) {
+  const userId = await getUserId();
+  if (!userId) return;
+  const { error } = await supabase.from('user_settings').update({
+    language,
+    updated_at: new Date().toISOString(),
+  }).eq('user_id', userId);
+  if (error) {
+    console.warn('[SettingsStore] Failed to persist the language:', error.message);
   }
 }
 
@@ -234,15 +249,20 @@ export const useSettingsStore = create<SettingsState>()(
       wikiResearchEnabled: false,
 
       setLanguage: (language) => {
+        // A choice made here beats an earlier ?lang= link.
+        linkedLanguage = null;
         set({ language });
         void applyAppLanguage(language);
-        void updateSettings({
-          language,
-          output_language: get().outputLanguage,
-          theme: get().theme,
-          feature_configs: get().featureConfigs,
-          custom_system_prompt: get().customSystemPrompt ?? null,
-        });
+        // Only the language: the switcher shows on pages that open before the
+        // account's settings load, and this device's copy of the rest may be older.
+        void updateLanguage(language);
+      },
+      chooseLinkedLanguage: (language) => {
+        // Kept until the account's settings load, so their saved language does not undo it.
+        linkedLanguage = language;
+        set({ language });
+        void applyAppLanguage(language);
+        void updateLanguage(language);
       },
       setOutputLanguage: (outputLanguage) => {
         set({ outputLanguage });
@@ -326,7 +346,10 @@ export const useSettingsStore = create<SettingsState>()(
         const savedConfigs = asRecord(data.feature_configs);
         const neverSaved = savedConfigs !== null && Object.keys(savedConfigs).length === 0;
 
-        const language = neverSaved ? get().language : isAppLanguage(data.language) ? data.language : 'en';
+        // A ?lang= link opened this page: it wins over the language the account saved before.
+        const linked = linkedLanguage;
+        linkedLanguage = null;
+        const language = linked ?? (neverSaved ? get().language : isAppLanguage(data.language) ? data.language : 'en');
         const outputLanguage = neverSaved ? get().outputLanguage : isAppLanguage(data.output_language) ? data.output_language : 'en';
         const theme = neverSaved ? get().theme : (data.theme as 'light' | 'dark' | 'system') || 'system';
         const customSystemPrompt = data.custom_system_prompt || undefined;
@@ -353,9 +376,14 @@ export const useSettingsStore = create<SettingsState>()(
             typeof data.updated_at === 'string' ? data.updated_at : null,
           );
         }
+        // The link was opened signed out, or its own save has not landed yet,
+        // unless the switcher has replaced its language since.
+        if (linked && !neverSaved && linked !== data.language && get().language === linked) await updateLanguage(linked);
       },
       resetLocalData: (preserveLanguage = false) => {
         const language = preserveLanguage ? get().language : 'en';
+        // A sign-out or another account: an earlier ?lang= link no longer applies.
+        if (!preserveLanguage) linkedLanguage = null;
         set({
           ownerUserId: null,
           language,

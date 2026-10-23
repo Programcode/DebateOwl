@@ -2,13 +2,15 @@ import { createRoot } from "react-dom/client";
 import { flushSync } from "react-dom";
 import App from "./App.tsx";
 import { WebTelemetry } from "./components/WebTelemetry";
-import "./i18n";
+import { appLanguageReady } from "./i18n";
 import "@fontsource-variable/inter";
 import "./index.css";
 import { registerServiceWorker } from "./register-service-worker";
 import { installStaleChunkReload } from "./lib/reload-stale-chunk";
 import { initializeObservability } from "./lib/observability";
-import { preloadRoute } from "./lib/route-modules";
+import { preloadStartupRoute } from "./lib/route-modules";
+import { legacyCallbackPath } from "./lib/auth-callback";
+import { chooseUrlLanguage, searchWithoutLanguage } from "./lib/url-language";
 
 const initializeTelemetry = (): void => {
   const run = (): void => { void initializeObservability(); };
@@ -19,6 +21,8 @@ const initializeTelemetry = (): void => {
   }
 };
 
+const LANGUAGE_WAIT_MS = 3_000;
+
 /** The route whose HTML the build prerendered into #root, when it is the page being opened. */
 function prerenderedRoute(container: HTMLElement): string | undefined {
   const route = container.dataset.prerendered;
@@ -28,6 +32,18 @@ function prerenderedRoute(container: HTMLElement): string | undefined {
 installStaleChunkReload();
 
 export function mountApp(): void {
+  // Sign-in links already in inboxes return to / or /app. Move them onto the
+  // callback route before the first render, so the prerendered landing page
+  // is replaced and AuthProvider exchanges the code there.
+  const callbackPath = legacyCallbackPath(window.location);
+  if (callbackPath) window.history.replaceState(window.history.state, "", callbackPath);
+  // A ?lang= link picks the language before the first render waits for it, and
+  // leaves the address so a later switcher choice survives a reload.
+  const { pathname, search, hash } = window.location;
+  if (chooseUrlLanguage(search)) {
+    window.history.replaceState(window.history.state, "", `${pathname}${searchWithoutLanguage(search)}${hash}`);
+  }
+
   const container = document.getElementById("root")!;
   const root = createRoot(container);
   const app = (
@@ -37,6 +53,15 @@ export function mountApp(): void {
     </>
   );
   const prerendered = prerenderedRoute(container);
+  const page = preloadStartupRoute(prerendered === "*" ? "*" : window.location.pathname);
+  // The first render waits for the chosen language's strings, so a Spanish or
+  // Hungarian visitor never sees the English text first. A stalled request
+  // must not hold the startup screen: after a few seconds English renders and
+  // the language switches when its strings arrive.
+  const languageReady = Promise.race([
+    appLanguageReady(),
+    new Promise<void>((resolve) => { window.setTimeout(resolve, LANGUAGE_WAIT_MS); }),
+  ]);
   if (prerendered) {
     // The prerendered page stays on screen until its module is loaded, then one
     // synchronous render replaces it with the same page. A failed load renders
@@ -45,11 +70,12 @@ export function mountApp(): void {
       flushSync(() => root.render(app));
       delete container.dataset.prerendered;
     };
-    void Promise.resolve(preloadRoute(prerendered)).then(render, render);
+    void Promise.all([page, languageReady]).then(render, render);
   } else {
     // HTML prerendered for another route (an offline copy, say) is replaced like the startup shell.
     delete container.dataset.prerendered;
-    root.render(app);
+    const render = (): void => root.render(app);
+    void languageReady.then(render, render);
   }
   registerServiceWorker();
 

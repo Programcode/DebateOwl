@@ -2,10 +2,6 @@ export function getWebAppRedirectUrl(path = '/app'): string {
   return `${window.location.origin}${path}`;
 }
 
-export function getOAuthRedirectUrl(): string {
-  return `${window.location.origin}/app`;
-}
-
 const ALLOWED_EXTERNAL_PROTOCOLS = new Set(['http:', 'https:']);
 
 function getSafeExternalUrl(url: string): string {

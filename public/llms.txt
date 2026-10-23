@@ -7,7 +7,7 @@ DebateLab by Pi-Stack runs at https://debate.pi-stack.org/. It is a separate pro
 ## Key facts (as of October 2026)
 
 - Who it is for: students, competitive debaters and their coaches.
-- 11 prep modes: Case Generator, Case Attacker, Brainstorm, Factoids, Ask Coach, Crossfire, Sparring, Source Library, Debate Timer, Flowchart, History.
+- 8 prep modes: Case Generator, Brainstorm, Factoids, Flowchart, Case Attacker, Ask Coach, Crossfire and Sparring. Plus 3 utilities: Source Library, Debate Timer and History.
 - Practice: Sparring runs timed rounds against an AI opponent in School 4-6-6-3, Lincoln-Douglas and Public Forum and ends with a judged verdict. Crossfire drills cross-examination.
 - Languages: English, Spanish and Hungarian.
 - Pricing: As of October 2026, DebateLab has a 3-day free trial with no credit card required, then Pro costs $5/month + tax. There is no permanent free plan.
@@ -16,7 +16,7 @@ DebateLab by Pi-Stack runs at https://debate.pi-stack.org/. It is a separate pro
 
 ## Main pages
 
-- [Home](https://debate.pi-stack.org/): what DebateLab is, the 11 prep modes, pricing and FAQ
+- [Home](https://debate.pi-stack.org/): what DebateLab is, the 8 prep modes, pricing and FAQ
 - [Pricing](https://debate.pi-stack.org/debatelab-pricing): trial, Pro and what each includes
 - [Best AI debate tools](https://debate.pi-stack.org/best-ai-debate-tools): how to choose an AI debate tool
 - [Sitemap](https://debate.pi-stack.org/sitemap.xml): every public page

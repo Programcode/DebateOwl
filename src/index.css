@@ -10,11 +10,147 @@
   line-gap-override: 0%;
 }
 
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+/* Tailwind scans only the app source, as the v3 config's `content` did. */
+@import "tailwindcss" source(none);
+@source "./**/*.{ts,tsx}";
+@import "tw-animate-css";
+@plugin "@tailwindcss/typography";
 
-/* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
+@custom-variant dark (&:is(.dark *));
+
+/* v3's hoverOnlyWhenSupported: hover styles only where the primary pointer can really hover. */
+@custom-variant hover {
+  @media (hover: hover) and (pointer: fine) {
+    &:hover {
+      @slot;
+    }
+  }
+}
+
+/* Tokens resolve at runtime, so .dark and prefers-contrast overrides below keep working. */
+@theme inline {
+  --color-border: hsl(var(--border));
+  --color-input: hsl(var(--input));
+  --color-ring: hsl(var(--ring));
+  --color-background: hsl(var(--background));
+  --color-foreground: hsl(var(--foreground));
+  --color-primary: hsl(var(--primary));
+  --color-primary-foreground: hsl(var(--primary-foreground));
+  --color-secondary: hsl(var(--secondary));
+  --color-secondary-foreground: hsl(var(--secondary-foreground));
+  --color-destructive: hsl(var(--destructive));
+  --color-destructive-foreground: hsl(var(--destructive-foreground));
+  --color-muted: hsl(var(--muted));
+  --color-muted-foreground: hsl(var(--muted-foreground));
+  --color-accent: hsl(var(--accent));
+  --color-accent-foreground: hsl(var(--accent-foreground));
+  --color-popover: hsl(var(--popover));
+  --color-popover-foreground: hsl(var(--popover-foreground));
+  --color-card: hsl(var(--card));
+  --color-card-foreground: hsl(var(--card-foreground));
+  --color-success: hsl(var(--success));
+  --color-success-foreground: hsl(var(--success-foreground));
+
+  --radius-lg: var(--radius);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-sm: calc(var(--radius) - 4px);
+
+  --shadow-2xs: var(--app-shadow-2xs);
+  --shadow-xs: var(--app-shadow-xs);
+  --shadow-sm: var(--app-shadow-sm);
+  --shadow-md: var(--app-shadow-md);
+  --shadow-lg: var(--app-shadow-lg);
+  --shadow-xl: var(--app-shadow-xl);
+  --shadow-2xl: var(--app-shadow-2xl);
+}
+
+@theme {
+  --font-sans: 'Inter Variable', 'Inter Fallback', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans', sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
+
+  --ease-out-strong: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
+
+  /* v3's breakpoints in px, so a larger browser font size doesn't move them. */
+  --breakpoint-sm: 640px;
+  --breakpoint-md: 768px;
+  --breakpoint-lg: 1024px;
+  --breakpoint-xl: 1280px;
+  --breakpoint-2xl: 1536px;
+}
+
+/* v3's palette (hex) for the families the app uses; v4's oklch values render visibly different. */
+@theme {
+  --color-slate-50: #f8fafc; --color-slate-100: #f1f5f9; --color-slate-200: #e2e8f0; --color-slate-300: #cbd5e1; --color-slate-400: #94a3b8; --color-slate-500: #64748b; --color-slate-600: #475569; --color-slate-700: #334155; --color-slate-800: #1e293b; --color-slate-900: #0f172a; --color-slate-950: #020617;
+  --color-red-50: #fef2f2; --color-red-100: #fee2e2; --color-red-200: #fecaca; --color-red-300: #fca5a5; --color-red-400: #f87171; --color-red-500: #ef4444; --color-red-600: #dc2626; --color-red-700: #b91c1c; --color-red-800: #991b1b; --color-red-900: #7f1d1d; --color-red-950: #450a0a;
+  --color-orange-50: #fff7ed; --color-orange-100: #ffedd5; --color-orange-200: #fed7aa; --color-orange-300: #fdba74; --color-orange-400: #fb923c; --color-orange-500: #f97316; --color-orange-600: #ea580c; --color-orange-700: #c2410c; --color-orange-800: #9a3412; --color-orange-900: #7c2d12; --color-orange-950: #431407;
+  --color-amber-50: #fffbeb; --color-amber-100: #fef3c7; --color-amber-200: #fde68a; --color-amber-300: #fcd34d; --color-amber-400: #fbbf24; --color-amber-500: #f59e0b; --color-amber-600: #d97706; --color-amber-700: #b45309; --color-amber-800: #92400e; --color-amber-900: #78350f; --color-amber-950: #451a03;
+  --color-yellow-50: #fefce8; --color-yellow-100: #fef9c3; --color-yellow-200: #fef08a; --color-yellow-300: #fde047; --color-yellow-400: #facc15; --color-yellow-500: #eab308; --color-yellow-600: #ca8a04; --color-yellow-700: #a16207; --color-yellow-800: #854d0e; --color-yellow-900: #713f12; --color-yellow-950: #422006;
+  --color-green-50: #f0fdf4; --color-green-100: #dcfce7; --color-green-200: #bbf7d0; --color-green-300: #86efac; --color-green-400: #4ade80; --color-green-500: #22c55e; --color-green-600: #16a34a; --color-green-700: #15803d; --color-green-800: #166534; --color-green-900: #14532d; --color-green-950: #052e16;
+  --color-emerald-50: #ecfdf5; --color-emerald-100: #d1fae5; --color-emerald-200: #a7f3d0; --color-emerald-300: #6ee7b7; --color-emerald-400: #34d399; --color-emerald-500: #10b981; --color-emerald-600: #059669; --color-emerald-700: #047857; --color-emerald-800: #065f46; --color-emerald-900: #064e3b; --color-emerald-950: #022c22;
+  --color-cyan-50: #ecfeff; --color-cyan-100: #cffafe; --color-cyan-200: #a5f3fc; --color-cyan-300: #67e8f9; --color-cyan-400: #22d3ee; --color-cyan-500: #06b6d4; --color-cyan-600: #0891b2; --color-cyan-700: #0e7490; --color-cyan-800: #155e75; --color-cyan-900: #164e63; --color-cyan-950: #083344;
+  --color-sky-50: #f0f9ff; --color-sky-100: #e0f2fe; --color-sky-200: #bae6fd; --color-sky-300: #7dd3fc; --color-sky-400: #38bdf8; --color-sky-500: #0ea5e9; --color-sky-600: #0284c7; --color-sky-700: #0369a1; --color-sky-800: #075985; --color-sky-900: #0c4a6e; --color-sky-950: #082f49;
+  --color-blue-50: #eff6ff; --color-blue-100: #dbeafe; --color-blue-200: #bfdbfe; --color-blue-300: #93c5fd; --color-blue-400: #60a5fa; --color-blue-500: #3b82f6; --color-blue-600: #2563eb; --color-blue-700: #1d4ed8; --color-blue-800: #1e40af; --color-blue-900: #1e3a8a; --color-blue-950: #172554;
+  --color-rose-50: #fff1f2; --color-rose-100: #ffe4e6; --color-rose-200: #fecdd3; --color-rose-300: #fda4af; --color-rose-400: #fb7185; --color-rose-500: #f43f5e; --color-rose-600: #e11d48; --color-rose-700: #be123c; --color-rose-800: #9f1239; --color-rose-900: #881337; --color-rose-950: #4c0519;
+}
+
+/* v3's container: centred, 2rem padding, capped at 1400px. */
+@utility container {
+  margin-inline: auto;
+  padding-inline: 2rem;
+  @media (width >= 640px) {
+    max-width: none;
+  }
+  @media (width >= 1400px) {
+    max-width: 1400px;
+  }
+}
+
+/* v3's space-x/space-y: a margin on each following sibling (and none after it). v4 puts the margin on
+   every child but the last instead, which an inline element ignores, so a Label above its field lost
+   its gap. v4 still emits its own rule at zero specificity; the :not(html) rule (one type selector's
+   weight) cancels it on the first child without overriding that child's own mb-* or me-* utility. */
+@utility space-y-* {
+  & > :not([hidden]) ~ :not([hidden]) {
+    margin-top: calc(var(--spacing) * --value(number));
+    margin-bottom: 0;
+  }
+
+  :where(& > :not(:last-child)):not(html) {
+    margin-block-end: 0;
+  }
+}
+
+@utility space-x-* {
+  & > :not([hidden]) ~ :not([hidden]) {
+    margin-left: calc(var(--spacing) * --value(number));
+    margin-right: 0;
+  }
+
+  :where(& > :not(:last-child)):not(html) {
+    margin-inline-end: 0;
+  }
+}
+
+/* The hover lift and the press state outrank a button's own shadow-* and duration-* classes, as they
+   did when v3 emitted components unlayered; in v4's components layer every utility would beat them. */
+@utility motion-lift {
+  @media (hover: hover) and (pointer: fine) {
+    &:not(:disabled):not([aria-disabled='true']):hover {
+      transform: translateY(-1px);
+      box-shadow: 0 8px 20px hsl(var(--foreground) / 0.08);
+    }
+  }
+}
+
+@utility motion-press {
+  &:not(:disabled):not([aria-disabled='true']):active {
+    transform: scale(var(--motion-press-scale));
+    transition-duration: var(--motion-duration-press);
+  }
+}
+
+/* Definition of the design system. All colors, gradients, fonts, etc should be defined here.
 All colors MUST be HSL.
 */
 
@@ -63,30 +199,19 @@ All colors MUST be HSL.
 
     --chart-5: 215 19% 34%;
 
+    --app-shadow-2xs: 0 1px 3px 0px hsl(0 0% 0% / 0.05);
 
-    --font-sans: 'Inter Variable', 'Inter Fallback', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans', sans-serif;
+    --app-shadow-xs: 0 1px 3px 0px hsl(0 0% 0% / 0.05);
 
-    --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
+    --app-shadow-sm: 0 1px 3px 0px hsl(0 0% 0% / 0.1), 0 1px 2px -1px hsl(0 0% 0% / 0.1);
 
-    --shadow-2xs: 0 1px 3px 0px hsl(0 0% 0% / 0.05);
+    --app-shadow-md: 0 1px 3px 0px hsl(0 0% 0% / 0.1), 0 2px 4px -1px hsl(0 0% 0% / 0.1);
 
-    --shadow-xs: 0 1px 3px 0px hsl(0 0% 0% / 0.05);
+    --app-shadow-lg: 0 1px 3px 0px hsl(0 0% 0% / 0.1), 0 4px 6px -1px hsl(0 0% 0% / 0.1);
 
-    --shadow-sm: 0 1px 3px 0px hsl(0 0% 0% / 0.1), 0 1px 2px -1px hsl(0 0% 0% / 0.1);
+    --app-shadow-xl: 0 1px 3px 0px hsl(0 0% 0% / 0.1), 0 8px 10px -1px hsl(0 0% 0% / 0.1);
 
-    --shadow: 0 1px 3px 0px hsl(0 0% 0% / 0.1), 0 1px 2px -1px hsl(0 0% 0% / 0.1);
-
-    --shadow-md: 0 1px 3px 0px hsl(0 0% 0% / 0.1), 0 2px 4px -1px hsl(0 0% 0% / 0.1);
-
-    --shadow-lg: 0 1px 3px 0px hsl(0 0% 0% / 0.1), 0 4px 6px -1px hsl(0 0% 0% / 0.1);
-
-    --shadow-xl: 0 1px 3px 0px hsl(0 0% 0% / 0.1), 0 8px 10px -1px hsl(0 0% 0% / 0.1);
-
-    --shadow-2xl: 0 1px 3px 0px hsl(0 0% 0% / 0.25);
-
-    --tracking-normal: 0em;
-
-    --spacing: 0.25rem;
+    --app-shadow-2xl: 0 1px 3px 0px hsl(0 0% 0% / 0.25);
   }
 
   .dark {
@@ -125,20 +250,41 @@ All colors MUST be HSL.
     --chart-3: 215 20% 65%;
     --chart-4: 215 16% 46%;
     --chart-5: 215 19% 34%;
-    --shadow-2xs: 0 1px 3px 0px hsl(0 0% 0% / 0.3);
-    --shadow-xs: 0 1px 3px 0px hsl(0 0% 0% / 0.3);
-    --shadow-sm: 0 1px 3px 0px hsl(0 0% 0% / 0.4), 0 1px 2px -1px hsl(0 0% 0% / 0.4);
-    --shadow: 0 1px 3px 0px hsl(0 0% 0% / 0.4), 0 1px 2px -1px hsl(0 0% 0% / 0.4);
-    --shadow-md: 0 1px 3px 0px hsl(0 0% 0% / 0.4), 0 2px 4px -1px hsl(0 0% 0% / 0.4);
-    --shadow-lg: 0 1px 3px 0px hsl(0 0% 0% / 0.45), 0 4px 6px -1px hsl(0 0% 0% / 0.45);
-    --shadow-xl: 0 1px 3px 0px hsl(0 0% 0% / 0.45), 0 8px 10px -1px hsl(0 0% 0% / 0.45);
-    --shadow-2xl: 0 1px 3px 0px hsl(0 0% 0% / 0.6);
+    --app-shadow-2xs: 0 1px 3px 0px hsl(0 0% 0% / 0.3);
+    --app-shadow-xs: 0 1px 3px 0px hsl(0 0% 0% / 0.3);
+    --app-shadow-sm: 0 1px 3px 0px hsl(0 0% 0% / 0.4), 0 1px 2px -1px hsl(0 0% 0% / 0.4);
+    --app-shadow-md: 0 1px 3px 0px hsl(0 0% 0% / 0.4), 0 2px 4px -1px hsl(0 0% 0% / 0.4);
+    --app-shadow-lg: 0 1px 3px 0px hsl(0 0% 0% / 0.45), 0 4px 6px -1px hsl(0 0% 0% / 0.45);
+    --app-shadow-xl: 0 1px 3px 0px hsl(0 0% 0% / 0.45), 0 8px 10px -1px hsl(0 0% 0% / 0.45);
+    --app-shadow-2xl: 0 1px 3px 0px hsl(0 0% 0% / 0.6);
   }
 }
 
 @layer base {
-  * {
+  /* v4's preflight defaults borders to currentColor; v3's was a fixed grey, so set ours everywhere. */
+  *,
+  ::after,
+  ::before,
+  ::backdrop,
+  ::file-selector-button {
     @apply border-border;
+  }
+
+  /* v3 defaults that v4's preflight dropped: grey placeholders and pointer buttons. */
+  input::placeholder,
+  textarea::placeholder {
+    color: #9ca3af;
+  }
+
+  button:not(:disabled),
+  [role="button"]:not(:disabled) {
+    cursor: pointer;
+  }
+
+  /* v4 zeroes every element's padding; v3 kept the browser's 1px in table cells. */
+  th,
+  td {
+    padding: 1px;
   }
 
   body {
@@ -177,7 +323,7 @@ All colors MUST be HSL.
     scroll-behavior: smooth;
   }
 
-  /* One focus system. Primitives that draw their own ring use focus-visible:outline-none. */
+  /* One focus system. Primitives that draw their own ring use focus-visible:outline-hidden. */
   :focus-visible {
     outline: 2px solid hsl(var(--ring));
     outline-offset: 2px;
@@ -211,7 +357,8 @@ All colors MUST be HSL.
     background: linear-gradient(135deg, hsl(var(--card)) 0%, hsl(198 35% 90%) 100%);
   }
 
-  .dark .glass-card {
+  .dark .glass-card,
+  .dark .feature-card {
     background: linear-gradient(135deg, hsl(var(--card)) 0%, hsl(217 32% 20%) 100%);
   }
 
@@ -258,9 +405,10 @@ All colors MUST be HSL.
       box-shadow 300ms var(--motion-ease-fluid);
   }
 
-  /* Landing section headings: one size scale and one tracking per size. */
+  /* Landing section headings: one size scale and one tracking per size. Each size brings its own
+     line height (v4's leading-* would otherwise win at every breakpoint). */
   .section-heading {
-    @apply text-balance text-3xl font-bold leading-tight tracking-[-0.022em] text-foreground md:text-4xl lg:text-5xl lg:tracking-[-0.025em];
+    @apply text-balance text-3xl font-bold leading-tight tracking-[-0.022em] text-foreground md:text-4xl md:leading-10 lg:text-5xl lg:leading-none lg:tracking-[-0.025em];
   }
 
   @media (hover: hover) and (pointer: fine) {
@@ -280,7 +428,8 @@ All colors MUST be HSL.
 
   /* Cards answer hover with an edge and a shadow; they don't lift or tilt (they aren't clickable). */
   .feature-card {
-    @apply glass-card p-6;
+    @apply bg-card border border-border rounded-2xl shadow-sm p-6;
+    background: linear-gradient(135deg, hsl(var(--card)) 0%, hsl(198 35% 90%) 100%);
     transition:
       border-color var(--motion-duration-normal) var(--motion-ease-fluid),
       box-shadow var(--motion-duration-normal) var(--motion-ease-fluid);
@@ -339,18 +488,6 @@ All colors MUST be HSL.
     transition-timing-function: var(--motion-ease-fluid);
   }
 
-  @media (hover: hover) and (pointer: fine) {
-    .motion-lift:not(:disabled):not([aria-disabled='true']):hover {
-      transform: translateY(-1px);
-      box-shadow: 0 8px 20px hsl(var(--foreground) / 0.08);
-    }
-  }
-
-  .motion-press:not(:disabled):not([aria-disabled='true']):active {
-    transform: scale(var(--motion-press-scale));
-    transition-duration: var(--motion-duration-press);
-  }
-
   .motion-surface {
     transition-property: transform, box-shadow, border-color, background-color, opacity;
     transition-duration: var(--motion-duration-normal);
@@ -373,6 +510,21 @@ All colors MUST be HSL.
 
   .motion-swap {
     animation: motion-swap var(--motion-duration-normal) var(--motion-ease-fluid) both;
+  }
+
+  /* Landing sections fade up once as they scroll in (components/landing/Reveal.tsx).
+     Full transform strings run on the compositor. */
+  .landing-reveal {
+    opacity: 0;
+    transform: translateY(12px);
+    transition-property: opacity, transform;
+    transition-duration: 350ms;
+    transition-timing-function: var(--motion-ease-out-strong);
+  }
+
+  .landing-reveal[data-shown] {
+    opacity: 1;
+    transform: translateY(0px);
   }
 
 
@@ -431,48 +583,44 @@ All colors MUST be HSL.
   }
 }
 
-@layer utilities {
-  .text-balance {
-    text-wrap: balance;
-  }
+@utility scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
 
-  .scrollbar-hide {
-    -ms-overflow-style: none;
-    scrollbar-width: none;
-  }
-
-  .scrollbar-hide::-webkit-scrollbar {
+  &::-webkit-scrollbar {
     display: none;
   }
 }
 
-/* Themed scrollbars */
-* {
-  scrollbar-width: thin;
-  scrollbar-color: hsl(var(--muted-foreground) / 0.3) transparent;
-}
+/* Themed scrollbars sit in the base layer so .scrollbar-hide still overrides them. */
+@layer base {
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: hsl(var(--muted-foreground) / 0.3) transparent;
+  }
 
-*::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
-}
+  *::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
 
-*::-webkit-scrollbar-track {
-  background: transparent;
-}
+  *::-webkit-scrollbar-track {
+    background: transparent;
+  }
 
-*::-webkit-scrollbar-thumb {
-  background-color: hsl(var(--muted-foreground) / 0.3);
-  border-radius: 3px;
-}
+  *::-webkit-scrollbar-thumb {
+    background-color: hsl(var(--muted-foreground) / 0.3);
+    border-radius: 3px;
+  }
 
-@media (hover: hover) and (pointer: fine) {
-  *::-webkit-scrollbar-thumb:hover {
-    background-color: hsl(var(--muted-foreground) / 0.5);
+  @media (hover: hover) and (pointer: fine) {
+    *::-webkit-scrollbar-thumb:hover {
+      background-color: hsl(var(--muted-foreground) / 0.5);
+    }
   }
 }
 
-/* Scroll margin for anchor links under sticky header */
+/* Scroll margin for anchors under the sticky header. Unlayered, so it wins over scroll-mt-* as in v3. */
 [id] {
   scroll-margin-top: 5rem;
 }
@@ -501,6 +649,59 @@ All colors MUST be HSL.
   transition: transform 250ms var(--motion-ease-out-strong);
 }
 
+/* React Flow's controls, minimap, attribution, and edge labels are white in its own
+   stylesheet; here they follow the theme. Its stylesheet loads after this one, so
+   each rule carries the extra .react-flow class. */
+.react-flow .react-flow__controls {
+  box-shadow: 0 0 0 1px hsl(var(--border));
+}
+
+.react-flow .react-flow__controls-button {
+  background: hsl(var(--card));
+  color: hsl(var(--card-foreground));
+  border-bottom-color: hsl(var(--border));
+}
+
+.react-flow .react-flow__controls-button:hover {
+  background: hsl(var(--accent));
+}
+
+.react-flow .react-flow__minimap {
+  background-color: hsl(var(--card));
+  box-shadow: 0 0 0 1px hsl(var(--border));
+}
+
+.react-flow .react-flow__minimap-mask {
+  fill: hsl(var(--muted) / 0.6);
+}
+
+.react-flow .react-flow__attribution {
+  background: hsl(var(--card) / 0.8);
+}
+
+.react-flow .react-flow__attribution a {
+  color: hsl(var(--muted-foreground));
+  /* The credit stays; its link is a 24px target (44px on touch) instead of 12px of text. */
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+  padding: 0 4px;
+}
+
+/* An edge is a 2px line; its invisible stroke is the tap target. React Flow sizes that
+   stroke in canvas units, so it is divided by the zoom to stay 24px on screen (44px on touch). */
+.react-flow .react-flow__edge-interaction {
+  stroke-width: calc(24px / var(--flow-zoom, 1));
+}
+
+.react-flow .react-flow__edge-textbg {
+  fill: hsl(var(--card));
+}
+
+.react-flow .react-flow__edge-text {
+  fill: hsl(var(--card-foreground));
+}
+
 /* React Flow's 26px canvas controls grow to touch size on phones. Its stylesheet loads
    after this one with a content-box 16px + padding, so this needs the extra class. */
 @media (pointer: coarse) {
@@ -508,6 +709,14 @@ All colors MUST be HSL.
     box-sizing: border-box;
     width: 44px;
     height: 44px;
+  }
+
+  .react-flow .react-flow__attribution a {
+    min-height: 44px;
+  }
+
+  .react-flow .react-flow__edge-interaction {
+    stroke-width: calc(44px / var(--flow-zoom, 1));
   }
 }
 
@@ -581,7 +790,7 @@ All colors MUST be HSL.
     animation-name: none !important;
   }
 
-  /* Overlay enter and exit (tailwindcss-animate) keep their timing as plain fades. */
+  /* Overlay enter and exit (tw-animate-css) keep their timing as plain fades. */
   .animate-in,
   [data-state='open'][class*='animate-in'],
   [data-state='delayed-open'][class*='animate-in'],
@@ -593,6 +802,10 @@ All colors MUST be HSL.
 
   [data-state='closed'][class*='animate-out'] {
     animation-name: motion-fade-out !important;
+  }
+
+  .landing-reveal {
+    transform: none;
   }
 
   /* Spinners and live indicators become a slow opacity pulse so they never look hung. */

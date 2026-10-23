@@ -71,7 +71,7 @@ interface SparringStoreState {
   tickTimer: (now?: number) => void;
   pauseTimer: (now?: number) => void;
   resumeTimer: (now?: number) => void;
-  resetTurnTimer: (now?: number) => void;
+  resetTurnTimer: () => void;
   submitUserSpeech: (content: string, now?: number, delivery?: SpeechDelivery | null) => SparringSession | null;
   appendAiSpeech: (speech: SparringSpeech, now?: number) => SparringSession | null;
   completeSession: (scorecard: SparringScorecard, now?: number) => SparringSession | null;
@@ -215,13 +215,12 @@ function currentTurn(session: SparringSession): SparringTurn | undefined {
   return session.turns[session.currentTurnIndex];
 }
 
-function timerForTurn(turn: SparringTurn | undefined, now: number) {
-  const duration = turn?.timeLimitSeconds ?? 0;
-  const shouldRun = turn?.speaker === 'user';
+/** A user turn opens with a full, stopped clock; it runs once the student starts speaking or typing. */
+function timerForTurn(turn: SparringTurn | undefined): Pick<SparringSession, 'timerRemainingSeconds' | 'timerRunning' | 'timerDeadline'> {
   return {
-    timerRemainingSeconds: duration,
-    timerRunning: shouldRun,
-    timerDeadline: shouldRun ? now + duration * 1000 : null,
+    timerRemainingSeconds: turn?.timeLimitSeconds ?? 0,
+    timerRunning: false,
+    timerDeadline: null,
   };
 }
 
@@ -245,7 +244,7 @@ function advanceSession(session: SparringSession, now: number): SparringSession 
     ...session,
     currentTurnIndex: nextIndex,
     draft: '',
-    ...timerForTurn(nextTurn, now),
+    ...timerForTurn(nextTurn),
     updatedAt: now,
   };
 }
@@ -334,7 +333,7 @@ export const useSparringStore = create<SparringStoreState>()(
           currentTurnIndex: 0,
           phase: 'round',
           draft: '',
-          ...timerForTurn(turns[0], now),
+          ...timerForTurn(turns[0]),
           debateId: input.debateId ?? null,
           ...(input.voice ? { voice: true } : {}),
           createdAt: now,
@@ -384,11 +383,11 @@ export const useSparringStore = create<SparringStoreState>()(
         return { currentSession: { ...session, timerRunning: true, timerDeadline: now + session.timerRemainingSeconds * 1000 } };
       }),
 
-      resetTurnTimer: (now = Date.now()) => set((state) => {
+      resetTurnTimer: () => set((state) => {
         const session = state.currentSession;
         const turn = session ? currentTurn(session) : undefined;
         if (!session || turn?.speaker !== 'user') return state;
-        return { currentSession: { ...session, ...timerForTurn(turn, now) } };
+        return { currentSession: { ...session, ...timerForTurn(turn) } };
       }),
 
       submitUserSpeech: (content, now = Date.now(), delivery = null) => {

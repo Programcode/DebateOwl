@@ -46,7 +46,7 @@ test.describe('Hungarian parity', () => {
     await expectHungarianDocument(page);
 
     for (const [path, heading] of [
-      ['/login', 'Bejelentkezés a DebateLab-ba'],
+      ['/login', 'Bejelentkezés a DebateLabba'],
       ['/terms', 'Felhasználási feltételek'],
       ['/privacy', 'Adatvédelmi irányelvek'],
       ['/expocit/sources', 'Források'],
@@ -76,7 +76,7 @@ test.describe('Hungarian parity', () => {
 
     await expectHungarianDocument(page);
     await expect(page.getByRole('heading', { name: 'Felkészülés' })).toBeVisible({ timeout: 15_000 });
-    await expect(page.locator('.react-joyride__tooltip')).toContainText('Üdvözlünk a DebateLab-ban!', { timeout: 15_000 });
+    await expect(page.locator('.react-joyride__tooltip')).toContainText('Üdvözlünk a DebateLabban!', { timeout: 15_000 });
     await expect(page.locator('[data-test-id="button-primary"]')).toContainText('Következő');
     await expect(page.locator('[data-test-id="button-skip"]')).toContainText('Túra kihagyása');
     await page.locator('[data-test-id="button-skip"]').click();
@@ -139,7 +139,7 @@ test.describe('Hungarian parity', () => {
     await expect(page.getByRole('alert').filter({ hasText: 'Adj meg egy címet.' })).toBeVisible();
 
     await page.goto('/app/flowchart', { waitUntil: 'domcontentloaded' });
-    await page.getByRole('button', { name: 'Betöltés' }).click();
+    await page.getByRole('button', { name: 'Megnyitás', exact: true }).click();
     await expect(page.getByRole('dialog', { name: 'Mentett folyamatábrák' }).getByRole('button', { name: 'Bezárás' })).toBeVisible();
     await page.keyboard.press('Escape');
     // Deleting a node raises a toast, whose close button is localized too.
@@ -150,7 +150,7 @@ test.describe('Hungarian parity', () => {
     await expect(page.locator('[data-sonner-toast] [data-close-button]')).toHaveAttribute('aria-label', 'Bezárás');
 
     await page.goto('/app/timer', { waitUntil: 'domcontentloaded' });
-    await expect(page.getByRole('timer', { name: 'Időmérő kijelző' })).toBeVisible();
+    await expect(page.getByRole('timer', { name: 'Időmérő-kijelző' })).toBeVisible();
     expect(errors, errors.join('\n')).toEqual([]);
   });
 });

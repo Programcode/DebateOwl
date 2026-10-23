@@ -6,6 +6,7 @@ import { parseDebateContextUsage, useDebateContextStore } from '@/lib/stores/deb
 import type { ProviderConfig } from './providers/types';
 import { AskOutputSchema, type AskOutput } from './schemas/ask';
 import { consumeSSEChunk, type ParsedSSEEvent } from './sse';
+import { refreshAIUsage } from '@/lib/query-client';
 
 export { consumeSSEChunk };
 
@@ -109,7 +110,7 @@ export async function streamAskChat(
     throw error;
   }
   if (!accessToken) {
-    const error = new AIAuthError('Please sign in to use AI features', { requestId });
+    const error = new AIAuthError(i18n.t('serverErrors.signInRequired'), { requestId });
     captureStreamFailure(error, provider, config.model, startTime, requestId, Boolean(handlers.signal?.aborted));
     throw error;
   }
@@ -277,5 +278,6 @@ export async function streamAskChat(
     handlers.signal?.removeEventListener('abort', abortForCaller);
     controller.signal.removeEventListener('abort', cancelReader);
     cancelReader();
+    refreshAIUsage();
   }
 }

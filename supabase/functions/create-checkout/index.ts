@@ -6,6 +6,7 @@ import { HttpError, jsonError, requireUser } from "../_shared/auth.ts";
 import { createEdgeStripe, Stripe } from "../_shared/stripe.ts";
 import { getCorsHeaders } from "../_shared/cors.ts";
 import {
+  discountPromoRefusal,
   findCustomerOwnedByUser,
   hasOpenSubscription,
   isAllowedCheckoutRedirectUrl,
@@ -271,6 +272,52 @@ export async function handleRequest(req: Request): Promise<Response> {
       });
     }
 
+    // Check a promo code before any Stripe customer is created for this attempt.
+    let allowPromotionCodes = false;
+    if (promoCode) {
+      const { data: promo, error: promoLookupError } = await supabase.from("promo_codes")
+        .select("*")
+        .eq("code", promoCode.toUpperCase())
+        .eq("is_active", true)
+        .maybeSingle();
+
+      if (promoLookupError) {
+        console.warn(`[CHECKOUT] Promo lookup failed`);
+      }
+
+      if (promo && promo.type === "discount") {
+        const refusal = discountPromoRefusal(promo);
+        if (refusal) {
+          return new Response(JSON.stringify({
+            error: refusal === "expired" ? "This promo code has expired" : "This promo code has reached its usage limit",
+            code: refusal === "expired" ? "promo_expired" : "promo_exhausted",
+          }), {
+            status: 400,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+
+        const { data: existingRedemption, error: redemptionLookupError } = await supabase.from("user_promos")
+          .select("id")
+          .eq("user_id", user.id)
+          .eq("promo_code_id", promo.id)
+          .maybeSingle();
+
+        if (redemptionLookupError) {
+          console.warn(`[CHECKOUT] Promo redemption lookup failed`);
+        }
+
+        if (existingRedemption) {
+          return new Response(JSON.stringify({ error: "You've already redeemed this promo code" }), {
+            status: 400,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+
+        allowPromotionCodes = true;
+      }
+    }
+
     // Get or create Stripe customer
     let customerId = await findCustomerIdByUser({ id: user.id, email: user.email });
     if (!customerId) {
@@ -309,41 +356,8 @@ export async function handleRequest(req: Request): Promise<Response> {
       subscription_data: {
         metadata: { user_id: user.id },
       },
+      ...(allowPromotionCodes && { allow_promotion_codes: true }),
     };
-
-    // Apply promo code if provided
-    if (promoCode) {
-      const { data: promo, error: promoLookupError } = await supabase.from("promo_codes")
-        .select("*")
-        .eq("code", promoCode.toUpperCase())
-        .eq("is_active", true)
-        .maybeSingle();
-
-      if (promoLookupError) {
-        console.warn(`[CHECKOUT] Promo lookup failed`);
-      }
-
-      if (promo && promo.type === "discount") {
-        const { data: existingRedemption, error: redemptionLookupError } = await supabase.from("user_promos")
-          .select("id")
-          .eq("user_id", user.id)
-          .eq("promo_code_id", promo.id)
-          .maybeSingle();
-
-        if (redemptionLookupError) {
-          console.warn(`[CHECKOUT] Promo redemption lookup failed`);
-        }
-
-        if (existingRedemption) {
-          return new Response(JSON.stringify({ error: "You've already redeemed this promo code" }), {
-            status: 400,
-            headers: { ...corsHeaders, "Content-Type": "application/json" },
-          });
-        }
-
-        sessionParams.allow_promotion_codes = true;
-      }
-    }
 
     const session = await stripe.checkout.sessions.create(sessionParams);
 

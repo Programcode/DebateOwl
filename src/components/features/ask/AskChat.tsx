@@ -13,7 +13,7 @@ import { cn } from '@/lib/utils';
 import { useSpeechToText } from '@/hooks/use-speech-to-text';
 import { useToast } from '@/hooks/use-toast';
 import { validateFileUpload, MAX_FILE_COUNT, formatFileSize } from '@/lib/validation/file';
-import { formatEuropeanDate, formatEuropeanTime } from '@/lib/date-format';
+import { formatDecimal, formatEuropeanDate, formatEuropeanTime } from '@/lib/date-format';
 import { ModelSelector } from '@/components/ModelSelector';
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -104,6 +104,8 @@ function sourceQualityClass(label?: string) {
   return 'bg-amber-500/10 text-amber-600 dark:text-amber-400';
 }
 
+const USER_BUBBLE_MARKDOWN = 'text-current [&_*]:text-current [&_li::marker]:text-current [&_a]:decoration-current [&_code]:bg-primary-foreground/15 [&_blockquote]:border-current/40';
+
 const MessageBubble = React.memo(function MessageBubble({ message, onSave }: { message: Message, onSave?: (title: string, content: string) => void }) {
   const { t } = useTranslation();
   const isUser = message.role === 'user';
@@ -138,7 +140,10 @@ const MessageBubble = React.memo(function MessageBubble({ message, onSave }: { m
           </Button>
         )}
         <div className="text-sm">
-          {message.content ? <Markdown>{message.content}</Markdown> : null}
+          {/* prose paints its own gray text, which was about 2:1 on the blue user bubble; take the bubble's color instead. */}
+          {message.content ? (
+            <Markdown className={isUser ? USER_BUBBLE_MARKDOWN : undefined}>{message.content}</Markdown>
+          ) : null}
           {message.isStreaming && (
             <span className="streaming-caret" aria-hidden="true" />
           )}
@@ -174,7 +179,7 @@ const MessageBubble = React.memo(function MessageBubble({ message, onSave }: { m
                   </div>
                   {citation.source && getFirstUrl(citation.source) ? (
                     <a
-                      className="mt-1 block break-words text-primary hover:underline [overflow-wrap:anywhere]"
+                      className="mt-1 block text-primary hover:underline wrap-anywhere"
                       href={getFirstUrl(citation.source)}
                       target="_blank"
                       rel="noreferrer"
@@ -182,7 +187,7 @@ const MessageBubble = React.memo(function MessageBubble({ message, onSave }: { m
                       {citation.source}
                     </a>
                   ) : citation.source ? (
-                    <div className="mt-1 break-words [overflow-wrap:anywhere] text-muted-foreground">{citation.source}</div>
+                    <div className="mt-1 wrap-anywhere text-muted-foreground">{citation.source}</div>
                   ) : null}
                   {citation.note && (
                     <div className="mt-1 text-muted-foreground">{citation.note}</div>
@@ -224,11 +229,11 @@ const MessageBubble = React.memo(function MessageBubble({ message, onSave }: { m
                       </span>
                     </div>
                     {safeUrl ? (
-                      <a className="mt-1 block text-primary hover:underline break-words [overflow-wrap:anywhere]" href={safeUrl} target="_blank" rel="noreferrer">
+                      <a className="mt-1 block text-primary hover:underline wrap-anywhere" href={safeUrl} target="_blank" rel="noreferrer">
                         {source.title || source.url}
                       </a>
                     ) : (
-                      <span className="mt-1 block break-words text-muted-foreground [overflow-wrap:anywhere]">{source.title || source.url}</span>
+                      <span className="mt-1 block text-muted-foreground wrap-anywhere">{source.title || source.url}</span>
                     )}
                   </li>
                   );
@@ -300,7 +305,8 @@ const MessageBubble = React.memo(function MessageBubble({ message, onSave }: { m
           </div>
         )}
 
-        <span className="text-xs text-muted-foreground">
+        {/* Muted gray is unreadable on the blue user bubble; the bubble's own color is 5:1 or better. */}
+        <span data-testid="message-meta" className={cn('text-xs', isUser ? 'text-current' : 'text-muted-foreground')}>
           {(() => {
             try {
               const parts: string[] = [];
@@ -311,7 +317,7 @@ const MessageBubble = React.memo(function MessageBubble({ message, onSave }: { m
                 parts.push(message.output.provider);
               }
               if (message.role === 'assistant' && message.output?.durationMs) {
-                parts.push(`${(message.output.durationMs / 1000).toFixed(1)}s`);
+                parts.push(t('askChat.elapsed', { seconds: formatDecimal(message.output.durationMs / 1000, 1) }));
               }
               return parts.join(' • ');
             } catch (e) {
@@ -361,7 +367,7 @@ function SavedChatsPanel({
               <button
                 key={chat.id}
                 type="button"
-                className="w-full rounded-lg border bg-card p-3 text-left transition-colors hover:border-primary/40 hover:bg-accent/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                className="w-full rounded-lg border bg-card p-3 text-left transition-colors hover:border-primary/40 hover:bg-accent/50 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring"
                 onClick={() => handleLoad(chat.id)}
               >
                 <div className="truncate text-sm font-medium">{chat.title}</div>
@@ -563,13 +569,14 @@ export function AskChat({ messages, streamingMessage, isLoading, error, onDismis
         </aside>
 
     <Card className="flex flex-col h-[calc(100dvh-14rem)] min-h-[400px] max-h-[800px] border-primary/20">
-      <CardHeader className="bg-gradient-to-br from-primary/5 to-transparent shrink-0">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
+      <CardHeader className="bg-linear-to-br from-primary/5 to-transparent shrink-0">
+        {/* Wraps on a phone: the Hungarian title and two buttons do not fit one 375 px row. */}
+        <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
+          <div className="flex min-w-0 items-center gap-3">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10">
               <MessageCircle className="h-5 w-5 text-primary" />
             </div>
-            <div>
+            <div className="min-w-0">
               <CardTitle>{t('askChat.title')}</CardTitle>
               <CardDescription>{t('askChat.subtitle')}</CardDescription>
             </div>

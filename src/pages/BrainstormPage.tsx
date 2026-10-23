@@ -11,7 +11,7 @@ import { BrainstormResults } from '@/components/features/brainstorm/BrainstormRe
 import { brainstorm, type DiscoveredSource } from '@/lib/ai/client';
 import { useSubscriptionError } from '@/hooks/use-subscription-error';
 import { getUserFacingAIError } from '@/lib/ai/error-display';
-import { LimitReachedModal, ModelRestrictedModal, PricingModal } from '@/components/features/subscription';
+import { DailyUsage, SubscriptionErrorModals } from '@/components/features/subscription';
 import type { BrainstormInput } from '@/lib/ai/schemas/brainstorm';
 import { EmptyState } from '@/components/ui/empty-state';
 import { PageHeader } from '@/components/layout/PageHeader';
@@ -19,6 +19,8 @@ import { ToolRunErrorPanel, isCanceled, useRevealResults, useToolRun } from '@/c
 import { LiveToolRun } from '@/components/features/tools/live-draft';
 import { brainstormDraftSections } from '@/components/features/tools/live-sections';
 import { brainstormDiscussPrompt, openDiscussion } from '@/components/features/tools/discuss';
+import { markResultSaved, useResultSaved } from '@/components/features/tools/result-actions';
+import { useToast } from '@/hooks/use-toast';
 import { WorkspaceToolScope, useWorkspaceToolScope } from '@/components/features/workspace/WorkspaceToolScope';
 import { recordInDebate } from '@/lib/debate/record';
 import { CurrentDebateStrip } from '@/components/features/debate/CurrentDebateStrip';
@@ -26,13 +28,14 @@ import { useDebateMotionGate } from '@/components/features/debate/DebateMotionGa
 
 export default function BrainstormPage() {
   const workspace = useWorkspaceToolScope('brainstorm');
-  const { brainstormResult, brainstormLoading, brainstormForm, setBrainstormResult, setBrainstormLoading, recordResult } = useSessionStore(useShallow((state) => ({
+  const { brainstormResult, brainstormLoading, brainstormForm, setBrainstormResult, setBrainstormLoading, recordResult, saveCurrentBrainstorm } = useSessionStore(useShallow((state) => ({
     brainstormResult: state.brainstormResult,
     brainstormLoading: state.brainstormLoading,
     brainstormForm: state.brainstormForm,
     setBrainstormResult: state.setBrainstormResult,
     setBrainstormLoading: state.setBrainstormLoading,
     recordResult: state.recordResult,
+    saveCurrentBrainstorm: state.saveCurrentBrainstorm,
   })));
   const debateGate = useDebateMotionGate({ disabled: Boolean(workspace.context) });
   const { getFeatureConfig } = useSettingsStore();
@@ -50,6 +53,9 @@ export default function BrainstormPage() {
   const subError = useSubscriptionError();
   const [discoveredSources, setDiscoveredSources] = useState<DiscoveredSource[]>([]);
   const { t } = useTranslation();
+  const { toast } = useToast();
+  const resultSaved = useResultSaved(brainstormResult);
+  const [saving, setSaving] = useState(false);
 
   const handleSubmit = (data: BrainstormInput) => debateGate.run(data.motion, (target) => void submitBrainstorm(data, target.debateId));
 
@@ -66,7 +72,7 @@ export default function BrainstormPage() {
       setBrainstormResult(result);
       await workspace.attach(data, result);
       if (target.debateId) {
-        await recordInDebate(() => recordResult('brainstorm', { title: data.motion, input: data, output: result, debateId: target.debateId, side: data.side }));
+        if (await recordInDebate(() => recordResult('brainstorm', { title: data.motion, input: data, output: result, debateId: target.debateId, side: data.side }))) markResultSaved(result);
       }
       results.reveal();
     } catch (error) {
@@ -80,6 +86,23 @@ export default function BrainstormPage() {
     }
   };
 
+  // One-off results are not saved automatically; Save puts them in History.
+  const handleSave = async () => {
+    const result = brainstormResult;
+    if (!result || saving) return;
+    setSaving(true);
+    try {
+      await saveCurrentBrainstorm((lastRun.current?.data.motion || brainstormForm?.motion || t('generatedArtifacts.brainstormTitle')).slice(0, 300));
+      markResultSaved(result);
+      toast({ title: t('resultActions.savedToHistory', 'Saved to History') });
+    } catch (error) {
+      console.error('Failed to save brainstorm:', error);
+      toast({ title: t('resultActions.saveFailed', 'Could not save. Try again.'), variant: 'destructive' });
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const handleDiscuss = () => {
     if (brainstormResult) openDiscussion(navigate, brainstormDiscussPrompt(brainstormResult, t));
   };
@@ -88,7 +111,7 @@ export default function BrainstormPage() {
     <div className="container py-8 px-4">
       <WorkspaceToolScope context={workspace.context} />
       <div className="max-w-6xl mx-auto">
-        <PageHeader title={t('nav.brainstorm')} />
+        <PageHeader title={t('nav.brainstorm')} meta={<DailyUsage />} />
         <CurrentDebateStrip side={brainstormForm?.side} hidden={Boolean(workspace.context)} />
 
         <div className="grid gap-8 lg:grid-cols-[400px_minmax(0,1fr)]">
@@ -110,7 +133,7 @@ export default function BrainstormPage() {
               <LiveToolRun label={t('brainstorm.working', 'Finding angles…')} live={run.liveState} sections={run.liveState.draft ? brainstormDraftSections(run.liveState.draft, t) : []} onCancel={run.cancel} />
             ) : brainstormResult ? (
               <div key="brainstorm-results">
-                <BrainstormResults result={brainstormResult} discoveredSources={discoveredSources} onDiscuss={handleDiscuss} />
+                <BrainstormResults result={brainstormResult} discoveredSources={discoveredSources} onDiscuss={handleDiscuss} onSave={() => void handleSave()} saved={resultSaved} saving={saving} />
               </div>
             ) : (
               <EmptyState icon={Lightbulb} title={t('brainstorm.emptyTitle')} description={t('brainstorm.emptyDesc')} />
@@ -120,27 +143,7 @@ export default function BrainstormPage() {
       </div>
 
       {debateGate.dialog}
-      <LimitReachedModal
-        open={subError.limitModalOpen}
-        onOpenChange={subError.setLimitModalOpen}
-        variant={subError.limitModalVariant}
-        limit={subError.limitModalLimit}
-        current={subError.limitModalCurrent}
-        units={subError.limitModalUnits}
-        onUpgrade={() => { subError.setLimitModalOpen(false); subError.setPricingModalOpen(true); }}
-      />
-      <ModelRestrictedModal
-        open={subError.modelModalOpen}
-        onOpenChange={subError.setModelModalOpen}
-        onUpgrade={() => {
-          subError.setModelModalOpen(false);
-          subError.setPricingModalOpen(true);
-        }}
-      />
-      <PricingModal
-        open={subError.pricingModalOpen}
-        onOpenChange={subError.setPricingModalOpen}
-      />
+      <SubscriptionErrorModals subError={subError} />
     </div>
   );
 }

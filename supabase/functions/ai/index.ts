@@ -58,9 +58,13 @@ import {
   checkRateLimit,
   checkUserBanned,
   logUsage,
+  parseQuotaSessionKey,
+  peekRateLimit,
+  type QuotaSession,
   type RateLimitResult,
   refundQuotaReservation,
 } from "../_shared/entitlements.ts";
+import { REFUND_MAX_DELIVERED_CHARS } from "../_shared/usage-limits.ts";
 import {
   CLAUDE_UNAVAILABLE_CODE,
   CLAUDE_UNAVAILABLE_MESSAGE,
@@ -185,6 +189,16 @@ export async function handleRequest(req: Request): Promise<Response> {
     return badRequest("Unsupported model or provider combination", corsHeaders);
   }
   const requestedModel: ModelSelection = rawModel;
+  // A read-only quota check: what a new round on this model costs and whether
+  // it fits today. Crossfire and Sparring ask before starting a round, so the
+  // clock never starts on one the server would refuse. Reserves nothing.
+  if (body.quotaCheck === true) {
+    const quota = await peekRateLimit(userId, requestedModel);
+    if (quota.statusCode === 500) return badRequest("Unable to verify your quota", corsHeaders, 500);
+    return new Response(JSON.stringify({
+      quota: { allowed: quota.allowed, code: quota.code, limit: quota.limit, current: quota.current, units: quota.units },
+    }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+  }
   let model = DEFAULT_MODEL as string;
   let modelEntry: ModelCatalogEntry = modelForRequest(DEFAULT_MODEL);
   let resolvedModelMeta: string | undefined;
@@ -268,6 +282,18 @@ export async function handleRequest(req: Request): Promise<Response> {
     }
     validatedSparringRequest = sparringResult.request;
   }
+  // Crossfire and Sparring are charged once per round (SESSION_QUOTA). A
+  // Sparring round is named by its validated sessionId. Crossfire sends its
+  // round id beside `input`, so servers from before session charging ignore
+  // it; a Crossfire request without one is charged per call.
+  let quotaSession: QuotaSession | undefined;
+  if (validatedSparringRequest) {
+    quotaSession = { feature: "sparring", key: validatedSparringRequest.sessionId };
+  } else if (crossfireInput && body.quotaSession !== undefined) {
+    const key = parseQuotaSessionKey(body.quotaSession);
+    if (!key) return badRequest("Invalid quota session", corsHeaders);
+    quotaSession = { feature: "crossfire", key };
+  }
   let sourceAssessments: SourceAssessment[] = [];
   let workspaceAccess: {
     meta: Record<string, unknown>;
@@ -277,6 +303,9 @@ export async function handleRequest(req: Request): Promise<Response> {
     workspaceId: string;
   } | null = null;
   let workspaceThreadSettled = false;
+  // The answer reached storage (a workspace thread reply or a Sparring
+  // scorecard), so a later failure still leaves the student something.
+  let outputSaved = false;
   let loadedDebate: LoadedDebateContext | null = null;
   let debateSourceCounts = { omittedForSize: 0, shortened: 0 };
   const successBody = async (payload: Record<string, unknown>) => {
@@ -296,6 +325,7 @@ export async function handleRequest(req: Request): Promise<Response> {
       });
       if (settled.error) throw new Error("Workspace thread response unavailable");
       workspaceThreadSettled = true;
+      outputSaved = true;
     }
     const meta = {
       ...(responseTruncated ? { truncated: true } : {}),
@@ -525,7 +555,7 @@ export async function handleRequest(req: Request): Promise<Response> {
   // Check rate limits (includes subscription gating and model access)
   let rateLimit: RateLimitResult;
   try {
-    rateLimit = await checkRateLimit(userId, requestedModel);
+    rateLimit = await checkRateLimit(userId, requestedModel, quotaSession);
   } catch (error) {
     await interruptWorkspaceThread();
     if (sparringScoreClaimed && sparringScoreClaimToken && validatedSparringRequest) {
@@ -583,6 +613,8 @@ export async function handleRequest(req: Request): Promise<Response> {
     }
     const message = error instanceof Error ? error.message : "Model routing failed";
     log(requestId, "ERROR", "Model routing failed", { error: message });
+    // Nothing ran, so nothing is charged.
+    await refundQuotaReservation(userId, rateLimit);
     return badRequest(message.includes("Pro") ? message : "Unable to route this request", corsHeaders, message.includes("Pro") ? 403 : 500);
   }
 
@@ -624,6 +656,7 @@ export async function handleRequest(req: Request): Promise<Response> {
       if (rankingUsage) await logUsage(userId, "jev_source_ranking", provider, JEV_MODEL, rankingUsage, undefined, ranked.jevUsage ? "error" : "success", ranked.jevUsage ? "jev_incomplete" : undefined);
     } catch {
       await interruptWorkspaceThread();
+      await refundQuotaReservation(userId, rateLimit);
       return badRequest("Unable to rank sources", corsHeaders, 500);
     }
   }
@@ -712,7 +745,29 @@ export async function handleRequest(req: Request): Promise<Response> {
         ? "WEB RESEARCH RESULTS are attached to this request."
         : undefined,
     });
-  const runFeature = async (stream?: GenerationStream): Promise<Response> => {
+  // Characters of model text streamed to the browser. A reset does not take
+  // any back: the student has already read them.
+  let deliveredChars = 0;
+  // The streamed answer on screen is complete: the model sent its
+  // finish_reason. A repair retry's reset voids it.
+  let modelFinished = false;
+  const countDelivered = (stream?: GenerationStream): GenerationStream | undefined => stream && {
+    ...stream,
+    delta: (text) => {
+      deliveredChars += text.length;
+      stream.delta(text);
+    },
+    reset: () => {
+      modelFinished = false;
+      stream.reset();
+    },
+    finished: () => {
+      modelFinished = true;
+      stream.finished?.();
+    },
+  };
+  const runFeature = async (sink?: GenerationStream): Promise<Response> => {
+    const stream = countDelivered(sink);
     try {
       const ctx: FeatureContext = {
         req,
@@ -748,6 +803,7 @@ export async function handleRequest(req: Request): Promise<Response> {
             claimToken: sparringScoreClaimToken,
             onScoreSaved: () => {
               sparringScoreClaimed = false;
+              outputSaved = true;
             },
           });
         case "crossfire":
@@ -821,33 +877,48 @@ export async function handleRequest(req: Request): Promise<Response> {
       // post-processing error. This avoids counting its repair attempts twice.
       const mainErrorUsage = completedMainUsage ?? selectObservedUsage(usageError, workSignal?.aborted === true);
       // Claude runs only on the Anthropic key, with no fallback provider. When
-      // it fails the student gets an outage message, and their request back
-      // if no provider call had finished or written anything yet.
+      // it fails the student gets an outage message.
       const claudeUnavailable = err instanceof ClaudeProviderUnavailableError;
+      const aborted = workSignal?.aborted === true;
+      const timedOut = aborted && (workSignal.reason as { name?: unknown } | undefined)?.name === "TimeoutError";
       const errorUsage = mergeNormalizedUsage([
         mainErrorUsage,
         ...researchUsageForLog(),
       ]);
-      // OpenRouter credits already spent on the request keep it counted.
-      // A cancelled request is never refunded, even when the refusal raced the abort.
-      const refundable = claudeUnavailable && !workSignal?.aborted && !err.afterOutput && !completedMainUsage && !usageError?.completedUsage &&
+      // A run that produced nothing costs nothing: a provider failure, a
+      // response that failed validation, the request budget running out, or
+      // the browser leaving (reload, closed tab, Stop) before the student saw
+      // a usable part of the answer. A run whose answer was saved, or that
+      // streamed REFUND_MAX_DELIVERED_CHARS or more, stays charged, and so
+      // does one whose streamed answer the model had finished, however the
+      // request ended afterwards (a disconnect, a failed read of the usage
+      // trailer): a short answer may already be on screen. A non-streamed
+      // call the browser left after the provider answered stays charged too.
+      const answerFinished = modelFinished || (aborted && Boolean(completedMainUsage));
+      const refundable = !outputSaved && !answerFinished && deliveredChars < REFUND_MAX_DELIVERED_CHARS;
+      // Refund before answering, so a retry sent straight away sees it.
+      const refunded = refundable && await refundQuotaReservation(userId, rateLimit);
+      // The weekly cap counts real spend, so a refunded run's cost (BYOK
+      // provider charges included) still counts. Only a Claude refusal that cost nothing is logged at 0.
+      const freeRefusal = claudeUnavailable && !aborted && !err.afterOutput && !completedMainUsage && !usageError?.completedUsage &&
         !researchDidWork && !researchAccountingIncomplete && !chargedAgainstCap(errorUsage);
       await logUsage(
         userId,
         feature,
         provider,
         model,
-        // A refunded request counts toward neither today's quota nor the weekly cap.
-        refundable ? excludeFromCap(errorUsage) : errorUsage,
+        freeRefusal ? excludeFromCap(errorUsage) : errorUsage,
         latencyMs,
-        "error",
-        claudeUnavailable ? "claude_unavailable" : "ai_error",
+        aborted && !timedOut ? "cancelled" : "error",
+        claudeUnavailable ? "claude_unavailable" : timedOut ? "timeout" : aborted ? "aborted" : "provider_error",
       );
+      // Tells the client to say "You were not charged": the units went back,
+      // or this call ran inside a session that had already paid.
+      const notCharged = refunded || rateLimit.charged === false ? { charged: false } : {};
       if (claudeUnavailable) {
-        if (refundable) await refundQuotaReservation(userId, rateLimit);
-        return new Response(JSON.stringify({ error: CLAUDE_UNAVAILABLE_MESSAGE, code: CLAUDE_UNAVAILABLE_CODE }), { status: CLAUDE_UNAVAILABLE_STATUS, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+        return new Response(JSON.stringify({ error: CLAUDE_UNAVAILABLE_MESSAGE, code: CLAUDE_UNAVAILABLE_CODE, ...notCharged }), { status: CLAUDE_UNAVAILABLE_STATUS, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
-      return new Response(JSON.stringify({ error: "AI request failed. Please try again.", code: "provider_error" }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      return new Response(JSON.stringify({ error: "AI request failed. Please try again.", code: "provider_error", ...notCharged }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
   };
 

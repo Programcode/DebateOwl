@@ -29,7 +29,7 @@ const copy = {
     demoTab: "Demókód",
     demoCode: "Demókód",
     signIn: "Bejelentkezés demókóddal",
-    welcome: "Üdvözlünk a DebateLab-ban!",
+    welcome: "Üdvözlünk a DebateLabban!",
     firstDebate: "Itt indíthatod el az első vitádat.",
     startDebate: "Vita indítása",
     motionField: "Tétel",

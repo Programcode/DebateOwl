@@ -24,9 +24,8 @@ vi.mock('@/lib/ai/client', async (importOriginal) => ({
 }));
 
 vi.mock('@/components/features/subscription', () => ({
-  LimitReachedModal: (): null => null,
-  ModelRestrictedModal: (): null => null,
-  PricingModal: (): null => null,
+  DailyUsage: (): null => null,
+  SubscriptionErrorModals: (): null => null,
 }));
 
 vi.mock('@/lib/ai/streaming', () => ({
@@ -42,7 +41,7 @@ describe('Ask across an account change', () => {
   it('never shows the previous account\'s answer as it is written', async () => {
     enableOneOffMode();
     const view = render(<MemoryRouter initialEntries={['/app/ask']}><AskPage /></MemoryRouter>);
-    fireEvent.change(screen.getByPlaceholderText('Ask your debate coach...'), { target: { value: 'How do I weigh cost?' } });
+    fireEvent.change(screen.getByRole('textbox', { name: 'Message to your debate coach' }), { target: { value: 'How do I weigh cost?' } });
     fireEvent.click(screen.getByRole('button', { name: 'Send message' }));
     await waitFor(() => expect(mocks.live).toBeDefined());
 
@@ -67,7 +66,7 @@ describe('Ask across an account change', () => {
     enableOneOffMode();
     useSessionStore.getState().clearAskMessages();
     const view = render(<MemoryRouter initialEntries={['/app/ask']}><AskPage /></MemoryRouter>);
-    fireEvent.change(screen.getByPlaceholderText('Ask your debate coach...'), { target: { value: 'How do I weigh cost?' } });
+    fireEvent.change(screen.getByRole('textbox', { name: 'Message to your debate coach' }), { target: { value: 'How do I weigh cost?' } });
     fireEvent.click(screen.getByRole('button', { name: 'Send message' }));
     await waitFor(() => expect(mocks.live).toBeDefined());
     act(() => mocks.live!.onDraft({ response: 'A partial answer' }));

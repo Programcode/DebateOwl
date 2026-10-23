@@ -53,7 +53,7 @@ function WeaknessCard({ weakness }: { weakness: Weakness }) {
                 {t(`attackResults.types.${weakness.type}`, weakness.type)}
               </Badge>
             </div>
-            <h4 className="mt-1 font-medium text-foreground">{weakness.description}</h4>
+            <h3 className="mt-1 font-medium text-foreground">{weakness.description}</h3>
           </div>
         </div>
       </div>
@@ -208,20 +208,20 @@ export function AttackResults({ result, discoveredSources, onDiscuss, onPractice
           <div className="flex gap-4 text-sm">
             <div className="flex items-center gap-1">
               <div className="h-3 w-3 rounded-full bg-destructive" />
-              <span>{criticalCount} {t('attackResults.critical')}</span>
+              <span>{t('attackResults.criticalCount', { count: criticalCount })}</span>
             </div>
             <div className="flex items-center gap-1">
               <div className="h-3 w-3 rounded-full bg-amber-500" />
-              <span>{majorCount} {t('attackResults.major')}</span>
+              <span>{t('attackResults.majorCount', { count: majorCount })}</span>
             </div>
             <div className="flex items-center gap-1">
               <div className="h-3 w-3 rounded-full bg-primary" />
-              <span>{minorCount} {t('attackResults.minor')}</span>
+              <span>{t('attackResults.minorCount', { count: minorCount })}</span>
             </div>
           </div>
 
           <div>
-            <h4 className="text-sm font-medium text-muted-foreground mb-2">{t('attackResults.strengths')}</h4>
+            <h3 className="text-sm font-medium text-muted-foreground mb-2">{t('attackResults.strengths')}</h3>
             <ul className="space-y-1">
               {strengthAreas.map((strength, i) => (
                 <li key={i} className="flex items-baseline gap-2 text-sm">
@@ -303,12 +303,12 @@ export function AttackResults({ result, discoveredSources, onDiscuss, onPractice
         >
           <div className="space-y-4">
             <div>
-              <h4 className="text-sm font-medium text-muted-foreground mb-1">{t('attackResults.currentWeighing')}</h4>
+              <h3 className="text-sm font-medium text-muted-foreground mb-1">{t('attackResults.currentWeighing')}</h3>
               <p className="text-foreground">{weighingAnalysis.currentWeighing}</p>
             </div>
             <Separator />
             <div>
-              <h4 className="text-sm font-medium text-muted-foreground mb-2">{t('attackResults.missingComparisons')}</h4>
+              <h3 className="text-sm font-medium text-muted-foreground mb-2">{t('attackResults.missingComparisons')}</h3>
               <ul className="space-y-1">
                 {(weighingAnalysis.missingComparisons ?? []).map((comparison, i) => (
                   <li key={i} className="flex items-start gap-2 text-sm">
@@ -320,7 +320,7 @@ export function AttackResults({ result, discoveredSources, onDiscuss, onPractice
             </div>
             <Separator />
             <div>
-              <h4 className="text-sm font-medium text-muted-foreground mb-2">{t('attackResults.improvements')}</h4>
+              <h3 className="text-sm font-medium text-muted-foreground mb-2">{t('attackResults.improvements')}</h3>
               <ul className="space-y-1">
                 {(weighingAnalysis.improvementSuggestions ?? []).map((suggestion, i) => (
                   <li key={i} className="flex items-start gap-2 text-sm">

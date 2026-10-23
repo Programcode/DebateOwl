@@ -20,7 +20,7 @@ import {
     DialogHeader,
     DialogTitle,
 } from '@/components/ui/dialog';
-import { formatEuropeanDate, formatEuropeanDateTime, formatNumber } from '@/lib/date-format';
+import { formatDecimal, formatEuropeanDate, formatEuropeanDateTime, formatNumber } from '@/lib/date-format';
 import { captureProductEvent } from '@/lib/observability';
 import { AdminAnnouncements } from '@/components/admin/AdminAnnouncements';
 
@@ -354,7 +354,7 @@ function DemoAccessPanel({ codes, loading, error, onCreate, onDisable, onReset }
                                         return (
                                             <tr key={code.id}>
                                                 <td className="whitespace-nowrap px-3 py-4 font-medium">{code.email || t('admin.unknownEmail')}</td>
-                                                <td className="max-w-[14rem] px-3 py-4">
+                                                <td className="max-w-56 px-3 py-4">
                                                     <span className="block truncate" title={displayLabel}>{displayLabel}</span>
                                                 </td>
                                                 <td className="px-3 py-4 capitalize">{t(`admin.users.roles.${code.role}`, code.role)}</td>
@@ -463,11 +463,11 @@ export default function AdminPage() {
     const { t } = useTranslation();
     const formatKnownCost = (cost: number, unknownCostRequests = 0) => {
         if (cost > 0 && unknownCostRequests > 0) {
-            return t('admin.dashboard.knownPlusUnknownCost', { cost: cost.toFixed(4), count: unknownCostRequests });
+            return t('admin.dashboard.knownPlusUnknownCost', { cost: formatDecimal(cost, 4), count: unknownCostRequests });
         }
-        if (cost > 0) return `$${cost.toFixed(4)}`;
+        if (cost > 0) return `$${formatDecimal(cost, 4)}`;
         if (unknownCostRequests > 0) return t('admin.dashboard.unknownCost');
-        return '$0.0000';
+        return `$${formatDecimal(0, 4)}`;
     };
 
     const fetchAdminData = useCallback(async (action: string, params?: Record<string, string>) => {
@@ -731,8 +731,8 @@ export default function AdminPage() {
             <div className="container py-8 px-4">
                 <Card className="max-w-md mx-auto">
                     <CardHeader>
-                        <CardTitle className="flex items-center gap-2">
-                            <Shield className="h-5 w-5 text-destructive" />
+                        <CardTitle as="h1" className="flex items-center gap-2">
+                            <Shield className="h-5 w-5 text-destructive" aria-hidden="true" />
                             {t('admin.dashboard.accessDenied')}
                         </CardTitle>
                         <CardDescription>
@@ -798,7 +798,7 @@ export default function AdminPage() {
                             <AlertCircle className="h-4 w-4 text-muted-foreground" />
                         </CardHeader>
                         <CardContent>
-                            <div className="text-2xl font-bold">{stats?.totals.successRate.toFixed(1) || 100}%</div>
+                            <div className="text-2xl font-bold">{stats ? formatDecimal(stats.totals.successRate, 1) : 100}%</div>
                             <p className="text-xs text-muted-foreground">{t('admin.dashboard.successRateDescription')}</p>
                         </CardContent>
                     </Card>

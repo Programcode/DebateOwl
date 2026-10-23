@@ -220,14 +220,14 @@ export function DebateTimer({ storageKey, embedded = false, onFirstStart, footer
       // Clicking anywhere in the timer focuses it, which turns its keyboard shortcuts on.
       tabIndex={-1}
       aria-label={t('timer.region', { format: format.name })}
-      className={cn('rounded-2xl border border-border bg-card text-card-foreground focus:outline-none', embedded ? 'border-0 bg-transparent' : 'shadow-sm')}
+      className={cn('rounded-2xl border border-border bg-card text-card-foreground focus:outline-hidden', embedded ? 'border-0 bg-transparent' : 'shadow-sm')}
     >
       {!embedded && (
         <div className="flex flex-wrap items-end gap-3 border-b border-border p-4">
           <label className="flex flex-col gap-1 text-sm font-medium">
             {t('timer.format')}
             <select
-              className="h-10 min-w-[14rem] rounded-md border border-input bg-background px-3 text-base"
+              className="h-10 min-w-56 rounded-md border border-input bg-background px-3 text-base"
               value={session.choice.id}
               onChange={(event) => {
                 const value = event.target.value;
@@ -254,7 +254,7 @@ export function DebateTimer({ storageKey, embedded = false, onFirstStart, footer
                 aria-current={index === round.segmentIndex ? 'step' : undefined}
                 title={entry.label}
                 className={cn(
-                  'flex min-h-11 items-center gap-2 rounded-md border px-3 text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+                  'flex min-h-11 items-center gap-2 rounded-md border px-3 text-sm transition-colors focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring',
                   index === round.segmentIndex ? 'border-primary bg-primary text-primary-foreground' : 'border-border bg-background hover:bg-muted',
                 )}
               >
@@ -353,7 +353,7 @@ export function DebateTimer({ storageKey, embedded = false, onFirstStart, footer
                   disabled={left === 0}
                   aria-pressed={running}
                   className={cn(
-                    'flex flex-col items-center rounded-lg border p-3 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-60',
+                    'flex flex-col items-center rounded-lg border p-3 transition-colors focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-60',
                     running ? 'border-primary bg-primary/10' : 'border-border bg-background hover:bg-muted',
                   )}
                 >

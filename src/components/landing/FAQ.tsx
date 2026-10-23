@@ -1,5 +1,6 @@
 import { useTranslation } from "react-i18next";
 import { ChevronDown } from "lucide-react";
+import { PREP_MODE_COUNT } from "@/components/features/tools/tool-links";
 import { factsAsOf } from "@/lib/seo/pages";
 import { Reveal } from "./Reveal";
 
@@ -8,7 +9,7 @@ const FAQ = () => {
     const asOf = factsAsOf(i18n.language);
 
     const faqs = [
-        { question: t('faq.q6'), answer: t('faq.a6') },
+        { question: t('faq.q6'), answer: t('faq.a6', { modes: PREP_MODE_COUNT }) },
         { question: t('faq.q1'), answer: t('faq.a1', { asOf }) },
         { question: t('faq.q2'), answer: t('faq.a2') },
         { question: t('faq.q3'), answer: t('faq.a3') },
@@ -28,7 +29,7 @@ const FAQ = () => {
                 <Reveal delay={0.05}>
                     {faqs.map((faq) => (
                         <details key={faq.question} className="group border-b">
-                            <summary className="flex cursor-pointer list-none items-center justify-between gap-4 rounded-sm py-4 text-left text-lg font-medium transition-colors duration-150 hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring [&::-webkit-details-marker]:hidden">
+                            <summary className="flex cursor-pointer list-none items-center justify-between gap-4 rounded-sm py-4 text-left text-lg font-medium transition-colors duration-150 hover:text-primary focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring [&::-webkit-details-marker]:hidden">
                                 {faq.question}
                                 <ChevronDown aria-hidden="true" className="h-4 w-4 shrink-0 transition-transform duration-150 ease-out-strong group-open:rotate-180" />
                             </summary>

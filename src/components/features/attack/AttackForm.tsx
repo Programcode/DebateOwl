@@ -86,7 +86,7 @@ export function AttackForm({ onSubmit, isLoading, importedCase, debateContext = 
               className="min-h-[200px] resize-y"
             />
             {errors.caseText && (
-              <p className="text-sm text-destructive">{errors.caseText.message}</p>
+              <p className="text-sm text-destructive">{t(errors.caseText.message ?? '')}</p>
             )}
           </div>
 
@@ -94,17 +94,19 @@ export function AttackForm({ onSubmit, isLoading, importedCase, debateContext = 
           <ModelSelector feature="attack" showLabel />
 
           <div className="space-y-2">
-            <Label className="text-sm font-medium">{t('attackForm.options')}</Label>
+            <Label id="attack-options-label" htmlFor="attack-options-toggle" className="text-sm font-medium">{t('attackForm.options')}</Label>
             <Button
+              id="attack-options-toggle"
               type="button"
               variant="outline"
               className="h-10 w-full justify-between"
+              aria-labelledby="attack-options-label attack-options-toggle-text"
               aria-expanded={optionsOpen}
               aria-controls="attack-options"
               onClick={() => setOptionsOpen((open) => !open)}
             >
-              <span className="flex items-center gap-2">
-                <SlidersHorizontal className="h-4 w-4" />
+              <span id="attack-options-toggle-text" className="flex items-center gap-2">
+                <SlidersHorizontal className="h-4 w-4" aria-hidden="true" />
                 {t('attackForm.moreOptions')}
               </span>
               <ChevronDown className={`h-4 w-4 transition-transform duration-150 ease-out-strong ${optionsOpen ? 'rotate-180' : ''}`} />
@@ -123,12 +125,12 @@ export function AttackForm({ onSubmit, isLoading, importedCase, debateContext = 
               <div className="grid gap-4 sm:grid-cols-2">
                 {/* Aggressiveness */}
                 <div className="space-y-2">
-                  <Label className="text-sm font-medium">{t('attackForm.intensity')}</Label>
+                  <Label id="attack-intensity-label" htmlFor="attack-intensity" className="text-sm font-medium">{t('attackForm.intensity')}</Label>
                   <Select
                     value={currentValues.aggressiveness}
                     onValueChange={(value) => setValue('aggressiveness', value as AttackInput['aggressiveness'])}
                   >
-                    <SelectTrigger>
+                    <SelectTrigger id="attack-intensity" aria-labelledby="attack-intensity-label">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -141,12 +143,12 @@ export function AttackForm({ onSubmit, isLoading, importedCase, debateContext = 
 
                 {/* Judge Paradigm */}
                 <div className="space-y-2">
-                  <Label className="text-sm font-medium">{t('attackForm.paradigm')}</Label>
+                  <Label id="attack-paradigm-label" htmlFor="attack-paradigm" className="text-sm font-medium">{t('attackForm.paradigm')}</Label>
                   <Select
                     value={currentValues.judgeParadigm}
                     onValueChange={(value) => setValue('judgeParadigm', value as AttackInput['judgeParadigm'])}
                   >
-                    <SelectTrigger>
+                    <SelectTrigger id="attack-paradigm" aria-labelledby="attack-paradigm-label">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>

@@ -274,20 +274,20 @@ Deno.test("ElevenLabs cost fails closed for an unlisted model, missing usage, or
   if (calculateRequestCost({ provider: "elevenlabs", model: "eleven_v4", usage: { incomplete: true } }).costUsd !== null) throw new Error("incomplete work was priced");
 });
 
-Deno.test("the weekly cap counts OpenRouter credit spend, not BYOK provider charges", () => {
-  // A BYOK Claude call: OpenRouter charges only its fee (0 here); the provider bills our own key.
-  const byok = normalizeOpenRouterUsage({ prompt_tokens: 1500, completion_tokens: 600, cost: 0, is_byok: true });
-  // A Claude call that fell back to OpenRouter credits counts in full.
+Deno.test("the weekly cap counts the full charge, BYOK provider charges included", () => {
+  // QB-17: a BYOK Claude call costs us the provider's charge even when OpenRouter's fee is 0.
+  const byok = normalizeOpenRouterUsage({ ...BYOK_USAGE, cost: 0 });
   const credits = normalizeOpenRouterUsage({ prompt_tokens: 1500, completion_tokens: 600, cost: 0.012, is_byok: false });
   const gpt = normalizeOpenRouterUsage({ prompt_tokens: 1000, completion_tokens: 500, cost: 0.004 });
-  if (calculateRequestCost({ provider: "openrouter", model: "anthropic/claude-opus-5.5", usage: byok }).capCostUsd !== 0) {
-    throw new Error("a BYOK call counted toward the cap");
+  const byokCost = calculateRequestCost({ provider: "openrouter", model: "anthropic/claude-opus-5.5", usage: byok });
+  if (byokCost.capCostUsd !== byokCost.costUsd || byokCost.costUsd !== 0.0004882) {
+    throw new Error(`a BYOK call counted ${byokCost.capCostUsd} toward the cap but cost ${byokCost.costUsd}`);
   }
   if (calculateRequestCost({ provider: "openrouter", model: "anthropic/claude-opus-5.5", usage: credits }).capCostUsd !== 0.012) {
     throw new Error("a credit-billed Claude call did not count");
   }
   const merged = calculateRequestCost({ provider: "openrouter", model: "openai/gpt-6-luna", usage: mergeNormalizedUsage([gpt, byok]) });
-  if (Math.abs((merged.capCostUsd ?? -1) - 0.004) > 1e-12) throw new Error(`merged cap spend wrong: ${merged.capCostUsd}`);
+  if (Math.abs((merged.capCostUsd ?? -1) - 0.0044882) > 1e-12) throw new Error(`merged cap spend wrong: ${merged.capCostUsd}`);
 });
 
 Deno.test("a usage with a separate provider charge counts it toward the cap in full", () => {
@@ -319,11 +319,17 @@ Deno.test("ElevenLabs voice cost counts toward the cap", () => {
   if (result.capCostUsd !== result.costUsd || result.costUsd === null) throw new Error("voice cost missing from the cap");
 });
 
-Deno.test("a BYOK call logs the provider charge but counts only OpenRouter's fee toward the cap", () => {
+Deno.test("a BYOK call counts no less than its logged cost toward the cap", () => {
   const byok = normalizeOpenRouterUsage({ ...BYOK_USAGE, cost: 0.0001 });
   const result = calculateRequestCost({ provider: "openrouter", model: "anthropic/claude-sonnet-5.5", usage: byok });
   if (Math.abs((result.costUsd ?? -1) - 0.0005882) > 1e-12) throw new Error(`logged cost wrong: ${result.costUsd}`);
-  if (result.capCostUsd !== 0.0001) throw new Error(`cap counted the BYOK provider charge: ${result.capCostUsd}`);
+  if (result.capCostUsd !== result.costUsd) throw new Error(`cap ${result.capCostUsd} is below the logged cost ${result.costUsd}`);
+  // Without the upstream figure the cost is unknown; the cap still counts the fee it does know.
+  const { cost_details: _details, ...withoutUpstream } = BYOK_USAGE;
+  const unknownUpstream = normalizeOpenRouterUsage({ ...withoutUpstream, cost: 0.0001 });
+  if (unknownUpstream.reportedCostUsd !== undefined || unknownUpstream.capCostUsd !== 0.0001) {
+    throw new Error("a BYOK call without the upstream charge did not fall back to the fee");
+  }
   // A BYOK usage with no fee figure stays unknown for both, never the provider charge alone.
   const noFee = normalizeOpenRouterUsage({ ...BYOK_USAGE, cost: undefined });
   if (noFee.reportedCostUsd !== undefined || noFee.capCostUsd !== undefined) throw new Error("a BYOK call without a fee got a cost");

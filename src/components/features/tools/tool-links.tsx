@@ -45,6 +45,10 @@ export const UTILITY_TOOLS = [
   { key: 'history', href: '/app/history', icon: Clock },
 ] satisfies readonly Tool[];
 
+// Copy that states how many modes there are reads these, so it cannot drift from the lists.
+export const PREP_MODE_COUNT = PREPARE_TOOLS.length + PRACTICE_TOOLS.length;
+export const UTILITY_COUNT = UTILITY_TOOLS.length;
+
 /**
  * A link to a tool. `row` shows the description (Tools page lists); `tile` shows only
  * the label (the debate dashboard and the utility strip).
@@ -62,7 +66,7 @@ export function ToolLink({ tool, variant, tourId }: { tool: Tool; variant: 'row'
         data-tour={tourId}
         className={cn(
           'flex min-h-11 items-center gap-2 rounded-md border border-border bg-card px-3 py-2 text-sm font-medium text-foreground transition-colors',
-          'hover:border-primary/40 hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
+          'hover:border-primary/40 hover:bg-accent focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
         )}
       >
         <Icon className="h-4 w-4 shrink-0 text-primary" aria-hidden="true" />
@@ -76,7 +80,7 @@ export function ToolLink({ tool, variant, tourId }: { tool: Tool; variant: 'row'
       to={tool.href}
       {...prefetchHandlers}
       data-tour={tourId}
-      className="group flex items-center gap-3 rounded-md border-b border-border/60 px-3 py-3 transition-colors last:border-b-0 hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+      className="group flex items-center gap-3 rounded-md border-b border-border/60 px-3 py-3 transition-colors last:border-b-0 hover:bg-accent focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
     >
       <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary">
         <Icon className="h-5 w-5" aria-hidden="true" />

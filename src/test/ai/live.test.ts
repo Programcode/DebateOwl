@@ -1,6 +1,6 @@
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { FunctionsFetchError, FunctionsHttpError } from '@supabase/supabase-js';
-import { readLiveResponse } from '@/lib/ai/live';
+import { LIVE_STREAM_DRAIN_MS, readLiveResponse } from '@/lib/ai/live';
 
 function eventStream(chunks: string[]): Response {
   const encoder = new TextEncoder();
@@ -101,5 +101,74 @@ describe('readLiveResponse', () => {
   it('fails when the stream ends before its result', async () => {
     const error = await readLiveResponse(eventStream([event('delta', { text: '{"a": "b' })]), { onDraft: () => {} });
     expect(error).toBeInstanceOf(FunctionsFetchError);
+  });
+
+  it('cancels immediately when the caller aborts', async () => {
+    let cancelCount = 0;
+    const encoder = new TextEncoder();
+    const response = new Response(new ReadableStream({
+      start(controller) {
+        controller.enqueue(encoder.encode(event('delta', { text: 'partial' })));
+      },
+      // The body stays open, as a fetch can after the request signal aborts.
+      pull: () => new Promise<void>(() => {}),
+      cancel() { cancelCount += 1; },
+    }), { headers: { 'Content-Type': 'text/event-stream' } });
+
+    const controller = new AbortController();
+    const reading = readLiveResponse(response, { onDraft: () => {} }, controller.signal);
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(cancelCount).toBe(0);
+    controller.abort();
+    // The abort listener cancels before the read loop resumes, not after the drain cap.
+    expect(cancelCount).toBe(1);
+    await expect(reading).rejects.toMatchObject({ name: 'AbortError' });
+    expect(cancelCount).toBe(1);
+  });
+});
+
+describe('draining the body after result', () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  function openResultStream(closeAfterMs: number | null, onCancel: () => void): Response {
+    const encoder = new TextEncoder();
+    return new Response(new ReadableStream({
+      start(controller) {
+        controller.enqueue(encoder.encode(event('result', { status: 200, body: { output: { ok: true } } })));
+        if (closeAfterMs !== null) setTimeout(() => controller.close(), closeAfterMs);
+      },
+      cancel: onCancel,
+    }), { headers: { 'Content-Type': 'text/event-stream' } });
+  }
+
+  it('returns the result before the body closes and does not cancel once it ends', async () => {
+    vi.useFakeTimers();
+    let cancelled = false;
+    const pending = readLiveResponse(openResultStream(400, () => { cancelled = true; }), { onDraft: () => {} });
+
+    await expect(pending).resolves.toEqual({ output: { ok: true } });
+    expect(cancelled).toBe(false);
+
+    await vi.advanceTimersByTimeAsync(400);
+    expect(cancelled).toBe(false);
+    // The drain cap must not cancel a body that already ended.
+    await vi.advanceTimersByTimeAsync(LIVE_STREAM_DRAIN_MS);
+    expect(cancelled).toBe(false);
+  });
+
+  it('cancels when the body stays open through the drain cap', async () => {
+    vi.useFakeTimers();
+    let cancelled = false;
+    const pending = readLiveResponse(openResultStream(null, () => { cancelled = true; }), { onDraft: () => {} });
+
+    await expect(pending).resolves.toEqual({ output: { ok: true } });
+    expect(cancelled).toBe(false);
+
+    await vi.advanceTimersByTimeAsync(LIVE_STREAM_DRAIN_MS - 1);
+    expect(cancelled).toBe(false);
+    await vi.advanceTimersByTimeAsync(1);
+    expect(cancelled).toBe(true);
   });
 });

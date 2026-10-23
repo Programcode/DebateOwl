@@ -3,22 +3,25 @@ import { Reveal } from "./Reveal";
 import { Check, Crown, Sparkles, Zap } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useRoutePrefetch } from "@/hooks/use-route-prefetch";
+import { PREP_MODE_COUNT, UTILITY_COUNT } from "@/components/features/tools/tool-links";
 import { factsAsOf } from "@/lib/seo/pages";
 
 const Pricing = () => {
     const { t, i18n } = useTranslation();
     const appPrefetch = useRoutePrefetch("/app");
 
+    const modeCounts = { modes: PREP_MODE_COUNT, utilities: UTILITY_COUNT };
+
     const TRIAL_FEATURES = [
         t('pricing.trialFeature1'),
-        t('pricing.trialFeature2'),
+        t('pricing.trialFeature2', modeCounts),
         t('pricing.trialFeature3'),
         t('pricing.trialFeature4'),
     ];
 
     const PRO_FEATURES = [
         t('pricing.proFeature1'),
-        t('pricing.proFeature2'),
+        t('pricing.proFeature2', modeCounts),
         t('pricing.proFeature3'),
         t('pricing.proFeature4'),
         t('pricing.proFeature5'),
@@ -26,7 +29,7 @@ const Pricing = () => {
 
     return (
         <section id="pricing" className="relative overflow-hidden py-24">
-            <div className="absolute inset-0 bg-gradient-to-b from-background via-secondary/10 to-background" />
+            <div className="absolute inset-0 bg-linear-to-b from-background via-secondary/10 to-background" />
             <div className="absolute inset-0 animated-grid opacity-40" />
 
             <div className="section-container relative z-10">
@@ -42,7 +45,7 @@ const Pricing = () => {
                     <div className="h-full rounded-2xl border border-border/70 bg-card p-7 shadow-sm transition-[border-color,box-shadow] duration-200 hover:border-primary/30 hover:shadow-lg">
                         <div className="mb-4 flex items-center justify-between">
                             <h3 className="text-2xl font-semibold text-foreground">{t('pricing.trial')}</h3>
-                            <span className="rounded-full border border-border/70 bg-secondary/60 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                            <span className="rounded-full border border-border/70 bg-muted px-3 py-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                                 {t('pricing.trialBadge')}
                             </span>
                         </div>

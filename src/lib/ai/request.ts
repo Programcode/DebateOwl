@@ -10,7 +10,8 @@ import { toast } from '@/hooks/use-toast';
 import { captureException, captureProductEvent } from '@/lib/observability';
 import { isAppLanguage, type AppLanguage } from '@/lib/languages';
 import i18n from '@/i18n';
-import { localizedLimitMessage } from './limit-message';
+import { isSubscriptionRefusalCode, subscriptionLimitMessage } from './limit-message';
+import { serverErrorMessage } from '@/lib/server-errors';
 import type { WorkspaceToolContext } from '@/lib/workspace/tool-context';
 import {
   AIError,
@@ -36,11 +37,14 @@ import {
 import { parseSourceAssessments } from './sources';
 import { utf8ByteLength } from './text';
 import { readLiveResponse, type LiveGeneration } from './live';
+import { refreshAIUsage } from '@/lib/query-client';
 
 // Request timeout in milliseconds (200 seconds)
 export const REQUEST_TIMEOUT_MS = 200 * 1000;
 const MAX_CLIENT_ERROR_BODY_BYTES = 16_000;
 const MAX_CLIENT_REQUEST_BODY_BYTES = 190_000;
+// The session ids the ai function accepts (parseQuotaSessionKey).
+const QUOTA_SESSION_KEY = /^[A-Za-z0-9._:-]{1,128}$/;
 
 export interface AIRequestOptions<T = unknown> {
   includeActiveSources?: boolean;
@@ -60,6 +64,12 @@ export interface AIRequestOptions<T = unknown> {
   voice?: boolean;
   /** Show the answer while the model writes it. */
   live?: LiveGeneration;
+  /**
+   * The Crossfire round this request belongs to. The server charges a round
+   * once, however many turns it takes (Sparring rounds are named by their
+   * input's sessionId instead).
+   */
+  quotaSession?: string;
 }
 
 /**
@@ -184,6 +194,8 @@ export async function callSupabaseAI<T = unknown>(
     });
   };
 
+  // The server said this failure cost nothing (refunded, or a paid session).
+  let notCharged = false;
   const controller = new AbortController();
   const timeoutId = setTimeout(() => {
     controller.abort();
@@ -208,7 +220,7 @@ export async function callSupabaseAI<T = unknown>(
     }
 
     if (!accessToken) {
-      throw new AIAuthError('Please sign in to use AI features', { requestId });
+      throw new AIAuthError(i18n.t('serverErrors.signInRequired'), { requestId });
     }
 
     const requestBody = {
@@ -222,10 +234,14 @@ export async function callSupabaseAI<T = unknown>(
       workspaceContext: options.workspaceContext,
       // Beside `input`, so a server from before voice rounds ignores it.
       ...(options.voice ? { voice: true } : {}),
+      // Beside `input` for the same reason: older servers charge per call. An id
+      // the server would reject (a round restored from an old draft) is left
+      // out, and that round is charged per call.
+      ...(options.quotaSession && QUOTA_SESSION_KEY.test(options.quotaSession) ? { quotaSession: options.quotaSession } : {}),
     };
 
     if (utf8ByteLength(JSON.stringify(requestBody)) > MAX_CLIENT_REQUEST_BODY_BYTES) {
-      throw new AIError('Request is too large. Shorten the input and try again.', { statusCode: 413, requestId });
+      throw new AIError(i18n.t('serverErrors.requestTooLarge'), { statusCode: 413, requestId });
     }
 
     const live = options.live;
@@ -262,18 +278,19 @@ export async function callSupabaseAI<T = unknown>(
 
     // Handle response with error field (from edge function)
     if (data?.error) {
+      notCharged = data.charged === false;
       const errorMessage = data.error as string;
       const errorCode = data.code as string | undefined;
 
       // Subscription errors (402 / trial expired / limit reached)
-      if (errorCode === 'trial_expired' || errorCode === 'limit_reached' || errorCode === 'weekly_budget_reached') {
+      if (isSubscriptionRefusalCode(errorCode)) {
         const details = {
           code: errorCode,
           limit: typeof data.limit === 'number' ? data.limit : undefined,
           current: typeof data.current === 'number' ? data.current : undefined,
           units: typeof data.units === 'number' ? data.units : undefined,
         };
-        throw new AISubscriptionError(localizedLimitMessage(errorMessage, details), { statusCode: 402, requestId, ...details });
+        throw new AISubscriptionError(subscriptionLimitMessage(details), { statusCode: 402, requestId, ...details });
       }
 
       // Model restriction (403 / upgrade_required)
@@ -301,7 +318,7 @@ export async function callSupabaseAI<T = unknown>(
       }
 
       // The function reported a failure that is not a limit, auth, or provider error.
-      throw new AIServerError(errorMessage, { statusCode: 500, requestId });
+      throw new AIServerError(serverErrorMessage(errorCode, errorMessage), { statusCode: 500, requestId });
     }
 
     // Validate response has expected output
@@ -353,6 +370,7 @@ export async function callSupabaseAI<T = unknown>(
   } catch (err) {
     // Re-throw our custom errors
     if (err instanceof AIError) {
+      if (notCharged) err.notCharged = true;
       refreshDebatesIfMissing(err, debateContext);
       reportFailure(err);
       throw err;
@@ -397,6 +415,7 @@ export async function callSupabaseAI<T = unknown>(
   } finally {
     clearTimeout(timeoutId);
     options.signal?.removeEventListener('abort', abortFromCaller);
+    refreshAIUsage();
   }
 }
 

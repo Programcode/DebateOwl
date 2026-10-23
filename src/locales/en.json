@@ -231,9 +231,11 @@
     "openingPage": "Opening {{page}}",
     "page": "Page",
     "close": "Close",
+    "notifications": "Notifications",
     "loading": "Loading",
     "error": "Error",
     "logoAlt": "DebateLab logo",
+    "skipToContent": "Skip to main content",
     "or": "or",
     "back": "Back",
     "cancel": "Cancel",
@@ -245,7 +247,8 @@
     "deleted": "Deleted",
     "discuss": "Discuss",
     "retry": "Retry",
-    "undo": "Undo"
+    "undo": "Undo",
+    "notAvailable": "N/A"
   },
   "aiClient": {
     "inputShortened": "Input was shortened",
@@ -253,7 +256,10 @@
     "autoSavedFolder": "Auto-saved",
     "sourceSaveFailed": "Source save failed",
     "sourceSaveFailedDesc": "Could not save “{{title}}” to your library.",
-    "sourceAssessmentSaveFailed": "The source ranking could not be saved."
+    "sourceAssessmentSaveFailed": "The source ranking could not be saved.",
+    "sourcesAutoSaved_one": "Added {{count}} source to your Library",
+    "sourcesAutoSaved_other": "Added {{count}} sources to your Library",
+    "sourcesAutoSavedDesc": "Research found them. They are in the Auto-saved folder, and the ones switched on ground your next requests."
   },
   "generatedArtifacts": {
     "brainstormTitle": "Brainstorm",
@@ -384,13 +390,16 @@
     "undone": "Reverted",
     "undoneDesc": "Loaded previous generation.",
     "saveFailedDesc": "The case could not be saved. Please try again.",
-    "working": "Writing your case…"
+    "working": "Writing your case…",
+    "flowchartOtherDebate": "The Flowchart takes only a case generated in the current debate. Generate the case here to send it."
   },
   "attack": {
     "emptyTitle": "No Mercy Mode",
     "emptyDesc": "Paste your argument to receive ruthless criticism, identify logical fallacies, and get actionable improvements.",
     "failed": "Attack Analysis Failed",
-    "working": "Reviewing your case…"
+    "working": "Reviewing your case…",
+    "previousCritique": "Critique of your previous argument",
+    "previousCritiqueDesc": "Your latest version was not reviewed, so this critique may not match the text in the form."
   },
   "brainstorm": {
     "emptyTitle": "Unlock Creative Angles",
@@ -424,7 +433,10 @@
     "saveFailed": "Save failed",
     "saveFailedDesc": "The chat could not be saved. Please try again.",
     "sourceSaveFailedDesc": "The source could not be saved. Please try again.",
-    "stopped": "You stopped this answer before it finished."
+    "stopped": "You stopped this answer before it finished.",
+    "notSent": "Not sent",
+    "notSentDailyLimit": "Not sent: daily limit reached",
+    "notSentModelDesc": "This model needs Pro. Pick another model, then retry."
   },
   "chat": {},
   "settings": {
@@ -443,9 +455,6 @@
     "tierExpired": "Expired",
     "ends": "Ends",
     "loading": "Loading...",
-    "manageSubscription": "Manage Subscription",
-    "setUpBilling": "Set Up Billing",
-    "upgradeToPro": "Upgrade to Pro",
     "confirmingSubscription": "Confirming your Pro subscription…",
     "checkoutCanceled": "Checkout canceled",
     "checkoutCanceledDesc": "No charge was made.",
@@ -454,10 +463,12 @@
     "checkoutConfirmSlowTitle": "Still waiting on Stripe",
     "checkoutConfirmSlow": "Stripe hasn't confirmed the payment yet. This page will catch up after a refresh.",
     "accessActive": "AI access is active. Usage limits may apply.",
+    "promoAccessUntil": "Your Pro access comes from a promo code and runs until {{date}}. Billing is optional until then; set it up only to keep Pro after that date.",
+    "promoAccess": "Your Pro access comes from a promo code, so billing is optional.",
     "accessExpired": "Your access has expired. Upgrade to continue using AI tools.",
     "globalSettings": "Global Settings",
     "account": "Account",
-    "accountDesc": "API keys are managed securely on the server.",
+    "accountDesc": "How you sign in, and a copy of everything you saved.",
     "signedInAs": "Signed in as",
     "unknownUser": "Unknown user",
     "signInGoogle": "Sign-in: Google",
@@ -511,7 +522,19 @@
     "deleteAccountSuccessDesc": "Your account and all of its data have been permanently deleted.",
     "deleteAccountFailed": "Account not deleted",
     "signingOut": "Signing out…",
-    "deletingData": "Deleting…"
+    "deletingData": "Deleting…",
+    "tierExtended": "Extended access",
+    "tierPaymentFailed": "Payment failed",
+    "extendedAccessDesc_one": "Extended access is active: {{count}} AI use a day.",
+    "extendedAccessDesc_other": "Extended access is active: {{count}} AI uses a day.",
+    "renewsOn": "Renews on {{date}}",
+    "cancelsOn": "Cancels on {{date}}",
+    "endsOn": "Ends on {{date}}",
+    "paymentFailedDesc": "Payment failed: update your payment method to keep Pro.",
+    "paymentGraceUntil": "Pro access continues until {{date}} while we retry the payment.",
+    "paymentFailedNoAccess": "Payment failed: update your payment method to restore AI access.",
+    "subscriptionEndedOn": "Your Pro subscription ended on {{date}}. Resubscribe to keep using AI tools.",
+    "subscriptionEnded": "Your Pro subscription has ended. Resubscribe to keep using AI tools."
   },
   "login": {
     "title": "Sign in to DebateLab",
@@ -525,9 +548,13 @@
     "emailHint": "We'll send a six-digit code.",
     "sendCode": "Send code",
     "sendingCode": "Sending code...",
+    "slowSend": "This can take a few seconds.",
     "resendCode": "Resend code",
     "resendingCode": "Resending code...",
+    "resendIn": "Resend in {{time}}",
     "codeSent": "Code sent",
+    "codeResent": "New code sent",
+    "codeRecentlySent": "We sent a code to this address a moment ago. Enter it below, or resend when the timer ends.",
     "codeSentDesc": "Check your email for the six-digit code.",
     "useDifferentEmail": "Use a different email",
     "otpLabel": "Verification code",
@@ -539,9 +566,16 @@
     "demoCodePlaceholder": "DEMO-AB12-CD34",
     "signInWithDemoCode": "Sign in with demo code",
     "signingIn": "Signing in...",
+    "finishingSignIn": "Signing you in…",
+    "retrySignIn": "Try again",
+    "backToSignIn": "Back to sign-in",
     "invalidEmail": "Enter a valid email address.",
+    "emailRequired": "Email is required.",
+    "emailTooLong": "That email address is too long. Use one with at most {{max}} characters.",
     "invalidCode": "Enter a valid six-digit code.",
     "invalidDemoCode": "Enter a valid demo code.",
+    "demoCodeRequired": "Enter your demo code.",
+    "invalidDemoCodeFormat": "Demo codes look like DEMO-AB12-CD34.",
     "emailOtpError": "Could not send code.",
     "verifyOtpError": "Could not verify code.",
     "demoError": "Could not sign in with demo code.",
@@ -558,8 +592,13 @@
       "demoExpired": "This demo code has expired.",
       "demoUsedUp": "This demo code has no uses left.",
       "rateLimited": "Too many attempts. Try again later.",
+      "rateLimitedWait": "Too many attempts. Try again in {{time}}.",
       "codeExpired": "That code is wrong or has expired. Check it or send a new one.",
-      "network": "Can't reach DebateLab. Check your connection and try again."
+      "network": "Can't reach DebateLab. Check your connection and try again.",
+      "linkExpired": "This sign-in link has expired or was already used. Send a new code.",
+      "linkOtherBrowser": "This sign-in link only works in the browser where you asked for it. Send a new code here.",
+      "callbackFailed": "Sign-in didn't finish. Try again.",
+      "callbackTimedOut": "Signing in is taking longer than it should. Try again."
     }
   },
   "admin": {
@@ -895,7 +934,6 @@
   },
   "features": {
     "title": "Everything You Need to Win",
-    "subtitle": "Eleven debate tools for competitive preparation.",
     "generate": "Case Generator",
     "generateDesc": "Build complete cases with structured arguments, evidence, and counter-strategies.",
     "attack": "Case Attacker",
@@ -962,11 +1000,11 @@
     "proPeriod": "/month + tax",
     "recommended": "Recommended",
     "trialFeature1": "Starter AI prep access",
-    "trialFeature2": "All 11 prep modes",
+    "trialFeature2": "All {{modes}} prep modes and {{utilities}} utilities",
     "trialFeature3": "Starter models",
     "trialFeature4": "3-day access",
     "proFeature1": "Expanded AI prep access",
-    "proFeature2": "All 11 prep modes",
+    "proFeature2": "All {{modes}} prep modes and {{utilities}} utilities",
     "proFeature3": "All 10 models, including Claude Opus and Sonnet, GPT-6.1 Sol, and Gemini",
     "proFeature4": "Priority support",
     "proFeature5": "Active Grounding™ research",
@@ -993,7 +1031,7 @@
     "a5": "Yes! Save cases, brainstorms, and chats to History. Export to Word, PDF, or Google Docs.",
     "subtitle": "Pricing, workflow, and product details at a glance.",
     "q6": "What is DebateLab?",
-    "a6": "DebateLab is an AI debate prep and practice app for students and competitive debaters. It has 11 prep modes, including a case generator, a case attacker, evidence research with citations, an AI coach, Crossfire and timed Sparring rounds against an AI opponent, and it is available in English, Spanish and Hungarian."
+    "a6": "DebateLab is an AI debate prep and practice app for students and competitive debaters. It has {{modes}} prep modes, including a case generator, a case attacker, evidence research with citations, an AI coach, Crossfire and timed Sparring rounds against an AI opponent, and it is available in English, Spanish and Hungarian."
   },
   "finalCta": {
     "title": "Ready to Build Your Next Winning Case?",
@@ -1194,7 +1232,13 @@
     "exportError": "An unexpected error occurred during export",
     "weaknessesCount_one": "{{count}} issue found, sorted by severity",
     "weaknessesCount_other": "{{count}} issues found, sorted by severity",
-    "resultTitle": "Critique"
+    "resultTitle": "Critique",
+    "criticalCount_one": "{{count}} Critical",
+    "criticalCount_other": "{{count}} Critical",
+    "majorCount_one": "{{count}} Major",
+    "majorCount_other": "{{count}} Major",
+    "minorCount_one": "{{count}} Minor",
+    "minorCount_other": "{{count}} Minor"
   },
   "brainstormForm": {
     "motion": "Motion / Topic",
@@ -1262,7 +1306,6 @@
     "unverified": "Unverified",
     "pending": "Pending",
     "importantNotes": "Important Notes",
-    "found": "Found",
     "factoids": "Factoids",
     "factoidsDesc": "Evidence points with citations",
     "findMore": "Find More Evidence",
@@ -1287,7 +1330,11 @@
     "exportError": "An unexpected error occurred during export",
     "noVerified": "No verified matching sources were found. Try a broader source type or timeframe.",
     "useSuggestion": "Search this",
-    "resultTitle": "Evidence"
+    "resultTitle": "Evidence",
+    "foundCount_one": "Found {{count}} factoid",
+    "foundCount_other": "Found {{count}} factoids",
+    "verifiedCount_one": "{{count}} Verified",
+    "verifiedCount_other": "{{count}} Verified"
   },
   "askChat": {
     "title": "Ask Your Coach",
@@ -1350,7 +1397,7 @@
   },
   "limitModal": {
     "trialEnded": "Free Trial Ended",
-    "trialEndedDesc": "Your 3-day free trial has ended. Upgrade to Pro to keep using DebateLab.",
+    "trialEndedDesc": "Your {{days}}-day free trial has ended. Upgrade to Pro to keep using DebateLab.",
     "limitReached": "Daily Access Paused",
     "limitReachedDesc": "You've used {{current}} of {{limit}} included AI uses today. Access refreshes at midnight UTC.",
     "weightedDesc": "This model counts as {{units}} uses, and you have {{remaining}} left today. Pick a lighter model or wait until midnight UTC.",
@@ -1358,46 +1405,52 @@
     "weeklyReached": "Weekly AI Allowance Used",
     "weeklyReachedDesc": "You've used this week's AI allowance. It refreshes on Monday at 00:00 UTC. Contact support if you need more.",
     "ok": "OK",
-    "upgrade": "Upgrade to Pro - $5/mo",
     "upgradeNote": "More AI prep access + high reasoning",
     "notNow": "Not now",
-    "gotIt": "OK"
+    "gotIt": "OK",
+    "paymentFailed": "Payment Failed",
+    "paymentFailedDesc": "Your last payment failed. Update your payment method in Settings to keep using DebateLab.",
+    "subscriptionEnded": "Pro Subscription Ended",
+    "subscriptionEndedDesc": "Your Pro subscription has ended. Resubscribe to keep using DebateLab.",
+    "subscriptionEndedOnDesc": "Your Pro subscription ended on {{date}}. Resubscribe to keep using DebateLab.",
+    "updatePayment": "Update payment method",
+    "limitReachedGenericDesc": "You've used today's included AI uses. Access refreshes at midnight UTC.",
+    "zeroLimitDesc": "This account has no daily AI uses right now. Contact support if this seems wrong.",
+    "roundShortDesc": "This round needs {{units}} AI uses and you have {{remaining}} left today. Pick a lighter model or wait until midnight UTC."
   },
   "modelModal": {
     "title": "Pro Reasoning",
     "description": "High reasoning is reserved for Pro members.",
     "descriptionWithModel": "High reasoning with {{model}} is reserved for Pro members.",
     "upgradeNote": "Upgrade to unlock high reasoning.",
-    "upgrade": "Upgrade to Pro - $5/mo",
-    "useFree": "Use low reasoning instead"
+    "useFree": "Use low reasoning instead",
+    "restrictedDesc": "This model or reasoning level needs Pro."
   },
   "dailyLimit": {
-    "usage": "Today: {{used}} of {{limit}} AI requests used. They refresh at midnight UTC ({{time}} your time).",
-    "sparringNone": "You have no AI requests left today, so the opponent can't answer. They refresh at midnight UTC.",
-    "sparringShort": "This round needs {{needed}} AI requests and you have {{remaining}} left today, so it would stop before the judge. They refresh at midnight UTC."
+    "remaining_one": "{{count}} of {{limit}} AI uses left today",
+    "remaining_other": "{{count}} of {{limit}} AI uses left today",
+    "remainingWithReset_one": "{{count}} of {{limit}} AI uses left today. They refresh at midnight UTC ({{time}} your time).",
+    "remainingWithReset_other": "{{count}} of {{limit}} AI uses left today. They refresh at midnight UTC ({{time}} your time)."
   },
   "pricingModal": {
     "title": "Upgrade to Pro",
-    "subtitle": "Unlock higher usage limits, all 10 models, and configurable reasoning.",
-    "free": "Free",
+    "subtitle": "Unlock higher usage limits, every model, and configurable reasoning.",
+    "free": "Free trial",
     "pro": "Pro",
     "current": "Current",
     "recommended": "Recommended",
-    "freePrice": "$0",
-    "proPrice": "$5",
-    "freePeriod": "/mo",
     "proPeriod": "/mo + tax",
     "freeFeature1": "Starter AI prep access",
     "freeFeature2": "Starter models",
     "freeFeature3": "All debate features",
-    "freeFeature4": "3-day free trial",
+    "freeFeature4": "No credit card needed",
     "proFeature1": "Expanded AI prep access",
-    "proFeature2": "All 10 models, including Claude Opus and Sonnet, GPT-6.1 Sol, and Gemini",
+    "proFeature2": "Every model, including Claude Opus and Sonnet, GPT-6.1 Sol, and Gemini",
     "proFeature3": "Deep research with Exa",
     "proFeature4": "Priority processing",
     "proFeature5": "All debate features",
     "redirecting": "Redirecting...",
-    "upgradeNow": "Upgrade Now",
+    "offlineUpgrade": "You are offline. Connect to the internet to upgrade.",
     "applying": "Applying...",
     "apply": "Apply",
     "promoCode": "Have a promo code?",
@@ -1407,7 +1460,15 @@
     "codeRedeemed": "Code Redeemed",
     "invalidCode": "Invalid Code",
     "redeemError": "Error",
-    "redeemErrorDesc": "Failed to redeem code"
+    "redeemErrorDesc": "Failed to redeem code",
+    "titleYourPlan": "Your plan",
+    "titleResubscribe": "Resubscribe to Pro",
+    "subtitleManage": "Change your payment method, see invoices or cancel in the billing portal.",
+    "subtitleCanceling": "Your Pro plan is set to cancel on {{date}}. You can keep it in the billing portal.",
+    "subtitlePaymentFailed": "Your last payment failed. Update your payment method in the billing portal to keep Pro.",
+    "subtitleSetUpBilling": "Your Pro access comes from a promotion. Set up billing to keep Pro after it ends.",
+    "freePeriod_one": "for {{count}} day",
+    "freePeriod_other": "for {{count}} days"
   },
   "onboarding": {
     "welcome": "Welcome to DebateLab! 🎉",
@@ -1429,8 +1490,9 @@
   "timer": {
     "title": "Debate Timer",
     "displayLabel": "Timer display",
+    "speechProgress": "{{speech}} progress",
     "selectFormat": "Select Format",
-    "formatStandard": "Standard (4-6-6-3)",
+    "formatStandard": "School 4-6-6-3",
     "formatLD": "Lincoln-Douglas",
     "formatPF": "Public Forum",
     "formatPolicy": "Policy",
@@ -1512,7 +1574,7 @@
     "typeField": "Type",
     "strengthField": "Strength",
     "labelPlaceholder": "Short label...",
-    "titlePlaceholder": "Node title...",
+    "titlePlaceholder": "Flowchart title...",
     "descPlaceholder": "Description...",
     "typeArgument": "Argument",
     "typeAttack": "Attack",
@@ -1548,6 +1610,7 @@
     "autoLayout": "Auto layout",
     "edgeAttack": "Attack",
     "edgeRebuttal": "Rebuttal",
+    "edgeTypeLabel": "Link type",
     "edgeSupport": "Support",
     "exportFailedToast": "Could not export flowchart.",
     "selectedNode": "Selected",
@@ -1562,7 +1625,20 @@
     "deletedNamed": "Deleted {{title}}",
     "deleteNamed": "Delete {{title}}",
     "restoreFailed": "Could not restore the flowchart",
-    "nodeDeletedNamed": "Deleted {{label}}"
+    "nodeDeletedNamed": "Deleted {{label}}",
+    "titleRequired": "Add a title.",
+    "labelRequired": "Add a label.",
+    "buildFromCase": "Build from current case",
+    "builtFromCase": "Built from your current case",
+    "canvasControls": "Canvas controls",
+    "attribution": "React Flow attribution",
+    "fromCase": {
+      "thesis": "Thesis",
+      "argument": "Argument {{n}}",
+      "attack": "Attack {{n}}",
+      "rebuttal": "Rebuttal {{n}}"
+    },
+    "resetForDebate": "You switched debates, so the flowchart went back to the template. Unsaved changes were not kept."
   },
   "historyPage": {
     "title": "History",
@@ -1605,11 +1681,27 @@
     "deleteCaseLabel": "Delete {{title}}",
     "load": "Load",
     "resume": "Resume",
-    "messages": "messages",
     "caseDeleted": "Saved case deleted.",
     "deleteCaseDesc": "This removes the saved case from your history.",
     "deleteCaseTitle": "Delete saved case?",
-    "deleteFailed": "Could not delete saved case."
+    "deleteFailed": "Could not delete saved case.",
+    "tabCrossfire": "Crossfire",
+    "crossfireTitle": "Crossfire rounds",
+    "emptyCrossfire": "No Crossfire rounds yet",
+    "emptyCrossfireDesc": "Finish a Crossfire round to review its transcript and debrief here.",
+    "startCrossfire": "Start Crossfire",
+    "crossfireTurns_one": "{{count}} turn",
+    "crossfireTurns_other": "{{count}} turns",
+    "open": "Open",
+    "crossfireRound": "Crossfire round",
+    "deleteCrossfireAria": "Delete Crossfire round: {{title}}",
+    "deleteCrossfireTitle": "Delete Crossfire round?",
+    "deleteCrossfireDesc": "This removes the transcript and debrief from your history.",
+    "crossfireDeleted": "Crossfire round deleted.",
+    "crossfireDeleteFailed": "Could not delete the Crossfire round.",
+    "crossfireUnreadable": "This round was saved in an older format and cannot be shown.",
+    "crossfireNoDebrief": "This round has no debrief.",
+    "openCrossfireAria": "Open Crossfire round: {{title}}"
   },
   "libraryPage": {
     "title": "Source Library",
@@ -1626,7 +1718,6 @@
     "unsupportedFile": "Unsupported file",
     "importPreview": "Import preview",
     "saveImported": "Save imported source",
-    "words": "words",
     "folder": "Folder",
     "generalFolder": "General",
     "textSource": "Text",
@@ -1667,7 +1758,6 @@
     "titlePlaceholder": "Source title...",
     "originPlaceholder": "URL or reference...",
     "contentPlaceholder": "Paste source content...",
-    "sourcesCount": "sources",
     "emptyTitle": "No Sources Yet",
     "emptyDesc": "Add sources to ground AI responses in real evidence.",
     "manualEntry": "Manual Entry",
@@ -1706,11 +1796,28 @@
     "restoreFailed": "Could not restore the source",
     "deleteFailed": "Could not delete the source.",
     "readingFile": "Reading file…",
-    "summary": "{{total}} sources · {{active}} active · {{folders}} folders",
+    "summary": "{{sources}} · {{active}} · {{folders}}",
     "mergeFolderTitle": "Merge into {{name}}?",
     "mergeFolders": "Merge folders",
     "mergeFailed": "Could not merge the folders. Try again.",
-    "openOrigin": "Open {{title}} in a new tab"
+    "openOrigin": "Open {{title}} in a new tab",
+    "savingSource": "Saving…",
+    "offlineTitle": "Change not saved",
+    "offlineNotSaved": "You are offline. Reconnect and try again.",
+    "toggleFailed": "Could not change this source",
+    "toggleFailedDesc": "It is back to how it was. Try again.",
+    "sourceSaved": "Saved {{title}} to the Library",
+    "duplicateUrlDesc": "This page is already in this debate's Library.",
+    "loadingSources": "Loading sources…",
+    "folderUpdateFailed": "Could not change this folder",
+    "sourceCount_one": "{{count}} source",
+    "sourceCount_other": "{{count}} sources",
+    "activeCount_one": "{{count}} active",
+    "activeCount_other": "{{count}} active",
+    "folderCount_one": "{{count}} folder",
+    "folderCount_other": "{{count}} folders",
+    "wordCount_one": "{{formatted}} word",
+    "wordCount_other": "{{formatted}} words"
   },
   "autoSavedSources": {
     "undo": "Undo auto-saved sources",
@@ -1725,6 +1832,8 @@
   },
   "sharedPage": {
     "title": "Shared Content",
+    "notFoundTitle": "Shared link not found",
+    "backHome": "Back to home",
     "noCode": "No share code provided",
     "notFound": "Content not found",
     "loadFailed": "Failed to load shared content",
@@ -1732,12 +1841,13 @@
     "goToApp": "Go to App",
     "openApp": "Open App",
     "sharedOn": "Shared on",
-    "views": "views"
+    "viewCount_one": "{{count}} view",
+    "viewCount_other": "{{count}} views"
   },
   "privacyPage": {
     "title": "Privacy Policy",
     "lastUpdated": "Last updated",
-    "date": "October 1, 2026",
+    "date": "October 23, 2026",
     "s1": "Information We Collect",
     "p1": "We collect information you provide when creating an account, including your name and email from Google sign-in or email sign-in, plus usage data such as generated content, saved items, and interaction patterns. If you use an admin-issued demo code, we process that code to authenticate your demo account.",
     "s2": "How We Use Your Information",
@@ -1747,17 +1857,19 @@
     "s4": "Data Storage",
     "p4": "Your data is stored securely using Supabase infrastructure with encryption at rest and in transit.",
     "s5": "Data Sharing",
-    "p5": "We do not sell your personal data. We share data only with OpenRouter for AI processing, ElevenLabs for the opponent's voice in voice rounds, and payment processors for billing.",
+    "p5": "We do not sell your personal data. We share data only with OpenRouter for AI processing, ElevenLabs for the opponent's voice in voice rounds, Exa for web research, PostHog and Sentry for analytics and error monitoring (see Cookies and Tracking), Jam for bug reports (see Bug Reports with Jam), and payment processors for billing.",
     "s6": "Your Rights",
     "p6": "In Settings you can download a copy of your data as a JSON file, erase your saved work, or delete your account. Deleting your account permanently removes it and all data stored with it, and cancels any Pro subscription immediately. Stripe keeps its own billing records, such as invoices and payments, as required for tax and accounting.",
     "s7": "Cookies and Tracking",
     "p7": "We use essential cookies and browser storage for authentication and preferences. We use PostHog for product analytics and Sentry for error monitoring, structured logs, application metrics, performance tracing, and error-only Session Replay. Sentry does not record ordinary sessions. It records sessions containing captured errors; all replay text and inputs are masked and media is blocked. Sentry receives technical metadata such as routes, browser details, request URLs, methods and status codes, stack traces, timings, and safe event classifications. Automatic collection of user identity, cookies, headers, HTTP bodies, query parameters, AI inputs and outputs, and stack-frame variables is disabled. PostHog autocapture, pageview capture, session recording, and persistent browser storage are disabled. We do not send debate content, chat messages, source titles, or email addresses in analytics events or structured logs.",
-    "s8": "Children's Privacy",
-    "p8": "DebateLab is designed for users 13 and older. We do not knowingly collect data from children under 13.",
-    "s9": "Changes to This Policy",
-    "p9": "We may update this policy periodically. Significant changes will be communicated via email or in-app notification.",
-    "s10": "Contact Us",
-    "p10": "For privacy questions or data requests, contact us at privacy@debatelab.app."
+    "s8": "Bug Reports with Jam",
+    "p8": "We use Jam, a bug-reporting service run by We are Jam, Inc., so that you can show us a problem by recording it. Jam's scripts load for every visitor to DebateLab, after your first click, tap or key press, or 8 seconds after the page loads, whichever comes first. They open a frame from recorder.jam.dev, which receives the address of the page you are on, your browser and device details and page load timings, and they collect the page's console logs, its network requests and your clicks and key presses so these can be attached to a recording. A recording is made when you open a Jam recording link we sent you and press Start Recording. It contains a video of the screen, window or tab you choose to share, together with that technical data, so it can include anything shown on the page or exchanged with our servers, such as your debate content. While you are signed in, your DebateLab account ID is available to Jam and is attached to any recording you make, which links the recording to your account. Jam processes this data as our service provider and keeps it until it is no longer needed to provide its service; it does not state a fixed retention period. To ask us to delete a recording, or to object to this processing, contact privacy@debatelab.app.",
+    "s9": "Children's Privacy",
+    "p9": "DebateLab is designed for users 13 and older. We do not knowingly collect data from children under 13.",
+    "s10": "Changes to This Policy",
+    "p10": "We may update this policy periodically. Significant changes will be communicated via email or in-app notification.",
+    "s11": "Contact Us",
+    "p11": "For privacy questions or data requests, contact us at privacy@debatelab.app."
   },
   "termsPage": {
     "title": "Terms of Service",
@@ -1969,18 +2081,22 @@
       "aboutMinutes": "About {{count}} minutes",
       "turns": "{{count}} turns",
       "opponentTurns": "Opponent turns",
-      "aiRequests": "AI requests",
-      "aiRequestBreakdown": "{{count}} replies + 1 judge",
+      "aiRequests": "Round cost",
+      "aiRequestBreakdown": "For the whole round: {{count}} replies + the judge",
+      "roundCostUnit_one": "AI use",
+      "roundCostUnit_other": "AI uses",
       "aiModel": "AI model",
       "openingRoom": "Opening room...",
       "startRound": "Start round",
+      "checkingQuota": "Checking your AI uses for today…",
+      "startFailed": "Could not open the round. Try again.",
       "draftNotice": "Your draft is saved in this tab as you type. You can pause without losing your place.",
       "offlineCannotStart": "Reconnect to start a round. Your setup is kept while you are offline.",
       "speakingOrder": "Speaking order",
       "aboutMinutes_one": "About {{count}} minute",
       "aboutMinutes_other": "About {{count}} minutes",
-      "aiRequestBreakdown_one": "{{count}} reply + 1 judge",
-      "aiRequestBreakdown_other": "{{count}} replies + 1 judge",
+      "aiRequestBreakdown_one": "For the whole round: {{count}} reply + the judge",
+      "aiRequestBreakdown_other": "For the whole round: {{count}} replies + the judge",
       "speeches_one": "{{count}} speech",
       "speeches_other": "{{count}} speeches",
       "turns_one": "{{count}} turn",
@@ -1996,7 +2112,6 @@
       "draftSavedNotice": "Drafts save in this tab",
       "connected": "Connected",
       "offlineDraft": "Offline. Draft saved locally.",
-      "totalWords": "{{count}} words",
       "complete": "Round complete",
       "turnOf": "Turn {{current}} of {{total}}",
       "preparingResult": "Preparing your result",
@@ -2014,7 +2129,6 @@
       "judgeDescription": "Reading the claims, responses, and strategic choices. This usually takes one request.",
       "yourSpeech": "Your speech",
       "yourSpeechDescription": "Make the case in the time you have. The opponent will respond to this text.",
-      "wordCount": "{{count}} words",
       "speechPlaceholder": "Build your claim, warrant, and impact...",
       "draftFor": "Draft for {{label}}",
       "toSubmit": "to submit",
@@ -2041,12 +2155,15 @@
       "youAreCon": "You are Con",
       "submittedCount_one": "{{count}} submitted",
       "submittedCount_other": "{{count}} submitted",
-      "totalWords_one": "{{count}} word",
-      "totalWords_other": "{{count}} words",
-      "wordCount_one": "{{count}} word",
-      "wordCount_other": "{{count}} words",
+      "totalWords_one": "{{formatted}} word so far",
+      "totalWords_other": "{{formatted}} words so far",
+      "wordCount_one": "{{formatted}} word",
+      "wordCount_other": "{{formatted}} words",
       "latestOpponent": "Opponent’s last speech",
-      "opponentSpeaking": "Opponent is speaking"
+      "opponentSpeaking": "Opponent is speaking",
+      "startSpeaking": "Start speaking",
+      "readyNote": "Your clock starts when you start speaking or typing.",
+      "currentRound": "Current round"
     },
     "scorecard": {
       "eyebrow": "Round review",
@@ -2263,7 +2380,7 @@
     "deleted": "Debate deleted",
     "deleteFailed": "Could not delete the debate",
     "lastActivity": "Last activity {{when}}",
-    "counts": "{{sources}} sources · {{outputs}} outputs",
+    "counts": "{{sources}} ({{active}}) · {{outputs}}",
     "menuAria": "Current debate: {{motion}}",
     "open": "Open debate",
     "useOneOff": "Use one-off mode",
@@ -2293,7 +2410,6 @@
     "recentWork": "Recent work",
     "noWork": "Results from any tool appear here automatically.",
     "tools": "Prepare and practice",
-    "openItemAria": "Open {{title}}",
     "recordFailed": "Could not save this result to the debate",
     "sourceNeedsDebate": "Start or select a debate before saving sources.",
     "librarySources": "Sources for",
@@ -2339,7 +2455,15 @@
     "itemCount_other": "{{count}} items",
     "viewAll": "View all ({{total}})",
     "switching": "Switching…",
-    "deleting": "Deleting…"
+    "deleting": "Deleting…",
+    "creating": "Creating…",
+    "loadingCurrent": "Loading your current debate…",
+    "activeCount_one": "{{count}} active",
+    "activeCount_other": "{{count}} active",
+    "outputCount_one": "{{count}} output",
+    "outputCount_other": "{{count}} outputs",
+    "sourceCount_one": "{{count}} source",
+    "sourceCount_other": "{{count}} sources"
   },
   "debateContext": {
     "using": "Using {{list}}",
@@ -2350,8 +2474,6 @@
     "resultCount_other": "{{count}} saved results",
     "resultName": "{{kind}} ({{side}})",
     "resultMeta": "{{kind}}, {{side}}",
-    "leftOut_one": "{{count}} item is left out to fit the request.",
-    "leftOut_other": "{{count}} items are left out to fit the request.",
     "review": "Review",
     "oneOff": "One-off mode: no Current Debate material will be used or saved.",
     "reviewTitle": "What this request will use",
@@ -2384,7 +2506,13 @@
     "lastShortened_one": "{{count}} source was shortened to fit.",
     "lastShortened_other": "{{count}} sources were shortened to fit.",
     "lastUnavailable_one": "{{count}} item was no longer in this debate.",
-    "lastUnavailable_other": "{{count}} items were no longer in this debate."
+    "lastUnavailable_other": "{{count}} items were no longer in this debate.",
+    "sourceCountOf_one": "{{used}} of {{count}} source",
+    "sourceCountOf_other": "{{used}} of {{count}} sources",
+    "resultCountOf_one": "{{used}} of {{count}} saved result",
+    "resultCountOf_other": "{{used}} of {{count}} saved results",
+    "didntFit_one": "({{count}} didn’t fit)",
+    "didntFit_other": "({{count}} didn’t fit)"
   },
   "themeToggle": {
     "toggle": "Toggle theme",
@@ -2448,7 +2576,8 @@
     "safety": "{{provider}} blocked this request for safety reasons. Try rephrasing your input.",
     "unexpectedProvider": "The AI provider returned an unexpected error. Please try again later.",
     "unexpected": "An unexpected error occurred",
-    "offline": "Check your connection and try again."
+    "offline": "Check your connection and try again.",
+    "notCharged": "You were not charged for this request."
   },
   "clock": {
     "timeUp": "Time is up.",
@@ -2458,5 +2587,98 @@
     "question": "What is the best AI debate practice tool?",
     "answer": "It depends on what you need. As of {{asOf}}, DebateLab fits students and competitive debaters who want one place to build cases, find weak points, check evidence and run timed practice rounds, in English, Spanish or Hungarian: a 3-day free trial with no card, then $5/month + tax. If you want free practice against an AI opponent in World Schools or Asian Parliamentary style, debatelab.ai, a separate product, says it is free. If you mostly need brainstorming or writing help on any subject, a general assistant such as ChatGPT is more flexible.",
     "compare": "Compare AI debate tools"
+  },
+  "sessionQuota": {
+    "cost_one": "This round costs {{count}} AI use, however many turns it takes.",
+    "cost_other": "This round costs {{count}} AI uses, however many turns it takes.",
+    "remaining_one": "You have {{count}} left today.",
+    "remaining_other": "You have {{count}} left today."
+  },
+  "resultActions": {
+    "savedToHistory": "Saved to History",
+    "saveFailed": "Could not save. Try again."
+  },
+  "billing": {
+    "upgradeToPro": "Upgrade to Pro",
+    "manageSubscription": "Manage Subscription",
+    "setUpBilling": "Set Up Billing",
+    "resubscribe": "Resubscribe"
+  },
+  "trialBanner": {
+    "daysLeft_one": "Free trial: {{count}} day left.",
+    "daysLeft_other": "Free trial: {{count}} days left.",
+    "endsToday": "Your free trial ends today.",
+    "dismiss": "Hide the trial reminder"
+  },
+  "pageHead": {
+    "home": {
+      "title": "{{brand}} | AI Debate Prep, Cases & Rebuttals",
+      "description": "{{product}} is an AI debate prep and practice app for students and debaters: cases, rebuttals, evidence, coaching and timed rounds against an AI opponent."
+    },
+    "terms": {
+      "title": "Terms of Service | {{brand}}",
+      "description": "The terms for using {{brand}}: accounts, subscriptions and billing, acceptable use, AI-generated content, intellectual property, and liability."
+    },
+    "privacy": {
+      "title": "Privacy Policy | {{brand}}",
+      "description": "How {{brand}} collects, uses, stores, and shares your information, how AI requests are processed, and the rights you have over your data."
+    },
+    "sources": {
+      "title": "Sources | {{brand}}",
+      "description": "The sources consulted during the research and development of {{brand}}, listed alphabetically by author surname or institutional name."
+    },
+    "notFound": {
+      "title": "Page not found | {{brand}}",
+      "description": "This page does not exist on {{brand}}."
+    },
+    "tools": {
+      "title": "Free Debate Tools: Timer, Motions, Flow Sheets | {{brand}}",
+      "description": "Free debate tools that need no account: a format-aware round timer, a practice motion generator, printable flow sheets and a speech time calculator."
+    },
+    "debateTimer": {
+      "title": "Free Debate Timer for PF, LD, Policy, BP & World Schools | {{brand}}",
+      "description": "A free debate timer with presets for Public Forum, LD, Policy, BP, World Schools and Asian Parliamentary: protected time, POI knocks and prep banks."
+    },
+    "motionGenerator": {
+      "title": "Debate Motion Generator: 300 Practice Motions | {{brand}}",
+      "description": "Draw a random debate motion, or three for a veto drill, from 300 original practice motions sorted by topic, difficulty and type. THW and Resolved wording."
+    },
+    "flowSheet": {
+      "title": "Printable Debate Flow Sheet Generator | {{brand}}",
+      "description": "Print a one-page debate flow sheet with a column for every speech in PF, LD, Policy, BP, World Schools or Asian Parliamentary, on A4 or Letter."
+    },
+    "speechTimeCalculator": {
+      "title": "Speech Time Calculator for Debate Speeches | {{brand}}",
+      "description": "Paste a speech to see its word count, how long it takes to deliver at slow, average and fast pace, and which debate speech slots it fits. Runs in your browser."
+    }
+  },
+  "validation": {
+    "caseTextRequired": "Case text is required",
+    "motionRequired": "Motion is required",
+    "claimRequired": "Claim is required",
+    "messageRequired": "Message is required"
+  },
+  "serverErrors": {
+    "signInRequired": "Please sign in to continue.",
+    "sessionExpired": "Authentication failed. Your session may have expired. Please sign in again.",
+    "accessDenied": "Access denied. Your session may have expired. Please sign in again.",
+    "banned": "Your account has been suspended. Please contact support.",
+    "requestTooLarge": "Request is too large. Shorten the input and try again.",
+    "messageTooLarge": "Message is too large. Shorten it before sending.",
+    "usageCheckFailed": "Unable to verify your quota. Please try again.",
+    "accessCheckFailed": "Unable to verify your account access. Please try again.",
+    "aiService": "AI service error: {{message}}. Please try again.",
+    "portalFailed": "Could not open the billing portal. Please try again.",
+    "alreadySubscribed": "You already have a subscription. Manage it from Settings.",
+    "promoExpired": "This promo code has expired",
+    "promoExhausted": "This promo code has reached its usage limit",
+    "promoApplied": "Promo code applied!",
+    "promoDiscountNoted": "Discount code noted! Apply it at checkout for a discount.",
+    "promoInvalid": "Invalid or expired promo code",
+    "promoAlreadyRedeemed": "You've already redeemed this code",
+    "promoTooManyAttempts": "Too many promo code attempts. Try again in 15 minutes.",
+    "promoUnsupported": "Unsupported promo code type",
+    "promoMissing": "Please enter a promo code",
+    "promoFailed": "Unable to redeem promo code. Please try again."
   }
 }

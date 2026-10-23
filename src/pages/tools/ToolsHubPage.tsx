@@ -19,7 +19,7 @@ export default function ToolsHubPage() {
             <li key={tool.route}>
               <Link
                 to={tool.route}
-                className="flex h-full flex-col rounded-xl border border-border bg-card p-5 transition-colors hover:border-primary/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                className="flex h-full flex-col rounded-xl border border-border bg-card p-5 transition-colors hover:border-primary/60 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring"
               >
                 <h2 className="text-lg font-semibold text-foreground">{tool.name}</h2>
                 <p className="mt-1 text-muted-foreground">{tool.blurb}</p>

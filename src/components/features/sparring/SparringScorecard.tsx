@@ -34,7 +34,8 @@ export function SparringScorecard({ session, scorecard, onRestart, onExport, onE
   const spokenSpeeches = session.speeches.filter((speech) => speech.speaker === 'user' && speech.delivery);
   const spokenRound = spokenSpeeches.length > 0;
   const chartData = scorecard.categories.map((category) => ({
-    category: category.name,
+    // The axis shows this value, so it carries the translated name.
+    category: t(`sparring.category.${category.name}`, category.name),
     You: category.userScore,
     Opponent: category.aiScore,
   }));

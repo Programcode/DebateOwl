@@ -6,6 +6,7 @@ Every AI tool has a model selector. Basic accounts can pick Claude Haiku 5.5, GP
 
 - `model-pro-default`: a new Pro account's `user_settings.feature_configs` hold `anthropic/claude-sonnet-5.5` for every tool, the selector shows `Claude Sonnet 5.5` with `Claude Opus 5.5` still enabled, and a Generate run records `model: anthropic/claude-sonnet-5.5` in `ai_requests`.
 - `model-basic-default`: a trial account with no saved settings gets `anthropic/claude-haiku-5.5` everywhere. `Claude Opus 5.5` and `Claude Sonnet 5.5` are disabled options, and a Generate run records Haiku 5.5.
+- `model-picker-narrow`: with `Auto Fast` picked, the field shows only the name and test id `model-auto-description` shows its description below, in English and Hungarian at 375 px, with neither cut off.
 - `model-retired`: saved `anthropic/claude-sonnet-5` configs become `anthropic/claude-sonnet-5.5` on screen and in `user_settings`.
 
 ## How to get to it (user POV)
@@ -20,5 +21,5 @@ Every AI tool has a model selector. Basic accounts can pick Claude Haiku 5.5, GP
 
 ## Gotchas
 
-- Fake mode records the requested model but answers with fake text, and live mode rewrites every chat call to the Muse Spark contributor pin. Neither proves that OpenRouter accepts the Claude 5.5 IDs; that needs a direct OpenRouter call.
+- Fake mode records the requested model but answers with fake text, and live mode rewrites every chat call to the Claude Haiku 5.5 pin. Neither proves that OpenRouter accepts the Sonnet and Opus 5.5 IDs; that needs a direct OpenRouter call.
 - Existing saved choices of a model still in the catalog are kept. Only retired IDs and unsaved settings move to the new defaults. Saved Opus 5.5 settings from the old Pro default are moved to Sonnet 5.5 once, by the `20261022120000_opus_default_to_sonnet.sql` data migration, not by the client.
