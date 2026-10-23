@@ -14,6 +14,7 @@ import { useExternalRedirectPending } from '@/hooks/use-external-redirect-pendin
 import { consumeWorkspaceInvite } from '@/lib/workspace/invite-handoff';
 import { authRetryAfterSeconds, localizeAuthError } from '@/lib/auth-errors';
 import { clearSessionExpiredNotice, sessionExpiredNotice } from '@/lib/supabase/session-expiry';
+import { clearSignOutIntent } from '@/lib/supabase/sign-out-intent';
 import { AUTH_CALLBACK_ERROR_KEYS } from '@/lib/auth-callback';
 import {
   DEMO_CODE_PATTERN,
@@ -117,6 +118,9 @@ export default function LoginPage() {
   useEffect(() => {
     if (user) navigate(consumeWorkspaceInvite() ?? from, { replace: true });
   }, [user, navigate, from]);
+
+  // The sign-out redirect has landed here; later deep links keep their page again.
+  useEffect(() => clearSignOutIntent(), []);
 
   useEffect(() => {
     if (callbackError) clearCallbackError();

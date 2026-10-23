@@ -12,6 +12,7 @@ A visitor signs in with a demo access code on the Login page. The `demo-code-log
 - `auth-session-expired` signs out a session the server revoked: the stored tokens are refused, so the app goes to `/login` and shows `Your session expired. Sign in again.` once (`recipes/auth.spec.ts`).
 - `auth-email-link` opens the sign-in link from the email after a resend failed with 429. It lands on `/app` through `/auth/callback` without showing `/login` on the way, and the same link opened again shows `This sign-in link has expired or was already used. Send a new code.` on `/login` (`recipes/auth.spec.ts`).
 - `auth-deep-link-email-code` opens `/app/generate` signed out, lands on `/login` (one `main`, an `h1`), sends a code, and sees `Resend in 0:NN` disabled. A wrong code shows `That code is wrong or has expired. Check it or send a new one.`. After the countdown it resends (`New code sent`, the old error gone), and the new code returns to `/app/generate` (`recipes/auth.spec.ts`).
+- `auth-same-account-after-sign-out` signs out from Settings and signs the same account back in by email code: it lands on `/app`, not Settings. A session that ends by itself still returns the account to the page it left (`recipes/auth.spec.ts`).
 - `auth-switch-account` signs out from Settings (the logout request has `scope=local`) and signs a second account in on the same `/login` page. It lands on `/app`, not on Settings, and gets its own onboarding tour. On phones the menu still opens and navigates while the tour shows (`recipes/auth.spec.ts`).
 
 ## How to get to it (user POV)

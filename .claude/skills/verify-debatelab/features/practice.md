@@ -5,6 +5,7 @@ Live practice modes. Sparring runs a multi-speech round against an AI opponent a
 ## Sub-features
 
 - `spar-round` starts a round with a chosen format, submits the user's speeches, and receives opponent speeches.
+- `spar-start` the setup prices the whole round (test id `sparring-round-cost`, `N AI uses`, and `For the whole round: 4 replies + the judge` for the school format), in English and Hungarian at 375 px and 1280 px. While the pre-round quota check runs, Start reads `Opening room...`, is disabled with `aria-busy`, and test id `sparring-starting` says `Checking your AI uses for today…`; a second press sends no second check, and the round opens without a reload once the check answers.
 - `spar-verdict` judges the finished round. A `sparring_sessions` row reaches `status: complete`, with `side: pro` and the debate for its motion.
 - `cross-turn` answers a user question with an AI response and attaches a Jev `Direct answer` signal.
 - `cross-debrief` ends the session and shows the debrief. A `crossfires` row is filed in the debate for its resolution.
@@ -27,7 +28,8 @@ Preconditions:
 
 - **Start a sparring round.** On `/app/sparring`, fill the field labelled `Motion`. Open the combobox named `Round format` and choose the option matching `Lincoln-Douglas · 5 speeches`. Click `Start round`. A new account has no Current Debate, so `Start a debate with this motion?` opens: `chooseForMotion(page, "create")`.
 - **Speeches.** For each user turn, fill the textbox named `Draft for <turn>` (`Affirmative constructive`, `First affirmative rebuttal`, `Second affirmative rebuttal`) and click `Submit speech`. Each turn opens with a stopped clock (test id `sparring-ready`, button `Start speaking`); filling the draft starts it. After each of the first two, the last `FAKE-PROVIDER opponent speech` is visible.
-- **Verdict.** The heading `Here is what happened in the room.` and the text `FAKE-PROVIDER verdict: the user had the edge.` appear. `providerCall("sparring").user` contains `SPARRING ACTION:`. `sparring_sessions` statuses for the user equal `["complete"]`, and `select("side,debates(motion)")` gives `{side: "pro", debates: {motion}}`.
+- **Verdict.** The heading `Here is what happened in the room.` and the text `FAKE-PROVIDER verdict: the user had the edge.` appear. `providerCall("sparring").user` contains `SPARRING ACTION:`. `sparring_sessions` statuses for the user equal `["complete"]`, and `select("side,debates(motion)")` gives `{side: "pro", debates: {motion}}`. In Hungarian the radar chart axis (`.recharts-polar-angle-axis-tick text`) reads `Logika`, `Bizonyíték`, `Előadás`, `Stratégia`.
+- **Hold the quota check.** `page.route("**/functions/v1/ai")` and wait before `route.fallback()` when the body has `quotaCheck: true`; register it after the page loads, since setup asks once on load.
 - **Start Crossfire.** On `/app/crossfire`, fill test id `crossfire-resolution` and `crossfire-argument`. Click `mode-question-ai` (or `mode-ai-questions-user`), then `start-crossfire`, then `chooseForMotion(page, "create")`.
 - **Crossfire turn.** Fill `crossfire-input` and click `submit-turn`. The text `FAKE-PROVIDER crossfire answer` and `Direct answer` appear. `providerCall("crossfire")` and `providerCall("jev")` both fired.
 - **Debrief.** Click `end-crossfire`. Test id `crossfire-debrief` is visible. `crossfires` for the user equals `[{title: <resolution>, debates: {motion: <resolution>}}]`.

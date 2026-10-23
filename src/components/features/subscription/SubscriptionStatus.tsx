@@ -61,6 +61,12 @@ export function SubscriptionStatus({
   const action = billingAction({ billingState, hasOpenSubscription, hasStripeBilling });
 
   const description = (() => {
+    // Pro with no Stripe customer came from a promo code: say so, and that billing can wait.
+    if (action === 'setUpBilling') {
+      return billingDateKind === 'ends' && date
+        ? t('settings.promoAccessUntil', { date })
+        : t('settings.promoAccess');
+    }
     switch (billingState) {
       case 'extended_access':
         return t('settings.extendedAccessDesc', { count: dailyLimit });
@@ -93,7 +99,7 @@ export function SubscriptionStatus({
             {portalLoading ? t('settings.loading') : t(BILLING_ACTION_LABELS.manage)}
           </Button>
         ) : (
-          <Button size="sm" onClick={onUpgrade}>
+          <Button size="sm" onClick={onUpgrade} aria-haspopup="dialog">
             <Zap className="h-4 w-4 mr-2" />
             {t(BILLING_ACTION_LABELS[action])}
           </Button>

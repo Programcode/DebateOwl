@@ -97,3 +97,29 @@ test("model-retired: a saved Claude Sonnet 5 setting moves to Claude Sonnet 5.5"
   await evidence.shot("01-retired-migrated");
   await evidence.step("Saved Sonnet 5 configs were rewritten to Sonnet 5.5 in user_settings");
 });
+
+// QA round 3: at 375 px the Auto Fast description was squeezed into the field and clipped.
+test("model-picker-narrow: an Auto choice shows its name in the field and its description below, at 375 px in Hungarian", async ({ signedIn: page, evidence }, testInfo) => {
+  if (testInfo.project.name === "mobile-chromium") await page.setViewportSize({ width: 375, height: 812 });
+  await page.goto("/app/generate");
+  const picker = page.getByRole("combobox", { name: "Select AI model for generate" });
+  await picker.click();
+  await page.getByRole("option", { name: /^Auto Fast/ }).click();
+  await expect(picker).toHaveText("Auto Fast");
+  await expect(page.getByTestId("model-auto-description")).toHaveText("Fast routing, usually Claude Haiku");
+  await page.getByRole("button", { name: "Language", exact: true }).click();
+  await page.getByRole("radio", { name: "Magyar" }).first().click();
+  const description = page.getByTestId("model-auto-description");
+  const huPicker = page.getByRole("combobox", { name: /^MI-modell kiválasztása/ });
+  await expect(description).toHaveText("Gyors útválasztás, általában Claude Haikuval");
+  // Nothing in the field or its description is cut off.
+  await expect(huPicker).toHaveText("Auto Fast");
+  for (const element of [huPicker, description]) {
+    const clipped = await element.evaluate((node) => node.scrollWidth > node.clientWidth + 1);
+    expect(clipped).toBe(false);
+  }
+  await evidence.shot("01-auto-fast-hu");
+  await huPicker.click();
+  await evidence.shot("02-auto-fast-hu-open");
+  await page.keyboard.press("Escape");
+});

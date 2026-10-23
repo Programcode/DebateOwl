@@ -145,11 +145,16 @@ export default function SparringPage() {
   // from the browser's own estimate, as before session charging.
   const { remainingToday } = useSubscription();
   const [checkingQuota, setCheckingQuota] = useState(false);
+  const [startError, setStartError] = useState<string | null>(null);
+  // Set in the click itself, before React re-renders the disabled button, so a
+  // second click (or Enter) during the quota check never starts a second check.
+  const startingRef = useRef(false);
   useEffect(() => {
     if (userIdRef.current === userId) return;
     userIdRef.current = userId;
     // A Start pressed by the previous account never opens a round for this one.
     startRequestRef.current += 1;
+    startingRef.current = false;
     setCheckingQuota(false);
   }, [userId]);
 
@@ -309,19 +314,37 @@ export default function SparringPage() {
     });
   }, [saveArtifact, session, workspace.context]);
 
-  const handleStart = (values: SparringSetupValues) => debateGate.run(values.motion, (target) => void beginRound(values, target.debateId));
+  const handleStart = (values: SparringSetupValues) => {
+    if (startingRef.current) return;
+    debateGate.run(values.motion, (target) => void beginRound(values, target.debateId));
+  };
 
   const beginRound = async (values: SparringSetupValues, debateId: string | null) => {
+    if (startingRef.current) return;
+    startingRef.current = true;
     const owner = userIdRef.current;
     const roundBefore = useSparringStore.getState().currentSession;
     const startRequest = startRequestRef.current + 1;
     startRequestRef.current = startRequest;
+    const current = () => startRequestRef.current === startRequest && mountedRef.current && userIdRef.current === owner;
     // Check today's quota before the round opens, so a speech is never
     // written for a round the server would refuse. An unknown answer does not block.
+    setStartError(null);
     setCheckingQuota(true);
-    const refusal = await sessionQuota.checkBeforeStart();
-    if (startRequestRef.current !== startRequest || !mountedRef.current || userIdRef.current !== owner) return;
-    setCheckingQuota(false);
+    let refusal: Awaited<ReturnType<typeof sessionQuota.checkBeforeStart>>;
+    try {
+      refusal = await sessionQuota.checkBeforeStart();
+    } catch {
+      // A check that fails outright is unknown, like a timeout: it does not block.
+      refusal = null;
+    } finally {
+      // Never leave the button spinning, whatever the check did.
+      if (current()) {
+        startingRef.current = false;
+        setCheckingQuota(false);
+      }
+    }
+    if (!current()) return;
     if (refusal) {
       handleSubscriptionError(refusal);
       return;
@@ -330,8 +353,14 @@ export default function SparringPage() {
     if (useSparringStore.getState().currentSession !== roundBefore) return;
     const target = { debateId };
     artifactRequestIdRef.current = crypto.randomUUID();
-    opponentVoice.beginRound();
-    startSession({ ...values, debateId: target.debateId });
+    try {
+      opponentVoice.beginRound();
+      startSession({ ...values, debateId: target.debateId });
+    } catch (error) {
+      console.warn('[Sparring] Could not open the round:', error);
+      setStartError(t('sparring.setup.startFailed', 'Could not open the round. Try again.'));
+      return;
+    }
     setAiError(null);
     setJudgingError(null);
     setRetryNonce(0);
@@ -380,6 +409,7 @@ export default function SparringPage() {
           remainingRequests={sessionQuota.remaining ?? remainingToday}
           blockedReason={sessionQuota.blocked}
           isStarting={checkingQuota}
+          startError={startError}
           debatePrefill={!workspace.context}
           voiceAllowed={!workspace.context}
           banner={<CurrentDebateStrip hidden={Boolean(workspace.context)} className="" />}
