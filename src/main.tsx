@@ -59,7 +59,8 @@ export function mountApp(): void {
   } else {
     // HTML prerendered for another route (an offline copy, say) is replaced like the startup shell.
     delete container.dataset.prerendered;
-    void appLanguageReady().then(() => root.render(app));
+    const render = (): void => root.render(app);
+    void appLanguageReady().then(render, render);
   }
   registerServiceWorker();
 

@@ -26,7 +26,9 @@ const APP_SHELL = [
 ];
 
 // vercel.json serves app-shell.html at these paths, so offline the worker does too.
-const APP_SHELL_PATHS = [/^\/app(?:\/|$)/, /^\/login\/?$/, /^\/share\//, /^\/expocit\/sources\/?$/];
+// (/expocit/sources is rewritten too, but its prerendered file is served first,
+// so it is a public page here.)
+const APP_SHELL_PATHS = [/^\/app(?:\/|$)/, /^\/login\/?$/, /^\/share\//];
 
 const NETWORK_ONLY_PREFIXES = [
   // Supabase, also when a preview proxies it on this origin.

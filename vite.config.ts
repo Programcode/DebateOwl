@@ -3,7 +3,7 @@ import react from "@vitejs/plugin-react-swc";
 import { sentryVitePlugin } from "@sentry/vite-plugin";
 import { execSync } from "node:child_process";
 import { createHash } from "node:crypto";
-import { readFileSync, writeFileSync } from "node:fs";
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import path from "path";
 import { STAGING_PREVIEW_PROXY_PATH, SUPABASE_PROJECTS } from "./src/lib/supabase/projects";
 
@@ -81,6 +81,7 @@ function embedPages(): Plugin {
  * measurements load what production serves.
  */
 function appShellRewrites(): Plugin {
+  const outDir = path.resolve(__dirname, "dist");
   const { rewrites = [] } = JSON.parse(readFileSync(path.resolve(__dirname, "vercel.json"), "utf8")) as {
     rewrites?: Array<{ source: string; destination: string }>;
   };
@@ -96,6 +97,8 @@ function appShellRewrites(): Plugin {
     configurePreviewServer: (server) => {
       server.middlewares.use((req, _res, next) => {
         const [pathname, query] = (req.url ?? "").split("?", 2);
+        // Vercel serves files before rewrites, so a prerendered page (/expocit/sources) wins.
+        if (existsSync(path.join(outDir, pathname, "index.html"))) return next();
         const route = routes.find(({ pattern }) => pattern.test(pathname));
         if (route) req.url = `${route.destination}${query === undefined ? "" : `?${query}`}`;
         next();
