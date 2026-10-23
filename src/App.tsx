@@ -2,7 +2,7 @@
 import { Component, Suspense, lazy, useEffect, useRef, useState, type ComponentType, type ErrorInfo, type ReactNode } from "react";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { QueryClient, QueryClientProvider, onlineManager } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, useLocation, useNavigationType } from "react-router-dom";
 import { MotionConfig } from "framer-motion";
 import { AuthProvider, useAuth } from "@/lib/supabase/AuthProvider";
@@ -74,6 +74,9 @@ const OnboardingTour = lazy(() => import("@/components/features/onboarding/Onboa
   .then(({ OnboardingTour: Tour }) => ({ default: Tour })));
 
 const queryClient = new QueryClient();
+// TanStack Query assumes it is online until an `offline` event. A page opened
+// offline would run and fail every query; this pauses them until `online`.
+if (typeof navigator !== "undefined") onlineManager.setOnline(navigator.onLine);
 
 type ToolName =
   | "generate"
