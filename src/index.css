@@ -130,6 +130,24 @@
   }
 }
 
+/* The hover lift and the press state outrank a button's own shadow-* and duration-* classes, as they
+   did when v3 emitted components unlayered; in v4's components layer every utility would beat them. */
+@utility motion-lift {
+  @media (hover: hover) and (pointer: fine) {
+    &:not(:disabled):not([aria-disabled='true']):hover {
+      transform: translateY(-1px);
+      box-shadow: 0 8px 20px hsl(var(--foreground) / 0.08);
+    }
+  }
+}
+
+@utility motion-press {
+  &:not(:disabled):not([aria-disabled='true']):active {
+    transform: scale(var(--motion-press-scale));
+    transition-duration: var(--motion-duration-press);
+  }
+}
+
 /* Definition of the design system. All colors, gradients, fonts, etc should be defined here.
 All colors MUST be HSL.
 */
@@ -468,18 +486,6 @@ All colors MUST be HSL.
     transition-timing-function: var(--motion-ease-fluid);
   }
 
-  @media (hover: hover) and (pointer: fine) {
-    .motion-lift:not(:disabled):not([aria-disabled='true']):hover {
-      transform: translateY(-1px);
-      box-shadow: 0 8px 20px hsl(var(--foreground) / 0.08);
-    }
-  }
-
-  .motion-press:not(:disabled):not([aria-disabled='true']):active {
-    transform: scale(var(--motion-press-scale));
-    transition-duration: var(--motion-duration-press);
-  }
-
   .motion-surface {
     transition-property: transform, box-shadow, border-color, background-color, opacity;
     transition-duration: var(--motion-duration-normal);
@@ -584,8 +590,7 @@ All colors MUST be HSL.
   }
 }
 
-/* Themed scrollbars, and the scroll margin for anchors under the sticky header. They sit in the
-   base layer so utilities (.scrollbar-hide, scroll-mt-*) still override them. */
+/* Themed scrollbars sit in the base layer so .scrollbar-hide still overrides them. */
 @layer base {
   * {
     scrollbar-width: thin;
@@ -611,10 +616,11 @@ All colors MUST be HSL.
       background-color: hsl(var(--muted-foreground) / 0.5);
     }
   }
+}
 
-  [id] {
-    scroll-margin-top: 5rem;
-  }
+/* Scroll margin for anchors under the sticky header. Unlayered, so it wins over scroll-mt-* as in v3. */
+[id] {
+  scroll-margin-top: 5rem;
 }
 
 /* Vaul's bottom sheet: 300ms open, 200ms close on the drawer curve (its default is 500ms both ways). */
