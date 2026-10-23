@@ -1,4 +1,7 @@
--- DB-03 (proposed, destructive): drop policies that no migration created.
+-- DB-03: drop policies that no migration created. Approved by Adam on
+-- 23 Oct 2026; moved from supabase/proposed/. It was run by hand on staging
+-- and production first, after shared links, role reads and usage counts were
+-- tested on staging, so on both hosted projects this finds nothing to drop.
 --
 -- The QA run on 22 Oct 2026 found policies on production that are not in
 -- staging or in supabase/migrations, including duplicate permissive ones on
@@ -24,7 +27,8 @@
 -- caller's own rows: without user_roles_select_own, signed-in users could no
 -- longer read their own role (SettingsPage and the curated_sources admin
 -- policies depend on it), and a drifted copy would keep the leak this fixes.
--- Do a dry run first (BEGIN; ...; ROLLBACK;).
+-- Running it again changes nothing: every drop is IF EXISTS and the kept
+-- policies are never dropped.
 
 DO $$
 DECLARE
