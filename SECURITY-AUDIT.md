@@ -176,6 +176,23 @@ Accept monitor writes only from a `SECURITY DEFINER` function granted to `servic
 
 ---
 
+### 5. Billing-portal failures return Stripe's error text
+
+| | |
+|---|---|
+| Severity | **Low** |
+| Verification | **Source-verified.** Not triggered. |
+| Principal | Any signed-in user who can reach portal session creation |
+| Result | Stripe's `message` is copied into the HTTP body |
+
+**Where:** `supabase/functions/create-portal/index.ts:59-84` and `:156-162`.
+
+`classifyStripeError` returns `stripeErr.message` for Stripe 4xx and 5xx responses. The handler sends that string to the browser. `resource_missing` is replaced with a fixed `no_active_subscription` body. Other Stripe failures are not. A portal create can fail with a message that names the customer id, the parameter Stripe rejected, or a request id. The secret key is not in that message. `create-checkout` already answers its own failures with a fixed string.
+
+**Fix:** return a fixed `error` and `code` to the client. Log `message` and Stripe's `requestId` on the server, truncated.
+
+---
+
 ## Reviewed, no boundary violation found
 
 These were traced because they are the usual failure points. The source shows a control on the path. They are not findings.
