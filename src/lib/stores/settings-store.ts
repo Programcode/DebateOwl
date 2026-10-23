@@ -253,17 +253,12 @@ export const useSettingsStore = create<SettingsState>()(
         linkedLanguage = null;
         set({ language });
         void applyAppLanguage(language);
-        void updateSettings({
-          language,
-          output_language: get().outputLanguage,
-          theme: get().theme,
-          feature_configs: get().featureConfigs,
-          custom_system_prompt: get().customSystemPrompt ?? null,
-        });
+        // Only the language: the switcher shows on pages that open before the
+        // account's settings load, and this device's copy of the rest may be older.
+        void updateLanguage(language);
       },
       chooseLinkedLanguage: (language) => {
-        // Not setLanguage: that saves this device's whole settings snapshot, which
-        // would overwrite the account's newer copy if it has not loaded yet.
+        // Kept until the account's settings load, so their saved language does not undo it.
         linkedLanguage = language;
         set({ language });
         void applyAppLanguage(language);
