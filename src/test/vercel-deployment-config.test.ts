@@ -234,9 +234,10 @@ describe("Vercel frontend deployment configuration", () => {
     expect(packageJson.scripts?.build).toBe("vite build && node scripts/prerender.mjs && node scripts/sitemap.mjs && node scripts/check-site.mjs && node scripts/check-build-boundaries.mjs");
   });
 
-  it("caches the offline shell and only caches feature assets after they are visited", () => {
+  it("answers app routes with the cached shell and never stores a navigation as another page", () => {
     const serviceWorker = readProjectFile("public/sw.js");
-    expect(serviceWorker).toContain("cache.put('/index.html', response.clone())");
+    expect(serviceWorker).toContain("caches.match('/app-shell.html', { cacheName: APP_SHELL_CACHE })");
+    expect(serviceWorker).not.toContain("cache.put('/index.html'");
     expect(serviceWorker).not.toContain("'/app/crossfire'");
     expect(serviceWorker).not.toContain("'/app/sparring'");
     expect(serviceWorker).toContain("'/favicon-72.png'");
