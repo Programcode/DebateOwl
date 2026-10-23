@@ -99,6 +99,20 @@ describe('settings hydration cleanup', () => {
     expect(saved.ask.model).toBe('meta/muse-spark-1.3-contributor');
   });
 
+  it('lets a ?lang= link opened before hydration win, without saving this device\'s older settings (IN-04)', async () => {
+    db.row = { ...db.row, language: 'hu', theme: 'dark' };
+    // This device last saw the account with a light theme.
+    useSettingsStore.setState({ theme: 'light' });
+
+    useSettingsStore.getState().chooseLinkedLanguage('es');
+    await useSettingsStore.getState().hydrateFromServer();
+
+    await vi.waitFor(() => expect(db.row.language).toBe('es'));
+    expect(useSettingsStore.getState().language).toBe('es');
+    expect(db.row.theme).toBe('dark');
+    expect(useSettingsStore.getState().theme).toBe('dark');
+  });
+
   it('keeps a past-due payer\'s Pro model choices through the payment grace', async () => {
     // The webhook leaves the tier alone on a failed renewal; the AI functions still serve Pro.
     const proChoices = Object.fromEntries(features.map((feature) => [

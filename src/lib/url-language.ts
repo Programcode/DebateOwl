@@ -16,14 +16,13 @@ export function searchWithoutLanguage(search: string): string {
 }
 
 /**
- * Switches to the language a `?lang=` link asks for, the way the language
- * switcher does: kept on this device and, when signed in, on the account.
- * Returns whether the address asked for one.
+ * Switches to the language a `?lang=` link asks for, kept on this device and,
+ * when signed in, on the account, like a switcher choice. Returns whether the
+ * address asked for one.
  */
 export function chooseUrlLanguage(search: string): boolean {
   const language = urlLanguage(search);
   if (!language) return false;
-  const settings = useSettingsStore.getState();
-  if (settings.language !== language) settings.setLanguage(language);
+  useSettingsStore.getState().chooseLinkedLanguage(language);
   return true;
 }

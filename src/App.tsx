@@ -17,7 +17,7 @@ import { StagingBanner } from "@/components/StagingBanner";
 import { captureException, captureProductEvent, toTelemetrySafeError } from "@/lib/observability";
 import { appLayoutLoader, preloadStartupRoute, routeLoaders, type RouteLoader } from "@/lib/route-modules";
 import type { PrerenderedRoute } from "@/lib/seo/pages";
-import { usePrivateRouteHead } from "@/lib/seo/use-page-head";
+import { PageLabelProvider, usePrivateRouteHead } from "@/lib/seo/use-page-head";
 import { RouteSkeleton, type RouteSkeletonVariant } from "@/components/loading/RouteSkeleton";
 import { useTranslation } from "react-i18next";
 import { COLLABORATION_URL } from "@/lib/workspace/collaboration-config";
@@ -253,17 +253,21 @@ function PendingAppRoute() {
   );
 }
 
-function RouteContent({ children }: { children: ReactNode }) {
+export function RouteContent({ children }: { children: ReactNode }) {
   const location = useLocation();
   const { label } = useRouteLabel(location.pathname);
-  usePrivateRouteHead(location.pathname, label);
+  // A page that names itself better than its route (usePageLabel).
+  const [pageLabel, setPageLabel] = useState<string | null>(null);
+  usePrivateRouteHead(location.pathname, pageLabel ?? label);
 
   return (
-    <LocalizedRouteErrorBoundary key={location.pathname}>
-      <Suspense fallback={<PendingRoute />}>
-        {children}
-      </Suspense>
-    </LocalizedRouteErrorBoundary>
+    <PageLabelProvider value={setPageLabel}>
+      <LocalizedRouteErrorBoundary key={location.pathname}>
+        <Suspense fallback={<PendingRoute />}>
+          {children}
+        </Suspense>
+      </LocalizedRouteErrorBoundary>
+    </PageLabelProvider>
   );
 }
 

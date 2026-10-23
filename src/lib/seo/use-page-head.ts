@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { createContext, useContext, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { HEAD_NAMES } from './head-text';
 import { PAGE_HEAD_IDS, PAGE_HEADS, SHELL_HEAD, SITE_ORIGIN, type PageHead, type PrerenderedRoute } from './pages';
@@ -55,6 +55,24 @@ export function usePageHead(route: PrerenderedRoute) {
       document.head.querySelectorAll('script[type="application/ld+json"], meta[property="og:url"]').forEach((node) => node.remove());
     };
   }, [route]);
+}
+
+const PageLabelContext = createContext<(label: string | null) => void>(() => undefined);
+
+/** Lets a page under a route name the tab better than the route does (see usePageLabel). */
+export const PageLabelProvider = PageLabelContext.Provider;
+
+/**
+ * Names the tab "<label> · DebateLab" instead of the route's label while the
+ * page shows it, as a missing share link does. The route keeps writing the
+ * title, so a language switch cannot leave the route's label on top.
+ */
+export function usePageLabel(label: string | null) {
+  const setLabel = useContext(PageLabelContext);
+  useEffect(() => {
+    setLabel(label);
+    return () => setLabel(null);
+  }, [label, setLabel]);
 }
 
 /** Sign-in, the signed-in app and share links: never indexed (vercel.json sends the same X-Robots-Tag). */
