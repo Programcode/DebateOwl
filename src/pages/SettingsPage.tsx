@@ -257,7 +257,7 @@ export default function SettingsPage() {
               <p role="status" className="text-sm text-muted-foreground">{t('settings.confirmingSubscription')}</p>
             ) : subscription.loading ? (
               // The card's shape while the plan loads, not a long "Loading…" (ST-03).
-              <div data-testid="subscription-loading" aria-busy="true" className="space-y-3">
+              <div data-testid="subscription-loading" className="space-y-3">
                 <div className="flex items-center justify-between gap-4" aria-hidden="true">
                   <div className="h-6 w-28 animate-pulse rounded-full bg-muted" />
                   <div className="h-9 w-36 animate-pulse rounded-md bg-muted" />

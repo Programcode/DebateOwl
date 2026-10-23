@@ -20,6 +20,7 @@ import {
   formatPlanPrice,
   type BillingAction,
 } from '@/lib/billing/plan';
+import { refreshAIUsage } from '@/lib/query-client';
 import { PLAN_DIALOG_CLASS, PLAN_DIALOG_CLOSE_CLASS } from './dialog-layout';
 
 interface PricingModalProps {
@@ -80,6 +81,11 @@ export function PricingModal({ open, onOpenChange, onPromoRedeemed }: PricingMod
     try {
       await runRedirect(() => action === 'manage' ? redirectToPortal() : redirectToCheckout(promoCode || undefined));
     } catch (err) {
+      // The portal's own refusal is English; say it the way Settings does.
+      if (action === 'manage' && err instanceof Error && err.message.toLowerCase().includes('no active subscription')) {
+        toast({ title: t('settings.noSubscription'), description: t('settings.noSubscriptionDesc') });
+        return;
+      }
       toast({
         title: action === 'manage' ? t('settings.portalError') : t('pricingModal.checkoutError'),
         description: err instanceof Error ? err.message : t('pricingModal.checkoutErrorDesc'),
@@ -112,6 +118,8 @@ export function PricingModal({ open, onOpenChange, onPromoRedeemed }: PricingMod
         setPromoCode('');
         setShowPromo(false);
         onOpenChange(false);
+        // Wherever the dialog opened (Settings, a tool, the trial banner), the plan and count change now.
+        refreshAIUsage();
         onPromoRedeemed?.();
       }
     } catch (err) {

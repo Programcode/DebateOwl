@@ -41,11 +41,13 @@ const TITLES: Record<LimitModalVariant, string> = {
 export function LimitReachedModal({ open, onOpenChange, variant, limit, current, units, onUpgrade }: LimitReachedModalProps) {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const { isPro, billingState, billingDate } = useSubscription();
+  const { billingState, billingDate } = useSubscription();
   const accessEnded = variant === 'trial_ended' || variant === 'trial_expired' || variant === 'subscription_ended';
   const isWeeklyBudget = variant === 'weekly_budget_reached';
-  // A Pro student who used today's included requests already pays. Selling Pro again is the wrong next step.
-  const paidDailyCap = isPro && variant === 'limit_reached';
+  // A paying student who used today's included requests already has Pro, so selling it again is the wrong
+  // next step. Legacy free is served at Pro limits but pays nothing, so it is still offered Pro.
+  const paidDailyCap = (billingState === 'pro' || billingState === 'pro_canceling' || billingState === 'payment_failed')
+    && variant === 'limit_reached';
 
   const endedOn = variant === 'subscription_ended' && billingState === 'subscription_ended' && billingDate
     ? formatEuropeanDate(billingDate)

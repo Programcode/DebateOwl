@@ -57,8 +57,16 @@ describe('LimitReachedModal', () => {
     expect(screen.getByRole('button', { name: 'Upgrade to Pro' })).toBeInTheDocument();
   });
 
+  it('offers Pro to a legacy free account at the daily cap: it is served like Pro but pays nothing', () => {
+    subscription.isPro = true;
+    subscription.billingState = 'legacy_free';
+    renderModal();
+    expect(screen.getByRole('button', { name: 'Upgrade to Pro' })).toBeInTheDocument();
+  });
+
   it('does not sell Pro again when a paying student hits the daily cap', async () => {
     subscription.isPro = true;
+    subscription.billingState = 'pro';
     const { onUpgrade, onOpenChange } = renderModal();
     expect(screen.queryByRole('button', { name: 'Upgrade to Pro' })).not.toBeInTheDocument();
     expect(screen.queryByText('More AI prep access + high reasoning')).not.toBeInTheDocument();
