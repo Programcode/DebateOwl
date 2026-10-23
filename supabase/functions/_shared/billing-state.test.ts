@@ -109,6 +109,10 @@ check("a renewing Stripe plan shows its renewal over a promo grant it overlaps",
   { status: "active", current_period_start: at(-1), current_period_end: at(29) },
 ], { state: "pro", access: true, limit: 50, date: at(29), dateKind: "renews", open: true });
 
+check("a cancelling Stripe plan inside a longer promo grant shows the promo", settings({ subscription_tier: "pro", grace_period_ends_at: "9999-12-31T23:59:59.999Z" }), [
+  { status: "active", current_period_start: at(-1), current_period_end: at(29), cancel_at_period_end: true },
+], { state: "pro", access: true, limit: 50, open: true });
+
 check("lifetime promo Pro shows no end date", settings({ subscription_tier: "pro", grace_period_ends_at: "9999-12-31T23:59:59.999Z", daily_limit_override: 50 }), [], {
   state: "pro", access: true, limit: 50,
 });

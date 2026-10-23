@@ -177,16 +177,19 @@ export function resolveBillingState(
   const override = settings.daily_limit_override;
 
   // Stripe Pro counts whatever the tier says, and comes before a promo grant
-  // (QB-08 keeps both) so the card shows the renewal date the payer is billed on. Only the webhook (service role)
-  // writes subscriptions rows, while the tier can lag it: an invoice paid
-  // before its subscription.updated event arrives, an account the old webhook
-  // downgraded on a failed payment, or an admin gift trial given to a payer.
+  // (QB-08 keeps both) so the card shows the renewal date the payer is billed
+  // on; a plan set to cancel before the promo ends shows the promo instead.
+  // Only the webhook (service role) writes subscriptions rows, while the tier
+  // can lag it: an invoice paid before its subscription.updated event arrives,
+  // an account the old webhook downgraded on a failed payment, or an admin
+  // gift trial given to a payer.
   {
     const current = latest(
       rows.filter((row) => (row.status === "active" || row.status === "trialing") && (time(row.current_period_end) ?? 0) > nowMs),
       (row) => time(row.current_period_end),
     );
-    if (current) {
+    const promoOutlasts = tier === "pro" && promoEnd !== null && promoEnd > (time(current?.current_period_end) ?? 0);
+    if (current && !(current.cancel_at_period_end && promoOutlasts)) {
       return current.cancel_at_period_end
         ? result("pro_canceling", "pro", "pro", ["cancels", current.current_period_end])
         : result("pro", "pro", "pro", ["renews", current.current_period_end]);

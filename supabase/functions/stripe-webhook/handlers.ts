@@ -31,6 +31,11 @@ export function promoGrantActive(gracePeriodEndsAt: string | null | undefined, n
   return !Number.isNaN(end) && end > now.getTime();
 }
 
+/** Postgres undefined_column, or PostgREST's unknown-column error in a write. */
+function isMissingColumn(error: { code?: string }): boolean {
+  return error.code === "42703" || error.code === "PGRST204";
+}
+
 export function createWebhookHandlers({ supabase, stripe, now = () => new Date() }: WebhookDeps) {
   async function lookupAccount(userId: string): Promise<AccountPresence> {
     const { data, error } = await supabase.auth.admin.getUserById(userId);
@@ -77,14 +82,22 @@ export function createWebhookHandlers({ supabase, stripe, now = () => new Date()
    * Records when a run of failed payments began (on: true, kept if already
    * set) or that it is over (on: false). The past-due grace counts from it.
    * A database without 20261023020000 has no column: the grace then counts
-   * from the period start, so a failed write is logged, never retried.
+   * from the period start, so that error is logged, not retried. Any other
+   * failure throws so Stripe redelivers: a failure time left behind would cut
+   * the grace short on the next failed payment.
    */
   async function markPaymentFailure(subscriptionId: string, on: boolean) {
     const update = supabase.from("subscriptions")
       .update({ payment_failed_at: on ? now().toISOString() : null })
       .eq("stripe_subscription_id", subscriptionId);
     const { error } = on ? await update.is("payment_failed_at", null) : await update.not("payment_failed_at", "is", null);
-    if (error) console.warn(`[WEBHOOK] Could not ${on ? "record" : "clear"} payment_failed_at: ${error.message}`);
+    if (!error) return;
+    const message = `Could not ${on ? "record" : "clear"} payment_failed_at: ${error.message}`;
+    if (isMissingColumn(error)) {
+      console.warn(`[WEBHOOK] ${message}`);
+      return;
+    }
+    throw new Error(message);
   }
 
   async function userIdForSubscription(subscriptionId: string): Promise<string | null> {

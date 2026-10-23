@@ -26,6 +26,8 @@ function assertEquals(actual: unknown, expected: unknown, message: string) {
 /** Applies eq. filters and records every write, the way supabase-js sends them. */
 function fakeDatabase(tables: Record<string, Row[]>) {
   const writes: Array<{ table: string; method: string; body: Row }> = [];
+  /** Set to an error code to fail every write of payment_failed_at. */
+  const fail: { paymentFailedAtWrite?: string } = {};
   const matches = (row: Row, params: URLSearchParams) => {
     for (const [key, value] of params) {
       if (["select", "order", "limit", "on_conflict", "columns"].includes(key)) continue;
@@ -55,6 +57,9 @@ function fakeDatabase(tables: Record<string, Row[]>) {
       return Response.json(found);
     }
     const body = await request.json() as Row;
+    if (fail.paymentFailedAtWrite && "payment_failed_at" in body) {
+      return Response.json({ code: fail.paymentFailedAtWrite, message: "write failed" }, { status: 400 });
+    }
     writes.push({ table, method: request.method, body });
     if (request.method === "PATCH") {
       for (const row of rows.filter((row) => matches(row, url.searchParams))) Object.assign(row, body);
@@ -66,7 +71,7 @@ function fakeDatabase(tables: Record<string, Row[]>) {
     }
     return new Response(null, { status: 204 });
   };
-  return { fetchImpl, writes };
+  return { fetchImpl, writes, fail };
 }
 
 function stripeSubscription(overrides: Partial<Stripe.Subscription>): Stripe.Subscription {
@@ -104,7 +109,7 @@ function setup(settings: Row, subscription: Row, stripeState: Stripe.Subscriptio
   };
   const handlers = createWebhookHandlers({ supabase, stripe, now: () => NOW });
   const state = () => resolveBillingState(tables.user_settings[0], tables.subscriptions, NOW);
-  return { tables, writes: db.writes, handlers, state };
+  return { tables, writes: db.writes, fail: db.fail, handlers, state };
 }
 
 async function quietly<T>(run: () => Promise<T>): Promise<T> {
@@ -149,6 +154,29 @@ Deno.test("a retried failure keeps the first failure's time, so the grace cannot
   assertEquals([resolved.state, resolved.hasAccess, resolved.refusal], ["payment_failed", false, "payment_failed"], "resolved state");
 });
 
+Deno.test("a failed clear of payment_failed_at throws so Stripe redelivers, unless the column is missing", async () => {
+  for (const [code, throws] of [["XX000", true], ["PGRST204", false]] as const) {
+    const recovered = stripeSubscription({ status: "active" });
+    const { handlers, fail } = setup(
+      { subscription_tier: "pro", grace_period_ends_at: null },
+      { status: "past_due", current_period_start: iso(nowS - 10 * DAY_S), current_period_end: iso(nowS + 20 * DAY_S), payment_failed_at: iso(nowS - DAY_S) },
+      recovered,
+    );
+    fail.paymentFailedAtWrite = code;
+    let threw = false;
+    const warn = console.warn;
+    console.warn = () => {};
+    try {
+      await quietly(() => handlers.handle("invoice.payment_succeeded", { id: "in_fixture_4", subscription: SUB }));
+    } catch {
+      threw = true;
+    } finally {
+      console.warn = warn;
+    }
+    assertEquals(threw, throws, `throws for ${code}`);
+  }
+});
+
 Deno.test("invoice.payment_succeeded clears the failure and restores Pro", async () => {
   const recovered = stripeSubscription({ status: "active" });
   const { tables, handlers, state } = setup(
@@ -176,8 +204,8 @@ Deno.test("customer.subscription.updated records cancel_at_period_end and keeps 
   assertEquals(tables.subscriptions[0].cancel_at, iso(nowS + 20 * DAY_S), "cancel_at");
   assertEquals(tables.user_settings[0].grace_period_ends_at, LIFETIME, "promo grant");
   assertEquals(tables.user_settings[0].subscription_tier, "pro", "tier");
-  // The card shows the Stripe plan's cancellation; the lifetime grant keeps Pro after it.
-  assertEquals(state().state, "pro_canceling", "resolved state");
+  // The lifetime grant keeps Pro past the cancellation, so the card does not say "Cancels on".
+  assertEquals(state().state, "pro", "resolved state");
 });
 
 Deno.test("customer.subscription.updated for a Stripe-only plan shows Cancels on (QB-15)", async () => {
