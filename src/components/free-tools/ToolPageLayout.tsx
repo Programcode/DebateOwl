@@ -32,11 +32,11 @@ export function ToolFaq({ faq }: { faq: readonly FaqEntry[] }) {
       <div className="mt-4 divide-y divide-border border-y border-border">
         {faq.map((entry) => (
           <details key={entry.question} className="group py-3">
-            <summary className="cursor-pointer list-none font-medium marker:hidden focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-sm [&::-webkit-details-marker]:hidden">
+            <summary className="cursor-pointer list-none font-medium marker:hidden focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring rounded-sm [&::-webkit-details-marker]:hidden">
               <span className="mr-2 inline-block text-muted-foreground transition-transform group-open:rotate-90 motion-reduce:transition-none" aria-hidden="true">›</span>
               {entry.question}
             </summary>
-            <p className="!mt-2 pl-5 text-muted-foreground">{entry.answer}</p>
+            <p className="mt-2! pl-5 text-muted-foreground">{entry.answer}</p>
           </details>
         ))}
       </div>
@@ -49,10 +49,10 @@ export function ToolCta({ title, children }: { title: string; children: ReactNod
   const { t } = useTranslation('tools');
   return (
     <aside className="rounded-xl border border-primary/30 bg-primary/5 p-6" aria-labelledby="cta-heading">
-      <h2 id="cta-heading" className="!text-xl">{title}</h2>
-      <div className="!mt-2 text-muted-foreground">{children}</div>
-      <p className="!mt-2 text-sm text-muted-foreground">{t('layout.ctaPricing')}</p>
-      <Link to="/login" className="!mt-4 inline-flex min-h-11 items-center rounded-md bg-primary px-4 font-medium text-primary-foreground !no-underline hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
+      <h2 id="cta-heading" className="text-xl!">{title}</h2>
+      <div className="mt-2! text-muted-foreground">{children}</div>
+      <p className="mt-2! text-sm text-muted-foreground">{t('layout.ctaPricing')}</p>
+      <Link to="/login" className="mt-4! inline-flex min-h-11 items-center rounded-md bg-primary px-4 font-medium text-primary-foreground no-underline! hover:bg-primary/90 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
         {t('layout.ctaButton')}
       </Link>
     </aside>
@@ -66,11 +66,11 @@ function OtherTools({ current }: { current: ToolRoute }) {
   return (
     <nav aria-labelledby="other-tools-heading">
       <h2 id="other-tools-heading">{t('layout.otherTools')}</h2>
-      <ul className="!list-none !pl-0 mt-4 grid gap-4 sm:grid-cols-3">
+      <ul className="list-none! pl-0! mt-4 grid gap-4 sm:grid-cols-3">
         {others.map((tool) => (
-          <li key={tool.route} className="!mt-0">
+          <li key={tool.route} className="mt-0!">
             <Link to={tool.route} className="font-medium">{tool.name}</Link>
-            <p className="!mt-1 text-sm text-muted-foreground">{tool.blurb}</p>
+            <p className="mt-1! text-sm text-muted-foreground">{tool.blurb}</p>
           </li>
         ))}
       </ul>
@@ -113,7 +113,7 @@ export function ToolPageLayout({ route, title, intro, shortAnswer, tool, childre
           </Link>
         </div>
       </header>
-      <main id={MAIN_CONTENT_ID} className="container mx-auto px-4 pb-16 pt-6 focus-visible:outline-none">
+      <main id={MAIN_CONTENT_ID} className="container mx-auto px-4 pb-16 pt-6 focus-visible:outline-hidden">
         <nav aria-label={t('layout.breadcrumb')} className="text-sm text-muted-foreground print:hidden">
           <ol className="flex flex-wrap items-center gap-1">
             <li><Link to="/" className="hover:text-foreground">DebateLab</Link></li>

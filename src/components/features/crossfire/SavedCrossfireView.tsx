@@ -46,7 +46,7 @@ function TurnReferences({ turnIds }: { turnIds: string[] }) {
         <a
           key={turnId}
           href={`#crossfire-turn-${turnId}`}
-          className="rounded-md border border-primary/25 bg-primary/10 px-2 py-1 text-xs font-semibold text-primary hover:bg-primary/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          className="rounded-md border border-primary/25 bg-primary/10 px-2 py-1 text-xs font-semibold text-primary hover:bg-primary/15 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring"
         >
           {turnId}
         </a>

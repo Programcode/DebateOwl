@@ -229,7 +229,7 @@ export function SparringRound({
           {judging && !judgingError && judgingSections.length > 0 ? (
             <LiveToolRun label={t('sparring.round.judgeWeighing', 'Judge is weighing the round')} live={liveJudging ?? {}} sections={judgingSections} />
           ) : judging ? (
-          <Card className="border-primary/20 bg-primary/[0.025]" aria-busy={judging && !judgingError}>
+          <Card className="border-primary/20 bg-primary/2.5" aria-busy={judging && !judgingError}>
               <CardContent className="flex min-h-[240px] flex-col items-center justify-center p-8 text-center">
                 {judgingError ? (
                   <>
@@ -309,7 +309,7 @@ export function SparringRound({
                   <p className="mt-3 whitespace-pre-wrap text-sm leading-7 text-foreground/90">{liveSpeech}<LiveCaret /></p>
                 </article>
               ) : (
-                <Card className="border-primary/20 bg-primary/[0.025]">
+                <Card className="border-primary/20 bg-primary/2.5">
                   <CardContent className="flex min-h-[240px] flex-col items-center justify-center p-8 text-center">
                     {aiError ? (
                       <>

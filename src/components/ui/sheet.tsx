@@ -78,7 +78,7 @@ const SheetContent = React.forwardRef<React.ElementRef<typeof SheetPrimitive.Con
     const { t } = useTranslation();
     const drawer = React.useContext(SheetDrawerContext);
     const close = (
-      <SheetPrimitive.Close className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity data-[state=open]:bg-secondary hover:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none pointer-coarse:after:absolute pointer-coarse:after:-inset-3.5">
+      <SheetPrimitive.Close className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity data-[state=open]:bg-secondary hover:opacity-100 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none pointer-coarse:after:absolute pointer-coarse:after:-inset-3.5">
         <X className="h-4 w-4" />
         <span className="sr-only">{t('common.close')}</span>
       </SheetPrimitive.Close>
@@ -94,7 +94,7 @@ const SheetContent = React.forwardRef<React.ElementRef<typeof SheetPrimitive.Con
               "fixed inset-x-0 bottom-0 z-50 flex max-h-[85dvh] flex-col rounded-t-xl border-t bg-background shadow-lg",
               className,
               // Whatever width the side sheet asked for, the bottom sheet spans the screen.
-              "inset-x-0 w-full max-w-none pb-[var(--native-safe-bottom,0px)]",
+              "inset-x-0 w-full max-w-none pb-(--native-safe-bottom,0px)",
             )}
             {...props}
           >

@@ -76,8 +76,8 @@ export function useDebateMotionGate(options: { disabled?: boolean } = {}): {
           </DialogTitle>
           <DialogDescription asChild>
             <div className="space-y-2">
-              <p className="break-words border-l-2 border-primary pl-3 text-left font-medium text-foreground">{pending?.motion}</p>
-              <p className="break-words">
+              <p className="wrap-break-word border-l-2 border-primary pl-3 text-left font-medium text-foreground">{pending?.motion}</p>
+              <p className="wrap-break-word">
                 {current
                   ? t('debate.mismatchDesc', { motion: current.motion, defaultValue: 'Your Current Debate is “{{motion}}”.' })
                   : t('debate.offerDesc', 'A debate keeps this motion, its sources, and your results together, and every tool uses it.')}

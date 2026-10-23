@@ -23,7 +23,7 @@ export function SkipLink() {
         target.focus({ preventScroll: true });
         target.scrollIntoView({ block: 'start' });
       }}
-      className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[100] focus:inline-flex focus:min-h-11 focus:items-center focus:rounded-md focus:bg-background focus:px-4 focus:text-sm focus:font-medium focus:text-foreground focus:shadow-lg focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:ring-offset-background"
+      className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-100 focus:inline-flex focus:min-h-11 focus:items-center focus:rounded-md focus:bg-background focus:px-4 focus:text-sm focus:font-medium focus:text-foreground focus:shadow-lg focus:outline-hidden focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:ring-offset-background"
     >
       {t('common.skipToContent', 'Skip to main content')}
     </a>

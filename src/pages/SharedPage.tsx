@@ -58,7 +58,7 @@ function renderSharedResult(item: SharedItem): ReactNode | null {
 function PlainValue({ value }: { value: unknown }): ReactNode {
     if (value === null || value === undefined || value === '') return null;
     if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
-        return <p className="whitespace-pre-wrap break-words">{String(value)}</p>;
+        return <p className="whitespace-pre-wrap wrap-break-word">{String(value)}</p>;
     }
     if (Array.isArray(value)) {
         return (
@@ -170,7 +170,7 @@ export default function SharedPage() {
     return (
         <PublicPageShell className="max-w-4xl">
             <header className="mb-6 space-y-2">
-                <h1 className="break-words text-3xl font-bold leading-tight tracking-tight">{item.title || t('sharedPage.title')}</h1>
+                <h1 className="wrap-break-word text-3xl font-bold leading-tight tracking-tight">{item.title || t('sharedPage.title')}</h1>
                 <p className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
                     <Badge variant="secondary">{item.item_type}</Badge>
                     {t('sharedPage.sharedOn')} {formatEuropeanDate(item.created_at)}

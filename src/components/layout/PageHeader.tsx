@@ -22,7 +22,7 @@ export function PageHeader({ title, eyebrow, meta, actions, icon, className, tit
         {eyebrow && <p className="text-sm font-medium text-muted-foreground">{eyebrow}</p>}
         <div className="flex items-center gap-3">
           {icon && <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary [&_svg]:h-5 [&_svg]:w-5">{icon}</span>}
-          <h1 className="min-w-0 break-words text-3xl font-bold leading-tight tracking-tight text-foreground" data-testid={titleTestId}>{title}</h1>
+          <h1 className="min-w-0 wrap-break-word text-3xl font-bold leading-tight tracking-tight text-foreground" data-testid={titleTestId}>{title}</h1>
         </div>
         {meta && <div className="text-sm text-muted-foreground">{meta}</div>}
       </div>
