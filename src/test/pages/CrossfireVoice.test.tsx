@@ -38,6 +38,10 @@ vi.mock('@/lib/ai/client', () => ({
   isAIModelRestrictionError: () => false,
 }));
 
+vi.mock('@/hooks/use-subscription', () => ({
+  useSubscription: () => ({ remainingToday: null as number | null, dailyLimit: 5 }),
+}));
+
 vi.mock('@/hooks/use-session-quota', () => ({
   useSessionQuota: () => ({ units: null as number | null, remaining: null as number | null, blocked: null as string | null, checkBeforeStart: async (): Promise<null> => null }),
 }));

@@ -2,8 +2,9 @@
 import { Component, Suspense, lazy, useEffect, useRef, useState, type ComponentType, type ErrorInfo, type ReactNode } from "react";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, useLocation, useNavigationType } from "react-router-dom";
+import { QueryClientProvider } from "@tanstack/react-query";
+import { queryClient } from "@/lib/query-client";
+import { BrowserRouter, Navigate, Routes, Route, useLocation, useNavigationType } from "react-router-dom";
 import { MotionConfig } from "framer-motion";
 import { AuthProvider, useAuth } from "@/lib/supabase/AuthProvider";
 import { RequireAuth } from "@/components/auth/RequireAuth";
@@ -78,7 +79,6 @@ const AppLayout = lazy(() => {
 const OnboardingTour = lazy(() => import("@/components/features/onboarding/OnboardingTour")
   .then(({ OnboardingTour: Tour }) => ({ default: Tour })));
 
-const queryClient = new QueryClient();
 // TanStack Query refetches after an `offline` then `online` pair, but a page
 // opened offline never sees `offline`. Retry whatever failed once the
 // connection returns, such as Settings' admin-role check.
@@ -366,6 +366,8 @@ function AppRoutes() {
             <Route path="/app/sparring" element={<RouteContent><SparringPage /></RouteContent>} />
             <Route path="/app/flowchart" element={<RouteContent><FlowchartPage /></RouteContent>} />
             <Route path="/app/settings" element={<RouteContent><SettingsPage /></RouteContent>} />
+            {/* Billing lives in Settings (QB-12). */}
+            <Route path="/app/billing" element={<Navigate to="/app/settings#subscription" replace />} />
             <Route path="/app/admin" element={<RouteContent><AdminPage /></RouteContent>} />
           </Route>
           <Route path="*" element={<RouteContent><NotFound /></RouteContent>} />

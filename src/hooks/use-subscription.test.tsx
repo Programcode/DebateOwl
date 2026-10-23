@@ -13,8 +13,8 @@ const ACTIVE_TRIAL: Record<string, unknown> = { subscription_tier: 'trial', dail
 let settingsRow: Record<string, unknown> = ACTIVE_TRIAL;
 let subscriptionRows: Record<string, unknown>[] = [];
 
-// ai_usage_today: the server's counter. Missing (an older server) by default.
-let usageToday: { data: number | null; error: { message: string } | null } = { data: null, error: { message: 'function not found' } };
+// ai_usage_today: the server's weighted counter, the only source of the count.
+let usageToday: { data: number | null; error: { message: string } | null } = { data: 1, error: null };
 
 function builder(table: string) {
   let column = '';
@@ -66,7 +66,7 @@ describe('useSubscription rate limits', () => {
   beforeEach(() => {
     orders.length = 0;
     rateLimitResult = { data: { limit_value: 12 }, error: null };
-    usageToday = { data: null, error: { message: 'function not found' } };
+    usageToday = { data: 1, error: null };
     settingsRow = ACTIVE_TRIAL;
     subscriptionRows = [];
   });
@@ -102,6 +102,16 @@ describe('useSubscription rate limits', () => {
     await waitFor(() => expect(result.current.loading).toBe(false));
     expect(result.current.dailyUsed).toBe(3);
     expect(result.current.remainingToday).toBe(9);
+  });
+
+  // QB-03: Settings counted logged ai_requests rows when the counter could not
+  // be read, a number the server does not enforce. Unknown is shown as nothing.
+  it('leaves the count unknown when the counter cannot be read, instead of counting rows', async () => {
+    usageToday = { data: null, error: { message: 'function not found' } };
+    const { result } = renderHook(() => useSubscription(), { wrapper });
+    await waitFor(() => expect(result.current.loading).toBe(false));
+    expect(result.current.dailyLimit).toBe(12);
+    expect(result.current.remainingToday).toBeNull();
   });
 });
 

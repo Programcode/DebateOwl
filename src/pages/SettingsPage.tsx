@@ -1,7 +1,7 @@
 // src/pages/SettingsPage.tsx
 import { useEffect, useRef, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Settings, Lock, Trash2, Crown, Shield, Download, UserX } from 'lucide-react';
 import type { User } from '@supabase/supabase-js';
@@ -29,6 +29,7 @@ import { redirectToPortal } from '@/lib/stripe';
 import { deleteAccount, downloadAccountData } from '@/lib/account';
 import { PricingModal } from '@/components/features/subscription/PricingModal';
 import { SubscriptionStatus } from '@/components/features/subscription/SubscriptionStatus';
+import { DailyUsage } from '@/components/features/subscription/DailyUsage';
 import { EnvironmentSwitcher } from '@/components/features/settings/EnvironmentSwitcher';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
@@ -55,20 +56,13 @@ function signInMethodKey(user: User | null): string | null {
   return null;
 }
 
-/** The next midnight UTC, when the daily AI requests refresh, on the reader's clock. */
-function dailyResetTime(locale: string): string {
-  const now = new Date();
-  const reset = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1));
-  return reset.toLocaleTimeString(locale, { hour: 'numeric', minute: '2-digit' });
-}
-
 export default function SettingsPage() {
   const { language, setLanguage, outputLanguage, setOutputLanguage, theme, setTheme } = useSettingsStore();
   const { clearSession, clearAllData } = useSessionStore();
   const resetSparringLocalData = useSparringStore((state) => state.resetLocalData);
   const { user, signOut } = useAuth();
   const { toast } = useToast();
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   const signInMethod = signInMethodKey(user);
   const subscription = useSubscription();
   const [pricingOpen, setPricingOpen] = useState(false);
@@ -82,6 +76,7 @@ export default function SettingsPage() {
   const [deletingData, setDeletingData] = useState(false);
   const [signingOut, setSigningOut] = useState(false);
   const navigate = useNavigate();
+  const { hash } = useLocation();
   const [searchParams, setSearchParams] = useSearchParams();
   const checkout = searchParams.get('checkout');
   const refreshSubscription = useRef(subscription.refresh);
@@ -121,6 +116,12 @@ export default function SettingsPage() {
     }, CHECKOUT_CONFIRM_INTERVAL_MS);
     return () => window.clearTimeout(timer);
   }, [checkout, checkoutPoll, searchParams, setSearchParams, subscription.loading, subscription.tier, t, toast]);
+  // /app/billing lands here (QB-12). A router navigation does not scroll to
+  // the hash by itself.
+  useEffect(() => {
+    if (hash === '#subscription') document.getElementById('subscription')?.scrollIntoView({ block: 'start' });
+  }, [hash]);
+
   // Must match deletionConfirmation in supabase/functions/account/index.ts.
   const expectedAccountConfirmation = user?.email || 'DELETE';
 
@@ -244,7 +245,7 @@ export default function SettingsPage() {
         <PageHeader className="mb-8" icon={<Settings />} title={t('settings.title')} />
 
         {/* Subscription Status */}
-        <Card data-testid="subscription-card" className="mb-8 border-primary/20">
+        <Card id="subscription" data-testid="subscription-card" className="mb-8 scroll-mt-20 border-primary/20">
           <CardHeader>
             <div className="flex items-center gap-2">
               <Crown className="h-5 w-5 text-amber-500" />
@@ -252,10 +253,18 @@ export default function SettingsPage() {
             </div>
           </CardHeader>
           <CardContent className="space-y-4">
-            {subscription.loading || confirmingCheckout ? (
-              <p role="status" className="text-sm text-muted-foreground">
-                {confirmingCheckout ? t('settings.confirmingSubscription') : t('settings.loading')}
-              </p>
+            {confirmingCheckout ? (
+              <p role="status" className="text-sm text-muted-foreground">{t('settings.confirmingSubscription')}</p>
+            ) : subscription.loading ? (
+              // The card's shape while the plan loads, not a long "Loading…" (ST-03).
+              <div data-testid="subscription-loading" className="space-y-3">
+                <div className="flex items-center justify-between gap-4" aria-hidden="true">
+                  <div className="h-6 w-28 animate-pulse rounded-full bg-muted" />
+                  <div className="h-9 w-36 animate-pulse rounded-md bg-muted" />
+                </div>
+                <div className="h-4 w-3/4 animate-pulse rounded bg-muted" aria-hidden="true" />
+                <span className="sr-only" role="status">{t('settings.loading')}</span>
+              </div>
             ) : (
               <>
                 <SubscriptionStatus
@@ -269,15 +278,7 @@ export default function SettingsPage() {
                   onManage={() => void handleManageSubscription()}
                   onUpgrade={() => setPricingOpen(true)}
                 />
-                {subscription.remainingToday !== null && subscription.dailyLimit > 0 && (
-                  <p data-testid="daily-usage" className="text-sm text-muted-foreground">
-                    {t('dailyLimit.usage', {
-                      used: Math.min(subscription.dailyUsed, subscription.dailyLimit),
-                      limit: subscription.dailyLimit,
-                      time: dailyResetTime(i18n.language),
-                    })}
-                  </p>
-                )}
+                <DailyUsage showReset />
               </>
             )}
           </CardContent>
@@ -346,10 +347,11 @@ export default function SettingsPage() {
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="flex items-center justify-between gap-3">
-              {/* A long email wraps instead of pushing Sign out off a phone screen. */}
+              {/* A long email is cut short, whole in its tooltip, instead of
+                  breaking mid-word or pushing Sign out off a phone screen (ST-03). */}
               <div className="min-w-0">
                 <p className="text-sm text-muted-foreground">{t('settings.signedInAs')}</p>
-                <p className="font-medium break-all">{user?.email || t('settings.unknownUser')}</p>
+                <p className="truncate font-medium" title={user?.email || undefined}>{user?.email || t('settings.unknownUser')}</p>
                 {signInMethod && <p data-testid="sign-in-method" className="text-xs text-muted-foreground">{t(signInMethod)}</p>}
               </div>
               <Button variant="outline" className="shrink-0" onClick={handleSignOut} disabled={signingOut}>
@@ -402,7 +404,7 @@ export default function SettingsPage() {
         <Card className="border-destructive/20 bg-destructive/5 mt-8">
           <CardHeader>
             <CardTitle className="text-destructive">{t('settings.dangerZone')}</CardTitle>
-            <CardDescription>
+            <CardDescription className="wrap-break-word">
               {t('settings.dangerDesc', { email: user?.email })}
             </CardDescription>
           </CardHeader>

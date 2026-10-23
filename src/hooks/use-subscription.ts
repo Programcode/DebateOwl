@@ -149,29 +149,13 @@ async function fetchSubscription(userId: string): Promise<SubscriptionSnapshot> 
       else if (typeof ownLimit?.limit_value === 'number') snapshot.dailyLimit = ownLimit.limit_value;
     }
 
-    // The server's own counter: model-weighted units, one charge per Crossfire
-    // or Sparring round, refunds given back.
+    // The server's own counter (daily_usage_counters through ai_usage_today):
+    // model-weighted units, one charge per Crossfire or Sparring round, refunds
+    // given back. Counting logged rows would disagree with what the server
+    // enforces, so an unreadable counter leaves the count unknown (QB-03).
     const counted = await readAIUsageToday();
-    if (counted !== null) {
-      return { ...snapshot, dailyUsed: counted, usageKnown: limitKnown && Boolean(data) };
-    }
-
-    // A server from before ai_usage_today: count today's usage rows. Refused
-    // calls and the jev_* helper steps inside a call log rows too, but use no quota.
-    const todayStart = new Date();
-    todayStart.setUTCHours(0, 0, 0, 0);
-    const { count, error: usageError } = await supabase
-      .from('ai_requests')
-      .select('*', { count: 'exact', head: true })
-      .eq('user_id', userId)
-      .gte('created_at', todayStart.toISOString())
-      .neq('status', 'rate_limited')
-      .not('feature', 'like', 'jev_%');
-    if (usageError) {
-      console.warn('[useSubscription] Failed to load daily usage:', usageError.message);
-    }
-
-    return { ...snapshot, dailyUsed: usageError ? 0 : count || 0, usageKnown: !usageError && limitKnown && Boolean(data) };
+    if (counted === null) return { ...snapshot, usageKnown: false };
+    return { ...snapshot, dailyUsed: counted, usageKnown: limitKnown && Boolean(data) };
   } catch (error) {
     console.warn('[useSubscription] Failed to load:', error);
     throw error;

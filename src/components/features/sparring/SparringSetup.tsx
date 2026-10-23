@@ -24,6 +24,8 @@ import type { SparringDifficulty, SparringFormat, SparringSide } from '@/lib/ai/
 import { VoiceModeToggle } from '@/components/features/voice/VoiceModeToggle';
 import { useVoiceAvailability } from '@/lib/voice/availability';
 import { SessionCostNote } from '@/components/features/subscription/SessionCostNote';
+import { DailyUsage } from '@/components/features/subscription/DailyUsage';
+import { shortfallMessage } from '@/lib/ai/limit-message';
 
 export interface SparringSetupValues {
   motion: string;
@@ -91,7 +93,7 @@ export function SparringSetup({ onStart, roundCost = null, remainingRequests = n
 
   return (
     <div className="mx-auto w-full max-w-6xl space-y-6">
-      <PageHeader className="mb-0" title={t('nav.sparring', 'Sparring')} />
+      <PageHeader className="mb-0" title={t('nav.sparring', 'Sparring')} meta={<DailyUsage />} />
       {banner}
 
       <form onSubmit={handleSubmit} className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_300px]">
@@ -272,9 +274,8 @@ export function SparringSetup({ onStart, roundCost = null, remainingRequests = n
               </Button>
               {requestShortfall && (
                 <p data-testid="sparring-request-shortfall" role="status" className="rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-xs leading-5 text-amber-800 dark:text-amber-200">
-                  {remainingRequests === 0
-                    ? t('dailyLimit.sparringNone')
-                    : t('dailyLimit.sparringShort', { needed: cost, remaining: remainingRequests })}
+                  {/* The server's refusal when it answered, else the same words from the browser's count (QB-06). */}
+                  {blockedReason ?? shortfallMessage(cost, remainingRequests)}
                 </p>
               )}
               {/* The shortfall note above already explains a day that is used up. */}
