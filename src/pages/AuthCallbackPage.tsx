@@ -29,10 +29,12 @@ export default function AuthCallbackPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center gap-3 bg-background text-muted-foreground" role="status" aria-live="polite">
-        <Loader2 className="h-6 w-6 animate-spin text-primary" aria-hidden="true" />
-        <span>{t('login.finishingSignIn', 'Signing you in…')}</span>
-      </div>
+      <main className="min-h-screen flex items-center justify-center bg-background text-muted-foreground">
+        <div className="flex items-center gap-3" role="status" aria-live="polite">
+          <Loader2 className="h-6 w-6 animate-spin text-primary" aria-hidden="true" />
+          <span>{t('login.finishingSignIn', 'Signing you in…')}</span>
+        </div>
+      </main>
     );
   }
 
@@ -41,7 +43,8 @@ export default function AuthCallbackPage() {
   // Checked before `user`: a session this browser already had must not hide it.
   if (callbackError === 'timed-out') {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center gap-4 bg-background p-6 text-center">
+      <main className="min-h-screen flex flex-col items-center justify-center gap-4 bg-background p-6 text-center">
+        <h1 className="text-xl font-semibold">{t('login.title')}</h1>
         <p className="max-w-sm text-sm" role="alert">{t('login.errors.callbackTimedOut')}</p>
         <div className="flex flex-wrap justify-center gap-2">
           <Button onClick={() => window.location.reload()}>{t('login.retrySignIn')}</Button>
@@ -49,7 +52,7 @@ export default function AuthCallbackPage() {
             <Link to="/login" state={{ from: { pathname: next } }} replace>{t('login.backToSignIn')}</Link>
           </Button>
         </div>
-      </div>
+      </main>
     );
   }
 

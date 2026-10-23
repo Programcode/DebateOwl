@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { AuthApiError } from '@supabase/supabase-js';
@@ -18,6 +18,9 @@ vi.mock('@/lib/supabase/AuthProvider', () => ({
     signInWithDemoCode: vi.fn(),
   }),
 }));
+
+// Each test sends to the same address; a stored resend cooldown would skip the send.
+beforeEach(() => sessionStorage.clear());
 
 async function requestCode() {
   render(<MemoryRouter><LoginPage /></MemoryRouter>);
