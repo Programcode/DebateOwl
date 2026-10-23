@@ -24,6 +24,49 @@ const DRAFT_INTERVAL_MS = 50;
  */
 export const LIVE_STREAM_DRAIN_MS = 2_000;
 
+/**
+ * The function sends a keepalive every 15 s. Three missed in a row means the
+ * stream is gone even if the connection still looks open, as when a proxy
+ * holds the tail of a response.
+ */
+export const LIVE_STREAM_STALL_MS = 45_000;
+
+/**
+ * Why a live stream ended without its answer: the body ended, the
+ * connection dropped, nothing arrived for LIVE_STREAM_STALL_MS, or the
+ * `result` event arrived but could not be read. The caller can still recover
+ * the stored result (run-recovery.ts) before it reports the failure.
+ */
+export type LiveStreamFailure = 'ended' | 'dropped' | 'stalled' | 'unreadable';
+
+export class LiveStreamError extends Error {
+  readonly reason: LiveStreamFailure;
+  /** The read error behind a dropped stream. */
+  readonly cause?: unknown;
+
+  constructor(reason: LiveStreamFailure, cause?: unknown) {
+    super(reason === 'unreadable' ? 'The answer arrived but could not be read.' : 'The response ended before the answer was complete.');
+    this.name = 'LiveStreamError';
+    this.reason = reason;
+    this.cause = cause;
+  }
+}
+
+/** Reads one chunk, or 'stalled' when nothing arrives in time. */
+async function readWithin(reader: ReadableStreamDefaultReader<Uint8Array>, ms: number): Promise<ReadableStreamReadResult<Uint8Array> | 'stalled'> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  try {
+    return await Promise.race([
+      reader.read(),
+      new Promise<'stalled'>((resolve) => {
+        timer = setTimeout(() => resolve('stalled'), ms);
+      }),
+    ]);
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
+}
+
 function isPhase(value: unknown): value is LivePhase {
   return value === 'research' || value === 'writing' || value === 'checking';
 }
@@ -83,6 +126,7 @@ export async function readLiveResponse<T>(
   let shown = '';
   let timer: ReturnType<typeof setTimeout> | null = null;
   let result: { status: number; body: unknown } | null = null;
+  let unreadableResult = false;
 
   const showDraft = () => {
     if (timer) clearTimeout(timer);
@@ -112,8 +156,11 @@ export async function readLiveResponse<T>(
         // cannot arrive after it and look like writing again.
         showDraft();
         live.onPhase?.(payload.phase);
-      } else if (event === 'result' && typeof payload.status === 'number') {
-        result = { status: payload.status, body: payload.body };
+      } else if (event === 'result') {
+        // A result that is not the {status, body} the function sends was
+        // damaged on the way; the stored copy may still be read.
+        if (typeof payload.status === 'number') result = { status: payload.status, body: payload.body };
+        else unreadableResult = true;
       }
     }
   };
@@ -136,20 +183,34 @@ export async function readLiveResponse<T>(
     if (!streamEnded) reader.cancel().catch((): undefined => undefined);
   };
 
+  let failure: LiveStreamError | null = null;
   try {
-    while (!result) {
+    while (!result && !failure) {
       if (signal?.aborted) throw new DOMException('The request was canceled.', 'AbortError');
-      const { done, value } = await reader.read();
+      let chunk: Awaited<ReturnType<typeof readWithin>>;
+      try {
+        chunk = await readWithin(reader, LIVE_STREAM_STALL_MS);
+      } catch (error) {
+        if (signal?.aborted) throw new DOMException('The request was canceled.', 'AbortError');
+        // The connection dropped (ERR_CONNECTION_CLOSED, network change).
+        failure = new LiveStreamError('dropped', error);
+        break;
+      }
       if (signal?.aborted) throw new DOMException('The request was canceled.', 'AbortError');
-      if (done) {
+      if (chunk === 'stalled') {
+        failure = new LiveStreamError('stalled');
+        break;
+      }
+      if (chunk.done) {
         streamEnded = true;
         break;
       }
-      const parsed = consumeSSEChunk(buffer, decoder.decode(value, { stream: true }));
+      const parsed = consumeSSEChunk(buffer, decoder.decode(chunk.value, { stream: true }));
       buffer = parsed.buffer;
       handle(parsed.events);
     }
-    if (!result) handle(consumeSSEChunk('', `${buffer}${decoder.decode()}\n\n`).events);
+    // A last event without its closing blank line still counts.
+    if (!result && !failure) handle(consumeSSEChunk('', `${buffer}${decoder.decode()}\n\n`).events);
 
     // Hand the answer back before the tail, so a slow close cannot delay the UI.
     if (result && !streamEnded) {
@@ -168,7 +229,7 @@ export async function readLiveResponse<T>(
   }
 
   const final = result as { status: number; body: unknown } | null;
-  if (!final) return new FunctionsFetchError(new Error('The response ended before the answer was complete.'));
+  if (!final) return new FunctionsFetchError(failure ?? new LiveStreamError(unreadableResult ? 'unreadable' : 'ended'));
   if (final.status >= 200 && final.status < 300) return final.body as T;
   // The same error a plain request would have produced, so error mapping
   // (limits, model access, provider failures) does not change.

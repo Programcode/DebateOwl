@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { FunctionsFetchError, FunctionsHttpError } from '@supabase/supabase-js';
-import { LIVE_STREAM_DRAIN_MS, readLiveResponse } from '@/lib/ai/live';
+import { LIVE_STREAM_DRAIN_MS, LIVE_STREAM_STALL_MS, LiveStreamError, readLiveResponse } from '@/lib/ai/live';
 
 function eventStream(chunks: string[]): Response {
   const encoder = new TextEncoder();
@@ -169,6 +169,56 @@ describe('draining the body after result', () => {
     await vi.advanceTimersByTimeAsync(LIVE_STREAM_DRAIN_MS - 1);
     expect(cancelled).toBe(false);
     await vi.advanceTimersByTimeAsync(1);
+    expect(cancelled).toBe(true);
+  });
+
+  it('reads a large result split across many reads, and one sent without its closing blank line', async () => {
+    const body = { output: { thesis: 'x'.repeat(5_000) }, discoveredSources: [{ title: 'é ünicode ✓', content: 'y'.repeat(20_000) }] };
+    const whole = event('delta', { text: '{"thesis"' }) + event('result', { status: 200, body });
+    // Byte-level splits land inside multi-byte characters too.
+    const bytes = new TextEncoder().encode(whole);
+    const split = new Response(new ReadableStream({
+      start(controller) {
+        for (let index = 0; index < bytes.length; index += 997) controller.enqueue(bytes.slice(index, index + 997));
+        controller.close();
+      },
+    }), { headers: { 'Content-Type': 'text/event-stream' } });
+    await expect(readLiveResponse(split, { onDraft: () => {} })).resolves.toEqual(body);
+
+    const unterminated = eventStream([`event: result\ndata: ${JSON.stringify({ status: 200, body })}`]);
+    await expect(readLiveResponse(unterminated, { onDraft: () => {} })).resolves.toEqual(body);
+  });
+
+  it('tells a damaged result, a dropped connection, and a silent stream apart instead of throwing', async () => {
+    const damaged = await readLiveResponse(eventStream(['event: result\ndata: {"status":200,"body":{"out\n\n']), { onDraft: () => {} });
+    expect(damaged).toBeInstanceOf(FunctionsFetchError);
+    expect((damaged as FunctionsFetchError).context).toMatchObject({ name: 'LiveStreamError', reason: 'unreadable' });
+
+    const encoder = new TextEncoder();
+    const dropped = new Response(new ReadableStream({
+      start(controller) {
+        controller.enqueue(encoder.encode(event('delta', { text: '{"a": "b' })));
+        setTimeout(() => controller.error(new TypeError('network error')), 5);
+      },
+    }), { headers: { 'Content-Type': 'text/event-stream' } });
+    const droppedError = await readLiveResponse(dropped, { onDraft: () => {} });
+    expect((droppedError as FunctionsFetchError).context).toBeInstanceOf(LiveStreamError);
+    expect((droppedError as FunctionsFetchError).context).toMatchObject({ reason: 'dropped' });
+
+    vi.useFakeTimers();
+    let cancelled = false;
+    const silent = new Response(new ReadableStream({
+      start(controller) {
+        controller.enqueue(encoder.encode(event('delta', { text: '{"a"' })));
+      },
+      cancel() {
+        cancelled = true;
+      },
+    }), { headers: { 'Content-Type': 'text/event-stream' } });
+    const pending = readLiveResponse(silent, { onDraft: () => {} });
+    await vi.advanceTimersByTimeAsync(LIVE_STREAM_STALL_MS);
+    const stalled = await pending;
+    expect((stalled as FunctionsFetchError).context).toMatchObject({ reason: 'stalled' });
     expect(cancelled).toBe(true);
   });
 });

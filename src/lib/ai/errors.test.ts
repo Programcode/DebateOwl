@@ -37,6 +37,16 @@ describe('classifyAIError', () => {
     expect(classifyAIError(new TimeoutError())).toMatchObject({ errorName: 'TimeoutError', shouldCaptureException: true });
   });
 
+  it('keeps transient provider failures out of exception reports but still reports the rest', () => {
+    const mapped = (payload: Record<string, unknown>, status: number) =>
+      classifyAIError(mapAIError({ message: 'failed', context: { status } }, 'req_1', 'openrouter', 'auto-pro', payload));
+    // A Claude outage, and a failure the server marked worth retrying.
+    expect(mapped({ error: 'Anthropic Claude is temporarily unavailable.', code: 'provider_unavailable' }, 503)).toMatchObject({ errorName: 'AIProviderError', shouldCaptureException: false });
+    expect(mapped({ error: 'AI request failed. Please try again.', code: 'provider_error', retryable: true }, 500)).toMatchObject({ errorName: 'AIProviderError', shouldCaptureException: false });
+    // An answer that failed validation may be a bug.
+    expect(mapped({ error: 'AI request failed. Please try again.', code: 'provider_error' }, 500)).toMatchObject({ errorName: 'AIProviderError', shouldCaptureException: true });
+  });
+
   it('recognizes the other browser network messages and an offline navigator', () => {
     expect(classifyAIError(new TypeError('NetworkError when attempting to fetch resource')).errorName).toBe('AINetworkError');
     expect(classifyAIError(new TypeError('Load failed')).errorName).toBe('AINetworkError');

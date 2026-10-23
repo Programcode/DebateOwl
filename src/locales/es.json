@@ -2110,6 +2110,8 @@
       "turnOf": "Turno {{current}} de {{total}}",
       "preparingResult": "Preparando tu resultado",
       "judgeReading": "El juez está leyendo la transcripción.",
+      "judgeFailed": "El juez no pudo terminar de puntuar.",
+      "scoringStopped": "Puntuación detenida",
       "scoring": "Puntuando la ronda",
       "noTimer": "No hay cronómetro durante la evaluación",
       "timeRemaining": "{{time}} restantes",

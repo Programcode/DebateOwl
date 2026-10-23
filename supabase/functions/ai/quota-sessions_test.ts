@@ -232,14 +232,16 @@ Deno.test("a failed call refunds the session only when it was the call that paid
   }
 });
 
-Deno.test("a streamed run the browser cancels is refunded only before a usable answer", async () => {
+Deno.test("a streamed run the browser cancels before the answer is whole is refunded, however much streamed", async () => {
   const originalError = console.error;
   console.error = () => undefined;
   install();
   try {
+    // A half-written structured answer is a preview, not a result (the
+    // 200-character rule still holds for ai-stream's plain-text Ask).
     for (const [label, delivered, refunded] of [
       ["cancelled after a few characters", 40, true],
-      ["cancelled after a real answer", REFUND_MAX_DELIVERED_CHARS + 60, false],
+      ["cancelled after most of an answer", REFUND_MAX_DELIVERED_CHARS + 60, true],
     ] as const) {
       reset({ hangAfter: `{"response":"${"x".repeat(delivered)}` });
       const controller = new AbortController();

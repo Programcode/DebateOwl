@@ -64,7 +64,6 @@ import {
   type RateLimitResult,
   refundQuotaReservation,
 } from "../_shared/entitlements.ts";
-import { REFUND_MAX_DELIVERED_CHARS } from "../_shared/usage-limits.ts";
 import {
   CLAUDE_UNAVAILABLE_CODE,
   CLAUDE_UNAVAILABLE_MESSAGE,
@@ -98,10 +97,13 @@ import {
   callAI,
   createRequestBudgetSignal,
   type GenerationStream,
+  isIncompleteProviderStream,
   modelForRequest,
   OPENROUTER_PROVIDER,
+  REQUEST_BUDGET_MS,
 } from "./provider.ts";
 import { streamFeatureResponse } from "./stream.ts";
+import { createRunResultRecorder, parseResultKey, type RunResultsDatabase } from "./run-results.ts";
 import {
   isRecord,
   MAX_REQUEST_BODY_BYTES,
@@ -138,8 +140,14 @@ export {
   MAX_CROSSFIRE_TURN_CHARS,
 } from "./features/crossfire-input.ts";
 
+// A streamed run that has not answered this long after its request arrived
+// is answered with a timeout: past the provider budget, before Supabase's
+// 150 s wall clock cuts the connection.
+const STREAM_DEADLINE_MS = REQUEST_BUDGET_MS + 12_000;
+
 export async function handleRequest(req: Request): Promise<Response> {
   const requestId = generateRequestId();
+  const receivedAt = Date.now();
   const corsHeaders = getCorsHeaders(req.headers.get("origin"));
 
   if (req.method === "OPTIONS") {
@@ -212,6 +220,10 @@ export async function handleRequest(req: Request): Promise<Response> {
   // Live generation: answer with Server-Sent Events (see stream.ts). Older
   // servers ignore the flag and answer with JSON, which clients also accept.
   const streamRequested = body.stream === true;
+  // The browser's id for a streamed run. With it the final result is kept in
+  // ai_run_results, so a browser that loses the stream can still read it.
+  // Older clients send none and stream as before.
+  const resultKey = streamRequested ? parseResultKey(body.resultKey) : null;
   // The per-user custom system prompt was replaced by each Current Debate's
   // settings and instructions. A customSystemPrompt field from an older
   // client is ignored.
@@ -587,6 +599,12 @@ export async function handleRequest(req: Request): Promise<Response> {
     });
   }
 
+  // Every path that gives the units back goes through this, so a run is
+  // refunded at most once, however its failure is reached.
+  const reservation = rateLimit;
+  let refund: Promise<boolean> | undefined;
+  const refundOnce = () => refund ??= refundQuotaReservation(userId, reservation);
+
   const routingStartedAt = Date.now();
   try {
     const resolution = await resolveModelSelection({
@@ -614,7 +632,8 @@ export async function handleRequest(req: Request): Promise<Response> {
     const message = error instanceof Error ? error.message : "Model routing failed";
     log(requestId, "ERROR", "Model routing failed", { error: message });
     // Nothing ran, so nothing is charged.
-    await refundQuotaReservation(userId, rateLimit);
+    await refundOnce();
+    await logUsage(userId, feature, provider, requestedModel, undefined, undefined, "error", "routing_failed");
     return badRequest(message.includes("Pro") ? message : "Unable to route this request", corsHeaders, message.includes("Pro") ? 403 : 500);
   }
 
@@ -656,7 +675,8 @@ export async function handleRequest(req: Request): Promise<Response> {
       if (rankingUsage) await logUsage(userId, "jev_source_ranking", provider, JEV_MODEL, rankingUsage, undefined, ranked.jevUsage ? "error" : "success", ranked.jevUsage ? "jev_incomplete" : undefined);
     } catch {
       await interruptWorkspaceThread();
-      await refundQuotaReservation(userId, rateLimit);
+      await refundOnce();
+      await logUsage(userId, feature, provider, model, undefined, undefined, "error", "source_ranking_failed");
       return badRequest("Unable to rank sources", corsHeaders, 500);
     }
   }
@@ -745,18 +765,14 @@ export async function handleRequest(req: Request): Promise<Response> {
         ? "WEB RESEARCH RESULTS are attached to this request."
         : undefined,
     });
-  // Characters of model text streamed to the browser. A reset does not take
-  // any back: the student has already read them.
-  let deliveredChars = 0;
   // The streamed answer on screen is complete: the model sent its
   // finish_reason. A repair retry's reset voids it.
   let modelFinished = false;
+  // The handler wrote this run's ai_requests row. Every handler logs it right
+  // before ctx.respond, so a failure after that must not log a second one.
+  let usageLogged = false;
   const countDelivered = (stream?: GenerationStream): GenerationStream | undefined => stream && {
     ...stream,
-    delta: (text) => {
-      deliveredChars += text.length;
-      stream.delta(text);
-    },
     reset: () => {
       modelFinished = false;
       stream.reset();
@@ -790,9 +806,12 @@ export async function handleRequest(req: Request): Promise<Response> {
         markTruncated: () => {
           responseTruncated = true;
         },
-        respond: async (payload) => new Response(JSON.stringify(await successBody(payload)), {
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        }),
+        respond: async (payload) => {
+          usageLogged = true;
+          return new Response(JSON.stringify(await successBody(payload)), {
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        },
       };
 
       switch (feature) {
@@ -846,6 +865,7 @@ export async function handleRequest(req: Request): Promise<Response> {
 
       const latencyMs = Date.now() - startTime;
       await logUsage(userId, feature, provider, model, mergeNormalizedUsage([fallbackResult.usage, ...researchUsageForLog()]), latencyMs);
+      usageLogged = true;
       return new Response(JSON.stringify(await successBody({ output })), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     } catch (err) {
       const message = err instanceof Error ? err.message : "Unknown error";
@@ -885,45 +905,59 @@ export async function handleRequest(req: Request): Promise<Response> {
         mainErrorUsage,
         ...researchUsageForLog(),
       ]);
-      // A run that produced nothing costs nothing: a provider failure, a
-      // response that failed validation, the request budget running out, or
-      // the browser leaving (reload, closed tab, Stop) before the student saw
-      // a usable part of the answer. A run whose answer was saved, or that
-      // streamed REFUND_MAX_DELIVERED_CHARS or more, stays charged, and so
-      // does one whose streamed answer the model had finished, however the
-      // request ended afterwards (a disconnect, a failed read of the usage
-      // trailer): a short answer may already be on screen. A non-streamed
-      // call the browser left after the provider answered stays charged too.
-      const answerFinished = modelFinished || (aborted && Boolean(completedMainUsage));
-      const refundable = !outputSaved && !answerFinished && deliveredChars < REFUND_MAX_DELIVERED_CHARS;
+      // A run the student got nothing from costs nothing: a provider failure,
+      // a response that failed validation, the request budget running out, or
+      // the browser leaving (reload, closed tab, Stop, a dropped connection)
+      // before the answer was whole. Text streamed so far does not count: a
+      // half-written case is a preview, not a result. A run whose answer was
+      // saved stays charged, and so does one the browser left after the model
+      // had finished its answer (it may be on screen, and the student chose
+      // to leave), as does a non-streamed call the browser left after the
+      // provider answered. When the server fails after the model finished,
+      // the student sees an error instead of the answer, so it is refunded.
+      const clientLeft = aborted && !timedOut;
+      const answerKept = clientLeft && (modelFinished || Boolean(completedMainUsage));
+      const refundable = !outputSaved && !answerKept;
       // Refund before answering, so a retry sent straight away sees it.
-      const refunded = refundable && await refundQuotaReservation(userId, rateLimit);
+      const refunded = refundable && await refundOnce();
       // The weekly cap counts real spend, so a refunded run's cost (BYOK
       // provider charges included) still counts. Only a Claude refusal that cost nothing is logged at 0.
       const freeRefusal = claudeUnavailable && !aborted && !err.afterOutput && !completedMainUsage && !usageError?.completedUsage &&
         !researchDidWork && !researchAccountingIncomplete && !chargedAgainstCap(errorUsage);
-      await logUsage(
-        userId,
-        feature,
-        provider,
-        model,
-        freeRefusal ? excludeFromCap(errorUsage) : errorUsage,
-        latencyMs,
-        aborted && !timedOut ? "cancelled" : "error",
-        claudeUnavailable ? "claude_unavailable" : timedOut ? "timeout" : aborted ? "aborted" : "provider_error",
-      );
+      // One row per run: a handler that already logged its success row (the
+      // failure came while answering) is not logged again.
+      if (!usageLogged) {
+        await logUsage(
+          userId,
+          feature,
+          provider,
+          model,
+          freeRefusal ? excludeFromCap(errorUsage) : errorUsage,
+          latencyMs,
+          aborted && !timedOut ? "cancelled" : "error",
+          claudeUnavailable ? "claude_unavailable" : timedOut ? "timeout" : aborted ? "aborted" : "provider_error",
+        );
+      }
       // Tells the client to say "You were not charged": the units went back,
       // or this call ran inside a session that had already paid.
       const notCharged = refunded || rateLimit.charged === false ? { charged: false } : {};
+      // A provider outage, a cut-off provider stream, or the time budget is
+      // worth trying again as it is; the browser handles those quietly. Other
+      // failures (an answer that failed validation, a save that failed) may
+      // be bugs and are reported.
+      const retryable = claudeUnavailable || timedOut || isIncompleteProviderStream(err) ? { retryable: true } : {};
       if (claudeUnavailable) {
-        return new Response(JSON.stringify({ error: CLAUDE_UNAVAILABLE_MESSAGE, code: CLAUDE_UNAVAILABLE_CODE, ...notCharged }), { status: CLAUDE_UNAVAILABLE_STATUS, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+        return new Response(JSON.stringify({ error: CLAUDE_UNAVAILABLE_MESSAGE, code: CLAUDE_UNAVAILABLE_CODE, ...notCharged, ...retryable }), { status: CLAUDE_UNAVAILABLE_STATUS, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
-      return new Response(JSON.stringify({ error: "AI request failed. Please try again.", code: "provider_error", ...notCharged }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      return new Response(JSON.stringify({ error: "AI request failed. Please try again.", code: "provider_error", ...notCharged, ...retryable }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
   };
 
   if (!streamRequested) return await runFeature();
-  return streamFeatureResponse(corsHeaders, streamCancel, runFeature);
+  return streamFeatureResponse(corsHeaders, streamCancel, runFeature, {
+    recorder: resultKey ? createRunResultRecorder(supabase as unknown as RunResultsDatabase, userId, feature, resultKey) : undefined,
+    deadlineMs: STREAM_DEADLINE_MS - (Date.now() - receivedAt),
+  });
 }
 
 if (import.meta.main) {

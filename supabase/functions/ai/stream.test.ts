@@ -35,6 +35,8 @@ type ProviderReply = { content: string; finishReason?: string } | { status: numb
 interface Harness {
   providerBodies: Array<Record<string, unknown>>;
   usageRows: Array<Record<string, unknown>>;
+  /** Writes to ai_run_results, in order: the method, the query, the row. */
+  runResultWrites: Array<{ method: string; query: string; row: Record<string, unknown> }>;
   restore: () => void;
 }
 
@@ -58,7 +60,7 @@ function sseBody(content: string, finishReason = "stop"): ReadableStream<Uint8Ar
 
 function install(replies: ProviderReply[]): Harness {
   const originalFetch = globalThis.fetch;
-  const harness: Harness = { providerBodies: [], usageRows: [], restore: () => { globalThis.fetch = originalFetch; } };
+  const harness: Harness = { providerBodies: [], usageRows: [], runResultWrites: [], restore: () => { globalThis.fetch = originalFetch; } };
   globalThis.fetch = (async (input: Request | URL | string, init?: RequestInit) => {
     const url = new URL(input instanceof Request ? input.url : String(input));
     if (url.origin === "https://supabase.test") {
@@ -74,6 +76,10 @@ function install(replies: ProviderReply[]): Harness {
       if (url.pathname.endsWith("/rest/v1/rpc/claim_ai_session_quota")) return jsonResponse([{ allowed: true, charged: true, units: 1, current_count: 1, charge_id: 1 }]);
       if (/\/rest\/v1\/rpc\/refund_(daily_quota|ai_session_quota)$/.test(url.pathname)) return jsonResponse(1);
       if (url.pathname.includes("/rest/v1/global_prompts")) return jsonResponse({ prompt_text: null });
+      if (url.pathname.includes("/rest/v1/ai_run_results")) {
+        harness.runResultWrites.push({ method: init?.method ?? "GET", query: decodeURIComponent(url.search), row: JSON.parse(String(init?.body)) });
+        return new Response(null, { status: 204 });
+      }
       if (url.pathname.includes("/rest/v1/ai_requests")) {
         const row = JSON.parse(String(init?.body));
         harness.usageRows.push(Array.isArray(row) ? row[0] : row);
@@ -121,11 +127,11 @@ const REPLY = JSON.stringify({
   speech: { content: "Free fares sound generous. Who pays for the buses? \"Nobody\" is not an answer.", strategy: "Press the funding gap.", targetedPoints: ["price barrier"] },
 });
 
-function aiRequest(stream: boolean): Request {
+function aiRequest(stream: boolean, extra: Record<string, unknown> = {}): Request {
   return new Request("http://127.0.0.1/functions/v1/ai", {
     method: "POST",
     headers: { Authorization: "Bearer test-user-token", "Content-Type": "application/json" },
-    body: JSON.stringify({ model: "openai/gpt-6-luna", feature: "sparring", input: respondInput, ...(stream ? { stream: true } : {}) }),
+    body: JSON.stringify({ model: "openai/gpt-6-luna", feature: "sparring", input: respondInput, ...(stream ? { stream: true } : {}), ...extra }),
   });
 }
 
@@ -286,4 +292,136 @@ Deno.test("frame overhead does not count against the answer's size cap", async (
   const ignore = { delta: () => {}, reset: () => {}, phase: () => {} };
   const { text } = await readOpenRouterStream(body, ignore, new AbortController().signal);
   assert(text.length === tokens * 5, `the answer was cut: ${text.length}`);
+});
+
+Deno.test("a Claude reply cut off at its cap is continued from where it stopped, not written again", async () => {
+  // Cut where Claude would: mid-string, not on whitespace (a prefill cannot end in it).
+  let cut = 70;
+  while (REPLY[cut - 1] === " ") cut += 1;
+  const cutOff = { content: REPLY.slice(0, cut), finishReason: "length" };
+  const rest = { content: REPLY.slice(cut) };
+  for (const stream of [false, true]) {
+    const harness = install([cutOff, rest]);
+    try {
+      const response = await handleRequest(aiRequest(stream, { model: "anthropic/claude-haiku-5.5" }));
+      let body: { output?: { speech?: { content?: string } } };
+      if (stream) {
+        const events = await readEvents(response);
+        assert(!events.some((event) => event.event === "reset"), "the streamed text was voided instead of continued");
+        const streamed = events.filter((event) => event.event === "delta").map((event) => event.data.text).join("");
+        assert(streamed === REPLY, `the browser saw text twice or lost some: ${streamed}`);
+        const result = events.at(-1);
+        assert(result?.event === "result" && result.data.status === 200, `the continued stream did not succeed: ${JSON.stringify(result)}`);
+        body = result.data.body as typeof body;
+      } else {
+        assert(response.status === 200, `the continued request returned ${response.status}`);
+        body = await response.json();
+      }
+      assert(body.output?.speech?.content?.startsWith("Free fares sound generous."), "the joined reply did not parse into the speech");
+      assert(harness.providerBodies.length === 2, `expected one continuation, got ${harness.providerBodies.length - 1}`);
+      const continuation = harness.providerBodies[1];
+      const messages = continuation.messages as Array<{ role: string; content: unknown }>;
+      assert(messages.at(-1)?.role === "assistant" && messages.at(-1)?.content === REPLY.slice(0, cut), "the cut-off text was not sent as the reply's start");
+      assert(continuation.reasoning === undefined && continuation.response_format === undefined, "a prefill was sent with reasoning or a response format, which Claude rejects");
+      assert(continuation.max_tokens === REPLY_TOKEN_CAPS.sparringSpeech, `unexpected continuation cap: ${continuation.max_tokens}`);
+      const usage = harness.usageRows.find((row) => row.feature === "sparring");
+      assert(usage?.input_tokens === 20 && usage.output_tokens === 10, `both calls were not billed: ${JSON.stringify(usage)}`);
+    } finally {
+      harness.restore();
+    }
+  }
+
+  // A provider that refuses the prefill gets the reply written again, as before.
+  const refused = install([cutOff, { status: 400 }, { content: REPLY }]);
+  try {
+    const events = await readEvents(await handleRequest(aiRequest(true, { model: "anthropic/claude-haiku-5.5" })));
+    assert(events.some((event) => event.event === "reset"), "the restart did not void the cut-off text");
+    assert(events.at(-1)?.event === "result" && events.at(-1)?.data.status === 200, "the restarted run did not succeed");
+    assert(refused.providerBodies.length === 3 && refused.providerBodies[2].reasoning !== undefined, "expected the full restart after the refused continuation");
+  } finally {
+    refused.restore();
+  }
+
+  // A continuation that is cut off too fails the request; there is no third call.
+  const harness = install([cutOff, { content: "still going", finishReason: "length" }, rest]);
+  try {
+    const response = await handleRequest(aiRequest(false, { model: "anthropic/claude-haiku-5.5" }));
+    assert(response.status >= 500, `a twice cut-off reply returned ${response.status}`);
+    assert(harness.providerBodies.length === 2, `expected one continuation, got ${harness.providerBodies.length - 1}`);
+  } finally {
+    harness.restore();
+  }
+});
+
+Deno.test("a streamed run with a result key stores its result before sending it", async () => {
+  const harness = install([{ content: REPLY }]);
+  try {
+    const events = await readEvents(await handleRequest(aiRequest(true, { resultKey: "req_1_abc" })));
+    const result = events.at(-1);
+    assert(result?.event === "result" && result.data.status === 200, "the run did not succeed");
+    const [begin, finish] = harness.runResultWrites;
+    assert(harness.runResultWrites.length === 2, `expected a start and a finish write, got ${JSON.stringify(harness.runResultWrites)}`);
+    assert(begin.method === "POST" && begin.query.includes("on_conflict=user_id,feature"), `the start was not an upsert: ${JSON.stringify(begin)}`);
+    assert(begin.row.result_key === "req_1_abc" && begin.row.status === null && begin.row.user_id === USER, `unexpected start row: ${JSON.stringify(begin.row)}`);
+    assert(finish.method === "PATCH" && finish.query.includes("result_key=eq.req_1_abc"), `the finish could overwrite a newer run: ${JSON.stringify(finish)}`);
+    assert(finish.row.status === 200 && JSON.stringify(finish.row.body) === JSON.stringify(result.data.body), "the stored result is not the one sent");
+  } finally {
+    harness.restore();
+  }
+
+  // Older clients send no key and nothing is stored.
+  const plain = install([{ content: REPLY }]);
+  try {
+    await readEvents(await handleRequest(aiRequest(true)));
+    assert(plain.runResultWrites.length === 0, "a run without a result key was stored");
+  } finally {
+    plain.restore();
+  }
+});
+
+Deno.test("the worker is held until the browser has read the last event", async () => {
+  const registered: Promise<unknown>[] = [];
+  const runtime = globalThis as { EdgeRuntime?: { waitUntil: (promise: Promise<unknown>) => void } };
+  runtime.EdgeRuntime = { waitUntil: (promise) => registered.push(promise) };
+  const harness = install([{ content: REPLY }]);
+  try {
+    const response = await handleRequest(aiRequest(true));
+    assert(registered.length >= 2, `expected the run and the stream registered, got ${registered.length}`);
+    const held = Promise.all(registered);
+    const early = await Promise.race([held.then(() => "released"), new Promise((resolve) => setTimeout(() => resolve("held"), 50))]);
+    assert(early === "held", "the worker was released before the browser read the stream");
+    const events = await readEvents(response);
+    assert(events.at(-1)?.event === "result", "the stream did not end with its result");
+    await held;
+  } finally {
+    delete runtime.EdgeRuntime;
+    harness.restore();
+  }
+});
+
+Deno.test("a run that outlives the stream's deadline ends with a retryable result, stored first", async () => {
+  const { streamFeatureResponse } = await import("./stream.ts");
+  const cancel = new AbortController();
+  let resultSeen = false;
+  const stored: Array<Record<string, unknown>> = [];
+  const response = streamFeatureResponse({}, cancel, (stream) => new Promise<Response>((resolve) => {
+    stream.delta("{\"partial\":");
+    // Like a step that ignores the budget until it is aborted.
+    cancel.signal.addEventListener("abort", () => resolve(new Response("{}", { status: 500 })));
+  }), {
+    deadlineMs: 30,
+    recorder: {
+      begin: async () => {},
+      finish: async (payload) => {
+        assert(!resultSeen, "the result was sent before it was stored");
+        stored.push(payload);
+      },
+    },
+  });
+  const text = await response.text();
+  resultSeen = true;
+  const result = JSON.parse(/event: result\ndata: (.+)\n\n$/.exec(text)?.[1] ?? "null");
+  assert(result?.status === 500 && result.body.retryable === true, `expected a retryable failure, got ${JSON.stringify(result)}`);
+  assert((cancel.signal.reason as { name?: string })?.name === "TimeoutError", "the run was not aborted as a timeout");
+  assert(stored.length === 1 && JSON.stringify(stored[0]) === JSON.stringify(result), "the stored result differs from the sent one");
 });

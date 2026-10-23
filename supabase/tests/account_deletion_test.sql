@@ -111,6 +111,7 @@ INSERT INTO public.ai_requests (user_id, feature, provider, model)
   VALUES ('ac000000-0000-4000-8000-00000000000a', 'brainstorm', 'openrouter', 'model');
 INSERT INTO public.daily_usage_counters (user_id, usage_date) VALUES ('ac000000-0000-4000-8000-00000000000a', current_date);
 INSERT INTO public.ai_quota_sessions (user_id, feature, session_key) VALUES ('ac000000-0000-4000-8000-00000000000a', 'crossfire', 'cf-leaver');
+INSERT INTO public.ai_run_results (user_id, feature, result_key, status, body) VALUES ('ac000000-0000-4000-8000-00000000000a', 'generate', 'req_1_leaver', 200, '{"output":{}}');
 INSERT INTO public.rate_limits (user_id, limit_type, limit_value) VALUES ('ac000000-0000-4000-8000-00000000000a', 'daily', 5);
 INSERT INTO public.api_keys (user_id, provider, key_ciphertext) VALUES ('ac000000-0000-4000-8000-00000000000a', 'openai', 'LEAVER-CIPHERTEXT');
 INSERT INTO public.user_roles (user_id, role) VALUES ('ac000000-0000-4000-8000-00000000000a', 'admin');

@@ -24,6 +24,10 @@ import { HttpError, jsonError, requireUser } from "../_shared/auth.ts";
 import { getCorsHeaders } from "../_shared/cors.ts";
 import { checkRateLimit, logUsage, refundQuotaReservation } from "../_shared/entitlements.ts";
 import { REFUND_MAX_DELIVERED_CHARS } from "../_shared/usage-limits.ts";
+import { keepWorkerAlive } from "../_shared/background.ts";
+
+// After the close, bytes the HTTP layer took still have to reach the socket.
+const STREAM_SETTLE_MS = 1_000;
 import {
   CLAUDE_UNAVAILABLE_CODE,
   CLAUDE_UNAVAILABLE_MESSAGE,
@@ -252,7 +256,9 @@ export async function handleRequest(req: Request): Promise<Response> {
   const startedAt = Date.now();
 
   const stream = new ReadableStream({
-    async start(controller) {
+    // Supabase counts the answer as sent once headers are out and may retire
+    // the worker mid-answer (EarlyDrop) unless the work is registered.
+    start: (controller) => keepWorkerAlive((async () => {
       const encoder = new TextEncoder();
       let accumulated = "";
       let streamUsageRaw: Record<string, unknown> | undefined;
@@ -439,7 +445,7 @@ export async function handleRequest(req: Request): Promise<Response> {
         reader?.releaseLock();
         try { controller.close(); } catch { /* already closed */ }
       }
-    },
+    })(), STREAM_SETTLE_MS),
   });
 
   return new Response(stream, {

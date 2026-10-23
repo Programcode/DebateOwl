@@ -301,8 +301,8 @@ export async function peekRateLimit(userId: string, model?: ModelSelection): Pro
 
 /**
  * Gives back exactly what checkRateLimit reserved for a request that produced
- * nothing: the same `units`, which follow the requested selection (Auto Pro
- * reserves 5 even when it resolves to Haiku). A session call that did not pay
+ * nothing: the same `units`, which follow the requested selection (an Auto
+ * selection reserves its most expensive candidate). A session call that did not pay
  * has nothing to give back, and a session charge is returned only while no
  * other call has run on it. Returns whether units went back. A failed refund
  * is logged, never thrown, so the student still gets the error.

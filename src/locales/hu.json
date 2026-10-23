@@ -2110,6 +2110,8 @@
       "turnOf": "{{current}}. kör a(z) {{total}} közül",
       "preparingResult": "Eredmény előkészítése",
       "judgeReading": "A bíró olvassa az átiratot.",
+      "judgeFailed": "A bíró nem tudta befejezni az értékelést.",
+      "scoringStopped": "Az értékelés leállt",
       "scoring": "Forduló értékelése",
       "noTimer": "Értékelés közben nincs időmérő",
       "timeRemaining": "{{time}} van hátra",

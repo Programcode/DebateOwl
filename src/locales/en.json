@@ -2110,6 +2110,8 @@
       "turnOf": "Turn {{current}} of {{total}}",
       "preparingResult": "Preparing your result",
       "judgeReading": "The judge is reading the transcript.",
+      "judgeFailed": "The judge could not finish scoring.",
+      "scoringStopped": "Scoring stopped",
       "scoring": "Scoring the round",
       "noTimer": "No timer while judging",
       "timeRemaining": "{{time}} remaining",

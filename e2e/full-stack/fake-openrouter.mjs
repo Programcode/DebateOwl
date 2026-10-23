@@ -206,10 +206,16 @@ function classify(body) {
   const messages = Array.isArray(body.messages) ? body.messages : [];
   const systemMessage = messages.find((message) => message.role === "system");
   const system = messageText(systemMessage);
-  const user = String(messages.at(-1)?.content ?? "");
+  // A continuation sends the cut-off reply back as the start of the
+  // assistant's turn; the prompt is the user message before it.
+  const last = messages.at(-1);
+  const prefill = last?.role === "assistant" ? messageText(last) : null;
+  const user = String((prefill === null ? last : messages.at(-2))?.content ?? "");
   const shape = {
     messageCount: messages.length,
     cacheBreakpoint: Array.isArray(systemMessage?.content) && systemMessage.content.some((part) => part?.cache_control),
+    continuation: prefill !== null,
+    prefill,
   };
   if (body.stream === true && system.includes("Answer in clear Markdown that can stream smoothly")) {
     return { feature: "ask-stream", system, user, ...shape };
@@ -395,7 +401,7 @@ createServer(async (req, res) => {
   }
 
   const body = JSON.parse(await readBody(req));
-  const { output, ...record } = classify(body);
+  const { output, prefill, ...record } = classify(body);
   const { feature } = record;
   requests.push({ ...record, model: body.model, stream: body.stream === true, maxTokens: body.max_tokens });
   if (!feature) return json(res, 500, { error: { message: "Fake OpenRouter does not recognize this prompt" } });
@@ -411,7 +417,13 @@ createServer(async (req, res) => {
   const finishReason = truncation ? "length" : "stop";
   if (feature === "ask-stream") return stream(res, finishReason);
   if (output === null) return json(res, 500, { error: { message: `Fake ${feature} could not parse the request` } });
-  const content = truncation ? JSON.stringify(output).slice(0, Math.floor(JSON.stringify(output).length / 2)) : JSON.stringify(output);
+  const full = JSON.stringify(output);
+  let content = truncation ? full.slice(0, Math.floor(full.length / 2)) : full;
+  if (prefill !== null) {
+    // A model continuing a prefill writes only the rest of its reply.
+    if (!full.startsWith(prefill)) return json(res, 500, { error: { message: `Fake ${feature} continuation does not match its reply` } });
+    content = full.slice(prefill.length);
+  }
   if (body.stream === true) return streamJson(res, content, finishReason);
   return json(res, 200, {
     id: `fake-${requests.length}`,

@@ -229,6 +229,13 @@ export function isAIProviderError(error: unknown): error is AIProviderError {
   return error instanceof AIProviderError || (error instanceof Error && error.name === 'AIProviderError');
 }
 
+/** A provider failure the server marked worth retrying as is (an outage, a dropped stream, the time budget). */
+export function isTransientProviderError(error: unknown): boolean {
+  if (!isAIProviderError(error)) return false;
+  const details = (error as AIError).details;
+  return details?.retryable === true || details?.code === 'provider_unavailable';
+}
+
 export function isTimeoutError(error: unknown): error is TimeoutError {
   return error instanceof TimeoutError || (error instanceof Error && error.name === 'TimeoutError');
 }
@@ -263,7 +270,10 @@ export function classifyAIError(error: unknown, userInitiatedAbort = false): AIE
   if (error instanceof AIResponseError || (error instanceof Error && error.name === 'AIResponseError')) {
     return { errorName: 'AIResponseError', statusCode, shouldCaptureException: true };
   }
-  if (isAIProviderError(error)) return { errorName: 'AIProviderError', statusCode, shouldCaptureException: true };
+  // An outage or a dropped provider stream is expected now and then and the
+  // student is told to try again; ai_request_failed still records it. Other
+  // provider failures may be bugs and are reported.
+  if (isAIProviderError(error)) return { errorName: 'AIProviderError', statusCode, shouldCaptureException: !isTransientProviderError(error) };
   if (error instanceof AIServerError || (error instanceof Error && error.name === 'AIServerError')) {
     return { errorName: 'AIServerError', statusCode, shouldCaptureException: true };
   }
@@ -383,7 +393,7 @@ function mapAIErrorPayload(
       statusCode: statusCode || 500,
       requestId,
       provider,
-      details: { model, code: errorCode },
+      details: { model, code: errorCode, ...(payload?.retryable === true ? { retryable: true } : {}) },
     });
   }
 

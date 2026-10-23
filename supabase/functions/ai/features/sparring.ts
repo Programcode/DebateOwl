@@ -1,6 +1,7 @@
 import { logUsage } from "../../_shared/entitlements.ts";
-import { mergeNormalizedUsage } from "../../_shared/cost.ts";
-import { callAI } from "../provider.ts";
+import { mergeNormalizedUsage, type NormalizedUsage, selectObservedUsage } from "../../_shared/cost.ts";
+import { ClaudeProviderUnavailableError } from "../../_shared/provider-routing.ts";
+import { type AIResult, callAI, InvalidJsonResponseError, isIncompleteProviderStream, missingOpenRouterUsage } from "../provider.ts";
 import { cleanGeneratedText } from "../text.ts";
 import { buildUserPrompt } from "../prompt-builder.ts";
 import {
@@ -24,6 +25,28 @@ export interface SparringHandlerOptions {
   onScoreSaved: () => void;
 }
 
+// The judge gets one more attempt inside the same request when the first one
+// produced no scorecard for a reason another try can fix: a reply that failed
+// the schema, a provider outage, or a dropped provider stream. The round has
+// already paid, so the retry costs the student nothing and spares them
+// "Try scoring again". A failed save is not retried, and neither is a run
+// that has used up this much of its time.
+const JUDGE_RETRY_BEFORE_MS = 60_000;
+
+class InvalidSparringOutputError extends Error {
+  constructor(readonly usage?: NormalizedUsage, readonly completedUsage?: NormalizedUsage) {
+    super("AI response did not match the expected sparring schema");
+    this.name = "InvalidSparringOutputError";
+  }
+}
+
+function judgeMayRetry(error: unknown): boolean {
+  if (error instanceof InvalidSparringOutputError || error instanceof InvalidJsonResponseError) return true;
+  if (isIncompleteProviderStream(error)) return true;
+  // 401, 402 and 403 are the key or its credit, which a retry does not fix.
+  return error instanceof ClaudeProviderUnavailableError && (error.status === null || error.status === 429 || error.status >= 500);
+}
+
 // SPARRING: transcript-only opponent replies and scorecards. No research
 // branch runs here, and score persistence follows output validation.
 export async function handleSparring(ctx: FeatureContext, options: SparringHandlerOptions): Promise<Response> {
@@ -35,7 +58,7 @@ export async function handleSparring(ctx: FeatureContext, options: SparringHandl
   const systemPrompt = await buildSystemPromptFor(feature);
   const userPrompt = buildUserPrompt(feature, sparringRequest as unknown as Record<string, unknown>, "");
   const messages = [{ role: "user", content: userPrompt }];
-  const aiResult = recordMainResult(await callAI(
+  const callModel = () => callAI(
     provider,
     model,
     systemPrompt,
@@ -44,10 +67,49 @@ export async function handleSparring(ctx: FeatureContext, options: SparringHandl
     sparringRequest.action === "score" ? "sparringScore" : "sparringSpeech",
     workSignal,
     ctx.stream,
-  ));
-  const output = cleanGeneratedText(aiResult.output);
-  const normalizedOutput = normalizeSparringOutput(output, sparringRequest.action);
-  const parsedOutput = parseSparringProviderOutput(normalizedOutput, sparringRequest.action);
+  );
+  const readOutput = (result: AIResult) =>
+    parseSparringProviderOutput(normalizeSparringOutput(cleanGeneratedText(result.output), sparringRequest.action), sparringRequest.action);
+
+  let aiResult: AIResult;
+  let parsedOutput: ReturnType<typeof readOutput>;
+  if (sparringRequest.action === "score") {
+    const judge = async (earlierUsage?: NormalizedUsage) => {
+      const result = await callModel();
+      const usage = mergeNormalizedUsage([earlierUsage, result.usage]);
+      const parsed = readOutput(result);
+      // The call completed, so its tokens are billed even though it failed.
+      if (!parsed) throw new InvalidSparringOutputError(usage, usage);
+      return { result: recordMainResult({ ...result, usage }), parsed };
+    };
+    let judged: Awaited<ReturnType<typeof judge>>;
+    try {
+      judged = await judge();
+    } catch (error) {
+      if (!judgeMayRetry(error) || workSignal.aborted || Date.now() - startTime > JUDGE_RETRY_BEFORE_MS) throw error;
+      const firstUsage = selectObservedUsage(error as { usage?: NormalizedUsage; completedUsage?: NormalizedUsage }, false)
+        ?? missingOpenRouterUsage("judge_attempt");
+      console.warn(`[SPARRING] Judge attempt failed (${error instanceof Error ? error.name : "unknown"}); trying once more`);
+      // The first attempt's draft is void; the scorecard is written again.
+      ctx.stream?.reset();
+      try {
+        judged = await judge(firstUsage);
+      } catch (retryError) {
+        // Bill the first attempt with whatever the second one cost.
+        if (retryError && typeof retryError === "object" && !(retryError instanceof InvalidSparringOutputError)) {
+          const withUsage = retryError as { usage?: NormalizedUsage; completedUsage?: NormalizedUsage };
+          withUsage.usage = mergeNormalizedUsage([firstUsage, withUsage.usage ?? missingOpenRouterUsage("judge_retry")]);
+          withUsage.completedUsage = mergeNormalizedUsage([firstUsage, withUsage.completedUsage]);
+        }
+        throw retryError;
+      }
+    }
+    aiResult = judged.result;
+    parsedOutput = judged.parsed;
+  } else {
+    aiResult = recordMainResult(await callModel());
+    parsedOutput = readOutput(aiResult);
+  }
   if (!parsedOutput) throw new Error("AI response did not match the expected sparring schema");
 
   // In a voice round the speech may carry audio tags. They go to the voice

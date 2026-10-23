@@ -4,22 +4,34 @@
 // and rate_limits rows; these values decide how fast a request uses them up.
 
 import { AUTO_FAST, AUTO_PRO, type ModelSelection } from "./model-catalog.ts";
+import { FAST_CANDIDATES, PRO_CANDIDATES } from "./auto-model-router.ts";
 
 /** Quota units a model without an entry below costs. */
 export const DEFAULT_QUOTA_UNITS = 1;
 
 /**
  * How many daily requests one call to a model counts as. Unlisted models
- * cost DEFAULT_QUOTA_UNITS. The quota is reserved before Auto picks a model,
- * so Auto selections are charged as their most expensive candidate.
+ * cost DEFAULT_QUOTA_UNITS.
  */
-export const MODEL_QUOTA_UNITS: Readonly<Record<string, number>> = {
+const MODEL_UNITS: Readonly<Record<string, number>> = {
   "anthropic/claude-opus-5.5": 5,
   "openai/gpt-6.1-sol": 3,
   "anthropic/claude-sonnet-5.5": 2,
   "deepseek/deepseek-v4-pro-0813": 2,
-  [AUTO_PRO]: 5,
-  [AUTO_FAST]: 1,
+};
+
+const modelUnits = (model: string) => MODEL_UNITS[model] ?? DEFAULT_QUOTA_UNITS;
+
+/**
+ * The quota is reserved before Auto picks a model, so an Auto selection costs
+ * its most expensive candidate. Derived from the pools, so a pool change
+ * (Auto Pro dropping Opus) cannot leave Auto charging for a model it no
+ * longer uses.
+ */
+export const MODEL_QUOTA_UNITS: Readonly<Record<string, number>> = {
+  ...MODEL_UNITS,
+  [AUTO_PRO]: Math.max(...Object.keys(PRO_CANDIDATES).map(modelUnits)),
+  [AUTO_FAST]: Math.max(...Object.keys(FAST_CANDIDATES).map(modelUnits)),
 };
 
 /**
