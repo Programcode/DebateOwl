@@ -2120,6 +2120,7 @@
       "resetTurn": "Reset turn",
       "clockNote": "The clock uses the saved deadline, not tab focus.",
       "scoreFailed": "Could not score this round",
+      "scorecardMalformed": "The scorecard came back malformed. Try scoring again.",
       "retryScoring": "Try scoring again",
       "judgeWeighing": "Judge is weighing the round",
       "judgeDescription": "Reading the claims, responses, and strategic choices. This usually takes one request.",
@@ -2571,6 +2572,7 @@
     "unavailable": "{{provider}} is temporarily unavailable. Please try again later.",
     "safety": "{{provider}} blocked this request for safety reasons. Try rephrasing your input.",
     "unexpectedProvider": "The AI provider returned an unexpected error. Please try again later.",
+    "invalidOutput": "The AI's answer came back malformed. Please try again.",
     "unexpected": "An unexpected error occurred",
     "offline": "Check your connection and try again.",
     "notCharged": "You were not charged for this request."

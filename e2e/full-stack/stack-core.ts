@@ -22,7 +22,7 @@ export const admin = stackReady
   ? createClient(supabaseUrl!, serviceKey!, { auth: { persistSession: false } })
   : (null as never);
 
-export type FakeRequest = { feature: string | null; model?: string; stream?: boolean; maxTokens?: number; system: string; user: string; continuation?: boolean };
+export type FakeRequest = { feature: string | null; model?: string; stream?: boolean; maxTokens?: number; system: string; user: string };
 
 export const fake = {
   async reset() {

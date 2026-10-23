@@ -14,6 +14,7 @@ for (const [key, value] of Object.entries({
 })) Deno.env.set(key, value);
 
 const { handleSparring } = await import("./features/sparring.ts");
+const { AIResponseValidationError } = await import("./provider.ts");
 const { narrowSparringDatabase } = await import("./runtime.ts");
 type FeatureContext = import("./features/types.ts").FeatureContext;
 type SparringRequest = import("./sparring-persistence.ts").SparringRequest;
@@ -131,7 +132,7 @@ const database = narrowSparringDatabase({
 
 const options = { request, database, claimToken: "claim-token", onScoreSaved: () => {} };
 
-Deno.test("the judge tries once more after a scorecard that fails the schema, and bills both attempts", async () => {
+Deno.test("a scorecard in the wrong shape gets one repair retry naming the field, and both attempts are billed", async () => {
   const harness = install([{ content: JSON.stringify({ action: "score", scorecard: {} }) }, { content: SCORECARD }]);
   const events: string[] = [];
   savedScorecards.length = 0;
@@ -141,6 +142,13 @@ Deno.test("the judge tries once more after a scorecard that fails the schema, an
     const response = await handleSparring(context(events), options);
     assertEquals(response.status, 200);
     assertEquals(harness.calls.length, 2);
+    for (const call of harness.calls) {
+      const format = call.response_format as { type?: string; json_schema?: { name?: string; strict?: boolean } };
+      assertEquals([format.type, format.json_schema?.name, format.json_schema?.strict], ["json_schema", "sparring_scorecard", true]);
+    }
+    const [system, ...rest] = harness.calls[1].messages as Array<{ role: string; content: unknown }>;
+    assertEquals(JSON.stringify(system.content).includes('did not match the required shape at \\"scorecard.categories\\"'), true, "the repair prompt does not name the field");
+    assertEquals(String(rest.at(-1)?.content).includes("Return only valid JSON matching this schema"), true);
     assertEquals(events, ["reset"], "the first attempt's draft was not voided");
     assertEquals(savedScorecards.length, 1);
     assertEquals(harness.usageRows.length, 1, "exactly one usage row for the run");
@@ -175,5 +183,24 @@ Deno.test("a provider outage gets the retry; an exhausted key does not", async (
   } finally {
     console.error = originalError;
     console.warn = originalWarn;
+  }
+});
+
+Deno.test("a scorecard still in the wrong shape after its repair fails with the typed error and the field", async () => {
+  // The fixture places verdict beside the scorecard; an empty one cannot be repaired.
+  const malformed = { content: JSON.stringify({ ...JSON.parse(SCORECARD), verdict: "" }) };
+  const harness = install([malformed, malformed, { content: SCORECARD }]);
+  const originalWarn = console.warn;
+  console.warn = () => undefined;
+  try {
+    const error = await assertRejects(() => handleSparring(context([]), options));
+    assertEquals(error instanceof AIResponseValidationError, true);
+    assertEquals((error as InstanceType<typeof AIResponseValidationError>).path, "scorecard.verdict");
+    assertEquals(harness.calls.length, 2, "only one repair retry");
+    assertEquals(harness.usageRows.length, 0, "the entrypoint, not the handler, logs a failed run");
+    assertEquals((error as InstanceType<typeof AIResponseValidationError>).usage?.inputTokens, 20);
+  } finally {
+    console.warn = originalWarn;
+    harness.restore();
   }
 });

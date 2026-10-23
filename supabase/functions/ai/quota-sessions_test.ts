@@ -22,6 +22,8 @@ const SPARRING_SESSION = "5e551000-0000-4000-8000-000000000009";
 
 interface Harness {
   rpcs: Array<{ name: string; body: Record<string, unknown> }>;
+  /** Chat completion request bodies, in order. */
+  providerCalls: Array<Record<string, unknown>>;
   usageRows: Array<Record<string, unknown>>;
   /** What claim_ai_session_quota answers. */
   claim: Record<string, unknown>;
@@ -29,7 +31,7 @@ interface Harness {
   reply: { content: string } | { status: number } | { hangAfter: string; finished?: boolean; thenFail?: boolean };
 }
 
-const harness: Harness = { rpcs: [], usageRows: [], claim: {}, reply: { content: "" } };
+const harness: Harness = { rpcs: [], providerCalls: [], usageRows: [], claim: {}, reply: { content: "" } };
 
 function json(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), { status, headers: { "Content-Type": "application/json" } });
@@ -84,6 +86,7 @@ function install() {
     }
     if (url.href === "https://openrouter.ai/api/v1/chat/completions") {
       const body = JSON.parse(String(init?.body));
+      harness.providerCalls.push(body);
       const reply = harness.reply;
       if ("status" in reply) return json({ error: { message: "Provider overloaded" } }, reply.status);
       if ("hangAfter" in reply) return new Response(hangingStream(reply.hangAfter, reply.finished === true, init?.signal, reply.thenFail === true), { headers: { "Content-Type": "text/event-stream" } });
@@ -102,6 +105,7 @@ function install() {
 
 function reset(reply: Harness["reply"], claim: Record<string, unknown> = { allowed: true, charged: true, units: 1, current_count: 1, denied_by: null, charge_id: 1 }) {
   harness.rpcs.length = 0;
+  harness.providerCalls.length = 0;
   harness.usageRows.length = 0;
   harness.reply = reply;
   harness.claim = claim;
@@ -228,6 +232,36 @@ Deno.test("a failed call refunds the session only when it was the call that paid
     assertEquals(harness.usageRows.at(-1)?.error_code, "provider_error");
   } finally {
     globalThis.fetch = originalFetch;
+    console.error = originalError;
+  }
+});
+
+Deno.test("a Sparring reply in the wrong shape gets one repair retry, then fails as invalid_output and is refunded once", async () => {
+  const originalWarn = console.warn;
+  const originalError = console.error;
+  console.warn = () => undefined;
+  console.error = () => undefined;
+  install();
+  try {
+    // Valid JSON, but the speech has no strategy, on the first try and the repair.
+    reset({ content: JSON.stringify({ action: "respond", speech: { content: "Who pays for the buses?", targetedPoints: [] } }) });
+    const response = await send({ feature: "sparring", input: sparringInput });
+    assertEquals(response.status, 502);
+    const body = await response.json();
+    assertEquals([body.code, body.charged], ["invalid_output", false]);
+    assertEquals(harness.providerCalls.length, 2, "one first attempt and one repair retry");
+    const repairMessages = harness.providerCalls[1].messages as Array<{ role: string; content: unknown }>;
+    assertEquals(String(repairMessages.at(-1)?.content).includes("Return only valid JSON matching this schema"), true);
+    for (const call of harness.providerCalls) {
+      assertEquals((call.response_format as { type?: string; json_schema?: { name?: string; strict?: boolean } }).json_schema?.name, "sparring_speech");
+    }
+    assertEquals(rpcNames(), ["claim_ai_session_quota", "refund_ai_session_quota"]);
+    assertEquals(harness.usageRows.filter((row) => row.feature === "sparring").map((row) => row.error_code), ["invalid_output"]);
+    // Both attempts are billed in that one row.
+    assertEquals(harness.usageRows.find((row) => row.feature === "sparring")?.input_tokens, 20);
+  } finally {
+    globalThis.fetch = originalFetch;
+    console.warn = originalWarn;
     console.error = originalError;
   }
 });

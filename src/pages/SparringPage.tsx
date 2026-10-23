@@ -5,7 +5,7 @@ import { ArrowLeft, CircleHelp } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useSparringStore } from '@/lib/stores/sparring-store';
 import { useSettingsStore } from '@/lib/stores/settings-store';
-import { generateSparringTurn, isAISubscriptionError, judgeSparringSession } from '@/lib/ai/client';
+import { AIError, generateSparringTurn, isAISubscriptionError, isInvalidOutputError, judgeSparringSession } from '@/lib/ai/client';
 import { getUserFacingAIError } from '@/lib/ai/error-display';
 import type { SparringRespondInput, SparringScoreInput, SparringSpeech } from '@/lib/ai/schemas/sparring';
 import { SparringSetup, type SparringSetupValues } from '@/components/features/sparring/SparringSetup';
@@ -282,7 +282,9 @@ export default function SparringPage() {
       .catch((error: unknown) => {
         if (judgeRequestRef.current !== requestKey) return;
         handleSubscriptionError(error);
-        setJudgingError(readableError(error, t('sparring.round.judgeRequestFailed', 'The judge request failed. Check your connection and try again.')));
+        setJudgingError(isInvalidOutputError(error)
+          ? `${t('sparring.round.scorecardMalformed', 'The scorecard came back malformed. Try scoring again.')}${error instanceof AIError && error.notCharged ? ` ${t('aiErrors.notCharged')}` : ''}`
+          : readableError(error, t('sparring.round.judgeRequestFailed', 'The judge request failed. Check your connection and try again.')));
       })
       .finally(() => {
         if (judgeRequestRef.current === requestKey) {

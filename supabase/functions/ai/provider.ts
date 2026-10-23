@@ -29,7 +29,7 @@ import {
   readResponseText,
 } from "../_shared/research.ts";
 import { withPromptCaching } from "../_shared/prompt-budget.ts";
-import { ClaudeProviderUnavailableError, isClaudeModel, openRouterProviderOptions, providerRequestError, warnIfClaudeNotByok } from "../_shared/provider-routing.ts";
+import { openRouterProviderOptions, providerRequestError, warnIfClaudeNotByok } from "../_shared/provider-routing.ts";
 
 export const OPENROUTER_PROVIDER: Provider = "openrouter";
 
@@ -57,14 +57,30 @@ export class InvalidJsonResponseError extends Error {
 export class OutputTruncatedError extends Error {
   /** Token usage of the cut-off attempt so the retry can bill it. */
   usage?: NormalizedUsage;
-  /** The reply as far as it got, so a continuation can pick it up. */
-  readonly partialText: string;
 
-  constructor(usage?: NormalizedUsage, partialText = "") {
+  constructor(usage?: NormalizedUsage) {
     super("AI reply was cut off at its token cap");
     this.name = "OutputTruncatedError";
     this.usage = usage;
-    this.partialText = partialText;
+  }
+}
+
+/**
+ * A reply that parsed as JSON but not into the shape the feature needs, even
+ * after its repair retry. `path` names the first wrong field for the log;
+ * the reply itself is never logged. The call completed, so it is billed.
+ */
+export class AIResponseValidationError extends Error {
+  readonly path: string;
+  usage?: NormalizedUsage;
+  completedUsage?: NormalizedUsage;
+
+  constructor(path: string, usage?: NormalizedUsage) {
+    super("AI response did not match the expected shape");
+    this.name = "AIResponseValidationError";
+    this.path = path;
+    this.usage = usage;
+    this.completedUsage = usage;
   }
 }
 
@@ -281,37 +297,6 @@ export async function callAI(
   try {
     return await callAIOnce(provider, model, systemPrompt, messages, reasoningEffort, replyTokens, signal, stream, outputSchema);
   } catch (err) {
-    if (err instanceof OutputTruncatedError && canContinueReply(provider, model, err.partialText)) {
-      // Claude picks a cut-off reply up where it stopped, so the text already
-      // written (and streamed) is kept and only the rest is paid for.
-      // Restarting would write the whole answer twice, which is what pushed
-      // long Haiku cases past the function's time limit.
-      console.warn(`[AI] Reply hit its ${cap} cap (${replyTokens} tokens, ${model}, effort ${reasoningEffort}); continuing for up to ${replyTokens * (TRUNCATION_RETRY_FACTOR - 1)} more`);
-      const partialText = err.partialText;
-      try {
-        return await retryOnce(err.usage, "truncation_continuation", () =>
-          continueOpenRouterReply(
-            [{ role: "system", content: systemPrompt }, ...messages],
-            partialText,
-            model,
-            replyTokens * (TRUNCATION_RETRY_FACTOR - 1),
-            signal,
-            stream,
-          )
-        );
-      } catch (continuationError) {
-        // The provider refused the prefilled request itself (it wrote
-        // nothing): write the reply again, as before continuations.
-        if (!(continuationError instanceof ClaudeProviderUnavailableError) || continuationError.status !== 400 || continuationError.afterOutput) {
-          throw continuationError;
-        }
-        console.warn(`[AI] The continuation was refused (${model}); retrying with ${replyTokens * TRUNCATION_RETRY_FACTOR}`);
-        stream?.reset();
-        return await retryOnce((continuationError as { usage?: NormalizedUsage }).usage, "truncation_retry", () =>
-          callAIOnce(provider, model, systemPrompt, messages, reasoningEffort, replyTokens * TRUNCATION_RETRY_FACTOR, signal, stream, outputSchema)
-        );
-      }
-    }
     if (err instanceof OutputTruncatedError) {
       console.warn(`[AI] Reply hit its ${cap} cap (${replyTokens} tokens, ${model}, effort ${reasoningEffort}); retrying with ${replyTokens * TRUNCATION_RETRY_FACTOR}`);
       stream?.reset();
@@ -425,12 +410,6 @@ export function createRequestBudgetSignal(
   return AbortSignal.any([requestSignal, deadlineSignal]);
 }
 
-function openRouterKey(): string {
-  const apiKey = Deno.env.get("OPENROUTER_API_KEY");
-  if (!apiKey) throw new Error("OPENROUTER_API_KEY missing");
-  return apiKey;
-}
-
 export async function callOpenRouter(
   messages: Array<{ role: string; content: string }>,
   model: string,
@@ -440,7 +419,9 @@ export async function callOpenRouter(
   stream?: GenerationStream,
   outputSchema?: JsonOutputSchema,
 ): Promise<AIResult> {
-  const apiKey = openRouterKey();
+  const apiKey = Deno.env.get("OPENROUTER_API_KEY");
+  if (!apiKey) throw new Error("OPENROUTER_API_KEY missing");
+
   const modelEntry = modelForRequest(model);
   const payload: Record<string, unknown> = {
     model,
@@ -453,65 +434,6 @@ export async function callOpenRouter(
     reasoning: { effort: reasoningEffort, exclude: true },
     provider: openRouterProviderOptions(model),
   };
-  const reply = await requestOpenRouter(apiKey, model, payload, signal, stream);
-  if (reply.finishReason === "length") throw new OutputTruncatedError(reply.usage, reply.text);
-  return parseProviderContent(reply.text, "OpenRouter", reply.usage);
-}
-
-/**
- * A cut-off reply can be continued instead of restarted when the model takes
- * an assistant prefill and goes on from its last character: Claude does, and
- * Auto only routes to Claude. Other families restart, as before.
- */
-export function canContinueReply(provider: Provider, model: string, partialText: string): boolean {
-  return provider === OPENROUTER_PROVIDER && isClaudeModel(model) && partialText.trim().length > 0;
-}
-
-/**
- * Asks the model to go on from `partialText`, which is sent as the start of
- * its own reply (an assistant prefill), and returns the whole reply. Claude
- * does not take a prefill with reasoning on or with a response format, and
- * the rest of a half-written object needs neither, so both are left out. The
- * stream gets only the new text: what it already showed stays.
- */
-export async function continueOpenRouterReply(
-  messages: Array<{ role: string; content: string }>,
-  partialText: string,
-  model: string,
-  replyTokens: number,
-  signal?: AbortSignal,
-  stream?: GenerationStream,
-): Promise<AIResult> {
-  const apiKey = openRouterKey();
-  const modelEntry = modelForRequest(model);
-  // Anthropic rejects a prefill that ends in whitespace. Between JSON tokens
-  // it means nothing, and the model writes any it needs again.
-  const prefill = partialText.trimEnd();
-  const payload: Record<string, unknown> = {
-    model,
-    messages: withPromptCaching(model, [...messages, { role: "assistant", content: prefill }]),
-    max_tokens: Math.min(modelEntry.maxTokens, replyTokens),
-    provider: openRouterProviderOptions(model),
-  };
-  const reply = await requestOpenRouter(apiKey, model, payload, signal, stream);
-  const text = prefill + reply.text;
-  if (reply.finishReason === "length") throw new OutputTruncatedError(reply.usage, text);
-  return parseProviderContent(text, "OpenRouter", reply.usage);
-}
-
-interface OpenRouterReply {
-  text: string;
-  usage: NormalizedUsage;
-  finishReason?: string;
-}
-
-async function requestOpenRouter(
-  apiKey: string,
-  model: string,
-  payload: Record<string, unknown>,
-  signal?: AbortSignal,
-  stream?: GenerationStream,
-): Promise<OpenRouterReply> {
   if (stream) return await streamOpenRouter(apiKey, model, payload, stream, signal);
 
   const { response, data, errorBody } = await fetchJsonWithTimeout<OpenRouterResponse>(`${OPENROUTER_API_URL}/v1/chat/completions`, {
@@ -526,12 +448,8 @@ async function requestOpenRouter(
   if (!data?.choices || !Array.isArray(data.choices) || data.choices.length === 0) throw new Error("OpenRouter returned no choices");
   const usage = normalizeProviderUsage(data.usage) ?? missingOpenRouterUsage("response");
   warnIfClaudeNotByok(model, usage.raw, "ai");
-  const finishReason = data.choices[0]?.finish_reason;
-  return {
-    text: data.choices[0]?.message?.content ?? "",
-    usage,
-    finishReason: typeof finishReason === "string" ? finishReason : undefined,
-  };
+  if (data.choices[0]?.finish_reason === "length") throw new OutputTruncatedError(usage);
+  return parseProviderContent(data.choices[0]?.message?.content ?? "", "OpenRouter", usage);
 }
 
 // A streamed reply wraps every token in a JSON frame (ids, model, provider,
@@ -546,9 +464,9 @@ type OpenRouterStreamChunk = {
 };
 
 /**
- * The same request with `stream: true`. Each content token goes to the sink
- * as it arrives; the joined text is then handled exactly like a non-streamed
- * reply, so the result the caller sees does not change.
+ * The same request as callOpenRouter with `stream: true`. Each content token
+ * goes to the sink as it arrives; the joined text is then parsed exactly like
+ * a non-streamed reply, so the result the caller sees does not change.
  */
 async function streamOpenRouter(
   apiKey: string,
@@ -556,9 +474,9 @@ async function streamOpenRouter(
   payload: Record<string, unknown>,
   stream: GenerationStream,
   signal?: AbortSignal,
-): Promise<OpenRouterReply> {
+): Promise<AIResult> {
   stream.phase("writing");
-  const reply = await fetchWithTimeoutAndConsume(`${OPENROUTER_API_URL}/v1/chat/completions`, {
+  const { text, usage, finishReason } = await fetchWithTimeoutAndConsume(`${OPENROUTER_API_URL}/v1/chat/completions`, {
     method: "POST",
     headers: { "Content-Type": "application/json", "Authorization": `Bearer ${apiKey}` },
     body: JSON.stringify({ ...payload, stream: true, stream_options: { include_usage: true } }),
@@ -572,8 +490,9 @@ async function streamOpenRouter(
     }
     return await readOpenRouterStream(response.body, stream, bodySignal, model);
   });
-  warnIfClaudeNotByok(model, reply.usage.raw, "ai");
-  return reply;
+  warnIfClaudeNotByok(model, usage.raw, "ai");
+  if (finishReason === "length") throw new OutputTruncatedError(usage);
+  return parseProviderContent(text, "OpenRouter", usage);
 }
 
 export async function readOpenRouterStream(

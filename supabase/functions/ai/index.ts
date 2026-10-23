@@ -94,9 +94,11 @@ import {
 } from "./runtime.ts";
 import {
   type AIResult,
+  AIResponseValidationError,
   callAI,
   createRequestBudgetSignal,
   type GenerationStream,
+  InvalidJsonResponseError,
   isIncompleteProviderStream,
   modelForRequest,
   OPENROUTER_PROVIDER,
@@ -899,6 +901,9 @@ export async function handleRequest(req: Request): Promise<Response> {
       // Claude runs only on the Anthropic key, with no fallback provider. When
       // it fails the student gets an outage message.
       const claudeUnavailable = err instanceof ClaudeProviderUnavailableError;
+      // The model answered, but not in a usable shape even after its repair
+      // retry. Not a provider outage: logged and answered as invalid_output.
+      const invalidOutput = err instanceof AIResponseValidationError || err instanceof InvalidJsonResponseError;
       const aborted = workSignal?.aborted === true;
       const timedOut = aborted && (workSignal.reason as { name?: unknown } | undefined)?.name === "TimeoutError";
       const errorUsage = mergeNormalizedUsage([
@@ -935,7 +940,7 @@ export async function handleRequest(req: Request): Promise<Response> {
           freeRefusal ? excludeFromCap(errorUsage) : errorUsage,
           latencyMs,
           aborted && !timedOut ? "cancelled" : "error",
-          claudeUnavailable ? "claude_unavailable" : timedOut ? "timeout" : aborted ? "aborted" : "provider_error",
+          claudeUnavailable ? "claude_unavailable" : timedOut ? "timeout" : aborted ? "aborted" : invalidOutput ? "invalid_output" : "provider_error",
         );
       }
       // Tells the client to say "You were not charged": the units went back,
@@ -948,6 +953,9 @@ export async function handleRequest(req: Request): Promise<Response> {
       const retryable = claudeUnavailable || timedOut || isIncompleteProviderStream(err) ? { retryable: true } : {};
       if (claudeUnavailable) {
         return new Response(JSON.stringify({ error: CLAUDE_UNAVAILABLE_MESSAGE, code: CLAUDE_UNAVAILABLE_CODE, ...notCharged, ...retryable }), { status: CLAUDE_UNAVAILABLE_STATUS, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+      if (invalidOutput && !aborted) {
+        return new Response(JSON.stringify({ error: "The AI answer came back malformed. Please try again.", code: "invalid_output", ...notCharged }), { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
       return new Response(JSON.stringify({ error: "AI request failed. Please try again.", code: "provider_error", ...notCharged, ...retryable }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }

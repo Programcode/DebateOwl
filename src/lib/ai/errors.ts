@@ -229,6 +229,11 @@ export function isAIProviderError(error: unknown): error is AIProviderError {
   return error instanceof AIProviderError || (error instanceof Error && error.name === 'AIProviderError');
 }
 
+/** The server could not use the model's answer (`invalid_output`). */
+export function isInvalidOutputError(error: unknown): boolean {
+  return error instanceof AIResponseError && error.details?.code === 'invalid_output';
+}
+
 /** A provider failure the server marked worth retrying as is (an outage, a dropped stream, the time budget). */
 export function isTransientProviderError(error: unknown): boolean {
   if (!isAIProviderError(error)) return false;
@@ -386,6 +391,12 @@ function mapAIErrorPayload(
       limit: typeof payload?.limit === 'number' ? payload.limit : undefined,
       current: typeof payload?.current === 'number' ? payload.current : undefined,
     });
+  }
+
+  // The model answered, but in a shape the feature could not use, even after
+  // the server's repair retry. Trying again usually works.
+  if (errorCode === 'invalid_output') {
+    return new AIResponseError(i18n.t('aiErrors.invalidOutput'), { requestId, details: { code: errorCode } });
   }
 
   if (isProviderErrorMessage(message) || isProviderErrorCode(errorCode)) {

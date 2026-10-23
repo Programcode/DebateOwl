@@ -1,14 +1,15 @@
 import { logUsage } from "../../_shared/entitlements.ts";
 import { mergeNormalizedUsage, type NormalizedUsage, selectObservedUsage } from "../../_shared/cost.ts";
 import { ClaudeProviderUnavailableError } from "../../_shared/provider-routing.ts";
-import { type AIResult, callAI, InvalidJsonResponseError, isIncompleteProviderStream, missingOpenRouterUsage } from "../provider.ts";
+import { AIResponseValidationError, callAI, isIncompleteProviderStream, missingOpenRouterUsage, withJsonRepairPrompt } from "../provider.ts";
 import { cleanGeneratedText } from "../text.ts";
 import { buildUserPrompt } from "../prompt-builder.ts";
 import {
   completeClaimedSparringScoreSession,
   createSparringSpeechIntegrityToken,
+  checkSparringProviderOutput,
   normalizeSparringOutput,
-  parseSparringProviderOutput,
+  sparringOutputSchema,
   type SparringDatabase,
   type SparringRequest,
 } from "../sparring-persistence.ts";
@@ -25,23 +26,16 @@ export interface SparringHandlerOptions {
   onScoreSaved: () => void;
 }
 
-// The judge gets one more attempt inside the same request when the first one
-// produced no scorecard for a reason another try can fix: a reply that failed
-// the schema, a provider outage, or a dropped provider stream. The round has
-// already paid, so the retry costs the student nothing and spares them
-// "Try scoring again". A failed save is not retried, and neither is a run
-// that has used up this much of its time.
-const JUDGE_RETRY_BEFORE_MS = 60_000;
+// One more attempt runs inside the same request when the first gave no usable
+// answer for a reason another try can fix. A reply in the wrong shape (it
+// parsed, but a field is missing or wrong) gets a repair prompt naming the
+// field; for the judge, a provider outage or a dropped provider stream gets a
+// plain retry. A Sparring round has already paid, so the retry costs the
+// student nothing and spares them "Try scoring again". A failed save is not
+// retried, and neither is a run that has used up this much of its time.
+const RETRY_BEFORE_MS = 60_000;
 
-class InvalidSparringOutputError extends Error {
-  constructor(readonly usage?: NormalizedUsage, readonly completedUsage?: NormalizedUsage) {
-    super("AI response did not match the expected sparring schema");
-    this.name = "InvalidSparringOutputError";
-  }
-}
-
-function judgeMayRetry(error: unknown): boolean {
-  if (error instanceof InvalidSparringOutputError || error instanceof InvalidJsonResponseError) return true;
+function transientProviderFailure(error: unknown): boolean {
   if (isIncompleteProviderStream(error)) return true;
   // 401, 402 and 403 are the key or its credit, which a retry does not fix.
   return error instanceof ClaudeProviderUnavailableError && (error.status === null || error.status === 429 || error.status >= 500);
@@ -54,70 +48,71 @@ export async function handleSparring(ctx: FeatureContext, options: SparringHandl
   const { userId, provider, model, reasoningEffort, workSignal, startTime, researchUsageForLog, recordMainResult, buildSystemPromptFor } = ctx;
   const { request: sparringRequest, database: sparringDatabase, claimToken: sparringScoreClaimToken } = options;
   if (!sparringRequest) throw new Error("Invalid sparring request");
+  const action = sparringRequest.action;
 
   const systemPrompt = await buildSystemPromptFor(feature);
   const userPrompt = buildUserPrompt(feature, sparringRequest as unknown as Record<string, unknown>, "");
   const messages = [{ role: "user", content: userPrompt }];
-  const callModel = () => callAI(
+  const outputSchema = sparringOutputSchema(action);
+  const callModel = (repairPath?: string) => callAI(
     provider,
     model,
-    systemPrompt,
-    messages,
+    repairPath === undefined
+      ? systemPrompt
+      : `${systemPrompt}\n\nJSON REPAIR INSTRUCTION: The previous answer did not match the required shape at "${repairPath}". Return only one JSON object with exactly the fields above, every list item a plain string.`,
+    repairPath === undefined ? messages : withJsonRepairPrompt(messages),
     reasoningEffort,
-    sparringRequest.action === "score" ? "sparringScore" : "sparringSpeech",
+    action === "score" ? "sparringScore" : "sparringSpeech",
     workSignal,
     ctx.stream,
+    outputSchema,
   );
-  const readOutput = (result: AIResult) =>
-    parseSparringProviderOutput(normalizeSparringOutput(cleanGeneratedText(result.output), sparringRequest.action), sparringRequest.action);
-
-  let aiResult: AIResult;
-  let parsedOutput: ReturnType<typeof readOutput>;
-  if (sparringRequest.action === "score") {
-    const judge = async (earlierUsage?: NormalizedUsage) => {
-      const result = await callModel();
-      const usage = mergeNormalizedUsage([earlierUsage, result.usage]);
-      const parsed = readOutput(result);
-      // The call completed, so its tokens are billed even though it failed.
-      if (!parsed) throw new InvalidSparringOutputError(usage, usage);
-      return { result: recordMainResult({ ...result, usage }), parsed };
-    };
-    let judged: Awaited<ReturnType<typeof judge>>;
-    try {
-      judged = await judge();
-    } catch (error) {
-      if (!judgeMayRetry(error) || workSignal.aborted || Date.now() - startTime > JUDGE_RETRY_BEFORE_MS) throw error;
-      const firstUsage = selectObservedUsage(error as { usage?: NormalizedUsage; completedUsage?: NormalizedUsage }, false)
-        ?? missingOpenRouterUsage("judge_attempt");
-      console.warn(`[SPARRING] Judge attempt failed (${error instanceof Error ? error.name : "unknown"}); trying once more`);
-      // The first attempt's draft is void; the scorecard is written again.
-      ctx.stream?.reset();
-      try {
-        judged = await judge(firstUsage);
-      } catch (retryError) {
-        // Bill the first attempt with whatever the second one cost.
-        if (retryError && typeof retryError === "object" && !(retryError instanceof InvalidSparringOutputError)) {
-          const withUsage = retryError as { usage?: NormalizedUsage; completedUsage?: NormalizedUsage };
-          withUsage.usage = mergeNormalizedUsage([firstUsage, withUsage.usage ?? missingOpenRouterUsage("judge_retry")]);
-          withUsage.completedUsage = mergeNormalizedUsage([firstUsage, withUsage.completedUsage]);
-        }
-        throw retryError;
-      }
+  const attempt = async (repairPath?: string, earlierUsage?: NormalizedUsage) => {
+    const result = await callModel(repairPath);
+    const usage = mergeNormalizedUsage([earlierUsage, result.usage]);
+    const checked = checkSparringProviderOutput(normalizeSparringOutput(cleanGeneratedText(result.output), action), action);
+    if (!checked.ok) {
+      // The field path only: the reply is the student's round and is never logged.
+      console.warn(`[SPARRING] ${action} reply failed its shape at ${checked.path}${repairPath === undefined ? "" : " after the repair retry"}`);
+      throw new AIResponseValidationError(checked.path, usage);
     }
-    aiResult = judged.result;
-    parsedOutput = judged.parsed;
-  } else {
-    aiResult = recordMainResult(await callModel());
-    parsedOutput = readOutput(aiResult);
+    return { result: recordMainResult({ ...result, usage }), parsed: checked.value };
+  };
+
+  let answered: Awaited<ReturnType<typeof attempt>>;
+  try {
+    answered = await attempt();
+  } catch (error) {
+    const wrongShape = error instanceof AIResponseValidationError;
+    const retry = wrongShape || (action === "score" && transientProviderFailure(error));
+    if (!retry || workSignal.aborted || Date.now() - startTime > RETRY_BEFORE_MS) throw error;
+    const firstUsage = selectObservedUsage(error as { usage?: NormalizedUsage; completedUsage?: NormalizedUsage }, false)
+      ?? missingOpenRouterUsage("sparring_attempt");
+    console.warn(`[SPARRING] ${action} attempt failed (${error instanceof Error ? error.name : "unknown"}); trying once more`);
+    // The first attempt's draft is void; the answer is written again.
+    ctx.stream?.reset();
+    try {
+      answered = await attempt(wrongShape ? error.path : undefined, firstUsage);
+    } catch (retryError) {
+      // Bill the first attempt with whatever the second one cost. A shape
+      // failure already carries both.
+      if (retryError && typeof retryError === "object" && !(retryError instanceof AIResponseValidationError)) {
+        const withUsage = retryError as { usage?: NormalizedUsage; completedUsage?: NormalizedUsage };
+        withUsage.usage = mergeNormalizedUsage([firstUsage, withUsage.usage ?? missingOpenRouterUsage("sparring_retry")]);
+        withUsage.completedUsage = mergeNormalizedUsage([firstUsage, withUsage.completedUsage]);
+      }
+      throw retryError;
+    }
   }
-  if (!parsedOutput) throw new Error("AI response did not match the expected sparring schema");
+  const aiResult = answered.result;
+  const parsedOutput = answered.parsed;
 
   // In a voice round the speech may carry audio tags. They go to the voice
   // only: the content that is shown, signed, and saved has none.
   let voice: VoicePayload | undefined;
   if (parsedOutput.action === "respond" && ctx.voice) {
     const reply = await prepareVoiceReply(userId, feature, parsedOutput.speech.content);
-    if (!reply.clean) throw new Error("AI response did not match the expected sparring schema");
+    if (!reply.clean) throw new AIResponseValidationError("speech.content", aiResult.usage);
     parsedOutput.speech.content = reply.clean;
     voice = reply.voice;
   }

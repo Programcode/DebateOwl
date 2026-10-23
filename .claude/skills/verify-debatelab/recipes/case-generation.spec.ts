@@ -236,35 +236,20 @@ test("gen-error: a provider failure shows an error and the retry succeeds", asyn
   await evidence.shot("02-retried");
 });
 
-test("gen-cutoff: a case cut off at its length cap is continued from where it stopped and still appears", async ({ signedIn: page, evidence }) => {
+test("gen-cutoff: a case cut off at its length cap is retried once with a larger cap and still appears", async ({ signedIn: page, evidence }) => {
   test.skip(LIVE, "only the fake provider can force a cut-off reply");
   await fake.truncate("generate");
   await openGenerate(page);
-  // Read the raw events, not just the result, to check what streamed.
-  const response = page.waitForResponse((candidate) => {
-    if (!candidate.url().endsWith("/functions/v1/ai") || candidate.request().method() !== "POST") return false;
-    try {
-      return (candidate.request().postDataJSON() as { feature?: string }).feature === "generate";
-    } catch {
-      return false;
-    }
-  }, { timeout: AI_TIMEOUT });
+  const response = aiResponse(page, "generate");
   await page.getByRole("button", { name: "Generate Debate Case" }).click();
-  const events = await (await response).text();
-  const result = JSON.parse(/event: result\ndata: (.+)\n\n/.exec(events)?.[1] ?? "null") as { status: number; body: { output: CaseOutput } };
-  expect(result.status).toBe(200);
-  await expect(page.getByText(result.body.output.caseStructure.thesis).first()).toBeVisible();
+  const body = await response;
+  await expect(page.getByText((body.output as unknown as CaseOutput).caseStructure.thesis).first()).toBeVisible();
   await expect(page.getByRole("alert").filter({ hasText: "Generation Failed" })).toHaveCount(0);
-  // Auto Fast runs Claude, which continues the cut-off reply: no reset, and
-  // the browser saw each part of the case once.
-  expect(events).not.toContain("event: reset");
-  const streamed = [...events.matchAll(/event: delta\ndata: (.+)\n\n/g)].map((match) => JSON.parse(match[1]).text).join("");
-  expect(JSON.parse(streamed).caseStructure.thesis).toBe(result.body.output.caseStructure.thesis);
-  const calls = (await fake.requests()).filter((request) => request.feature === "generate").map((request) => ({ maxTokens: request.maxTokens ?? 0, continuation: request.continuation === true }));
-  await evidence.json("01-generate-calls", calls);
-  expect(calls).toHaveLength(2);
-  expect(calls.map((call) => call.continuation)).toEqual([false, true]);
-  await evidence.shot("02-case-after-continuation");
+  const caps = (await fake.requests()).filter((request) => request.feature === "generate").map((request) => request.maxTokens ?? 0);
+  await evidence.json("01-generate-max-tokens", caps);
+  expect(caps).toHaveLength(2);
+  expect(caps[1]).toBeGreaterThan(caps[0]);
+  await evidence.shot("02-case-after-retry");
 });
 
 test("gen-quota: an account without quota is told why and the provider is never called", async ({ signedIn: page, user, evidence }) => {

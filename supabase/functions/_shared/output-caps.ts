@@ -19,8 +19,13 @@ export const REPLY_TOKEN_CAPS = {
   sparringSpeech: 2_500,
   /** The Sparring scorecard: four categories, moments, areas, verdict. */
   sparringScore: 3_000,
-  /** A full case, any length setting. */
-  generate: 6_000,
+  /**
+   * A full case, any length setting. Claude Haiku can write past 6,000 on a
+   * comprehensive case; a cut-off reply is then written again from the start
+   * at twice the cap, which took Auto Fast cases past the function's time
+   * limit. The cap only bounds the reply, so room costs nothing unless used.
+   */
+  generate: 12_000,
   attack: 4_000,
   brainstorm: 4_000,
   factoids: 4_000,
