@@ -1,9 +1,8 @@
 // src/pages/FlowchartPage.tsx
-import { useCallback, useMemo, useRef, useState, useEffect } from 'react';
+import { useCallback, useLayoutEffect, useMemo, useRef, useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import ReactFlow, {
     Node,
-    Edge,
     Controls,
     ControlButton,
     Background,
@@ -12,13 +11,14 @@ import ReactFlow, {
     useEdgesState,
     addEdge,
     Connection,
-    MarkerType,
     BackgroundVariant,
     Handle,
     Position,
     useReactFlow,
     useStore,
     useStoreApi,
+    ReactFlowProvider,
+    type FitViewOptions,
     type ReactFlowInstance,
 } from 'reactflow';
 import 'reactflow/dist/style.css';
@@ -62,33 +62,37 @@ import {
     Minus,
     Maximize,
     Lock,
-    Unlock
+    Unlock,
+    FileInput,
 } from 'lucide-react';
 import { toPng } from 'html-to-image';
 import { formatRelativeDate } from '@/lib/date-format';
 import { toast } from 'sonner';
-import type { TFunction } from 'i18next';
 import { CurrentDebateStrip } from '@/components/features/debate/CurrentDebateStrip';
 import { useDebateStore } from '@/lib/stores/debate-store';
 import { WorkspaceToolScope, useWorkspaceToolScope } from '@/components/features/workspace/WorkspaceToolScope';
+import {
+    caseHasFlowchart,
+    edgeLabel,
+    edgeOfKind,
+    editNodeData,
+    flowchartFromCase,
+    nodeDescription,
+    nodeLabel,
+    starterFlowchart,
+    studentNodeData,
+    type EdgeKind,
+    type FlowNodeData,
+    type NodeType,
+} from '@/lib/flowchart';
 
-// Custom node types
-type NodeType = 'thesis' | 'contention' | 'attack' | 'rebuttal' | 'dropped';
-type EdgeKind = 'support' | 'attack' | 'rebuttal';
-
-interface FlowNodeData {
-    label: string;
-    description?: string;
-    type: NodeType;
-    strength?: 'strong' | 'moderate' | 'weak';
-}
-
+// Shades dark enough for white text at 4.5:1.
 const nodeColors: Record<NodeType, { bg: string; border: string; text: string }> = {
     thesis: { bg: 'bg-primary', border: 'border-primary', text: 'text-primary-foreground' },
-    contention: { bg: 'bg-emerald-500', border: 'border-emerald-500', text: 'text-white' },
-    attack: { bg: 'bg-red-500', border: 'border-red-500', text: 'text-white' },
-    rebuttal: { bg: 'bg-blue-500', border: 'border-blue-500', text: 'text-white' },
-    dropped: { bg: 'bg-amber-500', border: 'border-amber-500', text: 'text-white' },
+    contention: { bg: 'bg-emerald-700', border: 'border-emerald-700', text: 'text-white' },
+    attack: { bg: 'bg-red-700', border: 'border-red-700', text: 'text-white' },
+    rebuttal: { bg: 'bg-blue-700', border: 'border-blue-700', text: 'text-white' },
+    dropped: { bg: 'bg-amber-700', border: 'border-amber-700', text: 'text-white' },
 };
 
 const nodeIcons: Record<NodeType, React.ReactNode> = {
@@ -105,12 +109,14 @@ const strengthTranslationKeys = {
     weak: 'flowchart.strengthWeak',
 };
 
-// React Flow 11 writes its keyboard help for nodes and edges in English, with no
-// prop to change it (v12's ariaLabelConfig has one). That text is static, so
-// React never writes it again after mount; the translated help takes its place.
+// React Flow 11 writes its keyboard help for nodes and edges, and the name of its
+// attribution link, in English, with no prop to change them (v12's ariaLabelConfig
+// has one). That text is static, so React never writes it again after mount; the
+// translated text takes its place.
 function LocalizedA11yDescriptions(): null {
     const { t } = useTranslation();
     const rfId = useStore((state) => state.rfId);
+    const domNode = useStore((state) => state.domNode);
     useEffect(() => {
         const replace = (id: string, text: string) => {
             const element = document.getElementById(id);
@@ -118,13 +124,14 @@ function LocalizedA11yDescriptions(): null {
         };
         replace(`react-flow__node-desc-${rfId}`, t('flowchart.a11yNodeHelp'));
         replace(`react-flow__edge-desc-${rfId}`, t('flowchart.a11yEdgeHelp'));
-    }, [rfId, t]);
+        domNode?.querySelector('.react-flow__attribution a')?.setAttribute('aria-label', t('flowchart.attribution'));
+    }, [rfId, domNode, t]);
     return null;
 }
 
 // React Flow's own control buttons have fixed English names, so the canvas
 // renders the same four with translated ones.
-function LocalizedControls() {
+function useCanvasControls() {
     const { t } = useTranslation();
     const { zoomIn, zoomOut, fitView } = useReactFlow();
     const store = useStoreApi();
@@ -136,35 +143,69 @@ function LocalizedControls() {
         nodesConnectable: !isInteractive,
         elementsSelectable: !isInteractive,
     });
+    return [
+        { key: 'zoom-in', label: t('flowchart.zoomIn'), icon: <Plus />, onClick: () => zoomIn(), disabled: maxZoomReached },
+        { key: 'zoom-out', label: t('flowchart.zoomOut'), icon: <Minus />, onClick: () => zoomOut(), disabled: minZoomReached },
+        { key: 'fit', label: t('flowchart.fitView'), icon: <Maximize />, onClick: () => fitView(FIT_VIEW) },
+        { key: 'lock', label: t('flowchart.toggleInteractivity'), icon: isInteractive ? <Unlock /> : <Lock />, onClick: toggleInteractivity, pressed: !isInteractive },
+    ];
+}
 
+// Over the canvas from the small breakpoint up.
+function LocalizedControls() {
+    const controls = useCanvasControls();
     return (
-        <Controls showZoom={false} showFitView={false} showInteractive={false}>
-            <ControlButton onClick={() => zoomIn()} disabled={maxZoomReached} title={t('flowchart.zoomIn')} aria-label={t('flowchart.zoomIn')}>
-                <Plus />
-            </ControlButton>
-            <ControlButton onClick={() => zoomOut()} disabled={minZoomReached} title={t('flowchart.zoomOut')} aria-label={t('flowchart.zoomOut')}>
-                <Minus />
-            </ControlButton>
-            <ControlButton onClick={() => fitView()} title={t('flowchart.fitView')} aria-label={t('flowchart.fitView')}>
-                <Maximize />
-            </ControlButton>
-            <ControlButton
-                onClick={toggleInteractivity}
-                title={t('flowchart.toggleInteractivity')}
-                aria-label={t('flowchart.toggleInteractivity')}
-                aria-pressed={!isInteractive}
-            >
-                {isInteractive ? <Unlock /> : <Lock />}
-            </ControlButton>
+        <Controls className="max-sm:!hidden" showZoom={false} showFitView={false} showInteractive={false}>
+            {controls.map((control) => (
+                <ControlButton
+                    key={control.key}
+                    onClick={control.onClick}
+                    disabled={control.disabled}
+                    title={control.label}
+                    aria-label={control.label}
+                    aria-pressed={control.pressed}
+                >
+                    {control.icon}
+                </ControlButton>
+            ))}
         </Controls>
     );
 }
 
+// On phones the canvas is too narrow to float controls over it without covering
+// nodes, so the same buttons sit in a row under it.
+function CanvasControlsBar() {
+    const { t } = useTranslation();
+    const controls = useCanvasControls();
+    return (
+        <div role="group" aria-label={t('flowchart.canvasControls')} className="flex gap-2 border-t p-2 sm:hidden">
+            {controls.map((control) => (
+                <Button
+                    key={control.key}
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    className="h-11 w-11 [&_svg]:h-4 [&_svg]:w-4"
+                    onClick={control.onClick}
+                    disabled={control.disabled}
+                    title={control.label}
+                    aria-label={control.label}
+                    aria-pressed={control.pressed}
+                >
+                    {control.icon}
+                </Button>
+            ))}
+        </div>
+    );
+}
+
+const FIT_VIEW: FitViewOptions = { padding: 0.2 };
+
+// Toolbar buttons show only their icon on phones; the text stays as their name.
+const COMPACT_LABEL = 'sr-only sm:not-sr-only';
+
 // 12px handles get an invisible 44px hit area on touch.
 const HANDLE_CLASS = "!bg-white/50 !w-3 !h-3 !border-2 !border-white/80 pointer-coarse:after:absolute pointer-coarse:after:-inset-4 pointer-coarse:after:content-['']";
-
-// Edges are static; rebuttals are dashed so they read apart from support without motion.
-const REBUTTAL_DASH = '6 4';
 
 // Custom node component
 function CustomNode({ data }: { data: FlowNodeData }) {
@@ -184,22 +225,22 @@ function CustomNode({ data }: { data: FlowNodeData }) {
             <Handle type="target" position={Position.Top} className={HANDLE_CLASS} />
             <div className="flex items-center gap-2 mb-1">
                 {nodeIcons[data.type]}
-                <Badge variant="secondary" className="text-xs uppercase bg-white/20">
+                <Badge variant="secondary" className="text-xs uppercase border-current bg-transparent text-inherit hover:bg-transparent">
                     {t(typeLabelKey)}
                 </Badge>
             </div>
-            <div className="font-semibold text-sm">{data.label}</div>
-            {data.description && (
-                <div className="text-xs opacity-80 mt-1 line-clamp-2">{data.description}</div>
+            <div className="font-semibold text-sm">{nodeLabel(data, t)}</div>
+            {nodeDescription(data, t) && (
+                <div className="text-xs mt-1 line-clamp-2 whitespace-pre-line">{nodeDescription(data, t)}</div>
             )}
             {data.strength && (
                 <Badge
                     variant="outline"
-                    className={`mt-2 text-xs ${data.strength === 'strong'
-                        ? 'border-green-300 text-green-100'
+                    className={`mt-2 text-xs text-white ${data.strength === 'strong'
+                        ? 'border-green-300'
                         : data.strength === 'weak'
-                            ? 'border-red-300 text-red-100'
-                            : 'border-yellow-300 text-yellow-100'
+                            ? 'border-red-300'
+                            : 'border-yellow-300'
                         }`}
                 >
                     {t(strengthTranslationKeys[data.strength])}
@@ -214,62 +255,6 @@ const nodeTypes = {
     custom: CustomNode,
 };
 
-const edgeStyles: Record<EdgeKind, { label: string; stroke: string; dash?: string }> = {
-    support: { label: 'Support', stroke: '#10b981' },
-    attack: { label: 'Attack', stroke: '#ef4444' },
-    rebuttal: { label: 'Rebuttal', stroke: '#3b82f6', dash: REBUTTAL_DASH },
-};
-
-// Initial sample data
-function createInitialNodes(t: TFunction): Node<FlowNodeData>[] {
-    return [
-    {
-        id: 'thesis',
-        type: 'custom',
-        position: { x: 400, y: 50 },
-        data: { label: t('flowchart.starter.thesisLabel'), description: t('flowchart.starter.thesisDesc'), type: 'thesis' },
-    },
-    {
-        id: 'c1',
-        type: 'custom',
-        position: { x: 150, y: 200 },
-        data: { label: t('flowchart.starter.argument1Label'), description: t('flowchart.starter.argument1Desc'), type: 'contention', strength: 'strong' },
-    },
-    {
-        id: 'c2',
-        type: 'custom',
-        position: { x: 400, y: 200 },
-        data: { label: t('flowchart.starter.argument2Label'), description: t('flowchart.starter.argument2Desc'), type: 'contention', strength: 'moderate' },
-    },
-    {
-        id: 'c3',
-        type: 'custom',
-        position: { x: 650, y: 200 },
-        data: { label: t('flowchart.starter.argument3Label'), description: t('flowchart.starter.argument3Desc'), type: 'contention', strength: 'weak' },
-    },
-    {
-        id: 'a1',
-        type: 'custom',
-        position: { x: 150, y: 350 },
-        data: { label: t('flowchart.starter.opponentAttackLabel'), description: t('flowchart.starter.opponentAttackDesc'), type: 'attack' },
-    },
-    {
-        id: 'r1',
-        type: 'custom',
-        position: { x: 150, y: 500 },
-        data: { label: t('flowchart.starter.rebuttalLabel'), description: t('flowchart.starter.rebuttalDesc'), type: 'rebuttal' },
-    },
-    ];
-}
-
-const initialEdges: Edge[] = [
-    { id: 'e-thesis-c1', source: 'thesis', target: 'c1', markerEnd: { type: MarkerType.ArrowClosed } },
-    { id: 'e-thesis-c2', source: 'thesis', target: 'c2', markerEnd: { type: MarkerType.ArrowClosed } },
-    { id: 'e-thesis-c3', source: 'thesis', target: 'c3', markerEnd: { type: MarkerType.ArrowClosed } },
-    { id: 'e-c1-a1', source: 'c1', target: 'a1', style: { stroke: '#ef4444' }, markerEnd: { type: MarkerType.ArrowClosed } },
-    { id: 'e-a1-r1', source: 'a1', target: 'r1', style: { stroke: '#3b82f6', strokeDasharray: REBUTTAL_DASH }, markerEnd: { type: MarkerType.ArrowClosed } },
-];
-
 export default function FlowchartPage() {
     const workspace = useWorkspaceToolScope('flowchart');
     const { t } = useTranslation();
@@ -278,21 +263,30 @@ export default function FlowchartPage() {
         setPendingFlowchartData,
         saveFlowchart,
         savedFlowcharts: allSavedFlowcharts,
-        deleteSavedFlowchart
+        deleteSavedFlowchart,
+        generateResult,
+        generateResultDebateId,
     } = useSessionStore();
     // Saved flowcharts follow the Current Debate; one-off mode shows one-off flowcharts.
     const flowchartScope = useDebateStore((state) => state.oneOff ? null : state.currentDebateId);
     const savedFlowcharts = allSavedFlowcharts.filter((item) => (item.debateId ?? null) === flowchartScope);
+    // The case on the Generate page, when it belongs to the same debate as these flowcharts.
+    // A case restored before results recorded their debate is not offered.
+    const currentCase = !workspace.context && caseHasFlowchart(generateResult) && generateResultDebateId !== undefined && generateResultDebateId === flowchartScope
+        ? generateResult
+        : null;
 
-    const [nodes, setNodes, onNodesChange] = useNodesState(createInitialNodes(t));
-    const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
-    // Screen readers name an edge by the nodes it joins, not by internal ids.
-    // Only the canvas gets these; saved charts keep plain edges.
+    const [starter] = useState(() => starterFlowchart(t));
+    const [nodes, setNodes, onNodesChange] = useNodesState<FlowNodeData>(starter.nodes);
+    const [edges, setEdges, onEdgesChange] = useEdgesState(starter.edges);
+    // Screen readers name an edge by the nodes it joins, not by internal ids, and edge
+    // labels follow the language. Only the canvas gets these; saved charts keep plain edges.
     // Keyed on ids and titles, so dragging a node does not rebuild every edge.
-    const nodeTitlesKey = JSON.stringify(nodes.map((node) => [node.id, (node.data as FlowNodeData | undefined)?.label ?? '']));
+    const nodeTitlesKey = JSON.stringify(nodes.map((node) => [node.id, node.data ? nodeLabel(node.data, t) : '']));
     const nodeTitles = useMemo(() => new Map<string, string>(JSON.parse(nodeTitlesKey) as Array<[string, string]>), [nodeTitlesKey]);
     const labelledEdges = useMemo(() => edges.map((edge) => ({
         ...edge,
+        label: edgeLabel(edge, t),
         ariaLabel: t('flowchart.edgeAriaLabel', {
             source: nodeTitles.get(edge.source) || edge.source,
             target: nodeTitles.get(edge.target) || edge.target,
@@ -302,18 +296,58 @@ export default function FlowchartPage() {
     // Save/Load dialog states
     const [isSaveDialogOpen, setIsSaveDialogOpen] = useState(false);
     const [saveTitle, setSaveTitle] = useState('');
+    const [saveTitleError, setSaveTitleError] = useState(false);
+    const saveTitleRef = useRef<HTMLInputElement>(null);
     const [isLoadDialogOpen, setIsLoadDialogOpen] = useState(false);
 
-    // Node ids repeat across charts, so a node's Undo belongs to the chart it was deleted
-    // from: loading another chart retires that Undo.
+    // Each chart gets a fresh canvas, which fits it once its nodes have sizes.
+    const [chartKey, setChartKey] = useState(0);
+    const [flowInstance, setFlowInstance] = useState<ReactFlowInstance | null>(null);
+    const flowInstanceRef = useRef<ReactFlowInstance | null>(null);
+    flowInstanceRef.current = flowInstance;
+    // The canvas changing width (a rotated phone, a resized window) fits the chart again.
+    // A new chart remounts the canvas element, so the observer follows the key.
+    const canvasRef = useRef<HTMLDivElement>(null);
+    const canvasSize = useRef({ width: 0, height: 0 });
+    useEffect(() => {
+        const canvas = canvasRef.current;
+        if (!canvas) return;
+        let frame = 0;
+        const observer = new ResizeObserver(([entry]) => {
+            const { width, height } = entry.contentRect;
+            const widthChanged = canvasSize.current.width !== 0 && Math.round(canvasSize.current.width) !== Math.round(width);
+            canvasSize.current = { width, height };
+            // Only width: a phone's browser bar changes the height while scrolling.
+            if (!widthChanged) return;
+            cancelAnimationFrame(frame);
+            frame = requestAnimationFrame(() => void flowInstanceRef.current?.fitView(FIT_VIEW));
+        });
+        observer.observe(canvas);
+        return () => {
+            observer.disconnect();
+            cancelAnimationFrame(frame);
+        };
+    }, [chartKey]);
+
+    // Node ids repeat across charts, so an Undo (a deleted node, a built case) belongs to
+    // the chart it came from: loading another chart retires that Undo.
     const chartVersion = useRef(0);
-    const nodeUndoToast = useRef<string | number | null>(null);
-    const replaceChart = useCallback((data: FlowchartData) => {
+    const undoToasts = useRef(new Set<string | number>());
+    // The debate (null: one-off work) a loaded, imported, or built chart belongs to;
+    // undefined while the canvas holds the template.
+    const chartScope = useRef<string | null | undefined>(undefined);
+    const currentScope = useRef(flowchartScope);
+    useLayoutEffect(() => {
+        currentScope.current = flowchartScope;
+    }, [flowchartScope]);
+    const replaceChart = useCallback((data: FlowchartData, scope: string | null | undefined = currentScope.current) => {
         chartVersion.current += 1;
-        if (nodeUndoToast.current !== null) toast.dismiss(nodeUndoToast.current);
-        nodeUndoToast.current = null;
+        undoToasts.current.forEach((id) => toast.dismiss(id));
+        undoToasts.current.clear();
+        chartScope.current = scope;
         setNodes(data.nodes);
         setEdges(data.edges);
+        setChartKey((key) => key + 1);
     }, [setNodes, setEdges]);
 
     useEffect(() => {
@@ -328,33 +362,29 @@ export default function FlowchartPage() {
     const [newNodeDescription, setNewNodeDescription] = useState('');
     const [newNodeType, setNewNodeType] = useState<NodeType>('contention');
     const [newNodeStrength, setNewNodeStrength] = useState<'strong' | 'moderate' | 'weak'>('moderate');
+    const [newNodeLabelError, setNewNodeLabelError] = useState(false);
+    const newNodeLabelRef = useRef<HTMLInputElement>(null);
     const [selectedNode, setSelectedNode] = useState<string | null>(null);
-    const [flowInstance, setFlowInstance] = useState<ReactFlowInstance | null>(null);
-    const canvasRef = useRef<HTMLDivElement>(null);
     const [layoutAnimating, setLayoutAnimating] = useState(false);
     const [editingNodeId, setEditingNodeId] = useState<string | null>(null);
     const [selectedEdgeType, setSelectedEdgeType] = useState<EdgeKind>('support');
 
     const onConnect = useCallback(
         (connection: Connection) => {
-            const edgeStyle = edgeStyles[selectedEdgeType];
-            setEdges((eds) =>
-                addEdge(
-                    {
-                        ...connection,
-                        label: edgeStyle.label,
-                        style: { stroke: edgeStyle.stroke, strokeWidth: 2, ...(edgeStyle.dash ? { strokeDasharray: edgeStyle.dash } : {}) },
-                        markerEnd: { type: MarkerType.ArrowClosed },
-                    },
-                    eds
-                )
-            );
+            if (!connection.source || !connection.target) return;
+            // addEdge names the edge after its endpoints and handles, and skips duplicates.
+            const { label, data, style, markerEnd } = edgeOfKind(selectedEdgeType, connection.source, connection.target, t);
+            setEdges((eds) => addEdge({ ...connection, label, data, style, markerEnd }, eds));
         },
-        [selectedEdgeType, setEdges]
+        [selectedEdgeType, setEdges, t]
     );
 
     const handleSaveNode = useCallback(() => {
-        if (!newNodeLabel.trim()) return;
+        if (!newNodeLabel.trim()) {
+            setNewNodeLabelError(true);
+            newNodeLabelRef.current?.focus();
+            return;
+        }
 
         if (editingNodeId) {
             setNodes((nds) =>
@@ -362,13 +392,12 @@ export default function FlowchartPage() {
                     if (node.id === editingNodeId) {
                         return {
                             ...node,
-                            data: {
-                                ...node.data,
+                            data: editNodeData(node.data, {
                                 label: newNodeLabel,
                                 description: newNodeDescription,
                                 type: newNodeType,
                                 strength: newNodeType === 'contention' ? newNodeStrength : undefined,
-                            },
+                            }, t),
                         };
                     }
                     return node;
@@ -377,20 +406,21 @@ export default function FlowchartPage() {
             setEditingNodeId(null);
         } else {
             // A new node appears in the middle of what the user is looking at.
-            const rect = canvasRef.current?.getBoundingClientRect();
-            const centre = rect && flowInstance
-                ? flowInstance.screenToFlowPosition({ x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 })
+            const { width, height } = canvasSize.current;
+            const viewport = flowInstance?.getViewport();
+            const centre = viewport && width
+                ? { x: (width / 2 - viewport.x) / viewport.zoom, y: (height / 2 - viewport.y) / viewport.zoom }
                 : { x: 400, y: 250 };
             const newNode: Node<FlowNodeData> = {
                 id: `node-${Date.now()}`,
                 type: 'custom',
                 position: { x: centre.x - 100, y: centre.y - 40 },
-                data: {
+                data: studentNodeData({
                     label: newNodeLabel,
                     description: newNodeDescription,
                     type: newNodeType,
                     strength: newNodeType === 'contention' ? newNodeStrength : undefined,
-                },
+                }),
             };
             setNodes((nds) => [...nds, newNode]);
         }
@@ -398,10 +428,14 @@ export default function FlowchartPage() {
         setNewNodeLabel('');
         setNewNodeDescription('');
         setIsAddDialogOpen(false);
-    }, [newNodeLabel, newNodeDescription, newNodeType, newNodeStrength, editingNodeId, setNodes, flowInstance]);
+    }, [newNodeLabel, newNodeDescription, newNodeType, newNodeStrength, editingNodeId, setNodes, flowInstance, t]);
 
     const handleSaveFlowchart = async () => {
-        if (!saveTitle.trim()) return;
+        if (!saveTitle.trim()) {
+            setSaveTitleError(true);
+            saveTitleRef.current?.focus();
+            return;
+        }
 
         try {
             await saveFlowchart(saveTitle, { nodes, edges }, workspace.context ? null : undefined);
@@ -414,6 +448,35 @@ export default function FlowchartPage() {
             console.error(error);
         }
     };
+
+    // Building from the case replaces the canvas, so Undo puts the previous chart back.
+    const buildFromCase = () => {
+        if (!currentCase) return;
+        const previous = { nodes, edges };
+        const previousScope = chartScope.current;
+        replaceChart(flowchartFromCase(currentCase, t));
+        setSelectedNode(null);
+        const version = chartVersion.current;
+        undoToasts.current.add(toast.success(t('flowchart.builtFromCase'), {
+            action: {
+                label: t('common.undo', 'Undo'),
+                onClick: () => {
+                    if (chartVersion.current !== version) return;
+                    replaceChart(previous, previousScope);
+                    setSelectedNode(null);
+                },
+            },
+        }));
+    };
+
+    // A chart belongs to its debate: switching debates puts the template back rather
+    // than leave that chart on the canvas, to be saved into another debate.
+    useEffect(() => {
+        if (chartScope.current === undefined || chartScope.current === flowchartScope) return;
+        replaceChart(starterFlowchart(t), undefined);
+        setSelectedNode(null);
+        toast(t('flowchart.resetForDebate'));
+    }, [flowchartScope, replaceChart, t]);
 
     const handleLoadFlowchart = (data: FlowchartData) => {
         replaceChart(data);
@@ -454,6 +517,7 @@ export default function FlowchartPage() {
 
     const openAddDialog = () => {
         setEditingNodeId(null);
+        setNewNodeLabelError(false);
         setNewNodeLabel('');
         setNewNodeDescription('');
         setNewNodeType('contention');
@@ -463,14 +527,15 @@ export default function FlowchartPage() {
 
     const openEditDialog = useCallback((node: Node<FlowNodeData>) => {
         setEditingNodeId(node.id);
-        setNewNodeLabel(node.data.label);
-        setNewNodeDescription(node.data.description || '');
+        setNewNodeLabelError(false);
+        setNewNodeLabel(nodeLabel(node.data, t));
+        setNewNodeDescription(nodeDescription(node.data, t));
         setNewNodeType(node.data.type);
         if (node.data.strength) {
             setNewNodeStrength(node.data.strength);
         }
         setIsAddDialogOpen(true);
-    }, []);
+    }, [t]);
 
     // Deleting a node acts at once; Undo puts the node and its edges back.
     const deleteSelectedNode = useCallback(() => {
@@ -482,7 +547,7 @@ export default function FlowchartPage() {
         setEdges((eds) => eds.filter((e) => e.source !== selectedNode && e.target !== selectedNode));
         setSelectedNode(null);
         const version = chartVersion.current;
-        nodeUndoToast.current = toast(t('flowchart.nodeDeletedNamed', { label: removedNode.data.label, defaultValue: 'Deleted {{label}}' }), {
+        const undo = toast(t('flowchart.nodeDeletedNamed', { label: nodeLabel(removedNode.data, t), defaultValue: 'Deleted {{label}}' }), {
             action: {
                 label: t('common.undo', 'Undo'),
                 onClick: () => {
@@ -492,6 +557,7 @@ export default function FlowchartPage() {
                 },
             },
         });
+        undoToasts.current.add(undo);
     }, [selectedNode, nodes, edges, setNodes, setEdges, t]);
 
     const autoLayout = useCallback(() => {
@@ -523,15 +589,15 @@ export default function FlowchartPage() {
     }, [nodes, setNodes, flowInstance]);
 
     const exportToPng = useCallback(() => {
-        const flowElement = document.querySelector('.react-flow') as HTMLElement;
+        const flowElement = canvasRef.current?.querySelector<HTMLElement>('.react-flow');
         if (!flowElement) return;
 
+        // The canvas size comes from its ResizeObserver, so exporting forces no layout.
+        const background = getComputedStyle(document.documentElement).getPropertyValue('--background').trim();
         toPng(flowElement, {
-            backgroundColor: getComputedStyle(document.documentElement).getPropertyValue('--background')
-                ? `hsl(${getComputedStyle(document.documentElement).getPropertyValue('--background')})`
-                : '#ffffff',
-            width: flowElement.offsetWidth,
-            height: flowElement.offsetHeight,
+            backgroundColor: background ? `hsl(${background})` : '#ffffff',
+            width: Math.round(canvasSize.current.width),
+            height: Math.round(canvasSize.current.height),
         }).then((dataUrl) => {
             const link = document.createElement('a');
             link.download = 'debate-flowchart.png';
@@ -565,8 +631,8 @@ export default function FlowchartPage() {
                             <Dialog open={isLoadDialogOpen} onOpenChange={setIsLoadDialogOpen}>
                                 <DialogTrigger asChild>
                                     <Button variant="outline" size="sm">
-                                        <FolderOpen className="h-4 w-4 mr-2" />
-                                        {t('flowchart.load')}
+                                        <FolderOpen className="h-4 w-4 sm:mr-2" />
+                                        <span className={COMPACT_LABEL}>{t('flowchart.load')}</span>
                                     </Button>
                                 </DialogTrigger>
                                 <DialogContent className="max-w-md">
@@ -620,11 +686,17 @@ export default function FlowchartPage() {
                             </Dialog>
 
                             {/* Save Dialog */}
-                            <Dialog open={isSaveDialogOpen} onOpenChange={setIsSaveDialogOpen}>
+                            <Dialog
+                                open={isSaveDialogOpen}
+                                onOpenChange={(open) => {
+                                    setIsSaveDialogOpen(open);
+                                    if (open) setSaveTitleError(false);
+                                }}
+                            >
                                 <DialogTrigger asChild>
                                     <Button variant="outline" size="sm">
-                                        <Save className="h-4 w-4 mr-2" />
-                                        {t('flowchart.save')}
+                                        <Save className="h-4 w-4 sm:mr-2" />
+                                        <span className={COMPACT_LABEL}>{t('flowchart.save')}</span>
                                     </Button>
                                 </DialogTrigger>
                                 <DialogContent>
@@ -637,10 +709,21 @@ export default function FlowchartPage() {
                                             <Label htmlFor="flowchart-save-title">{t('flowchart.titleField')}</Label>
                                             <Input
                                                 id="flowchart-save-title"
+                                                ref={saveTitleRef}
                                                 placeholder={t('flowchart.titlePlaceholder')}
                                                 value={saveTitle}
-                                                onChange={(e) => setSaveTitle(e.target.value)}
+                                                aria-invalid={saveTitleError}
+                                                aria-describedby={saveTitleError ? 'flowchart-save-title-error' : undefined}
+                                                onChange={(e) => {
+                                                    setSaveTitle(e.target.value);
+                                                    if (saveTitleError) setSaveTitleError(false);
+                                                }}
                                             />
+                                            {saveTitleError && (
+                                                <p id="flowchart-save-title-error" role="alert" className="text-sm text-destructive">
+                                                    {t('flowchart.titleRequired')}
+                                                </p>
+                                            )}
                                         </div>
                                     </div>
                                     <DialogFooter>
@@ -649,7 +732,7 @@ export default function FlowchartPage() {
                                 </DialogContent>
                             </Dialog>
 
-                            <div className="w-px h-8 bg-border mx-1" />
+                            <div className="w-px h-8 bg-border mx-1" aria-hidden="true" />
 
                             <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
                                 <DialogTrigger asChild>
@@ -668,10 +751,21 @@ export default function FlowchartPage() {
                                             <Label htmlFor="flowchart-node-label">{t('flowchart.labelField')}</Label>
                                             <Input
                                                 id="flowchart-node-label"
+                                                ref={newNodeLabelRef}
                                                 placeholder={t('flowchart.labelPlaceholder')}
                                                 value={newNodeLabel}
-                                                onChange={(e) => setNewNodeLabel(e.target.value)}
+                                                aria-invalid={newNodeLabelError}
+                                                aria-describedby={newNodeLabelError ? 'flowchart-node-label-error' : undefined}
+                                                onChange={(e) => {
+                                                    setNewNodeLabel(e.target.value);
+                                                    if (newNodeLabelError) setNewNodeLabelError(false);
+                                                }}
                                             />
+                                            {newNodeLabelError && (
+                                                <p id="flowchart-node-label-error" role="alert" className="text-sm text-destructive">
+                                                    {t('flowchart.labelRequired')}
+                                                </p>
+                                            )}
                                         </div>
                                         <div className="space-y-2">
                                             <Label htmlFor="flowchart-node-description">{t('flowchart.descriptionField')}</Label>
@@ -718,26 +812,6 @@ export default function FlowchartPage() {
                                 </DialogContent>
                             </Dialog>
 
-                            {selectedNode && selectedNode !== 'thesis' && (
-                                <>
-                                    <Button
-                                        variant="outline"
-                                        size="sm"
-                                        onClick={() => {
-                                            const node = nodes.find(n => n.id === selectedNode);
-                                            if (node) openEditDialog(node);
-                                        }}
-                                    >
-                                        <GitBranch className="h-4 w-4 mr-2" />
-                                        {t('flowchart.edit')}
-                                    </Button>
-                                    <Button variant="destructive" size="sm" onClick={deleteSelectedNode}>
-                                        <Trash2 className="h-4 w-4 mr-2" />
-                                        {t('flowchart.delete')}
-                                    </Button>
-                                </>
-                            )}
-
                             <Select value={selectedEdgeType} onValueChange={(value) => setSelectedEdgeType(value as EdgeKind)}>
                                 <SelectTrigger className="h-9 w-[132px]" aria-label={t('flowchart.edgeTypeLabel')}>
                                     <SelectValue />
@@ -750,14 +824,21 @@ export default function FlowchartPage() {
                             </Select>
 
                             <Button variant="outline" size="sm" onClick={autoLayout}>
-                                <LayoutGrid className="h-4 w-4 mr-2" />
-                                {t('flowchart.autoLayout', 'Auto layout')}
+                                <LayoutGrid className="h-4 w-4 sm:mr-2" />
+                                <span className={COMPACT_LABEL}>{t('flowchart.autoLayout')}</span>
                             </Button>
 
                             <Button variant="outline" size="sm" onClick={exportToPng}>
-                                <Download className="h-4 w-4 mr-2" />
-                                {t('flowchart.exportPng')}
+                                <Download className="h-4 w-4 sm:mr-2" />
+                                <span className={COMPACT_LABEL}>{t('flowchart.exportPng')}</span>
                             </Button>
+
+                            {currentCase && (
+                                <Button variant="outline" size="sm" onClick={buildFromCase}>
+                                    <FileInput className="h-4 w-4 sm:mr-2" />
+                                    <span className={COMPACT_LABEL}>{t('flowchart.buildFromCase')}</span>
+                                </Button>
+                            )}
                         </div>
                     </div>
                     <CurrentDebateStrip hidden={Boolean(workspace.context)} className="mt-3" />
@@ -768,16 +849,16 @@ export default function FlowchartPage() {
                         <Badge variant="outline" className="gap-1">
                             <Target className="h-3 w-3" /> {t('flowchart.legendThesis')}: {stats.thesis || 0}
                         </Badge>
-                        <Badge variant="outline" className="gap-1 border-emerald-500 text-emerald-600">
+                        <Badge variant="outline" className="gap-1 border-emerald-600 text-emerald-700 dark:text-emerald-400">
                             <Shield className="h-3 w-3" /> {t('flowchart.legendArgument')}: {stats.contention || 0}
                         </Badge>
-                        <Badge variant="outline" className="gap-1 border-red-500 text-red-600">
+                        <Badge variant="outline" className="gap-1 border-red-600 text-red-700 dark:text-red-400">
                             <Swords className="h-3 w-3" /> {t('flowchart.legendAttack')}: {stats.attack || 0}
                         </Badge>
-                        <Badge variant="outline" className="gap-1 border-blue-500 text-blue-600">
+                        <Badge variant="outline" className="gap-1 border-blue-600 text-blue-700 dark:text-blue-400">
                             <GitBranch className="h-3 w-3" /> {t('flowchart.legendRebuttal')}: {stats.rebuttal || 0}
                         </Badge>
-                        <Badge variant="outline" className="gap-1 border-amber-500 text-amber-600">
+                        <Badge variant="outline" className="gap-1 border-amber-600 text-amber-700 dark:text-amber-400">
                             <AlertTriangle className="h-3 w-3" /> {t('flowchart.legendDropped')}: {stats.dropped || 0}
                         </Badge>
                     </div>
@@ -792,10 +873,10 @@ export default function FlowchartPage() {
                                         <div className="min-w-0">
                                             <div className="flex flex-wrap items-center gap-2">
                                                 <Badge variant="secondary">{t('flowchart.selectedNode', 'Selected')}</Badge>
-                                                <h2 className="truncate text-sm font-semibold">{node.data.label}</h2>
+                                                <h2 className="truncate text-sm font-semibold">{nodeLabel(node.data, t)}</h2>
                                             </div>
-                                            {node.data.description && (
-                                                <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">{node.data.description}</p>
+                                            {nodeDescription(node.data, t) && (
+                                                <p className="mt-1 line-clamp-2 whitespace-pre-line text-sm text-muted-foreground">{nodeDescription(node.data, t)}</p>
                                             )}
                                         </div>
                                         <div className="flex shrink-0 gap-2">
@@ -817,6 +898,7 @@ export default function FlowchartPage() {
                     )}
 
                     {/* Flow Canvas */}
+                    <ReactFlowProvider key={chartKey}>
                     <div ref={canvasRef} className={`h-[50vh] min-h-[400px] w-full${layoutAnimating ? ' flow-layout-animating' : ''}`}>
                         <ReactFlow
                             onInit={setFlowInstance}
@@ -833,20 +915,26 @@ export default function FlowchartPage() {
                             onPaneClick={() => setSelectedNode(null)}
                             nodeTypes={nodeTypes}
                             fitView
-                            attributionPosition="bottom-left"
+                            fitViewOptions={FIT_VIEW}
+                            // A built case is wider than a phone at React Flow's default 0.5.
+                            minZoom={0.2}
+                            // Top right is clear of the controls and the minimap, and fitting leaves a margin there.
+                            attributionPosition="top-right"
                         >
                             <LocalizedControls />
                             <LocalizedA11yDescriptions />
+                            {/* Phones have no room for an overview over the chart. */}
                             <MiniMap
+                                className="max-sm:hidden"
                                 ariaLabel={t('flowchart.miniMap')}
                                 nodeColor={(node) => {
                                     const type = (node.data as FlowNodeData).type;
                                     switch (type) {
                                         case 'thesis': return '#3b82f6';
-                                        case 'contention': return '#10b981';
-                                        case 'attack': return '#ef4444';
-                                        case 'rebuttal': return '#3b82f6';
-                                        case 'dropped': return '#f59e0b';
+                                        case 'contention': return '#047857';
+                                        case 'attack': return '#b91c1c';
+                                        case 'rebuttal': return '#1d4ed8';
+                                        case 'dropped': return '#b45309';
                                         default: return '#6b7280';
                                     }
                                 }}
@@ -854,6 +942,8 @@ export default function FlowchartPage() {
                             <Background variant={BackgroundVariant.Dots} gap={12} size={1} />
                         </ReactFlow>
                     </div>
+                    <CanvasControlsBar />
+                    </ReactFlowProvider>
                 </CardContent>
             </Card>
 
@@ -870,19 +960,19 @@ export default function FlowchartPage() {
                             <span>{t('flowchart.legendThesis')}</span>
                         </div>
                         <div className="flex items-center gap-2">
-                            <div className="h-4 w-4 rounded bg-emerald-500" />
+                            <div className="h-4 w-4 rounded bg-emerald-700" />
                             <span>{t('flowchart.legendArgument')}</span>
                         </div>
                         <div className="flex items-center gap-2">
-                            <div className="h-4 w-4 rounded bg-red-500" />
+                            <div className="h-4 w-4 rounded bg-red-700" />
                             <span>{t('flowchart.legendAttack')}</span>
                         </div>
                         <div className="flex items-center gap-2">
-                            <div className="h-4 w-4 rounded bg-blue-500" />
+                            <div className="h-4 w-4 rounded bg-blue-700" />
                             <span>{t('flowchart.legendRebuttal')}</span>
                         </div>
                         <div className="flex items-center gap-2">
-                            <div className="h-4 w-4 rounded bg-amber-500" />
+                            <div className="h-4 w-4 rounded bg-amber-700" />
                             <span>{t('flowchart.legendDropped')}</span>
                         </div>
                     </div>

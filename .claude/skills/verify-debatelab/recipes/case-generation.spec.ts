@@ -119,6 +119,36 @@ test("gen-save: a one-off case is saved under a title and reopens from History o
   await reopenFromHistory(browser, user, title, output.caseStructure.thesis, evidence, "02", "one-off");
 });
 
+test("gen-flowchart: the Flowchart builds from the Current Debate's case, and its app text follows the language", async ({ signedIn: page, evidence }) => {
+  const { output } = await generate(page);
+  await page.goto("/app/flowchart");
+  // The template stays the blank start; the case is one click away.
+  await expect(page.getByText("Your Thesis", { exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "Build from current case" }).click();
+  await expect(page.getByText(output.caseStructure.thesis).first()).toBeVisible();
+  for (const contention of output.contentions) await expect(page.getByText(contention.claim).first()).toBeVisible();
+  await expect(page.getByText("Your Thesis", { exact: true })).toHaveCount(0);
+  // Every node fits the canvas once it is built.
+  await expect.poll(() => page.evaluate(() => {
+    const canvas = document.querySelector(".react-flow")!.getBoundingClientRect();
+    return [...document.querySelectorAll(".react-flow__node")].filter((node) => {
+      const box = node.getBoundingClientRect();
+      return box.left < canvas.left - 1 || box.right > canvas.right + 1 || box.top < canvas.top - 1 || box.bottom > canvas.bottom + 1;
+    }).length;
+  })).toBe(0);
+  await expect(page.getByRole("button", { name: "From Thesis to Argument 1" })).toHaveCount(1);
+  await evidence.shot("01-built-from-case");
+
+  // Node titles the app wrote follow the language on the same canvas; the case's own text does not change.
+  await page.getByRole("button", { name: "Language", exact: true }).click();
+  await page.getByRole("radiogroup", { name: "Interface language" }).getByRole("radio", { name: "Magyar" }).click();
+  await page.keyboard.press("Escape");
+  await expect(page.getByText("1. érv", { exact: true })).toBeVisible();
+  await expect(page.getByText("Argument 1", { exact: true })).toHaveCount(0);
+  await expect(page.getByText(output.caseStructure.thesis).first()).toBeVisible();
+  await evidence.shot("02-built-from-case-hu");
+});
+
 test("gen-research: generation researches the web and cites what it found", async ({ signedIn: page, evidence }) => {
   const { body } = await generate(page);
   await evidence.json("01-generate-response", body);

@@ -388,7 +388,8 @@
     "undone": "Cambio deshecho",
     "undoneDesc": "Se cargó la generación anterior.",
     "saveFailedDesc": "No se pudo guardar el caso. Inténtalo de nuevo.",
-    "working": "Escribiendo tu caso…"
+    "working": "Escribiendo tu caso…",
+    "flowchartOtherDebate": "El diagrama solo acepta un caso generado en el debate actual. Genera el caso aquí para enviarlo."
   },
   "attack": {
     "emptyTitle": "Modo sin piedad",
@@ -1547,7 +1548,7 @@
     "typeField": "Tipo",
     "strengthField": "Fuerza",
     "labelPlaceholder": "Etiqueta corta...",
-    "titlePlaceholder": "Título del nodo...",
+    "titlePlaceholder": "Título del diagrama...",
     "descPlaceholder": "Descripción...",
     "typeArgument": "Argumento",
     "typeAttack": "Ataque",
@@ -1598,7 +1599,20 @@
     "deletedNamed": "Se eliminó {{title}}",
     "deleteNamed": "Eliminar {{title}}",
     "restoreFailed": "No se pudo restaurar el diagrama",
-    "nodeDeletedNamed": "Se eliminó {{label}}"
+    "nodeDeletedNamed": "Se eliminó {{label}}",
+    "titleRequired": "Añade un título.",
+    "labelRequired": "Añade una etiqueta.",
+    "buildFromCase": "Crear desde el caso actual",
+    "builtFromCase": "Creado a partir de tu caso actual",
+    "canvasControls": "Controles del lienzo",
+    "attribution": "Atribución de React Flow",
+    "fromCase": {
+      "thesis": "Tesis",
+      "argument": "Argumento {{n}}",
+      "attack": "Ataque {{n}}",
+      "rebuttal": "Refutación {{n}}"
+    },
+    "resetForDebate": "Cambiaste de debate, así que el diagrama volvió a la plantilla. Los cambios sin guardar no se conservaron."
   },
   "historyPage": {
     "title": "Historial",

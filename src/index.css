@@ -501,6 +501,48 @@ All colors MUST be HSL.
   transition: transform 250ms var(--motion-ease-out-strong);
 }
 
+/* React Flow's controls, minimap, attribution, and edge labels are white in its own
+   stylesheet; here they follow the theme. Its stylesheet loads after this one, so
+   each rule carries the extra .react-flow class. */
+.react-flow .react-flow__controls {
+  box-shadow: 0 0 0 1px hsl(var(--border));
+}
+
+.react-flow .react-flow__controls-button {
+  background: hsl(var(--card));
+  color: hsl(var(--card-foreground));
+  border-bottom-color: hsl(var(--border));
+}
+
+.react-flow .react-flow__controls-button:hover {
+  background: hsl(var(--accent));
+}
+
+.react-flow .react-flow__minimap {
+  background-color: hsl(var(--card));
+  box-shadow: 0 0 0 1px hsl(var(--border));
+}
+
+.react-flow .react-flow__minimap-mask {
+  fill: hsl(var(--muted) / 0.6);
+}
+
+.react-flow .react-flow__attribution {
+  background: hsl(var(--card) / 0.8);
+}
+
+.react-flow .react-flow__attribution a {
+  color: hsl(var(--muted-foreground));
+}
+
+.react-flow .react-flow__edge-textbg {
+  fill: hsl(var(--card));
+}
+
+.react-flow .react-flow__edge-text {
+  fill: hsl(var(--card-foreground));
+}
+
 /* React Flow's 26px canvas controls grow to touch size on phones. Its stylesheet loads
    after this one with a content-box 16px + padding, so this needs the extra class. */
 @media (pointer: coarse) {

@@ -13,7 +13,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useSubscriptionError } from '@/hooks/use-subscription-error';
 import { getUserFacingAIError } from '@/lib/ai/error-display';
 import { LimitReachedModal, ModelRestrictedModal, PricingModal } from '@/components/features/subscription';
-import { MarkerType, type Node as ReactFlowNode, type Edge as ReactFlowEdge } from 'reactflow';
+import { caseHasFlowchart, flowchartFromCase } from '@/lib/flowchart';
 
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -55,6 +55,8 @@ export default function GeneratePage() {
   const debateGate = useDebateMotionGate({ disabled: Boolean(workspace.context) });
   // The debate row this page's current result was recorded into, if any.
   const [recordedCaseId, setRecordedCaseId] = useState<string | null>(null);
+  // Undo shows an autosaved snapshot, which is not the recorded case.
+  const [restoredSnapshot, setRestoredSnapshot] = useState(false);
   // Debate the current result belongs to (null for one-off); undefined after a reload.
   const [resultDebateId, setResultDebateId] = useState<string | null | undefined>(undefined);
   const { getFeatureConfig } = useSettingsStore();
@@ -80,6 +82,11 @@ export default function GeneratePage() {
     const prev = (autosavedCases || []).find(item => item.data !== generateResult);
     if (prev) {
       setGenerateResult(prev.data);
+      // A snapshot does not record its debate or its saved row. Unknown keeps it out of
+      // the Flowchart, and a regeneration then cannot overwrite the replaced case's row.
+      useSessionStore.setState({ generateResultDebateId: undefined });
+      setResultDebateId(undefined);
+      setRestoredSnapshot(true);
       // Autosaved snapshots do not carry researched sources; drop the panel
       // rather than showing provenance that belongs to a different case.
       setDiscoveredSources([]);
@@ -108,6 +115,7 @@ export default function GeneratePage() {
       setDiscoveredSources(sources);
       setGenerateResult(result);
       setRecordedCaseId(null);
+      setRestoredSnapshot(false);
       setResultDebateId(target.debateId);
       setGenerateResultDebateId(target.debateId);
       await workspace.attach(data, result);
@@ -182,7 +190,7 @@ export default function GeneratePage() {
         setGenerateResult(regenerated);
         setDiscoveredSources(sources);
         await workspace.attach({ ...data, regeneratedSection: section }, regenerated);
-        if (recordedCaseId) await updateRecordedResult('case', recordedCaseId, regenerated);
+        if (recordedCaseId && !restoredSnapshot) await updateRecordedResult('case', recordedCaseId, regenerated);
         toast({ title: t('generate.regenerated', 'Section regenerated'), description: t('generate.regeneratedDesc', 'The selected section has been refreshed.'), variant: 'success' });
       })
       .catch((error) => {
@@ -230,118 +238,19 @@ export default function GeneratePage() {
   };
 
   const handleImportFlowchart = () => {
-    if (!generateResult?.caseStructure || !generateResult?.contentions) {
+    if (!caseHasFlowchart(generateResult)) {
       toast({ title: t('generate.flowchartImportFailed'), description: t('generate.flowchartNoData'), variant: "destructive" });
+      return;
+    }
+    // The flowchart files its chart in the current debate, so only that debate's case goes there.
+    const { oneOff, currentDebateId } = useDebateStore.getState();
+    if (!workspace.context && (generateResultDebateId === undefined || generateResultDebateId !== (oneOff ? null : currentDebateId))) {
+      toast({ title: t('generate.flowchartImportFailed'), description: t('generate.flowchartOtherDebate'), variant: "destructive" });
       return;
     }
 
     try {
-      const nodes: ReactFlowNode[] = [];
-      const edges: ReactFlowEdge[] = [];
-      const centerX = 400;
-
-      // Thesis
-      nodes.push({
-        id: 'thesis',
-        type: 'custom',
-        position: { x: centerX, y: 50 },
-        data: {
-          label: 'Thesis',
-          description: generateResult.caseStructure.thesis,
-          type: 'thesis'
-        }
-      });
-
-      // Contentions — use 'contention' type to match FlowchartPage nodeColors/nodeIcons
-      const contentions = generateResult.contentions;
-      contentions.forEach((c, i) => {
-        const id = `c-${i}`;
-        const xPos = centerX + ((i - (contentions.length - 1) / 2) * 300);
-
-        nodes.push({
-          id,
-          type: 'custom',
-          position: { x: xPos, y: 250 },
-          data: {
-            label: `Argument ${i + 1}`,
-            description: c.claim,
-            type: 'contention',
-            strength: 'strong'
-          }
-        });
-
-        edges.push({
-          id: `e-thesis-${id}`,
-          source: 'thesis',
-          target: id,
-          markerEnd: { type: MarkerType.ArrowClosed }
-        });
-      });
-
-      // Attacks (Predicted Opponent Case)
-      if (generateResult.predictedOpponentCase?.likelyArguments) {
-        const attacks = generateResult.predictedOpponentCase.likelyArguments;
-        attacks.forEach((arg, i) => {
-          const id = `a-${i}`;
-          const xPos = centerX + ((i - (attacks.length - 1) / 2) * 300);
-
-          nodes.push({
-            id,
-            type: 'custom',
-            position: { x: xPos, y: 450 },
-            data: {
-              label: `Attack ${i + 1}`,
-              description: arg,
-              type: 'attack'
-            }
-          });
-
-          const targetContentionId = contentions.length ? `c-${i % contentions.length}` : 'thesis';
-          edges.push({
-            id: `e-${targetContentionId}-${id}`,
-            source: targetContentionId,
-            target: id,
-            label: 'Attack',
-            style: { stroke: '#ef4444', strokeWidth: 2 },
-            markerEnd: { type: MarkerType.ArrowClosed }
-          });
-        });
-      }
-
-      // Counters / Rebuttals — link each to its target contention
-      if (generateResult.counters?.length) {
-        generateResult.counters.forEach((counter, i) => {
-          const id = `r-${i}`;
-          // Find the contention this counter targets
-          const targetIdx = contentions.findIndex(
-            (c) => c.claim.toLowerCase().includes(counter.targetArgument?.toLowerCase() ?? '')
-          );
-          const parentId = targetIdx >= 0 ? `c-${targetIdx}` : 'thesis';
-          const parentNode = nodes.find((n) => n.id === parentId);
-          const xPos = parentNode ? parentNode.position.x + 50 : centerX + (i * 250);
-
-          nodes.push({
-            id,
-            type: 'custom',
-            position: { x: xPos, y: 650 },
-            data: {
-              label: `Rebuttal ${i + 1}`,
-              description: counter.rebuttal || counter.counterpoint,
-              type: 'rebuttal'
-            }
-          });
-
-          edges.push({
-            id: `e-${parentId}-${id}`,
-            source: parentId,
-            target: id,
-            style: { stroke: '#3b82f6', strokeDasharray: '6 4' },
-            markerEnd: { type: MarkerType.ArrowClosed }
-          });
-        });
-      }
-
-      setPendingFlowchartData({ nodes, edges });
+      setPendingFlowchartData(flowchartFromCase(generateResult, t));
       navigate('/app/flowchart');
       toast({ title: t('generate.flowchartImported'), description: t('generate.flowchartImportedDesc') });
     } catch (error) {

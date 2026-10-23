@@ -388,7 +388,8 @@
     "undone": "Reverted",
     "undoneDesc": "Loaded previous generation.",
     "saveFailedDesc": "The case could not be saved. Please try again.",
-    "working": "Writing your case…"
+    "working": "Writing your case…",
+    "flowchartOtherDebate": "The Flowchart takes only a case generated in the current debate. Generate the case here to send it."
   },
   "attack": {
     "emptyTitle": "No Mercy Mode",
@@ -1547,7 +1548,7 @@
     "typeField": "Type",
     "strengthField": "Strength",
     "labelPlaceholder": "Short label...",
-    "titlePlaceholder": "Node title...",
+    "titlePlaceholder": "Flowchart title...",
     "descPlaceholder": "Description...",
     "typeArgument": "Argument",
     "typeAttack": "Attack",
@@ -1598,7 +1599,20 @@
     "deletedNamed": "Deleted {{title}}",
     "deleteNamed": "Delete {{title}}",
     "restoreFailed": "Could not restore the flowchart",
-    "nodeDeletedNamed": "Deleted {{label}}"
+    "nodeDeletedNamed": "Deleted {{label}}",
+    "titleRequired": "Add a title.",
+    "labelRequired": "Add a label.",
+    "buildFromCase": "Build from current case",
+    "builtFromCase": "Built from your current case",
+    "canvasControls": "Canvas controls",
+    "attribution": "React Flow attribution",
+    "fromCase": {
+      "thesis": "Thesis",
+      "argument": "Argument {{n}}",
+      "attack": "Attack {{n}}",
+      "rebuttal": "Rebuttal {{n}}"
+    },
+    "resetForDebate": "You switched debates, so the flowchart went back to the template. Unsaved changes were not kept."
   },
   "historyPage": {
     "title": "History",

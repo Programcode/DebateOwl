@@ -40,7 +40,7 @@ Each feature file starts with an H1 title and one paragraph describing the user-
 ## Features
 
 - [Demo-code sign-in](./auth-demo-login.md): sign-in, reload, rejected code, sign-out (`e2e/full-stack/auth.spec.ts`); email one-time-code sign-in through Mailpit, the emailed sign-in link through `/auth/callback` (including after a failed resend, and a used link), and a second account on the same browser (`recipes/auth.spec.ts`).
-- [Case generation](./case-generation.md): generate, web research, save and reopen from History on a fresh device, PDF and DOCX export, single-section regeneration, provider failure and retry, a reply cut off at its length cap, quota block (`recipes/case-generation.spec.ts`).
+- [Case generation](./case-generation.md): generate, web research, save and reopen from History on a fresh device, PDF and DOCX export, single-section regeneration, building a flowchart from the case, provider failure and retry, a reply cut off at its length cap, quota block (`recipes/case-generation.spec.ts`).
 - [Library sources](./library-sources.md): add, pause, delete, grounding, and URL import (`recipes/library.spec.ts`).
 - [AI tools](./ai-tools.md): Attack, Brainstorm, Factoids, and Ask streamed, cut off at its length cap, cited, and with web search (`recipes/ai-tools.spec.ts`).
 - [Live generation](./live-generation.md): every AI tool shows its answer while the model writes it, Cancel mid-stream, and the event stream's shape (`recipes/live-generation.spec.ts`); Crossfire and Sparring requests stream too (`recipes/practice.spec.ts`).
