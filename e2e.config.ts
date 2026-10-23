@@ -1,6 +1,7 @@
 import type { E2EConfig } from "e2e";
 import { web } from "@e2e-dev/web";
 import { openrouter } from "@openrouter/ai-sdk-provider";
+import { withAnthropicCacheLimit } from "./agentic/support/anthropic-cache";
 
 // Agentic browser tests (TesterArmy e2e) against the verify-debatelab stack.
 // Run them through `.claude/skills/verify-debatelab/bin/verify.sh e2e`, which
@@ -30,7 +31,8 @@ function claudeOnly(id: string) {
   if (!id.startsWith("anthropic/")) {
     throw new Error(`The testing agent runs only on Claude through the Anthropic BYOK key; ${id} would bill OpenRouter credits`);
   }
-  return openrouter(id, { provider: { only: ["anthropic"], allow_fallbacks: false } });
+  // Anthropic allows four prompt-cache breakpoints; see agentic/support/anthropic-cache.ts.
+  return withAnthropicCacheLimit(openrouter(id, { provider: { only: ["anthropic"], allow_fallbacks: false } }));
 }
 const model = claudeOnly(process.env.E2E_AGENT_MODEL || E2E_DEFAULT_MODEL);
 const judge = claudeOnly(process.env.E2E_JUDGE_MODEL || E2E_DEFAULT_MODEL);
