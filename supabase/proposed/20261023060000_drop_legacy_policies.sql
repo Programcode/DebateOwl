@@ -20,21 +20,32 @@
 --
 -- The policy names were in the QA snapshot, which is not in the repo, so
 -- this drops by exclusion and prints each definition first. It stops before
--- dropping anything if a policy it means to keep is missing, since dropping
--- the rest would then leave signed-in users unable to read their own role
--- (SettingsPage and the curated_sources admin policies depend on it). Do a
--- dry run first (BEGIN; ...; ROLLBACK;).
+-- dropping anything unless both kept policies exist and read only the
+-- caller's own rows: without user_roles_select_own, signed-in users could no
+-- longer read their own role (SettingsPage and the curated_sources admin
+-- policies depend on it), and a drifted copy would keep the leak this fixes.
+-- Do a dry run first (BEGIN; ...; ROLLBACK;).
 
 DO $$
 DECLARE
   p record;
 BEGIN
-  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE schemaname = 'public'
-      AND tablename = 'user_roles' AND policyname = 'user_roles_select_own')
-    OR NOT EXISTS (SELECT 1 FROM pg_policies WHERE schemaname = 'public'
-      AND tablename = 'ai_requests' AND policyname = 'ai_requests_select_own') THEN
-    RAISE EXCEPTION 'user_roles_select_own or ai_requests_select_own is missing; recreate it before dropping the others';
-  END IF;
+  -- The kept policies must exist and read only the caller's own rows, as
+  -- 20260819000000 and 20261016120000 define them.
+  FOR p IN
+    SELECT k.tablename, k.policyname, pol.cmd, pol.permissive, pol.qual
+    FROM (VALUES ('user_roles', 'user_roles_select_own'),
+                 ('ai_requests', 'ai_requests_select_own')) AS k(tablename, policyname)
+    LEFT JOIN pg_policies AS pol
+      ON pol.schemaname = 'public' AND pol.tablename = k.tablename AND pol.policyname = k.policyname
+  LOOP
+    RAISE NOTICE 'keeping policy % on %: % % USING (%)', p.policyname, p.tablename, p.permissive, p.cmd, p.qual;
+    IF p.cmd IS DISTINCT FROM 'SELECT'
+      OR p.qual IS DISTINCT FROM '(user_id = ( SELECT auth.uid() AS uid))' THEN
+      RAISE EXCEPTION 'policy % on % is missing or not own-rows SELECT; fix it before dropping the others',
+        p.policyname, p.tablename;
+    END IF;
+  END LOOP;
 
   FOR p IN
     SELECT pol.polname, cls.relname,

@@ -39,7 +39,7 @@ SELECT is_empty(
     WHERE has_any_column_privilege(r, t, 'SELECT')
     UNION ALL
     SELECT t FROM unnest(ARRAY['public.promo_codes', 'public.daily_usage_counters']) AS t
-    WHERE has_table_privilege('authenticated', t, 'SELECT')$$,
+    WHERE has_any_column_privilege('authenticated', t, 'SELECT')$$,
   'anon reads none of them (nor AI request history), and signed-in users cannot read promo codes or usage counters directly'
 );
 SELECT ok(

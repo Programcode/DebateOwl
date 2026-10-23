@@ -1,14 +1,15 @@
 -- SC-04: get_shared_item counted every call, so reloading a share link
 -- inflated its view count. Count each viewer at most once per share per UTC
 -- day instead. The share page and the function's signature and result stay
--- the same.
+-- the same. The number shown on the share page now means distinct viewers
+-- per day, not page loads.
 --
 -- A viewer is the signed-in user, otherwise the client IP the API gateway
 -- forwards. The stored key is a SHA-256 of share, day and viewer. It keeps
 -- raw IPs out of the table, but it is not anonymous: with no secret in it,
 -- an IPv4 address can be recovered by trying every address. Only server
--- roles can read the table, and rows from earlier days are deleted as soon
--- as a new view is counted. This stops reload inflation; it is not abuse
+-- roles can read the table, and each counted view deletes up to 500 rows
+-- from earlier days. This stops reload inflation; it is not abuse
 -- protection: a client that varies its IP still counts again, and viewers
 -- behind one NAT address count once.
 
@@ -70,7 +71,12 @@ BEGIN
     SET view_count = s.view_count + 1
     WHERE s.id = v_item.id
     RETURNING s.view_count INTO v_item.view_count;
-    DELETE FROM public.share_views AS v WHERE v.viewed_on < v_today;
+    -- Bounded, so a busy day never makes one viewer's request slow; the
+    -- next counted views delete the rest.
+    DELETE FROM public.share_views AS v
+    WHERE v.ctid = ANY (ARRAY(
+      SELECT o.ctid FROM public.share_views AS o WHERE o.viewed_on < v_today LIMIT 500
+    ));
   END IF;
 
   RETURN QUERY SELECT v_item.id, v_item.share_code, v_item.item_type,
