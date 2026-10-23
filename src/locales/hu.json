@@ -388,7 +388,8 @@
     "undone": "Visszaállítva",
     "undoneDesc": "Az előző generálás betöltve.",
     "saveFailedDesc": "Nem sikerült menteni az esetet. Próbáld újra.",
-    "working": "Az eseted megírása…"
+    "working": "Az eseted megírása…",
+    "flowchartOtherDebate": "A folyamatábra csak a jelenlegi vitában létrehozott esetet fogadja. Hozd létre itt az esetet, hogy elküldhesd."
   },
   "attack": {
     "emptyTitle": "Kegyetlen mód",
@@ -1527,7 +1528,7 @@
     "typeField": "Típus",
     "strengthField": "Erősség",
     "labelPlaceholder": "Rövid címke...",
-    "titlePlaceholder": "Csomópont címe...",
+    "titlePlaceholder": "A folyamatábra címe...",
     "descPlaceholder": "Leírás...",
     "typeArgument": "Érv",
     "typeAttack": "Támadás",
@@ -1578,7 +1579,20 @@
     "deletedNamed": "Törölve: {{title}}",
     "deleteNamed": "{{title}} törlése",
     "restoreFailed": "Nem sikerült visszaállítani a folyamatábrát",
-    "nodeDeletedNamed": "Törölve: {{label}}"
+    "nodeDeletedNamed": "Törölve: {{label}}",
+    "titleRequired": "Adj meg egy címet.",
+    "labelRequired": "Adj meg egy címkét.",
+    "buildFromCase": "Létrehozás a jelenlegi esetből",
+    "builtFromCase": "A folyamatábra elkészült a jelenlegi esetedből",
+    "canvasControls": "Vászonvezérlők",
+    "attribution": "React Flow forrásmegjelölés",
+    "fromCase": {
+      "thesis": "Tézis",
+      "argument": "{{n}}. érv",
+      "attack": "{{n}}. támadás",
+      "rebuttal": "{{n}}. cáfolat"
+    },
+    "resetForDebate": "Vitát váltottál, ezért a folyamatábra visszaállt a sablonra. A nem mentett módosítások elvesztek."
   },
   "historyPage": {
     "title": "Előzmények",

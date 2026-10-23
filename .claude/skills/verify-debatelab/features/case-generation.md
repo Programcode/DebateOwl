@@ -11,6 +11,7 @@ A signed-in user enters a motion on Generate and receives a structured debate ca
 - `gen-save` saves a one-off case (the motion dialog answered with `Not now, use it once`) under a title into `cases` with `debate_id: null`. It appears in History under `One-off and unsorted work`, including from a fresh browser context.
 - `gen-regenerate` regenerates one section. Only that section shows the overlay `Regenerating <section>…`; the rest of the case and the result toolbar stay on screen, and every regenerate button and the form's submit button are disabled until it finishes.
 - `gen-export` downloads a `.pdf` (starting with `%PDF`) and a `.docx` (starting with `PK`).
+- `gen-flowchart` builds a flowchart from the Current Debate's case. `/app/flowchart` opens the template; the button `Build from current case` replaces it with the thesis, one node per contention (claim and evidence), the predicted attacks, and the counters, fitted to the canvas. Node titles the app wrote (`Thesis`, `Argument 1`) follow the UI language.
 
 ## How to get to it (user POV)
 
@@ -33,6 +34,7 @@ Preconditions:
 - **Cancel.** While a generation runs, the results column shows `Writing your case…` and a `Cancel` button. Cancel stops the request and shows no error.
 - **Quota.** Update `user_settings` to set `daily_limit_override: 0` through `admin`, start the debate, then generate. The dialog shows `Daily Access Paused`. `fake.requests()` has no `generate` entry.
 - **Regenerate a section.** After generating, click the button named `Regenerate Arguments` (the section titles are `Case Structure`, `Arguments`, `Predicted Opponent Case`, `Prepared Counters`). Hold the request with `page.route("**/functions/v1/ai", ...)` to check the in-flight state: a `status` with `Regenerating Arguments` is visible and `Regenerate Case Structure` is disabled. The toast `Section regenerated` follows. A full generation shows no toast: the result appears in place (and scrolls into view on phones).
+- **Flowchart.** After generating in the debate, open `/app/flowchart` and click the button named `Build from current case` (Hungarian: `Létrehozás a jelenlegi esetből`). It appears only when the case belongs to the Current Debate, or to one-off work while no debate is chosen. The contention claims are visible, and an edge is a button named `From Thesis to Argument 1`.
 - **Export.** Wait for `page.waitForEvent("download")` while clicking the button named `PDF` or `DOCX` (use `exact`). Check the suggested filename's extension and the file's magic bytes.
 
 ## Gotchas
