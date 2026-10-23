@@ -8,7 +8,7 @@ import { askChat, isAIModelRestrictionError, isAIProviderError, isAISubscription
 import { isAskStreamingSupported, streamAskChat } from '@/lib/ai/streaming';
 import { useSubscriptionError } from '@/hooks/use-subscription-error';
 import { getUserFacingAIError } from '@/lib/ai/error-display';
-import { LimitReachedModal, ModelRestrictedModal, PricingModal } from '@/components/features/subscription';
+import { DailyUsage, SubscriptionErrorModals } from '@/components/features/subscription';
 import { useToast } from '@/hooks/use-toast';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useShallow } from 'zustand/react/shallow';
@@ -476,7 +476,7 @@ export default function AskPage() {
     <div className="container py-8 px-4">
       <WorkspaceToolScope context={workspace.context} />
       <div className="max-w-5xl mx-auto">
-        <PageHeader title={t('nav.ask')} />
+        <PageHeader title={t('nav.ask')} meta={<DailyUsage />} />
         <CurrentDebateStrip hidden={Boolean(workspace.context)} />
         <div>
           <AskChat
@@ -509,27 +509,7 @@ export default function AskPage() {
         </div>
       </div>
 
-      <LimitReachedModal
-        open={subError.limitModalOpen}
-        onOpenChange={subError.setLimitModalOpen}
-        variant={subError.limitModalVariant}
-        limit={subError.limitModalLimit}
-        current={subError.limitModalCurrent}
-        units={subError.limitModalUnits}
-        onUpgrade={() => { subError.setLimitModalOpen(false); subError.setPricingModalOpen(true); }}
-      />
-      <ModelRestrictedModal
-        open={subError.modelModalOpen}
-        onOpenChange={subError.setModelModalOpen}
-        onUpgrade={() => {
-          subError.setModelModalOpen(false);
-          subError.setPricingModalOpen(true);
-        }}
-      />
-      <PricingModal
-        open={subError.pricingModalOpen}
-        onOpenChange={subError.setPricingModalOpen}
-      />
+      <SubscriptionErrorModals subError={subError} />
     </div>
   );
 }

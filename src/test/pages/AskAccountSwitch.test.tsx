@@ -24,9 +24,8 @@ vi.mock('@/lib/ai/client', async (importOriginal) => ({
 }));
 
 vi.mock('@/components/features/subscription', () => ({
-  LimitReachedModal: (): null => null,
-  ModelRestrictedModal: (): null => null,
-  PricingModal: (): null => null,
+  DailyUsage: (): null => null,
+  SubscriptionErrorModals: (): null => null,
 }));
 
 vi.mock('@/lib/ai/streaming', () => ({
