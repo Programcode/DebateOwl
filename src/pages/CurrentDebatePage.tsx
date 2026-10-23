@@ -34,14 +34,14 @@ function ItemRow({ item }: { item: DebateItem }) {
   const canOpen = item.kind !== 'crossfire';
   return (
     <li className="flex items-center justify-between gap-3 border-b border-border/60 py-2 last:border-b-0">
-      <div className="min-w-0">
+      <div className="min-w-0 flex-1">
         <p className="truncate text-sm font-medium">{item.title}</p>
         <p className="text-xs text-muted-foreground">
           {t(`debate.kinds.${item.kind}`)} · {formatEuropeanDateTime(item.createdAt)}
         </p>
       </div>
       {canOpen && (
-        <Button variant="ghost" size="sm" onClick={() => openItem(item)} aria-label={t('debate.openItemAria', { title: item.title, defaultValue: 'Open {{title}}' })}>
+        <Button variant="ghost" size="sm" className="shrink-0" onClick={() => openItem(item)} aria-label={t('debate.openItemAria', { title: item.title, defaultValue: 'Open {{title}}' })}>
           {t('historyPage.load', 'Load')}
         </Button>
       )}
@@ -53,10 +53,10 @@ function SideSection({ side, items }: { side: 'pro' | 'con'; items: DebateItem[]
   const { t } = useTranslation();
   const relevant = items.filter((item) => item.side === side || item.side === 'both');
   return (
-    <Card className="h-full border-border/70 bg-card/60" data-testid={`debate-side-${side}`}>
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+    <Card className="h-full min-w-0 border-border/70 bg-card/60" data-testid={`debate-side-${side}`}>
+      <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-2 space-y-0 pb-2">
         <CardTitle>{t(sideLabelKey(side))}</CardTitle>
-        <Badge variant="secondary">{t('debate.itemCount', { count: relevant.length, defaultValue: '{{count}} items' })}</Badge>
+        <Badge variant="secondary" className="shrink-0">{t('debate.itemCount', { count: relevant.length, defaultValue: '{{count}} items' })}</Badge>
       </CardHeader>
       <CardContent>
         {relevant.length === 0
@@ -155,14 +155,15 @@ export default function CurrentDebatePage() {
           </Card>
         )}
 
-        <div className="grid gap-6 md:grid-cols-2">
+        {/* grid-cols-1 is minmax(0, 1fr): a long title truncates instead of widening the page. */}
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
           <SideSection side="pro" items={items} />
           <SideSection side="con" items={items} />
         </div>
 
-        <div className="grid gap-6 md:grid-cols-2">
-          <Card className="border-border/70 bg-card/60" data-testid="debate-sources">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+          <Card className="min-w-0 border-border/70 bg-card/60" data-testid="debate-sources">
+            <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-2 space-y-0 pb-2">
               <CardTitle>{t('debate.sources', 'Sources')}</CardTitle>
               <Button asChild variant="ghost" size="sm">
                 <Link to="/app/library"><Database className="mr-1 h-4 w-4" aria-hidden="true" />{t('nav.library', 'Library')}</Link>
@@ -179,7 +180,7 @@ export default function CurrentDebatePage() {
               <ViewAll to="/app/library" count={debateSources.length} shown={6} />
             </CardContent>
           </Card>
-          <Card className="border-border/70 bg-card/60" data-testid="debate-recent">
+          <Card className="min-w-0 border-border/70 bg-card/60" data-testid="debate-recent">
             <CardHeader className="pb-2">
               <CardTitle>{t('debate.recentWork', 'Recent work')}</CardTitle>
             </CardHeader>

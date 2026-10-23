@@ -533,6 +533,17 @@ All colors MUST be HSL.
 
 .react-flow .react-flow__attribution a {
   color: hsl(var(--muted-foreground));
+  /* The credit stays; its link is a 24px target (44px on touch) instead of 12px of text. */
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+  padding: 0 4px;
+}
+
+/* An edge is a 2px line; its invisible stroke is the tap target. React Flow sizes that
+   stroke in canvas units, so it is divided by the zoom to stay 24px on screen (44px on touch). */
+.react-flow .react-flow__edge-interaction {
+  stroke-width: calc(24px / var(--flow-zoom, 1));
 }
 
 .react-flow .react-flow__edge-textbg {
@@ -550,6 +561,14 @@ All colors MUST be HSL.
     box-sizing: border-box;
     width: 44px;
     height: 44px;
+  }
+
+  .react-flow .react-flow__attribution a {
+    min-height: 44px;
+  }
+
+  .react-flow .react-flow__edge-interaction {
+    stroke-width: calc(44px / var(--flow-zoom, 1));
   }
 }
 

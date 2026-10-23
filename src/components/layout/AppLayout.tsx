@@ -25,6 +25,7 @@ import { CurrentDebateMenu } from '@/components/features/debate/CurrentDebateMen
 import { useCurrentDebate } from '@/lib/stores/debate-store';
 import { navSectionFor } from '@/components/layout/nav-sections';
 import { DebateDialogs, InactiveDebateGate } from '@/components/features/debate/DebateDialogs';
+import { MAIN_CONTENT_ID, SkipLink } from '@/components/layout/SkipLink';
 import {
   dismissAnnouncement,
   listActiveAnnouncements,
@@ -48,7 +49,8 @@ const desktopLinkClass = cn(
   "flex items-center gap-1.5 px-2 xl:px-3 py-2 rounded-md text-sm font-medium whitespace-nowrap transition-colors",
   "text-muted-foreground hover:text-foreground hover:bg-accent"
 );
-const activeLinkClass = "bg-primary/10 text-primary hover:bg-primary/10 hover:text-primary";
+// A 5% tint keeps primary text above 4.5:1; at 10% it measured 4.45.
+const activeLinkClass = "bg-primary/5 text-primary hover:bg-primary/5 hover:text-primary";
 
 const ANNOUNCEMENT_CACHE_KEY = 'debatelab-announcements';
 
@@ -255,6 +257,7 @@ export function AppLayout() {
 
   return (
     <div className="native-safe-screen flex flex-col bg-background">
+      <SkipLink />
       {/* Header: the edge appears once content scrolls under it. */}
       <header
         ref={headerRef}
@@ -350,7 +353,7 @@ export function AppLayout() {
                             onClick={() => setMobileMenuOpen(false)}
                             className={cn(
                               "flex min-h-11 items-center gap-3 px-3 py-2.5 rounded-lg transition-colors",
-                              active ? "bg-primary/10 text-primary font-semibold" : "text-muted-foreground hover:text-foreground hover:bg-accent",
+                              active ? "bg-primary/5 text-primary font-semibold" : "text-muted-foreground hover:text-foreground hover:bg-accent",
                             )}
                           >
                             <item.icon className="h-5 w-5" aria-hidden="true" />
@@ -389,7 +392,7 @@ export function AppLayout() {
       <InactiveDebateGate />
 
       {/* Main Content */}
-      <main className="native-main-content flex-1">
+      <main id={MAIN_CONTENT_ID} tabIndex={-1} className="native-main-content flex-1 focus-visible:outline-none">
         <Outlet />
       </main>
 
@@ -398,8 +401,8 @@ export function AppLayout() {
         <div className="container flex flex-col items-center justify-between gap-2 px-4 text-sm text-muted-foreground md:flex-row">
           <p className="font-medium">DebateLab</p>
           <div className="flex items-center gap-4">
-            <Link to="/terms" {...termsPrefetch} className="inline-flex items-center justify-center rounded-sm transition-colors hover:text-foreground pointer-coarse:min-h-11 pointer-coarse:min-w-11">{t('footer.terms')}</Link>
-            <Link to="/privacy" {...privacyPrefetch} className="inline-flex items-center rounded-sm transition-colors hover:text-foreground pointer-coarse:min-h-11">{t('footer.privacy')}</Link>
+            <Link to="/terms" {...termsPrefetch} className="inline-flex min-h-6 items-center justify-center rounded-sm transition-colors hover:text-foreground pointer-coarse:min-h-11 pointer-coarse:min-w-11">{t('footer.terms')}</Link>
+            <Link to="/privacy" {...privacyPrefetch} className="inline-flex min-h-6 items-center rounded-sm transition-colors hover:text-foreground pointer-coarse:min-h-11">{t('footer.privacy')}</Link>
           </div>
         </div>
       </footer>

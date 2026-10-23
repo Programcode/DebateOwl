@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '@/lib/supabase/auth-context';
 import { cn } from '@/lib/utils';
+import { MAIN_CONTENT_ID, SkipLink } from '@/components/layout/SkipLink';
 
 /** Where "home" is for this visitor: the app when signed in, the landing page otherwise. */
 // eslint-disable-next-line react-refresh/only-export-components
@@ -20,6 +21,7 @@ export function PublicPageShell({ children, className }: { children: ReactNode; 
   const home = useHomePath();
   return (
     <div className="min-h-screen bg-background">
+      <SkipLink />
       <header className="border-b border-border/60">
         <div className="container flex h-14 items-center px-4">
           <Link to={home} className="flex items-center gap-2 rounded-md pointer-coarse:min-h-11">
@@ -30,7 +32,7 @@ export function PublicPageShell({ children, className }: { children: ReactNode; 
           </Link>
         </div>
       </header>
-      <main className={cn('container mx-auto px-4 py-10', className)}>{children}</main>
+      <main id={MAIN_CONTENT_ID} tabIndex={-1} className={cn('container mx-auto px-4 py-10 focus-visible:outline-none', className)}>{children}</main>
     </div>
   );
 }

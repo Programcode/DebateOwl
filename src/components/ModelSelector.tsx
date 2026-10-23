@@ -107,8 +107,9 @@ export function ModelSelector({ feature, className, showLabel = false }: ModelSe
             setFeatureConfig(feature, { reasoningEffort: value });
           }}
         >
+          {/* Locked, not broken: the dimmed field keeps its value readable (4.5:1) instead of fading to 50%. */}
           <SelectTrigger
-            className="h-10 w-full text-sm"
+            className="h-10 w-full text-sm disabled:bg-muted/50 disabled:text-muted-foreground disabled:opacity-100"
             aria-label={t('modelSelector.reasoning', 'Reasoning')}
           >
             <SelectValue />

@@ -37,7 +37,7 @@ const Navbar = () => {
         >
             <div className="section-container">
                 <div className="flex h-16 items-center justify-between md:h-20">
-                    <Link to="/" className="group flex items-center gap-2 pointer-coarse:min-h-11">
+                    <Link to="/" className="group flex shrink-0 items-center gap-2 rounded-lg pr-1 pointer-coarse:min-h-11">
                         <img
                             src="/favicon-72.png"
                             alt={t('common.logoAlt')}
@@ -48,19 +48,19 @@ const Navbar = () => {
                         <span className="text-xl font-bold text-foreground">DebateLab</span>
                     </Link>
 
-                    <div className="hidden items-center gap-7 md:flex">
+                    <div className="hidden items-center gap-7 lg:flex">
                         {navLinks.map((link) => (
                             <a
                                 key={link.href}
                                 href={link.href}
-                                className="text-sm font-medium text-muted-foreground transition-colors duration-200 hover:text-foreground focus-visible:text-foreground rounded-sm"
+                                className="inline-flex min-h-6 items-center rounded-sm text-sm font-medium text-muted-foreground transition-colors duration-200 hover:text-foreground focus-visible:text-foreground"
                             >
                                 {link.label}
                             </a>
                         ))}
                     </div>
 
-                    <div className="hidden items-center gap-3 md:flex">
+                    <div className="hidden items-center gap-3 lg:flex">
                         <LanguageSwitcher />
                         <Link to="/app" {...appPrefetch} className="btn-primary-gradient inline-flex items-center gap-2 text-sm">
                             <span className="relative z-10">{t('nav.startTrial')}</span>
@@ -71,7 +71,7 @@ const Navbar = () => {
                     <button
                         type="button"
                         onClick={() => setIsOpen(!isOpen)}
-                        className="flex h-11 w-11 items-center justify-center rounded-md text-foreground md:hidden"
+                        className="flex h-11 w-11 items-center justify-center rounded-md text-foreground lg:hidden"
                         aria-label={isOpen ? t('nav.closeMenu') : t('nav.openMenu')}
                         aria-expanded={isOpen}
                     >
@@ -82,7 +82,7 @@ const Navbar = () => {
 
             {isOpen && (
                 // Opacity and a 4px drop in 180ms; reduced motion keeps the fade only.
-                <div className="border-b border-border bg-background md:hidden animate-in fade-in-0 slide-in-from-top-1 duration-180 ease-out-strong">
+                <div className="border-b border-border bg-background lg:hidden animate-in fade-in-0 slide-in-from-top-1 duration-180 ease-out-strong">
                     <div className="section-container flex flex-col gap-1 py-4">
                         {navLinks.map((link) => (
                             <a
