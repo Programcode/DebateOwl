@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { useAuth } from '@/lib/supabase/AuthProvider';
 import { Loader2 } from 'lucide-react';
 import { consumeWorkspaceInvite, stashWorkspaceInvite } from '@/lib/workspace/invite-handoff';
+import { clearSignOutIntent, hasSignOutIntent } from '@/lib/supabase/sign-out-intent';
 
 export function RequireAuth({ children, fallback }: { children: ReactNode; fallback?: ReactNode }) {
   const { user, loading } = useAuth();
@@ -13,7 +14,9 @@ export function RequireAuth({ children, fallback }: { children: ReactNode; fallb
   // with it, so LoginPage returns only that account to the page it left.
   const lastUserId = useRef<string | undefined>(undefined);
   useEffect(() => {
-    if (user) lastUserId.current = user.id;
+    if (!user) return;
+    lastUserId.current = user.id;
+    clearSignOutIntent();
   }, [user]);
 
   if (loading) {
@@ -32,10 +35,13 @@ export function RequireAuth({ children, fallback }: { children: ReactNode; fallb
 
   if (!user) {
     const invite = stashWorkspaceInvite(location);
+    // Signing out on purpose from Settings must not make Settings the next
+    // sign-in's landing page (QA round 3); an invite still survives.
+    const from = invite ? "/app/workspaces/invite" : hasSignOutIntent() ? null : location.pathname;
     return (
       <Navigate
         to="/login"
-        state={{ from: { pathname: invite ? "/app/workspaces/invite" : location.pathname }, fromUserId: lastUserId.current }}
+        state={from ? { from: { pathname: from }, fromUserId: lastUserId.current } : null}
         replace
       />
     );

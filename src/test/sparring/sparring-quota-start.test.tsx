@@ -9,6 +9,8 @@ import type { ProviderConfig } from '@/lib/ai/providers/types';
 const mocks = vi.hoisted(() => ({
   user: { id: 'user-a' } as { id: string } | null,
   releaseCheck: null as ((refusal: null) => void) | null,
+  failCheck: null as ((error: Error) => void) | null,
+  checks: 0,
 }));
 
 vi.mock('@/lib/supabase/AuthProvider', () => ({
@@ -36,7 +38,13 @@ vi.mock('@/hooks/use-session-quota', () => ({
     remaining: 4,
     blocked: null as string | null,
     // Held until the test releases it, like a slow quota check.
-    checkBeforeStart: () => new Promise<null>((resolve) => { mocks.releaseCheck = resolve; }),
+    checkBeforeStart: () => {
+      mocks.checks += 1;
+      return new Promise<null>((resolve, reject) => {
+        mocks.releaseCheck = resolve;
+        mocks.failCheck = reject;
+      });
+    },
   }),
 }));
 
@@ -76,6 +84,33 @@ describe('Sparring Start after the quota check', () => {
     useSparringStore.setState({ currentSession: null });
     mocks.user = { id: 'user-a' };
     mocks.releaseCheck = null;
+    mocks.failCheck = null;
+    mocks.checks = 0;
+  });
+
+  // QA bug 7: clicks during a slow check did nothing visible.
+  it('shows the check in progress and runs one check however often Start is pressed', async () => {
+    await pressStart();
+    const pending = screen.getByRole('button', { name: /Opening room/ });
+    expect(pending).toBeDisabled();
+    expect(pending).toHaveAttribute('aria-busy', 'true');
+    expect(screen.getByTestId('sparring-starting')).toHaveTextContent('Checking your AI uses for today');
+
+    // Enter in the form and a second click while the check is out.
+    fireEvent.submit(pending.closest('form')!);
+    fireEvent.click(pending);
+    expect(mocks.checks).toBe(1);
+
+    await act(async () => mocks.releaseCheck?.(null));
+    expect(await screen.findByText('Round in progress')).toBeInTheDocument();
+    expect(mocks.checks).toBe(1);
+  });
+
+  it('opens the round when the check fails outright, and never leaves Start spinning', async () => {
+    await pressStart();
+    await act(async () => mocks.failCheck?.(new Error('network')));
+    expect(await screen.findByText('Round in progress')).toBeInTheDocument();
+    expect(screen.queryByTestId('sparring-starting')).not.toBeInTheDocument();
   });
 
   it('opens the round when the same account is still signed in', async () => {

@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { Session } from '@supabase/supabase-js';
 import { AUTH_STORAGE_KEY, setActiveAccessToken, supabase } from './client';
 import { allowSessionsAfterSignIn, rejectDeadSession, restoredSessionsBlocked } from './session-expiry';
+import { clearSignOutIntent, markSignOutIntent } from './sign-out-intent';
 import { AuthContext, useAuth, type AuthContextValue } from './auth-context';
 import { useSessionStore } from '@/lib/stores/session-store';
 import { useSettingsStore } from '@/lib/stores/settings-store';
@@ -513,8 +514,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (verificationError) throw verificationError;
     },
     signOut: async () => {
-      // Local scope: signing out here must not sign the account out on other devices.
-      await supabase.auth.signOut({ scope: 'local' });
+      markSignOutIntent();
+      try {
+        // Local scope: signing out here must not sign the account out on other devices.
+        await supabase.auth.signOut({ scope: 'local' });
+      } catch (error) {
+        clearSignOutIntent();
+        throw error;
+      }
       clearCrossfireDraftOnAuthChange(session?.user?.id, undefined);
       resetSessionStore();
       resetSettingsStore();

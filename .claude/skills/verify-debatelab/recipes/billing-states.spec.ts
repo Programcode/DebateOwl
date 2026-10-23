@@ -79,6 +79,18 @@ const STATES: State[] = [
     refusal: { title: PAUSED, button: OK },
   },
   {
+    // QA round 3: Pro from a promo code, no Stripe customer. Settings says where
+    // Pro came from and that billing can wait until it ends.
+    name: "promo-pro",
+    settings: { subscription_tier: "pro", grace_period_ends_at: at(365) },
+    badge: { en: "Pro", hu: "Pro" },
+    text: { en: /comes from a promo code and runs until .+\. Billing is optional until then/, hu: /promóciós kódból származik \(lejárat: .+\)\. Addig a számlázás beállítása nem kötelező/ },
+    button: { en: "Set Up Billing", hu: "Számlázás beállítása" },
+    plan: "plan-pro",
+    dailyLimit: 50,
+    refusal: { title: PAUSED, button: OK },
+  },
+  {
     // QB-13: the tier the old webhook wrote on the first failed invoice.
     name: "past-due-grace",
     settings: { subscription_tier: "expired" },
