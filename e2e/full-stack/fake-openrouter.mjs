@@ -14,17 +14,25 @@ const port = Number(process.env.PORT ?? 8787);
 const upstream = process.env.UPSTREAM;
 const liveModel = process.env.LIVE_MODEL;
 const chatModel = (requested) => (liveModel === "as-requested" ? requested : liveModel);
-// Claude requests pin OpenRouter to the Anthropic provider. A rewritten
-// model is served elsewhere, so it keeps only the provider options that
-// still apply to it.
+// Claude runs only on DebateLab's Anthropic key (BYOK in OpenRouter): every
+// Claude call leaves pinned to the Anthropic provider with fallbacks off, and
+// any `models` fallback list is dropped. A rewrite to another family (only
+// as-requested reaches one) keeps just the options that still apply to it.
+const ANTHROPIC_ONLY = { only: ["anthropic"], allow_fallbacks: false };
 const liveChatBody = (body) => {
   const model = chatModel(body.model);
-  if (model === body.model || !body.provider || typeof body.provider !== "object") return { ...body, model };
-  const { only: _only, allow_fallbacks: _allowFallbacks, ...provider } = body.provider;
-  return { ...body, model, provider };
+  const { models: _models, ...rest } = body;
+  const provider = body.provider && typeof body.provider === "object" ? body.provider : {};
+  if (model.startsWith("anthropic/")) return { ...rest, model, provider: { ...provider, ...ANTHROPIC_ONLY } };
+  if (model === body.model || !body.provider || typeof body.provider !== "object") return { ...rest, model };
+  const { only: _only, allow_fallbacks: _allowFallbacks, ...others } = provider;
+  return { ...rest, model, provider: others };
 };
 const maxUpstreamCalls = Number(process.env.MAX_UPSTREAM_CALLS ?? 200);
 if (upstream && !liveModel) throw new Error("LIVE_MODEL is required with UPSTREAM");
+if (upstream && liveModel !== "as-requested" && !liveModel.startsWith("anthropic/")) {
+  throw new Error(`LIVE_MODEL must be an anthropic/ model (Anthropic BYOK) or as-requested, not ${liveModel}`);
+}
 const requests = [];
 // Subscription state the fake Stripe returns, set by tests through /__subscription.
 const subscriptions = new Map();

@@ -8,7 +8,7 @@ This directory is the maintained source for verifying DebateLab's user-facing be
 - The browser client is the `up` instance at `http://127.0.0.1:18081`. Never use the `debatelab` container on `:8080` or a plain `npm run dev`, because both reach production.
 - Each scripted test signs in with its own fresh demo-code user (a Pro account with a daily limit of 999) and deletes it afterwards. The fixture marks the onboarding tour as seen, and the user starts with no Current Debate.
 - Most tools work inside a Current Debate (see [current-debate](./current-debate.md)). Start one with `startDebate(page, motion)` first, or answer the motion dialog that opens after submit with `chooseForMotion(page, "create" | "once")`. The Library's `Add Source` stays disabled until a debate exists.
-- In fake mode, model answers come from the fake provider and contain the marker `FAKE-PROVIDER`. In live mode (`up --live`), every chat call goes to real OpenRouter pinned to `meta/muse-spark-1.3-contributor`, research uses real Exa, and answers are real model text.
+- In fake mode, model answers come from the fake provider and contain the marker `FAKE-PROVIDER`. In live mode (`up --live`), every chat call goes to real OpenRouter pinned to `anthropic/claude-haiku-5.5` on the Anthropic BYOK key, research uses real Exa, and answers are real model text.
 - The feature files quote fake-mode text such as `FAKE-PROVIDER case thesis`. Recipes never assert it: they read the `ai` response body with `aiResponse()` and check that its fields are on screen, so the same recipe passes in both modes.
 
 ## Driving conventions

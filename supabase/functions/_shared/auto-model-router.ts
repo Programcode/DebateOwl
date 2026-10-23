@@ -17,19 +17,20 @@ import type { NormalizedUsage } from "./cost.ts";
 const ROUTING_CONFIDENCE = 0.55;
 const MAX_ROUTING_STATE_CHARS = 8_000;
 
-const FAST_CANDIDATES = {
+// Auto only routes to Claude, which runs on DebateLab's Anthropic key (BYOK in
+// OpenRouter). Every other family bills OpenRouter credits, so Auto never picks
+// one; a student can still choose one by hand. With one candidate per pool the
+// Jev routing call is skipped (it would bill OpenRouter credits for nothing).
+// Add a candidate only if it is an anthropic/ model: auto-model-router.test.ts
+// and src/test/ai/anthropic-only-guard.test.ts fail otherwise.
+export const FAST_CANDIDATES = {
   "anthropic/claude-haiku-5.5": "Default for ordinary DebateLab work: cases, rebuttals, coaching, and structured output.",
-  "openai/gpt-6-luna": "Best for short latency-sensitive conversation and simple coaching.",
-  "meta/muse-spark-1.3-contributor": "Best for very long input, multilingual output, or broad context handling.",
 } as const;
 
 // Opus is opt-in only: Auto Pro never routes or falls back to it.
-const PRO_CANDIDATES = {
+export const PRO_CANDIDATES = {
   "anthropic/claude-sonnet-5.5": "Default for professional DebateLab work: nuanced rhetoric, adversarial critique, and long-form writing.",
-  "openai/gpt-6.1-sol": "Best for complex structured reasoning and reliable multi-part analysis.",
 } as const;
-
-type AutoCandidate = keyof typeof FAST_CANDIDATES | keyof typeof PRO_CANDIDATES;
 
 export type AutoModelRouterJev = (args: CallJevArgs) => Promise<JevDecisionResult>;
 
@@ -71,7 +72,7 @@ function routingState(args: ResolveModelSelectionArgs) {
   };
 }
 
-function fallbackFor(selection: typeof AUTO_FAST | typeof AUTO_PRO): AutoCandidate {
+function fallbackFor(selection: typeof AUTO_FAST | typeof AUTO_PRO): string {
   return selection === AUTO_FAST ? "anthropic/claude-haiku-5.5" : "anthropic/claude-sonnet-5.5";
 }
 
@@ -88,9 +89,26 @@ export async function resolveModelSelection(args: ResolveModelSelectionArgs): Pr
     return { requestedModel, resolvedModel: requestedModel, modelEntry, usedFallback: false };
   }
   if (requestedModel === AUTO_PRO && !canAccessProModels) throw new Error("Auto Pro requires Pro access");
+  const candidates: Readonly<Record<string, string>> = requestedModel === AUTO_FAST ? FAST_CANDIDATES : PRO_CANDIDATES;
+  return await routeAmongCandidates(args, candidates, fallbackFor(requestedModel));
+}
 
-  const candidates = requestedModel === AUTO_FAST ? FAST_CANDIDATES : PRO_CANDIDATES;
-  const fallback = fallbackFor(requestedModel);
+/**
+ * Picks one of `candidates` with Jev, or `fallback` when Jev is unsure, fails,
+ * or names something outside the pool. A single-candidate pool resolves to it
+ * without a Jev call. Exported for tests; callers use resolveModelSelection.
+ */
+export async function routeAmongCandidates(
+  args: ResolveModelSelectionArgs,
+  candidates: Readonly<Record<string, string>>,
+  fallback: string,
+): Promise<ResolvedModelSelection> {
+  const { requestedModel } = args;
+  const fallbackEntry = getModelCatalogEntry(fallback);
+  if (!fallbackEntry) throw new Error(`Missing fallback model: ${fallback}`);
+  if (Object.keys(candidates).length === 1 && Object.hasOwn(candidates, fallback)) {
+    return { requestedModel, resolvedModel: fallback, modelEntry: fallbackEntry, usedFallback: false };
+  }
   let jev: JevDecisionResult | undefined;
   try {
     jev = await (args.callJevImpl ?? callJev)({
@@ -106,10 +124,8 @@ export async function resolveModelSelection(args: ResolveModelSelectionArgs): Pr
     });
   } catch (error) {
     if (isAbort(error, args.signal)) throw error;
-    const modelEntry = getModelCatalogEntry(fallback);
-    if (!modelEntry) throw new Error(`Missing fallback model: ${fallback}`);
     const jevUsage = getJevErrorUsage(error);
-    return { requestedModel, resolvedModel: fallback, modelEntry, usedFallback: true, ...(jevUsage ? { jevUsage } : {}) };
+    return { requestedModel, resolvedModel: fallback, modelEntry: fallbackEntry, usedFallback: true, ...(jevUsage ? { jevUsage } : {}) };
   }
 
   const answer = jev.answers.model;

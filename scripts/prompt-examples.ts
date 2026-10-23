@@ -12,7 +12,7 @@
 import { PROMPT_EXAMPLES } from "../supabase/functions/_shared/prompts/prompt-examples.ts";
 import { openRouterProviderOptions } from "../supabase/functions/_shared/provider-routing.ts";
 
-const [functionsDir, outPath, model = "openai/gpt-6-luna", only] = Deno.args;
+const [functionsDir, outPath, model = "anthropic/claude-haiku-5.5", only] = Deno.args;
 const selected = only ? new Set(only.split(",")) : null;
 if (!functionsDir || !outPath) {
   console.error("usage: prompt-examples.ts <functions-dir> <out.json> [model]");

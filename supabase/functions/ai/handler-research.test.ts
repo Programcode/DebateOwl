@@ -770,7 +770,8 @@ Deno.test("AI handlers use strict OpenRouter routing and server-side reasoning t
     }
 
     if (openRouterBodies.length !== MODEL_CATALOG.length + 8) throw new Error(`unexpected OpenRouter call count: ${openRouterBodies.length}`);
-    if (decisionBodies.length !== 2) throw new Error(`unexpected Decisions call count: ${decisionBodies.length}`);
+    // Auto Fast and Auto Pro each have one Claude candidate, so neither calls Jev.
+    if (decisionBodies.length !== 0) throw new Error(`unexpected Decisions call count: ${decisionBodies.length}`);
     for (let index = 0; index < MODEL_CATALOG.length; index += 1) {
       const entry = MODEL_CATALOG[index];
       const body = openRouterBodies[index];
