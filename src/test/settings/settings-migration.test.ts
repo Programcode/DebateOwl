@@ -113,6 +113,25 @@ describe('settings hydration cleanup', () => {
     expect(useSettingsStore.getState().theme).toBe('dark');
   });
 
+  it('lets a later switcher choice or a sign-out cancel a ?lang= link (IN-04)', async () => {
+    // Opened /hu, then picked English with the switcher before the account loaded.
+    useSettingsStore.getState().chooseLinkedLanguage('hu');
+    useSettingsStore.getState().setLanguage('en');
+    await vi.waitFor(() => expect(db.row.language).toBe('en'));
+    await useSettingsStore.getState().hydrateFromServer();
+    expect(useSettingsStore.getState().language).toBe('en');
+    expect(db.row.language).toBe('en');
+
+    // Opened /hu, then signed out; the next account loads its own language.
+    useSettingsStore.getState().chooseLinkedLanguage('hu');
+    await vi.waitFor(() => expect(db.row.language).toBe('hu'));
+    useSettingsStore.getState().resetLocalData();
+    db.row = { ...db.row, language: 'es' };
+    await useSettingsStore.getState().hydrateFromServer();
+    expect(useSettingsStore.getState().language).toBe('es');
+    expect(db.row.language).toBe('es');
+  });
+
   it('keeps a past-due payer\'s Pro model choices through the payment grace', async () => {
     // The webhook leaves the tier alone on a failed renewal; the AI functions still serve Pro.
     const proChoices = Object.fromEntries(features.map((feature) => [

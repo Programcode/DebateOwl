@@ -249,6 +249,8 @@ export const useSettingsStore = create<SettingsState>()(
       wikiResearchEnabled: false,
 
       setLanguage: (language) => {
+        // A choice made here beats an earlier ?lang= link.
+        linkedLanguage = null;
         set({ language });
         void applyAppLanguage(language);
         void updateSettings({
@@ -379,11 +381,14 @@ export const useSettingsStore = create<SettingsState>()(
             typeof data.updated_at === 'string' ? data.updated_at : null,
           );
         }
-        // The link was opened signed out, or its own save has not landed yet.
-        if (linked && !neverSaved && linked !== data.language) await updateLanguage(linked);
+        // The link was opened signed out, or its own save has not landed yet,
+        // unless the switcher has replaced its language since.
+        if (linked && !neverSaved && linked !== data.language && get().language === linked) await updateLanguage(linked);
       },
       resetLocalData: (preserveLanguage = false) => {
         const language = preserveLanguage ? get().language : 'en';
+        // A sign-out or another account: an earlier ?lang= link no longer applies.
+        if (!preserveLanguage) linkedLanguage = null;
         set({
           ownerUserId: null,
           language,
