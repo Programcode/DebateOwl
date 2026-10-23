@@ -5,6 +5,7 @@
 // - a #fragment that names no id on the target page;
 // - JSON-LD that does not parse or carries HTML entities into its text;
 // - an indexed page without its question H2 (#short-answer) as the first H2;
+// - a page whose first heading is not its H1, or a heading that skips a level (H1 to H3);
 // - an image without alt text, a button without a name, or a form field without a label.
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { join, relative, sep } from 'node:path';
@@ -142,6 +143,12 @@ for (const file of htmlFiles(DIST)) {
     if (!firstH2 || !/\sid="short-answer"/.test(firstH2[1])) report(where, 'the first H2 is not the #short-answer question');
     else if (!textOf(firstH2[2]).endsWith('?')) report(where, 'the #short-answer H2 is not a question');
   }
+
+  const levels = [...body.matchAll(/<h([1-6])\b/g)].map((match) => Number(match[1]));
+  if (levels.length && levels[0] !== 1) report(where, `the first heading is an H${levels[0]}, not the H1`);
+  levels.forEach((level, index) => {
+    if (index && level > levels[index - 1] + 1) report(where, `heading level skips from H${levels[index - 1]} to H${level}`);
+  });
 
   for (const [tag] of body.matchAll(/<img\b[^>]*>/g)) {
     if (!/\salt="/.test(tag)) report(where, `image without alt text: ${tag.slice(0, 80)}`);

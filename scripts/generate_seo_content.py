@@ -3,6 +3,7 @@ from datetime import date
 from pathlib import Path
 import html
 import json
+import re
 import sys
 
 sys.dont_write_bytecode = True  # keep scripts/__pycache__ out of the tree
@@ -22,15 +23,18 @@ PRICING = SITE["pricing"]
 # Prices and plan facts are stated "as of" this month; move it when they are rechecked.
 FACTS_AS_OF = date.fromisoformat(SITE["factsCheckedOn"]).strftime("%B %Y")
 DEFINITION = f'{PRODUCT} is {SITE["definition"]}.'
+PRO_PRICE = f"${PRICING['proMonthly']}/month + tax"
 # One line every guide, llms.txt and the pricing page share.
 PLAN_FACTS = (
     f"As of {FACTS_AS_OF}, {PRODUCT} has a {PRICING['trialDays']}-day free trial with no credit card required, "
-    f"then Pro costs ${PRICING['proMonthly']}/month + tax. There is no permanent free plan."
+    f"then Pro costs {PRO_PRICE}. There is no permanent free plan."
 )
 # The date the page text last changed. The build reads it into sitemap.xml as
 # <lastmod>, so bump it only when the copy changes, not on every regeneration.
 # A guide whose own copy changed alone sets "modified" in seo_guides.py instead.
 CONTENT_DATE = "2026-10-20"
+# The date the shared FAQS below last changed; a page that shows them is modified then at the latest.
+FAQS_DATE = "2026-10-23"
 # The commit that first added every current guide (git log --diff-filter=A).
 # A new guide sets "published" in its PAGES entry.
 PUBLISHED_DATE = "2026-07-05"
@@ -74,7 +78,7 @@ PAGES = [
     {"slug": "debate-collapsing-strategy", "title": "How to Collapse in Debate | DebateLab Guide", "description": "Learn how to collapse in debate: select the winning clash, drop losing arguments, and concentrate your time on the comparison that wins the ballot.", "eyebrow": "Strategy guide", "h1": "How to Collapse in Debate", "lead": "Collapsing means choosing the few arguments that win and abandoning the rest.", "features": ["Clash selection", "Time concentration", "Ballot framing"], "sections": [["Why collapsing matters", ["If you spread yourself thin, you lose. Collapsing lets you spend more time on the argument that actually wins the round."]], ["How to decide what to collapse to", ["Pick the clash where you have the strongest evidence, the clearest warrant, and the best weighing. Drop the rest cleanly."]], ["How to collapse cleanly", ["Signal that you are collapsing, explain why the dropped arguments do not matter, and spend your remaining time on the winning clash."]]]},
     {"slug": "debate-pronunciation-and-delivery", "title": "Debate Speech Delivery and Pronunciation Guide | DebateLab", "description": "Improve your debate speech delivery with tips on clarity, pacing, emphasis, pronunciation, and using pauses for judge-friendly presentations.", "eyebrow": "Delivery guide", "h1": "Debate Speech Delivery and Pronunciation Guide", "lead": "Clear delivery makes your arguments land. Slow down, emphasize key words, and pause where it matters.", "features": ["Clarity and pacing", "Emphasis techniques", "Pause strategy"], "sections": [["Why delivery matters", ["The judge cannot vote for an argument they did not hear clearly. Speed without clarity is wasted effort."]], ["How to improve delivery", ["Slow down on tags and author names, pause between contentions, and emphasize weighing phrases. Practice with a timer and record yourself."]], ["Common delivery problems", ["Speaking too fast, mumbling, monotone delivery, and forgetting to pause. Each of these can cost you rounds even with strong arguments."]]]},
     {"slug": "best-ai-debate-tools", "title": "Best AI Debate Tools Compared | {product}", "description": "Compare the best AI debate tools for case generation, rebuttal practice, evidence research, flowcharts, coaching, and tournament preparation.", "eyebrow": "Comparison", "h1": "Best AI Debate Tools Compared", "lead": "See how AI debate tools compare on features, formats, and prep workflows."},
-    {"slug": "debatelab-pricing", "title": "DebateLab Pricing and Plans | DebateLab", "description": "DebateLab pricing and plans for AI debate practice: free trial, Pro features, and what is included for students and competitive debaters.", "eyebrow": "Pricing", "h1": "DebateLab Pricing and Plans", "lead": "See what DebateLab offers and how to get started with AI debate practice.", "features": ["Free trial", "Pro features", "Student plans"], "sections": [["DebateLab trial", ["DebateLab offers a trial so users can explore case generation, rebuttal practice, evidence leads, flowcharts, coaching, and timing before subscribing."]], ["What Pro includes", ["Pro features include extended AI usage, saved cases, private history, and advanced practice workflows. Check the app for current pricing."]], ["How to decide if DebateLab is worth it", ["If you debate regularly and need structured prep, DebateLab saves time and improves quality. The trial lets you test the workflow before paying."]]]},
+    {"slug": "debatelab-pricing", "title": "DebateLab Pricing and Plans | DebateLab", "description": "DebateLab pricing and plans for AI debate practice: free trial, Pro features, and what is included for students and competitive debaters.", "eyebrow": "Pricing", "h1": "DebateLab Pricing and Plans", "lead": "See what DebateLab offers and how to get started with AI debate practice."},
     {"slug": "debatelab-vs-chatgpt", "title": "{product} vs ChatGPT for Debate Prep | {product}", "description": "Compare {product} vs ChatGPT for debate prep: structured workflows vs generic chat, evidence research, rebuttal drills, case generation, and coaching.", "eyebrow": "Comparison", "h1": "{product} vs ChatGPT for Debate Prep", "lead": "ChatGPT is a general chatbot. {product} is a debate practice workspace.", "features": ["Structured workflows", "Evidence leads", "Practice tools"], "sections": [["What ChatGPT does well", ["ChatGPT is a flexible general-purpose AI. It can brainstorm, draft, and answer questions about any topic, including debate."]], ["What {product} does differently", ["{product} is designed for debate prep workflows: case structure, targeted rebuttals, evidence leads, argument flowcharts, coaching prompts, and timed practice. Each workflow supports a specific prep task."]], ["When to use each", ["Use ChatGPT for general brainstorming and research. Use {product} for structured, repeatable debate practice that mirrors what you do in a round."]]]},
     {"slug": "debatelab-vs-windebate", "title": "DebateLab vs WinDebate Comparison | DebateLab", "description": "Compare DebateLab vs WinDebate: case generation, rebuttal drills, evidence research, format coverage, pricing, and workflow differences.", "eyebrow": "Comparison", "h1": "DebateLab vs WinDebate", "lead": "Two AI debate prep platforms compared on features and workflows.", "features": ["Feature comparison", "Format coverage", "Workflow differences"], "sections": [["WinDebate overview", ["WinDebate focuses on research, drills, feedback, and progress tracking for competitive debaters. It covers PF, LD, Congress, Policy, and Worlds."]], ["DebateLab overview", ["DebateLab focuses on structured prep workflows: case generation, rebuttal practice, evidence leads, argument flowcharts, coaching prompts, and online debate timers."]], ["How to choose", ["Compare format coverage, feature depth, feedback style, pricing, and which tool fits your actual tournament workflow."]]]},
     {"slug": "debatelab-vs-debateclub", "title": "DebateLab vs DebateClub Comparison | DebateLab", "description": "Compare DebateLab vs DebateClub: voice debating, case generation, rebuttal drills, evidence research, and workflow differences for competitive debaters.", "eyebrow": "Comparison", "h1": "DebateLab vs DebateClub", "lead": "Voice sparring vs structured prep: two approaches to AI debate practice.", "features": ["Voice vs text workflows", "Feature comparison", "Prep focus areas"], "sections": [["DebateClub overview", ["DebateClub focuses on voice-based AI debate sparring with real-time feedback in a conversational format."]], ["DebateLab overview", ["DebateLab focuses on text-based structured prep: cases, rebuttals, evidence, flowcharts, coaching, and timed practice for tournament preparation."]], ["Which approach fits you", ["If you want voice practice, DebateClub is focused there. If you want structured prep workflows, DebateLab is designed for that."]]]},
@@ -82,14 +86,41 @@ PAGES = [
 
 FAQS = [
     ("Is {product} an AI debate practice platform?", "Yes. {product} focuses on debate prep workflows such as cases, rebuttals, evidence, flowcharts, coaching, and timing."),
-    ("Can Google index private {product} app pages?", "No. Private dashboards and account routes should remain noindexed while public guides provide crawlable context."),
     ("Should students verify AI-generated debate evidence?", "Yes. AI can suggest research leads, but students should check original sources before using evidence in round."),
 ]
 
+def tool_keys(name):
+    """The tool keys in one of the lists in tool-links.tsx, in order."""
+    block = re.search(rf"export const {name} = \[(.*?)\] satisfies", TOOL_LINKS, re.S)
+    keys = re.findall(r"\bkey: '([^']+)'", block.group(1)) if block else []
+    if not keys or len(keys) != block.group(1).count("{"):
+        raise SystemExit(f"Could not read every tool in {name} in tool-links.tsx")
+    return keys
+
+def names(keys):
+    """Tool names as the landing page shows them (features.<key> in en.json), joined with "and"."""
+    labels = [EN["features"][key] for key in keys]
+    return labels[0] if len(labels) == 1 else ", ".join(labels[:-1]) + " and " + labels[-1]
+
+# The app's tool lists are the source of truth for how many modes there are.
+TOOL_LINKS = (ROOT / "src" / "components" / "features" / "tools" / "tool-links.tsx").read_text()
+EN = json.loads((ROOT / "src" / "locales" / "en.json").read_text())
+PREP_MODES = tool_keys("PREPARE_TOOLS") + tool_keys("PRACTICE_TOOLS")
+UTILITIES = tool_keys("UTILITY_TOOLS")
+TOKENS = {
+    "{product}": PRODUCT,
+    "{pro_price}": PRO_PRICE,
+    "{mode_count}": str(len(PREP_MODES)),
+    "{mode_names}": names(PREP_MODES),
+    "{utility_names}": names(UTILITIES),
+}
+
 def fill(value):
-    """Replaces the {product} token in page copy with the configured product name."""
+    """Replaces the tokens in TOKENS ({product}, {pro_price}, {mode_count}, ...) in page copy."""
     if isinstance(value, str):
-        return value.replace("{product}", PRODUCT)
+        for token, text in TOKENS.items():
+            value = value.replace(token, text)
+        return value
     if isinstance(value, dict):
         return {key: fill(item) for key, item in value.items()}
     if isinstance(value, (list, tuple)):
@@ -104,10 +135,8 @@ ANSWERS = fill(ANSWERS)
 
 NAV = [("AI practice","/ai-debate-practice"),("Case generator","/ai-debate-case-generator"),("Rebuttal practice","/debate-rebuttal-practice"),("Evidence finder","/debate-evidence-finder"),("Pricing","/debatelab-pricing"),("Open app","/app")]
 
-# The eleven prep modes, named as the landing page names them.
-PREP_MODES = ["Case Generator", "Case Attacker", "Brainstorm", "Factoids", "Ask Coach", "Crossfire", "Sparring", "Source Library", "Debate Timer", "Flowchart", "History"]
 SOFTWARE_ID = BASE + "/#software"
-ORGANIZATION_REF = {"@type": "Organization", "@id": BASE + "/#organization", "name": ORGANIZATION, "url": BASE + "/"}
+ORGANIZATION_REF = {"@type": "Organization", "@id": BASE + "/#organization", "name": ORGANIZATION, "url": BASE + "/", "logo": BASE + "/icon-1024.png"}
 SOFTWARE = {
     "@type": "SoftwareApplication",
     "@id": SOFTWARE_ID,
@@ -118,7 +147,7 @@ SOFTWARE = {
     "operatingSystem": "Web",
     "url": BASE + "/",
     "inLanguage": ["en", "es", "hu"],
-    "featureList": PREP_MODES,
+    "featureList": [EN["features"][key] for key in PREP_MODES + UTILITIES],
     "offers": [
         {"@type": "Offer", "name": "Free trial", "price": "0", "priceCurrency": PRICING["currency"], "description": f"{PRICING['trialDays']}-day free trial, no credit card required."},
         {"@type": "Offer", "name": "Pro", "price": PRICING["proMonthly"], "priceCurrency": PRICING["currency"], "description": "Monthly subscription, billed plus tax.", "priceSpecification": {"@type": "UnitPriceSpecification", "price": PRICING["proMonthly"], "priceCurrency": PRICING["currency"], "billingDuration": "P1M", "valueAddedTaxIncluded": False}},
@@ -196,6 +225,8 @@ def render_page(page):
     question, answer = lead_answer(page)
     published = page.get("published", PUBLISHED_DATE)
     modified = page.get("modified", CONTENT_DATE)
+    if "faqs" not in page:
+        modified = max(modified, FAQS_DATE)
     feature_cards = "".join(feature_card(feature) for feature in page["features"])
     article = []
     for heading, blocks in page["sections"]:
@@ -264,7 +295,7 @@ def llms_txt():
 ## Key facts (as of {FACTS_AS_OF})
 
 - Who it is for: students, competitive debaters and their coaches.
-- 11 prep modes: {", ".join(PREP_MODES)}.
+- {len(PREP_MODES)} prep modes: {names(PREP_MODES)}. Plus {len(UTILITIES)} utilities: {names(UTILITIES)}.
 - Practice: Sparring runs timed rounds against an AI opponent in School 4-6-6-3, Lincoln-Douglas and Public Forum and ends with a judged verdict. Crossfire drills cross-examination.
 - Languages: English, Spanish and Hungarian.
 - Pricing: {PLAN_FACTS}
@@ -273,7 +304,7 @@ def llms_txt():
 
 ## Main pages
 
-- [Home]({BASE}/): what {PRODUCT} is, the 11 prep modes, pricing and FAQ
+- [Home]({BASE}/): what {PRODUCT} is, the {len(PREP_MODES)} prep modes, pricing and FAQ
 - [Pricing]({page_url("debatelab-pricing")}): trial, Pro and what each includes
 - [Best AI debate tools]({page_url("best-ai-debate-tools")}): how to choose an AI debate tool
 - [Sitemap]({BASE}/sitemap.xml): every public page

@@ -935,7 +935,6 @@
   },
   "features": {
     "title": "Todo lo que necesitas para ganar",
-    "subtitle": "Once herramientas de debate para una preparación competitiva.",
     "generate": "Generador de casos",
     "generateDesc": "Construye casos completos con argumentos estructurados, evidencia y contra-estrategias.",
     "attack": "Atacante de casos",
@@ -1002,11 +1001,11 @@
     "proPeriod": "/mes + impuestos",
     "recommended": "Recomendado",
     "trialFeature1": "Acceso inicial a preparación con IA",
-    "trialFeature2": "Las 11 herramientas de preparación",
+    "trialFeature2": "Los {{modes}} modos de preparación y las {{utilities}} utilidades",
     "trialFeature3": "Modelos iniciales",
     "trialFeature4": "Acceso por 3 días",
     "proFeature1": "Acceso ampliado a preparación con IA",
-    "proFeature2": "Las 11 herramientas de preparación",
+    "proFeature2": "Los {{modes}} modos de preparación y las {{utilities}} utilidades",
     "proFeature3": "Los 10 modelos, incluidos Claude Opus y Sonnet, GPT-6.1 Sol y Gemini",
     "proFeature4": "Soporte prioritario",
     "proFeature5": "Investigación Active Grounding™",
@@ -1033,7 +1032,7 @@
     "a5": "¡Sí! Guarda casos, lluvias de ideas y chats en el Historial. Exporta a Word, PDF o Google Docs.",
     "subtitle": "Precios, flujo de trabajo y detalles del producto de un vistazo.",
     "q6": "¿Qué es DebateLab?",
-    "a6": "DebateLab es una app de preparación y práctica de debate con IA para estudiantes y debatientes de competición. Tiene 11 modos de preparación, entre ellos un generador de casos, un atacante de casos, investigación de evidencia con citas, un coach de IA, Interrogatorio y rondas de Sparring cronometradas contra un oponente de IA, y está disponible en inglés, español y húngaro."
+    "a6": "DebateLab es una app de preparación y práctica de debate con IA para estudiantes y debatientes de competición. Tiene {{modes}} modos de preparación, entre ellos un generador de casos, un atacante de casos, investigación de evidencia con citas, un coach de IA, Interrogatorio y rondas de Sparring cronometradas contra un oponente de IA, y está disponible en inglés, español y húngaro."
   },
   "finalCta": {
     "title": "¿Listo para construir tu próximo caso ganador?",
@@ -1828,7 +1827,7 @@
   "privacyPage": {
     "title": "Política de privacidad",
     "lastUpdated": "Última actualización",
-    "date": "1 de octubre de 2026",
+    "date": "23 de octubre de 2026",
     "s1": "Información que recopilamos",
     "p1": "Recopilamos la información que proporcionas al crear una cuenta, incluido tu nombre y correo electrónico, que pueden proceder del inicio de sesión con Google o por email, además de datos de uso como contenido generado, elementos guardados y patrones de interacción. Si usas un código demo emitido por un administrador, procesamos ese código para autenticar tu cuenta demo.",
     "s2": "Cómo usamos tu información",
@@ -1838,17 +1837,19 @@
     "s4": "Almacenamiento de datos",
     "p4": "Tus datos se almacenan de forma segura usando infraestructura de Supabase con cifrado en reposo y en tránsito.",
     "s5": "Compartir datos",
-    "p5": "No vendemos tus datos personales. Solo compartimos datos con OpenRouter para el procesamiento de IA, con ElevenLabs para la voz del oponente en las rondas con voz y con procesadores de pago para la facturación.",
+    "p5": "No vendemos tus datos personales. Solo compartimos datos con OpenRouter para el procesamiento de IA, con ElevenLabs para la voz del oponente en las rondas con voz, con Exa para la búsqueda web, con PostHog y Sentry para la analítica y la monitorización de errores (consulta Cookies y seguimiento), con Jam para los informes de errores (consulta Informes de errores con Jam) y con procesadores de pago para la facturación.",
     "s6": "Tus derechos",
     "p6": "En Configuración puedes descargar una copia de tus datos en un archivo JSON, borrar tu trabajo guardado o eliminar tu cuenta. Eliminar la cuenta la borra para siempre junto con todos los datos guardados en ella y cancela de inmediato cualquier suscripción Pro. Stripe conserva sus propios registros de facturación, como facturas y pagos, según exigen las normas fiscales y contables.",
     "s7": "Cookies y seguimiento",
     "p7": "Usamos cookies y almacenamiento del navegador esenciales para la autenticación y las preferencias. Usamos PostHog para analítica de producto y Sentry para monitorización de errores, registros estructurados, métricas de la aplicación, seguimiento del rendimiento y reproducción de sesiones solo cuando hay errores. Sentry no registra sesiones normales. Registra sesiones que contienen errores capturados; todo el texto y los campos de entrada se ocultan en las reproducciones y el contenido multimedia se bloquea. Sentry recibe metadatos técnicos como rutas, datos del navegador, URL, métodos y códigos de estado de solicitudes, trazas de pila, tiempos y clasificaciones seguras de eventos. La recopilación automática de identidad del usuario, cookies, cabeceras, cuerpos HTTP, parámetros de consulta, entradas y salidas de IA y variables de marcos de pila está desactivada. La captura automática, el registro de páginas vistas, la grabación de sesiones y el almacenamiento persistente de PostHog están desactivados. No enviamos contenido de debates, mensajes de chat, títulos de fuentes ni direcciones de correo electrónico en eventos analíticos o registros estructurados.",
-    "s8": "Privacidad de menores",
-    "p8": "DebateLab está diseñado para usuarios de 13 años o más. No recopilamos datos de menores de 13 años conscientemente.",
-    "s9": "Cambios a esta política",
-    "p9": "Podemos actualizar esta política periódicamente. Los cambios significativos se comunicarán por email o notificación en la app.",
-    "s10": "Contáctanos",
-    "p10": "Para preguntas de privacidad o solicitudes de datos, contáctanos en privacy@debatelab.app."
+    "s8": "Informes de errores con Jam",
+    "p8": "Usamos Jam, un servicio de informes de errores de We are Jam, Inc., para que puedas mostrarnos un problema grabándolo. Los scripts de Jam se cargan para todas las personas que visitan DebateLab, tras tu primer clic, toque o pulsación de tecla, o 8 segundos después de que cargue la página, lo que ocurra primero. Abren un marco de recorder.jam.dev, que recibe la dirección de la página en la que estás, datos de tu navegador y dispositivo y los tiempos de carga de la página, y recopilan los registros de la consola de la página, sus solicitudes de red y tus clics y pulsaciones de teclas para poder adjuntarlos a una grabación. Una grabación se crea cuando abres un enlace de grabación de Jam que te hemos enviado y pulsas «Start Recording». Contiene un vídeo de la pantalla, ventana o pestaña que elijas compartir junto con esos datos técnicos, por lo que puede incluir todo lo que se muestre en la página o se intercambie con nuestros servidores, como el contenido de tus debates. Mientras tienes la sesión iniciada, el ID de tu cuenta de DebateLab está disponible para Jam y se adjunta a cualquier grabación que hagas, lo que vincula la grabación con tu cuenta. Jam trata estos datos como nuestro proveedor de servicios y los conserva hasta que dejan de ser necesarios para prestar su servicio; no indica un plazo de conservación fijo. Para pedirnos que eliminemos una grabación u oponerte a este tratamiento, escríbenos a privacy@debatelab.app.",
+    "s9": "Privacidad de menores",
+    "p9": "DebateLab está diseñado para usuarios de 13 años o más. No recopilamos datos de menores de 13 años conscientemente.",
+    "s10": "Cambios a esta política",
+    "p10": "Podemos actualizar esta política periódicamente. Los cambios significativos se comunicarán por email o notificación en la app.",
+    "s11": "Contáctanos",
+    "p11": "Para preguntas de privacidad o solicitudes de datos, contáctanos en privacy@debatelab.app."
   },
   "termsPage": {
     "title": "Términos de servicio",

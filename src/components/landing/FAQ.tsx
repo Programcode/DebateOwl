@@ -1,5 +1,6 @@
 import { useTranslation } from "react-i18next";
 import { ChevronDown } from "lucide-react";
+import { PREP_MODE_COUNT } from "@/components/features/tools/tool-links";
 import { factsAsOf } from "@/lib/seo/pages";
 import { Reveal } from "./Reveal";
 
@@ -8,7 +9,7 @@ const FAQ = () => {
     const asOf = factsAsOf(i18n.language);
 
     const faqs = [
-        { question: t('faq.q6'), answer: t('faq.a6') },
+        { question: t('faq.q6'), answer: t('faq.a6', { modes: PREP_MODE_COUNT }) },
         { question: t('faq.q1'), answer: t('faq.a1', { asOf }) },
         { question: t('faq.q2'), answer: t('faq.a2') },
         { question: t('faq.q3'), answer: t('faq.a3') },
