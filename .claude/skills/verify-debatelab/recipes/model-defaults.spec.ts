@@ -1,5 +1,5 @@
 import type { Page } from "@playwright/test";
-import { admin, AI_TIMEOUT, aiResponse, chooseForMotion, expect, providerCalls, test } from "./fixtures";
+import { admin, AI_TIMEOUT, aiResponse, expect, providerCalls, test, chooseOneOff } from "./fixtures";
 
 // Feature map: features/model-defaults.md.
 const motion = "This House would make public transport free at the point of use";
@@ -19,9 +19,10 @@ async function updateSettings(userId: string, values: Record<string, unknown>) {
 
 async function generateOnce(page: Page) {
   await page.getByRole("textbox", { name: "Motion / Topic *" }).fill(motion);
+  // Generate starts a debate for a new motion, so choose one-off before submitting.
+  await chooseOneOff(page);
   const response = aiResponse(page, "generate");
   await page.getByRole("button", { name: "Generate Debate Case" }).click();
-  await chooseForMotion(page, "once");
   return response;
 }
 

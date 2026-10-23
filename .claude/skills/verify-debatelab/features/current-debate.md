@@ -5,7 +5,7 @@ Each student works in one Current Debate at a time: a motion with its own Librar
 ## Sub-features
 
 - `debate-start` starts a debate from the header. The control's `aria-label` becomes `Current debate: <motion>`, and `debates` and `current_debates` get the row.
-- `debate-offer` opens the dialog `Start a debate with this motion?` when a tool runs with a motion and no Current Debate exists. `Start debate` creates the debate and the run lands in it. `Not now, use it once` runs without one.
+- `debate-autostart`: Generate with no Current Debate creates one for its motion without asking, files the case in it, and shows the toast `Started a debate for this motion`. Its strip offers `Use once` beside `Start debate`. Other tools still open the dialog `Start a debate with this motion?`: `Start debate` creates the debate and the run lands in it, `Not now, use it once` runs without one.
 - `debate-once` opens the dialog `This is a different motion` when a Current Debate exists and the tool has another motion. `Use once without saving to a debate` runs with no debate material and saves nothing to a debate. `Create a new debate for this motion` switches to a new one.
 - `debate-scope` keeps sources and results in their debate. The Library, the dashboard at `/app/debate`, History, and every AI request's system prompt see only the Current Debate's material.
 - `debate-switch` switches back to an earlier debate through `Switch debate`, and the Library and History follow.
@@ -24,11 +24,12 @@ Each student works in one Current Debate at a time: a motion with its own Librar
 Preconditions:
 
 - Doctor passes. The recipe `recipes/current-debate.spec.ts` covers every sub-feature: `bin/verify.sh drive recipes/current-debate`. The maintained specs are `e2e/full-stack/current-debate.spec.ts`, `first-run.spec.ts`, and `debate-context.spec.ts`.
-- Helpers, re-exported from `recipes/fixtures.ts`: `startDebate(page, motion)`, `chooseForMotion(page, "create" | "once")`, and `debateControl(page)` (the visible header control on either viewport).
+- Helpers, re-exported from `recipes/fixtures.ts`: `startDebate(page, motion)`, `chooseForMotion(page, "create" | "once")`, `chooseOneOff(page)` (one-off mode from the debate strip, before a Generate submit), and `debateControl(page)` (the visible header control on either viewport).
 
 - **Start.** `await startDebate(page, motion)`. It clicks the header control, fills the dialog field labelled `Motion`, and clicks the dialog's `Start debate`. End state: `debateControl(page)` has `aria-label` `Current debate: <motion>`, and `current_debates.debate_id` for the user is that `debates` row.
 - **Scope.** Add a source on `/app/library` with a unique marker (see [library-sources](./library-sources.md)); the test id `library-debate` names the motion. Run Brainstorm or Generate: the motion field already holds the debate's motion and no dialog opens. End state: the newest `providerCalls()` entry for the feature has this debate's marker in `system` and not another debate's. `sources.debate_id`, `cases.debate_id`, and `brainstorms.debate_id` point at the debate they were made in.
-- **Offer.** With no debate, fill a tool's motion and submit. The dialog `Start a debate with this motion?` contains the motion. Click its `Start debate`. End state: the result shows, the strip reads `Working in: <motion>`, and `debates` holds exactly that motion.
+- **Offer.** With no debate, fill Brainstorm's motion and submit. The dialog `Start a debate with this motion?` contains the motion. Click its `Start debate` (`chooseForMotion(page, "create")`).
+- **Autostart.** With no debate, fill Generate's motion and click `Generate Debate Case`. No dialog opens; the toast `Started a debate for this motion` shows. End state: the result shows, the strip reads `Working in: <motion>`, and `debates` holds exactly that motion.
 - **Use once.** With a debate, submit a different motion. The dialog `This is a different motion` opens. `chooseForMotion(page, "once")`. End state: the provider call's `system` has no debate marker, and the header still names the old debate.
 - **Dashboard.** `/app/debate`: `current-debate-motion` has the motion, `debate-side-pro` reads `In favor`, `debate-side-con` reads `Against`, and `debate-sources` and `debate-recent` list only this debate's work.
 - **Switch.** Click `debateControl(page)`, then the dialog's `Switch debate`, then `Switch to <motion>`. End state: the Library shows only that debate's sources. In History, the `Brainstorms` and `Cases` tabs show only its results.

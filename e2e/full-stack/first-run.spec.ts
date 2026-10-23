@@ -20,7 +20,7 @@ const copy = {
     skip: "Skip Tour",
     generateMotion: "Motion / Topic *",
     generateSubmit: "Generate Debate Case",
-    offerTitle: "Start a debate with this motion?",
+    startedToast: "Started a debate for this motion",
     workingIn: "Working in:",
     tourMotion: "This House would ban homework",
     gateMotion: "This House would abolish zoos",
@@ -39,7 +39,7 @@ const copy = {
     skip: "Túra kihagyása",
     generateMotion: "Indítvány / téma *",
     generateSubmit: "Vitaeset generálása",
-    offerTitle: "Indítasz egy vitát ezzel a tétellel?",
+    startedToast: "Vitát indítottunk ezzel a tétellel",
     workingIn: "Munka ebben:",
     tourMotion: "Ez a Ház betiltaná a házi feladatot",
     gateMotion: "Ez a Ház bezárná az állatkerteket",
@@ -133,7 +133,7 @@ for (const locale of ["en", "hu"] as const) {
     }).toEqual([debates[0].id]);
   });
 
-  test(`[${locale}] a fresh account that skips the tour is offered a debate from its motion`, async ({ page, user }) => {
+  test(`[${locale}] a fresh account that skips the tour gets a debate from its first motion`, async ({ page, user }) => {
     test.setTimeout(90_000);
     await signUpFresh(page, user, locale);
     await welcomeTourSettled(page);
@@ -144,10 +144,9 @@ for (const locale of ["en", "hu"] as const) {
     await page.getByRole("textbox", { name: text.generateMotion }).fill(text.gateMotion);
     await page.getByRole("button", { name: text.generateSubmit }).click();
 
-    const offer = page.getByRole("dialog", { name: text.offerTitle });
-    await expect(offer).toContainText(text.gateMotion);
-    await offer.getByRole("button", { name: text.startDebate }).click();
-    await expect(offer).toBeHidden();
+    // Design choice (MD-10): no motion dialog; a toast says the debate was started.
+    await expect(page.getByText(text.startedToast).first()).toBeVisible();
+    await expect(page.getByRole("dialog")).toHaveCount(0);
 
     await expectResult(page, `${MARK} case thesis`);
     await expect(page.getByTestId("current-debate-strip")).toContainText(`${text.workingIn} ${text.gateMotion}`);

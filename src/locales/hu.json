@@ -2431,7 +2431,11 @@
     "switching": "Váltás…",
     "deleting": "Törlés…",
     "creating": "Létrehozás…",
-    "loadingCurrent": "Az aktuális vitád betöltése…"
+    "loadingCurrent": "Az aktuális vitád betöltése…",
+    "startedForMotion": "Vitát indítottunk ezzel a tétellel",
+    "startedForMotionDesc": "A forrásai és eredményei együtt maradnak. Az Aktuális vita oldalon átnevezheted vagy válthatsz.",
+    "noCurrentAutoStrip": "Nincs aktuális vita. Az első eredményed elindít egyet a tételével.",
+    "leaveOneOff": "Egyszeri mód kikapcsolása"
   },
   "debateContext": {
     "using": "Felhasználva: {{list}}",
