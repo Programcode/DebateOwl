@@ -126,6 +126,56 @@ Insert failures earlier in the function use a fixed string. This path does not. 
 
 ---
 
+### 4. The anon key can read and write the keepalive tables
+
+| | |
+|---|---|
+| Severity | **Medium** |
+| Verification | **Source-verified.** Policies and grants were re-read. Not executed against Postgres. |
+| Principal | Anyone who has the publishable anon key (it ships in the client) |
+| Boundary | Operator uptime rows are writable and readable with no session |
+
+**Where**
+
+- `supabase/migrations/20260820070000_reconcile_prod_only_objects.sql:141-170`
+- `supabase/migrations/20260923191320_explicit_legacy_table_grants.sql:31` — sequence `USAGE` for `anon`
+- `supabase/migrations/20261016120000_security_preship_hardening.sql:141` — revokes `TRUNCATE`, `TRIGGER`, and `REFERENCES` from `anon` and `authenticated`. It does not revoke `INSERT`, `SELECT`, or `UPDATE`.
+
+**What the code does**
+
+Both tables have RLS on. The policies that exist are `TO anon` only, and the predicate is a string that is written in the migration:
+
+- `keepalive_events`: `INSERT` and `SELECT` when `source = 'external-keepalive-monitor'`. `details` is unbounded `jsonb`.
+- `keepalive_heartbeat`: `INSERT`, `SELECT`, and `UPDATE` when `id` is `external-keepalive` or `rpc-keepalive`.
+
+`GRANT ALL` is given to `anon`, `authenticated`, and `service_role`. There is no `DELETE` policy, so `DELETE` is denied by RLS even though the grant includes it. There is no `authenticated` policy, so a signed-in JWT is also denied. The anon role is not. No later migration drops these policies or revokes `INSERT`/`SELECT`/`UPDATE`.
+
+**Exploit path**
+
+1. Take the anon key from the client bundle (`src/lib/supabase/projects.ts`). No user session.
+2. `POST /rest/v1/keepalive_events` with `{"source":"external-keepalive-monitor","details":{...}}`. PostgREST accepts it. Repeat with a large `details` object. Each row stays.
+3. `GET /rest/v1/keepalive_events?source=eq.external-keepalive-monitor` returns every such row, including whatever the real monitor has written into `details`.
+4. `PATCH /rest/v1/keepalive_heartbeat?id=eq.external-keepalive` sets `touched_at`, `source`, and `details`. A monitor that treats a fresh `touched_at` as "the stack is up" can be shown a healthy beat while the stack is down, or the previous beat can be overwritten.
+
+This is not another user's debate, library, or billing row. The concrete result is unauthenticated read and write of the operator heartbeat, plus unbounded inserts into `keepalive_events`.
+
+**Fix**
+
+```sql
+REVOKE ALL ON TABLE public.keepalive_events FROM anon, authenticated;
+REVOKE ALL ON TABLE public.keepalive_heartbeat FROM anon, authenticated;
+REVOKE ALL ON SEQUENCE public.keepalive_events_id_seq FROM anon, authenticated;
+DROP POLICY IF EXISTS "keepalive_events_anon_insert" ON public.keepalive_events;
+DROP POLICY IF EXISTS "keepalive_events_anon_select" ON public.keepalive_events;
+DROP POLICY IF EXISTS "keepalive_heartbeat_anon_insert" ON public.keepalive_heartbeat;
+DROP POLICY IF EXISTS "keepalive_heartbeat_anon_select" ON public.keepalive_heartbeat;
+DROP POLICY IF EXISTS "keepalive_heartbeat_anon_update" ON public.keepalive_heartbeat;
+```
+
+Accept monitor writes only from a `SECURITY DEFINER` function granted to `service_role`, with `SET search_path = ''`, a dedicated secret compared in constant time, a fixed `source`, and a size cap on `details` (for example `octet_length(details::text) <= 1024`). Do not reuse `SUPABASE_SERVICE_ROLE_KEY` as that secret. The external monitor calls the function with the service role, or a private Edge Function that checks the secret and then writes with the service role.
+
+---
+
 ## Reviewed, no boundary violation found
 
 These were traced because they are the usual failure points. The source shows a control on the path. They are not findings.
