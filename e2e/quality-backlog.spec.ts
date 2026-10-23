@@ -146,9 +146,11 @@ test('language menu closes once a language is chosen', { tag: '@smoke' }, async 
   await setLocale(page, 'en');
   await page.goto('/');
   // Below lg the section links and the language control sit in the menu.
+  const language = page.getByRole('button', { name: 'Language' });
   const openMenu = page.getByRole('button', { name: 'Open menu' });
+  await expect(language.or(openMenu).first()).toBeVisible();
   if (await openMenu.isVisible()) await openMenu.click();
-  await page.getByRole('button', { name: 'Language' }).click();
+  await language.click();
   const menu = page.getByRole('radiogroup', { name: 'Interface language' });
   await expect(menu).toBeVisible();
 
