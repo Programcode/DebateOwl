@@ -1,11 +1,11 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, type ReactNode } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '@/lib/supabase/AuthProvider';
 import { Loader2 } from 'lucide-react';
 import { consumeWorkspaceInvite, stashWorkspaceInvite } from '@/lib/workspace/invite-handoff';
 
-export function RequireAuth({ children }: { children: React.ReactNode }) {
+export function RequireAuth({ children, fallback }: { children: ReactNode; fallback?: ReactNode }) {
   const { user, loading } = useAuth();
   const location = useLocation();
   const { t } = useTranslation();
@@ -17,6 +17,8 @@ export function RequireAuth({ children }: { children: React.ReactNode }) {
   }, [user]);
 
   if (loading) {
+    // The caller's fallback brings its own <main>.
+    if (fallback) return <>{fallback}</>;
     // Signed-out views have no AppLayout, so this is the page's one <main>.
     return (
       <main className="min-h-screen flex items-center justify-center bg-background">

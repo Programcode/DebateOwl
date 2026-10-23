@@ -1,3 +1,5 @@
+import { loadAllAppLanguages } from "@/i18n";
+
 export type RouteLoader<T> = (() => Promise<T>) & {
   /** The module once it has loaded, so a page can render without suspending. */
   loaded: () => T | undefined;
@@ -45,7 +47,9 @@ export const routeLoaders = {
   "/app/library": cacheLoader(() => import("@/pages/LibraryPage")),
   "/app/timer": cacheLoader(() => import("@/pages/TimerPage")),
   "/app/sparring": cacheLoader(() => import("@/pages/SparringPage")),
-  "/app/flowchart": cacheLoader(() => import("@/pages/FlowchartPage")),
+  // Charts saved before nodes kept their text keys hold starter text in the
+  // language they were made in; recognising it needs every catalog.
+  "/app/flowchart": cacheLoader(() => Promise.all([import("@/pages/FlowchartPage"), loadAllAppLanguages()]).then(([page]) => page)),
   "/app/settings": cacheLoader(() => import("@/pages/SettingsPage")),
   "/app/admin": cacheLoader(() => import("@/pages/AdminPage")),
   "/tools": cacheLoader(() => import("@/pages/tools/ToolsHubPage")),
@@ -56,6 +60,10 @@ export const routeLoaders = {
   "*": cacheLoader(() => import("@/pages/NotFound")),
 } as const;
 
+/** The signed-in header and navigation around every /app page. */
+export const appLayoutLoader = cacheLoader(() => import("@/components/layout/AppLayout")
+  .then(({ AppLayout }) => ({ default: AppLayout })));
+
 type RoutePath = keyof typeof routeLoaders;
 
 function isRoutePath(pathname: string): pathname is RoutePath {
@@ -64,4 +72,17 @@ function isRoutePath(pathname: string): pathname is RoutePath {
 
 export function preloadRoute(pathname: string): Promise<unknown> | undefined {
   return isRoutePath(pathname) ? routeLoaders[pathname]() : undefined;
+}
+
+/**
+ * Starts fetching the page being opened (and the signed-in layout under /app)
+ * while the entry is still starting up, instead of when React first reaches it.
+ */
+export function preloadStartupRoute(pathname: string): Promise<unknown> | undefined {
+  const normalized = pathname.length > 1 ? pathname.replace(/\/+$/, "") : pathname;
+  if (normalized === "/app" || normalized.startsWith("/app/")) void appLayoutLoader().catch((): void => undefined);
+  const page = preloadRoute(normalized);
+  // A failed load is reported by the route's own lazy load when it renders.
+  page?.catch((): void => undefined);
+  return page;
 }

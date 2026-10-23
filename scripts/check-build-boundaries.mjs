@@ -21,7 +21,9 @@ function staticGraphFrom(file) {
   return graph;
 }
 
-const forbiddenFeature = /(?:\/src\/pages\/AdminPage\.tsx$|\/src\/lib\/(?:pdf-export-utils|export-utils)\.ts$|\/node_modules\/(?:jspdf|jspdf-autotable|docx|recharts|reactflow)\/)/i;
+// Also kept out: the Spanish and Hungarian catalogs (loaded only when chosen)
+// and the signed-in layout (loaded only under /app).
+const forbiddenFeature = /(?:\/src\/pages\/AdminPage\.tsx$|\/src\/lib\/(?:pdf-export-utils|export-utils)\.ts$|\/node_modules\/(?:jspdf|jspdf-autotable|docx|recharts|reactflow)\/|\/src\/locales\/(?:tools\/)?(?:es|hu)\.json$|\/src\/components\/layout\/AppLayout\.tsx$)/i;
 const initialRoutes = [
   { key: entryKey, pageModules: new Set() },
   ...[

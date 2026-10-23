@@ -102,7 +102,7 @@ This sends one tiny typed choice to OpenRouter's Decisions endpoint using the pi
 npm run build
 ```
 
-This proves the Vite production bundle compiles, prerenders the public pages, checks the built site's links, fragments, JSON-LD and basic accessibility (including heading order) with `scripts/check-site.mjs`, and then walks the emitted Vite manifest to reject feature-only PDF, DOCX, chart, ReactFlow, export, and Admin modules from the static `index.html` dependency graph. It does not prove authentication, database behavior, provider access, or production deployment.
+This proves the Vite production bundle compiles, prerenders the public pages, checks the built site's links, fragments, JSON-LD and basic accessibility (including heading order) with `scripts/check-site.mjs`, and then walks the emitted Vite manifest to reject feature-only PDF, DOCX, chart, ReactFlow, export, and Admin modules, the Spanish and Hungarian catalogs, and the signed-in layout from the static `index.html` dependency graph. It does not prove authentication, database behavior, provider access, or production deployment.
 
 ## Production service-worker smoke
 
@@ -110,7 +110,7 @@ This proves the Vite production bundle compiles, prerenders the public pages, ch
 npm run test:sw
 ```
 
-Run this after `npm run build`. It serves `dist/` through Vite preview and proves that a v2 worker cache upgrades to v3 and claims the page, a first-visited route and its display logo reload offline, an unvisited route shows recovery UI, an intent-prefetched route opens offline, and private API paths do not enter Cache Storage. It uses a stub session and blocks external requests, so it is not authenticated backend or deployed-host proof.
+Run this after `npm run build`. It serves `dist/` through Vite preview (which applies the `vercel.json` rewrites, so app routes get `app-shell.html` as in production) and proves that a v2 worker cache upgrades to this build's caches and claims the page; that after one visit to `/app`, Home, Library, History, Settings and Timer open offline as fresh navigations, the timer runs, the offline indicator shows, and switching to Spanish works; that a visited public page answers offline only with itself and an unvisited one gets the offline page; that an unvisited route shows recovery UI and an intent-prefetched one opens; and that private API paths and `/auth/callback` do not enter Cache Storage. It uses a stub session and blocks external requests, so it is not authenticated backend or deployed-host proof.
 
 ## Credential-free browser gate
 

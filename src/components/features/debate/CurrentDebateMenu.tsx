@@ -29,7 +29,7 @@ export function CurrentDebateMenu({ variant }: { variant: 'desktop' | 'mobile' }
 
   const itemClass = cn(
     'flex min-w-0 items-center gap-1.5 rounded-md py-2 text-sm font-medium transition-colors pointer-coarse:min-h-11 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
-    active ? 'bg-primary/10 text-primary' : 'text-muted-foreground hover:bg-accent hover:text-foreground',
+    active ? 'bg-primary/5 text-primary' : 'text-muted-foreground hover:bg-accent hover:text-foreground',
   );
 
   if (!debate) {

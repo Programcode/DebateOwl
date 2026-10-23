@@ -1,5 +1,6 @@
-import { describe, expect, it } from 'vitest';
+import { beforeAll, describe, expect, it } from 'vitest';
 import i18n from '@/i18n';
+import { routeLoaders } from '@/lib/route-modules';
 import { edgeLabel, editNodeData, flowchartFromCase, nodeDescription, nodeLabel, starterFlowchart, studentNodeData, type FlowNodeData } from '@/lib/flowchart';
 import type { GenerateOutput } from '@/lib/ai/schemas/generate';
 
@@ -7,6 +8,9 @@ const en = i18n.getFixedT('en');
 const hu = i18n.getFixedT('hu');
 
 describe('flowchart app text', () => {
+    // The page's route loader fetches every language, as the app does before rendering it.
+    beforeAll(async () => { await routeLoaders['/app/flowchart'](); });
+
     it('shows starter nodes in the current language, not the one they were created in', () => {
         const thesis = starterFlowchart(en).nodes[0].data;
         expect(thesis.label).toBe('Your Thesis');

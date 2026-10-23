@@ -104,3 +104,58 @@ test('Flowchart deletes a selected node at once and Undo puts it back', async ({
   await page.getByRole('button', { name: 'Undo' }).click();
   await expect(page.getByText('Argument 1', { exact: true })).toHaveCount(1);
 });
+
+// VS-05: a long motion and long item titles once widened the dashboard past a phone screen.
+for (const locale of locales) {
+  test(`Current Debate fits a 360px phone with sources attached in ${locale}`, { tag: '@smoke' }, async ({ page }) => {
+    const motion = 'This House believes that national governments should nationalise all critical digital infrastructure including undersea cables';
+    await page.setViewportSize({ width: 360, height: 780 });
+    await setLocale(page, locale);
+    await stubSupabaseSession(page);
+    await seedCurrentDebate(page, motion);
+    await page.addInitScript(({ motion }) => {
+      const debateId = '00000000-0000-4000-8000-00000000d001';
+      const now = Date.now();
+      const sources = [0, 1, 2].map((index) => ({
+        id: `source-${index}`, title: `${motion} source ${index}`, content: 'Evidence', type: 'text',
+        debateId, createdAt: now - index, isActive: true, folder: 'General',
+      }));
+      const savedCases = [0, 1].map((index) => ({
+        id: `case-${index}`, title: `${motion} case ${index}`, data: { motion }, createdAt: now - index,
+        debateId, side: index ? 'con' : 'pro',
+      }));
+      window.localStorage.setItem('debate-trainer-storage', JSON.stringify({
+        state: { ownerUserId: '00000000-0000-0000-0000-000000000001', sourceLibrary: sources, savedCases, sourceFolders: ['General'] },
+        version: 1,
+      }));
+    }, { motion });
+
+    await page.goto('/app/debate');
+    await expect(page.getByTestId('debate-sources').getByText(`${motion} source 0`)).toBeVisible();
+    // The Load button stays on screen beside its truncated title.
+    const load = await page.getByTestId('debate-side-pro').getByRole('button', { name: `${motion} case 0` }).boundingBox();
+    expect(load).not.toBeNull();
+    expect(load!.x + load!.width).toBeLessThanOrEqual(360);
+
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(360);
+  });
+}
+
+// VS-09: picking a language closes the menu; the choice already persists.
+test('language menu closes once a language is chosen', { tag: '@smoke' }, async ({ page }) => {
+  await setLocale(page, 'en');
+  await page.goto('/');
+  // Below lg the section links and the language control sit in the menu.
+  const language = page.getByRole('button', { name: 'Language' });
+  const openMenu = page.getByRole('button', { name: 'Open menu' });
+  await expect(language.or(openMenu).first()).toBeVisible();
+  if (await openMenu.isVisible()) await openMenu.click();
+  await language.click();
+  const menu = page.getByRole('radiogroup', { name: 'Interface language' });
+  await expect(menu).toBeVisible();
+
+  await menu.getByRole('radio', { name: 'Magyar' }).click();
+
+  await expect(page.getByRole('radiogroup')).toHaveCount(0);
+  await expect(page.locator('html')).toHaveAttribute('lang', 'hu');
+});

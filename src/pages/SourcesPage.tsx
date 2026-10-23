@@ -151,7 +151,7 @@ export default function SourcesPage() {
                     href={source.url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-primary underline underline-offset-2 break-words [overflow-wrap:anywhere] hover:text-primary/80 transition-colors"
+                    className="inline-flex min-h-6 max-w-full items-center text-primary underline underline-offset-2 break-words [overflow-wrap:anywhere] hover:text-primary/80 transition-colors pointer-coarse:min-h-11"
                   >
                     {source.url}
                   </a>

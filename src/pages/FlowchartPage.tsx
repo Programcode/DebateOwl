@@ -205,6 +205,10 @@ const FIT_VIEW: FitViewOptions = { padding: 0.2 };
 const COMPACT_LABEL = 'sr-only sm:not-sr-only';
 
 // 12px handles get an invisible 44px hit area on touch.
+// Edge labels get 24px-tall pills. The invisible stroke that takes an edge tap is sized
+// in screen pixels in index.css, from the --flow-zoom the canvas sets below.
+const EDGE_LABEL_PADDING: [number, number] = [8, 6];
+
 const HANDLE_CLASS = "!bg-white/50 !w-3 !h-3 !border-2 !border-white/80 pointer-coarse:after:absolute pointer-coarse:after:-inset-4 pointer-coarse:after:content-['']";
 
 // Custom node component
@@ -286,6 +290,7 @@ export default function FlowchartPage() {
     const nodeTitles = useMemo(() => new Map<string, string>(JSON.parse(nodeTitlesKey) as Array<[string, string]>), [nodeTitlesKey]);
     const labelledEdges = useMemo(() => edges.map((edge) => ({
         ...edge,
+        labelBgPadding: EDGE_LABEL_PADDING,
         label: edgeLabel(edge, t),
         ariaLabel: t('flowchart.edgeAriaLabel', {
             source: nodeTitles.get(edge.source) || edge.source,
@@ -309,6 +314,10 @@ export default function FlowchartPage() {
     // A new chart remounts the canvas element, so the observer follows the key.
     const canvasRef = useRef<HTMLDivElement>(null);
     const canvasSize = useRef({ width: 0, height: 0 });
+    // Edge tap strokes are sized in screen pixels from this (see index.css).
+    const writeFlowZoom = useCallback((_: unknown, viewport: { zoom: number }) => {
+        canvasRef.current?.style.setProperty('--flow-zoom', String(viewport.zoom));
+    }, []);
     useEffect(() => {
         const canvas = canvasRef.current;
         if (!canvas) return;
@@ -902,6 +911,7 @@ export default function FlowchartPage() {
                     <div ref={canvasRef} className={`h-[50vh] min-h-[400px] w-full${layoutAnimating ? ' flow-layout-animating' : ''}`}>
                         <ReactFlow
                             onInit={setFlowInstance}
+                            onMove={writeFlowZoom}
                             // The page scrolls under the wheel; zoom uses pinch, the controls, or Ctrl+wheel.
                             zoomOnScroll={false}
                             preventScrolling={false}
