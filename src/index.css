@@ -106,13 +106,14 @@
   }
 }
 
-/* v3's space-x/space-y: a margin on each following sibling. v4 puts the margin on every child but the
-   last instead, which an inline element ignores, so a Label above its field lost its gap. v4 still
-   emits its own rule at zero specificity; the :not(html) rule (one type selector's weight) cancels it
-   without overriding a child's own mb-* or me-* utility. */
+/* v3's space-x/space-y: a margin on each following sibling (and none after it). v4 puts the margin on
+   every child but the last instead, which an inline element ignores, so a Label above its field lost
+   its gap. v4 still emits its own rule at zero specificity; the :not(html) rule (one type selector's
+   weight) cancels it on the first child without overriding that child's own mb-* or me-* utility. */
 @utility space-y-* {
   & > :not([hidden]) ~ :not([hidden]) {
     margin-top: calc(var(--spacing) * --value(number));
+    margin-bottom: 0;
   }
 
   :where(& > :not(:last-child)):not(html) {
@@ -123,6 +124,7 @@
 @utility space-x-* {
   & > :not([hidden]) ~ :not([hidden]) {
     margin-left: calc(var(--spacing) * --value(number));
+    margin-right: 0;
   }
 
   :where(& > :not(:last-child)):not(html) {
