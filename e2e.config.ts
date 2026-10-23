@@ -18,15 +18,22 @@ const live = process.env.VERIFY_MODE === "live";
 // The testing agent's models, separate from the app's own. Both need tool
 // calling and image input. The actor drives agent.act and explorations; its
 // recorded flows replay with no model call, so it runs only on a cache miss
-// and in explorations. Ling 3.0 Flash VL is about a fifth of GPT-6 Luna's
-// price and drives these flows fine; Gemma 3 12B, cheaper still, could not.
-// OpenRouter withdrew the free Qwen tier used before.
-// The judge answers every agent.assert, waitFor and extract on every run, so it
-// must be cheap and reliable: the Muse Spark contributor tier, which like the
-// app's live pin may keep prompts (made-up content only).
+// and in explorations. The judge answers every agent.assert, waitFor and
+// extract on every run.
+// Both run on Claude Haiku pinned to the Anthropic provider with fallbacks off,
+// so they bill DebateLab's Anthropic key (BYOK in OpenRouter), never OpenRouter
+// credits. Any other family would bill credits, so a non-Claude override fails
+// here instead (src/test/ai/anthropic-only-guard.test.ts checks this file).
 // `||`, not `??`: an unset Actions variable arrives as an empty string.
-const model = openrouter(process.env.E2E_AGENT_MODEL || "inclusionai/ling-3.0-flash-vl");
-const judge = openrouter(process.env.E2E_JUDGE_MODEL || "meta/muse-spark-1.3-contributor");
+const E2E_DEFAULT_MODEL = "anthropic/claude-haiku-5.5";
+function claudeOnly(id: string) {
+  if (!id.startsWith("anthropic/")) {
+    throw new Error(`The testing agent runs only on Claude through the Anthropic BYOK key; ${id} would bill OpenRouter credits`);
+  }
+  return openrouter(id, { provider: { only: ["anthropic"], allow_fallbacks: false } });
+}
+const model = claudeOnly(process.env.E2E_AGENT_MODEL || E2E_DEFAULT_MODEL);
+const judge = claudeOnly(process.env.E2E_JUDGE_MODEL || E2E_DEFAULT_MODEL);
 
 // `context` reaches every model call, judges included: what the app calls things.
 const context = [
@@ -49,8 +56,7 @@ const rules = [
   "Never delete the account or all data, sign out, or open billing checkout unless the instruction asks for it.",
 ];
 
-// The judge cannot act: Meta's endpoint accepts only tool_choice "auto", and
-// the act loop requires a tool call. Explorations act with the actor too.
+// The judge only judges; the actor drives agent.act and explorations.
 const agent = (persona?: string) => ({
   model,
   judge,

@@ -1,6 +1,6 @@
 ---
 name: verify-debatelab
-description: Launch and drive the real DebateLab web app (React client + local Supabase Auth/Postgres/Edge Functions, with either a fake model provider or real OpenRouter pinned to the cheap meta/muse-spark-1.3-contributor model plus real Exa research) to prove a user-facing feature works, with screenshots, ARIA snapshots, provider calls, and database rows as evidence. Use when asked to verify, demo, reproduce, or screenshot DebateLab behavior in a browser, or before calling a DebateLab UI/Edge Function change done.
+description: Launch and drive the real DebateLab web app (React client + local Supabase Auth/Postgres/Edge Functions, with either a fake model provider or real OpenRouter pinned to Claude Haiku 5.5 on the Anthropic BYOK key plus real Exa research) to prove a user-facing feature works, with screenshots, ARIA snapshots, provider calls, and database rows as evidence. Use when asked to verify, demo, reproduce, or screenshot DebateLab behavior in a browser, or before calling a DebateLab UI/Edge Function change done.
 ---
 
 # Verify DebateLab
@@ -8,7 +8,7 @@ description: Launch and drive the real DebateLab web app (React client + local S
 DebateLab is a web app. The surface a user touches is the browser client at `/login` and `/app/*`, backed by Supabase Auth, Postgres/RLS, and Deno Edge Functions. This skill runs all of that locally and drives it with Playwright. It has two modes:
 
 - **Fake (default, free).** `e2e/full-stack/fake-openrouter.mjs` answers every model call with canned text. Proves wiring, rows, and UI, not model behavior.
-- **Live (`up --live`, costs money).** The same container becomes a recording proxy to real OpenRouter. It rewrites every chat call to `meta/muse-spark-1.3-contributor` (override with `VERIFY_LIVE_MODEL`), records OpenRouter's reply model as proof, and stops forwarding after `--max-calls` (default 400). Edge Functions also get a real Exa key, so web research and verified citations are real.
+- **Live (`up --live`, costs money).** The same container becomes a recording proxy to real OpenRouter. It rewrites every chat call to `anthropic/claude-haiku-5.5` pinned to the Anthropic provider with fallbacks off, so it bills the Anthropic BYOK key and not OpenRouter credits (override with `VERIFY_LIVE_MODEL`, which must be an `anthropic/` model), records OpenRouter's reply model as proof, and stops forwarding after `--max-calls` (default 400). Edge Functions also get a real Exa key, so web research and verified citations are real.
 
 Everything goes through one helper, run from the repository root (`git rev-parse --show-toplevel`):
 
@@ -42,7 +42,7 @@ STRIPE_TEST_SECRET_KEY=sk_test_...   # optional; live keys are refused
 STRIPE_TEST_PRICE_ID=price_...       # required with the Stripe key
 ```
 
-It prints nothing about the values. Ask Adam before the first live run: it spends money and sends prompts to a contributor model that may use them for training, so never put real user data in a live run. Costs: Muse Spark 1.3 contributor is $0.10 per million prompt tokens and $0.20 per million completion tokens, so a full `drive all` is cents of model spend. Exa bills per search and is usually the larger part. Jev decisions go to `/api/alpha/decisions` with Jev's own model and are not pinned. `doctor` shows `live calls used N/max`; once the cap is hit the proxy answers 429 and tests fail rather than spend more.
+It prints nothing about the values. Ask Adam before the first live run: it spends money (Exa, Jev, and the Anthropic key), so never put real user data in a live run. Model calls bill the Anthropic BYOK key; Exa bills per search. Jev decisions go to `/api/alpha/decisions` with Jev's own model and are not pinned. `doctor` shows `live calls used N/max`; once the cap is hit the proxy answers 429 and tests fail rather than spend more.
 
 ## Launch
 
@@ -123,7 +123,7 @@ $H e2e cache ls                                             # recorded agent flo
 
 - `e2e` runs `doctor` first and refuses a broken stack, like `drive`. It turns e2e telemetry off and prints `EVIDENCE <dir>`, which holds `summary.md`, `report.json`, and per-attempt screenshots, traces, and failure videos.
 - The suite is tool journeys (tag `journey`) and a page sweep (tag `pages`) of every student and public page in English, Spanish and Hungarian (not `/app/admin` or `/share/:code`). Every test fails on an uncaught error, `console.error` (React warnings included), a Supabase 5xx, horizontal overflow, or a request to a hosted project: `agentic/support/capture-errors.js` records them in the page. A failure that names `errors the page logged` is a real app error to fix, not test noise.
-- The testing agent has its own OpenRouter models: `inclusionai/ling-3.0-flash-vl` acts (test steps on a cache miss, and explorations) and `meta/muse-spark-1.3-contributor` judges. `E2E_AGENT_MODEL` and `E2E_JUDGE_MODEL` override them; the model is not part of the replay key. The key comes from `OPENROUTER_API_KEY`, `LIVE_OPENROUTER_API_KEY`, or the live keys file, and is needed in fake mode too. A recorded `agent.act` replays with no model call; every judgment and every exploration step is a call. Without a key, agent tests skip. An OpenRouter error such as `[Meta] The requested model was not found` is infrastructure: rerun with `--last-failed`. The Muse Spark judge cannot act.
+- The testing agent has its own OpenRouter models: `anthropic/claude-haiku-5.5` both acts (test steps on a cache miss, and explorations) and judges, pinned to the Anthropic provider (BYOK) with fallbacks off. `E2E_AGENT_MODEL` and `E2E_JUDGE_MODEL` override them but must be `anthropic/` models; the model is not part of the replay key. The key comes from `OPENROUTER_API_KEY`, `LIVE_OPENROUTER_API_KEY`, or the live keys file, and is needed in fake mode too. A recorded `agent.act` replays with no model call; every judgment and every exploration step is a call. Without a key, agent tests skip. An OpenRouter error naming Anthropic (an outage, or the key out of credit) is infrastructure: rerun with `--last-failed`.
 - `--session student` starts an exploration signed in as a fresh demo user, minted by `agentic/sessions.e2e.ts`. `--agent` picks a persona: `first-timer`, `coach`, `edge-input`, or `hungarian`. `--target mobile` explores the phone-sized viewport.
 - Explorations report `issue` (functional) and `warning` (cosmetic) findings, and exit 1 when there is an issue. Treat a finding as a lead: the stack serves Vite dev, so a route that is still compiling can look dead, and fake mode answers every motion with free-transport text. Prove a finding with a repro test tagged `repro` before you report it as a bug.
 - Several explorations can run at once (a bug bash), because each gets its own evidence directory. They share this one stack, so give each a different area.

@@ -40,8 +40,11 @@ STATE="$STATE_DIR/stack.env"
 USERS="$STATE_DIR/users.tsv"
 ARTIFACTS="$VERIFY_ROOT/artifacts"  # evidence; never removed by this script
 PROJECT_ID="$(basename "$REPO")"   # supabase/config.toml has no project_id
-# Adam's standing choice for live verification: the cheap contributor tier.
-LIVE_MODEL="${VERIFY_LIVE_MODEL:-meta/muse-spark-1.3-contributor}"
+# Live verification runs on Claude Haiku through DebateLab's Anthropic key
+# (BYOK in OpenRouter). Other families bill OpenRouter credits, so they are
+# refused; the proxy pins the rewritten call to the Anthropic provider.
+LIVE_MODEL="${VERIFY_LIVE_MODEL:-anthropic/claude-haiku-5.5}"
+case "$LIVE_MODEL" in anthropic/*) ;; *) printf 'FAIL VERIFY_LIVE_MODEL must be an anthropic/ model (Anthropic BYOK), not %s\n' "$LIVE_MODEL" >&2; exit 1 ;; esac
 LIVE_KEYS_FILE="${VERIFY_LIVE_KEYS_FILE:-$HOME/.config/debatelab/live-verify.env}"
 
 say() { printf '%s\n' "$*"; }
@@ -299,7 +302,7 @@ cmd_e2e() {
     [ -n "$key" ] && export OPENROUTER_API_KEY="$key"
   fi
   if [ -n "${OPENROUTER_API_KEY:-}" ]; then
-    say "info testing agent: OpenRouter actor ${E2E_AGENT_MODEL:-inclusionai/ling-3.0-flash-vl}, judge ${E2E_JUDGE_MODEL:-meta/muse-spark-1.3-contributor} (replayed steps make no model call)"
+    say "info testing agent: OpenRouter actor ${E2E_AGENT_MODEL:-anthropic/claude-haiku-5.5}, judge ${E2E_JUDGE_MODEL:-anthropic/claude-haiku-5.5}, Anthropic BYOK only (replayed steps make no model call)"
   else
     say "info no OpenRouter key: tests with agent steps will skip"
   fi

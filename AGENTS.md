@@ -96,14 +96,14 @@ To prove that a user-facing change works, drive the real app with the `verify-de
 ```bash
 H=.claude/skills/verify-debatelab/bin/verify.sh
 $H up                  # fake model provider, free
-$H up --live           # real AI: OpenRouter pinned to meta/muse-spark-1.3-contributor, real Exa
+$H up --live           # real AI: OpenRouter pinned to anthropic/claude-haiku-5.5 (Anthropic BYOK), real Exa
 $H doctor              # proves the stack is local, ours, and (live) pinned
 $H drive all           # every recipe; or recipes/<name>, e2e/<path>; add --project desktop-chromium
 $H e2e run             # agentic tests in agentic/ (TesterArmy e2e); `e2e explore "<goal>" --session student --agent <persona>` hunts for bugs
 $H down                # always, including after failures
 ```
 
-- Use `--live` when the change touches prompts, model output handling, web research, or citations. The fake mode cannot prove those. URL import fetches pages directly and works the same in both modes. Every chat call is rewritten to the Muse Spark contributor model, so a full run costs cents plus Exa searches, and the proxy stops after 400 upstream calls (`--max-calls N`). Only use made-up debate content: the contributor model may keep prompts.
+- Use `--live` when the change touches prompts, model output handling, web research, or citations. The fake mode cannot prove those. URL import fetches pages directly and works the same in both modes. Every chat call is rewritten to Claude Haiku 5.5 pinned to the Anthropic provider, so model calls bill the Anthropic BYOK key, not OpenRouter credits; Exa searches still cost, and the proxy stops after 400 upstream calls (`--max-calls N`). Only use made-up debate content. Never point a default, an Auto pool, or the testing agent at a non-`anthropic/` model or enable `allow_fallbacks`: `src/test/ai/anthropic-only-guard.test.ts` fails on it.
 - Live keys come from `~/.config/debatelab/live-verify.env` (mode 600, `LIVE_OPENROUTER_API_KEY` and `LIVE_EXA_API_KEY`). On Adam's VPS it holds copies of the Hermes keys in `~/.hermes/.env`. Never print them.
 - The stack holds the same lock as `./.superset/db-gate.sh`, so only one worktree can run it at a time.
 - Most tools work inside a Current Debate. Recipes start one with `startDebate` or answer the motion dialog with `chooseForMotion`; see the skill's Drive section.
