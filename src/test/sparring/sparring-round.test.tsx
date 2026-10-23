@@ -53,6 +53,21 @@ describe('SparringRound', () => {
     expect(useSparringStore.getState().currentSession?.timerRunning).toBe(true);
   });
 
+  it('says scoring stopped when the judge fails, and goes back to reading on a retry', () => {
+    const session = useSparringStore.getState().startSession({ motion: 'This house would make public transport free.', userSide: 'pro', format: 'standard', difficulty: 'medium' });
+    const round = (judgingError: string | null) => <SparringRound session={session} judging judgingError={judgingError} onSubmit={() => undefined} onRetryJudging={() => undefined} />;
+    const view = render(round('The AI provider returned an unexpected error.'));
+    expect(screen.getByText('Scoring stopped')).toBeInTheDocument();
+    expect(screen.getByText('The judge could not finish scoring.')).toBeInTheDocument();
+    expect(screen.queryByText('The judge is reading the transcript.')).not.toBeInTheDocument();
+    expect(screen.queryByText('Round in progress')).not.toBeInTheDocument();
+
+    // Try scoring again clears the error while the new request runs.
+    view.rerender(round(null));
+    expect(screen.getByText('The judge is reading the transcript.')).toBeInTheDocument();
+    expect(screen.queryByText('Scoring stopped')).not.toBeInTheDocument();
+  });
+
   it('does not nest a second main landmark inside the app layout', () => {
     renderRound();
     expect(document.querySelector('main')).toBeNull();

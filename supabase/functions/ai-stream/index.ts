@@ -24,6 +24,7 @@ import { HttpError, jsonError, requireUser } from "../_shared/auth.ts";
 import { getCorsHeaders } from "../_shared/cors.ts";
 import { checkRateLimit, logUsage, refundQuotaReservation } from "../_shared/entitlements.ts";
 import { REFUND_MAX_DELIVERED_CHARS } from "../_shared/usage-limits.ts";
+import { keepWorkerAlive, trackDrain, waitAtMost, workerTimeLeft } from "../_shared/background.ts";
 import {
   CLAUDE_UNAVAILABLE_CODE,
   CLAUDE_UNAVAILABLE_MESSAGE,
@@ -52,6 +53,13 @@ import {
 import { resolveModelSelection } from "../_shared/auto-model-router.ts";
 import { outputTokenLimit, REPLY_TOKEN_CAPS } from "../_shared/output-caps.ts";
 import { JEV_MODEL } from "../_shared/jev.ts";
+
+// After the close, hold the worker at most this long for the browser to take
+// the last bytes, and never past the wall clock. A client that stopped
+// reading must not hold it to 150 s.
+const DRAIN_CAP_MS = 10_000;
+// Bytes the HTTP layer took on the last read still have to reach the socket.
+const STREAM_SETTLE_MS = 500;
 
 type ChatRole = "user" | "assistant";
 
@@ -106,6 +114,7 @@ export function buildMessages(message: string, history: ChatMessage[], mode: str
 
 
 export async function handleRequest(req: Request): Promise<Response> {
+  const receivedAt = Date.now();
   const corsHeaders = getCorsHeaders(req.headers.get("Origin"));
 
   if (req.method === "OPTIONS") {
@@ -251,8 +260,9 @@ export async function handleRequest(req: Request): Promise<Response> {
   const history = normalizeHistory(input.history);
   const startedAt = Date.now();
 
-  const stream = new ReadableStream({
-    async start(controller) {
+  let answering!: Promise<void>;
+  const source = new ReadableStream<Uint8Array>({
+    start: (controller) => answering = (async () => {
       const encoder = new TextEncoder();
       let accumulated = "";
       let streamUsageRaw: Record<string, unknown> | undefined;
@@ -439,10 +449,15 @@ export async function handleRequest(req: Request): Promise<Response> {
         reader?.releaseLock();
         try { controller.close(); } catch { /* already closed */ }
       }
-    },
+    })(),
   });
+  // Supabase counts the answer as sent once headers are out and may retire
+  // the worker mid-answer (EarlyDrop) unless the work is registered. It stays
+  // registered until the browser has read the final event.
+  const { body: events, drained } = trackDrain(source);
+  keepWorkerAlive(answering.then(() => waitAtMost(drained, Math.min(DRAIN_CAP_MS, workerTimeLeft(receivedAt)))), STREAM_SETTLE_MS);
 
-  return new Response(stream, {
+  return new Response(events, {
     headers: {
       ...corsHeaders,
       "Content-Type": "text/event-stream; charset=utf-8",

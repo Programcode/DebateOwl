@@ -36,7 +36,9 @@ import {
 } from './errors';
 import { parseSourceAssessments } from './sources';
 import { utf8ByteLength } from './text';
-import { readLiveResponse, type LiveGeneration } from './live';
+import { LiveStreamError, readLiveResponse, type LiveGeneration } from './live';
+import { recoverRunResult } from './run-recovery';
+import { FunctionsFetchError, FunctionsHttpError } from '@supabase/supabase-js';
 import { refreshAIUsage } from '@/lib/query-client';
 
 // Request timeout in milliseconds (200 seconds)
@@ -161,7 +163,8 @@ export async function callSupabaseAI<T = unknown>(
   config: ProviderConfig,
   options: AIRequestOptions<T> = {},
 ): Promise<T> {
-  const requestId = `req_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+  const startedAt = Date.now();
+  const requestId = `req_${startedAt}_${Math.random().toString(36).slice(2, 8)}`;
   const startTime = performance.now();
 
   const session = useSessionStore.getState();
@@ -245,10 +248,12 @@ export async function callSupabaseAI<T = unknown>(
     }
 
     const live = options.live;
-    const { data, error } = live
+    let { data, error } = live
       ? await invokeAuthenticatedFunctionWith<Record<string, unknown>>('ai', {
         headers: { Authorization: `Bearer ${accessToken}` },
-        body: { ...requestBody, stream: true },
+        // The request id names the run's stored result, so a dropped stream
+        // can be recovered below. Servers from before it ignore the field.
+        body: { ...requestBody, stream: true, resultKey: requestId },
         signal: controller.signal,
       }, (response) => readLiveResponse<Record<string, unknown>>(response, live, controller.signal))
       : await invokeAuthenticatedFunction<Record<string, unknown>>('ai', {
@@ -256,6 +261,28 @@ export async function callSupabaseAI<T = unknown>(
         body: requestBody,
         signal: controller.signal,
       });
+
+    // The stream dropped before its answer arrived. The server keeps running
+    // while the connection lasts and stores the final result before sending
+    // it, so the answer may be waiting even though the browser never got it.
+    if (live && error instanceof FunctionsFetchError && error.context instanceof LiveStreamError && !browserIsOffline()) {
+      const recovered = await recoverRunResult(feature, requestId, startedAt, controller.signal, error.context.reason === 'stalled' ? Infinity : undefined);
+      if (recovered && recovered.status >= 200 && recovered.status < 300) {
+        captureProductEvent('ai_stream_recovered', { feature, durationMs: Math.round(performance.now() - startTime) });
+        data = recovered.body as Record<string, unknown>;
+        error = null;
+      } else if (recovered) {
+        error = new FunctionsHttpError(new Response(JSON.stringify(recovered.body ?? {}), {
+          status: recovered.status,
+          headers: { 'Content-Type': 'application/json' },
+        }));
+      } else {
+        // Not a request the browser could not send: the stream broke on the way.
+        throw error.context.reason === 'unreadable'
+          ? new AIResponseError('The streamed answer could not be read', { requestId })
+          : new AINetworkError(offlineAIMessage(), { requestId });
+      }
+    }
 
     const elapsed = Math.round(performance.now() - startTime);
 
@@ -313,7 +340,7 @@ export async function callSupabaseAI<T = unknown>(
         throw new AIProviderError(errorMessage, {
           requestId,
           provider,
-          details: { model: config.model, code: errorCode },
+          details: { model: config.model, code: errorCode, ...(data.retryable === true ? { retryable: true } : {}) },
         });
       }
 

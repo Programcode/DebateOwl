@@ -74,6 +74,7 @@ const PRODUCT_EVENT_NAMES = new Set([
   "ai_request_failed",
   "ai_request_started",
   "ai_request_succeeded",
+  "ai_stream_recovered",
   "content_exported",
   "free_tool_used",
   "sparring_round_completed",

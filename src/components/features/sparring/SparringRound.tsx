@@ -167,7 +167,7 @@ export function SparringRound({
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2 text-xs font-medium text-muted-foreground">
             <Badge variant="outline" className="rounded-md">{t(`sparring.format.${session.format}`, session.format.toUpperCase())}</Badge>
-            <span>{t('sparring.round.inProgress', 'Round in progress')}</span>
+            <span>{judging && judgingError ? t('sparring.round.scoringStopped', 'Scoring stopped') : t('sparring.round.inProgress', 'Round in progress')}</span>
             <span aria-hidden="true">·</span>
             <span>{session.userSide === 'pro' ? t('sparring.round.youArePro', 'You are Pro') : t('sparring.round.youAreCon', 'You are Con')}</span>
           </div>
@@ -188,7 +188,7 @@ export function SparringRound({
               <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
                 <div>
                   <p className="text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">{judging ? t('sparring.round.complete', 'Round complete') : currentTurn ? t('sparring.round.turnOf', 'Turn {{current}} of {{total}}', { current: session.currentTurnIndex + 1, total: session.turns.length }) : t('sparring.round.preparingResult', 'Preparing your result')}</p>
-                  <p className="mt-1 text-lg font-semibold text-foreground">{judging ? t('sparring.round.judgeReading', 'The judge is reading the transcript.') : currentTurn ? t(`sparring.turns.${currentTurn.id}`, currentTurn.label) : t('sparring.round.scoring', 'Scoring the round')}</p>
+                  <p className={cn('mt-1 text-lg font-semibold', judging && judgingError ? 'text-destructive' : 'text-foreground')}>{judging ? (judgingError ? t('sparring.round.judgeFailed', 'The judge could not finish scoring.') : t('sparring.round.judgeReading', 'The judge is reading the transcript.')) : currentTurn ? t(`sparring.turns.${currentTurn.id}`, currentTurn.label) : t('sparring.round.scoring', 'Scoring the round')}</p>
                 </div>
                 <div className="flex items-center gap-2 text-3xl">
                   <Clock3 className="h-6 w-6 text-muted-foreground" aria-hidden="true" />

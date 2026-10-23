@@ -66,6 +66,40 @@ export class OutputTruncatedError extends Error {
 }
 
 /**
+ * A reply that parsed as JSON but not into the shape the feature needs, even
+ * after its repair retry. `path` names the first wrong field for the log;
+ * the reply itself is never logged. The call completed, so it is billed.
+ */
+export class AIResponseValidationError extends Error {
+  readonly path: string;
+  usage?: NormalizedUsage;
+  completedUsage?: NormalizedUsage;
+
+  constructor(path: string, usage?: NormalizedUsage) {
+    super("AI response did not match the expected shape");
+    this.name = "AIResponseValidationError";
+    this.path = path;
+    this.usage = usage;
+    this.completedUsage = usage;
+  }
+}
+
+/** The provider's stream stopped before the model ended its reply: a dropped upstream connection. */
+export class IncompleteProviderStreamError extends Error {
+  usage?: NormalizedUsage;
+
+  constructor(usage?: NormalizedUsage) {
+    super("OpenRouter stream ended before completion");
+    this.name = "IncompleteProviderStreamError";
+    this.usage = usage;
+  }
+}
+
+export function isIncompleteProviderStream(error: unknown): boolean {
+  return error instanceof IncompleteProviderStreamError;
+}
+
+/**
  * Parses provider content, attaching the attempt's token usage to a parse
  * failure so callAI's repair retry can fold it into the final accounting.
  */
@@ -517,10 +551,23 @@ export async function readOpenRouterStream(
     }
   };
 
+  // The model ended its reply and only the usage trailer was lost: the answer
+  // is whole, so it is kept and its usage marked incomplete.
+  let trailerLost = false;
   try {
     while (!done) {
       if (signal.aborted) throw signal.reason ?? new DOMException("The operation was aborted", "AbortError");
-      const { done: ended, value } = await reader.read();
+      let read: ReadableStreamReadResult<Uint8Array>;
+      try {
+        read = await reader.read();
+      } catch (readError) {
+        if (finishReason && finishReason !== "length" && text && !signal.aborted) {
+          trailerLost = true;
+          break;
+        }
+        throw readError;
+      }
+      const { done: ended, value } = read;
       if (ended) break;
       totalBytes += value.byteLength;
       if (totalBytes > MAX_PROVIDER_RESPONSE_BYTES * MAX_STREAM_FRAME_OVERHEAD) {
@@ -534,7 +581,7 @@ export async function readOpenRouterStream(
         if (done) break;
       }
     }
-    if (!done) {
+    if (!done && !trailerLost) {
       buffer += decoder.decode();
       for (const line of buffer.split("\n")) {
         processLine(line);
@@ -553,9 +600,11 @@ export async function readOpenRouterStream(
     void reader.cancel().catch(() => undefined);
   }
   if (!done && !finishReason) {
-    const error = new Error("OpenRouter stream ended before completion") as Error & { usage?: NormalizedUsage };
-    error.usage = usageRaw ? { ...normalizeOpenRouterUsage(usageRaw), incomplete: true } : missingOpenRouterUsage("stream");
-    throw error;
+    throw new IncompleteProviderStreamError(usageRaw ? { ...normalizeOpenRouterUsage(usageRaw), incomplete: true } : missingOpenRouterUsage("stream"));
+  }
+  if (trailerLost) {
+    console.warn("[OpenRouter] Stream dropped after the reply finished; usage is incomplete");
+    return { text, usage: usageRaw ? { ...normalizeOpenRouterUsage(usageRaw), incomplete: true } : missingOpenRouterUsage("stream"), finishReason };
   }
   return { text, usage: usageRaw ? normalizeOpenRouterUsage(usageRaw) : missingOpenRouterUsage("stream"), finishReason };
 }

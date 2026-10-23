@@ -229,6 +229,18 @@ export function isAIProviderError(error: unknown): error is AIProviderError {
   return error instanceof AIProviderError || (error instanceof Error && error.name === 'AIProviderError');
 }
 
+/** The server could not use the model's answer (`invalid_output`). */
+export function isInvalidOutputError(error: unknown): boolean {
+  return error instanceof AIResponseError && error.details?.code === 'invalid_output';
+}
+
+/** A provider failure the server marked worth retrying as is (an outage, a dropped stream, the time budget). */
+export function isTransientProviderError(error: unknown): boolean {
+  if (!isAIProviderError(error)) return false;
+  const details = (error as AIError).details;
+  return details?.retryable === true || details?.code === 'provider_unavailable';
+}
+
 export function isTimeoutError(error: unknown): error is TimeoutError {
   return error instanceof TimeoutError || (error instanceof Error && error.name === 'TimeoutError');
 }
@@ -263,7 +275,10 @@ export function classifyAIError(error: unknown, userInitiatedAbort = false): AIE
   if (error instanceof AIResponseError || (error instanceof Error && error.name === 'AIResponseError')) {
     return { errorName: 'AIResponseError', statusCode, shouldCaptureException: true };
   }
-  if (isAIProviderError(error)) return { errorName: 'AIProviderError', statusCode, shouldCaptureException: true };
+  // An outage or a dropped provider stream is expected now and then and the
+  // student is told to try again; ai_request_failed still records it. Other
+  // provider failures may be bugs and are reported.
+  if (isAIProviderError(error)) return { errorName: 'AIProviderError', statusCode, shouldCaptureException: !isTransientProviderError(error) };
   if (error instanceof AIServerError || (error instanceof Error && error.name === 'AIServerError')) {
     return { errorName: 'AIServerError', statusCode, shouldCaptureException: true };
   }
@@ -378,12 +393,18 @@ function mapAIErrorPayload(
     });
   }
 
+  // The model answered, but in a shape the feature could not use, even after
+  // the server's repair retry. Trying again usually works.
+  if (errorCode === 'invalid_output') {
+    return new AIResponseError(i18n.t('aiErrors.invalidOutput'), { requestId, details: { code: errorCode } });
+  }
+
   if (isProviderErrorMessage(message) || isProviderErrorCode(errorCode)) {
     return new AIProviderError(message, {
       statusCode: statusCode || 500,
       requestId,
       provider,
-      details: { model, code: errorCode },
+      details: { model, code: errorCode, ...(payload?.retryable === true ? { retryable: true } : {}) },
     });
   }
 

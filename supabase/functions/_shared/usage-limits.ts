@@ -4,22 +4,34 @@
 // and rate_limits rows; these values decide how fast a request uses them up.
 
 import { AUTO_FAST, AUTO_PRO, type ModelSelection } from "./model-catalog.ts";
+import { FAST_CANDIDATES, PRO_CANDIDATES } from "./auto-model-router.ts";
 
 /** Quota units a model without an entry below costs. */
 export const DEFAULT_QUOTA_UNITS = 1;
 
 /**
  * How many daily requests one call to a model counts as. Unlisted models
- * cost DEFAULT_QUOTA_UNITS. The quota is reserved before Auto picks a model,
- * so Auto selections are charged as their most expensive candidate.
+ * cost DEFAULT_QUOTA_UNITS.
  */
-export const MODEL_QUOTA_UNITS: Readonly<Record<string, number>> = {
+const MODEL_UNITS: Readonly<Record<string, number>> = {
   "anthropic/claude-opus-5.5": 5,
   "openai/gpt-6.1-sol": 3,
   "anthropic/claude-sonnet-5.5": 2,
   "deepseek/deepseek-v4-pro-0813": 2,
-  [AUTO_PRO]: 5,
-  [AUTO_FAST]: 1,
+};
+
+const modelUnits = (model: string) => MODEL_UNITS[model] ?? DEFAULT_QUOTA_UNITS;
+
+/**
+ * The quota is reserved before Auto picks a model, so an Auto selection costs
+ * its most expensive candidate. Derived from the pools, so a pool change
+ * (Auto Pro dropping Opus) cannot leave Auto charging for a model it no
+ * longer uses.
+ */
+export const MODEL_QUOTA_UNITS: Readonly<Record<string, number>> = {
+  ...MODEL_UNITS,
+  [AUTO_PRO]: Math.max(...Object.keys(PRO_CANDIDATES).map(modelUnits)),
+  [AUTO_FAST]: Math.max(...Object.keys(FAST_CANDIDATES).map(modelUnits)),
 };
 
 /**
@@ -55,8 +67,11 @@ export const SESSION_QUOTA: Readonly<Record<"crossfire" | "sparring", { maxCalls
 };
 
 /**
- * A failed or cancelled run is refunded unless the user already saw this many
- * characters of its streamed output. Below it the run produced nothing usable;
- * at or above it the user may have read an answer, so it stays charged.
+ * A run the browser left (reload, Stop, a dropped connection) is refunded
+ * unless the user already saw this many characters of its streamed output.
+ * Below it the run produced nothing usable; at or above it the user may have
+ * read an answer, so it stays charged. In the ai function a run that failed
+ * on the server is refunded however much streamed; ai-stream's plain-text Ask
+ * applies this limit whatever ended the run.
  */
 export const REFUND_MAX_DELIVERED_CHARS = 200;

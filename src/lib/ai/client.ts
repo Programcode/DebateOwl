@@ -15,6 +15,7 @@ export {
   isAINetworkError,
   isAIRateLimitError,
   isAIProviderError,
+  isInvalidOutputError,
   isTimeoutError,
   isAISubscriptionError,
   isAIModelRestrictionError,

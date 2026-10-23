@@ -120,6 +120,9 @@ Deno.test("streaming Ask forwards the shared prompt and returns provider SSE", a
 
     throw new Error(`Unexpected request: ${url}`);
   }) as typeof fetch;
+  const registered: Promise<unknown>[] = [];
+  const runtime = globalThis as { EdgeRuntime?: { waitUntil: (promise: Promise<unknown>) => void } };
+  runtime.EdgeRuntime = { waitUntil: (promise) => registered.push(promise) };
 
   try {
     const response = await handleRequest(
@@ -149,7 +152,15 @@ Deno.test("streaming Ask forwards the shared prompt and returns provider SSE", a
       throw new Error("streaming handler did not return SSE");
     }
 
+    // The answer is finished and closed within milliseconds, but the worker
+    // stays registered until the browser has read the final event, well past
+    // the old fixed 1 s settle.
+    if (registered.length !== 1) throw new Error(`expected one waitUntil registration, got ${registered.length}`);
+    const held = registered[0];
+    const early = await Promise.race([held.then(() => "released"), new Promise((resolve) => setTimeout(() => resolve("held"), 1_500))]);
+    if (early !== "held") throw new Error("the worker was released before the browser read the final event");
     const body = await response.text();
+    await held;
     assertIncludes(body, 'event: delta\ndata: {"text":"Szia"}');
     assertIncludes(body, 'event: delta\ndata: {"text":" Adam"}');
     assertIncludes(body, "event: final");
@@ -192,6 +203,7 @@ Deno.test("streaming Ask forwards the shared prompt and returns provider SSE", a
       throw new Error("provider did not receive the current Ask message");
     }
   } finally {
+    delete runtime.EdgeRuntime;
     globalThis.fetch = originalFetch;
   }
 });

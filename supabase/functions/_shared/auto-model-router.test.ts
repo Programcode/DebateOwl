@@ -150,3 +150,14 @@ Deno.test("router bounds state and propagates caller cancellation", async () => 
   }
   throw new Error("routing cancellation was converted to a fallback");
 });
+
+Deno.test("Auto charges its most expensive candidate, so Auto Pro costs what Sonnet costs", async () => {
+  const { quotaUnitsFor } = await import("./usage-limits.ts");
+  // Written out by hand, not read from the table under test.
+  const ownUnits: Record<string, number> = { "anthropic/claude-haiku-5.5": 1, "anthropic/claude-sonnet-5.5": 2, "anthropic/claude-opus-5.5": 5 };
+  for (const [selection, pool] of [[AUTO_FAST, FAST_CANDIDATES], [AUTO_PRO, PRO_CANDIDATES]] as const) {
+    const expected = Math.max(...Object.keys(pool).map((id) => ownUnits[id] ?? 1));
+    if (quotaUnitsFor(selection) !== expected) throw new Error(`${selection} reserves ${quotaUnitsFor(selection)}, its pool's most expensive candidate costs ${expected}`);
+  }
+  if (quotaUnitsFor(AUTO_PRO) !== 2) throw new Error(`Auto Pro reserves ${quotaUnitsFor(AUTO_PRO)}; its only candidate, Sonnet, costs 2`);
+});

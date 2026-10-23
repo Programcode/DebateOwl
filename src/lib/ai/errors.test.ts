@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import i18n from '@/i18n';
 import {
   AIAuthError,
   AIModelRestrictionError,
@@ -35,6 +36,25 @@ describe('classifyAIError', () => {
     expect(classifyAIError(new AIModelRestrictionError('upgrade')).errorName).toBe('AIModelRestrictionError');
     expect(classifyAIError(new AIAuthError('no', { statusCode: 403 })).shouldCaptureException).toBe(false);
     expect(classifyAIError(new TimeoutError())).toMatchObject({ errorName: 'TimeoutError', shouldCaptureException: true });
+  });
+
+  it('reads invalid_output as a malformed answer, not a provider failure', async () => {
+    const { isInvalidOutputError } = await import('./errors');
+    const error = mapAIError({ message: 'failed', context: { status: 502 } }, 'req_1', 'openrouter', 'auto-pro', { error: 'The AI answer came back malformed. Please try again.', code: 'invalid_output', charged: false });
+    expect(error.name).toBe('AIResponseError');
+    expect(isInvalidOutputError(error)).toBe(true);
+    expect(error.notCharged).toBe(true);
+    expect(error.message).toBe(i18n.t('aiErrors.invalidOutput'));
+  });
+
+  it('keeps transient provider failures out of exception reports but still reports the rest', () => {
+    const mapped = (payload: Record<string, unknown>, status: number) =>
+      classifyAIError(mapAIError({ message: 'failed', context: { status } }, 'req_1', 'openrouter', 'auto-pro', payload));
+    // A Claude outage, and a failure the server marked worth retrying.
+    expect(mapped({ error: 'Anthropic Claude is temporarily unavailable.', code: 'provider_unavailable' }, 503)).toMatchObject({ errorName: 'AIProviderError', shouldCaptureException: false });
+    expect(mapped({ error: 'AI request failed. Please try again.', code: 'provider_error', retryable: true }, 500)).toMatchObject({ errorName: 'AIProviderError', shouldCaptureException: false });
+    // An answer that failed validation may be a bug.
+    expect(mapped({ error: 'AI request failed. Please try again.', code: 'provider_error' }, 500)).toMatchObject({ errorName: 'AIProviderError', shouldCaptureException: true });
   });
 
   it('recognizes the other browser network messages and an offline navigator', () => {
