@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Check, Globe } from 'lucide-react';
 import { useSettingsStore } from '@/lib/stores/settings-store';
@@ -38,13 +39,18 @@ function LanguageChoices({ label, value, onChange }: { label: string; value: App
   );
 }
 
-/** Two taps to change language: open, pick. The AI output language sits underneath. */
+/** Two taps to change language: open, pick. The menu closes on the pick; the AI output language sits underneath. */
 export function LanguageSwitcher() {
   const { t } = useTranslation();
   const { language, outputLanguage, setLanguage, setOutputLanguage } = useSettingsStore();
+  const [open, setOpen] = useState(false);
+  const choose = (set: (language: AppLanguage) => void) => (next: AppLanguage) => {
+    set(next);
+    setOpen(false);
+  };
 
   return (
-    <Popover>
+    <Popover open={open} onOpenChange={setOpen}>
       <HeaderTooltip label={t('langSwitcher.title', 'Language')}>
         <PopoverTrigger asChild>
           <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground" aria-label={t('langSwitcher.label', 'Language')}>
@@ -53,9 +59,9 @@ export function LanguageSwitcher() {
         </PopoverTrigger>
       </HeaderTooltip>
       <PopoverContent align="end" className="w-60 space-y-3 p-2">
-        <LanguageChoices label={t('langSwitcher.uiLanguage', 'Interface language')} value={language} onChange={setLanguage} />
+        <LanguageChoices label={t('langSwitcher.uiLanguage', 'Interface language')} value={language} onChange={choose(setLanguage)} />
         <div className="border-t" />
-        <LanguageChoices label={t('langSwitcher.outputLanguage', 'AI output language')} value={outputLanguage} onChange={setOutputLanguage} />
+        <LanguageChoices label={t('langSwitcher.outputLanguage', 'AI output language')} value={outputLanguage} onChange={choose(setOutputLanguage)} />
       </PopoverContent>
     </Popover>
   );

@@ -42,7 +42,7 @@ const Pricing = () => {
                     <div className="h-full rounded-2xl border border-border/70 bg-card p-7 shadow-sm transition-[border-color,box-shadow] duration-200 hover:border-primary/30 hover:shadow-lg">
                         <div className="mb-4 flex items-center justify-between">
                             <h3 className="text-2xl font-semibold text-foreground">{t('pricing.trial')}</h3>
-                            <span className="rounded-full border border-border/70 bg-secondary/60 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                            <span className="rounded-full border border-border/70 bg-muted px-3 py-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                                 {t('pricing.trialBadge')}
                             </span>
                         </div>
