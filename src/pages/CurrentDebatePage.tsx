@@ -40,9 +40,10 @@ function ItemRow({ item }: { item: DebateItem }) {
           {t(`debate.kinds.${item.kind}`)} · {formatEuropeanDateTime(item.createdAt)}
         </p>
       </div>
+      {/* The name starts with the visible word (WCAG 2.5.3) and ends with which item it loads. */}
       {canOpen && (
-        <Button variant="ghost" size="sm" className="shrink-0" onClick={() => openItem(item)} aria-label={t('debate.openItemAria', { title: item.title, defaultValue: 'Open {{title}}' })}>
-          {t('historyPage.load', 'Load')}
+        <Button variant="ghost" size="sm" className="shrink-0" onClick={() => openItem(item)}>
+          {t('historyPage.load', 'Load')}<span className="sr-only"> {item.title}</span>
         </Button>
       )}
     </li>
