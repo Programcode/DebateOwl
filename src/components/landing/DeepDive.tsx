@@ -38,7 +38,7 @@ const DeepDive = () => {
                     </Reveal>
 
                     <Reveal delay={0.05} className="relative">
-                        <div className="absolute inset-0 bg-gradient-to-tr from-primary/20 to-accent/20 blur-3xl rounded-full opacity-40" />
+                        <div className="absolute inset-0 bg-linear-to-tr from-primary/20 to-accent/20 blur-3xl rounded-full opacity-40" />
                         <div className="glass-card p-8 rounded-2xl border border-border/50 relative overflow-hidden">
                             <div className="space-y-4 font-mono text-sm max-h-[400px] overflow-hidden opacity-90">
                                 <div className="text-muted-foreground">{t('deepDive.preview.processHeading')}</div>

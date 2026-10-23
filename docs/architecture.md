@@ -23,6 +23,8 @@ Collaborative Workspace (`/app/workspaces/*`, the `workspace-invites` function, 
 
 `AuthProvider`, TanStack Query, theme and motion providers, toast systems, the offline indicator, and the route error boundary wrap the routed application.
 
+Styles are Tailwind CSS 4, configured in [`src/index.css`](../src/index.css) (`@theme`, `@custom-variant`, `@utility`) and built by `@tailwindcss/vite`; there is no `tailwind.config`. Tailwind 4 needs Safari 16.4, Chrome 111 or Firefox 128. Older browsers lose cascade layers, and translucent colours such as `bg-primary/10` render solid where `color-mix()` is missing.
+
 ## Workspace layout
 
 The repository is an npm workspace. The web app is the root package and still lives in `src/`. [`packages/core/`](../packages/core/README.md) (`@debatelab/core`) holds platform-neutral TypeScript the iOS app will share: languages, input validation, the Zod schemas for AI requests and results, Crossfire and Sparring logic, and the Edge Function error reader. Its code may not use DOM globals, React, `import.meta`, or Deno specifiers; its tsconfig has no DOM library and ESLint enforces the rest. Each moved module leaves a one-line re-export at its old `src/lib/` path, so web imports and test mocks are unchanged. The stores, the AI client and streaming, the Supabase client, and the i18n catalogs stay in `src/` for now.

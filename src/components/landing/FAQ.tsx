@@ -29,7 +29,7 @@ const FAQ = () => {
                 <Reveal delay={0.05}>
                     {faqs.map((faq) => (
                         <details key={faq.question} className="group border-b">
-                            <summary className="flex cursor-pointer list-none items-center justify-between gap-4 rounded-sm py-4 text-left text-lg font-medium transition-colors duration-150 hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring [&::-webkit-details-marker]:hidden">
+                            <summary className="flex cursor-pointer list-none items-center justify-between gap-4 rounded-sm py-4 text-left text-lg font-medium transition-colors duration-150 hover:text-primary focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring [&::-webkit-details-marker]:hidden">
                                 {faq.question}
                                 <ChevronDown aria-hidden="true" className="h-4 w-4 shrink-0 transition-transform duration-150 ease-out-strong group-open:rotate-180" />
                             </summary>

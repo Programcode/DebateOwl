@@ -263,7 +263,7 @@ export function AppLayout() {
       <header
         ref={headerRef}
         className={cn(
-          "native-safe-top sticky top-[var(--staging-banner-height,0px)] z-50 border-b bg-card/80 backdrop-blur-xl transition-colors",
+          "native-safe-top sticky top-(--staging-banner-height,0px) z-50 border-b bg-card/80 backdrop-blur-xl transition-colors",
           scrolled ? "border-border/60" : "border-transparent",
         )}
       >
@@ -313,7 +313,7 @@ export function AppLayout() {
                 to="/app/settings"
                 aria-label={t('nav.settings', 'Settings')}
                 data-tour="nav-settings"
-                className="hidden lg:inline-flex h-10 w-10 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                className="hidden lg:inline-flex h-10 w-10 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                 activeClassName={activeLinkClass}
               >
                 <Settings className="h-5 w-5" aria-hidden="true" />
@@ -337,11 +337,11 @@ export function AppLayout() {
                 <DialogPrimitive.Overlay className="fixed inset-0 z-40 bg-black/40 lg:hidden data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=open]:fade-in-0 data-[state=closed]:fade-out-0 ease-out-strong data-[state=open]:duration-180 data-[state=closed]:duration-120" />
                 <DialogPrimitive.Content
                   aria-describedby={undefined}
-                  className="native-scroll-y native-mobile-menu fixed inset-x-0 top-[var(--app-header-bottom,8rem)] z-40 overflow-y-auto border-b border-border bg-card p-4 shadow-lg lg:hidden data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=open]:fade-in-0 data-[state=closed]:fade-out-0 data-[state=open]:slide-in-from-top-1 data-[state=closed]:slide-out-to-top-1 ease-out-strong data-[state=open]:duration-180 data-[state=closed]:duration-120"
+                  className="native-scroll-y native-mobile-menu fixed inset-x-0 top-(--app-header-bottom,8rem) z-40 overflow-y-auto border-b border-border bg-card p-4 shadow-lg lg:hidden data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=open]:fade-in-0 data-[state=closed]:fade-out-0 data-[state=open]:slide-in-from-top-1 data-[state=closed]:slide-out-to-top-1 ease-out-strong data-[state=open]:duration-180 data-[state=closed]:duration-120"
                 >
                   <DialogPrimitive.Title className="sr-only">{t('nav.mobileNavigation')}</DialogPrimitive.Title>
                   <nav aria-label={t('nav.mobileNavigation')}>
-                    <div className="grid gap-1 pb-[var(--native-safe-bottom,0px)]">
+                    <div className="grid gap-1 pb-(--native-safe-bottom,0px)">
                       {mobileNavItems.map((item) => {
                         const active = item.key === 'tools' ? section === 'tools'
                           : item.key === 'currentDebate' ? section === 'debate'
@@ -394,7 +394,7 @@ export function AppLayout() {
       <InactiveDebateGate />
 
       {/* Main Content */}
-      <main id={MAIN_CONTENT_ID} className="native-main-content flex-1 focus-visible:outline-none">
+      <main id={MAIN_CONTENT_ID} className="native-main-content flex-1 focus-visible:outline-hidden">
         <Outlet />
       </main>
 

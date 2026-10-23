@@ -46,10 +46,10 @@ function MotionList() {
         return (
           <section key={topic} aria-labelledby={`topic-${topic}`} className="mt-8">
             <h3 id={`topic-${topic}`}>{TOPIC_NAMES[topic]} ({motions.length})</h3>
-            <ul className="!list-none !pl-0 mt-3 divide-y divide-border/60">
+            <ul className="list-none! pl-0! mt-3 divide-y divide-border/60">
               {motions.map((motion) => (
-                <li key={motion.id} id={motion.id} className="!mt-0 py-2">
-                  <a href={`?m=${motion.id}`} className="!text-foreground !no-underline hover:!underline">{motion.motion}</a>
+                <li key={motion.id} id={motion.id} className="mt-0! py-2">
+                  <a href={`?m=${motion.id}`} className="text-foreground! no-underline! hover:underline!">{motion.motion}</a>
                   <span className="ml-2 whitespace-nowrap text-xs text-muted-foreground">{motion.difficulty}, {motion.type}</span>
                 </li>
               ))}

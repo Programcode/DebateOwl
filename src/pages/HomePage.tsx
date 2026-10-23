@@ -66,7 +66,7 @@ function CurrentDebateSummary({ t }: { t: TFunction }) {
       <CardContent className="flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between">
         <div className="min-w-0 space-y-1">
           <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">{t('nav.currentDebate', 'Current debate')}</p>
-          <p className="break-words text-lg font-semibold leading-snug">{debate.motion}</p>
+          <p className="wrap-break-word text-lg font-semibold leading-snug">{debate.motion}</p>
           <p className="text-sm text-muted-foreground">
             {t('debate.lastActivity', { when: formatRelativeDate(debate.lastActivityAt), defaultValue: 'Last activity {{when}}' })}
             {' · '}

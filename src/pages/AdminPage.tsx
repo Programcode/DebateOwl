@@ -354,7 +354,7 @@ function DemoAccessPanel({ codes, loading, error, onCreate, onDisable, onReset }
                                         return (
                                             <tr key={code.id}>
                                                 <td className="whitespace-nowrap px-3 py-4 font-medium">{code.email || t('admin.unknownEmail')}</td>
-                                                <td className="max-w-[14rem] px-3 py-4">
+                                                <td className="max-w-56 px-3 py-4">
                                                     <span className="block truncate" title={displayLabel}>{displayLabel}</span>
                                                 </td>
                                                 <td className="px-3 py-4 capitalize">{t(`admin.users.roles.${code.role}`, code.role)}</td>

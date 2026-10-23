@@ -116,7 +116,7 @@ export function SparringSetup({ onStart, roundCost = null, remainingRequests = n
                 value={motion}
                 onChange={(event) => setMotion(event.target.value)}
                 placeholder={t('sparring.setup.motionPlaceholder', 'This house would require social media companies to verify the age of every user.')}
-                className="min-h-[132px] resize-y text-base leading-7"
+                className="min-h-[132px] resize-y text-base leading-7 md:leading-5"
                 maxLength={MAX_MOTION_LENGTH}
                 autoFocus
                 aria-describedby="sparring-motion-count"
@@ -144,7 +144,7 @@ export function SparringSetup({ onStart, roundCost = null, remainingRequests = n
                     aria-pressed={selected}
                     onClick={() => setUserSide(side)}
                     className={cn(
-                      'motion-press rounded-xl border p-3 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
+                      'motion-press rounded-xl border p-3 text-left transition-colors focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
                       selected ? 'border-primary bg-primary/10 text-foreground shadow-sm' : 'border-border bg-background hover:border-primary/40 hover:bg-accent/50',
                     )}
                   >
@@ -175,7 +175,7 @@ export function SparringSetup({ onStart, roundCost = null, remainingRequests = n
                     aria-pressed={selected}
                     onClick={() => setDifficulty(level.id)}
                     className={cn(
-                      'motion-press rounded-xl border p-3 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
+                      'motion-press rounded-xl border p-3 text-left transition-colors focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
                       selected ? 'border-primary bg-primary/10 shadow-sm' : 'border-border hover:border-primary/40 hover:bg-accent/50',
                     )}
                   >
@@ -227,10 +227,10 @@ export function SparringSetup({ onStart, roundCost = null, remainingRequests = n
             </CardContent>
           </Card>
 
-          <Card className="border-primary/20 bg-primary/[0.025]">
+          <Card className="border-primary/20 bg-primary/2.5">
             <CardContent className="space-y-4 pt-6">
               <details className="group rounded-xl border border-border/70 bg-background/70 p-3">
-                <summary className="flex cursor-pointer list-none items-center justify-between gap-3 text-sm font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
+                <summary className="flex cursor-pointer list-none items-center justify-between gap-3 text-sm font-semibold focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
                   <span className="flex flex-1 items-center justify-between gap-3">
                     <span>{t('sparring.setup.speakingOrder', 'Speaking order')}</span>
                     <Badge variant="outline" className="rounded-md">{t('sparring.setup.turns', '{{count}} turns', { count: selectedFormat.turnCount })}</Badge>

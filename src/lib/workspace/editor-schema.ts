@@ -112,7 +112,7 @@ export function createWorkspaceEditor(
     editorProps: {
       attributes: {
         "aria-label": options.ariaLabel ?? "Document editor",
-        class: "min-h-64 px-4 py-3 focus:outline-none",
+        class: "min-h-64 px-4 py-3 focus:outline-hidden",
         role: "textbox",
       },
     },

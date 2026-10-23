@@ -10,7 +10,7 @@ const FinalCTA = () => {
 
     return (
         <section className="relative overflow-hidden py-24">
-            <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-secondary/10 to-emerald-200/20 dark:to-emerald-900/20" />
+            <div className="absolute inset-0 bg-linear-to-br from-primary/10 via-secondary/10 to-emerald-200/20 dark:to-emerald-900/20" />
             <div className="absolute inset-0 animated-grid opacity-45" />
 
             <div className="orb orb-primary -top-40 left-0 h-80 w-80 opacity-55" />
