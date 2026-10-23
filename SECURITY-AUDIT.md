@@ -1,12 +1,24 @@
 # DebateLab security audit
 
-**Status:** partial, time-boxed pass. Highest-risk surfaces were reviewed first. This is not a claim that the rest of the repository is clean.
+**Status:** partial, time-boxed pass (two rounds). Highest-risk surfaces were reviewed first, then the remaining edge functions, RLS and `SECURITY DEFINER` grants, storage, XSS sinks, collaboration, AI quota, headers, the service worker, and the lockfile advisory feed. This is not a claim that the rest of the repository is clean.
+
+## Severity-ranked summary
+
+No critical or high issue was confirmed. Two issues are medium, two are low, and one stays unranked because the runtime result was not observed.
+
+| Rank | Severity | Finding | Concrete result |
+|---|---|---|---|
+| 1 | **Medium** | Discount caps are never consumed, and Checkout sets `allow_promotion_codes: true` | A signed-in user passes `max_redemptions` and the per-user check forever. Stripe then accepts any promotion code on the account. Pro still requires a signed webhook. |
+| 2 | **Medium** | Anon policies on `keepalive_events` and `keepalive_heartbeat` | The publishable anon key can insert and read monitor rows and overwrite the two heartbeat rows. No session. |
+| 3 | **Low** | `share` returns the thrown error text | A signed-in user receives PostgREST or Postgres text from `consume_daily_quota`. |
+| 4 | **Low** | `create-portal` returns Stripe's error text | A signed-in user receives Stripe's `message` when portal session creation fails. |
+| — | **Not assigned** | `import-source` checks DNS, then `fetch`es the name again | Rebinding to a private address is what the code comments describe. This pass did not run the fetch. |
 
 **Source:** `2ac31e605e609728d1baa8f67426aa38987bc689` (`main`, clean worktree at the start of the audit).
 
 **Method:** [cloudflare/security-audit-skill](https://github.com/cloudflare/security-audit-skill) `skills/security-audit` (SKILL.md, RECONNAISSANCE.md, HUNTING.md, ATTACK-CLASSES.md, VALIDATION-AND-REPORTING.md, plus the AI, web/auth, client, cloud, data-isolation, supply-chain, protocol, and resource-exhaustion companions). A candidate needs a lower-trust principal, a crossed control, and a concrete result. Missing best practice without that result is listed under hardening, not as a finding.
 
-**Execution boundary:** source inspection only. No requests to `*.supabase.co`, `debate.pi-stack.org`, Stripe, OpenRouter, Exa, or ElevenLabs. Target code was not executed: this environment cannot provide the skill's OS sandbox (empty allowlisted environment, no external network, read-only target, scratch-only writes, and explicit resource limits) together. Postgres was not started. `npm audit` was not run, because that contacts a registry.
+**Execution boundary:** source inspection only. No requests to `*.supabase.co`, `debate.pi-stack.org`, Stripe, OpenRouter, Exa, or ElevenLabs. Target code was not executed: this environment cannot provide the skill's OS sandbox (empty allowlisted environment, no external network, read-only target, scratch-only writes, and explicit resource limits) together. Postgres was not started. The second pass ran `npm audit --package-lock-only` (the npm advisory endpoint, not the hosts above). The lockfile reported 0 info, low, moderate, high, and critical advisories. `node_modules` was not installed, so this is the lockfile feed only.
 
 **Profile:** closest to a `quick` pass over edge functions, RLS and grants, admin, payments and promos, secrets, and the AI and import sinks those depend on. No prior `coverage-ledger.json` or `findings.json` exists for this repo. A full six-phase ledger (every surface × boundary × attack class, isolated hunters, fresh verifiers, schema validators) was not finished before the time limit. Unreviewed areas are listed at the end.
 
@@ -69,7 +81,90 @@ This does not grant Pro by itself. Pro still requires a completed Checkout Sessi
 
 **Fix**
 
-In `redeem_promo_code_atomic`, handle `discount` like the other types: record `user_promos` and increment `redemptions_count` before returning, or refuse the type in the RPC and do both writes in the Checkout handler before the Stripe session is created. Pass Stripe one promotion code or coupon taken from server-side `config`, and do not set `allow_promotion_codes`. Use the same failure message and the same fifteen-minute failure lock for the Checkout lookup. Add a pgTAP case that redeems one discount code up to `max_redemptions` and asserts the next call does not open a session.
+Keep one function, `redeem_promo_code_atomic`, as the only writer. Checkout calls it with the user-scoped client from `requireUser` (`auth.uid()` is null on the service-role client this function uses today). Store the Stripe promotion-code id in `promo_codes.config` under `stripe_promotion_code`. The id has to match `^promo_[A-Za-z0-9]+$`. A discount row without that id is the same failure as an unknown code.
+
+Replace the early `RETURN` so the existing `user_promos` insert and `redemptions_count` update run. A second call by the same user, which Checkout makes after the promo screen, returns the stored id and does not increment again. Entitlement types stay single-use errors. Unknown, expired, exhausted, and malformed-config codes keep one message and the existing failure lock.
+
+```sql
+-- Replace the unknown/expired/exhausted/already-redeemed IF.
+-- A user who already holds the discount row must get the id back even when
+-- redemptions_count is now at the cap; otherwise Checkout fails after a claim.
+IF NOT FOUND
+   OR (v_promo.expires_at IS NOT NULL AND v_promo.expires_at < now()) THEN
+  v_failure := 'Invalid or expired promo code';
+ELSIF EXISTS (
+  SELECT 1 FROM public.user_promos
+  WHERE user_id = v_user_id AND promo_code_id = v_promo.id
+) THEN
+  IF v_promo.type::text = 'discount'
+     AND COALESCE(v_promo.config->>'stripe_promotion_code', '') ~ '^promo_[A-Za-z0-9]+$' THEN
+    RETURN jsonb_build_object(
+      'success', true,
+      'message', 'Discount code noted! Apply it at checkout for a discount.',
+      'promoCodeId', v_promo.id,
+      'promoType', 'discount',
+      'stripePromotionCode', v_promo.config->>'stripe_promotion_code');
+  END IF;
+  v_failure := 'You''ve already redeemed this code';
+ELSIF v_promo.max_redemptions IS NOT NULL
+      AND COALESCE(v_promo.redemptions_count, 0) >= v_promo.max_redemptions THEN
+  v_failure := 'Invalid or expired promo code';
+END IF;
+
+-- Replace WHEN 'discount' THEN RETURN ... with:
+WHEN 'discount' THEN
+  IF COALESCE(v_config->>'stripe_promotion_code', '') !~ '^promo_[A-Za-z0-9]+$' THEN
+    INSERT INTO private.promo_redeem_failures (user_id) VALUES (v_user_id);
+    RETURN jsonb_build_object('success', false, 'message', 'Invalid or expired promo code');
+  END IF;
+  -- No user_settings write. The insert and counter below record the claim.
+
+-- Final return, so Checkout can read the id. redeem-promo already ignores extra keys.
+RETURN jsonb_build_object(
+  'success', true,
+  'message', CASE WHEN v_promo.type::text = 'discount'
+    THEN 'Discount code noted! Apply it at checkout for a discount.'
+    ELSE 'Promo code applied!' END,
+  'promoCodeId', v_promo.id,
+  'promoType', v_promo.type::text,
+  'stripePromotionCode', CASE WHEN v_promo.type::text = 'discount'
+    THEN v_config->>'stripe_promotion_code' ELSE NULL END);
+```
+
+In `create-checkout`, delete the service-role `promo_codes` / `user_promos` lookup, `discountPromoRefusal`, and `allowPromotionCodes`. `allow_promotion_codes` and `discounts` cannot be set together; the session must send only the server-side id.
+
+```ts
+const auth = await requireUser(req);
+const user = auth.user;
+let discounts: Stripe.Checkout.SessionCreateParams.Discount[] | undefined;
+if (promoCode) {
+  const { data: result, error } = await auth.userClient.rpc("redeem_promo_code_atomic", {
+    p_code: promoCode,
+  });
+  const promotionCode = result?.stripePromotionCode;
+  const allowed = !error
+    && result?.success === true
+    && result?.promoType === "discount"
+    && typeof promotionCode === "string"
+    && /^promo_[A-Za-z0-9]+$/.test(promotionCode);
+  if (!allowed) {
+    return new Response(JSON.stringify({
+      error: "Invalid or expired promo code",
+      code: "promo_invalid",
+    }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+  }
+  discounts = [{ promotion_code: promotionCode }];
+}
+
+const sessionParams: Stripe.Checkout.SessionCreateParams = {
+  // customer, line_items, urls, metadata unchanged
+  ...(discounts ? { discounts } : {}),
+};
+```
+
+Every RPC failure, including the lockout, becomes that one 400. Do not branch on `promo_expired` or `promo_exhausted`. A Stripe error after the RPC has committed still consumes a redemption; that is the direction that keeps the cap. Do not delete `user_promos` on a client disconnect.
+
+Add a pgTAP case: the `max_redemptions`-th distinct user gets a `promo_` id back; the next user gets `success = false` and one message; `redemptions_count` equals the cap; a second call by an earlier user does not increment. Assert the Checkout params object contains `discounts[0].promotion_code` and has no `allow_promotion_codes` key.
 
 ---
 
@@ -94,7 +189,52 @@ Literal private hosts, obfuscated IPv4, and IPv4-mapped IPv6 are rejected in `su
 
 **Safe check (local only):** point `import-source` at a hostname whose first `A`/`AAAA` answer is public and whose next answer is `127.0.0.1` or a dummy listener on a blocked range. Use a local resolver and a local listener. Do not aim this at cloud metadata, production, or staging.
 
-**Fix if the rebinding fetch succeeds:** connect to the address that was checked (pinned dial), or send the fetch through an egress proxy that enforces the same ranges. Keep the current literal and DNS checks in front of that.
+**Fix**
+
+Do not call `fetch(currentUrl)`. Dial one address that just passed `isPrivateIpv4` / `isPrivateIpv6`, and set SNI and `Host` to the original name. Re-run the same pin on every redirect hop. `Deno.connect` to the IP avoids a second lookup. `Deno.startTls` is the TLS handshake with the original hostname. If the Edge runtime rejects raw sockets, put the same dial in an egress proxy and have the function call only that proxy.
+
+```ts
+async function publicAddresses(hostname: string, signal: AbortSignal): Promise<string[]> {
+  const settled = await Promise.allSettled([
+    Deno.resolveDns(hostname, "A", { signal }),
+    Deno.resolveDns(hostname, "AAAA", { signal }),
+  ]);
+  const addresses = settled.flatMap((result) =>
+    result.status === "fulfilled" ? result.value : [],
+  );
+  if (addresses.length === 0) throw new Error("Could not resolve host.");
+  if (addresses.some((address) => isPrivateIpv4(address) || isPrivateIpv6(address))) {
+    throw new Error("Private and local network URLs cannot be imported.");
+  }
+  return addresses;
+}
+
+async function pinnedConnection(url: URL, signal: AbortSignal): Promise<Deno.Conn> {
+  const ip = (await publicAddresses(url.hostname, signal))[0];
+  const port = url.port === "" ? (url.protocol === "https:" ? 443 : 80) : Number(url.port);
+  const tcp = await Deno.connect({ hostname: ip, port, signal });
+  if (url.protocol !== "https:") return tcp;
+  return await Deno.startTls(tcp, { hostname: url.hostname });
+}
+```
+
+Write the HTTP/1.1 request on that connection with `Host: url.host`. Read the status line. On a 3xx, cancel the body, resolve `Location` against `url`, run `validatePublicHttpUrl`, and call `pinnedConnection` again. Never pass the hostname to `fetch`.
+
+The proxy form, if sockets are blocked:
+
+```ts
+await fetch(Deno.env.get("IMPORT_EGRESS_PROXY")!, {
+  method: "POST",
+  headers: { "content-type": "application/json" },
+  body: JSON.stringify({ url: currentUrl.toString() }),
+  signal,
+  redirect: "manual",
+});
+```
+
+The proxy resolves, rejects any address `isPrivateIpv4` / `isPrivateIpv6` accepts as blocked, connects to a remaining address, and applies the same rule to each hop. It is the only host the function may dial. Keep the literal checks in `validatePublicHttpUrl` in front of either path.
+
+The safe local check is unchanged: a resolver that answers the first lookup with a public address and the connection lookup with `127.0.0.1` or a dummy listener on a blocked range. Confirm the pinned dial hits the public address and the proxy refuses the second answer. Do not aim either at cloud metadata, production, or staging. Until that run succeeds, this item stays `needs_validation` and has no severity.
 
 ---
 
@@ -229,6 +369,22 @@ These were traced because they are the usual failure points. The source shows a 
 
 **CI.** Workflows that load staging, live-provider, or production-canary secrets are the ones AGENTS.md already names. This pass did not re-prove each job's ref guard.
 
+**Second pass, edge functions.** Every `supabase/functions/*/index.ts` entry was checked for an auth gate. `requireUser` runs before work in `voice`, `workspace-invites`, `announcements`, `create-checkout`, `create-portal`, `export-gdoc`, `import-source`, `redeem-promo`, `share`, `ai`, `ai-stream`, `account`, and `admin`. `stripe-webhook` verifies the signature before writes. `demo-code-login` is the pre-session function. `export-gdoc` rejects a refresh token in the body and uses the caller's Google access token for that user's export. `announcements` reads and dismisses through the user-scoped client. `ai-stream` `normalizeHistory` keeps only `user` and `assistant` (`ai-stream/index.ts:87-95`). Workspace invite redemption is by digest after `requireUser`.
+
+**Second pass, RLS and definer functions.** A scan of `CREATE FUNCTION` bodies in `supabase/migrations` found 71 `SECURITY DEFINER` definitions. Each one includes a `search_path` assignment (`''` or `public`), including `handle_new_user` (`SET search_path = public` after the body, `20260208000000_stripe_schema.sql:86`). The scan can miss a definition whose header is split in a way the script did not see; it did not miss a definer function that lacked the string `search_path`. `GRANT ALL` to `anon` on `curated_sources`, `evidence_cards`, and `sparring_sessions` has no `TO anon` policy. RLS denies those. The policies that allow `anon` are the keepalive policies in finding 4, plus `EXECUTE` on `get_shared_item(text)`, which is the public share read. `ai_usage_today()` is granted to `authenticated` and filters `auth.uid()` (`20261022220000_ai_quota_sessions.sql:223-237`). Quota claim, consume, and refund functions require `auth.role() = 'service_role'` (`:69`, `:146`, `:190`).
+
+**Second pass, storage.** No `storage.objects` or `storage.buckets` policy appears in `supabase/migrations` or `config.toml`. With RLS on and no policy, a client JWT cannot read or write objects. `source_files.storage_key` is updatable by the owner (`owner_scoped_tables_rls_test.sql`). Account deletion deletes storage by `storage.objects.owner` / `owner_id`, and the migration says it does not follow `storage_key` (`20261001100000_account_deletion_and_export.sql:255-261`). That does not grant a cross-tenant object read. Whether a hosted bucket is public is not in this repo, so it is not a finding.
+
+**Second pass, XSS and URLs.** `dangerouslySetInnerHTML` in `src/` is the JSON-LD script in `ToolPageLayout.tsx:149`, and `jsonLd` escapes `<`. Markdown uses `react-markdown` 9 with no `rehype-raw` and no custom `urlTransform`. Images are links. The auth callback tests reject a `javascript:` redirect. No `supabase.channel` or `postgres_changes` subscription exists under `src/`.
+
+**Second pass, collaboration.** `services/collaboration/src/index.ts` verifies the Supabase JWT, then `postgres-store.ts:73-96` allows the room only when `workspace_members.user_id` matches, the document epoch matches, and a write also requires `workspace.status = 'active'`. The room name is not enough.
+
+**Second pass, AI quota.** Session keys are client-supplied. `claim_ai_session_quota` is service-role only and the server passes the session cap and TTL. A client key does not reset the daily counter. The refund path returns units only when the session still has `calls_used = 1` and the charge id matches (`20261022220000_ai_quota_sessions.sql:146-168`). That is the cancelled-run refund, not a second charge for the same call.
+
+**Second pass, headers and the worker.** `vercel.json:149-167` sets the CSP above. The timer embed uses `frame-ancestors *` and `script-src 'self'`. `public/sw.js` sends `/auth/v1`, `/rest/v1`, `/functions/v1`, `/storage/v1`, and `/auth/callback` through the network. Cached asset messages stay on this origin and under `/assets/`. No secret is in `vercel.json`.
+
+**Second pass, dependencies.** `npm audit --package-lock-only` reported zero advisories. Deno `esm.sh` imports were not fed to an advisory database.
+
 ---
 
 ## Hardening (not findings)
@@ -243,14 +399,14 @@ These were traced because they are the usual failure points. The source shows a 
 
 ## Coverage gap
 
-Not reviewed deeply enough to call covered:
+Still not reviewed deeply enough to call covered:
 
-- Every `SECURITY DEFINER` function under `supabase/migrations/` after the quota, promo, share, account, and webhook functions cited above. Workspace RPCs were sampled (`workspace-invites` requires `requireUser` and redeems by digest) and were not line-audited.
-- `services/collaboration` beyond `createWorkspaceAuthenticator` (token verify, then `isAuthorized`).
-- Storage object policies, Realtime channel authorization, and Auth hook configuration that live only in the hosted project.
-- Dependency CVEs (`package-lock.json`, Deno `esm.sh` imports). No advisory feed was queried.
-- Git history for secrets removed after commit.
-- A dynamic pass for DOM XSS, open redirects, and prompt injection against a running app.
+- The body of every workspace RPC. Membership checks were read on `create_workspace`-style functions and on the collaboration store. Each statement of each workspace function was not re-proved.
+- Auth hook configuration that exists only in the hosted project.
+- Whether any hosted storage bucket is public. Source has no bucket policy.
+- Deno `esm.sh` URL advisories, and git history for secrets removed after commit.
+- A dynamic pass for DOM XSS, open redirects, and prompt injection against a running app. `react-markdown` 9's default `urlTransform` was not read from an installed package (`node_modules` is absent).
 - Effective production RLS. Source can drift from a database that had policies applied by hand. `20261023080000_drop_legacy_policies.sql` is the repo's attempt to close one such drift; this audit did not query a database.
+- The import rebinding fetch (finding 2). The gap is in the source. The connection was not observed.
 
-No confirmed critical or high issue was established in the surfaces that were read: unauthenticated code execution, service-role use from the client, cross-user debate reads, webhook forgery, or self-service admin grant.
+No confirmed critical or high issue was established in the surfaces that were read: unauthenticated code execution, service-role use from the client, cross-user debate or workspace reads, webhook forgery, or self-service admin grant.
