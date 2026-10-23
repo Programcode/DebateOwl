@@ -152,20 +152,22 @@ test("debate-start, debate-scope, debate-once, debate-switch: two debates keep t
   await evidence.json("07-rows", { debates, sources, cases, brainstorms, current });
 });
 
-test("debate-offer: with no Current Debate, a tool offers to start one for the motion it was given", async ({ signedIn: page, user, evidence }) => {
+test("debate-autostart: with no Current Debate, Generate starts one for its motion without asking", async ({ signedIn: page, user, evidence }) => {
   const motion = "This House would abolish zoos";
+  // Generate starts a debate only once the debate list has loaded; until then it asks.
+  const listed = page.waitForResponse((response) => response.url().includes("/rest/v1/current_debates") && response.request().method() === "GET");
   await page.goto("/app/generate");
+  await listed;
   await page.getByRole("textbox", { name: "Motion / Topic *" }).fill(motion);
   const run = aiResponse(page, "generate");
   await page.getByRole("button", { name: "Generate Debate Case" }).click();
 
-  const offer = page.getByRole("dialog", { name: "Start a debate with this motion?" });
-  await expect(offer).toContainText(motion);
-  await evidence.shot("01-offer");
-  await evidence.aria("01-offer", offer);
-  await offer.getByRole("button", { name: "Start debate" }).click();
-  await expect(offer).toBeHidden();
-  await evidence.step("Generate with no Current Debate → Start a debate with this motion? → Start debate");
+  // Design choice (MD-10): no motion dialog; a toast says the debate was started.
+  const started = page.getByText("Started a debate for this motion").first();
+  await expect(started).toBeVisible();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  await evidence.shot("01-started-toast");
+  await evidence.step("Generate with no Current Debate → toast Started a debate for this motion, no dialog");
 
   const body = await run;
   const thesis = (body.output as { caseStructure: { thesis: string } }).caseStructure.thesis;

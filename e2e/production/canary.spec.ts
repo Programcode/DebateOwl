@@ -114,12 +114,24 @@ test("the canary account generates a case", async ({ page }) => {
   await page.goto("/app/generate");
   await pickBasicDefault(page, "generate");
   await page.getByRole("textbox", { name: "Motion / Topic *" }).fill("This House would make public transport free");
+  // Use the motion once so the canary account does not collect production debates.
+  // Generate starts a debate for a new motion without asking, so choose one-off on the
+  // debate strip first. A build without that button still asks after the click.
+  const strip = page.getByTestId("current-debate-strip");
+  await expect(strip).toBeVisible();
+  const useOnce = strip.getByRole("button", { name: "Use once", exact: true });
+  const choseUpFront = await useOnce.isVisible();
+  if (choseUpFront) {
+    await useOnce.click();
+    await expect(strip).toContainText("One-off mode");
+  }
   const generated = page.waitForResponse((response) => response.url().endsWith("/functions/v1/ai") && response.request().method() === "POST", { timeout: 150_000 });
   await page.getByRole("button", { name: "Generate Debate Case" }).click();
-  // Use the motion once so the canary account does not collect production debates.
-  await page.getByRole("dialog", { name: /^(Start a debate with this motion\?|This is a different motion)$/ })
-    .getByRole("button", { name: /^(Not now, use it once|Use once without saving to a debate)$/ })
-    .click();
+  if (!choseUpFront) {
+    await page.getByRole("dialog", { name: /^(Start a debate with this motion\?|This is a different motion)$/ })
+      .getByRole("button", { name: /^(Not now, use it once|Use once without saving to a debate)$/ })
+      .click();
+  }
   const { status, body } = await readAIResponse(await generated);
   expect(status, "ai generate status").toBe(200);
   expect(body.output.contentions, "generated contentions").toHaveLength(3);

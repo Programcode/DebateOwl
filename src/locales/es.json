@@ -2422,7 +2422,11 @@
     "switching": "Cambiando…",
     "deleting": "Eliminando…",
     "creating": "Creando…",
-    "loadingCurrent": "Cargando tu debate actual…"
+    "loadingCurrent": "Cargando tu debate actual…",
+    "startedForMotion": "Se inició un debate con esta moción",
+    "startedForMotionDesc": "Sus fuentes y resultados quedan juntos. Puedes renombrarlo o cambiarlo desde Debate actual.",
+    "noCurrentAutoStrip": "No hay debate actual. Tu primer resultado inicia uno con su moción.",
+    "leaveOneOff": "Desactivar el modo puntual"
   },
   "debateContext": {
     "using": "Usando {{list}}",

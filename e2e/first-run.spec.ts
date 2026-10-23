@@ -18,7 +18,7 @@ const copy = {
     finish: 'Get Started!',
     generateMotion: 'Motion / Topic *',
     generateSubmit: 'Generate Debate Case',
-    offerTitle: 'Start a debate with this motion?',
+    startedToast: 'Started a debate for this motion',
     workingIn: 'Working in:',
     tourMotion: 'This House would ban homework',
     gateMotion: 'This House would abolish zoos',
@@ -34,7 +34,7 @@ const copy = {
     finish: 'Kezdjük!',
     generateMotion: 'Indítvány / téma *',
     generateSubmit: 'Vitaeset generálása',
-    offerTitle: 'Indítasz egy vitát ezzel a tétellel?',
+    startedToast: 'Vitát indítottunk ezzel a tétellel',
     workingIn: 'Munka ebben:',
     tourMotion: 'Ez a Ház betiltaná a házi feladatot',
     gateMotion: 'Ez a Ház bezárná az állatkerteket',
@@ -162,17 +162,19 @@ for (const locale of ['en', 'hu'] as const) {
     await expect(tooltip).toHaveCount(0);
   });
 
-  test(`[${locale}] a tool offers a first debate from the typed motion instead of the switch dialog`, locale === 'en' ? { tag: '@smoke' } : {}, async ({ page }) => {
+  test(`[${locale}] the first Generate starts a debate from the typed motion without asking`, locale === 'en' ? { tag: '@smoke' } : {}, async ({ page }) => {
     const backend = await freshStart(page, locale, true);
+    // Generate starts a debate only once the debate list has loaded; until then it asks.
+    const listed = page.waitForResponse((response) => response.url().includes('/rest/v1/current_debates') && response.request().method() === 'GET');
     await page.goto('/app/generate', { waitUntil: 'domcontentloaded' });
+    await listed;
 
     await page.getByRole('textbox', { name: text.generateMotion }).fill(text.gateMotion);
     await page.getByRole('button', { name: text.generateSubmit }).click();
 
-    const offer = page.getByRole('dialog', { name: text.offerTitle });
-    await expect(offer).toContainText(text.gateMotion);
-    await offer.getByRole('button', { name: text.startDebate }).click();
-    await expect(offer).toBeHidden();
+    // Design choice (MD-10): no motion dialog; a toast says the debate was started.
+    await expect(page.getByText(text.startedToast).first()).toBeVisible();
+    await expect(page.getByRole('dialog')).toHaveCount(0);
 
     await expect(page.getByTestId('current-debate-strip')).toContainText(`${text.workingIn} ${text.gateMotion}`);
     expect(backend.debates.map((debate) => debate.motion)).toEqual([text.gateMotion]);

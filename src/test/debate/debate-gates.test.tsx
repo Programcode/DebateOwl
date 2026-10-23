@@ -75,8 +75,8 @@ describe('five-day Current Debate gate', () => {
   });
 });
 
-function GateHarness({ motion, onTarget }: { motion: string; onTarget: (target: DebateTarget) => void }) {
-  const gate = useDebateMotionGate();
+function GateHarness({ motion, onTarget, startImplicitly = false }: { motion: string; onTarget: (target: DebateTarget) => void; startImplicitly?: boolean }) {
+  const gate = useDebateMotionGate({ startImplicitly });
   return (
     <>
       <button type="button" onClick={() => gate.run(motion, onTarget)}>Submit</button>
@@ -192,6 +192,43 @@ describe('motion mismatch choice', () => {
     expect(screen.getByRole('dialog', { name: 'Start a debate with this motion?' })).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Switch to this existing debate' }));
     await waitFor(() => expect(onTarget).toHaveBeenCalledWith({ debateId: zoos.id }));
+  });
+
+  it('starts a debate without asking when the tool starts implicitly, once however often it is submitted', async () => {
+    mockCreatedDebate('auto-debate', 'This House would abolish zoos');
+    useDebateStore.setState({ hydrated: true });
+    const onTarget = vi.fn();
+    render(<GateHarness motion="This House would abolish zoos" onTarget={onTarget} startImplicitly />);
+    fireEvent.click(screen.getByRole('button', { name: 'Submit' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Submit' }));
+    await waitFor(() => expect(onTarget).toHaveBeenCalledWith({ debateId: 'auto-debate' }));
+    expect(onTarget).toHaveBeenCalledTimes(1);
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(useDebateStore.getState().debates).toHaveLength(1);
+    expect(useDebateStore.getState().currentDebateId).toBe('auto-debate');
+  });
+
+  it('falls back to asking when starting a debate implicitly fails', async () => {
+    supabaseMock.from.mockImplementationOnce(() => ({
+      insert: () => ({ select: () => ({ single: async () => ({ data: null as unknown, error: { message: 'insert failed' } }) }) }),
+    }) as unknown as ReturnType<typeof supabaseMock.from>);
+    useDebateStore.setState({ hydrated: true });
+    const onTarget = vi.fn();
+    render(<GateHarness motion="This House would abolish zoos" onTarget={onTarget} startImplicitly />);
+    fireEvent.click(screen.getByRole('button', { name: 'Submit' }));
+    expect(await screen.findByRole('dialog', { name: 'Start a debate with this motion?' })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Not now, use it once' }));
+    expect(onTarget).toHaveBeenCalledWith({ debateId: null });
+  });
+
+  it('asks instead of starting a debate while the debate list has not loaded', () => {
+    useDebateStore.setState({ hydrated: false });
+    const onTarget = vi.fn();
+    render(<GateHarness motion="This House would abolish zoos" onTarget={onTarget} startImplicitly />);
+    fireEvent.click(screen.getByRole('button', { name: 'Submit' }));
+    expect(screen.getByRole('dialog', { name: 'Start a debate with this motion?' })).toBeInTheDocument();
+    expect(supabaseMock.from).not.toHaveBeenCalledWith('debates');
+    expect(onTarget).not.toHaveBeenCalled();
   });
 
   it('does nothing when the user dismisses the choice', () => {

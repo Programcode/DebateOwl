@@ -2422,7 +2422,11 @@
     "switching": "Switching…",
     "deleting": "Deleting…",
     "creating": "Creating…",
-    "loadingCurrent": "Loading your current debate…"
+    "loadingCurrent": "Loading your current debate…",
+    "startedForMotion": "Started a debate for this motion",
+    "startedForMotionDesc": "Its sources and results stay together. Rename or switch it from Current debate.",
+    "noCurrentAutoStrip": "No current debate. Your first result starts one for its motion.",
+    "leaveOneOff": "Turn off one-off mode"
   },
   "debateContext": {
     "using": "Using {{list}}",
