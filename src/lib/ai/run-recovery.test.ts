@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { FunctionsFetchError } from '@supabase/supabase-js';
 import { LiveStreamError } from '@/lib/ai/live';
-import { RUN_RESULT_MISSING_MS, RUN_RESULT_POLL_MS } from '@/lib/ai/run-recovery';
+import { RUN_RESULT_MISSING_MS, RUN_RESULT_POLL_MS, RUN_RESULT_RUNNING_MS } from '@/lib/ai/run-recovery';
 
 // A live request whose stream drops: the answer the server stored is read
 // back by the id the request sent, instead of failing with "check your
@@ -85,6 +85,21 @@ describe('a live request whose stream dropped', () => {
     const pending = callSupabaseAI('generate', { motion: 'Homework' }, config, { live, debateId: null });
     await vi.advanceTimersByTimeAsync(RUN_RESULT_POLL_MS);
     await expect(pending).resolves.toEqual({ output: { done: true } });
+  });
+
+  it('gives up on a dropped run whose row never finishes, well before the wall clock', async () => {
+    vi.useFakeTimers();
+    invokeWith.mockImplementation(async (_name: string, options: { body: { resultKey: string } }) => {
+      rows.push({ result_key: options.body.resultKey, status: null, body: null });
+      return { data: null, error: new FunctionsFetchError(new LiveStreamError('dropped')) };
+    });
+    let settled: unknown = 'pending';
+    const pending = callSupabaseAI('generate', { motion: 'Homework' }, config, { live, debateId: null }).catch((caught: unknown) => caught);
+    void pending.then((value) => { settled = value; });
+    await vi.advanceTimersByTimeAsync(RUN_RESULT_RUNNING_MS - RUN_RESULT_POLL_MS);
+    expect(settled).toBe('pending');
+    await vi.advanceTimersByTimeAsync(2 * RUN_RESULT_POLL_MS);
+    expect(await pending).toBeInstanceOf(AINetworkError);
   });
 
   it('reports the stored failure, including that it was not charged', async () => {

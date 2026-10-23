@@ -64,6 +64,7 @@ import {
   type RateLimitResult,
   refundQuotaReservation,
 } from "../_shared/entitlements.ts";
+import { REFUND_MAX_DELIVERED_CHARS } from "../_shared/usage-limits.ts";
 import {
   CLAUDE_UNAVAILABLE_CODE,
   CLAUDE_UNAVAILABLE_MESSAGE,
@@ -767,6 +768,9 @@ export async function handleRequest(req: Request): Promise<Response> {
         ? "WEB RESEARCH RESULTS are attached to this request."
         : undefined,
     });
+  // Characters of model text streamed to the browser. A reset does not take
+  // any back: the student has already read them.
+  let deliveredChars = 0;
   // The streamed answer on screen is complete: the model sent its
   // finish_reason. A repair retry's reset voids it.
   let modelFinished = false;
@@ -775,6 +779,10 @@ export async function handleRequest(req: Request): Promise<Response> {
   let usageLogged = false;
   const countDelivered = (stream?: GenerationStream): GenerationStream | undefined => stream && {
     ...stream,
+    delta: (text) => {
+      deliveredChars += text.length;
+      stream.delta(text);
+    },
     reset: () => {
       modelFinished = false;
       stream.reset();
@@ -910,18 +918,19 @@ export async function handleRequest(req: Request): Promise<Response> {
         mainErrorUsage,
         ...researchUsageForLog(),
       ]);
-      // A run the student got nothing from costs nothing: a provider failure,
-      // a response that failed validation, the request budget running out, or
-      // the browser leaving (reload, closed tab, Stop, a dropped connection)
-      // before the answer was whole. Text streamed so far does not count: a
-      // half-written case is a preview, not a result. A run whose answer was
-      // saved stays charged, and so does one the browser left after the model
-      // had finished its answer (it may be on screen, and the student chose
-      // to leave), as does a non-streamed call the browser left after the
-      // provider answered. When the server fails after the model finished,
-      // the student sees an error instead of the answer, so it is refunded.
+      // A run that failed on the server costs nothing, however much of it had
+      // streamed: a provider failure, a reply cut off at its cap, a response
+      // that failed validation, or the request budget running out. The
+      // student sees an error instead of the answer. A run the browser left
+      // (reload, closed tab, Stop, a dropped connection; the server cannot
+      // tell these apart) is refunded only before the student saw a usable
+      // part of the answer: one that streamed REFUND_MAX_DELIVERED_CHARS or
+      // more, or whose answer the model had finished, stays charged, as does
+      // a non-streamed call the browser left after the provider answered.
+      // Otherwise a student could read most of a case and press Stop to get
+      // the unit back. A run whose answer was saved always stays charged.
       const clientLeft = aborted && !timedOut;
-      const answerKept = clientLeft && (modelFinished || Boolean(completedMainUsage));
+      const answerKept = clientLeft && (modelFinished || Boolean(completedMainUsage) || deliveredChars >= REFUND_MAX_DELIVERED_CHARS);
       const refundable = !outputSaved && !answerKept;
       // Refund before answering, so a retry sent straight away sees it.
       const refunded = refundable && await refundOnce();

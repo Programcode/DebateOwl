@@ -265,8 +265,8 @@ export async function callSupabaseAI<T = unknown>(
     // The stream dropped before its answer arrived. The server keeps running
     // while the connection lasts and stores the final result before sending
     // it, so the answer may be waiting even though the browser never got it.
-    if (live && error instanceof FunctionsFetchError && !browserIsOffline()) {
-      const recovered = await recoverRunResult(feature, requestId, startedAt, controller.signal);
+    if (live && error instanceof FunctionsFetchError && error.context instanceof LiveStreamError && !browserIsOffline()) {
+      const recovered = await recoverRunResult(feature, requestId, startedAt, controller.signal, error.context.reason === 'stalled' ? Infinity : undefined);
       if (recovered && recovered.status >= 200 && recovered.status < 300) {
         captureProductEvent('ai_stream_recovered', { feature, durationMs: Math.round(performance.now() - startTime) });
         data = recovered.body as Record<string, unknown>;
@@ -276,7 +276,7 @@ export async function callSupabaseAI<T = unknown>(
           status: recovered.status,
           headers: { 'Content-Type': 'application/json' },
         }));
-      } else if (error.context instanceof LiveStreamError) {
+      } else {
         // Not a request the browser could not send: the stream broke on the way.
         throw error.context.reason === 'unreadable'
           ? new AIResponseError('The streamed answer could not be read', { requestId })

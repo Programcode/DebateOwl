@@ -343,7 +343,6 @@ Deno.test("the worker is held until the browser has read the last event", async 
 Deno.test("a run that outlives the stream's deadline ends with a retryable result, stored first", async () => {
   const { streamFeatureResponse } = await import("./stream.ts");
   const cancel = new AbortController();
-  let resultSeen = false;
   const stored: Array<Record<string, unknown>> = [];
   const response = streamFeatureResponse({}, cancel, (stream) => new Promise<Response>((resolve) => {
     stream.delta("{\"partial\":");
@@ -354,15 +353,25 @@ Deno.test("a run that outlives the stream's deadline ends with a retryable resul
     recorder: {
       begin: async () => {},
       finish: async (payload) => {
-        assert(!resultSeen, "the result was sent before it was stored");
+        // Slow storage: the result must still wait for it.
+        await new Promise((resolve) => setTimeout(resolve, 20));
         stored.push(payload);
       },
     },
   });
-  const text = await response.text();
-  resultSeen = true;
+  const reader = response.body!.getReader();
+  const decoder = new TextDecoder();
+  let text = "";
+  let storedWhenResultArrived: number | undefined;
+  while (true) {
+    const { value, done } = await reader.read();
+    if (done) break;
+    text += decoder.decode(value, { stream: true });
+    if (storedWhenResultArrived === undefined && text.includes("event: result")) storedWhenResultArrived = stored.length;
+  }
+  assert(storedWhenResultArrived === 1, "the result was sent before it was stored");
   const result = JSON.parse(/event: result\ndata: (.+)\n\n$/.exec(text)?.[1] ?? "null");
   assert(result?.status === 500 && result.body.retryable === true, `expected a retryable failure, got ${JSON.stringify(result)}`);
   assert((cancel.signal.reason as { name?: string })?.name === "TimeoutError", "the run was not aborted as a timeout");
-  assert(stored.length === 1 && JSON.stringify(stored[0]) === JSON.stringify(result), "the stored result differs from the sent one");
+  assert(JSON.stringify(stored[0]) === JSON.stringify(result), "the stored result differs from the sent one");
 });

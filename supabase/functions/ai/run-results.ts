@@ -8,6 +8,9 @@ const RESULT_KEY = /^[A-Za-z0-9._:-]{1,128}$/;
 // Either write is a single-row upsert or update; past this the answer is sent
 // without waiting, as it was before the table existed.
 const WRITE_TIMEOUT_MS = 4_000;
+// The finish waits this long for a slow start write to land, so the start
+// cannot arrive after the finish and leave a finished run looking unfinished.
+const BEGIN_SETTLE_MS = 10_000;
 
 /** The browser's id for a run, as the table accepts it, or null. */
 export function parseResultKey(value: unknown): string | null {
@@ -36,13 +39,13 @@ export interface RunResultsDatabase {
   from: (table: "ai_run_results") => RunResultsTable;
 }
 
-async function bounded(label: string, write: () => WriteResult): Promise<void> {
+async function bounded(label: string, write: () => WriteResult, timeoutMs = WRITE_TIMEOUT_MS): Promise<void> {
   let timer: ReturnType<typeof setTimeout> | undefined;
   try {
     const outcome = await Promise.race([
       Promise.resolve(write()),
       new Promise<"timeout">((resolve) => {
-        timer = setTimeout(() => resolve("timeout"), WRITE_TIMEOUT_MS);
+        timer = setTimeout(() => resolve("timeout"), timeoutMs);
       }),
     ]);
     if (outcome === "timeout") console.warn(`[AI_RUN_RESULT] ${label} timed out`);
@@ -60,25 +63,34 @@ export function createRunResultRecorder(
   feature: string,
   resultKey: string,
 ): RunResultRecorder {
+  // The start write itself, which may outlive the begin() wait.
+  let started: Promise<unknown> = Promise.resolve();
   return {
-    begin: () => bounded("begin", () => database.from("ai_run_results").upsert({
-      user_id: userId,
-      feature,
-      result_key: resultKey,
-      status: null,
-      body: null,
-      started_at: new Date().toISOString(),
-      finished_at: null,
-    }, { onConflict: "user_id,feature" })),
-    finish: (result) => bounded("finish", () => database.from("ai_run_results")
-      .update({
-        status: typeof result.status === "number" ? result.status : 500,
-        body: result.body ?? null,
-        finished_at: new Date().toISOString(),
-      })
-      .eq("user_id", userId)
-      .eq("feature", feature)
-      // A newer run of the same feature took the row: leave its row alone.
-      .eq("result_key", resultKey)),
+    begin: () => bounded("begin", () => {
+      const write = Promise.resolve(database.from("ai_run_results").upsert({
+        user_id: userId,
+        feature,
+        result_key: resultKey,
+        status: null,
+        body: null,
+        started_at: new Date().toISOString(),
+        finished_at: null,
+      }, { onConflict: "user_id,feature" }));
+      started = write.catch(() => undefined);
+      return write;
+    }),
+    finish: async (result) => {
+      await bounded("begin settle", () => started.then(() => ({ error: null })), BEGIN_SETTLE_MS);
+      await bounded("finish", () => database.from("ai_run_results")
+        .update({
+          status: typeof result.status === "number" ? result.status : 500,
+          body: result.body ?? null,
+          finished_at: new Date().toISOString(),
+        })
+        .eq("user_id", userId)
+        .eq("feature", feature)
+        // A newer run of the same feature took the row: leave its row alone.
+        .eq("result_key", resultKey));
+    },
   };
 }

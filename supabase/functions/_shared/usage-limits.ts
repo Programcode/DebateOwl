@@ -67,8 +67,11 @@ export const SESSION_QUOTA: Readonly<Record<"crossfire" | "sparring", { maxCalls
 };
 
 /**
- * A failed or cancelled run is refunded unless the user already saw this many
- * characters of its streamed output. Below it the run produced nothing usable;
- * at or above it the user may have read an answer, so it stays charged.
+ * A run the browser left (reload, Stop, a dropped connection) is refunded
+ * unless the user already saw this many characters of its streamed output.
+ * Below it the run produced nothing usable; at or above it the user may have
+ * read an answer, so it stays charged. In the ai function a run that failed
+ * on the server is refunded however much streamed; ai-stream's plain-text Ask
+ * applies this limit whatever ended the run.
  */
 export const REFUND_MAX_DELIVERED_CHARS = 200;

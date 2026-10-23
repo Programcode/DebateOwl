@@ -25,9 +25,6 @@ import { getCorsHeaders } from "../_shared/cors.ts";
 import { checkRateLimit, logUsage, refundQuotaReservation } from "../_shared/entitlements.ts";
 import { REFUND_MAX_DELIVERED_CHARS } from "../_shared/usage-limits.ts";
 import { keepWorkerAlive } from "../_shared/background.ts";
-
-// After the close, bytes the HTTP layer took still have to reach the socket.
-const STREAM_SETTLE_MS = 1_000;
 import {
   CLAUDE_UNAVAILABLE_CODE,
   CLAUDE_UNAVAILABLE_MESSAGE,
@@ -56,6 +53,9 @@ import {
 import { resolveModelSelection } from "../_shared/auto-model-router.ts";
 import { outputTokenLimit, REPLY_TOKEN_CAPS } from "../_shared/output-caps.ts";
 import { JEV_MODEL } from "../_shared/jev.ts";
+
+// After the close, bytes the HTTP layer took still have to reach the socket.
+const STREAM_SETTLE_MS = 1_000;
 
 type ChatRole = "user" | "assistant";
 

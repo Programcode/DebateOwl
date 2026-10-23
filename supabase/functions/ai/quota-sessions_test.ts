@@ -266,16 +266,14 @@ Deno.test("a Sparring reply in the wrong shape gets one repair retry, then fails
   }
 });
 
-Deno.test("a streamed run the browser cancels before the answer is whole is refunded, however much streamed", async () => {
+Deno.test("a streamed run the browser cancels is refunded only before a usable answer", async () => {
   const originalError = console.error;
   console.error = () => undefined;
   install();
   try {
-    // A half-written structured answer is a preview, not a result (the
-    // 200-character rule still holds for ai-stream's plain-text Ask).
     for (const [label, delivered, refunded] of [
       ["cancelled after a few characters", 40, true],
-      ["cancelled after most of an answer", REFUND_MAX_DELIVERED_CHARS + 60, true],
+      ["cancelled after a real answer", REFUND_MAX_DELIVERED_CHARS + 60, false],
     ] as const) {
       reset({ hangAfter: `{"response":"${"x".repeat(delivered)}` });
       const controller = new AbortController();
@@ -363,6 +361,25 @@ Deno.test("a finished answer stays charged when the provider connection drops be
         assertEquals(rpcNames().includes("refund_daily_quota"), refunded, `${label} finished=${finished}`);
       }
     }
+  } finally {
+    globalThis.fetch = originalFetch;
+    console.error = originalError;
+  }
+});
+
+Deno.test("a run that fails on the server is refunded however much of it streamed", async () => {
+  const originalError = console.error;
+  console.error = () => undefined;
+  install();
+  try {
+    // The provider connection breaks mid-answer, after a long stretch reached
+    // the browser. The student gets an error, not the answer.
+    const partial = `{"response":"${"x".repeat(REFUND_MAX_DELIVERED_CHARS + 300)}`;
+    reset({ hangAfter: partial, finished: false, thenFail: true });
+    const text = await (await send({ feature: "ask", input: { message: "A question", mode: "general", webSearch: false }, stream: true })).text();
+    assertEquals(text.includes('"charged":false'), true);
+    assertEquals(rpcNames(), ["consume_ai_quota", "refund_daily_quota"]);
+    assertEquals(harness.usageRows.filter((row) => row.feature === "ask").length, 1);
   } finally {
     globalThis.fetch = originalFetch;
     console.error = originalError;
