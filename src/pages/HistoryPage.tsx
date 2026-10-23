@@ -239,7 +239,7 @@ export default function HistoryPage() {
                       <div key={item.id} className="flex items-center justify-between p-4 border rounded-lg bg-card hover:bg-accent/5">
                         <div className="space-y-1">
                           <h4 className="font-semibold">{item.title}</h4>
-                          <p className="text-xs text-muted-foreground">{t('askChat.messageCount', { count: item.data.length })} •{formatEuropeanDateTime(item.createdAt)}</p>
+                          <p className="text-xs text-muted-foreground">{t('askChat.messageCount', { count: item.data.length })} • {formatEuropeanDateTime(item.createdAt)}</p>
                         </div>
                         <Button variant="outline" size="sm" onClick={() => handleLoadChat(item.id)}>
                           <Eye className="h-4 w-4 mr-2" /> {t('historyPage.resume')}

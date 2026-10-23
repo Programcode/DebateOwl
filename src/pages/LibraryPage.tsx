@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { DebateRequiredError, DuplicateSourceError, isPendingSource, useSessionStore, type Source } from '@/lib/stores/session-store';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -250,7 +250,7 @@ export default function LibraryPage() {
     folder: 'General',
     isActive: true,
   });
-  const draftWordCount = sourceDraft.content.trim().split(/\s+/).filter(Boolean).length;
+  const draftWordCount = useMemo(() => sourceDraft.content.trim().split(/\s+/).filter(Boolean).length, [sourceDraft.content]);
   const [importPreview, setImportPreview] = useState<{
     title: string;
     content: string;

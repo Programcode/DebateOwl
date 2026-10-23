@@ -467,7 +467,7 @@ export default function AdminPage() {
         }
         if (cost > 0) return `$${formatDecimal(cost, 4)}`;
         if (unknownCostRequests > 0) return t('admin.dashboard.unknownCost');
-        return '$0.0000';
+        return `$${formatDecimal(0, 4)}`;
     };
 
     const fetchAdminData = useCallback(async (action: string, params?: Record<string, string>) => {

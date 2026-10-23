@@ -150,7 +150,7 @@ test.describe('Hungarian parity', () => {
     await expect(page.locator('[data-sonner-toast] [data-close-button]')).toHaveAttribute('aria-label', 'Bezárás');
 
     await page.goto('/app/timer', { waitUntil: 'domcontentloaded' });
-    await expect(page.getByRole('timer', { name: 'Időmérő kijelző' })).toBeVisible();
+    await expect(page.getByRole('timer', { name: 'Időmérő-kijelző' })).toBeVisible();
     expect(errors, errors.join('\n')).toEqual([]);
   });
 });
