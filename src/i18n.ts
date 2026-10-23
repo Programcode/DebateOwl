@@ -41,6 +41,15 @@ async function loadCatalogs(language: AppLanguage): Promise<boolean> {
   }
 }
 
+/**
+ * Fetches every language's strings without switching to any of them. The
+ * flowchart recognises starter text saved in any language, so its page waits
+ * for this.
+ */
+export async function loadAllAppLanguages(): Promise<void> {
+  await Promise.all((Object.keys(CATALOGS) as AppLanguage[]).map(loadCatalogs));
+}
+
 let requestedLanguage: AppLanguage = 'en';
 let pendingLanguage: Promise<void> = Promise.resolve();
 

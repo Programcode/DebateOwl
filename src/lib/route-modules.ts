@@ -1,3 +1,5 @@
+import { loadAllAppLanguages } from "@/i18n";
+
 export type RouteLoader<T> = (() => Promise<T>) & {
   /** The module once it has loaded, so a page can render without suspending. */
   loaded: () => T | undefined;
@@ -45,7 +47,9 @@ export const routeLoaders = {
   "/app/library": cacheLoader(() => import("@/pages/LibraryPage")),
   "/app/timer": cacheLoader(() => import("@/pages/TimerPage")),
   "/app/sparring": cacheLoader(() => import("@/pages/SparringPage")),
-  "/app/flowchart": cacheLoader(() => import("@/pages/FlowchartPage")),
+  // Charts saved before nodes kept their text keys hold starter text in the
+  // language they were made in; recognising it needs every catalog.
+  "/app/flowchart": cacheLoader(() => Promise.all([import("@/pages/FlowchartPage"), loadAllAppLanguages()]).then(([page]) => page)),
   "/app/settings": cacheLoader(() => import("@/pages/SettingsPage")),
   "/app/admin": cacheLoader(() => import("@/pages/AdminPage")),
   "/tools": cacheLoader(() => import("@/pages/tools/ToolsHubPage")),
