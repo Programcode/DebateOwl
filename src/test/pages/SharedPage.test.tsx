@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { AuthContext, type AuthContextValue } from '@/lib/supabase/auth-context';
 import SharedPage from '@/pages/SharedPage';
@@ -54,8 +54,11 @@ describe('a missing share link', () => {
     expect(screen.queryByRole('heading', { name: 'Shared Content' })).not.toBeInTheDocument();
     expect(screen.getByText('This shared content is no longer available')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Back to home' })).toHaveAttribute('href', '/');
-    expect(document.title).toBe('Shared link not found · DebateLab');
-    expect(document.head.querySelector('meta[name="robots"]')?.getAttribute('content')).toBe('noindex, nofollow');
+    // The heading commits before the passive effect that sets the title and robots meta runs.
+    await waitFor(() => expect(document.title).toBe('Shared link not found · DebateLab'));
+    await waitFor(() =>
+      expect(document.head.querySelector('meta[name="robots"]')?.getAttribute('content')).toBe('noindex, nofollow'),
+    );
   });
 
   it('still shows a shared item that exists', async () => {
