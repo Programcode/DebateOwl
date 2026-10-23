@@ -20,8 +20,12 @@ export function parseResultKey(value: unknown): string | null {
 export interface RunResultRecorder {
   /** Marks the run as started; a row still unfinished later is a run the worker lost. */
   begin: () => Promise<void>;
-  /** Stores what the `result` event carries, before it is sent. */
-  finish: (result: Record<string, unknown>) => Promise<void>;
+  /**
+   * Stores what the `result` event carries, before it is sent. Waits at most
+   * `budgetMs` in all, so a slow database cannot hold the answer past the
+   * worker's wall clock.
+   */
+  finish: (result: Record<string, unknown>, budgetMs?: number) => Promise<void>;
 }
 
 type WriteResult = PromiseLike<{ error: { message?: string; code?: string } | null }>;
@@ -79,8 +83,10 @@ export function createRunResultRecorder(
       started = write.catch(() => undefined);
       return write;
     }),
-    finish: async (result) => {
-      await bounded("begin settle", () => started.then(() => ({ error: null })), BEGIN_SETTLE_MS);
+    finish: async (result, budgetMs = BEGIN_SETTLE_MS + WRITE_TIMEOUT_MS) => {
+      const until = Date.now() + budgetMs;
+      const left = (cap: number) => Math.min(cap, Math.max(0, until - Date.now()));
+      await bounded("begin settle", () => started.then(() => ({ error: null })), left(BEGIN_SETTLE_MS));
       await bounded("finish", () => database.from("ai_run_results")
         .update({
           status: typeof result.status === "number" ? result.status : 500,
@@ -90,7 +96,7 @@ export function createRunResultRecorder(
         .eq("user_id", userId)
         .eq("feature", feature)
         // A newer run of the same feature took the row: leave its row alone.
-        .eq("result_key", resultKey));
+        .eq("result_key", resultKey), left(WRITE_TIMEOUT_MS));
     },
   };
 }

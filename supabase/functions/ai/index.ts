@@ -107,6 +107,7 @@ import {
 } from "./provider.ts";
 import { streamFeatureResponse } from "./stream.ts";
 import { createRunResultRecorder, parseResultKey, type RunResultsDatabase } from "./run-results.ts";
+import { workerTimeLeft } from "../_shared/background.ts";
 import {
   isRecord,
   MAX_REQUEST_BODY_BYTES,
@@ -974,6 +975,7 @@ export async function handleRequest(req: Request): Promise<Response> {
   return streamFeatureResponse(corsHeaders, streamCancel, runFeature, {
     recorder: resultKey ? createRunResultRecorder(supabase as unknown as RunResultsDatabase, userId, feature, resultKey) : undefined,
     deadlineMs: STREAM_DEADLINE_MS - (Date.now() - receivedAt),
+    endMs: workerTimeLeft(receivedAt),
   });
 }
 

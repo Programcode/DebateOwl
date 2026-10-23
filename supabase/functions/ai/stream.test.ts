@@ -340,14 +340,16 @@ Deno.test("the worker is held until the browser has read the last event", async 
   }
 });
 
-Deno.test("a run that outlives the stream's deadline ends with a retryable result, stored first", async () => {
+Deno.test("a run that outlives the stream's deadline ends with its own refunded answer, stored first", async () => {
   const { streamFeatureResponse } = await import("./stream.ts");
   const cancel = new AbortController();
   const stored: Array<Record<string, unknown>> = [];
+  const timedOut = { error: "AI request failed. Please try again.", code: "provider_error", charged: false, retryable: true };
   const response = streamFeatureResponse({}, cancel, (stream) => new Promise<Response>((resolve) => {
     stream.delta("{\"partial\":");
-    // Like a step that ignores the budget until it is aborted.
-    cancel.signal.addEventListener("abort", () => resolve(new Response("{}", { status: 500 })));
+    // Like a step that ignores the budget until it is aborted; its error path
+    // then refunds and says so.
+    cancel.signal.addEventListener("abort", () => resolve(new Response(JSON.stringify(timedOut), { status: 500 })));
   }), {
     deadlineMs: 30,
     recorder: {
@@ -372,6 +374,42 @@ Deno.test("a run that outlives the stream's deadline ends with a retryable resul
   assert(storedWhenResultArrived === 1, "the result was sent before it was stored");
   const result = JSON.parse(/event: result\ndata: (.+)\n\n$/.exec(text)?.[1] ?? "null");
   assert(result?.status === 500 && result.body.retryable === true, `expected a retryable failure, got ${JSON.stringify(result)}`);
+  assert(result.body.charged === false, `the refunded run's answer lost charged:false: ${JSON.stringify(result)}`);
   assert((cancel.signal.reason as { name?: string })?.name === "TimeoutError", "the run was not aborted as a timeout");
   assert(JSON.stringify(stored[0]) === JSON.stringify(result), "the stored result differs from the sent one");
+});
+
+Deno.test("a run that ignores the deadline abort still ends with a retryable timeout", async () => {
+  const { streamFeatureResponse } = await import("./stream.ts");
+  const cancel = new AbortController();
+  // Never settles, as a step stuck past its abort would.
+  const response = streamFeatureResponse({}, cancel, () => new Promise<Response>(() => {}), { deadlineMs: 10 });
+  const events = await readEvents(response);
+  const result = events.at(-1);
+  assert(result?.event === "result" && result.data.status === 500, `expected a failure result, got ${JSON.stringify(result)}`);
+  const body = result.data.body as Record<string, unknown>;
+  assert(body.retryable === true && !("charged" in body), `a run that never answered cannot claim a refund: ${JSON.stringify(body)}`);
+});
+
+Deno.test("a hung database cannot hold the result past the worker's end", async () => {
+  const { streamFeatureResponse } = await import("./stream.ts");
+  const { createRunResultRecorder } = await import("./run-results.ts");
+  const hung = new Promise<{ error: null }>(() => {});
+  const database = {
+    from: () => ({
+      upsert: () => hung,
+      update: () => ({ eq: () => ({ eq: () => ({ eq: () => hung }) }) }),
+    }),
+  };
+  const began = Date.now();
+  const response = streamFeatureResponse({}, new AbortController(), async () => new Response("{\"ok\":true}"), {
+    recorder: createRunResultRecorder(database, USER, "sparring", "req_hung"),
+    // Without the end the recorder would wait 4 s for the start write and
+    // up to 14 s more to finish.
+    endMs: 1_200,
+  });
+  const events = await readEvents(response);
+  const elapsed = Date.now() - began;
+  assert(events.at(-1)?.event === "result" && events.at(-1)?.data.status === 200, "the answer was not sent");
+  assert(elapsed < 1_500, `the result waited ${elapsed} ms on a hung database`);
 });

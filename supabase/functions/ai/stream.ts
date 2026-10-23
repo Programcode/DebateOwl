@@ -14,7 +14,8 @@
 // the HTTP layer has taken the last byte. Supabase otherwise counts a stream
 // as answered once its headers are out and may retire the worker mid-run.
 // With a recorder, `result` is stored before it is sent, so a browser that
-// loses the stream can still read it.
+// loses the stream can still read it. Storing it and waiting for the browser
+// to read it are cut short to end before the worker's wall clock.
 
 import { keepWorkerAlive } from "../_shared/background.ts";
 import type { GenerationPhase, GenerationStream } from "./provider.ts";
@@ -26,6 +27,11 @@ const HEARTBEAT_MS = 15_000;
 const DRAIN_CAP_MS = 10_000;
 // Bytes the HTTP layer took on the last read still have to reach the socket.
 const SETTLE_MS = 500;
+// After a deadline abort, how long the run's own error path gets to answer.
+// Its answer says whether the units went back (`charged: false`).
+const DEADLINE_GRACE_MS = 2_000;
+// Kept free after the result is stored, for the browser to read it.
+const SEND_RESERVE_MS = 1_000;
 
 const FAILED_RESULT = { status: 500, body: { error: "AI request failed. Please try again.", code: "provider_error" } };
 // Running out of time is worth another try; the browser says so.
@@ -68,6 +74,11 @@ export interface StreamFeatureOptions {
    * ends with an answer instead of a dropped connection at the wall clock.
    */
   deadlineMs?: number;
+  /**
+   * Milliseconds from now by which the worker must be done. Storing the
+   * result and waiting for the browser to read it are bounded by what is left.
+   */
+  endMs?: number;
 }
 
 /**
@@ -80,6 +91,8 @@ export function streamFeatureResponse(
   run: (stream: GenerationStream) => Promise<Response>,
   options: StreamFeatureOptions = {},
 ): Response {
+  const endAt = options.endMs === undefined ? undefined : Date.now() + options.endMs;
+  const timeLeft = (fallback: number) => endAt === undefined ? fallback : Math.min(fallback, Math.max(0, endAt - Date.now()));
   const encoder = new TextEncoder();
   // Events wait here until the HTTP layer reads them. The body below hands
   // out one chunk per read, so when it closes the last event has been taken.
@@ -153,10 +166,12 @@ export function streamFeatureResponse(
       const outcome = await within(running, options.deadlineMs, "deadline" as const);
       if (outcome === "deadline") {
         console.error("[AI_STREAM] Run passed its deadline; answering with a timeout");
-        // The run's own error path refunds and logs it once it sees the abort.
+        // The run's own error path refunds and logs it once it sees the abort,
+        // and its answer carries `charged: false` when the units went back. A
+        // step that ignores the abort gets the plain timeout instead.
         cancel.abort(new DOMException("The request ran past its time budget", "TimeoutError"));
-        running.catch(() => undefined);
-        payload = DEADLINE_RESULT;
+        const answered = await within(running.catch(() => undefined), DEADLINE_GRACE_MS, undefined);
+        payload = answered ?? DEADLINE_RESULT;
       } else {
         payload = outcome;
       }
@@ -165,16 +180,19 @@ export function streamFeatureResponse(
       payload = FAILED_RESULT;
     }
     if (options.recorder) {
-      await began;
       // Stored before it is sent: a browser that loses the stream from here
-      // on can still read it.
-      await options.recorder.finish(payload);
+      // on can still read it. A slow database gets only the time left before
+      // the end, less what the browser needs to read the result.
+      const recordBy = endAt === undefined ? undefined : endAt - SEND_RESERVE_MS;
+      const recordLeft = () => recordBy === undefined ? undefined : Math.max(0, recordBy - Date.now());
+      await within(began, recordLeft(), undefined);
+      await options.recorder.finish(payload, recordLeft());
     }
     push(sse("result", payload));
     stop();
     ended = true;
     wake?.();
-    await within(drained, DRAIN_CAP_MS, undefined);
+    await within(drained, timeLeft(DRAIN_CAP_MS), undefined);
   })();
   keepWorkerAlive(lifecycle, SETTLE_MS);
 
