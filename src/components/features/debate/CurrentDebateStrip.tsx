@@ -83,7 +83,7 @@ export function CurrentDebateStrip({ side, hidden = false, className = 'mb-6' }:
     <div className={`${base} border-primary/20 bg-primary/5`} data-testid="current-debate-strip">
       <span className="min-w-0 flex-1 basis-48">
         <span className="text-muted-foreground">{t('debate.workingIn', 'Working in:')} </span>
-        <span className="break-words font-medium text-foreground">{debate.motion}</span>
+        <span className="wrap-break-word font-medium text-foreground">{debate.motion}</span>
       </span>
       {side && <Badge variant="outline">{t(sideLabelKey(side))}</Badge>}
       <div className="flex gap-2">

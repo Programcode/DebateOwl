@@ -160,7 +160,7 @@ function DebateContextReview({ plan, motion, usage, pinsReady, resultsComplete }
       <div className="space-y-6 px-5 py-4">
         <section aria-labelledby="debate-context-debate" className="space-y-1 text-sm">
           <h3 id="debate-context-debate" className="font-medium">{t('debateContext.debateHeading', 'Debate')}</h3>
-          {motion && <p className="break-words text-foreground">{motion}</p>}
+          {motion && <p className="wrap-break-word text-foreground">{motion}</p>}
           <p className="text-muted-foreground">
             {plan.policy.instructions
               ? t('debateContext.instructionsUsed', 'Your debate settings and instructions are included.')
@@ -236,7 +236,7 @@ function SourceRow({ source, onChange }: { source: ContextSourceItem; onChange: 
     <li className="flex items-start gap-3 rounded-md px-1 py-1.5 pointer-coarse:min-h-11">
       <Checkbox id={id} checked={source.included} onCheckedChange={(checked) => onChange(checked === true)} className="mt-0.5 pointer-coarse:after:-top-2" />
       <label htmlFor={id} className="min-w-0 flex-1 cursor-pointer text-sm">
-        <span className="block break-words">{source.title}</span>
+        <span className="block wrap-break-word">{source.title}</span>
         {note && <span className="block text-xs text-muted-foreground">{note}</span>}
       </label>
     </li>
@@ -252,7 +252,7 @@ function OutputRow({ output, onChange, onPin, pinDisabled }: { output: ContextOu
     <li className="flex items-start gap-3 rounded-md px-1 py-1.5 pointer-coarse:min-h-11">
       <Checkbox id={id} checked={output.included} onCheckedChange={(checked) => onChange(checked === true)} className="mt-0.5 pointer-coarse:after:-top-2" />
       <label htmlFor={id} className="min-w-0 flex-1 cursor-pointer text-sm">
-        <span className="block break-words">{output.title || kind}</span>
+        <span className="block wrap-break-word">{output.title || kind}</span>
         <span className="block text-xs text-muted-foreground">
           {output.side ? t('debateContext.resultMeta', { kind, side: t(`debate.side.${output.side}`) }) : kind}
           {output.pinned && `, ${t('debateContext.pinned', 'pinned')}`}

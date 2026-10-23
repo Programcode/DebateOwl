@@ -14,7 +14,7 @@ export function ResearchedSources({ sources }: { sources?: DiscoveredSource[] })
         <ChevronDown className="h-4 w-4 shrink-0 transition-transform duration-150 ease-out-strong group-open:rotate-180" aria-hidden="true" />
       </summary>
       <div className="mt-3">
-        <SourceQualityList sources={sources} className="[&_a]:break-words" />
+        <SourceQualityList sources={sources} className="[&_a]:wrap-break-word" />
         <p className="mt-3 text-xs text-muted-foreground">{t('sourceQuality.fallbackNote')}</p>
       </div>
     </details>

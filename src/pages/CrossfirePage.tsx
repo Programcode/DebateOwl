@@ -213,7 +213,7 @@ function TurnReferences({ turnIds }: { turnIds: string[] }) {
         <a
           key={turnId}
           href={`#crossfire-turn-${turnId}`}
-          className="rounded-md border border-primary/25 bg-primary/10 px-2 py-1 text-xs font-semibold text-primary hover:bg-primary/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          className="rounded-md border border-primary/25 bg-primary/10 px-2 py-1 text-xs font-semibold text-primary hover:bg-primary/15 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring"
         >
           {turnId}
         </a>
@@ -826,7 +826,7 @@ export default function CrossfirePage() {
                           (nextMode) => dispatch({ type: 'config-patched', patch: { mode: nextMode } }),
                         )}
                         className={cn(
-                          'rounded-lg border p-4 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+                          'rounded-lg border p-4 text-left transition-colors focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring',
                           selected ? 'border-primary bg-primary/5' : 'border-border hover:bg-muted/50',
                         )}
                       >
@@ -865,7 +865,7 @@ export default function CrossfirePage() {
                           (nextStyle) => dispatch({ type: 'config-patched', patch: { style: nextStyle } }),
                         )}
                         className={cn(
-                          'rounded-lg border p-4 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+                          'rounded-lg border p-4 text-left transition-colors focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring',
                           selected ? 'border-primary bg-primary/5' : 'border-border hover:bg-muted/50',
                         )}
                       >
@@ -902,7 +902,7 @@ export default function CrossfirePage() {
                         }),
                       )}
                       className={cn(
-                        'min-h-11 rounded-md border px-4 text-sm font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+                        'min-h-11 rounded-md border px-4 text-sm font-medium focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring',
                         state.config.durationSeconds === duration ? 'border-primary bg-primary text-primary-foreground' : 'border-border hover:bg-muted',
                       )}
                     >
@@ -1035,7 +1035,7 @@ export default function CrossfirePage() {
               <Badge variant="secondary">{t(`crossfire.style${state.config.style[0].toUpperCase()}${state.config.style.slice(1)}`)}</Badge>
             </div>
             <h1 className="mt-3 text-2xl font-bold tracking-tight">{t('crossfire.title')}</h1>
-            <p className="mt-1 max-w-3xl break-words text-sm text-muted-foreground">{state.config.resolution}</p>
+            <p className="mt-1 max-w-3xl wrap-break-word text-sm text-muted-foreground">{state.config.resolution}</p>
           </div>
           <div className="flex items-center gap-3">
             <CrossfireClock endsAt={state.endsAt} onExpire={() => endSession('timer')} />

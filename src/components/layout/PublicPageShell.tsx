@@ -34,7 +34,7 @@ export function PublicPageShell({ children, className }: { children: ReactNode; 
           <LanguageSwitcher />
         </div>
       </header>
-      <main id={MAIN_CONTENT_ID} className={cn('container mx-auto px-4 py-10 focus-visible:outline-none', className)}>{children}</main>
+      <main id={MAIN_CONTENT_ID} className={cn('container mx-auto px-4 py-10 focus-visible:outline-hidden', className)}>{children}</main>
     </div>
   );
 }

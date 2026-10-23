@@ -26,7 +26,7 @@ function LanguageChoices({ label, value, onChange }: { label: string; value: App
             onClick={() => onChange(code)}
             className={cn(
               'flex w-full items-center justify-between rounded-md px-2 py-2 text-left text-sm transition-colors pointer-coarse:min-h-11',
-              'hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+              'hover:bg-accent focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring',
               selected && 'font-medium text-primary',
             )}
           >

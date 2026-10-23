@@ -413,7 +413,7 @@ export default function HistoryPage() {
                       return (
                         <div key={item.id} data-testid="history-crossfire-row" className="flex items-center justify-between gap-4 rounded-lg border bg-card p-4 transition-colors hover:bg-accent/5">
                           <div className="min-w-0 space-y-1">
-                            <h4 className="line-clamp-2 break-words font-semibold">{item.title}</h4>
+                            <h4 className="line-clamp-2 wrap-break-word font-semibold">{item.title}</h4>
                             <p className="text-xs text-muted-foreground">
                               {turns !== undefined && <>{t('historyPage.crossfireTurns', { count: turns })} • </>}
                               {formatEuropeanDateTime(item.createdAt)}
@@ -454,7 +454,7 @@ export default function HistoryPage() {
             {openCrossfire && (
               <>
                 <SheetHeader className="border-b px-5 py-4 text-left">
-                  <SheetTitle className="pr-8 break-words">{openCrossfire.title}</SheetTitle>
+                  <SheetTitle className="pr-8 wrap-break-word">{openCrossfire.title}</SheetTitle>
                   <SheetDescription>{t('historyPage.crossfireRound', 'Crossfire round')} • {formatEuropeanDateTime(openCrossfire.createdAt)}</SheetDescription>
                 </SheetHeader>
                 <div className="flex-1 overflow-y-auto px-5 py-5" data-testid="saved-crossfire">

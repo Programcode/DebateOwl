@@ -404,7 +404,7 @@ export default function SettingsPage() {
         <Card className="border-destructive/20 bg-destructive/5 mt-8">
           <CardHeader>
             <CardTitle className="text-destructive">{t('settings.dangerZone')}</CardTitle>
-            <CardDescription className="break-words">
+            <CardDescription className="wrap-break-word">
               {t('settings.dangerDesc', { email: user?.email })}
             </CardDescription>
           </CardHeader>

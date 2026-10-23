@@ -17,7 +17,7 @@
         ".claude/skills/verify-debatelab/playwright.verify.config.ts"
       ],
       "project": [
-        "src/**/*.{ts,tsx}",
+        "src/**/*.{ts,tsx,css}",
         "scripts/**/*.{mjs,ts}",
         "e2e/**/*.{ts,mjs}",
         "agentic/**/*.ts",

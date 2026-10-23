@@ -61,7 +61,7 @@ export function TrialBanner() {
     <section
       data-testid="trial-banner"
       aria-label={t('settings.tierTrial')}
-      className="border-b border-blue-500/20 bg-blue-500/[0.06]"
+      className="border-b border-blue-500/20 bg-blue-500/6"
     >
       <div className="container flex items-center gap-2 px-4 text-sm">
         <Clock className="h-4 w-4 shrink-0 text-blue-700 dark:text-blue-300" aria-hidden="true" />

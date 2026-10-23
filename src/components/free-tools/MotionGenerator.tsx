@@ -43,7 +43,7 @@ function Chip({ pressed, onClick, children }: { pressed: boolean; onClick: () =>
       aria-pressed={pressed}
       onClick={onClick}
       className={cn(
-        'min-h-9 rounded-full border px-3 text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring pointer-coarse:min-h-11',
+        'min-h-9 rounded-full border px-3 text-sm transition-colors focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring pointer-coarse:min-h-11',
         pressed ? 'border-primary bg-primary text-primary-foreground' : 'border-border bg-background hover:bg-muted',
       )}
     >

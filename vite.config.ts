@@ -1,5 +1,6 @@
 import { defineConfig, loadEnv, type Connect, type Plugin, type PluginOption } from "vite";
 import react from "@vitejs/plugin-react-swc";
+import tailwindcss from "@tailwindcss/vite";
 import { sentryVitePlugin } from "@sentry/vite-plugin";
 import { execSync } from "node:child_process";
 import { createHash } from "node:crypto";
@@ -229,7 +230,7 @@ export default defineConfig(({ mode }) => {
     proxy,
     allowedHosts,
   },
-  plugins: [react(), bundleGraph(), embedPages(), appShellRewrites(), serviceWorkerPrecache(), ...uploadSourceMaps],
+  plugins: [react(), tailwindcss(), bundleGraph(), embedPages(), appShellRewrites(), serviceWorkerPrecache(), ...uploadSourceMaps],
   define: {
     "import.meta.env.VITE_SENTRY_RELEASE": JSON.stringify(release ?? ""),
     "import.meta.env.VITE_SENTRY_ENVIRONMENT": JSON.stringify(process.env.VERCEL_ENV ?? ""),

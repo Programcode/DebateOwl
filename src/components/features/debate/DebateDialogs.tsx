@@ -88,13 +88,13 @@ export function DebatePicker({ onPicked, excludeCurrent = false }: { onPicked: (
             <div className="flex items-start gap-3">
               <button
                 type="button"
-                className="min-w-0 flex-1 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-sm disabled:opacity-60"
+                className="min-w-0 flex-1 text-left focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring rounded-sm disabled:opacity-60"
                 disabled={busy !== null}
                 aria-busy={busy?.id === debate.id && busy.action === 'switch'}
                 onClick={() => void pick(debate)}
                 aria-label={t('debate.switchToAria', { motion: debate.motion, defaultValue: 'Switch to {{motion}}' })}
               >
-                <span className="block break-words font-medium">{debate.motion}</span>
+                <span className="block wrap-break-word font-medium">{debate.motion}</span>
                 <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
                   {busy?.id === debate.id && busy.action === 'switch' && <Loader2 className="h-3 w-3 animate-spin" aria-hidden="true" />}
                   {busy?.id === debate.id && busy.action === 'switch'
@@ -223,7 +223,7 @@ export function InactiveDebateGate() {
           <AlertDialogTitle>{t('debate.gateTitle', 'Still preparing this debate?')}</AlertDialogTitle>
           <AlertDialogDescription asChild>
             <div className="space-y-2">
-              <p className="break-words font-medium text-foreground">{debate.motion}</p>
+              <p className="wrap-break-word font-medium text-foreground">{debate.motion}</p>
               <p>{t('debate.gateDesc', { when: formatRelativeDate(debate.lastActivityAt), defaultValue: 'Last activity {{when}}. Choose how to continue.' })}</p>
             </div>
           </AlertDialogDescription>

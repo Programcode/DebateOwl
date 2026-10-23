@@ -30,7 +30,7 @@ const Navbar = () => {
     return (
         <nav
             className={cn(
-                "fixed left-0 right-0 top-[var(--staging-banner-height,0px)] z-50 nav-blur",
+                "fixed left-0 right-0 top-(--staging-banner-height,0px) z-50 nav-blur",
                 scrolled || isOpen ? "border-border shadow-sm" : "border-transparent",
             )}
             aria-label={t('nav.mainNavigation')}
