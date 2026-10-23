@@ -2581,5 +2581,76 @@
     "daysLeft_other": "Ingyenes próba: még {{count}} nap van hátra.",
     "endsToday": "Az ingyenes próbád ma lejár.",
     "dismiss": "Próbaidő-emlékeztető elrejtése"
+  },
+  "pageHead": {
+    "home": {
+      "title": "{{brand}} | MI-alapú vitafelkészülés, érvek és cáfolatok",
+      "description": "A {{product}} MI-alapú app vitára készülő diákoknak: esetépítés, cáfolatok, bizonyítékok, coaching és időzített gyakorlókörök egy MI-ellenféllel szemben."
+    },
+    "terms": {
+      "title": "Felhasználási feltételek | {{brand}}",
+      "description": "A {{brand}} használatának feltételei: fiókok, előfizetések, elfogadható használat, MI által generált tartalom, szellemi tulajdon és felelősség."
+    },
+    "privacy": {
+      "title": "Adatvédelmi tájékoztató | {{brand}}",
+      "description": "Hogyan gyűjti, használja, tárolja és osztja meg a {{brand}} az adataidat, hogyan dolgozza fel az MI-kéréseket, és milyen jogaid vannak."
+    },
+    "sources": {
+      "title": "Források | {{brand}}",
+      "description": "A {{brand}} kutatása és fejlesztése során felhasznált források, a szerző vezetékneve vagy az intézmény neve szerint betűrendben."
+    },
+    "notFound": {
+      "title": "Az oldal nem található | {{brand}}",
+      "description": "Ez az oldal nem létezik a {{brand}} webhelyén."
+    },
+    "tools": {
+      "title": "Ingyenes vitaeszközök: időzítő, indítványok, jegyzetlapok | {{brand}}",
+      "description": "Ingyenes, fiók nélkül használható vitaeszközök: formátumhoz igazodó időzítő, indítványgenerátor, nyomtatható jegyzetlapok és beszédidő-kalkulátor."
+    },
+    "debateTimer": {
+      "title": "Ingyenes vitaidőzítő PF, LD, Policy, BP és World Schools formátumhoz | {{brand}}",
+      "description": "Ingyenes vitaidőzítő PF, LD, Policy, BP, World Schools és Asian Parliamentary beállításokkal: védett idő, POI-jelzés és felkészülési idő."
+    },
+    "motionGenerator": {
+      "title": "Indítványgenerátor: 300 gyakorló vitaindítvány | {{brand}}",
+      "description": "Húzz egy véletlen vitaindítványt, vagy hármat a vétógyakorláshoz, 300 eredeti gyakorló indítványból, téma, nehézség és típus szerint rendezve."
+    },
+    "flowSheet": {
+      "title": "Nyomtatható vitajegyzetlap-generátor | {{brand}}",
+      "description": "Egyoldalas, nyomtatható vitajegyzetlap minden beszédhez külön oszloppal PF, LD, Policy, BP, World Schools vagy Asian Parliamentary formátumhoz."
+    },
+    "speechTimeCalculator": {
+      "title": "Beszédidő-kalkulátor vitabeszédekhez | {{brand}}",
+      "description": "Illessz be egy beszédet, és megmutatjuk a szószámát, hogy lassú, átlagos és gyors tempóban mennyi ideig tart, és mely vitabeszéd-idősávokba fér bele."
+    }
+  },
+  "validation": {
+    "caseTextRequired": "Az érv szövegének megadása kötelező",
+    "motionRequired": "Az indítvány megadása kötelező",
+    "claimRequired": "Az állítás megadása kötelező",
+    "messageRequired": "Az üzenet megadása kötelező"
+  },
+  "serverErrors": {
+    "signInRequired": "A folytatáshoz jelentkezz be.",
+    "sessionExpired": "A hitelesítés nem sikerült. Lehet, hogy lejárt a munkameneted. Jelentkezz be újra.",
+    "accessDenied": "Hozzáférés megtagadva. Lehet, hogy lejárt a munkameneted. Jelentkezz be újra.",
+    "banned": "A fiókodat felfüggesztettük. Fordulj az ügyfélszolgálathoz.",
+    "requestTooLarge": "A kérés túl nagy. Rövidítsd le a szöveget, és próbáld újra.",
+    "messageTooLarge": "Az üzenet túl hosszú. Rövidítsd le küldés előtt.",
+    "usageCheckFailed": "Nem sikerült ellenőrizni a keretedet. Próbáld újra.",
+    "accessCheckFailed": "Nem sikerült ellenőrizni a fiókod hozzáférését. Próbáld újra.",
+    "aiService": "MI-szolgáltatási hiba: {{message}}. Próbáld újra.",
+    "portalFailed": "Nem sikerült megnyitni a számlázási portált. Próbáld újra.",
+    "alreadySubscribed": "Már van előfizetésed. A Beállításokban kezelheted.",
+    "promoExpired": "Ez a promóciós kód lejárt",
+    "promoExhausted": "Ez a promóciós kód elérte a felhasználási korlátját",
+    "promoApplied": "Promóciós kód beváltva!",
+    "promoDiscountNoted": "Kedvezménykód rögzítve! A kedvezményhez add meg fizetéskor.",
+    "promoInvalid": "Érvénytelen vagy lejárt promóciós kód",
+    "promoAlreadyRedeemed": "Ezt a kódot már beváltottad",
+    "promoTooManyAttempts": "Túl sok próbálkozás promóciós kóddal. Próbáld újra 15 perc múlva.",
+    "promoUnsupported": "Nem támogatott promóciós kódtípus",
+    "promoMissing": "Adj meg egy promóciós kódot",
+    "promoFailed": "Nem sikerült beváltani a promóciós kódot. Próbáld újra."
   }
 }

@@ -10,6 +10,7 @@ import { installStaleChunkReload } from "./lib/reload-stale-chunk";
 import { initializeObservability } from "./lib/observability";
 import { preloadStartupRoute } from "./lib/route-modules";
 import { legacyCallbackPath } from "./lib/auth-callback";
+import { chooseUrlLanguage, searchWithoutLanguage } from "./lib/url-language";
 
 const initializeTelemetry = (): void => {
   const run = (): void => { void initializeObservability(); };
@@ -36,6 +37,12 @@ export function mountApp(): void {
   // is replaced and AuthProvider exchanges the code there.
   const callbackPath = legacyCallbackPath(window.location);
   if (callbackPath) window.history.replaceState(window.history.state, "", callbackPath);
+  // A ?lang= link picks the language before the first render waits for it, and
+  // leaves the address so a later switcher choice survives a reload.
+  const { pathname, search, hash } = window.location;
+  if (chooseUrlLanguage(search)) {
+    window.history.replaceState(window.history.state, "", `${pathname}${searchWithoutLanguage(search)}${hash}`);
+  }
 
   const container = document.getElementById("root")!;
   const root = createRoot(container);

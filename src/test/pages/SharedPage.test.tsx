@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
+import { TooltipProvider } from '@/components/ui/tooltip';
 import { AuthContext, type AuthContextValue } from '@/lib/supabase/auth-context';
 import SharedPage from '@/pages/SharedPage';
 
@@ -30,11 +31,13 @@ const signedOut: AuthContextValue = {
 function renderShare(path = '/share/doesnotexist123') {
   return render(
     <AuthContext.Provider value={signedOut}>
-      <MemoryRouter initialEntries={[path]}>
-        <Routes>
-          <Route path="/share/:code" element={<SharedPage />} />
-        </Routes>
-      </MemoryRouter>
+      <TooltipProvider>
+        <MemoryRouter initialEntries={[path]}>
+          <Routes>
+            <Route path="/share/:code" element={<SharedPage />} />
+          </Routes>
+        </MemoryRouter>
+      </TooltipProvider>
     </AuthContext.Provider>,
   );
 }

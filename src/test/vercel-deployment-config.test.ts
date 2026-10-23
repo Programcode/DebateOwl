@@ -102,6 +102,11 @@ describe("Vercel frontend deployment configuration", () => {
     })));
   });
 
+  it("sends /es and /hu to the landing page in that language, not a 404 (IN-04)", () => {
+    // Temporary: the language is the visitor's choice, not a moved page.
+    expect(loadConfig().redirects).toContainEqual({ source: "/:lang(es|hu)", destination: "/?lang=:lang", statusCode: 302 });
+  });
+
   it("redirects each retired guide to a live guide that no page links past", () => {
     // Google already knows these URLs; dropping a rule turns one into a 404.
     const retiredGuides: Record<string, string> = {
@@ -119,7 +124,8 @@ describe("Vercel frontend deployment configuration", () => {
       "/debatelab-alternatives": "/best-ai-debate-tools",
       "/ai-tools-for-debate-students": "/best-ai-debate-tools",
     };
-    const guideRedirects = (loadConfig().redirects ?? []).filter((rule) => !rule.source.startsWith("/:page("));
+    const guideRedirects = (loadConfig().redirects ?? [])
+      .filter((rule) => !rule.source.startsWith("/:page(") && !rule.source.startsWith("/:lang("));
     const retired = new Set(Object.keys(retiredGuides));
     const pages = readdirSync(resolve(process.cwd(), "public"), { withFileTypes: true })
       .filter((entry) => entry.isDirectory() && existsSync(resolve(process.cwd(), "public", entry.name, "index.html")))

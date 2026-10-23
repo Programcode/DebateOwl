@@ -110,7 +110,7 @@ export async function streamAskChat(
     throw error;
   }
   if (!accessToken) {
-    const error = new AIAuthError('Please sign in to use AI features', { requestId });
+    const error = new AIAuthError(i18n.t('serverErrors.signInRequired'), { requestId });
     captureStreamFailure(error, provider, config.model, startTime, requestId, Boolean(handlers.signal?.aborted));
     throw error;
   }

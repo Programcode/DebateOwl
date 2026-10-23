@@ -4,7 +4,7 @@ import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { queryClient } from "@/lib/query-client";
-import { BrowserRouter, Navigate, Routes, Route, useLocation, useNavigationType } from "react-router-dom";
+import { BrowserRouter, Navigate, Routes, Route, useLocation, useNavigate, useNavigationType } from "react-router-dom";
 import { MotionConfig } from "framer-motion";
 import { AuthProvider, useAuth } from "@/lib/supabase/AuthProvider";
 import { RequireAuth } from "@/components/auth/RequireAuth";
@@ -22,6 +22,7 @@ import { RouteSkeleton, type RouteSkeletonVariant } from "@/components/loading/R
 import { useTranslation } from "react-i18next";
 import { COLLABORATION_URL } from "@/lib/workspace/collaboration-config";
 import { AUTH_CALLBACK_PATH } from "@/lib/auth-callback";
+import { chooseUrlLanguage, searchWithoutLanguage } from "@/lib/url-language";
 
 /**
  * A page the build prerenders. mountApp loads its module before the first
@@ -314,6 +315,19 @@ function ScrollToTopOnNavigate(): null {
   return null;
 }
 
+/**
+ * A ?lang= reached inside the app (the /es and /hu redirects): switch to it and
+ * drop it from the address. mountApp handles the one a page opens with.
+ */
+export function UrlLanguage(): null {
+  const { pathname, search, hash } = useLocation();
+  const navigate = useNavigate();
+  useEffect(() => {
+    if (chooseUrlLanguage(search)) navigate({ pathname, search: searchWithoutLanguage(search), hash }, { replace: true });
+  }, [hash, navigate, pathname, search]);
+  return null;
+}
+
 function AppRoutes() {
   useSessionStorageSync();
 
@@ -321,6 +335,9 @@ function AppRoutes() {
     <Routes>
           {/* Public Routes */}
           <Route path="/" element={<RouteContent><LandingPage /></RouteContent>} />
+          {/* Language home pages; vercel.json redirects them on a full load too. */}
+          <Route path="/es" element={<Navigate to="/?lang=es" replace />} />
+          <Route path="/hu" element={<Navigate to="/?lang=hu" replace />} />
           <Route path="/terms" element={<RouteContent><TermsPage /></RouteContent>} />
           <Route path="/privacy" element={<RouteContent><PrivacyPage /></RouteContent>} />
           <Route path="/expocit/sources" element={<RouteContent><SourcesPage /></RouteContent>} />
@@ -387,6 +404,7 @@ const App = () => (
             <StagingBanner />
             <BrowserRouter useTransitions={false}>
               <ScrollToTopOnNavigate />
+              <UrlLanguage />
               <LocalizedRouteErrorBoundary>
                 <AppRoutes />
               </LocalizedRouteErrorBoundary>

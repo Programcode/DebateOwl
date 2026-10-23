@@ -1,5 +1,6 @@
 import site from '@/config/site.json';
-import { TOOL_PAGE_HEADS } from './tool-pages';
+import { englishHead, type PageHeadId } from './head-text';
+import { TOOL_PAGE_HEAD_IDS, TOOL_PAGE_HEADS } from './tool-pages';
 
 /** Brand and domain strings live in src/config/site.json; nothing else should hardcode them. */
 export const SITE_ORIGIN = site.origin;
@@ -24,39 +25,31 @@ export interface PageHead {
 }
 
 /**
- * Head tags for the pages the build prerenders (scripts/prerender.mjs). The
- * client sets the same tags when it shows these pages (usePageHead), so a
- * crawler that runs the app sees what the HTML said.
+ * Head tags for the pages the build prerenders (scripts/prerender.mjs), in
+ * English from the `pageHead` catalog section. The client sets the same tags
+ * when it shows these pages (usePageHead), in the visitor's language, so a
+ * crawler that runs the app in English sees what the HTML said.
  */
 export const PAGE_HEADS = {
-  '/': {
-    title: `${BRAND} | AI Debate Prep, Cases & Rebuttals`,
-    description: `${PRODUCT} is an AI debate prep and practice app for students and competitive debaters: cases, rebuttals, evidence, coaching and timed practice rounds against an AI opponent.`,
-    canonicalPath: '/',
-  },
-  '/terms': {
-    title: `Terms of Service | ${BRAND}`,
-    description: `The terms for using ${BRAND}: accounts, subscriptions and billing, acceptable use, AI-generated content, intellectual property, and liability.`,
-    canonicalPath: '/terms',
-  },
-  '/privacy': {
-    title: `Privacy Policy | ${BRAND}`,
-    description: `How ${BRAND} collects, uses, stores, and shares your information, how AI requests are processed, and the rights you have over your data.`,
-    canonicalPath: '/privacy',
-  },
-  '/expocit/sources': {
-    title: `Sources | ${BRAND}`,
-    description: `The sources consulted during the research and development of ${BRAND}, listed alphabetically by author surname or institutional name.`,
-    canonicalPath: '/expocit/sources',
-  },
+  '/': { ...englishHead('home'), canonicalPath: '/' },
+  '/terms': { ...englishHead('terms'), canonicalPath: '/terms' },
+  '/privacy': { ...englishHead('privacy'), canonicalPath: '/privacy' },
+  '/expocit/sources': { ...englishHead('sources'), canonicalPath: '/expocit/sources' },
   ...TOOL_PAGE_HEADS,
-  '*': {
-    title: `Page not found | ${BRAND}`,
-    description: `This page does not exist on ${BRAND}.`,
-  },
+  '*': englishHead('notFound'),
 } as const satisfies Record<string, PageHead>;
 
 export type PrerenderedRoute = keyof typeof PAGE_HEADS;
+
+/** Each prerendered page's `pageHead.<id>` catalog section. */
+export const PAGE_HEAD_IDS: Record<PrerenderedRoute, PageHeadId> = {
+  '/': 'home',
+  '/terms': 'terms',
+  '/privacy': 'privacy',
+  '/expocit/sources': 'sources',
+  ...TOOL_PAGE_HEAD_IDS,
+  '*': 'notFound',
+};
 
 /**
  * Head the client restores for a public page. index.html itself (the app

@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
+import { TooltipProvider } from '@/components/ui/tooltip';
 import { RequireAuth } from '@/components/auth/RequireAuth';
 import LoginPage from '@/pages/LoginPage';
 
@@ -25,15 +26,17 @@ function Where() {
 
 function App() {
   return (
-    <MemoryRouter initialEntries={['/app/history']}>
-      <Routes>
-        <Route path="/login" element={<><LoginPage /><Where /></>} />
-        <Route element={<RequireAuth><Where /></RequireAuth>}>
-          <Route path="/app" element={null} />
-          <Route path="/app/history" element={null} />
-        </Route>
-      </Routes>
-    </MemoryRouter>
+    <TooltipProvider>
+      <MemoryRouter initialEntries={['/app/history']}>
+        <Routes>
+          <Route path="/login" element={<><LoginPage /><Where /></>} />
+          <Route element={<RequireAuth><Where /></RequireAuth>}>
+            <Route path="/app" element={null} />
+            <Route path="/app/history" element={null} />
+          </Route>
+        </Routes>
+      </MemoryRouter>
+    </TooltipProvider>
   );
 }
 

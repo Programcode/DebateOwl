@@ -1,3 +1,4 @@
+import i18n from '@/i18n';
 import type { ProviderConfig } from '../providers/types';
 import { AskOutputSchema, type AskOutput } from '../schemas/ask';
 import type { WorkspaceToolContext } from '@/lib/workspace/tool-context';
@@ -13,7 +14,7 @@ const MAX_ASK_MESSAGE_BYTES = 80_000;
 
 export function boundAskMessage(message: string): string {
   if (!isAskMessageWithinBudget(message)) {
-    throw new AIError('Message is too large. Shorten it before sending.', { statusCode: 413 });
+    throw new AIError(i18n.t('serverErrors.messageTooLarge'), { statusCode: 413 });
   }
   return message;
 }

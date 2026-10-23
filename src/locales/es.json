@@ -2581,5 +2581,76 @@
     "daysLeft_other": "Prueba gratis: quedan {{count}} días.",
     "endsToday": "Tu prueba gratis termina hoy.",
     "dismiss": "Ocultar el aviso de la prueba"
+  },
+  "pageHead": {
+    "home": {
+      "title": "{{brand}} | Preparación de debates con IA: casos y refutaciones",
+      "description": "{{product}} es una app con IA para preparar y practicar debates: casos, refutaciones, evidencia, coaching y rondas cronometradas contra un oponente de IA."
+    },
+    "terms": {
+      "title": "Términos del servicio | {{brand}}",
+      "description": "Las condiciones de uso de {{brand}}: cuentas, suscripciones, uso aceptable, contenido generado por IA, propiedad intelectual y responsabilidad."
+    },
+    "privacy": {
+      "title": "Política de privacidad | {{brand}}",
+      "description": "Cómo {{brand}} recopila, usa, guarda y comparte tu información, cómo se procesan las solicitudes de IA y qué derechos tienes sobre tus datos."
+    },
+    "sources": {
+      "title": "Fuentes | {{brand}}",
+      "description": "Las fuentes consultadas para investigar y desarrollar {{brand}}, por orden alfabético del apellido del autor o del nombre de la institución."
+    },
+    "notFound": {
+      "title": "Página no encontrada | {{brand}}",
+      "description": "Esta página no existe en {{brand}}."
+    },
+    "tools": {
+      "title": "Herramientas de debate gratis: cronómetro, mociones, hojas de flujo | {{brand}}",
+      "description": "Herramientas de debate gratis y sin cuenta: cronómetro por formato, generador de mociones, hojas de flujo imprimibles y calculadora de tiempo de discurso."
+    },
+    "debateTimer": {
+      "title": "Cronómetro de debate gratis para PF, LD, Policy, BP y World Schools | {{brand}}",
+      "description": "Cronómetro de debate gratis con ajustes para PF, LD, Policy, BP, World Schools y Asian Parliamentary: tiempo protegido, avisos de POI y preparación."
+    },
+    "motionGenerator": {
+      "title": "Generador de mociones de debate: 300 mociones de práctica | {{brand}}",
+      "description": "Saca una moción de debate al azar, o tres para practicar el veto, de entre 300 mociones originales ordenadas por tema, dificultad y tipo."
+    },
+    "flowSheet": {
+      "title": "Generador de hojas de flujo de debate imprimibles | {{brand}}",
+      "description": "Imprime una hoja de flujo de una página con una columna por discurso en PF, LD, Policy, BP, World Schools o Asian Parliamentary, en A4 o Carta."
+    },
+    "speechTimeCalculator": {
+      "title": "Calculadora de tiempo para discursos de debate | {{brand}}",
+      "description": "Pega un discurso para ver cuántas palabras tiene, cuánto dura a ritmo lento, medio o rápido y en qué turnos de debate cabe. Funciona en tu navegador."
+    }
+  },
+  "validation": {
+    "caseTextRequired": "El texto del argumento es obligatorio",
+    "motionRequired": "La moción es obligatoria",
+    "claimRequired": "La declaración es obligatoria",
+    "messageRequired": "El mensaje es obligatorio"
+  },
+  "serverErrors": {
+    "signInRequired": "Inicia sesión para continuar.",
+    "sessionExpired": "No se pudo verificar tu sesión. Puede que haya caducado. Vuelve a iniciar sesión.",
+    "accessDenied": "Acceso denegado. Puede que tu sesión haya caducado. Vuelve a iniciar sesión.",
+    "banned": "Tu cuenta está suspendida. Ponte en contacto con soporte.",
+    "requestTooLarge": "La solicitud es demasiado grande. Acorta el texto e inténtalo de nuevo.",
+    "messageTooLarge": "El mensaje es demasiado largo. Acórtalo antes de enviarlo.",
+    "usageCheckFailed": "No se pudo comprobar tu cuota. Inténtalo de nuevo.",
+    "accessCheckFailed": "No se pudo comprobar el acceso de tu cuenta. Inténtalo de nuevo.",
+    "aiService": "Error del servicio de IA: {{message}}. Inténtalo de nuevo.",
+    "portalFailed": "No se pudo abrir el portal de facturación. Inténtalo de nuevo.",
+    "alreadySubscribed": "Ya tienes una suscripción. Gestiónala desde Ajustes.",
+    "promoExpired": "Este código promocional ha caducado",
+    "promoExhausted": "Este código promocional ha alcanzado su límite de usos",
+    "promoApplied": "¡Código promocional aplicado!",
+    "promoDiscountNoted": "¡Código de descuento guardado! Aplícalo al pagar para obtener el descuento.",
+    "promoInvalid": "Código promocional no válido o caducado",
+    "promoAlreadyRedeemed": "Ya has canjeado este código",
+    "promoTooManyAttempts": "Demasiados intentos con códigos promocionales. Vuelve a intentarlo en 15 minutos.",
+    "promoUnsupported": "Tipo de código promocional no compatible",
+    "promoMissing": "Introduce un código promocional",
+    "promoFailed": "No se pudo canjear el código promocional. Inténtalo de nuevo."
   }
 }

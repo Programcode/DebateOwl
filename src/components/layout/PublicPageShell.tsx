@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { useAuth } from '@/lib/supabase/auth-context';
 import { cn } from '@/lib/utils';
 import { MAIN_CONTENT_ID, SkipLink } from '@/components/layout/SkipLink';
+import { LanguageSwitcher } from '@/components/LanguageSwitcher';
 
 /** Where "home" is for this visitor: the app when signed in, the landing page otherwise. */
 // eslint-disable-next-line react-refresh/only-export-components
@@ -23,13 +24,14 @@ export function PublicPageShell({ children, className }: { children: ReactNode; 
     <div className="min-h-screen bg-background">
       <SkipLink />
       <header className="border-b border-border/60">
-        <div className="container flex h-14 items-center px-4">
+        <div className="container flex h-14 items-center justify-between gap-4 px-4">
           <Link to={home} className="flex items-center gap-2 rounded-md pointer-coarse:min-h-11">
             <span className="flex h-8 w-8 items-center justify-center overflow-hidden rounded-md bg-white dark:bg-slate-800">
               <img src="/favicon-72.png" alt={t('common.logoAlt')} width={32} height={32} className="h-full w-full object-cover" />
             </span>
             <span className="font-semibold tracking-tight text-foreground">DebateLab</span>
           </Link>
+          <LanguageSwitcher />
         </div>
       </header>
       <main id={MAIN_CONTENT_ID} className={cn('container mx-auto px-4 py-10 focus-visible:outline-none', className)}>{children}</main>
