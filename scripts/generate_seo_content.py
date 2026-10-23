@@ -92,15 +92,15 @@ FAQS = [
 def tool_keys(name):
     """The tool keys in one of the lists in tool-links.tsx, in order."""
     block = re.search(rf"export const {name} = \[(.*?)\] satisfies", TOOL_LINKS, re.S)
-    keys = re.findall(r"key: '(\w+)'", block.group(1)) if block else []
-    if not keys:
-        raise SystemExit(f"Found no tools in {name} in tool-links.tsx")
+    keys = re.findall(r"\bkey: '([^']+)'", block.group(1)) if block else []
+    if not keys or len(keys) != block.group(1).count("{"):
+        raise SystemExit(f"Could not read every tool in {name} in tool-links.tsx")
     return keys
 
 def names(keys):
     """Tool names as the landing page shows them (features.<key> in en.json), joined with "and"."""
     labels = [EN["features"][key] for key in keys]
-    return ", ".join(labels[:-1]) + " and " + labels[-1]
+    return labels[0] if len(labels) == 1 else ", ".join(labels[:-1]) + " and " + labels[-1]
 
 # The app's tool lists are the source of truth for how many modes there are.
 TOOL_LINKS = (ROOT / "src" / "components" / "features" / "tools" / "tool-links.tsx").read_text()
