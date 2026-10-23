@@ -116,6 +116,9 @@ const STATES: State[] = [
   },
 ];
 
+/** A state by name, so adding one to the list never shifts another test's pick. */
+const stateNamed = (name: string) => STATES.find((candidate) => candidate.name === name)!;
+
 const today = () => new Date().toISOString().slice(0, 10);
 
 async function setState(userId: string, state: State) {
@@ -328,7 +331,7 @@ test("bill-access: extended access is served; a past-due payer after the grace i
   const userId = await user.userId();
 
   // QB-02: extended access really is served.
-  await setState(userId, STATES[1]);
+  await setState(userId, stateNamed("extended-access"));
   const served = aiResponse(page, "brainstorm");
   await brainstorm(page);
   expect(((await served).output.topFive as unknown[]).length).toBeGreaterThan(0);
@@ -336,7 +339,7 @@ test("bill-access: extended access is served; a past-due payer after the grace i
 
   // QB-13: past the grace, a past-due payer is refused with payment_failed and sent to Settings, not Checkout.
   await setState(userId, {
-    ...STATES[4],
+    ...stateNamed("past-due-grace"),
     subscription: { status: "past_due", current_period_start: at(-20), current_period_end: at(10) },
   });
   await brainstorm(page);
