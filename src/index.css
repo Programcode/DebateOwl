@@ -70,6 +70,13 @@
 
   --ease-out-strong: cubic-bezier(0.23, 1, 0.32, 1);
   --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
+
+  /* v3's breakpoints in px, so a larger browser font size doesn't move them. */
+  --breakpoint-sm: 640px;
+  --breakpoint-md: 768px;
+  --breakpoint-lg: 1024px;
+  --breakpoint-xl: 1280px;
+  --breakpoint-2xl: 1536px;
 }
 
 /* v3's palette (hex) for the families the app uses; v4's oklch values render visibly different. */
@@ -91,7 +98,7 @@
 @utility container {
   margin-inline: auto;
   padding-inline: 2rem;
-  @media (width >= 40rem) {
+  @media (width >= 640px) {
     max-width: none;
   }
   @media (width >= 1400px) {
