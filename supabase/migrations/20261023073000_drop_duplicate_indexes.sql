@@ -1,5 +1,5 @@
--- DB-05 (proposed, destructive): drop indexes that duplicate another index
--- on the same table and column.
+-- DB-05: drop indexes that duplicate another index on the same table and
+-- column. Approved by Adam 23 Oct 2026; moved from supabase/proposed/.
 --
 --   subscriptions      idx_subscriptions_stripe_customer duplicates
 --                      idx_subscriptions_stripe_customer_id (both plain

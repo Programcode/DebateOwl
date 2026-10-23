@@ -1,4 +1,5 @@
--- DB-05 (proposed): give private.promo_redeem_failures a primary key.
+-- DB-05: give private.promo_redeem_failures a primary key (approved by Adam
+-- 23 Oct 2026; moved from supabase/proposed/).
 --
 -- It is the one table without a primary key. Its natural columns
 -- (user_id, failed_at) can repeat when two failures share a timestamp, so a
