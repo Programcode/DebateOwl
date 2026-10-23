@@ -454,9 +454,6 @@
     "tierExpired": "Expired",
     "ends": "Ends",
     "loading": "Loading...",
-    "manageSubscription": "Manage Subscription",
-    "setUpBilling": "Set Up Billing",
-    "upgradeToPro": "Upgrade to Pro",
     "confirmingSubscription": "Confirming your Pro subscription…",
     "checkoutCanceled": "Checkout canceled",
     "checkoutCanceledDesc": "No charge was made.",
@@ -468,7 +465,7 @@
     "accessExpired": "Your access has expired. Upgrade to continue using AI tools.",
     "globalSettings": "Global Settings",
     "account": "Account",
-    "accountDesc": "API keys are managed securely on the server.",
+    "accountDesc": "How you sign in, and a copy of everything you saved.",
     "signedInAs": "Signed in as",
     "unknownUser": "Unknown user",
     "signInGoogle": "Sign-in: Google",
@@ -534,8 +531,7 @@
     "paymentGraceUntil": "Pro access continues until {{date}} while we retry the payment.",
     "paymentFailedNoAccess": "Payment failed: update your payment method to restore AI access.",
     "subscriptionEndedOn": "Your Pro subscription ended on {{date}}. Resubscribe to keep using AI tools.",
-    "subscriptionEnded": "Your Pro subscription has ended. Resubscribe to keep using AI tools.",
-    "resubscribe": "Resubscribe"
+    "subscriptionEnded": "Your Pro subscription has ended. Resubscribe to keep using AI tools."
   },
   "login": {
     "title": "Sign in to DebateLab",
@@ -1389,7 +1385,7 @@
   },
   "limitModal": {
     "trialEnded": "Free Trial Ended",
-    "trialEndedDesc": "Your 3-day free trial has ended. Upgrade to Pro to keep using DebateLab.",
+    "trialEndedDesc": "Your {{days}}-day free trial has ended. Upgrade to Pro to keep using DebateLab.",
     "limitReached": "Daily Access Paused",
     "limitReachedDesc": "You've used {{current}} of {{limit}} included AI uses today. Access refreshes at midnight UTC.",
     "weightedDesc": "This model counts as {{units}} uses, and you have {{remaining}} left today. Pick a lighter model or wait until midnight UTC.",
@@ -1397,7 +1393,6 @@
     "weeklyReached": "Weekly AI Allowance Used",
     "weeklyReachedDesc": "You've used this week's AI allowance. It refreshes on Monday at 00:00 UTC. Contact support if you need more.",
     "ok": "OK",
-    "upgrade": "Upgrade to Pro - $5/mo",
     "upgradeNote": "More AI prep access + high reasoning",
     "notNow": "Not now",
     "gotIt": "OK",
@@ -1407,43 +1402,42 @@
     "subscriptionEndedDesc": "Your Pro subscription has ended. Resubscribe to keep using DebateLab.",
     "subscriptionEndedOnDesc": "Your Pro subscription ended on {{date}}. Resubscribe to keep using DebateLab.",
     "updatePayment": "Update payment method",
-    "resubscribe": "Resubscribe"
+    "limitReachedGenericDesc": "You've used today's included AI uses. Access refreshes at midnight UTC.",
+    "zeroLimitDesc": "This account has no daily AI uses right now. Contact support if this seems wrong.",
+    "roundShortDesc": "This round needs {{units}} AI uses and you have {{remaining}} left today. Pick a lighter model or wait until midnight UTC."
   },
   "modelModal": {
     "title": "Pro Reasoning",
     "description": "High reasoning is reserved for Pro members.",
     "descriptionWithModel": "High reasoning with {{model}} is reserved for Pro members.",
     "upgradeNote": "Upgrade to unlock high reasoning.",
-    "upgrade": "Upgrade to Pro - $5/mo",
-    "useFree": "Use low reasoning instead"
+    "useFree": "Use low reasoning instead",
+    "restrictedDesc": "This model or reasoning level needs Pro."
   },
   "dailyLimit": {
-    "usage": "Today: {{used}} of {{limit}} AI requests used. They refresh at midnight UTC ({{time}} your time).",
-    "sparringNone": "You have no AI requests left today, so the opponent can't answer. They refresh at midnight UTC.",
-    "sparringShort": "This round costs {{needed}} AI requests on this model and you have {{remaining}} left today. Pick a lighter model or wait until midnight UTC."
+    "remaining_one": "{{count}} of {{limit}} AI uses left today",
+    "remaining_other": "{{count}} of {{limit}} AI uses left today",
+    "remainingWithReset_one": "{{count}} of {{limit}} AI uses left today. They refresh at midnight UTC ({{time}} your time).",
+    "remainingWithReset_other": "{{count}} of {{limit}} AI uses left today. They refresh at midnight UTC ({{time}} your time)."
   },
   "pricingModal": {
     "title": "Upgrade to Pro",
-    "subtitle": "Unlock higher usage limits, all 10 models, and configurable reasoning.",
-    "free": "Free",
+    "subtitle": "Unlock higher usage limits, every model, and configurable reasoning.",
+    "free": "Free trial",
     "pro": "Pro",
     "current": "Current",
     "recommended": "Recommended",
-    "freePrice": "$0",
-    "proPrice": "$5",
-    "freePeriod": "/mo",
     "proPeriod": "/mo + tax",
     "freeFeature1": "Starter AI prep access",
     "freeFeature2": "Starter models",
     "freeFeature3": "All debate features",
-    "freeFeature4": "3-day free trial",
+    "freeFeature4": "No credit card needed",
     "proFeature1": "Expanded AI prep access",
-    "proFeature2": "All 10 models, including Claude Opus and Sonnet, GPT-6.1 Sol, and Gemini",
+    "proFeature2": "Every model, including Claude Opus and Sonnet, GPT-6.1 Sol, and Gemini",
     "proFeature3": "Deep research with Exa",
     "proFeature4": "Priority processing",
     "proFeature5": "All debate features",
     "redirecting": "Redirecting...",
-    "upgradeNow": "Upgrade Now",
     "offlineUpgrade": "You are offline. Connect to the internet to upgrade.",
     "applying": "Applying...",
     "apply": "Apply",
@@ -1454,7 +1448,15 @@
     "codeRedeemed": "Code Redeemed",
     "invalidCode": "Invalid Code",
     "redeemError": "Error",
-    "redeemErrorDesc": "Failed to redeem code"
+    "redeemErrorDesc": "Failed to redeem code",
+    "titleYourPlan": "Your plan",
+    "titleResubscribe": "Resubscribe to Pro",
+    "subtitleManage": "Change your payment method, see invoices or cancel in the billing portal.",
+    "subtitleCanceling": "Your Pro plan is set to cancel on {{date}}. You can keep it in the billing portal.",
+    "subtitlePaymentFailed": "Your last payment failed. Update your payment method in the billing portal to keep Pro.",
+    "subtitleSetUpBilling": "Your Pro access comes from a promotion. Set up billing to keep Pro after it ends.",
+    "freePeriod_one": "for {{count}} day",
+    "freePeriod_other": "for {{count}} days"
   },
   "onboarding": {
     "welcome": "Welcome to DebateLab! 🎉",
@@ -2559,13 +2561,96 @@
     "compare": "Compare AI debate tools"
   },
   "sessionQuota": {
-    "cost_one": "This round costs {{count}} AI request, however many turns it takes.",
-    "cost_other": "This round costs {{count}} AI requests, however many turns it takes.",
+    "cost_one": "This round costs {{count}} AI use, however many turns it takes.",
+    "cost_other": "This round costs {{count}} AI uses, however many turns it takes.",
     "remaining_one": "You have {{count}} left today.",
     "remaining_other": "You have {{count}} left today."
   },
   "resultActions": {
     "savedToHistory": "Saved to History",
     "saveFailed": "Could not save. Try again."
+  },
+  "billing": {
+    "upgradeToPro": "Upgrade to Pro",
+    "manageSubscription": "Manage Subscription",
+    "setUpBilling": "Set Up Billing",
+    "resubscribe": "Resubscribe"
+  },
+  "trialBanner": {
+    "daysLeft_one": "Free trial: {{count}} day left.",
+    "daysLeft_other": "Free trial: {{count}} days left.",
+    "endsToday": "Your free trial ends today.",
+    "dismiss": "Hide the trial reminder"
+  },
+  "pageHead": {
+    "home": {
+      "title": "{{brand}} | AI Debate Prep, Cases & Rebuttals",
+      "description": "{{product}} is an AI debate prep and practice app for students and debaters: cases, rebuttals, evidence, coaching and timed rounds against an AI opponent."
+    },
+    "terms": {
+      "title": "Terms of Service | {{brand}}",
+      "description": "The terms for using {{brand}}: accounts, subscriptions and billing, acceptable use, AI-generated content, intellectual property, and liability."
+    },
+    "privacy": {
+      "title": "Privacy Policy | {{brand}}",
+      "description": "How {{brand}} collects, uses, stores, and shares your information, how AI requests are processed, and the rights you have over your data."
+    },
+    "sources": {
+      "title": "Sources | {{brand}}",
+      "description": "The sources consulted during the research and development of {{brand}}, listed alphabetically by author surname or institutional name."
+    },
+    "notFound": {
+      "title": "Page not found | {{brand}}",
+      "description": "This page does not exist on {{brand}}."
+    },
+    "tools": {
+      "title": "Free Debate Tools: Timer, Motions, Flow Sheets | {{brand}}",
+      "description": "Free debate tools that need no account: a format-aware round timer, a practice motion generator, printable flow sheets and a speech time calculator."
+    },
+    "debateTimer": {
+      "title": "Free Debate Timer for PF, LD, Policy, BP & World Schools | {{brand}}",
+      "description": "A free debate timer with presets for Public Forum, LD, Policy, BP, World Schools and Asian Parliamentary: protected time, POI knocks and prep banks."
+    },
+    "motionGenerator": {
+      "title": "Debate Motion Generator: 300 Practice Motions | {{brand}}",
+      "description": "Draw a random debate motion, or three for a veto drill, from 300 original practice motions sorted by topic, difficulty and type. THW and Resolved wording."
+    },
+    "flowSheet": {
+      "title": "Printable Debate Flow Sheet Generator | {{brand}}",
+      "description": "Print a one-page debate flow sheet with a column for every speech in PF, LD, Policy, BP, World Schools or Asian Parliamentary, on A4 or Letter."
+    },
+    "speechTimeCalculator": {
+      "title": "Speech Time Calculator for Debate Speeches | {{brand}}",
+      "description": "Paste a speech to see its word count, how long it takes to deliver at slow, average and fast pace, and which debate speech slots it fits. Runs in your browser."
+    }
+  },
+  "validation": {
+    "caseTextRequired": "Case text is required",
+    "motionRequired": "Motion is required",
+    "claimRequired": "Claim is required",
+    "messageRequired": "Message is required"
+  },
+  "serverErrors": {
+    "signInRequired": "Please sign in to continue.",
+    "sessionExpired": "Authentication failed. Your session may have expired. Please sign in again.",
+    "accessDenied": "Access denied. Your session may have expired. Please sign in again.",
+    "banned": "Your account has been suspended. Please contact support.",
+    "requestTooLarge": "Request is too large. Shorten the input and try again.",
+    "messageTooLarge": "Message is too large. Shorten it before sending.",
+    "usageCheckFailed": "Unable to verify your quota. Please try again.",
+    "accessCheckFailed": "Unable to verify your account access. Please try again.",
+    "aiService": "AI service error: {{message}}. Please try again.",
+    "portalFailed": "Could not open the billing portal. Please try again.",
+    "alreadySubscribed": "You already have a subscription. Manage it from Settings.",
+    "promoExpired": "This promo code has expired",
+    "promoExhausted": "This promo code has reached its usage limit",
+    "promoApplied": "Promo code applied!",
+    "promoDiscountNoted": "Discount code noted! Apply it at checkout for a discount.",
+    "promoInvalid": "Invalid or expired promo code",
+    "promoAlreadyRedeemed": "You've already redeemed this code",
+    "promoTooManyAttempts": "Too many promo code attempts. Try again in 15 minutes.",
+    "promoUnsupported": "Unsupported promo code type",
+    "promoMissing": "Please enter a promo code",
+    "promoFailed": "Unable to redeem promo code. Please try again."
   }
 }

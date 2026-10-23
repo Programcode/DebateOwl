@@ -155,7 +155,7 @@ function useCanvasControls() {
 function LocalizedControls() {
     const controls = useCanvasControls();
     return (
-        <Controls className="max-sm:!hidden" showZoom={false} showFitView={false} showInteractive={false}>
+        <Controls className="max-sm:hidden!" showZoom={false} showFitView={false} showInteractive={false}>
             {controls.map((control) => (
                 <ControlButton
                     key={control.key}
@@ -209,7 +209,7 @@ const COMPACT_LABEL = 'sr-only sm:not-sr-only';
 // in screen pixels in index.css, from the --flow-zoom the canvas sets below.
 const EDGE_LABEL_PADDING: [number, number] = [8, 6];
 
-const HANDLE_CLASS = "!bg-white/50 !w-3 !h-3 !border-2 !border-white/80 pointer-coarse:after:absolute pointer-coarse:after:-inset-4 pointer-coarse:after:content-['']";
+const HANDLE_CLASS = "bg-white/50! w-3! h-3! border-2! border-white/80! pointer-coarse:after:absolute pointer-coarse:after:-inset-4 pointer-coarse:after:content-['']";
 
 // Custom node component
 function CustomNode({ data }: { data: FlowNodeData }) {
@@ -666,10 +666,10 @@ export default function FlowchartPage() {
                                                 >
                                                     <button
                                                         type="button"
-                                                        className="min-w-0 flex-1 space-y-1 rounded-md p-2 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                                                        className="min-w-0 flex-1 space-y-1 rounded-md p-2 text-left focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring"
                                                         onClick={() => handleLoadFlowchart(item.data)}
                                                     >
-                                                        <div className="font-medium break-words">{item.title}</div>
+                                                        <div className="font-medium wrap-break-word">{item.title}</div>
                                                         <div className="text-xs text-muted-foreground flex items-center gap-1">
                                                             <Clock className="h-3 w-3" />
                                                             {formatRelativeDate(item.createdAt)}

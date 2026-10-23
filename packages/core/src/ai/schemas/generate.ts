@@ -2,7 +2,8 @@
 import { z } from 'zod';
 
 export const GenerateInputSchema = z.object({
-  motion: z.string().min(1, 'Motion is required'),
+  // A catalog key, not text: the form shows it in the interface language.
+  motion: z.string().min(1, 'validation.motionRequired'),
   side: z.enum(['pro', 'con']),
   format: z.enum(['custom', 'bp', 'policy', 'classroom']), // Kept others for backward compatibility but UI will restrict
   role: z.enum(['intro', 'r1', 'r2', 'conc', 'general']),

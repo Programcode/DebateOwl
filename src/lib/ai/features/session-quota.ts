@@ -1,7 +1,7 @@
 import type { ProviderConfig } from '../providers/types';
 import { getActiveAccessToken, invokeAuthenticatedFunction } from '@/lib/supabase/client';
 import { AIModelRestrictionError, AISubscriptionError, type AIError } from '../errors';
-import { isSubscriptionRefusalCode, localizedLimitMessage } from '../limit-message';
+import { isSubscriptionRefusalCode, subscriptionLimitMessage } from '../limit-message';
 
 /** What a new Crossfire or Sparring round costs, and whether today's quota covers it. */
 export interface SessionQuota {
@@ -78,5 +78,5 @@ export function sessionQuotaError(quota: SessionQuota | null | undefined): AIErr
   if (quota.code === 'upgrade_required') return new AIModelRestrictionError('This model requires a Pro subscription.');
   if (!isSubscriptionRefusalCode(quota.code)) return null;
   const details = { code: quota.code, limit: quota.limit, current: quota.current, units: quota.units };
-  return new AISubscriptionError(localizedLimitMessage('', details), { statusCode: 402, ...details });
+  return new AISubscriptionError(subscriptionLimitMessage(details), { statusCode: 402, ...details });
 }

@@ -96,7 +96,7 @@ function SourceRow({
                   event.stopPropagation();
                   open();
                 }}
-                className="line-clamp-2 min-w-0 break-words rounded-sm text-left text-sm font-medium text-foreground transition-colors hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-progress sm:line-clamp-1"
+                className="line-clamp-2 min-w-0 wrap-break-word rounded-sm text-left text-sm font-medium text-foreground transition-colors hover:text-primary focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-progress sm:line-clamp-1"
               >
                 {source.title}
               </button>
@@ -684,7 +684,7 @@ export default function LibraryPage() {
               <>
                 <p className="mt-2 text-sm text-muted-foreground" data-testid="library-debate">
                   {t('debate.librarySources', 'Sources for')}{' '}
-                  <span className="break-words font-medium text-foreground">{currentDebate.motion}</span>{' '}
+                  <span className="wrap-break-word font-medium text-foreground">{currentDebate.motion}</span>{' '}
                   <Button variant="link" size="sm" className="h-auto p-0" onClick={() => openDebateDialog('switch')}>{t('debate.change', 'Change')}</Button>
                 </p>
                 <p className="mt-1 text-sm text-muted-foreground">
@@ -824,7 +824,7 @@ export default function LibraryPage() {
               <div className="space-y-2">
                 <Label htmlFor="source-file">{t('libraryPage.importFileLabel')}</Label>
                 {/* The real input is invisible, so the label shows its focus ring. */}
-                <Button asChild type="button" variant="outline" className="relative w-full justify-start overflow-hidden has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-ring has-[:focus-visible]:ring-offset-2">
+                <Button asChild type="button" variant="outline" className="relative w-full justify-start overflow-hidden has-focus-visible:ring-2 has-focus-visible:ring-ring has-focus-visible:ring-offset-2">
                   <label htmlFor="source-file" className="cursor-pointer" aria-busy={isImportingFile}>
                     {isImportingFile ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Upload className="h-4 w-4 mr-2" />}
                     {isImportingFile ? t('libraryPage.readingFile', 'Reading file…') : t('libraryPage.chooseFile')}

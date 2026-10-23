@@ -3,3 +3,4 @@ export { LimitReachedModal } from './LimitReachedModal';
 export { ModelRestrictedModal } from './ModelRestrictedModal';
 export { SubscriptionErrorModals } from './SubscriptionErrorModals';
 export { SessionCostNote } from './SessionCostNote';
+export { DailyUsage } from './DailyUsage';

@@ -33,6 +33,8 @@ interface SettingsState {
   wikiResearchEnabled: boolean;
 
   setLanguage: (lang: AppLanguage) => void;
+  /** A ?lang= link's choice, which may arrive before the account's settings load. */
+  chooseLinkedLanguage: (lang: AppLanguage) => void;
   setOutputLanguage: (lang: AppLanguage) => void;
   setTheme: (theme: 'light' | 'dark' | 'system') => void;
   setFeatureConfig: (feature: FeatureTab, config: Partial<ProviderConfig>) => void;
@@ -186,6 +188,22 @@ async function updateSettings(payload: {
   }
 }
 
+/** A ?lang= link's language, until the account's settings load and take it. */
+let linkedLanguage: AppLanguage | null = null;
+
+/** Saves only the interface language, so it can never overwrite settings this device has not loaded. */
+async function updateLanguage(language: AppLanguage) {
+  const userId = await getUserId();
+  if (!userId) return;
+  const { error } = await supabase.from('user_settings').update({
+    language,
+    updated_at: new Date().toISOString(),
+  }).eq('user_id', userId);
+  if (error) {
+    console.warn('[SettingsStore] Failed to persist the language:', error.message);
+  }
+}
+
 // The cleanup rewrites the whole feature_configs snapshot it read, so it only
 // applies while the row is unchanged since that read. A settings save that
 // lands first moves updated_at and wins; the next hydration retries.
@@ -231,15 +249,20 @@ export const useSettingsStore = create<SettingsState>()(
       wikiResearchEnabled: false,
 
       setLanguage: (language) => {
+        // A choice made here beats an earlier ?lang= link.
+        linkedLanguage = null;
         set({ language });
         void applyAppLanguage(language);
-        void updateSettings({
-          language,
-          output_language: get().outputLanguage,
-          theme: get().theme,
-          feature_configs: get().featureConfigs,
-          custom_system_prompt: get().customSystemPrompt ?? null,
-        });
+        // Only the language: the switcher shows on pages that open before the
+        // account's settings load, and this device's copy of the rest may be older.
+        void updateLanguage(language);
+      },
+      chooseLinkedLanguage: (language) => {
+        // Kept until the account's settings load, so their saved language does not undo it.
+        linkedLanguage = language;
+        set({ language });
+        void applyAppLanguage(language);
+        void updateLanguage(language);
       },
       setOutputLanguage: (outputLanguage) => {
         set({ outputLanguage });
@@ -323,7 +346,10 @@ export const useSettingsStore = create<SettingsState>()(
         const savedConfigs = asRecord(data.feature_configs);
         const neverSaved = savedConfigs !== null && Object.keys(savedConfigs).length === 0;
 
-        const language = neverSaved ? get().language : isAppLanguage(data.language) ? data.language : 'en';
+        // A ?lang= link opened this page: it wins over the language the account saved before.
+        const linked = linkedLanguage;
+        linkedLanguage = null;
+        const language = linked ?? (neverSaved ? get().language : isAppLanguage(data.language) ? data.language : 'en');
         const outputLanguage = neverSaved ? get().outputLanguage : isAppLanguage(data.output_language) ? data.output_language : 'en';
         const theme = neverSaved ? get().theme : (data.theme as 'light' | 'dark' | 'system') || 'system';
         const customSystemPrompt = data.custom_system_prompt || undefined;
@@ -350,9 +376,14 @@ export const useSettingsStore = create<SettingsState>()(
             typeof data.updated_at === 'string' ? data.updated_at : null,
           );
         }
+        // The link was opened signed out, or its own save has not landed yet,
+        // unless the switcher has replaced its language since.
+        if (linked && !neverSaved && linked !== data.language && get().language === linked) await updateLanguage(linked);
       },
       resetLocalData: (preserveLanguage = false) => {
         const language = preserveLanguage ? get().language : 'en';
+        // A sign-out or another account: an earlier ?lang= link no longer applies.
+        if (!preserveLanguage) linkedLanguage = null;
         set({
           ownerUserId: null,
           language,

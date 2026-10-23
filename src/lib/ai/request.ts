@@ -10,7 +10,8 @@ import { toast } from '@/hooks/use-toast';
 import { captureException, captureProductEvent } from '@/lib/observability';
 import { isAppLanguage, type AppLanguage } from '@/lib/languages';
 import i18n from '@/i18n';
-import { isSubscriptionRefusalCode, localizedLimitMessage } from './limit-message';
+import { isSubscriptionRefusalCode, subscriptionLimitMessage } from './limit-message';
+import { serverErrorMessage } from '@/lib/server-errors';
 import type { WorkspaceToolContext } from '@/lib/workspace/tool-context';
 import {
   AIError,
@@ -36,6 +37,7 @@ import {
 import { parseSourceAssessments } from './sources';
 import { utf8ByteLength } from './text';
 import { readLiveResponse, type LiveGeneration } from './live';
+import { refreshAIUsage } from '@/lib/query-client';
 
 // Request timeout in milliseconds (200 seconds)
 export const REQUEST_TIMEOUT_MS = 200 * 1000;
@@ -218,7 +220,7 @@ export async function callSupabaseAI<T = unknown>(
     }
 
     if (!accessToken) {
-      throw new AIAuthError('Please sign in to use AI features', { requestId });
+      throw new AIAuthError(i18n.t('serverErrors.signInRequired'), { requestId });
     }
 
     const requestBody = {
@@ -239,7 +241,7 @@ export async function callSupabaseAI<T = unknown>(
     };
 
     if (utf8ByteLength(JSON.stringify(requestBody)) > MAX_CLIENT_REQUEST_BODY_BYTES) {
-      throw new AIError('Request is too large. Shorten the input and try again.', { statusCode: 413, requestId });
+      throw new AIError(i18n.t('serverErrors.requestTooLarge'), { statusCode: 413, requestId });
     }
 
     const live = options.live;
@@ -288,7 +290,7 @@ export async function callSupabaseAI<T = unknown>(
           current: typeof data.current === 'number' ? data.current : undefined,
           units: typeof data.units === 'number' ? data.units : undefined,
         };
-        throw new AISubscriptionError(localizedLimitMessage(errorMessage, details), { statusCode: 402, requestId, ...details });
+        throw new AISubscriptionError(subscriptionLimitMessage(details), { statusCode: 402, requestId, ...details });
       }
 
       // Model restriction (403 / upgrade_required)
@@ -316,7 +318,7 @@ export async function callSupabaseAI<T = unknown>(
       }
 
       // The function reported a failure that is not a limit, auth, or provider error.
-      throw new AIServerError(errorMessage, { statusCode: 500, requestId });
+      throw new AIServerError(serverErrorMessage(errorCode, errorMessage), { statusCode: 500, requestId });
     }
 
     // Validate response has expected output
@@ -413,6 +415,7 @@ export async function callSupabaseAI<T = unknown>(
   } finally {
     clearTimeout(timeoutId);
     options.signal?.removeEventListener('abort', abortFromCaller);
+    refreshAIUsage();
   }
 }
 

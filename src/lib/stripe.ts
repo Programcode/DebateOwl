@@ -1,6 +1,36 @@
 import { supabase } from '@/lib/supabase/client';
-import { getEdgeFunctionErrorMessage } from '@/lib/supabase/edge-function-error';
+import { readEdgeFunctionError } from '@/lib/supabase/edge-function-error';
 import { getWebAppRedirectUrl, openExternalUrl } from '@/lib/native';
+import i18n from '@/i18n';
+import { serverErrorMessage } from '@/lib/server-errors';
+import { promoResultCode } from '../../supabase/functions/_shared/promo-result';
+
+/** A billing call that failed, with its message in the interface language and the server's code. */
+export class BillingError extends Error {
+  readonly code?: string;
+
+  constructor(message: string, code?: string) {
+    super(message);
+    this.name = 'BillingError';
+    this.code = code;
+  }
+}
+
+/**
+ * The portal's refusal for an account Stripe has no subscription for. A
+ * create-portal deployed before its codes sends only the English text.
+ */
+export function isNoActiveSubscription(error: unknown): boolean {
+  if (error instanceof BillingError && error.code === 'no_active_subscription') return true;
+  return error instanceof Error && error.message.toLowerCase().includes('no active subscription');
+}
+
+/** A failed billing function call as a BillingError: a known code translated, else the server's text, else the fallback. */
+async function billingError(error: unknown, fallbackKey: string): Promise<BillingError> {
+  const { message, code, status } = await readEdgeFunctionError(error);
+  if (status === 401) return new BillingError(i18n.t('serverErrors.sessionExpired'), code);
+  return new BillingError(serverErrorMessage(code, message || i18n.t(fallbackKey)), code);
+}
 
 /**
  * Redirect user to Stripe Checkout for Pro subscription.
@@ -8,7 +38,7 @@ import { getWebAppRedirectUrl, openExternalUrl } from '@/lib/native';
 export async function redirectToCheckout(promoCode?: string): Promise<void> {
   const { data: sessionData } = await supabase.auth.getSession();
   const accessToken = sessionData.session?.access_token;
-  if (!accessToken) throw new Error('Please sign in to upgrade');
+  if (!accessToken) throw new BillingError(i18n.t('serverErrors.signInRequired'), 'unauthenticated');
 
   const checkoutBody = {
     successUrl: `${getWebAppRedirectUrl('/app/settings')}?checkout=success&session_id={CHECKOUT_SESSION_ID}`,
@@ -21,8 +51,8 @@ export async function redirectToCheckout(promoCode?: string): Promise<void> {
     body: checkoutBody,
   });
 
-  if (error) throw new Error(await getEdgeFunctionErrorMessage(error) || 'Failed to create checkout session');
-  if (!data?.url) throw new Error('No checkout URL returned');
+  if (error) throw await billingError(error, 'pricingModal.checkoutErrorDesc');
+  if (!data?.url) throw new BillingError(i18n.t('pricingModal.checkoutErrorDesc'));
 
   await openExternalUrl(data.url);
 }
@@ -33,7 +63,7 @@ export async function redirectToCheckout(promoCode?: string): Promise<void> {
 export async function redirectToPortal(): Promise<void> {
   const { data: sessionData } = await supabase.auth.getSession();
   const accessToken = sessionData.session?.access_token;
-  if (!accessToken) throw new Error('Please sign in to manage subscription');
+  if (!accessToken) throw new BillingError(i18n.t('serverErrors.signInRequired'), 'unauthenticated');
 
   const { data, error } = await supabase.functions.invoke('create-portal', {
     headers: { Authorization: `Bearer ${accessToken}` },
@@ -42,25 +72,33 @@ export async function redirectToPortal(): Promise<void> {
     },
   });
 
-  if (error) throw new Error(await getEdgeFunctionErrorMessage(error) || 'Failed to create portal session');
-  if (!data?.url) throw new Error('No portal URL returned');
+  if (error) throw await billingError(error, 'serverErrors.portalFailed');
+  if (!data?.url) throw new BillingError(i18n.t('serverErrors.portalFailed'));
 
   await openExternalUrl(data.url);
 }
 
 /**
- * Redeem a promo code for the current user.
+ * Redeem a promo code for the current user. The message is in the interface
+ * language when the answer is one the browser knows, else the server's text.
  */
 export async function redeemPromoCode(code: string): Promise<{ success: boolean; message: string }> {
   const { data: sessionData } = await supabase.auth.getSession();
   const accessToken = sessionData.session?.access_token;
-  if (!accessToken) throw new Error('Please sign in to redeem a code');
+  if (!accessToken) throw new BillingError(i18n.t('serverErrors.signInRequired'), 'unauthenticated');
 
   const { data, error } = await supabase.functions.invoke('redeem-promo', {
     headers: { Authorization: `Bearer ${accessToken}` },
     body: { code },
   });
 
-  if (error) return { success: false, message: await getEdgeFunctionErrorMessage(error) || 'Failed to redeem code' };
-  return data as { success: boolean; message: string };
+  if (error) {
+    // redeem-promo answers a refusal with { success, message } rather than { error }.
+    const { message, body, status } = await readEdgeFunctionError(error);
+    if (status === 401) return { success: false, message: i18n.t('serverErrors.sessionExpired') };
+    const fallback = (typeof body?.message === 'string' && body.message) || message || i18n.t('pricingModal.redeemErrorDesc');
+    return { success: false, message: serverErrorMessage(promoResultCode(body), fallback) };
+  }
+  const result = data as { success: boolean; message: string; code?: string };
+  return { success: result.success, message: serverErrorMessage(promoResultCode(result), result.message) };
 }

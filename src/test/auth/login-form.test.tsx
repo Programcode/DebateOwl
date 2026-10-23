@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, fireEvent, render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
+import { TooltipProvider } from '@/components/ui/tooltip';
 import { AuthApiError } from '@supabase/supabase-js';
 import LoginPage from '@/pages/LoginPage';
 import { authRetryAfterSeconds } from '@/lib/auth-errors';
@@ -22,7 +23,7 @@ vi.mock('@/lib/supabase/AuthProvider', () => ({
 }));
 
 function renderLogin() {
-  return render(<MemoryRouter><LoginPage /></MemoryRouter>);
+  return render(<TooltipProvider><MemoryRouter><LoginPage /></MemoryRouter></TooltipProvider>);
 }
 
 function submitEmail(value: string) {

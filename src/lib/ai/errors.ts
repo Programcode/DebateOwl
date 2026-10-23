@@ -1,5 +1,6 @@
 import i18n from '@/i18n';
-import { localizedLimitMessage } from './limit-message';
+import { serverErrorMessage } from '@/lib/server-errors';
+import { subscriptionLimitMessage } from './limit-message';
 
 /**
  * Base class for AI-related errors with structured information.
@@ -342,10 +343,7 @@ function mapAIErrorPayload(
 
   // Return appropriate error type based on status code
   if (statusCode === 401) {
-    return new AIAuthError(
-      'Authentication failed. Your session may have expired. Please sign in again.',
-      { statusCode, requestId }
-    );
+    return new AIAuthError(i18n.t('serverErrors.sessionExpired'), { statusCode, requestId });
   }
 
   if (statusCode === 402) {
@@ -355,7 +353,7 @@ function mapAIErrorPayload(
       current: typeof payload?.current === 'number' ? payload.current : undefined,
       units: typeof payload?.units === 'number' ? payload.units : undefined,
     };
-    return new AISubscriptionError(localizedLimitMessage(message, details), { statusCode, requestId, ...details });
+    return new AISubscriptionError(subscriptionLimitMessage(details), { statusCode, requestId, ...details });
   }
 
   if (statusCode === 403) {
@@ -364,8 +362,9 @@ function mapAIErrorPayload(
     if (code === 'upgrade_required' || message.includes('model') || message.includes('upgrade')) {
       return new AIModelRestrictionError(message, { requestId });
     }
+    // A suspended account says so; another refusal keeps the server's text.
     return new AIAuthError(
-      message || 'Access denied. Your session may have expired. Please sign in again.',
+      serverErrorMessage(code, payloadMessage || i18n.t('serverErrors.accessDenied')),
       { statusCode, requestId }
     );
   }
@@ -396,17 +395,13 @@ function mapAIErrorPayload(
   if (!statusCode) {
     return new AIUnknownError(i18n.t('aiErrors.unexpected'), { requestId, causeType: privacySafeCauseType(error) });
   }
+  // A known code reads in the interface language; anything else keeps the server's text.
+  const serviceMessage = serverErrorMessage(errorCode, i18n.t('serverErrors.aiService', { message }));
   if (statusCode >= 500) {
-    return new AIServerError(
-      `AI service error: ${message}. Please try again.`,
-      { statusCode, requestId }
-    );
+    return new AIServerError(serviceMessage, { statusCode, requestId });
   }
 
-  return new AIError(
-    `AI service error: ${message}. Please try again.`,
-    { statusCode, requestId }
-  );
+  return new AIError(serviceMessage, { statusCode, requestId });
 }
 
 export function isProviderErrorMessage(message: string): boolean {

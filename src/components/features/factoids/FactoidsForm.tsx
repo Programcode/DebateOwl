@@ -77,7 +77,7 @@ export function FactoidsForm({ onSubmit, isLoading, debateContext = true }: Fact
               className="h-12"
             />
             {errors.claim && (
-              <p className="text-sm text-destructive">{errors.claim.message}</p>
+              <p className="text-sm text-destructive">{t(errors.claim.message ?? '')}</p>
             )}
           </div>
 
@@ -148,7 +148,7 @@ export function FactoidsForm({ onSubmit, isLoading, debateContext = true }: Fact
                 placeholder={t('factoidsForm.regionPlaceholder')}
               />
               {errors.region && (
-                <p className="text-sm text-destructive">{errors.region.message}</p>
+                <p className="text-sm text-destructive">{t(errors.region.message ?? '')}</p>
               )}
             </div>
 

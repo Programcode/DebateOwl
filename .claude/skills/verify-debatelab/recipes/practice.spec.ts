@@ -130,9 +130,9 @@ test("cross-ai-questions: the AI questions the user, answers are judged, and the
 
 /**
  * Today's AI requests are used up: the server's counter (what the ai function
- * checks, and what Crossfire and Sparring ask it for before a round) and the
- * usage rows (the Settings usage line's fallback on an older database). A refused call and a Jev
- * helper row are on the list too, and must not count as used.
+ * checks, what Crossfire and Sparring ask it for before a round, and what the
+ * usage line reads) and the usage rows real calls leave. A refused call and a
+ * Jev helper row are on the list too, and must not count as used.
  */
 async function useUpDailyRequests(userId: string, limit: number) {
   await admin.from("user_settings").update({ daily_limit_override: limit }).eq("user_id", userId);
@@ -166,7 +166,8 @@ test("cross-daily-limit and spar-daily-limit: with no requests left, Crossfire s
   await evidence.shot("02-crossfire-back-in-setup");
 
   await page.goto("/app/sparring");
-  await expect(page.getByTestId("sparring-request-shortfall")).toContainText("You have no AI requests left today");
+  // QB-06: the same words as the Crossfire dialog above.
+  await expect(page.getByTestId("sparring-request-shortfall")).toContainText("You've used 2 of 2 included AI uses today.");
   await evidence.shot("03-sparring-warns");
   await evidence.aria("03-sparring-warns", page.getByTestId("sparring-request-shortfall"));
 });

@@ -151,7 +151,7 @@ export default function CurrentDebatePage() {
               {debate.settings.format && (
                 <p><span className="text-muted-foreground">{t('debate.format', 'Format')}: </span>{t(`debate.formats.${debate.settings.format}`, debate.settings.format)}</p>
               )}
-              {debate.instructions && <p className="whitespace-pre-wrap break-words">{debate.instructions}</p>}
+              {debate.instructions && <p className="whitespace-pre-wrap wrap-break-word">{debate.instructions}</p>}
             </CardContent>
           </Card>
         )}

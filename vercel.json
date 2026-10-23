@@ -27,6 +27,11 @@
       "statusCode": 301
     },
     {
+      "source": "/:lang(es|hu)",
+      "destination": "/?lang=:lang",
+      "statusCode": 302
+    },
+    {
       "source": "/online-debate-timer-tool",
       "destination": "/online-debate-timer",
       "statusCode": 301

@@ -3,6 +3,7 @@ import { CreditCard, Zap } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { formatEuropeanDate } from '@/lib/date-format';
+import { BILLING_ACTION_LABELS, billingAction } from '@/lib/billing/plan';
 import type { BillingDateKind, BillingStateName } from '@/hooks/use-subscription';
 
 // Tinted badges keep their label readable (white on amber or green was about 2:1).
@@ -57,8 +58,7 @@ export function SubscriptionStatus({
   const badge = STATE_BADGES[billingState];
   const date = billingDate ? formatEuropeanDate(billingDate) : null;
   const dateLabel = billingDateKind ? DATE_LABELS[billingDateKind] : undefined;
-  const isPro = billingState === 'pro' || billingState === 'pro_canceling';
-  const canManage = hasOpenSubscription || (isPro && hasStripeBilling);
+  const action = billingAction({ billingState, hasOpenSubscription, hasStripeBilling });
 
   const description = (() => {
     switch (billingState) {
@@ -79,24 +79,23 @@ export function SubscriptionStatus({
 
   return (
     <>
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
+      {/* Wraps on a phone: a long badge, date and button (Hungarian) never squeeze into one row. */}
+      <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-3">
+        <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1">
           <Badge variant="outline" className={badge.color}>{t(badge.labelKey)}</Badge>
           {dateLabel && date && (
             <span data-testid="billing-date" className="text-sm text-muted-foreground">{t(dateLabel, { date })}</span>
           )}
         </div>
-        {canManage ? (
+        {action === 'manage' ? (
           <Button variant="outline" size="sm" onClick={onManage} disabled={portalLoading}>
             <CreditCard className="h-4 w-4 mr-2" />
-            {portalLoading ? t('settings.loading') : t('settings.manageSubscription')}
+            {portalLoading ? t('settings.loading') : t(BILLING_ACTION_LABELS.manage)}
           </Button>
         ) : (
           <Button size="sm" onClick={onUpgrade}>
             <Zap className="h-4 w-4 mr-2" />
-            {billingState === 'subscription_ended'
-              ? t('settings.resubscribe')
-              : isPro ? t('settings.setUpBilling') : t('settings.upgradeToPro')}
+            {t(BILLING_ACTION_LABELS[action])}
           </Button>
         )}
       </div>

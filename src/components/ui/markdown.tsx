@@ -11,7 +11,7 @@ interface MarkdownProps {
 export function Markdown({ children, className, inline = false }: MarkdownProps) {
   return (
     <ReactMarkdown
-      className={cn(inline ? 'inline [overflow-wrap:anywhere]' : 'prose prose-sm dark:prose-invert max-w-none break-words [overflow-wrap:anywhere]', className)}
+      className={cn(inline ? 'inline wrap-anywhere' : 'prose prose-sm dark:prose-invert max-w-none wrap-anywhere', className)}
       components={{
         p: ({ children }) => inline ? <span>{children}</span> : <p className="mb-2 last:mb-0">{children}</p>,
         strong: ({ children }) => <strong className="font-semibold">{children}</strong>,
@@ -26,14 +26,14 @@ export function Markdown({ children, className, inline = false }: MarkdownProps)
         blockquote: ({ children }) => <blockquote className="border-l-2 border-primary/40 pl-3 italic">{children}</blockquote>,
         // Model output links open beside the app and never leak the referrer.
         a: ({ children, href }) => (
-          <a href={href} target="_blank" rel="noopener noreferrer" className="text-primary underline underline-offset-2 [overflow-wrap:anywhere]">
+          <a href={href} target="_blank" rel="noopener noreferrer" className="text-primary underline underline-offset-2 wrap-anywhere">
             {children}
           </a>
         ),
         // Never load an image a model asked for: a prompt-injected source could
         // put the student's work in the image URL and fetch it without a click.
         img: ({ alt, src }) => (
-          <a href={src} target="_blank" rel="noopener noreferrer" className="text-primary underline underline-offset-2 [overflow-wrap:anywhere]">
+          <a href={src} target="_blank" rel="noopener noreferrer" className="text-primary underline underline-offset-2 wrap-anywhere">
             {alt || src}
           </a>
         ),

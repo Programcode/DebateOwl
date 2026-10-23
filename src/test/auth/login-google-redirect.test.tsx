@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
+import { TooltipProvider } from '@/components/ui/tooltip';
 import LoginPage from '@/pages/LoginPage';
 import { restoreFromBackForwardCache } from '@/test/helpers/page-lifecycle';
 
@@ -23,7 +24,7 @@ vi.mock('@/lib/supabase/AuthProvider', () => ({
 // back/forward cache with the button stuck on "Redirecting...".
 describe('Continue with Google', () => {
   it('works again after Back from Google restores the page', async () => {
-    render(<MemoryRouter><LoginPage /></MemoryRouter>);
+    render(<TooltipProvider><MemoryRouter><LoginPage /></MemoryRouter></TooltipProvider>);
 
     fireEvent.click(screen.getByRole('button', { name: 'Continue with Google' }));
     const redirecting = await screen.findByRole('button', { name: 'Redirecting...' });

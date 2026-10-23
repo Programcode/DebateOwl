@@ -29,7 +29,7 @@ const Pricing = () => {
 
     return (
         <section id="pricing" className="relative overflow-hidden py-24">
-            <div className="absolute inset-0 bg-gradient-to-b from-background via-secondary/10 to-background" />
+            <div className="absolute inset-0 bg-linear-to-b from-background via-secondary/10 to-background" />
             <div className="absolute inset-0 animated-grid opacity-40" />
 
             <div className="section-container relative z-10">

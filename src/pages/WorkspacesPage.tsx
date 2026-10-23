@@ -117,7 +117,7 @@ export default function WorkspacesPage() {
               <Link
                 key={workspace.id}
                 to={`/app/workspaces/${workspace.id}`}
-                className="motion-press flex items-center justify-between gap-4 rounded-lg border border-border bg-card px-4 py-4 hover:border-primary/40 hover:bg-accent/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                className="motion-press flex items-center justify-between gap-4 rounded-lg border border-border bg-card px-4 py-4 hover:border-primary/40 hover:bg-accent/40 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
               >
                 <span className="min-w-0">
                   <span className="block truncate font-medium text-foreground">

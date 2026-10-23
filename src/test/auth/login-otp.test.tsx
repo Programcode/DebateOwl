@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
+import { TooltipProvider } from '@/components/ui/tooltip';
 import { AuthApiError } from '@supabase/supabase-js';
 import LoginPage from '@/pages/LoginPage';
 
@@ -23,7 +24,7 @@ vi.mock('@/lib/supabase/AuthProvider', () => ({
 beforeEach(() => sessionStorage.clear());
 
 async function requestCode() {
-  render(<MemoryRouter><LoginPage /></MemoryRouter>);
+  render(<TooltipProvider><MemoryRouter><LoginPage /></MemoryRouter></TooltipProvider>);
   fireEvent.change(screen.getByLabelText('Email address'), { target: { value: 'student@example.com' } });
   fireEvent.click(screen.getByRole('button', { name: 'Send code' }));
   return await screen.findByLabelText('Verification code');

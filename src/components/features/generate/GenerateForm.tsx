@@ -166,7 +166,7 @@ export function GenerateForm({ onSubmit, isLoading, debatePrefill = true }: Gene
               </p>
             )}
             {errors.motion && (
-              <p className="text-sm text-destructive">{errors.motion.message}</p>
+              <p className="text-sm text-destructive">{t(errors.motion.message ?? '')}</p>
             )}
           </div>
 

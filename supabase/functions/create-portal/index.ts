@@ -50,7 +50,13 @@ async function findCustomerIdByUser(user: { id: string; email?: string | null })
   return findCustomerOwnedByUser(candidates.data, user.id);
 }
 
-function classifyStripeError(err: unknown): { status: number; message: string } {
+// The browser translates this code; the English message stays for older browsers.
+const NO_ACTIVE_SUBSCRIPTION = {
+  error: "No active subscription found. Upgrade to Pro to start a subscription.",
+  code: "no_active_subscription",
+};
+
+function classifyStripeError(err: unknown): { status: number; message: string; code?: string } {
   const stripeErr = err as {
     type?: string;
     code?: string;
@@ -63,10 +69,7 @@ function classifyStripeError(err: unknown): { status: number; message: string } 
     : "Failed to create billing portal session";
 
   if (stripeErr.code === "resource_missing") {
-    return {
-      status: 400,
-      message: "No active subscription found. Upgrade to Pro to start a subscription.",
-    };
+    return { status: 400, message: NO_ACTIVE_SUBSCRIPTION.error, code: NO_ACTIVE_SUBSCRIPTION.code };
   }
 
   if (typeof stripeErr.statusCode === "number") {
@@ -133,7 +136,7 @@ export async function handleRequest(req: Request): Promise<Response> {
 
     const customerId = await findCustomerIdByUser({ id: user.id, email: user.email });
     if (!customerId) {
-      return new Response(JSON.stringify({ error: "No active subscription found. Upgrade to Pro to start a subscription." }), {
+      return new Response(JSON.stringify(NO_ACTIVE_SUBSCRIPTION), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -151,9 +154,9 @@ export async function handleRequest(req: Request): Promise<Response> {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (err) {
-    const { status, message } = classifyStripeError(err);
+    const { status, message, code } = classifyStripeError(err);
     console.error("[PORTAL] Error:", message);
-    return new Response(JSON.stringify({ error: message }), {
+    return new Response(JSON.stringify({ error: message, ...(code ? { code } : {}) }), {
       status,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });

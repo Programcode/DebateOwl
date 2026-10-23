@@ -2,8 +2,9 @@
 import { Component, Suspense, lazy, useEffect, useRef, useState, type ComponentType, type ErrorInfo, type ReactNode } from "react";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, useLocation, useNavigationType } from "react-router-dom";
+import { QueryClientProvider } from "@tanstack/react-query";
+import { queryClient } from "@/lib/query-client";
+import { BrowserRouter, Navigate, Routes, Route, useLocation, useNavigate, useNavigationType } from "react-router-dom";
 import { MotionConfig } from "framer-motion";
 import { AuthProvider, useAuth } from "@/lib/supabase/AuthProvider";
 import { RequireAuth } from "@/components/auth/RequireAuth";
@@ -16,11 +17,12 @@ import { StagingBanner } from "@/components/StagingBanner";
 import { captureException, captureProductEvent, toTelemetrySafeError } from "@/lib/observability";
 import { appLayoutLoader, preloadStartupRoute, routeLoaders, type RouteLoader } from "@/lib/route-modules";
 import type { PrerenderedRoute } from "@/lib/seo/pages";
-import { usePrivateRouteHead } from "@/lib/seo/use-page-head";
+import { PageLabelProvider, usePrivateRouteHead } from "@/lib/seo/use-page-head";
 import { RouteSkeleton, type RouteSkeletonVariant } from "@/components/loading/RouteSkeleton";
 import { useTranslation } from "react-i18next";
 import { COLLABORATION_URL } from "@/lib/workspace/collaboration-config";
 import { AUTH_CALLBACK_PATH } from "@/lib/auth-callback";
+import { chooseUrlLanguage, searchWithoutLanguage } from "@/lib/url-language";
 
 /**
  * A page the build prerenders. mountApp loads its module before the first
@@ -78,7 +80,6 @@ const AppLayout = lazy(() => {
 const OnboardingTour = lazy(() => import("@/components/features/onboarding/OnboardingTour")
   .then(({ OnboardingTour: Tour }) => ({ default: Tour })));
 
-const queryClient = new QueryClient();
 // TanStack Query refetches after an `offline` then `online` pair, but a page
 // opened offline never sees `offline`. Retry whatever failed once the
 // connection returns, such as Settings' admin-role check.
@@ -252,17 +253,21 @@ function PendingAppRoute() {
   );
 }
 
-function RouteContent({ children }: { children: ReactNode }) {
+export function RouteContent({ children }: { children: ReactNode }) {
   const location = useLocation();
   const { label } = useRouteLabel(location.pathname);
-  usePrivateRouteHead(location.pathname, label);
+  // A page that names itself better than its route (usePageLabel).
+  const [pageLabel, setPageLabel] = useState<string | null>(null);
+  usePrivateRouteHead(location.pathname, pageLabel ?? label);
 
   return (
-    <LocalizedRouteErrorBoundary key={location.pathname}>
-      <Suspense fallback={<PendingRoute />}>
-        {children}
-      </Suspense>
-    </LocalizedRouteErrorBoundary>
+    <PageLabelProvider value={setPageLabel}>
+      <LocalizedRouteErrorBoundary key={location.pathname}>
+        <Suspense fallback={<PendingRoute />}>
+          {children}
+        </Suspense>
+      </LocalizedRouteErrorBoundary>
+    </PageLabelProvider>
   );
 }
 
@@ -314,6 +319,19 @@ function ScrollToTopOnNavigate(): null {
   return null;
 }
 
+/**
+ * A ?lang= reached inside the app (the /es and /hu redirects): switch to it and
+ * drop it from the address. mountApp handles the one a page opens with.
+ */
+export function UrlLanguage(): null {
+  const { pathname, search, hash } = useLocation();
+  const navigate = useNavigate();
+  useEffect(() => {
+    if (chooseUrlLanguage(search)) navigate({ pathname, search: searchWithoutLanguage(search), hash }, { replace: true });
+  }, [hash, navigate, pathname, search]);
+  return null;
+}
+
 function AppRoutes() {
   useSessionStorageSync();
 
@@ -321,6 +339,9 @@ function AppRoutes() {
     <Routes>
           {/* Public Routes */}
           <Route path="/" element={<RouteContent><LandingPage /></RouteContent>} />
+          {/* Language home pages; vercel.json redirects them on a full load too. */}
+          <Route path="/es" element={<Navigate to="/?lang=es" replace />} />
+          <Route path="/hu" element={<Navigate to="/?lang=hu" replace />} />
           <Route path="/terms" element={<RouteContent><TermsPage /></RouteContent>} />
           <Route path="/privacy" element={<RouteContent><PrivacyPage /></RouteContent>} />
           <Route path="/expocit/sources" element={<RouteContent><SourcesPage /></RouteContent>} />
@@ -366,6 +387,8 @@ function AppRoutes() {
             <Route path="/app/sparring" element={<RouteContent><SparringPage /></RouteContent>} />
             <Route path="/app/flowchart" element={<RouteContent><FlowchartPage /></RouteContent>} />
             <Route path="/app/settings" element={<RouteContent><SettingsPage /></RouteContent>} />
+            {/* Billing lives in Settings (QB-12). */}
+            <Route path="/app/billing" element={<Navigate to="/app/settings#subscription" replace />} />
             <Route path="/app/admin" element={<RouteContent><AdminPage /></RouteContent>} />
           </Route>
           <Route path="*" element={<RouteContent><NotFound /></RouteContent>} />
@@ -385,6 +408,7 @@ const App = () => (
             <StagingBanner />
             <BrowserRouter useTransitions={false}>
               <ScrollToTopOnNavigate />
+              <UrlLanguage />
               <LocalizedRouteErrorBoundary>
                 <AppRoutes />
               </LocalizedRouteErrorBoundary>

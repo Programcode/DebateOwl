@@ -6,6 +6,8 @@ import { AlertTriangle, Zap, Clock, CreditCard } from 'lucide-react';
 import { useSubscription } from '@/hooks/use-subscription';
 import { formatEuropeanDate } from '@/lib/date-format';
 import { subscriptionLimitMessage } from '@/lib/ai/error-display';
+import { BILLING_ACTION_LABELS } from '@/lib/billing/plan';
+import { PLAN_DIALOG_CLASS, PLAN_DIALOG_CLOSE_CLASS } from './dialog-layout';
 
 /** trial_expired is what functions older than the other access codes sent; it shows as trial_ended. */
 export type LimitModalVariant =
@@ -39,11 +41,13 @@ const TITLES: Record<LimitModalVariant, string> = {
 export function LimitReachedModal({ open, onOpenChange, variant, limit, current, units, onUpgrade }: LimitReachedModalProps) {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const { isPro, billingState, billingDate } = useSubscription();
+  const { billingState, billingDate } = useSubscription();
   const accessEnded = variant === 'trial_ended' || variant === 'trial_expired' || variant === 'subscription_ended';
   const isWeeklyBudget = variant === 'weekly_budget_reached';
-  // A Pro student who used today's included requests already pays. Selling Pro again is the wrong next step.
-  const paidDailyCap = isPro && variant === 'limit_reached';
+  // A paying student who used today's included requests already has Pro, so selling it again is the wrong
+  // next step. Legacy free is served at Pro limits but pays nothing, so it is still offered Pro.
+  const paidDailyCap = (billingState === 'pro' || billingState === 'pro_canceling' || billingState === 'payment_failed')
+    && variant === 'limit_reached';
 
   const endedOn = variant === 'subscription_ended' && billingState === 'subscription_ended' && billingDate
     ? formatEuropeanDate(billingDate)
@@ -54,7 +58,7 @@ export function LimitReachedModal({ open, onOpenChange, variant, limit, current,
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[420px]">
+      <DialogContent className={`${PLAN_DIALOG_CLASS} sm:max-w-[420px]`} closeClassName={PLAN_DIALOG_CLOSE_CLASS}>
         <DialogHeader>
           <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-amber-100 dark:bg-amber-900/30 mb-3">
             {accessEnded ? (
@@ -89,7 +93,7 @@ export function LimitReachedModal({ open, onOpenChange, variant, limit, current,
             <>
               <Button onClick={onUpgrade} size="lg" className="w-full">
                 <Zap className="h-4 w-4 mr-2" />
-                {variant === 'subscription_ended' ? t('limitModal.resubscribe') : t('limitModal.upgrade')}
+                {t(variant === 'subscription_ended' ? BILLING_ACTION_LABELS.resubscribe : BILLING_ACTION_LABELS.upgrade)}
               </Button>
               <Button variant="ghost" className="w-full" onClick={() => onOpenChange(false)}>
                 {t('limitModal.notNow', 'Not now')}
