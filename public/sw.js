@@ -140,7 +140,10 @@ async function pageNavigation(event) {
     }
     return response;
   } catch {
-    return (await caches.match(key, { ignoreVary: true })) || offlinePage();
+    // The copy saved on the last visit, before the one stored at install.
+    return (await caches.match(key, { cacheName: PAGES_CACHE, ignoreVary: true }))
+      || (await caches.match(key, { ignoreVary: true }))
+      || offlinePage();
   }
 }
 

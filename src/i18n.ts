@@ -66,6 +66,14 @@ export function applyAppLanguage(language: AppLanguage): Promise<void> {
   return pendingLanguage;
 }
 
+// A language chosen offline, before its strings were ever cached, stays on the
+// current one; try again when the connection returns.
+if (typeof window !== 'undefined') {
+  window.addEventListener('online', () => {
+    if (i18n.language !== requestedLanguage) void applyAppLanguage(requestedLanguage);
+  });
+}
+
 /**
  * Settles once the last requested language is showing (or has failed to load).
  * The first render waits for it, so a Spanish or Hungarian visitor never sees

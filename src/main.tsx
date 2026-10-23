@@ -20,6 +20,8 @@ const initializeTelemetry = (): void => {
   }
 };
 
+const LANGUAGE_WAIT_MS = 3_000;
+
 /** The route whose HTML the build prerendered into #root, when it is the page being opened. */
 function prerenderedRoute(container: HTMLElement): string | undefined {
   const route = container.dataset.prerendered;
@@ -46,7 +48,13 @@ export function mountApp(): void {
   const prerendered = prerenderedRoute(container);
   const page = preloadStartupRoute(prerendered === "*" ? "*" : window.location.pathname);
   // The first render waits for the chosen language's strings, so a Spanish or
-  // Hungarian visitor never sees the English text first.
+  // Hungarian visitor never sees the English text first. A stalled request
+  // must not hold the startup screen: after a few seconds English renders and
+  // the language switches when its strings arrive.
+  const languageReady = Promise.race([
+    appLanguageReady(),
+    new Promise<void>((resolve) => { window.setTimeout(resolve, LANGUAGE_WAIT_MS); }),
+  ]);
   if (prerendered) {
     // The prerendered page stays on screen until its module is loaded, then one
     // synchronous render replaces it with the same page. A failed load renders
@@ -55,12 +63,12 @@ export function mountApp(): void {
       flushSync(() => root.render(app));
       delete container.dataset.prerendered;
     };
-    void Promise.all([page, appLanguageReady()]).then(render, render);
+    void Promise.all([page, languageReady]).then(render, render);
   } else {
     // HTML prerendered for another route (an offline copy, say) is replaced like the startup shell.
     delete container.dataset.prerendered;
     const render = (): void => root.render(app);
-    void appLanguageReady().then(render, render);
+    void languageReady.then(render, render);
   }
   registerServiceWorker();
 

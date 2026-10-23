@@ -2,7 +2,7 @@
 import { Component, Suspense, lazy, useEffect, useRef, useState, type ComponentType, type ErrorInfo, type ReactNode } from "react";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { QueryClient, QueryClientProvider, onlineManager } from "@tanstack/react-query";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, useLocation, useNavigationType } from "react-router-dom";
 import { MotionConfig } from "framer-motion";
 import { AuthProvider, useAuth } from "@/lib/supabase/AuthProvider";
@@ -74,9 +74,14 @@ const OnboardingTour = lazy(() => import("@/components/features/onboarding/Onboa
   .then(({ OnboardingTour: Tour }) => ({ default: Tour })));
 
 const queryClient = new QueryClient();
-// TanStack Query assumes it is online until an `offline` event. A page opened
-// offline would run and fail every query; this pauses them until `online`.
-if (typeof navigator !== "undefined") onlineManager.setOnline(navigator.onLine);
+// TanStack Query refetches after an `offline` then `online` pair, but a page
+// opened offline never sees `offline`. Retry whatever failed once the
+// connection returns, such as Settings' admin-role check.
+if (typeof window !== "undefined") {
+  window.addEventListener("online", () => {
+    void queryClient.refetchQueries({ type: "active", predicate: (query) => query.state.status === "error" });
+  });
+}
 
 type ToolName =
   | "generate"

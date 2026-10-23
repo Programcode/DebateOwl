@@ -3,7 +3,7 @@ import react from "@vitejs/plugin-react-swc";
 import { sentryVitePlugin } from "@sentry/vite-plugin";
 import { execSync } from "node:child_process";
 import { createHash } from "node:crypto";
-import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "path";
 import { STAGING_PREVIEW_PROXY_PATH, SUPABASE_PROJECTS } from "./src/lib/supabase/projects";
 
@@ -115,6 +115,8 @@ function appShellRewrites(): Plugin {
  * instead of quietly dropping out of offline use.
  */
 const OFFLINE_MODULES = [
+  // The landing page's HTML is precached too; without its code it would turn into the error page.
+  "src/pages/LandingPage.tsx",
   "src/components/layout/AppLayout.tsx",
   "src/pages/HomePage.tsx",
   "src/pages/LibraryPage.tsx",
@@ -158,7 +160,15 @@ function serviceWorkerPrecache(): Plugin {
       const workerPath = path.join(outDir, "sw.js");
       const worker = readFileSync(workerPath, "utf8");
       if (!worker.includes(SERVICE_WORKER_BUILD)) throw new Error(`serviceWorkerPrecache: public/sw.js no longer contains ${SERVICE_WORKER_BUILD}`);
-      const id = createHash("sha256").update(worker).update(assets.join("\n")).digest("hex").slice(0, 12);
+      // The unhashed files the worker serves cache-first (theme-init.js, the
+      // icons) change the id too, so a deploy that changes only them still
+      // ships a new worker.
+      const hash = createHash("sha256").update(worker).update(assets.join("\n"));
+      const publicDir = path.resolve(__dirname, "public");
+      for (const file of readdirSync(publicDir).filter((name) => /\.(?:js|png|ico|webmanifest)$/.test(name) && name !== "sw.js").sort()) {
+        hash.update(file).update(readFileSync(path.join(publicDir, file)));
+      }
+      const id = hash.digest("hex").slice(0, 12);
       writeFileSync(workerPath, worker.replace(SERVICE_WORKER_BUILD, `const BUILD = ${JSON.stringify({ id, assets })};`));
     },
   };

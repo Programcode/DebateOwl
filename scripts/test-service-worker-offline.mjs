@@ -119,6 +119,7 @@ async function main() {
   const attackPath = chunk('src/pages/AttackPage.tsx');
   // Precached at install: opened offline after one visit to /app, without visiting them first.
   const precachedPaths = [
+    'src/pages/LandingPage.tsx',
     'src/components/layout/AppLayout.tsx',
     'src/pages/HomePage.tsx',
     'src/pages/LibraryPage.tsx',
@@ -221,6 +222,13 @@ async function main() {
       ))).flat();
       return paths.every((path) => urls.includes(path));
     }, [entryPath, ...precachedPaths, '/app-shell.html', '/terms', '/favicon-72.png'], 'the precache and the visited Terms page');
+    // Installed up front, not picked up by browsing: they sit in this build's shell cache.
+    const shellCache = await page.evaluate(async () => {
+      const key = (await caches.keys()).find((name) => name.endsWith('-shell'));
+      return key ? (await (await caches.open(key)).keys()).map((request) => new URL(request.url).pathname) : [];
+    });
+    const notPrecached = [entryPath, ...precachedPaths, '/', '/app-shell.html'].filter((path) => !shellCache.includes(path));
+    assert.deepEqual(notPrecached, [], 'expected in the install-time precache');
 
     const firstVisitCache = await cachePaths(page);
     assert.equal(firstVisitCache.includes(attackPath), false, 'unvisited Attack chunk was cached');
@@ -269,6 +277,12 @@ async function main() {
     await page.locator('main h1', { hasText: es.termsPage.title }).waitFor({ timeout: CONTENT_TIMEOUT_MS });
     await page.goto(`${origin}/privacy`, { waitUntil: 'domcontentloaded' });
     await page.getByRole('heading', { name: 'Offline', exact: true }).waitFor({ timeout: CONTENT_TIMEOUT_MS });
+    // The landing page was never visited, but its HTML and code were precached:
+    // React takes it over offline instead of replacing it with the error page.
+    await page.goto(`${origin}/`, { waitUntil: 'domcontentloaded' });
+    await waitFor(page, () => document.getElementById('root')?.dataset.prerendered === undefined, undefined, 'React to take over the landing page');
+    await page.locator('h1', { hasText: es.hero.headline }).waitFor({ timeout: CONTENT_TIMEOUT_MS });
+    assert.equal(await page.getByRole('heading', { name: es.routeError.heading }).count(), 0, 'the landing page turned into the error page offline');
     await page.goto(`${origin}/app`, { waitUntil: 'domcontentloaded' });
     await page.locator('main h1', { hasText: es.home.heading }).waitFor({ timeout: CONTENT_TIMEOUT_MS });
     await page.close();
@@ -294,7 +308,12 @@ async function main() {
     await attackLink.click();
     await prefetchedPage.getByRole('heading', { name: 'Attack', exact: true }).waitFor({ timeout: CONTENT_TIMEOUT_MS });
 
+    // The sign-in callback always goes to the network and is never stored.
+    await context.setOffline(false);
+    await prefetchedPage.goto(`${origin}/auth/callback?code=t11-offline-test`, { waitUntil: 'load' });
+    await prefetchedPage.waitForTimeout(1_000);
     const finalCache = await cachePaths(prefetchedPage);
+    assert.equal(finalCache.some((path) => path.startsWith('/auth/')), false, 'the sign-in callback entered Cache Storage');
     assert.deepEqual(
       finalCache.filter((path) => /^\/(?:auth|rest|functions|storage)\/v1/.test(path)),
       [],
@@ -302,7 +321,8 @@ async function main() {
     );
     console.log(JSON.stringify({
       upgradeActivated: true,
-      precachedRoutesOffline: ['/app', '/app/library', '/app/history', '/app/settings', '/app/timer'],
+      precachedRoutesOffline: ['/', '/app', '/app/library', '/app/history', '/app/settings', '/app/timer'],
+      authCallbackNeverCached: true,
       timerRunsOffline: true,
       languageSwitchOffline: true,
       publicPagesKeepTheirOwnHtml: true,

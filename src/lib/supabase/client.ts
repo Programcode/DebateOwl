@@ -41,13 +41,11 @@ function requestUrl(input: RequestInfo | URL): string {
 }
 
 /**
- * Reads that wait for the connection instead of failing. supabase-js retries a
- * failed read three more times, so offline every query became a burst of
- * requests. Writes still fail at once, so the UI can say nothing was saved.
- * Auth is left out: auth-js holds its session lock during a user lookup, and a
- * lookup held offline would block sign-out and every other request.
+ * A Supabase read whose failure supabase-js would retry three more times (1, 2
+ * and 4 seconds apart). Offline that turned every query into a burst of
+ * doomed requests. Auth is left out: its own client decides how to retry.
  */
-function waitsForConnection(url: string, method: string): boolean {
+function isRetriedRead(url: string, method: string): boolean {
   if (method !== 'GET' && method !== 'HEAD') return false;
   try {
     const path = new URL(url, SUPABASE_URL).pathname;
@@ -55,27 +53,6 @@ function waitsForConnection(url: string, method: string): boolean {
   } catch {
     return false;
   }
-}
-
-/** Resolves once the browser is online, or rejects when the request is aborted first. */
-function untilOnline(signal?: AbortSignal | null): Promise<void> {
-  if (typeof navigator === 'undefined' || navigator.onLine !== false) return Promise.resolve();
-  return new Promise((resolve, reject) => {
-    const online = () => {
-      signal?.removeEventListener('abort', aborted);
-      resolve();
-    };
-    const aborted = () => {
-      window.removeEventListener('online', online);
-      reject(signal?.reason ?? new DOMException('The request was aborted.', 'AbortError'));
-    };
-    if (signal?.aborted) {
-      aborted();
-      return;
-    }
-    window.addEventListener('online', online, { once: true });
-    signal?.addEventListener('abort', aborted, { once: true });
-  });
 }
 
 // A signed-in request the server refused may mean a revoked session. supabase-js
@@ -92,10 +69,18 @@ const watchedFetch: typeof fetch = async (input, init) => {
       headers: { "content-type": "application/json" },
     });
   }
-  const method = (init?.method ?? (input instanceof Request ? input.method : 'GET')).toUpperCase();
-  if (waitsForConnection(requestUrl(input), method)) await untilOnline(init?.signal ?? (input instanceof Request ? input.signal : undefined));
-  const response = await globalThis.fetch(input, init);
   const url = requestUrl(input);
+  const method = (init?.method ?? (input instanceof Request ? input.method : 'GET')).toUpperCase();
+  // Every request is sent, so a browser that wrongly reports offline still works.
+  // A read that fails while the browser is offline is ended as an abort, the one
+  // failure postgrest-js does not retry.
+  const response = await globalThis.fetch(input, init).catch((error: unknown) => {
+    const aborted = error instanceof Error && error.name === 'AbortError';
+    if (!aborted && navigator.onLine === false && isRetriedRead(url, method)) {
+      throw new DOMException('Offline: the request was not retried.', 'AbortError');
+    }
+    throw error;
+  });
   if (activeAccessToken && isAuthRejection(url, response.status)) {
     let userLookup = false;
     try {
