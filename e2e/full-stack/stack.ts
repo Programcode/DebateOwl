@@ -74,6 +74,12 @@ export const test = base.extend<Fixtures>({
     // Any uncaught exception fails the test, even when the visible flow passes.
     const errors: string[] = [];
     page.on("pageerror", (error) => errors.push(error.message));
+    // Jam starts on the first click, mid-test, and wraps window.fetch. With
+    // it, Playwright stops seeing the streamed `ai` responses these flows
+    // wait on. Real users are unaffected; tests that cover Jam itself live in
+    // the browser-only specs. Serve empty modules so it never starts here.
+    await page.context().route("https://js.jam.dev/**", (route) =>
+      route.fulfill({ status: 200, contentType: "text/javascript", body: "" }));
     // Init scripts rerun on every load, so seed only what the app has not written.
     await page.addInitScript(() => {
       const seed = (key: string, state: Record<string, unknown>) => {
