@@ -465,7 +465,7 @@
     "accessExpired": "Your access has expired. Upgrade to continue using AI tools.",
     "globalSettings": "Global Settings",
     "account": "Account",
-    "accountDesc": "API keys are managed securely on the server.",
+    "accountDesc": "How you sign in, and a copy of everything you saved.",
     "signedInAs": "Signed in as",
     "unknownUser": "Unknown user",
     "signInGoogle": "Sign-in: Google",
