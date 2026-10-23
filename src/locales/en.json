@@ -395,7 +395,9 @@
     "emptyTitle": "No Mercy Mode",
     "emptyDesc": "Paste your argument to receive ruthless criticism, identify logical fallacies, and get actionable improvements.",
     "failed": "Attack Analysis Failed",
-    "working": "Reviewing your case…"
+    "working": "Reviewing your case…",
+    "previousCritique": "Critique of your previous argument",
+    "previousCritiqueDesc": "Your latest version was not reviewed, so this critique may not match the text in the form."
   },
   "brainstorm": {
     "emptyTitle": "Unlock Creative Angles",
@@ -546,9 +548,13 @@
     "emailHint": "We'll send a six-digit code.",
     "sendCode": "Send code",
     "sendingCode": "Sending code...",
+    "slowSend": "This can take a few seconds.",
     "resendCode": "Resend code",
     "resendingCode": "Resending code...",
+    "resendIn": "Resend in {{time}}",
     "codeSent": "Code sent",
+    "codeResent": "New code sent",
+    "codeRecentlySent": "We sent a code to this address a moment ago. Enter it below, or resend when the timer ends.",
     "codeSentDesc": "Check your email for the six-digit code.",
     "useDifferentEmail": "Use a different email",
     "otpLabel": "Verification code",
@@ -564,8 +570,12 @@
     "retrySignIn": "Try again",
     "backToSignIn": "Back to sign-in",
     "invalidEmail": "Enter a valid email address.",
+    "emailRequired": "Email is required.",
+    "emailTooLong": "That email address is too long. Use one with at most {{max}} characters.",
     "invalidCode": "Enter a valid six-digit code.",
     "invalidDemoCode": "Enter a valid demo code.",
+    "demoCodeRequired": "Enter your demo code.",
+    "invalidDemoCodeFormat": "Demo codes look like DEMO-AB12-CD34.",
     "emailOtpError": "Could not send code.",
     "verifyOtpError": "Could not verify code.",
     "demoError": "Could not sign in with demo code.",
@@ -582,6 +592,7 @@
       "demoExpired": "This demo code has expired.",
       "demoUsedUp": "This demo code has no uses left.",
       "rateLimited": "Too many attempts. Try again later.",
+      "rateLimitedWait": "Too many attempts. Try again in {{time}}.",
       "codeExpired": "That code is wrong or has expired. Check it or send a new one.",
       "network": "Can't reach DebateLab. Check your connection and try again.",
       "linkExpired": "This sign-in link has expired or was already used. Send a new code.",
@@ -2075,7 +2086,6 @@
       "draftSavedNotice": "Drafts save in this tab",
       "connected": "Connected",
       "offlineDraft": "Offline. Draft saved locally.",
-      "totalWords": "{{count}} words",
       "complete": "Round complete",
       "turnOf": "Turn {{current}} of {{total}}",
       "preparingResult": "Preparing your result",
@@ -2093,7 +2103,6 @@
       "judgeDescription": "Reading the claims, responses, and strategic choices. This usually takes one request.",
       "yourSpeech": "Your speech",
       "yourSpeechDescription": "Make the case in the time you have. The opponent will respond to this text.",
-      "wordCount": "{{count}} words",
       "speechPlaceholder": "Build your claim, warrant, and impact...",
       "draftFor": "Draft for {{label}}",
       "toSubmit": "to submit",
@@ -2120,12 +2129,15 @@
       "youAreCon": "You are Con",
       "submittedCount_one": "{{count}} submitted",
       "submittedCount_other": "{{count}} submitted",
-      "totalWords_one": "{{count}} word",
-      "totalWords_other": "{{count}} words",
-      "wordCount_one": "{{count}} word",
-      "wordCount_other": "{{count}} words",
+      "totalWords_one": "{{formatted}} word so far",
+      "totalWords_other": "{{formatted}} words so far",
+      "wordCount_one": "{{formatted}} word",
+      "wordCount_other": "{{formatted}} words",
       "latestOpponent": "Opponent’s last speech",
-      "opponentSpeaking": "Opponent is speaking"
+      "opponentSpeaking": "Opponent is speaking",
+      "startSpeaking": "Start speaking",
+      "readyNote": "Your clock starts when you start speaking or typing.",
+      "currentRound": "Current round"
     },
     "scorecard": {
       "eyebrow": "Round review",
@@ -2418,7 +2430,9 @@
     "itemCount_other": "{{count}} items",
     "viewAll": "View all ({{total}})",
     "switching": "Switching…",
-    "deleting": "Deleting…"
+    "deleting": "Deleting…",
+    "creating": "Creating…",
+    "loadingCurrent": "Loading your current debate…"
   },
   "debateContext": {
     "using": "Using {{list}}",
@@ -2429,8 +2443,6 @@
     "resultCount_other": "{{count}} saved results",
     "resultName": "{{kind}} ({{side}})",
     "resultMeta": "{{kind}}, {{side}}",
-    "leftOut_one": "{{count}} item is left out to fit the request.",
-    "leftOut_other": "{{count}} items are left out to fit the request.",
     "review": "Review",
     "oneOff": "One-off mode: no Current Debate material will be used or saved.",
     "reviewTitle": "What this request will use",
@@ -2463,7 +2475,13 @@
     "lastShortened_one": "{{count}} source was shortened to fit.",
     "lastShortened_other": "{{count}} sources were shortened to fit.",
     "lastUnavailable_one": "{{count}} item was no longer in this debate.",
-    "lastUnavailable_other": "{{count}} items were no longer in this debate."
+    "lastUnavailable_other": "{{count}} items were no longer in this debate.",
+    "sourceCountOf_one": "{{used}} of {{count}} source",
+    "sourceCountOf_other": "{{used}} of {{count}} sources",
+    "resultCountOf_one": "{{used}} of {{count}} saved result",
+    "resultCountOf_other": "{{used}} of {{count}} saved results",
+    "didntFit_one": "({{count}} didn’t fit)",
+    "didntFit_other": "({{count}} didn’t fit)"
   },
   "themeToggle": {
     "toggle": "Toggle theme",
@@ -2544,5 +2562,9 @@
     "cost_other": "This round costs {{count}} AI requests, however many turns it takes.",
     "remaining_one": "You have {{count}} left today.",
     "remaining_other": "You have {{count}} left today."
+  },
+  "resultActions": {
+    "savedToHistory": "Saved to History",
+    "saveFailed": "Could not save. Try again."
   }
 }

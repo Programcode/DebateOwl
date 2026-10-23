@@ -197,6 +197,14 @@ describe('Current Debate context in requests and the Review control', () => {
     expect(within(sheet).getByRole('button', { name: /Pin Result 10/ })).toHaveAttribute('aria-pressed', 'false');
   });
 
+  it('counts only what reaches the model and says how much did not fit', () => {
+    seedCurrentDebate();
+    useSessionStore.setState({ sourceLibrary: Array.from({ length: 12 }, (_, i) => source(i + 1)), savedCases: [] });
+    render(<DebateContextControl feature="generate" side="pro" />);
+    const control = screen.getByTestId('debate-context-control');
+    expect(control).toHaveTextContent('Using 10 of 12 sources (2 didn’t fit)');
+  });
+
   it('keeps pin buttons disabled until saved results have loaded', async () => {
     // Pins on results that have not loaded yet cannot be counted toward the limit.
     seedCurrentDebate();

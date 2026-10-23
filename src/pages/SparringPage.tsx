@@ -67,8 +67,6 @@ export default function SparringPage() {
   const appendAiSpeech = useSparringStore((state) => state.appendAiSpeech);
   const completeSession = useSparringStore((state) => state.completeSession);
   const abandonSession = useSparringStore((state) => state.abandonSession);
-  const pauseTimer = useSparringStore((state) => state.pauseTimer);
-  const resumeTimer = useSparringStore((state) => state.resumeTimer);
   const beginWorkspaceSession = useSparringStore((state) => state.beginWorkspaceSession);
   const endWorkspaceSession = useSparringStore((state) => state.endWorkspaceSession);
   const getFeatureConfig = useSettingsStore((state) => state.getFeatureConfig);
@@ -226,15 +224,9 @@ export default function SparringPage() {
         };
         const next = appendAiSpeech(speech);
         if (!next || !voiceActive || !mountedRef.current) return;
-        // The student's clock waits while the opponent is speaking.
-        const userIsNext = next.phase === 'round';
-        if (userIsNext) pauseTimer();
-        opponentVoice.speak({ feature: 'sparring', text: generated.content, voice: result.voice, language: outputLanguage }, () => {
-          // Resume only the turn this reply paused. A reply still playing when
-          // the next one arrives ends after that one has paused a later turn.
-          const current = useSparringStore.getState().currentSession;
-          if (userIsNext && current?.id === session.id && current.currentTurnIndex === next.currentTurnIndex) resumeTimer();
-        });
+        // The student's next turn opens with a stopped clock, so the opponent can finish
+        // first; it runs once the student starts speaking or typing.
+        opponentVoice.speak({ feature: 'sparring', text: generated.content, voice: result.voice, language: outputLanguage });
       })
       .catch((error: unknown) => {
         if (aiRequestRef.current !== requestKey) return;
@@ -248,7 +240,7 @@ export default function SparringPage() {
           setLiveSpeech('');
         }
       });
-  }, [appendAiSpeech, config, handleSubscriptionError, outputLanguage, pauseTimer, resumeTimer, retryNonce, session, t, voiceActive, workspace.context]);
+  }, [appendAiSpeech, config, handleSubscriptionError, outputLanguage, retryNonce, session, t, voiceActive, workspace.context]);
 
   useEffect(() => {
     if (!session || session.phase !== 'judging') return;

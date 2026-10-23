@@ -395,7 +395,9 @@
     "emptyTitle": "Modo sin piedad",
     "emptyDesc": "Pega tu argumento para recibir críticas despiadadas, identificar falacias lógicas y obtener mejoras accionables.",
     "failed": "Error en el análisis de ataque",
-    "working": "Revisando tu caso…"
+    "working": "Revisando tu caso…",
+    "previousCritique": "Crítica de tu argumento anterior",
+    "previousCritiqueDesc": "Tu última versión no se revisó, así que esta crítica puede no coincidir con el texto del formulario."
   },
   "brainstorm": {
     "emptyTitle": "Desbloquea ángulos creativos",
@@ -546,9 +548,13 @@
     "emailHint": "Te enviaremos un código de seis dígitos.",
     "sendCode": "Enviar código",
     "sendingCode": "Enviando código...",
+    "slowSend": "Esto puede tardar unos segundos.",
     "resendCode": "Reenviar código",
     "resendingCode": "Reenviando código...",
+    "resendIn": "Reenviar en {{time}}",
     "codeSent": "Código enviado",
+    "codeResent": "Nuevo código enviado",
+    "codeRecentlySent": "Hace un momento enviamos un código a esta dirección. Introdúcelo abajo o pide uno nuevo cuando termine la cuenta atrás.",
     "codeSentDesc": "Revisa tu email para encontrar el código de seis dígitos.",
     "useDifferentEmail": "Usar otro email",
     "otpLabel": "Código de verificación",
@@ -564,8 +570,12 @@
     "retrySignIn": "Reintentar",
     "backToSignIn": "Volver al inicio de sesión",
     "invalidEmail": "Introduce una dirección de email válida.",
+    "emailRequired": "El email es obligatorio.",
+    "emailTooLong": "Esa dirección de email es demasiado larga. Usa una de {{max}} caracteres como máximo.",
     "invalidCode": "Introduce un código válido de seis dígitos.",
     "invalidDemoCode": "Introduce un código demo válido.",
+    "demoCodeRequired": "Introduce tu código demo.",
+    "invalidDemoCodeFormat": "Los códigos demo tienen este formato: DEMO-AB12-CD34.",
     "emailOtpError": "No se pudo enviar el código.",
     "verifyOtpError": "No se pudo verificar el código.",
     "demoError": "No se pudo iniciar sesión con el código demo.",
@@ -582,6 +592,7 @@
       "demoExpired": "Este código de demostración ha caducado.",
       "demoUsedUp": "Este código de demostración ya no tiene usos.",
       "rateLimited": "Demasiados intentos. Inténtalo más tarde.",
+      "rateLimitedWait": "Demasiados intentos. Inténtalo de nuevo en {{time}}.",
       "codeExpired": "Ese código es incorrecto o ha caducado. Revísalo o solicita uno nuevo.",
       "network": "No se puede conectar con DebateLab. Revisa tu conexión e inténtalo de nuevo.",
       "linkExpired": "Este enlace de inicio de sesión ha caducado o ya se usó. Solicita un código nuevo.",
@@ -2075,7 +2086,6 @@
       "draftSavedNotice": "Los borradores se guardan en esta pestaña",
       "connected": "Conectado",
       "offlineDraft": "Sin conexión. Borrador guardado localmente.",
-      "totalWords": "{{count}} palabras",
       "complete": "Ronda terminada",
       "turnOf": "Turno {{current}} de {{total}}",
       "preparingResult": "Preparando tu resultado",
@@ -2093,7 +2103,6 @@
       "judgeDescription": "Está leyendo las afirmaciones, respuestas y decisiones estratégicas. Esto suele requerir una solicitud.",
       "yourSpeech": "Tu intervención",
       "yourSpeechDescription": "Expón el caso con el tiempo que tienes. El oponente responderá a este texto.",
-      "wordCount": "{{count}} palabras",
       "speechPlaceholder": "Desarrolla tu afirmación, razonamiento e impacto...",
       "draftFor": "Borrador para {{label}}",
       "toSubmit": "para enviar",
@@ -2120,12 +2129,15 @@
       "youAreCon": "Estás en contra",
       "submittedCount_one": "{{count}} enviada",
       "submittedCount_other": "{{count}} enviadas",
-      "totalWords_one": "{{count}} palabra",
-      "totalWords_other": "{{count}} palabras",
-      "wordCount_one": "{{count}} palabra",
-      "wordCount_other": "{{count}} palabras",
+      "totalWords_one": "{{formatted}} palabra hasta ahora",
+      "totalWords_other": "{{formatted}} palabras hasta ahora",
+      "wordCount_one": "{{formatted}} palabra",
+      "wordCount_other": "{{formatted}} palabras",
       "latestOpponent": "Último discurso del oponente",
-      "opponentSpeaking": "El oponente está hablando"
+      "opponentSpeaking": "El oponente está hablando",
+      "startSpeaking": "Empezar a hablar",
+      "readyNote": "Tu cronómetro empieza cuando empiezas a hablar o a escribir.",
+      "currentRound": "Ronda actual"
     },
     "scorecard": {
       "eyebrow": "Revisión de la ronda",
@@ -2418,7 +2430,9 @@
     "itemCount_other": "{{count}} elementos",
     "viewAll": "Ver todo ({{total}})",
     "switching": "Cambiando…",
-    "deleting": "Eliminando…"
+    "deleting": "Eliminando…",
+    "creating": "Creando…",
+    "loadingCurrent": "Cargando tu debate actual…"
   },
   "debateContext": {
     "using": "Usando {{list}}",
@@ -2429,8 +2443,6 @@
     "resultCount_other": "{{count}} resultados guardados",
     "resultName": "{{kind}} ({{side}})",
     "resultMeta": "{{kind}}, {{side}}",
-    "leftOut_one": "{{count}} elemento queda fuera para que la solicitud quepa.",
-    "leftOut_other": "{{count}} elementos quedan fuera para que la solicitud quepa.",
     "review": "Revisar",
     "oneOff": "Modo puntual: no se usará ni se guardará material del debate actual.",
     "reviewTitle": "Qué usará esta solicitud",
@@ -2463,7 +2475,13 @@
     "lastShortened_one": "{{count}} fuente se recortó para que cupiera.",
     "lastShortened_other": "{{count}} fuentes se recortaron para que cupieran.",
     "lastUnavailable_one": "{{count}} elemento ya no estaba en este debate.",
-    "lastUnavailable_other": "{{count}} elementos ya no estaban en este debate."
+    "lastUnavailable_other": "{{count}} elementos ya no estaban en este debate.",
+    "sourceCountOf_one": "{{used}} de {{count}} fuente",
+    "sourceCountOf_other": "{{used}} de {{count}} fuentes",
+    "resultCountOf_one": "{{used}} de {{count}} resultado guardado",
+    "resultCountOf_other": "{{used}} de {{count}} resultados guardados",
+    "didntFit_one": "({{count}} no cupo)",
+    "didntFit_other": "({{count}} no cupieron)"
   },
   "themeToggle": {
     "toggle": "Cambiar tema",
@@ -2544,5 +2562,9 @@
     "cost_other": "Esta ronda cuesta {{count}} solicitudes de IA, dure los turnos que dure.",
     "remaining_one": "Hoy te queda {{count}}.",
     "remaining_other": "Hoy te quedan {{count}}."
+  },
+  "resultActions": {
+    "savedToHistory": "Guardado en el historial",
+    "saveFailed": "No se pudo guardar. Inténtalo de nuevo."
   }
 }

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useOnlineStatus } from '@/hooks/use-online-status';
 import { AlertCircle, Bot, Check, ChevronRight, CirclePause, CirclePlay, Clock3, CloudOff, Loader2, RotateCcw, Send, UserRound, Wifi } from 'lucide-react';
@@ -9,6 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Markdown } from '@/components/ui/markdown';
 import { cn } from '@/lib/utils';
+import { formatNumber } from '@/lib/date-format';
 import { formatRoundTime, type SparringTurnKind } from '@/lib/sparring/formats';
 import type { SparringSession } from '@/lib/stores/sparring-store';
 import { useSparringStore } from '@/lib/stores/sparring-store';
@@ -103,6 +104,24 @@ export function SparringRound({
   });
   const { listening, stop: stopCapture, cancel: cancelCapture } = capture;
   const turnKey = `${session.id}:${currentTurn?.id ?? ''}`;
+  // A turn waits on a full, stopped clock until the student starts it; pausing later does not undo that.
+  const [startedTurn, setStartedTurn] = useState<string | null>(null);
+  const awaitingStart = userTurn && !judging && startedTurn !== turnKey && !session.timerRunning
+    && session.timerRemainingSeconds === currentTurn?.timeLimitSeconds;
+  const beginTurn = () => {
+    // Starting the turn talks over the opponent, which ends its audio.
+    opponentVoice.stop();
+    setStartedTurn(turnKey);
+    resumeTimer();
+  };
+  // A reset turn starts again from its ready step.
+  const resetTurn = () => {
+    // A microphone still listening would keep adding untimed words to the reset turn.
+    void stopCapture();
+    setStartedTurn(null);
+    resetTurnTimer();
+  };
+  const draftRef = useRef<HTMLTextAreaElement>(null);
 
   // Each turn of each round is measured on its own, and a microphone start
   // still waiting for permission does not carry over into the next turn.
@@ -114,10 +133,14 @@ export function SparringRound({
     if (!micAllowed) void stopCapture();
   }, [micAllowed, stopCapture]);
 
+  const startTurn = () => {
+    beginTurn();
+    draftRef.current?.focus();
+  };
+
   const startSpeaking = () => {
     // Speaking over the opponent ends its audio, and the clock runs again.
-    opponentVoice.stop();
-    resumeTimer();
+    beginTurn();
     void capture.start();
   };
 
@@ -154,12 +177,12 @@ export function SparringRound({
           {isOnline ? <Wifi className="h-3.5 w-3.5 text-emerald-500" aria-hidden="true" /> : <CloudOff className="h-3.5 w-3.5 text-amber-500" aria-hidden="true" />}
           <span>{isOnline ? t('sparring.round.connected', 'Connected') : t('sparring.round.offlineDraft', 'Offline. Draft saved locally.')}</span>
           <span className="hidden h-4 w-px bg-border sm:block" aria-hidden="true" />
-          <span className="font-mono tabular-nums">{t('sparring.round.totalWords', '{{count}} words', { count: totalWords })}</span>
+          <span className="tabular-nums">{t('sparring.round.totalWords', { count: totalWords, formatted: formatNumber(totalWords) })}</span>
         </div>
       </header>
 
       <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_300px]">
-        <main className="min-w-0 space-y-5">
+        <section className="min-w-0 space-y-5" aria-label={t('sparring.round.currentRound', 'Current round')}>
           <Card className={cn('overflow-hidden transition-colors duration-300', isUrgent && 'border-amber-500/60')}>
             <CardContent className="p-4 sm:p-6">
               <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
@@ -176,13 +199,24 @@ export function SparringRound({
                 </div>
               </div>
               <Progress value={judging ? 0 : timerProgress} className={cn('mt-5 h-2', tone === 'over' ? '[&>div]:bg-destructive' : isUrgent ? '[&>div]:bg-amber-500' : '[&>div]:bg-primary')} aria-label={t('sparring.round.timeRemaining', 'Time remaining')} />
-              {!judging && userTurn && (
+              {awaitingStart && (
+                <div className="mt-4 flex flex-wrap items-center gap-3" data-testid="sparring-ready">
+                  {!voice && (
+                    <Button type="button" onClick={startTurn}>
+                      <CirclePlay className="h-4 w-4" aria-hidden="true" />
+                      {t('sparring.round.startSpeaking', 'Start speaking')}
+                    </Button>
+                  )}
+                  <span className="text-sm text-muted-foreground">{t('sparring.round.readyNote', 'Your clock starts when you start speaking or typing.')}</span>
+                </div>
+              )}
+              {!judging && userTurn && !awaitingStart && (
                 <div className="mt-4 flex flex-wrap items-center gap-2">
                   <Button type="button" variant="outline" size="sm" onClick={() => session.timerRunning ? pauseTimer() : resumeTimer()} disabled={session.timerRemainingSeconds <= 0}>
                     {session.timerRunning ? <CirclePause className="h-4 w-4" aria-hidden="true" /> : <CirclePlay className="h-4 w-4" aria-hidden="true" />}
                     {session.timerRunning ? t('sparring.round.pauseClock', 'Pause clock') : t('sparring.round.resumeClock', 'Resume clock')}
                   </Button>
-                  <Button type="button" variant="ghost" size="sm" onClick={() => resetTurnTimer()}>
+                  <Button type="button" variant="ghost" size="sm" onClick={resetTurn}>
                     <RotateCcw className="h-4 w-4" aria-hidden="true" />
                     {t('sparring.round.resetTurn', 'Reset turn')}
                   </Button>
@@ -234,14 +268,19 @@ export function SparringRound({
                         <CardTitle className="flex items-center gap-2 text-lg"><UserRound className="h-5 w-5 text-primary" aria-hidden="true" /> {t('sparring.round.yourSpeech', 'Your speech')}</CardTitle>
                         <p className="mt-1 max-w-2xl text-sm leading-6 text-muted-foreground">{roleGuidance}</p>
                       </div>
-                      <Badge variant="outline" className="shrink-0 rounded-md font-mono text-xs tabular-nums">{t('sparring.round.wordCount', '{{count}} words', { count: currentWordCount })}</Badge>
+                      <Badge variant="outline" className="shrink-0 rounded-md font-mono text-xs tabular-nums">{t('sparring.round.wordCount', { count: currentWordCount, formatted: formatNumber(currentWordCount) })}</Badge>
                     </div>
                   </CardHeader>
                   <CardContent className="space-y-3">
                     {voice && <VoiceMicControl capture={capture} onStart={startSpeaking} onStop={() => void stopCapture()} disabled={timeExpired} />}
                     <Textarea
+                      ref={draftRef}
                       value={session.draft}
-                      onChange={(event) => setDraft(event.target.value)}
+                      onChange={(event) => {
+                        // Typing starts the turn, so the clock always covers a written speech.
+                        if (awaitingStart) beginTurn();
+                        setDraft(event.target.value);
+                      }}
                       onKeyDown={handleKeyDown}
                       placeholder={voice ? t('voiceRound.mic.draftPlaceholder') : t('sparring.round.speechPlaceholder', 'Build your claim, warrant, and impact…')}
                       className="min-h-[240px] resize-y text-base leading-7"
@@ -329,7 +368,7 @@ export function SparringRound({
               </div>
             )}
           </section>
-        </main>
+        </section>
 
         <aside className="min-w-0 lg:sticky lg:top-24 lg:self-start">
           <Card>
