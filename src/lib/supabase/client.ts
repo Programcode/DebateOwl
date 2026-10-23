@@ -6,6 +6,7 @@ import {
 } from '@supabase/supabase-js';
 import { e2eRefusesProductionRequest } from './e2e-guard';
 import { getActiveEnv, SUPABASE_URL, SUPABASE_ANON_KEY } from './env';
+import { STAGING_PREVIEW_PROXY_PATH } from './projects';
 import { verifySessionAfterRejection } from './session-expiry';
 
 export { SUPABASE_URL };
@@ -48,7 +49,9 @@ function requestUrl(input: RequestInfo | URL): string {
 function isRetriedRead(url: string, method: string): boolean {
   if (method !== 'GET' && method !== 'HEAD') return false;
   try {
-    const path = new URL(url, SUPABASE_URL).pathname;
+    // `npm run dev:preview` reaches Supabase through a proxy path on its own origin.
+    const fullPath = new URL(url, SUPABASE_URL).pathname;
+    const path = fullPath.startsWith(`${STAGING_PREVIEW_PROXY_PATH}/`) ? fullPath.slice(STAGING_PREVIEW_PROXY_PATH.length) : fullPath;
     return path.startsWith('/rest/v1/') || path.startsWith('/functions/v1/') || path.startsWith('/storage/v1/');
   } catch {
     return false;

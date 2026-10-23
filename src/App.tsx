@@ -14,7 +14,7 @@ import { hasCompletedOnboarding, useOnboardingStore } from "@/hooks/use-onboardi
 import { OfflineIndicator } from "@/components/OfflineIndicator";
 import { StagingBanner } from "@/components/StagingBanner";
 import { captureException, captureProductEvent, toTelemetrySafeError } from "@/lib/observability";
-import { appLayoutLoader, routeLoaders, type RouteLoader } from "@/lib/route-modules";
+import { appLayoutLoader, preloadStartupRoute, routeLoaders, type RouteLoader } from "@/lib/route-modules";
 import type { PrerenderedRoute } from "@/lib/seo/pages";
 import { usePrivateRouteHead } from "@/lib/seo/use-page-head";
 import { RouteSkeleton, type RouteSkeletonVariant } from "@/components/loading/RouteSkeleton";
@@ -69,7 +69,12 @@ const MotionGeneratorToolPage = prerenderedPage("/tools/debate-motion-generator"
 const FlowSheetToolPage = prerenderedPage("/tools/debate-flow-sheet");
 const SpeechTimeCalculatorToolPage = prerenderedPage("/tools/speech-time-calculator");
 // Public pages never load the signed-in header, navigation and debate dialogs.
-const AppLayout = lazy(appLayoutLoader);
+// Arriving from sign-in, the page being opened loads alongside the layout
+// instead of after it.
+const AppLayout = lazy(() => {
+  void preloadStartupRoute(window.location.pathname);
+  return appLayoutLoader();
+});
 const OnboardingTour = lazy(() => import("@/components/features/onboarding/OnboardingTour")
   .then(({ OnboardingTour: Tour }) => ({ default: Tour })));
 

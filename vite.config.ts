@@ -161,11 +161,11 @@ function serviceWorkerPrecache(): Plugin {
       const worker = readFileSync(workerPath, "utf8");
       if (!worker.includes(SERVICE_WORKER_BUILD)) throw new Error(`serviceWorkerPrecache: public/sw.js no longer contains ${SERVICE_WORKER_BUILD}`);
       // The unhashed files the worker serves cache-first (theme-init.js, the
-      // icons) change the id too, so a deploy that changes only them still
-      // ships a new worker.
+      // icons and images) change the id too, so a deploy that changes only
+      // them still ships a new worker.
       const hash = createHash("sha256").update(worker).update(assets.join("\n"));
       const publicDir = path.resolve(__dirname, "public");
-      for (const file of readdirSync(publicDir).filter((name) => /\.(?:js|png|ico|webmanifest)$/.test(name) && name !== "sw.js").sort()) {
+      for (const file of readdirSync(publicDir).filter((name) => /\.(?:js|png|ico|jpg|svg|webmanifest)$/.test(name) && name !== "sw.js").sort()) {
         hash.update(file).update(readFileSync(path.join(publicDir, file)));
       }
       const id = hash.digest("hex").slice(0, 12);
