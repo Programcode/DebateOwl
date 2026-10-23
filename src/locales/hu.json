@@ -468,7 +468,7 @@
     "accessExpired": "A hozzáférésed lejárt. Válts magasabb csomagra az MI-eszközök további használatához.",
     "globalSettings": "Globális beállítások",
     "account": "Fiók",
-    "accountDesc": "Az API-kulcsokat biztonságosan a szerver kezeli.",
+    "accountDesc": "A bejelentkezésed és minden mentett adatod másolata.",
     "signedInAs": "Bejelentkezve mint",
     "unknownUser": "Ismeretlen felhasználó",
     "signInGoogle": "Bejelentkezés: Google",
