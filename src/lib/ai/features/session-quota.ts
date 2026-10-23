@@ -1,12 +1,12 @@
 import type { ProviderConfig } from '../providers/types';
 import { getActiveAccessToken, invokeAuthenticatedFunction } from '@/lib/supabase/client';
 import { AIModelRestrictionError, AISubscriptionError, type AIError } from '../errors';
-import { localizedLimitMessage } from '../limit-message';
+import { isSubscriptionRefusalCode, localizedLimitMessage } from '../limit-message';
 
 /** What a new Crossfire or Sparring round costs, and whether today's quota covers it. */
 export interface SessionQuota {
   allowed: boolean;
-  /** Why the server would refuse: limit_reached, weekly_budget_reached, trial_expired, upgrade_required, banned. */
+  /** Why the server would refuse: limit_reached, weekly_budget_reached, trial_ended, payment_failed, subscription_ended (trial_expired from older functions), upgrade_required, banned. */
   code?: string;
   limit?: number;
   current?: number;
@@ -76,7 +76,7 @@ export function sessionQuotaRemaining(quota: SessionQuota | null | undefined): n
 export function sessionQuotaError(quota: SessionQuota | null | undefined): AIError | null {
   if (!quota || quota.allowed) return null;
   if (quota.code === 'upgrade_required') return new AIModelRestrictionError('This model requires a Pro subscription.');
-  if (quota.code !== 'limit_reached' && quota.code !== 'weekly_budget_reached' && quota.code !== 'trial_expired') return null;
+  if (!isSubscriptionRefusalCode(quota.code)) return null;
   const details = { code: quota.code, limit: quota.limit, current: quota.current, units: quota.units };
   return new AISubscriptionError(localizedLimitMessage('', details), { statusCode: 402, ...details });
 }

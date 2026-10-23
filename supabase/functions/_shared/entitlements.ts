@@ -11,6 +11,7 @@ import {
   type ModelSelection,
 } from "./model-catalog.ts";
 import { WEEKLY_AI_BUDGET_USD, PRO_DAILY_LIMIT, quotaUnitsFor, SESSION_QUOTA, TRIAL_DAILY_LIMIT } from "./usage-limits.ts";
+import { type AccessRefusalCode, type BillingStateName, planDailyLimit, resolveBillingState } from "./billing-state.ts";
 
 const supabase = createClient(
   Deno.env.get("SUPABASE_URL")!,
@@ -23,7 +24,12 @@ export interface RateLimitResult {
   reason?: string;
   limit?: number;
   current?: number;
-  code?: "limit_reached" | "weekly_budget_reached" | "trial_expired" | "banned" | "upgrade_required";
+  /**
+   * trial_ended, payment_failed and subscription_ended replace the single
+   * trial_expired code older builds sent for every account without access.
+   * The client still accepts trial_expired from functions deployed before them.
+   */
+  code?: "limit_reached" | "weekly_budget_reached" | AccessRefusalCode | "banned" | "upgrade_required" | "unauthenticated";
   /** Quota units this request needed; more than 1 for expensive models. */
   units?: number;
   statusCode?: number;
@@ -54,6 +60,10 @@ export function parseQuotaSessionKey(value: unknown): string | null {
 
 export interface SubscriptionInfo {
   tier: string; // 'trial' | 'pro' | 'legacy_free' | 'expired'
+  /** The resolved state the Settings card shows too; see billing-state.ts. */
+  state: BillingStateName;
+  /** Why an account without access is refused; null while it has access. */
+  refusal: AccessRefusalCode | null;
   dailyLimit: number;
   canAccessProModels: boolean;
   trialEndsAt: string | null;
@@ -82,71 +92,36 @@ export async function getSubscriptionInfo(userId: string): Promise<SubscriptionI
   // trigger and can no longer be deleted by the client (see 20260819000000
   // security_hardening.sql). A missing row is therefore untrusted, not a new
   // user — fail closed instead of granting a fresh trial.
-  if (!user) return { tier: "expired", dailyLimit: 0, canAccessProModels: false, trialEndsAt: null, gracePeriodEndsAt: null };
+  if (!user) return { tier: "expired", dailyLimit: 0, state: "trial_ended", refusal: "trial_ended", canAccessProModels: false, trialEndsAt: null, gracePeriodEndsAt: null };
 
-  const tier = user.subscription_tier || "trial";
-  const limitOrDefault = (defaultLimit: number) => user.daily_limit_override ?? defaultLimit;
-  const now = new Date();
-  const expired = { tier: "expired", dailyLimit: limitOrDefault(0), canAccessProModels: false, trialEndsAt: user.trial_ends_at, gracePeriodEndsAt: user.grace_period_ends_at };
-  const activeGiftTrial = user.trial_ends_at ? new Date(user.trial_ends_at) : null;
-  const giftTrialInfo = activeGiftTrial && now < activeGiftTrial
-    ? { tier: "trial", dailyLimit: limitOrDefault(TRIAL_DAILY_LIMIT), canAccessProModels: false, trialEndsAt: user.trial_ends_at, gracePeriodEndsAt: user.grace_period_ends_at }
-    : null;
-
-  // Legacy free users in grace period get pro-level access
-  if (tier === "legacy_free") {
-    const graceEnd = user.grace_period_ends_at ? new Date(user.grace_period_ends_at) : null;
-    if (graceEnd && now < graceEnd) {
-      return { tier: "legacy_free", dailyLimit: limitOrDefault(PRO_DAILY_LIMIT), canAccessProModels: true, trialEndsAt: user.trial_ends_at, gracePeriodEndsAt: user.grace_period_ends_at };
-    }
-    if (giftTrialInfo) return giftTrialInfo;
-    // Grace period expired — treat as expired
-    return expired;
+  // Every state but promo Pro needs the Stripe rows: a past-due payer keeps
+  // Pro through the payment grace, and a former subscriber is refused with
+  // subscription_ended rather than told their trial ended.
+  // `*` so a function deployed before 20261023020000 (payment_failed_at) reads
+  // the columns that exist instead of failing every request.
+  const { data: subscriptions, error } = await supabase
+    .from("subscriptions")
+    .select("*")
+    .eq("user_id", userId)
+    .order("current_period_end", { ascending: false })
+    .limit(10);
+  // Without the rows, settings alone can still prove access (promo Pro, a
+  // trial, an override). An account they cannot prove is not told its trial
+  // ended when it may be paying: the check fails and the caller answers 500.
+  const billing = resolveBillingState(user, error ? [] : subscriptions);
+  if (error) {
+    console.warn("[ENTITLEMENTS] subscriptions lookup failed:", error.message);
+    if (!billing.hasAccess) throw new Error(`Subscription lookup failed: ${error.message}`);
   }
-
-  // Pro subscribers or promo Pro access. Stripe Pro must have an active
-  // subscription period; promo Pro uses grace_period_ends_at, with lifetime
-  // promo codes represented by a far-future date.
-  if (tier === "pro") {
-    const promoEnd = user.grace_period_ends_at ? new Date(user.grace_period_ends_at) : null;
-    if (promoEnd && now < promoEnd) {
-      return { tier: "pro", dailyLimit: limitOrDefault(PRO_DAILY_LIMIT), canAccessProModels: true, trialEndsAt: user.trial_ends_at, gracePeriodEndsAt: user.grace_period_ends_at };
-    }
-
-    const { data: subscriptions } = await supabase
-      .from("subscriptions")
-      .select("status, current_period_end")
-      .eq("user_id", userId)
-      .in("status", ["active", "trialing"])
-      .order("current_period_end", { ascending: false })
-      .limit(1);
-
-    const activeSubscription = subscriptions?.find((sub) =>
-      sub.current_period_end && new Date(sub.current_period_end) > now
-    );
-
-    if (activeSubscription) {
-      return { tier: "pro", dailyLimit: limitOrDefault(PRO_DAILY_LIMIT), canAccessProModels: true, trialEndsAt: user.trial_ends_at, gracePeriodEndsAt: user.grace_period_ends_at };
-    }
-
-    if (giftTrialInfo) return giftTrialInfo;
-    return expired;
-  }
-
-  // Trial users
-  if (tier === "trial") {
-    const trialEnd = user.trial_ends_at ? new Date(user.trial_ends_at) : null;
-    if (trialEnd && now < trialEnd) {
-      return { tier: "trial", dailyLimit: limitOrDefault(TRIAL_DAILY_LIMIT), canAccessProModels: false, trialEndsAt: user.trial_ends_at, gracePeriodEndsAt: user.grace_period_ends_at };
-    }
-    // Trial expired
-    return expired;
-  }
-
-  if (giftTrialInfo) return giftTrialInfo;
-
-  // Expired
-  return expired;
+  return {
+    tier: billing.tier,
+    state: billing.state,
+    refusal: billing.refusal,
+    dailyLimit: planDailyLimit(billing, user.daily_limit_override, { pro: PRO_DAILY_LIMIT, trial: TRIAL_DAILY_LIMIT }),
+    canAccessProModels: billing.plan === "pro",
+    trialEndsAt: user.trial_ends_at,
+    gracePeriodEndsAt: user.grace_period_ends_at,
+  };
 }
 
 async function readRateLimit(userId: string | null, limitType: string): Promise<number | null> {
@@ -180,6 +155,13 @@ export async function getConfiguredDailyLimit(userId: string, fallbackLimit: num
   return fallbackLimit;
 }
 
+// Logged and returned for API callers; the browser shows its own translation of the code.
+const ACCESS_REFUSAL_REASONS: Record<AccessRefusalCode, string> = {
+  trial_ended: "Your free trial has ended. Upgrade to Pro to continue using DebateLab.",
+  payment_failed: "Your last payment failed. Update your payment method to keep using DebateLab.",
+  subscription_ended: "Your Pro subscription has ended. Resubscribe to continue using DebateLab.",
+};
+
 type AccessCheck =
   | { denied: RateLimitResult }
   | { denied?: undefined; tier: string; dailyLimit: number; canAccessProModels: boolean };
@@ -191,14 +173,13 @@ async function checkAccess(userId: string, model?: ModelSelection): Promise<Acce
   }
 
   const sub = await getSubscriptionInfo(userId);
-  const dailyLimit = sub.tier === "expired" && sub.dailyLimit === 0
-    ? 0
-    : await getConfiguredDailyLimit(userId, sub.dailyLimit);
-
-  // Trial/access expired
-  if (sub.tier === "expired" && dailyLimit === 0) {
-    return { denied: { allowed: false, reason: "Your free trial has ended. Upgrade to Pro to continue using DebateLab.", code: "trial_expired", limit: 0, current: 0, statusCode: 402 } };
+  // No plan and no override: refused with a code naming why (the browser
+  // localizes it). Extended access (an override on an expired trial, or the
+  // extra_limit promo) has access and goes on to the quota like any plan.
+  if (sub.refusal) {
+    return { denied: { allowed: false, reason: ACCESS_REFUSAL_REASONS[sub.refusal], code: sub.refusal, limit: 0, current: 0, statusCode: 402 } };
   }
+  const dailyLimit = await getConfiguredDailyLimit(userId, sub.dailyLimit);
 
   if (model && (model === AUTO_PRO || (!isAutoModelSelection(model) && getModelCatalogEntry(model)?.isProOnly)) && !sub.canAccessProModels) {
     return { denied: { allowed: false, reason: "This model requires a Pro subscription. Upgrade to unlock advanced models.", code: "upgrade_required", statusCode: 403 } };
@@ -230,7 +211,9 @@ function quotaDenial(deniedBy: unknown, tier: string, dailyLimit: number, curren
  * units; the rest pass with `charged: false`.
  */
 export async function checkRateLimit(userId: string | null, model?: ModelSelection, session?: QuotaSession): Promise<RateLimitResult> {
-  if (!userId) return { allowed: true }; // Anonymous users not rate limited (for now)
+  // Every caller requires a signed-in user first. Without one there is no
+  // account to check or charge, so refuse rather than wave the request through.
+  if (!userId) return { allowed: false, reason: "Sign in to use AI tools.", code: "unauthenticated", statusCode: 401 };
 
   try {
     const access = await checkAccess(userId, model);

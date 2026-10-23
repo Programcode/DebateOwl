@@ -77,6 +77,7 @@ Deno.test("generate marks every contention when research has no citable sources"
             grace_period_ends_at: null,
           });
         }
+        if (url.pathname.includes("/rest/v1/subscriptions")) return jsonResponse([]);
         if (url.pathname.includes("/rest/v1/rate_limits")) {
           if ((url.searchParams.get("order") ?? "").includes("updated_at")) throw new Error(`rate_limits must not order by updated_at: ${url.search}`);
           return jsonResponse({ limit_value: 50 });

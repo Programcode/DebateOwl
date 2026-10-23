@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Settings, Lock, Trash2, Crown, CreditCard, Zap, Shield, Download, UserX } from 'lucide-react';
+import { Settings, Lock, Trash2, Crown, Shield, Download, UserX } from 'lucide-react';
 import type { User } from '@supabase/supabase-js';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
@@ -15,7 +15,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Badge } from '@/components/ui/badge';
 import { useSettingsStore } from '@/lib/stores/settings-store';
 import { useSessionStore } from '@/lib/stores/session-store';
 import { useDebateStore } from '@/lib/stores/debate-store';
@@ -29,8 +28,8 @@ import { useExternalRedirectPending } from '@/hooks/use-external-redirect-pendin
 import { redirectToPortal } from '@/lib/stripe';
 import { deleteAccount, downloadAccountData } from '@/lib/account';
 import { PricingModal } from '@/components/features/subscription/PricingModal';
+import { SubscriptionStatus } from '@/components/features/subscription/SubscriptionStatus';
 import { EnvironmentSwitcher } from '@/components/features/settings/EnvironmentSwitcher';
-import { formatEuropeanDate } from '@/lib/date-format';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { PageHeader } from '@/components/layout/PageHeader';
@@ -41,14 +40,6 @@ import {
   stripCheckoutParams,
 } from '@/lib/billing/checkout-return';
 
-
-// Tinted badges keep their label readable (white on amber or green was about 2:1).
-const tierLabels: Record<string, { labelKey: string; color: string }> = {
-  trial: { labelKey: 'settings.tierTrial', color: 'border-blue-500/30 bg-blue-500/15 text-blue-800 dark:text-blue-300' },
-  pro: { labelKey: 'settings.tierPro', color: 'border-amber-500/30 bg-amber-500/15 text-amber-800 dark:text-amber-300' },
-  legacy_free: { labelKey: 'settings.tierLegacyFree', color: 'border-success/30 bg-success/15 text-success' },
-  expired: { labelKey: 'settings.tierExpired', color: 'border-destructive/30 bg-destructive/10 text-destructive' },
-};
 
 /** How this account signs in, from what Auth recorded for it (not only this session). */
 function signInMethodKey(user: User | null): string | null {
@@ -247,17 +238,13 @@ export default function SettingsPage() {
     }
   };
 
-  const tierInfo = tierLabels[subscription.tier] || tierLabels.expired;
-  const canManageStripeBilling = subscription.tier === 'pro' && subscription.hasStripeBilling;
-  const upgradeLabel = subscription.tier === 'pro' ? t('settings.setUpBilling') : t('settings.upgradeToPro');
-
   return (
     <div className="container py-8 px-4">
       <div className="max-w-4xl mx-auto">
         <PageHeader className="mb-8" icon={<Settings />} title={t('settings.title')} />
 
         {/* Subscription Status */}
-        <Card className="mb-8 border-primary/20">
+        <Card data-testid="subscription-card" className="mb-8 border-primary/20">
           <CardHeader>
             <div className="flex items-center gap-2">
               <Crown className="h-5 w-5 text-amber-500" />
@@ -271,36 +258,17 @@ export default function SettingsPage() {
               </p>
             ) : (
               <>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <Badge variant="outline" className={tierInfo.color}>{t(tierInfo.labelKey)}</Badge>
-                    {subscription.tier === 'trial' && subscription.trialEndsAt && (
-                      <span className="text-sm text-muted-foreground">
-                        {t('settings.ends')} {formatEuropeanDate(subscription.trialEndsAt)}
-                      </span>
-                    )}
-                  </div>
-                  {canManageStripeBilling ? (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => void handleManageSubscription()}
-                      disabled={portalLoading}
-                    >
-                      <CreditCard className="h-4 w-4 mr-2" />
-                      {portalLoading ? t('settings.loading') : t('settings.manageSubscription')}
-                    </Button>
-                  ) : (
-                    <Button size="sm" onClick={() => setPricingOpen(true)}>
-                      <Zap className="h-4 w-4 mr-2" />
-                      {upgradeLabel}
-                    </Button>
-                  )}
-                </div>
-
-                <p className="text-sm text-muted-foreground">
-                  {t(subscription.tier === 'expired' ? 'settings.accessExpired' : 'settings.accessActive')}
-                </p>
+                <SubscriptionStatus
+                  billingState={subscription.billingState}
+                  billingDate={subscription.billingDate}
+                  billingDateKind={subscription.billingDateKind}
+                  hasOpenSubscription={subscription.hasOpenSubscription}
+                  hasStripeBilling={subscription.hasStripeBilling}
+                  dailyLimit={subscription.dailyLimit}
+                  portalLoading={portalLoading}
+                  onManage={() => void handleManageSubscription()}
+                  onUpgrade={() => setPricingOpen(true)}
+                />
                 {subscription.remainingToday !== null && subscription.dailyLimit > 0 && (
                   <p data-testid="daily-usage" className="text-sm text-muted-foreground">
                     {t('dailyLimit.usage', {

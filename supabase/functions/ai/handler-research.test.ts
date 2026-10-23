@@ -198,6 +198,7 @@ Deno.test("factoids handler carries Exa filters and consulted-source metadata ac
           grace_period_ends_at: null,
         });
       }
+      if (url.pathname.includes("/rest/v1/subscriptions")) return jsonResponse([]);
       if (url.pathname.includes("/rest/v1/rate_limits")) {
         if ((url.searchParams.get("order") ?? "").includes("updated_at")) throw new Error(`rate_limits must not order by updated_at: ${url.search}`);
         return jsonResponse({ limit_value: 50 });
@@ -339,6 +340,7 @@ Deno.test("Ask marks only surviving URL and research context as available", asyn
           grace_period_ends_at: null,
         });
       }
+      if (url.pathname.includes("/rest/v1/subscriptions")) return jsonResponse([]);
       if (url.pathname.includes("/rest/v1/rate_limits")) {
         if ((url.searchParams.get("order") ?? "").includes("updated_at")) throw new Error(`rate_limits must not order by updated_at: ${url.search}`);
         return jsonResponse({ limit_value: 50 });
@@ -476,13 +478,17 @@ function supabaseTestResponse(url: URL): Response | undefined {
   if (url.origin !== "https://supabase.test") return undefined;
   if (url.pathname === "/auth/v1/user") return jsonResponse({ id: "user-1", aud: "authenticated" });
   if (url.pathname.includes("/rest/v1/user_roles")) return jsonResponse({ role: "user" });
+  const tier = (globalThis as typeof globalThis & { __testTier?: string }).__testTier || "trial";
   if (url.pathname.includes("/rest/v1/user_settings")) return jsonResponse({
-    subscription_tier: (globalThis as typeof globalThis & { __testTier?: string }).__testTier || "trial",
+    subscription_tier: tier,
     daily_limit_override: 50,
     trial_ends_at: "2099-01-01T00:00:00.000Z",
     grace_period_ends_at: null,
   });
-  if (url.pathname.includes("/rest/v1/subscriptions")) return jsonResponse([{ status: "active", current_period_end: "2099-01-01T00:00:00.000Z" }]);
+  // A paid Stripe period means Pro whatever the tier, so only the Pro account has one.
+  if (url.pathname.includes("/rest/v1/subscriptions")) {
+    return jsonResponse(tier === "pro" ? [{ status: "active", current_period_end: "2099-01-01T00:00:00.000Z" }] : []);
+  }
   if (url.pathname.includes("/rest/v1/rate_limits")) {
     if ((url.searchParams.get("order") ?? "").includes("updated_at")) throw new Error(`rate_limits must not order by updated_at: ${url.search}`);
     return jsonResponse({ limit_value: 50 });

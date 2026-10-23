@@ -413,8 +413,8 @@ export async function handleRequest(req: Request): Promise<Response> {
         const answerFinished = (streamSawDone || streamSawFinishReason) && streamFinishReason !== "length";
         const refunded = !answerFinished && accumulated.length < REFUND_MAX_DELIVERED_CHARS &&
           await refundQuotaReservation(user.id, rateLimit);
-        // The weekly cap counts real spend, so a refunded run's OpenRouter
-        // cost still counts. Only a Claude refusal that cost nothing is logged at 0.
+        // The weekly cap counts real spend, so a refunded run's cost (BYOK
+        // provider charges included) still counts. Only a Claude refusal that cost nothing is logged at 0.
         const freeRefusal = claudeUnavailable && !err.afterOutput && !accumulated && !chargedAgainstCap(observedUsage);
         const notCharged = refunded ? { charged: false } : {};
         if (claudeUnavailable) {

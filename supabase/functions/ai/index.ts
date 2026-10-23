@@ -898,8 +898,8 @@ export async function handleRequest(req: Request): Promise<Response> {
       const refundable = !outputSaved && !answerFinished && deliveredChars < REFUND_MAX_DELIVERED_CHARS;
       // Refund before answering, so a retry sent straight away sees it.
       const refunded = refundable && await refundQuotaReservation(userId, rateLimit);
-      // The weekly cap counts real spend, so a refunded run's OpenRouter cost
-      // still counts. Only a Claude refusal that cost nothing is logged at 0.
+      // The weekly cap counts real spend, so a refunded run's cost (BYOK
+      // provider charges included) still counts. Only a Claude refusal that cost nothing is logged at 0.
       const freeRefusal = claudeUnavailable && !aborted && !err.afterOutput && !completedMainUsage && !usageError?.completedUsage &&
         !researchDidWork && !researchAccountingIncomplete && !chargedAgainstCap(errorUsage);
       await logUsage(

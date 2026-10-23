@@ -20,7 +20,7 @@ const past = () => new Date(Date.now() - DAY).toISOString();
 interface Routes {
   user_settings?: unknown;
   user_roles?: unknown;
-  subscriptions?: unknown;
+  subscriptions?: unknown | ((url: URL) => Response);
   rate_limits?: unknown | ((url: URL) => Response);
   quota?: unknown;
   onQuota?: (body: Record<string, unknown>) => void;
@@ -33,7 +33,9 @@ async function withSupabase<T>(routes: Routes, run: () => Promise<T>): Promise<T
     const url = new URL(input instanceof Request ? input.url : String(input));
     if (url.pathname.includes("/rest/v1/user_settings")) return json(routes.user_settings ?? null);
     if (url.pathname.includes("/rest/v1/user_roles")) return json(routes.user_roles ?? { role: "user" });
-    if (url.pathname.includes("/rest/v1/subscriptions")) return json(routes.subscriptions ?? []);
+    if (url.pathname.includes("/rest/v1/subscriptions")) {
+      return typeof routes.subscriptions === "function" ? routes.subscriptions(url) : json(routes.subscriptions ?? []);
+    }
     if (url.pathname.includes("/rest/v1/rate_limits")) {
       routes.requests?.push(`${url.pathname}${url.search}`);
       const order = url.searchParams.get("order") ?? "";
@@ -126,9 +128,17 @@ Deno.test("banned users are refused before any quota is consumed", async () => {
   });
 });
 
-Deno.test("anonymous callers bypass the rate limit", async () => {
-  const result = await checkRateLimit(null);
-  assertEquals(result.allowed, true, "allowed");
+Deno.test("a request without a user is refused, not waved through (SC-03)", async () => {
+  let quotaConsumed = false;
+  await withSupabase({
+    get quota() { quotaConsumed = true; return [{ allowed: true, current_count: 1 }]; },
+  }, async () => {
+    const result = await checkRateLimit(null);
+    assertEquals(result.allowed, false, "allowed");
+    assertEquals(result.code, "unauthenticated", "code");
+    assertEquals(result.statusCode, 401, "statusCode");
+    assertEquals(quotaConsumed, false, "quota must not be consumed without a user");
+  });
 });
 
 Deno.test("an exhausted quota reports the limit-reached code", async () => {
@@ -144,15 +154,100 @@ Deno.test("an exhausted quota reports the limit-reached code", async () => {
   });
 });
 
-Deno.test("expired access is refused with the trial-expired code", async () => {
-  await withSupabase({
-    user_settings: { subscription_tier: "trial", daily_limit_override: null, trial_ends_at: past(), grace_period_ends_at: null },
-  }, async () => {
-    const result = await checkRateLimit("user-1");
-    assertEquals(result.allowed, false, "allowed");
-    assertEquals(result.code, "trial_expired", "code");
-    assertEquals(result.statusCode, 402, "statusCode");
+const DAY_MS = 24 * 60 * 60 * 1000;
+const daysFromNow = (days: number) => new Date(Date.now() + days * DAY_MS).toISOString();
+
+// Each account without access is refused with a code naming why (QB-13, QB-14).
+for (const [name, routes, code] of [
+  ["an expired trial", { user_settings: { subscription_tier: "trial", daily_limit_override: null, trial_ends_at: past(), grace_period_ends_at: null } }, "trial_ended"],
+  ["a past-due payer after the grace", {
+    user_settings: { subscription_tier: "pro", daily_limit_override: null, trial_ends_at: null, grace_period_ends_at: null },
+    subscriptions: [{ status: "past_due", current_period_start: daysFromNow(-20), current_period_end: daysFromNow(10) }],
+  }, "payment_failed"],
+  ["a former subscriber", {
+    user_settings: { subscription_tier: "expired", daily_limit_override: null, trial_ends_at: daysFromNow(-60), grace_period_ends_at: null },
+    subscriptions: [{ status: "canceled", current_period_start: daysFromNow(-40), current_period_end: daysFromNow(-10), ended_at: daysFromNow(-10) }],
+  }, "subscription_ended"],
+] as const) {
+  Deno.test(`${name} is refused with ${code}`, async () => {
+    let quotaConsumed = false;
+    await withSupabase({
+      ...routes,
+      get quota() { quotaConsumed = true; return [{ allowed: true, current_count: 1 }]; },
+    }, async () => {
+      const result = await checkRateLimit("user-1");
+      assertEquals(result.allowed, false, "allowed");
+      assertEquals(result.code, code, "code");
+      assertEquals(result.statusCode, 402, "statusCode");
+      assertEquals(quotaConsumed, false, "quota must not be consumed");
+    });
   });
+}
+
+Deno.test("an override on an expired trial keeps working as extended access (QB-02)", async () => {
+  // Adam's decision: daily_limit_override on an expired trial is a deliberate grant.
+  let reserved: Record<string, unknown> | undefined;
+  await withSupabase({
+    user_settings: { subscription_tier: "trial", daily_limit_override: 5, trial_ends_at: past(), grace_period_ends_at: null },
+    onQuota: (body) => { reserved = body; },
+  }, async () => {
+    const info = await getSubscriptionInfo("user-1");
+    assertEquals(info.state, "extended_access", "state");
+    assertEquals(info.refusal, null, "refusal");
+    const result = await checkRateLimit("user-1");
+    assertEquals(result.allowed, true, "allowed");
+    assertEquals(result.canAccessProModels, false, "canAccessProModels");
+    assertEquals(reserved?.p_limit, 5, "limit reserved against");
+  });
+});
+
+Deno.test("a past-due payer keeps Pro through the payment grace (QB-13)", async () => {
+  await withSupabase({
+    // The tier the old webhook wrote on the first failed invoice.
+    user_settings: { subscription_tier: "expired", daily_limit_override: null, trial_ends_at: null, grace_period_ends_at: null },
+    subscriptions: [{ status: "past_due", current_period_start: daysFromNow(-2), current_period_end: daysFromNow(28) }],
+  }, async () => {
+    const info = await getSubscriptionInfo("user-1");
+    assertEquals(info.state, "payment_failed", "state");
+    assertEquals(info.dailyLimit, 50, "dailyLimit");
+    assertEquals(info.canAccessProModels, true, "canAccessProModels");
+    assertEquals((await checkRateLimit("user-1", "anthropic/claude-sonnet-5.5")).allowed, true, "allowed");
+  });
+});
+
+Deno.test("a failed subscriptions read still serves access the settings row proves", async () => {
+  const originalWarn = console.warn;
+  console.warn = () => {};
+  try {
+    await withSupabase({
+      user_settings: { subscription_tier: "trial", daily_limit_override: null, trial_ends_at: future(), grace_period_ends_at: null },
+      subscriptions: () => json({ message: "boom", code: "XX000" }, 500),
+    }, async () => {
+      assertEquals((await checkRateLimit("user-1")).allowed, true, "allowed");
+    });
+  } finally {
+    console.warn = originalWarn;
+  }
+});
+
+Deno.test("a failed subscriptions read fails closed", async () => {
+  const originalError = console.error;
+  const originalWarn = console.warn;
+  console.error = () => {};
+  console.warn = () => {};
+  try {
+    await withSupabase({
+      user_settings: { subscription_tier: "pro", daily_limit_override: null, trial_ends_at: null, grace_period_ends_at: null },
+      subscriptions: () => json({ message: "boom", code: "XX000" }, 500),
+    }, async () => {
+      const result = await checkRateLimit("user-1");
+      assertEquals(result.allowed, false, "allowed");
+      assertEquals(result.statusCode, 500, "statusCode");
+    });
+  } finally {
+    console.error = originalError;
+    console.warn = originalWarn;
+  }
 });
 
 const proUser = { subscription_tier: "pro", daily_limit_override: null, trial_ends_at: null, grace_period_ends_at: future() };
