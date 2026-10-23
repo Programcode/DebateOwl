@@ -11,7 +11,7 @@ import { RequireAuth } from "@/components/auth/RequireAuth";
 import { AccountQueryCache } from "@/components/auth/AccountQueryCache";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { useSessionStorageSync } from "@/hooks/use-session-storage-sync";
-import { useOnboardingStore } from "@/hooks/use-onboarding";
+import { hasCompletedOnboarding, useOnboardingStore } from "@/hooks/use-onboarding";
 import { OfflineIndicator } from "@/components/OfflineIndicator";
 import { StagingBanner } from "@/components/StagingBanner";
 import { captureException, captureProductEvent, toTelemetrySafeError } from "@/lib/observability";
@@ -21,6 +21,7 @@ import { usePrivateRouteHead } from "@/lib/seo/use-page-head";
 import { RouteSkeleton, type RouteSkeletonVariant } from "@/components/loading/RouteSkeleton";
 import { useTranslation } from "react-i18next";
 import { COLLABORATION_URL } from "@/lib/workspace/collaboration-config";
+import { AUTH_CALLBACK_PATH } from "@/lib/auth-callback";
 
 /**
  * A page the build prerenders. mountApp loads its module before the first
@@ -60,6 +61,7 @@ const AdminPage = lazy(routeLoaders["/app/admin"]);
 const SharedPage = lazy(routeLoaders["/share/:code"]);
 const FlowchartPage = lazy(routeLoaders["/app/flowchart"]);
 const LoginPage = lazy(routeLoaders["/login"]);
+const AuthCallbackPage = lazy(routeLoaders["/auth/callback"]);
 const SourcesPage = lazy(routeLoaders["/expocit/sources"]);
 const NotFound = prerenderedPage("*");
 const ToolsHubPage = prerenderedPage("/tools");
@@ -119,6 +121,7 @@ const ROUTE_FALLBACKS: Record<string, RouteFallback> = {
   "/privacy": { variant: "public", label: "Privacy", labelKey: "footer.privacy" },
   "/expocit/sources": { variant: "public", label: "Sources", labelKey: "crossfire.sources" },
   "/login": { variant: "public", label: "Sign in", labelKey: "login.title" },
+  "/auth/callback": { variant: "public", label: "Sign in", labelKey: "login.title" },
   "/app": { variant: "home-grid", label: "Tools", labelKey: "nav.tools" },
   "/app/debate": { variant: "settings/list", label: "Current debate", labelKey: "nav.currentDebate" },
   "/app/workspaces": { variant: "settings/list", label: "Workspaces", labelKey: "nav.workspaces" },
@@ -231,21 +234,29 @@ function RouteContent({ children }: { children: ReactNode }) {
 
 function OptionalOnboardingTour() {
   const location = useLocation();
-  const hasCompletedOnboarding = useOnboardingStore((state) => state.hasCompletedOnboarding);
+  const userId = useAuth().user?.id;
+  const completed = useOnboardingStore((state) => hasCompletedOnboarding(state, userId));
   const isTourRunning = useOnboardingStore((state) => state.isTourRunning);
-  const shouldLoadTour = isTourRunning || (location.pathname === "/app" && !hasCompletedOnboarding);
+  const claimLegacyCompletion = useOnboardingStore((state) => state.claimLegacyCompletion);
+  // A tour left running by the previous account never opens for one that finished it.
+  const shouldLoadTour = !completed && (isTourRunning || location.pathname === "/app");
 
-  if (!shouldLoadTour) return null;
+  useEffect(() => {
+    if (userId) claimLegacyCompletion(userId);
+  }, [claimLegacyCompletion, userId]);
 
-  return <TimedOnboardingTour />;
+  if (!userId || !shouldLoadTour) return null;
+
+  // Keyed by account, so one account's half-finished tour never carries into the next.
+  return <TimedOnboardingTour key={userId} userId={userId} />;
 }
 
-function TimedOnboardingTour() {
+function TimedOnboardingTour({ userId }: { userId: string }) {
   const [eligibleAt] = useState(() => typeof performance === "undefined" ? 0 : performance.now());
 
   return (
     <Suspense fallback={null}>
-      <OnboardingTour eligibleAt={eligibleAt} />
+      <OnboardingTour eligibleAt={eligibleAt} userId={userId} />
     </Suspense>
   );
 }
@@ -280,6 +291,7 @@ function AppRoutes() {
           <Route path="/privacy" element={<RouteContent><PrivacyPage /></RouteContent>} />
           <Route path="/expocit/sources" element={<RouteContent><SourcesPage /></RouteContent>} />
           <Route path="/login" element={<RouteContent><LoginPage /></RouteContent>} />
+          <Route path={AUTH_CALLBACK_PATH} element={<RouteContent><AuthCallbackPage /></RouteContent>} />
           <Route path="/share/:code" element={<RouteContent><SharedPage /></RouteContent>} />
           <Route path="/tools" element={<RouteContent><ToolsHubPage /></RouteContent>} />
           <Route path="/tools/debate-timer" element={<RouteContent><DebateTimerToolPage /></RouteContent>} />

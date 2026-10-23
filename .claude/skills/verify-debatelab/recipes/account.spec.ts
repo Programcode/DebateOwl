@@ -82,6 +82,8 @@ test("timer-run: the speech timer starts, pauses, and resets", async ({ signedIn
   await page.waitForTimeout(1_500);
   expect(await display.textContent()).toBe(paused);
   await evidence.shot("01-paused");
+  // Timer shortcuts ignore a focused button (#172), and Pause still has focus.
+  await page.evaluate(() => (document.activeElement as HTMLElement | null)?.blur());
   await page.keyboard.press("r");
   await expect(display).toHaveText(initial!);
   await evidence.shot("02-reset");

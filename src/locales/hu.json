@@ -546,6 +546,9 @@
     "demoCodePlaceholder": "DEMO-AB12-CD34",
     "signInWithDemoCode": "Bejelentkezés demókóddal",
     "signingIn": "Bejelentkezés...",
+    "finishingSignIn": "Bejelentkezés…",
+    "retrySignIn": "Újrapróbálás",
+    "backToSignIn": "Vissza a bejelentkezéshez",
     "invalidEmail": "Adj meg érvényes e-mail-címet.",
     "invalidCode": "Adj meg érvényes, hatjegyű kódot.",
     "invalidDemoCode": "Adj meg érvényes demókódot.",
@@ -566,7 +569,11 @@
       "demoUsedUp": "Ezzel a demókóddal már nem lehet többször belépni.",
       "rateLimited": "Túl sok próbálkozás. Próbáld újra később.",
       "codeExpired": "Ez a kód hibás vagy lejárt. Ellenőrizd, vagy kérj újat.",
-      "network": "A DebateLab nem érhető el. Ellenőrizd a kapcsolatot, és próbáld újra."
+      "network": "A DebateLab nem érhető el. Ellenőrizd a kapcsolatot, és próbáld újra.",
+      "linkExpired": "Ez a bejelentkezési link lejárt, vagy már felhasználták. Kérj új kódot.",
+      "linkOtherBrowser": "Ez a bejelentkezési link csak abban a böngészőben működik, ahol kérted. Kérj itt új kódot.",
+      "callbackFailed": "A bejelentkezés nem fejeződött be. Próbáld újra.",
+      "callbackTimedOut": "A bejelentkezés a szokásosnál tovább tart. Próbáld újra."
     }
   },
   "admin": {

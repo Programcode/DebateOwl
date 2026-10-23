@@ -1,5 +1,6 @@
 import { createContext, useContext } from 'react';
 import type { Session, User } from '@supabase/supabase-js';
+import type { AuthCallbackError } from '@/lib/auth-callback';
 
 // Kept apart from AuthProvider so public pages can read the signed-in user
 // without importing the Supabase client, which needs a browser. The build
@@ -9,8 +10,12 @@ export interface AuthContextValue {
   session: Session | null;
   user: User | null;
   loading: boolean;
-  signInWithGoogle: (options?: { driveAccess?: boolean }) => Promise<void>;
-  signInWithEmailOtp: (email: string) => Promise<void>;
+  /** Why the last sign-in callback (Google or an email link) did not sign anyone in. */
+  callbackError: AuthCallbackError | null;
+  clearCallbackError: () => void;
+  /** `next` is the in-app page to open after the callback. */
+  signInWithGoogle: (options?: { driveAccess?: boolean; next?: string }) => Promise<void>;
+  signInWithEmailOtp: (email: string, options?: { next?: string }) => Promise<void>;
   verifyEmailOtp: (email: string, token: string) => Promise<void>;
   signInWithDemoCode: (code: string) => Promise<void>;
   signOut: () => Promise<void>;

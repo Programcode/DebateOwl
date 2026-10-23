@@ -13,6 +13,7 @@ import { useExternalRedirectPending } from '@/hooks/use-external-redirect-pendin
 import { consumeWorkspaceInvite } from '@/lib/workspace/invite-handoff';
 import { localizeAuthError } from '@/lib/auth-errors';
 import { clearSessionExpiredNotice, sessionExpiredNotice } from '@/lib/supabase/session-expiry';
+import { AUTH_CALLBACK_ERROR_KEYS } from '@/lib/auth-callback';
 
 type AuthMode = 'email' | 'demo';
 type AuthStatus = 'idle' | 'submitting' | 'code-sent' | 'verifying' | 'success' | 'error';
@@ -30,8 +31,11 @@ function isAuthMode(value: string): value is AuthMode {
   return value === 'email' || value === 'demo';
 }
 
+/** RequireAuth's redirect: the page that needed sign-in, and whose session just ended there. */
+type LoginRouteState = { from?: { pathname?: string }; fromUserId?: string } | null;
+
 export default function LoginPage() {
-  const { user, signInWithGoogle, signInWithEmailOtp, verifyEmailOtp, signInWithDemoCode } = useAuth();
+  const { user, callbackError, clearCallbackError, signInWithGoogle, signInWithEmailOtp, verifyEmailOtp, signInWithDemoCode } = useAuth();
   const { pending: isRedirecting, run: runRedirect } = useExternalRedirectPending();
   const [authMode, setAuthMode] = useState<AuthMode>('email');
   const [authStatus, setAuthStatus] = useState<AuthStatus>('idle');
@@ -42,6 +46,9 @@ export default function LoginPage() {
   const [errorMessage, setErrorMessage] = useState('');
   // Set when the server refused this tab's session and it was signed out.
   const [sessionExpired] = useState(sessionExpiredNotice);
+  // Why the sign-in link or Google sign-in that opened this page failed. Kept
+  // for this visit; the provider's copy is cleared so it doesn't come back.
+  const [linkError] = useState(callbackError);
   const otpInputRef = useRef<HTMLInputElement>(null);
   const emailInputRef = useRef<HTMLInputElement>(null);
   const demoInputRef = useRef<HTMLInputElement>(null);
@@ -49,11 +56,21 @@ export default function LoginPage() {
   const location = useLocation();
   const { t } = useTranslation();
   const { toast } = useToast();
-  const from = (location.state as { from?: { pathname?: string } } | null)?.from?.pathname || '/app';
+  const routeState = location.state as LoginRouteState;
+  // A page another account had open belongs to that account. After a sign-out
+  // the next person at this browser starts on /app, not where they left off.
+  const fromThisAccount = !routeState?.fromUserId || routeState.fromUserId === user?.id;
+  const from = (fromThisAccount && routeState?.from?.pathname) || '/app';
+  // Google and the email link reload the page, so the deep link travels in the redirect.
+  const next = routeState?.fromUserId ? undefined : routeState?.from?.pathname;
 
   useEffect(() => {
     if (user) navigate(consumeWorkspaceInvite() ?? from, { replace: true });
   }, [user, navigate, from]);
+
+  useEffect(() => {
+    if (callbackError) clearCallbackError();
+  }, [callbackError, clearCallbackError]);
 
   useEffect(() => {
     if (sessionExpired) clearSessionExpiredNotice();
@@ -72,7 +89,7 @@ export default function LoginPage() {
 
   const handleGoogleSignIn = async () => {
     try {
-      await runRedirect(() => signInWithGoogle());
+      await runRedirect(() => signInWithGoogle({ next }));
     } catch (error) {
       toast({
         title: t('login.failed', 'Could not start sign in'),
@@ -102,7 +119,7 @@ export default function LoginPage() {
     setErrorMessage('');
     setAuthStatus('submitting');
     try {
-      await signInWithEmailOtp(normalizedEmail);
+      await signInWithEmailOtp(normalizedEmail, { next });
       setOtp('');
       setEmailSent(true);
       setAuthStatus('code-sent');
@@ -137,7 +154,7 @@ export default function LoginPage() {
     setErrorMessage('');
     setAuthStatus('submitting');
     try {
-      await signInWithEmailOtp(email.trim());
+      await signInWithEmailOtp(email.trim(), { next });
       setOtp('');
       setAuthStatus('code-sent');
     } catch (error) {
@@ -194,6 +211,11 @@ export default function LoginPage() {
           {sessionExpired && (
             <p className="mb-4 rounded-md border border-border bg-muted px-3 py-2 text-sm" role="status">
               {t('login.sessionExpired', 'Your session expired. Sign in again.')}
+            </p>
+          )}
+          {linkError && authStatus === 'idle' && (
+            <p className="mb-4 rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive" role="alert">
+              {t(AUTH_CALLBACK_ERROR_KEYS[linkError])}
             </p>
           )}
           <Button className="w-full" onClick={() => void handleGoogleSignIn()} disabled={isRedirecting}>

@@ -83,7 +83,7 @@ describe("Vercel frontend deployment configuration", () => {
     const config = loadConfig();
 
     expect(config.rewrites).toEqual(
-      ["/app", "/app/:path*", "/login", "/share/:path*", "/expocit/sources"]
+      ["/app", "/app/:path*", "/login", "/auth/callback", "/share/:path*", "/expocit/sources"]
         .map((source) => ({ source, destination: "/app-shell.html" })),
     );
     // Rewrite sources match exactly, so /app/settings/ must first lose its slash.
@@ -277,7 +277,7 @@ describe("Vercel frontend deployment configuration", () => {
     }
   });
 
-  it.each(["/app", "/app/(.*)", "/login", "/share/(.*)", "/embed/debate-timer"])(
+  it.each(["/app", "/app/(.*)", "/login", "/auth/callback", "/share/(.*)", "/embed/debate-timer"])(
     "keeps private route %s out of search indexes",
     (source) => {
       const config = loadConfig();
