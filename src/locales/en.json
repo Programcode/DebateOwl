@@ -1385,7 +1385,7 @@
   },
   "limitModal": {
     "trialEnded": "Free Trial Ended",
-    "trialEndedDesc": "Your 3-day free trial has ended. Upgrade to Pro to keep using DebateLab.",
+    "trialEndedDesc": "Your {{days}}-day free trial has ended. Upgrade to Pro to keep using DebateLab.",
     "limitReached": "Daily Access Paused",
     "limitReachedDesc": "You've used {{current}} of {{limit}} included AI uses today. Access refreshes at midnight UTC.",
     "weightedDesc": "This model counts as {{units}} uses, and you have {{remaining}} left today. Pick a lighter model or wait until midnight UTC.",
@@ -1403,7 +1403,8 @@
     "subscriptionEndedOnDesc": "Your Pro subscription ended on {{date}}. Resubscribe to keep using DebateLab.",
     "updatePayment": "Update payment method",
     "limitReachedGenericDesc": "You've used today's included AI uses. Access refreshes at midnight UTC.",
-    "zeroLimitDesc": "This account has no daily AI uses right now. Contact support if this seems wrong."
+    "zeroLimitDesc": "This account has no daily AI uses right now. Contact support if this seems wrong.",
+    "roundShortDesc": "This round needs {{units}} AI uses and you have {{remaining}} left today. Pick a lighter model or wait until midnight UTC."
   },
   "modelModal": {
     "title": "Pro Reasoning",
@@ -1416,7 +1417,8 @@
   "dailyLimit": {
     "remaining_one": "{{count}} of {{limit}} AI uses left today",
     "remaining_other": "{{count}} of {{limit}} AI uses left today",
-    "resets": "They refresh at midnight UTC ({{time}} your time)."
+    "remainingWithReset_one": "{{count}} of {{limit}} AI uses left today. They refresh at midnight UTC ({{time}} your time).",
+    "remainingWithReset_other": "{{count}} of {{limit}} AI uses left today. They refresh at midnight UTC ({{time}} your time)."
   },
   "pricingModal": {
     "title": "Upgrade to Pro",

@@ -1385,7 +1385,7 @@
   },
   "limitModal": {
     "trialEnded": "Prueba gratuita finalizada",
-    "trialEndedDesc": "Tu prueba gratuita de 3 días ha terminado. Actualiza a Pro para seguir usando DebateLab.",
+    "trialEndedDesc": "Tu prueba gratuita de {{days}} días ha terminado. Mejora a Pro para seguir usando DebateLab.",
     "limitReached": "Acceso diario pausado",
     "limitReachedDesc": "Has usado {{current}} de {{limit}} usos de IA incluidos hoy. El acceso se renueva a medianoche UTC.",
     "weightedDesc": "Este modelo cuenta como {{units}} usos y te quedan {{remaining}} hoy. Elige un modelo más ligero o espera a la medianoche UTC.",
@@ -1403,7 +1403,8 @@
     "subscriptionEndedOnDesc": "Tu suscripción Pro terminó el {{date}}. Vuelve a suscribirte para seguir usando DebateLab.",
     "updatePayment": "Actualizar método de pago",
     "limitReachedGenericDesc": "Has usado los usos de IA incluidos hoy. El acceso se renueva a medianoche UTC.",
-    "zeroLimitDesc": "Esta cuenta no tiene usos diarios de IA ahora mismo. Contacta con soporte si crees que es un error."
+    "zeroLimitDesc": "Esta cuenta no tiene usos diarios de IA ahora mismo. Contacta con soporte si crees que es un error.",
+    "roundShortDesc": "Esta ronda necesita {{units}} usos de IA y hoy te quedan {{remaining}}. Elige un modelo más ligero o espera a la medianoche UTC."
   },
   "modelModal": {
     "title": "Razonamiento Pro",
@@ -1416,7 +1417,8 @@
   "dailyLimit": {
     "remaining_one": "Te queda {{count}} de {{limit}} usos de IA hoy",
     "remaining_other": "Te quedan {{count}} de {{limit}} usos de IA hoy",
-    "resets": "Se renuevan a medianoche UTC ({{time}} en tu hora)."
+    "remainingWithReset_one": "Te queda {{count}} de {{limit}} usos de IA hoy. Se renuevan a medianoche UTC ({{time}} en tu hora).",
+    "remainingWithReset_other": "Te quedan {{count}} de {{limit}} usos de IA hoy. Se renuevan a medianoche UTC ({{time}} en tu hora)."
   },
   "pricingModal": {
     "title": "Mejorar a Pro",

@@ -18,10 +18,11 @@ export function DailyUsage({ showReset = false, className }: { showReset?: boole
   const { t, i18n } = useTranslation();
   const { remainingToday, dailyLimit } = useSubscription();
   if (remainingToday === null || dailyLimit <= 0) return null;
-  const remaining = t('dailyLimit.remaining', { count: remainingToday, limit: dailyLimit });
   return (
     <p data-testid="daily-usage" className={cn('text-sm text-muted-foreground', className)}>
-      {showReset ? `${remaining}. ${t('dailyLimit.resets', { time: dailyResetTime(i18n.language) })}` : remaining}
+      {showReset
+        ? t('dailyLimit.remainingWithReset', { count: remainingToday, limit: dailyLimit, time: dailyResetTime(i18n.language) })
+        : t('dailyLimit.remaining', { count: remainingToday, limit: dailyLimit })}
     </p>
   );
 }

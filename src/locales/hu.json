@@ -1385,7 +1385,7 @@
   },
   "limitModal": {
     "trialEnded": "Ingyenes próba lejárt",
-    "trialEndedDesc": "A 3 napos ingyenes próbaidőszakod lejárt. Frissíts Pro-ra a DebateLab további használatához.",
+    "trialEndedDesc": "A {{days}} napos ingyenes próbaidőszakod lejárt. Válts Pro-ra a DebateLab további használatához.",
     "limitReached": "Napi hozzáférés szünetel",
     "limitReachedDesc": "Elérted a mai keretet: {{current}} / {{limit}} MI-használatot vettél igénybe. A hozzáférés éjfélkor (UTC) frissül.",
     "weightedDesc": "Ez a modell {{units}} használatnak számít, és ma még {{remaining}} maradt. Válassz könnyebb modellt, vagy várj éjfélig (UTC).",
@@ -1403,7 +1403,8 @@
     "subscriptionEndedOnDesc": "A Pro-előfizetésed véget ért ({{date}}). Fizess elő újra a DebateLab további használatához.",
     "updatePayment": "Fizetési mód frissítése",
     "limitReachedGenericDesc": "Elfogyott a mai MI-használati kereted. A hozzáférés éjfélkor (UTC) frissül.",
-    "zeroLimitDesc": "Ennek a fióknak most nincs napi MI-használati kerete. Ha szerinted ez hiba, írj az ügyfélszolgálatnak."
+    "zeroLimitDesc": "Ennek a fióknak most nincs napi MI-használati kerete. Ha szerinted ez hiba, írj az ügyfélszolgálatnak.",
+    "roundShortDesc": "Ez a kör {{units}} MI-használatot igényel, de mára csak {{remaining}} maradt. Válassz könnyebb modellt, vagy várj éjfélig (UTC)."
   },
   "modelModal": {
     "title": "Pro érvelés",
@@ -1416,7 +1417,8 @@
   "dailyLimit": {
     "remaining_one": "Mára {{count}} / {{limit}} MI-használat maradt",
     "remaining_other": "Mára {{count}} / {{limit}} MI-használat maradt",
-    "resets": "Éjfélkor (UTC) frissül (nálad {{time}})."
+    "remainingWithReset_one": "Mára {{count}} / {{limit}} MI-használat maradt. Éjfélkor (UTC) frissül (nálad {{time}}).",
+    "remainingWithReset_other": "Mára {{count}} / {{limit}} MI-használat maradt. Éjfélkor (UTC) frissül (nálad {{time}})."
   },
   "pricingModal": {
     "title": "Váltás Pro-ra",

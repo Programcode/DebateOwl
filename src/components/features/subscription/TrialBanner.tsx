@@ -4,7 +4,7 @@ import { Clock, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useSubscription } from '@/hooks/use-subscription';
 import { useAuth } from '@/lib/supabase/AuthProvider';
-import { BILLING_ACTION_LABELS } from '@/lib/billing/plan';
+import { BILLING_ACTION_LABELS, billingAction } from '@/lib/billing/plan';
 import { PricingModal } from './PricingModal';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -37,7 +37,8 @@ function readDismissed(key: string): boolean {
 export function TrialBanner() {
   const { t } = useTranslation();
   const { user } = useAuth();
-  const { billingState, billingDate, billingDateKind } = useSubscription();
+  const subscription = useSubscription();
+  const { billingState, billingDate, billingDateKind } = subscription;
   const [dismissed, setDismissed] = useState<string | null>(null);
   const [pricingOpen, setPricingOpen] = useState(false);
 
@@ -68,7 +69,8 @@ export function TrialBanner() {
           {daysLeft === 0 ? t('trialBanner.endsToday') : t('trialBanner.daysLeft', { count: daysLeft })}
         </p>
         <Button variant="link" size="sm" className="h-11 shrink-0 px-2" onClick={() => setPricingOpen(true)}>
-          {t(BILLING_ACTION_LABELS.upgrade)}
+          {/* The dialog's own next step: Manage while a past-due subscription still bills. */}
+          {t(BILLING_ACTION_LABELS[billingAction(subscription)])}
         </Button>
         <Button
           type="button"

@@ -1,4 +1,5 @@
 import i18n from '@/i18n';
+import { TRIAL_DAYS } from '@/lib/billing/plan';
 
 export interface LimitDetails {
   code?: string;
@@ -32,7 +33,7 @@ export function isSubscriptionRefusalCode(code: unknown): code is string {
  * only and never shown, even when the refusal carries no code.
  */
 export function subscriptionLimitMessage({ code, limit, current, units }: LimitDetails): string {
-  if (code === 'trial_ended' || code === 'trial_expired') return i18n.t('limitModal.trialEndedDesc');
+  if (code === 'trial_ended' || code === 'trial_expired') return i18n.t('limitModal.trialEndedDesc', { days: TRIAL_DAYS });
   if (code === 'payment_failed') return i18n.t('limitModal.paymentFailedDesc');
   if (code === 'subscription_ended') return i18n.t('limitModal.subscriptionEndedDesc');
   if (code === 'weekly_budget_reached') return i18n.t('limitModal.weeklyReachedDesc');
@@ -47,14 +48,16 @@ export function subscriptionLimitMessage({ code, limit, current, units }: LimitD
   const remaining = Math.max(0, limit - (current || 0));
   // A weighted model can be refused while lighter requests still fit today.
   if (weight > 1 && remaining > 0) return i18n.t('limitModal.weightedDesc', { units: weight, remaining });
-  return i18n.t('limitModal.limitReachedDesc', { current: current ?? limit, limit });
+  // A limit lowered during the day must not read "7 of 5 used".
+  return i18n.t('limitModal.limitReachedDesc', { current: Math.min(current ?? limit, limit), limit });
 }
 
 /**
- * The same text for a round the browser can tell will not fit before asking
- * the server: Sparring warns with it while the server's quota answer is unknown.
+ * Why a Sparring round will not fit, from the browser's own count while the
+ * server's answer is unknown. A round's cost is not always the model's weight
+ * (an older server charges per call), so this names the round, not the model.
  */
 export function shortfallMessage(units: number, remaining: number): string {
-  if (remaining > 0 && units > 1) return i18n.t('limitModal.weightedDesc', { units, remaining });
+  if (remaining > 0) return i18n.t('limitModal.roundShortDesc', { units, remaining });
   return i18n.t('limitModal.limitReachedGenericDesc');
 }
