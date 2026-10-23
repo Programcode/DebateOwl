@@ -2,12 +2,15 @@
 -- Without one, deleting a user (auth.users cascades and SET NULLs), a source,
 -- a promo code, a share or a workspace document scans the whole child table.
 -- Skipped: global_prompts, promo_codes and curated_sources created_by, which
--- reference admin authors on tables with a handful of rows.
+-- reference admin authors on tables with a handful of rows, and the
+-- (workspace_id, document_id) keys of private.workspace_document_state and
+-- private.workspace_document_updates, whose primary keys already lead with
+-- document_id (the advisor still lists those two).
 --
 -- Plain CREATE INDEX: the CLI runs each migration file in a transaction, so
--- CONCURRENTLY is not available. Each build briefly blocks writes to its
--- table; every table here is small or, for the hidden workspace feature,
--- empty in production.
+-- CONCURRENTLY is not available. Each build blocks writes to its table until
+-- the whole file commits; every table here is small or, for the hidden
+-- workspace feature, empty in production.
 
 -- squawk-ignore-file require-concurrent-index-creation
 
@@ -19,9 +22,7 @@ CREATE INDEX IF NOT EXISTS shared_items_created_by_idx ON public.shared_items (c
 CREATE INDEX IF NOT EXISTS demo_access_codes_created_by_idx ON public.demo_access_codes (created_by);
 
 CREATE INDEX IF NOT EXISTS workspace_audit_events_version_id_idx ON public.workspace_audit_events (version_id);
-CREATE INDEX IF NOT EXISTS workspace_document_state_document_idx ON private.workspace_document_state (workspace_id, document_id);
 CREATE INDEX IF NOT EXISTS workspace_document_updates_author_id_idx ON private.workspace_document_updates (author_id);
-CREATE INDEX IF NOT EXISTS workspace_document_updates_document_idx ON private.workspace_document_updates (workspace_id, document_id);
 CREATE INDEX IF NOT EXISTS workspace_versions_created_by_idx ON public.workspace_versions (created_by);
 CREATE INDEX IF NOT EXISTS workspace_proposals_author_id_idx ON public.workspace_proposals (author_id);
 CREATE INDEX IF NOT EXISTS workspace_comments_author_id_idx ON public.workspace_comments (author_id);

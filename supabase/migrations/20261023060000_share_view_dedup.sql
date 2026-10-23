@@ -4,10 +4,13 @@
 -- the same.
 --
 -- A viewer is the signed-in user, otherwise the client IP the API gateway
--- forwards. The stored key is a SHA-256 of share, day and viewer, so rows
--- cannot be matched across shares or days, and rows from earlier days are
--- deleted as soon as a new view is counted. This stops reload inflation; it
--- is not abuse protection: a client that varies its IP still counts again.
+-- forwards. The stored key is a SHA-256 of share, day and viewer. It keeps
+-- raw IPs out of the table, but it is not anonymous: with no secret in it,
+-- an IPv4 address can be recovered by trying every address. Only server
+-- roles can read the table, and rows from earlier days are deleted as soon
+-- as a new view is counted. This stops reload inflation; it is not abuse
+-- protection: a client that varies its IP still counts again, and viewers
+-- behind one NAT address count once.
 
 CREATE TABLE public.share_views (
   share_id uuid NOT NULL REFERENCES public.shared_items(id) ON DELETE CASCADE,
@@ -44,8 +47,8 @@ BEGIN
     EXCEPTION WHEN others THEN
       v_headers := NULL;
     END;
-    -- cf-connecting-ip is set by the edge and cannot be supplied by the
-    -- client; the first x-forwarded-for entry is the fallback.
+    -- On hosted Supabase, Cloudflare sets cf-connecting-ip and overwrites any
+    -- client value; the first x-forwarded-for entry is the fallback.
     v_viewer := 'ip:' || coalesce(
       nullif(btrim(v_headers ->> 'cf-connecting-ip'), ''),
       nullif(btrim(split_part(v_headers ->> 'x-forwarded-for', ',', 1)), ''),
@@ -58,7 +61,7 @@ BEGIN
   VALUES (
     v_item.id,
     v_today,
-    sha256(convert_to(v_item.id::text || ':' || v_today::text || ':' || v_viewer, 'UTF8'))
+    sha256(convert_to(v_item.id::text || ':' || to_char(v_today, 'YYYY-MM-DD') || ':' || v_viewer, 'UTF8'))
   )
   ON CONFLICT DO NOTHING;
 

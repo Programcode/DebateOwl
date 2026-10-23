@@ -20,20 +20,27 @@ SELECT is_empty(
     FROM unnest(ARRAY['public.user_roles', 'public.subscriptions', 'public.user_promos',
       'public.admin_grants', 'public.promo_codes', 'public.daily_usage_counters']) AS t,
       unnest(ARRAY['anon', 'authenticated']) AS r,
-      unnest(ARRAY['INSERT', 'UPDATE', 'DELETE']) AS p
-    WHERE has_table_privilege(r, t, p)$$,
-  'clients cannot write roles, subscriptions, promos, admin grants or usage counters'
+      unnest(ARRAY['INSERT', 'UPDATE']) AS p
+    WHERE has_any_column_privilege(r, t, p)
+    UNION ALL
+    SELECT t || ':' || r || ':DELETE'
+    FROM unnest(ARRAY['public.user_roles', 'public.subscriptions', 'public.user_promos',
+      'public.admin_grants', 'public.promo_codes', 'public.daily_usage_counters']) AS t,
+      unnest(ARRAY['anon', 'authenticated']) AS r
+    WHERE has_table_privilege(r, t, 'DELETE')$$,
+  'clients cannot write roles, subscriptions, promos, admin grants or usage counters, even one column'
 );
 SELECT is_empty(
   $$SELECT t || ':' || r
     FROM unnest(ARRAY['public.user_roles', 'public.subscriptions', 'public.user_promos',
-      'public.admin_grants', 'public.promo_codes', 'public.daily_usage_counters']) AS t,
+      'public.admin_grants', 'public.promo_codes', 'public.daily_usage_counters',
+      'public.ai_requests']) AS t,
       unnest(ARRAY['anon']) AS r
-    WHERE has_table_privilege(r, t, 'SELECT')
+    WHERE has_any_column_privilege(r, t, 'SELECT')
     UNION ALL
     SELECT t FROM unnest(ARRAY['public.promo_codes', 'public.daily_usage_counters']) AS t
     WHERE has_table_privilege('authenticated', t, 'SELECT')$$,
-  'anon reads none of them, and signed-in users cannot read promo codes or usage counters directly'
+  'anon reads none of them (nor AI request history), and signed-in users cannot read promo codes or usage counters directly'
 );
 SELECT ok(
   (SELECT bool_and(has_table_privilege('service_role', t, p))

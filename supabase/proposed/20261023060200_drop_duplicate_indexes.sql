@@ -11,8 +11,10 @@
 --   user_roles         idx_user_roles_user_id duplicates user_roles_user_id_key.
 --   demo_access_codes  demo_access_codes_email_idx duplicates demo_access_codes_email_key.
 --
--- Each drop runs only if the index that stays exists and covers exactly the
--- same columns, so a project whose indexes differ keeps both. Run it outside
+-- Each drop runs only if the index that stays exists, is valid, is unique
+-- whenever the dropped one is, and has the same columns, operator classes,
+-- collations and no expression or predicate. A project whose indexes differ
+-- keeps both. Run it outside
 -- peak hours: DROP INDEX briefly locks its table.
 
 DO $$
@@ -35,7 +37,11 @@ BEGIN
       JOIN pg_index AS k ON k.indrelid = d.indrelid
       WHERE d.indexrelid = to_regclass('public.' || pair.dropped)
         AND k.indexrelid = to_regclass('public.' || pair.kept)
+        AND k.indisvalid
+        AND (NOT d.indisunique OR k.indisunique)
         AND d.indkey::text = k.indkey::text
+        AND d.indclass::text = k.indclass::text
+        AND d.indcollation::text = k.indcollation::text
         AND d.indexprs IS NULL AND k.indexprs IS NULL
         AND d.indpred IS NULL AND k.indpred IS NULL
     ) THEN

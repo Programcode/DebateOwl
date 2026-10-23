@@ -11,18 +11,31 @@
 --   user_roles    "user_roles_select_own" (SELECT own row).
 --   ai_requests   "ai_requests_select_own" (SELECT own rows).
 --
--- Every other policy on these tables is inert: the clients' table grants
--- (and, from 20261023060100, no write grant on user_roles) already block
--- what those policies would allow. Dropping them removes the advisor warnings
--- and the confusion. The policy names were in the QA snapshot, which is not
--- in the repo, so this drops by exclusion and prints each definition first.
--- Run on production only after checking the NOTICE output in a dry run
--- (BEGIN; ...; ROLLBACK;).
+-- Write policies on these tables are inert: clients hold no INSERT, UPDATE
+-- or DELETE grant on them (user_roles from 20261023060100), and no grant at
+-- all on shared_items. SELECT policies are not: signed-in users keep SELECT
+-- on user_roles and ai_requests, so a legacy permissive SELECT policy there
+-- is live until this runs (anon lost SELECT in 20261023060100 and
+-- 20261023060800). Read the NOTICE lines with that in mind.
+--
+-- The policy names were in the QA snapshot, which is not in the repo, so
+-- this drops by exclusion and prints each definition first. It stops before
+-- dropping anything if a policy it means to keep is missing, since dropping
+-- the rest would then leave signed-in users unable to read their own role
+-- (SettingsPage and the curated_sources admin policies depend on it). Do a
+-- dry run first (BEGIN; ...; ROLLBACK;).
 
 DO $$
 DECLARE
   p record;
 BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE schemaname = 'public'
+      AND tablename = 'user_roles' AND policyname = 'user_roles_select_own')
+    OR NOT EXISTS (SELECT 1 FROM pg_policies WHERE schemaname = 'public'
+      AND tablename = 'ai_requests' AND policyname = 'ai_requests_select_own') THEN
+    RAISE EXCEPTION 'user_roles_select_own or ai_requests_select_own is missing; recreate it before dropping the others';
+  END IF;
+
   FOR p IN
     SELECT pol.polname, cls.relname,
       pg_get_expr(pol.polqual, pol.polrelid) AS using_expr,

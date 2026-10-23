@@ -1,5 +1,5 @@
 BEGIN;
-SELECT plan(9);
+SELECT plan(10);
 
 -- get_shared_item counts each viewer once per share per UTC day (SC-04).
 INSERT INTO auth.users (id) VALUES
@@ -9,9 +9,10 @@ INSERT INTO public.shared_items (share_code, item_type, item_data, title, create
   ('pgtap-views-a', 'case', '{}', 'Share A', 'e1111111-1111-4111-8111-111111111111'),
   ('pgtap-views-b', 'case', '{}', 'Share B', 'e1111111-1111-4111-8111-111111111111');
 
-CREATE FUNCTION pg_temp.views(p_code text) RETURNS integer LANGUAGE sql AS $$
-  SELECT view_count FROM public.shared_items WHERE share_code = p_code
-$$;
+-- A record from an earlier day must be pruned by the next counted view.
+INSERT INTO public.share_views (share_id, viewed_on, viewer_key)
+SELECT id, (now() AT TIME ZONE 'UTC')::date - 1, '\x01'::bytea
+FROM public.shared_items WHERE share_code = 'pgtap-views-b';
 
 SET LOCAL ROLE anon;
 SELECT set_config('request.jwt.claim.sub', '', true);
@@ -74,6 +75,13 @@ SELECT throws_ok(
   'signed-in callers cannot write view records'
 );
 RESET ROLE;
+
+SELECT is(
+  (SELECT count(*) FROM public.share_views
+    WHERE viewed_on < (now() AT TIME ZONE 'UTC')::date),
+  0::bigint,
+  'records from earlier days are deleted once a new view is counted'
+);
 
 -- Without request headers (direct SQL callers) the lookup still works.
 SELECT set_config('request.headers', '', true);

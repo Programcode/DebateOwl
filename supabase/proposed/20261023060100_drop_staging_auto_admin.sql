@@ -9,5 +9,7 @@
 --   JOIN pg_proc p ON p.oid = t.tgfoid WHERE p.proname = 'staging_auto_admin';
 --
 -- That query must return no rows; without CASCADE the drop fails otherwise.
+-- `\df public.staging_auto_admin` should show it with no arguments; if it
+-- takes any, add them to the DROP below, or IF EXISTS skips it silently.
 
 DROP FUNCTION IF EXISTS public.staging_auto_admin();
