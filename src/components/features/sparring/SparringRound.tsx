@@ -302,7 +302,7 @@ export function SparringRound({
                 </Card>
               ) : aiLoading && !aiError && liveSpeech ? (
                 // The opponent's speech as it is written, in the place it will be read.
-                <article data-testid="sparring-live-speech" className="rounded-lg border-2 border-brand-tint-border bg-card p-4 animate-in fade-in-0 duration-200 sm:p-5" aria-busy="true" aria-labelledby="sparring-live-opponent">
+                <article data-testid="sparring-live-speech" className="rounded-lg border-2 border-brand-tint-border bg-card p-4 motion-safe:animate-in fade-in-0 duration-200 sm:p-5" aria-busy="true" aria-labelledby="sparring-live-opponent">
                   <div className="flex items-center gap-2.5">
                     <OwlAvatar pose="point" size={32} />
                     <h2 id="sparring-live-opponent" className="text-sm font-extrabold text-heading">{t('sparring.round.opponentSpeaking', 'Opponent is speaking')}</h2>
@@ -351,7 +351,7 @@ export function SparringRound({
             ) : (
               <div className="space-y-3">
                 {session.speeches.map((speech) => (
-                  <article key={speech.id} className={cn('rounded-lg border-2 p-4 animate-in fade-in-0 slide-in-from-bottom-1 duration-300 sm:p-5', speech.speaker === 'user' ? 'border-brand-tint-border bg-brand-tint/60' : 'border-border bg-card')}>
+                  <article key={speech.id} className={cn('rounded-lg border-2 p-4 motion-safe:animate-in fade-in-0 slide-in-from-bottom-1 duration-300 sm:p-5', speech.speaker === 'user' ? 'border-brand-tint-border bg-brand-tint/60' : 'border-border bg-card')}>
                     <div className="flex items-start justify-between gap-3">
                       <div className="flex min-w-0 items-center gap-2">
                         {speech.speaker === 'user' ? (
@@ -389,7 +389,7 @@ export function SparringRound({
                 return (
                   <div key={turn.id} className={cn('flex items-center gap-3 rounded-md px-3 py-2.5 text-sm transition-colors duration-300', current && 'bg-brand-tint text-foreground', complete && 'text-muted-foreground', !current && !complete && 'text-muted-foreground')}>
                     <span className={cn('flex h-7 w-7 shrink-0 items-center justify-center rounded-full border-2 text-xs font-bold tabular-nums transition-colors duration-300', complete ? 'border-success bg-success text-success-foreground' : current ? 'border-brand bg-brand text-white shadow-[0_2px_0_var(--do-primary-ledge)]' : 'border-border-strong text-muted-foreground')}>
-                      {complete ? <Check className="h-3.5 w-3.5 animate-in zoom-in-50 duration-300 ease-overshoot" strokeWidth={3.5} aria-label={t('sparring.round.completeStatus', 'Complete')} /> : index + 1}
+                      {complete ? <Check className="h-3.5 w-3.5 motion-safe:animate-in zoom-in-50 duration-300 ease-overshoot" strokeWidth={3.5} aria-label={t('sparring.round.completeStatus', 'Complete')} /> : index + 1}
                     </span>
                     <span className="min-w-0 flex-1">
                       <span className="block truncate font-bold">{t(`sparring.turns.${turn.id}`, turn.label)}</span>

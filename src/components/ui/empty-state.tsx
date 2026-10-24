@@ -19,7 +19,7 @@ interface EmptyStateProps {
 /** Nothing here yet: the owl with the tool's icon badge, one line on what goes here, and the next step. */
 export function EmptyState({ icon: Icon, title, description, actionLabel, onAction, pose = 'point', headingLevel: Heading = 'h2', className }: EmptyStateProps) {
   return (
-    <div className={cn('flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-border-strong bg-card/60 px-6 py-10 text-center animate-in fade-in-0 duration-300', className)}>
+    <div className={cn('flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-border-strong bg-card/60 px-6 py-10 text-center motion-safe:animate-in fade-in-0 duration-300', className)}>
       <div className="relative mb-4">
         <Owl pose={pose} size={112} />
         <span className="absolute -bottom-1 -right-2 flex h-10 w-10 items-center justify-center rounded-full border-2 border-card bg-brand-tint text-primary shadow-sm" aria-hidden="true">

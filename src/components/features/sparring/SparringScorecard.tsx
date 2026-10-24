@@ -68,7 +68,7 @@ export function SparringScorecard({ session, scorecard, onRestart, onExport, onE
             <div className="flex flex-wrap items-center justify-between gap-4">
               <div className="flex items-center gap-4">
                 {/* The owl celebrates a win and holds up one point to work on otherwise. */}
-                <Owl pose={scorecard.winner === 'user' ? 'celebrating' : 'idea'} size={96} priority className="-my-2 animate-in zoom-in-90 fade-in-0 duration-500 ease-overshoot" />
+                <Owl pose={scorecard.winner === 'user' ? 'celebrating' : 'idea'} size={96} priority className="-my-2 motion-safe:animate-in zoom-in-90 fade-in-0 duration-500 ease-overshoot" />
                 <div>
                   <p className="text-xs font-extrabold uppercase tracking-[0.08em] text-muted-foreground">{t('sparring.scorecard.finalResult', 'Final result')}</p>
                   <h2 id="result-heading" className="mt-1 font-display text-2xl font-[600] text-heading">{winnerText}</h2>

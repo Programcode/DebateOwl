@@ -113,7 +113,7 @@ const MessageBubble = React.memo(function MessageBubble({ message, onSave }: { m
   const output = message.output;
 
   return (
-    <div className={cn('flex items-end gap-2.5', isUser ? 'justify-end animate-in fade-in-0 slide-in-from-bottom-1 duration-200 ease-out-strong' : 'animate-in fade-in-0 slide-in-from-bottom-1 duration-200 ease-out-strong justify-start')}>
+    <div className={cn('flex items-end gap-2.5', isUser ? 'justify-end motion-safe:animate-in fade-in-0 slide-in-from-bottom-1 duration-200 ease-out-strong' : 'motion-safe:animate-in fade-in-0 slide-in-from-bottom-1 duration-200 ease-out-strong justify-start')}>
       {/* The coach is the owl. */}
       {!isUser && <OwlAvatar pose="idea" size={32} className="mb-0.5 hidden sm:inline-flex" />}
       <div
@@ -602,7 +602,7 @@ export function AskChat({ messages, streamingMessage, isLoading, error, onDismis
       <CardContent className="relative flex-1 overflow-hidden p-0">
         <div ref={scrollRef} onScroll={handleScroll} className="h-full overflow-y-auto overscroll-contain p-4">
           {messages.length === 0 && !streamingMessage ? (
-            <div className="flex flex-col items-center justify-center h-full text-center p-6 animate-in fade-in-0 duration-300">
+            <div className="flex flex-col items-center justify-center h-full text-center p-6 motion-safe:animate-in fade-in-0 duration-300">
               <Owl pose="point" size={112} className="mb-3" priority />
               <h3 className="font-display text-xl font-[600] text-heading mb-1">{t('askChat.startConversation')}</h3>
               <p className="text-sm text-muted-foreground max-w-sm">
@@ -617,7 +617,7 @@ export function AskChat({ messages, streamingMessage, isLoading, error, onDismis
               ))}
               {waitingForText && (
                 // One true status line: what is happening, and how long it has taken once that matters.
-                <p className="flex items-center gap-2.5 text-sm font-bold text-muted-foreground animate-in fade-in-0 duration-200" role="status" aria-live="polite">
+                <p className="flex items-center gap-2.5 text-sm font-bold text-muted-foreground motion-safe:animate-in fade-in-0 duration-200" role="status" aria-live="polite">
                   <OwlAvatar pose={searchingWeb ? 'skeptical' : 'idea'} size={32} />
                   <span className="inline-flex items-center gap-2 rounded-[20px] rounded-bl-md border-2 border-border bg-card px-3.5 py-2.5">
                     {searchingWeb ? t('askChat.searchingWeb', 'Searching the web…') : t('askChat.working', 'Working…')}

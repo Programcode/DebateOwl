@@ -103,7 +103,7 @@ export function ToolRunStatus({ label, onCancel, pose = 'idea' }: { label: strin
   const { t } = useTranslation();
   const elapsed = useElapsedSeconds();
   return (
-    <div className="flex min-h-[400px] flex-col items-center justify-center gap-4 rounded-xl border-2 border-dashed border-border-strong bg-card/60 p-8 text-center animate-in fade-in-0 duration-300">
+    <div className="flex min-h-[400px] flex-col items-center justify-center gap-4 rounded-xl border-2 border-dashed border-border-strong bg-card/60 p-8 text-center motion-safe:animate-in fade-in-0 duration-300">
       <span className="owl-bob">
         <Owl pose={pose} size={120} priority />
       </span>
@@ -125,7 +125,7 @@ export function ToolRunStatus({ label, onCancel, pose = 'idea' }: { label: strin
 export function ToolRunErrorPanel({ error, onRetry, onDismiss }: { error: ToolRunError; onRetry?: () => void; onDismiss?: () => void }) {
   const { t } = useTranslation();
   return (
-    <div role="alert" className="mb-4 flex items-start gap-3 rounded-lg border-2 border-destructive/30 bg-danger-tint p-4 text-sm animate-in fade-in-0 slide-in-from-top-1 duration-200">
+    <div role="alert" className="mb-4 flex items-start gap-3 rounded-lg border-2 border-destructive/30 bg-danger-tint p-4 text-sm motion-safe:animate-in fade-in-0 slide-in-from-top-1 duration-200">
       <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-card text-danger-text" aria-hidden="true">
         <AlertCircle className="h-4 w-4" strokeWidth={2.5} />
       </span>

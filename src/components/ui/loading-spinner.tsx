@@ -52,7 +52,7 @@ interface LoadingOverlayProps {
 
 export function LoadingOverlay({ message = 'Processing...' }: LoadingOverlayProps) {
   return (
-    <div className="absolute inset-0 z-10 flex items-center justify-center rounded-[inherit] bg-background/90 backdrop-blur-[2px] animate-in fade-in-0 duration-200">
+    <div className="absolute inset-0 z-10 flex items-center justify-center rounded-[inherit] bg-background/90 backdrop-blur-[2px] motion-safe:animate-in fade-in-0 duration-200">
       <OwlLoader message={message} size={72} />
     </div>
   );

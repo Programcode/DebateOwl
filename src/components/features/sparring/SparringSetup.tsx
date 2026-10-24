@@ -156,7 +156,7 @@ export function SparringSetup({ onStart, roundCost = null, remainingRequests = n
                         <span className={cn('h-3 w-3 rounded-full', side === 'pro' ? 'bg-brand' : 'bg-destructive')} aria-hidden="true" />
                         {side === 'pro' ? t('sparring.pro', 'Pro') : t('sparring.con', 'Con')}
                       </span>
-                      {selected ? <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-brand text-white animate-in zoom-in-50 duration-300 ease-overshoot"><Check className="h-3.5 w-3.5" strokeWidth={3.5} aria-hidden="true" /></span> : <span className="h-6 w-6 shrink-0 rounded-full border-2 border-border-strong" aria-hidden="true" />}
+                      {selected ? <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-brand text-white motion-safe:animate-in zoom-in-50 duration-300 ease-overshoot"><Check className="h-3.5 w-3.5" strokeWidth={3.5} aria-hidden="true" /></span> : <span className="h-6 w-6 shrink-0 rounded-full border-2 border-border-strong" aria-hidden="true" />}
                     </span>
                   </button>
                 );
@@ -186,7 +186,7 @@ export function SparringSetup({ onStart, roundCost = null, remainingRequests = n
                         <Gauge className="h-4 w-4 text-primary" aria-hidden="true" />
                         {t(`sparring.difficulty.${level.id}`, level.name)}
                       </span>
-                      {selected && <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-brand text-white animate-in zoom-in-50 duration-300 ease-overshoot"><Check className="h-3.5 w-3.5" strokeWidth={3.5} aria-hidden="true" /></span>}
+                      {selected && <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-brand text-white motion-safe:animate-in zoom-in-50 duration-300 ease-overshoot"><Check className="h-3.5 w-3.5" strokeWidth={3.5} aria-hidden="true" /></span>}
                     </span>
                   </button>
                 );

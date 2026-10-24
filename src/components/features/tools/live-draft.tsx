@@ -92,7 +92,7 @@ export function LiveToolRun({
         )}
       </div>
       {sections.map((section, sectionIndex) => (
-        <section key={section.id} className="space-y-3 rounded-lg border-2 border-border bg-card p-4 animate-in fade-in-0 slide-in-from-bottom-1 duration-300 sm:p-5" aria-label={section.title}>
+        <section key={section.id} className="space-y-3 rounded-lg border-2 border-border bg-card p-4 motion-safe:animate-in fade-in-0 slide-in-from-bottom-1 duration-300 sm:p-5" aria-label={section.title}>
           <h3 className="text-base font-extrabold text-heading">{section.title}</h3>
           {section.blocks.map((block, blockIndex) => (
             <Block key={blockIndex} block={block} writing={writing && sectionIndex === lastSection && blockIndex === lastBlock} />
