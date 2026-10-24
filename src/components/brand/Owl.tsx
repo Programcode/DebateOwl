@@ -1,56 +1,26 @@
 import { AnimatePresence, motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
-import point160 from '@/assets/owl/owl-point-160.webp';
-import point320 from '@/assets/owl/owl-point-320.webp';
-import point640 from '@/assets/owl/owl-point-640.webp';
-import idea160 from '@/assets/owl/owl-idea-160.webp';
-import idea320 from '@/assets/owl/owl-idea-320.webp';
-import idea480 from '@/assets/owl/owl-idea-480.webp';
-import skeptical160 from '@/assets/owl/owl-skeptical-160.webp';
-import skeptical320 from '@/assets/owl/owl-skeptical-320.webp';
-import skeptical480 from '@/assets/owl/owl-skeptical-480.webp';
-import surprised160 from '@/assets/owl/owl-surprised-160.webp';
-import surprised320 from '@/assets/owl/owl-surprised-320.webp';
-import surprised480 from '@/assets/owl/owl-surprised-480.webp';
-import celebrating160 from '@/assets/owl/owl-celebrating-160.webp';
-import celebrating320 from '@/assets/owl/owl-celebrating-320.webp';
-import celebrating480 from '@/assets/owl/owl-celebrating-480.webp';
-import pointBust96 from '@/assets/owl/owl-point-bust-96.webp';
-import pointBust192 from '@/assets/owl/owl-point-bust-192.webp';
-import ideaBust96 from '@/assets/owl/owl-idea-bust-96.webp';
-import ideaBust192 from '@/assets/owl/owl-idea-bust-192.webp';
-import skepticalBust96 from '@/assets/owl/owl-skeptical-bust-96.webp';
-import skepticalBust192 from '@/assets/owl/owl-skeptical-bust-192.webp';
+import point from '@/assets/owl/owl-point.svg';
+import idea from '@/assets/owl/owl-idea.svg';
+import skeptical from '@/assets/owl/owl-skeptical.svg';
+import surprised from '@/assets/owl/owl-surprised.svg';
+import celebrating from '@/assets/owl/owl-celebrating.svg';
+import thinking from '@/assets/owl/owl-thinking.svg';
+import reading from '@/assets/owl/owl-reading.svg';
+import timekeeper from '@/assets/owl/owl-timekeeper.svg';
+import arguing from '@/assets/owl/owl-arguing.svg';
+import coach from '@/assets/owl/owl-coach.svg';
+import sleepy from '@/assets/owl/owl-sleepy.svg';
 
 /**
- * The owl's poses, cut from the mascot art as transparent WebP at 1x to 3x:
- * point (eager, pointing at the action), idea (finger up, making a point),
- * skeptical (arms crossed, sizing up an argument), surprised, celebrating.
+ * The owl's poses, hand-traced SVGs on a 512 px square: point (eager, pointing at the action),
+ * idea (finger up), skeptical (arms crossed), surprised, celebrating, thinking (wing at the beak),
+ * reading (open book), timekeeper (stopwatch), arguing (wings out, the Sparring opponent),
+ * coach (thumbs up, the Ask coach) and sleepy (nothing here yet).
  */
-export type OwlPose = 'point' | 'idea' | 'skeptical' | 'surprised' | 'celebrating';
-export type OwlBustPose = 'point' | 'idea' | 'skeptical';
+export type OwlPose = 'point' | 'idea' | 'skeptical' | 'surprised' | 'celebrating' | 'thinking' | 'reading' | 'timekeeper' | 'arguing' | 'coach' | 'sleepy';
 
-const FULL: Record<OwlPose, string> = {
-  point: `${point160} 160w, ${point320} 320w, ${point640} 640w`,
-  idea: `${idea160} 160w, ${idea320} 320w, ${idea480} 480w`,
-  skeptical: `${skeptical160} 160w, ${skeptical320} 320w, ${skeptical480} 480w`,
-  surprised: `${surprised160} 160w, ${surprised320} 320w, ${surprised480} 480w`,
-  celebrating: `${celebrating160} 160w, ${celebrating320} 320w, ${celebrating480} 480w`,
-};
-
-const FALLBACK: Record<OwlPose, string> = {
-  point: point320,
-  idea: idea320,
-  skeptical: skeptical320,
-  surprised: surprised320,
-  celebrating: celebrating320,
-};
-
-const BUST: Record<OwlBustPose, [string, string]> = {
-  point: [pointBust96, pointBust192],
-  idea: [ideaBust96, ideaBust192],
-  skeptical: [skepticalBust96, skepticalBust192],
-};
+const POSES: Record<OwlPose, string> = { point, idea, skeptical, surprised, celebrating, thinking, reading, timekeeper, arguing, coach, sleepy };
 
 // A pose change crossfades with a small pop on the design system's `pop` spring. With reduced
 // motion, App's MotionConfig drops the scale and travel and only the fade remains.
@@ -80,9 +50,7 @@ export function Owl({ pose, size, className, label, priority = false }: OwlProps
       <AnimatePresence initial={false}>
         <motion.img
           key={pose}
-          src={FALLBACK[pose]}
-          srcSet={FULL[pose]}
-          sizes={`${size}px`}
+          src={POSES[pose]}
           width={size}
           height={size}
           alt=""
@@ -101,7 +69,7 @@ export function Owl({ pose, size, className, label, priority = false }: OwlProps
 }
 
 interface OwlAvatarProps {
-  pose: OwlBustPose;
+  pose: OwlPose;
   /** Diameter in CSS pixels. */
   size?: number;
   className?: string;
@@ -110,7 +78,6 @@ interface OwlAvatarProps {
 
 /** The owl's head and shoulders in a tinted circle: the Ask coach and the Sparring opponent. */
 export function OwlAvatar({ pose, size = 40, className, label }: OwlAvatarProps) {
-  const [x1, x2] = BUST[pose];
   return (
     <span
       className={cn(
@@ -125,15 +92,14 @@ export function OwlAvatar({ pose, size = 40, className, label }: OwlAvatarProps)
       <AnimatePresence initial={false}>
         <motion.img
           key={pose}
-          src={x1}
-          srcSet={`${x1} 96w, ${x2} 192w`}
-          sizes={`${size}px`}
+          src={POSES[pose]}
           width={size}
           height={size}
           alt=""
           draggable={false}
           decoding="async"
-          className="absolute inset-0 h-full w-full translate-y-[6%] scale-110 select-none object-cover"
+          // The full pose, zoomed onto the head and shoulders.
+          className="absolute inset-0 h-full w-full origin-[52%_32%] scale-[1.6] select-none object-contain"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
