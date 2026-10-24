@@ -31,8 +31,9 @@ SELECT ok(
   'subscription status, redeemed promos, and usage remain client-readable'
 );
 SELECT ok(
-  has_sequence_privilege('anon', 'public.keepalive_events_id_seq', 'USAGE'),
-  'anonymous keepalive inserts can generate an event id'
+  NOT has_sequence_privilege('anon', 'public.keepalive_events_id_seq', 'USAGE')
+    AND has_sequence_privilege('service_role', 'public.keepalive_events_id_seq', 'USAGE'),
+  'only the service role can generate a keepalive event id'
 );
 
 INSERT INTO auth.users (id) VALUES

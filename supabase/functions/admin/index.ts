@@ -935,6 +935,16 @@ export async function handleRequest(req: Request): Promise<Response> {
                 });
             }
 
+            // A discount is useless without the Stripe promotion code Checkout
+            // applies for it; redeem_promo_code_atomic refuses one without it.
+            const stripePromotionCode = config?.stripe_promotion_code;
+            if (type === "discount" && (typeof stripePromotionCode !== "string" || !/^promo_[A-Za-z0-9]+$/.test(stripePromotionCode))) {
+                return new Response(JSON.stringify({ error: "A discount code needs a Stripe promotion code ID (promo_...)" }), {
+                    status: 400,
+                    headers: { ...corsHeaders, "Content-Type": "application/json" },
+                });
+            }
+
             await assertCurrentAdmin(user.id);
             const { error } = await supabase.from("promo_codes").insert({
                 code: code.toUpperCase(),

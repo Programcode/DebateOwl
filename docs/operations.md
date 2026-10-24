@@ -172,6 +172,10 @@ Stop when the project target is ambiguous, rollback is unproven, or the operatio
 
 Destructive statements such as `DROP` or `TRUNCATE`, secret rotation, project deletion, and broad unrelated function deployment always need separate explicit approval.
 
+### Keepalive monitor
+
+`keepalive_events` and `keepalive_heartbeat` belong to the external Supabase keepalive monitor (`Programcode/supabase-keepalive-monitor`), not the app. Since `20261024120000_keepalive_server_only.sql` only the service role can read or write them. The monitor's primary run, a systemd user timer on Adam's VPS, uses the service-role key. Any other copy of the monitor (the Pi's GitHub Actions backup) must also use the service-role key for the DebateLab projects; with the publishable key its REST and RPC steps get 401 or 403.
+
 ## Edge Function deployment boundaries
 
 [`supabase/config.toml`](../supabase/config.toml) disables gateway JWT verification for functions that authenticate or validate requests in their own handlers. Deployment must preserve those handler checks.

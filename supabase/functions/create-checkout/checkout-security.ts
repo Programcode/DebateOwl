@@ -41,20 +41,15 @@ export function findCustomerOwnedByUser(
   return customers.find((customer) => customer.deleted !== true && customer.metadata?.user_id === userId)?.id ?? null;
 }
 
-export interface DiscountPromo {
-  expires_at?: string | null;
-  max_redemptions?: number | null;
-  redemptions_count?: number | null;
-}
-
 /**
- * Why a discount promo cannot be used at Checkout, or null when it can. The
- * same checks redeem_promo_code_atomic applies to every other promo type:
- * the code's expiry and its redemption cap (QB-08).
+ * The Stripe promotion code a redeem_promo_code_atomic answer grants at
+ * Checkout, or null when the answer is not a successful discount claim.
  */
-export function discountPromoRefusal(promo: DiscountPromo, now: Date = new Date()): "expired" | "exhausted" | null {
-  const expires = promo.expires_at ? Date.parse(promo.expires_at) : Number.NaN;
-  if (!Number.isNaN(expires) && expires < now.getTime()) return "expired";
-  if (typeof promo.max_redemptions === "number" && (promo.redemptions_count ?? 0) >= promo.max_redemptions) return "exhausted";
-  return null;
+export function discountPromotionCode(claim: unknown): string | null {
+  if (!claim || typeof claim !== "object") return null;
+  const { success, promoType, stripePromotionCode } = claim as Record<string, unknown>;
+  if (success !== true || promoType !== "discount") return null;
+  return typeof stripePromotionCode === "string" && /^promo_[A-Za-z0-9]+$/.test(stripePromotionCode)
+    ? stripePromotionCode
+    : null;
 }

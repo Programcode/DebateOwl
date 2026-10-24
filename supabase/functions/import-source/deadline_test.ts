@@ -6,7 +6,15 @@ for (const [key, value] of Object.entries({
   SUPABASE_SERVICE_ROLE_KEY: "test-service-role-key",
 })) Deno.env.set(key, value);
 
-const { handleRequest } = await import("./index.ts");
+const { handleRequest, sourceTransport } = await import("./index.ts");
+
+// These tests stub the source with globalThis.fetch. Route the pinned transport
+// there, recording the addresses each hop was allowed to dial.
+const dialedAddresses: string[][] = [];
+sourceTransport.get = (url, addresses, headers, signal) => {
+  dialedAddresses.push(addresses);
+  return fetch(url, { headers, signal, redirect: "manual" });
+};
 
 // A body that sends one small chunk every 500 ms forever, or never sends at all.
 function slowBody(mode: "drip" | "stall", onCancel: () => void) {

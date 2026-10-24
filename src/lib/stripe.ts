@@ -3,7 +3,7 @@ import { readEdgeFunctionError } from '@/lib/supabase/edge-function-error';
 import { getWebAppRedirectUrl, openExternalUrl } from '@/lib/native';
 import i18n from '@/i18n';
 import { serverErrorMessage } from '@/lib/server-errors';
-import { promoResultCode } from '../../supabase/functions/_shared/promo-result';
+import { type PromoResultCode, promoResultCode } from '../../supabase/functions/_shared/promo-result';
 
 /** A billing call that failed, with its message in the interface language and the server's code. */
 export class BillingError extends Error {
@@ -81,8 +81,10 @@ export async function redirectToPortal(): Promise<void> {
 /**
  * Redeem a promo code for the current user. The message is in the interface
  * language when the answer is one the browser knows, else the server's text.
+ * A discount answers `promo_discount_noted`: it is claimed, and Checkout
+ * applies it when the same code is sent with the upgrade.
  */
-export async function redeemPromoCode(code: string): Promise<{ success: boolean; message: string }> {
+export async function redeemPromoCode(code: string): Promise<{ success: boolean; message: string; code?: PromoResultCode }> {
   const { data: sessionData } = await supabase.auth.getSession();
   const accessToken = sessionData.session?.access_token;
   if (!accessToken) throw new BillingError(i18n.t('serverErrors.signInRequired'), 'unauthenticated');
@@ -100,5 +102,6 @@ export async function redeemPromoCode(code: string): Promise<{ success: boolean;
     return { success: false, message: serverErrorMessage(promoResultCode(body), fallback) };
   }
   const result = data as { success: boolean; message: string; code?: string };
-  return { success: result.success, message: serverErrorMessage(promoResultCode(result), result.message) };
+  const resultCode = promoResultCode(result);
+  return { success: result.success, message: serverErrorMessage(resultCode, result.message), code: resultCode };
 }
