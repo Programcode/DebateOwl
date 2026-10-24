@@ -137,8 +137,10 @@ export function BrainstormForm({ onSubmit, isLoading, debatePrefill = true }: Br
           {/* Submit Button */}
           <Button
             type="submit"
-            className="w-full h-12"
+            size="lg"
+            className="w-full"
             disabled={isLoading}
+            aria-busy={isLoading}
           >
             {isLoading ? (
               <>

@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { buttonVariants } from '@/components/ui/button';
 import { OwlMark } from '@/components/brand/Owl';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
@@ -49,11 +50,11 @@ export function ToolFaq({ faq }: { faq: readonly FaqEntry[] }) {
 export function ToolCta({ title, children }: { title: string; children: ReactNode }) {
   const { t } = useTranslation('tools');
   return (
-    <aside className="rounded-xl border border-primary/30 bg-primary/5 p-6" aria-labelledby="cta-heading">
+    <aside className="rounded-xl border-2 border-brand-tint-border bg-brand-tint p-6" aria-labelledby="cta-heading">
       <h2 id="cta-heading" className="text-xl!">{title}</h2>
       <div className="mt-2! text-muted-foreground">{children}</div>
       <p className="mt-2! text-sm text-muted-foreground">{t('layout.ctaPricing')}</p>
-      <Link to="/login" className="mt-4! inline-flex min-h-11 items-center rounded-md bg-primary px-4 font-medium text-primary-foreground no-underline! hover:bg-primary/90 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
+      <Link to="/login" className={cn(buttonVariants(), 'not-prose mt-4! no-underline!')}>
         {t('layout.ctaButton')}
       </Link>
     </aside>

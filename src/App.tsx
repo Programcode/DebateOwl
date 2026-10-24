@@ -1,4 +1,6 @@
 // src/App.tsx
+import { Owl } from "@/components/brand/Owl";
+import { buttonVariants } from "@/components/ui/button";
 import { Component, Suspense, lazy, useEffect, useRef, useState, type ComponentType, type ErrorInfo, type ReactNode } from "react";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -192,13 +194,14 @@ export class RouteErrorBoundary extends Component<RouteErrorBoundaryProps, { fai
     if (this.state.failed) {
       return (
         <div className="flex min-h-[60vh] flex-col items-center justify-center gap-4 p-6 text-center">
-          <h1 className="text-xl font-semibold">{this.props.heading ?? 'Unable to load this page'}</h1>
-          <div className="flex flex-wrap justify-center gap-2">
-            <button className="rounded-md bg-primary px-4 py-2 text-primary-foreground" onClick={() => window.location.reload()}>
+          <Owl pose="surprised" size={136} />
+          <h1 className="font-display text-2xl font-[600] text-heading">{this.props.heading ?? 'Unable to load this page'}</h1>
+          <div className="flex flex-wrap justify-center gap-3">
+            <button className={buttonVariants()} onClick={() => window.location.reload()}>
               {this.props.reloadLabel ?? 'Reload'}
             </button>
             {/* A full navigation, so a broken route can't trap the user. */}
-            <a href={this.props.homeHref ?? '/'} className="rounded-md border border-input px-4 py-2 text-foreground">
+            <a href={this.props.homeHref ?? '/'} className={buttonVariants({ variant: 'outline' })}>
               {this.props.homeLabel ?? 'Go to home'}
             </a>
           </div>

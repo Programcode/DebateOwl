@@ -169,7 +169,7 @@ export function FactoidsForm({ onSubmit, isLoading, debateContext = true }: Fact
           <DebateContextControl feature="factoids" side={requestSide('factoids', currentValues)} hidden={!debateContext} />
 
           {/* Submit Button */}
-          <Button type="submit" className="w-full h-12" disabled={isLoading}>
+          <Button type="submit" size="lg" className="w-full" disabled={isLoading} aria-busy={isLoading}>
             {isLoading ? (
               <>
                 <LoadingSpinner size="sm" className="mr-2" />

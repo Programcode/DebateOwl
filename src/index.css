@@ -484,8 +484,10 @@ passes AA on every surface; buttons fill with --do-primary (#0A6FF0) and white t
     box-shadow: 0 var(--btn-ledge) 0 var(--btn-ledge-color), 0 0 0 7px var(--do-focus-glow);
   }
 
-  .btn:disabled:not([data-loading]),
-  .btn[aria-disabled='true']:not([data-loading]) {
+  /* A busy button (loading, or aria-busy while its request runs) keeps its face; only idle disabled
+     buttons go grey. */
+  .btn:disabled:not([data-loading]):not([aria-busy='true']),
+  .btn[aria-disabled='true']:not([data-loading]):not([aria-busy='true']) {
     --btn-face: var(--do-disabled-face);
     --btn-hover: var(--do-disabled-face);
     --btn-fg: var(--do-disabled-text);
@@ -494,8 +496,12 @@ passes AA on every surface; buttons fill with --do-primary (#0A6FF0) and white t
     cursor: not-allowed;
   }
 
-  .btn[data-loading] {
+  .btn[data-loading],
+  .btn[aria-busy='true'] {
     cursor: progress;
+  }
+
+  .btn[data-loading] {
     pointer-events: none;
   }
 
