@@ -1,6 +1,6 @@
 import { useCallback, useRef, useState, type ReactNode } from 'react';
+import { LoadingSpinner } from '@/components/ui/loading-spinner';
 import { useTranslation } from 'react-i18next';
-import { Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
@@ -108,7 +108,7 @@ export function useDebateMotionGate(options: { disabled?: boolean } = {}): {
               return { debateId: debate.id };
             })}
           >
-            {busy === 'create' && <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" />}
+            {busy === 'create' && <LoadingSpinner size="sm" className="mr-2" />}
             {busy === 'create'
               ? t('debate.creating', 'Creating…')
               : current ? t('debate.createFromMotion', 'Create a new debate for this motion') : t('debate.startDebate', 'Start debate')}

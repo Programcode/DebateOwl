@@ -1,4 +1,5 @@
 import { useEffect } from 'react';
+import { OwlLoader } from '@/components/ui/loading-spinner';
 import { Link, Navigate, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Loader2 } from 'lucide-react';
@@ -30,10 +31,7 @@ export default function AuthCallbackPage() {
   if (loading) {
     return (
       <main className="min-h-screen flex items-center justify-center bg-background text-muted-foreground">
-        <div className="flex items-center gap-3" role="status" aria-live="polite">
-          <Loader2 className="h-6 w-6 animate-spin text-primary" aria-hidden="true" />
-          <span>{t('login.finishingSignIn', 'Signing you in…')}</span>
-        </div>
+        <OwlLoader message={t('login.finishingSignIn', 'Signing you in…')} />
       </main>
     );
   }

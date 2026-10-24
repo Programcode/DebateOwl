@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react';
+import { LoadingSpinner } from '@/components/ui/loading-spinner';
 import { useTranslation } from 'react-i18next';
 import { useSessionStore } from '@/lib/stores/session-store';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button, buttonVariants } from '@/components/ui/button';
-import { Trash2, Eye, MessageCircle, FileText, Zap, Brain, BookOpen, Dumbbell, Flame, Loader2 } from 'lucide-react';
+import { Trash2, Eye, MessageCircle, FileText, Zap, Brain, BookOpen, Dumbbell, Flame } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Badge } from '@/components/ui/badge';
 import { formatEuropeanDateTime } from '@/lib/date-format';
@@ -492,7 +493,7 @@ export default function HistoryPage() {
                   confirmDeleteCrossfire();
                 }}
               >
-                {deletingCrossfire && <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" />}
+                {deletingCrossfire && <LoadingSpinner size="sm" className="mr-2" />}
                 {t('common.delete', 'Delete')}
               </AlertDialogAction>
             </AlertDialogFooter>

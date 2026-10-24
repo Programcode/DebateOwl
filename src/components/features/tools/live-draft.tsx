@@ -1,5 +1,6 @@
 import { useTranslation } from 'react-i18next';
-import { Button } from '@/components/ui/button';
+import { Button, ThinkingDots } from '@/components/ui/button';
+import { OwlAvatar } from '@/components/brand/Owl';
 import type { LivePhase } from '@/lib/ai/client';
 import { cn } from '@/lib/utils';
 import { ToolRunStatus, useElapsedSeconds, type LiveRunState } from './tool-run';
@@ -21,7 +22,7 @@ export function LiveCaret({ className }: { className?: string }) {
     <span
       aria-hidden="true"
       data-testid="live-caret"
-      className={cn('ml-0.5 inline-block h-[1.05em] w-[2px] translate-y-[0.15em] animate-pulse bg-primary motion-reduce:animate-none', className)}
+      className={cn('ml-0.5 inline-block h-[1.05em] w-[3px] translate-y-[0.15em] animate-pulse rounded-full bg-brand motion-reduce:animate-none', className)}
     />
   );
 }
@@ -67,17 +68,21 @@ export function LiveToolRun({
   const { t } = useTranslation();
   const status = useLivePhaseLabel(live.phase, label);
   const elapsed = useElapsedSeconds();
-  if (sections.length === 0) return <ToolRunStatus label={status} onCancel={onCancel} />;
+  // The owl looks things up while researching or checking sources, and has an idea before it writes.
+  if (sections.length === 0) {
+    return <ToolRunStatus label={status} onCancel={onCancel} pose={live.phase === 'research' || live.phase === 'checking' ? 'skeptical' : 'idea'} />;
+  }
 
   const lastSection = sections.length - 1;
   const lastBlock = sections[lastSection].blocks.length - 1;
   const writing = live.phase === 'writing';
   return (
     <div data-testid="live-draft" className="space-y-4" aria-busy="true">
-      <div className="flex items-center gap-3 rounded-lg border border-primary/25 bg-primary/5 px-4 py-3">
-        <span className="h-4 w-4 shrink-0 animate-spin rounded-full border-2 border-primary/25 border-t-primary [animation-duration:600ms]" aria-hidden="true" />
-        <p className="min-w-0 flex-1 text-sm font-medium text-foreground">
+      <div className="flex items-center gap-3 rounded-lg border-2 border-brand-tint-border bg-brand-tint px-3 py-2.5">
+        <OwlAvatar pose={writing ? 'point' : 'idea'} size={36} />
+        <p className="flex min-w-0 flex-1 flex-wrap items-center gap-x-2 text-sm font-bold text-foreground">
           <span role="status" aria-live="polite">{writing ? t('tools.live.writingLive', 'Writing live') : status}</span>
+          <ThinkingDots className="text-primary" />
           {elapsed >= 5 && <span className="ml-2 tabular-nums text-muted-foreground">{t('tools.elapsed', { seconds: elapsed, defaultValue: '{{seconds}}s' })}</span>}
         </p>
         {onCancel && (
@@ -87,8 +92,8 @@ export function LiveToolRun({
         )}
       </div>
       {sections.map((section, sectionIndex) => (
-        <section key={section.id} className="space-y-3 rounded-lg border border-border bg-card p-4 sm:p-5" aria-label={section.title}>
-          <h3 className="text-base font-semibold text-foreground">{section.title}</h3>
+        <section key={section.id} className="space-y-3 rounded-lg border-2 border-border bg-card p-4 animate-in fade-in-0 slide-in-from-bottom-1 duration-300 sm:p-5" aria-label={section.title}>
+          <h3 className="text-base font-extrabold text-heading">{section.title}</h3>
           {section.blocks.map((block, blockIndex) => (
             <Block key={blockIndex} block={block} writing={writing && sectionIndex === lastSection && blockIndex === lastBlock} />
           ))}

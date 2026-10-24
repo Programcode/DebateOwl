@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react';
+import { Owl, type OwlPose } from '@/components/brand/Owl';
 import { useTranslation } from 'react-i18next';
 import { AlertCircle, X } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { Button, ThinkingDots } from '@/components/ui/button';
 import type { LiveGeneration, LivePhase } from '@/lib/ai/client';
 
 export interface ToolRunError {
@@ -97,16 +98,19 @@ export function useElapsedSeconds() {
   return elapsed;
 }
 
-/** One spinner, one true status line, elapsed time once it matters, and a way out. */
-export function ToolRunStatus({ label, onCancel }: { label: string; onCancel?: () => void }) {
+/** The owl at work, one true status line, elapsed time once it matters, and a way out. */
+export function ToolRunStatus({ label, onCancel, pose = 'idea' }: { label: string; onCancel?: () => void; pose?: OwlPose }) {
   const { t } = useTranslation();
   const elapsed = useElapsedSeconds();
   return (
-    <div className="flex min-h-[400px] flex-col items-center justify-center gap-4 rounded-lg border-2 border-dashed border-border bg-card/50 p-8 text-center">
-      <span className="h-8 w-8 animate-spin rounded-full border-2 border-primary/25 border-t-primary [animation-duration:600ms]" aria-hidden="true" />
-      <p className="text-sm font-medium text-muted-foreground">
+    <div className="flex min-h-[400px] flex-col items-center justify-center gap-4 rounded-xl border-2 border-dashed border-border-strong bg-card/60 p-8 text-center animate-in fade-in-0 duration-300">
+      <span className="owl-bob">
+        <Owl pose={pose} size={120} priority />
+      </span>
+      <p className="flex flex-wrap items-center justify-center gap-x-2 gap-y-1 text-[0.9375rem] font-bold text-foreground">
         <span role="status" aria-live="polite">{label}</span>
-        {elapsed >= 5 && <span className="ml-2 tabular-nums">{t('tools.elapsed', { seconds: elapsed, defaultValue: '{{seconds}}s' })}</span>}
+        <ThinkingDots className="text-primary" />
+        {elapsed >= 5 && <span className="tabular-nums text-muted-foreground">{t('tools.elapsed', { seconds: elapsed, defaultValue: '{{seconds}}s' })}</span>}
       </p>
       {onCancel && (
         <Button type="button" variant="outline" size="sm" onClick={onCancel}>
@@ -121,10 +125,12 @@ export function ToolRunStatus({ label, onCancel }: { label: string; onCancel?: (
 export function ToolRunErrorPanel({ error, onRetry, onDismiss }: { error: ToolRunError; onRetry?: () => void; onDismiss?: () => void }) {
   const { t } = useTranslation();
   return (
-    <div role="alert" className="mb-4 flex items-start gap-3 rounded-lg border border-destructive/30 bg-destructive/5 p-4 text-sm">
-      <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-destructive" aria-hidden="true" />
-      <div className="min-w-0 flex-1">
-        <p className="font-medium text-foreground">{error.title}</p>
+    <div role="alert" className="mb-4 flex items-start gap-3 rounded-lg border-2 border-destructive/30 bg-danger-tint p-4 text-sm animate-in fade-in-0 slide-in-from-top-1 duration-200">
+      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-card text-danger-text" aria-hidden="true">
+        <AlertCircle className="h-4 w-4" strokeWidth={2.5} />
+      </span>
+      <div className="min-w-0 flex-1 pt-1">
+        <p className="font-extrabold text-foreground">{error.title}</p>
         {error.description && <p className="mt-0.5 text-muted-foreground">{error.description}</p>}
       </div>
       <div className="flex shrink-0 gap-1">

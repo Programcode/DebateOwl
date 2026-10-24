@@ -1,7 +1,8 @@
 import React, { useState, useRef, useEffect, useLayoutEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { MessageCircle, Send, RotateCcw, Quote, Map, List, HelpCircle, Paperclip, X, Bookmark, Mic, MicOff, Search, Save, PanelLeftOpen, PlusCircle, Square, SlidersHorizontal, ArrowDown, AlertCircle } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { Check, MessageCircle, Send, RotateCcw, Quote, Map, List, HelpCircle, Paperclip, X, Bookmark, Mic, MicOff, Search, Save, PanelLeftOpen, PlusCircle, Square, SlidersHorizontal, ArrowDown, AlertCircle } from 'lucide-react';
+import { Button, ThinkingDots } from '@/components/ui/button';
+import { Owl, OwlAvatar } from '@/components/brand/Owl';
 import { Input } from '@/components/ui/input';
 import { Markdown } from '@/components/ui/markdown';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -104,7 +105,7 @@ function sourceQualityClass(label?: string) {
   return 'bg-amber-500/10 text-amber-600 dark:text-amber-400';
 }
 
-const USER_BUBBLE_MARKDOWN = 'text-current [&_*]:text-current [&_li::marker]:text-current [&_a]:decoration-current [&_code]:bg-primary-foreground/15 [&_blockquote]:border-current/40';
+const USER_BUBBLE_MARKDOWN = 'text-current [&_*]:text-current [&_li::marker]:text-current [&_a]:decoration-current [&_code]:bg-white/15 [&_blockquote]:border-current/40';
 
 const MessageBubble = React.memo(function MessageBubble({ message, onSave }: { message: Message, onSave?: (title: string, content: string) => void }) {
   const { t } = useTranslation();
@@ -112,13 +113,15 @@ const MessageBubble = React.memo(function MessageBubble({ message, onSave }: { m
   const output = message.output;
 
   return (
-    <div className={cn('flex gap-3', isUser ? 'justify-end' : 'animate-in fade-in-0 slide-in-from-bottom-1 duration-150 ease-out-strong justify-start')}>
+    <div className={cn('flex items-end gap-2.5', isUser ? 'justify-end animate-in fade-in-0 slide-in-from-bottom-1 duration-200 ease-out-strong' : 'animate-in fade-in-0 slide-in-from-bottom-1 duration-200 ease-out-strong justify-start')}>
+      {/* The coach is the owl. */}
+      {!isUser && <OwlAvatar pose="idea" size={32} className="mb-0.5 hidden sm:inline-flex" />}
       <div
         className={cn(
-          'max-w-[85%] rounded-2xl px-4 py-3 space-y-3 relative group',
+          'max-w-[85%] rounded-[20px] px-4 py-3 space-y-3 relative group',
           isUser
-            ? 'bg-primary text-primary-foreground rounded-br-sm'
-            : 'bg-card border border-border rounded-bl-sm'
+            ? 'bg-brand text-white rounded-br-md shadow-[0_3px_0_var(--do-primary-ledge)]'
+            : 'bg-card border-2 border-border rounded-bl-md'
         )}
         data-streaming={message.isStreaming ? 'true' : undefined}
       >
@@ -171,9 +174,10 @@ const MessageBubble = React.memo(function MessageBubble({ message, onSave }: { m
                   <div className="flex items-start justify-between gap-2">
                     <span className="font-medium text-foreground">{citation.claim}</span>
                     <span className={cn(
-                      'shrink-0 rounded px-1.5 py-0.5 text-xs font-medium',
-                      citation.verified ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' : 'bg-amber-500/10 text-amber-600 dark:text-amber-400'
+                      'inline-flex shrink-0 items-center gap-1 rounded-full px-2 py-0.5 text-xs font-bold',
+                      citation.verified ? 'bg-success-tint text-success-text' : 'bg-warning-tint text-warning-text'
                     )}>
+                      {citation.verified ? <Check className="h-3 w-3" strokeWidth={3} aria-hidden="true" /> : <HelpCircle className="h-3 w-3" strokeWidth={2.5} aria-hidden="true" />}
                       {citation.verified ? t('askChat.verified') : t('askChat.unverified')}
                     </span>
                   </div>
@@ -569,13 +573,11 @@ export function AskChat({ messages, streamingMessage, isLoading, error, onDismis
         </aside>
 
     <Card className="flex flex-col h-[calc(100dvh-14rem)] min-h-[400px] max-h-[800px] border-primary/20">
-      <CardHeader className="bg-linear-to-br from-primary/5 to-transparent shrink-0">
+      <CardHeader className="shrink-0 border-b-2 border-border bg-brand-tint/50 pb-4">
         {/* Wraps on a phone: the Hungarian title and two buttons do not fit one 375 px row. */}
         <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
           <div className="flex min-w-0 items-center gap-3">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10">
-              <MessageCircle className="h-5 w-5 text-primary" />
-            </div>
+            <OwlAvatar pose={waitingForText && searchingWeb ? 'skeptical' : 'idea'} size={44} />
             <div className="min-w-0">
               <CardTitle>{t('askChat.title')}</CardTitle>
               <CardDescription>{t('askChat.subtitle')}</CardDescription>
@@ -600,9 +602,9 @@ export function AskChat({ messages, streamingMessage, isLoading, error, onDismis
       <CardContent className="relative flex-1 overflow-hidden p-0">
         <div ref={scrollRef} onScroll={handleScroll} className="h-full overflow-y-auto overscroll-contain p-4">
           {messages.length === 0 && !streamingMessage ? (
-            <div className="flex flex-col items-center justify-center h-full text-center p-6">
-              <MessageCircle className="h-12 w-12 text-muted-foreground/30 mb-4" />
-              <h3 className="font-medium text-foreground mb-1">{t('askChat.startConversation')}</h3>
+            <div className="flex flex-col items-center justify-center h-full text-center p-6 animate-in fade-in-0 duration-300">
+              <Owl pose="point" size={112} className="mb-3" priority />
+              <h3 className="font-display text-xl font-[600] text-heading mb-1">{t('askChat.startConversation')}</h3>
               <p className="text-sm text-muted-foreground max-w-sm">
                 {t('askChat.startDesc')}
               </p>
@@ -615,9 +617,12 @@ export function AskChat({ messages, streamingMessage, isLoading, error, onDismis
               ))}
               {waitingForText && (
                 // One true status line: what is happening, and how long it has taken once that matters.
-                <p className="flex items-center gap-2 text-sm text-muted-foreground" role="status" aria-live="polite">
-                  <span className="h-3.5 w-3.5 shrink-0 animate-spin rounded-full border-2 border-muted-foreground/30 border-t-muted-foreground [animation-duration:600ms]" aria-hidden="true" />
-                  {searchingWeb ? t('askChat.searchingWeb', 'Searching the web…') : t('askChat.working', 'Working…')}
+                <p className="flex items-center gap-2.5 text-sm font-bold text-muted-foreground animate-in fade-in-0 duration-200" role="status" aria-live="polite">
+                  <OwlAvatar pose={searchingWeb ? 'skeptical' : 'idea'} size={32} />
+                  <span className="inline-flex items-center gap-2 rounded-[20px] rounded-bl-md border-2 border-border bg-card px-3.5 py-2.5">
+                    {searchingWeb ? t('askChat.searchingWeb', 'Searching the web…') : t('askChat.working', 'Working…')}
+                    <ThinkingDots className="text-primary" />
+                  </span>
                   {elapsed >= 5 && <span className="tabular-nums">{t('askChat.elapsed', { seconds: elapsed, defaultValue: '{{seconds}}s' })}</span>}
                 </p>
               )}

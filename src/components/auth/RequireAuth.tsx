@@ -1,4 +1,5 @@
 import { useEffect, useRef, type ReactNode } from 'react';
+import { OwlLoader } from '@/components/ui/loading-spinner';
 import { Navigate, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '@/lib/supabase/AuthProvider';
@@ -25,10 +26,7 @@ export function RequireAuth({ children, fallback }: { children: ReactNode; fallb
     // Signed-out views have no AppLayout, so this is the page's one <main>.
     return (
       <main className="min-h-screen flex items-center justify-center bg-background">
-        <div role="status">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" aria-hidden="true" />
-          <span className="sr-only">{t('common.loading')}</span>
-        </div>
+        <OwlLoader message={t('common.loading')} />
       </main>
     );
   }

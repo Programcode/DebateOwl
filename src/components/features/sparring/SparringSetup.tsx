@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { Owl } from '@/components/brand/Owl';
+import { LoadingSpinner } from '@/components/ui/loading-spinner';
 import { useTranslation } from 'react-i18next';
 import { useOnlineStatus } from '@/hooks/use-online-status';
-import { ArrowRight, Check, ChevronDown, Cpu, Gauge, Loader2, Swords } from 'lucide-react';
+import { ArrowRight, Check, ChevronDown, Cpu, Gauge, Swords } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { DebateContextControl } from '@/components/features/debate/DebateContextControl';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -100,10 +102,10 @@ export function SparringSetup({ onStart, roundCost = null, remainingRequests = n
 
       <form onSubmit={handleSubmit} className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_300px]">
         <div className="space-y-6">
-          <Card className="overflow-hidden border-primary/20 shadow-sm">
-            <CardHeader className="border-b border-border/60 bg-primary/[0.035] pb-5">
-              <div className="flex items-start gap-3">
-                <div className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+          <Card className="overflow-hidden">
+            <CardHeader className="border-b-2 border-border bg-brand-tint/50 pb-5">
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-card text-primary shadow-[0_2px_0_var(--do-primary-tint-border)]">
                   <Swords className="h-5 w-5" aria-hidden="true" />
                 </div>
                 <div>
@@ -146,16 +148,15 @@ export function SparringSetup({ onStart, roundCost = null, remainingRequests = n
                     aria-pressed={selected}
                     onClick={() => setUserSide(side)}
                     className={cn(
-                      'motion-press rounded-xl border p-3 text-left transition-colors focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
-                      selected ? 'border-primary bg-primary/10 text-foreground shadow-sm' : 'border-border bg-background hover:border-primary/40 hover:bg-accent/50',
+                      'tile min-h-14 rounded-md px-4 py-3 text-left focus-visible:outline-hidden focus-visible:ring-[3px] focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-card',
                     )}
                   >
                     <span className="flex items-center justify-between gap-3">
-                      <span className="flex items-center gap-2 font-semibold">
-                        <span className={cn('h-2.5 w-2.5 rounded-full', side === 'pro' ? 'bg-emerald-500' : 'bg-rose-500')} aria-hidden="true" />
+                      <span className="flex items-center gap-2 font-extrabold text-heading">
+                        <span className={cn('h-3 w-3 rounded-full', side === 'pro' ? 'bg-brand' : 'bg-destructive')} aria-hidden="true" />
                         {side === 'pro' ? t('sparring.pro', 'Pro') : t('sparring.con', 'Con')}
                       </span>
-                      {selected && <Check className="h-4 w-4 text-primary" aria-hidden="true" />}
+                      {selected ? <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-brand text-white animate-in zoom-in-50 duration-300 ease-overshoot"><Check className="h-3.5 w-3.5" strokeWidth={3.5} aria-hidden="true" /></span> : <span className="h-6 w-6 shrink-0 rounded-full border-2 border-border-strong" aria-hidden="true" />}
                     </span>
                   </button>
                 );
@@ -177,13 +178,15 @@ export function SparringSetup({ onStart, roundCost = null, remainingRequests = n
                     aria-pressed={selected}
                     onClick={() => setDifficulty(level.id)}
                     className={cn(
-                      'motion-press rounded-xl border p-3 text-left transition-colors focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
-                      selected ? 'border-primary bg-primary/10 shadow-sm' : 'border-border hover:border-primary/40 hover:bg-accent/50',
+                      'tile min-h-14 rounded-md px-4 py-3 text-left focus-visible:outline-hidden focus-visible:ring-[3px] focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-card',
                     )}
                   >
-                    <span className="flex items-center gap-2 font-semibold">
-                      <Gauge className="h-4 w-4 text-primary" aria-hidden="true" />
-                      {t(`sparring.difficulty.${level.id}`, level.name)}
+                    <span className="flex items-center justify-between gap-2">
+                      <span className="flex items-center gap-2 font-extrabold text-heading">
+                        <Gauge className="h-4 w-4 text-primary" aria-hidden="true" />
+                        {t(`sparring.difficulty.${level.id}`, level.name)}
+                      </span>
+                      {selected && <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-brand text-white animate-in zoom-in-50 duration-300 ease-overshoot"><Check className="h-3.5 w-3.5" strokeWidth={3.5} aria-hidden="true" /></span>}
                     </span>
                   </button>
                 );
@@ -229,9 +232,11 @@ export function SparringSetup({ onStart, roundCost = null, remainingRequests = n
             </CardContent>
           </Card>
 
-          <Card className="border-primary/20 bg-primary/2.5">
+          <Card className="relative mt-16 overflow-visible border-brand-tint-border">
+            {/* The opponent, perched on the round card, sizes you up. */}
+            <Owl pose="skeptical" size={80} className="absolute -top-[68px] right-4" />
             <CardContent className="space-y-4 pt-6">
-              <details className="group rounded-xl border border-border/70 bg-background/70 p-3">
+              <details className="group rounded-md border-2 border-border bg-surface-sunken/60 p-3">
                 <summary className="flex cursor-pointer list-none items-center justify-between gap-3 text-sm font-semibold focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
                   <span className="flex flex-1 items-center justify-between gap-3">
                     <span>{t('sparring.setup.speakingOrder', 'Speaking order')}</span>
@@ -252,14 +257,14 @@ export function SparringSetup({ onStart, roundCost = null, remainingRequests = n
               </details>
 
               <div className="grid grid-cols-2 gap-3 text-sm">
-                <div className="rounded-lg border border-border/70 bg-background/70 p-3">
+                <div className="rounded-md border-2 border-border bg-surface-sunken/60 p-3">
                   <p className="text-xs text-muted-foreground">{t('sparring.setup.opponentTurns', 'Opponent turns')}</p>
-                  <p className="mt-1 text-xl font-semibold tabular-nums">{aiRequests}</p>
+                  <p className="mt-1 font-display text-2xl font-[600] tabular-nums text-heading">{aiRequests}</p>
                 </div>
-                <div className="rounded-lg border border-border/70 bg-background/70 p-3">
+                <div className="rounded-md border-2 border-border bg-surface-sunken/60 p-3">
                   <p className="text-xs text-muted-foreground">{t('sparring.setup.aiRequests', 'Round cost')}</p>
                   {/* The whole round is one charge (QA bug 7): the number is uses, not one per reply. */}
-                  <p data-testid="sparring-round-cost" className="mt-1 text-xl font-semibold tabular-nums">
+                  <p data-testid="sparring-round-cost" className="mt-1 font-display text-2xl font-[600] tabular-nums text-heading">
                     {formatNumber(cost)} <span className="text-sm font-medium text-muted-foreground">{t('sparring.setup.roundCostUnit', { count: cost })}</span>
                   </p>
                   <p className="mt-0.5 text-xs text-muted-foreground">{t('sparring.setup.aiRequestBreakdown', { count: aiRequests })}</p>
@@ -273,8 +278,8 @@ export function SparringSetup({ onStart, roundCost = null, remainingRequests = n
 
               <DebateContextControl feature="sparring" side={userSide} hidden={!debatePrefill} />
 
-              <Button type="submit" className="h-12 w-full" disabled={!canStart} aria-busy={isStarting}>
-                {isStarting && <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />}
+              <Button type="submit" variant="accent" size="lg" className="w-full" disabled={!canStart} aria-busy={isStarting}>
+                {isStarting && <LoadingSpinner size="sm" />}
                 {isStarting ? t('sparring.setup.openingRoom', 'Opening room…') : t('sparring.setup.startRound', 'Start round')}
                 {!isStarting && <ArrowRight className="h-4 w-4" aria-hidden="true" />}
               </Button>
@@ -285,12 +290,12 @@ export function SparringSetup({ onStart, roundCost = null, remainingRequests = n
                 </p>
               )}
               {startError && !isStarting && (
-                <p data-testid="sparring-start-error" role="alert" className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-xs leading-5 text-destructive">
+                <p data-testid="sparring-start-error" role="alert" className="rounded-md border-2 border-destructive/40 bg-danger-tint px-3 py-2 text-xs leading-5 text-danger-text">
                   {startError}
                 </p>
               )}
               {requestShortfall && (
-                <p data-testid="sparring-request-shortfall" role="status" className="rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-xs leading-5 text-amber-800 dark:text-amber-200">
+                <p data-testid="sparring-request-shortfall" role="status" className="rounded-md border-2 border-warning/40 bg-warning-tint px-3 py-2 text-xs leading-5 text-warning-text">
                   {/* The server's refusal when it answered, else the same words from the browser's count (QB-06). */}
                   {blockedReason ?? shortfallMessage(cost, remainingRequests)}
                 </p>

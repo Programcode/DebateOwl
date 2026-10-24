@@ -1,6 +1,7 @@
 import { Children, type ReactNode } from 'react';
+import { LoadingSpinner } from '@/components/ui/loading-spinner';
 import { useTranslation } from 'react-i18next';
-import { FileText, FileDown, Loader2, MessageSquare } from 'lucide-react';
+import { FileText, FileDown, MessageSquare } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import GoogleDocsIcon from '@/components/icons/GoogleDocsIcon';
 
@@ -71,7 +72,7 @@ export function ExportToolbar({
           disabled={isExportingGDocs}
         >
           {isExportingGDocs ? (
-            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            <LoadingSpinner size="sm" className="mr-2" />
           ) : (
             <GoogleDocsIcon className="mr-2 h-4 w-4" />
           )}

@@ -1,4 +1,6 @@
 import { useCallback, useEffect, useMemo, useReducer, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from 'react';
+import { OwlLoader } from '@/components/ui/loading-spinner';
+import { LoadingSpinner } from '@/components/ui/loading-spinner';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { motion, useReducedMotion } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
@@ -8,7 +10,6 @@ import {
   Check,
   Clock3,
   Flame,
-  Loader2,
   MessageSquare,
   Mic,
   RefreshCw,
@@ -729,9 +730,8 @@ export default function CrossfirePage() {
 
   if (stateOwnerId !== user?.id) {
     return (
-      <div className="container flex min-h-[60vh] items-center justify-center px-4 py-8" role="status">
-        <Loader2 className="h-6 w-6 animate-spin text-primary motion-reduce:animate-none" />
-        <span className="sr-only">{t('crossfire.loading')}</span>
+      <div className="container flex min-h-[60vh] items-center justify-center px-4 py-8">
+        <OwlLoader message={t('crossfire.loading')} />
       </div>
     );
   }
@@ -991,9 +991,9 @@ export default function CrossfirePage() {
             <CardContent className="flex min-h-56 flex-col items-center justify-center gap-4 p-8 text-center">
               {state.requestStatus === 'pending' ? (
                 <>
-                  <Loader2 className="h-7 w-7 animate-spin text-primary motion-reduce:animate-none" />
+                  <OwlLoader size={88} />
                   <div>
-                    <h2 className="font-semibold">{t('crossfire.debriefLoading')}</h2>
+                    <h2 className="font-display text-lg font-[600] text-heading">{t('crossfire.debriefLoading')}</h2>
                     <p className="mt-1 text-sm text-muted-foreground">{t('crossfire.debriefSubtitle')}</p>
                   </div>
                 </>
@@ -1083,7 +1083,7 @@ export default function CrossfirePage() {
           </article>
         ) : (
           <div className="flex items-center gap-3 rounded-lg border border-border/70 bg-card px-4 py-3 text-sm text-muted-foreground" role="status" aria-live="polite">
-            <Loader2 className="h-4 w-4 animate-spin text-primary motion-reduce:animate-none" />
+            <LoadingSpinner size="sm" className="text-primary" />
             {t('crossfire.thinking')}
           </div>
         ))}

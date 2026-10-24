@@ -1,6 +1,6 @@
 import { useRef, useState, type FormEvent } from 'react';
+import { LoadingSpinner } from '@/components/ui/loading-spinner';
 import { useTranslation } from 'react-i18next';
-import { Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
@@ -129,7 +129,7 @@ export function DebateForm({ initial, submitLabel, pendingLabel, onSubmit, onCan
       <div className="flex flex-wrap justify-end gap-2">
         {onCancel && <Button type="button" variant="outline" onClick={onCancel}>{t('common.cancel', 'Cancel')}</Button>}
         <Button type="submit" disabled={saving || !motion.trim()} aria-busy={saving}>
-          {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" />}
+          {saving && <LoadingSpinner size="sm" className="mr-2" />}
           {saving ? pendingLabel ?? submitLabel : submitLabel}
         </Button>
       </div>

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
+import { LoadingSpinner } from '@/components/ui/loading-spinner';
 import { useTranslation } from 'react-i18next';
-import { Ban, Loader2, Megaphone, Search, Trash2 } from 'lucide-react';
+import { Ban, Megaphone, Search, Trash2 } from 'lucide-react';
 import {
   createAnnouncement,
   deactivateAnnouncement,
@@ -309,7 +310,7 @@ export function AdminAnnouncements({ users }: AdminAnnouncementsProps) {
             onClick={handleCreate}
             disabled={submitting || !title.trim() || !body.trim()}
           >
-            {submitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" />}
+            {submitting && <LoadingSpinner size="sm" className="mr-2" />}
             {t('admin.announcements.create')}
           </Button>
         </CardContent>
@@ -323,7 +324,7 @@ export function AdminAnnouncements({ users }: AdminAnnouncementsProps) {
         <CardContent>
           {loading ? (
             <div className="flex min-h-48 items-center justify-center text-muted-foreground">
-              <Loader2 className="mr-2 h-5 w-5 animate-spin" aria-hidden="true" />
+              <LoadingSpinner size="sm" className="mr-2" />
               {t('admin.announcements.loading')}
             </div>
           ) : announcements.length === 0 ? (
@@ -412,7 +413,7 @@ export function AdminAnnouncements({ users }: AdminAnnouncementsProps) {
               }}
               disabled={deactivating}
             >
-              {deactivating && <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" />}
+              {deactivating && <LoadingSpinner size="sm" className="mr-2" />}
               {t('admin.announcements.deactivateAction')}
             </AlertDialogAction>
           </AlertDialogFooter>
@@ -430,7 +431,7 @@ export function AdminAnnouncements({ users }: AdminAnnouncementsProps) {
           <AlertDialogFooter>
             <AlertDialogCancel disabled={deleting}>{t('admin.announcements.cancel')}</AlertDialogCancel>
             <AlertDialogAction onClick={handleDelete} disabled={deleting}>
-              {deleting && <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" />}
+              {deleting && <LoadingSpinner size="sm" className="mr-2" />}
               {t('admin.announcements.deleteAction')}
             </AlertDialogAction>
           </AlertDialogFooter>
