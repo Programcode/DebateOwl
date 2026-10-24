@@ -48,6 +48,10 @@ test("bill-promo: an expired account is blocked, redeems a promo code, and gets 
 
 test("bill-discount: a discount code is claimed once, stays in the dialog, and goes to Checkout", async ({ signedIn: page, user, evidence }) => {
   const userId = await user.userId();
+  // An ended trial, so Settings and the dialog both offer "Upgrade to Pro".
+  await admin.from("user_settings")
+    .update({ subscription_tier: "expired", trial_ends_at: null, grace_period_ends_at: null, daily_limit_override: null })
+    .eq("user_id", userId);
   const code = `VERIFYD${randomUUID().slice(0, 8).toUpperCase()}`;
   const { data: promo, error } = await admin.from("promo_codes")
     .insert({ code, type: "discount", config: { stripe_promotion_code: "promo_VerifyRecipe" }, max_redemptions: 1 })
