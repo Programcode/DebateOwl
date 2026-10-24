@@ -1,0 +1,578 @@
+[
+  {
+    "shot": "home-430-light",
+    "overflow": 0,
+    "cls": 0,
+    "owls": [
+      {
+        "src": "owl-mark.svg",
+        "w": 36,
+        "h": 36,
+        "clipped": false
+      },
+      {
+        "src": "owl-mark.svg",
+        "w": 24,
+        "h": 24,
+        "clipped": false
+      }
+    ]
+  },
+  {
+    "shot": "home-430-dark",
+    "overflow": 0,
+    "cls": 0,
+    "owls": [
+      {
+        "src": "owl-mark.svg",
+        "w": 36,
+        "h": 36,
+        "clipped": false
+      },
+      {
+        "src": "owl-mark.svg",
+        "w": 24,
+        "h": 24,
+        "clipped": false
+      }
+    ]
+  },
+  {
+    "shot": "logo-430-light",
+    "overflow": 0,
+    "cls": 0,
+    "owls": [
+      {
+        "src": "owl-mark.svg",
+        "w": 36,
+        "h": 36,
+        "clipped": false
+      },
+      {
+        "src": "owl-mark.svg",
+        "w": 24,
+        "h": 24,
+        "clipped": false
+      }
+    ]
+  },
+  {
+    "shot": "logo-430-dark",
+    "overflow": 0,
+    "cls": 0,
+    "owls": [
+      {
+        "src": "owl-mark.svg",
+        "w": 36,
+        "h": 36,
+        "clipped": false
+      },
+      {
+        "src": "owl-mark.svg",
+        "w": 24,
+        "h": 24,
+        "clipped": false
+      }
+    ]
+  },
+  {
+    "shot": "timer-430-light",
+    "overflow": 0,
+    "cls": 0.0003,
+    "owls": [
+      {
+        "src": "owl-mark.svg",
+        "w": 36,
+        "h": 36,
+        "clipped": false
+      },
+      {
+        "src": "owl-mark.svg",
+        "w": 24,
+        "h": 24,
+        "clipped": false
+      }
+    ]
+  },
+  {
+    "shot": "timer-430-dark",
+    "overflow": 0,
+    "cls": 0.0003,
+    "owls": [
+      {
+        "src": "owl-mark.svg",
+        "w": 36,
+        "h": 36,
+        "clipped": false
+      },
+      {
+        "src": "owl-mark.svg",
+        "w": 24,
+        "h": 24,
+        "clipped": false
+      }
+    ]
+  },
+  {
+    "shot": "library-empty-430-light",
+    "overflow": 0,
+    "cls": 0.0001,
+    "owls": [
+      {
+        "src": "owl-mark.svg",
+        "w": 36,
+        "h": 36,
+        "clipped": false
+      },
+      {
+        "src": "owl-point-320.webp",
+        "w": 112,
+        "h": 112,
+        "clipped": false
+      },
+      {
+        "src": "owl-mark.svg",
+        "w": 24,
+        "h": 24,
+        "clipped": false
+      }
+    ]
+  },
+  {
+    "shot": "library-empty-430-dark",
+    "overflow": 0,
+    "cls": 0.0001,
+    "owls": [
+      {
+        "src": "owl-mark.svg",
+        "w": 36,
+        "h": 36,
+        "clipped": false
+      },
+      {
+        "src": "owl-point-320.webp",
+        "w": 112,
+        "h": 112,
+        "clipped": false
+      },
+      {
+        "src": "owl-mark.svg",
+        "w": 24,
+        "h": 24,
+        "clipped": false
+      }
+    ]
+  },
+  {
+    "shot": "404-430-light",
+    "overflow": 0,
+    "cls": 0.0001,
+    "owls": [
+      {
+        "src": "owl-mark.svg",
+        "w": 32,
+        "h": 32,
+        "clipped": false
+      },
+      {
+        "src": "owl-surprised-480.webp",
+        "w": 168,
+        "h": 168,
+        "clipped": false
+      }
+    ]
+  },
+  {
+    "shot": "404-430-dark",
+    "overflow": 0,
+    "cls": 0.0001,
+    "owls": [
+      {
+        "src": "owl-mark.svg",
+        "w": 32,
+        "h": 32,
+        "clipped": false
+      },
+      {
+        "src": "owl-surprised-480.webp",
+        "w": 168,
+        "h": 168,
+        "clipped": false
+      }
+    ]
+  },
+  {
+    "shot": "generate-failed-430-light",
+    "overflow": 0,
+    "cls": 0.0184,
+    "owls": [
+      {
+        "src": "owl-mark.svg",
+        "w": 36,
+        "h": 36,
+        "clipped": false
+      },
+      {
+        "src": "owl-point-320.webp",
+        "w": 112,
+        "h": 112,
+        "clipped": false
+      },
+      {
+        "src": "owl-mark.svg",
+        "w": 24,
+        "h": 24,
+        "clipped": false
+      }
+    ]
+  },
+  {
+    "shot": "generate-failed-430-dark",
+    "overflow": 0,
+    "cls": 0.0184,
+    "owls": [
+      {
+        "src": "owl-mark.svg",
+        "w": 36,
+        "h": 36,
+        "clipped": false
+      },
+      {
+        "src": "owl-point-320.webp",
+        "w": 112,
+        "h": 112,
+        "clipped": false
+      },
+      {
+        "src": "owl-mark.svg",
+        "w": 24,
+        "h": 24,
+        "clipped": false
+      }
+    ]
+  },
+  {
+    "shot": "generate-loading-430-light",
+    "overflow": 0,
+    "cls": 0.0184,
+    "owls": [
+      {
+        "src": "owl-mark.svg",
+        "w": 36,
+        "h": 36,
+        "clipped": false
+      },
+      {
+        "src": "owl-idea-320.webp",
+        "w": 120,
+        "h": 120,
+        "clipped": false
+      },
+      {
+        "src": "owl-mark.svg",
+        "w": 24,
+        "h": 24,
+        "clipped": false
+      }
+    ]
+  },
+  {
+    "shot": "generate-loading-430-dark",
+    "overflow": 0,
+    "cls": 0.0184,
+    "owls": [
+      {
+        "src": "owl-mark.svg",
+        "w": 36,
+        "h": 36,
+        "clipped": false
+      },
+      {
+        "src": "owl-idea-320.webp",
+        "w": 120,
+        "h": 120,
+        "clipped": false
+      },
+      {
+        "src": "owl-mark.svg",
+        "w": 24,
+        "h": 24,
+        "clipped": false
+      }
+    ]
+  },
+  {
+    "shot": "case-saved-430-light",
+    "overflow": 0,
+    "cls": 0.0211,
+    "owls": [
+      {
+        "src": "owl-mark.svg",
+        "w": 36,
+        "h": 36,
+        "clipped": false
+      },
+      {
+        "src": "owl-mark.svg",
+        "w": 24,
+        "h": 24,
+        "clipped": false
+      }
+    ]
+  },
+  {
+    "shot": "case-saved-430-dark",
+    "overflow": 0,
+    "cls": 0.0211,
+    "owls": [
+      {
+        "src": "owl-mark.svg",
+        "w": 36,
+        "h": 36,
+        "clipped": false
+      },
+      {
+        "src": "owl-mark.svg",
+        "w": 24,
+        "h": 24,
+        "clipped": false
+      }
+    ]
+  },
+  {
+    "shot": "ask-coach-430-light",
+    "overflow": 0,
+    "cls": 0.0184,
+    "owls": [
+      {
+        "src": "owl-mark.svg",
+        "w": 36,
+        "h": 36,
+        "clipped": false
+      },
+      {
+        "src": "owl-idea-bust-96.webp",
+        "w": 48,
+        "h": 48,
+        "clipped": false
+      },
+      {
+        "src": "owl-idea-bust-96.webp",
+        "w": 0,
+        "h": 0,
+        "clipped": false
+      },
+      {
+        "src": "owl-mark.svg",
+        "w": 24,
+        "h": 24,
+        "clipped": false
+      }
+    ]
+  },
+  {
+    "shot": "ask-coach-430-dark",
+    "overflow": 0,
+    "cls": 0.0184,
+    "owls": [
+      {
+        "src": "owl-mark.svg",
+        "w": 36,
+        "h": 36,
+        "clipped": false
+      },
+      {
+        "src": "owl-idea-bust-96.webp",
+        "w": 48,
+        "h": 48,
+        "clipped": false
+      },
+      {
+        "src": "owl-idea-bust-96.webp",
+        "w": 0,
+        "h": 0,
+        "clipped": false
+      },
+      {
+        "src": "owl-mark.svg",
+        "w": 24,
+        "h": 24,
+        "clipped": false
+      }
+    ]
+  },
+  {
+    "shot": "sparring-opponent-430-light",
+    "overflow": 0,
+    "cls": 0.0185,
+    "owls": [
+      {
+        "src": "owl-mark.svg",
+        "w": 36,
+        "h": 36,
+        "clipped": false
+      },
+      {
+        "src": "owl-skeptical-bust-96.webp",
+        "w": 35,
+        "h": 35,
+        "clipped": false
+      },
+      {
+        "src": "owl-skeptical-bust-96.webp",
+        "w": 35,
+        "h": 35,
+        "clipped": false
+      },
+      {
+        "src": "owl-mark.svg",
+        "w": 24,
+        "h": 24,
+        "clipped": false
+      }
+    ]
+  },
+  {
+    "shot": "sparring-opponent-430-dark",
+    "overflow": 0,
+    "cls": 0.0185,
+    "owls": [
+      {
+        "src": "owl-mark.svg",
+        "w": 36,
+        "h": 36,
+        "clipped": false
+      },
+      {
+        "src": "owl-skeptical-bust-96.webp",
+        "w": 35,
+        "h": 35,
+        "clipped": false
+      },
+      {
+        "src": "owl-skeptical-bust-96.webp",
+        "w": 35,
+        "h": 35,
+        "clipped": false
+      },
+      {
+        "src": "owl-mark.svg",
+        "w": 24,
+        "h": 24,
+        "clipped": false
+      }
+    ]
+  },
+  {
+    "shot": "sparring-won-430-light",
+    "overflow": 0,
+    "cls": 0.0225,
+    "owls": [
+      {
+        "src": "owl-mark.svg",
+        "w": 36,
+        "h": 36,
+        "clipped": false
+      },
+      {
+        "src": "owl-celebrating-320.webp",
+        "w": 96,
+        "h": 96,
+        "clipped": false
+      },
+      {
+        "src": "owl-skeptical-bust-96.webp",
+        "w": 24,
+        "h": 24,
+        "clipped": false
+      },
+      {
+        "src": "owl-mark.svg",
+        "w": 24,
+        "h": 24,
+        "clipped": false
+      }
+    ]
+  },
+  {
+    "shot": "sparring-won-430-dark",
+    "overflow": 0,
+    "cls": 0.0225,
+    "owls": [
+      {
+        "src": "owl-mark.svg",
+        "w": 36,
+        "h": 36,
+        "clipped": false
+      },
+      {
+        "src": "owl-celebrating-320.webp",
+        "w": 96,
+        "h": 96,
+        "clipped": false
+      },
+      {
+        "src": "owl-skeptical-bust-96.webp",
+        "w": 24,
+        "h": 24,
+        "clipped": false
+      },
+      {
+        "src": "owl-mark.svg",
+        "w": 24,
+        "h": 24,
+        "clipped": false
+      }
+    ]
+  },
+  {
+    "shot": "history-empty-430-light",
+    "overflow": 0,
+    "cls": 0,
+    "owls": [
+      {
+        "src": "owl-mark.svg",
+        "w": 36,
+        "h": 36,
+        "clipped": false
+      },
+      {
+        "src": "owl-point-320.webp",
+        "w": 112,
+        "h": 112,
+        "clipped": false
+      },
+      {
+        "src": "owl-mark.svg",
+        "w": 24,
+        "h": 24,
+        "clipped": false
+      }
+    ]
+  },
+  {
+    "shot": "history-empty-430-dark",
+    "overflow": 0,
+    "cls": 0,
+    "owls": [
+      {
+        "src": "owl-mark.svg",
+        "w": 36,
+        "h": 36,
+        "clipped": false
+      },
+      {
+        "src": "owl-point-320.webp",
+        "w": 112,
+        "h": 112,
+        "clipped": false
+      },
+      {
+        "src": "owl-mark.svg",
+        "w": 24,
+        "h": 24,
+        "clipped": false
+      }
+    ]
+  }
+]
