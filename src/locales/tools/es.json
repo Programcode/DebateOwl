@@ -2,6 +2,9 @@
   "footer": {
     "freeTools": "Herramientas de debate gratis"
   },
+  "home": {
+    "freeTools": "¿Solo necesitas un cronómetro de rondas, una moción de práctica o una hoja de flujo? Esas herramientas son gratis y no necesitan cuenta."
+  },
   "layout": {
     "allTools": "Herramientas de debate gratis",
     "breadcrumb": "Ruta de navegación",

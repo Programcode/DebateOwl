@@ -53,8 +53,8 @@ ANSWERS = {
         "It is useful before and after a round, not during one. A flowchart maps your thesis, your arguments, the attacks on them and your rebuttals, so you can see which link breaks a chain and where two contentions rely on the same assumption. Build it from the motion outward, add the strongest attack to each contention, and note the weighing at each clash. During the round itself, a written flow on paper or a laptop is faster than any canvas, so keep your in-round notes there and use the map to plan and review.",
     ),
     "online-debate-timer": (
-        "How should I use a timer to practise debate speeches?",
-        "Time every practice speech at its real length, because most debaters overestimate how much they can say in a minute. Note where the one-minute signal catches you, what you cut and what you would cut next time, then fix one thing and run the speech again. Short drills such as thirty-second blocks and short-clock rebuttals build pacing quickly. {product}'s timer has speech presets for Standard 4-6-6-3, Lincoln-Douglas, Public Forum and Policy. It does not time cross-examination, prep time, World Schools or British Parliamentary, so a phone timer covers those.",
+        "How long are debate speeches in each format?",
+        "It depends on the format. Public Forum has 4-minute constructives and rebuttals, 3-minute summaries and 2-minute final focus speeches. Lincoln-Douglas runs 6, 7, 4, 6 and 3 minutes. Policy uses 8-minute constructives and 5-minute rebuttals. British Parliamentary speeches are 7 minutes, and World Schools speeches are 8, followed by 4-minute replies. Cross-examination usually takes 3 minutes, and prep time varies by league, so check your tournament's rules. The free {product} debate timer loads each of these speech orders for you.",
     ),
     "how-to-write-a-debate-case": (
         "How do you write a debate case?",

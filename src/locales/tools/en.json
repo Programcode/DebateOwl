@@ -2,6 +2,9 @@
   "footer": {
     "freeTools": "Free debate tools"
   },
+  "home": {
+    "freeTools": "Only need a round timer, a practice motion or a flow sheet? Those tools are free and need no account."
+  },
   "layout": {
     "allTools": "Free debate tools",
     "breadcrumb": "Breadcrumb",

@@ -603,6 +603,7 @@ GUIDES = {
         ],
     },
     "debate-topics-for-students": {
+        "modified": "2026-10-23",
         "features": [
             ("Topics by level", "Starter motions for new debaters, intermediate motions with more technical clash, and advanced motions for experienced teams."),
             ("Topics by format", "Motion wording for BP and WSDC, resolutions for Public Forum and value resolutions for Lincoln-Douglas."),
@@ -682,6 +683,7 @@ GUIDES = {
                     "Debrief on one question: where was the clash, and who won it?",
                     "Rerun the same topic with sides swapped. The second round is usually much better, because each team now knows the other side's best arguments.",
                 ]},
+                "For a quick random pick, the [free debate motion generator](/tools/debate-motion-generator) draws a practice motion by topic and difficulty, with no account.",
                 "In {product}, start a Current Debate with the motion and run Brainstorm to see angles for both sides, generate a case with its predicted opposing case, or run a Sparring round against the AI when there is no second team available.",
             ]),
         ],
@@ -694,6 +696,7 @@ GUIDES = {
         ],
     },
     "public-forum-debate": {
+        "modified": "2026-10-23",
         "features": [
             ("The PF round, speech by speech", "What each of the eight speeches and three crossfires is for, with the standard times."),
             ("Summary and final focus that agree", "How to collapse to two issues in summary and extend exactly those into final focus."),
@@ -717,6 +720,7 @@ GUIDES = {
                     "Second speaker, team B: final focus, 2 minutes.",
                 ]},
                 "Each team also has a few minutes of preparation time to use between speeches, usually three. Check your league's rules, because some tournaments vary times and evidence rules.",
+                "The [free debate timer](/tools/debate-timer) runs this whole order, crossfires and each team's prep time included.",
             ]),
             ("What each speech has to do", [
                 {"h3": "Constructive"},
@@ -835,33 +839,44 @@ GUIDES = {
         ],
     },
     "online-debate-timer": {
-        "modified": "2026-10-21",
+        "modified": "2026-10-23",
         "features": [
-            ("Format presets", "Speech orders and times for Standard 4-6-6-3, Lincoln-Douglas, Public Forum and Policy, so each speech starts with the right clock."),
-            ("Signals you can hear", "One beep at one minute remaining and two beeps at time up, so you can practise without watching the screen."),
-            ("Keyboard control", "Space starts and stops the clock, R resets it, and the arrow keys move to the next or previous speaker."),
+            ("Speech times by format", "The speech order and lengths for Public Forum, Lincoln-Douglas, Policy, British Parliamentary and World Schools under their common rules."),
+            ("Cross-ex and prep time", "How long questioning periods and prep time run in each format, next to the speeches."),
+            ("Drills against the clock", "Short timed drills that build pacing, from thirty-second blocks to a full round in speaking order."),
         ],
         "sections": [
             ("Timing changes strategy", [
                 "A strong argument still loses if it arrives too late or runs too long. Speaking against the clock forces the choices a round will force anyway: which argument goes first, which one gets cut, and how much time the weighing needs.",
                 "Most debaters overestimate how much they can say in a minute. A timed run of a speech you thought was four minutes long usually shows where the time actually goes, and that is the first thing to fix.",
             ]),
+            ("Speech times by format", [
+                "These are the speech lengths under each format's most common rules. Leagues and tournaments change them, so check the invitation before you practise.",
+                {"list": [
+                    "Public Forum (NSDA): two 4-minute constructives, two 4-minute rebuttals, two 3-minute summaries and two 2-minute final focus speeches, with three 3-minute crossfires and 3 minutes of prep per team.",
+                    "Lincoln-Douglas (NSDA): 6-minute affirmative constructive, 7-minute negative constructive, 4-minute first affirmative rebuttal, 6-minute negative rebuttal and 3-minute second affirmative rebuttal, with two 3-minute cross-examinations and 4 minutes of prep per debater.",
+                    "Policy (NSDA): four 8-minute constructives, each followed by 3 minutes of cross-examination, then four 5-minute rebuttals, with 8 minutes of prep per team.",
+                    "British Parliamentary (WUDC): eight 7-minute speeches. Points of information are allowed except in the first and last minute, and teams prepare for 15 minutes before the round.",
+                    "World Schools (WSDC): six 8-minute substantive speeches with the first and last minute protected, then two 4-minute reply speeches, Opposition first.",
+                ]},
+                "The [free debate timer](/tools/debate-timer) runs any of these speech orders, cross-examination, crossfire and prep time included, with no account. It also has Asian Parliamentary and the school 4-6-6-3 format.",
+            ]),
             ("What the {product} timer covers", [
-                "Choose a format and the timer loads its speech order. Each speech has its own length, and moving to the next speaker resets the clock for that speech.",
+                "Inside the {product} app, choose a format and the timer loads its speech order. Each speech has its own length, and moving to the next speaker resets the clock for that speech.",
                 {"list": [
                     "Standard (4-6-6-3): introductor, two refutation speeches and a conclusor.",
                     "Lincoln-Douglas: 6-minute affirmative constructive, 7-minute negative constructive, 4-minute first affirmative rebuttal, 6-minute negative rebuttal and 3-minute second affirmative rebuttal.",
                     "Public Forum: four 4-minute constructive and rebuttal speeches, two 3-minute summaries and two 2-minute final focus speeches.",
                     "Policy: four 8-minute constructives and four 5-minute rebuttals.",
                 ]},
-                "The presets cover speeches only. Cross-examination periods, crossfire and prep time are not on the clock, so time those separately. World Schools and British Parliamentary have no preset; their speeches run 8 and 7 minutes, and a phone timer covers them.",
+                "The app presets cover speeches only, with no cross-examination, crossfire or prep time on the clock, and there is no World Schools or British Parliamentary preset. The [free debate timer](/tools/debate-timer) covers all of those.",
             ]),
             ("Drills to run against the clock", [
                 {"steps": [
                     "Thirty-second blocks. Deliver one prepared rebuttal block in thirty seconds. If it runs over, cut the setup, not the response.",
                     "Full speech. Give a whole constructive at its real length. Note where the one-minute beep lands; if you are still on your first argument, the structure needs work.",
                     "Short-clock rebuttal. Give a rebuttal with a minute less than the format allows. The real speech will then feel like it has room for weighing.",
-                    "Cross-ex timing. Run a three-minute question period on a separate timer and count how many questions actually led somewhere.",
+                    "Cross-ex timing. Run a three-minute question period against the clock and count how many questions actually led somewhere.",
                     "Full round order. Step through the whole format with a partner, using the arrow keys to move between speakers, so you practise the gaps as well as the speeches.",
                 ]},
                 "Drill one skill per session. A timer shows how long a speech took, not why, so the next step matters as much as the timing.",
@@ -872,8 +887,9 @@ GUIDES = {
             ]),
         ],
         "faqs": [
-            ("Which debate formats does the timer support?", "Standard 4-6-6-3, Lincoln-Douglas, Public Forum and Policy. World Schools and British Parliamentary have no preset yet, so time those speeches separately."),
-            ("Does the timer include prep time or cross-examination?", "No. The presets time speeches only. Use a second timer for cross-examination, crossfire and prep time."),
+            ("How long is a debate speech?", "Between two and eight minutes, depending on the format and the speech. Public Forum final focus speeches are the shortest at two minutes; Policy constructives and World Schools substantive speeches run eight."),
+            ("Which formats does the free debate timer support?", "Public Forum, Lincoln-Douglas, Policy, British Parliamentary, World Schools, Asian Parliamentary and the school 4-6-6-3 format, and you can build your own. The timer inside the {product} app has presets for Standard 4-6-6-3, Lincoln-Douglas, Public Forum and Policy."),
+            ("Does the timer include prep time or cross-examination?", "The free debate timer does: it times cross-examination and crossfire as part of the round and keeps a prep bank for each side in Public Forum, Lincoln-Douglas and Policy. The timer inside the {product} app times speeches only."),
             ("Can I use the timer without looking at the screen?", "Yes. It beeps once at one minute remaining and twice at time up, and you can turn the sound on or off."),
             ("What keyboard shortcuts does the timer have?", "Space starts and stops the clock, R resets it, and the arrow keys change speaker."),
             ("How often should I practise against a timer?", "Every time you practise a speech. Short timed drills several times a week build pacing faster than one long session."),
@@ -1051,7 +1067,7 @@ GUIDES = {
         ],
     },
     "how-to-flow-in-debate": {
-        "modified": "2026-10-20",
+        "modified": "2026-10-23",
         "features": [
             ("Column structure", "One column per speech, so each argument can be followed across the round from where it starts to where it is answered or dropped."),
             ("Abbreviations that keep up", "A short, consistent set of symbols, so you can write as fast as the round moves."),
@@ -1070,6 +1086,7 @@ GUIDES = {
                     "Use two colours, one for each side, so you can see at a glance who said what.",
                     "Leave space. Arguments grow across speeches, and a cramped flow is the one that loses track.",
                 ]},
+                "To skip ruling the columns by hand, print a [free debate flow sheet](/tools/debate-flow-sheet) with one column per speech for your format.",
             ]),
             ("Abbreviations", [
                 "You cannot write full sentences at speaking speed. Keep a short list and use it every time, so you can read your own flow under pressure:",
@@ -1101,7 +1118,7 @@ GUIDES = {
         ],
     },
     "world-schools-debate": {
-        "modified": "2026-10-20",
+        "modified": "2026-10-23",
         "features": [
             ("Motion interpretation", "Define the model, the stakeholders and what each side has to prove before anyone writes a speech."),
             ("Team roles", "What the first, second and third speakers and the reply speaker each owe the team, and how to practise each role."),
@@ -1139,7 +1156,7 @@ GUIDES = {
             ]),
             ("Prepare for WSDC with {product}", [
                 "Use Brainstorm and case generation to map arguments for both sides of a prepared motion, and run motions under a one-hour limit to practise impromptu prep. Crossfire with the AI asking the questions is a way to rehearse taking POIs and answering briefly. Attack finds the weak links in each speaker's material before the round does.",
-                "{product} Sparring does not yet run the full WSDC round, and the timer has no WSDC preset, so time the eight-minute speeches and four-minute replies separately.",
+                "{product} Sparring does not yet run the full WSDC round, and the timer inside the app has no WSDC preset. The [free debate timer](/tools/debate-timer) does, with the protected first and last minute and both reply speeches.",
             ]),
         ],
         "faqs": [

@@ -2,6 +2,9 @@
   "footer": {
     "freeTools": "Ingyenes vitaeszközök"
   },
+  "home": {
+    "freeTools": "Csak fordulóidőmérő, gyakorló vitatétel vagy jegyzetlap kell? Ezek az eszközök ingyenesek, és nem kell hozzájuk fiók."
+  },
   "layout": {
     "allTools": "Ingyenes vitaeszközök",
     "breadcrumb": "Morzsamenü",

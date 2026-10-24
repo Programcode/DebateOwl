@@ -21,6 +21,16 @@ DebateLab by Pi-Stack runs at https://debate.pi-stack.org/. It is a separate pro
 - [Best AI debate tools](https://debate.pi-stack.org/best-ai-debate-tools): how to choose an AI debate tool
 - [Sitemap](https://debate.pi-stack.org/sitemap.xml): every public page
 
+## Free tools
+
+Free to use, no account needed, and they run in the browser.
+
+- [All free debate tools](https://debate.pi-stack.org/tools): every tool below on one page
+- [Debate timer](https://debate.pi-stack.org/tools/debate-timer): Round timer for PF, LD, Policy, BP, World Schools and Asian Parliamentary, with protected time, POI knocks and prep banks.
+- [Debate motion generator](https://debate.pi-stack.org/tools/debate-motion-generator): Draw one practice motion or three for a veto drill, from 300 original motions sorted by topic and difficulty.
+- [Debate flow sheet](https://debate.pi-stack.org/tools/debate-flow-sheet): A printable one-page flow with a column for every speech in your format, on A4 or Letter.
+- [Speech time calculator](https://debate.pi-stack.org/tools/speech-time-calculator): Paste a speech to see how long it takes to deliver and which speech slots it fits.
+
 ## Guides
 
 - [AI Debate Practice for Stronger Cases, Rebuttals, and Speeches](https://debate.pi-stack.org/ai-debate-practice): Practice debate online with DebateLab: AI opponents, targeted drills, rebuttal feedback, evidence research, argument flowcharts, and tournament-ready prep tools.
@@ -29,7 +39,7 @@ DebateLab by Pi-Stack runs at https://debate.pi-stack.org/. It is a separate pro
 - [Ask an AI Debate Coach for Round-Ready Prep](https://debate.pi-stack.org/ai-debate-coach): Ask DebateLab's AI debate coach for help with strategy, argument structure, weighing, rebuttals, speeches, prep questions, and practice feedback.
 - [Find Better Debate Evidence Without Losing the Argument](https://debate.pi-stack.org/debate-evidence-finder): Find evidence leads for debate cases with DebateLab, then verify original sources, citations, warrants, and impact links before using them in round.
 - [Map the Clash With an Argument Flowchart](https://debate.pi-stack.org/argument-flowchart): Map debate arguments, clash, links, impacts, and weighing with DebateLab's argument flowchart workflow for clearer speeches and rebuttals.
-- [Practice With an Online Debate Timer](https://debate.pi-stack.org/online-debate-timer): Use DebateLab as an online debate timer for speech practice, rebuttal timing, and tournament-ready pacing across formats.
+- [How Debate Speech Times Work in Each Format](https://debate.pi-stack.org/online-debate-timer): How long debate speeches are in Public Forum, Lincoln-Douglas, Policy, British Parliamentary and World Schools, with cross-examination, prep time and drills for practising against the clock.
 - [How to Write a Debate Case](https://debate.pi-stack.org/how-to-write-a-debate-case): Learn how to write a debate case with a clear motion analysis, burdens, contentions, warrants, evidence, impacts, and weighing using DebateLab.
 - [How to Practice Debate Rebuttals](https://debate.pi-stack.org/how-to-practice-rebuttals): Learn how to practice debate rebuttals with drills for warrants, evidence quality, impact weighing, cross-examination, and speech collapse.
 - [Public Forum Debate Prep with AI](https://debate.pi-stack.org/public-forum-debate): Prepare for Public Forum debate with DebateLab: case construction, rebuttal drills, summary and final focus practice, crossfire prep, and evidence research.
