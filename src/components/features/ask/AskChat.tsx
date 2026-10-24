@@ -644,8 +644,10 @@ export function AskChat({ messages, streamingMessage, isLoading, error, onDismis
       </CardContent>
 
       <div className="shrink-0 border-t border-border p-4 space-y-2">
-        <div className="flex items-center gap-3 flex-wrap">
-          <div className="flex gap-1 overflow-x-auto scrollbar-hide">
+        {/* Options share the mode row, so only one row of controls sits above the message box.
+            On a phone it shows its icon only: the Hungarian label does not fit beside both modes. */}
+        <div className="flex items-center gap-2">
+          <div className="flex min-w-0 gap-1 overflow-x-auto scrollbar-hide">
             {modeOptions.map((option) => (
               <Button
                 key={option.id}
@@ -659,51 +661,51 @@ export function AskChat({ messages, streamingMessage, isLoading, error, onDismis
               </Button>
             ))}
           </div>
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button type="button" variant="outline" size="sm" className="ml-auto shrink-0 gap-2">
+                <SlidersHorizontal className="h-4 w-4" aria-hidden="true" />
+                <span className="sr-only sm:not-sr-only">{t('askChat.options', 'Options')}</span>
+                {[citationMode, webSearch, prosConsMode, argumentMapMode].filter(Boolean).length > 0 && (
+                  <span className="rounded-full bg-primary/10 px-1.5 text-xs font-medium text-primary tabular-nums">{[citationMode, webSearch, prosConsMode, argumentMapMode].filter(Boolean).length}</span>
+                )}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent align="end" className="w-72 space-y-1 p-3">
+                <div className="flex items-center justify-between gap-3 rounded-md px-1 py-1.5 pointer-coarse:min-h-11">
+                  <Label htmlFor="citation-mode" className="flex items-center gap-2 text-sm font-normal">
+                    <Quote className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
+                    {t('askChat.citations')}
+                  </Label>
+                  <Switch id="citation-mode" checked={citationMode} onCheckedChange={setCitationMode} />
+                </div>
+                <div className="flex items-center justify-between gap-3 rounded-md px-1 py-1.5 pointer-coarse:min-h-11">
+                  <Label htmlFor="web-search-mode" className="flex items-center gap-2 text-sm font-normal">
+                    <Search className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
+                    {t('askChat.webSearch')}
+                  </Label>
+                  <Switch id="web-search-mode" checked={webSearch} onCheckedChange={setWebSearch} />
+                </div>
+                <div className="flex items-center justify-between gap-3 rounded-md px-1 py-1.5 pointer-coarse:min-h-11">
+                  <Label htmlFor="pros-cons-mode" className="flex items-center gap-2 text-sm font-normal">
+                    <List className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
+                    {t('askChat.modeProsCons')}
+                  </Label>
+                  <Switch id="pros-cons-mode" checked={prosConsMode} onCheckedChange={setProsConsMode} />
+                </div>
+                <div className="flex items-center justify-between gap-3 rounded-md px-1 py-1.5 pointer-coarse:min-h-11">
+                  <Label htmlFor="argument-map-mode" className="flex items-center gap-2 text-sm font-normal">
+                    <Map className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
+                    {t('askChat.modeArgMap')}
+                  </Label>
+                  <Switch id="argument-map-mode" checked={argumentMapMode} onCheckedChange={setArgumentMapMode} />
+                </div>
+              <div className="border-t pt-2">
+                <ModelSelector feature="ask" className="w-full" />
+              </div>
+            </PopoverContent>
+          </Popover>
         </div>
-        <Popover>
-          <PopoverTrigger asChild>
-            <Button type="button" variant="outline" size="sm" className="gap-2">
-              <SlidersHorizontal className="h-4 w-4" aria-hidden="true" />
-              {t('askChat.options', 'Options')}
-              {[citationMode, webSearch, prosConsMode, argumentMapMode].filter(Boolean).length > 0 && (
-                <span className="rounded-full bg-primary/10 px-1.5 text-xs font-medium text-primary tabular-nums">{[citationMode, webSearch, prosConsMode, argumentMapMode].filter(Boolean).length}</span>
-              )}
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent align="start" className="w-72 space-y-1 p-3">
-              <div className="flex items-center justify-between gap-3 rounded-md px-1 py-1.5 pointer-coarse:min-h-11">
-                <Label htmlFor="citation-mode" className="flex items-center gap-2 text-sm font-normal">
-                  <Quote className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
-                  {t('askChat.citations')}
-                </Label>
-                <Switch id="citation-mode" checked={citationMode} onCheckedChange={setCitationMode} />
-              </div>
-              <div className="flex items-center justify-between gap-3 rounded-md px-1 py-1.5 pointer-coarse:min-h-11">
-                <Label htmlFor="web-search-mode" className="flex items-center gap-2 text-sm font-normal">
-                  <Search className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
-                  {t('askChat.webSearch')}
-                </Label>
-                <Switch id="web-search-mode" checked={webSearch} onCheckedChange={setWebSearch} />
-              </div>
-              <div className="flex items-center justify-between gap-3 rounded-md px-1 py-1.5 pointer-coarse:min-h-11">
-                <Label htmlFor="pros-cons-mode" className="flex items-center gap-2 text-sm font-normal">
-                  <List className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
-                  {t('askChat.modeProsCons')}
-                </Label>
-                <Switch id="pros-cons-mode" checked={prosConsMode} onCheckedChange={setProsConsMode} />
-              </div>
-              <div className="flex items-center justify-between gap-3 rounded-md px-1 py-1.5 pointer-coarse:min-h-11">
-                <Label htmlFor="argument-map-mode" className="flex items-center gap-2 text-sm font-normal">
-                  <Map className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
-                  {t('askChat.modeArgMap')}
-                </Label>
-                <Switch id="argument-map-mode" checked={argumentMapMode} onCheckedChange={setArgumentMapMode} />
-              </div>
-            <div className="border-t pt-2">
-              <ModelSelector feature="ask" className="w-full" />
-            </div>
-          </PopoverContent>
-        </Popover>
 
         {files.length > 0 && (
           <div className="flex flex-wrap gap-2">
