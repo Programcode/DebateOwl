@@ -1067,7 +1067,7 @@ export default function LibraryPage() {
               {firstLoadPending ? (
                 <OwlLoader className="py-10" size={88} message={t('libraryPage.loadingSources', 'Loading sources…')} />
               ) : sourceLibrary.length === 0 ? (
-                <EmptyState icon={Database} headingLevel="h3" title={t('libraryPage.emptyTitle')} description={t('libraryPage.emptyDesc')} />
+                <EmptyState icon={Database} pose="reading" headingLevel="h3" title={t('libraryPage.emptyTitle')} description={t('libraryPage.emptyDesc')} />
               ) : visibleSources.length === 0 ? (
                 <EmptyState icon={Search} pose="surprised" headingLevel="h3" title={t('libraryPage.noMatchingSources', 'No matching sources')} description={t('libraryPage.noMatchingSourcesDesc', 'Try a different search or folder.')} />
               ) : (

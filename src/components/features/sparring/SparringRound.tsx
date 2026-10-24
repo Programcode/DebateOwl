@@ -255,7 +255,7 @@ export function SparringRound({
                 // What you're answering stays in view above the composer, not below it in the transcript.
                 <article className="rounded-lg border-2 border-border bg-card p-4 sm:p-5" aria-labelledby="sparring-latest-opponent">
                   <div className="flex items-center gap-2.5">
-                    <OwlAvatar pose="skeptical" size={32} />
+                    <OwlAvatar pose="arguing" size={32} label={t('sparring.opponentAvatarAlt', 'The owl, your AI opponent')} />
                     <h2 id="sparring-latest-opponent" className="text-sm font-extrabold text-heading">{t('sparring.round.latestOpponent', 'Opponent’s last speech')}</h2>
                     <span className="truncate text-xs text-muted-foreground">{t(`sparring.turns.${latestOpponentSpeech.turnId}`, latestOpponentSpeech.role)}</span>
                   </div>
@@ -304,7 +304,7 @@ export function SparringRound({
                 // The opponent's speech as it is written, in the place it will be read.
                 <article data-testid="sparring-live-speech" className="rounded-lg border-2 border-brand-tint-border bg-card p-4 motion-safe:animate-in fade-in-0 duration-200 sm:p-5" aria-busy="true" aria-labelledby="sparring-live-opponent">
                   <div className="flex items-center gap-2.5">
-                    <OwlAvatar pose="point" size={32} />
+                    <OwlAvatar pose="arguing" size={32} label={t('sparring.opponentAvatarAlt', 'The owl, your AI opponent')} />
                     <h2 id="sparring-live-opponent" className="text-sm font-extrabold text-heading">{t('sparring.round.opponentSpeaking', 'Opponent is speaking')}</h2>
                     {currentTurn && <span className="truncate text-xs text-muted-foreground">{t(`sparring.turns.${currentTurn.id}`, currentTurn.label)}</span>}
                   </div>
@@ -324,8 +324,8 @@ export function SparringRound({
                       <>
                         {/* One indicator: the owl opponent sizing up the round, bobbing while it works. */}
                         {aiLoading
-                          ? <OwlLoader pose="skeptical" size={104} />
-                          : <Owl pose="skeptical" size={104} />}
+                          ? <OwlLoader pose="arguing" size={104} />
+                          : <Owl pose="arguing" size={104} />}
                         <h2 className="mt-4 font-display text-xl font-[600] text-heading">{aiLoading ? t('sparring.round.opponentThinking', 'Opponent is thinking') : t('sparring.round.opponentUpNext', 'Opponent is up next')}</h2>
                         <p className="mt-2 max-w-md text-sm leading-6 text-muted-foreground">{aiLoading ? t('sparring.round.opponentThinkingDescription', 'It is reading the motion and your speeches before choosing a response.') : t('sparring.round.opponentUpNextDescription', 'The next response will appear here.')}</p>
                       </>
@@ -358,7 +358,7 @@ export function SparringRound({
                           <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-brand text-white">
                             <UserRound className="h-4 w-4" aria-hidden="true" />
                           </div>
-                        ) : <OwlAvatar pose="skeptical" size={32} />}
+                        ) : <OwlAvatar pose="arguing" size={32} label={t('sparring.opponentAvatarAlt', 'The owl, your AI opponent')} />}
                         <div className="min-w-0">
                           <p className="truncate text-sm font-extrabold text-heading">{speech.speaker === 'user' ? t('sparring.user', 'You') : t('sparring.opponent', 'AI opponent')}</p>
                           <p className="truncate text-xs text-muted-foreground">{t(`sparring.turns.${speech.turnId}`, speech.role)}</p>

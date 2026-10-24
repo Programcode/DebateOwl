@@ -196,7 +196,7 @@ export default function HistoryPage() {
               </CardHeader>
               <CardContent>
                 {savedCases.length === 0 ? (
-                  <EmptyState icon={FileText} title={t('historyPage.emptyCases')} description={t('historyPage.emptyCasesDesc', 'Generated cases you save will appear here.')} actionLabel={t('historyPage.createCase', 'Create a case')} onAction={() => navigate('/app/generate')} />
+                  <EmptyState pose="sleepy" icon={FileText} title={t('historyPage.emptyCases')} description={t('historyPage.emptyCasesDesc', 'Generated cases you save will appear here.')} actionLabel={t('historyPage.createCase', 'Create a case')} onAction={() => navigate('/app/generate')} />
                 ) : (
                   <div>
                     <div className={LIST_CLASS}>
@@ -233,7 +233,7 @@ export default function HistoryPage() {
               </CardHeader>
               <CardContent>
                 {savedChats.length === 0 ? (
-                  <EmptyState icon={MessageCircle} title={t('historyPage.emptyChats')} description={t('historyPage.emptyChatsDesc', 'Saved coaching chats will appear here.')} actionLabel={t('historyPage.startChat', 'Start a chat')} onAction={() => navigate('/app/ask')} />
+                  <EmptyState pose="sleepy" icon={MessageCircle} title={t('historyPage.emptyChats')} description={t('historyPage.emptyChatsDesc', 'Saved coaching chats will appear here.')} actionLabel={t('historyPage.startChat', 'Start a chat')} onAction={() => navigate('/app/ask')} />
                 ) : (
                   <div className="space-y-4">
                     {savedChats.map((item) => (
@@ -260,7 +260,7 @@ export default function HistoryPage() {
               </CardHeader>
               <CardContent>
                 {savedAttacks.length === 0 ? (
-                  <EmptyState icon={Zap} title={t('historyPage.emptyAttacks')} description={t('historyPage.emptyAttacksDesc', 'Saved attack analyses will appear here.')} actionLabel={t('historyPage.attackCase', 'Attack a case')} onAction={() => navigate('/app/attack')} />
+                  <EmptyState pose="sleepy" icon={Zap} title={t('historyPage.emptyAttacks')} description={t('historyPage.emptyAttacksDesc', 'Saved attack analyses will appear here.')} actionLabel={t('historyPage.attackCase', 'Attack a case')} onAction={() => navigate('/app/attack')} />
                 ) : (
                   <div>
                     <div className={LIST_CLASS}>
@@ -290,7 +290,7 @@ export default function HistoryPage() {
               </CardHeader>
               <CardContent>
                 {savedBrainstorms.length === 0 ? (
-                  <EmptyState icon={Brain} title={t('historyPage.emptyBrainstorms')} description={t('historyPage.emptyBrainstormsDesc', 'Saved ideation sessions will appear here.')} actionLabel={t('historyPage.brainstormIdeas', 'Brainstorm ideas')} onAction={() => navigate('/app/brainstorm')} />
+                  <EmptyState pose="sleepy" icon={Brain} title={t('historyPage.emptyBrainstorms')} description={t('historyPage.emptyBrainstormsDesc', 'Saved ideation sessions will appear here.')} actionLabel={t('historyPage.brainstormIdeas', 'Brainstorm ideas')} onAction={() => navigate('/app/brainstorm')} />
                 ) : (
                   <div>
                     <div className={LIST_CLASS}>
@@ -320,7 +320,7 @@ export default function HistoryPage() {
               </CardHeader>
               <CardContent>
                 {savedFactoids.length === 0 ? (
-                  <EmptyState icon={BookOpen} title={t('historyPage.emptyFactoids')} description={t('historyPage.emptyFactoidsDesc', 'Saved evidence research will appear here.')} actionLabel={t('historyPage.findEvidence', 'Find evidence')} onAction={() => navigate('/app/factoids')} />
+                  <EmptyState pose="sleepy" icon={BookOpen} title={t('historyPage.emptyFactoids')} description={t('historyPage.emptyFactoidsDesc', 'Saved evidence research will appear here.')} actionLabel={t('historyPage.findEvidence', 'Find evidence')} onAction={() => navigate('/app/factoids')} />
                 ) : (
                   <div>
                     <div className={LIST_CLASS}>
@@ -351,6 +351,7 @@ export default function HistoryPage() {
               <CardContent>
                 {sparringSessions.length === 0 ? (
                   <EmptyState
+                    pose="sleepy"
                     icon={Dumbbell}
                     title={t('historyPage.emptySparring')}
                     description={t('historyPage.emptySparringDesc')}
@@ -401,6 +402,7 @@ export default function HistoryPage() {
               <CardContent>
                 {savedCrossfires.length === 0 ? (
                   <EmptyState
+                    pose="sleepy"
                     icon={Flame}
                     title={t('historyPage.emptyCrossfire', 'No Crossfire rounds yet')}
                     description={t('historyPage.emptyCrossfireDesc', 'Finish a Crossfire round to review its transcript and debrief here.')}

@@ -78,7 +78,7 @@ export function SparringScorecard({ session, scorecard, onRestart, onExport, onE
             </div>
             <div className="mt-8 grid gap-4 sm:grid-cols-2">
               <ScoreTotal label={t('sparring.scorecard.yourScore', 'Your score')} score={scorecard.userScore} icon={<UserRound className="h-4 w-4" aria-hidden="true" />} isWinner={scorecard.winner === 'user'} topScoreLabel={t('sparring.scorecard.topScore', 'Top score')} />
-              <ScoreTotal label={t('sparring.scorecard.opponentScore', 'Opponent score')} score={scorecard.aiScore} icon={<OwlAvatar pose="skeptical" size={22} />} isWinner={scorecard.winner === 'ai'} topScoreLabel={t('sparring.scorecard.topScore', 'Top score')} />
+              <ScoreTotal label={t('sparring.scorecard.opponentScore', 'Opponent score')} score={scorecard.aiScore} icon={<OwlAvatar pose="arguing" size={22} />} isWinner={scorecard.winner === 'ai'} topScoreLabel={t('sparring.scorecard.topScore', 'Top score')} />
             </div>
             <div className="mt-7 rounded-lg border-2 border-border bg-surface-sunken/60 p-4 sm:p-5">
               <p className="text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">{t('sparring.scorecard.verdict', "Judge's verdict")}</p>
@@ -179,7 +179,7 @@ export function SparringScorecard({ session, scorecard, onRestart, onExport, onE
             {session.speeches.map((speech) => (
               <article key={speech.id} className="rounded-xl border border-border/70 p-4">
                 <div className="flex flex-wrap items-center justify-between gap-2">
-                  <div className="flex items-center gap-2 text-sm font-semibold">{speech.speaker === 'user' ? <span className="flex h-7 w-7 items-center justify-center rounded-full bg-brand text-white" aria-hidden="true"><UserRound className="h-4 w-4" /></span> : <OwlAvatar pose="skeptical" size={28} />}{speech.speaker === 'user' ? t('sparring.user', 'You') : t('sparring.opponent', 'AI opponent')} <span className="font-normal text-muted-foreground">· {t(`sparring.turns.${speech.turnId}`, speech.role)}</span></div>
+                  <div className="flex items-center gap-2 text-sm font-semibold">{speech.speaker === 'user' ? <span className="flex h-7 w-7 items-center justify-center rounded-full bg-brand text-white" aria-hidden="true"><UserRound className="h-4 w-4" /></span> : <OwlAvatar pose="arguing" size={28} label={t('sparring.opponentAvatarAlt', 'The owl, your AI opponent')} />}{speech.speaker === 'user' ? t('sparring.user', 'You') : t('sparring.opponent', 'AI opponent')} <span className="font-normal text-muted-foreground">· {t(`sparring.turns.${speech.turnId}`, speech.role)}</span></div>
                   <span className="font-mono text-xs tabular-nums text-muted-foreground">{speech.speaker === 'ai' ? t('sparring.round.estimatedTimeUsed', '{{time}} estimated', { time: formatRoundTime(speech.timeUsedSeconds) }) : t('sparring.round.timeUsed', '{{time}} used', { time: formatRoundTime(speech.timeUsedSeconds) })}</span>
                 </div>
                 <div className="mt-3 text-sm leading-7"><Markdown>{speech.content}</Markdown></div>

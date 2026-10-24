@@ -234,7 +234,7 @@ export function SparringSetup({ onStart, roundCost = null, remainingRequests = n
 
           <Card className="relative mt-16 overflow-visible border-brand-tint-border">
             {/* The opponent, perched on the round card, sizes you up. */}
-            <Owl pose="skeptical" size={80} className="absolute -top-[68px] right-4" />
+            <Owl pose="arguing" size={80} className="absolute -top-[68px] right-4" />
             <CardContent className="space-y-4 pt-6">
               <details className="group rounded-md border-2 border-border bg-surface-sunken/60 p-3">
                 <summary className="flex cursor-pointer list-none items-center justify-between gap-3 text-sm font-semibold focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">

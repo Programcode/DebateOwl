@@ -1338,6 +1338,7 @@
   },
   "askChat": {
     "title": "Ask Your Coach",
+    "coachAvatarAlt": "The owl, your debate coach",
     "subtitle": "Get answers to debate questions",
     "startConversation": "Start a conversation",
     "startDesc": "Ask anything about debate strategy, arguments, or get help with your case.",
@@ -2019,6 +2020,7 @@
     "con": "Con",
     "user": "You",
     "opponent": "AI opponent",
+    "opponentAvatarAlt": "The owl, your AI opponent",
     "format": {
       "standard": "School 4-6-6-3",
       "ld": "Lincoln-Douglas",
