@@ -13,7 +13,7 @@ const LANGUAGE_ENTRIES = Object.entries(APP_LANGUAGES) as [AppLanguage, (typeof 
 function LanguageChoices({ label, value, onChange }: { label: string; value: AppLanguage; onChange: (language: AppLanguage) => void }) {
   return (
     <div role="radiogroup" aria-label={label} className="space-y-1">
-      <p className="px-2 text-xs font-medium text-muted-foreground">{label}</p>
+      <p className="px-2 pb-0.5 text-xs font-extrabold uppercase tracking-[0.08em] text-muted-foreground">{label}</p>
       {LANGUAGE_ENTRIES.map(([code, language]) => {
         const selected = code === value;
         return (
@@ -25,13 +25,13 @@ function LanguageChoices({ label, value, onChange }: { label: string; value: App
             lang={code}
             onClick={() => onChange(code)}
             className={cn(
-              'flex w-full items-center justify-between rounded-md px-2 py-2 text-left text-sm transition-colors pointer-coarse:min-h-11',
-              'hover:bg-accent focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring',
-              selected && 'font-medium text-primary',
+              'flex w-full items-center justify-between rounded-sm px-2.5 py-2 text-left text-[0.9375rem] transition-colors pointer-coarse:min-h-11',
+              'hover:bg-accent focus-visible:outline-hidden focus-visible:ring-[3px] focus-visible:ring-ring',
+              selected && 'bg-brand-tint font-extrabold text-primary',
             )}
           >
             {language.label}
-            {selected && <Check className="h-4 w-4" aria-hidden="true" />}
+            {selected && <Check className="h-4 w-4" strokeWidth={3} aria-hidden="true" />}
           </button>
         );
       })}
@@ -53,7 +53,7 @@ export function LanguageSwitcher() {
     <Popover open={open} onOpenChange={setOpen}>
       <HeaderTooltip label={t('langSwitcher.title', 'Language')}>
         <PopoverTrigger asChild>
-          <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground" aria-label={t('langSwitcher.label', 'Language')}>
+          <Button variant="ghost" size="icon" className="rounded-full text-muted-foreground hover:text-foreground" aria-label={t('langSwitcher.label', 'Language')}>
             <Globe className="h-5 w-5" aria-hidden="true" />
           </Button>
         </PopoverTrigger>

@@ -1,4 +1,5 @@
 import { useTranslation } from "react-i18next";
+import { OwlMark } from '@/components/brand/Owl';
 import { Link } from "react-router-dom";
 
 const Footer = () => {
@@ -11,14 +12,8 @@ const Footer = () => {
                     <div className="flex items-center gap-6">
                         {/* In-app links: no full reload through the startup shell. */}
                         <Link to="/" className="flex items-center gap-2 pointer-coarse:min-h-11">
-                            <img
-                                src="/favicon-72.png"
-                                alt={t('common.logoAlt')}
-                                width={32}
-                                height={32}
-                                className="h-8 w-8 rounded-lg border border-primary/20 object-cover"
-                            />
-                            <span className="text-lg font-bold text-foreground">DebateLab</span>
+                            <OwlMark size={32} alt={t('common.logoAlt')} />
+                            <span className="font-display text-lg font-[600] text-heading">DebateLab</span>
                         </Link>
                     </div>
 

@@ -15,7 +15,7 @@ export function ThemeToggle() {
             <Button
                 variant="ghost"
                 size="icon"
-                className="text-muted-foreground hover:text-foreground"
+                className="rounded-full text-muted-foreground hover:text-foreground"
                 onClick={() => {
                     if (theme === 'light') setTheme('dark');
                     else if (theme === 'dark') setTheme('system');

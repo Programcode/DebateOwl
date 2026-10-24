@@ -1,4 +1,5 @@
 // src/components/layout/AppLayout.tsx
+import { OwlMark } from '@/components/brand/Owl';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, Outlet, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
@@ -47,11 +48,11 @@ const mobileNavItems = [
 ];
 
 const desktopLinkClass = cn(
-  "flex items-center gap-1.5 px-2 xl:px-3 py-2 rounded-md text-sm font-medium whitespace-nowrap transition-colors",
+  "flex h-10 items-center gap-2 px-3 xl:px-3.5 rounded-full text-[0.9375rem] font-bold whitespace-nowrap transition-[color,background-color,transform] duration-150 active:scale-[0.97]",
   "text-muted-foreground hover:text-foreground hover:bg-accent"
 );
-// A 5% tint keeps primary text above 4.5:1; at 10% it measured 4.45.
-const activeLinkClass = "bg-primary/5 text-primary hover:bg-primary/5 hover:text-primary";
+// The plume tint keeps primary text above 4.5:1 in both themes (5.9 light, 7.9 dark).
+const activeLinkClass = "bg-brand-tint text-primary hover:bg-brand-tint hover:text-primary";
 
 const ANNOUNCEMENT_CACHE_KEY = 'debatelab-announcements';
 
@@ -263,16 +264,14 @@ export function AppLayout() {
       <header
         ref={headerRef}
         className={cn(
-          "native-safe-top sticky top-(--staging-banner-height,0px) z-50 border-b bg-card/80 backdrop-blur-xl transition-colors",
-          scrolled ? "border-border/60" : "border-transparent",
+          "native-safe-top sticky top-(--staging-banner-height,0px) z-50 border-b-2 bg-card/85 backdrop-blur-xl transition-[border-color,box-shadow] duration-200",
+          scrolled ? "border-border shadow-[0_6px_16px_-12px_rgb(11_42_110/0.25)] dark:shadow-[0_6px_16px_-10px_rgb(0_0_0/0.6)]" : "border-transparent",
         )}
       >
         <div className="container flex h-16 items-center justify-between px-4 max-[359px]:px-2">
           <Link to="/app" {...homePrefetch} onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-3 shrink-0 rounded-md pointer-coarse:min-h-11">
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-white dark:bg-slate-800 overflow-hidden shrink-0">
-              <img src="/favicon-72.png" alt={t('common.logoAlt')} width={36} height={36} className="h-full w-full object-cover" />
-            </div>
-            <span className="text-lg font-semibold tracking-tight text-foreground whitespace-nowrap">DebateLab</span>
+            <OwlMark size={36} alt={t('common.logoAlt')} />
+            <span className="whitespace-nowrap font-display text-xl font-[600] tracking-[-0.01em] text-heading">DebateLab</span>
           </Link>
 
           {/* Desktop Nav */}
@@ -313,7 +312,7 @@ export function AppLayout() {
                 to="/app/settings"
                 aria-label={t('nav.settings', 'Settings')}
                 data-tour="nav-settings"
-                className="hidden lg:inline-flex h-10 w-10 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                className="hidden lg:inline-flex h-10 w-10 items-center justify-center rounded-full text-muted-foreground transition-[color,background-color,transform] duration-150 hover:bg-accent hover:text-foreground active:scale-90 focus-visible:outline-hidden focus-visible:ring-[3px] focus-visible:ring-ring focus-visible:ring-offset-2"
                 activeClassName={activeLinkClass}
               >
                 <Settings className="h-5 w-5" aria-hidden="true" />
@@ -325,7 +324,7 @@ export function AppLayout() {
                   ref={mobileMenuTriggerRef}
                   variant="ghost"
                   size="icon"
-                  className="lg:hidden text-muted-foreground"
+                  className="rounded-full lg:hidden text-muted-foreground"
                   aria-label={mobileMenuOpen ? t('nav.closeMenu') : t('nav.openMenu')}
                   aria-expanded={mobileMenuOpen}
                 >
@@ -334,10 +333,10 @@ export function AppLayout() {
               </DialogPrimitive.Trigger>
               {/* Mobile Nav: a modal panel under the header, with a scrim over the page. */}
               <DialogPrimitive.Portal>
-                <DialogPrimitive.Overlay className="fixed inset-0 z-40 bg-black/40 lg:hidden data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=open]:fade-in-0 data-[state=closed]:fade-out-0 ease-out-strong data-[state=open]:duration-180 data-[state=closed]:duration-120" />
+                <DialogPrimitive.Overlay className="fixed inset-0 z-40 bg-[var(--do-overlay)] lg:hidden data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=open]:fade-in-0 data-[state=closed]:fade-out-0 ease-out-strong data-[state=open]:duration-180 data-[state=closed]:duration-120" />
                 <DialogPrimitive.Content
                   aria-describedby={undefined}
-                  className="native-scroll-y native-mobile-menu fixed inset-x-0 top-(--app-header-bottom,8rem) z-40 overflow-y-auto border-b border-border bg-card p-4 shadow-lg lg:hidden data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=open]:fade-in-0 data-[state=closed]:fade-out-0 data-[state=open]:slide-in-from-top-1 data-[state=closed]:slide-out-to-top-1 ease-out-strong data-[state=open]:duration-180 data-[state=closed]:duration-120"
+                  className="native-scroll-y native-mobile-menu fixed inset-x-0 top-(--app-header-bottom,8rem) z-40 overflow-y-auto rounded-b-xl border-b-2 border-border bg-card p-3 shadow-xl lg:hidden data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=open]:fade-in-0 data-[state=closed]:fade-out-0 data-[state=open]:slide-in-from-top-1 data-[state=closed]:slide-out-to-top-1 ease-out-strong data-[state=open]:duration-180 data-[state=closed]:duration-120"
                 >
                   <DialogPrimitive.Title className="sr-only">{t('nav.mobileNavigation')}</DialogPrimitive.Title>
                   <nav aria-label={t('nav.mobileNavigation')}>
@@ -353,14 +352,16 @@ export function AppLayout() {
                             aria-current={location.pathname === item.path ? 'page' : undefined}
                             onClick={() => setMobileMenuOpen(false)}
                             className={cn(
-                              "flex min-h-11 items-center gap-3 px-3 py-2.5 rounded-lg transition-colors",
-                              active ? "bg-primary/5 text-primary font-semibold" : "text-muted-foreground hover:text-foreground hover:bg-accent",
+                              "flex min-h-14 items-center gap-3 px-3 py-2.5 rounded-md transition-[color,background-color,transform] duration-150 active:scale-[0.98]",
+                              active ? "bg-brand-tint text-primary" : "text-foreground hover:bg-accent",
                             )}
                           >
-                            <item.icon className="h-5 w-5" aria-hidden="true" />
+                            <span className={cn("flex h-10 w-10 shrink-0 items-center justify-center rounded-sm", active ? "bg-card text-primary shadow-[0_2px_0_var(--do-primary-tint-border)]" : "bg-muted text-muted-foreground")}>
+                              <item.icon className="h-5 w-5" aria-hidden="true" />
+                            </span>
                             <div>
-                              <div className="font-medium">{t(`nav.${item.key}`)}</div>
-                              <div className="text-xs opacity-70">{t(`navDesc.${item.key}`)}</div>
+                              <div className="font-extrabold">{t(`nav.${item.key}`)}</div>
+                              <div className={cn("text-[0.8125rem]", active ? "text-primary" : "text-muted-foreground")}>{t(`navDesc.${item.key}`)}</div>
                             </div>
                           </Link>
                         );
@@ -374,7 +375,7 @@ export function AppLayout() {
         </div>
 
         {/* Mobile Current Debate row */}
-        <div className="container min-w-0 border-t border-border/60 px-4 py-1 max-[359px]:px-2 lg:hidden">
+        <div className="container min-w-0 border-t-2 border-border/70 px-4 py-1 max-[359px]:px-2 lg:hidden">
           <CurrentDebateMenu variant="mobile" />
         </div>
       </header>
@@ -399,9 +400,9 @@ export function AppLayout() {
       </main>
 
       {/* Footer */}
-      <footer className="native-safe-bottom border-t border-border bg-card/50 pt-4">
+      <footer className="native-safe-bottom border-t-2 border-border bg-card/60 pt-4">
         <div className="container flex flex-col items-center justify-between gap-2 px-4 text-sm text-muted-foreground md:flex-row">
-          <p className="font-medium">DebateLab</p>
+          <p className="flex items-center gap-2 font-display text-base font-[600] text-heading"><OwlMark size={24} />DebateLab</p>
           <div className="flex items-center gap-4">
             <Link to="/terms" {...termsPrefetch} className="inline-flex min-h-6 items-center justify-center rounded-sm transition-colors hover:text-foreground pointer-coarse:min-h-11 pointer-coarse:min-w-11">{t('footer.terms')}</Link>
             <Link to="/privacy" {...privacyPrefetch} className="inline-flex min-h-6 items-center rounded-sm transition-colors hover:text-foreground pointer-coarse:min-h-11">{t('footer.privacy')}</Link>

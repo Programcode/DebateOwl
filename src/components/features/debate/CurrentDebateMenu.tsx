@@ -28,15 +28,15 @@ export function CurrentDebateMenu({ variant }: { variant: 'desktop' | 'mobile' }
   const active = navSectionFor(pathname, Boolean(debate)) === 'debate';
 
   const itemClass = cn(
-    'flex min-w-0 items-center gap-1.5 rounded-md py-2 text-sm font-medium transition-colors pointer-coarse:min-h-11 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring',
-    active ? 'bg-primary/5 text-primary' : 'text-muted-foreground hover:bg-accent hover:text-foreground',
+    'flex h-10 min-w-0 items-center gap-1.5 rounded-full py-2 text-[0.9375rem] font-bold transition-[color,background-color] duration-150 pointer-coarse:min-h-11 focus-visible:outline-hidden focus-visible:ring-[3px] focus-visible:ring-ring',
+    active ? 'bg-brand-tint text-primary' : 'text-muted-foreground hover:bg-accent hover:text-foreground',
   );
 
   if (!debate) {
     return (
       <button
         type="button"
-        className={cn(itemClass, 'px-2', variant === 'desktop' && 'xl:px-3 whitespace-nowrap', variant === 'mobile' && 'w-full')}
+        className={cn(itemClass, 'px-3 active:scale-[0.97]', variant === 'desktop' && 'xl:px-3.5 whitespace-nowrap', variant === 'mobile' && 'w-full justify-center text-primary')}
         onClick={() => openDialog('create')}
         data-testid={`current-debate-${variant}`}
       >
@@ -57,7 +57,7 @@ export function CurrentDebateMenu({ variant }: { variant: 'desktop' | 'mobile' }
           <Link
             to="/app/debate"
             aria-current={pathname === '/app/debate' ? 'page' : undefined}
-            className={cn(itemClass, 'rounded-r-none pl-2 pr-1.5', variant === 'desktop' && 'xl:pl-3 whitespace-nowrap', variant === 'mobile' && 'flex-1')}
+            className={cn(itemClass, 'rounded-r-none pl-3 pr-1.5', variant === 'desktop' && 'xl:pl-3.5 whitespace-nowrap', variant === 'mobile' && 'flex-1')}
           >
             <span className="shrink-0">{t('nav.currentDebate', 'Current debate')}</span>
             {variant === 'mobile' && <span className="min-w-0 flex-1 truncate text-left font-normal text-muted-foreground">{debate.motion}</span>}
@@ -65,7 +65,7 @@ export function CurrentDebateMenu({ variant }: { variant: 'desktop' | 'mobile' }
           <PopoverTrigger asChild>
             <button
               type="button"
-              className={cn(itemClass, 'shrink-0 justify-center rounded-l-none px-1.5 pointer-coarse:min-w-11')}
+              className={cn(itemClass, 'shrink-0 justify-center rounded-l-none pl-1.5 pr-2.5 pointer-coarse:min-w-11')}
               aria-label={t('debate.menuAria', { motion: debate.motion, defaultValue: 'Current debate: {{motion}}' })}
               data-testid={`current-debate-${variant}`}
             >
@@ -76,14 +76,14 @@ export function CurrentDebateMenu({ variant }: { variant: 'desktop' | 'mobile' }
       </PopoverAnchor>
       <PopoverContent align="start" className="w-[min(22rem,calc(100vw-2rem))] space-y-3">
         <div className="space-y-1">
-          <p className="wrap-break-word font-semibold leading-snug">{debate.motion}</p>
+          <p className="wrap-break-word font-display text-lg font-[600] leading-snug text-heading">{debate.motion}</p>
           <p className="text-xs text-muted-foreground">
             {t('debate.lastActivity', { when: formatRelativeDate(debate.lastActivityAt), defaultValue: 'Last activity {{when}}' })}
           </p>
           <p className="text-xs text-muted-foreground">
             {debateCountsLabel(t, counts)}
           </p>
-          {oneOff && <p className="text-xs font-medium text-primary">{t('debate.oneOffActive', 'One-off mode is on')}</p>}
+          {oneOff && <p className="text-xs font-bold text-primary">{t('debate.oneOffActive', 'One-off mode is on')}</p>}
         </div>
         <div className="grid gap-1">
           <Button variant="ghost" className="justify-start" onClick={() => act(() => { navigate('/app/debate'); })}>{t('debate.open', 'Open debate')}</Button>
