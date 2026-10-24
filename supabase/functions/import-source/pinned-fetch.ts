@@ -17,23 +17,37 @@ const MAX_HEAD_BYTES = 32 * 1024;
 const READ_CHUNK_BYTES = 16 * 1024;
 const NULL_BODY_STATUSES = new Set([204, 205, 304]);
 
-export type Dial = (address: string, url: URL) => Promise<Deno.Conn>;
+// Each address gets this long to connect (and finish TLS) before the next one
+// is tried, so one address that drops packets cannot spend the whole deadline.
+export const CONNECT_TIMEOUT_MS = 3_000;
+
+export type Dial = (address: string, url: URL, signal: AbortSignal) => Promise<Deno.Conn>;
 
 /** TCP to `address`; for https, TLS with SNI and certificate checks for the URL's hostname. */
-export const dialAddress: Dial = async (address, url) => {
+export const dialAddress: Dial = async (address, url, signal) => {
   const port = url.port ? Number(url.port) : url.protocol === "https:" ? 443 : 80;
   const tcp = await Deno.connect({ hostname: address, port });
   if (url.protocol !== "https:") return tcp;
+  // A handshake that stalls is cancelled by closing the connection when the
+  // signal aborts. (Deno then still holds the TCP socket until the worker exits;
+  // the per-address budget and the import quota bound how many that can be.)
+  let current: Deno.Conn = tcp;
+  const abort = () => closeQuietly(current);
+  signal.addEventListener("abort", abort, { once: true });
   try {
+    if (signal.aborted) throw signal.reason;
     // Without ALPN a server may pick HTTP/2, which this client does not speak.
     const tls = await Deno.startTls(tcp, { hostname: url.hostname, alpnProtocols: ["http/1.1"] });
+    current = tls;
     // startTls defers the handshake; finish it here so a certificate that is
     // not valid for the hostname fails the dial.
     await tls.handshake();
     return tls;
   } catch (error) {
-    closeQuietly(tcp);
+    closeQuietly(current);
     throw error;
+  } finally {
+    signal.removeEventListener("abort", abort);
   }
 };
 
@@ -226,14 +240,21 @@ function bodyStream(reader: ConnReader, head: Head, onDone: () => void): Readabl
   return stream;
 }
 
-async function connectFirst(addresses: string[], url: URL, signal: AbortSignal, dial: Dial): Promise<Deno.Conn> {
+async function connectFirst(
+  addresses: string[],
+  url: URL,
+  signal: AbortSignal,
+  dial: Dial,
+  connectTimeoutMs: number,
+): Promise<Deno.Conn> {
   for (const address of addresses) {
     if (signal.aborted) break;
-    const attempt = dial(address, url);
+    const attemptSignal = AbortSignal.any([signal, AbortSignal.timeout(connectTimeoutMs)]);
+    const attempt = dial(address, url, attemptSignal);
     try {
-      return await untilAborted(attempt, signal);
+      return await untilAborted(attempt, attemptSignal);
     } catch {
-      // A connection that opens after the deadline is closed, not leaked.
+      // A connection that opens after its attempt gave up is closed, not leaked.
       attempt.then(closeQuietly, () => undefined);
     }
   }
@@ -252,9 +273,10 @@ export async function pinnedGet(
   headers: Record<string, string>,
   signal: AbortSignal,
   dial: Dial = dialAddress,
+  connectTimeoutMs = CONNECT_TIMEOUT_MS,
 ): Promise<Response> {
   if (url.protocol !== "http:" && url.protocol !== "https:") throw new Error("Only http and https URLs can be imported.");
-  const conn = await connectFirst(addresses, url, signal, dial);
+  const conn = await connectFirst(addresses, url, signal, dial, connectTimeoutMs);
   let closed = false;
   const close = () => {
     if (closed) return;

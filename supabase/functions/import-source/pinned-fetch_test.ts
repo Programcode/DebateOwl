@@ -112,9 +112,9 @@ Deno.test("pinnedGet tries the next checked address when one refuses", async () 
     ["192.0.2.1", "127.0.0.1"],
     HEADERS,
     new AbortController().signal,
-    (address, url) => {
+    (address, url, signal) => {
       dialed.push(address);
-      return address === "127.0.0.1" ? dialAddress(address, url) : Promise.reject(new Error("refused"));
+      return address === "127.0.0.1" ? dialAddress(address, url, signal) : Promise.reject(new Error("refused"));
     },
   );
   assertEquals([dialed, await response.text()], [["192.0.2.1", "127.0.0.1"], "ok"]);
@@ -129,4 +129,49 @@ Deno.test("pinnedGet stops and closes the connection when the deadline aborts", 
   await assertRejects(() => pending, Error, "deadline");
   // The server's pending read ends only because the client closed the socket.
   await server.served;
+});
+
+Deno.test("pinnedGet moves on from an address that never answers before the deadline runs out", async () => {
+  const server = await rawServer(["HTTP/1.1 200 OK\r\nContent-Length: 2\r\n\r\nok"]);
+  let stalledSignal: AbortSignal | undefined;
+  const response = await pinnedGet(
+    new URL(`http://source.invalid:${server.port}/`),
+    ["192.0.2.1", "127.0.0.1"],
+    HEADERS,
+    AbortSignal.timeout(5_000),
+    (address, url, signal) => {
+      if (address === "127.0.0.1") return dialAddress(address, url, signal);
+      stalledSignal = signal;
+      return new Promise<Deno.Conn>(() => {});
+    },
+    100,
+  );
+  assertEquals(await response.text(), "ok");
+  assertEquals(stalledSignal?.aborted, true);
+  await server.served;
+});
+
+Deno.test("pinnedGet closes a TLS connection whose handshake stalls when the deadline aborts", async () => {
+  // Deno keeps the TCP socket of a cancelled handshake open until the process
+  // exits, so a server cannot observe this; check that close() is called.
+  const server = await rawServer("never");
+  const originalStartTls = Deno.startTls;
+  let tlsClosed = false;
+  (Deno as unknown as { startTls: unknown }).startTls = (tcp: Deno.TcpConn) => Promise.resolve({
+    handshake: () => new Promise(() => {}),
+    close: () => {
+      tlsClosed = true;
+      tcp.close();
+    },
+  });
+  try {
+    const deadline = new AbortController();
+    const pending = pinnedGet(new URL(`https://source.invalid:${server.port}/`), ["127.0.0.1"], HEADERS, deadline.signal);
+    setTimeout(() => deadline.abort(new Error("deadline")), 50);
+    await assertRejects(() => pending, Error, "deadline");
+    assertEquals(tlsClosed, true);
+    await server.served;
+  } finally {
+    (Deno as unknown as { startTls: unknown }).startTls = originalStartTls;
+  }
 });
