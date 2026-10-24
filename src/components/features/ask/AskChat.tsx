@@ -115,7 +115,7 @@ const MessageBubble = React.memo(function MessageBubble({ message, onSave }: { m
   return (
     <div className={cn('flex items-end gap-2.5', isUser ? 'justify-end motion-safe:animate-in fade-in-0 slide-in-from-bottom-1 duration-200 ease-out-strong' : 'motion-safe:animate-in fade-in-0 slide-in-from-bottom-1 duration-200 ease-out-strong justify-start')}>
       {/* The coach is the owl. */}
-      {!isUser && <OwlAvatar pose="idea" size={32} className="mb-0.5 hidden sm:inline-flex" />}
+      {!isUser && <OwlAvatar pose="coach" size={32} label={t('askChat.coachAvatarAlt', 'The owl, your debate coach')} className="mb-0.5 hidden sm:inline-flex" />}
       <div
         className={cn(
           'max-w-[85%] rounded-[20px] px-4 py-3 space-y-3 relative group',
@@ -577,7 +577,7 @@ export function AskChat({ messages, streamingMessage, isLoading, error, onDismis
         {/* Wraps on a phone: the Hungarian title and two buttons do not fit one 375 px row. */}
         <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
           <div className="flex min-w-0 items-center gap-3">
-            <OwlAvatar pose={waitingForText && searchingWeb ? 'skeptical' : 'idea'} size={44} />
+            <OwlAvatar pose="coach" size={44} label={t('askChat.coachAvatarAlt', 'The owl, your debate coach')} />
             <div className="min-w-0">
               <CardTitle>{t('askChat.title')}</CardTitle>
               <CardDescription>{t('askChat.subtitle')}</CardDescription>
@@ -618,7 +618,8 @@ export function AskChat({ messages, streamingMessage, isLoading, error, onDismis
               {waitingForText && (
                 // One true status line: what is happening, and how long it has taken once that matters.
                 <p className="flex items-center gap-2.5 text-sm font-bold text-muted-foreground motion-safe:animate-in fade-in-0 duration-200" role="status" aria-live="polite">
-                  <OwlAvatar pose={searchingWeb ? 'skeptical' : 'idea'} size={32} />
+                  {/* Decorative: a label here would be announced with every status update. */}
+                  <OwlAvatar pose="coach" size={32} />
                   <span className="inline-flex items-center gap-2 rounded-[20px] rounded-bl-md border-2 border-border bg-card px-3.5 py-2.5">
                     {searchingWeb ? t('askChat.searchingWeb', 'Searching the web…') : t('askChat.working', 'Working…')}
                     <ThinkingDots className="text-primary" />

@@ -132,8 +132,9 @@ const OFFLINE_MODULES = [
 // The Latin subsets of Nunito (body) and Fredoka (headings, buttons) cover English, Spanish and
 // Hungarian. JetBrains Mono only draws timers, so it loads on first use.
 const OFFLINE_FONTS = /^assets\/(?:nunito|fredoka)-latin(?:-ext)?-wght-normal-[\w-]+\.woff2$/;
-// The owl poses the offline pages show: empty states point, loaders have an idea, errors look surprised.
-const OFFLINE_OWLS = /^assets\/owl-(?:point|idea|surprised)-(?:160|320)-[\w-]+\.webp$/;
+// The owl poses the offline pages show: Home points, Library reads, History sleeps, the Timer
+// holds a stopwatch, loaders have an idea, errors look surprised.
+const OFFLINE_OWLS = /^assets\/owl-(?:point|reading|sleepy|timekeeper|idea|surprised)-[\w-]+\.svg$/;
 const SERVICE_WORKER_BUILD = "const BUILD = { id: 'dev', assets: [] };";
 
 /** Writes this build's precache list and cache id into dist/sw.js. */

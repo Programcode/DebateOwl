@@ -5,6 +5,7 @@ import type { TFunction } from 'i18next';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { PageHeader } from '@/components/layout/PageHeader';
+import { Owl } from '@/components/brand/Owl';
 import { PRACTICE_TOOLS, PREPARE_TOOLS, ToolLink, UTILITY_TOOLS, type Tool } from '@/components/features/tools/tool-links';
 import { formatRelativeDate } from '@/lib/date-format';
 import { useCurrentDebate, useDebateStore } from '@/lib/stores/debate-store';
@@ -51,9 +52,13 @@ function CurrentDebateSummary({ t }: { t: TFunction }) {
     return (
       <Card className="mb-6 border-dashed border-border bg-card/60" data-testid="home-current-debate" data-tour="current-debate">
         <CardContent className="flex flex-col gap-3 p-5 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <p className="font-extrabold text-heading">{t('debate.noCurrentTitle', 'No current debate')}</p>
-            <p className="text-sm text-muted-foreground">{t('debate.noCurrentDesc', 'Start a debate to keep one motion, its sources, and your results together.')}</p>
+          <div className="flex items-center gap-4">
+            {/* Mirrored, so the owl points across its line at Start debate. */}
+            <Owl pose="point" size={76} priority className="-my-2 -scale-x-100" />
+            <div>
+              <p className="font-extrabold text-heading">{t('debate.noCurrentTitle', 'No current debate')}</p>
+              <p className="text-sm text-muted-foreground">{t('debate.noCurrentDesc', 'Start a debate to keep one motion, its sources, and your results together.')}</p>
+            </div>
           </div>
           <Button onClick={() => openDialog('create')}>{t('debate.startDebate', 'Start debate')}</Button>
         </CardContent>

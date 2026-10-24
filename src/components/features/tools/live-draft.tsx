@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next';
 import { Button, ThinkingDots } from '@/components/ui/button';
-import { OwlAvatar } from '@/components/brand/Owl';
+import { OwlAvatar, type OwlPose } from '@/components/brand/Owl';
 import type { LivePhase } from '@/lib/ai/client';
 import { cn } from '@/lib/utils';
 import { ToolRunStatus, useElapsedSeconds, type LiveRunState } from './tool-run';
@@ -59,18 +59,21 @@ export function LiveToolRun({
   live,
   sections,
   onCancel,
+  pose,
 }: {
   label: string;
   live: LiveRunState;
   sections: DraftSection[];
   onCancel?: () => void;
+  /** The tool's own owl for the whole run, in place of the phase poses. */
+  pose?: OwlPose;
 }) {
   const { t } = useTranslation();
   const status = useLivePhaseLabel(live.phase, label);
   const elapsed = useElapsedSeconds();
   // The owl looks things up while researching or checking sources, and has an idea before it writes.
   if (sections.length === 0) {
-    return <ToolRunStatus label={status} onCancel={onCancel} pose={live.phase === 'research' || live.phase === 'checking' ? 'skeptical' : 'idea'} />;
+    return <ToolRunStatus label={status} onCancel={onCancel} pose={pose ?? (live.phase === 'research' || live.phase === 'checking' ? 'skeptical' : 'idea')} />;
   }
 
   const lastSection = sections.length - 1;
@@ -79,7 +82,7 @@ export function LiveToolRun({
   return (
     <div data-testid="live-draft" className="space-y-4" aria-busy="true">
       <div className="flex items-center gap-3 rounded-lg border-2 border-brand-tint-border bg-brand-tint px-3 py-2.5">
-        <OwlAvatar pose={writing ? 'point' : 'idea'} size={36} />
+        <OwlAvatar pose={pose ?? (writing ? 'point' : 'idea')} size={36} />
         <p className="flex min-w-0 flex-1 flex-wrap items-center gap-x-2 text-sm font-bold text-foreground">
           <span role="status" aria-live="polite">{writing ? t('tools.live.writingLive', 'Writing live') : status}</span>
           <ThinkingDots className="text-primary" />

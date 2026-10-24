@@ -1338,6 +1338,7 @@
   },
   "askChat": {
     "title": "Pregunta a tu coach",
+    "coachAvatarAlt": "El búho, tu coach de debate",
     "subtitle": "Obtén respuestas a preguntas de debate",
     "startConversation": "Inicia una conversación",
     "startDesc": "Pregunta lo que sea sobre estrategia de debate, argumentos o pide ayuda con tu caso.",
@@ -2019,6 +2020,7 @@
     "con": "En contra",
     "user": "Tú",
     "opponent": "Oponente de IA",
+    "opponentAvatarAlt": "El búho, tu oponente de IA",
     "format": {
       "standard": "Formato escolar 4-6-6-3",
       "ld": "Lincoln-Douglas",

@@ -102,7 +102,7 @@ export function UnsortedWork() {
   ].sort((a, b) => (b.kind === 'item' ? b.item.createdAt : b.createdAt) - (a.kind === 'item' ? a.item.createdAt : a.createdAt));
 
   if (entries.length === 0) {
-    return <EmptyState icon={Inbox} title={t('debate.unsortedEmpty', 'Nothing outside your debates')} description={t('debate.unsortedEmptyDesc', 'One-off results and older unsorted work appear here.')} />;
+    return <EmptyState pose="sleepy" icon={Inbox} title={t('debate.unsortedEmpty', 'Nothing outside your debates')} description={t('debate.unsortedEmptyDesc', 'One-off results and older unsorted work appear here.')} />;
   }
 
   return (

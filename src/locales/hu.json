@@ -1338,6 +1338,7 @@
   },
   "askChat": {
     "title": "Kérdezd az edződet",
+    "coachAvatarAlt": "A bagoly, a vitaedződ",
     "subtitle": "Kapj válaszokat vitakérdésekre",
     "startConversation": "Indíts beszélgetést",
     "startDesc": "Kérdezz bármit vitastratégiáról, érvekről, vagy kérj segítséget az esetedhez.",
@@ -2019,6 +2020,7 @@
     "con": "Ellene",
     "user": "Te",
     "opponent": "MI-ellenfél",
+    "opponentAvatarAlt": "A bagoly, az MI-ellenfeled",
     "format": {
       "standard": "Iskolai 4-6-6-3",
       "ld": "Lincoln-Douglas",
