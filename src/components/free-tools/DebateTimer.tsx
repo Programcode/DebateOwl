@@ -283,7 +283,7 @@ export function DebateTimer({ storageKey, embedded = false, onFirstStart, footer
           role="timer"
           aria-label={t('timer.clockLabel')}
           className={cn(
-            'font-sans font-bold tabular-nums leading-none tracking-[-0.03em] transition-colors duration-300',
+            'font-mono font-bold tabular-nums leading-none tracking-[-0.04em] transition-colors duration-300',
             CLOCK_TONE_TEXT[tone],
             fullscreen ? 'text-[min(30vw,45vh)]' : embedded ? 'text-7xl sm:text-8xl' : 'text-7xl sm:text-9xl',
           )}

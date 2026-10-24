@@ -221,7 +221,7 @@ async function main() {
         (await (await caches.open(key)).keys()).map((request) => new URL(request.url).pathname)
       ))).flat();
       return paths.every((path) => urls.includes(path));
-    }, [entryPath, ...precachedPaths, '/app-shell.html', '/terms', '/favicon-72.png'], 'the precache and the visited Terms page');
+    }, [entryPath, ...precachedPaths, '/app-shell.html', '/terms', '/owl-mark.svg'], 'the precache and the visited Terms page');
     // Installed up front, not picked up by browsing: they sit in this build's shell cache.
     const shellCache = await page.evaluate(async () => {
       const key = (await caches.keys()).find((name) => name.endsWith('-shell'));
@@ -240,7 +240,7 @@ async function main() {
     await homeHeading(page).waitFor({ timeout: CONTENT_TIMEOUT_MS });
     await page.getByRole('status').filter({ hasText: en.offlineIndicator.label }).waitFor({ timeout: CONTENT_TIMEOUT_MS });
     const logo = page.locator('header a[href="/app"] img');
-    assert.equal(await logo.getAttribute('src'), '/favicon-72.png');
+    assert.equal(await logo.getAttribute('src'), '/owl-mark.svg');
     assert.ok(await logo.evaluate((image) => image.naturalWidth > 0), 'offline logo did not load');
 
     await page.locator('main [data-tour="mode-attack"]').click();
