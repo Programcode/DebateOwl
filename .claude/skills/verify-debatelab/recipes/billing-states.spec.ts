@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { join } from "node:path";
 import type { Locator, Page, TestInfo } from "@playwright/test";
-import { admin, AI_TIMEOUT, aiResponse, chooseForMotion, expect, test, type Evidence } from "./fixtures";
+import { admin, AI_TIMEOUT, aiResponse, chooseForMotion, expect, followSystemTheme, test, type Evidence } from "./fixtures";
 
 // Feature map: the Billing entry in features/README.md. Each state is written
 // straight into user_settings and subscriptions (what the Stripe webhook
@@ -188,6 +188,7 @@ for (const language of ["en", "hu"] as const) {
   test(`bill-states-${language}: Settings, the pricing dialog and a refused request agree on each billing state`, async ({ signedIn: page, user, evidence }, testInfo) => {
     test.setTimeout(600_000);
     const userId = await user.userId();
+    await followSystemTheme(page);
     if (language === "hu") await useHungarian(page);
     // The portal needs Stripe. Answer as it does for an account Stripe does
     // not know, which sends Settings to the pricing dialog: the one way a
@@ -258,6 +259,7 @@ for (const language of ["en", "hu"] as const) {
 // VS-06: the Spanish card at phone widths too (the matrix above covers EN and HU).
 test("bill-states-es: the Spanish subscription card wraps instead of squeezing", async ({ signedIn: page, user, evidence }, testInfo) => {
   const userId = await user.userId();
+  await followSystemTheme(page);
   await page.goto("/app/settings");
   await page.getByLabel("Interface Language").click();
   await page.getByRole("option", { name: "Español" }).click();

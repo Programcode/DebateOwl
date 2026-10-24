@@ -1,4 +1,4 @@
-import { admin, AI_TIMEOUT, aiResponse, chooseForMotion, expect, expectProviderCalls, fake, LIVE, providerCalls, test } from "./fixtures";
+import { admin, AI_TIMEOUT, aiResponse, chooseForMotion, expect, expectProviderCalls, fake, followSystemTheme, LIVE, providerCalls, test } from "./fixtures";
 
 // Feature map: features/ai-tools.md.
 
@@ -124,6 +124,7 @@ async function textContrast(page: import("@playwright/test").Page, text: string)
 // Hungarian placeholder was cut off at 375 px.
 test("ask-bubble: the student's message meets WCAG AA in light and dark, and the placeholder fits at 375 px", async ({ signedIn: page, evidence }, testInfo) => {
   if (testInfo.project.name === "mobile-chromium") await page.setViewportSize({ width: 375, height: 812 });
+  await followSystemTheme(page);
   const question = "How should I weigh **access** against cost?";
   await page.goto("/app/ask");
   await page.getByPlaceholder("Ask your debate coach...").fill(question);
