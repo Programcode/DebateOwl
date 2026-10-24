@@ -1,4 +1,5 @@
 import {
+  forwardFetchToCurrentStub,
   rejectedBearerCases,
   runBearerCases,
   TEST_ANON_KEY,
@@ -13,13 +14,7 @@ for (const [key, value] of Object.entries({
   STRIPE_SECRET_KEY: "sk_test_not_used",
 })) Deno.env.set(key, value);
 
-// Stripe's fetch client keeps the fetch it saw at import. Forward that to
-// whatever fetch the test has installed when Stripe calls it.
-const realFetch = globalThis.fetch;
-const forwardingFetch: typeof fetch = (input, init) =>
-  globalThis.fetch === forwardingFetch ? realFetch(input, init) : globalThis.fetch(input, init);
-globalThis.fetch = forwardingFetch;
-
+forwardFetchToCurrentStub();
 const { handleRequest } = await import("./index.ts");
 
 const send = (authorization?: string) =>

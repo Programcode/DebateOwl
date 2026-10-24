@@ -114,6 +114,9 @@ export function PricingModal({ open, onOpenChange, onPromoRedeemed }: PricingMod
         description: result.message,
         variant: result.success ? 'default' : 'destructive',
       });
+      // A discount changes nothing until Checkout: the code stays in the
+      // field so the upgrade sends it, and Checkout applies the discount.
+      if (result.success && result.code === 'promo_discount_noted') return;
       if (result.success) {
         setPromoCode('');
         setShowPromo(false);

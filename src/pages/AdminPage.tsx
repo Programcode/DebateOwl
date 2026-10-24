@@ -50,7 +50,7 @@ interface PromoCode {
     id: string;
     code: string;
     type: string;
-    config: Record<string, number>;
+    config: Record<string, number | string>;
     max_redemptions: number | null;
     redemptions_count: number;
     expires_at: string | null;
@@ -88,6 +88,9 @@ interface DemoAccessForm {
 }
 
 type DemoAction = 'disable' | 'reset';
+
+// A discount promo stands for one Stripe promotion code (redeem_promo_code_atomic).
+const STRIPE_PROMOTION_CODE = /^promo_[A-Za-z0-9]+$/;
 
 const EMPTY_DEMO_FORM: DemoAccessForm = { label: '', email: '', expiresAt: '', maxUses: '' };
 
@@ -451,7 +454,7 @@ export default function AdminPage() {
     const [demoCodes, setDemoCodes] = useState<DemoAccessCode[]>([]);
     const [demoCodesLoading, setDemoCodesLoading] = useState(true);
     const [demoCodesError, setDemoCodesError] = useState<string | null>(null);
-    const [newPromo, setNewPromo] = useState({ code: '', type: 'extended_trial', configDays: 30, configLimit: 15, maxRedemptions: '' });
+    const [newPromo, setNewPromo] = useState({ code: '', type: 'extended_trial', configDays: 30, configLimit: 15, maxRedemptions: '', stripePromotionCode: '' });
     const [giftTarget, setGiftTarget] = useState<User | null>(null);
     // Role changes are consequential and silent to the affected user, so each one asks first.
     const [roleChange, setRoleChange] = useState<{ user: User; role: 'admin' | 'banned' | 'user' } | null>(null);
@@ -1145,6 +1148,19 @@ export default function AdminPage() {
                                             />
                                         </div>
                                     )}
+                                    {newPromo.type === 'discount' && (
+                                        <div className="space-y-2">
+                                            <Label htmlFor="promo-stripe-code">{t('admin.promos.stripePromotionCode')}</Label>
+                                            <Input
+                                                id="promo-stripe-code"
+                                                placeholder="promo_..."
+                                                value={newPromo.stripePromotionCode}
+                                                onChange={(e) => setNewPromo({ ...newPromo, stripePromotionCode: e.target.value.trim() })}
+                                                className="font-mono"
+                                            />
+                                            <p className="text-xs text-muted-foreground">{t('admin.promos.stripePromotionCodeHint')}</p>
+                                        </div>
+                                    )}
                                     <div className="space-y-2">
                                         <Label>{t('admin.promos.maxRedemptions')}</Label>
                                         <Input
@@ -1157,13 +1173,15 @@ export default function AdminPage() {
                                     <Button
                                         onClick={async () => {
                                             try {
-                                                const config: Record<string, number> = {};
+                                                const config: Record<string, number | string> = {};
                                                 if (newPromo.type === 'extended_trial' || newPromo.type === 'free_month') {
                                                     config.days = newPromo.configDays;
                                                 } else if (newPromo.type === 'lifetime_pro') {
                                                     config.limit = 50;
                                                 } else if (newPromo.type === 'extra_limit') {
                                                     config.limit = newPromo.configLimit;
+                                                } else if (newPromo.type === 'discount') {
+                                                    config.stripe_promotion_code = newPromo.stripePromotionCode;
                                                 }
                                                 await postAdminData('create-promo', {
                                                     code: newPromo.code,
@@ -1174,12 +1192,12 @@ export default function AdminPage() {
                                                 toast({ title: t('admin.success'), description: t('admin.promos.created', { code: newPromo.code }) });
                                                 const data = await fetchAdminData('promo-codes');
                                                 setPromoCodes(data.codes || []);
-                                                setNewPromo({ code: '', type: 'extended_trial', configDays: 30, configLimit: 15, maxRedemptions: '' });
+                                                setNewPromo({ code: '', type: 'extended_trial', configDays: 30, configLimit: 15, maxRedemptions: '', stripePromotionCode: '' });
                                             } catch (err) {
                                                 toast({ title: t('admin.error'), description: err instanceof Error ? err.message : t('admin.promos.createFailed'), variant: 'destructive' });
                                             }
                                         }}
-                                        disabled={!newPromo.code.trim()}
+                                        disabled={!newPromo.code.trim() || (newPromo.type === 'discount' && !STRIPE_PROMOTION_CODE.test(newPromo.stripePromotionCode))}
                                         className="w-full"
                                     >
                                         {t('admin.promos.createAction')}
