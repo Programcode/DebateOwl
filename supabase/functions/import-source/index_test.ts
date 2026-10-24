@@ -8,7 +8,15 @@ for (const [key, value] of Object.entries(environment)) {
   Deno.env.set(key, value);
 }
 
-const { handleRequest, limitImportedText } = await import("./index.ts");
+const { handleRequest, sourceTransport, limitImportedText } = await import("./index.ts");
+
+// These tests stub the source with globalThis.fetch. Route the pinned transport
+// there, recording the addresses each hop was allowed to dial.
+const dialedAddresses: string[][] = [];
+sourceTransport.get = (url, addresses, headers, signal) => {
+  dialedAddresses.push(addresses);
+  return fetch(url, { headers, signal, redirect: "manual" });
+};
 
 Deno.test("limitImportedText sets a truncated flag and keeps a note inside the cap", () => {
   const long = "word ".repeat(20_000);
@@ -184,5 +192,22 @@ Deno.test("import-source refunds the slot when it fails before fetching the sour
     result.refunds[0]?.p_units !== 1
   ) {
     throw new Error(`quota was not refunded: ${JSON.stringify(result.refunds)}`);
+  }
+});
+
+Deno.test("import-source dials only the addresses the check just passed, on every redirect hop", async () => {
+  dialedAddresses.length = 0;
+  let hop = 0;
+  const result = await importWithStubs(
+    () => hop++ === 0
+      ? new Response(null, { status: 302, headers: { location: "https://example.com/next" } })
+      : new Response("<p>" + "word ".repeat(40) + "</p>", { headers: { "content-type": "text/html" } }),
+    // Every lookup answers differently; each hop must use the answer it checked.
+    (_host, type, call) => type === "A" ? [`93.184.216.${call}`] : [],
+  );
+  if (result.status !== 200) throw new Error(`import returned ${result.status}`);
+  // Lookup 1 is the check before the quota; lookups 2 and 3 are the two hops.
+  if (JSON.stringify(dialedAddresses) !== JSON.stringify([["93.184.216.2"], ["93.184.216.3"]])) {
+    throw new Error(`dialed ${JSON.stringify(dialedAddresses)}`);
   }
 });
