@@ -65,8 +65,8 @@ export function ToolLink({ tool, variant, tourId }: { tool: Tool; variant: 'row'
         {...prefetchHandlers}
         data-tour={tourId}
         className={cn(
-          'flex min-h-11 items-center gap-2 rounded-md border border-border bg-card px-3 py-2 text-sm font-medium text-foreground transition-colors',
-          'hover:border-primary/40 hover:bg-accent focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
+          'tile flex min-h-11 items-center gap-2 rounded-md px-3.5 py-2 text-[0.9375rem] font-bold text-foreground',
+          'focus-visible:outline-hidden focus-visible:ring-[3px] focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background',
         )}
       >
         <Icon className="h-4 w-4 shrink-0 text-primary" aria-hidden="true" />
@@ -80,16 +80,16 @@ export function ToolLink({ tool, variant, tourId }: { tool: Tool; variant: 'row'
       to={tool.href}
       {...prefetchHandlers}
       data-tour={tourId}
-      className="group flex items-center gap-3 rounded-md border-b border-border/60 px-3 py-3 transition-colors last:border-b-0 hover:bg-accent focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+      className="group flex items-center gap-3.5 rounded-md px-3 py-3 transition-[background-color,transform] duration-150 hover:bg-accent active:scale-[0.99] focus-visible:outline-hidden focus-visible:ring-[3px] focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-card"
     >
-      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary">
+      <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-md bg-brand-tint text-primary shadow-[0_3px_0_var(--do-primary-tint-border)] transition-transform duration-200 ease-overshoot group-hover:-translate-y-0.5 group-hover:-rotate-3">
         <Icon className="h-5 w-5" aria-hidden="true" />
       </span>
       <span className="min-w-0 flex-1">
-        <span className="block font-medium text-foreground">{t(`nav.${tool.key}`)}</span>
+        <span className="block font-extrabold text-heading">{t(`nav.${tool.key}`)}</span>
         <span className="block text-xs leading-5 text-muted-foreground sm:text-sm">{t(`home.${tool.key}Desc`, '')}</span>
       </span>
-      <ArrowRight className="h-4 w-4 shrink-0 text-muted-foreground transition-colors group-hover:text-primary" aria-hidden="true" />
+      <ArrowRight className="h-4 w-4 shrink-0 text-muted-foreground transition-[color,transform] duration-200 group-hover:translate-x-0.5 group-hover:text-primary" aria-hidden="true" />
     </Link>
   );
 }

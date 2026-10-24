@@ -4,6 +4,7 @@ import { Reveal } from "./Reveal";
 import { ArrowRight, CheckCircle2, Sparkles } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useRoutePrefetch } from "@/hooks/use-route-prefetch";
+import { Owl } from "@/components/brand/Owl";
 
 const Hero = () => {
     const { t } = useTranslation();
@@ -34,14 +35,14 @@ const Hero = () => {
                     <div>
                         <Reveal onLoad className="mb-6">
                             {/* rounded-2xl, not a pill: long Spanish and Hungarian copy wraps cleanly. */}
-                            <span className="inline-flex items-start gap-2 rounded-2xl border border-primary/30 bg-primary/10 px-4 py-2 text-sm text-foreground/80">
+                            <span className="inline-flex items-start gap-2 rounded-lg border-2 border-brand-tint-border bg-brand-tint px-4 py-2 text-sm font-bold text-foreground">
                                 <Sparkles aria-hidden="true" className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
                                 {t('hero.announcement')}
                             </span>
                         </Reveal>
 
                         <Reveal onLoad delay={0.05}>
-                            <h1 className="text-balance text-[clamp(2.25rem,1.2rem+4.5vw,4.5rem)] font-bold leading-[1.05] tracking-[-0.03em]">
+                            <h1 className="text-balance font-display text-[clamp(2.25rem,1.2rem+4.5vw,4.5rem)] font-[600] leading-[1.05] tracking-[-0.025em] text-heading">
                                 {t('hero.headline')}
                             </h1>
                         </Reveal>
@@ -71,9 +72,9 @@ const Hero = () => {
 
                         <Reveal onLoad delay={0.15} className="mt-8 grid gap-3 sm:grid-cols-3">
                             {planHighlights.map((item) => (
-                                <div key={item.label} className="rounded-xl border border-border/70 bg-card p-4">
-                                    <p className="text-xs uppercase tracking-wider text-muted-foreground">{item.label}</p>
-                                    <p className="mt-1 text-base font-semibold text-foreground">{item.value}</p>
+                                <div key={item.label} className="rounded-lg border-2 border-border bg-card p-4">
+                                    <p className="text-xs font-extrabold uppercase tracking-[0.08em] text-muted-foreground">{item.label}</p>
+                                    <p className="mt-1 font-display text-lg font-[600] text-heading">{item.value}</p>
                                 </div>
                             ))}
                         </Reveal>
@@ -81,7 +82,7 @@ const Hero = () => {
                         <ul className="mt-8 space-y-3">
                             {trustBullets.map((item) => (
                                 <li key={item} className="flex items-start gap-3 text-sm text-foreground/85">
-                                    <CheckCircle2 aria-hidden="true" className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+                                    <CheckCircle2 aria-hidden="true" className="mt-0.5 h-4 w-4 shrink-0 text-success-text" />
                                     <span>{item}</span>
                                 </li>
                             ))}
@@ -133,10 +134,12 @@ const HeroPreview = () => {
 
     return (
         <Reveal onLoad delay={0.1} className="relative">
-            <div className="absolute -inset-8 bg-linear-to-r from-primary/20 via-cyan-400/20 to-emerald-400/20 blur-3xl" />
-            <div className="relative overflow-hidden rounded-2xl border border-border/70 bg-card shadow-2xl">
+            <div className="absolute -inset-8 bg-linear-to-r from-plume-400/25 via-plume-200/20 to-[rgb(255_196_20/0.22)] blur-3xl" />
+            {/* The owl points the visitor at the product. */}
+            <Owl pose="point" size={140} priority className="absolute -bottom-10 -left-6 z-20 hidden -scale-x-100 sm:block lg:-left-12" />
+            <div className="relative overflow-hidden rounded-xl border-2 border-border bg-card shadow-2xl">
                 {/* Browser chrome */}
-                <div className="flex items-center border-b border-border/60 px-5 py-3">
+                <div className="flex items-center border-b-2 border-border px-5 py-3">
                     <div className="flex items-center gap-2">
                         <div className="h-2.5 w-2.5 rounded-full bg-rose-400" />
                         <div className="h-2.5 w-2.5 rounded-full bg-amber-400" />
@@ -145,17 +148,17 @@ const HeroPreview = () => {
                 </div>
 
                 <div className="grid grid-cols-1 gap-4 bg-background p-5 lg:grid-cols-[1.05fr_0.95fr]">
-                    <div className="space-y-4 rounded-xl border border-border/70 bg-card p-4">
+                    <div className="space-y-4 rounded-lg border-2 border-border bg-card p-4">
                         <div className="flex items-center justify-between gap-3">
-                            <p className="text-base font-semibold text-foreground">{t(`features.${mode}`)}</p>
-                            <div className="flex rounded-lg border border-border/70 bg-background p-1" role="group" aria-label={t('hero.preview.modeLabel')}>
+                            <p className="font-display text-lg font-[600] text-heading">{t(`features.${mode}`)}</p>
+                            <div className="flex rounded-full bg-surface-sunken p-1 ring-1 ring-inset ring-border" role="group" aria-label={t('hero.preview.modeLabel')}>
                                 {modes.map((item) => (
                                     <button
                                         key={item.key}
                                         type="button"
                                         aria-pressed={mode === item.key}
                                         onClick={() => setMode(item.key)}
-                                        className={`rounded-md px-2 py-1 text-xs font-medium transition-colors focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring pointer-coarse:min-h-11 ${mode === item.key ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}
+                                        className={`rounded-full px-2.5 py-1 text-xs font-bold transition-[color,background-color,box-shadow] duration-200 focus-visible:outline-hidden focus-visible:ring-[3px] focus-visible:ring-ring pointer-coarse:min-h-11 ${mode === item.key ? "bg-card text-heading shadow-[0_2px_0_var(--do-border-strong)] dark:bg-surface-raised" : "text-muted-foreground hover:text-foreground"}`}
                                     >
                                         {item.label}
                                     </button>
@@ -192,7 +195,7 @@ const HeroPreview = () => {
                         </div>
                     </div>
 
-                    <div className="space-y-3 rounded-xl border border-border/70 bg-card p-4" aria-hidden="true">
+                    <div className="space-y-3 rounded-lg border-2 border-border bg-card p-4" aria-hidden="true">
                         <div>
                             <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{sample.title}</p>
                         </div>

@@ -733,69 +733,85 @@ passes AA on every surface; buttons fill with --do-primary (#0A6FF0) and white t
 /* Landing Page Utilities */
 @layer components {
   .glass-card {
-    @apply bg-card border border-border rounded-2xl shadow-sm;
-    background: linear-gradient(135deg, hsl(var(--card)) 0%, hsl(198 35% 90%) 100%);
+    @apply bg-card border-2 border-border rounded-xl;
   }
 
-  .dark .glass-card,
-  .dark .feature-card {
-    background: linear-gradient(135deg, hsl(var(--card)) 0%, hsl(217 32% 20%) 100%);
+  /* The landing CTAs are links, so they share the tactile button: a ledge that presses down. */
+  .btn-primary-gradient,
+  .btn-secondary-outline {
+    --btn-ledge: 5px;
+    position: relative;
+    padding: 0.75rem 1.5rem;
+    border-radius: var(--radius-lg);
+    font-family: var(--font-display);
+    font-weight: 600;
+    letter-spacing: 0.01em;
+    transform: translateY(0);
+    transition:
+      transform 180ms var(--do-ease-overshoot),
+      box-shadow 180ms var(--do-ease-overshoot),
+      background-color 120ms var(--do-ease-standard),
+      border-color 120ms var(--do-ease-standard),
+      color 120ms var(--do-ease-standard);
+    touch-action: manipulation;
   }
-
 
   .btn-primary-gradient {
-    @apply relative px-6 py-3 font-semibold text-primary-foreground rounded-xl overflow-hidden shadow-lg;
-    background: linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(169 72% 40%) 100%);
-    transition:
-      transform var(--motion-duration-fast) var(--motion-ease-fluid),
-      box-shadow 300ms var(--motion-ease-fluid);
-  }
-
-  /* The landing CTAs are links, so they get the same press feedback as Button here. */
-  .btn-primary-gradient:active,
-  .btn-secondary-outline:active {
-    transform: scale(var(--motion-press-scale));
-    transition-duration: var(--motion-duration-press);
-  }
-
-  .btn-primary-gradient::before {
-    content: '';
-    @apply absolute inset-0 opacity-0 transition-opacity duration-300;
-    background: linear-gradient(135deg, hsl(200 92% 32%) 0%, hsl(169 72% 34%) 100%);
-  }
-
-  @media (hover: hover) and (pointer: fine) {
-    .btn-primary-gradient:hover::before {
-      @apply opacity-100;
-    }
-
-    .btn-primary-gradient:hover {
-      @apply shadow-xl;
-      box-shadow: 0 10px 40px hsl(var(--primary) / 0.3);
-    }
+    --btn-ledge-color: var(--do-primary-ledge);
+    border: 2px solid transparent;
+    background-color: var(--do-primary);
+    color: var(--do-on-primary);
+    box-shadow: 0 var(--btn-ledge) 0 var(--btn-ledge-color);
   }
 
   .btn-secondary-outline {
-    @apply px-6 py-3 font-semibold text-foreground rounded-xl border border-border bg-card shadow-sm;
-    transition:
-      transform var(--motion-duration-fast) var(--motion-ease-fluid),
-      color 300ms var(--motion-ease-fluid),
-      background-color 300ms var(--motion-ease-fluid),
-      border-color 300ms var(--motion-ease-fluid),
-      box-shadow 300ms var(--motion-ease-fluid);
+    --btn-ledge-color: var(--do-border-strong);
+    border: 2px solid var(--do-border-strong);
+    background-color: var(--do-surface);
+    color: var(--do-plume-700);
+    box-shadow: 0 var(--btn-ledge) 0 var(--btn-ledge-color);
   }
 
-  /* Landing section headings: one size scale and one tracking per size. Each size brings its own
-     line height (v4's leading-* would otherwise win at every breakpoint). */
-  .section-heading {
-    @apply text-balance text-3xl font-bold leading-tight tracking-[-0.022em] text-foreground md:text-4xl md:leading-10 lg:text-5xl lg:leading-none lg:tracking-[-0.025em];
+  .dark .btn-secondary-outline {
+    --btn-ledge-color: var(--do-ledge-neutral);
+    background-color: var(--do-surface-raised);
+    color: var(--do-plume-300);
   }
 
   @media (hover: hover) and (pointer: fine) {
+    .btn-primary-gradient:hover,
     .btn-secondary-outline:hover {
-      @apply bg-secondary border-primary/30 shadow-md;
-      color: hsl(var(--secondary-foreground));
+      transform: translateY(-1px);
+      box-shadow: 0 calc(var(--btn-ledge) + 1px) 0 var(--btn-ledge-color);
     }
+
+    .btn-primary-gradient:hover {
+      background-color: #0763E2;
+    }
+
+    .btn-secondary-outline:hover {
+      background-color: var(--do-primary-tint);
+    }
+  }
+
+  .btn-primary-gradient:active,
+  .btn-secondary-outline:active {
+    transform: translateY(var(--btn-ledge));
+    box-shadow: 0 0 0 var(--btn-ledge-color);
+    transition-duration: 70ms;
+    transition-timing-function: var(--do-ease-press);
+  }
+
+  .btn-primary-gradient:focus-visible,
+  .btn-secondary-outline:focus-visible {
+    outline: 3px solid var(--do-focus-ring);
+    outline-offset: 2px;
+  }
+
+  /* Landing section headings: Fredoka in navy, one size scale and one tracking per size. Each size
+     brings its own line height (v4's leading-* would otherwise win at every breakpoint). */
+  .section-heading {
+    @apply text-balance font-display text-3xl font-[600] leading-tight tracking-[-0.015em] text-heading md:text-4xl md:leading-10 lg:text-5xl lg:leading-none lg:tracking-[-0.02em];
   }
 
   /* Backgrounds are static: nothing on the landing page moves on its own. */
@@ -808,8 +824,7 @@ passes AA on every surface; buttons fill with --do-primary (#0A6FF0) and white t
 
   /* Cards answer hover with an edge and a shadow; they don't lift or tilt (they aren't clickable). */
   .feature-card {
-    @apply bg-card border border-border rounded-2xl shadow-sm p-6;
-    background: linear-gradient(135deg, hsl(var(--card)) 0%, hsl(198 35% 90%) 100%);
+    @apply bg-card border-2 border-border rounded-xl p-6;
     transition:
       border-color var(--motion-duration-normal) var(--motion-ease-fluid),
       box-shadow var(--motion-duration-normal) var(--motion-ease-fluid);
@@ -817,8 +832,8 @@ passes AA on every surface; buttons fill with --do-primary (#0A6FF0) and white t
 
   @media (hover: hover) and (pointer: fine) {
     .feature-card:hover {
-      @apply border-primary/40;
-      box-shadow: 0 20px 40px hsl(var(--foreground) / 0.08);
+      border-color: var(--do-primary-tint-border);
+      box-shadow: var(--app-shadow-lg);
     }
   }
 
@@ -830,15 +845,16 @@ passes AA on every surface; buttons fill with --do-primary (#0A6FF0) and white t
     background: hsl(var(--primary) / 0.3);
   }
 
+  /* The owl's two colours: a plume glow and a beak-gold glow. */
   .orb-accent {
-    background: hsl(169 72% 45% / 0.22);
+    background: rgb(255 196 20 / 0.2);
   }
 
   .aurora-bg {
     background:
-      radial-gradient(circle at 12% 18%, hsl(var(--primary) / 0.28), transparent 45%),
-      radial-gradient(circle at 82% 14%, hsl(169 72% 40% / 0.22), transparent 48%),
-      radial-gradient(circle at 55% 85%, hsl(186 78% 45% / 0.18), transparent 44%);
+      radial-gradient(circle at 12% 18%, rgb(30 141 251 / 0.22), transparent 45%),
+      radial-gradient(circle at 82% 14%, rgb(255 196 20 / 0.18), transparent 48%),
+      radial-gradient(circle at 55% 85%, rgb(76 166 253 / 0.14), transparent 44%);
   }
 
   .section-container {
@@ -848,11 +864,32 @@ passes AA on every surface; buttons fill with --do-primary (#0A6FF0) and white t
   .route-skeleton-surface {
     background-color: hsl(var(--card) / 0.72);
     border-color: hsl(var(--border));
+    border-width: 2px;
+  }
+
+  /* Route skeletons shimmer, and only appear once loading has taken 300ms, so fast loads never flash. */
+  [data-route-skeleton] {
+    animation: motion-fade-in 200ms var(--do-ease-decelerate) 300ms both;
   }
 
   .route-skeleton-shape {
-    background-color: hsl(var(--muted) / 0.58);
-    border-radius: calc(var(--radius) - 2px);
+    position: relative;
+    overflow: hidden;
+    background-color: var(--do-skeleton);
+    border-radius: var(--radius-sm);
+  }
+
+  .route-skeleton-shape::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    transform: translateX(-100%);
+    background: linear-gradient(90deg, transparent, rgb(255 255 255 / 0.55), transparent);
+    animation: skeleton-shimmer 1.2s linear infinite;
+  }
+
+  .dark .route-skeleton-shape::after {
+    background: linear-gradient(90deg, transparent, rgb(255 255 255 / 0.06), transparent);
   }
 
   /* The landing nav is the one blurred surface; its edge appears once content scrolls under it. */

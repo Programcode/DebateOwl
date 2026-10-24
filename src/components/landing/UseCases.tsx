@@ -43,7 +43,7 @@ const UseCases = () => {
                             <div className="w-14 h-14 rounded-full bg-secondary flex items-center justify-center mb-6">
                                 <persona.icon aria-hidden="true" className="w-7 h-7 text-primary" />
                             </div>
-                            <h3 className="text-2xl font-bold mb-1">{persona.title}</h3>
+                            <h3 className="font-display text-2xl font-[600] mb-1 text-heading">{persona.title}</h3>
                             <p className="text-primary font-medium mb-6">{persona.subtitle}</p>
 
                             <ul className="space-y-3">

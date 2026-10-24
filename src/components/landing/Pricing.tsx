@@ -42,14 +42,14 @@ const Pricing = () => {
 
                 <div className="mx-auto grid max-w-5xl grid-cols-1 gap-6 md:grid-cols-2">
                     <Reveal>
-                    <div className="h-full rounded-2xl border border-border/70 bg-card p-7 shadow-sm transition-[border-color,box-shadow] duration-200 hover:border-primary/30 hover:shadow-lg">
+                    <div className="h-full rounded-xl border-2 border-border bg-card p-7 transition-[border-color,box-shadow,transform] duration-200 hover:-translate-y-0.5 hover:border-brand-tint-border hover:shadow-lg">
                         <div className="mb-4 flex items-center justify-between">
-                            <h3 className="text-2xl font-semibold text-foreground">{t('pricing.trial')}</h3>
+                            <h3 className="font-display text-2xl font-[600] text-heading">{t('pricing.trial')}</h3>
                             <span className="rounded-full border border-border/70 bg-muted px-3 py-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                                 {t('pricing.trialBadge')}
                             </span>
                         </div>
-                        <p className="text-4xl font-bold text-foreground">
+                        <p className="font-display text-4xl font-[600] text-heading">
                             {t('pricing.trialPrice')}<span className="text-base font-medium text-muted-foreground"> {t('pricing.trialPeriod')}</span>
                         </p>
                         <p className="mt-2 text-sm text-muted-foreground">{t('pricing.trialDesc')}</p>
@@ -71,19 +71,19 @@ const Pricing = () => {
                     </Reveal>
 
                     <Reveal delay={0.05}>
-                    <div className="relative h-full rounded-2xl border-2 border-primary/45 bg-card p-7 shadow-xl ring-1 ring-primary/10 transition-[border-color,box-shadow] duration-200 hover:border-primary/60">
-                        <div className="absolute -top-4 left-6 inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary/10 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-primary">
+                    <div className="relative h-full rounded-xl border-2 border-brand bg-card p-7 shadow-[0_6px_0_var(--do-primary-ledge)] transition-[border-color,box-shadow] duration-200 hover:border-primary/60">
+                        <div className="absolute -top-4 left-6 inline-flex items-center gap-2 rounded-full bg-brand px-3 py-1 text-xs font-extrabold uppercase tracking-[0.08em] text-white shadow-[0_2px_0_var(--do-primary-ledge)]">
                             <Sparkles aria-hidden="true" className="h-3.5 w-3.5" />
                             {t('pricing.recommended')}
                         </div>
 
                         <div className="mb-4 mt-2 flex items-center justify-between">
-                            <h3 className="text-2xl font-semibold text-foreground">{t('pricing.pro')}</h3>
-                            <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-amber-900 dark:bg-amber-900/60 dark:text-amber-100">
+                            <h3 className="font-display text-2xl font-[600] text-heading">{t('pricing.pro')}</h3>
+                            <span className="rounded-full bg-gold-tint px-3 py-1 text-xs font-extrabold uppercase tracking-[0.08em] text-warning-text">
                                 {t('pricing.proBadge')}
                             </span>
                         </div>
-                        <p className="text-4xl font-bold text-foreground">
+                        <p className="font-display text-4xl font-[600] text-heading">
                             {t('pricing.proPrice')}<span className="text-base font-medium text-muted-foreground">{t('pricing.proPeriod')}</span>
                         </p>
                         <p className="mt-2 text-sm text-muted-foreground">{t('pricing.proDesc')}</p>

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { LoadingSpinner } from '@/components/ui/loading-spinner';
+import { LoadingSpinner, OwlLoader } from '@/components/ui/loading-spinner';
+import { EmptyState } from '@/components/ui/empty-state';
 import { useTranslation } from 'react-i18next';
 import { DebateRequiredError, DuplicateSourceError, isPendingSource, useSessionStore, type Source } from '@/lib/stores/session-store';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -1064,26 +1065,11 @@ export default function LibraryPage() {
             </CardHeader>
             <CardContent className="px-3 sm:px-6">
               {firstLoadPending ? (
-                <div className="flex items-center justify-center gap-2 py-12 text-sm text-muted-foreground" role="status">
-                  <LoadingSpinner size="sm" />
-                  {t('libraryPage.loadingSources', 'Loading sources…')}
-                </div>
+                <OwlLoader className="py-10" size={88} message={t('libraryPage.loadingSources', 'Loading sources…')} />
               ) : sourceLibrary.length === 0 ? (
-                <div className="text-center py-12 border-2 border-dashed rounded-lg">
-                  <Database className="h-12 w-12 text-muted-foreground/20 mx-auto mb-4" />
-                  <h3 className="text-lg font-medium">{t('libraryPage.emptyTitle')}</h3>
-                  <p className="text-sm text-muted-foreground max-w-xs mx-auto mt-1">
-                    {t('libraryPage.emptyDesc')}
-                  </p>
-                </div>
+                <EmptyState icon={Database} headingLevel="h3" title={t('libraryPage.emptyTitle')} description={t('libraryPage.emptyDesc')} />
               ) : visibleSources.length === 0 ? (
-                <div className="text-center py-12 border-2 border-dashed rounded-lg">
-                  <Database className="h-12 w-12 text-muted-foreground/20 mx-auto mb-4" />
-                  <h3 className="text-lg font-medium">{t('libraryPage.noMatchingSources', 'No matching sources')}</h3>
-                  <p className="text-sm text-muted-foreground max-w-xs mx-auto mt-1">
-                    {t('libraryPage.noMatchingSourcesDesc', 'Try a different search or folder.')}
-                  </p>
-                </div>
+                <EmptyState icon={Search} pose="surprised" headingLevel="h3" title={t('libraryPage.noMatchingSources', 'No matching sources')} description={t('libraryPage.noMatchingSourcesDesc', 'Try a different search or folder.')} />
               ) : (
                 // Phones scroll the page; only wide screens get a bounded inner list.
                 <div className="lg:max-h-[600px] lg:overflow-y-auto lg:pr-1">
