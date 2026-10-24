@@ -5,7 +5,7 @@ import { useSettingsStore } from '@/lib/stores/settings-store';
 type ResolvedTheme = 'light' | 'dark';
 
 // Browser chrome colours, matching --background in each theme.
-const THEME_COLORS: Record<ResolvedTheme, string> = { light: '#f1f5f9', dark: '#0f172a' };
+const THEME_COLORS: Record<ResolvedTheme, string> = { light: '#F7FAFE', dark: '#0B1426' };
 
 function syncThemeColor(theme: 'light' | 'dark' | 'system', resolved: ResolvedTheme) {
     document.querySelectorAll<HTMLMetaElement>('meta[name="theme-color"]').forEach((meta) => {

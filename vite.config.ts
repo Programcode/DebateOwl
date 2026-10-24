@@ -129,8 +129,9 @@ const OFFLINE_MODULES = [
   "src/locales/hu.json",
   "src/locales/tools/hu.json",
 ];
-// Inter's Latin subsets cover English, Spanish and Hungarian.
-const OFFLINE_FONTS = /^assets\/inter-latin(?:-ext)?-wght-normal-[\w-]+\.woff2$/;
+// The Latin subsets of Nunito (body) and Fredoka (headings, buttons) cover English, Spanish and
+// Hungarian. JetBrains Mono only draws timers, so it loads on first use.
+const OFFLINE_FONTS = /^assets\/(?:nunito|fredoka)-latin(?:-ext)?-wght-normal-[\w-]+\.woff2$/;
 const SERVICE_WORKER_BUILD = "const BUILD = { id: 'dev', assets: [] };";
 
 /** Writes this build's precache list and cache id into dist/sw.js. */
