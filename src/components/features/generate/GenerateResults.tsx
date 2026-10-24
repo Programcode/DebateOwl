@@ -316,7 +316,7 @@ export function GenerateResults({ result, discoveredSources, onRegenerateSection
             <ul className="space-y-2">
               {result.predictedOpponentCase?.strategicWeaknesses?.map((weakness, i) => (
                 <li key={i} className="flex items-start gap-2 text-sm">
-                  <span className="text-amber-500 mt-1">•</span>
+                  <span className="text-amber-600 dark:text-amber-400 mt-1">•</span>
                   <span className="text-foreground">{weakness}</span>
                 </li>
               ))}

@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next';
-import { CreditCard, Zap } from 'lucide-react';
+import { Check, CreditCard, Zap } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { formatEuropeanDate } from '@/lib/date-format';
@@ -9,11 +9,11 @@ import type { BillingDateKind, BillingStateName } from '@/hooks/use-subscription
 // Tinted badges keep their label readable (white on amber or green was about 2:1).
 const STATE_BADGES: Record<BillingStateName, { labelKey: string; color: string }> = {
   trial: { labelKey: 'settings.tierTrial', color: 'border-blue-500/30 bg-blue-500/15 text-blue-800 dark:text-blue-300' },
-  extended_access: { labelKey: 'settings.tierExtended', color: 'border-success/30 bg-success/15 text-success' },
+  extended_access: { labelKey: 'settings.tierExtended', color: 'border-success/30 bg-success/15 text-success-text' },
   pro: { labelKey: 'settings.tierPro', color: 'border-amber-500/30 bg-amber-500/15 text-amber-800 dark:text-amber-300' },
   pro_canceling: { labelKey: 'settings.tierPro', color: 'border-amber-500/30 bg-amber-500/15 text-amber-800 dark:text-amber-300' },
   payment_failed: { labelKey: 'settings.tierPaymentFailed', color: 'border-destructive/30 bg-destructive/10 text-destructive' },
-  legacy_free: { labelKey: 'settings.tierLegacyFree', color: 'border-success/30 bg-success/15 text-success' },
+  legacy_free: { labelKey: 'settings.tierLegacyFree', color: 'border-success/30 bg-success/15 text-success-text' },
   trial_ended: { labelKey: 'settings.tierExpired', color: 'border-destructive/30 bg-destructive/10 text-destructive' },
   subscription_ended: { labelKey: 'settings.tierExpired', color: 'border-destructive/30 bg-destructive/10 text-destructive' },
 };
@@ -88,7 +88,7 @@ export function SubscriptionStatus({
       {/* Wraps on a phone: a long badge, date and button (Hungarian) never squeeze into one row. */}
       <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-3">
         <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1">
-          <Badge variant="outline" className={badge.color}>{t(badge.labelKey)}</Badge>
+          <Badge variant="outline" className={badge.color}>{badge.color.includes('success') && <Check className="h-3 w-3" strokeWidth={3} aria-hidden="true" />}{t(badge.labelKey)}</Badge>
           {dateLabel && date && (
             <span data-testid="billing-date" className="text-sm text-muted-foreground">{t(dateLabel, { date })}</span>
           )}

@@ -138,7 +138,7 @@ export function PricingModal({ open, onOpenChange, onPromoRedeemed }: PricingMod
       <DialogContent className={`${PLAN_DIALOG_CLASS} sm:max-w-[600px]`} closeClassName={PLAN_DIALOG_CLOSE_CLASS}>
         <DialogHeader className="pr-10 text-left">
           <DialogTitle className="flex items-center gap-2 text-xl">
-            <Crown className="h-5 w-5 shrink-0 text-amber-500" />
+            <Crown className="h-5 w-5 shrink-0 text-amber-600 dark:text-amber-400" />
             {t(TITLES[action])}
           </DialogTitle>
           <DialogDescription>

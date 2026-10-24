@@ -473,12 +473,12 @@ export default function LoginPage() {
             </p>
           )}
           {authStatus === 'code-sent' && (
-            <p className="mt-4 text-sm text-success" role="status" aria-live="polite">
+            <p className="mt-4 text-sm text-success-text" role="status" aria-live="polite">
               {t(SENT_NOTICE_KEYS[sentNotice])}
             </p>
           )}
           {authStatus === 'success' && (
-            <p className="mt-4 text-sm text-success" role="status" aria-live="polite">
+            <p className="mt-4 text-sm text-success-text" role="status" aria-live="polite">
               {t('login.signedIn', 'Signed in')}
             </p>
           )}

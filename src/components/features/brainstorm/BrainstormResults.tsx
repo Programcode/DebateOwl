@@ -132,7 +132,7 @@ export function BrainstormResults({ result, discoveredSources, onDiscuss, onSave
       <SectionCard
         title={t('brainstormResults.clarification')}
         description={t('brainstormResults.clarificationDesc')}
-        icon={<AlertTriangle className="h-5 w-5 text-amber-500" />}
+        icon={<AlertTriangle className="h-5 w-5 text-amber-600 dark:text-amber-400" />}
       >
         <ul className="space-y-3">
           {result.clarifyingQuestions.map((question, i) => (
@@ -192,7 +192,7 @@ export function BrainstormResults({ result, discoveredSources, onDiscuss, onSave
                 <div className="flex-1">
                   {item.idea && <IdeaCard idea={item.idea} />}
                   <div className="mt-2 flex items-center gap-2 text-sm">
-                    <Lightbulb className="h-4 w-4 text-amber-500" />
+                    <Lightbulb className="h-4 w-4 text-amber-600 dark:text-amber-400" />
                     <span className="text-muted-foreground">{item.whyTop}</span>
                   </div>
                 </div>
@@ -268,12 +268,12 @@ export function BrainstormResults({ result, discoveredSources, onDiscuss, onSave
       {result.warningsAndTradeoffs && result.warningsAndTradeoffs.length > 0 && (
         <SectionCard
           title={t('brainstormResults.warnings')}
-          icon={<AlertTriangle className="h-5 w-5 text-amber-500" />}
+          icon={<AlertTriangle className="h-5 w-5 text-amber-600 dark:text-amber-400" />}
         >
           <ul className="space-y-2">
             {result.warningsAndTradeoffs.map((warning, i) => (
               <li key={i} className="flex items-start gap-2 text-sm">
-                <span className="text-amber-500 mt-1">⚠</span>
+                <span className="text-amber-600 dark:text-amber-400 mt-1">⚠</span>
                 <span className="text-foreground">{warning}</span>
               </li>
             ))}

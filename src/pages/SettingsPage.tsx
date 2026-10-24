@@ -248,7 +248,7 @@ export default function SettingsPage() {
         <Card id="subscription" data-testid="subscription-card" className="mb-8 scroll-mt-20 border-primary/20">
           <CardHeader>
             <div className="flex items-center gap-2">
-              <Crown className="h-5 w-5 text-amber-500" />
+              <Crown className="h-5 w-5 text-amber-600 dark:text-amber-400" />
               <CardTitle>{t('settings.subscription')}</CardTitle>
             </div>
           </CardHeader>

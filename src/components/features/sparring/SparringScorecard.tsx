@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Owl, OwlAvatar } from '@/components/brand/Owl';
 import { useTranslation } from 'react-i18next';
-import { Award, BarChart3, Bot, Download, FileText, Lightbulb, Mic, RotateCcw, Sparkles, Target, UserRound, Check } from 'lucide-react';
+import { Award, BarChart3, Download, FileText, Lightbulb, Mic, RotateCcw, Sparkles, Target, UserRound, Check } from 'lucide-react';
 import { PolarAngleAxis, PolarGrid, PolarRadiusAxis, Radar, RadarChart, ResponsiveContainer, Tooltip } from 'recharts';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -179,7 +179,7 @@ export function SparringScorecard({ session, scorecard, onRestart, onExport, onE
             {session.speeches.map((speech) => (
               <article key={speech.id} className="rounded-xl border border-border/70 p-4">
                 <div className="flex flex-wrap items-center justify-between gap-2">
-                  <div className="flex items-center gap-2 text-sm font-semibold"><span className={cn('flex h-7 w-7 items-center justify-center rounded-md', speech.speaker === 'user' ? 'bg-primary/10 text-primary' : 'bg-muted')} aria-hidden="true">{speech.speaker === 'user' ? <UserRound className="h-4 w-4" /> : <Bot className="h-4 w-4" />}</span>{speech.speaker === 'user' ? t('sparring.user', 'You') : t('sparring.opponent', 'AI opponent')} <span className="font-normal text-muted-foreground">· {t(`sparring.turns.${speech.turnId}`, speech.role)}</span></div>
+                  <div className="flex items-center gap-2 text-sm font-semibold">{speech.speaker === 'user' ? <span className="flex h-7 w-7 items-center justify-center rounded-full bg-brand text-white" aria-hidden="true"><UserRound className="h-4 w-4" /></span> : <OwlAvatar pose="skeptical" size={28} />}{speech.speaker === 'user' ? t('sparring.user', 'You') : t('sparring.opponent', 'AI opponent')} <span className="font-normal text-muted-foreground">· {t(`sparring.turns.${speech.turnId}`, speech.role)}</span></div>
                   <span className="font-mono text-xs tabular-nums text-muted-foreground">{speech.speaker === 'ai' ? t('sparring.round.estimatedTimeUsed', '{{time}} estimated', { time: formatRoundTime(speech.timeUsedSeconds) }) : t('sparring.round.timeUsed', '{{time}} used', { time: formatRoundTime(speech.timeUsedSeconds) })}</span>
                 </div>
                 <div className="mt-3 text-sm leading-7"><Markdown>{speech.content}</Markdown></div>

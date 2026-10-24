@@ -29,7 +29,7 @@ interface AttackResultsProps {
 
 const severityConfig = {
   critical: { icon: AlertCircle, color: 'text-destructive', bg: 'bg-destructive/10', border: 'border-destructive/30' },
-  major: { icon: AlertTriangle, color: 'text-amber-500', bg: 'bg-amber-500/10', border: 'border-amber-500/30' },
+  major: { icon: AlertTriangle, color: 'text-amber-600 dark:text-amber-400', bg: 'bg-amber-500/10', border: 'border-amber-500/30' },
   minor: { icon: Info, color: 'text-primary', bg: 'bg-primary/10', border: 'border-primary/30' },
 };
 
@@ -194,7 +194,7 @@ export function AttackResults({ result, discoveredSources, onDiscuss, onPractice
               <span className={cn(
                   'text-lg font-bold',
                   overallAssessment.score >= 70 ? 'text-primary' :
-                    overallAssessment.score >= 50 ? 'text-amber-500' : 'text-destructive'
+                    overallAssessment.score >= 50 ? 'text-amber-600 dark:text-amber-400' : 'text-destructive'
                 )}>
                   {overallAssessment.score}/100
               </span>

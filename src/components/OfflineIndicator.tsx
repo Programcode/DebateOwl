@@ -10,7 +10,7 @@ export function OfflineIndicator() {
 
   return (
     <div className="native-safe-fixed-bottom fixed left-1/2 z-60 flex -translate-x-1/2 items-center gap-2 rounded-full border bg-background/95 px-4 py-2 text-sm font-medium text-foreground shadow-lg backdrop-blur-sm" role="status" aria-live="polite">
-      <WifiOff className="h-4 w-4 text-amber-500" />
+      <WifiOff className="h-4 w-4 text-amber-600 dark:text-amber-400" />
       {t('offlineIndicator.label', 'Offline mode')}
     </div>
   );
