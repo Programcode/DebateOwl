@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024"><title>DebateOwl C app icon</title><defs>
+  <radialGradient id="i-body" cx="0.46" cy="0.26" r="0.8">
+    <stop offset="0" stop-color="#2B9BFF"/><stop offset="0.38" stop-color="#0A6FF0"/><stop offset="0.7" stop-color="#0661E2"/><stop offset="0.9" stop-color="#044FC6"/><stop offset="1" stop-color="#0344B6"/>
+  </radialGradient>
+  <radialGradient id="i-face" cx="0.5" cy="0.45" r="0.55">
+    <stop offset="0" stop-color="#1E8DFB" stop-opacity="0.9"/><stop offset="0.75" stop-color="#1E8DFB" stop-opacity="0.55"/><stop offset="1" stop-color="#1E8DFB" stop-opacity="0"/>
+  </radialGradient>
+  <linearGradient id="i-belly" x1="0" y1="0" x2="0.15" y2="1">
+    <stop offset="0" stop-color="#C9E5FE"/><stop offset="0.5" stop-color="#B3D8FC"/><stop offset="1" stop-color="#82BBF6"/>
+  </linearGradient>
+  <linearGradient id="i-wing" x1="0" y1="0" x2="0.6" y2="1">
+    <stop offset="0" stop-color="#1A86FB"/><stop offset="0.6" stop-color="#0664E6"/><stop offset="1" stop-color="#034CC4"/>
+  </linearGradient>
+  <linearGradient id="i-hand" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0" stop-color="#2190FC"/><stop offset="1" stop-color="#0663E4"/>
+  </linearGradient>
+  <radialGradient id="i-iris" cx="0.5" cy="0.75" r="0.75">
+    <stop offset="0" stop-color="#6CC4FF"/><stop offset="0.55" stop-color="#1A7BE6"/><stop offset="1" stop-color="#0B4FB8"/>
+  </radialGradient>
+  <linearGradient id="i-beak" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0" stop-color="#F8D132"/><stop offset="1" stop-color="#EE9F0C"/>
+  </linearGradient>
+  <linearGradient id="i-foot" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0" stop-color="#FFC414"/><stop offset="1" stop-color="#F39A00"/>
+  </linearGradient>
+</defs><rect width="1024" height="1024" fill="#DDF0FF"/><path d="M512 170 C700 170 828 262 848 440 C866 600 884 820 900 1024 L124 1024 C140 820 158 600 176 440 C196 262 324 170 512 170 Z" fill="url(#i-body)"/><path d="M470 196 C400 170 330 136 270 72 C238 120 232 196 262 262 C300 250 390 224 470 196 Z" fill="url(#i-wing)"/><path d="M284 104 C316 150 380 180 440 196" fill="none" stroke="#4CB0FD" stroke-width="22" stroke-linecap="round" opacity="0.8"/><path d="M554 196 C624 170 694 136 754 72 C786 120 792 196 762 262 C724 250 634 224 554 196 Z" fill="url(#i-wing)"/><path d="M740 104 C708 150 644 180 584 196" fill="none" stroke="#4CB0FD" stroke-width="22" stroke-linecap="round" opacity="0.8"/><ellipse cx="512" cy="1020" rx="260" ry="200" fill="url(#i-belly)"/><circle cx="364" cy="470" r="142" fill="#4CB0FD"/><circle cx="364" cy="470" r="118" fill="#0A63DD"/><circle cx="368" cy="476" r="110" fill="#1E8DFB"/><circle cx="660" cy="470" r="142" fill="#4CB0FD"/><circle cx="660" cy="470" r="118" fill="#0A63DD"/><circle cx="664" cy="476" r="110" fill="#1E8DFB"/><path d="M494 470 C502 444 522 444 530 470" fill="none" stroke="#4CB0FD" stroke-width="26" stroke-linecap="round"/><ellipse cx="372" cy="472" rx="92" ry="100" fill="#0B2A6E"/><ellipse cx="372" cy="482" rx="88" ry="92" fill="#FEFEFD"/><circle cx="396" cy="490" r="60" fill="url(#i-iris)"/><circle cx="400" cy="486" r="40" fill="#031B47"/><circle cx="378" cy="462" r="20" fill="#FFFFFF"/><circle cx="418" cy="518" r="9" fill="#FFFFFF"/><ellipse cx="652" cy="472" rx="92" ry="100" fill="#0B2A6E"/><ellipse cx="652" cy="482" rx="88" ry="92" fill="#FEFEFD"/><circle cx="630" cy="490" r="60" fill="url(#i-iris)"/><circle cx="634" cy="486" r="40" fill="#031B47"/><circle cx="612" cy="462" r="20" fill="#FFFFFF"/><circle cx="652" cy="518" r="9" fill="#FFFFFF"/><path d="M462 596 C488 576 540 576 566 596 C580 628 548 676 514 700 C478 676 448 628 462 596 Z" fill="url(#i-beak)"/><path d="M470 628 Q514 664 560 628" fill="none" stroke="#B5660C" stroke-width="12" stroke-linecap="round"/><ellipse cx="530" cy="598" rx="20" ry="10" fill="#FCEB93"/></svg>
