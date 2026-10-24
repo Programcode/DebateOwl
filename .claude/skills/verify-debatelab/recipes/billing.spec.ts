@@ -16,7 +16,7 @@ test("bill-promo: an expired account is blocked, redeems a promo code, and gets 
   const brainstorm = async () => {
     await page.goto("/app/brainstorm");
     await page.getByLabel("Motion / Topic *").fill("Public transport should be free");
-    await page.getByRole("button", { name: "Start Brainstorming" }).click();
+    await page.getByRole("button", { name: "Start brainstorming" }).click();
     // No Current Debate, so the motion check asks first; the paywall (or the run) follows it.
     await chooseForMotion(page, "once");
   };

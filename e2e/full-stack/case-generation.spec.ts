@@ -9,7 +9,7 @@ test("a signed-in user generates a case grounded in a saved Library source", asy
   const marker = `SOURCE-${Date.now()}`;
   await startDebate(page, motion);
   await page.goto("/app/library");
-  await page.getByRole("button", { name: "Add Source" }).click();
+  await page.getByRole("button", { name: "Add source" }).click();
   await page.getByRole("textbox", { name: "Title", exact: true }).fill("Tallinn fare study");
   // Imported articles are often this long. Inlining that text in the request
   // exceeded the Edge Function's 200 KB body limit before sources loaded server-side.
@@ -24,7 +24,7 @@ test("a signed-in user generates a case grounded in a saved Library source", asy
 
   await page.goto("/app/generate");
   await page.getByRole("textbox", { name: "Motion / Topic *" }).fill(motion);
-  await page.getByRole("button", { name: "Generate Debate Case" }).click();
+  await page.getByRole("button", { name: "Generate debate case" }).click();
 
   // A hang (as in the auth relock regression) fails here instead of spinning forever.
   await expectResult(page, `${MARK} case thesis`);
@@ -44,12 +44,12 @@ test("a provider failure shows an error and lets the user retry", async ({ signe
   await startDebate(page, motion);
   await page.goto("/app/generate");
   await page.getByRole("textbox", { name: "Motion / Topic *" }).fill(motion);
-  await page.getByRole("button", { name: "Generate Debate Case" }).click();
+  await page.getByRole("button", { name: "Generate debate case" }).click();
 
   await expect(page.getByText("Generation Failed", { exact: true })).toBeVisible({ timeout: 30_000 });
-  await expect(page.getByRole("button", { name: "Generate Debate Case" })).toBeEnabled();
+  await expect(page.getByRole("button", { name: "Generate debate case" })).toBeEnabled();
 
-  await page.getByRole("button", { name: "Generate Debate Case" }).click();
+  await page.getByRole("button", { name: "Generate debate case" }).click();
   await expectResult(page, `${MARK} case thesis`);
 });
 
@@ -58,7 +58,7 @@ test("an account without quota is told why generation is blocked", async ({ sign
   await startDebate(page, motion);
   await page.goto("/app/generate");
   await page.getByRole("textbox", { name: "Motion / Topic *" }).fill(motion);
-  await page.getByRole("button", { name: "Generate Debate Case" }).click();
+  await page.getByRole("button", { name: "Generate debate case" }).click();
 
   await expect(page.getByRole("dialog").getByText("Daily Access Paused")).toBeVisible({ timeout: 30_000 });
   expect((await fake.requests()).filter((request) => request.feature === "generate")).toEqual([]);
@@ -67,7 +67,7 @@ test("an account without quota is told why generation is blocked", async ({ sign
 test("a saved one-off case persists to the account and reloads from History", async ({ signedIn: page, user }) => {
   await page.goto("/app/generate");
   await page.getByRole("textbox", { name: "Motion / Topic *" }).fill(motion);
-  await page.getByRole("button", { name: "Generate Debate Case" }).click();
+  await page.getByRole("button", { name: "Generate debate case" }).click();
   await chooseForMotion(page, "once");
   await expectResult(page, `${MARK} case thesis`);
 
@@ -94,7 +94,7 @@ test("a generated case exports to PDF and DOCX files", async ({ signedIn: page }
   await startDebate(page, motion);
   await page.goto("/app/generate");
   await page.getByRole("textbox", { name: "Motion / Topic *" }).fill(motion);
-  await page.getByRole("button", { name: "Generate Debate Case" }).click();
+  await page.getByRole("button", { name: "Generate debate case" }).click();
   await expectResult(page, `${MARK} case thesis`);
 
   // PDF files start with "%PDF"; DOCX files are ZIP archives starting with "PK".

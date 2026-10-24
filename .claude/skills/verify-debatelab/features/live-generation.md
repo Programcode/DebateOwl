@@ -20,7 +20,7 @@ Preconditions:
 
 - Doctor passes. The user is signed in. `startDebate(page, motion)` avoids the motion dialog.
 
-- **Draft.** Click `Generate Debate Case`. `getByTestId("live-draft")` appears, holding a region named `Case Structure`, one `live-caret`, and a `Cancel` button. It disappears when the result renders.
+- **Draft.** Click `Generate debate case`. `getByTestId("live-draft")` appears, holding a region named `Case Structure`, one `live-caret`, and a `Cancel` button. It disappears when the result renders.
 - **Request.** The page's `ai` request body has `stream: true`. The response is `text/event-stream`: `phase` events (`research`, `writing`, `checking`), many `delta` events with the model's raw text, an optional `reset` when a repair retry starts the answer again, and exactly one final `result` event `{status, body}` holding what a plain request would return. Read it with `readAIResponse(response)`.
 - **Provider.** `expectStreamed(["generate"])`: every provider call for the feature had `stream: true`. Research sub-calls (`research-decision`, `research-queries`) are never streamed.
 - **Errors.** Checks before the feature (auth, input, quota, model access) still answer with plain JSON and their real status. A failure after streaming starts arrives as a `result` with the error status, which the client turns into the same error a plain request gets.

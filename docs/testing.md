@@ -200,7 +200,7 @@ Each test signs in through the Login page with a fresh demo code and deletes tha
 - Current Debate context: every request carries the debate's motion, instructions, and sources; Review drops a source and pins a saved case for exactly one request; the pin is stored; Crossfire leaves instructions out; and one-off work sends nothing;
 - a judged Lincoln-Douglas sparring round and a Crossfire debrief after a Jev signal attaches to an answer;
 - spoken Sparring and Crossfire rounds against the real `ai` and `voice` functions with no ElevenLabs key: the opponent prompt carries the voice rules, the reply comes back clean with signed segments, `voice` answers `voice_unavailable`, the browser voice reads the clean text, the judge gets the measured facts, and the saved round holds no audio tag (the recogniser and the browser voice are scripted);
-- Library activation and deletion, output-language sync across devices, flowchart saves, and Delete All My Data (it must leave another account's rows intact);
+- Library activation and deletion, output-language sync across devices, flowchart saves, and Delete all my data (it must leave another account's rows intact);
 - Download my data (only the caller's rows, even when the request names another user) and Delete account (no row in any `public` or `private` table mentions the user afterwards, another account is untouched, and a call without a session or with another user's confirmation deletes nothing);
 - a promo code redeemed in Settings that restores AI access, and signed Stripe webhooks that grant and revoke Pro while a forged or replayed one changes nothing;
 - admin announcements seen by another user, denied admin access, and a public share link.

@@ -40,13 +40,12 @@ describe('accessible names and headings', () => {
   it('renders CardTitle as an h2 by default and keeps the same classes at another level', () => {
     const { rerender } = render(<CardTitle>Prepare</CardTitle>);
     const title = screen.getByRole('heading', { level: 2, name: 'Prepare' });
-    expect(title.className).toContain('text-lg');
-    expect(title.className).toContain('font-semibold');
-    expect(title.className).toContain('leading-tight');
-    expect(title.className).toContain('tracking-[-0.014em]');
+    const classes = title.className;
+    expect(classes).toContain('text-lg');
+    expect(classes).toContain('text-heading');
 
     rerender(<CardTitle as="h1">Access Denied</CardTitle>);
-    expect(screen.getByRole('heading', { level: 1, name: 'Access Denied' }).className).toContain('text-lg');
+    expect(screen.getByRole('heading', { level: 1, name: 'Access Denied' }).className).toBe(classes);
   });
 
   it('names the notification region in the active language', async () => {

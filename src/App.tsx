@@ -199,7 +199,7 @@ export class RouteErrorBoundary extends Component<RouteErrorBoundaryProps, { fai
             </button>
             {/* A full navigation, so a broken route can't trap the user. */}
             <a href={this.props.homeHref ?? '/'} className="rounded-md border border-input px-4 py-2 text-foreground">
-              {this.props.homeLabel ?? 'Go to Home'}
+              {this.props.homeLabel ?? 'Go to home'}
             </a>
           </div>
         </div>

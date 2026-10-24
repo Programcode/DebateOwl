@@ -39,7 +39,7 @@ test("an expired access token refreshes before an AI request", async ({ signedIn
   });
   await page.goto("/app/generate");
   await page.getByRole("textbox", { name: "Motion / Topic *" }).fill("This House would make public transport free");
-  await page.getByRole("button", { name: "Generate Debate Case" }).click();
+  await page.getByRole("button", { name: "Generate debate case" }).click();
   await chooseForMotion(page, "once");
   await expectResult(page, `${MARK} case thesis`);
 });

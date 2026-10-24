@@ -22,7 +22,7 @@ describe('GenerateForm role from the Current Debate', () => {
     render(<GenerateForm onSubmit={onSubmit} isLoading={false} />);
     await waitFor(() => expect(screen.getByRole('textbox', { name: /Motion/ })).toHaveValue('This House would make public transport free'));
     expect(screen.getByRole('combobox', { name: 'Speaker Role' })).toHaveTextContent('Any role');
-    fireEvent.click(screen.getByRole('button', { name: 'Generate Debate Case' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Generate debate case' }));
     await waitFor(() => expect(onSubmit).toHaveBeenCalledTimes(1));
     expect(onSubmit.mock.calls[0][0]).toMatchObject({ motion: 'This House would make public transport free', role: 'general' });
   });

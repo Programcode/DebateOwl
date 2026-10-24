@@ -94,7 +94,7 @@ test('real staging session persists, starts a debate, writes and removes a sourc
       await page.reload();
       // Sources belong to a debate, so Library asks for one before it allows adding a source.
       await expect(page.getByTestId('library-debate')).toContainText('Select or create a debate', { timeout: 15_000 });
-      await expect(page.getByRole('button', { name: 'Add Source' })).toBeDisabled();
+      await expect(page.getByRole('button', { name: 'Add source' })).toBeDisabled();
       await page.getByTestId('library-debate').getByRole('button', { name: 'Start debate' }).click();
       const dialog = page.getByRole('dialog', { name: 'Start new debate' });
       await dialog.getByLabel('Motion').fill(motion);
@@ -114,7 +114,7 @@ test('real staging session persists, starts a debate, writes and removes a sourc
     });
 
     await step(page, 'add a source to the debate', async () => {
-      await page.getByRole('button', { name: 'Add Source' }).click();
+      await page.getByRole('button', { name: 'Add source' }).click();
       await page.getByPlaceholder('Source title...').fill(sourceTitle);
       await page.getByPlaceholder('Paste source content...').fill(sourceContent);
       const sourceInsert = page.waitForResponse((response) =>

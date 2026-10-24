@@ -20,7 +20,7 @@ async function updateSettings(userId: string, values: Record<string, unknown>) {
 async function generateOnce(page: Page) {
   await page.getByRole("textbox", { name: "Motion / Topic *" }).fill(motion);
   const response = aiResponse(page, "generate");
-  await page.getByRole("button", { name: "Generate Debate Case" }).click();
+  await page.getByRole("button", { name: "Generate debate case" }).click();
   await chooseForMotion(page, "once");
   return response;
 }

@@ -53,10 +53,10 @@
       },
       {
         "name": "tap",
-        "summary": "tap button \"Get Started!\"",
+        "summary": "tap button \"Get started!\"",
         "target": {
           "role": "button",
-          "name": "Get Started!"
+          "name": "Get started!"
         }
       }
     ],
@@ -72,7 +72,7 @@
       "callIndex": 0,
       "agent": "default"
     },
-    "summary": "Started a debate on “This House would make debate compulsory in secondary schools,” then advanced through the Library and Generate tour steps and selected “Get Started!” on the final step. The tour dialog closed, confirming completion.",
+    "summary": "Started a debate on “This House would make debate compulsory in secondary schools,” then advanced through the Library and Generate tour steps and selected “Get started!” on the final step. The tour dialog closed, confirming completion.",
     "startPath": "/app",
     "endPath": "/app",
     "endAnchors": [
@@ -120,7 +120,7 @@
       },
       {
         "role": "button",
-        "name": "Skip Tour"
+        "name": "Skip tour"
       },
       {
         "role": "button",

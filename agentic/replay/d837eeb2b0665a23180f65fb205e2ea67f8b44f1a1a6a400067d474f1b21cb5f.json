@@ -15,10 +15,10 @@
       },
       {
         "name": "tap",
-        "summary": "tap button \"Start Brainstorming\"",
+        "summary": "tap button \"Start brainstorming\"",
         "target": {
           "role": "button",
-          "name": "Start Brainstorming"
+          "name": "Start brainstorming"
         }
       },
       {
@@ -43,7 +43,7 @@
       "callIndex": 0,
       "agent": "default"
     },
-    "summary": "Brainstorming on 'This House would ban zoos' completed — motion entered, Start Brainstorming tapped, and the app offered to start a debate which was confirmed. The current screen shows generated brainstorm results (Top 5 Argument Angles), a 'Working in: This House would ban zoos' strip, and 'Curren…",
+    "summary": "Brainstorming on 'This House would ban zoos' completed — motion entered, Start brainstorming tapped, and the app offered to start a debate which was confirmed. The current screen shows generated brainstorm results (Top 5 Argument Angles), a 'Working in: This House would ban zoos' strip, and 'Curren…",
     "startPath": "/app/brainstorm",
     "endPath": "/app/brainstorm",
     "endAnchors": [

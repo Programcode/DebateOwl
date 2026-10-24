@@ -29,7 +29,7 @@ type State = {
 };
 
 const UPGRADE: Text = { en: "Upgrade to Pro", hu: "Váltás Pro-ra" };
-const MANAGE: Text = { en: "Manage Subscription", hu: "Előfizetés kezelése" };
+const MANAGE: Text = { en: "Manage subscription", hu: "Előfizetés kezelése" };
 const PAUSED: Text = { en: "Daily Access Paused", hu: "Napi hozzáférés szünetel" };
 const OK: Text = { en: "OK", hu: "Rendben" };
 
@@ -85,7 +85,7 @@ const STATES: State[] = [
     settings: { subscription_tier: "pro", grace_period_ends_at: at(365) },
     badge: { en: "Pro", hu: "Pro" },
     text: { en: /comes from a promo code and runs until .+\. Billing is optional until then/, hu: /promóciós kódból származik \(lejárat: .+\)\. Addig a számlázás beállítása nem kötelező/ },
-    button: { en: "Set Up Billing", hu: "Számlázás beállítása" },
+    button: { en: "Set up billing", hu: "Számlázás beállítása" },
     plan: "plan-pro",
     dailyLimit: 50,
     refusal: { title: PAUSED, button: OK },
@@ -152,7 +152,7 @@ async function chargeAIUnits(userId: string, units: number) {
 async function brainstorm(page: Page, language: "en" | "hu" = "en") {
   await page.goto("/app/brainstorm");
   await page.getByLabel(language === "en" ? "Motion / Topic *" : "Indítvány / téma *").fill("Public transport should be free");
-  await page.getByRole("button", { name: language === "en" ? "Start Brainstorming" : "Ötletelés indítása" }).click();
+  await page.getByRole("button", { name: language === "en" ? "Start brainstorming" : "Ötletelés indítása" }).click();
   if (language === "en") return chooseForMotion(page, "once");
   const dialog = page.getByRole("dialog", { name: /^(Indítasz egy vitát ezzel a tétellel\?|Ez egy másik tétel)$/ });
   await dialog.getByRole("button", { name: /^(Most nem, csak egyszer használom|Egyszeri használat vitába mentés nélkül)$/ }).click();

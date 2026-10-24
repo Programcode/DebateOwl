@@ -6,9 +6,9 @@ test("attack-run: Attack analyses a pasted argument", async ({ signedIn: page, e
   const argument = "Free transit cuts congestion because riders leave their cars at home, so cities should abolish fares.";
   await page.goto("/app/attack");
   await page.getByLabel("Your Argument *").fill(argument);
-  await evidence.step("Attack: pasted an argument and clicked Find Weaknesses");
+  await evidence.step("Attack: pasted an argument and clicked Find weaknesses");
   const response = aiResponse(page, "attack");
-  await page.getByRole("button", { name: "Find Weaknesses" }).click();
+  await page.getByRole("button", { name: "Find weaknesses" }).click();
   const body = await response;
   await evidence.json("01-attack-response", body);
   const weaknesses = body.output.weaknesses as Array<{ description: string }>;
@@ -24,7 +24,7 @@ test("brainstorm-run: Brainstorm returns ranked angles", async ({ signedIn: page
   await page.goto("/app/brainstorm");
   await page.getByLabel("Motion / Topic *").fill(motion);
   const response = aiResponse(page, "brainstorm");
-  await page.getByRole("button", { name: "Start Brainstorming" }).click();
+  await page.getByRole("button", { name: "Start brainstorming" }).click();
   // A new account has no Current Debate, so Brainstorm first offers one for this motion.
   await chooseForMotion(page, "create");
   await evidence.step(`Brainstorm: "${motion}", accepted the offer to start a debate for it`);

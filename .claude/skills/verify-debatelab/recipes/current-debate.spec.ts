@@ -13,7 +13,7 @@ const LIVE_AWARE_TIMEOUT = LIVE ? 900_000 : 150_000;
 
 async function addSource(page: Page, title: string, content: string) {
   await page.goto("/app/library");
-  await page.getByRole("button", { name: "Add Source" }).click();
+  await page.getByRole("button", { name: "Add source" }).click();
   await page.getByRole("textbox", { name: "Title", exact: true }).fill(title);
   await page.getByRole("textbox", { name: "Content", exact: true }).fill(content);
   await page.getByRole("button", { name: "Save to Library" }).click();
@@ -59,7 +59,7 @@ test("debate-start, debate-scope, debate-once, debate-switch: two debates keep t
   await expect(page.getByLabel("Motion / Topic *")).toHaveValue(HOMEWORK);
   let before = await callCount("brainstorm");
   const homeworkRun = aiResponse(page, "brainstorm");
-  await page.getByRole("button", { name: "Start Brainstorming" }).click();
+  await page.getByRole("button", { name: "Start brainstorming" }).click();
   const ideas = (await homeworkRun).output.topFive as Array<{ idea: { title: string } }>;
   await expect(page.getByText(ideas[0].idea.title).first()).toBeVisible();
   await expect(page.getByRole("dialog")).toHaveCount(0);
@@ -83,7 +83,7 @@ test("debate-start, debate-scope, debate-once, debate-switch: two debates keep t
   await expect(page.getByRole("textbox", { name: "Motion / Topic *" })).toHaveValue(ZOOS);
   before = await callCount("generate");
   const zooRun = aiResponse(page, "generate");
-  await page.getByRole("button", { name: "Generate Debate Case" }).click();
+  await page.getByRole("button", { name: "Generate debate case" }).click();
   const zooCase = (await zooRun).output as { caseStructure: { thesis: string } };
   await expect(page.getByText(zooCase.caseStructure.thesis).first()).toBeVisible();
   await expect.poll(async () => (await admin.from("cases").select("id").eq("user_id", userId)).data?.length).toBe(1);
@@ -97,7 +97,7 @@ test("debate-start, debate-scope, debate-once, debate-switch: two debates keep t
   await page.getByLabel("Motion / Topic *").fill("This House would lower the voting age");
   before = await callCount("brainstorm");
   const oneOffRun = aiResponse(page, "brainstorm");
-  await page.getByRole("button", { name: "Start Brainstorming" }).click();
+  await page.getByRole("button", { name: "Start brainstorming" }).click();
   await expect(page.getByRole("dialog")).toContainText("This is a different motion");
   await evidence.shot("04-different-motion-choice");
   await evidence.aria("04-different-motion-choice", page.getByRole("dialog"));
@@ -157,7 +157,7 @@ test("debate-offer: with no Current Debate, a tool offers to start one for the m
   await page.goto("/app/generate");
   await page.getByRole("textbox", { name: "Motion / Topic *" }).fill(motion);
   const run = aiResponse(page, "generate");
-  await page.getByRole("button", { name: "Generate Debate Case" }).click();
+  await page.getByRole("button", { name: "Generate debate case" }).click();
 
   const offer = page.getByRole("dialog", { name: "Start a debate with this motion?" });
   await expect(offer).toContainText(motion);
@@ -214,9 +214,9 @@ test("debate-tour: a brand-new account starts its first debate from the onboardi
   await next.click();
   await expect(tooltip).toContainText("Generate");
   await next.click();
-  await page.getByRole("button", { name: "Get Started!" }).click();
+  await page.getByRole("button", { name: "Get started!" }).click();
   await expect(tooltip).toHaveCount(0);
-  await evidence.step("Tour: Library → Generate → Get Started!");
+  await evidence.step("Tour: Library → Generate → Get started!");
 
   const userId = await user.userId();
   const { data: debates } = await admin.from("debates").select("id,motion").eq("user_id", userId);
@@ -229,7 +229,7 @@ test("debate-tour: a brand-new account starts its first debate from the onboardi
   await expect(page.getByTestId("current-debate-strip")).toContainText(`Working in: ${motion}`);
   await expect(page.getByRole("textbox", { name: "Motion / Topic *" })).toHaveValue(motion);
   const run = aiResponse(page, "generate");
-  await page.getByRole("button", { name: "Generate Debate Case" }).click();
+  await page.getByRole("button", { name: "Generate debate case" }).click();
   await run;
   await expect(page.getByRole("dialog")).toHaveCount(0);
   await evidence.shot("02-first-case-in-tour-debate");

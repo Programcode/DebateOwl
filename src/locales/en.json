@@ -16,7 +16,7 @@
     "whatsNew": "What's New",
     "pricing": "Pricing",
     "howItWorks": "How It Works",
-    "startTrial": "Start Trial",
+    "startTrial": "Start trial",
     "settings": "Settings",
     "openMenu": "Open menu",
     "closeMenu": "Close menu",
@@ -481,18 +481,18 @@
     "aiModelsDesc": "Select your preferred model directly from each feature page using the model dropdown in the header.",
     "admin": "Admin",
     "adminDesc": "Open the admin dashboard for usage, users, limits, and promo codes.",
-    "openAdmin": "Open Admin Panel",
+    "openAdmin": "Open admin panel",
     "developer": "Developer",
     "developerDesc": "Switch the app between production and staging Supabase projects. You will be signed out.",
     "switchToStaging": "Switch to Staging",
     "switchToProduction": "Switch to Production",
     "envSwitchTitle": "Switch Environment",
     "envSwitchDesc": "You'll be signed out and the app will reload pointing at {{target}}. You'll need to sign in again.",
-    "envSwitchConfirm": "Switch & Sign Out",
+    "envSwitchConfirm": "Switch & sign out",
     "stagingBanner": "Staging backend",
     "dangerZone": "Danger Zone",
     "dangerDesc": "Permanently delete all your saved data. This only affects your account ({{email}}).",
-    "deleteAllData": "Delete All My Data",
+    "deleteAllData": "Delete all my data",
     "deleteDialogTitle": "Delete all data",
     "deleteDialogDesc": "This permanently deletes all cases, attacks, brainstorms, factoids, chats, and sources for {{email}}. This action cannot be undone.",
     "typeEmailConfirm": "Type your email to confirm",
@@ -722,9 +722,9 @@
       "graceEnds": "• Grace ends {{date}}",
       "giftTrial": "Gift trial",
       "unban": "Unban",
-      "makeAdmin": "Make Admin",
+      "makeAdmin": "Make admin",
       "ban": "Ban",
-      "removeAdmin": "Remove Admin",
+      "removeAdmin": "Remove admin",
       "roleUpdated": "User role updated to {{role}}",
       "roleUpdateFailed": "Failed to update role",
       "roles": {
@@ -760,7 +760,7 @@
       "maxRedemptions": "Max Redemptions (blank = unlimited)",
       "created": "Promo code \"{{code}}\" created",
       "createFailed": "Failed to create code",
-      "createAction": "Create Code",
+      "createAction": "Create code",
       "activeCodes": "Active Codes",
       "codeCount_one": "{{count}} promo code",
       "codeCount_other": "{{count}} promo codes",
@@ -874,7 +874,7 @@
   "notFound": {
     "title": "404",
     "message": "Oops! Page not found",
-    "link": "Return to Home"
+    "link": "Return to home"
   },
   "footer": {
     "terms": "Terms",
@@ -897,8 +897,8 @@
     "requestsBadge": "Daily AI prep",
     "requestsBadgeValue": "Included",
     "proBadge": "$5/month Pro",
-    "cta": "Start Trial",
-    "ctaSecondary": "View Pricing",
+    "cta": "Start trial",
+    "ctaSecondary": "View pricing",
     "trustBullet1": "No credit card required",
     "trustBullet2": "Cancel anytime",
     "trustBullet3": "Works with any format",
@@ -1008,8 +1008,8 @@
     "proFeature3": "All 10 models, including Claude Opus and Sonnet, GPT-6.1 Sol, and Gemini",
     "proFeature4": "Priority support",
     "proFeature5": "Active Grounding™ research",
-    "startTrial": "Start Free Trial",
-    "subscribe": "Subscribe Now",
+    "startTrial": "Start free trial",
+    "subscribe": "Subscribe now",
     "noFreePlan": "There is no permanent free plan. After your trial ends, a subscription is required to continue using DebateLab.",
     "trialBadge": "New Users",
     "trialDesc": "Use the full workflow before deciding on Pro.",
@@ -1111,8 +1111,8 @@
     "toneFormal": "Formal",
     "toneConversational": "Conversational",
     "toneAggressive": "Aggressive",
-    "generating": "Generating Case...",
-    "submit": "Generate Debate Case",
+    "generating": "Generating case...",
+    "submit": "Generate debate case",
     "listening": "Listening... Speak your motion clearly",
     "stopListening": "Stop listening",
     "startVoice": "Start voice input",
@@ -1188,8 +1188,8 @@
     "detectFallaciesDesc": "Identify logical fallacies in the argument",
     "analyzeWeighing": "Analyze Weighing",
     "analyzeWeighingDesc": "Evaluate impact comparison and prioritization",
-    "analyzing": "Analyzing Case...",
-    "submit": "Find Weaknesses"
+    "analyzing": "Analyzing case...",
+    "submit": "Find weaknesses"
   },
   "attackResults": {
     "overall": "Overall Assessment",
@@ -1253,8 +1253,8 @@
     "outputBuckets": "Categorized Buckets",
     "existing": "What You Already Have (Optional)",
     "existingPlaceholder": "Share any ideas or angles you've already considered...",
-    "generating": "Generating Ideas...",
-    "submit": "Start Brainstorming"
+    "generating": "Generating ideas...",
+    "submit": "Start brainstorming"
   },
   "brainstormResults": {
     "clarification": "Clarification Needed",
@@ -1270,7 +1270,7 @@
     "neutral": "NEUTRAL",
     "untitled": "Untitled Idea",
     "tradeoffs": "Tradeoffs:",
-    "discuss": "Discuss Ideas",
+    "discuss": "Discuss ideas",
     "exportedDocx": "Brainstorm exported to DOCX!",
     "exportFailedDocx": "Failed to export to DOCX",
     "exportedGdocs": "Brainstorm exported to Google Docs!",
@@ -1297,7 +1297,7 @@
     "sourceAcademic": "Academic Only",
     "sourceGovernment": "Government Sources",
     "sourceNews": "Major News",
-    "finding": "Finding Evidence...",
+    "finding": "Finding evidence...",
     "submit": "Find Factoids"
   },
   "factoidsResults": {
@@ -1321,7 +1321,7 @@
     "howToUse": "How to use:",
     "saveToLibrary": "Save to Library",
     "saveClaimToLibrary": "Save {{claim}} to library",
-    "discuss": "Discuss Evidence",
+    "discuss": "Discuss evidence",
     "exportedDocx": "Factoids exported to DOCX!",
     "exportFailedDocx": "Failed to export to DOCX",
     "exportedGdocs": "Factoids exported to Google Docs!",
@@ -1480,10 +1480,10 @@
     "readyDesc": "Pick the mode that matches what you need for the next round.",
     "back": "Back",
     "close": "Close",
-    "getStarted": "Get Started!",
+    "getStarted": "Get started!",
     "next": "Next",
     "nextWithProgress": "Next (Step {step} of {steps})",
-    "skip": "Skip Tour",
+    "skip": "Skip tour",
     "debateFirstDesc": "Everything in DebateLab belongs to one debate: the motion you are preparing, its sources, and your results. Start your first debate here.",
     "debateCurrentDesc": "Everything in DebateLab belongs to your Current Debate: its motion, its sources, and your results. Open or change it here."
   },
@@ -1553,11 +1553,11 @@
     "title": "Argument Flowchart",
     "load": "Load",
     "save": "Save",
-    "addNode": "Add Node",
+    "addNode": "Add node",
     "edit": "Edit",
     "delete": "Delete",
     "exportPng": "Export PNG",
-    "saveChanges": "Save Changes",
+    "saveChanges": "Save changes",
     "saveFlowchart": "Save Flowchart",
     "savedFlowcharts": "Saved Flowcharts",
     "savedFlowchartsDesc": "Load a previously saved flowchart",
@@ -1705,9 +1705,9 @@
   },
   "libraryPage": {
     "title": "Source Library",
-    "addSource": "Add Source",
+    "addSource": "Add source",
     "cancel": "Cancel",
-    "clearAll": "Clear All",
+    "clearAll": "Clear all",
     "clearing": "Clearing...",
     "importUrl": "Import URL",
     "importUrlLabel": "Import from URL",
@@ -1839,7 +1839,7 @@
     "loadFailed": "Failed to load shared content",
     "contentNotFound": "This shared content is no longer available",
     "goToApp": "Go to App",
-    "openApp": "Open App",
+    "openApp": "Open app",
     "sharedOn": "Shared on",
     "viewCount_one": "{{count}} view",
     "viewCount_other": "{{count}} views"
@@ -2316,7 +2316,7 @@
   "routeError": {
     "heading": "Unable to load this page",
     "reload": "Reload",
-    "home": "Go to Home"
+    "home": "Go to home"
   },
   "sourcesPage": {
     "title": "Sources",
@@ -2604,8 +2604,8 @@
   },
   "billing": {
     "upgradeToPro": "Upgrade to Pro",
-    "manageSubscription": "Manage Subscription",
-    "setUpBilling": "Set Up Billing",
+    "manageSubscription": "Manage subscription",
+    "setUpBilling": "Set up billing",
     "resubscribe": "Resubscribe"
   },
   "trialBanner": {

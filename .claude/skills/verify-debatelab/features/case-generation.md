@@ -25,7 +25,7 @@ Preconditions:
 - Doctor passes. The recipe `recipes/case-generation.spec.ts` covers every sub-feature below: `bin/verify.sh drive recipes/case-generation`.
 
 - **Start the debate.** `await startDebate(page, motion)`. On `/app/generate`, the textbox named `Motion / Topic *` already holds the motion.
-- **Generate.** Click the button named `Generate Debate Case`. The text `FAKE-PROVIDER case thesis` and `FAKE-PROVIDER contention 3` appear, along with a toast `Generate complete`. Without a Current Debate, fill the motion yourself and answer the dialog `Start a debate with this motion?` with `chooseForMotion`.
+- **Generate.** Click the button named `Generate debate case`. The text `FAKE-PROVIDER case thesis` and `FAKE-PROVIDER contention 3` appear, along with a toast `Generate complete`. Without a Current Debate, fill the motion yourself and answer the dialog `Start a debate with this motion?` with `chooseForMotion`.
 - **Provider side effect.** `providerCall("generate")`'s `user` contains `Motion: <motion>`. `ai_requests` for the user contains `{feature: "generate", status: "success"}`.
 - **Filed in the debate.** `cases` for the user is one row whose `debates(motion)` is the motion. On a fresh browser context, `/app/history` shows it as a heading in the `Cases` tab panel, and `Load` reopens it.
 - **Save (one-off).** Generate with no debate and choose `chooseForMotion(page, "once")`. Click the button named `Save` (use `exact`), fill the dialog field labelled `Case title`, and click the dialog's `Save` button. `cases` for the user is `[{title, debate_id: null}]`. On a fresh browser context, `/app/history` shows `One-off and unsorted work` with a list item holding the title.
@@ -39,7 +39,7 @@ Preconditions:
 
 ## Gotchas
 
-- While any generation is running, the form's submit button reads `Generating Case...`, not `Generate Debate Case`. Find it by `[data-tour="generate-button"]` then.
+- While any generation is running, the form's submit button reads `Generating case...`, not `Generate debate case`. Find it by `[data-tour="generate-button"]` then.
 
 - The Generate page shows the heading `Ready to Generate` before the first run. Wait for it after navigating, because lazy route chunks load slowly on a cold Vite.
 - `Save` appears both on the result toolbar and in the dialog. Scope the second click to `getByRole("dialog")`. The toolbar `Save` exists only for one-off results.

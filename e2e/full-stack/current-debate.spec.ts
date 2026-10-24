@@ -17,7 +17,7 @@ async function snap(page: Page, name: string) {
 
 async function addSource(page: Page, title: string, content: string) {
   await page.goto("/app/library");
-  await page.getByRole("button", { name: "Add Source" }).click();
+  await page.getByRole("button", { name: "Add source" }).click();
   await page.getByRole("textbox", { name: "Title", exact: true }).fill(title);
   await page.getByRole("textbox", { name: "Content", exact: true }).fill(content);
   await page.getByRole("button", { name: "Save to Library" }).click();
@@ -53,7 +53,7 @@ test("two debates keep their motions, sources, and results apart", async ({ sign
   await page.goto("/app/brainstorm");
   await expect(page.getByTestId("current-debate-strip")).toContainText(`Working in: ${HOMEWORK}`);
   await expect(page.getByLabel("Motion / Topic *")).toHaveValue(HOMEWORK);
-  await page.getByRole("button", { name: "Start Brainstorming" }).click();
+  await page.getByRole("button", { name: "Start brainstorming" }).click();
   await expectResult(page, `${MARK} idea 1`);
   const homeworkCall = await latestCall("brainstorm");
   expect(homeworkCall.user).toContain(`Motion: ${HOMEWORK}`);
@@ -70,7 +70,7 @@ test("two debates keep their motions, sources, and results apart", async ({ sign
 
   await page.goto("/app/generate");
   await expect(page.getByRole("textbox", { name: "Motion / Topic *" })).toHaveValue(ZOOS);
-  await page.getByRole("button", { name: "Generate Debate Case" }).click();
+  await page.getByRole("button", { name: "Generate debate case" }).click();
   await expectResult(page, `${MARK} case thesis`);
   const zooCall = await latestCall("generate");
   expect(zooCall.user).toContain(`Motion: ${ZOOS}`);
@@ -80,7 +80,7 @@ test("two debates keep their motions, sources, and results apart", async ({ sign
   // A different motion asks first; "use once" keeps it out of every debate.
   await page.goto("/app/brainstorm");
   await page.getByLabel("Motion / Topic *").fill("This House would lower the voting age");
-  await page.getByRole("button", { name: "Start Brainstorming" }).click();
+  await page.getByRole("button", { name: "Start brainstorming" }).click();
   await expect(page.getByRole("dialog")).toContainText("This is a different motion");
   await snap(page, "3-different-motion-choice");
   await chooseForMotion(page, "once");

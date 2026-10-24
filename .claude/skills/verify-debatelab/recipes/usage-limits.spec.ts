@@ -37,7 +37,7 @@ test("usage-weighted: Opus counts as 5 requests, a lighter model still runs, and
   await selector.click();
   await page.getByRole("option", { name: /Claude Opus 5\.5/ }).click();
   await expect(selector).toContainText("Claude Opus 5.5");
-  await page.getByRole("button", { name: "Generate Debate Case" }).click();
+  await page.getByRole("button", { name: "Generate debate case" }).click();
   const daily = page.getByRole("dialog");
   await expect(daily.getByText("Daily Access Paused")).toBeVisible({ timeout: AI_TIMEOUT });
   await expect(daily.getByText("This model counts as 5 uses, and you have 4 left today.", { exact: false })).toBeVisible();
@@ -52,7 +52,7 @@ test("usage-weighted: Opus counts as 5 requests, a lighter model still runs, and
   await selector.click();
   await page.getByRole("option", { name: /Claude Haiku 5\.5/ }).click();
   const response = aiResponse(page, "generate");
-  await page.getByRole("button", { name: "Generate Debate Case" }).click();
+  await page.getByRole("button", { name: "Generate debate case" }).click();
   await response;
   expect(await generateCalls()).toBe(1);
   expect(await aiCounter(userId)).toBe(4);
@@ -64,7 +64,7 @@ test("usage-weighted: Opus counts as 5 requests, a lighter model still runs, and
     user_id: userId, feature: "generate", provider: "openrouter", model: "anthropic/claude-opus-5.5", status: "success", cost_usd: 2, cap_cost_usd: 2,
   });
   if (spendError) throw spendError;
-  await page.getByRole("button", { name: "Generate Debate Case" }).click();
+  await page.getByRole("button", { name: "Generate debate case" }).click();
   const weekly = page.getByRole("dialog");
   await expect(weekly.getByText("Weekly AI Allowance Used")).toBeVisible({ timeout: AI_TIMEOUT });
   await expect(weekly.getByText("It refreshes on Monday at 00:00 UTC.", { exact: false })).toBeVisible();
@@ -185,7 +185,7 @@ test("usage-refund-reload: reloading while Brainstorm streams costs nothing", as
   await fake.streamDelay(1_500);
   await page.goto("/app/brainstorm");
   await page.getByLabel("Motion / Topic *").fill(motion);
-  await page.getByRole("button", { name: "Start Brainstorming" }).click();
+  await page.getByRole("button", { name: "Start brainstorming" }).click();
   await chooseForMotion(page, "create");
   // The run is reserved and streaming: the counter shows it.
   await expect.poll(() => aiCounter(userId), { timeout: AI_TIMEOUT }).toBeGreaterThan(0);
