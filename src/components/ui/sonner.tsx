@@ -34,6 +34,7 @@ const Toaster = ({ ...props }: ToasterProps) => {
           info: "[&_[data-icon]]:bg-brand-tint [&_[data-icon]]:text-primary",
           actionButton: "group-[.toast]:bg-brand! group-[.toast]:text-white! group-[.toast]:font-display! group-[.toast]:rounded-md! group-[.toast]:shadow-[0_3px_0_var(--do-primary-ledge)]! group-[.toast]:h-8! group-[.toast]:px-3!",
           cancelButton: "group-[.toast]:bg-muted group-[.toast]:text-muted-foreground",
+          closeButton: "group-[.toast]:bg-card! group-[.toast]:text-muted-foreground! group-[.toast]:border-2! group-[.toast]:border-border! hover:group-[.toast]:text-foreground!",
         },
       }}
       {...props}

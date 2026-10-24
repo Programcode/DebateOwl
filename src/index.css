@@ -1043,6 +1043,12 @@ passes AA on every surface; buttons fill with --do-primary (#0A6FF0) and white t
   }
 }
 
+/* Body text is Nunito 600, so emphasis and minor headings in rendered answers step up to 800;
+   the typography plugin's 600 would read as plain text. Unlayered, so it beats the plugin. */
+.prose :where(strong, b, h3, h4):not(:where([class~="not-prose"], [class~="not-prose"] *)) {
+  font-weight: 800;
+}
+
 /* Scroll margin for anchors under the sticky header. Unlayered, so it wins over scroll-mt-* as in v3. */
 [id] {
   scroll-margin-top: 5rem;
