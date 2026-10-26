@@ -1528,6 +1528,17 @@
     "debateFirstDesc": "Todo en DebateLab pertenece a un debate: la moción que preparas, sus fuentes y tus resultados. Inicia aquí tu primer debate.",
     "debateCurrentDesc": "Todo en DebateLab pertenece a tu debate actual: su moción, sus fuentes y tus resultados. Ábrelo o cámbialo aquí."
   },
+  "debateOwlIntro": {
+    "greeting": "¡Hola, soy DebateOwl!",
+    "greetingNamed": "¡Hola, soy {{name}}, el búho de DebateOwl!",
+    "newLook": "DebateLab tiene un aspecto nuevo.",
+    "company": "Te haré compañía mientras algo carga.",
+    "sameTools": "Las mismas herramientas de siempre, en su sitio.",
+    "noticeTitle": "DebateLab se está convirtiendo poco a poco en DebateOwl",
+    "noticeBody": "La misma app, la misma cuenta y el mismo trabajo guardado, con un aspecto y un nombre nuevos. Cambiamos para que más gente nos encuentre en Google.",
+    "skipAnimation": "Saltar animación",
+    "done": "Entendido"
+  },
   "timer": {
     "title": "Cronómetro de debate",
     "displayLabel": "Pantalla del cronómetro",

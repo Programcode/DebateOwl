@@ -1528,6 +1528,17 @@
     "debateFirstDesc": "A DebateLabban minden egy vitához tartozik: a tétel, amelyre készülsz, a forrásai és az eredményeid. Itt indíthatod el az első vitádat.",
     "debateCurrentDesc": "A DebateLabban minden az aktuális vitádhoz tartozik: a tételéhez, a forrásaihoz és az eredményeidhez. Itt nyithatod meg vagy cserélheted le."
   },
+  "debateOwlIntro": {
+    "greeting": "Szia, én vagyok a DebateOwl!",
+    "greetingNamed": "Szia, {{name}} vagyok, a DebateOwl baglya!",
+    "newLook": "A DebateLab új külsőt kapott.",
+    "company": "Veled leszek, amíg valami betöltődik.",
+    "sameTools": "Ugyanazok az eszközök, ugyanott, ahol eddig.",
+    "noticeTitle": "A DebateLabből lassan DebateOwl lesz",
+    "noticeBody": "Ugyanaz az alkalmazás, ugyanaz a fiók, ugyanazok a mentett munkák, csak új külsővel és új névvel. Azért váltunk, hogy többen megtaláljanak minket a Google-ben.",
+    "skipAnimation": "Animáció kihagyása",
+    "done": "Értem"
+  },
   "timer": {
     "title": "Vitaidőmérő",
     "displayLabel": "Időmérő-kijelző",

@@ -1528,6 +1528,17 @@
     "debateFirstDesc": "Everything in DebateLab belongs to one debate: the motion you are preparing, its sources, and your results. Start your first debate here.",
     "debateCurrentDesc": "Everything in DebateLab belongs to your Current Debate: its motion, its sources, and your results. Open or change it here."
   },
+  "debateOwlIntro": {
+    "greeting": "Hi, I'm DebateOwl!",
+    "greetingNamed": "Hi, I'm {{name}}, the DebateOwl owl!",
+    "newLook": "DebateLab has a new look.",
+    "company": "I'll keep you company while things load.",
+    "sameTools": "Same tools as before, in the same spots.",
+    "noticeTitle": "DebateLab is slowly becoming DebateOwl",
+    "noticeBody": "Same app, same account, same saved work, with a new look and name. We're moving to help more people find us on Google.",
+    "skipAnimation": "Skip animation",
+    "done": "Got it"
+  },
   "timer": {
     "title": "Debate Timer",
     "displayLabel": "Timer display",

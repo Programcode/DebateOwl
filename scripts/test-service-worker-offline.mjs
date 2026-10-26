@@ -150,6 +150,8 @@ async function main() {
           state: { hasCompletedOnboarding: true, isTourRunning: false },
           version: 0,
         }));
+        // A production build opens the one-time DebateOwl welcome; this test is not about it.
+        localStorage.setItem('debateowl_intro_seen_v1', 'test-sw');
       }, stubSession());
       return nextContext;
     };
