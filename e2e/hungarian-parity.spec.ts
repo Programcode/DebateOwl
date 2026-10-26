@@ -1,6 +1,8 @@
+import { readFileSync } from 'node:fs';
 import { expect, test, type Page } from '@playwright/test';
 import { seedCurrentDebate, setLocale, stubSupabaseSession } from './helpers/auth';
-import site from '../src/config/site.json';
+
+const site = JSON.parse(readFileSync('src/config/site.json', 'utf8')) as { product: string };
 
 function collectRuntimeErrors(page: Page) {
   const errors: string[] = [];
