@@ -30,6 +30,7 @@ async function signInAsCanary(page: Page, { aiRequest }: { aiRequest: boolean })
   await page.addInitScript((session) => {
     localStorage.setItem("debate-auth-production", JSON.stringify(session));
     localStorage.setItem("debate-trainer-onboarding", JSON.stringify({ state: { hasCompletedOnboarding: true, isTourRunning: false }, version: 0 }));
+    localStorage.setItem("debateowl_intro_seen_v1", "canary");
   }, data.session);
 }
 

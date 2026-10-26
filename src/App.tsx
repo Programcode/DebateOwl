@@ -14,6 +14,7 @@ import { AccountQueryCache } from "@/components/auth/AccountQueryCache";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { useSessionStorageSync } from "@/hooks/use-session-storage-sync";
 import { hasCompletedOnboarding, useOnboardingStore } from "@/hooks/use-onboarding";
+import { browserStorage, markIntroSeen, shouldShowIntro } from "@/lib/debateowl-intro";
 import { OfflineIndicator } from "@/components/OfflineIndicator";
 import { StagingBanner } from "@/components/StagingBanner";
 import { captureException, captureProductEvent, toTelemetrySafeError } from "@/lib/observability";
@@ -81,6 +82,8 @@ const AppLayout = lazy(() => {
 });
 const OnboardingTour = lazy(() => import("@/components/features/onboarding/OnboardingTour")
   .then(({ OnboardingTour: Tour }) => ({ default: Tour })));
+const DebateOwlIntro = lazy(() => import("@/components/features/onboarding/DebateOwlIntro")
+  .then(({ DebateOwlIntro: Intro }) => ({ default: Intro })));
 
 // TanStack Query refetches after an `offline` then `online` pair, but a page
 // opened offline never sees `offline`. Retry whatever failed once the
@@ -274,6 +277,37 @@ export function RouteContent({ children }: { children: ReactNode }) {
   );
 }
 
+/**
+ * The one-time DebateOwl welcome opens over the signed-in app once its layout has loaded.
+ * The onboarding tour waits for it to close; without the welcome the tour mounts as before.
+ */
+function AppWelcome() {
+  const [introOpen, setIntroOpen] = useState(() => shouldShowIntro({
+    search: window.location.search,
+    storage: browserStorage(),
+    env: import.meta.env,
+  }));
+  const [layoutReady, setLayoutReady] = useState(false);
+
+  useEffect(() => {
+    if (!introOpen) return;
+    let live = true;
+    appLayoutLoader().then(() => { if (live) setLayoutReady(true); }, (): void => undefined);
+    return () => { live = false; };
+  }, [introOpen]);
+
+  if (!introOpen) return <OptionalOnboardingTour />;
+  if (!layoutReady) return null;
+  return (
+    <Suspense fallback={null}>
+      <DebateOwlIntro onClose={() => {
+        markIntroSeen(browserStorage());
+        setIntroOpen(false);
+      }} />
+    </Suspense>
+  );
+}
+
 function OptionalOnboardingTour() {
   const location = useLocation();
   const userId = useAuth().user?.id;
@@ -362,7 +396,7 @@ function AppRoutes() {
             element={
               <RequireAuth fallback={<PendingAppRoute />}>
                 <ToolRouteAnalytics />
-                <OptionalOnboardingTour />
+                <AppWelcome />
                 <Suspense fallback={<PendingAppRoute />}>
                   <AppLayout />
                 </Suspense>

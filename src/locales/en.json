@@ -1488,6 +1488,26 @@
     "debateFirstDesc": "Everything in DebateLab belongs to one debate: the motion you are preparing, its sources, and your results. Start your first debate here.",
     "debateCurrentDesc": "Everything in DebateLab belongs to your Current Debate: its motion, its sources, and your results. Open or change it here."
   },
+  "debateOwlIntro": {
+    "owlName": "",
+    "greeting": "Hi there!",
+    "greetingNamed": "Hi, I'm {{name}}!",
+    "hello": "This is DebateOwl, the new look of DebateLab.",
+    "whatChanged": "Here's what changed.",
+    "changesTitle": "Same app, new look",
+    "freshLookTitle": "A fresh look",
+    "freshLookDesc": "New colors, rounder letters and buttons that press down when you click them.",
+    "owlGuideTitle": "A friendlier owl guide",
+    "owlGuideDesc": "The owl keeps you company around the app, from the home screen to your history.",
+    "sameTitle": "Everything you use is still where it was",
+    "sameDesc": "Same tools, same menus, same steps.",
+    "nameTitle": "A new name, slowly",
+    "nameBody": "To help people find us on Google, we're slowly moving DebateLab to the name DebateOwl. Your account, cases and history stay exactly the same.",
+    "skip": "Skip",
+    "next": "Next",
+    "done": "Got it",
+    "progress": "Step {{step}} of {{steps}}"
+  },
   "timer": {
     "title": "Debate Timer",
     "displayLabel": "Timer display",
