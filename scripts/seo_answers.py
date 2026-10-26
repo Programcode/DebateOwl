@@ -70,19 +70,19 @@ ANSWERS = {
     ),
     "lincoln-douglas-debate": (
         "How do you build a Lincoln-Douglas debate case?",
-        "Build it around a value and a criterion. The value tells the judge what matters, and the criterion measures whether you achieve it. A strong LD case has an opening quote, definitions, the value, the criterion, and contentions with warrants and impacts. The most important check is whether your criterion actually links to your value, because cross-examination in LD often exposes weak links between the two. Before the round, prepare likely cross-ex questions and rebuttal blocks for common LD arguments.",
+        "Choose a value the resolution should be judged by and a criterion narrow enough to tell the judge which impacts count. Then write two or three contentions that each prove your side meets that criterion, and expect the negative to accept your framework and argue you fail it. Under NSDA rules the affirmative constructive is six minutes and the negative's is seven, which fits one framework and two or three contentions. Prepare cross-examination questions that pin down the opponent's framework, and blocks for the arguments you expect most.",
     ),
     "policy-debate": (
         "What do you need to prepare for policy debate?",
-        "Policy debate asks whether a plan should be adopted, so preparation covers several components rather than a single case. You need a plan and its advantages, plus prep for disadvantages, counterplans, topicality and kritiks. Research the disadvantages you are likely to face and build blocks for common disadvantage scenarios. Test whether a counterplan actually competes with the plan. Kritiks challenge the assumptions behind the opponent's framework, so brainstorm kritik arguments and prepare theory blocks as well.",
+        "Prepare an affirmative plan with advantages you can defend under cross-examination, and a negative strategy that does not depend on one argument. Most negatives pair a counterplan with a net-benefit disadvantage, so research both and the permutation answers to them. Write frontlines for the off-case positions you expect, and check topicality against your own plan text. NSDA rounds run eight-minute constructives, three-minute cross-examinations and five-minute rebuttals, with eight minutes of prep per team.",
     ),
     "british-parliamentary-debate": (
         "How do you prepare for British Parliamentary debate?",
-        "Prepare by role. BP has four teams, Opening Government, Opening Opposition, Closing Government and Closing Opposition, and each role has different responsibilities and winning strategies. Closing teams must extend by adding new analysis rather than repeating the opening arguments, so practice brainstorming credible extensions from any motion. Points of information expose holes in reasoning, so practice both generating and answering them. In every speech, compare impacts clearly for the judge.",
+        "Practise all four positions, because you learn yours only with the draw. Opening teams need a clear model and two strong arguments. Closing teams need an extension that their opening half did not run, so prepare several candidates and choose during the debate. Every speech is seven minutes, preparation is fifteen minutes after the motion with no internet, and points of information run between the first and sixth minute. Judges rank all four teams, so weigh against the team on your own bench as well as the other side.",
     ),
     "congress-debate": (
         "How do you prepare for Congressional debate?",
-        "Start with the legislation: understand the bill, its sponsorship and the opposition to it, so your speeches add value instead of repeating earlier speakers. Practice questioning that exposes flaws in reasoning without grandstanding. Rank the arguments in the round so you are ready for crystallization, which means telling the judges why your side won the key clashes. A good crystallization speech depends on selecting the right arguments and framing the ballot, so practice that selection as a skill of its own.",
+        "Read every bill on the docket and prepare short arguments on both sides of each, so you can speak whenever the presiding officer calls you. Speeches are up to three minutes, so plan one or two points that answer a named earlier speaker and add something new. Prepare questions as well, since scorers count how you ask and answer them. Toward the end of a bill's debate, a crystallization speech that explains who won the key clashes is often the strongest speech in the cycle.",
     ),
     "world-schools-debate": (
         "How does World Schools debate work, and how should a team prepare?",
