@@ -114,6 +114,7 @@ async function main() {
   const manifest = JSON.parse(await readFile('dist/.vite/manifest.json', 'utf8'));
   const en = JSON.parse(await readFile('src/locales/en.json', 'utf8'));
   const es = JSON.parse(await readFile('src/locales/es.json', 'utf8'));
+  const { product } = JSON.parse(await readFile('src/config/site.json', 'utf8'));
   const chunk = (key) => `/${manifest[key].file}`;
   const entryPath = chunk('index.html');
   const attackPath = chunk('src/pages/AttackPage.tsx');
@@ -281,7 +282,7 @@ async function main() {
     // React takes it over offline instead of replacing it with the error page.
     await page.goto(`${origin}/`, { waitUntil: 'domcontentloaded' });
     await waitFor(page, () => document.getElementById('root')?.dataset.prerendered === undefined, undefined, 'React to take over the landing page');
-    await page.locator('h1', { hasText: es.hero.headline }).waitFor({ timeout: CONTENT_TIMEOUT_MS });
+    await page.locator('h1', { hasText: es.hero.headline.replace('{{product}}', product) }).waitFor({ timeout: CONTENT_TIMEOUT_MS });
     assert.equal(await page.getByRole('heading', { name: es.routeError.heading }).count(), 0, 'the landing page turned into the error page offline');
     await page.goto(`${origin}/app`, { waitUntil: 'domcontentloaded' });
     await page.locator('main h1', { hasText: es.home.heading }).waitFor({ timeout: CONTENT_TIMEOUT_MS });

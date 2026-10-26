@@ -96,6 +96,31 @@
       "source": "/ai-tools-for-debate-students",
       "destination": "/best-ai-debate-tools",
       "statusCode": 301
+    },
+    {
+      "source": "/debate-collapsing-strategy",
+      "destination": "/debate-clash-points",
+      "statusCode": 301
+    },
+    {
+      "source": "/debate-prep-time-management",
+      "destination": "/how-to-prepare-for-a-debate-tournament",
+      "statusCode": 301
+    },
+    {
+      "source": "/debate-block-file-guide",
+      "destination": "/how-to-practice-rebuttals",
+      "statusCode": 301
+    },
+    {
+      "source": "/debate-pronunciation-and-delivery",
+      "destination": "/debate-speech-structure",
+      "statusCode": 301
+    },
+    {
+      "source": "/ai-vs-traditional-debate-prep",
+      "destination": "/ai-debate-practice",
+      "statusCode": 301
     }
   ],
   "rewrites": [

@@ -154,6 +154,11 @@ describe("Vercel frontend deployment configuration", () => {
       "/debate-evidence-verification": "/debate-evidence-finder",
       "/debatelab-alternatives": "/best-ai-debate-tools",
       "/ai-tools-for-debate-students": "/best-ai-debate-tools",
+      "/debate-collapsing-strategy": "/debate-clash-points",
+      "/debate-prep-time-management": "/how-to-prepare-for-a-debate-tournament",
+      "/debate-block-file-guide": "/how-to-practice-rebuttals",
+      "/debate-pronunciation-and-delivery": "/debate-speech-structure",
+      "/ai-vs-traditional-debate-prep": "/ai-debate-practice",
     };
     const guideRedirects = (loadConfig().redirects ?? [])
       .filter((rule) => !rule.source.startsWith("/:page(") && !rule.has);
@@ -268,7 +273,7 @@ describe("Vercel frontend deployment configuration", () => {
     const packageJson = loadPackageJson();
 
     expect(indexHtml).not.toMatch(/rel="(?:modulepreload|preload|prefetch)"[^>]*(?:pages|LandingPage|LoginPage|HomePage|GeneratePage|AttackPage)/i);
-    expect(packageJson.scripts?.build).toBe("vite build && node scripts/prerender.mjs && node scripts/sitemap.mjs && node scripts/check-site.mjs && node scripts/check-build-boundaries.mjs");
+    expect(packageJson.scripts?.build).toBe("vite build && node scripts/prerender.mjs && node scripts/sitemap.mjs && node scripts/check-site.mjs && node scripts/check-links.mjs && node scripts/check-build-boundaries.mjs");
   });
 
   it("answers app routes with the cached shell and never stores a navigation as another page", () => {

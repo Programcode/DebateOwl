@@ -893,8 +893,8 @@
     "dismissError": "Could not dismiss this announcement."
   },
   "hero": {
-    "headline": "Prepare Cases and Practice Rounds with AI",
-    "subheadline": "DebateLab is an AI debate prep and practice app for students and competitive debaters that builds structured cases, finds the weak points in arguments, researches evidence with citations and runs timed practice rounds against an AI opponent.",
+    "headline": "{{product}}: AI debate prep and practice",
+    "subheadline": "Prepare cases and practice rounds with AI. {{product}} builds structured cases, finds the weak points in arguments, researches evidence with citations and runs timed practice rounds against an AI opponent, for students and competitive debaters.",
     "trialBadge": "{{trialDays}}-day free trial",
     "requestsBadge": "Daily AI prep",
     "requestsBadgeValue": "Included",
@@ -1033,7 +1033,45 @@
     "a5": "Yes! Save cases, brainstorms, and chats to History. Export to Word, PDF, or Google Docs.",
     "subtitle": "Pricing, workflow, and product details at a glance.",
     "q6": "What is DebateLab?",
-    "a6": "DebateLab is an AI debate prep and practice app for students and competitive debaters. It has {{modes}} prep modes, including a case generator, a case attacker, evidence research with citations, an AI coach, Crossfire and timed Sparring rounds against an AI opponent, and it is available in English, Spanish and Hungarian."
+    "a6": "DebateLab is an AI debate prep and practice app for students and competitive debaters. It has {{modes}} prep modes, including a case generator, a case attacker, evidence research with citations, an AI coach, Crossfire and timed Sparring rounds against an AI opponent, and it is available in English, Spanish and Hungarian.",
+    "q7": "Is {{product}} the same as debatelab.ai?",
+    "a7": "No. {{brand}} is a separate product at {{host}}."
+  },
+  "guideHub": {
+    "title": "Debate guides and free tools",
+    "subtitle": "Read a guide before your next round, or open a free tool. No account needed.",
+    "practice": "Practice with AI",
+    "formats": "Debate formats",
+    "skills": "Skills guides",
+    "tools": "Free tools",
+    "compare": "Compare",
+    "englishGuides": "Guides in English",
+    "links": {
+      "ai-debate-practice": "AI debate practice",
+      "ai-debate-case-generator": "AI case generator with citations",
+      "ai-rebuttal-generator": "AI rebuttal generator",
+      "ai-debate-coach": "AI debate coach",
+      "debate-evidence-finder": "Debate evidence finder",
+      "public-forum-debate": "Public Forum",
+      "lincoln-douglas-debate": "Lincoln-Douglas",
+      "policy-debate": "Policy debate",
+      "british-parliamentary-debate": "British Parliamentary",
+      "world-schools-debate": "World Schools",
+      "congress-debate": "Congressional debate",
+      "how-to-write-a-debate-case": "How to write a debate case",
+      "how-to-practice-rebuttals": "How to practice rebuttals",
+      "debate-clash-points": "Finding the key clash",
+      "debate-fallacies": "Common debate fallacies",
+      "debate-judge-adaptation": "Adapting to your judge",
+      "how-to-prepare-for-a-debate-tournament": "Preparing for a tournament",
+      "tools": "All free debate tools",
+      "tools/debate-timer": "Debate timer",
+      "tools/debate-motion-generator": "Debate motion generator",
+      "tools/debate-flow-sheet": "Debate flow sheet",
+      "tools/speech-time-calculator": "Speech time calculator",
+      "best-ai-debate-tools": "Best AI debate tools compared",
+      "debatelab-vs-chatgpt": "{{product}} vs ChatGPT"
+    }
   },
   "finalCta": {
     "title": "Ready to Build Your Next Winning Case?",

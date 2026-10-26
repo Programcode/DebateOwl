@@ -4,6 +4,10 @@
 //   page, a vercel.json redirect to a page, or an app rewrite;
 // - a #fragment that names no id on the target page;
 // - JSON-LD that does not parse or carries HTML entities into its text;
+// - a FAQPage question that is not on the page, a home-page graph whose @id
+//   references do not resolve or whose WebSite and SoftwareApplication are not
+//   named for the product, or a page whose publisher or about names an @id the
+//   home page does not define;
 // - an indexed page without its question H2 (#short-answer) as the first H2;
 // - a page whose first heading is not its H1, or a heading that skips a level (H1 to H3);
 // - an image without alt text, a button without a name, or a form field without a label;
@@ -13,7 +17,8 @@ import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { join, relative, sep } from 'node:path';
 
 const DIST = 'dist';
-const SITE_ORIGIN = JSON.parse(readFileSync('src/config/site.json', 'utf8')).origin;
+const SITE = JSON.parse(readFileSync('src/config/site.json', 'utf8'));
+const SITE_ORIGIN = SITE.origin;
 const vercel = JSON.parse(readFileSync('vercel.json', 'utf8'));
 // Indexed pages that answer no question of their own.
 const NO_SHORT_ANSWER = new Set(['/terms', '/privacy', '/expocit/sources']);
@@ -119,6 +124,46 @@ function namedByAria(attributes, html) {
   });
 }
 
+/** Every {"@id"} reference anywhere in a JSON-LD value. */
+function references(value) {
+  if (Array.isArray(value)) return value.flatMap(references);
+  if (!value || typeof value !== 'object') return [];
+  const own = Object.keys(value).length === 1 && value['@id'] ? [value['@id']] : [];
+  return [...own, ...Object.values(value).flatMap(references)];
+}
+
+// The entities the home page defines, which every other page points at by @id.
+const homeGraph = JSON.parse(readFileSync(join(DIST, 'index.html'), 'utf8').match(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/)[1])['@graph'];
+const HOME_IDS = new Set(homeGraph.map((node) => node['@id']).filter(Boolean));
+
+function checkStructuredData(where, data, body) {
+  const graph = data['@graph'] ?? [data];
+  const entities = { amp: '&', lt: '<', gt: '>', quot: '"', '#x27': "'", '#39': "'", nbsp: ' ' };
+  const visible = body.replace(/<script[\s\S]*?<\/script>/g, '').replace(/<[^>]+>/g, '')
+    .replace(/&(amp|lt|gt|quot|#x27|#39|nbsp);/g, (_, name) => entities[name]).replace(/\s+/g, ' ');
+  for (const node of graph.filter((entry) => entry['@type'] === 'FAQPage')) {
+    for (const question of node.mainEntity) {
+      if (!visible.includes(question.name)) report(where, `FAQPage question "${question.name}" is not on the page`);
+    }
+  }
+  for (const node of graph) {
+    for (const key of ['publisher', 'author', 'about', 'isPartOf']) {
+      const id = node[key]?.['@id'];
+      if (id && !HOME_IDS.has(id)) report(where, `${node['@type']} ${key} names ${id}, which the home page does not define`);
+    }
+  }
+  if (where !== 'index.html') return;
+  const ids = new Set(graph.map((node) => node['@id']).filter(Boolean));
+  for (const id of references(graph)) if (!ids.has(id)) report(where, `JSON-LD references ${id}, which the graph does not define`);
+  const byType = (type) => graph.find((node) => node['@type'] === type) ?? {};
+  for (const type of ['WebSite', 'SoftwareApplication']) {
+    if (byType(type).name !== SITE.product) report(where, `${type}.name is "${byType(type).name}", not the product name "${SITE.product}"`);
+  }
+  if (!Array.isArray(byType('WebSite').alternateName)) report(where, 'WebSite.alternateName is not a list');
+  const sameAs = byType('Organization').sameAs;
+  if (!Array.isArray(sameAs) || !sameAs.length || sameAs.some((url) => !url.startsWith('https://'))) report(where, 'Organization.sameAs is not a list of https URLs');
+}
+
 // Canonical URL -> the page's hreflang set, checked for agreement after the loop.
 const hreflangSets = new Map();
 
@@ -145,7 +190,7 @@ for (const file of htmlFiles(DIST)) {
 
   for (const [, json] of html.matchAll(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/g)) {
     try {
-      JSON.parse(json);
+      checkStructuredData(where, JSON.parse(json), body);
     } catch (error) {
       report(where, `JSON-LD does not parse: ${error.message}`);
     }

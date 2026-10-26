@@ -2,8 +2,8 @@ import i18n from 'i18next';
 import { initReactI18next } from 'react-i18next';
 import en from './locales/en.json';
 import toolsEn from './locales/tools/en.json';
-import { type AppLanguage } from './lib/languages';
 import site from './config/site.json';
+import { type AppLanguage } from './lib/languages';
 
 type Catalogs = [{ default: object }, { default: object }];
 
@@ -24,11 +24,18 @@ void i18n.use(initReactI18next).init({
   defaultNS: 'translation',
   lng: 'en',
   fallbackLng: 'en',
-  // Product name, trial length and price come from src/config/site.json, so
-  // every language states the same facts as the English pages.
+  // Every string can name the product with {{product}}, {{brand}} and {{host}},
+  // and state the trial length and price with {{trialDays}} and {{proMonthly}},
+  // all from site.json, so every language states the same facts as the English pages.
   interpolation: {
     escapeValue: false,
-    defaultVariables: { product: site.product, brand: site.brand, trialDays: site.pricing.trialDays, proMonthly: site.pricing.proMonthly },
+    defaultVariables: {
+      product: site.product,
+      brand: site.brand,
+      host: new URL(site.origin).host,
+      trialDays: site.pricing.trialDays,
+      proMonthly: site.pricing.proMonthly,
+    },
   },
 });
 

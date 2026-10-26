@@ -34,6 +34,7 @@ export default function ToolsHubPage() {
         <p>The <Link to="/tools/debate-timer">debate timer</Link> runs a whole round: it knows the speech order and times for six league formats and the school 4-6-6-3 format, shows the protected minutes when points of information are not allowed, and keeps a prep bank for each side. Coaches can build their own format and share it as a link.</p>
         <p>The <Link to="/tools/debate-motion-generator">motion generator</Link> draws from {PRACTICE_MOTIONS.length} practice motions written for this site, with &quot;This House&quot; and &quot;Resolved&quot; wording, and lists every one of them by topic.</p>
         <p>The <Link to="/tools/debate-flow-sheet">flow sheet</Link> prints a page with one column per speech for the format you choose, and the <Link to="/tools/speech-time-calculator">speech time calculator</Link> tells you how long a written speech takes to deliver and which slots it fits.</p>
+        <p>Two guides go with them: <a href="/online-debate-timer">how debate speech times work</a> in each format, and <a href="/how-to-flow-in-debate">how to flow in debate</a>.</p>
         <p>The four tools share one set of format data, taken from the NSDA, WUDC, WSDC and UADC rules and cited on the timer page, so a Public Forum round has the same speeches on the timer, the flow sheet and the calculator.</p>
       </section>
 
