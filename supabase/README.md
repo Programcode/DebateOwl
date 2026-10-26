@@ -46,7 +46,7 @@ The browser boundary is [`../src/lib/ai/client.ts`](../src/lib/ai/client.ts). Sh
 
 ### Content and sharing
 
-- `import-source`: authenticated public-URL import with SSRF protection (resolved addresses checked against the IANA special-purpose ranges on every redirect), one 10-second deadline covering DNS, redirects and the body, content-type and 1 MB size limits, readable-text extraction, a daily quota, and logging.
+- `import-source`: authenticated public-URL import with SSRF protection (resolved addresses checked against the IANA special-purpose ranges on every redirect, and the connection made to a checked address, not the hostname, so DNS cannot change in between), one 10-second deadline covering DNS, redirects and the body, content-type and 1 MB size limits, readable-text extraction, a daily quota, and logging.
 - `share`: authenticated creation of share codes for supported saved content, with a 512 KB payload cap, expiry from 1 to 90 days (30 when omitted), and a daily quota of 50 per user.
 - `workspace-invites`: part of the hidden Workspace. Authenticated workspace code and email invitation creation, rotation, revocation, and redemption. The handler keeps raw invite values and email addresses out of database calls and uses service-role-only transactional RPCs for limits and membership changes.
 - `export-gdoc`: authenticated Google Docs export using a short-lived Google access token. It rejects refresh tokens.
@@ -56,13 +56,13 @@ The browser boundary is [`../src/lib/ai/client.ts`](../src/lib/ai/client.ts). Sh
 - `demo-code-login`: bounded pre-session access-code flow with normalized hashing, fail-closed attempt limits, atomic use consumption, server-owned demo-user bindings in Auth `app_metadata`, and a prohibition on granting administrator status.
 - `admin`: authenticated administrator operations with server-side role checks, including redacted demo-code list/create/disable/reset actions.
 - `announcements`: authenticated announcement listing and dismissal.
-- `redeem-promo`: authenticated atomic promo redemption.
+- `redeem-promo`: authenticated atomic promo redemption through `redeem_promo_code_atomic`. A `discount` code is claimed there too (it counts against `max_redemptions` and is single use per user) and must carry the Stripe promotion-code ID it stands for in `config.stripe_promotion_code`.
 - `account`: authenticated data export and account deletion for the caller only. It never reads a user ID from the request. Deletion cancels Stripe subscriptions first and stops if that fails, then removes Storage objects, clears the user's workspaces, and deletes the auth user. Export and the deletion plan use service-role-only RPCs. See [Account export and deletion](../docs/architecture.md#account-export-and-deletion).
 
 ### Billing
 
-- `create-checkout`: authenticated Stripe Checkout creation. Price selection is server-controlled and redirects are validated. It records the customer in `stripe_customers` before opening a session so that account deletion can stop its billing.
-- `create-portal`: authenticated Stripe Billing Portal creation with customer ownership checks.
+- `create-checkout`: authenticated Stripe Checkout creation. Price selection is server-controlled and redirects are validated. A promo code is claimed as the user through `redeem_promo_code_atomic` with `p_discount_only`, and the session applies only that code's `promo_` ID through `discounts`; Stripe's own promotion-code field is never enabled. Apply `20261024120100_discount_promo_claims.sql` before deploying it. It records the customer in `stripe_customers` before opening a session so that account deletion can stop its billing.
+- `create-portal`: authenticated Stripe Billing Portal creation with customer ownership checks. Stripe failures answer with a fixed `portal_failed` error; Stripe's message stays in the log.
 - `stripe-webhook`: Stripe-signature-validated subscription and invoice event handling. It claims each event in `webhook_events` before running handlers, reads subscription state from Stripe rather than the event payload, marks the claim complete, and lets a retry take over a claim left incomplete for 10 minutes. It needs the `webhook_events.completed_at` column, so apply `20261016120000_security_preship_hardening.sql` before deploying it.
 
 ## Shared backend modules

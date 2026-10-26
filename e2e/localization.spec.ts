@@ -12,10 +12,11 @@ const catalog = (language: string) => JSON.parse(readFileSync(`src/locales/${lan
 const en = catalog('en');
 const es = catalog('es');
 const hu = catalog('hu');
-const BRAND = 'DebateLab by Pi-Stack';
+const site = JSON.parse(readFileSync('src/config/site.json', 'utf8'));
+const BRAND = site.brand;
 const LANGUAGES = { en: 'English', es: 'Español', hu: 'Magyar' } as const;
 const SWITCHER = new RegExp(`^(${[en, es, hu].map((strings) => strings.langSwitcher.label).join('|')})$`);
-const brand = (text: string) => text.replace('{{brand}}', BRAND);
+const brand = (text: string) => text.replace('{{brand}}', BRAND).replace('{{product}}', site.product);
 
 const APP_ROUTES = ['/app', '/app/generate', '/app/attack', '/app/history', '/app/settings'];
 const PUBLIC_ROUTES = ['/terms', '/privacy', '/tools', '/no-such-page'];
@@ -118,7 +119,7 @@ test('sign-in and not-found pages carry the language switcher', async ({ page })
   await shot(page, '04-not-found-es');
 });
 
-test('?lang= and the /hu and /es home pages open the landing page in that language', async ({ page }) => {
+test('?lang= opens the landing page in that language, and /hu and /es are pages of their own', async ({ page }) => {
   await page.goto('/?lang=hu');
   await expect(page.locator('html')).toHaveAttribute('lang', 'hu');
   await expect(page).toHaveTitle(brand(hu.pageHead.home.title));
@@ -126,18 +127,23 @@ test('?lang= and the /hu and /es home pages open the landing page in that langua
   await shot(page, '01-landing-lang-hu');
 
   await page.goto('/es');
-  await expect.poll(() => new URL(page.url()).pathname).toBe('/');
   await expect(page.locator('html')).toHaveAttribute('lang', 'es');
   await expect(page).toHaveTitle(brand(es.pageHead.home.title));
+  // Still /es after the app takes over: the address and canonical stay Spanish.
+  expect(new URL(page.url()).pathname).toBe('/es');
+  await expect(page.locator('link[rel="canonical"]')).toHaveAttribute('href', `${site.origin}/es`);
   await shot(page, '02-landing-es');
 
   await page.goto('/hu');
-  await expect.poll(() => new URL(page.url()).pathname).toBe('/');
   await expect(page.locator('html')).toHaveAttribute('lang', 'hu');
-  // The choice is kept, not just shown once.
+  await expect(page.locator('link[rel="canonical"]')).toHaveAttribute('href', `${site.origin}/hu`);
+  // The choice is kept, not just shown once: Start leads into the app in Hungarian.
+  await page.getByRole('link', { name: hu.nav.startTrial }).first().click();
+  await expect.poll(() => new URL(page.url()).pathname).not.toBe('/hu');
+  await expect(page.locator('html')).toHaveAttribute('lang', 'hu');
   await page.reload();
   await expect(page.locator('html')).toHaveAttribute('lang', 'hu');
-  await shot(page, '03-landing-hu-after-reload');
+  await shot(page, '03-start-from-hu');
 });
 
 test('a server refusal with a code reads in the interface language', async ({ page }) => {

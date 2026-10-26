@@ -102,7 +102,7 @@ This sends one tiny typed choice to OpenRouter's Decisions endpoint using the pi
 npm run build
 ```
 
-This proves the Vite production bundle compiles, prerenders the public pages, checks the built site's links, fragments, JSON-LD and basic accessibility (including heading order) with `scripts/check-site.mjs`, and then walks the emitted Vite manifest to reject feature-only PDF, DOCX, chart, ReactFlow, export, and Admin modules, the Spanish and Hungarian catalogs, and the signed-in layout from the static `index.html` dependency graph. It does not prove authentication, database behavior, provider access, or production deployment.
+This proves the Vite production bundle compiles, prerenders the public pages, checks the built site's links, fragments, JSON-LD and basic accessibility (including heading order) with `scripts/check-site.mjs`, checks that every sitemap page has at least 3 inbound links and the home page links to at least 15 with `scripts/check-links.mjs`, and then walks the emitted Vite manifest to reject feature-only PDF, DOCX, chart, ReactFlow, export, and Admin modules, the Spanish and Hungarian catalogs, and the signed-in layout from the static `index.html` dependency graph. It does not prove authentication, database behavior, provider access, or production deployment.
 
 ## Production service-worker smoke
 

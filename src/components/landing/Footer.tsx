@@ -1,9 +1,11 @@
 import { useTranslation } from "react-i18next";
 import { OwlMark } from '@/components/brand/Owl';
 import { Link } from "react-router-dom";
+import { localizedPath, useRouteLanguage } from "@/lib/seo/localized-routes";
 
 const Footer = () => {
     const { t } = useTranslation();
+    const language = useRouteLanguage();
 
     return (
         <footer className="py-12 border-t border-border/50">
@@ -18,7 +20,7 @@ const Footer = () => {
                     </div>
 
                     <nav aria-label={t('footer.navLabel')} className="flex flex-wrap items-center justify-center gap-4 text-sm">
-                        <Link to="/tools" className="inline-flex min-h-6 items-center text-muted-foreground hover:text-foreground transition-colors underline-offset-4 hover:underline pointer-coarse:min-h-11 pointer-coarse:min-w-11 pointer-coarse:justify-center">
+                        <Link to={localizedPath("/tools", language)} className="inline-flex min-h-6 items-center text-muted-foreground hover:text-foreground transition-colors underline-offset-4 hover:underline pointer-coarse:min-h-11 pointer-coarse:min-w-11 pointer-coarse:justify-center">
                             {t('tools:footer.freeTools')}
                         </Link>
                         {/* Static guide pages, not app routes: plain links load them from the server. */}

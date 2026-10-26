@@ -12,7 +12,7 @@ import { installStaleChunkReload } from "./lib/reload-stale-chunk";
 import { initializeObservability } from "./lib/observability";
 import { preloadStartupRoute } from "./lib/route-modules";
 import { legacyCallbackPath } from "./lib/auth-callback";
-import { chooseUrlLanguage, searchWithoutLanguage } from "./lib/url-language";
+import { choosePathLanguage, chooseUrlLanguage, searchWithoutLanguage } from "./lib/url-language";
 
 const initializeTelemetry = (): void => {
   const run = (): void => { void initializeObservability(); };
@@ -45,6 +45,8 @@ export function mountApp(): void {
   if (chooseUrlLanguage(search)) {
     window.history.replaceState(window.history.state, "", `${pathname}${searchWithoutLanguage(search)}${hash}`);
   }
+  // /hu and /es pages were prerendered in their language; the first render matches it.
+  choosePathLanguage(pathname);
 
   const container = document.getElementById("root")!;
   const root = createRoot(container);

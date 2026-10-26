@@ -1,6 +1,7 @@
 import { createClient, type User } from "https://esm.sh/@supabase/supabase-js@2.114.0";
 import { isPrivateIpv4, isPrivateIpv6, validatePublicHttpUrl, validateResolvedPublicHost } from "./url-validation.ts";
 import { readBoundedText } from "./resource-limits.ts";
+import { pinnedGet } from "./pinned-fetch.ts";
 import { getMeta, getTitle, stripHtml } from "./html-text.ts";
 import { BodyTooLargeError, discardRequestBody, readBoundedBody, untilAborted } from "../_shared/bounded-body.ts";
 import { HttpError, jsonError, requireUser } from "../_shared/auth.ts";
@@ -77,21 +78,22 @@ class SourceTimeoutError extends Error {
   }
 }
 
+// How a source is fetched. Tests replace `get`; the function always uses pinnedGet.
+export const sourceTransport = { get: pinnedGet };
+
 // The caller's signal is the import's one deadline: it covers DNS, every
-// redirect hop and the body read that follows.
+// redirect hop and the body read that follows. Each hop connects only to the
+// addresses its own check just passed, so DNS cannot change between the check
+// and the connection.
 async function fetchWithRedirects(initialUrl: URL, signal: AbortSignal, onOutboundRequest?: () => void) {
   let currentUrl = initialUrl;
   for (let hop = 0; hop <= MAX_REDIRECTS; hop += 1) {
-    await validateResolvedPublicHost(currentUrl, signal);
+    const addresses = await validateResolvedPublicHost(currentUrl, signal);
     onOutboundRequest?.();
-    const response = await untilAborted(fetch(currentUrl.toString(), {
-      headers: {
-        "Accept": "text/html, text/plain;q=0.9, application/xhtml+xml;q=0.8",
-        "User-Agent": "DebateLabSourceImporter/1.0",
-      },
-      signal,
-      redirect: "manual",
-    }), signal);
+    const response = await untilAborted(sourceTransport.get(currentUrl, addresses, {
+      "Accept": "text/html, text/plain;q=0.9, application/xhtml+xml;q=0.8",
+      "User-Agent": "DebateLabSourceImporter/1.0",
+    }, signal), signal);
 
     // Manual redirect handling so we can re-validate against SSRF on every hop.
     if (response.status >= 300 && response.status < 400) {

@@ -1,13 +1,13 @@
 # Localization
 
-The interface runs in English, Spanish and Hungarian. Every page names itself in the tab title in the interface language ("Generálás · DebateLab" in the app, "Felhasználási feltételek | DebateLab by Pi-Stack" on public pages), form validation and server refusals read in that language, the language switcher sits in every header, and `?lang=es|hu|en` links and the `/es` and `/hu` home pages open the app in that language.
+The interface runs in English, Spanish and Hungarian. Every page names itself in the tab title in the interface language ("Generálás · DebateLab" in the app, "Felhasználási feltételek | DebateLab by Pi-Stack" on public pages), form validation and server refusals read in that language, the language switcher sits in every header, and `?lang=es|hu|en` links and the Hungarian and Spanish pages (`/hu`, `/es`, `/hu/tools/…`, `/es/tools/…`) open the app in that language.
 
 ## Sub-features
 
 - loc-titles: `document.title` on app and public routes, per language, and a switch retitling the page without a reload. App routes read `<page> · DebateLab` (`usePrivateRouteHead`); public pages use the `pageHead` catalog section (`usePageHead`), whose English text is also what the prerender writes.
 - loc-validation: an empty Attack submit shows `validation.caseTextRequired` in the interface language, and nothing shows before the first submit. Generate, Brainstorm and Factoids use the same keys.
 - loc-switcher: the switcher on `/login`, the 404 page, and the other public pages (`PublicPageShell`), besides the landing page and the app header.
-- loc-links: `/?lang=hu` switches and saves the language, sets `<html lang>`, and drops the parameter; `/es` and `/hu` land on `/` in that language (a client route here; `vercel.json` redirects them on the host).
+- loc-links: `/?lang=hu` switches and saves the language, sets `<html lang>`, and drops the parameter; `/es` and `/hu` are prerendered pages of their own that keep their address, and Start from `/hu` leads into the app in Hungarian.
 - loc-server-error: a refused promo code shows `serverErrors.promoInvalid` in the interface language while redeem-promo still answers in English beside its `code`.
 
 ## How to get to it (user POV)
@@ -30,4 +30,4 @@ $H drive recipes/localization --project mobile-chromium   # 375 px
 - The switcher's own name is translated (`langSwitcher.label`); match it in all three languages.
 - The recipe reads the catalogs from `src/locales/`, so its expectations follow the strings. Match on keys, never on copied text.
 - The promo field shows only for an account that would start a Checkout, so the recipe marks its Pro demo user expired first.
-- `/es` and `/hu` on the host are a `vercel.json` redirect; the local stack proves only the client route.
+- `/es` and `/hu` are files in `dist/` (`hu/index.html`), listed with their tool pages in `src/config/localized-routes.json`. Choosing another language with the switcher on one of them moves to that language's address.

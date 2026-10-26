@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
-  discountPromoRefusal,
+  discountPromotionCode,
   findCustomerOwnedByUser,
   hasOpenSubscription,
   isAllowedCheckoutRedirectUrl,
@@ -42,12 +42,14 @@ describe("checkout security", () => {
     expect(hasOpenSubscription(null)).toBe(false);
   });
 
-  it("refuses a discount promo past its expiry or its redemption cap (QB-08)", () => {
-    const now = new Date("2026-10-22T12:00:00.000Z");
-    expect(discountPromoRefusal({ expires_at: "2026-10-21T00:00:00.000Z" }, now)).toBe("expired");
-    expect(discountPromoRefusal({ max_redemptions: 10, redemptions_count: 10 }, now)).toBe("exhausted");
-    expect(discountPromoRefusal({ max_redemptions: 0, redemptions_count: null }, now)).toBe("exhausted");
-    expect(discountPromoRefusal({ expires_at: "2026-10-23T00:00:00.000Z", max_redemptions: 10, redemptions_count: 9 }, now)).toBeNull();
-    expect(discountPromoRefusal({ expires_at: null, max_redemptions: null }, now)).toBeNull();
+  it("applies only the Stripe promotion code a successful discount claim returns", () => {
+    const claim = { success: true, promoType: "discount", stripePromotionCode: "promo_1AbC" };
+    expect(discountPromotionCode(claim)).toBe("promo_1AbC");
+    expect(discountPromotionCode({ ...claim, success: false })).toBeNull();
+    expect(discountPromotionCode({ ...claim, promoType: "free_month" })).toBeNull();
+    expect(discountPromotionCode({ ...claim, stripePromotionCode: "coupon_50OFF" })).toBeNull();
+    expect(discountPromotionCode({ ...claim, stripePromotionCode: "promo_1AbC&allow_promotion_codes=true" })).toBeNull();
+    expect(discountPromotionCode({ success: false, code: "too_many_attempts" })).toBeNull();
+    expect(discountPromotionCode(null)).toBeNull();
   });
 });
