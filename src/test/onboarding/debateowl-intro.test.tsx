@@ -70,8 +70,8 @@ describe('DebateOwlIntro', () => {
     expect(screen.getByText("Hi, I'm DebateOwl!")).toBeTruthy();
   });
 
-  it('fits the owl name in once one is picked', () => {
-    renderIntro('OWL_NAME_PLACEHOLDER');
-    expect(screen.getByText("Hi, I'm OWL_NAME_PLACEHOLDER from DebateOwl!")).toBeTruthy();
+  it('Ollie introduces itself by name', () => {
+    renderIntro();
+    expect(screen.getByText("Hi, I'm Ollie, the DebateOwl owl!")).toBeTruthy();
   });
 });

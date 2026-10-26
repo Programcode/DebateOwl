@@ -5,11 +5,10 @@
 export const INTRO_SEEN_KEY = 'debateowl_intro_seen_v1';
 
 /**
- * The owl's personal name, the same in every language. No name has been picked, so it stays
- * empty and the owl speaks as DebateOwl; the copy reads complete without it. Drop the chosen
- * name in here and the greeting becomes debateOwlIntro.greetingNamed.
+ * The owl's personal name, the same in every language, used where the owl introduces itself
+ * (debateOwlIntro.greetingNamed). Change it here only. Empty, the owl speaks as DebateOwl.
  */
-export const OWL_NAME = '';
+export const OWL_NAME = 'Ollie';
 
 /** `?intro=show` opens the welcome even when seen or under test; `?intro=skip` keeps it closed. */
 export const INTRO_QUERY_PARAM = 'intro';

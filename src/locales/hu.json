@@ -1530,7 +1530,7 @@
   },
   "debateOwlIntro": {
     "greeting": "Szia, én vagyok a DebateOwl!",
-    "greetingNamed": "Szia, {{name}} vagyok a DebateOwltól!",
+    "greetingNamed": "Szia, {{name}} vagyok, a DebateOwl baglya!",
     "newLook": "A DebateLab új külsőt kapott.",
     "company": "Veled leszek, amíg valami betöltődik.",
     "sameTools": "Ugyanazok az eszközök, ugyanott, ahol eddig.",

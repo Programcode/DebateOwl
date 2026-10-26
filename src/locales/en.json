@@ -1530,7 +1530,7 @@
   },
   "debateOwlIntro": {
     "greeting": "Hi, I'm DebateOwl!",
-    "greetingNamed": "Hi, I'm {{name}} from DebateOwl!",
+    "greetingNamed": "Hi, I'm {{name}}, the DebateOwl owl!",
     "newLook": "DebateLab has a new look.",
     "company": "I'll keep you company while things load.",
     "sameTools": "Same tools as before, in the same spots.",
