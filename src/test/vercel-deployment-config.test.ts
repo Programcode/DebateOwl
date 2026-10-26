@@ -123,6 +123,11 @@ describe("Vercel frontend deployment configuration", () => {
       "/debate-evidence-verification": "/debate-evidence-finder",
       "/debatelab-alternatives": "/best-ai-debate-tools",
       "/ai-tools-for-debate-students": "/best-ai-debate-tools",
+      "/debate-collapsing-strategy": "/debate-clash-points",
+      "/debate-prep-time-management": "/how-to-prepare-for-a-debate-tournament",
+      "/debate-block-file-guide": "/how-to-practice-rebuttals",
+      "/debate-pronunciation-and-delivery": "/debate-speech-structure",
+      "/ai-vs-traditional-debate-prep": "/ai-debate-practice",
     };
     const guideRedirects = (loadConfig().redirects ?? [])
       .filter((rule) => !rule.source.startsWith("/:page(") && !rule.source.startsWith("/:lang("));

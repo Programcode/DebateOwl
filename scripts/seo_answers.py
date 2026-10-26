@@ -98,7 +98,7 @@ ANSWERS = {
     ),
     "how-to-prepare-for-a-debate-tournament": (
         "How do you prepare for a debate tournament?",
-        "Start with topic analysis when the topic is released: identify the key clashes, research both sides and build case templates. Then write block files, which are pre-written responses to the arguments you expect to face. On tournament day, bring extra pens, backup evidence, water, snacks, a timer and a plan for each round. Mental stamina matters as much as preparation.",
+        "Give a new topic about two weeks. In the first, read both sides, list the likely clashes and write a short case for each side. In the second, write blocks against the arguments you expect and run practice rounds at real speech times. Stop adding material two days out and check every source instead. In round, save most of your prep time for the final speeches, where you choose what to collapse to. For impromptu formats, practise building cases inside the real prep window.",
     ),
     "how-to-flow-in-debate": (
         "How do you flow a debate round?",
@@ -113,43 +113,23 @@ ANSWERS = {
         "It depends on level. Beginners do best with topics from daily life, such as banning homework in primary schools, optional school uniforms or a four-day school week, so they can focus on structure instead of research. Intermediate debaters can take on lowering the voting age to 16 or taxing sugary drinks. Advanced teams can handle universal basic income or autonomous weapons. At any level, a good practice topic is balanced, has real clash and stakes, and is accessible without specialist knowledge. Competitive leagues set their own topics.",
     ),
     "debate-clash-points": (
-        "How do you find the key clash in a debate?",
-        "Ask which disagreement, if resolved in your favor, wins you the round. A clash is any point where the two sides disagree, but the key clash is the one the judge must resolve to decide the round, so focus your prep there. In your speeches, tell the judge why this clash matters and why your side wins it. If you frame the clash, you frame the ballot.",
+        "How do you find the key clash in a debate and collapse to it?",
+        "List every open disagreement on your flow, then ask of each one whether winning it alone wins you the round and whether losing it loses you the round. The clash that passes both tests, and where your warrant is stronger, is the one to go for. In your last speeches, say plainly that you are going for it, respond to the opponent's attacks on it and weigh it against their best point. Drop the rest, unless an argument has been turned against you, which you still have to answer.",
     ),
     "debate-fallacies": (
         "How do you attack a logical fallacy in a debate?",
-        "Do not just name the fallacy. Explain why the logic fails, why the conclusion does not follow, and what the judge should do about it. Pointing out a fallacy and explaining why the argument fails can win you the clash. The most common fallacies in debate are ad hominem, straw man, false dichotomy, slippery slope, hasty generalization, appeal to authority and circular reasoning.",
-    ),
-    "debate-prep-time-management": (
-        "How should you spend your prep time in debate?",
-        "Spend it on the clashes that decide the round, not on reading every card. One split is to give the first third to case structure, the second third to rebuttal blocks and the last third to speech organization and weighing. Before a round, organize your evidence, confirm your arguments and practice the opening. During prep time, prioritize blocks over new research.",
+        "Point to the step that fails and say what the argument no longer proves once it does. Judges reward that explanation, not the name of the fallacy. A one-sentence answer usually works: a straw man misstates our model, a false dilemma ignores other options, a slippery slope has no reasons between its steps. Check first that the argument really is invalid rather than only weak, and use cross-examination to make the opponent state the missing link out loud.",
     ),
     "debate-judge-adaptation": (
         "How do you adapt your debating to different types of judges?",
-        "It depends on the judge. Lay judges want clear stories, so slow down. Flow judges want structured clash. Tech judges want speed and evidence, so you can speed up. Whatever the judge type, explain your weighing clearly and give the judge a reason to vote for you that fits their style. The aim is to make the judge's job easy.",
-    ),
-    "ai-vs-traditional-debate-prep": (
-        "Is AI debate prep better than traditional research and coaching?",
-        "Neither replaces the other. AI is faster at structure: case outlines, rebuttal blocks, topic brainstorming and evidence leads, which saves time on the repetitive parts of prep. Traditional prep does better at original source reading, real coaching feedback, tournament-specific strategy and adapting to a specific opponent, because those need human judgment. The practical answer is to combine them: use AI for scaffolding, traditional research for depth and coaching for strategy.",
-    ),
-    "debate-block-file-guide": (
-        "How do you build a debate block file?",
-        "Collect pre-written responses to common arguments and organize them by clash rather than by topic. Each clash should have blocks for both sides, so you are ready whichever side you are assigned. A good block file saves prep time and improves the quality of your responses in round. AI can help you brainstorm likely arguments and draft first blocks, but verify the logic and evidence yourself before using any of them.",
+        "Find out what the judge prefers before the round, from a published paradigm or by asking. Lay judges reward a clear story, plain language and a few arguments at a normal pace. Flow judges reward line-by-line answers, named extensions and explicit weighing. Technical judges add evidence quality and strategy. Change how many arguments you run and how you present them, not the claims you defend, and watch the judge's note-taking to adjust during the round.",
     ),
     "debate-speech-structure": (
-        "How should you structure a debate speech?",
-        "It depends on the speech. In an opening speech, state your position, define key terms, present contentions with warrants and impacts, and preview your weighing. In a rebuttal or final speech, respond to the key clash, extend your offense, weigh the comparison and end by telling the judge why you win. In every speech, the judge should never be confused about where you are, because a well-structured speech is easier to flow, easier to judge and easier to win.",
+        "How should you structure and deliver a debate speech?",
+        "Open with a one-sentence roadmap, signpost each section, and give each point as claim, warrant and impact. Constructives build the case and preview weighing; rebuttals start with the arguments the ballot depends on; final speeches collapse to one or two clashes and weigh them without new arguments. Budget each section's time before you speak. When delivering, slow down on signposts and the weighing line, pause so the judge can find their place, and practise any names you need to pronounce.",
     ),
     "debate-motion-analysis": (
         "How do you analyze a debate motion?",
-        "Read the motion carefully, define each term, identify what each side must prove, and map the likely clashes. Choose definitions that are fair, defensible and favorable to your side, since definitions can frame the round. Then pin down your burden, which is what you must prove to win. If you do not meet your burden, you lose regardless of how well you argue, so build your case strategy around it.",
-    ),
-    "debate-collapsing-strategy": (
-        "What does collapsing mean in debate, and how do you do it?",
-        "Collapsing means choosing the few arguments that win and abandoning the rest, so you spend more time on the argument that actually decides the round. Pick the clash where you have the strongest evidence, the clearest warrant and the best weighing. Then signal that you are collapsing, explain why the dropped arguments do not matter, and spend your remaining time on that clash. If you spread yourself thin, you lose.",
-    ),
-    "debate-pronunciation-and-delivery": (
-        "How can I improve my debate speech delivery?",
-        "Slow down on tags and author names, pause between contentions and emphasize your weighing phrases. The judge cannot vote for an argument they did not hear clearly, so speed without clarity is wasted effort. Practice with a timer and record yourself to catch the common problems: speaking too fast, mumbling, monotone delivery and forgetting to pause. Each of these can cost you rounds even when your arguments are strong.",
+        "Identify the motion type first, because a policy, value, regret or actor motion each sets a different burden. Define just the words that shape the round, the way a reasonable person would read them, and add a model for policy motions. Write each side's burden in one sentence, list who the motion affects, and name the two or three clashes the round is likely to turn on. Decide which clash to prepare first before writing any argument.",
     ),
 }

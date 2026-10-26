@@ -103,7 +103,7 @@ export default function SpeechTimeCalculatorToolPage() {
 
       <section>
         <h2>A pacing drill</h2>
-        <p>Take a 400-word passage. Read it once at your natural pace on the timer, then once aiming for exactly three minutes, then once for two and a half. Speakers who can change pace on purpose can slow down for the line that matters and speed through the summary, which is worth more than any single rate. The <a href="/debate-pronunciation-and-delivery">delivery guide</a> has more drills, and the <a href="/debate-speech-structure">speech structure guide</a> helps decide what each minute is for.</p>
+        <p>Take a 400-word passage. Read it once at your natural pace on the timer, then once aiming for exactly three minutes, then once for two and a half. Speakers who can change pace on purpose can slow down for the line that matters and speed through the summary, which is worth more than any single rate. The <a href="/debate-speech-structure">speech structure and delivery guide</a> has more drills and helps decide what each minute is for.</p>
       </section>
 
       <ToolFaq faq={FAQ} />
