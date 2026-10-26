@@ -13,6 +13,7 @@ const SERVER_ERROR_KEYS: Record<string, string> = {
   usage_check_failed: 'serverErrors.usageCheckFailed',
   access_check_failed: 'serverErrors.accessCheckFailed',
   no_active_subscription: 'settings.noSubscriptionDesc',
+  portal_failed: 'serverErrors.portalFailed',
   already_subscribed: 'serverErrors.alreadySubscribed',
   promo_expired: 'serverErrors.promoExpired',
   promo_exhausted: 'serverErrors.promoExhausted',

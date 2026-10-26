@@ -17,7 +17,7 @@ import { hasCompletedOnboarding, useOnboardingStore } from "@/hooks/use-onboardi
 import { OfflineIndicator } from "@/components/OfflineIndicator";
 import { StagingBanner } from "@/components/StagingBanner";
 import { captureException, captureProductEvent, toTelemetrySafeError } from "@/lib/observability";
-import { appLayoutLoader, preloadStartupRoute, routeLoaders, type RouteLoader } from "@/lib/route-modules";
+import { appLayoutLoader, localizedRouteLoaders, preloadStartupRoute, routeLoaders, type RouteLoader } from "@/lib/route-modules";
 import type { PrerenderedRoute } from "@/lib/seo/pages";
 import { PageLabelProvider, usePrivateRouteHead } from "@/lib/seo/use-page-head";
 import { RouteSkeleton, type RouteSkeletonVariant } from "@/components/loading/RouteSkeleton";
@@ -25,6 +25,8 @@ import { useTranslation } from "react-i18next";
 import { COLLABORATION_URL } from "@/lib/workspace/collaboration-config";
 import { AUTH_CALLBACK_PATH } from "@/lib/auth-callback";
 import { chooseUrlLanguage, searchWithoutLanguage } from "@/lib/url-language";
+import { LOCALIZED_PATHS } from "@/lib/seo/localized-routes";
+import { LocalizedRoute } from "@/components/LocalizedRoute";
 
 /**
  * A page the build prerenders. mountApp loads its module before the first
@@ -32,7 +34,10 @@ import { chooseUrlLanguage, searchWithoutLanguage } from "@/lib/url-language";
  * instead of showing a route skeleton while the chunk resolves.
  */
 function prerenderedPage(route: PrerenderedRoute) {
-  const loader: RouteLoader<{ default: ComponentType }> = routeLoaders[route];
+  return prerenderedModule(routeLoaders[route]);
+}
+
+function prerenderedModule(loader: RouteLoader<{ default: ComponentType }>) {
   const LazyPage = lazy(loader);
   return function PrerenderedPage() {
     const [Page] = useState(() => loader.loaded()?.default ?? LazyPage);
@@ -44,6 +49,8 @@ function prerenderedPage(route: PrerenderedRoute) {
 const LandingPage = prerenderedPage("/");
 const TermsPage = prerenderedPage("/terms");
 const PrivacyPage = prerenderedPage("/privacy");
+// The Hungarian and Spanish addresses in src/config/localized-routes.json.
+const LOCALIZED_PAGES = LOCALIZED_PATHS.map((entry) => ({ ...entry, Page: prerenderedModule(localizedRouteLoaders[entry.path]) }));
 const HomePage = lazy(routeLoaders["/app"]);
 const CurrentDebatePage = lazy(routeLoaders["/app/debate"]);
 const WorkspacesPage = lazy(routeLoaders["/app/workspaces"]);
@@ -323,7 +330,7 @@ function ScrollToTopOnNavigate(): null {
 }
 
 /**
- * A ?lang= reached inside the app (the /es and /hu redirects): switch to it and
+ * A ?lang= reached inside the app (a link from elsewhere in it): switch to it and
  * drop it from the address. mountApp handles the one a page opens with.
  */
 export function UrlLanguage(): null {
@@ -342,9 +349,10 @@ function AppRoutes() {
     <Routes>
           {/* Public Routes */}
           <Route path="/" element={<RouteContent><LandingPage /></RouteContent>} />
-          {/* Language home pages; vercel.json redirects them on a full load too. */}
-          <Route path="/es" element={<Navigate to="/?lang=es" replace />} />
-          <Route path="/hu" element={<Navigate to="/?lang=hu" replace />} />
+          {/* /hu, /es and their free tools: the same pages in that language, each at its own address. */}
+          {LOCALIZED_PAGES.map(({ path, route, language, Page }) => (
+            <Route key={path} path={path} element={<RouteContent><LocalizedRoute route={route} language={language}><Page /></LocalizedRoute></RouteContent>} />
+          ))}
           <Route path="/terms" element={<RouteContent><TermsPage /></RouteContent>} />
           <Route path="/privacy" element={<RouteContent><PrivacyPage /></RouteContent>} />
           <Route path="/expocit/sources" element={<RouteContent><SourcesPage /></RouteContent>} />

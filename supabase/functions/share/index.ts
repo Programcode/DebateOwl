@@ -199,9 +199,10 @@ export async function handleRequest(req: Request): Promise<Response> {
             headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
     } catch (err) {
+        // The thrown text can be PostgREST or Postgres detail; it stays in the log.
         const message = err instanceof Error ? err.message : "Unknown error";
-        console.error("[SHARE API ERROR]", message);
-        return new Response(JSON.stringify({ error: message }), {
+        console.error("[SHARE API ERROR]", message.slice(0, 2000));
+        return new Response(JSON.stringify({ error: "Failed to create share link" }), {
             status: 500,
             headers: { ...corsHeaders, "Content-Type": "application/json" },
         });

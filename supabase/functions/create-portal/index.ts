@@ -56,32 +56,33 @@ const NO_ACTIVE_SUBSCRIPTION = {
   code: "no_active_subscription",
 };
 
-function classifyStripeError(err: unknown): { status: number; message: string; code?: string } {
+// Any other failure. Stripe's own message can name the customer or the
+// rejected parameter, so it goes to the log, not the browser.
+const PORTAL_FAILED = {
+  error: "Could not open the billing portal. Please try again.",
+  code: "portal_failed",
+};
+
+function classifyStripeError(err: unknown): { status: number; body: { error: string; code: string } } {
   const stripeErr = err as {
-    type?: string;
     code?: string;
-    message?: string;
     statusCode?: number;
   };
 
-  const message = typeof stripeErr.message === "string" && stripeErr.message.trim()
-    ? stripeErr.message
-    : "Failed to create billing portal session";
-
   if (stripeErr.code === "resource_missing") {
-    return { status: 400, message: NO_ACTIVE_SUBSCRIPTION.error, code: NO_ACTIVE_SUBSCRIPTION.code };
+    return { status: 400, body: NO_ACTIVE_SUBSCRIPTION };
   }
 
   if (typeof stripeErr.statusCode === "number") {
     if (stripeErr.statusCode >= 400 && stripeErr.statusCode < 500) {
-      return { status: 400, message };
+      return { status: 400, body: PORTAL_FAILED };
     }
     if (stripeErr.statusCode >= 500) {
-      return { status: 502, message };
+      return { status: 502, body: PORTAL_FAILED };
     }
   }
 
-  return { status: 500, message };
+  return { status: 500, body: PORTAL_FAILED };
 }
 
 export async function handleRequest(req: Request): Promise<Response> {
@@ -154,9 +155,15 @@ export async function handleRequest(req: Request): Promise<Response> {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (err) {
-    const { status, message, code } = classifyStripeError(err);
-    console.error("[PORTAL] Error:", message);
-    return new Response(JSON.stringify({ error: message, ...(code ? { code } : {}) }), {
+    const { status, body } = classifyStripeError(err);
+    const stripeErr = err as { type?: string; code?: string; requestId?: string; message?: string };
+    console.error("[PORTAL] Error:", JSON.stringify({
+      type: stripeErr.type,
+      code: stripeErr.code,
+      requestId: stripeErr.requestId,
+      message: typeof stripeErr.message === "string" ? stripeErr.message : String(err),
+    }).slice(0, 2000));
+    return new Response(JSON.stringify(body), {
       status,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });

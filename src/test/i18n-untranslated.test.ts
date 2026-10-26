@@ -32,6 +32,9 @@ const SAME_AS_ENGLISH: Record<string, string[]> = {
     'es translation:sparring.format.pf', 'hu translation:sparring.format.pf',
     'es translation:debate.formats.bp', 'hu translation:debate.formats.bp',
     'es translation:debate.formats.policy', 'hu translation:debate.formats.policy',
+    ...['public-forum-debate', 'lincoln-douglas-debate', 'british-parliamentary-debate', 'world-schools-debate'].flatMap((guide) => [
+      `es translation:guideHub.links.${guide}`, `hu translation:guideHub.links.${guide}`,
+    ]),
   ],
   'Policy speech codes and school-format role codes': [
     ...['1ac', '1nc', '2ac', '2nc', '1nr', '1ar', '2nr', '2ar'].flatMap((code) => [

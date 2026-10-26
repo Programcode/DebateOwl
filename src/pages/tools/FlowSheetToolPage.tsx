@@ -57,7 +57,7 @@ export default function FlowSheetToolPage() {
         <h2>How to flow a round</h2>
         <p>A flow is a map of the arguments, not a transcript. Write each argument in the column of the speech that made it, in short form, and write each response next to the argument it answers, one column to the right. When a later speech extends or drops an argument, the row shows it.</p>
         <p>In a Public Forum round, the sheet gives you {speakingSegments(pf).length} columns and a box for each of the {questioningSegments(pf).length} crossfires. Flow the first constructive in column one; by the time Team B&apos;s rebuttal starts, column four should line up against Team A&apos;s case row by row. If a row is empty in the summary column, that argument was dropped, and the final focus should say so.</p>
-        <p>The <a href="/how-to-flow-in-debate">full flowing guide</a> covers symbols, colour coding and how to flow fast speakers.</p>
+        <p>The <a href="/how-to-flow-in-debate">full flowing guide</a> covers symbols, colour coding and how to flow fast speakers. After the round, the <a href="/argument-flowchart">argument flowchart guide</a> shows how to redraw a flow as a map of claims, links and weighing.</p>
       </section>
 
       <section>

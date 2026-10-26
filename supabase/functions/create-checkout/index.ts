@@ -1,12 +1,12 @@
 // Supabase Edge Function: Create Stripe Checkout Session
 // Creates a Checkout Session for subscription purchase.
 
-import { createClient, type User } from "https://esm.sh/@supabase/supabase-js@2.114.0";
-import { HttpError, jsonError, requireUser } from "../_shared/auth.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.114.0";
+import { type AuthContext, HttpError, jsonError, requireUser } from "../_shared/auth.ts";
 import { createEdgeStripe, Stripe } from "../_shared/stripe.ts";
 import { getCorsHeaders } from "../_shared/cors.ts";
 import {
-  discountPromoRefusal,
+  discountPromotionCode,
   findCustomerOwnedByUser,
   hasOpenSubscription,
   isAllowedCheckoutRedirectUrl,
@@ -204,14 +204,15 @@ export async function handleRequest(req: Request): Promise<Response> {
   }
 
   // Authenticate user
-  let user: User;
+  let auth: AuthContext;
   try {
-    user = (await requireUser(req)).user;
+    auth = await requireUser(req);
   } catch (error) {
     if (!(error instanceof HttpError)) throw error;
     console.warn("[CHECKOUT] Authentication rejected:", error.message);
     return jsonError(error, corsHeaders);
   }
+  const { user, userClient } = auth;
 
   try {
     let body: unknown;
@@ -272,50 +273,31 @@ export async function handleRequest(req: Request): Promise<Response> {
       });
     }
 
-    // Check a promo code before any Stripe customer is created for this attempt.
-    let allowPromotionCodes = false;
+    // A promo code is claimed through redeem_promo_code_atomic as the user, so
+    // its expiry, cap, single use and failure lockout apply here too. Only a
+    // discount is accepted, and Checkout applies exactly the Stripe promotion
+    // code stored with it; Stripe's own promo-code field stays closed. A claim
+    // stays counted if Stripe fails below, which keeps the cap.
+    let promotionCode: string | undefined;
     if (promoCode) {
-      const { data: promo, error: promoLookupError } = await supabase.from("promo_codes")
-        .select("*")
-        .eq("code", promoCode.toUpperCase())
-        .eq("is_active", true)
-        .maybeSingle();
-
-      if (promoLookupError) {
-        console.warn(`[CHECKOUT] Promo lookup failed`);
+      const { data: claim, error: claimError } = await userClient.rpc("redeem_promo_code_atomic", {
+        p_code: promoCode,
+        p_discount_only: true,
+      });
+      if (claimError) {
+        console.error(`[CHECKOUT] Promo claim failed for ${user.id}: ${claimError.code ?? "unknown"}`);
       }
-
-      if (promo && promo.type === "discount") {
-        const refusal = discountPromoRefusal(promo);
-        if (refusal) {
-          return new Response(JSON.stringify({
-            error: refusal === "expired" ? "This promo code has expired" : "This promo code has reached its usage limit",
-            code: refusal === "expired" ? "promo_expired" : "promo_exhausted",
-          }), {
-            status: 400,
-            headers: { ...corsHeaders, "Content-Type": "application/json" },
-          });
-        }
-
-        const { data: existingRedemption, error: redemptionLookupError } = await supabase.from("user_promos")
-          .select("id")
-          .eq("user_id", user.id)
-          .eq("promo_code_id", promo.id)
-          .maybeSingle();
-
-        if (redemptionLookupError) {
-          console.warn(`[CHECKOUT] Promo redemption lookup failed`);
-        }
-
-        if (existingRedemption) {
-          return new Response(JSON.stringify({ error: "You've already redeemed this promo code" }), {
-            status: 400,
-            headers: { ...corsHeaders, "Content-Type": "application/json" },
-          });
-        }
-
-        allowPromotionCodes = true;
+      const claimed = discountPromotionCode(claimError ? null : claim);
+      if (!claimed) {
+        return new Response(JSON.stringify({
+          error: "Invalid or expired promo code",
+          code: "promo_invalid",
+        }), {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
       }
+      promotionCode = claimed;
     }
 
     // Get or create Stripe customer
@@ -356,7 +338,7 @@ export async function handleRequest(req: Request): Promise<Response> {
       subscription_data: {
         metadata: { user_id: user.id },
       },
-      ...(allowPromotionCodes && { allow_promotion_codes: true }),
+      ...(promotionCode && { discounts: [{ promotion_code: promotionCode }] }),
     };
 
     const session = await stripe.checkout.sessions.create(sessionParams);

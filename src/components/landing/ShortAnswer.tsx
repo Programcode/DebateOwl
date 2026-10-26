@@ -1,4 +1,6 @@
 import { useTranslation } from "react-i18next";
+import { Link } from "react-router-dom";
+import { localizedPath, useRouteLanguage } from "@/lib/seo/localized-routes";
 import { ArrowRight } from "lucide-react";
 import { factsAsOf } from "@/lib/seo/pages";
 import { Reveal } from "./Reveal";
@@ -9,6 +11,7 @@ import { Reveal } from "./Reveal";
  */
 const ShortAnswer = () => {
     const { t, i18n } = useTranslation();
+    const language = useRouteLanguage();
 
     return (
         <section aria-labelledby="short-answer" className="py-20">
@@ -26,6 +29,16 @@ const ShortAnswer = () => {
                         {t('shortAnswer.compare')}
                         <ArrowRight aria-hidden="true" className="h-4 w-4" />
                     </a>
+                    <p className="mt-4 text-muted-foreground">
+                        {t('tools:home.freeTools')}{' '}
+                        <Link
+                            to={localizedPath("/tools", language)}
+                            className="inline-flex items-center gap-2 font-medium text-primary underline-offset-4 hover:underline pointer-coarse:min-h-11"
+                        >
+                            {t('tools:footer.freeTools')}
+                            <ArrowRight aria-hidden="true" className="h-4 w-4" />
+                        </Link>
+                    </p>
                 </Reveal>
             </div>
         </section>

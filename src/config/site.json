@@ -3,6 +3,7 @@
   "product": "DebateLab",
   "brand": "DebateLab by Pi-Stack",
   "organization": "Pi-Stack",
+  "organizationSameAs": ["https://pi-stack.org/"],
   "factsCheckedOn": "2026-10-20",
   "definition": "an AI debate prep and practice app for students and competitive debaters that builds structured cases, finds the weak points in arguments, researches evidence with citations and runs timed practice rounds against an AI opponent",
   "pricing": {
