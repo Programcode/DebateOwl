@@ -10,6 +10,7 @@ import Footer from "@/components/landing/Footer";
 import WhatsNew from "@/components/landing/WhatsNew";
 import Pricing from "@/components/landing/Pricing";
 import ShortAnswer from "@/components/landing/ShortAnswer";
+import GuideHub from "@/components/landing/GuideHub";
 import { usePageHead } from "@/lib/seo/use-page-head";
 import { MAIN_CONTENT_ID, SkipLink } from "@/components/layout/SkipLink";
 
@@ -30,6 +31,7 @@ const LandingPage = () => {
                 <DeepDive />
                 <HowItWorks />
                 <UseCases />
+                <GuideHub />
                 <FAQ />
                 <FinalCTA />
             </main>

@@ -35,6 +35,8 @@ PLAN_FACTS = (
 CONTENT_DATE = "2026-10-20"
 # The date the shared FAQS below last changed; a page that shows them is modified then at the latest.
 FAQS_DATE = "2026-10-23"
+# The date the related-guide and in-body links (CLUSTERS, LINK_PHRASES) last changed; every page shows them.
+LINKS_DATE = "2026-10-26"
 # The commit that first added every current guide (git log --diff-filter=A).
 # A new guide sets "published" in its PAGES entry.
 PUBLISHED_DATE = "2026-07-05"
@@ -139,20 +141,116 @@ def fill(value):
     return value
 
 # Long-form guides replace a page's features and sections and add its own FAQs.
-# Merging by slug keeps PAGES in order, which internal_links() depends on.
+# Merging by slug keeps PAGES in order, the order llms.txt lists the guides in.
 PAGES = [fill({**page, **GUIDES.get(page["slug"], {})}) for page in PAGES]
+
+# Topic clusters for the "Related" block. Every page in PAGES belongs to exactly
+# one cluster. When a page leaves PAGES, delete it here and from LINK_PHRASES too.
+CLUSTERS = {
+    "Practice and product": [
+        "ai-debate-practice", "ai-debate-coach", "ai-debate-case-generator", "ai-rebuttal-generator",
+        "debate-rebuttal-practice", "debate-evidence-finder", "argument-flowchart", "online-debate-timer",
+        "ai-vs-traditional-debate-prep",  # seo/deepen-thin-guides merges it into ai-debate-practice
+    ],
+    "Formats": [
+        "public-forum-debate", "lincoln-douglas-debate", "policy-debate", "british-parliamentary-debate",
+        "world-schools-debate", "congress-debate",
+    ],
+    "Skills": [
+        "how-to-write-a-debate-case", "how-to-practice-rebuttals", "how-to-weigh-in-debate", "how-to-cross-examine-in-debate",
+        "how-to-flow-in-debate", "debate-clash-points", "debate-speech-structure", "debate-fallacies",
+        "debate-motion-analysis", "debate-judge-adaptation", "how-to-prepare-for-a-debate-tournament", "debate-topics-for-students",
+        # seo/deepen-thin-guides merges each of these into the guide named after it.
+        "debate-collapsing-strategy",  # debate-clash-points
+        "debate-prep-time-management",  # how-to-prepare-for-a-debate-tournament
+        "debate-block-file-guide",  # how-to-practice-rebuttals
+        "debate-pronunciation-and-delivery",  # debate-speech-structure
+    ],
+    "Compare": ["best-ai-debate-tools", "debatelab-vs-chatgpt", "debatelab-vs-debateclub", "debatelab-vs-windebate", "debatelab-pricing"],
+}
+RELATED_SIBLINGS = 6
+RELATED_CROSS = 2
+
+# In-body links. In this order, each entry links the first paragraph text that matches it
+# (whole words, any case) to its guide, until the page has IN_BODY_LINKS of them. Specific
+# phrases come first; the single words at the end only fill pages that are still short.
+LINK_PHRASES = [
+    (r"Public Forum|final focus", "public-forum-debate"),
+    (r"Lincoln-Douglas|value and criterion", "lincoln-douglas-debate"),
+    (r"British Parliamentary|closing teams?", "british-parliamentary-debate"),
+    (r"World Schools|reply speech(?:es)?", "world-schools-debate"),
+    (r"Congress(?:ional)? debate|crystalli[sz]ation", "congress-debate"),
+    (r"policy debate|counterplans?", "policy-debate"),
+    (r"cross-examination", "how-to-cross-examine-in-debate"),
+    (r"flowing|flow sheets?", "how-to-flow-in-debate"),
+    (r"argument flowcharts?", "argument-flowchart"),
+    (r"block files?|pre-written responses", "debate-block-file-guide"),
+    (r"rebuttal drills|practi[cs]e rebuttals|rebuttal practice", "debate-rebuttal-practice"),
+    (r"rebuttal blocks?", "how-to-practice-rebuttals"),
+    (r"key clash(?:es)?|clash points?", "debate-clash-points"),
+    (r"collaps(?:e|es|ing)|drop the rest", "debate-collapsing-strategy"),
+    (r"fallac(?:y|ies)", "debate-fallacies"),
+    (r"motion analysis|analy[sz]e the motion|interpret(?:ing)? (?:the|a) motion", "debate-motion-analysis"),
+    (r"(?:lay|tech|flow) judges?|judge types?|read the judge", "debate-judge-adaptation"),
+    (r"tournament prep(?:aration)?|tournament day|before (?:a|the) tournament", "how-to-prepare-for-a-debate-tournament"),
+    (r"prep time", "debate-prep-time-management"),
+    (r"delivery|pronunciation", "debate-pronunciation-and-delivery"),
+    (r"speech structure|structured speech", "debate-speech-structure"),
+    (r"write (?:a|your) case|writing (?:a|your) case|case structure", "how-to-write-a-debate-case"),
+    (r"case generator|generate (?:a|the) case|case generation", "ai-debate-case-generator"),
+    (r"evidence leads|evidence research|research evidence", "debate-evidence-finder"),
+    (r"AI (?:debate )?coach", "ai-debate-coach"),
+    (r"AI opponents?|Sparring rounds?", "ai-debate-practice"),
+    (r"generated rebuttals?|rebuttal generator", "ai-rebuttal-generator"),
+    (r"ChatGPT|general chatbot", "debatelab-vs-chatgpt"),
+    (r"debate topics|topic areas", "debate-topics-for-students"),
+    (r"speech times?|timed practice", "online-debate-timer"),
+    (r"weighing|weigh|compare impacts", "how-to-weigh-in-debate"),
+    (r"points? of information", "world-schools-debate"),
+    (r"frame the ballot|framing the ballot", "debate-judge-adaptation"),
+    (r"questioning", "how-to-cross-examine-in-debate"),
+    (r"blocks", "debate-block-file-guide"),
+    (r"criterion", "lincoln-douglas-debate"),
+    (r"extensions?", "british-parliamentary-debate"),
+    (r"cross-ex", "how-to-cross-examine-in-debate"),
+    (r"burdens?", "debate-motion-analysis"),
+    (r"clarity", "debate-pronunciation-and-delivery"),
+    (r"rebuttals", "how-to-practice-rebuttals"),
+    (r"clash(?:es)?", "debate-clash-points"),
+    (r"evidence", "debate-evidence-finder"),
+]
+IN_BODY_LINKS = 3
+# The in-body links each page got, for the report main() prints with --links.
+IN_BODY_REPORT = {}
+
+def check_link_tables():
+    """Fails generation when CLUSTERS or LINK_PHRASES name a page PAGES lacks, or miss one it has."""
+    slugs = [page["slug"] for page in PAGES]
+    clustered = [slug for cluster in CLUSTERS.values() for slug in cluster]
+    problems = [f"CLUSTERS lists {slug}, which is not in PAGES" for slug in clustered if slug not in slugs]
+    problems += [f"{slug} is in no cluster in CLUSTERS" for slug in slugs if slug not in clustered]
+    problems += [f"{slug} is in more than one cluster" for slug in set(clustered) if clustered.count(slug) > 1]
+    problems += [f"LINK_PHRASES links to {slug}, which is not in PAGES" for _, slug in LINK_PHRASES if slug not in slugs]
+    if problems:
+        raise SystemExit("Fix the link tables in generate_seo_content.py:\n  " + "\n  ".join(problems))
+
+check_link_tables()
+PAGE_BY_SLUG = {page["slug"]: page for page in PAGES}
+CLUSTER_OF = {slug: name for name, cluster in CLUSTERS.items() for slug in cluster}
+CLUSTER_ORDER = [slug for cluster in CLUSTERS.values() for slug in cluster]
+PHRASE_PATTERNS = [(re.compile(rf"\b(?:{phrase})\b", re.I), slug) for phrase, slug in LINK_PHRASES]
 FAQS = fill(FAQS)
 ANSWERS = fill(ANSWERS)
 
 NAV = [("AI practice","/ai-debate-practice"),("Case generator","/ai-debate-case-generator"),("Rebuttal practice","/debate-rebuttal-practice"),("Evidence finder","/debate-evidence-finder"),("Pricing","/debatelab-pricing"),("Open app","/app")]
 
 SOFTWARE_ID = BASE + "/#software"
-ORGANIZATION_REF = {"@type": "Organization", "@id": BASE + "/#organization", "name": ORGANIZATION, "url": BASE + "/", "logo": BASE + "/icon-1024.png"}
+ORGANIZATION_REF = {"@type": "Organization", "@id": BASE + "/#organization", "name": ORGANIZATION, "url": BASE + "/", "logo": BASE + "/icon-1024.png", "sameAs": SITE["organizationSameAs"]}
 SOFTWARE = {
     "@type": "SoftwareApplication",
     "@id": SOFTWARE_ID,
-    "name": BRAND,
-    "alternateName": PRODUCT,
+    "name": PRODUCT,
+    "alternateName": BRAND,
     "description": DEFINITION,
     "applicationCategory": "EducationalApplication",
     "operatingSystem": "Web",
@@ -193,12 +291,56 @@ def lead_answer(page):
         raise SystemExit(f"{slug}: the lead answer has {words} words; the limit is {ANSWER_MAX_WORDS}")
     return question, answer
 
+def related_slugs(current):
+    """Up to RELATED_SIBLINGS pages from the current page's cluster, then RELATED_CROSS from
+    other clusters. Both start just after the current page, so each page gets a different set."""
+    cluster = CLUSTERS[CLUSTER_OF[current]]
+    at = cluster.index(current)
+    siblings = (cluster[at + 1:] + cluster[:at])[:RELATED_SIBLINGS]
+    others = [slug for slug in CLUSTER_ORDER if CLUSTER_OF[slug] != CLUSTER_OF[current]]
+    start = (CLUSTER_ORDER.index(current) * 5) % len(others)
+    cross = []
+    for slug in others[start:] + others[:start]:
+        # One page from each of two other clusters, not two from the same one.
+        if all(CLUSTER_OF[slug] != CLUSTER_OF[taken] for taken in cross):
+            cross.append(slug)
+        if len(cross) == RELATED_CROSS:
+            break
+    return siblings + cross
+
 def internal_links(current):
-    links = [(p["title"].replace(f" | {PRODUCT}", "").replace(f" | {PRODUCT} Guide", ""), "/" + p["slug"]) for p in PAGES if p["slug"] != current]
-    chosen = links[:8]
-    if current in [p["slug"] for p in PAGES[:8]]:
-        chosen = links[8:16]
-    return "\n".join(f'<a href="{esc(href)}">{esc(label)}</a>' for label, href in chosen[:8])
+    return "\n".join(f'<a href="/{slug}">{esc(PAGE_BY_SLUG[slug]["h1"])}</a>' for slug in related_slugs(current))
+
+def in_body_links(page, used):
+    """The in-body links for a page: {(paragraph, part): [(start, end, slug)]}, where part
+    indexes re.split(MARKDOWN_LINK, paragraph). `used` holds slugs the page must not link."""
+    paragraphs = [block for _, blocks in page["sections"] for block in blocks if isinstance(block, str)]
+    spans = {}
+    for pattern, slug in PHRASE_PATTERNS:
+        if sum(map(len, spans.values())) == IN_BODY_LINKS:
+            break
+        if slug in used:
+            continue
+        for at, paragraph in enumerate(paragraphs):
+            parts = re.split(MARKDOWN_LINK, paragraph)
+            for part in range(0, len(parts), 3):
+                taken = spans.get((at, part), [])
+                match = next((m for m in pattern.finditer(parts[part]) if all(m.end() <= start or end <= m.start() for start, end, _ in taken)), None)
+                if match:
+                    spans.setdefault((at, part), []).append((match.start(), match.end(), slug))
+                    used.add(slug)
+                    break
+            if slug in used:
+                break
+    return spans
+
+def with_links(text, spans):
+    """Escaped text with each (start, end, slug) span turned into a link to that guide."""
+    out, last = [], 0
+    for start, end, slug in sorted(spans):
+        out.append(f'{esc(text[last:start])}<a href="/{slug}">{esc(text[start:end])}</a>')
+        last = end
+    return "".join(out) + esc(text[last:])
 
 def feature_card(feature):
     """A highlight card: a title, or a (title, description) pair."""
@@ -207,19 +349,22 @@ def feature_card(feature):
     title, description = feature
     return f'<article class="card"><h3>{esc(title)}</h3><p class="muted">{esc(description)}</p></article>'
 
-def linked(text):
-    """Escaped text in which [label](/path) becomes a link to that page on this site."""
-    parts = re.split(r"\[([^\]]+)\]\((/[^)\s]*)\)", text)
-    out = [esc(parts[0])]
+MARKDOWN_LINK = r"\[([^\]]+)\]\((/[^)\s]*)\)"
+
+def linked(text, spans):
+    """Escaped text in which [label](/path) becomes a link to that page on this site.
+    `spans` maps a part of re.split(MARKDOWN_LINK, text) to its in-body links."""
+    parts = re.split(MARKDOWN_LINK, text)
+    out = [with_links(parts[0], spans.get(0, []))]
     for i in range(1, len(parts), 3):
-        out.append(f'<a href="{esc(parts[i + 1])}">{esc(parts[i])}</a>{esc(parts[i + 2])}')
+        out.append(f'<a href="{esc(parts[i + 1])}">{esc(parts[i])}</a>{with_links(parts[i + 2], spans.get(i + 2, []))}')
     return "".join(out)
 
-def render_block(block):
+def render_block(block, spans=None):
     """A paragraph string, or a dict holding one of h3, steps, list or example.
-    Paragraphs may link another page with [label](/path)."""
+    Paragraphs may link another page with [label](/path); `spans` adds in-body links."""
     if isinstance(block, str):
-        return f"<p>{linked(block)}</p>"
+        return f"<p>{linked(block, spans or {})}</p>"
     if "h3" in block:
         return f"<h3>{esc(block['h3'])}</h3>"
     if "steps" in block:
@@ -244,14 +389,23 @@ def structured_data(page, question, answer, faqs, published, modified):
 def render_page(page):
     question, answer = lead_answer(page)
     published = page.get("published", PUBLISHED_DATE)
-    modified = page.get("modified", CONTENT_DATE)
+    modified = max(page.get("modified", CONTENT_DATE), LINKS_DATE)
     if "faqs" not in page:
         modified = max(modified, FAQS_DATE)
     feature_cards = "".join(feature_card(feature) for feature in page["features"])
-    article = []
+    # In-body links skip the page itself and pages its copy already links.
+    written = {href.lstrip("/") for _, blocks in page["sections"] for block in blocks if isinstance(block, str) for _, href in re.findall(MARKDOWN_LINK, block)}
+    spans = in_body_links(page, {page["slug"], *written})
+    article, at = [], 0
     for heading, blocks in page["sections"]:
         article.append(f"<h2>{esc(heading)}</h2>")
-        article.extend(render_block(block) for block in blocks)
+        for block in blocks:
+            if isinstance(block, str):
+                article.append(render_block(block, {part: links for (where, part), links in spans.items() if where == at}))
+                at += 1
+            else:
+                article.append(render_block(block))
+    IN_BODY_REPORT[page["slug"]] = spans
     faqs = page.get("faqs", FAQS)
     faq_html = "".join(f"<details><summary>{esc(q)}</summary><p>{esc(a)}</p></details>" for q, a in faqs)
     nav = "".join(f'<a href="{href}">{esc(label)}</a>' for label, href in NAV)
@@ -356,6 +510,9 @@ def main():
     (PUBLIC / "llms.txt").write_text(llms_txt())
 
     print(f"Generated {len(PAGES)} public SEO pages and llms.txt; the build writes sitemap.xml")
+    if "--links" in sys.argv:
+        for slug, spans in IN_BODY_REPORT.items():
+            print(f"{slug}: " + (", ".join(f"/{target}" for links in spans.values() for _, _, target in links) or "(none)"))
 
 if __name__ == "__main__":
     main()

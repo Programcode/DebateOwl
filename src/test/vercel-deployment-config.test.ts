@@ -237,7 +237,7 @@ describe("Vercel frontend deployment configuration", () => {
     const packageJson = loadPackageJson();
 
     expect(indexHtml).not.toMatch(/rel="(?:modulepreload|preload|prefetch)"[^>]*(?:pages|LandingPage|LoginPage|HomePage|GeneratePage|AttackPage)/i);
-    expect(packageJson.scripts?.build).toBe("vite build && node scripts/prerender.mjs && node scripts/sitemap.mjs && node scripts/check-site.mjs && node scripts/check-build-boundaries.mjs");
+    expect(packageJson.scripts?.build).toBe("vite build && node scripts/prerender.mjs && node scripts/sitemap.mjs && node scripts/check-site.mjs && node scripts/check-links.mjs && node scripts/check-build-boundaries.mjs");
   });
 
   it("answers app routes with the cached shell and never stores a navigation as another page", () => {

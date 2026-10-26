@@ -893,8 +893,8 @@
     "dismissError": "A közleményt nem sikerült bezárni."
   },
   "hero": {
-    "headline": "Készíts eseteket és gyakorolj fordulókat MI-vel",
-    "subheadline": "A DebateLab egy MI-alapú vitafelkészítő és gyakorló alkalmazás diákoknak és versenyvitázóknak, amely strukturált eseteket épít, megtalálja az érvek gyenge pontjait, hivatkozásokkal kutat bizonyítékokat, és időzített gyakorlófordulókat futtat egy MI-ellenféllel szemben.",
+    "headline": "{{product}}: MI-alapú vitafelkészítés és gyakorlás",
+    "subheadline": "Készíts eseteket és gyakorolj fordulókat MI-vel. A {{product}} strukturált eseteket épít, megtalálja az érvek gyenge pontjait, hivatkozásokkal kutat bizonyítékokat, és időzített gyakorlófordulókat futtat egy MI-ellenféllel szemben, diákoknak és versenyvitázóknak.",
     "trialBadge": "3 napos ingyenes próba",
     "requestsBadge": "Napi MI-felkészülés",
     "requestsBadgeValue": "Benne van",
@@ -1033,7 +1033,44 @@
     "a5": "Igen! Ments eseteket, ötleteket és beszélgetéseket az Előzményekbe. Exportálj Word, PDF vagy Google Docs formátumba.",
     "subtitle": "Árazás, munkafolyamat és termékrészletek röviden.",
     "q6": "Mi az a DebateLab?",
-    "a6": "A DebateLab egy MI-alapú vitafelkészítő és gyakorló alkalmazás diákoknak és versenyvitázóknak. {{modes}} felkészülési módja van, köztük esetgenerátor, esettámadó, hivatkozásokkal támogatott bizonyítékkutatás, MI-edző, Keresztkérdezés és időzített Vitapárbaj-fordulók MI-ellenféllel, és angolul, spanyolul és magyarul is elérhető."
+    "a6": "A DebateLab egy MI-alapú vitafelkészítő és gyakorló alkalmazás diákoknak és versenyvitázóknak. {{modes}} felkészülési módja van, köztük esetgenerátor, esettámadó, hivatkozásokkal támogatott bizonyítékkutatás, MI-edző, Keresztkérdezés és időzített Vitapárbaj-fordulók MI-ellenféllel, és angolul, spanyolul és magyarul is elérhető.",
+    "q7": "Ugyanaz a {{product}}, mint a debatelab.ai?",
+    "a7": "Nem. A {{brand}} egy különálló termék, a {{host}} címen."
+  },
+  "guideHub": {
+    "title": "Vitaútmutatók és ingyenes eszközök",
+    "subtitle": "Olvass el egy útmutatót a következő forduló előtt, vagy nyiss meg egy ingyenes eszközt, fiók nélkül. Az útmutatók angol nyelvűek.",
+    "practice": "Gyakorlás MI-vel",
+    "formats": "Vitaformátumok",
+    "skills": "Készségfejlesztő útmutatók",
+    "tools": "Ingyenes eszközök",
+    "compare": "Összehasonlítás",
+    "links": {
+      "ai-debate-practice": "MI-alapú vitagyakorlás",
+      "ai-debate-case-generator": "MI-esetgenerátor hivatkozásokkal",
+      "ai-rebuttal-generator": "MI-cáfolatgenerátor",
+      "ai-debate-coach": "MI-vitaedző",
+      "debate-evidence-finder": "Bizonyítékkereső vitához",
+      "public-forum-debate": "Public Forum",
+      "lincoln-douglas-debate": "Lincoln-Douglas",
+      "policy-debate": "Policy",
+      "british-parliamentary-debate": "British Parliamentary",
+      "world-schools-debate": "World Schools",
+      "congress-debate": "Kongresszusi vita",
+      "how-to-write-a-debate-case": "Hogyan írj vitaesetet",
+      "how-to-practice-rebuttals": "Hogyan gyakorold a cáfolatot",
+      "debate-clash-points": "A döntő ütközőpont megtalálása",
+      "debate-fallacies": "Gyakori érvelési hibák",
+      "debate-judge-adaptation": "Alkalmazkodás a bíróhoz",
+      "how-to-prepare-for-a-debate-tournament": "Felkészülés egy versenyre",
+      "tools": "Az összes ingyenes eszköz",
+      "tools/debate-timer": "Vitaidőzítő",
+      "tools/debate-motion-generator": "Vitatéma-generátor",
+      "tools/debate-flow-sheet": "Flow-lap",
+      "tools/speech-time-calculator": "Beszédidő-kalkulátor",
+      "best-ai-debate-tools": "A legjobb MI-alapú vitaeszközök",
+      "debatelab-vs-chatgpt": "{{product}} vagy ChatGPT"
+    }
   },
   "finalCta": {
     "title": "Készen állsz a következő győztes eseted felépítésére?",

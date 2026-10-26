@@ -12,13 +12,13 @@ test('a stalled Jam recorder cannot delay the real application', async ({ page, 
   await page.goto('/', { waitUntil: 'domcontentloaded' });
 
   // Jam waits for an interaction, so the landing page is up before any recorder request.
-  await expect(page.getByRole('heading', { name: /Prepare Cases and Practice Rounds/ })).toBeVisible({ timeout: 2_000 });
+  await expect(page.getByRole('heading', { name: /: AI debate prep and practice$/ })).toBeVisible({ timeout: 2_000 });
   expect(jamRequests).toEqual([]);
 
   const jamRequest = page.waitForRequest('https://js.jam.dev/**');
   await page.evaluate(() => window.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true })));
   await jamRequest;
-  await expect(page.getByRole('heading', { name: /Prepare Cases and Practice Rounds/ })).toBeVisible();
+  await expect(page.getByRole('heading', { name: /: AI debate prep and practice$/ })).toBeVisible();
   await expect(page.getByText('DebateLab by Pi-Stack is the official')).toHaveCount(0);
 });
 
@@ -27,7 +27,7 @@ test('pagehide removes the Jam frame and a persisted pageshow does not re-add it
   await page.route('https://js.jam.dev/**', (route) => route.fulfill({ status: 200, contentType: 'text/javascript', body: '' }));
 
   await page.goto('/', { waitUntil: 'load' });
-  const heading = page.getByRole('heading', { name: /Prepare Cases and Practice Rounds/ });
+  const heading = page.getByRole('heading', { name: /: AI debate prep and practice$/ });
   await expect(heading).toBeVisible();
   const jamRequest = page.waitForRequest('https://js.jam.dev/**');
   await page.evaluate(() => window.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true })));
@@ -50,7 +50,7 @@ test('pagehide removes the Jam frame and a persisted pageshow does not re-add it
 test('public routes keep the real UI after refresh', async ({ page }) => {
   await setLocale(page, 'en');
   for (const [path, label] of [
-    ['/', /Prepare Cases and Practice Rounds/],
+    ['/', /: AI debate prep and practice$/],
     ['/login', 'Continue with Google'],
   ] as const) {
     await page.goto(path);

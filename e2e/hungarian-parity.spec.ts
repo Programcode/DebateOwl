@@ -1,5 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 import { seedCurrentDebate, setLocale, stubSupabaseSession } from './helpers/auth';
+import site from '../src/config/site.json';
 
 function collectRuntimeErrors(page: Page) {
   const errors: string[] = [];
@@ -32,7 +33,7 @@ test.describe('Hungarian parity', () => {
     await page.goto('/', { waitUntil: 'domcontentloaded' });
 
     await expectHungarianDocument(page);
-    await expect(page.getByRole('heading', { level: 1, name: 'Készíts eseteket és gyakorolj fordulókat MI-vel' })).toBeVisible();
+    await expect(page.getByRole('heading', { level: 1, name: `${site.product}: MI-alapú vitafelkészítés és gyakorlás` })).toBeVisible();
     await expect(page.getByText(/^Attól függ, mire van szükséged\. 2026\. október állapot szerint/)).toBeAttached();
     if ((page.viewportSize()?.width ?? 0) < 768) {
       await expect(page.getByRole('button', { name: 'Menü megnyitása' })).toBeVisible();
