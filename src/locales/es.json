@@ -1489,24 +1489,15 @@
     "debateCurrentDesc": "Todo en DebateLab pertenece a tu debate actual: su moción, sus fuentes y tus resultados. Ábrelo o cámbialo aquí."
   },
   "debateOwlIntro": {
-    "owlName": "",
-    "greeting": "¡Hola!",
-    "greetingNamed": "¡Hola, soy {{name}}!",
-    "hello": "Esto es DebateOwl, el nuevo aspecto de DebateLab.",
-    "whatChanged": "Te cuento qué ha cambiado.",
-    "changesTitle": "La misma app, con otro aspecto",
-    "freshLookTitle": "Un aspecto renovado",
-    "freshLookDesc": "Colores nuevos, letras más redondas y botones que se hunden al pulsarlos.",
-    "owlGuideTitle": "Un búho guía más cercano",
-    "owlGuideDesc": "El búho te acompaña por la app, desde el inicio hasta tu historial.",
-    "sameTitle": "Todo lo que usas sigue en su sitio",
-    "sameDesc": "Las mismas herramientas, los mismos menús, los mismos pasos.",
-    "nameTitle": "Un nombre nuevo, poco a poco",
-    "nameBody": "Para que la gente nos encuentre en Google, estamos cambiando poco a poco el nombre de DebateLab a DebateOwl. Tu cuenta, tus casos y tu historial siguen exactamente igual.",
-    "skip": "Saltar",
-    "next": "Siguiente",
-    "done": "Entendido",
-    "progress": "Paso {{step}} de {{steps}}"
+    "greeting": "¡Hola, soy DebateOwl!",
+    "greetingNamed": "¡Hola, soy {{name}}, de DebateOwl!",
+    "newLook": "DebateLab tiene un aspecto nuevo.",
+    "company": "Te haré compañía mientras algo carga.",
+    "sameTools": "Las mismas herramientas de siempre, en su sitio.",
+    "noticeTitle": "DebateLab se está convirtiendo poco a poco en DebateOwl",
+    "noticeBody": "La misma app, la misma cuenta y el mismo trabajo guardado, con un aspecto y un nombre nuevos. Cambiamos para que más gente nos encuentre en Google.",
+    "skipAnimation": "Saltar animación",
+    "done": "Entendido"
   },
   "timer": {
     "title": "Cronómetro de debate",

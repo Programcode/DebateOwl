@@ -43,17 +43,19 @@ describe('shouldShowIntro', () => {
 });
 
 describe('DebateOwlIntro', () => {
-  function renderIntro() {
+  function renderIntro(owlName?: string) {
     const storage = memoryStorage();
-    render(<DebateOwlIntro onClose={() => markIntroSeen(storage)} />);
+    render(<DebateOwlIntro onClose={() => markIntroSeen(storage)} owlName={owlName} />);
     return storage;
   }
 
-  it('Skip marks it seen', () => {
+  it('Got it marks it seen; Skip animation only skips ahead', () => {
     const storage = renderIntro();
-    // owlName is empty until the owl has a name: the greeting must not show a key or a blank.
-    expect(screen.getByRole('dialog', { name: 'Hi there!' })).toBeTruthy();
-    fireEvent.click(screen.getByRole('button', { name: 'Skip' }));
+    expect(screen.getByRole('dialog', { name: 'DebateLab is slowly becoming DebateOwl' })).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Skip animation' }));
+    expect(screen.queryByRole('button', { name: 'Skip animation' })).toBeNull();
+    expect(shouldShowIntro({ search: '', storage, env: appEnv })).toBe(true);
+    fireEvent.click(screen.getByRole('button', { name: 'Got it' }));
     expect(shouldShowIntro({ search: '', storage, env: appEnv })).toBe(false);
   });
 
@@ -63,12 +65,13 @@ describe('DebateOwlIntro', () => {
     expect(shouldShowIntro({ search: '', storage, env: appEnv })).toBe(false);
   });
 
-  it('the last step closes with Got it and marks it seen', () => {
-    const storage = renderIntro();
-    fireEvent.click(screen.getByRole('button', { name: 'Next' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Next' }));
-    expect(shouldShowIntro({ search: '', storage, env: appEnv })).toBe(true);
-    fireEvent.click(screen.getByRole('button', { name: 'Got it' }));
-    expect(shouldShowIntro({ search: '', storage, env: appEnv })).toBe(false);
+  it('introduces the owl as DebateOwl until it has a name', () => {
+    renderIntro('');
+    expect(screen.getByText("Hi, I'm DebateOwl!")).toBeTruthy();
+  });
+
+  it('uses the owl name once one is set', () => {
+    renderIntro('Hootie');
+    expect(screen.getByText("Hi, I'm Hootie from DebateOwl!")).toBeTruthy();
   });
 });

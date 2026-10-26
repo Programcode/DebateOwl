@@ -4,6 +4,12 @@
  */
 export const INTRO_SEEN_KEY = 'debateowl_intro_seen_v1';
 
+/**
+ * The owl's personal name, the same in every language. Empty until one is picked from the
+ * shortlist; while empty the owl introduces itself as DebateOwl.
+ */
+export const OWL_NAME = '';
+
 /** `?intro=show` opens the welcome even when seen or under test; `?intro=skip` keeps it closed. */
 export const INTRO_QUERY_PARAM = 'intro';
 

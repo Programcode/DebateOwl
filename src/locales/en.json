@@ -1489,24 +1489,15 @@
     "debateCurrentDesc": "Everything in DebateLab belongs to your Current Debate: its motion, its sources, and your results. Open or change it here."
   },
   "debateOwlIntro": {
-    "owlName": "",
-    "greeting": "Hi there!",
-    "greetingNamed": "Hi, I'm {{name}}!",
-    "hello": "This is DebateOwl, the new look of DebateLab.",
-    "whatChanged": "Here's what changed.",
-    "changesTitle": "Same app, new look",
-    "freshLookTitle": "A fresh look",
-    "freshLookDesc": "New colors, rounder letters and buttons that press down when you click them.",
-    "owlGuideTitle": "A friendlier owl guide",
-    "owlGuideDesc": "The owl keeps you company around the app, from the home screen to your history.",
-    "sameTitle": "Everything you use is still where it was",
-    "sameDesc": "Same tools, same menus, same steps.",
-    "nameTitle": "A new name, slowly",
-    "nameBody": "To help people find us on Google, we're slowly moving DebateLab to the name DebateOwl. Your account, cases and history stay exactly the same.",
-    "skip": "Skip",
-    "next": "Next",
-    "done": "Got it",
-    "progress": "Step {{step}} of {{steps}}"
+    "greeting": "Hi, I'm DebateOwl!",
+    "greetingNamed": "Hi, I'm {{name}} from DebateOwl!",
+    "newLook": "DebateLab has a new look.",
+    "company": "I'll keep you company while things load.",
+    "sameTools": "Same tools as before, in the same spots.",
+    "noticeTitle": "DebateLab is slowly becoming DebateOwl",
+    "noticeBody": "Same app, same account, same saved work, with a new look and name. We're moving to help more people find us on Google.",
+    "skipAnimation": "Skip animation",
+    "done": "Got it"
   },
   "timer": {
     "title": "Debate Timer",

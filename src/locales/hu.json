@@ -1489,24 +1489,15 @@
     "debateCurrentDesc": "A DebateLabban minden az aktuális vitádhoz tartozik: a tételéhez, a forrásaihoz és az eredményeidhez. Itt nyithatod meg vagy cserélheted le."
   },
   "debateOwlIntro": {
-    "owlName": "",
-    "greeting": "Szia!",
-    "greetingNamed": "Szia, {{name}} vagyok!",
-    "hello": "Ez a DebateOwl, a DebateLab új külseje.",
-    "whatChanged": "Megmutatom, mi változott.",
-    "changesTitle": "Ugyanaz az alkalmazás, új külsővel",
-    "freshLookTitle": "Friss külső",
-    "freshLookDesc": "Új színek, kerekebb betűk és gombok, amelyek kattintásra lenyomódnak.",
-    "owlGuideTitle": "Barátságosabb bagolykísérő",
-    "owlGuideDesc": "A bagoly végigkísér az alkalmazásban, a kezdőlaptól az előzményekig.",
-    "sameTitle": "Minden ott van, ahol eddig",
-    "sameDesc": "Ugyanazok az eszközök, menük és lépések.",
-    "nameTitle": "Új név, fokozatosan",
-    "nameBody": "Hogy könnyebben megtaláljanak minket a Google-ben, a DebateLab nevét fokozatosan DebateOwlra cseréljük. A fiókod, az eseteid és az előzményeid pontosan ugyanazok maradnak.",
-    "skip": "Kihagyás",
-    "next": "Következő",
-    "done": "Értem",
-    "progress": "{{step}}/{{steps}}. lépés"
+    "greeting": "Szia, én vagyok a DebateOwl!",
+    "greetingNamed": "Szia, {{name}} vagyok a DebateOwltól!",
+    "newLook": "A DebateLab új külsőt kapott.",
+    "company": "Veled leszek, amíg valami betöltődik.",
+    "sameTools": "Ugyanazok az eszközök, ugyanott, ahol eddig.",
+    "noticeTitle": "A DebateLabből lassan DebateOwl lesz",
+    "noticeBody": "Ugyanaz az alkalmazás, ugyanaz a fiók, ugyanazok a mentett munkák, csak új külsővel és új névvel. Azért váltunk, hogy többen megtaláljanak minket a Google-ben.",
+    "skipAnimation": "Animáció kihagyása",
+    "done": "Értem"
   },
   "timer": {
     "title": "Vitaidőmérő",
