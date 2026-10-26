@@ -6,7 +6,7 @@ import { StaticRouter } from 'react-router-dom';
 import i18n from '@/i18n';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { AuthContext, type AuthContextValue } from '@/lib/supabase/auth-context';
-import { BRAND, DEFINITION, ORGANIZATION, PAGE_HEADS, PRICING, PRODUCT, SITE_ORIGIN, factsAsOf, type PageHead, type PrerenderedRoute } from '@/lib/seo/pages';
+import { BRAND, DEFINITION, ORGANIZATION, ORGANIZATION_SAME_AS, PAGE_HEADS, PRICING, PRODUCT, SITE_ORIGIN, factsAsOf, type PageHead, type PrerenderedRoute } from '@/lib/seo/pages';
 import LandingPage from '@/pages/LandingPage';
 import TermsPage from '@/pages/TermsPage';
 import PrivacyPage from '@/pages/PrivacyPage';
@@ -73,6 +73,7 @@ function landingQuestions(): Array<[string, string]> {
   return [
     [i18n.t('shortAnswer.question'), i18n.t('shortAnswer.answer', { asOf })],
     [i18n.t('faq.q6'), i18n.t('faq.a6', { modes: PREP_MODE_COUNT })],
+    [i18n.t('faq.q7'), i18n.t('faq.a7')],
     [i18n.t('faq.q1'), i18n.t('faq.a1', { asOf })],
     ...[2, 3, 4, 5].map((n): [string, string] => [i18n.t(`faq.q${n}`), i18n.t(`faq.a${n}`)]),
   ];
@@ -90,19 +91,21 @@ function landingStructuredData(dateModified: string | undefined) {
         name: ORGANIZATION,
         url: `${SITE_ORIGIN}/`,
         logo: `${SITE_ORIGIN}/icon-1024.png`,
+        sameAs: ORGANIZATION_SAME_AS,
       },
       {
         '@type': 'WebSite',
         '@id': WEBSITE_ID,
         url: `${SITE_ORIGIN}/`,
-        name: BRAND,
+        name: PRODUCT,
+        alternateName: [BRAND, new URL(SITE_ORIGIN).host],
         publisher: { '@id': ORGANIZATION_ID },
       },
       {
         '@type': 'SoftwareApplication',
         '@id': `${SITE_ORIGIN}/#software`,
-        name: BRAND,
-        alternateName: PRODUCT,
+        name: PRODUCT,
+        alternateName: BRAND,
         applicationCategory: 'EducationalApplication',
         operatingSystem: 'Web',
         url: `${SITE_ORIGIN}/`,

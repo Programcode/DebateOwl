@@ -28,11 +28,11 @@ export type ToolPageRoute = Exclude<ToolRoute, '/tools'>;
 
 /** The last time each page's content changed in substance; bump it with the change. */
 export const TOOL_PAGES_MODIFIED: Record<ToolRoute, string> = {
-  '/tools': '2026-10-22',
-  '/tools/debate-timer': '2026-10-22',
+  '/tools': '2026-10-26',
+  '/tools/debate-timer': '2026-10-26',
   '/tools/debate-motion-generator': '2026-10-22',
-  '/tools/debate-flow-sheet': '2026-10-22',
-  '/tools/speech-time-calculator': '2026-10-22',
+  '/tools/debate-flow-sheet': '2026-10-26',
+  '/tools/speech-time-calculator': '2026-10-26',
 };
 
 export interface FaqEntry {

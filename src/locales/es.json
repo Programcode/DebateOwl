@@ -893,8 +893,8 @@
     "dismissError": "No se pudo descartar este anuncio."
   },
   "hero": {
-    "headline": "Prepara casos y practica rondas con IA",
-    "subheadline": "DebateLab es una app de preparación y práctica de debate con IA para estudiantes y debatientes de competición que construye casos estructurados, encuentra los puntos débiles de los argumentos, investiga evidencia con citas y organiza rondas de práctica cronometradas contra un oponente de IA.",
+    "headline": "{{product}}: preparación y práctica de debate con IA",
+    "subheadline": "Prepara casos y practica rondas con IA. {{product}} construye casos estructurados, encuentra los puntos débiles de los argumentos, investiga evidencia con citas y organiza rondas de práctica cronometradas contra un oponente de IA, para estudiantes y debatientes de competición.",
     "trialBadge": "Prueba gratis de 3 días",
     "requestsBadge": "Preparación diaria con IA",
     "requestsBadgeValue": "Incluido",
@@ -1033,7 +1033,44 @@
     "a5": "¡Sí! Guarda casos, lluvias de ideas y chats en el Historial. Exporta a Word, PDF o Google Docs.",
     "subtitle": "Precios, flujo de trabajo y detalles del producto de un vistazo.",
     "q6": "¿Qué es DebateLab?",
-    "a6": "DebateLab es una app de preparación y práctica de debate con IA para estudiantes y debatientes de competición. Tiene {{modes}} modos de preparación, entre ellos un generador de casos, un atacante de casos, investigación de evidencia con citas, un coach de IA, Interrogatorio y rondas de Sparring cronometradas contra un oponente de IA, y está disponible en inglés, español y húngaro."
+    "a6": "DebateLab es una app de preparación y práctica de debate con IA para estudiantes y debatientes de competición. Tiene {{modes}} modos de preparación, entre ellos un generador de casos, un atacante de casos, investigación de evidencia con citas, un coach de IA, Interrogatorio y rondas de Sparring cronometradas contra un oponente de IA, y está disponible en inglés, español y húngaro.",
+    "q7": "¿{{product}} es lo mismo que debatelab.ai?",
+    "a7": "No. {{brand}} es un producto distinto, en {{host}}."
+  },
+  "guideHub": {
+    "title": "Guías de debate y herramientas gratis",
+    "subtitle": "Lee una guía antes de tu próxima ronda o abre una herramienta gratis, sin cuenta. Las guías están en inglés.",
+    "practice": "Practica con IA",
+    "formats": "Formatos de debate",
+    "skills": "Guías de habilidades",
+    "tools": "Herramientas gratis",
+    "compare": "Comparar",
+    "links": {
+      "ai-debate-practice": "Práctica de debate con IA",
+      "ai-debate-case-generator": "Generador de casos con IA y citas",
+      "ai-rebuttal-generator": "Generador de refutaciones con IA",
+      "ai-debate-coach": "Coach de debate con IA",
+      "debate-evidence-finder": "Buscador de evidencia para debate",
+      "public-forum-debate": "Public Forum",
+      "lincoln-douglas-debate": "Lincoln-Douglas",
+      "policy-debate": "Policy",
+      "british-parliamentary-debate": "British Parliamentary",
+      "world-schools-debate": "World Schools",
+      "congress-debate": "Debate de Congreso",
+      "how-to-write-a-debate-case": "Cómo escribir un caso de debate",
+      "how-to-practice-rebuttals": "Cómo practicar refutaciones",
+      "debate-clash-points": "Encontrar el choque clave",
+      "debate-fallacies": "Falacias comunes en el debate",
+      "debate-judge-adaptation": "Adaptarte a tu juez",
+      "how-to-prepare-for-a-debate-tournament": "Prepararte para un torneo",
+      "tools": "Todas las herramientas gratis",
+      "tools/debate-timer": "Cronómetro de debate",
+      "tools/debate-motion-generator": "Generador de mociones",
+      "tools/debate-flow-sheet": "Hoja de flujo",
+      "tools/speech-time-calculator": "Calculadora de tiempo de discurso",
+      "best-ai-debate-tools": "Las mejores herramientas de IA para debate",
+      "debatelab-vs-chatgpt": "{{product}} frente a ChatGPT"
+    }
   },
   "finalCta": {
     "title": "¿Listo para construir tu próximo caso ganador?",
