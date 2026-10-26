@@ -1,0 +1,40 @@
+$ curl -s https://debate.pi-stack.org/hu   # local dist/, served like Vercel
+HTTP 200
+<html lang="hu">
+<title>DebateLab – MI-alapú vitafelkészítés és gyakorlás diákoknak</title>
+<link rel="canonical" href="https://debate.pi-stack.org/hu" />
+<link rel="alternate" hreflang="en" href="https://debate.pi-stack.org/" />
+<link rel="alternate" hreflang="hu" href="https://debate.pi-stack.org/hu" />
+<link rel="alternate" hreflang="es" href="https://debate.pi-stack.org/es" />
+<link rel="alternate" hreflang="x-default" href="https://debate.pi-stack.org/" />
+
+$ curl -s https://debate.pi-stack.org/es   # local dist/, served like Vercel
+HTTP 200
+<html lang="es">
+<title>DebateLab – Preparación y práctica de debate con IA para estudiantes</title>
+<link rel="canonical" href="https://debate.pi-stack.org/es" />
+<link rel="alternate" hreflang="en" href="https://debate.pi-stack.org/" />
+<link rel="alternate" hreflang="hu" href="https://debate.pi-stack.org/hu" />
+<link rel="alternate" hreflang="es" href="https://debate.pi-stack.org/es" />
+<link rel="alternate" hreflang="x-default" href="https://debate.pi-stack.org/" />
+
+$ curl -s https://debate.pi-stack.org/hu/tools/vita-idozito   # local dist/, served like Vercel
+HTTP 200
+<html lang="hu">
+<title>Ingyenes vitaidőmérő PF, LD, Policy, BP és World Schools formátumhoz | DebateLab by Pi-Stack</title>
+<link rel="canonical" href="https://debate.pi-stack.org/hu/tools/vita-idozito" />
+<link rel="alternate" hreflang="en" href="https://debate.pi-stack.org/tools/debate-timer" />
+<link rel="alternate" hreflang="hu" href="https://debate.pi-stack.org/hu/tools/vita-idozito" />
+<link rel="alternate" hreflang="es" href="https://debate.pi-stack.org/es/tools/cronometro-debate" />
+<link rel="alternate" hreflang="x-default" href="https://debate.pi-stack.org/tools/debate-timer" />
+
+$ curl -s https://debate.pi-stack.org/es/tools/cronometro-debate   # local dist/, served like Vercel
+HTTP 200
+<html lang="es">
+<title>Cronómetro de debate gratis para PF, LD, Policy, BP y World Schools | DebateLab by Pi-Stack</title>
+<link rel="canonical" href="https://debate.pi-stack.org/es/tools/cronometro-debate" />
+<link rel="alternate" hreflang="en" href="https://debate.pi-stack.org/tools/debate-timer" />
+<link rel="alternate" hreflang="hu" href="https://debate.pi-stack.org/hu/tools/vita-idozito" />
+<link rel="alternate" hreflang="es" href="https://debate.pi-stack.org/es/tools/cronometro-debate" />
+<link rel="alternate" hreflang="x-default" href="https://debate.pi-stack.org/tools/debate-timer" />
+
