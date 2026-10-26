@@ -194,7 +194,7 @@ export function AttackForm({ onSubmit, isLoading, importedCase, debateContext = 
           <DebateContextControl feature="attack" side={requestSide('attack', currentValues)} hidden={!debateContext} />
 
           {/* Submit Button */}
-          <Button type="submit" className="w-full h-12" disabled={isLoading}>
+          <Button type="submit" size="lg" className="w-full" disabled={isLoading} aria-busy={isLoading}>
             {isLoading ? (
               <span className="inline-flex items-center">
                 <LoadingSpinner size="sm" className="mr-2" />

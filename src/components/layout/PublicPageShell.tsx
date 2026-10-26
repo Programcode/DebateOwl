@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { OwlMark } from '@/components/brand/Owl';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '@/lib/supabase/auth-context';
@@ -26,10 +27,8 @@ export function PublicPageShell({ children, className }: { children: ReactNode; 
       <header className="border-b border-border/60">
         <div className="container flex h-14 items-center justify-between gap-4 px-4">
           <Link to={home} className="flex items-center gap-2 rounded-md pointer-coarse:min-h-11">
-            <span className="flex h-8 w-8 items-center justify-center overflow-hidden rounded-md bg-white dark:bg-slate-800">
-              <img src="/favicon-72.png" alt={t('common.logoAlt')} width={32} height={32} className="h-full w-full object-cover" />
-            </span>
-            <span className="font-semibold tracking-tight text-foreground">DebateLab</span>
+            <OwlMark size={32} alt={t('common.logoAlt')} />
+            <span className="font-display text-lg font-[600] tracking-[-0.01em] text-heading">DebateLab</span>
           </Link>
           <LanguageSwitcher />
         </div>

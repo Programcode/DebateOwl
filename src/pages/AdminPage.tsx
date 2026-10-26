@@ -1,4 +1,6 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react';
+import { OwlLoader } from '@/components/ui/loading-spinner';
+import { LoadingSpinner } from '@/components/ui/loading-spinner';
 import { useTranslation } from 'react-i18next';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -10,7 +12,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { useToast } from '@/hooks/use-toast';
 import { supabase, SUPABASE_URL } from '@/lib/supabase/client';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
-import { Activity, Users, DollarSign, AlertCircle, Shield, Settings2, Loader2, Ban, UserCheck, Ticket, CreditCard, Gift, Megaphone, KeyRound, Copy, RotateCcw } from 'lucide-react';
+import { Activity, Users, DollarSign, AlertCircle, Shield, Settings2, Ban, UserCheck, Ticket, CreditCard, Gift, Megaphone, KeyRound, Copy, RotateCcw } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import {
     Dialog,
@@ -294,7 +296,7 @@ function DemoAccessPanel({ codes, loading, error, onCreate, onDisable, onReset }
                         </div>
                         {formError && <p className="text-sm text-destructive" role="alert">{formError}</p>}
                         <Button type="submit" className="w-full" disabled={submitting}>
-                            {submitting ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : <KeyRound className="mr-1 h-4 w-4" />}
+                            {submitting ? <LoadingSpinner size="sm" className="mr-1" /> : <KeyRound className="mr-1 h-4 w-4" />}
                             {submitting ? t('admin.creating') : t('admin.createDemoCode')}
                         </Button>
                     </form>
@@ -413,7 +415,7 @@ function DemoAccessPanel({ codes, loading, error, onCreate, onDisable, onReset }
                     <DialogFooter>
                         <Button type="button" variant="outline" onClick={() => setPendingAction(null)} disabled={actionLoading}>{t('admin.cancel')}</Button>
                         <Button type="button" variant={pendingAction?.type === 'disable' ? 'destructive' : 'default'} onClick={confirmAction} disabled={actionLoading}>
-                            {actionLoading && <Loader2 className="mr-1 h-4 w-4 animate-spin" />}
+                            {actionLoading && <LoadingSpinner size="sm" className="mr-1" />}
                             {pendingAction?.type === 'disable' ? t('admin.disableCode') : t('admin.resetUseCount')}
                         </Button>
                     </DialogFooter>
@@ -724,7 +726,7 @@ export default function AdminPage() {
     if (loading) {
         return (
             <div className="container py-8 flex items-center justify-center min-h-[60vh]">
-                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                <OwlLoader message={t('common.loading')} />
             </div>
         );
     }
@@ -1068,7 +1070,7 @@ export default function AdminPage() {
                                 {usersHasMore && (
                                     <div className="mt-4 flex justify-center">
                                         <Button variant="outline" onClick={() => void loadMoreUsers()} disabled={loadingMoreUsers}>
-                                            {loadingMoreUsers && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                                            {loadingMoreUsers && <LoadingSpinner size="sm" className="mr-2" />}
                                             {loadingMoreUsers ? t('admin.users.loadingMore') : t('admin.users.loadMore')}
                                         </Button>
                                     </div>
@@ -1335,7 +1337,7 @@ export default function AdminPage() {
                     <DialogFooter>
                         <Button type="button" variant="outline" onClick={() => setRoleChange(null)} disabled={roleSaving}>{t('admin.cancel')}</Button>
                         <Button type="button" variant={roleChange?.role === 'banned' ? 'destructive' : 'default'} onClick={() => void confirmRoleChange()} disabled={roleSaving}>
-                            {roleSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                            {roleSaving && <LoadingSpinner size="sm" className="mr-2" />}
                             {roleChange?.role === 'admin'
                                 ? t('admin.users.makeAdmin')
                                 : roleChange?.role === 'banned'
@@ -1387,7 +1389,7 @@ export default function AdminPage() {
                             {t('admin.giftTrial.cancel')}
                         </Button>
                         <Button onClick={handleGiftTrial} disabled={giftSubmitting || giftDays < 1 || giftDays > 365}>
-                            {giftSubmitting ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Gift className="h-4 w-4 mr-1" />}
+                            {giftSubmitting ? <LoadingSpinner size="sm" className="mr-1" /> : <Gift className="h-4 w-4 mr-1" />}
                             {t('admin.giftTrial.action', { count: giftDays })}
                         </Button>
                     </DialogFooter>

@@ -47,10 +47,10 @@
       },
       {
         "name": "tap",
-        "summary": "tap button \"Start Brainstorming\"",
+        "summary": "tap button \"Start brainstorming\"",
         "target": {
           "role": "button",
-          "name": "Start Brainstorming"
+          "name": "Start brainstorming"
         }
       }
     ],
@@ -66,7 +66,7 @@
       "callIndex": 0,
       "agent": "default"
     },
-    "summary": "The brainstorm step was completed successfully: (1) navigated to /app/brainstorm, (2) entered motion 'This House would ban zoos', (3) when the app offered to start a new debate with this motion, clicked 'Start debate' to confirm, (4) clicked 'Start Brainstorming' which generated 5 argument angles (…",
+    "summary": "The brainstorm step was completed successfully: (1) navigated to /app/brainstorm, (2) entered motion 'This House would ban zoos', (3) when the app offered to start a new debate with this motion, clicked 'Start debate' to confirm, (4) clicked 'Start brainstorming' which generated 5 argument angles (…",
     "startPath": "/app/brainstorm",
     "endPath": "/app/brainstorm",
     "endAnchors": [

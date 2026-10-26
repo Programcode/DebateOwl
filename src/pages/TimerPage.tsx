@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Play, Pause, RotateCcw, Bell, Volume2, VolumeX, Keyboard } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
 import { PageHeader } from '@/components/layout/PageHeader';
+import { Owl } from '@/components/brand/Owl';
 import { ClockAnnouncer, RoundClock, clockTone } from '@/components/features/practice/RoundClock';
 import { displaySeconds, pauseClock, remainingMs, startClock, type ClockState } from '@/lib/timer-clock';
 import { timerShortcutBlocked } from '@/lib/timer-shortcuts';
@@ -236,7 +237,11 @@ export default function TimerPage() {
   return (
     <div className="container py-8 px-4">
       <div className="max-w-3xl mx-auto text-center">
-        <PageHeader className="mb-8 sm:justify-center" title={t('timer.title')} />
+        <PageHeader
+          className="mb-8 sm:justify-center"
+          // The timekeeper owl leads the title; it is decorative, so the heading still reads "Debate Timer".
+          title={<span className="inline-flex items-center gap-3"><Owl pose="timekeeper" size={60} priority className="-my-3" />{t('timer.title')}</span>}
+        />
 
         <div className="flex justify-between items-center mb-6 max-w-xl mx-auto">
           <Select value={formatId} onValueChange={(val) => {

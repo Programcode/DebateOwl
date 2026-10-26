@@ -10,7 +10,7 @@ const FinalCTA = () => {
 
     return (
         <section className="relative overflow-hidden py-24">
-            <div className="absolute inset-0 bg-linear-to-br from-primary/10 via-secondary/10 to-emerald-200/20 dark:to-emerald-900/20" />
+            <div className="absolute inset-0 bg-linear-to-br from-primary/10 via-secondary/10 to-[rgb(255_196_20/0.14)]" />
             <div className="absolute inset-0 animated-grid opacity-45" />
 
             <div className="orb orb-primary -top-40 left-0 h-80 w-80 opacity-55" />
@@ -18,7 +18,7 @@ const FinalCTA = () => {
 
             <div className="section-container relative z-10">
                 <Reveal className="mx-auto max-w-3xl text-center">
-                    <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary/10 px-4 py-2 text-sm text-foreground/85">
+                    <div className="mb-6 inline-flex items-center gap-2 rounded-full border-2 border-brand-tint-border bg-brand-tint px-4 py-2 text-sm font-bold text-foreground">
                         <Sparkles aria-hidden="true" className="h-4 w-4 text-primary" />
                         {t('finalCta.freeTrialAvailable')}
                     </div>

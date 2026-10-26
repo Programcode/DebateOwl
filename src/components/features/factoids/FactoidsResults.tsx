@@ -35,7 +35,7 @@ interface FactoidsResultsProps {
 
 const verificationConfig = {
   verified: { icon: CheckCircle, color: 'text-primary', bg: 'bg-primary/10', labelKey: 'factoidsResults.verified' },
-  unverified: { icon: AlertTriangle, color: 'text-amber-500', bg: 'bg-amber-500/10', labelKey: 'factoidsResults.unverified' },
+  unverified: { icon: AlertTriangle, color: 'text-amber-600 dark:text-amber-400', bg: 'bg-amber-500/10', labelKey: 'factoidsResults.unverified' },
   pending: { icon: Clock, color: 'text-muted-foreground', bg: 'bg-muted', labelKey: 'factoidsResults.pending' },
 };
 
@@ -130,13 +130,13 @@ function FactoidCard({ factoid, onSave }: { factoid: Factoid, onSave?: FactoidsR
             {t('factoidsResults.viewSource')} <ExternalLink className="h-3 w-3" />
           </a>
         ) : (
-          <span className="text-amber-500 text-xs">{t('factoidsResults.urlNeedsVerification')}</span>
+          <span className="text-amber-600 dark:text-amber-400 text-xs">{t('factoidsResults.urlNeedsVerification')}</span>
         )}
       </div>
 
       {/* How to Use */}
       <div className="flex items-start gap-2 text-sm">
-        <Lightbulb className="h-4 w-4 text-amber-500 mt-0.5 shrink-0" />
+        <Lightbulb className="h-4 w-4 text-amber-600 dark:text-amber-400 mt-0.5 shrink-0" />
         <div>
           <span className="font-medium text-muted-foreground">{t('factoidsResults.howToUse')} </span>
           <span className="text-foreground">{factoid.howToUse}</span>
@@ -248,13 +248,13 @@ export function FactoidsResults({ result, discoveredSources, onDiscuss, onSave, 
       {warnings.length > 0 && (
         <div className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-4">
           <div className="flex items-center gap-2 mb-2">
-            <AlertTriangle className="h-5 w-5 text-amber-500" />
+            <AlertTriangle className="h-5 w-5 text-amber-600 dark:text-amber-400" />
             <span className="font-medium text-amber-600">{t('factoidsResults.importantNotes')}</span>
           </div>
           <ul className="space-y-1 text-sm">
             {warnings.map((warning, i) => (
               <li key={i} className="flex items-start gap-2">
-                <span className="text-amber-500">•</span>
+                <span className="text-amber-600 dark:text-amber-400">•</span>
                 <span className="text-foreground">{warning}</span>
               </li>
             ))}

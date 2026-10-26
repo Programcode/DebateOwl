@@ -15,10 +15,10 @@
       },
       {
         "name": "tap",
-        "summary": "tap button \"Find Weaknesses\"",
+        "summary": "tap button \"Find weaknesses\"",
         "target": {
           "role": "button",
-          "name": "Find Weaknesses"
+          "name": "Find weaknesses"
         }
       }
     ],
@@ -34,7 +34,7 @@
       "callIndex": 0,
       "agent": "default"
     },
-    "summary": "Argument entered and weaknesses found successfully. The critique shows 1 major weakness (evidential gap on congestion claim), a hasty generalization fallacy, cross-examination questions, weighing analysis, and improvement suggestions. The Find Weaknesses action produced the expected analysis output.",
+    "summary": "Argument entered and weaknesses found successfully. The critique shows 1 major weakness (evidential gap on congestion claim), a hasty generalization fallacy, cross-examination questions, weighing analysis, and improvement suggestions. The Find weaknesses action produced the expected analysis output.",
     "startPath": "/app/attack",
     "endPath": "/app/attack",
     "endAnchors": [

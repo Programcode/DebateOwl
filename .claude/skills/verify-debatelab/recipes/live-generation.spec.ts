@@ -38,7 +38,7 @@ test("live-generate: a case fills in section by section while the model writes i
   await page.goto("/app/generate");
   await expect(page.getByRole("textbox", { name: "Motion / Topic *" })).toHaveValue(motion);
   const request = aiRequest(page, "generate");
-  await page.getByRole("button", { name: "Generate Debate Case" }).click();
+  await page.getByRole("button", { name: "Generate debate case" }).click();
 
   // Before the answer is complete, the draft shows what is written so far.
   const draft = page.getByTestId("live-draft");
@@ -63,7 +63,7 @@ test("live-generate: a case fills in section by section while the model writes i
 test("live-cancel: Cancel stops a live run and leaves no draft or result", async ({ signedIn: page, evidence }) => {
   await startDebate(page, motion);
   await page.goto("/app/generate");
-  await page.getByRole("button", { name: "Generate Debate Case" }).click();
+  await page.getByRole("button", { name: "Generate debate case" }).click();
   const draft = page.getByTestId("live-draft");
   await expect(draft).toBeVisible({ timeout: AI_TIMEOUT });
   await draft.getByRole("button", { name: "Cancel" }).click();
@@ -79,13 +79,13 @@ test("live-tools: Attack, Brainstorm, Factoids, and cited Ask stream their answe
   await page.goto("/app/attack");
   await page.getByLabel("Your Argument *").fill("Free transit raises ridership, so it always pays for itself.");
   let request = aiRequest(page, "attack");
-  await page.getByRole("button", { name: "Find Weaknesses" }).click();
+  await page.getByRole("button", { name: "Find weaknesses" }).click();
   await expectLiveStream(await request);
   await evidence.shot("01-attack");
 
   await page.goto("/app/brainstorm");
   request = aiRequest(page, "brainstorm");
-  await page.getByRole("button", { name: "Start Brainstorming" }).click();
+  await page.getByRole("button", { name: "Start brainstorming" }).click();
   await expectLiveStream(await request);
   await evidence.shot("02-brainstorm");
 

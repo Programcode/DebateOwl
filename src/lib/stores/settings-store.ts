@@ -243,7 +243,8 @@ export const useSettingsStore = create<SettingsState>()(
       ownerUserId: null as string | null,
       language: 'en',
       outputLanguage: 'en',
-      theme: 'system',
+      // Light by default; System and Dark are a choice in Settings or the header toggle.
+      theme: 'light',
       customSystemPrompt: undefined as string | undefined,
       featureConfigs: getDefaultFeatureConfigs(),
       wikiResearchEnabled: false,
@@ -351,7 +352,7 @@ export const useSettingsStore = create<SettingsState>()(
         linkedLanguage = null;
         const language = linked ?? (neverSaved ? get().language : isAppLanguage(data.language) ? data.language : 'en');
         const outputLanguage = neverSaved ? get().outputLanguage : isAppLanguage(data.output_language) ? data.output_language : 'en';
-        const theme = neverSaved ? get().theme : (data.theme as 'light' | 'dark' | 'system') || 'system';
+        const theme = neverSaved ? get().theme : (data.theme as 'light' | 'dark' | 'system') || 'light';
         const customSystemPrompt = data.custom_system_prompt || undefined;
         await applyAppLanguage(language);
         set({
@@ -388,7 +389,7 @@ export const useSettingsStore = create<SettingsState>()(
           ownerUserId: null,
           language,
           outputLanguage: 'en',
-          theme: 'system',
+          theme: 'light',
           customSystemPrompt: undefined,
           featureConfigs: getDefaultFeatureConfigs(),
           wikiResearchEnabled: false,
@@ -430,7 +431,7 @@ export const useSettingsStore = create<SettingsState>()(
         state.featureConfigs = normalizeFeatureConfigs(state.featureConfigs);
         if (!isAppLanguage(state.language)) state.language = 'en';
         if (!isAppLanguage(state.outputLanguage)) state.outputLanguage = 'en';
-        if (!state.theme) state.theme = 'system';
+        if (!state.theme) state.theme = 'light';
         if (typeof state.wikiResearchEnabled !== 'boolean') state.wikiResearchEnabled = false;
         void applyAppLanguage(state.language);
       },

@@ -1,4 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { LoadingSpinner, OwlLoader } from '@/components/ui/loading-spinner';
+import { EmptyState } from '@/components/ui/empty-state';
 import { useTranslation } from 'react-i18next';
 import { DebateRequiredError, DuplicateSourceError, isPendingSource, useSessionStore, type Source } from '@/lib/stores/session-store';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -6,7 +8,7 @@ import { Button, buttonVariants } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Trash2, Plus, Globe, FileText, Database, ShieldCheck, ShieldAlert, ExternalLink, Loader2, Link2, Upload, FolderPlus, Check, Search, Folder, Sparkles, X, Save, Copy, Pencil, FolderMinus } from 'lucide-react';
+import { Trash2, Plus, Globe, FileText, Database, ShieldCheck, ShieldAlert, ExternalLink, Link2, Upload, FolderPlus, Check, Search, Folder, Sparkles, X, Save, Copy, Pencil, FolderMinus } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
@@ -83,7 +85,7 @@ function SourceRow({
         <div className="flex min-w-0 flex-1 items-start gap-3 sm:items-center">
           <div className={`shrink-0 rounded-md p-1.5 ${source.isActive ? 'bg-primary/10 text-primary' : 'bg-muted text-muted-foreground'}`}>
             {pending
-              ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+              ? <LoadingSpinner size="sm" />
               : source.type === 'url' ? <Globe className="h-4 w-4" /> : <FileText className="h-4 w-4" />}
           </div>
           <div className="min-w-0 flex-1">
@@ -821,7 +823,7 @@ export default function LibraryPage() {
                     }}
                   />
                   <Button type="button" variant="secondary" onClick={() => void handleImportUrl()} disabled={isImportingUrl} aria-label={t('libraryPage.importUrl')}>
-                    {isImportingUrl ? <Loader2 className="h-4 w-4 animate-spin" /> : <Link2 className="h-4 w-4" />}
+                    {isImportingUrl ? <LoadingSpinner size="sm" /> : <Link2 className="h-4 w-4" />}
                   </Button>
                 </div>
                 <p className="text-xs text-muted-foreground">{t('libraryPage.importUrlHelp', 'Auto import creates an editable draft. Review it before saving to your library.')}</p>
@@ -831,7 +833,7 @@ export default function LibraryPage() {
                 {/* The real input is invisible, so the label shows its focus ring. */}
                 <Button asChild type="button" variant="outline" className="relative w-full justify-start overflow-hidden has-focus-visible:ring-2 has-focus-visible:ring-ring has-focus-visible:ring-offset-2">
                   <label htmlFor="source-file" className="cursor-pointer" aria-busy={isImportingFile}>
-                    {isImportingFile ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Upload className="h-4 w-4 mr-2" />}
+                    {isImportingFile ? <LoadingSpinner size="sm" className="mr-2" /> : <Upload className="h-4 w-4 mr-2" />}
                     {isImportingFile ? t('libraryPage.readingFile', 'Reading file…') : t('libraryPage.chooseFile')}
                     <input
                       id="source-file"
@@ -855,7 +857,7 @@ export default function LibraryPage() {
                       </p>
                     </div>
                     <Button type="button" size="sm" disabled={isSavingSource} onClick={() => void handleSavePreview()}>
-                      {isSavingSource && <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" />}
+                      {isSavingSource && <LoadingSpinner size="sm" className="mr-2" />}
                       {t('libraryPage.saveImported')}
                     </Button>
                   </div>
@@ -929,7 +931,7 @@ export default function LibraryPage() {
                 {addErrors.content && <p id="new-source-content-error" role="alert" className="text-sm text-destructive">{addErrors.content}</p>}
               </div>
               <Button onClick={() => void handleAdd()} className="w-full" disabled={isSavingSource}>
-                {isSavingSource && <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" />}
+                {isSavingSource && <LoadingSpinner size="sm" className="mr-2" />}
                 {t('libraryPage.saveToLibrary')}
               </Button>
             </CardContent>
@@ -1063,26 +1065,11 @@ export default function LibraryPage() {
             </CardHeader>
             <CardContent className="px-3 sm:px-6">
               {firstLoadPending ? (
-                <div className="flex items-center justify-center gap-2 py-12 text-sm text-muted-foreground" role="status">
-                  <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
-                  {t('libraryPage.loadingSources', 'Loading sources…')}
-                </div>
+                <OwlLoader className="py-10" size={88} message={t('libraryPage.loadingSources', 'Loading sources…')} />
               ) : sourceLibrary.length === 0 ? (
-                <div className="text-center py-12 border-2 border-dashed rounded-lg">
-                  <Database className="h-12 w-12 text-muted-foreground/20 mx-auto mb-4" />
-                  <h3 className="text-lg font-medium">{t('libraryPage.emptyTitle')}</h3>
-                  <p className="text-sm text-muted-foreground max-w-xs mx-auto mt-1">
-                    {t('libraryPage.emptyDesc')}
-                  </p>
-                </div>
+                <EmptyState icon={Database} pose="reading" headingLevel="h3" title={t('libraryPage.emptyTitle')} description={t('libraryPage.emptyDesc')} />
               ) : visibleSources.length === 0 ? (
-                <div className="text-center py-12 border-2 border-dashed rounded-lg">
-                  <Database className="h-12 w-12 text-muted-foreground/20 mx-auto mb-4" />
-                  <h3 className="text-lg font-medium">{t('libraryPage.noMatchingSources', 'No matching sources')}</h3>
-                  <p className="text-sm text-muted-foreground max-w-xs mx-auto mt-1">
-                    {t('libraryPage.noMatchingSourcesDesc', 'Try a different search or folder.')}
-                  </p>
-                </div>
+                <EmptyState icon={Search} pose="surprised" headingLevel="h3" title={t('libraryPage.noMatchingSources', 'No matching sources')} description={t('libraryPage.noMatchingSourcesDesc', 'Try a different search or folder.')} />
               ) : (
                 // Phones scroll the page; only wide screens get a bounded inner list.
                 <div className="lg:max-h-[600px] lg:overflow-y-auto lg:pr-1">
@@ -1147,7 +1134,7 @@ export default function LibraryPage() {
                   .finally(() => setMerging(false));
               }}
             >
-              {merging && <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" />}
+              {merging && <LoadingSpinner size="sm" className="mr-2" />}
               {t('libraryPage.mergeFolders', 'Merge folders')}
             </AlertDialogAction>
           </AlertDialogFooter>
@@ -1281,7 +1268,7 @@ export default function LibraryPage() {
                   </Button>
                 </div>
                 <Button type="button" disabled={isSavingDraft} onClick={() => void handleSaveSourceDraft()}>
-                  {isSavingDraft ? <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" /> : <Save className="mr-2 h-4 w-4" />}
+                  {isSavingDraft ? <LoadingSpinner size="sm" className="mr-2" /> : <Save className="mr-2 h-4 w-4" />}
                   {t('common.save', 'Save')}
                 </Button>
               </SheetFooter>

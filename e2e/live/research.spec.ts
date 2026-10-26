@@ -10,7 +10,7 @@ test("case generation researches the web and cites what it found", async ({ sign
   await page.goto("/app/generate");
   await page.getByRole("textbox", { name: "Motion / Topic *" }).fill("This House would make public transport free at the point of use");
   const response = aiResponse(page, "generate");
-  await page.getByRole("button", { name: "Generate Debate Case" }).click();
+  await page.getByRole("button", { name: "Generate debate case" }).click();
   await chooseForMotion(page, "once");
   const body = await response;
 
@@ -72,7 +72,7 @@ test("a web page imports into the Library", async ({ signedIn: page, user }) => 
   // Sources belong to a debate, so the Library needs a Current Debate first.
   await startDebate(page, "This House would make public transport free");
   await page.goto("/app/library");
-  await page.getByRole("button", { name: "Add Source" }).click();
+  await page.getByRole("button", { name: "Add source" }).click();
   await page.getByRole("textbox", { name: "Import from URL" }).fill(url);
   await page.getByRole("button", { name: "Import URL" }).click();
   await expect(page.getByText("Import preview", { exact: true })).toBeVisible({ timeout: 60_000 });

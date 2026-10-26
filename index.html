@@ -14,8 +14,8 @@
     <!-- The shell for /app, /login and /share. Prerender replaces this with the
          public index directive on pages that have a canonical URL. -->
     <meta name="robots" content="noindex, nofollow" />
-    <meta name="theme-color" content="#f1f5f9" media="(prefers-color-scheme: light)" />
-    <meta name="theme-color" content="#0f172a" media="(prefers-color-scheme: dark)" />
+    <meta name="theme-color" content="#F7FAFE" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#0B1426" media="(prefers-color-scheme: dark)" />
     <link rel="icon" href="/favicon.ico" sizes="48x48" />
     <link rel="icon" type="image/png" href="/favicon.png" sizes="48x48" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" sizes="180x180" />
@@ -37,13 +37,13 @@
     <style>
       body {
         margin: 0;
-        background: #f1f5f9;
-        color: #0f172a;
+        background: #F7FAFE;
+        color: #1F2B40;
       }
 
       html.dark body {
-        background: #0f172a;
-        color: #f8fafc;
+        background: #0B1426;
+        color: #EEF4FF;
       }
 
       #root > .app-startup-shell,
@@ -54,36 +54,66 @@
         min-height: 100dvh;
         padding: 24px;
         box-sizing: border-box;
-        font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        font-family: ui-rounded, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
       }
 
       .app-startup-shell__card {
-        width: min(100%, 28rem);
+        width: min(100%, 24rem);
         padding: 28px;
-        border: 1px solid #cbd5e1;
-        border-radius: 12px;
-        background: #f8fafc;
-        box-shadow: 0 1px 3px rgb(15 23 42 / 0.08);
+        border: 2px solid #E2E9F2;
+        border-radius: 24px;
+        background: #FFFFFF;
+        box-shadow: 0 1px 2px rgb(11 42 110 / 0.06), 0 2px 6px rgb(11 42 110 / 0.06);
         text-align: center;
       }
 
       html.dark .app-startup-shell__card {
-        border-color: #334155;
-        background: #1e293b;
-        box-shadow: 0 1px 3px rgb(0 0 0 / 0.24);
+        border-color: #24324D;
+        background: #131E33;
+        box-shadow: 0 2px 6px rgb(0 0 0 / 0.35);
+      }
+
+      .app-startup-shell__mark {
+        display: block;
+        width: 56px;
+        height: 56px;
+        margin: 0 auto 12px;
+        border-radius: 16px;
+        animation: startup-bob 2.4s cubic-bezier(0.2, 0, 0, 1) infinite;
       }
 
       .app-startup-shell__brand {
-        color: #0284c7;
-        font-size: 0.75rem;
-        font-weight: 700;
-        letter-spacing: 0.16em;
-        text-transform: uppercase;
+        color: #0B2A6E;
+        font-size: 1.125rem;
+        font-weight: 800;
+        letter-spacing: -0.01em;
+      }
+
+      html.dark .app-startup-shell__brand {
+        color: #FFFFFF;
       }
 
       .app-startup-shell__status {
-        margin: 12px 0 0;
-        font-size: 1rem;
+        margin: 6px 0 0;
+        color: #526380;
+        font-size: 0.9375rem;
+        font-weight: 600;
+      }
+
+      html.dark .app-startup-shell__status {
+        color: #A9B7C9;
+      }
+
+      @keyframes startup-bob {
+        50% {
+          transform: translateY(-4px);
+        }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        .app-startup-shell__mark {
+          animation: none;
+        }
       }
 
       #root > .app-bootstrap-error {
@@ -101,13 +131,19 @@
 
       .app-bootstrap-error button {
         border: 0;
-        border-radius: 8px;
-        padding: 10px 16px;
-        background: #0284c7;
-        color: #f8fafc;
+        border-radius: 18px;
+        padding: 12px 20px;
+        background: #0A6FF0;
+        box-shadow: 0 4px 0 #0342A8;
+        color: #FFFFFF;
         cursor: pointer;
         font: inherit;
-        font-weight: 600;
+        font-weight: 700;
+      }
+
+      .app-bootstrap-error button:active {
+        transform: translateY(4px);
+        box-shadow: 0 0 0 #0342A8;
       }
     </style>
   </head>
@@ -116,6 +152,7 @@
     <div id="root">
       <main class="app-startup-shell" data-startup-shell aria-busy="true" aria-label="DebateLab is loading">
         <div class="app-startup-shell__card">
+          <img class="app-startup-shell__mark" src="/owl-mark.svg" alt="" width="56" height="56" />
           <span class="app-startup-shell__brand">DebateLab</span>
           <p class="app-startup-shell__status" data-startup-status role="status">Loading DebateLab</p>
         </div>

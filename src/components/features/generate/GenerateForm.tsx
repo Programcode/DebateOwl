@@ -294,7 +294,7 @@ export function GenerateForm({ onSubmit, isLoading, debatePrefill = true }: Gene
           <DebateContextControl feature="generate" side={requestSide('generate', currentValues)} hidden={!debatePrefill} />
 
           {/* Submit Button */}
-          <Button type="submit" className="w-full h-12" disabled={isLoading} aria-busy={isLoading} data-tour="generate-button">
+          <Button type="submit" size="lg" className="w-full" disabled={isLoading} aria-busy={isLoading} data-tour="generate-button">
             {isLoading ? (
               <span className="inline-flex items-center">
                 <LoadingSpinner size="sm" className="mr-2" />

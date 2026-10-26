@@ -5,7 +5,7 @@ test.skip(!stackReady, "Local full stack is required (run ./.superset/db-gate.sh
 test("Attack analyses a pasted case", async ({ signedIn: page }) => {
   await page.goto("/app/attack");
   await page.getByLabel("Your Argument *").fill("Free transit cuts congestion because riders leave their cars at home.");
-  await page.getByRole("button", { name: "Find Weaknesses" }).click();
+  await page.getByRole("button", { name: "Find weaknesses" }).click();
 
   await expectResult(page, `${MARK} weakness`);
   expect((await providerCall("attack")).user).toContain("riders leave their cars at home");
@@ -14,7 +14,7 @@ test("Attack analyses a pasted case", async ({ signedIn: page }) => {
 test("Brainstorm returns ranked angles", async ({ signedIn: page }) => {
   await page.goto("/app/brainstorm");
   await page.getByLabel("Motion / Topic *").fill("Universal basic income should replace targeted welfare");
-  await page.getByRole("button", { name: "Start Brainstorming" }).click();
+  await page.getByRole("button", { name: "Start brainstorming" }).click();
   await chooseForMotion(page, "create");
 
   await expectResult(page, `${MARK} idea 1`);

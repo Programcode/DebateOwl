@@ -30,6 +30,7 @@ async function signInAsCanary(page: Page, { aiRequest }: { aiRequest: boolean })
   await page.addInitScript((session) => {
     localStorage.setItem("debate-auth-production", JSON.stringify(session));
     localStorage.setItem("debate-trainer-onboarding", JSON.stringify({ state: { hasCompletedOnboarding: true, isTourRunning: false }, version: 0 }));
+    localStorage.setItem("debateowl_intro_seen_v1", "canary");
   }, data.session);
 }
 
@@ -82,7 +83,7 @@ test("the AI function rejects unauthenticated calls instead of crashing", async 
 test("the canary account signs in and loads its account", async ({ page }) => {
   await signInAsCanary(page, { aiRequest: false });
   await page.goto("/app/generate");
-  await expect(page.getByRole("button", { name: "Generate Debate Case" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Generate debate case" })).toBeVisible();
   await page.goto("/app/settings");
   await expect(page.getByText("Pro", { exact: true })).toBeVisible();
 });
@@ -115,7 +116,7 @@ test("the canary account generates a case", async ({ page }) => {
   await pickBasicDefault(page, "generate");
   await page.getByRole("textbox", { name: "Motion / Topic *" }).fill("This House would make public transport free");
   const generated = page.waitForResponse((response) => response.url().endsWith("/functions/v1/ai") && response.request().method() === "POST", { timeout: 150_000 });
-  await page.getByRole("button", { name: "Generate Debate Case" }).click();
+  await page.getByRole("button", { name: "Generate debate case" }).click();
   // Use the motion once so the canary account does not collect production debates.
   await page.getByRole("dialog", { name: /^(Start a debate with this motion\?|This is a different motion)$/ })
     .getByRole("button", { name: /^(Not now, use it once|Use once without saving to a debate)$/ })

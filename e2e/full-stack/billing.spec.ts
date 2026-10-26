@@ -23,7 +23,7 @@ async function tier(userId: string) {
 async function brainstorm(page: Page) {
   await page.goto("/app/brainstorm");
   await page.getByLabel("Motion / Topic *").fill("Public transport should be free");
-  await page.getByRole("button", { name: "Start Brainstorming" }).click();
+  await page.getByRole("button", { name: "Start brainstorming" }).click();
   await chooseForMotion(page, "once");
 }
 
@@ -126,7 +126,7 @@ test("signed Stripe webhooks grant and revoke Pro, and forged ones change nothin
 
   await page.goto("/app/settings");
   await expect(page.getByText("Pro", { exact: true })).toBeVisible();
-  await expect(page.getByRole("button", { name: "Manage Subscription" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Manage subscription" })).toBeVisible();
   await expect(page.getByTestId("billing-date")).toContainText("Renews on");
 
   // A failed renewal keeps Pro while Stripe retries, and Settings asks for a
@@ -143,7 +143,7 @@ test("signed Stripe webhooks grant and revoke Pro, and forged ones change nothin
   await page.reload();
   await expect(page.getByText("Payment failed", { exact: true })).toBeVisible();
   await expect(page.getByText(/Pro access continues until/)).toBeVisible();
-  await expect(page.getByRole("button", { name: "Manage Subscription" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Manage subscription" })).toBeVisible();
   await expect(page.getByRole("button", { name: /Upgrade to Pro/ })).toHaveCount(0);
 
   await fake.stripeSubscription(subscriptionObject(subscriptionId, "canceled"));

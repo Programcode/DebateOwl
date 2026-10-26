@@ -1,4 +1,5 @@
 import { useTranslation } from "react-i18next";
+import { OwlMark } from '@/components/brand/Owl';
 import { useEffect, useState } from "react";
 import { Menu, X, ArrowRight } from "lucide-react";
 import { Link } from "react-router-dom";
@@ -38,14 +39,8 @@ const Navbar = () => {
             <div className="section-container">
                 <div className="flex h-16 items-center justify-between md:h-20">
                     <Link to="/" className="group flex shrink-0 items-center gap-2 rounded-lg pr-1 pointer-coarse:min-h-11">
-                        <img
-                            src="/favicon-72.png"
-                            alt={t('common.logoAlt')}
-                            width={36}
-                            height={36}
-                            className="h-9 w-9 rounded-lg border border-primary/20 object-cover transition-colors group-hover:border-primary/40"
-                        />
-                        <span className="text-xl font-bold text-foreground">DebateLab</span>
+                        <OwlMark size={38} alt={t('common.logoAlt')} className="transition-transform duration-200 ease-overshoot group-hover:-rotate-6 group-hover:scale-105" />
+                        <span className="font-display text-[1.375rem] font-[600] leading-none tracking-[-0.01em] text-heading">DebateLab</span>
                     </Link>
 
                     <div className="hidden items-center gap-7 lg:flex">

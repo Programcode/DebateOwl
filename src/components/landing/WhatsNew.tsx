@@ -27,7 +27,7 @@ const WhatsNew = () => {
                 <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
                     {updates.map((update, index) => (
                         <Reveal key={update.title} delay={index * 0.05}>
-                            <div className="h-full rounded-2xl border border-border/70 bg-card p-6 shadow-sm transition-[border-color,box-shadow] duration-200 hover:border-primary/30 hover:shadow-lg">
+                            <div className="h-full rounded-xl border-2 border-border bg-card p-6 transition-[border-color,box-shadow,transform] duration-200 hover:-translate-y-0.5 hover:border-brand-tint-border hover:shadow-lg">
                                 <div className="mb-4 flex items-center justify-between">
                                     <div className="flex h-11 w-11 items-center justify-center rounded-xl border border-primary/20 bg-primary/10">
                                         <update.icon aria-hidden="true" className="h-5 w-5 text-primary" />
@@ -36,7 +36,7 @@ const WhatsNew = () => {
                                         {update.badge}
                                     </span>
                                 </div>
-                                <h3 className="text-xl font-semibold text-foreground">{update.title}</h3>
+                                <h3 className="font-display text-xl font-[600] text-heading">{update.title}</h3>
                                 <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{update.description}</p>
                             </div>
                         </Reveal>

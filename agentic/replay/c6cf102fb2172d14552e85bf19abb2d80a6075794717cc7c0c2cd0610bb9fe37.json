@@ -46,10 +46,10 @@
       },
       {
         "name": "tap",
-        "summary": "tap button \"Add Source\"",
+        "summary": "tap button \"Add source\"",
         "target": {
           "role": "button",
-          "name": "Add Source"
+          "name": "Add source"
         }
       },
       {

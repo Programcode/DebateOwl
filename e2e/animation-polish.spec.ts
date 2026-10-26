@@ -52,7 +52,7 @@ async function openGenerateOptions(page: Page) {
 
 async function generateMockCase(page: Page) {
   await page.getByLabel('Motion / Topic').fill('This House would make public transport free.');
-  await page.getByRole('button', { name: 'Generate Debate Case' }).click();
+  await page.getByRole('button', { name: 'Generate debate case' }).click();
   await page.mouse.move(0, 0);
   await expect(page.getByText('Writing your case…')).toBeVisible({ timeout: STATE_TIMEOUT_MS });
   await expect(page.getByText(/We support the motion/)).toBeVisible({ timeout: STATE_TIMEOUT_MS });
@@ -126,7 +126,7 @@ test('audits applicable empty, loading, result, and option states across feature
   await expect(attackOptions).toHaveAttribute('data-open', 'false');
   expect(await attackOptions.evaluate((element) => (element as HTMLElement).inert)).toBe(true);
   await page.getByLabel('Your Argument').fill('Universal transit improves access, reduces congestion, and strengthens civic participation.');
-  await page.getByRole('button', { name: 'Find Weaknesses' }).click();
+  await page.getByRole('button', { name: 'Find weaknesses' }).click();
   await expect(page.getByText('Reviewing your case…')).toBeVisible({ timeout: STATE_TIMEOUT_MS });
   await expect(page.getByRole('heading', { name: 'Overall Assessment' })).toBeVisible({ timeout: STATE_TIMEOUT_MS });
   await page.screenshot({ path: testInfo.outputPath('attack-result.png'), fullPage: true });
@@ -134,7 +134,7 @@ test('audits applicable empty, loading, result, and option states across feature
   await openFeatureRoute(page, 'brainstorm');
   await expect(page.getByText('Unlock Creative Angles')).toBeVisible({ timeout: STATE_TIMEOUT_MS });
   await page.getByLabel('Motion / Topic').fill('This House would make public transport free.');
-  await page.getByRole('button', { name: 'Start Brainstorming' }).click();
+  await page.getByRole('button', { name: 'Start brainstorming' }).click();
   await expect(page.getByText('Finding angles…')).toBeVisible({ timeout: STATE_TIMEOUT_MS });
   await expect(page.getByRole('heading', { name: 'Top 5 Argument Angles' })).toBeVisible({ timeout: STATE_TIMEOUT_MS });
 

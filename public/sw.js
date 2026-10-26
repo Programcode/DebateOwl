@@ -23,6 +23,7 @@ const APP_SHELL = [
   '/icon-192.png',
   '/icon-512.png',
   '/icon-maskable-512.png',
+  '/owl-mark.svg',
 ];
 
 // vercel.json serves app-shell.html at these paths, so offline the worker does too.

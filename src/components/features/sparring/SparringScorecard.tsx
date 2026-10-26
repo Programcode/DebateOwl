@@ -1,6 +1,7 @@
 import { useState } from 'react';
+import { Owl, OwlAvatar } from '@/components/brand/Owl';
 import { useTranslation } from 'react-i18next';
-import { Award, BarChart3, Bot, Download, FileText, Lightbulb, Mic, RotateCcw, Sparkles, Target, UserRound } from 'lucide-react';
+import { Award, BarChart3, Download, FileText, Lightbulb, Mic, RotateCcw, Sparkles, Target, UserRound, Check } from 'lucide-react';
 import { PolarAngleAxis, PolarGrid, PolarRadiusAxis, Radar, RadarChart, ResponsiveContainer, Tooltip } from 'recharts';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -21,9 +22,10 @@ interface SparringScorecardProps {
 }
 
 function winnerTone(winner: SparringScorecard['winner']) {
-  if (winner === 'user') return 'border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300';
-  if (winner === 'ai') return 'border-rose-500/30 bg-rose-500/10 text-rose-700 dark:text-rose-300';
-  return 'border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-300';
+  // A loss is never red: it reads as "keep training", in the plume tint.
+  if (winner === 'user') return 'border-success/40 bg-success-tint text-success-text';
+  if (winner === 'ai') return 'border-brand-tint-border bg-brand-tint text-primary';
+  return 'border-warning/40 bg-warning-tint text-warning-text';
 }
 
 export function SparringScorecard({ session, scorecard, onRestart, onExport, onExportPdf }: SparringScorecardProps) {
@@ -50,7 +52,7 @@ export function SparringScorecard({ session, scorecard, onRestart, onExport, onE
       <header className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
         <div>
           <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.18em] text-primary"><Award className="h-3.5 w-3.5" aria-hidden="true" /> {t('sparring.scorecard.eyebrow', 'Round review')}</div>
-          <h1 className="mt-2 text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">{t('sparring.scorecard.heading', 'Here is what happened in the room.')}</h1>
+          <h1 className="mt-2 font-display text-3xl font-[600] tracking-[-0.015em] text-heading sm:text-4xl">{t('sparring.scorecard.heading', 'Here is what happened in the room.')}</h1>
           <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">{session.motion}</p>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -64,17 +66,21 @@ export function SparringScorecard({ session, scorecard, onRestart, onExport, onE
         <Card className="overflow-hidden border-primary/20">
           <CardContent className="p-6 sm:p-8">
             <div className="flex flex-wrap items-center justify-between gap-4">
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">{t('sparring.scorecard.finalResult', 'Final result')}</p>
-                <h2 id="result-heading" className="mt-2 text-2xl font-semibold">{winnerText}</h2>
+              <div className="flex items-center gap-4">
+                {/* The owl celebrates a win and holds up one point to work on otherwise. */}
+                <Owl pose={scorecard.winner === 'user' ? 'celebrating' : 'idea'} size={96} priority className="-my-2 motion-safe:animate-in zoom-in-90 fade-in-0 duration-500 ease-overshoot" />
+                <div>
+                  <p className="text-xs font-extrabold uppercase tracking-[0.08em] text-muted-foreground">{t('sparring.scorecard.finalResult', 'Final result')}</p>
+                  <h2 id="result-heading" className="mt-1 font-display text-2xl font-[600] text-heading">{winnerText}</h2>
+                </div>
               </div>
-              <Badge variant="outline" className={cn('rounded-md px-3 py-1.5 text-xs', winnerTone(scorecard.winner))}>{scorecard.winner === 'tie' ? t('sparring.scorecard.tied', 'Tied') : scorecard.winner === 'user' ? t('sparring.scorecard.winner', 'Winner') : t('sparring.scorecard.keepTraining', 'Keep training')}</Badge>
+              <Badge variant="outline" className={cn('rounded-full px-3 py-1.5 text-xs', winnerTone(scorecard.winner))}>{scorecard.winner === 'user' && <Check className="h-3.5 w-3.5" strokeWidth={3} aria-hidden="true" />}{scorecard.winner === 'tie' ? t('sparring.scorecard.tied', 'Tied') : scorecard.winner === 'user' ? t('sparring.scorecard.winner', 'Winner') : t('sparring.scorecard.keepTraining', 'Keep training')}</Badge>
             </div>
             <div className="mt-8 grid gap-4 sm:grid-cols-2">
               <ScoreTotal label={t('sparring.scorecard.yourScore', 'Your score')} score={scorecard.userScore} icon={<UserRound className="h-4 w-4" aria-hidden="true" />} isWinner={scorecard.winner === 'user'} topScoreLabel={t('sparring.scorecard.topScore', 'Top score')} />
-              <ScoreTotal label={t('sparring.scorecard.opponentScore', 'Opponent score')} score={scorecard.aiScore} icon={<Bot className="h-4 w-4" aria-hidden="true" />} isWinner={scorecard.winner === 'ai'} topScoreLabel={t('sparring.scorecard.topScore', 'Top score')} />
+              <ScoreTotal label={t('sparring.scorecard.opponentScore', 'Opponent score')} score={scorecard.aiScore} icon={<OwlAvatar pose="arguing" size={22} />} isWinner={scorecard.winner === 'ai'} topScoreLabel={t('sparring.scorecard.topScore', 'Top score')} />
             </div>
-            <div className="mt-7 rounded-xl border border-border/70 bg-muted/25 p-4 sm:p-5">
+            <div className="mt-7 rounded-lg border-2 border-border bg-surface-sunken/60 p-4 sm:p-5">
               <p className="text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">{t('sparring.scorecard.verdict', "Judge's verdict")}</p>
               <p className="mt-2 text-base leading-7 text-foreground">{scorecard.verdict}</p>
             </div>
@@ -173,7 +179,7 @@ export function SparringScorecard({ session, scorecard, onRestart, onExport, onE
             {session.speeches.map((speech) => (
               <article key={speech.id} className="rounded-xl border border-border/70 p-4">
                 <div className="flex flex-wrap items-center justify-between gap-2">
-                  <div className="flex items-center gap-2 text-sm font-semibold"><span className={cn('flex h-7 w-7 items-center justify-center rounded-md', speech.speaker === 'user' ? 'bg-primary/10 text-primary' : 'bg-muted')} aria-hidden="true">{speech.speaker === 'user' ? <UserRound className="h-4 w-4" /> : <Bot className="h-4 w-4" />}</span>{speech.speaker === 'user' ? t('sparring.user', 'You') : t('sparring.opponent', 'AI opponent')} <span className="font-normal text-muted-foreground">· {t(`sparring.turns.${speech.turnId}`, speech.role)}</span></div>
+                  <div className="flex items-center gap-2 text-sm font-semibold">{speech.speaker === 'user' ? <span className="flex h-7 w-7 items-center justify-center rounded-full bg-brand text-white" aria-hidden="true"><UserRound className="h-4 w-4" /></span> : <OwlAvatar pose="arguing" size={28} label={t('sparring.opponentAvatarAlt', 'The owl, your AI opponent')} />}{speech.speaker === 'user' ? t('sparring.user', 'You') : t('sparring.opponent', 'AI opponent')} <span className="font-normal text-muted-foreground">· {t(`sparring.turns.${speech.turnId}`, speech.role)}</span></div>
                   <span className="font-mono text-xs tabular-nums text-muted-foreground">{speech.speaker === 'ai' ? t('sparring.round.estimatedTimeUsed', '{{time}} estimated', { time: formatRoundTime(speech.timeUsedSeconds) }) : t('sparring.round.timeUsed', '{{time}} used', { time: formatRoundTime(speech.timeUsedSeconds) })}</span>
                 </div>
                 <div className="mt-3 text-sm leading-7"><Markdown>{speech.content}</Markdown></div>
@@ -188,9 +194,9 @@ export function SparringScorecard({ session, scorecard, onRestart, onExport, onE
 
 function ScoreTotal({ label, score, icon, isWinner, topScoreLabel }: { label: string; score: number; icon: React.ReactNode; isWinner: boolean; topScoreLabel: string }) {
   return (
-    <div className={cn('rounded-xl border p-4', isWinner ? 'border-primary/40 bg-primary/10' : 'border-border/70 bg-background')}>
-      <div className="flex items-center gap-2 text-sm text-muted-foreground">{icon}{label}{isWinner && <span className="ml-auto text-xs font-medium text-primary">{topScoreLabel}</span>}</div>
-      <p className="mt-2 font-mono text-4xl font-semibold tracking-tight tabular-nums">{score}<span className="ml-1 text-lg font-normal text-muted-foreground">/100</span></p>
+    <div className={cn('rounded-lg border-2 p-4', isWinner ? 'border-brand bg-brand-tint shadow-[0_4px_0_var(--do-primary-tint-border)]' : 'border-border bg-card')}>
+      <div className="flex items-center gap-2 text-sm font-bold text-muted-foreground">{icon}{label}{isWinner && <span className="ml-auto text-xs font-extrabold text-primary">{topScoreLabel}</span>}</div>
+      <p className="mt-2 font-display text-5xl font-[600] tracking-[-0.02em] text-heading tabular-nums">{score}<span className="ml-1 text-lg font-normal text-muted-foreground">/100</span></p>
     </div>
   );
 }
@@ -202,7 +208,7 @@ function InsightCard({ title, icon, items, tone, emptyLabel }: { title: string; 
       <CardContent>
         {items.length > 0 ? (
           <ul className="space-y-3">
-            {items.map((item, index) => <li key={`${item}-${index}`} className="flex gap-3 text-sm leading-6 text-muted-foreground"><span className={cn('mt-2 h-1.5 w-1.5 shrink-0 rounded-full', tone === 'primary' ? 'bg-primary' : 'bg-amber-500')} aria-hidden="true" />{item}</li>)}
+            {items.map((item, index) => <li key={`${item}-${index}`} className="flex gap-3 text-sm leading-6 text-muted-foreground"><span className={cn('mt-2 h-1.5 w-1.5 shrink-0 rounded-full', tone === 'primary' ? 'bg-brand' : 'bg-warning')} aria-hidden="true" />{item}</li>)}
           </ul>
         ) : <p className="text-sm text-muted-foreground">{emptyLabel}</p>}
       </CardContent>

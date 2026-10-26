@@ -48,13 +48,13 @@ export function ClockAnnouncer({ secondsLeft, running }: { secondsLeft: number; 
   return <span className="sr-only" role="status" aria-live="polite">{message}</span>;
 }
 
-/** The speaking clock: tabular figures in the UI face, coloured by how much time is left. */
+/** The speaking clock: tabular JetBrains Mono figures, coloured by how much time is left. */
 export function RoundClock({ secondsLeft, className, label }: { secondsLeft: number; className?: string; label?: string }) {
   return (
     <span
       role="timer"
       aria-label={label}
-      className={cn('font-sans font-semibold tabular-nums tracking-[-0.02em] transition-colors duration-300', CLOCK_TONE_TEXT[clockTone(secondsLeft)], className)}
+      className={cn('font-mono font-bold tabular-nums tracking-[-0.03em] transition-colors duration-300', CLOCK_TONE_TEXT[clockTone(secondsLeft)], className)}
     >
       {formatClock(secondsLeft)}
     </span>

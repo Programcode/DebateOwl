@@ -70,6 +70,17 @@ export async function expectStreamed(features: string[]) {
   }
 }
 
+/**
+ * New accounts start on the light theme. Recipes that compare light and dark
+ * switch the account to System in Settings first, so emulateMedia drives the theme.
+ */
+export async function followSystemTheme(page: Page) {
+  await page.goto("/app/settings");
+  await page.locator("#settings-theme").click();
+  await page.getByRole("option").nth(2).click();
+  await expect(page.locator("#settings-theme")).toHaveText(/System|Rendszer|Sistema/);
+}
+
 /** The provider was called for each feature, and every call succeeded. */
 export async function expectProviderCalls(features: string[]) {
   const calls = await providerCalls();

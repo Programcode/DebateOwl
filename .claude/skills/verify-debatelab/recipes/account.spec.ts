@@ -23,7 +23,7 @@ test("acct-language: the output language follows the account to a new device and
     await other.goto("/app/attack");
     await other.getByLabel("Your Argument *").fill("Free transit cuts congestion because riders leave their cars at home.");
     const response = aiResponse(other, "attack");
-    await other.getByRole("button", { name: "Find Weaknesses" }).click();
+    await other.getByRole("button", { name: "Find weaknesses" }).click();
     const body = await response;
     await evidence.json("02-attack-response", body);
     const call = (await expectProviderCalls(["attack"])).find((item) => item.feature === "attack")!;

@@ -2,11 +2,11 @@ import type { Page } from "@playwright/test";
 import { admin, AI_TIMEOUT, aiResponse, expect, expectProviderCalls, startDebate, test } from "./fixtures";
 
 // Feature map: features/library-sources.md. The Library belongs to the Current
-// Debate: `Add Source` stays disabled until one exists, so each test starts one.
+// Debate: `Add source` stays disabled until one exists, so each test starts one.
 const motion = "Public transport should be free";
 
 async function addSource(page: Page, title: string, content: string) {
-  await page.getByRole("button", { name: "Add Source" }).click();
+  await page.getByRole("button", { name: "Add source" }).click();
   await page.getByRole("textbox", { name: "Title", exact: true }).fill(title);
   await page.getByRole("textbox", { name: "Content", exact: true }).fill(content);
   await page.getByRole("button", { name: "Save to Library" }).click();
@@ -32,7 +32,7 @@ test("lib-add, lib-toggle, lib-ground, lib-delete: only active sources ground AI
   await page.goto("/app/brainstorm");
   await expect(page.getByLabel("Motion / Topic *")).toHaveValue(motion);
   const response = aiResponse(page, "brainstorm");
-  await page.getByRole("button", { name: "Start Brainstorming" }).click();
+  await page.getByRole("button", { name: "Start brainstorming" }).click();
   await response;
   const call = (await expectProviderCalls(["brainstorm"])).find((item) => item.feature === "brainstorm")!;
   expect(call.system).toContain("ACTIVE-SOURCE-MARKER");
@@ -73,7 +73,7 @@ test("lib-import: a web page imports into the Library", async ({ signedIn: page,
   const url = "https://en.wikipedia.org/wiki/Free_public_transport";
   await startDebate(page, motion);
   await page.goto("/app/library");
-  await page.getByRole("button", { name: "Add Source" }).click();
+  await page.getByRole("button", { name: "Add source" }).click();
   await page.getByRole("textbox", { name: "Import from URL" }).fill(url);
   await page.getByRole("button", { name: "Import URL" }).click();
   await expect(page.getByText("Import preview", { exact: true })).toBeVisible({ timeout: AI_TIMEOUT });
@@ -182,7 +182,7 @@ test("lib-dedupe and lib-layout: a page saved once per debate, and long titles k
   // The same page with tracking and a fragment is refused before any fetch.
   let imported = false;
   page.on("request", (request) => { if (request.url().includes("/functions/v1/import-source")) imported = true; });
-  await page.getByRole("button", { name: "Add Source" }).click();
+  await page.getByRole("button", { name: "Add source" }).click();
   await page.getByRole("textbox", { name: "Import from URL" }).fill("http://example.org/estudios/deberes-escolares-primaria?utm_source=x#top");
   await page.getByRole("button", { name: "Import URL" }).click();
   await expect(page.getByText("This page is already in this debate's Library.")).toBeVisible();

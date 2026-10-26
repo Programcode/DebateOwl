@@ -15,10 +15,10 @@
       },
       {
         "name": "tap",
-        "summary": "tap button \"Find Weaknesses\"",
+        "summary": "tap button \"Find weaknesses\"",
         "target": {
           "role": "button",
-          "name": "Find Weaknesses"
+          "name": "Find weaknesses"
         }
       }
     ],
@@ -34,7 +34,7 @@
       "callIndex": 0,
       "agent": "default"
     },
-    "summary": "The argument was entered into the 'Your Argument' field and 'Find Weaknesses' was tapped. The screen now shows the full critique: an overall assessment (62/100), one major weakness (no comparative evidence for the congestion claim), detected fallacies (hasty generalization), cross-examination quest…",
+    "summary": "The argument was entered into the 'Your Argument' field and 'Find weaknesses' was tapped. The screen now shows the full critique: an overall assessment (62/100), one major weakness (no comparative evidence for the congestion claim), detected fallacies (hasty generalization), cross-examination quest…",
     "startPath": "/app/attack",
     "endPath": "/app/attack",
     "endAnchors": [

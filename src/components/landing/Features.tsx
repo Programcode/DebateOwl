@@ -48,10 +48,10 @@ const Features = () => {
                     {features.map((feature, index) => (
                         <Reveal key={feature.title} delay={index * 0.04}>
                             <div className="feature-card h-full">
-                                <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-xl border border-primary/20 bg-primary/10">
+                                <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-md bg-brand-tint shadow-[0_3px_0_var(--do-primary-tint-border)]">
                                     <feature.icon aria-hidden="true" className="h-6 w-6 text-primary" />
                                 </div>
-                                <h3 className="mb-2 text-xl font-semibold text-foreground">{feature.title}</h3>
+                                <h3 className="mb-2 font-display text-xl font-[600] text-heading">{feature.title}</h3>
                                 <p className="text-sm leading-relaxed text-muted-foreground">{feature.description}</p>
                             </div>
                         </Reveal>

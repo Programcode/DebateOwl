@@ -19,7 +19,8 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Save, Target } from 'lucide-react';
+import { Check, Save, Target } from 'lucide-react';
+import { Owl } from '@/components/brand/Owl';
 import { EmptyState } from '@/components/ui/empty-state';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { ToolRunErrorPanel, isCanceled, useRevealResults, useToolRun } from '@/components/features/tools/tool-run';
@@ -224,7 +225,18 @@ export default function GeneratePage() {
       await saveCurrentCase(title);
       markResultSaved(saving);
       setSaveDialogOpen(false);
-      toast({ title: t('generate.saved'), description: t('generate.savedDesc') });
+      toast({
+        title: t('generate.saved'),
+        description: t('generate.savedDesc'),
+        variant: 'success',
+        // The owl celebrates beside the success check, so the meaning never rests on the owl or the colour.
+        icon: (
+          <span className="flex items-center gap-2">
+            <Owl pose="celebrating" size={44} priority className="-my-2" />
+            <span className="flex size-8 items-center justify-center rounded-full bg-success-tint text-success-text"><Check className="size-4" strokeWidth={3} /></span>
+          </span>
+        ),
+      });
     } catch (error) {
       console.error('Failed to save case:', error);
       toast({
@@ -295,7 +307,7 @@ export default function GeneratePage() {
               />
             )}
             {generateLoading ? (
-              <LiveToolRun label={t('generate.working', 'Writing your case…')} live={run.liveState} sections={run.liveState.draft ? generateDraftSections(run.liveState.draft, t) : []} onCancel={run.cancel} />
+              <LiveToolRun label={t('generate.working', 'Writing your case…')} live={run.liveState} sections={run.liveState.draft ? generateDraftSections(run.liveState.draft, t) : []} onCancel={run.cancel} pose="thinking" />
             ) : generateResult ? (
               <div key="generate-results" id="generate-results" className="space-y-4">
                 <GenerateResults
@@ -312,7 +324,7 @@ export default function GeneratePage() {
                 />
               </div>
             ) : (
-              <EmptyState icon={Target} title={t('generate.emptyTitle')} description={t('generate.emptyDesc')} />
+              <EmptyState icon={Target} pose={run.error ? 'surprised' : 'point'} title={t('generate.emptyTitle')} description={t('generate.emptyDesc')} />
             )}
           </div>
         </div>

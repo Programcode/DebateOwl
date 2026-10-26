@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { join } from "node:path";
 import type { Locator, Page, TestInfo } from "@playwright/test";
-import { admin, AI_TIMEOUT, aiResponse, chooseForMotion, expect, test, type Evidence } from "./fixtures";
+import { admin, AI_TIMEOUT, aiResponse, chooseForMotion, expect, followSystemTheme, test, type Evidence } from "./fixtures";
 
 // Feature map: the Billing entry in features/README.md. Each state is written
 // straight into user_settings and subscriptions (what the Stripe webhook
@@ -29,7 +29,7 @@ type State = {
 };
 
 const UPGRADE: Text = { en: "Upgrade to Pro", hu: "Váltás Pro-ra" };
-const MANAGE: Text = { en: "Manage Subscription", hu: "Előfizetés kezelése" };
+const MANAGE: Text = { en: "Manage subscription", hu: "Előfizetés kezelése" };
 const PAUSED: Text = { en: "Daily Access Paused", hu: "Napi hozzáférés szünetel" };
 const OK: Text = { en: "OK", hu: "Rendben" };
 
@@ -85,7 +85,7 @@ const STATES: State[] = [
     settings: { subscription_tier: "pro", grace_period_ends_at: at(365) },
     badge: { en: "Pro", hu: "Pro" },
     text: { en: /comes from a promo code and runs until .+\. Billing is optional until then/, hu: /promóciós kódból származik \(lejárat: .+\)\. Addig a számlázás beállítása nem kötelező/ },
-    button: { en: "Set Up Billing", hu: "Számlázás beállítása" },
+    button: { en: "Set up billing", hu: "Számlázás beállítása" },
     plan: "plan-pro",
     dailyLimit: 50,
     refusal: { title: PAUSED, button: OK },
@@ -152,7 +152,7 @@ async function chargeAIUnits(userId: string, units: number) {
 async function brainstorm(page: Page, language: "en" | "hu" = "en") {
   await page.goto("/app/brainstorm");
   await page.getByLabel(language === "en" ? "Motion / Topic *" : "Indítvány / téma *").fill("Public transport should be free");
-  await page.getByRole("button", { name: language === "en" ? "Start Brainstorming" : "Ötletelés indítása" }).click();
+  await page.getByRole("button", { name: language === "en" ? "Start brainstorming" : "Ötletelés indítása" }).click();
   if (language === "en") return chooseForMotion(page, "once");
   const dialog = page.getByRole("dialog", { name: /^(Indítasz egy vitát ezzel a tétellel\?|Ez egy másik tétel)$/ });
   await dialog.getByRole("button", { name: /^(Most nem, csak egyszer használom|Egyszeri használat vitába mentés nélkül)$/ }).click();
@@ -188,6 +188,7 @@ for (const language of ["en", "hu"] as const) {
   test(`bill-states-${language}: Settings, the pricing dialog and a refused request agree on each billing state`, async ({ signedIn: page, user, evidence }, testInfo) => {
     test.setTimeout(600_000);
     const userId = await user.userId();
+    await followSystemTheme(page);
     if (language === "hu") await useHungarian(page);
     // The portal needs Stripe. Answer as it does for an account Stripe does
     // not know, which sends Settings to the pricing dialog: the one way a
@@ -258,6 +259,7 @@ for (const language of ["en", "hu"] as const) {
 // VS-06: the Spanish card at phone widths too (the matrix above covers EN and HU).
 test("bill-states-es: the Spanish subscription card wraps instead of squeezing", async ({ signedIn: page, user, evidence }, testInfo) => {
   const userId = await user.userId();
+  await followSystemTheme(page);
   await page.goto("/app/settings");
   await page.getByLabel("Interface Language").click();
   await page.getByRole("option", { name: "Español" }).click();

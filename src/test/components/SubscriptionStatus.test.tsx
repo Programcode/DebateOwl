@@ -46,7 +46,7 @@ const CASES: Array<{
     badge: 'Pro',
     date: 'Renews on 22 Nov 2026',
     text: /AI access is active/,
-    button: 'Manage Subscription',
+    button: 'Manage subscription',
   },
   {
     // QB-15: a plan set to cancel says so.
@@ -55,7 +55,7 @@ const CASES: Array<{
     badge: 'Pro',
     date: 'Cancels on 22 Nov 2026',
     text: /AI access is active/,
-    button: 'Manage Subscription',
+    button: 'Manage subscription',
   },
   {
     // QB-13: the portal, never a second Checkout.
@@ -64,7 +64,7 @@ const CASES: Array<{
     badge: 'Payment failed',
     date: null,
     text: /Payment failed: update your payment method to keep Pro\. Pro access continues until 22 Nov 2026/,
-    button: 'Manage Subscription',
+    button: 'Manage subscription',
   },
   {
     name: 'past due after grace',
@@ -72,7 +72,7 @@ const CASES: Array<{
     badge: 'Payment failed',
     date: null,
     text: /update your payment method to restore AI access/,
-    button: 'Manage Subscription',
+    button: 'Manage subscription',
   },
   {
     // QB-14: a former subscriber is not told their free trial ended.
@@ -98,7 +98,7 @@ const CASES: Array<{
     badge: 'Pro',
     date: null,
     text: /^Your Pro access comes from a promo code, so billing is optional\.$/,
-    button: 'Set Up Billing',
+    button: 'Set up billing',
   },
   {
     // QA round 3: a dated promo said nothing about where Pro came from.
@@ -107,7 +107,7 @@ const CASES: Array<{
     badge: 'Pro',
     date: 'Ends on 22 Nov 2026',
     text: /comes from a promo code and runs until 22 Nov 2026\. Billing is optional until then/,
-    button: 'Set Up Billing',
+    button: 'Set up billing',
   },
 ];
 

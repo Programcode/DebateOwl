@@ -1,12 +1,22 @@
-/* Inter is self-hosted (imported in main.tsx, no render-blocking third-party request), and the fallback is
-   Arial scaled to Inter's metrics so the swap doesn't shift the layout. */
+/* Nunito (body) and Fredoka (headings, buttons) are self-hosted (imported in main.tsx), and each
+   fallback is Arial scaled to the web font's metrics (measured in Chromium at the weights the app
+   uses), so the swap doesn't shift the layout. */
 
 @font-face {
-  font-family: "Inter Fallback";
+  font-family: "Nunito Fallback";
   src: local("Arial");
-  size-adjust: 107.4%;
-  ascent-override: 90.2%;
-  descent-override: 22.48%;
+  size-adjust: 96.8%;
+  ascent-override: 104.4%;
+  descent-override: 36.2%;
+  line-gap-override: 0%;
+}
+
+@font-face {
+  font-family: "Fredoka Fallback";
+  src: local("Arial");
+  size-adjust: 94.4%;
+  ascent-override: 102.8%;
+  descent-override: 25.4%;
   line-gap-override: 0%;
 }
 
@@ -14,6 +24,7 @@
 @import "tailwindcss" source(none);
 @source "./**/*.{ts,tsx}";
 @import "tw-animate-css";
+@import "./styles/tokens.css";
 @plugin "@tailwindcss/typography";
 
 @custom-variant dark (&:is(.dark *));
@@ -51,9 +62,35 @@
   --color-success: hsl(var(--success));
   --color-success-foreground: hsl(var(--success-foreground));
 
-  --radius-lg: var(--radius);
-  --radius-md: calc(var(--radius) - 2px);
-  --radius-sm: calc(var(--radius) - 4px);
+  /* DebateOwl roles (src/styles/tokens.css). */
+  --color-heading: var(--do-heading);
+  --color-brand: var(--do-primary);
+  --color-brand-tint: var(--do-primary-tint);
+  --color-brand-tint-border: var(--do-primary-tint-border);
+  --color-surface-sunken: var(--do-surface-sunken);
+  --color-surface-raised: var(--do-surface-raised);
+  --color-border-strong: var(--do-border-strong);
+  --color-gold: var(--do-accent);
+  --color-on-gold: var(--do-on-accent);
+  --color-gold-tint: var(--do-accent-tint);
+  --color-success-text: var(--do-success-text);
+  --color-success-tint: var(--do-success-tint);
+  --color-danger-text: var(--do-danger-text);
+  --color-danger-tint: var(--do-danger-tint);
+  --color-warning: var(--do-warning);
+  --color-warning-text: var(--do-warning-text);
+  --color-warning-tint: var(--do-warning-tint);
+  --color-pro: var(--do-pro);
+  --color-pro-tint: var(--do-pro-tint);
+
+  /* One radius scale from the design system: chips 10, inputs and tiles 14, buttons and cards 18,
+     sheets and dialogs 24, hero panels 32. */
+  --radius-xs: 6px;
+  --radius-sm: 10px;
+  --radius-md: 14px;
+  --radius-lg: 18px;
+  --radius-xl: 24px;
+  --radius-2xl: 32px;
 
   --shadow-2xs: var(--app-shadow-2xs);
   --shadow-xs: var(--app-shadow-xs);
@@ -65,11 +102,21 @@
 }
 
 @theme {
-  --font-sans: 'Inter Variable', 'Inter Fallback', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans', sans-serif;
-  --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
+  --font-sans: 'Nunito Variable', 'Nunito Fallback', ui-rounded, ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-display: 'Fredoka Variable', 'Fredoka Fallback', 'Nunito Variable', ui-rounded, system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono Variable', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', monospace;
+
+  /* Nunito reads thin on navy below 600, so body text starts there and every step moves up one notch. */
+  --font-weight-normal: 600;
+  --font-weight-medium: 650;
+  --font-weight-semibold: 700;
+  --font-weight-bold: 800;
+  --font-weight-extrabold: 900;
 
   --ease-out-strong: cubic-bezier(0.23, 1, 0.32, 1);
   --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
+  --ease-overshoot: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --ease-standard: cubic-bezier(0.2, 0, 0, 1);
 
   /* v3's breakpoints in px, so a larger browser font size doesn't move them. */
   --breakpoint-sm: 640px;
@@ -77,21 +124,28 @@
   --breakpoint-lg: 1024px;
   --breakpoint-xl: 1280px;
   --breakpoint-2xl: 1536px;
+
+  /* The brand scales, for the few places that need a fixed step. */
+  --color-plume-50: #EEF7FF; --color-plume-100: #D6EAFE; --color-plume-200: #B3D8FC; --color-plume-300: #7CC0FE; --color-plume-400: #4CA6FD; --color-plume-500: #1E8DFB; --color-plume-600: #0A6FF0; --color-plume-700: #0556D6; --color-plume-800: #0342A8; --color-plume-900: #0B2A6E; --color-plume-950: #061442;
+  --color-ink-50: #EFF4FA; --color-ink-100: #E2E9F2; --color-ink-200: #CDD7E4; --color-ink-300: #A9B7C9; --color-ink-400: #8494AB; --color-ink-500: #5F708A; --color-ink-600: #46566F; --color-ink-700: #33425A; --color-ink-800: #1F2B40; --color-ink-900: #131E33; --color-ink-950: #0B1426;
 }
 
-/* v3's palette (hex) for the families the app uses; v4's oklch values render visibly different. */
+/* The palette families the app still names directly are redrawn in the owl's colours at matching
+   lightness, so every existing class lands on brand: slate is ink, blue/sky/cyan are plume, emerald
+   and green are mint, red and rose are coral (from the tongue), amber is the beak gold. Amber's
+   600-950 steps are darker than Tailwind's so amber text passes AA on white. */
 @theme {
-  --color-slate-50: #f8fafc; --color-slate-100: #f1f5f9; --color-slate-200: #e2e8f0; --color-slate-300: #cbd5e1; --color-slate-400: #94a3b8; --color-slate-500: #64748b; --color-slate-600: #475569; --color-slate-700: #334155; --color-slate-800: #1e293b; --color-slate-900: #0f172a; --color-slate-950: #020617;
-  --color-red-50: #fef2f2; --color-red-100: #fee2e2; --color-red-200: #fecaca; --color-red-300: #fca5a5; --color-red-400: #f87171; --color-red-500: #ef4444; --color-red-600: #dc2626; --color-red-700: #b91c1c; --color-red-800: #991b1b; --color-red-900: #7f1d1d; --color-red-950: #450a0a;
+  --color-slate-50: #EFF4FA; --color-slate-100: #E2E9F2; --color-slate-200: #CDD7E4; --color-slate-300: #A9B7C9; --color-slate-400: #8494AB; --color-slate-500: #5F708A; --color-slate-600: #46566F; --color-slate-700: #33425A; --color-slate-800: #1F2B40; --color-slate-900: #131E33; --color-slate-950: #0B1426;
+  --color-blue-50: #EEF7FF; --color-blue-100: #D6EAFE; --color-blue-200: #B3D8FC; --color-blue-300: #7CC0FE; --color-blue-400: #4CA6FD; --color-blue-500: #1E8DFB; --color-blue-600: #0A6FF0; --color-blue-700: #0556D6; --color-blue-800: #0342A8; --color-blue-900: #0B2A6E; --color-blue-950: #061442;
+  --color-sky-50: #EEF7FF; --color-sky-100: #D6EAFE; --color-sky-200: #B3D8FC; --color-sky-300: #7CC0FE; --color-sky-400: #4CA6FD; --color-sky-500: #1E8DFB; --color-sky-600: #0A6FF0; --color-sky-700: #0556D6; --color-sky-800: #0342A8; --color-sky-900: #0B2A6E; --color-sky-950: #061442;
+  --color-cyan-50: #EEF7FF; --color-cyan-100: #D6EAFE; --color-cyan-200: #B3D8FC; --color-cyan-300: #7CC0FE; --color-cyan-400: #4CA6FD; --color-cyan-500: #1E8DFB; --color-cyan-600: #0A6FF0; --color-cyan-700: #0556D6; --color-cyan-800: #0342A8; --color-cyan-900: #0B2A6E; --color-cyan-950: #061442;
+  --color-emerald-50: #E6FBF3; --color-emerald-100: #C2F3E0; --color-emerald-200: #8FE8C6; --color-emerald-300: #55DBAB; --color-emerald-400: #2FD39A; --color-emerald-500: #14B37D; --color-emerald-600: #0A8058; --color-emerald-700: #0A6849; --color-emerald-800: #075A40; --color-emerald-900: #06402E; --color-emerald-950: #06291D;
+  --color-green-50: #E6FBF3; --color-green-100: #C2F3E0; --color-green-200: #8FE8C6; --color-green-300: #55DBAB; --color-green-400: #2FD39A; --color-green-500: #14B37D; --color-green-600: #0A8058; --color-green-700: #0A6849; --color-green-800: #075A40; --color-green-900: #06402E; --color-green-950: #06291D;
+  --color-red-50: #FFEDEE; --color-red-100: #FFD3D5; --color-red-200: #FFADB0; --color-red-300: #FF8A8E; --color-red-400: #FF6B70; --color-red-500: #F0454B; --color-red-600: #D23239; --color-red-700: #B32A30; --color-red-800: #7E1B20; --color-red-900: #6B171B; --color-red-950: #3F0C0F;
+  --color-rose-50: #FFEDEE; --color-rose-100: #FFD3D5; --color-rose-200: #FFADB0; --color-rose-300: #FF8A8E; --color-rose-400: #FF6B70; --color-rose-500: #F0454B; --color-rose-600: #D23239; --color-rose-700: #B32A30; --color-rose-800: #7E1B20; --color-rose-900: #6B171B; --color-rose-950: #3F0C0F;
+  --color-amber-50: #FFF8DB; --color-amber-100: #FFEFB0; --color-amber-200: #FCE48A; --color-amber-300: #FFD95A; --color-amber-400: #FFC414; --color-amber-500: #F39A00; --color-amber-600: #A15C06; --color-amber-700: #9A5806; --color-amber-800: #7A4405; --color-amber-900: #6B3D05; --color-amber-950: #3D2203;
   --color-orange-50: #fff7ed; --color-orange-100: #ffedd5; --color-orange-200: #fed7aa; --color-orange-300: #fdba74; --color-orange-400: #fb923c; --color-orange-500: #f97316; --color-orange-600: #ea580c; --color-orange-700: #c2410c; --color-orange-800: #9a3412; --color-orange-900: #7c2d12; --color-orange-950: #431407;
-  --color-amber-50: #fffbeb; --color-amber-100: #fef3c7; --color-amber-200: #fde68a; --color-amber-300: #fcd34d; --color-amber-400: #fbbf24; --color-amber-500: #f59e0b; --color-amber-600: #d97706; --color-amber-700: #b45309; --color-amber-800: #92400e; --color-amber-900: #78350f; --color-amber-950: #451a03;
   --color-yellow-50: #fefce8; --color-yellow-100: #fef9c3; --color-yellow-200: #fef08a; --color-yellow-300: #fde047; --color-yellow-400: #facc15; --color-yellow-500: #eab308; --color-yellow-600: #ca8a04; --color-yellow-700: #a16207; --color-yellow-800: #854d0e; --color-yellow-900: #713f12; --color-yellow-950: #422006;
-  --color-green-50: #f0fdf4; --color-green-100: #dcfce7; --color-green-200: #bbf7d0; --color-green-300: #86efac; --color-green-400: #4ade80; --color-green-500: #22c55e; --color-green-600: #16a34a; --color-green-700: #15803d; --color-green-800: #166534; --color-green-900: #14532d; --color-green-950: #052e16;
-  --color-emerald-50: #ecfdf5; --color-emerald-100: #d1fae5; --color-emerald-200: #a7f3d0; --color-emerald-300: #6ee7b7; --color-emerald-400: #34d399; --color-emerald-500: #10b981; --color-emerald-600: #059669; --color-emerald-700: #047857; --color-emerald-800: #065f46; --color-emerald-900: #064e3b; --color-emerald-950: #022c22;
-  --color-cyan-50: #ecfeff; --color-cyan-100: #cffafe; --color-cyan-200: #a5f3fc; --color-cyan-300: #67e8f9; --color-cyan-400: #22d3ee; --color-cyan-500: #06b6d4; --color-cyan-600: #0891b2; --color-cyan-700: #0e7490; --color-cyan-800: #155e75; --color-cyan-900: #164e63; --color-cyan-950: #083344;
-  --color-sky-50: #f0f9ff; --color-sky-100: #e0f2fe; --color-sky-200: #bae6fd; --color-sky-300: #7dd3fc; --color-sky-400: #38bdf8; --color-sky-500: #0ea5e9; --color-sky-600: #0284c7; --color-sky-700: #0369a1; --color-sky-800: #075985; --color-sky-900: #0c4a6e; --color-sky-950: #082f49;
-  --color-blue-50: #eff6ff; --color-blue-100: #dbeafe; --color-blue-200: #bfdbfe; --color-blue-300: #93c5fd; --color-blue-400: #60a5fa; --color-blue-500: #3b82f6; --color-blue-600: #2563eb; --color-blue-700: #1d4ed8; --color-blue-800: #1e40af; --color-blue-900: #1e3a8a; --color-blue-950: #172554;
-  --color-rose-50: #fff1f2; --color-rose-100: #ffe4e6; --color-rose-200: #fecdd3; --color-rose-300: #fda4af; --color-rose-400: #fb7185; --color-rose-500: #f43f5e; --color-rose-600: #e11d48; --color-rose-700: #be123c; --color-rose-800: #9f1239; --color-rose-900: #881337; --color-rose-950: #4c0519;
 }
 
 /* v3's container: centred, 2rem padding, capped at 1400px. */
@@ -150,113 +204,107 @@
   }
 }
 
-/* Definition of the design system. All colors, gradients, fonts, etc should be defined here.
-All colors MUST be HSL.
+/* Definition of the design system. The shadcn roles below are HSL triplets (consumed as
+hsl(var(--x) / a)); their values come from the DebateOwl tokens in src/styles/tokens.css.
+--primary is the brand blue at text strength (plume-700 light, plume-400 dark) so text-primary
+passes AA on every surface; buttons fill with --do-primary (#0A6FF0) and white text.
 */
 
 @layer base {
   :root {
-    --background: 209 40% 96%;
-    --foreground: 222 47% 11%;
+    --background: 214 77.8% 98.2%; /* ink-25 #F7FAFE */
+    --foreground: 218 34.7% 18.6%; /* ink-800 #1F2B40 */
 
-    --card: 210 40% 98%;
-    --card-foreground: 222 47% 11%;
+    --card: 0 0% 100%;
+    --card-foreground: 218 34.7% 18.6%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 222 47% 11%;
+    --popover-foreground: 218 34.7% 18.6%;
 
-    --primary: 200 98% 33%;
-    --primary-foreground: 204 100% 97%;
+    --primary: 217 95.4% 42.9%; /* plume-700 #0556D6 */
+    --primary-foreground: 0 0% 100%;
 
-    --secondary: 215 24% 26%;
-    --secondary-foreground: 210 40% 98%;
+    --secondary: 214 38.1% 91.8%; /* ink-100 #E2E9F2 */
+    --secondary-foreground: 221 81.8% 23.7%; /* plume-900 #0B2A6E */
 
-    --muted: 214 32% 91%;
-    --muted-foreground: 215 16% 40%;
+    --muted: 213 52.4% 95.9%; /* ink-50 #EFF4FA */
+    --muted-foreground: 217 21.9% 41.2%; /* #526380, 5:1 even on ink-100 */
 
-    --accent: 214 32% 89%;
-    --accent-foreground: 222 47% 11%;
+    --accent: 208 100% 96.7%; /* plume-50 #EEF7FF */
+    --accent-foreground: 221 81.8% 23.7%;
 
-    --destructive: 0 72% 47%;
-    --destructive-foreground: 0 85% 97%;
+    --destructive: 357 64% 51%; /* coral-600 #D23239 */
+    --destructive-foreground: 0 0% 100%;
 
-    --success: 142 72% 27%;
-    --success-foreground: 138 76% 97%;
+    --success: 160 79.9% 39%; /* mint-500 #14B37D, always with a check mark */
+    --success-foreground: 159 74.5% 9.2%; /* mint-800 #06291D */
 
-    --border: 212 26% 83%;
-    --input: 215 16% 55%;
-    --ring: 200 98% 33%;
+    --border: 214 38.1% 91.8%; /* ink-100 #E2E9F2 */
+    --input: 215 18.8% 59.4%; /* ink-400 #8494AB, 3:1 on white */
+    --ring: 217 95.4% 42.9%;
 
-    --radius: 0.5rem;
+    --radius: 1.125rem;
 
-    --chart-1: 198 93% 59%;
+    --chart-1: 214 92% 49%; /* plume-600 */
+    --chart-2: 41 94.4% 50.6%; /* gold-500 */
+    --chart-3: 160 79.9% 39%; /* mint-500 */
+    --chart-4: 358 85.1% 60.6%; /* coral-500 */
+    --chart-5: 215 18.8% 59.4%; /* ink-400 */
 
-    --chart-2: 213 93% 67%;
-
-    --chart-3: 215 20% 65%;
-
-    --chart-4: 215 16% 46%;
-
-    --chart-5: 215 19% 34%;
-
-    --app-shadow-2xs: 0 1px 3px 0px hsl(0 0% 0% / 0.05);
-
-    --app-shadow-xs: 0 1px 3px 0px hsl(0 0% 0% / 0.05);
-
-    --app-shadow-sm: 0 1px 3px 0px hsl(0 0% 0% / 0.1), 0 1px 2px -1px hsl(0 0% 0% / 0.1);
-
-    --app-shadow-md: 0 1px 3px 0px hsl(0 0% 0% / 0.1), 0 2px 4px -1px hsl(0 0% 0% / 0.1);
-
-    --app-shadow-lg: 0 1px 3px 0px hsl(0 0% 0% / 0.1), 0 4px 6px -1px hsl(0 0% 0% / 0.1);
-
-    --app-shadow-xl: 0 1px 3px 0px hsl(0 0% 0% / 0.1), 0 8px 10px -1px hsl(0 0% 0% / 0.1);
-
-    --app-shadow-2xl: 0 1px 3px 0px hsl(0 0% 0% / 0.25);
+    /* Navy-tinted elevation: e1 cards, e2 popovers and toasts, e3 dialogs. */
+    --app-shadow-2xs: 0 1px 2px rgb(11 42 110 / 0.05);
+    --app-shadow-xs: 0 1px 2px rgb(11 42 110 / 0.06);
+    --app-shadow-sm: 0 1px 2px rgb(11 42 110 / 0.06), 0 2px 6px rgb(11 42 110 / 0.06);
+    --app-shadow-md: 0 2px 6px rgb(11 42 110 / 0.07), 0 6px 16px rgb(11 42 110 / 0.07);
+    --app-shadow-lg: 0 4px 10px rgb(11 42 110 / 0.08), 0 8px 24px rgb(11 42 110 / 0.08);
+    --app-shadow-xl: 0 12px 32px rgb(11 42 110 / 0.16), 0 2px 6px rgb(11 42 110 / 0.08);
+    --app-shadow-2xl: 0 24px 56px rgb(11 42 110 / 0.22);
   }
 
   .dark {
-    --background: 222 47% 11%;
-    --foreground: 210 40% 98%;
+    --background: 220 55.1% 9.6%; /* ink-950 #0B1426 */
+    --foreground: 219 100% 96.7%; /* #EEF4FF */
 
-    --card: 217 32% 17%;
-    --card-foreground: 210 40% 98%;
+    --card: 219 45.7% 13.7%; /* #131E33 */
+    --card-foreground: 219 100% 96.7%;
 
-    --popover: 215 24% 26%;
-    --popover-foreground: 210 40% 98%;
+    --popover: 219 41.7% 18.8%; /* #1C2A44 */
+    --popover-foreground: 219 100% 96.7%;
 
-    --primary: 198 93% 59%;
-    --primary-foreground: 204 80% 15%;
+    --primary: 209 97.8% 64.5%; /* plume-400 #4CA6FD */
+    --primary-foreground: 226 83.3% 14.1%; /* plume-950 */
 
-    --secondary: 212 26% 83%;
-    --secondary-foreground: 228 84% 4%;
+    --secondary: 220 36.3% 22.2%; /* #24324D */
+    --secondary-foreground: 219 100% 96.7%;
 
-    --muted: 217 30% 22%;
-    --muted-foreground: 215 20% 70%;
+    --muted: 219 41.7% 18.8%;
+    --muted-foreground: 214 22.9% 72.5%; /* ink-300 #A9B7C9 */
 
-    --accent: 217 32% 20%;
-    --accent-foreground: 210 40% 98%;
+    --accent: 221 70.2% 18.4%; /* plume tint #0E2350 */
+    --accent-foreground: 219 100% 96.7%;
 
-    --destructive: 0 84% 60%;
-    --destructive-foreground: 0 86% 10%;
+    --destructive: 358 100% 71%; /* coral-400 #FF6B70 */
+    --destructive-foreground: 220 55.1% 9.6%;
 
-    --success: 142 69% 58%;
-    --success-foreground: 144 61% 10%;
+    --success: 159 65.1% 50.6%; /* mint-400 #2FD39A */
+    --success-foreground: 159 74.5% 9.2%;
 
-    --border: 215 19% 34%;
-    --input: 215 16% 47%;
-    --ring: 198 93% 59%;
-    --chart-1: 199 95% 73%;
-    --chart-2: 211 96% 78%;
-    --chart-3: 215 20% 65%;
-    --chart-4: 215 16% 46%;
-    --chart-5: 215 19% 34%;
-    --app-shadow-2xs: 0 1px 3px 0px hsl(0 0% 0% / 0.3);
-    --app-shadow-xs: 0 1px 3px 0px hsl(0 0% 0% / 0.3);
-    --app-shadow-sm: 0 1px 3px 0px hsl(0 0% 0% / 0.4), 0 1px 2px -1px hsl(0 0% 0% / 0.4);
-    --app-shadow-md: 0 1px 3px 0px hsl(0 0% 0% / 0.4), 0 2px 4px -1px hsl(0 0% 0% / 0.4);
-    --app-shadow-lg: 0 1px 3px 0px hsl(0 0% 0% / 0.45), 0 4px 6px -1px hsl(0 0% 0% / 0.45);
-    --app-shadow-xl: 0 1px 3px 0px hsl(0 0% 0% / 0.45), 0 8px 10px -1px hsl(0 0% 0% / 0.45);
-    --app-shadow-2xl: 0 1px 3px 0px hsl(0 0% 0% / 0.6);
+    --border: 220 36.3% 22.2%; /* #24324D */
+    --input: 216 18.5% 45.7%; /* ink-500 #5F708A, 3.3:1 on cards */
+    --ring: 46 100% 67.6%; /* gold-300 #FFD95A */
+    --chart-1: 209 97.8% 64.5%;
+    --chart-2: 45 100% 53.9%;
+    --chart-3: 159 65.1% 50.6%;
+    --chart-4: 358 100% 71%;
+    --chart-5: 214 22.9% 72.5%;
+    /* Shadows vanish on navy, so dark elevation is black at higher alpha plus a 1px top highlight. */
+    --app-shadow-2xs: 0 1px 2px rgb(0 0 0 / 0.3);
+    --app-shadow-xs: 0 1px 2px rgb(0 0 0 / 0.3);
+    --app-shadow-sm: inset 0 1px 0 rgb(255 255 255 / 0.04), 0 2px 6px rgb(0 0 0 / 0.35);
+    --app-shadow-md: inset 0 1px 0 rgb(255 255 255 / 0.04), 0 4px 12px rgb(0 0 0 / 0.4);
+    --app-shadow-lg: inset 0 1px 0 rgb(255 255 255 / 0.05), 0 8px 24px rgb(0 0 0 / 0.45);
+    --app-shadow-xl: inset 0 1px 0 rgb(255 255 255 / 0.06), 0 16px 40px rgb(0 0 0 / 0.55);
+    --app-shadow-2xl: 0 24px 56px rgb(0 0 0 / 0.6);
   }
 }
 
@@ -270,10 +318,17 @@ All colors MUST be HSL.
     @apply border-border;
   }
 
-  /* v3 defaults that v4's preflight dropped: grey placeholders and pointer buttons. */
+  /* v3 defaults that v4's preflight dropped: placeholders and pointer buttons. Placeholders use
+     ink-500 (light) and ink-400 (dark), both above 4.5:1 on their field. */
   input::placeholder,
   textarea::placeholder {
-    color: #9ca3af;
+    color: var(--do-ink-500);
+    opacity: 1;
+  }
+
+  .dark input::placeholder,
+  .dark textarea::placeholder {
+    color: var(--do-ink-400);
   }
 
   button:not(:disabled),
@@ -289,6 +344,22 @@ All colors MUST be HSL.
 
   body {
     @apply bg-background text-foreground;
+    font-weight: 600;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
+
+  /* Page titles are Fredoka in navy, the colour of the owl's outline. */
+  h1 {
+    font-family: var(--font-display);
+    letter-spacing: -0.015em;
+  }
+
+  /* Numbers that change in place (timers, counters) never jitter. */
+  time,
+  [role="timer"] {
+    font-variant-numeric: tabular-nums;
   }
 
   html, body, #root {
@@ -300,8 +371,8 @@ All colors MUST be HSL.
   }
 
   ::selection {
-    background: hsl(var(--primary) / 0.2);
-    color: hsl(var(--foreground));
+    background: var(--do-gold-200);
+    color: var(--do-plume-950);
   }
 
   :root {
@@ -323,9 +394,10 @@ All colors MUST be HSL.
     scroll-behavior: smooth;
   }
 
-  /* One focus system. Primitives that draw their own ring use focus-visible:outline-hidden. */
+  /* One focus system: a 3px ring (plume-700 light, gold-300 dark). Primitives that draw their own
+     ring use focus-visible:outline-hidden and the same --ring colour. */
   :focus-visible {
-    outline: 2px solid hsl(var(--ring));
+    outline: 3px solid hsl(var(--ring));
     outline-offset: 2px;
   }
 
@@ -350,72 +422,402 @@ All colors MUST be HSL.
   transition: none !important;
 }
 
+/* Tactile buttons (style guide .do-btn). A solid ledge sits under the face, drawn as a box-shadow so
+   nothing shifts in layout. Hover lifts the face 1px; press sinks it onto its ledge in 70ms and it
+   springs back on release. Variants only swap the custom properties. These live in the components
+   layer, so a call site's own bg-*, text-* or h-* utilities still win. */
+@layer components {
+  .btn {
+    --btn-face: var(--do-primary);
+    --btn-hover: #0763E2;
+    --btn-fg: var(--do-on-primary);
+    --btn-edge: transparent;
+    --btn-ledge-color: var(--do-primary-ledge);
+    --btn-ledge: 4px;
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    white-space: nowrap;
+    border: 2px solid var(--btn-edge);
+    border-radius: var(--radius-lg);
+    background-color: var(--btn-face);
+    color: var(--btn-fg);
+    font-family: var(--font-display);
+    font-weight: 600;
+    letter-spacing: 0.01em;
+    line-height: 1.25;
+    box-shadow: 0 var(--btn-ledge) 0 var(--btn-ledge-color);
+    transform: translateY(0);
+    transition:
+      transform 180ms var(--do-ease-overshoot),
+      box-shadow 180ms var(--do-ease-overshoot),
+      background-color 120ms var(--do-ease-standard),
+      border-color 120ms var(--do-ease-standard),
+      color 120ms var(--do-ease-standard),
+      opacity 120ms var(--do-ease-standard);
+    user-select: none;
+    -webkit-user-select: none;
+    touch-action: manipulation;
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    .btn:not(:disabled):not([aria-disabled='true']):hover {
+      background-color: var(--btn-hover);
+      transform: translateY(-1px);
+      box-shadow: 0 calc(var(--btn-ledge) + 1px) 0 var(--btn-ledge-color);
+    }
+  }
+
+  .btn:not(:disabled):not([aria-disabled='true']):active,
+  .btn[data-pressed] {
+    transform: translateY(var(--btn-ledge));
+    box-shadow: 0 0 0 var(--btn-ledge-color);
+    transition-duration: 70ms;
+    transition-timing-function: var(--do-ease-press);
+  }
+
+  .btn:focus-visible {
+    outline: 3px solid var(--do-focus-ring);
+    outline-offset: 2px;
+    box-shadow: 0 var(--btn-ledge) 0 var(--btn-ledge-color), 0 0 0 7px var(--do-focus-glow);
+  }
+
+  /* A busy button (loading, or aria-busy while its request runs) keeps its face; only idle disabled
+     buttons go grey. */
+  .btn:disabled:not([data-loading]):not([aria-busy='true']),
+  .btn[aria-disabled='true']:not([data-loading]):not([aria-busy='true']) {
+    --btn-face: var(--do-disabled-face);
+    --btn-hover: var(--do-disabled-face);
+    --btn-fg: var(--do-disabled-text);
+    --btn-edge: transparent;
+    --btn-ledge: 0px;
+    cursor: not-allowed;
+  }
+
+  .btn[data-loading],
+  .btn[aria-busy='true'] {
+    cursor: progress;
+  }
+
+  .btn[data-loading] {
+    pointer-events: none;
+  }
+
+  .btn-primary {
+    /* The defaults above. */
+  }
+
+  .btn-accent {
+    --btn-face: var(--do-accent);
+    --btn-hover: var(--do-accent-hover);
+    --btn-fg: var(--do-on-accent);
+    --btn-ledge-color: var(--do-accent-ledge);
+  }
+
+  .btn-success {
+    --btn-face: var(--do-success);
+    --btn-hover: var(--do-mint-400);
+    --btn-fg: var(--do-on-success);
+    --btn-ledge-color: var(--do-success-ledge);
+  }
+
+  .btn-destructive {
+    --btn-face: var(--do-danger);
+    --btn-hover: var(--do-coral-700);
+    --btn-fg: var(--do-on-danger);
+    --btn-ledge-color: var(--do-danger-ledge);
+  }
+
+  .dark .btn-destructive {
+    --btn-hover: var(--do-coral-300);
+  }
+
+  /* The style guide's secondary: a white face with a strong edge and blue text. */
+  .btn-outline {
+    --btn-face: var(--do-surface);
+    --btn-hover: var(--do-primary-tint);
+    --btn-fg: var(--do-plume-700);
+    --btn-edge: var(--do-border-strong);
+    --btn-ledge-color: var(--do-border-strong);
+    --btn-ledge: 3px;
+  }
+
+  .dark .btn-outline {
+    --btn-face: var(--do-surface-raised);
+    --btn-hover: var(--do-primary-tint);
+    --btn-fg: var(--do-plume-300);
+    --btn-edge: var(--do-border-strong);
+    --btn-ledge-color: var(--do-ledge-neutral);
+  }
+
+  /* Tonal: a blue tint with a blue ledge, quieter than primary. */
+  .btn-secondary {
+    --btn-face: var(--do-plume-100);
+    --btn-hover: var(--do-plume-50);
+    --btn-fg: var(--do-plume-800);
+    --btn-ledge-color: var(--do-plume-200);
+    --btn-ledge: 3px;
+  }
+
+  .dark .btn-secondary {
+    --btn-face: var(--do-primary-tint);
+    --btn-hover: #132C62;
+    --btn-fg: var(--do-plume-200);
+    --btn-ledge-color: var(--do-plume-950);
+  }
+
+  /* Ghost and link have no ledge: they sit flat and answer with a tint or an underline. */
+  .btn-ghost,
+  .btn-link {
+    --btn-face: transparent;
+    --btn-ledge: 0px;
+    --btn-ledge-color: transparent;
+    box-shadow: none;
+  }
+
+  .btn-ghost {
+    --btn-hover: hsl(var(--accent));
+    color: inherit;
+    font-family: var(--font-sans);
+    font-weight: 700;
+    letter-spacing: 0;
+  }
+
+  .btn-ghost:not(:disabled):active {
+    transform: scale(0.96);
+  }
+
+  .btn-link {
+    --btn-hover: transparent;
+    --btn-fg: hsl(var(--primary));
+    text-underline-offset: 4px;
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    .btn-ghost:not(:disabled):hover,
+    .btn-link:not(:disabled):hover {
+      transform: none;
+      box-shadow: none;
+    }
+
+    .btn-ghost:not(:disabled):hover {
+      color: hsl(var(--accent-foreground));
+    }
+
+    .btn-link:not(:disabled):hover {
+      text-decoration: underline;
+    }
+  }
+
+  .btn-ghost:disabled,
+  .btn-link:disabled {
+    --btn-face: transparent;
+    opacity: 0.5;
+  }
+
+  .btn-ghost:focus-visible,
+  .btn-link:focus-visible {
+    box-shadow: 0 0 0 7px var(--do-focus-glow);
+  }
+
+  /* The "thinking" dots that replace a spinner: three dots bouncing on a 120ms stagger. */
+  .thinking-dots {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.22em;
+  }
+
+  .thinking-dots > i {
+    width: 0.4em;
+    height: 0.4em;
+    border-radius: 9999px;
+    background: currentColor;
+    animation: thinking-dot 900ms var(--do-ease-standard) infinite;
+  }
+
+  .thinking-dots > i:nth-child(2) {
+    animation-delay: 120ms;
+  }
+
+  .thinking-dots > i:nth-child(3) {
+    animation-delay: 240ms;
+  }
+
+  /* A tappable card: the action card of the design system, pressing down like a button. */
+  .tile {
+    border: 2px solid var(--do-border);
+    background-color: var(--do-surface);
+    box-shadow: 0 3px 0 var(--do-border-strong);
+    transition:
+      transform 180ms var(--do-ease-overshoot),
+      box-shadow 180ms var(--do-ease-overshoot),
+      border-color 120ms var(--do-ease-standard),
+      background-color 120ms var(--do-ease-standard);
+  }
+
+  .dark .tile {
+    box-shadow: 0 3px 0 var(--do-ledge-neutral);
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    .tile:hover {
+      border-color: var(--do-primary-tint-border);
+      transform: translateY(-1px);
+      box-shadow: 0 4px 0 var(--do-primary-tint-border);
+    }
+  }
+
+  .tile:active {
+    transform: translateY(3px);
+    box-shadow: 0 0 0 var(--do-border-strong);
+    transition-duration: 70ms;
+    transition-timing-function: var(--do-ease-press);
+  }
+
+  .tile[aria-pressed='true'],
+  .tile[aria-checked='true'],
+  .tile[data-selected='true'] {
+    border-color: var(--do-primary);
+    background-color: var(--do-primary-tint);
+    box-shadow: 0 3px 0 var(--do-primary);
+  }
+
+  /* Progress fills carry a glassy highlight along their top edge. */
+  .progress-fill {
+    position: relative;
+  }
+
+  .progress-fill::after {
+    content: '';
+    position: absolute;
+    top: 3px;
+    right: 8px;
+    left: 8px;
+    height: 3px;
+    border-radius: 9999px;
+    background: rgb(255 255 255 / 0.35);
+  }
+
+  /* Skeleton shapes shimmer left to right once loading takes more than a moment. */
+  .skeleton-shimmer {
+    position: relative;
+    overflow: hidden;
+    background-color: var(--do-skeleton);
+  }
+
+  .skeleton-shimmer::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    transform: translateX(-100%);
+    background: linear-gradient(90deg, transparent, rgb(255 255 255 / 0.55), transparent);
+    animation: skeleton-shimmer 1.2s linear infinite;
+  }
+
+  .dark .skeleton-shimmer::after {
+    background: linear-gradient(90deg, transparent, rgb(255 255 255 / 0.06), transparent);
+  }
+}
+
+@keyframes thinking-dot {
+  0%, 60%, 100% {
+    transform: translateY(0);
+  }
+  30% {
+    transform: translateY(-0.35em);
+  }
+}
+
+@keyframes skeleton-shimmer {
+  to {
+    transform: translateX(100%);
+  }
+}
+
 /* Landing Page Utilities */
 @layer components {
   .glass-card {
-    @apply bg-card border border-border rounded-2xl shadow-sm;
-    background: linear-gradient(135deg, hsl(var(--card)) 0%, hsl(198 35% 90%) 100%);
+    @apply bg-card border-2 border-border rounded-xl;
   }
 
-  .dark .glass-card,
-  .dark .feature-card {
-    background: linear-gradient(135deg, hsl(var(--card)) 0%, hsl(217 32% 20%) 100%);
+  /* The landing CTAs are links, so they share the tactile button: a ledge that presses down. */
+  .btn-primary-gradient,
+  .btn-secondary-outline {
+    --btn-ledge: 5px;
+    position: relative;
+    padding: 0.75rem 1.5rem;
+    border-radius: var(--radius-lg);
+    font-family: var(--font-display);
+    font-weight: 600;
+    letter-spacing: 0.01em;
+    transform: translateY(0);
+    transition:
+      transform 180ms var(--do-ease-overshoot),
+      box-shadow 180ms var(--do-ease-overshoot),
+      background-color 120ms var(--do-ease-standard),
+      border-color 120ms var(--do-ease-standard),
+      color 120ms var(--do-ease-standard);
+    touch-action: manipulation;
   }
-
 
   .btn-primary-gradient {
-    @apply relative px-6 py-3 font-semibold text-primary-foreground rounded-xl overflow-hidden shadow-lg;
-    background: linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(169 72% 40%) 100%);
-    transition:
-      transform var(--motion-duration-fast) var(--motion-ease-fluid),
-      box-shadow 300ms var(--motion-ease-fluid);
-  }
-
-  /* The landing CTAs are links, so they get the same press feedback as Button here. */
-  .btn-primary-gradient:active,
-  .btn-secondary-outline:active {
-    transform: scale(var(--motion-press-scale));
-    transition-duration: var(--motion-duration-press);
-  }
-
-  .btn-primary-gradient::before {
-    content: '';
-    @apply absolute inset-0 opacity-0 transition-opacity duration-300;
-    background: linear-gradient(135deg, hsl(200 92% 32%) 0%, hsl(169 72% 34%) 100%);
-  }
-
-  @media (hover: hover) and (pointer: fine) {
-    .btn-primary-gradient:hover::before {
-      @apply opacity-100;
-    }
-
-    .btn-primary-gradient:hover {
-      @apply shadow-xl;
-      box-shadow: 0 10px 40px hsl(var(--primary) / 0.3);
-    }
+    --btn-ledge-color: var(--do-primary-ledge);
+    border: 2px solid transparent;
+    background-color: var(--do-primary);
+    color: var(--do-on-primary);
+    box-shadow: 0 var(--btn-ledge) 0 var(--btn-ledge-color);
   }
 
   .btn-secondary-outline {
-    @apply px-6 py-3 font-semibold text-foreground rounded-xl border border-border bg-card shadow-sm;
-    transition:
-      transform var(--motion-duration-fast) var(--motion-ease-fluid),
-      color 300ms var(--motion-ease-fluid),
-      background-color 300ms var(--motion-ease-fluid),
-      border-color 300ms var(--motion-ease-fluid),
-      box-shadow 300ms var(--motion-ease-fluid);
+    --btn-ledge-color: var(--do-border-strong);
+    border: 2px solid var(--do-border-strong);
+    background-color: var(--do-surface);
+    color: var(--do-plume-700);
+    box-shadow: 0 var(--btn-ledge) 0 var(--btn-ledge-color);
   }
 
-  /* Landing section headings: one size scale and one tracking per size. Each size brings its own
-     line height (v4's leading-* would otherwise win at every breakpoint). */
-  .section-heading {
-    @apply text-balance text-3xl font-bold leading-tight tracking-[-0.022em] text-foreground md:text-4xl md:leading-10 lg:text-5xl lg:leading-none lg:tracking-[-0.025em];
+  .dark .btn-secondary-outline {
+    --btn-ledge-color: var(--do-ledge-neutral);
+    background-color: var(--do-surface-raised);
+    color: var(--do-plume-300);
   }
 
   @media (hover: hover) and (pointer: fine) {
+    .btn-primary-gradient:hover,
     .btn-secondary-outline:hover {
-      @apply bg-secondary border-primary/30 shadow-md;
-      color: hsl(var(--secondary-foreground));
+      transform: translateY(-1px);
+      box-shadow: 0 calc(var(--btn-ledge) + 1px) 0 var(--btn-ledge-color);
     }
+
+    .btn-primary-gradient:hover {
+      background-color: #0763E2;
+    }
+
+    .btn-secondary-outline:hover {
+      background-color: var(--do-primary-tint);
+    }
+  }
+
+  .btn-primary-gradient:active,
+  .btn-secondary-outline:active {
+    transform: translateY(var(--btn-ledge));
+    box-shadow: 0 0 0 var(--btn-ledge-color);
+    transition-duration: 70ms;
+    transition-timing-function: var(--do-ease-press);
+  }
+
+  .btn-primary-gradient:focus-visible,
+  .btn-secondary-outline:focus-visible {
+    outline: 3px solid var(--do-focus-ring);
+    outline-offset: 2px;
+  }
+
+  /* Landing section headings: Fredoka in navy, one size scale and one tracking per size. Each size
+     brings its own line height (v4's leading-* would otherwise win at every breakpoint). */
+  .section-heading {
+    @apply text-balance font-display text-3xl font-[600] leading-tight tracking-[-0.015em] text-heading md:text-4xl md:leading-10 lg:text-5xl lg:leading-none lg:tracking-[-0.02em];
   }
 
   /* Backgrounds are static: nothing on the landing page moves on its own. */
@@ -428,8 +830,7 @@ All colors MUST be HSL.
 
   /* Cards answer hover with an edge and a shadow; they don't lift or tilt (they aren't clickable). */
   .feature-card {
-    @apply bg-card border border-border rounded-2xl shadow-sm p-6;
-    background: linear-gradient(135deg, hsl(var(--card)) 0%, hsl(198 35% 90%) 100%);
+    @apply bg-card border-2 border-border rounded-xl p-6;
     transition:
       border-color var(--motion-duration-normal) var(--motion-ease-fluid),
       box-shadow var(--motion-duration-normal) var(--motion-ease-fluid);
@@ -437,8 +838,8 @@ All colors MUST be HSL.
 
   @media (hover: hover) and (pointer: fine) {
     .feature-card:hover {
-      @apply border-primary/40;
-      box-shadow: 0 20px 40px hsl(var(--foreground) / 0.08);
+      border-color: var(--do-primary-tint-border);
+      box-shadow: var(--app-shadow-lg);
     }
   }
 
@@ -450,15 +851,16 @@ All colors MUST be HSL.
     background: hsl(var(--primary) / 0.3);
   }
 
+  /* The owl's two colours: a plume glow and a beak-gold glow. */
   .orb-accent {
-    background: hsl(169 72% 45% / 0.22);
+    background: rgb(255 196 20 / 0.2);
   }
 
   .aurora-bg {
     background:
-      radial-gradient(circle at 12% 18%, hsl(var(--primary) / 0.28), transparent 45%),
-      radial-gradient(circle at 82% 14%, hsl(169 72% 40% / 0.22), transparent 48%),
-      radial-gradient(circle at 55% 85%, hsl(186 78% 45% / 0.18), transparent 44%);
+      radial-gradient(circle at 12% 18%, rgb(30 141 251 / 0.22), transparent 45%),
+      radial-gradient(circle at 82% 14%, rgb(255 196 20 / 0.18), transparent 48%),
+      radial-gradient(circle at 55% 85%, rgb(76 166 253 / 0.14), transparent 44%);
   }
 
   .section-container {
@@ -468,11 +870,32 @@ All colors MUST be HSL.
   .route-skeleton-surface {
     background-color: hsl(var(--card) / 0.72);
     border-color: hsl(var(--border));
+    border-width: 2px;
+  }
+
+  /* Route skeletons shimmer, and only appear once loading has taken 300ms, so fast loads never flash. */
+  [data-route-skeleton] {
+    animation: motion-fade-in 200ms var(--do-ease-decelerate) 300ms both;
   }
 
   .route-skeleton-shape {
-    background-color: hsl(var(--muted) / 0.58);
-    border-radius: calc(var(--radius) - 2px);
+    position: relative;
+    overflow: hidden;
+    background-color: var(--do-skeleton);
+    border-radius: var(--radius-sm);
+  }
+
+  .route-skeleton-shape::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    transform: translateX(-100%);
+    background: linear-gradient(90deg, transparent, rgb(255 255 255 / 0.55), transparent);
+    animation: skeleton-shimmer 1.2s linear infinite;
+  }
+
+  .dark .route-skeleton-shape::after {
+    background: linear-gradient(90deg, transparent, rgb(255 255 255 / 0.06), transparent);
   }
 
   /* The landing nav is the one blurred surface; its edge appears once content scrolls under it. */
@@ -620,6 +1043,12 @@ All colors MUST be HSL.
   }
 }
 
+/* Body text is Nunito 600, so emphasis and minor headings in rendered answers step up to 800;
+   the typography plugin's 600 would read as plain text. Unlayered, so it beats the plugin. */
+.prose :where(strong, b, h3, h4):not(:where([class~="not-prose"], [class~="not-prose"] *)) {
+  font-weight: 800;
+}
+
 /* Scroll margin for anchors under the sticky header. Unlayered, so it wins over scroll-mt-* as in v3. */
 [id] {
   scroll-margin-top: 5rem;
@@ -732,6 +1161,18 @@ All colors MUST be HSL.
   }
 }
 
+/* A toast whose icon is the owl beside its check: the slot grows to fit both instead of the
+   32 px tinted circle, and the check keeps its own circle. In the utilities layer, because the
+   Toaster's `size-8!` is a layered important rule, which an unlayered one cannot override. */
+@layer utilities {
+  [data-sonner-toast].toast-owl [data-icon] {
+    width: auto !important;
+    height: auto !important;
+    border-radius: 0 !important;
+    background: none !important;
+  }
+}
+
 @keyframes motion-swap {
   from {
     opacity: 0;
@@ -810,7 +1251,9 @@ All colors MUST be HSL.
 
   /* Spinners and live indicators become a slow opacity pulse so they never look hung. */
   .animate-spin,
-  .streaming-caret {
+  .streaming-caret,
+  .thinking-dots > i,
+  .skeleton-shimmer {
     animation-name: motion-pulse !important;
     animation-duration: 1.2s !important;
     animation-timing-function: ease-in-out !important;
@@ -821,14 +1264,48 @@ All colors MUST be HSL.
     animation-name: pulse !important;
   }
 
+  .skeleton-shimmer::after {
+    display: none;
+  }
+
   .motion-press,
   .motion-press:hover,
   .motion-press:active,
   .motion-lift:hover,
+  .btn,
+  .btn:hover,
+  .btn:active,
+  .tile,
+  .tile:hover,
+  .tile:active,
   .motion-expand,
   .btn-primary-gradient:active,
   .btn-secondary-outline:active {
     transform: none !important;
+  }
+}
+
+/* With reduced motion a press still shows: the face stays put and its ledge goes flat. */
+@media (prefers-reduced-motion: reduce) {
+  .btn:not(:disabled):active,
+  .tile:active {
+    box-shadow: 0 0 0 transparent !important;
+    filter: brightness(0.94);
+  }
+}
+
+/* The owl in a loader floats gently, two seconds up and down. */
+.owl-bob {
+  display: inline-block;
+  animation: owl-bob 2.4s var(--do-ease-standard) infinite;
+}
+
+@keyframes owl-bob {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-5px);
   }
 }
 

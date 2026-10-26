@@ -77,13 +77,13 @@ describe('PricingModal per billing state', () => {
   const CASES = [
     { name: 'trial', state: stateOf({}), button: 'Upgrade to Pro', current: 'plan-trial', portal: false },
     { name: 'trial ended with extended access', state: stateOf({ tier: 'expired', billingState: 'extended_access' }), button: 'Upgrade to Pro', current: null, portal: false },
-    { name: 'active Pro', state: stateOf({ tier: 'pro', billingState: 'pro', hasOpenSubscription: true, hasStripeBilling: true }), button: 'Manage Subscription', current: 'plan-pro', portal: true },
-    { name: 'Pro set to cancel', state: stateOf({ tier: 'pro', billingState: 'pro_canceling', billingDate: '2026-11-22T00:00:00Z', hasOpenSubscription: true, hasStripeBilling: true }), button: 'Manage Subscription', current: 'plan-pro', portal: true },
-    { name: 'past due in the grace', state: stateOf({ tier: 'pro', billingState: 'payment_failed', hasOpenSubscription: true, hasStripeBilling: true }), button: 'Manage Subscription', current: 'plan-pro', portal: true },
-    { name: 'past due after the grace', state: stateOf({ tier: 'expired', billingState: 'payment_failed', hasOpenSubscription: true, hasStripeBilling: true }), button: 'Manage Subscription', current: null, portal: true },
+    { name: 'active Pro', state: stateOf({ tier: 'pro', billingState: 'pro', hasOpenSubscription: true, hasStripeBilling: true }), button: 'Manage subscription', current: 'plan-pro', portal: true },
+    { name: 'Pro set to cancel', state: stateOf({ tier: 'pro', billingState: 'pro_canceling', billingDate: '2026-11-22T00:00:00Z', hasOpenSubscription: true, hasStripeBilling: true }), button: 'Manage subscription', current: 'plan-pro', portal: true },
+    { name: 'past due in the grace', state: stateOf({ tier: 'pro', billingState: 'payment_failed', hasOpenSubscription: true, hasStripeBilling: true }), button: 'Manage subscription', current: 'plan-pro', portal: true },
+    { name: 'past due after the grace', state: stateOf({ tier: 'expired', billingState: 'payment_failed', hasOpenSubscription: true, hasStripeBilling: true }), button: 'Manage subscription', current: null, portal: true },
     { name: 'subscription ended', state: stateOf({ tier: 'expired', billingState: 'subscription_ended', hasStripeBilling: true }), button: 'Resubscribe', current: null, portal: false },
     { name: 'legacy free in its grace', state: stateOf({ tier: 'legacy_free', billingState: 'legacy_free' }), button: 'Upgrade to Pro', current: null, portal: false },
-    { name: 'promo Pro without Stripe', state: stateOf({ tier: 'pro', billingState: 'pro' }), button: 'Set Up Billing', current: 'plan-pro', portal: false },
+    { name: 'promo Pro without Stripe', state: stateOf({ tier: 'pro', billingState: 'pro' }), button: 'Set up billing', current: 'plan-pro', portal: false },
   ];
 
   beforeEach(() => {
@@ -94,7 +94,7 @@ describe('PricingModal per billing state', () => {
   it.each(CASES)('$name: one right next step and the right plan marked current', async ({ state, button, current, portal }) => {
     subscription = state;
     renderModal();
-    for (const other of ['Upgrade to Pro', 'Manage Subscription', 'Resubscribe', 'Set Up Billing'].filter((name) => name !== button)) {
+    for (const other of ['Upgrade to Pro', 'Manage subscription', 'Resubscribe', 'Set up billing'].filter((name) => name !== button)) {
       expect(screen.queryByRole('button', { name: other })).not.toBeInTheDocument();
     }
     for (const plan of ['plan-trial', 'plan-pro']) {

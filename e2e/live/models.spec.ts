@@ -26,13 +26,13 @@ test("Attack and Brainstorm return valid structured analyses", async ({ signedIn
   await page.goto("/app/attack");
   await page.getByLabel("Your Argument *").fill("Free transit cuts congestion because riders leave their cars at home, so cities should abolish fares.");
   const attack = aiResponse(page, "attack");
-  await page.getByRole("button", { name: "Find Weaknesses" }).click();
+  await page.getByRole("button", { name: "Find weaknesses" }).click();
   expect(((await attack).output.weaknesses as unknown[]).length).toBeGreaterThan(0);
 
   await page.goto("/app/brainstorm");
   await page.getByLabel("Motion / Topic *").fill("Universal basic income should replace targeted welfare");
   const brainstorm = aiResponse(page, "brainstorm");
-  await page.getByRole("button", { name: "Start Brainstorming" }).click();
+  await page.getByRole("button", { name: "Start brainstorming" }).click();
   await chooseForMotion(page, "once");
   expect(((await brainstorm).output.topFive as unknown[]).length).toBeGreaterThan(0);
   await expectProviderCallsHealthy(["attack", "brainstorm"]);

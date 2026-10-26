@@ -1,4 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
+import { LoadingSpinner } from '@/components/ui/loading-spinner';
+import { OwlMark } from '@/components/brand/Owl';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
@@ -7,7 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { LanguageSwitcher } from '@/components/LanguageSwitcher';
-import { ArrowLeft, Loader2 } from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
 import { useAuth } from '@/lib/supabase/AuthProvider';
 import { useToast } from '@/hooks/use-toast';
 import { useExternalRedirectPending } from '@/hooks/use-external-redirect-pending';
@@ -312,7 +314,7 @@ export default function LoginPage() {
   const describedBy = (hintId: string, errorId: string) => hasError ? `${hintId} ${errorId}` : hintId;
   const pending = (label: string) => (
     <>
-      <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+      <LoadingSpinner size="sm" />
       {label}
     </>
   );
@@ -334,9 +336,7 @@ export default function LoginPage() {
       </div>
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
-          <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center overflow-hidden rounded-lg bg-white dark:bg-slate-800">
-            <img src="/favicon-72.png" alt="" width={48} height={48} className="h-full w-full object-cover" />
-          </div>
+          <OwlMark size={56} className="mx-auto mb-3" />
           {/* The page heading, styled like CardTitle (which renders an h2 by default). */}
           <h1 className="text-2xl font-semibold leading-none tracking-tight">{t('login.title')}</h1>
           <CardDescription>{t('login.subtitle')}</CardDescription>
@@ -473,12 +473,12 @@ export default function LoginPage() {
             </p>
           )}
           {authStatus === 'code-sent' && (
-            <p className="mt-4 text-sm text-success" role="status" aria-live="polite">
+            <p className="mt-4 text-sm text-success-text" role="status" aria-live="polite">
               {t(SENT_NOTICE_KEYS[sentNotice])}
             </p>
           )}
           {authStatus === 'success' && (
-            <p className="mt-4 text-sm text-success" role="status" aria-live="polite">
+            <p className="mt-4 text-sm text-success-text" role="status" aria-live="polite">
               {t('login.signedIn', 'Signed in')}
             </p>
           )}

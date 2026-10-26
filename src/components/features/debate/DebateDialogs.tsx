@@ -1,6 +1,7 @@
 import { useState } from 'react';
+import { LoadingSpinner } from '@/components/ui/loading-spinner';
 import { useTranslation } from 'react-i18next';
-import { Check, Loader2, Trash2 } from 'lucide-react';
+import { Check, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import {
@@ -96,7 +97,7 @@ export function DebatePicker({ onPicked, excludeCurrent = false }: { onPicked: (
               >
                 <span className="block wrap-break-word font-medium">{debate.motion}</span>
                 <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                  {busy?.id === debate.id && busy.action === 'switch' && <Loader2 className="h-3 w-3 animate-spin" aria-hidden="true" />}
+                  {busy?.id === debate.id && busy.action === 'switch' && <LoadingSpinner size="sm" />}
                   {busy?.id === debate.id && busy.action === 'switch'
                     ? t('debate.switching', 'Switching…')
                     : t('debate.lastActivity', { when: formatRelativeDate(debate.lastActivityAt), defaultValue: 'Last activity {{when}}' })}

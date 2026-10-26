@@ -28,15 +28,15 @@ const HowItWorks = () => {
                         {steps.map((step, index) => (
                             <Reveal key={step.step} delay={index * 0.05} className="relative flex flex-col items-center text-center">
                                 <div className="relative mb-6">
-                                    <div className="w-20 h-20 rounded-full bg-secondary border border-border flex items-center justify-center relative z-10">
+                                    <div className="w-20 h-20 rounded-full bg-card border-2 border-border flex items-center justify-center relative z-10 shadow-[0_4px_0_var(--do-border-strong)] dark:shadow-[0_4px_0_var(--do-ledge-neutral)]">
                                         <step.icon aria-hidden="true" className="w-8 h-8 text-primary" />
                                     </div>
-                                    <div className="absolute -top-2 -right-2 w-8 h-8 rounded-full bg-primary flex items-center justify-center text-sm font-bold text-primary-foreground shadow-md">
+                                    <div className="absolute -top-2 -right-2 z-20 w-8 h-8 rounded-full bg-gold flex items-center justify-center font-display text-sm font-[600] text-on-gold shadow-[0_2px_0_var(--do-accent-ledge)]">
                                         {step.step}
                                     </div>
                                 </div>
 
-                                <h3 className="text-xl font-semibold mb-3 text-foreground">{step.title}</h3>
+                                <h3 className="font-display text-xl font-[600] mb-3 text-heading">{step.title}</h3>
                                 <p className="text-muted-foreground text-sm max-w-xs">{step.description}</p>
                             </Reveal>
                         ))}

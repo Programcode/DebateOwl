@@ -40,7 +40,7 @@ describe('EnvironmentSwitcher', () => {
     expect(mocks.signOut).not.toHaveBeenCalled();
     expect(screen.getByRole('dialog')).toHaveTextContent('pointing at staging');
 
-    await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Switch & Sign Out' })); });
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Switch & sign out' })); });
     expect(order).toEqual(['signOut', 'set:staging', 'reload']);
   });
 
@@ -62,7 +62,7 @@ describe('EnvironmentSwitcher', () => {
     const reload = vi.fn();
     render(<EnvironmentSwitcher reload={reload} />);
     fireEvent.click(screen.getByRole('button', { name: 'Switch to Production' }));
-    await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Switch & Sign Out' })); });
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Switch & sign out' })); });
     expect(mocks.setActiveEnv).toHaveBeenCalledWith('production');
     expect(reload).toHaveBeenCalledOnce();
   });

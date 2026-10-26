@@ -4,7 +4,9 @@
 import { createInstance } from 'i18next';
 import { initReactI18next, useTranslation } from 'react-i18next';
 import { createRoot } from 'react-dom/client';
-import '@fontsource-variable/inter';
+import '@fontsource-variable/nunito';
+import '@fontsource-variable/fredoka';
+import '@fontsource-variable/jetbrains-mono';
 import '../index.css';
 import toolsEn from '../locales/tools/en.json';
 import toolsEs from '../locales/tools/es.json';

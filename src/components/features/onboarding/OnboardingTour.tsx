@@ -43,7 +43,7 @@ export function OnboardingTour({ eligibleAt, userId }: { eligibleAt?: number; us
             target: '[data-tour="current-debate"]',
             content: (
                 <div>
-                    <h2 className="text-xl font-bold mb-2">{t('onboarding.welcome')}</h2>
+                    <h2 className="mb-2 font-display text-xl font-[600] text-heading">{t('onboarding.welcome')}</h2>
                     <p className="text-muted-foreground">
                         {currentDebateId ? t('onboarding.debateCurrentDesc') : t('onboarding.debateFirstDesc')}
                     </p>
@@ -59,9 +59,10 @@ export function OnboardingTour({ eligibleAt, userId }: { eligibleAt?: number; us
             ...(currentDebateId ? {} : {
                 styles: {
                     buttonNext: {
-                        backgroundColor: 'transparent',
-                        border: '1px solid hsl(var(--border))',
-                        color: 'hsl(var(--foreground))',
+                        backgroundColor: 'var(--do-surface)',
+                        border: '2px solid var(--do-border-strong)',
+                        boxShadow: '0 3px 0 var(--do-border-strong)',
+                        color: 'hsl(var(--primary))',
                     },
                 },
             }),
@@ -195,7 +196,7 @@ export function OnboardingTour({ eligibleAt, userId }: { eligibleAt?: number; us
                 options: {
                     arrowColor: 'hsl(var(--popover))',
                     backgroundColor: 'hsl(var(--popover))',
-                    overlayColor: 'hsl(var(--background) / 0.72)',
+                    overlayColor: 'var(--do-overlay)',
                     primaryColor: 'hsl(var(--primary))',
                     textColor: 'hsl(var(--popover-foreground))',
                     // Hungarian footer labels wrap at Joyride's default 380px.
@@ -204,11 +205,11 @@ export function OnboardingTour({ eligibleAt, userId }: { eligibleAt?: number; us
                 },
                 tooltip: {
                     backgroundColor: 'hsl(var(--popover))',
-                    border: '1px solid hsl(var(--border))',
-                    borderRadius: '0.5rem',
-                    boxShadow: '0 20px 45px hsl(var(--foreground) / 0.18)',
+                    border: '2px solid hsl(var(--border))',
+                    borderRadius: '24px',
+                    boxShadow: 'var(--app-shadow-xl)',
                     color: 'hsl(var(--popover-foreground))',
-                    padding: '1rem',
+                    padding: '1.25rem',
                 },
                 tooltipContent: {
                     textAlign: 'left',
@@ -216,11 +217,15 @@ export function OnboardingTour({ eligibleAt, userId }: { eligibleAt?: number; us
                 buttonClose: {
                     color: 'hsl(var(--muted-foreground))',
                 },
+                // The tour's buttons press like the app's (.btn in index.css draws the ledge).
                 buttonNext: {
-                    backgroundColor: 'hsl(var(--primary))',
-                    borderRadius: '0.375rem',
-                    color: 'hsl(var(--primary-foreground))',
-                    padding: '0.5rem 1rem',
+                    backgroundColor: 'var(--do-primary)',
+                    borderRadius: '14px',
+                    boxShadow: '0 3px 0 var(--do-primary-ledge)',
+                    color: '#FFFFFF',
+                    fontFamily: 'var(--font-display)',
+                    fontWeight: 600,
+                    padding: '0.625rem 1rem',
                 },
                 buttonBack: {
                     color: 'hsl(var(--muted-foreground))',
@@ -245,7 +250,7 @@ export function OnboardingTour({ eligibleAt, userId }: { eligibleAt?: number; us
 function TourCopy({ title, description }: { title: string; description: string }) {
     return (
         <div>
-            <h3 className="font-semibold mb-1">{title}</h3>
+            <h3 className="mb-1 font-extrabold text-heading">{title}</h3>
             <p className="text-sm text-muted-foreground">{description}</p>
         </div>
     );

@@ -17,7 +17,7 @@ async function snap(page: Page, name: string) {
 
 async function addSource(page: Page, title: string, content: string) {
   await page.goto("/app/library");
-  await page.getByRole("button", { name: "Add Source" }).click();
+  await page.getByRole("button", { name: "Add source" }).click();
   await page.getByRole("textbox", { name: "Title", exact: true }).fill(title);
   await page.getByRole("textbox", { name: "Content", exact: true }).fill(content);
   await page.getByRole("button", { name: "Save to Library" }).click();
@@ -49,7 +49,7 @@ test("every request carries its debate's material, and Review changes exactly on
   const control = page.getByTestId("debate-context-control");
   await expect(control).toContainText("Using 2 sources");
   await snap(page, "1-generate-context-line");
-  await page.getByRole("button", { name: "Generate Debate Case" }).click();
+  await page.getByRole("button", { name: "Generate debate case" }).click();
   await expectResult(page, `${MARK} case thesis`);
   const generateCall = await latestCall("generate");
   for (const expected of ["<current-debate>", MOTION, INSTRUCTION, "FARE-SOURCE", "RIDERSHIP-SOURCE", "STUDENT MATERIAL RULES"]) {
@@ -69,7 +69,7 @@ test("every request carries its debate's material, and Review changes exactly on
   await expect(sheet).toBeHidden();
   await expect(control).toContainText("Using 1 source and 1 saved result");
 
-  await page.getByRole("button", { name: "Start Brainstorming" }).click();
+  await page.getByRole("button", { name: "Start brainstorming" }).click();
   await expectResult(page, `${MARK} idea 1`);
   const brainstormCall = await latestCall("brainstorm");
   expect(brainstormCall.system).toContain("FARE-SOURCE");
@@ -97,7 +97,7 @@ test("every request carries its debate's material, and Review changes exactly on
   await page.goto("/app/brainstorm");
   await page.getByLabel("Motion / Topic *").fill("This House would lower the voting age");
   const before = (await fake.requests()).filter((request) => request.feature === "brainstorm").length;
-  await page.getByRole("button", { name: "Start Brainstorming" }).click();
+  await page.getByRole("button", { name: "Start brainstorming" }).click();
   await page.getByRole("dialog").getByRole("button", { name: "Use once without saving to a debate" }).click();
   await expectResult(page, `${MARK} idea 1`);
   const oneOffCall = await latestCall("brainstorm", before);

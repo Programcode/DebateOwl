@@ -19,10 +19,10 @@ export function PageHeader({ title, eyebrow, meta, actions, icon, className, tit
   return (
     <header className={cn('mb-6 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between', className)}>
       <div className="min-w-0 space-y-1">
-        {eyebrow && <p className="text-sm font-medium text-muted-foreground">{eyebrow}</p>}
+        {eyebrow && <p className="text-xs font-extrabold uppercase tracking-[0.08em] text-muted-foreground">{eyebrow}</p>}
         <div className="flex items-center gap-3">
-          {icon && <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary [&_svg]:h-5 [&_svg]:w-5">{icon}</span>}
-          <h1 className="min-w-0 wrap-break-word text-3xl font-bold leading-tight tracking-tight text-foreground" data-testid={titleTestId}>{title}</h1>
+          {icon && <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-md bg-brand-tint text-primary shadow-[0_3px_0_var(--do-primary-tint-border)] [&_svg]:h-5 [&_svg]:w-5">{icon}</span>}
+          <h1 className="min-w-0 wrap-break-word font-display text-[1.75rem] font-[600] leading-tight tracking-[-0.015em] text-heading sm:text-[2rem]" data-testid={titleTestId}>{title}</h1>
         </div>
         {/* empty:hidden: a meta component that renders nothing leaves no gap. */}
         {meta && <div className="text-sm text-muted-foreground empty:hidden">{meta}</div>}

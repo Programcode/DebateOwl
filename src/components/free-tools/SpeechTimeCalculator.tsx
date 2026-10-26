@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { Check } from 'lucide-react';
 import { BUILT_IN_FORMATS, formatDuration } from '@/lib/free-tools/formats';
 import { countWords, MAX_WPM, MIN_WPM, PACES, slotFits, spokenSeconds } from '@/lib/free-tools/speech-time';
 import { captureProductEvent } from '@/lib/observability';
@@ -93,7 +94,8 @@ export function SpeechTimeCalculator() {
                   <span className="font-medium">{fit.formatShortName} {formatDuration(fit.slotSeconds)}</span>{' '}
                   <span className="text-muted-foreground">{fit.roles}</span>
                 </span>
-                <span className={cn('shrink-0 tabular-nums', fit.fits ? 'text-emerald-800 dark:text-emerald-300' : 'text-destructive')}>
+                <span className={cn('inline-flex shrink-0 items-center gap-1 tabular-nums', fit.fits ? 'font-bold text-emerald-800 dark:text-emerald-300' : 'text-destructive')}>
+                  {fit.fits && <Check className="h-3.5 w-3.5 self-center" strokeWidth={3} aria-hidden="true" />}
                   {fit.fits ? t('calc.spare', { time: describeSpare(fit.spareSeconds) }) : t('calc.over', { time: describeSpare(fit.spareSeconds) })}
                 </span>
               </li>

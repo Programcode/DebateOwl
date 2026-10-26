@@ -1,10 +1,11 @@
 import { useEffect, useState, type ReactNode } from 'react';
+import { OwlLoader } from '@/components/ui/loading-spinner';
 import { useTranslation } from 'react-i18next';
 import { Link, useParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/lib/supabase/client';
-import { Loader2, Share2 } from 'lucide-react';
+import { Share2 } from 'lucide-react';
 import { formatEuropeanDate } from '@/lib/date-format';
 import { PublicPageShell, useHomePath } from '@/components/layout/PublicPageShell';
 import { usePageLabel } from '@/lib/seo/use-page-head';
@@ -147,7 +148,7 @@ export default function SharedPage() {
     if (loading) {
         return (
             <PublicPageShell className="flex min-h-[50vh] items-center justify-center">
-                <Loader2 className="h-8 w-8 animate-spin text-primary" aria-label={t('common.loading', 'Loading')} />
+                <OwlLoader message={t('common.loading', 'Loading')} />
             </PublicPageShell>
         );
     }

@@ -14,20 +14,20 @@ Users save reference texts to their Library. The Library belongs to the Current 
 - `lib-delete` deletes a source. It stays gone after a reload and in the `sources` table.
 - `lib-counts` the Current Debate summary on `/app` shows `<total> sources (<active> active)`, and Ask's `Using <n> sources` counts the same active sources.
 - `lib-import` imports a web page by URL through the `import-source` Edge Function, which fetches the page itself (no Exa), so it works in both modes when the VPS has outbound internet.
-- `lib-erase` has Settings → `Delete All My Data` remove this account's sources and nobody else's.
+- `lib-erase` has Settings → `Delete all my data` remove this account's sources and nobody else's.
 
 ## How to get to it (user POV)
 
 - Desktop: `More` → `Library`. Mobile: `Open menu` → `Library`. Or go to `/app/library`.
-- Settings (`/app/settings`) → `Delete All My Data`, for the erase path.
+- Settings (`/app/settings`) → `Delete all my data`, for the erase path.
 
 ## Driving it with verify.sh + Playwright
 
 Preconditions:
 
-- Doctor passes. The user is signed in (`signedIn` fixture). A Current Debate exists: `await startDebate(page, motion)`. Without one, `Add Source` stays disabled.
+- Doctor passes. The user is signed in (`signedIn` fixture). A Current Debate exists: `await startDebate(page, motion)`. Without one, `Add source` stays disabled.
 
-- **Add.** Click the button named `Add Source`. Fill the textbox named `Title` (exact), fill the textbox named `Content` (exact) with a unique marker, and click `Save to Library`. Leaving either empty shows an inline error under the field and moves focus to it. The switch named `Toggle <title>` is checked. `sources` has a row with `is_active: true` and the debate's `debate_id`.
+- **Add.** Click the button named `Add source`. Fill the textbox named `Title` (exact), fill the textbox named `Content` (exact) with a unique marker, and click `Save to Library`. Leaving either empty shows an inline error under the field and moves focus to it. The switch named `Toggle <title>` is checked. `sources` has a row with `is_active: true` and the debate's `debate_id`.
 - **Toggle.** Click the switch named `Toggle <title>`. It becomes not checked.
 - **Offline toggle.** `page.context().setOffline(true)`, click the switch: the offline toast shows, the switch stays checked, and the row's `is_active` is unchanged. Still offline, open the source, change its `Content` and click `Save`: the toast `Could not save this source.` shows and the typed text stays in the sheet. Set offline back to false and click `Save` again: `Source updated` shows and the row has the new content with `is_active` unchanged.
 - **Duplicate import.** Insert a URL source through `admin`, then import the same page with `?utm_source=x#top`: the duplicate warning shows and no `import-source` request is made.
@@ -36,7 +36,7 @@ Preconditions:
 - **Delete.** Click the button named `Delete <title>` (use `exact`). It deletes at once, with no confirmation, and a toast `Deleted <title>` offers `Undo`, which saves the source again. The switch count drops to 0, and stays 0 after `page.reload()`. `sources` no longer has the title.
 - **Counts.** Insert 7 URL sources through `admin`, 5 with `is_active: true`. `/app` test id `home-current-debate` contains `7 sources (5 active)`; on `/app/ask` test id `debate-context-control` contains `Using 5 sources`.
 - **Import.** In the add panel, fill `Import from URL` and click `Import URL`. The `Import preview` panel appears, then `Save imported source` stores a row whose `origin` is the URL.
-- **Erase.** On Settings, click `Delete All My Data`. In the dialog, fill `Type your email to confirm` with `user.email` and click the dialog's `Delete All My Data`. The text `Data Deleted` appears, and `sources` for the user is `[]`.
+- **Erase.** On Settings, click `Delete all my data`. In the dialog, fill `Type your email to confirm` with `user.email` and click the dialog's `Delete all my data`. The text `Data Deleted` appears, and `sources` for the user is `[]`.
 
 ## Gotchas
 

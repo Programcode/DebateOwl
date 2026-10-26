@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { Owl, OwlAvatar } from '@/components/brand/Owl';
+import { OwlLoader } from '@/components/ui/loading-spinner';
 import { useTranslation } from 'react-i18next';
 import { useOnlineStatus } from '@/hooks/use-online-status';
-import { AlertCircle, Bot, Check, ChevronRight, CirclePause, CirclePlay, Clock3, CloudOff, Loader2, RotateCcw, Send, UserRound, Wifi } from 'lucide-react';
+import { AlertCircle, Check, ChevronRight, CirclePause, CirclePlay, Clock3, CloudOff, RotateCcw, Send, UserRound, Wifi } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
@@ -163,7 +165,7 @@ export function SparringRound({
 
   return (
     <div className="mx-auto w-full max-w-7xl space-y-5">
-      <header className="flex flex-col gap-4 rounded-2xl border border-border bg-card p-4 shadow-sm sm:p-5 lg:flex-row lg:items-center lg:justify-between">
+      <header className="flex flex-col gap-4 rounded-xl border-2 border-border bg-card p-4 sm:p-5 lg:flex-row lg:items-center lg:justify-between">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2 text-xs font-medium text-muted-foreground">
             <Badge variant="outline" className="rounded-md">{t(`sparring.format.${session.format}`, session.format.toUpperCase())}</Badge>
@@ -171,10 +173,10 @@ export function SparringRound({
             <span aria-hidden="true">·</span>
             <span>{session.userSide === 'pro' ? t('sparring.round.youArePro', 'You are Pro') : t('sparring.round.youAreCon', 'You are Con')}</span>
           </div>
-          <h1 className="mt-2 max-w-4xl text-xl font-semibold tracking-tight text-foreground sm:text-2xl">{session.motion}</h1>
+          <h1 className="mt-2 max-w-4xl font-display text-[1.375rem] font-[600] leading-snug tracking-[-0.01em] text-heading sm:text-[1.625rem]">{session.motion}</h1>
         </div>
         <div className="flex shrink-0 items-center gap-3 text-xs text-muted-foreground" aria-live="polite">
-          {isOnline ? <Wifi className="h-3.5 w-3.5 text-emerald-500" aria-hidden="true" /> : <CloudOff className="h-3.5 w-3.5 text-amber-500" aria-hidden="true" />}
+          {isOnline ? <Wifi className="h-3.5 w-3.5 text-success-text" aria-hidden="true" /> : <CloudOff className="h-3.5 w-3.5 text-warning-text" aria-hidden="true" />}
           <span>{isOnline ? t('sparring.round.connected', 'Connected') : t('sparring.round.offlineDraft', 'Offline. Draft saved locally.')}</span>
           <span className="hidden h-4 w-px bg-border sm:block" aria-hidden="true" />
           <span className="tabular-nums">{t('sparring.round.totalWords', { count: totalWords, formatted: formatNumber(totalWords) })}</span>
@@ -234,14 +236,14 @@ export function SparringRound({
                 {judgingError ? (
                   <>
                     <div className="flex h-12 w-12 items-center justify-center rounded-full bg-destructive/10 text-destructive"><AlertCircle className="h-6 w-6" aria-hidden="true" /></div>
-                    <h2 className="mt-4 text-lg font-semibold">{t('sparring.round.scoreFailed', 'Could not score this round')}</h2>
+                    <h2 className="mt-4 font-display text-xl font-[600] text-heading">{t('sparring.round.scoreFailed', 'Could not score this round')}</h2>
                     <p className="mt-2 max-w-md text-sm leading-6 text-muted-foreground">{judgingError}</p>
                     <Button type="button" className="mt-5" onClick={onRetryJudging}>{t('sparring.round.retryScoring', 'Try scoring again')}</Button>
                   </>
                 ) : (
                   <>
-                    <Loader2 className="h-7 w-7 animate-spin text-primary [animation-duration:700ms]" aria-hidden="true" />
-                    <h2 className="mt-5 text-lg font-semibold">{t('sparring.round.judgeWeighing', 'Judge is weighing the round')}</h2>
+                    <OwlLoader size={104} />
+                    <h2 className="mt-4 font-display text-xl font-[600] text-heading">{t('sparring.round.judgeWeighing', 'Judge is weighing the round')}</h2>
                     <p className="mt-2 max-w-md text-sm leading-6 text-muted-foreground">{t('sparring.round.judgeDescription', 'Reading the claims, responses, and strategic choices. This usually takes one request.')}</p>
                   </>
                 )}
@@ -251,10 +253,10 @@ export function SparringRound({
             <>
               {userTurn && latestOpponentSpeech && (
                 // What you're answering stays in view above the composer, not below it in the transcript.
-                <article className="rounded-xl border border-border bg-card p-4 sm:p-5" aria-labelledby="sparring-latest-opponent">
-                  <div className="flex items-center gap-2">
-                    <Bot className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
-                    <h2 id="sparring-latest-opponent" className="text-sm font-semibold">{t('sparring.round.latestOpponent', 'Opponent’s last speech')}</h2>
+                <article className="rounded-lg border-2 border-border bg-card p-4 sm:p-5" aria-labelledby="sparring-latest-opponent">
+                  <div className="flex items-center gap-2.5">
+                    <OwlAvatar pose="arguing" size={32} label={t('sparring.opponentAvatarAlt', 'The owl, your AI opponent')} />
+                    <h2 id="sparring-latest-opponent" className="text-sm font-extrabold text-heading">{t('sparring.round.latestOpponent', 'Opponent’s last speech')}</h2>
                     <span className="truncate text-xs text-muted-foreground">{t(`sparring.turns.${latestOpponentSpeech.turnId}`, latestOpponentSpeech.role)}</span>
                   </div>
                   <div className="mt-3 max-h-60 overflow-y-auto text-sm leading-7 text-foreground/90"><Markdown>{latestOpponentSpeech.content}</Markdown></div>
@@ -300,10 +302,10 @@ export function SparringRound({
                 </Card>
               ) : aiLoading && !aiError && liveSpeech ? (
                 // The opponent's speech as it is written, in the place it will be read.
-                <article data-testid="sparring-live-speech" className="rounded-xl border border-primary/20 bg-card p-4 sm:p-5" aria-busy="true" aria-labelledby="sparring-live-opponent">
-                  <div className="flex items-center gap-2">
-                    <Bot className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
-                    <h2 id="sparring-live-opponent" className="text-sm font-semibold">{t('sparring.round.opponentSpeaking', 'Opponent is speaking')}</h2>
+                <article data-testid="sparring-live-speech" className="rounded-lg border-2 border-brand-tint-border bg-card p-4 motion-safe:animate-in fade-in-0 duration-200 sm:p-5" aria-busy="true" aria-labelledby="sparring-live-opponent">
+                  <div className="flex items-center gap-2.5">
+                    <OwlAvatar pose="arguing" size={32} label={t('sparring.opponentAvatarAlt', 'The owl, your AI opponent')} />
+                    <h2 id="sparring-live-opponent" className="text-sm font-extrabold text-heading">{t('sparring.round.opponentSpeaking', 'Opponent is speaking')}</h2>
                     {currentTurn && <span className="truncate text-xs text-muted-foreground">{t(`sparring.turns.${currentTurn.id}`, currentTurn.label)}</span>}
                   </div>
                   <p className="mt-3 whitespace-pre-wrap text-sm leading-7 text-foreground/90">{liveSpeech}<LiveCaret /></p>
@@ -314,17 +316,17 @@ export function SparringRound({
                     {aiError ? (
                       <>
                         <div className="flex h-12 w-12 items-center justify-center rounded-full bg-destructive/10 text-destructive"><AlertCircle className="h-6 w-6" aria-hidden="true" /></div>
-                        <h2 className="mt-4 text-lg font-semibold">{t('sparring.round.opponentFailed', 'The opponent could not answer')}</h2>
+                        <h2 className="mt-4 font-display text-xl font-[600] text-heading">{t('sparring.round.opponentFailed', 'The opponent could not answer')}</h2>
                         <p className="mt-2 max-w-md text-sm leading-6 text-muted-foreground">{aiError}</p>
                         <Button type="button" className="mt-5" onClick={onRetryAi} disabled={!isOnline} title={!isOnline ? t('sparring.round.offlineRetry', 'Reconnect before retrying.') : undefined}>{t('sparring.round.retryOpponent', 'Retry opponent turn')}</Button>
                       </>
                     ) : (
                       <>
-                        {/* One indicator: a spinner while the opponent works, its icon otherwise. */}
+                        {/* One indicator: the owl opponent sizing up the round, bobbing while it works. */}
                         {aiLoading
-                          ? <Loader2 className="h-7 w-7 animate-spin text-primary [animation-duration:700ms]" aria-hidden="true" />
-                          : <Bot className="h-7 w-7 text-muted-foreground" aria-hidden="true" />}
-                        <h2 className="mt-5 text-lg font-semibold">{aiLoading ? t('sparring.round.opponentThinking', 'Opponent is thinking') : t('sparring.round.opponentUpNext', 'Opponent is up next')}</h2>
+                          ? <OwlLoader pose="arguing" size={104} />
+                          : <Owl pose="arguing" size={104} />}
+                        <h2 className="mt-4 font-display text-xl font-[600] text-heading">{aiLoading ? t('sparring.round.opponentThinking', 'Opponent is thinking') : t('sparring.round.opponentUpNext', 'Opponent is up next')}</h2>
                         <p className="mt-2 max-w-md text-sm leading-6 text-muted-foreground">{aiLoading ? t('sparring.round.opponentThinkingDescription', 'It is reading the motion and your speeches before choosing a response.') : t('sparring.round.opponentUpNextDescription', 'The next response will appear here.')}</p>
                       </>
                     )}
@@ -337,26 +339,28 @@ export function SparringRound({
           <section aria-labelledby="transcript-heading">
             <div className="mb-3 flex items-center justify-between gap-3">
               <div>
-                <h2 id="transcript-heading" className="text-lg font-semibold">{t('sparring.round.transcript', 'Transcript')}</h2>
+                <h2 id="transcript-heading" className="font-display text-xl font-[600] text-heading">{t('sparring.round.transcript', 'Transcript')}</h2>
                 <p className="mt-1 text-sm text-muted-foreground">{t('sparring.round.transcriptDescription', 'Every submitted speech stays here for the judge.')}</p>
               </div>
               <Badge variant="secondary" className="rounded-md">{t('sparring.round.submittedCount', '{{count}} submitted', { count: session.speeches.length })}</Badge>
             </div>
             {session.speeches.length === 0 ? (
-              <Card className="border-dashed bg-muted/20">
+              <Card className="border-dashed border-border-strong bg-card/60">
                 <CardContent className="flex min-h-[150px] items-center justify-center p-6 text-center text-sm text-muted-foreground">{t('sparring.round.transcriptEmpty', 'Your first speech will appear here after you submit it.')}</CardContent>
               </Card>
             ) : (
               <div className="space-y-3">
                 {session.speeches.map((speech) => (
-                  <article key={speech.id} className={cn('rounded-xl border p-4 sm:p-5', speech.speaker === 'user' ? 'border-primary/20 bg-primary/[0.035]' : 'border-border bg-card')}>
+                  <article key={speech.id} className={cn('rounded-lg border-2 p-4 motion-safe:animate-in fade-in-0 slide-in-from-bottom-1 duration-300 sm:p-5', speech.speaker === 'user' ? 'border-brand-tint-border bg-brand-tint/60' : 'border-border bg-card')}>
                     <div className="flex items-start justify-between gap-3">
                       <div className="flex min-w-0 items-center gap-2">
-                        <div className={cn('flex h-8 w-8 shrink-0 items-center justify-center rounded-lg', speech.speaker === 'user' ? 'bg-primary/10 text-primary' : 'bg-muted text-foreground')}>
-                          {speech.speaker === 'user' ? <UserRound className="h-4 w-4" aria-hidden="true" /> : <Bot className="h-4 w-4" aria-hidden="true" />}
-                        </div>
+                        {speech.speaker === 'user' ? (
+                          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-brand text-white">
+                            <UserRound className="h-4 w-4" aria-hidden="true" />
+                          </div>
+                        ) : <OwlAvatar pose="arguing" size={32} label={t('sparring.opponentAvatarAlt', 'The owl, your AI opponent')} />}
                         <div className="min-w-0">
-                          <p className="truncate text-sm font-semibold">{speech.speaker === 'user' ? t('sparring.user', 'You') : t('sparring.opponent', 'AI opponent')}</p>
+                          <p className="truncate text-sm font-extrabold text-heading">{speech.speaker === 'user' ? t('sparring.user', 'You') : t('sparring.opponent', 'AI opponent')}</p>
                           <p className="truncate text-xs text-muted-foreground">{t(`sparring.turns.${speech.turnId}`, speech.role)}</p>
                         </div>
                       </div>
@@ -383,12 +387,12 @@ export function SparringRound({
                 const complete = index < session.currentTurnIndex;
                 const current = index === session.currentTurnIndex && session.phase === 'round';
                 return (
-                  <div key={turn.id} className={cn('flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition-colors', current && 'bg-primary/10 text-foreground', complete && 'text-muted-foreground', !current && !complete && 'text-muted-foreground/70')}>
-                    <span className={cn('flex h-6 w-6 shrink-0 items-center justify-center rounded-full border text-xs font-mono tabular-nums', complete ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' : current ? 'border-primary bg-primary text-primary-foreground' : 'border-border text-muted-foreground')}>
-                      {complete ? <Check className="h-3.5 w-3.5" aria-label={t('sparring.round.completeStatus', 'Complete')} /> : index + 1}
+                  <div key={turn.id} className={cn('flex items-center gap-3 rounded-md px-3 py-2.5 text-sm transition-colors duration-300', current && 'bg-brand-tint text-foreground', complete && 'text-muted-foreground', !current && !complete && 'text-muted-foreground')}>
+                    <span className={cn('flex h-7 w-7 shrink-0 items-center justify-center rounded-full border-2 text-xs font-bold tabular-nums transition-colors duration-300', complete ? 'border-success bg-success text-success-foreground' : current ? 'border-brand bg-brand text-white shadow-[0_2px_0_var(--do-primary-ledge)]' : 'border-border-strong text-muted-foreground')}>
+                      {complete ? <Check className="h-3.5 w-3.5 motion-safe:animate-in zoom-in-50 duration-300 ease-overshoot" strokeWidth={3.5} aria-label={t('sparring.round.completeStatus', 'Complete')} /> : index + 1}
                     </span>
                     <span className="min-w-0 flex-1">
-                      <span className="block truncate font-medium">{t(`sparring.turns.${turn.id}`, turn.label)}</span>
+                      <span className="block truncate font-bold">{t(`sparring.turns.${turn.id}`, turn.label)}</span>
                       <span className="block text-xs">{turn.speaker === 'user' ? t('sparring.user', 'You') : t('sparring.opponent', 'AI opponent')} · {formatRoundTime(turn.timeLimitSeconds)}</span>
                     </span>
                     {current && <ChevronRight className="h-4 w-4 shrink-0 text-primary" aria-hidden="true" />}

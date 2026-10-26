@@ -183,15 +183,17 @@ export function GenerateResults({ result, discoveredSources, onRegenerateSection
             onGoogleDocs={handleGoogleDocsExport}
             isExportingGDocs={isExportingGDocs}
             extraExports={<CopyResultButton getText={() => caseText(result)} />}
+            evenRows
             secondaryActions={(onSave || saved || onDiscuss || onImportFlowchart || onUndo || onPracticeCrossfire) ? (
+              // What happens to this case first (keep it, undo a change), then where to take it next.
               <>
-                {onPracticeCrossfire && (
-                  <Button variant="outline" size="sm" onClick={onPracticeCrossfire}>
-                    <Flame className="mr-2 h-4 w-4" />
-                    {t('crossfire.openFromResult', 'Open in Crossfire')}
+                <SaveResultAction saved={saved} onSave={onSave} />
+                {onUndo && (
+                  <Button variant="outline" size="sm" onClick={onUndo} disabled={regeneratingSection !== null}>
+                    <Undo2 className="mr-2 h-4 w-4" />
+                    {t('generateResults.undo', 'Undo')}
                   </Button>
                 )}
-                <SaveResultAction saved={saved} onSave={onSave} />
                 {onDiscuss && (
                   <Button variant="outline" size="sm" onClick={onDiscuss}>
                     <MessageSquare className="mr-2 h-4 w-4" />
@@ -204,10 +206,10 @@ export function GenerateResults({ result, discoveredSources, onRegenerateSection
                     {t('generateResults.flowcharts')}
                   </Button>
                 )}
-                {onUndo && (
-                  <Button variant="outline" size="sm" onClick={onUndo} disabled={regeneratingSection !== null}>
-                    <Undo2 className="mr-2 h-4 w-4" />
-                    {t('generateResults.undo', 'Undo')}
+                {onPracticeCrossfire && (
+                  <Button variant="outline" size="sm" onClick={onPracticeCrossfire}>
+                    <Flame className="mr-2 h-4 w-4" />
+                    {t('crossfire.openFromResult', 'Open in Crossfire')}
                   </Button>
                 )}
               </>
@@ -316,7 +318,7 @@ export function GenerateResults({ result, discoveredSources, onRegenerateSection
             <ul className="space-y-2">
               {result.predictedOpponentCase?.strategicWeaknesses?.map((weakness, i) => (
                 <li key={i} className="flex items-start gap-2 text-sm">
-                  <span className="text-amber-500 mt-1">•</span>
+                  <span className="text-amber-600 dark:text-amber-400 mt-1">•</span>
                   <span className="text-foreground">{weakness}</span>
                 </li>
               ))}

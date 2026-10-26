@@ -45,10 +45,10 @@
       },
       {
         "name": "tap",
-        "summary": "tap button \"Generate Debate Case\"",
+        "summary": "tap button \"Generate debate case\"",
         "target": {
           "role": "button",
-          "name": "Generate Debate Case"
+          "name": "Generate debate case"
         }
       }
     ],

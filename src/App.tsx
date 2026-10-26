@@ -1,4 +1,6 @@
 // src/App.tsx
+import { Owl } from "@/components/brand/Owl";
+import { buttonVariants } from "@/components/ui/button";
 import { Component, Suspense, lazy, useEffect, useRef, useState, type ComponentType, type ErrorInfo, type ReactNode } from "react";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -12,6 +14,7 @@ import { AccountQueryCache } from "@/components/auth/AccountQueryCache";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { useSessionStorageSync } from "@/hooks/use-session-storage-sync";
 import { hasCompletedOnboarding, useOnboardingStore } from "@/hooks/use-onboarding";
+import { browserStorage, markIntroSeen, shouldShowIntro } from "@/lib/debateowl-intro";
 import { OfflineIndicator } from "@/components/OfflineIndicator";
 import { StagingBanner } from "@/components/StagingBanner";
 import { captureException, captureProductEvent, toTelemetrySafeError } from "@/lib/observability";
@@ -86,6 +89,8 @@ const AppLayout = lazy(() => {
 });
 const OnboardingTour = lazy(() => import("@/components/features/onboarding/OnboardingTour")
   .then(({ OnboardingTour: Tour }) => ({ default: Tour })));
+const DebateOwlIntro = lazy(() => import("@/components/features/onboarding/DebateOwlIntro")
+  .then(({ DebateOwlIntro: Intro }) => ({ default: Intro })));
 
 // TanStack Query refetches after an `offline` then `online` pair, but a page
 // opened offline never sees `offline`. Retry whatever failed once the
@@ -199,14 +204,15 @@ export class RouteErrorBoundary extends Component<RouteErrorBoundaryProps, { fai
     if (this.state.failed) {
       return (
         <div className="flex min-h-[60vh] flex-col items-center justify-center gap-4 p-6 text-center">
-          <h1 className="text-xl font-semibold">{this.props.heading ?? 'Unable to load this page'}</h1>
-          <div className="flex flex-wrap justify-center gap-2">
-            <button className="rounded-md bg-primary px-4 py-2 text-primary-foreground" onClick={() => window.location.reload()}>
+          <Owl pose="surprised" size={136} />
+          <h1 className="font-display text-2xl font-[600] text-heading">{this.props.heading ?? 'Unable to load this page'}</h1>
+          <div className="flex flex-wrap justify-center gap-3">
+            <button className={buttonVariants()} onClick={() => window.location.reload()}>
               {this.props.reloadLabel ?? 'Reload'}
             </button>
             {/* A full navigation, so a broken route can't trap the user. */}
-            <a href={this.props.homeHref ?? '/'} className="rounded-md border border-input px-4 py-2 text-foreground">
-              {this.props.homeLabel ?? 'Go to Home'}
+            <a href={this.props.homeHref ?? '/'} className={buttonVariants({ variant: 'outline' })}>
+              {this.props.homeLabel ?? 'Go to home'}
             </a>
           </div>
         </div>
@@ -275,6 +281,37 @@ export function RouteContent({ children }: { children: ReactNode }) {
         </Suspense>
       </LocalizedRouteErrorBoundary>
     </PageLabelProvider>
+  );
+}
+
+/**
+ * The one-time DebateOwl welcome opens over the signed-in app once its layout has loaded.
+ * The onboarding tour waits for it to close; without the welcome the tour mounts as before.
+ */
+function AppWelcome() {
+  const [introOpen, setIntroOpen] = useState(() => shouldShowIntro({
+    search: window.location.search,
+    storage: browserStorage(),
+    env: import.meta.env,
+  }));
+  const [layoutReady, setLayoutReady] = useState(false);
+
+  useEffect(() => {
+    if (!introOpen) return;
+    let live = true;
+    appLayoutLoader().then(() => { if (live) setLayoutReady(true); }, (): void => undefined);
+    return () => { live = false; };
+  }, [introOpen]);
+
+  if (!introOpen) return <OptionalOnboardingTour />;
+  if (!layoutReady) return null;
+  return (
+    <Suspense fallback={null}>
+      <DebateOwlIntro onClose={() => {
+        markIntroSeen(browserStorage());
+        setIntroOpen(false);
+      }} />
+    </Suspense>
   );
 }
 
@@ -367,7 +404,7 @@ function AppRoutes() {
             element={
               <RequireAuth fallback={<PendingAppRoute />}>
                 <ToolRouteAnalytics />
-                <OptionalOnboardingTour />
+                <AppWelcome />
                 <Suspense fallback={<PendingAppRoute />}>
                   <AppLayout />
                 </Suspense>
