@@ -150,7 +150,7 @@ export default function DebateTimerToolPage() {
         <ul>
           <li><Link to="/tools/debate-flow-sheet">Print a flow sheet</Link> laid out for the same format, so the timer and the flow match speech for speech.</li>
           <li><a href="/how-to-flow-in-debate">How to flow in debate</a> covers what to write in each column while the clock runs.</li>
-          <li><a href="/debate-prep-time-management">Managing prep time</a> goes deeper on spending a prep bank well.</li>
+          <li><a href="/how-to-prepare-for-a-debate-tournament">Preparing for a tournament</a> goes deeper on spending a prep bank well.</li>
         </ul>
       </section>
 
