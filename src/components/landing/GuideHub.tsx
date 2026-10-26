@@ -1,4 +1,5 @@
 import { useTranslation } from "react-i18next";
+import { useLocation } from "react-router-dom";
 import { Reveal } from "./Reveal";
 
 /**
@@ -14,8 +15,13 @@ const GROUPS = [
     { id: "compare", paths: ["/best-ai-debate-tools", "/debatelab-vs-chatgpt"] },
 ] as const;
 
+/** Language home pages such as /hu and /es. The guides are English, so the hub stays off them. */
+const LOCALIZED_ROUTE = /^\/(?:es|hu)(?:\/|$)/;
+
 const GuideHub = () => {
     const { t } = useTranslation();
+    const { pathname } = useLocation();
+    if (LOCALIZED_ROUTE.test(pathname)) return null;
 
     return (
         <section aria-labelledby="guide-hub-title" className="py-24">

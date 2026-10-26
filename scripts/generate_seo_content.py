@@ -31,12 +31,9 @@ PLAN_FACTS = (
 )
 # The date the page text last changed. The build reads it into sitemap.xml as
 # <lastmod>, so bump it only when the copy changes, not on every regeneration.
-# A guide whose own copy changed alone sets "modified" in seo_guides.py instead.
-CONTENT_DATE = "2026-10-20"
-# The date the shared FAQS below last changed; a page that shows them is modified then at the latest.
-FAQS_DATE = "2026-10-23"
-# The date the related-guide and in-body links (CLUSTERS, LINK_PHRASES) last changed; every page shows them.
-LINKS_DATE = "2026-10-26"
+# A guide whose own copy changed alone sets "modified" in seo_guides.py instead;
+# no page is dated earlier than CONTENT_DATE, since the shared copy is on every page.
+CONTENT_DATE = "2026-10-26"
 # The commit that first added every current guide (git log --diff-filter=A).
 # A new guide sets "published" in its PAGES entry.
 PUBLISHED_DATE = "2026-07-05"
@@ -44,7 +41,7 @@ PUBLISHED_DATE = "2026-07-05"
 ANSWER_MAX_WORDS = 100
 
 CSS = """
-:root{color-scheme:dark;--bg:#070a12;--panel:#101827;--text:#f8fafc;--muted:#b6c2d6;--brand:#7c5cff;--brand2:#22d3ee;--line:rgba(255,255,255,.14)}*{box-sizing:border-box}body{margin:0;background:radial-gradient(circle at 18% 8%,rgba(124,92,255,.30),transparent 34rem),radial-gradient(circle at 85% 18%,rgba(34,211,238,.18),transparent 28rem),var(--bg);color:var(--text);font-family:ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;line-height:1.65}a{color:inherit}.wrap{width:min(1120px,92vw);margin:auto}.nav{display:flex;justify-content:space-between;align-items:center;gap:18px;padding:24px 0}.brand{font-weight:850;letter-spacing:-.04em;font-size:1.25rem;text-decoration:none}.nav div{display:flex;gap:18px;flex-wrap:wrap;justify-content:flex-end}.nav a{color:var(--muted);text-decoration:none}.hero{padding:54px 0 34px}.eyebrow{display:inline-flex;border:1px solid var(--line);border-radius:999px;padding:8px 12px;color:#c4b5fd;background:rgba(124,92,255,.12);font-size:.92rem}.hero h1{max-width:940px;font-size:clamp(2.35rem,6vw,5.15rem);line-height:1;letter-spacing:-.07em;margin:22px 0}.lead{max-width:800px;color:var(--muted);font-size:clamp(1.08rem,1.8vw,1.28rem)}.cta{display:flex;gap:14px;flex-wrap:wrap;margin-top:28px}.btn{display:inline-flex;align-items:center;justify-content:center;border-radius:14px;padding:14px 20px;font-weight:750;text-decoration:none}.primary{background:linear-gradient(135deg,var(--brand),var(--brand2));color:white}.secondary{border:1px solid var(--line);background:rgba(255,255,255,.06)}.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;margin:34px 0}.card{border:1px solid var(--line);border-radius:24px;background:rgba(16,24,39,.78);padding:24px;box-shadow:0 24px 80px rgba(0,0,0,.24)}.card h2,.card h3{letter-spacing:-.035em;line-height:1.12;margin-top:0}.muted{color:var(--muted)}.section{padding:34px 0}.article{max-width:840px}.article h2{font-size:clamp(1.65rem,3vw,2.35rem);letter-spacing:-.04em;line-height:1.14;margin-top:2rem}.article h3{font-size:1.2rem;letter-spacing:-.025em}.links{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin:28px 0}.links a{border:1px solid var(--line);border-radius:16px;padding:14px;text-decoration:none;background:rgba(255,255,255,.05)}details{border:1px solid var(--line);border-radius:18px;padding:16px 18px;margin:12px 0;background:rgba(255,255,255,.05)}summary{cursor:pointer;font-weight:750}.footer{border-top:1px solid var(--line);color:var(--muted);padding:28px 0;margin-top:42px}.breadcrumb{color:var(--muted);font-size:.94rem;margin-top:8px}.dates{color:var(--muted);font-size:.94rem;margin:18px 0 0}.answer{max-width:840px;border:1px solid var(--line);border-left:4px solid var(--brand);border-radius:20px;background:rgba(16,24,39,.78);padding:22px 26px}.answer h2{font-size:clamp(1.35rem,2.4vw,1.8rem);letter-spacing:-.035em;line-height:1.18;margin:0 0 10px}.answer p{margin:0}@media(max-width:760px){.nav{align-items:flex-start;flex-direction:column}.nav div{justify-content:flex-start}.grid,.links{grid-template-columns:1fr}.hero{padding-top:34px}.hero h1{letter-spacing:-.045em}}
+:root{color-scheme:dark;--bg:#070a12;--panel:#101827;--text:#f8fafc;--muted:#b6c2d6;--brand:#7c5cff;--brand2:#22d3ee;--line:rgba(255,255,255,.14)}*{box-sizing:border-box}body{margin:0;background:radial-gradient(circle at 18% 8%,rgba(124,92,255,.30),transparent 34rem),radial-gradient(circle at 85% 18%,rgba(34,211,238,.18),transparent 28rem),var(--bg);color:var(--text);font-family:ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;line-height:1.65}a{color:inherit}.wrap{width:min(1120px,92vw);margin:auto}.nav{display:flex;justify-content:space-between;align-items:center;gap:18px;padding:24px 0}.brand{font-weight:850;letter-spacing:-.04em;font-size:1.25rem;text-decoration:none}.nav div{display:flex;gap:18px;flex-wrap:wrap;justify-content:flex-end}.nav a{color:var(--muted);text-decoration:none}.hero{padding:54px 0 34px}.eyebrow{display:inline-flex;border:1px solid var(--line);border-radius:999px;padding:8px 12px;color:#c4b5fd;background:rgba(124,92,255,.12);font-size:.92rem}.hero h1{max-width:940px;font-size:clamp(2.35rem,6vw,5.15rem);line-height:1;letter-spacing:-.07em;margin:22px 0}.lead{max-width:800px;color:var(--muted);font-size:clamp(1.08rem,1.8vw,1.28rem)}.cta{display:flex;gap:14px;flex-wrap:wrap;margin-top:28px}.btn{display:inline-flex;align-items:center;justify-content:center;border-radius:14px;padding:14px 20px;font-weight:750;text-decoration:none}.primary{background:linear-gradient(135deg,var(--brand),var(--brand2));color:white}.secondary{border:1px solid var(--line);background:rgba(255,255,255,.06)}.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;margin:34px 0}.card{border:1px solid var(--line);border-radius:24px;background:rgba(16,24,39,.78);padding:24px;box-shadow:0 24px 80px rgba(0,0,0,.24)}.card h2,.card h3{letter-spacing:-.035em;line-height:1.12;margin-top:0}.muted{color:var(--muted)}.section{padding:34px 0}.article{max-width:840px}.article h2{font-size:clamp(1.65rem,3vw,2.35rem);letter-spacing:-.04em;line-height:1.14;margin-top:2rem}.article h3{font-size:1.2rem;letter-spacing:-.025em}.links{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin:28px 0}.links a{border:1px solid var(--line);border-radius:16px;padding:14px;text-decoration:none;background:rgba(255,255,255,.05)}details{border:1px solid var(--line);border-radius:18px;padding:16px 18px;margin:12px 0;background:rgba(255,255,255,.05)}summary{cursor:pointer;font-weight:750}.footer{border-top:1px solid var(--line);color:var(--muted);padding:28px 0;margin-top:42px}.breadcrumb{color:var(--muted);font-size:.94rem;margin-top:8px}.dates{color:var(--muted);font-size:.94rem;margin:18px 0 0}.answer{max-width:840px;border:1px solid var(--line);border-left:4px solid var(--brand);border-radius:20px;background:rgba(16,24,39,.78);padding:22px 26px}.answer h2{font-size:clamp(1.35rem,2.4vw,1.8rem);letter-spacing:-.035em;line-height:1.18;margin:0 0 10px}.answer p{margin:0}.table{overflow-x:auto;margin:18px 0}table{width:100%;border-collapse:collapse;font-size:.96rem}caption{text-align:left;color:var(--muted);padding-bottom:8px}th,td{border-bottom:1px solid var(--line);padding:10px 12px;text-align:left;vertical-align:top}th{color:var(--muted);font-weight:700}@media(max-width:760px){.nav{align-items:flex-start;flex-direction:column}.nav div{justify-content:flex-start}.grid,.links{grid-template-columns:1fr}.table thead{display:none}.table tr{display:block;padding:10px 0;border-bottom:1px solid var(--line)}.table td{display:block;border:0;padding:3px 0}.table td::before{content:attr(data-label);display:block;color:var(--muted);font-size:.85rem;font-weight:700}.hero{padding-top:34px}.hero h1{letter-spacing:-.045em}}
 """.strip()
 
 PAGES = [
@@ -71,24 +68,14 @@ PAGES = [
     {"slug": "debate-topics-for-students", "title": "Debate Topics for Students | {product}", "description": "Browse debate topics for students organized by format, difficulty, and subject, with AI-assisted case brainstorming and prep workflows.", "eyebrow": "Resource", "h1": "Debate Topics for Students", "lead": "Find topics, brainstorm cases, and start preparing with AI-guided prompts.", "features": ["Topic categories", "Case brainstorming", "Format-specific topics"], "sections": [["How to pick a debate topic", ["A good topic has clear clashes, real-world stakes, and enough literature for both sides. {product} can help you brainstorm cases from any topic."]], ["Popular debate topics", ["Common topic areas include technology, education, environment, foreign policy, civil liberties, economics, and ethics. Each area has predictable clashes."]], ["From topic to prep", ["Once you pick a topic, use {product} to draft a case, attack it, find evidence leads, and practice the speech."]]]},
     {"slug": "debate-clash-points", "title": "Debate Clash Points: Finding and Attacking the Key Argument | DebateLab", "description": "Learn how to identify debate clash points, select the winning clash, and frame the ballot for the judge in any debate format.", "eyebrow": "Strategy guide", "h1": "Debate Clash Points: Find and Attack the Key Argument", "lead": "Identify the clash that decides the round and focus your prep there.", "features": ["Clash identification", "Clash selection", "Ballot framing"], "sections": [["What is a clash point", ["A clash is the point where two sides disagree. The key clash is the one the judge must resolve to decide the round."]], ["How to find the key clash", ["Ask: which disagreement, if resolved in my favor, wins me the round? That is the clash to focus on."]], ["Framing the clash for the judge", ["Tell the judge why this clash matters and why your side wins it. If you frame the clash, you frame the ballot."]]]},
     {"slug": "debate-fallacies", "title": "Common Debate Fallacies and How to Attack Them | DebateLab", "description": "Learn common logical fallacies in debate: ad hominem, straw man, false dichotomy, slippery slope, and how to turn them into rebuttal opportunities.", "eyebrow": "Strategy guide", "h1": "Common Debate Fallacies and How to Attack Them", "lead": "Turn your opponent's bad logic into round-winning rebuttals.", "features": ["Fallacy identification", "Attack strategies", "Cross-ex exploitation"], "sections": [["Why fallacies matter", ["If your opponent commits a fallacy, you can win the clash by pointing it out and explaining why the argument fails."]], ["Common fallacies in debate", ["Ad hominem, straw man, false dichotomy, slippery slope, hasty generalization, appeal to authority, and circular reasoning are the most common."]], ["How to attack a fallacy", ["Do not just name it. Explain why the logic fails, why the conclusion does not follow, and what the judge should do about it."]]]},
-    {"slug": "debate-prep-time-management", "modified": "2026-10-23", "title": "Debate Prep Time Management | DebateLab Guide", "description": "Learn how to manage prep time in debate: allocation strategies, block building, speech prioritization, and tournament-day prep workflow.", "eyebrow": "Strategy guide", "h1": "Debate Prep Time Management", "lead": "Use your limited prep time to build the arguments that win rounds.", "features": ["Prep allocation", "Block building strategy", "Speech prioritization"], "sections": [["Why prep management matters", ["Prep time is limited. The best debaters spend it on the clashes that decide the round, not on reading every card."]], ["How to allocate prep time", ["Spend the first third on case structure, the second on rebuttal blocks, and the last on speech organization and weighing.", "If you write speeches out, the [speech time calculator](/tools/speech-time-calculator) shows how long a draft takes to deliver and which speech slots it fits."]], ["Tournament-day prep", ["Before the round, organize evidence, confirm arguments, and practice the opening. During prep time, prioritize blocks over new research.", "To practice under real limits, the [free debate timer](/tools/debate-timer) keeps a prep bank for each side in Public Forum, Lincoln-Douglas and Policy."]]]},
     {"slug": "debate-judge-adaptation", "title": "Debate Judge Adaptation Guide | DebateLab", "description": "Learn how to adapt to different debate judges: lay judges, tech judges, flow judges, and how to read the room for better ballot outcomes.", "eyebrow": "Strategy guide", "h1": "Debate Judge Adaptation Guide", "lead": "Read the judge, adapt your style, and frame the ballot they want to write.", "features": ["Judge types", "Style adaptation", "Ballot framing"], "sections": [["Types of judges", ["Lay judges want clear stories, flow judges want structured clash, tech judges want speed and evidence. Read the judge and adapt."]], ["How to adapt your style", ["Slow down for lay judges, speed up for tech judges, and always explain your weighing clearly regardless of judge type."]], ["Framing the ballot", ["Give the judge a reason to vote for you that fits their style. The best debaters make the judge's job easy."]]]},
-    {"slug": "ai-vs-traditional-debate-prep", "title": "AI vs Traditional Debate Prep | DebateLab", "description": "Compare AI debate prep tools with traditional research and coaching methods, and learn how to combine both for the strongest tournament preparation.", "eyebrow": "Comparison", "h1": "AI vs Traditional Debate Prep", "lead": "AI speeds up structure; traditional research and coaching provide depth and judgment.", "features": ["Speed and structure", "Research depth", "Human judgment"], "sections": [["What AI does well", ["AI generates structure fast: case outlines, rebuttal blocks, topic brainstorming, and evidence leads. It saves time on the repetitive parts of prep."]], ["What traditional prep does better", ["Original source reading, real coaching feedback, tournament-specific strategy, and adapting to a specific opponent all require human judgment."]], ["How to combine them", ["Use AI for scaffolding, use traditional research for depth, and use coaching for strategy. DebateLab supports the AI scaffolding step."]]]},
-    {"slug": "debate-block-file-guide", "title": "How to Build a Debate Block File | DebateLab", "description": "Learn how to build a debate block file with pre-written responses to common arguments, structured by clash, and ready for use in round.", "eyebrow": "Strategy guide", "h1": "How to Build a Debate Block File", "lead": "Pre-written blocks let you respond faster and more precisely in round.", "features": ["Block structure", "Clash organization", "Evidence integration"], "sections": [["What is a block file", ["A block file is a collection of pre-written responses to common arguments. It saves prep time and improves response quality in round."]], ["How to organize blocks", ["Organize by clash, not by topic. Each clash should have blocks for both sides so you are ready regardless of which side you are assigned."]], ["Using AI to build blocks", ["DebateLab can help you brainstorm likely arguments and draft initial blocks. Verify the logic and evidence before using them in round."]]]},
     {"slug": "debate-speech-structure", "title": "Debate Speech Structure Guide | DebateLab", "description": "Learn debate speech structure for every format: opening, rebuttal, summary, final focus, crystallization, and reply speech organization.", "eyebrow": "Strategy guide", "h1": "Debate Speech Structure Guide", "lead": "Structure your speech so the judge can follow every argument and every comparison.", "features": ["Opening structure", "Rebuttal structure", "Final speech structure"], "sections": [["Why structure matters", ["A well-structured speech is easier to flow, easier to judge, and easier to win. The judge should never be confused about where you are."]], ["Opening speech structure", ["State your position, define key terms, present contentions with warrants and impacts, and preview weighing."]], ["Rebuttal and final speech structure", ["Respond to the key clash, extend your offense, weigh the comparison, and frame the ballot. End by telling the judge why you win."]]]},
     {"slug": "debate-motion-analysis", "modified": "2026-10-23", "title": "Debate Motion Analysis Guide | DebateLab", "description": "Learn how to analyze a debate motion: define terms, identify burdens, map clashes, and build case strategy from the topic release.", "eyebrow": "Strategy guide", "h1": "Debate Motion Analysis Guide", "lead": "From topic to strategy: define, clash, and build a winning case.", "features": ["Definition strategy", "Burden identification", "Clash mapping"], "sections": [["How to analyze a motion", ["Read the motion carefully, define each term, identify what each side must prove, and map the likely clashes.", "To practice on a motion you have not seen, draw one from the [free debate motion generator](/tools/debate-motion-generator)."]], ["Definition strategy", ["Definitions can frame the round. Choose definitions that are fair, defensible, and favorable to your side."]], ["Burden identification", ["Your burden is what you must prove to win. If you do not meet your burden, you lose regardless of how well you argue."]]]},
-    {"slug": "debate-collapsing-strategy", "title": "How to Collapse in Debate | DebateLab Guide", "description": "Learn how to collapse in debate: select the winning clash, drop losing arguments, and concentrate your time on the comparison that wins the ballot.", "eyebrow": "Strategy guide", "h1": "How to Collapse in Debate", "lead": "Collapsing means choosing the few arguments that win and abandoning the rest.", "features": ["Clash selection", "Time concentration", "Ballot framing"], "sections": [["Why collapsing matters", ["If you spread yourself thin, you lose. Collapsing lets you spend more time on the argument that actually wins the round."]], ["How to decide what to collapse to", ["Pick the clash where you have the strongest evidence, the clearest warrant, and the best weighing. Drop the rest cleanly."]], ["How to collapse cleanly", ["Signal that you are collapsing, explain why the dropped arguments do not matter, and spend your remaining time on the winning clash."]]]},
-    {"slug": "debate-pronunciation-and-delivery", "title": "Debate Speech Delivery and Pronunciation Guide | DebateLab", "description": "Improve your debate speech delivery with tips on clarity, pacing, emphasis, pronunciation, and using pauses for judge-friendly presentations.", "eyebrow": "Delivery guide", "h1": "Debate Speech Delivery and Pronunciation Guide", "lead": "Clear delivery makes your arguments land. Slow down, emphasize key words, and pause where it matters.", "features": ["Clarity and pacing", "Emphasis techniques", "Pause strategy"], "sections": [["Why delivery matters", ["The judge cannot vote for an argument they did not hear clearly. Speed without clarity is wasted effort."]], ["How to improve delivery", ["Slow down on tags and author names, pause between contentions, and emphasize weighing phrases. Practice with a timer and record yourself."]], ["Common delivery problems", ["Speaking too fast, mumbling, monotone delivery, and forgetting to pause. Each of these can cost you rounds even with strong arguments."]]]},
     {"slug": "best-ai-debate-tools", "title": "Best AI Debate Tools Compared | {product}", "description": "Compare the best AI debate tools for case generation, rebuttal practice, evidence research, flowcharts, coaching, and tournament preparation.", "eyebrow": "Comparison", "h1": "Best AI Debate Tools Compared", "lead": "See how AI debate tools compare on features, formats, and prep workflows."},
     {"slug": "debatelab-pricing", "title": "DebateLab Pricing and Plans | DebateLab", "description": "DebateLab pricing and plans for AI debate practice: free trial, Pro features, and what is included for students and competitive debaters.", "eyebrow": "Pricing", "h1": "DebateLab Pricing and Plans", "lead": "See what DebateLab offers and how to get started with AI debate practice."},
     {"slug": "debatelab-vs-chatgpt", "title": "{product} vs ChatGPT for Debate Prep | {product}", "description": "Compare {product} vs ChatGPT for debate prep: structured workflows vs generic chat, evidence research, rebuttal drills, case generation, and coaching.", "eyebrow": "Comparison", "h1": "{product} vs ChatGPT for Debate Prep", "lead": "ChatGPT is a general chatbot. {product} is a debate practice workspace.", "features": ["Structured workflows", "Evidence leads", "Practice tools"], "sections": [["What ChatGPT does well", ["ChatGPT is a flexible general-purpose AI. It can brainstorm, draft, and answer questions about any topic, including debate."]], ["What {product} does differently", ["{product} is designed for debate prep workflows: case structure, targeted rebuttals, evidence leads, argument flowcharts, coaching prompts, and timed practice. Each workflow supports a specific prep task."]], ["When to use each", ["Use ChatGPT for general brainstorming and research. Use {product} for structured, repeatable debate practice that mirrors what you do in a round."]]]},
     {"slug": "debatelab-vs-windebate", "title": "DebateLab vs WinDebate Comparison | DebateLab", "description": "Compare DebateLab vs WinDebate: case generation, rebuttal drills, evidence research, format coverage, pricing, and workflow differences.", "eyebrow": "Comparison", "h1": "DebateLab vs WinDebate", "lead": "Two AI debate prep platforms compared on features and workflows.", "features": ["Feature comparison", "Format coverage", "Workflow differences"], "sections": [["WinDebate overview", ["WinDebate focuses on research, drills, feedback, and progress tracking for competitive debaters. It covers PF, LD, Congress, Policy, and Worlds."]], ["DebateLab overview", ["DebateLab focuses on structured prep workflows: case generation, rebuttal practice, evidence leads, argument flowcharts, coaching prompts, and online debate timers."]], ["How to choose", ["Compare format coverage, feature depth, feedback style, pricing, and which tool fits your actual tournament workflow."]]]},
     {"slug": "debatelab-vs-debateclub", "title": "DebateLab vs DebateClub Comparison | DebateLab", "description": "Compare DebateLab vs DebateClub: voice debating, case generation, rebuttal drills, evidence research, and workflow differences for competitive debaters.", "eyebrow": "Comparison", "h1": "DebateLab vs DebateClub", "lead": "Voice sparring vs structured prep: two approaches to AI debate practice.", "features": ["Voice vs text workflows", "Feature comparison", "Prep focus areas"], "sections": [["DebateClub overview", ["DebateClub focuses on voice-based AI debate sparring with real-time feedback in a conversational format."]], ["DebateLab overview", ["DebateLab focuses on text-based structured prep: cases, rebuttals, evidence, flowcharts, coaching, and timed practice for tournament preparation."]], ["Which approach fits you", ["If you want voice practice, DebateClub is focused there. If you want structured prep workflows, DebateLab is designed for that."]]]},
-]
-
-FAQS = [
-    ("Is {product} an AI debate practice platform?", "Yes. {product} focuses on debate prep workflows such as cases, rebuttals, evidence, flowcharts, coaching, and timing."),
-    ("Should students verify AI-generated debate evidence?", "Yes. AI can suggest research leads, but students should check original sources before using evidence in round."),
 ]
 
 def tool_keys(name):
@@ -150,7 +137,6 @@ CLUSTERS = {
     "Practice and product": [
         "ai-debate-practice", "ai-debate-coach", "ai-debate-case-generator", "ai-rebuttal-generator",
         "debate-rebuttal-practice", "debate-evidence-finder", "argument-flowchart", "online-debate-timer",
-        "ai-vs-traditional-debate-prep",  # seo/deepen-thin-guides merges it into ai-debate-practice
     ],
     "Formats": [
         "public-forum-debate", "lincoln-douglas-debate", "policy-debate", "british-parliamentary-debate",
@@ -160,11 +146,6 @@ CLUSTERS = {
         "how-to-write-a-debate-case", "how-to-practice-rebuttals", "how-to-weigh-in-debate", "how-to-cross-examine-in-debate",
         "how-to-flow-in-debate", "debate-clash-points", "debate-speech-structure", "debate-fallacies",
         "debate-motion-analysis", "debate-judge-adaptation", "how-to-prepare-for-a-debate-tournament", "debate-topics-for-students",
-        # seo/deepen-thin-guides merges each of these into the guide named after it.
-        "debate-collapsing-strategy",  # debate-clash-points
-        "debate-prep-time-management",  # how-to-prepare-for-a-debate-tournament
-        "debate-block-file-guide",  # how-to-practice-rebuttals
-        "debate-pronunciation-and-delivery",  # debate-speech-structure
     ],
     "Compare": ["best-ai-debate-tools", "debatelab-vs-chatgpt", "debatelab-vs-debateclub", "debatelab-vs-windebate", "debatelab-pricing"],
 }
@@ -184,18 +165,14 @@ LINK_PHRASES = [
     (r"cross-examination", "how-to-cross-examine-in-debate"),
     (r"flowing|flow sheets?", "how-to-flow-in-debate"),
     (r"argument flowcharts?", "argument-flowchart"),
-    (r"block files?|pre-written responses", "debate-block-file-guide"),
     (r"rebuttal drills|practi[cs]e rebuttals|rebuttal practice", "debate-rebuttal-practice"),
-    (r"rebuttal blocks?", "how-to-practice-rebuttals"),
-    (r"key clash(?:es)?|clash points?", "debate-clash-points"),
-    (r"collaps(?:e|es|ing)|drop the rest", "debate-collapsing-strategy"),
+    (r"rebuttal blocks?|block files?|pre-written responses", "how-to-practice-rebuttals"),
+    (r"key clash(?:es)?|clash points?|collaps(?:e|es|ing)|drop the rest", "debate-clash-points"),
     (r"fallac(?:y|ies)", "debate-fallacies"),
     (r"motion analysis|analy[sz]e the motion|interpret(?:ing)? (?:the|a) motion", "debate-motion-analysis"),
     (r"(?:lay|tech|flow) judges?|judge types?|read the judge", "debate-judge-adaptation"),
-    (r"tournament prep(?:aration)?|tournament day|before (?:a|the) tournament", "how-to-prepare-for-a-debate-tournament"),
-    (r"prep time", "debate-prep-time-management"),
-    (r"delivery|pronunciation", "debate-pronunciation-and-delivery"),
-    (r"speech structure|structured speech", "debate-speech-structure"),
+    (r"tournament prep(?:aration)?|tournament day|before (?:a|the) tournament|prep time", "how-to-prepare-for-a-debate-tournament"),
+    (r"speech structure|structured speech|delivery|pronunciation", "debate-speech-structure"),
     (r"write (?:a|your) case|writing (?:a|your) case|case structure", "how-to-write-a-debate-case"),
     (r"case generator|generate (?:a|the) case|case generation", "ai-debate-case-generator"),
     (r"evidence leads|evidence research|research evidence", "debate-evidence-finder"),
@@ -209,13 +186,11 @@ LINK_PHRASES = [
     (r"points? of information", "world-schools-debate"),
     (r"frame the ballot|framing the ballot", "debate-judge-adaptation"),
     (r"questioning", "how-to-cross-examine-in-debate"),
-    (r"blocks", "debate-block-file-guide"),
     (r"criterion", "lincoln-douglas-debate"),
     (r"extensions?", "british-parliamentary-debate"),
     (r"cross-ex", "how-to-cross-examine-in-debate"),
     (r"burdens?", "debate-motion-analysis"),
-    (r"clarity", "debate-pronunciation-and-delivery"),
-    (r"rebuttals", "how-to-practice-rebuttals"),
+    (r"blocks|rebuttals", "how-to-practice-rebuttals"),
     (r"clash(?:es)?", "debate-clash-points"),
     (r"evidence", "debate-evidence-finder"),
 ]
@@ -239,7 +214,6 @@ PAGE_BY_SLUG = {page["slug"]: page for page in PAGES}
 CLUSTER_OF = {slug: name for name, cluster in CLUSTERS.items() for slug in cluster}
 CLUSTER_ORDER = [slug for cluster in CLUSTERS.values() for slug in cluster]
 PHRASE_PATTERNS = [(re.compile(rf"\b(?:{phrase})\b", re.I), slug) for phrase, slug in LINK_PHRASES]
-FAQS = fill(FAQS)
 ANSWERS = fill(ANSWERS)
 
 NAV = [("AI practice","/ai-debate-practice"),("Case generator","/ai-debate-case-generator"),("Rebuttal practice","/debate-rebuttal-practice"),("Evidence finder","/debate-evidence-finder"),("Pricing","/debatelab-pricing"),("Open app","/app")]
@@ -311,10 +285,19 @@ def related_slugs(current):
 def internal_links(current):
     return "\n".join(f'<a href="/{slug}">{esc(PAGE_BY_SLUG[slug]["h1"])}</a>' for slug in related_slugs(current))
 
+def body_texts(page):
+    """The texts in-body links may go in, in page order: paragraphs, then each list or steps item."""
+    for _, blocks in page["sections"]:
+        for block in blocks:
+            if isinstance(block, str):
+                yield block
+            elif "list" in block or "steps" in block:
+                yield from block.get("list", block.get("steps"))
+
 def in_body_links(page, used):
-    """The in-body links for a page: {(paragraph, part): [(start, end, slug)]}, where part
-    indexes re.split(MARKDOWN_LINK, paragraph). `used` holds slugs the page must not link."""
-    paragraphs = [block for _, blocks in page["sections"] for block in blocks if isinstance(block, str)]
+    """The in-body links for a page: {(text, part): [(start, end, slug)]}, where text indexes
+    body_texts(page) and part indexes re.split(MARKDOWN_LINK, text). `used` holds slugs the page must not link."""
+    paragraphs = list(body_texts(page))
     spans = {}
     for pattern, slug in PHRASE_PATTERNS:
         if sum(map(len, spans.values())) == IN_BODY_LINKS:
@@ -349,31 +332,50 @@ def feature_card(feature):
     title, description = feature
     return f'<article class="card"><h3>{esc(title)}</h3><p class="muted">{esc(description)}</p></article>'
 
-MARKDOWN_LINK = r"\[([^\]]+)\]\((/[^)\s]*)\)"
+MARKDOWN_LINK = r"\[([^\]]+)\]\((/[^)\s]*|https://[^)\s]+)\)"
 
-def linked(text, spans):
-    """Escaped text in which [label](/path) becomes a link to that page on this site.
-    `spans` maps a part of re.split(MARKDOWN_LINK, text) to its in-body links."""
+def linked(text, spans=None):
+    """Escaped text in which [label](/path) links a page on this site and [label](https://...) a primary source.
+    `spans` maps a part of re.split(MARKDOWN_LINK, text) to its in-body links (see in_body_links)."""
+    spans = spans or {}
     parts = re.split(MARKDOWN_LINK, text)
     out = [with_links(parts[0], spans.get(0, []))]
     for i in range(1, len(parts), 3):
         out.append(f'<a href="{esc(parts[i + 1])}">{esc(parts[i])}</a>{with_links(parts[i + 2], spans.get(i + 2, []))}')
     return "".join(out)
 
-def render_block(block, spans=None):
-    """A paragraph string, or a dict holding one of h3, steps, list or example.
-    Paragraphs may link another page with [label](/path); `spans` adds in-body links."""
+def render_block(block, spans_of=lambda: None):
+    """A paragraph string, or a dict holding one of h3, steps, list, table or example.
+    Paragraphs, list items and table cells may link with [label](/path) or [label](https://...).
+    `spans_of()` returns the in-body links of the next text from body_texts()."""
     if isinstance(block, str):
-        return f"<p>{linked(block, spans or {})}</p>"
+        return f"<p>{linked(block, spans_of())}</p>"
     if "h3" in block:
         return f"<h3>{esc(block['h3'])}</h3>"
     if "steps" in block:
-        return "<ol>" + "".join(f"<li>{esc(item)}</li>" for item in block["steps"]) + "</ol>"
+        return "<ol>" + "".join(f"<li>{linked(item, spans_of())}</li>" for item in block["steps"]) + "</ol>"
     if "list" in block:
-        return "<ul>" + "".join(f"<li>{esc(item)}</li>" for item in block["list"]) + "</ul>"
+        return "<ul>" + "".join(f"<li>{linked(item, spans_of())}</li>" for item in block["list"]) + "</ul>"
+    if "table" in block:
+        table = block["table"]
+        head = "".join(f'<th scope="col">{esc(cell)}</th>' for cell in table["head"])
+        # data-label lets narrow screens show each row as a stack of labelled cells.
+        labels = [esc(cell) for cell in table["head"]]
+        rows = "".join("<tr>" + "".join(f'<td data-label="{label}">{linked(cell)}</td>' for label, cell in zip(labels, row)) + "</tr>" for row in table["rows"])
+        caption = f"<caption>{esc(table['caption'])}</caption>" if "caption" in table else ""
+        return f'<div class="table"><table>{caption}<thead><tr>{head}</tr></thead><tbody>{rows}</tbody></table></div>'
     example = block["example"]
     rows = "".join(f"<p><strong>{esc(label)}</strong> {esc(text)}</p>" for label, text in example["rows"])
     return f'<div class="card"><h3>{esc(example["title"])}</h3>{rows}</div>'
+
+def about(slug):
+    """The About aside. The full definition and plan facts stay on the pricing page (and on / and llms.txt);
+    every other guide gets one line, so the same paragraph is not repeated across the site."""
+    if slug == "debatelab-pricing":
+        body = f'<p>{esc(DEFINITION)} The app is available in English, Spanish and Hungarian.</p><p>{esc(PLAN_FACTS)}</p>'
+    else:
+        body = f'<p>{PRODUCT} is an AI debate prep and practice app. See <a href="/">how it works</a> or <a href="/debatelab-pricing">pricing</a>.</p>'
+    return f'<aside class="section article" aria-labelledby="about"><h2 id="about">About {PRODUCT}</h2>{body}</aside>'
 
 def structured_data(page, question, answer, faqs, published, modified):
     # sitemap.mjs reads the first dateModified in the file, so the Article stays first.
@@ -389,24 +391,23 @@ def structured_data(page, question, answer, faqs, published, modified):
 def render_page(page):
     question, answer = lead_answer(page)
     published = page.get("published", PUBLISHED_DATE)
-    modified = max(page.get("modified", CONTENT_DATE), LINKS_DATE)
-    if "faqs" not in page:
-        modified = max(modified, FAQS_DATE)
+    modified = max(page.get("modified", CONTENT_DATE), CONTENT_DATE)
+    if not page.get("faqs"):
+        raise SystemExit(f"{page['slug']} has no FAQs of its own in seo_guides.py")
     feature_cards = "".join(feature_card(feature) for feature in page["features"])
     # In-body links skip the page itself and pages its copy already links.
-    written = {href.lstrip("/") for _, blocks in page["sections"] for block in blocks if isinstance(block, str) for _, href in re.findall(MARKDOWN_LINK, block)}
+    written = {href.lstrip("/") for text in body_texts(page) for _, href in re.findall(MARKDOWN_LINK, text)}
     spans = in_body_links(page, {page["slug"], *written})
-    article, at = [], 0
+    texts = iter(range(len(list(body_texts(page)))))
+    def spans_of():
+        at = next(texts)
+        return {part: links for (where, part), links in spans.items() if where == at}
+    article = []
     for heading, blocks in page["sections"]:
         article.append(f"<h2>{esc(heading)}</h2>")
-        for block in blocks:
-            if isinstance(block, str):
-                article.append(render_block(block, {part: links for (where, part), links in spans.items() if where == at}))
-                at += 1
-            else:
-                article.append(render_block(block))
+        article.extend(render_block(block, spans_of) for block in blocks)
     IN_BODY_REPORT[page["slug"]] = spans
-    faqs = page.get("faqs", FAQS)
+    faqs = page["faqs"]
     faq_html = "".join(f"<details><summary>{esc(q)}</summary><p>{esc(a)}</p></details>" for q, a in faqs)
     nav = "".join(f'<a href="{href}">{esc(label)}</a>' for label, href in NAV)
     dates = f'Published <time datetime="{published}">{long_date(published)}</time> · Updated <time datetime="{modified}">{long_date(modified)}</time>'
@@ -454,7 +455,7 @@ def render_page(page):
       <div class="article section">{"".join(article)}</div>
       <section class="section faq article" aria-labelledby="faq"><h2 id="faq">Frequently asked questions</h2>{faq_html}</section>
     </article>
-    <aside class="section article" aria-labelledby="about"><h2 id="about">About {PRODUCT}</h2><p>{esc(DEFINITION)} The app is available in English, Spanish and Hungarian.</p><p>{esc(PLAN_FACTS)} <a href="/debatelab-pricing">See pricing</a>.</p></aside>
+    {about(page["slug"])}
     <section class="section article" aria-labelledby="related"><h2 id="related">Related {PRODUCT} guides</h2><nav class="links" aria-label="Related guides">{internal_links(page["slug"])}</nav></section>
   </main>
   <footer class="footer"><div class="wrap">{BRAND}: <a href="/">Home</a> / <a href="/debatelab-pricing">Pricing</a> / <a href="/privacy">Privacy</a> / <a href="/terms">Terms</a> / <a href="/sitemap.xml">Sitemap</a></div></footer>
