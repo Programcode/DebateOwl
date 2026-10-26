@@ -91,7 +91,7 @@ export function DebateOwlIntro({ onClose, owlName = OWL_NAME }: { onClose: () =>
             )}
           >
             <ul className="relative space-y-2">
-              <Line shown={beat >= 1} className="font-display text-xl font-[600] leading-7 text-heading">
+              <Line shown={beat >= 1} className="font-display text-xl font-[600] leading-7 text-heading text-balance">
                 {greeting}
               </Line>
               <Line shown={beat >= 2} icon={<Paintbrush className="h-4 w-4 text-primary" strokeWidth={2.5} />}>
