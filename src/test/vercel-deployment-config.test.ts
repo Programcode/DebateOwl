@@ -13,7 +13,12 @@ type VercelConfig = {
     deploymentEnabled?: boolean | Record<string, boolean>;
   };
   trailingSlash?: boolean;
-  redirects?: Array<{ source: string; destination: string; statusCode?: number }>;
+  redirects?: Array<{
+    source: string;
+    destination: string;
+    statusCode?: number;
+    has?: Array<{ type: string; key: string; value?: string }>;
+  }>;
   rewrites?: Array<{ source: string; destination: string }>;
   headers?: HeaderRule[];
   routes?: Array<{
@@ -102,9 +107,35 @@ describe("Vercel frontend deployment configuration", () => {
     })));
   });
 
-  it("sends /es and /hu to the landing page in that language, not a 404 (IN-04)", () => {
-    // Temporary: the language is the visitor's choice, not a moved page.
-    expect(loadConfig().redirects).toContainEqual({ source: "/:lang(es|hu)", destination: "/?lang=:lang", statusCode: 302 });
+  it("sends only the homepage's ?lang=hu|es links to /hu and /es, so they stop competing with them", () => {
+    // Where Vercel sends a path and query: the first redirect whose source is the
+    // exact path and whose query conditions match whole values, with each named
+    // group put into the destination. Vercel then appends the original query, so
+    // /?lang=hu lands on /hu?lang=hu: /hu is its own canonical and the client
+    // drops ?lang= from the address on load.
+    const redirectTarget = (url: string) => {
+      const { pathname, searchParams } = new URL(url, "https://example.test");
+      for (const rule of loadConfig().redirects ?? []) {
+        if (rule.source !== pathname) continue;
+        const groups: Record<string, string> = {};
+        const matches = (rule.has ?? []).every((condition) => {
+          const value = condition.type === "query" ? searchParams.get(condition.key) : null;
+          if (value === null) return false;
+          const match = new RegExp(`^(?:${condition.value ?? ".*"})$`).exec(value);
+          Object.assign(groups, match?.groups);
+          return Boolean(match);
+        });
+        if (matches) return { status: rule.statusCode, path: rule.destination.replace(/:(\w+)/g, (_, name: string) => groups[name]) };
+      }
+      return undefined;
+    };
+
+    expect(redirectTarget("/?lang=hu")).toEqual({ status: 301, path: "/hu" });
+    expect(redirectTarget("/?lang=es&utm_source=x")).toEqual({ status: 301, path: "/es" });
+    // English, unknown values, and every other page keep the client's ?lang= handling.
+    for (const url of ["/?lang=en", "/?lang=hungarian", "/", "/app?lang=hu", "/tools?lang=es", "/login?lang=hu"]) {
+      expect(redirectTarget(url), url).toBeUndefined();
+    }
   });
 
   it("redirects each retired guide to a live guide that no page links past", () => {
@@ -130,7 +161,7 @@ describe("Vercel frontend deployment configuration", () => {
       "/ai-vs-traditional-debate-prep": "/ai-debate-practice",
     };
     const guideRedirects = (loadConfig().redirects ?? [])
-      .filter((rule) => !rule.source.startsWith("/:page(") && !rule.source.startsWith("/:lang("));
+      .filter((rule) => !rule.source.startsWith("/:page(") && !rule.has);
     const retired = new Set(Object.keys(retiredGuides));
     const pages = readdirSync(resolve(process.cwd(), "public"), { withFileTypes: true })
       .filter((entry) => entry.isDirectory() && existsSync(resolve(process.cwd(), "public", entry.name, "index.html")))

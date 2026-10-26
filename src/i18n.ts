@@ -24,10 +24,18 @@ void i18n.use(initReactI18next).init({
   defaultNS: 'translation',
   lng: 'en',
   fallbackLng: 'en',
-  // Every string can name the product with {{product}}, {{brand}} and {{host}} from site.json.
+  // Every string can name the product with {{product}}, {{brand}} and {{host}},
+  // and state the trial length and price with {{trialDays}} and {{proMonthly}},
+  // all from site.json, so every language states the same facts as the English pages.
   interpolation: {
     escapeValue: false,
-    defaultVariables: { product: site.product, brand: site.brand, host: new URL(site.origin).host },
+    defaultVariables: {
+      product: site.product,
+      brand: site.brand,
+      host: new URL(site.origin).host,
+      trialDays: site.pricing.trialDays,
+      proMonthly: site.pricing.proMonthly,
+    },
   },
 });
 

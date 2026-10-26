@@ -895,17 +895,17 @@
   "hero": {
     "headline": "{{product}}: MI-alapú vitafelkészítés és gyakorlás",
     "subheadline": "Készíts eseteket és gyakorolj fordulókat MI-vel. A {{product}} strukturált eseteket épít, megtalálja az érvek gyenge pontjait, hivatkozásokkal kutat bizonyítékokat, és időzített gyakorlófordulókat futtat egy MI-ellenféllel szemben, diákoknak és versenyvitázóknak.",
-    "trialBadge": "3 napos ingyenes próba",
+    "trialBadge": "{{trialDays}} napos ingyenes próba",
     "requestsBadge": "Napi MI-felkészülés",
     "requestsBadgeValue": "Benne van",
-    "proBadge": "$5/hó Pro",
+    "proBadge": "${{proMonthly}}/hó Pro",
     "cta": "Próba indítása",
     "ctaSecondary": "Árak megtekintése",
     "trustBullet1": "Bankkártya nem szükséges",
     "trustBullet2": "Bármikor lemondható",
     "trustBullet3": "Bármely formátummal működik",
     "announcement": "Új 2026-ban: gyorsabb bejelentkezés, Drive-exportálás, folyamatábrák és okosabb felkészülési eszközök",
-    "trialBadgeValue": "3 nap",
+    "trialBadgeValue": "{{trialDays}} nap",
     "preview": {
       "topicLabel": "Indítvány",
       "topicValue": "Tiltsák be az iskolák a telefonokat?",
@@ -996,15 +996,15 @@
     "subtitle": "Kezdj ingyen, frissíts amikor készen állsz.",
     "trial": "Próba",
     "trialPrice": "$0",
-    "trialPeriod": "3 napig",
+    "trialPeriod": "{{trialDays}} napig",
     "pro": "Pro",
-    "proPrice": "$5",
+    "proPrice": "${{proMonthly}}",
     "proPeriod": "/hó + adó",
     "recommended": "Ajánlott",
     "trialFeature1": "Kezdő MI-felkészülési hozzáférés",
     "trialFeature2": "Mind a {{modes}} felkészülési mód és a {{utilities}} segédeszköz",
     "trialFeature3": "Kezdő modellek",
-    "trialFeature4": "3 napos hozzáférés",
+    "trialFeature4": "{{trialDays}} napos hozzáférés",
     "proFeature1": "Bővített MI-felkészülési hozzáférés",
     "proFeature2": "Mind a {{modes}} felkészülési mód és a {{utilities}} segédeszköz",
     "proFeature3": "Mind a 10 modell, köztük a Claude Opus és Sonnet, a GPT-6.1 Sol és a Gemini",
@@ -1022,7 +1022,7 @@
   "faq": {
     "title": "Gyakran ismételt kérdések",
     "q1": "Mennyibe kerül a DebateLab?",
-    "a1": "{{asOf}} állapot szerint a DebateLab 3 napos ingyenes próbát kínál bankkártya nélkül. Ezután a Pro $5/hó + adó, bővített hozzáféréssel és mind a 10 modellel. Nincs állandó ingyenes csomag.",
+    "a1": "{{asOf}} állapot szerint a {{product}} {{trialDays}} napos ingyenes próbát kínál bankkártya nélkül. Ezután a Pro ${{proMonthly}}/hó + adó, bővített hozzáféréssel és mind a 10 modellel. Nincs állandó ingyenes csomag.",
     "q2": "Mit kapok a Pro-val?",
     "a2": "Bővített MI-felkészülési hozzáférés mind a 10 modellel, köztük a Claude Opus és Sonnet, a GPT-6.1 Sol és a Gemini modellekkel, Active Grounding™ kutatással és elsőbbségi támogatással.",
     "q3": "Lemondhatom az előfizetésem?",
@@ -1045,6 +1045,7 @@
     "skills": "Készségfejlesztő útmutatók",
     "tools": "Ingyenes eszközök",
     "compare": "Összehasonlítás",
+    "englishGuides": "Angol nyelvű útmutatók",
     "links": {
       "ai-debate-practice": "MI-alapú vitagyakorlás",
       "ai-debate-case-generator": "MI-esetgenerátor hivatkozásokkal",
@@ -1058,15 +1059,15 @@
       "world-schools-debate": "World Schools",
       "congress-debate": "Kongresszusi vita",
       "how-to-write-a-debate-case": "Hogyan írj vitaesetet",
-      "how-to-practice-rebuttals": "Hogyan gyakorold a cáfolatot",
+      "how-to-practice-rebuttals": "Hogyan gyakorold a cáfolást",
       "debate-clash-points": "A döntő ütközőpont megtalálása",
       "debate-fallacies": "Gyakori érvelési hibák",
       "debate-judge-adaptation": "Alkalmazkodás a bíróhoz",
       "how-to-prepare-for-a-debate-tournament": "Felkészülés egy versenyre",
       "tools": "Az összes ingyenes eszköz",
-      "tools/debate-timer": "Vitaidőzítő",
-      "tools/debate-motion-generator": "Vitatéma-generátor",
-      "tools/debate-flow-sheet": "Flow-lap",
+      "tools/debate-timer": "Vitaidőmérő",
+      "tools/debate-motion-generator": "Vitatétel-generátor",
+      "tools/debate-flow-sheet": "Jegyzetlap",
       "tools/speech-time-calculator": "Beszédidő-kalkulátor",
       "best-ai-debate-tools": "A legjobb MI-alapú vitaeszközök",
       "debatelab-vs-chatgpt": "{{product}} vagy ChatGPT"
@@ -2628,7 +2629,7 @@
   },
   "shortAnswer": {
     "question": "Melyik a legjobb MI-alapú vitagyakorló eszköz?",
-    "answer": "Attól függ, mire van szükséged. {{asOf}} állapot szerint a DebateLab azoknak a diákoknak és versenyvitázóknak való, akik egy helyen szeretnének eseteket építeni, gyenge pontokat találni, bizonyítékokat ellenőrizni és időzített gyakorlófordulókat futtatni angolul, spanyolul vagy magyarul: 3 napos ingyenes próba bankkártya nélkül, utána $5/hó + adó. Ha ingyen szeretnél MI-ellenféllel gyakorolni World Schools vagy Asian Parliamentary stílusban, a debatelab.ai, egy másik termék, azt írja magáról, hogy ingyenes. Ha főleg ötletelésre vagy írási segítségre van szükséged bármilyen témában, egy általános asszisztens, például a ChatGPT rugalmasabb.",
+    "answer": "Attól függ, mire van szükséged. {{asOf}} állapot szerint a {{product}} azoknak a diákoknak és versenyvitázóknak való, akik egy helyen szeretnének eseteket építeni, gyenge pontokat találni, bizonyítékokat ellenőrizni és időzített gyakorlófordulókat futtatni angolul, spanyolul vagy magyarul: {{trialDays}} napos ingyenes próba bankkártya nélkül, utána ${{proMonthly}}/hó + adó. Ha ingyen szeretnél MI-ellenféllel gyakorolni World Schools vagy Asian Parliamentary stílusban, a debatelab.ai, egy másik termék, azt írja magáról, hogy ingyenes. Ha főleg ötletelésre vagy írási segítségre van szükséged bármilyen témában, egy általános asszisztens, például a ChatGPT rugalmasabb.",
     "compare": "MI-alapú vitaeszközök összehasonlítása"
   },
   "sessionQuota": {
@@ -2655,7 +2656,7 @@
   },
   "pageHead": {
     "home": {
-      "title": "{{brand}} | MI-alapú vitafelkészülés, érvek és cáfolatok",
+      "title": "{{product}} – MI-alapú vitafelkészülés és gyakorlás diákoknak",
       "description": "A {{product}} MI-alapú app vitára készülő diákoknak: esetépítés, cáfolatok, bizonyítékok, coaching és időzített gyakorlókörök egy MI-ellenféllel szemben."
     },
     "terms": {
@@ -2675,16 +2676,16 @@
       "description": "Ez az oldal nem létezik a {{brand}} webhelyén."
     },
     "tools": {
-      "title": "Ingyenes vitaeszközök: időmérő, indítványok, jegyzetlapok | {{brand}}",
-      "description": "Ingyenes, fiók nélkül használható vitaeszközök: formátumhoz igazodó időmérő, indítványgenerátor, nyomtatható jegyzetlapok és beszédidő-kalkulátor."
+      "title": "Ingyenes vitaeszközök: időmérő, vitatételek, jegyzetlapok | {{brand}}",
+      "description": "Ingyenes, fiók nélkül használható vitaeszközök: formátumhoz igazodó időmérő, vitatétel-generátor, nyomtatható jegyzetlapok és beszédidő-kalkulátor."
     },
     "debateTimer": {
       "title": "Ingyenes vitaidőmérő PF, LD, Policy, BP és World Schools formátumhoz | {{brand}}",
       "description": "Ingyenes vitaidőmérő PF, LD, Policy, BP, World Schools és Asian Parliamentary beállításokkal: védett idő, POI-jelzés és felkészülési idő."
     },
     "motionGenerator": {
-      "title": "Indítványgenerátor: 300 gyakorló vitaindítvány | {{brand}}",
-      "description": "Húzz egy véletlen vitaindítványt, vagy hármat a vétógyakorláshoz, 300 eredeti gyakorló indítványból, téma, nehézség és típus szerint rendezve."
+      "title": "Vitatétel-generátor: 300 gyakorló vitatétel | {{brand}}",
+      "description": "Húzz egy véletlen vitatételt, vagy hármat a vétógyakorláshoz, 300 eredeti gyakorló tételből, téma, nehézség és típus szerint rendezve."
     },
     "flowSheet": {
       "title": "Nyomtatható vitajegyzetlap-generátor | {{brand}}",

@@ -10,7 +10,7 @@
     "breadcrumb": "Breadcrumb",
     "faq": "Frequently asked questions",
     "otherTools": "More free tools",
-    "ctaPricing": "Start with a 3-day free trial, no card needed. After that DebateLab costs $5 a month plus tax.",
+    "ctaPricing": "Start with a {{trialDays}}-day free trial, no card needed. After that {{product}} costs ${{proMonthly}} a month plus tax.",
     "ctaButton": "Start the free trial"
   },
   "shortAnswer": {

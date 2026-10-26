@@ -31,6 +31,24 @@ Free to use, no account needed, and they run in the browser.
 - [Debate flow sheet](https://debate.pi-stack.org/tools/debate-flow-sheet): A printable one-page flow with a column for every speech in your format, on A4 or Letter.
 - [Speech time calculator](https://debate.pi-stack.org/tools/speech-time-calculator): Paste a speech to see how long it takes to deliver and which speech slots it fits.
 
+## Magyar
+
+- [DebateLab – MI-alapú vitafelkészülés és gyakorlás diákoknak](https://debate.pi-stack.org/hu): A DebateLab MI-alapú app vitára készülő diákoknak: esetépítés, cáfolatok, bizonyítékok, coaching és időzített gyakorlókörök egy MI-ellenféllel szemben.
+- [Ingyenes vitaeszközök: időmérő, vitatételek, jegyzetlapok | DebateLab by Pi-Stack](https://debate.pi-stack.org/hu/tools): Ingyenes, fiók nélkül használható vitaeszközök: formátumhoz igazodó időmérő, vitatétel-generátor, nyomtatható jegyzetlapok és beszédidő-kalkulátor.
+- [Ingyenes vitaidőmérő PF, LD, Policy, BP és World Schools formátumhoz | DebateLab by Pi-Stack](https://debate.pi-stack.org/hu/tools/vitaidomero): Ingyenes vitaidőmérő PF, LD, Policy, BP, World Schools és Asian Parliamentary beállításokkal: védett idő, POI-jelzés és felkészülési idő.
+- [Vitatétel-generátor: 300 gyakorló vitatétel | DebateLab by Pi-Stack](https://debate.pi-stack.org/hu/tools/vitatetel-generator): Húzz egy véletlen vitatételt, vagy hármat a vétógyakorláshoz, 300 eredeti gyakorló tételből, téma, nehézség és típus szerint rendezve.
+- [Nyomtatható vitajegyzetlap-generátor | DebateLab by Pi-Stack](https://debate.pi-stack.org/hu/tools/jegyzetlap): Egyoldalas, nyomtatható vitajegyzetlap minden beszédhez külön oszloppal PF, LD, Policy, BP, World Schools vagy Asian Parliamentary formátumhoz.
+- [Beszédidő-kalkulátor vitabeszédekhez | DebateLab by Pi-Stack](https://debate.pi-stack.org/hu/tools/beszedido-kalkulator): Illessz be egy beszédet, és megmutatjuk a szószámát, hogy lassú, átlagos és gyors tempóban mennyi ideig tart, és mely vitabeszéd-idősávokba fér bele.
+
+## Español
+
+- [DebateLab – Preparación y práctica de debate con IA para estudiantes](https://debate.pi-stack.org/es): DebateLab es una app con IA para preparar y practicar debates: casos, refutaciones, evidencia, coaching y rondas cronometradas contra un oponente de IA.
+- [Herramientas de debate gratis: cronómetro, mociones, hojas de flujo | DebateLab by Pi-Stack](https://debate.pi-stack.org/es/tools): Herramientas de debate gratis y sin cuenta: cronómetro por formato, generador de mociones, hojas de flujo imprimibles y calculadora de tiempo de discurso.
+- [Cronómetro de debate gratis para PF, LD, Policy, BP y World Schools | DebateLab by Pi-Stack](https://debate.pi-stack.org/es/tools/cronometro-debate): Cronómetro de debate gratis con ajustes para PF, LD, Policy, BP, World Schools y Asian Parliamentary: tiempo protegido, avisos de POI y preparación.
+- [Generador de mociones de debate: 300 mociones de práctica | DebateLab by Pi-Stack](https://debate.pi-stack.org/es/tools/generador-mociones): Saca una moción de debate al azar, o tres para practicar el veto, de entre 300 mociones originales ordenadas por tema, dificultad y tipo.
+- [Generador de hojas de flujo de debate imprimibles | DebateLab by Pi-Stack](https://debate.pi-stack.org/es/tools/hoja-de-flujo): Imprime una hoja de flujo de una página con una columna por discurso en PF, LD, Policy, BP, World Schools o Asian Parliamentary, en A4 o Carta.
+- [Calculadora de tiempo para discursos de debate | DebateLab by Pi-Stack](https://debate.pi-stack.org/es/tools/calculadora-tiempo-discurso): Pega un discurso para ver cuántas palabras tiene, cuánto dura a ritmo lento, medio o rápido y en qué turnos de debate cabe. Funciona en tu navegador.
+
 ## Guides
 
 - [AI Debate Practice for Stronger Cases, Rebuttals, and Speeches](https://debate.pi-stack.org/ai-debate-practice): Practice debate online with DebateLab: AI opponents, targeted drills, rebuttal feedback, evidence research, argument flowcharts, and tournament-ready prep tools.

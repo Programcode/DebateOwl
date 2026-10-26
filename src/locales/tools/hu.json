@@ -10,7 +10,7 @@
     "breadcrumb": "Morzsamenü",
     "faq": "Gyakori kérdések",
     "otherTools": "További ingyenes eszközök",
-    "ctaPricing": "Kezdd 3 napos ingyenes próbával, bankkártya nélkül. Utána a DebateLab havi 5 dollár plusz adó.",
+    "ctaPricing": "Kezdd {{trialDays}} napos ingyenes próbával, bankkártya nélkül. Utána a {{product}} havi {{proMonthly}} dollár plusz adó.",
     "ctaButton": "Ingyenes próba indítása"
   },
   "shortAnswer": {
@@ -24,7 +24,7 @@
     },
     "motions": {
       "question": "Hol találok véletlenszerű vitatételeket gyakorláshoz?",
-      "answer": "Itt. A generátor egy tételt húz, vétógyakorlathoz hármat, {{total}} eredeti, ehhez az oldalhoz írt gyakorló tételből. Szűrhetsz téma, nehézség és tételtípus szerint, a megfogalmazás pedig lehet This House vagy Resolved. Ingyenes, nem kell hozzá fiók, és lejjebb az összes tétel megtalálható téma szerint."
+      "answer": "Itt. A generátor egy tételt húz, vétógyakorlathoz hármat, {{total}} eredeti, ehhez az oldalhoz írt gyakorló tételből. Szűrhetsz téma, nehézség és tételtípus szerint, a megfogalmazás pedig lehet This House vagy Resolved. Ingyenes, nem kell hozzá fiók, a tételek pedig angol nyelvűek."
     },
     "flow": {
       "question": "Hogyan készíthetek jegyzetlapot egy vitafordulóhoz?",

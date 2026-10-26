@@ -10,7 +10,9 @@
 //   home page does not define;
 // - an indexed page without its question H2 (#short-answer) as the first H2;
 // - a page whose first heading is not its H1, or a heading that skips a level (H1 to H3);
-// - an image without alt text, a button without a name, or a form field without a label.
+// - an image without alt text, a button without a name, or a form field without a label;
+// - hreflang links that do not resolve, leave out the page itself or x-default,
+//   disagree with <html lang>, or are not the same set on every page they name.
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { join, relative, sep } from 'node:path';
 
@@ -162,10 +164,24 @@ function checkStructuredData(where, data, body) {
   if (!Array.isArray(sameAs) || !sameAs.length || sameAs.some((url) => !url.startsWith('https://'))) report(where, 'Organization.sameAs is not a list of https URLs');
 }
 
+// Canonical URL -> the page's hreflang set, checked for agreement after the loop.
+const hreflangSets = new Map();
+
 for (const file of htmlFiles(DIST)) {
   const where = relative(DIST, file);
   const html = readFileSync(file, 'utf8');
   const body = html.slice(html.indexOf('<body'));
+
+  const alternates = [...html.matchAll(/<link rel="alternate" hreflang="([^"]+)" href="([^"]+)" \/>/g)];
+  if (alternates.length) {
+    const set = Object.fromEntries(alternates.map(([, hreflang, href]) => [hreflang, href]));
+    const canonical = html.match(/<link rel="canonical" href="([^"]*)"/)?.[1];
+    const language = html.match(/<html lang="([^"]+)"/)?.[1];
+    if (!canonical || set[language] !== canonical) report(where, `hreflang="${language}" does not name this page's canonical URL ${canonical}`);
+    if (!set['x-default']) report(where, 'hreflang links without x-default');
+    for (const href of Object.values(set)) checkUrl(href, where);
+    hreflangSets.set(canonical, { where, set });
+  }
 
   for (const [, href] of body.matchAll(/<a\b[^>]*\shref="([^"]*)"/g)) {
     if (/^(mailto:|tel:|javascript:)/i.test(href)) continue;
@@ -209,6 +225,15 @@ for (const file of htmlFiles(DIST)) {
     if (/\stype="hidden"/.test(tag) || insideLabel(index) || namedByAria(tag, body)) continue;
     const id = tag.match(/\sid="([^"]+)"/)?.[1];
     if (!id || !labelled.has(id)) report(where, `form field without a label: ${tag.slice(0, 80)}`);
+  }
+}
+
+const sameSet = (a, b) => JSON.stringify(Object.entries(a).sort()) === JSON.stringify(Object.entries(b).sort());
+for (const { where, set } of hreflangSets.values()) {
+  for (const [hreflang, href] of Object.entries(set)) {
+    const other = hreflangSets.get(href);
+    if (!other) report(where, `hreflang="${hreflang}" names ${href}, which lists no hreflang set back`);
+    else if (!sameSet(set, other.set)) report(where, `hreflang set differs from the one on ${other.where}`);
   }
 }
 

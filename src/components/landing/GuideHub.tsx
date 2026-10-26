@@ -1,5 +1,6 @@
 import { useTranslation } from "react-i18next";
-import { useLocation } from "react-router-dom";
+import { Link } from "react-router-dom";
+import { localizedPath, useRouteLanguage } from "@/lib/seo/localized-routes";
 import { Reveal } from "./Reveal";
 
 /**
@@ -15,13 +16,48 @@ const GROUPS = [
     { id: "compare", paths: ["/best-ai-debate-tools", "/debatelab-vs-chatgpt"] },
 ] as const;
 
-/** Language home pages such as /hu and /es. The guides are English, so the hub stays off them. */
-const LOCALIZED_ROUTE = /^\/(?:es|hu)(?:\/|$)/;
+const TOOLS = GROUPS.find((group) => group.id === "tools")!;
+const linkClass = "inline-flex text-muted-foreground underline-offset-4 hover:text-primary hover:underline pointer-coarse:min-h-11 pointer-coarse:items-center";
+
+/**
+ * /hu and /es: the guides are in English, so only the free tools show, at their
+ * addresses in that language, plus one link to the English guides on the home page.
+ */
+const TranslatedToolsHub = ({ language }: { language: "hu" | "es" }) => {
+    const { t } = useTranslation();
+    return (
+        <section aria-labelledby="guide-hub-title" className="py-24">
+            <div className="section-container">
+                <Reveal className="mb-12 text-center">
+                    <h2 id="guide-hub-title" className="section-heading mb-4">{t('guideHub.title')}</h2>
+                    <p className="mx-auto max-w-2xl text-lg text-muted-foreground">{t('guideHub.subtitle')}</p>
+                </Reveal>
+
+                <Reveal delay={0.05} className="mx-auto max-w-md">
+                    <nav aria-labelledby="guide-hub-tools">
+                        <h3 id="guide-hub-tools" className="mb-3 font-semibold">{t('guideHub.tools')}</h3>
+                        <ul className="space-y-2">
+                            {TOOLS.paths.map((path) => (
+                                <li key={path}>
+                                    <Link to={localizedPath(path, language)} className={linkClass}>{t(`guideHub.links.${path.slice(1)}`)}</Link>
+                                </li>
+                            ))}
+                        </ul>
+                    </nav>
+                    {/* The English home page lists every guide; a plain link loads it from the server. */}
+                    <p className="mt-6">
+                        <a href="/#guide-hub-title" hrefLang="en" className={linkClass}>{t('guideHub.englishGuides')}</a>
+                    </p>
+                </Reveal>
+            </div>
+        </section>
+    );
+};
 
 const GuideHub = () => {
     const { t } = useTranslation();
-    const { pathname } = useLocation();
-    if (LOCALIZED_ROUTE.test(pathname)) return null;
+    const language = useRouteLanguage();
+    if (language !== "en") return <TranslatedToolsHub language={language} />;
 
     return (
         <section aria-labelledby="guide-hub-title" className="py-24">
@@ -39,10 +75,7 @@ const GuideHub = () => {
                                 {group.paths.map((path) => (
                                     <li key={path}>
                                         {/* Static pages, not app routes: a plain link loads each from the server. */}
-                                        <a
-                                            href={path}
-                                            className="inline-flex text-muted-foreground underline-offset-4 hover:text-primary hover:underline pointer-coarse:min-h-11 pointer-coarse:items-center"
-                                        >
+                                        <a href={path} className={linkClass}>
                                             {t(`guideHub.links.${path.slice(1)}`)}
                                         </a>
                                     </li>

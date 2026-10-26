@@ -1,7 +1,8 @@
 // Runs after scripts/prerender.mjs. Writes dist/sitemap.xml from the HTML pages
 // in dist/: every page that names itself as canonical and is not noindex. Each
 // <lastmod> is the dateModified the page itself declares in its JSON-LD; a page
-// without one is listed without a lastmod rather than with a made-up date.
+// without one is listed without a lastmod rather than with a made-up date. A
+// page with hreflang links in its head gets the same alternates as xhtml:link.
 import { readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join, relative, sep } from 'node:path';
 
@@ -34,15 +35,23 @@ for (const file of htmlPages(DIST)) {
   }
   const lastmod = html.match(/"dateModified":"(\d{4}-\d{2}-\d{2})"/)?.[1];
   if (!lastmod) console.log(`sitemap: ${route} declares no dateModified; listed without lastmod`);
-  urls.push({ url, lastmod });
+  const alternates = [...html.matchAll(/<link rel="alternate" hreflang="([^"]+)" href="([^"]+)" \/>/g)]
+    .map(([, hreflang, href]) => ({ hreflang, href }));
+  urls.push({ url, lastmod, alternates });
 }
 
 urls.sort((a, b) => (a.url === `${SITE_ORIGIN}/` ? -1 : b.url === `${SITE_ORIGIN}/` ? 1 : a.url.localeCompare(b.url)));
 const body = urls
-  .map(({ url, lastmod }) => `  <url>\n    <loc>${url}</loc>\n${lastmod ? `    <lastmod>${lastmod}</lastmod>\n` : ''}  </url>`)
+  .map(({ url, lastmod, alternates }) => [
+    '  <url>',
+    `    <loc>${url}</loc>`,
+    ...(lastmod ? [`    <lastmod>${lastmod}</lastmod>`] : []),
+    ...alternates.map(({ hreflang, href }) => `    <xhtml:link rel="alternate" hreflang="${hreflang}" href="${href}" />`),
+    '  </url>',
+  ].join('\n'))
   .join('\n');
 writeFileSync(
   join(DIST, 'sitemap.xml'),
-  `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${body}\n</urlset>\n`,
+  `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml">\n${body}\n</urlset>\n`,
 );
-console.log(`sitemap: ${urls.length} URLs, ${urls.filter((entry) => entry.lastmod).length} with lastmod`);
+console.log(`sitemap: ${urls.length} URLs, ${urls.filter((entry) => entry.lastmod).length} with lastmod, ${urls.filter((entry) => entry.alternates.length).length} with hreflang`);

@@ -3,7 +3,9 @@ import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import Footer from '@/components/landing/Footer';
 import { usePageHead } from '@/lib/seo/use-page-head';
-import { jsonLd, type FaqEntry, type ToolRoute } from '@/lib/seo/tool-pages';
+import { jsonLd, type FaqEntry, type ToolPageRoute, type ToolRoute } from '@/lib/seo/tool-pages';
+import { localizedPath, useRouteLanguage } from '@/lib/seo/localized-routes';
+import site from '@/config/site.json';
 import { cn } from '@/lib/utils';
 import { MAIN_CONTENT_ID, SkipLink } from '@/components/layout/SkipLink';
 
@@ -13,6 +15,9 @@ export const FREE_TOOLS = [
   { route: '/tools/debate-flow-sheet', name: 'Debate flow sheet', blurb: 'A printable one-page flow with a column for every speech in your format, on A4 or Letter.' },
   { route: '/tools/speech-time-calculator', name: 'Speech time calculator', blurb: 'Paste a speech to see how long it takes to deliver and which speech slots it fits.' },
 ] as const;
+
+/** A free tool's English route, with its name and blurb in the page's language. */
+export type FreeTool = { route: ToolPageRoute; name: string; blurb: string };
 
 /** Long-form copy under a tool: a readable measure and plain headings. */
 export function ToolArticle({ children, className }: { children: ReactNode; className?: string }) {
@@ -59,17 +64,18 @@ export function ToolCta({ title, children }: { title: string; children: ReactNod
   );
 }
 
-function OtherTools({ current }: { current: ToolRoute }) {
+function OtherTools({ current, tools }: { current: ToolRoute; tools: readonly FreeTool[] }) {
   const { t } = useTranslation('tools');
-  const others = FREE_TOOLS.filter((tool) => tool.route !== current);
-  if (others.length === FREE_TOOLS.length) return null;
+  const language = useRouteLanguage();
+  const others = tools.filter((tool) => tool.route !== current);
+  if (others.length === tools.length) return null;
   return (
     <nav aria-labelledby="other-tools-heading">
       <h2 id="other-tools-heading">{t('layout.otherTools')}</h2>
       <ul className="list-none! pl-0! mt-4 grid gap-4 sm:grid-cols-3">
         {others.map((tool) => (
           <li key={tool.route} className="mt-0!">
-            <Link to={tool.route} className="font-medium">{tool.name}</Link>
+            <Link to={localizedPath(tool.route, language)} className="font-medium">{tool.name}</Link>
             <p className="mt-1! text-sm text-muted-foreground">{tool.blurb}</p>
           </li>
         ))}
@@ -90,25 +96,30 @@ interface ToolPageLayoutProps {
   /** Long-form sections, FAQ and CTA. */
   children: ReactNode;
   structuredData: object;
+  /** The tools' names and blurbs in the page's language; English by default. */
+  tools?: readonly FreeTool[];
 }
 
-export function ToolPageLayout({ route, title, intro, shortAnswer, tool, children, structuredData }: ToolPageLayoutProps) {
+export function ToolPageLayout({ route, title, intro, shortAnswer, tool, children, structuredData, tools = FREE_TOOLS }: ToolPageLayoutProps) {
   const { t } = useTranslation('tools');
   usePageHead(route);
-  const crumb = FREE_TOOLS.find((entry) => entry.route === route)?.name;
+  const language = useRouteLanguage();
+  const home = localizedPath('/', language);
+  const hub = localizedPath('/tools', language);
+  const crumb = tools.find((entry) => entry.route === route)?.name;
 
   return (
     <div className="min-h-screen bg-background">
       <SkipLink />
       <header className="border-b border-border/60 print:hidden">
         <div className="container flex h-14 items-center justify-between gap-4 px-4">
-          <Link to="/" className="flex items-center gap-2 rounded-md pointer-coarse:min-h-11">
+          <Link to={home} className="flex items-center gap-2 rounded-md pointer-coarse:min-h-11">
             <span className="flex h-8 w-8 items-center justify-center overflow-hidden rounded-md bg-white dark:bg-slate-800">
               <img src="/favicon-72.png" alt="" width={32} height={32} className="h-full w-full object-cover" />
             </span>
-            <span className="font-semibold tracking-tight text-foreground">DebateLab</span>
+            <span className="font-semibold tracking-tight text-foreground">{site.product}</span>
           </Link>
-          <Link to="/tools" className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground pointer-coarse:min-h-11">
+          <Link to={hub} className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground pointer-coarse:min-h-11">
             {t('layout.allTools')}
           </Link>
         </div>
@@ -116,11 +127,11 @@ export function ToolPageLayout({ route, title, intro, shortAnswer, tool, childre
       <main id={MAIN_CONTENT_ID} className="container mx-auto px-4 pb-16 pt-6 focus-visible:outline-hidden">
         <nav aria-label={t('layout.breadcrumb')} className="text-sm text-muted-foreground print:hidden">
           <ol className="flex flex-wrap items-center gap-1">
-            <li><Link to="/" className="hover:text-foreground">DebateLab</Link></li>
+            <li><Link to={home} className="hover:text-foreground">{site.product}</Link></li>
             <li aria-hidden="true">/</li>
             {crumb ? (
               <>
-                <li><Link to="/tools" className="hover:text-foreground">{t('layout.allTools')}</Link></li>
+                <li><Link to={hub} className="hover:text-foreground">{t('layout.allTools')}</Link></li>
                 <li aria-hidden="true">/</li>
                 <li aria-current="page" className="text-foreground">{crumb}</li>
               </>
@@ -141,7 +152,7 @@ export function ToolPageLayout({ route, title, intro, shortAnswer, tool, childre
         {tool && <div className="mx-auto mt-8 max-w-5xl">{tool}</div>}
         <ToolArticle className="mt-14 print:hidden">
           {children}
-          <OtherTools current={route} />
+          <OtherTools current={route} tools={tools} />
         </ToolArticle>
       </main>
       <div className="print:hidden"><Footer /></div>

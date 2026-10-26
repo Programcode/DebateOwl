@@ -27,9 +27,10 @@
       "statusCode": 301
     },
     {
-      "source": "/:lang(es|hu)",
-      "destination": "/?lang=:lang",
-      "statusCode": 302
+      "source": "/",
+      "has": [{ "type": "query", "key": "lang", "value": "(?<l>hu|es)" }],
+      "destination": "/:l",
+      "statusCode": 301
     },
     {
       "source": "/online-debate-timer-tool",

@@ -3,10 +3,14 @@
 import type { ComponentType } from 'react';
 import { renderToString } from 'react-dom/server';
 import { StaticRouter } from 'react-router-dom';
-import i18n from '@/i18n';
+import i18n, { applyAppLanguage } from '@/i18n';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { AuthContext, type AuthContextValue } from '@/lib/supabase/auth-context';
-import { BRAND, DEFINITION, ORGANIZATION, ORGANIZATION_SAME_AS, PAGE_HEADS, PRICING, PRODUCT, SITE_ORIGIN, factsAsOf, type PageHead, type PrerenderedRoute } from '@/lib/seo/pages';
+import { BRAND, DEFINITION, ORGANIZATION, ORGANIZATION_SAME_AS, PAGE_HEAD_IDS, PAGE_HEADS, PRICING, PRODUCT, SITE_ORIGIN, factsAsOf, type PageHead, type PrerenderedRoute } from '@/lib/seo/pages';
+import { HEAD_NAMES } from '@/lib/seo/head-text';
+import { hreflangAlternates, isLocalizedRoute, LOCALIZED_PATHS, RouteLanguageProvider, type PageLanguage } from '@/lib/seo/localized-routes';
+import { TOOL_PAGES as HU_TOOL_PAGES } from '@/pages/tools/localized/hu';
+import { TOOL_PAGES as ES_TOOL_PAGES } from '@/pages/tools/localized/es';
 import LandingPage from '@/pages/LandingPage';
 import TermsPage from '@/pages/TermsPage';
 import PrivacyPage from '@/pages/PrivacyPage';
@@ -34,7 +38,12 @@ const SIGNED_OUT: AuthContextValue = {
 };
 
 export interface PrerenderedPage {
-  route: PrerenderedRoute;
+  /** The address, which #root's data-prerendered names: /hu for the Hungarian landing page. */
+  route: string;
+  /** The <html lang>; English when absent. */
+  language?: PageLanguage;
+  /** hreflang links for a page that exists in every language. */
+  alternates?: { hreflang: string; href: string }[];
   /** Output path inside dist/. */
   file: string;
   /** Source path of the page module, the key of its chunk in the Vite manifest. */
@@ -54,22 +63,22 @@ function isoDate(englishDate: string): string {
   return new Date(time).toISOString().slice(0, 10);
 }
 
-function webPage(route: PrerenderedRoute, dateModified: string | undefined) {
-  const head: PageHead = PAGE_HEADS[route];
+function webPage(route: PrerenderedRoute, dateModified: string | undefined, head: PageHead = PAGE_HEADS[route], language?: PageLanguage) {
   return {
     '@type': 'WebPage',
     '@id': `${SITE_ORIGIN}${head.canonicalPath}#webpage`,
     url: `${SITE_ORIGIN}${head.canonicalPath}`,
     name: head.title,
     description: head.description,
+    ...(language ? { inLanguage: language } : {}),
     isPartOf: { '@id': WEBSITE_ID },
     ...(dateModified ? { dateModified } : {}),
   };
 }
 
-/** The landing page's visible questions and answers, in the order the page shows them. */
-function landingQuestions(): Array<[string, string]> {
-  const asOf = factsAsOf('en');
+/** The landing page's visible questions and answers, in the order the page shows them, in i18n's current language. */
+function landingQuestions(language: PageLanguage = 'en'): Array<[string, string]> {
+  const asOf = factsAsOf(language);
   return [
     [i18n.t('shortAnswer.question'), i18n.t('shortAnswer.answer', { asOf })],
     [i18n.t('faq.q6'), i18n.t('faq.a6', { modes: PREP_MODE_COUNT })],
@@ -139,14 +148,29 @@ function landingStructuredData(dateModified: string | undefined) {
         publisher: { '@id': ORGANIZATION_ID },
       },
       webPage('/', dateModified),
-      {
-        '@type': 'FAQPage',
-        mainEntity: landingQuestions().map(([name, text]) => ({
-          '@type': 'Question',
-          name,
-          acceptedAnswer: { '@type': 'Answer', text },
-        })),
-      },
+      faqPage('en'),
+    ],
+  };
+}
+
+function faqPage(language: PageLanguage) {
+  return {
+    '@type': 'FAQPage',
+    mainEntity: landingQuestions(language).map(([name, text]) => ({
+      '@type': 'Question',
+      name,
+      acceptedAnswer: { '@type': 'Answer', text },
+    })),
+  };
+}
+
+/** /hu and /es: their own page and FAQ, about the product the English landing page describes. */
+function localizedLandingStructuredData(head: PageHead, language: PageLanguage, dateModified: string | undefined) {
+  return {
+    '@context': 'https://schema.org',
+    '@graph': [
+      { ...webPage('/', dateModified, head, language), about: { '@id': `${SITE_ORIGIN}/#software` } },
+      faqPage(language),
     ],
   };
 }
@@ -158,17 +182,51 @@ function legalStructuredData(route: '/terms' | '/privacy', dateKey: string) {
   };
 }
 
-function render(route: PrerenderedRoute, Page: ComponentType): string {
+function render(route: string, Page: ComponentType, language: PageLanguage = 'en'): string {
   return renderToString(
     <AuthContext.Provider value={SIGNED_OUT}>
       <TooltipProvider delayDuration={200}>
         <StaticRouter location={route === '*' ? '/404' : route}>
-          <Page />
+          <RouteLanguageProvider value={language}>
+            <Page />
+          </RouteLanguageProvider>
         </StaticRouter>
       </TooltipProvider>
     </AuthContext.Provider>,
   );
 }
+
+const TRANSLATED_TOOL_PAGES = { hu: HU_TOOL_PAGES, es: ES_TOOL_PAGES };
+
+/** The Hungarian and Spanish pages: the landing page and the free tools, each in its own language. */
+async function localizedPages(landingModified: string | undefined): Promise<PrerenderedPage[]> {
+  const pages: PrerenderedPage[] = [];
+  for (const { path, route, language } of LOCALIZED_PATHS) {
+    await applyAppLanguage(language);
+    const id = PAGE_HEAD_IDS[route];
+    const head: PageHead = {
+      title: i18n.t(`pageHead.${id}.title`, HEAD_NAMES),
+      description: i18n.t(`pageHead.${id}.description`, HEAD_NAMES),
+      canonicalPath: path,
+    };
+    const common = { route: path, file: `${path.slice(1)}/index.html`, language, alternates: hreflangAlternates(route), head };
+    if (route === '/') {
+      pages.push({
+        ...common,
+        module: 'src/pages/LandingPage.tsx',
+        body: render(path, LandingPage, language),
+        structuredData: localizedLandingStructuredData(head, language, landingModified),
+      });
+    } else {
+      // The tool pages render their own JSON-LD in the body.
+      pages.push({ ...common, module: `src/pages/tools/localized/${language}.tsx`, body: render(path, TRANSLATED_TOOL_PAGES[language][route], language) });
+    }
+  }
+  await applyAppLanguage('en');
+  return pages;
+}
+
+const alternatesOf = (route: string) => (isLocalizedRoute(route) ? { alternates: hreflangAlternates(route) } : {});
 
 /**
  * Renders the public pages in English, signed out. `landingModified` is the
@@ -178,6 +236,7 @@ export async function prerenderPages({ landingModified }: { landingModified?: st
   await i18n.changeLanguage('en');
   return [
     {
+      ...alternatesOf('/'),
       route: '/',
       file: 'index.html',
       module: 'src/pages/LandingPage.tsx',
@@ -203,6 +262,7 @@ export async function prerenderPages({ landingModified }: { landingModified?: st
     },
     // The tool pages render their own JSON-LD in the body.
     ...TOOL_PAGES.map(({ route, module, Page }) => ({
+      ...alternatesOf(route),
       route,
       file: `${route.slice(1)}/index.html`,
       module,
@@ -223,5 +283,7 @@ export async function prerenderPages({ landingModified }: { landingModified?: st
       head: PAGE_HEADS['*'],
       body: render('*', NotFound),
     },
+    // Last: they switch i18n to each language in turn, then back to English.
+    ...(await localizedPages(landingModified)),
   ];
 }

@@ -6,8 +6,9 @@ import en from '@/locales/en.json';
 import es from '@/locales/es.json';
 import hu from '@/locales/hu.json';
 import { HEAD_NAMES } from '@/lib/seo/head-text';
-import { PAGE_HEADS, type PrerenderedRoute } from '@/lib/seo/pages';
+import { PAGE_HEADS, SITE_ORIGIN as PAGE_ORIGIN, type PrerenderedRoute } from '@/lib/seo/pages';
 import { usePageHead, usePrivateRouteHead } from '@/lib/seo/use-page-head';
+import { RouteLanguageProvider } from '@/lib/seo/localized-routes';
 
 // IN-01, SE-01: every page's tab title and description follow the interface language.
 
@@ -57,6 +58,16 @@ describe('page titles', () => {
     await switchTo('hu');
     expect(document.title).toBe(`${hu.nav.generate} · DebateLab`);
     expect(description()).toBe(hu.pageHead.home.description.replace('{{product}}', HEAD_NAMES.product));
+  });
+
+  it('keep a Hungarian or Spanish page canonical to its own address, not the English one', () => {
+    // The prerendered /hu says canonical /hu; if the app rewrote it to / on load, Google would fold /hu into the English page.
+    const canonical = () => document.head.querySelector<HTMLLinkElement>('link[rel="canonical"]')?.href;
+    const { unmount } = render(<RouteLanguageProvider value="hu"><PublicPage route="/" /></RouteLanguageProvider>);
+    expect(canonical()).toBe(`${PAGE_ORIGIN}/hu`);
+    unmount();
+    render(<RouteLanguageProvider value="es"><PublicPage route="/tools/debate-timer" /></RouteLanguageProvider>);
+    expect(canonical()).toBe(`${PAGE_ORIGIN}/es/tools/cronometro-debate`);
   });
 
   it('keep every description within 160 characters in every language', () => {
