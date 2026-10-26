@@ -4,7 +4,8 @@ generate_seo_content.py merges each entry over the PAGES item with the same
 slug. Name the product with {product} and the Pro price with {pro_price}; the
 generator fills them from src/config/site.json. {mode_count}, {mode_names} and
 {utility_names} come from the tool lists in tool-links.tsx. A section is (heading, blocks), where a block is a
-paragraph string or a dict with one of: h3, steps, list, example.
+paragraph string or a dict with one of: h3, steps, list, table ({"head": [...], "rows": [[...]]}), example.
+A format guide's speech times must match src/lib/free-tools/formats.ts, which the free timer runs.
 """
 
 GUIDES = {
@@ -1330,6 +1331,299 @@ GUIDES = {
             ("Is DebateClub for competitive debate?", "As of October 2026, DebateClub's site describes training for high-stakes conversations such as negotiations and pitches and does not name competitive debate formats."),
             ("Does {product} support voice practice?", "Yes. Sparring has a voice mode, so you can speak your speeches instead of typing them."),
             ("Which is cheaper?", "As of October 2026, {product} Pro is {pro_price} and DebateClub Pro is $19/month. DebateClub also has a free tier with one debate credit; {product} has a 3-day trial and no permanent free plan."),
+        ],
+    },
+    "lincoln-douglas-debate": {
+        "modified": "2026-10-26",
+        "title": "Lincoln-Douglas Debate: Times, Value and Criterion | {product}",
+        "description": "How a Lincoln-Douglas round runs at NSDA speech times, how a value and criterion work, a worked example case and the neg turn against it, common LD mistakes and a 15-minute drill.",
+        "features": [
+            ("The NSDA round", "Seven speeches and cross-examinations at 6-3-7-3-4-6-3, with four minutes of prep per debater."),
+            ("Framework that does work", "A value and a criterion the rest of the case actually depends on, instead of a label at the top."),
+            ("A worked example and its turn", "One affirmative contention on an original practice resolution, and how a negative turns it under the same criterion."),
+        ],
+        "sections": [
+            ("The round at NSDA times", [
+                "Lincoln-Douglas is one debater against one. The National Speech & Debate Association (NSDA) writes resolutions that ask for a value judgment, and the topic changes several times a season. Under the [NSDA High School Unified Manual](https://www.speechanddebate.org/high-school-unified-manual/), a round runs in this order:",
+                {"table": {"head": ["Speech", "Who", "Time"], "rows": [
+                    ["Affirmative constructive (AC)", "Affirmative", "6 minutes"],
+                    ["Cross-examination", "Negative asks, affirmative answers", "3 minutes"],
+                    ["Negative constructive (NC)", "Negative", "7 minutes"],
+                    ["Cross-examination", "Affirmative asks, negative answers", "3 minutes"],
+                    ["First affirmative rebuttal (1AR)", "Affirmative", "4 minutes"],
+                    ["Negative rebuttal (NR)", "Negative", "6 minutes"],
+                    ["Second affirmative rebuttal (2AR)", "Affirmative", "3 minutes"],
+                    ["Prep time", "Each debater, used between speeches", "4 minutes"],
+                ]}},
+                "The time split explains most LD strategy. The affirmative speaks first and last but has 13 minutes of speeches to the negative's 13, and the 1AR has four minutes to answer seven minutes of NC. Some tournaments allow more prep than four minutes, so read the invitation. The [free debate timer with the LD preset](/tools/debate-timer?format=ld) runs this order and keeps each debater's prep bank.",
+            ]),
+            ("What the value and criterion are for", [
+                "The value is the goal the resolution should be judged by, such as justice, wellbeing or liberty. The criterion, sometimes called the standard or value criterion, is the test the judge uses to decide which side achieves that value better. Together they are the framework, and in a close round the framework decides which arguments count at all.",
+                "A criterion earns its place when it is narrow enough to exclude some impacts. \"Maximising wellbeing\" lets almost anything in, so the round turns into a contest of the biggest numbers. \"Protecting the least advantaged\" tells the judge that a benefit to most people does not outweigh a serious harm to the worst off. The narrower test is easier to attack, but it also gives you a reason to win when the negative's offense is larger in raw terms.",
+                "Each contention should then show how the resolution meets the criterion. If a contention would win under any framework, it is fine, but it does not need your framework, and your opponent can ignore the framework debate entirely.",
+            ]),
+            ("Worked example: one contention and the turn", [
+                {"example": {"title": "Practice resolution: Resolved: Cities ought to prioritize pedestrians over private cars when allocating street space", "rows": [
+                    ("Value:", "Justice, defined as giving each person what they are owed as a member of the public."),
+                    ("Criterion:", "Protecting the least advantaged users of public space."),
+                    ("Contention 1:", "Streets are a shared public good, but car-first allocation gives most of that space to people who can afford a car. Children, many older people and people on low incomes travel on foot or by bus, so they get the least space and carry the most risk."),
+                    ("Impact under the criterion:", "Prioritizing pedestrians reallocates a public good toward the people the criterion says to protect first."),
+                    ("Negative turn:", "Accept the criterion and argue that the affirmative fails it. Many disabled people, rural commuters and night-shift workers without transit depend on cars, and they are among the least advantaged too. Pedestrian priority without replacement transit takes access from them."),
+                    ("Affirmative answer in the 1AR:", "Prioritizing is not banning: accessible parking, paratransit and delivery access stay. Then weigh: the affirmative helps more of the least advantaged, and the negative's harm can be fixed inside the affirmative world."),
+                ]}},
+                "The turn works because it fights on the affirmative's own criterion. A negative who instead argued \"economic growth matters more\" would need to win a separate framework debate first, which costs time in a seven-minute NC.",
+            ]),
+            ("Cross-examination in LD", [
+                "Each debater gets one three-minute cross-examination. Spend it on the framework and on the one link you plan to attack. Useful questions get a commitment you can quote later: \"Does your criterion let a benefit to the majority outweigh a harm to the worst off?\" A yes or no either way gives you something for the next speech.",
+                "When you answer, keep replies short and stay consistent with the case. Conceding a definition is usually cheaper than defending a weak one for the whole round.",
+            ]),
+            ("Common LD mistakes", [
+                {"list": [
+                    "A value and criterion that no contention mentions again. If the framework disappears after the first minute, the judge decides on impacts alone.",
+                    "A criterion that is just the value restated, such as value \"morality\" and criterion \"being moral\". It gives the judge no test to apply.",
+                    "An NC that only attacks. The negative needs offense of its own, or the affirmative can win on a small risk of its advantage.",
+                    "A 1AR that tries to answer everything at the same depth. Group the NC's responses, answer the framework first, and extend one contention cleanly.",
+                    "A 2AR that introduces new arguments. Judges discount them because the negative has no speech left to respond.",
+                ]},
+            ]),
+            ("A 15-minute LD drill", [
+                {"steps": [
+                    "Two minutes: write a value and criterion for both sides of the current resolution, or the practice one above.",
+                    "Three minutes: for your affirmative, write one contention in three sentences, ending with how it meets the criterion.",
+                    "Four minutes: write the negative turn against that contention under the same criterion, as if you were the opponent.",
+                    "Four minutes: deliver a 1AR answer to the turn out loud, timed with the LD preset's 1AR slot.",
+                    "Two minutes: write one cross-examination question that would have set up the turn, and one that would have prevented it.",
+                ]},
+                "In {product}, Case Attacker runs the same test on a full case: paste the affirmative and it points to the weakest link. Crossfire is a cross-examination drill, where the AI questions you about your case or answers your questions from the other side. Sparring runs LD rounds at the NSDA speech times with a judged verdict at the end; the cross-examination periods are left out, so pair it with a Crossfire drill.",
+            ]),
+        ],
+        "faqs": [
+            ("How long is a Lincoln-Douglas round?", "The speeches and cross-examinations add up to 32 minutes. With four minutes of prep for each debater, a round takes about 40 minutes."),
+            ("Do I need a value premise and a criterion in every LD case?", "Most traditional LD judges expect both. Some circuits use a single standard or a framework argument instead, but the purpose is the same: give the judge a test for weighing the round."),
+            ("Can the affirmative and negative use the same value?", "Yes, and it is common. When both sides share a value, the round usually turns on the criterion or on who better meets the shared framework."),
+            ("Why is the 1AR so hard?", "It has four minutes to answer a seven-minute negative constructive and the negative's cross-examination. Grouping arguments and answering the framework first saves the most time."),
+        ],
+    },
+    "policy-debate": {
+        "modified": "2026-10-26",
+        "title": "Policy Debate (CX): Times, Plans, DAs and Counterplans | {product}",
+        "description": "How a Policy (CX) round runs at the NSDA 8-3-5 times, what the plan, disadvantage, counterplan, topicality and kritik each have to prove, a worked 1NC against an example plan, common mistakes and a 15-minute drill.",
+        "features": [
+            ("The 8-3-5 round", "Four constructives, four cross-examinations and four rebuttals, with eight minutes of prep per team."),
+            ("What each position must prove", "The parts of a plan, a disadvantage, a counterplan, topicality and a kritik, and where each one is usually weak."),
+            ("A worked 1NC and 2NR", "An original practice resolution, an example plan, the negative's off-case positions and how the round collapses."),
+        ],
+        "sections": [
+            ("The round at NSDA times", [
+                "Policy debate, also called CX, is two debaters against two. The affirmative proposes a plan that meets the resolution and the negative argues it should not be adopted. The resolution stays the same for the whole school year, so teams build large research files and the evidence is detailed. The [NSDA Policy Debate page](https://www.speechanddebate.org/policy-debate/) and the [High School Unified Manual](https://www.speechanddebate.org/high-school-unified-manual/) set this order:",
+                {"table": {"head": ["Speech", "Who", "Time"], "rows": [
+                    ["First affirmative constructive (1AC)", "Affirmative", "8 minutes"],
+                    ["Cross-examination", "Negative asks the 1AC speaker", "3 minutes"],
+                    ["First negative constructive (1NC)", "Negative", "8 minutes"],
+                    ["Cross-examination", "Affirmative asks the 1NC speaker", "3 minutes"],
+                    ["Second affirmative constructive (2AC)", "Affirmative", "8 minutes"],
+                    ["Cross-examination", "Negative asks the 2AC speaker", "3 minutes"],
+                    ["Second negative constructive (2NC)", "Negative", "8 minutes"],
+                    ["Cross-examination", "Affirmative asks the 2NC speaker", "3 minutes"],
+                    ["First negative rebuttal (1NR)", "Negative", "5 minutes"],
+                    ["First affirmative rebuttal (1AR)", "Affirmative", "5 minutes"],
+                    ["Second negative rebuttal (2NR)", "Negative", "5 minutes"],
+                    ["Second affirmative rebuttal (2AR)", "Affirmative", "5 minutes"],
+                    ["Prep time", "Each team, used between speeches", "8 minutes"],
+                ]}},
+                "Each debater gives one constructive and one rebuttal, asks once and answers once. The 2NC and 1NR run back to back, so the negative gets 13 uninterrupted minutes, called the negative block, and the 1AR has five minutes to answer all of it. Older material lists five minutes of prep and some state circuits still use four-minute rebuttals. The [free debate timer with the Policy preset](/tools/debate-timer?format=policy) runs the NSDA order with both prep banks.",
+            ]),
+            ("What each position has to prove", [
+                {"h3": "The affirmative plan"},
+                "The 1AC reads a plan text and usually two or three advantages. An advantage needs a harm in the present system, a reason the present system will not solve it (inherency), and evidence that the plan solves it (solvency). The plan text matters more than new debaters expect: the negative will quote it word for word to argue topicality or to write a counterplan around it.",
+                {"h3": "Disadvantage (DA)"},
+                "A disadvantage says the plan causes something bad. It has four parts: uniqueness (the bad thing is not happening now), a link (the plan triggers it), an internal link and an impact. Most DAs are weakest at uniqueness or at the link, and the 2AC should name which.",
+                {"h3": "Counterplan (CP)"},
+                "A counterplan is a different way to get the affirmative's advantages. It must compete: it has to be a reason to reject the plan, not just an addition to it. The usual test is a permutation, where the affirmative argues it could do both. A counterplan paired with a disadvantage that only the plan triggers, called the net benefit, is the most common negative strategy.",
+                {"h3": "Topicality (T) and kritiks (K)"},
+                "Topicality argues that the plan falls outside the resolution, with an interpretation of a word, a violation, standards and a reason to vote. A kritik challenges an assumption the affirmative makes, with a link, an impact and an alternative. Both are judged by different standards in different regions, so ask the judge's preferences before the round.",
+            ]),
+            ("Worked example: a 1NC and how it collapses", [
+                {"example": {"title": "Practice resolution: Resolved: The United States federal government should substantially increase funding for public library systems in the United States", "rows": [
+                    ("Plan:", "A federal grant program that pays public library systems to extend evening and weekend hours and to lend internet hotspots."),
+                    ("Advantage:", "Households without home internet rely on libraries to apply for jobs and public services; longer hours and lending widen that access."),
+                    ("1NC off-case 1, states counterplan:", "The fifty states fund the same hours and lending programs through their own library agencies."),
+                    ("1NC off-case 2, net benefit DA:", "A new federal grant program expands federal control of a local service; the link is the plan's grant conditions."),
+                    ("1NC on case:", "Solvency press: longer hours do not help households whose problem is transport, not opening times."),
+                    ("2AR answer:", "Permute: do both. Then a solvency deficit: states fund unevenly, so the counterplan leaves the poorest areas out, and those are the advantage's harm."),
+                    ("2NR collapse:", "Go for the counterplan and the DA only. Drop the solvency press and spend the five minutes on why the permutation still links to the DA."),
+                ]}},
+                "The 2NR rarely goes for everything in the 1NC. Choosing what to drop, and saying so clearly, keeps the final negative speech deep enough to win the one comparison that decides the round.",
+            ]),
+            ("Common Policy mistakes", [
+                {"list": [
+                    "Reading cards without explaining them. A judge who cannot tell what a card proves gives it little weight, however strong the source.",
+                    "A 2AC that answers every off-case position with the same generic responses. Name the weakest part of each DA and CP instead.",
+                    "Conceding the permutation by never answering it in the block.",
+                    "A 2NR that extends five positions at the same depth. Most winning 2NRs go for one or two.",
+                    "Asking cross-examination questions that do not set up the next speech. Each question should come back as an argument.",
+                ]},
+            ]),
+            ("A 15-minute Policy drill", [
+                {"steps": [
+                    "Four minutes: write a disadvantage against your own plan, with one sentence each for uniqueness, link, internal link and impact.",
+                    "Two minutes: read it aloud as if it were in the 1NC.",
+                    "Five minutes: write a 2AC frontline of four answers, labelled by the part of the DA each one attacks.",
+                    "Three minutes: deliver the frontline, timed against the Policy preset's 2AC slot so you can see how much of eight minutes it would take.",
+                    "One minute: write the answer you would extend in the 1AR if you had time for only one.",
+                ]},
+                "{product} can do the opponent's half. Case Generator drafts an affirmative from the resolution, Case Attacker points to the weakest links in a plan or a disadvantage, and Factoids finds evidence leads with citations to read in full before you cut a card. Sparring does not run Policy rounds, so use the free timer for full-round practice with a partner.",
+            ]),
+        ],
+        "faqs": [
+            ("How long is a Policy debate round?", "The speeches and cross-examinations take 64 minutes. With eight minutes of prep per team, a round runs about 80 minutes before any decision."),
+            ("What is the negative block?", "The second negative constructive and the first negative rebuttal, which run back to back. The negative usually splits positions between the two speeches so the 1AR has to answer both."),
+            ("Does a counterplan have to be competitive?", "Yes. If the affirmative can do the plan and the counterplan together without losing anything, the counterplan is not a reason to reject the plan."),
+            ("Do I have to speak fast in Policy?", "No. Many circuits debate quickly, but speed only helps if the judge can follow it. Ask for the judge's preferences and adjust."),
+        ],
+    },
+    "british-parliamentary-debate": {
+        "modified": "2026-10-26",
+        "title": "British Parliamentary Debate: Roles, POIs, Extensions | {product}",
+        "description": "How a British Parliamentary round runs under the WUDC manual: what all eight speakers do on one example motion, how to find an extension, points of information, ranking, common mistakes and a 15-minute drill.",
+        "features": [
+            ("Eight speakers, four teams", "What the Prime Minister through the Opposition Whip each owe the debate, shown on one practice motion."),
+            ("Finding an extension", "Three ways a closing team finds material its opening half has not used, and why a thin one loses to the opening."),
+            ("POIs and protected time", "Offering and taking points of information between the first and sixth minute, under fifteen seconds each."),
+        ],
+        "sections": [
+            ("The round under the WUDC manual", [
+                "British Parliamentary (BP) is the format of the World Universities Debating Championship and many university and school competitions. Four teams of two debate one motion: Opening Government (OG), Opening Opposition (OO), Closing Government (CG) and Closing Opposition (CO). Teams get 15 minutes to prepare after the motion is released, with no internet and no help from anyone but their partner. The [WUDC Debating & Judging Manual](https://debate.ethz.ch/wp-content/uploads/2024/11/WUDC-Debating-Judging-Manual-Revised-November-2024-.pdf) sets this order:",
+                {"table": {"head": ["Speech", "Team", "Time"], "rows": [
+                    ["Prime Minister (PM)", "Opening Government", "7 minutes"],
+                    ["Leader of the Opposition (LO)", "Opening Opposition", "7 minutes"],
+                    ["Deputy Prime Minister (DPM)", "Opening Government", "7 minutes"],
+                    ["Deputy Leader of the Opposition (DLO)", "Opening Opposition", "7 minutes"],
+                    ["Member of Government (MG)", "Closing Government", "7 minutes"],
+                    ["Member of Opposition (MO)", "Closing Opposition", "7 minutes"],
+                    ["Government Whip (GW)", "Closing Government", "7 minutes"],
+                    ["Opposition Whip (OW)", "Closing Opposition", "7 minutes"],
+                ]}},
+                "Points of information can be offered between the end of the first minute and the end of the sixth; the first and last minutes are protected. Signals sound at 1:00, 6:00 and 7:00, and judges disregard anything said after 7:15. The manual calls the member speakers Government Member and Opposition Member; the timer uses MG and MO. The [free debate timer with the BP preset](/tools/debate-timer?format=bp) knocks at each signal.",
+                "At the end, the judges rank the four teams from first to fourth. There are no draws, and a team can beat the other team on its own side of the table. At WUDC, a first place is worth three team points, second two, third one and fourth none.",
+            ]),
+            ("Worked example: all eight speakers on one motion", [
+                {"example": {"title": "Practice motion: This House would give each city neighbourhood a binding vote on new chain stores opening there", "rows": [
+                    ("PM:", "Defines the model: a chain is a business with ten or more outlets, a planning application triggers a vote of the ward's residents, and a majority against blocks the permit. First argument: residents bear the costs of a changed high street, so they should decide."),
+                    ("LO:", "Rebuts the model's fairness, since turnout in local votes skews toward older homeowners. Argues the vote protects incumbent businesses and raises prices for the residents least able to pay."),
+                    ("DPM:", "Answers the turnout point and adds a second argument: independent shops keep more spending in the area and give a neighbourhood a reason to visit."),
+                    ("DLO:", "Rebuts the local spending claim and adds that blocked chains move to the next ward, so the policy shifts costs rather than removing them."),
+                    ("MG extension:", "The vote changes chains' behaviour before any ballot. To win, a chain offers local hiring, smaller formats or design concessions, so most neighbourhoods get better chain stores rather than none."),
+                    ("MO extension:", "Distribution across the city: wealthier wards organise and vote chains out, poorer wards do not, so low-wage retail and its traffic concentrate where residents already have least say."),
+                    ("GW:", "Organises the debate into two clashes, local control and who pays, shows why the government bench wins both, and argues that the MG's negotiation mechanism is the strongest material on that bench. No new arguments."),
+                    ("OW:", "Does the same for opposition, arguing the MO's distribution point outweighs because it applies citywide. No new arguments."),
+                ]}},
+                "Both extensions work because they move the debate. The MG adds a mechanism the opening did not consider, and the MO adds a stakeholder comparison across the whole city. A closing team that only explained the opening's arguments better would struggle to rank above that opening.",
+            ]),
+            ("How to find an extension", [
+                "The manual defines an extension as anything that side of the debate has not yet said, but a closing team is credited only for what goes beyond its opening half. In 15 minutes of prep, a closing team should prepare two or three candidate extensions and choose once the opening speeches are known.",
+                {"list": [
+                    "A new mechanism: how the policy changes behaviour before or after it takes effect, as in the MG example.",
+                    "A new stakeholder or scale: a group, a region or a time frame the opening half did not weigh.",
+                    "A new comparison: a reason the clash the opening half won matters more than the clash it lost.",
+                ]},
+                "Check every candidate against the opening's material during their speeches. If OG or OO already ran your best idea, drop it and use the next one; repeating the opening is the most common reason a closing team ranks below it.",
+            ]),
+            ("Points of information", [
+                "A POI lasts up to fifteen seconds and can be a question or a comment. The manual says teams should take at least one POI per speaker and encourages three across the team, including one from the team on the diagonal. Offer them often, keep them short, and aim at the one link a speech depends on. When you take one, answer in a sentence and go back to your structure.",
+            ]),
+            ("Common BP mistakes", [
+                {"list": [
+                    "An opening government model so vague that the opposition can define the debate instead.",
+                    "A closing team that contradicts its opening half. The manual calls this knifing and allows it only in rare cases.",
+                    "A whip speech that adds new arguments. Judges ignore them, and the time is lost.",
+                    "Refusing every POI, which reads as avoiding the strongest objection.",
+                    "Weighing only against the team opposite, when the ranking also depends on the team on your own bench.",
+                ]},
+            ]),
+            ("A 15-minute BP drill", [
+                {"steps": [
+                    "One minute: pick a motion from the [free debate motion generator](/tools/debate-motion-generator) and assign yourself closing government.",
+                    "Five minutes: write the two arguments you expect opening government to run.",
+                    "Five minutes: write two extensions that neither argument covers, one mechanism and one stakeholder.",
+                    "Three minutes: deliver the strongest extension out loud against the BP preset, offering yourself one POI at the two-minute mark.",
+                    "One minute: write the sentence a whip would use to say why that extension beats the opening's material.",
+                ]},
+                "Brainstorm in {product} maps angles for both benches of a motion, which helps with the five-minute extension step, and Case Attacker tests whether an extension depends on a weak link. Sparring does not run BP rounds.",
+            ]),
+        ],
+        "faqs": [
+            ("How long is each speech in British Parliamentary debate?", "Seven minutes. The first and last minutes are protected from points of information, and judges disregard material after seven minutes and fifteen seconds."),
+            ("How much preparation time do teams get?", "Fifteen minutes after the motion is released. Partners may confer with each other, but not with coaches or anyone else, and may not use the internet."),
+            ("Can a whip bring new arguments?", "No. A whip may add new rebuttal, examples and explanation of existing arguments, but judges ignore new arguments."),
+            ("Can a closing team beat its opening half?", "Yes, if its exclusive contribution is more persuasive than what the opening half added. A minimal extension usually ranks below the opening."),
+        ],
+    },
+    "congress-debate": {
+        "modified": "2026-10-26",
+        "title": "Congressional Debate: Speeches and Questioning | {product}",
+        "description": "How a Congressional Debate session runs under the NSDA rules: authorship, sponsorship and later speeches, direct questioning, precedence and recency, a worked example on an original bill, common mistakes and a 15-minute drill.",
+        "features": [
+            ("Speech and question times", "Three-minute speeches, two minutes of questions after the first two and one minute after the rest."),
+            ("Precedence and recency", "How the presiding officer chooses speakers, and what that means for when to stand."),
+            ("A worked example", "The authorship, first negative, a mid-cycle speech and a crystallization on one original practice bill."),
+        ],
+        "sections": [
+            ("How a session runs", [
+                "Congressional Debate models a legislature. A chamber of students debates bills and resolutions written by schools, one at a time, and a presiding officer elected by the chamber runs the floor. Scorers evaluate every speech, including how the speaker answers questions, and a parliamentarian advises the chair on procedure. The [NSDA High School Unified Manual](https://www.speechanddebate.org/high-school-unified-manual/) sets a session at three hours or more, with 18 to 20 students as the optimum and no more than 30. Each new session elects a presiding officer and resets the seating chart and precedence.",
+                {"table": {"head": ["Speech", "Speaking time", "Questioning after it"], "rows": [
+                    ["Authorship or sponsorship (introduces the legislation)", "Up to 3 minutes", "2 minutes"],
+                    ["First negative", "Up to 3 minutes", "2 minutes"],
+                    ["Every later speech, alternating affirmative and negative", "Up to 3 minutes", "1 minute"],
+                ]}},
+                "A student from the school that wrote the legislation gives the authorship. If no one from that school is in the chamber, another student can sponsor it. NSDA district and national tournaments use direct questioning, where each questioner gets up to 30 seconds of back-and-forth with the speaker. Under traditional questioning, each questioner asks one brief question at a time. The free debate timer has no Congress preset, but its custom format can hold three-minute speeches and questioning blocks.",
+            ]),
+            ("Precedence and recency", [
+                "When more than one student stands, the presiding officer first picks students who have not spoken that session, then those who have spoken fewer times, then those who spoke least recently. NSDA district and national tournaments preset a randomized recency order before the session starts. Because of that rule, your first speech matters most: the chamber decides early which bills get a full debate, and later speeches compete with every student who has not spoken yet.",
+            ]),
+            ("Worked example: one bill through the cycle", [
+                {"example": {"title": "Practice bill: A Bill to Require Federal Agencies to Publish Plain-Language Summaries of New Regulations", "rows": [
+                    ("Authorship:", "States the problem, that people affected by a rule often cannot tell what it requires, then walks through the bill's sections: a one-page summary for each final rule, a readability standard and a date it takes effect. Closes with the strongest impact."),
+                    ("First negative:", "Accepts the goal and attacks the mechanism: a summary that differs from the rule's legal text invites confusion and lawsuits over which one governs."),
+                    ("Mid-cycle affirmative:", "Names the first negative and answers the conflict point directly: the bill can state that the legal text controls. Adds new analysis on who benefits most, small businesses without legal staff."),
+                    ("Direct question to that speaker:", "If the legal text controls, what happens to a business that relied on the summary in good faith?"),
+                    ("Crystallization, late in the cycle:", "Names the two clashes the chamber has debated, legal certainty and access for small businesses, says which speakers carried each, and explains why the affirmative side wins both. No new arguments."),
+                ]}},
+                "The mid-cycle speech earns its score by refuting a named speaker and adding one new point. A speech that repeats the authorship's arguments, however polished, gives scorers little to reward.",
+            ]),
+            ("What each kind of speech is for", [
+                {"h3": "Authorship and sponsorship"},
+                "Explain the problem, what the legislation does section by section, and why it solves the problem. Two minutes of questions follow, so prepare for the obvious objections before you stand.",
+                {"h3": "Refutation speeches"},
+                "From the first negative onward, a strong speech answers a named earlier speaker and adds something new: a new argument, new evidence or a new stakeholder. Prepare two or three short points per side for each bill on the docket so you can speak whenever the floor opens.",
+                {"h3": "Crystallization"},
+                "Late in the debate on a bill, a crystallization speech summarizes the main clashes, credits the speakers who carried each one and explains which side wins. It works only when the chamber has debated the bill long enough for clear clashes to exist.",
+            ]),
+            ("Common Congress mistakes", [
+                {"list": [
+                    "Rehashing the arguments earlier speakers made, without naming them or adding anything.",
+                    "Writing one speech per bill and having nothing to say when the debate moves on.",
+                    "Asking questions that are speeches in disguise. Presiding officers discourage statements during questioning.",
+                    "Giving a crystallization speech too early, before the debate has clashes to summarize.",
+                    "Speaking on the wrong side when called. NSDA rules deduct at least three points for it.",
+                ]},
+            ]),
+            ("A 15-minute Congress drill", [
+                {"steps": [
+                    "Three minutes: read one bill from your docket and write the problem, the mechanism and one objection in a sentence each.",
+                    "Four minutes: write a mid-cycle negative speech outline that names an imaginary affirmative speaker and answers their point.",
+                    "Three minutes: deliver it against a three-minute timer.",
+                    "Three minutes: write three direct-questioning questions you would ask the authorship, each under ten seconds to say.",
+                    "Two minutes: write the opening two sentences of a crystallization for the same bill.",
+                ]},
+                "Ask Coach in {product} can explain a bill's likely objections, and Factoids finds evidence leads with citations to check before you quote them. Crossfire drills cross-examination, which is close practice for direct questioning. Sparring does not run Congress sessions.",
+            ]),
+        ],
+        "faqs": [
+            ("How long is a Congressional Debate speech?", "Up to three minutes. The authorship or sponsorship and the first negative speech are each followed by two minutes of questioning, and every later speech by one minute."),
+            ("What is the difference between authorship and sponsorship?", "An authorship is given by a student from the school that wrote the legislation. A sponsorship is the same introductory speech given by another student when no author is present."),
+            ("What is direct questioning?", "A questioning method in which the presiding officer recognizes each questioner for up to 30 seconds of back-and-forth with the speaker. NSDA district and national tournaments use it."),
+            ("When should I give a crystallization speech?", "Late in the debate on a bill, once there are clear clashes to summarize. It names those clashes and explains which side won them, without new arguments."),
         ],
     },
 }

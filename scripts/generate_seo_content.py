@@ -31,8 +31,9 @@ PLAN_FACTS = (
 )
 # The date the page text last changed. The build reads it into sitemap.xml as
 # <lastmod>, so bump it only when the copy changes, not on every regeneration.
-# A guide whose own copy changed alone sets "modified" in seo_guides.py instead.
-CONTENT_DATE = "2026-10-20"
+# A guide whose own copy changed alone sets "modified" in seo_guides.py instead;
+# no page is dated earlier than CONTENT_DATE, since the shared copy is on every page.
+CONTENT_DATE = "2026-10-26"
 # The date the shared FAQS below last changed; a page that shows them is modified then at the latest.
 FAQS_DATE = "2026-10-23"
 # The commit that first added every current guide (git log --diff-filter=A).
@@ -42,7 +43,7 @@ PUBLISHED_DATE = "2026-07-05"
 ANSWER_MAX_WORDS = 100
 
 CSS = """
-:root{color-scheme:dark;--bg:#070a12;--panel:#101827;--text:#f8fafc;--muted:#b6c2d6;--brand:#7c5cff;--brand2:#22d3ee;--line:rgba(255,255,255,.14)}*{box-sizing:border-box}body{margin:0;background:radial-gradient(circle at 18% 8%,rgba(124,92,255,.30),transparent 34rem),radial-gradient(circle at 85% 18%,rgba(34,211,238,.18),transparent 28rem),var(--bg);color:var(--text);font-family:ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;line-height:1.65}a{color:inherit}.wrap{width:min(1120px,92vw);margin:auto}.nav{display:flex;justify-content:space-between;align-items:center;gap:18px;padding:24px 0}.brand{font-weight:850;letter-spacing:-.04em;font-size:1.25rem;text-decoration:none}.nav div{display:flex;gap:18px;flex-wrap:wrap;justify-content:flex-end}.nav a{color:var(--muted);text-decoration:none}.hero{padding:54px 0 34px}.eyebrow{display:inline-flex;border:1px solid var(--line);border-radius:999px;padding:8px 12px;color:#c4b5fd;background:rgba(124,92,255,.12);font-size:.92rem}.hero h1{max-width:940px;font-size:clamp(2.35rem,6vw,5.15rem);line-height:1;letter-spacing:-.07em;margin:22px 0}.lead{max-width:800px;color:var(--muted);font-size:clamp(1.08rem,1.8vw,1.28rem)}.cta{display:flex;gap:14px;flex-wrap:wrap;margin-top:28px}.btn{display:inline-flex;align-items:center;justify-content:center;border-radius:14px;padding:14px 20px;font-weight:750;text-decoration:none}.primary{background:linear-gradient(135deg,var(--brand),var(--brand2));color:white}.secondary{border:1px solid var(--line);background:rgba(255,255,255,.06)}.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;margin:34px 0}.card{border:1px solid var(--line);border-radius:24px;background:rgba(16,24,39,.78);padding:24px;box-shadow:0 24px 80px rgba(0,0,0,.24)}.card h2,.card h3{letter-spacing:-.035em;line-height:1.12;margin-top:0}.muted{color:var(--muted)}.section{padding:34px 0}.article{max-width:840px}.article h2{font-size:clamp(1.65rem,3vw,2.35rem);letter-spacing:-.04em;line-height:1.14;margin-top:2rem}.article h3{font-size:1.2rem;letter-spacing:-.025em}.links{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin:28px 0}.links a{border:1px solid var(--line);border-radius:16px;padding:14px;text-decoration:none;background:rgba(255,255,255,.05)}details{border:1px solid var(--line);border-radius:18px;padding:16px 18px;margin:12px 0;background:rgba(255,255,255,.05)}summary{cursor:pointer;font-weight:750}.footer{border-top:1px solid var(--line);color:var(--muted);padding:28px 0;margin-top:42px}.breadcrumb{color:var(--muted);font-size:.94rem;margin-top:8px}.dates{color:var(--muted);font-size:.94rem;margin:18px 0 0}.answer{max-width:840px;border:1px solid var(--line);border-left:4px solid var(--brand);border-radius:20px;background:rgba(16,24,39,.78);padding:22px 26px}.answer h2{font-size:clamp(1.35rem,2.4vw,1.8rem);letter-spacing:-.035em;line-height:1.18;margin:0 0 10px}.answer p{margin:0}@media(max-width:760px){.nav{align-items:flex-start;flex-direction:column}.nav div{justify-content:flex-start}.grid,.links{grid-template-columns:1fr}.hero{padding-top:34px}.hero h1{letter-spacing:-.045em}}
+:root{color-scheme:dark;--bg:#070a12;--panel:#101827;--text:#f8fafc;--muted:#b6c2d6;--brand:#7c5cff;--brand2:#22d3ee;--line:rgba(255,255,255,.14)}*{box-sizing:border-box}body{margin:0;background:radial-gradient(circle at 18% 8%,rgba(124,92,255,.30),transparent 34rem),radial-gradient(circle at 85% 18%,rgba(34,211,238,.18),transparent 28rem),var(--bg);color:var(--text);font-family:ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;line-height:1.65}a{color:inherit}.wrap{width:min(1120px,92vw);margin:auto}.nav{display:flex;justify-content:space-between;align-items:center;gap:18px;padding:24px 0}.brand{font-weight:850;letter-spacing:-.04em;font-size:1.25rem;text-decoration:none}.nav div{display:flex;gap:18px;flex-wrap:wrap;justify-content:flex-end}.nav a{color:var(--muted);text-decoration:none}.hero{padding:54px 0 34px}.eyebrow{display:inline-flex;border:1px solid var(--line);border-radius:999px;padding:8px 12px;color:#c4b5fd;background:rgba(124,92,255,.12);font-size:.92rem}.hero h1{max-width:940px;font-size:clamp(2.35rem,6vw,5.15rem);line-height:1;letter-spacing:-.07em;margin:22px 0}.lead{max-width:800px;color:var(--muted);font-size:clamp(1.08rem,1.8vw,1.28rem)}.cta{display:flex;gap:14px;flex-wrap:wrap;margin-top:28px}.btn{display:inline-flex;align-items:center;justify-content:center;border-radius:14px;padding:14px 20px;font-weight:750;text-decoration:none}.primary{background:linear-gradient(135deg,var(--brand),var(--brand2));color:white}.secondary{border:1px solid var(--line);background:rgba(255,255,255,.06)}.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;margin:34px 0}.card{border:1px solid var(--line);border-radius:24px;background:rgba(16,24,39,.78);padding:24px;box-shadow:0 24px 80px rgba(0,0,0,.24)}.card h2,.card h3{letter-spacing:-.035em;line-height:1.12;margin-top:0}.muted{color:var(--muted)}.section{padding:34px 0}.article{max-width:840px}.article h2{font-size:clamp(1.65rem,3vw,2.35rem);letter-spacing:-.04em;line-height:1.14;margin-top:2rem}.article h3{font-size:1.2rem;letter-spacing:-.025em}.links{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin:28px 0}.links a{border:1px solid var(--line);border-radius:16px;padding:14px;text-decoration:none;background:rgba(255,255,255,.05)}details{border:1px solid var(--line);border-radius:18px;padding:16px 18px;margin:12px 0;background:rgba(255,255,255,.05)}summary{cursor:pointer;font-weight:750}.footer{border-top:1px solid var(--line);color:var(--muted);padding:28px 0;margin-top:42px}.breadcrumb{color:var(--muted);font-size:.94rem;margin-top:8px}.dates{color:var(--muted);font-size:.94rem;margin:18px 0 0}.answer{max-width:840px;border:1px solid var(--line);border-left:4px solid var(--brand);border-radius:20px;background:rgba(16,24,39,.78);padding:22px 26px}.answer h2{font-size:clamp(1.35rem,2.4vw,1.8rem);letter-spacing:-.035em;line-height:1.18;margin:0 0 10px}.answer p{margin:0}.table{overflow-x:auto;margin:18px 0}table{width:100%;border-collapse:collapse;font-size:.96rem}caption{text-align:left;color:var(--muted);padding-bottom:8px}th,td{border-bottom:1px solid var(--line);padding:10px 12px;text-align:left;vertical-align:top}th{color:var(--muted);font-weight:700}@media(max-width:760px){.nav{align-items:flex-start;flex-direction:column}.nav div{justify-content:flex-start}.grid,.links{grid-template-columns:1fr}.hero{padding-top:34px}.hero h1{letter-spacing:-.045em}}
 """.strip()
 
 PAGES = [
@@ -208,27 +209,42 @@ def feature_card(feature):
     return f'<article class="card"><h3>{esc(title)}</h3><p class="muted">{esc(description)}</p></article>'
 
 def linked(text):
-    """Escaped text in which [label](/path) becomes a link to that page on this site."""
-    parts = re.split(r"\[([^\]]+)\]\((/[^)\s]*)\)", text)
+    """Escaped text in which [label](/path) links a page on this site and [label](https://...) a primary source."""
+    parts = re.split(r"\[([^\]]+)\]\((/[^)\s]*|https://[^)\s]+)\)", text)
     out = [esc(parts[0])]
     for i in range(1, len(parts), 3):
         out.append(f'<a href="{esc(parts[i + 1])}">{esc(parts[i])}</a>{esc(parts[i + 2])}')
     return "".join(out)
 
 def render_block(block):
-    """A paragraph string, or a dict holding one of h3, steps, list or example.
-    Paragraphs may link another page with [label](/path)."""
+    """A paragraph string, or a dict holding one of h3, steps, list, table or example.
+    Paragraphs, list items and table cells may link with [label](/path) or [label](https://...)."""
     if isinstance(block, str):
         return f"<p>{linked(block)}</p>"
     if "h3" in block:
         return f"<h3>{esc(block['h3'])}</h3>"
     if "steps" in block:
-        return "<ol>" + "".join(f"<li>{esc(item)}</li>" for item in block["steps"]) + "</ol>"
+        return "<ol>" + "".join(f"<li>{linked(item)}</li>" for item in block["steps"]) + "</ol>"
     if "list" in block:
-        return "<ul>" + "".join(f"<li>{esc(item)}</li>" for item in block["list"]) + "</ul>"
+        return "<ul>" + "".join(f"<li>{linked(item)}</li>" for item in block["list"]) + "</ul>"
+    if "table" in block:
+        table = block["table"]
+        head = "".join(f'<th scope="col">{esc(cell)}</th>' for cell in table["head"])
+        rows = "".join("<tr>" + "".join(f"<td>{linked(cell)}</td>" for cell in row) + "</tr>" for row in table["rows"])
+        caption = f"<caption>{esc(table['caption'])}</caption>" if "caption" in table else ""
+        return f'<div class="table"><table>{caption}<thead><tr>{head}</tr></thead><tbody>{rows}</tbody></table></div>'
     example = block["example"]
     rows = "".join(f"<p><strong>{esc(label)}</strong> {esc(text)}</p>" for label, text in example["rows"])
     return f'<div class="card"><h3>{esc(example["title"])}</h3>{rows}</div>'
+
+def about(slug):
+    """The About aside. The full definition and plan facts stay on the pricing page (and on / and llms.txt);
+    every other guide gets one line, so the same paragraph is not repeated across the site."""
+    if slug == "debatelab-pricing":
+        body = f'<p>{esc(DEFINITION)} The app is available in English, Spanish and Hungarian.</p><p>{esc(PLAN_FACTS)}</p>'
+    else:
+        body = f'<p>{PRODUCT} is an AI debate prep and practice app. See <a href="/">how it works</a> or <a href="/debatelab-pricing">pricing</a>.</p>'
+    return f'<aside class="section article" aria-labelledby="about"><h2 id="about">About {PRODUCT}</h2>{body}</aside>'
 
 def structured_data(page, question, answer, faqs, published, modified):
     # sitemap.mjs reads the first dateModified in the file, so the Article stays first.
@@ -244,7 +260,7 @@ def structured_data(page, question, answer, faqs, published, modified):
 def render_page(page):
     question, answer = lead_answer(page)
     published = page.get("published", PUBLISHED_DATE)
-    modified = page.get("modified", CONTENT_DATE)
+    modified = max(page.get("modified", CONTENT_DATE), CONTENT_DATE)
     if "faqs" not in page:
         modified = max(modified, FAQS_DATE)
     feature_cards = "".join(feature_card(feature) for feature in page["features"])
@@ -300,7 +316,7 @@ def render_page(page):
       <div class="article section">{"".join(article)}</div>
       <section class="section faq article" aria-labelledby="faq"><h2 id="faq">Frequently asked questions</h2>{faq_html}</section>
     </article>
-    <aside class="section article" aria-labelledby="about"><h2 id="about">About {PRODUCT}</h2><p>{esc(DEFINITION)} The app is available in English, Spanish and Hungarian.</p><p>{esc(PLAN_FACTS)} <a href="/debatelab-pricing">See pricing</a>.</p></aside>
+    {about(page["slug"])}
     <section class="section article" aria-labelledby="related"><h2 id="related">Related {PRODUCT} guides</h2><nav class="links" aria-label="Related guides">{internal_links(page["slug"])}</nav></section>
   </main>
   <footer class="footer"><div class="wrap">{BRAND}: <a href="/">Home</a> / <a href="/debatelab-pricing">Pricing</a> / <a href="/privacy">Privacy</a> / <a href="/terms">Terms</a> / <a href="/sitemap.xml">Sitemap</a></div></footer>
