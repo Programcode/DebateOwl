@@ -10,7 +10,7 @@
     "breadcrumb": "Ruta de navegación",
     "faq": "Preguntas frecuentes",
     "otherTools": "Más herramientas gratis",
-    "ctaPricing": "Empieza con 3 días de prueba gratis, sin tarjeta. Después, DebateLab cuesta 5 $ al mes más impuestos.",
+    "ctaPricing": "Empieza con {{trialDays}} días de prueba gratis, sin tarjeta. Después, {{product}} cuesta {{proMonthly}} $ al mes más impuestos.",
     "ctaButton": "Empezar la prueba gratis"
   },
   "shortAnswer": {
@@ -24,7 +24,7 @@
     },
     "motions": {
       "question": "¿Dónde consigo mociones de debate al azar para practicar?",
-      "answer": "Aquí. El generador saca una moción, o tres para un ejercicio de veto, de {{total}} mociones de práctica originales escritas para este sitio, con filtros de tema, dificultad y tipo de moción, y redacción «Esta Casa» o «Resolved». Es gratis, no necesita cuenta, y más abajo están todas las mociones ordenadas por tema."
+      "answer": "Aquí. El generador saca una moción, o tres para un ejercicio de veto, de {{total}} mociones de práctica originales escritas para este sitio, con filtros de tema, dificultad y tipo de moción, y redacción «Esta Casa» o «Resolved». Es gratis, no necesita cuenta, y las mociones están en inglés."
     },
     "flow": {
       "question": "¿Cómo hago una hoja de flujo para un debate?",

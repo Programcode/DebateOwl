@@ -102,11 +102,6 @@ describe("Vercel frontend deployment configuration", () => {
     })));
   });
 
-  it("sends /es and /hu to the landing page in that language, not a 404 (IN-04)", () => {
-    // Temporary: the language is the visitor's choice, not a moved page.
-    expect(loadConfig().redirects).toContainEqual({ source: "/:lang(es|hu)", destination: "/?lang=:lang", statusCode: 302 });
-  });
-
   it("redirects each retired guide to a live guide that no page links past", () => {
     // Google already knows these URLs; dropping a rule turns one into a 404.
     const retiredGuides: Record<string, string> = {

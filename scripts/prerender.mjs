@@ -1,6 +1,7 @@
 // Runs after `vite build`. Writes real HTML for the public pages into dist/:
-// index.html (the landing page), terms/index.html, privacy/index.html and
-// 404.html, each with its own head. The unchanged build of index.html becomes
+// index.html (the landing page), terms/index.html, privacy/index.html, the
+// free tools, the Hungarian and Spanish pages (hu/…, es/…) and 404.html, each
+// with its own head. The unchanged build of index.html becomes
 // app-shell.html, which vercel.json serves for app routes.
 import { execFileSync } from 'node:child_process';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
@@ -66,6 +67,7 @@ function pageAssets(manifest, module, shell) {
 function pageHtml(shell, page, assets) {
   const { head } = page;
   let html = shell;
+  html = replaceOnce(html, /<html lang="en">/, `<html lang="${page.language ?? 'en'}">`, '<html lang="en">');
   html = replaceOnce(html, /<title>[^<]*<\/title>/, `<title>${escapeText(head.title)}</title>`, 'title');
   for (const [pattern, value, label] of [
     [/<meta name="description" content="[^"]*" \/>/, `<meta name="description" content="${escapeAttribute(head.description)}" />`, 'description'],
@@ -85,6 +87,10 @@ function pageHtml(shell, page, assets) {
   if (head.canonicalPath) {
     const url = `${SITE_ORIGIN}${head.canonicalPath}`;
     added.push(`<link rel="canonical" href="${url}" />`, `<meta property="og:url" content="${url}" />`);
+  }
+  // A page that exists in English, Hungarian and Spanish names all three, itself included.
+  for (const { hreflang, href } of page.alternates ?? []) {
+    added.push(`<link rel="alternate" hreflang="${hreflang}" href="${escapeAttribute(href)}" />`);
   }
   for (const href of assets.styles) added.push(`<link rel="stylesheet" href="${href}" />`);
   for (const href of assets.scripts) added.push(`<link rel="modulepreload" crossorigin href="${href}" />`);

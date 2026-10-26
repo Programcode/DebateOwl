@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { HEAD_NAMES } from './head-text';
+import { localizedPath, useRouteLanguage } from './localized-routes';
 import { PAGE_HEAD_IDS, PAGE_HEADS, SHELL_HEAD, SITE_ORIGIN, type PageHead, type PrerenderedRoute } from './pages';
 
 function setMeta(name: string, content: string) {
@@ -28,11 +29,13 @@ function setCanonical(path: string | undefined) {
  * Gives a prerendered page its own title, description, canonical URL and
  * robots rule while it is on screen, and puts the shell's back when the visitor
  * moves on to a page that has none. The title and description follow the
- * interface language. The structured data and og:url the build wrote describe
- * only the page first loaded, so they go when it does.
+ * interface language; the canonical URL is the address in the route's own
+ * language, so /hu stays /hu. The structured data, og:url and hreflang links
+ * the build wrote describe only the page first loaded, so they go when it does.
  */
 export function usePageHead(route: PrerenderedRoute) {
   const { t } = useTranslation();
+  const routeLanguage = useRouteLanguage();
   const id = PAGE_HEAD_IDS[route];
   const title = t(`pageHead.${id}.title`, HEAD_NAMES);
   const description = t(`pageHead.${id}.description`, HEAD_NAMES);
@@ -46,15 +49,17 @@ export function usePageHead(route: PrerenderedRoute) {
   useEffect(() => {
     const head: PageHead = PAGE_HEADS[route];
     setMeta('robots', head.canonicalPath ? SHELL_HEAD.robots : 'noindex, nofollow');
-    setCanonical(head.canonicalPath);
+    setCanonical(head.canonicalPath && localizedPath(head.canonicalPath, routeLanguage));
     return () => {
       document.title = SHELL_HEAD.title;
       setMeta('description', SHELL_HEAD.description);
       setMeta('robots', SHELL_HEAD.robots);
       setCanonical(undefined);
-      document.head.querySelectorAll('script[type="application/ld+json"], meta[property="og:url"]').forEach((node) => node.remove());
+      document.head
+        .querySelectorAll('script[type="application/ld+json"], meta[property="og:url"], link[rel="alternate"][hreflang]')
+        .forEach((node) => node.remove());
     };
-  }, [route]);
+  }, [route, routeLanguage]);
 }
 
 const PageLabelContext = createContext<(label: string | null) => void>(() => undefined);

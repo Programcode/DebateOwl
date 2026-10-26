@@ -1,4 +1,6 @@
+import type { ComponentType } from "react";
 import { loadAllAppLanguages } from "@/i18n";
+import { LOCALIZED_PATHS } from "@/lib/seo/localized-routes";
 
 export type RouteLoader<T> = (() => Promise<T>) & {
   /** The module once it has loaded, so a page can render without suspending. */
@@ -24,8 +26,10 @@ function cacheLoader<T>(loader: () => Promise<T>): RouteLoader<T> {
   return Object.assign(load, { loaded: () => loaded });
 }
 
+const landingLoader = cacheLoader(() => import("@/pages/LandingPage"));
+
 export const routeLoaders = {
-  "/": cacheLoader(() => import("@/pages/LandingPage")),
+  "/": landingLoader,
   "/terms": cacheLoader(() => import("@/pages/TermsPage")),
   "/privacy": cacheLoader(() => import("@/pages/PrivacyPage")),
   "/expocit/sources": cacheLoader(() => import("@/pages/SourcesPage")),
@@ -60,6 +64,27 @@ export const routeLoaders = {
   "*": cacheLoader(() => import("@/pages/NotFound")),
 } as const;
 
+type PageModule = { default: ComponentType };
+
+// Each language's translated tool pages share one chunk.
+const translatedToolPages = {
+  hu: cacheLoader(() => import("@/pages/tools/localized/hu")),
+  es: cacheLoader(() => import("@/pages/tools/localized/es")),
+};
+
+/**
+ * Loaders for the Hungarian and Spanish addresses in src/config/localized-routes.json:
+ * /hu and /es are the landing page itself, the rest pick their page from the language's chunk.
+ */
+export const localizedRouteLoaders: Record<string, RouteLoader<PageModule>> = Object.fromEntries(
+  LOCALIZED_PATHS.map(({ path, route, language }) => [
+    path,
+    route === "/"
+      ? landingLoader
+      : cacheLoader(() => translatedToolPages[language]().then((module): PageModule => ({ default: module.TOOL_PAGES[route] }))),
+  ]),
+);
+
 /** The signed-in header and navigation around every /app page. */
 export const appLayoutLoader = cacheLoader(() => import("@/components/layout/AppLayout")
   .then(({ AppLayout }) => ({ default: AppLayout })));
@@ -71,7 +96,8 @@ function isRoutePath(pathname: string): pathname is RoutePath {
 }
 
 export function preloadRoute(pathname: string): Promise<unknown> | undefined {
-  return isRoutePath(pathname) ? routeLoaders[pathname]() : undefined;
+  if (isRoutePath(pathname)) return routeLoaders[pathname]();
+  return localizedRouteLoaders[pathname]?.();
 }
 
 /**

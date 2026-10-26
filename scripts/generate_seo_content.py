@@ -308,6 +308,22 @@ def render_page(page):
 </html>
 '''
 
+# The Hungarian and Spanish pages (src/config/localized-routes.json), named by their own titles.
+LOCALIZED_ROUTES = json.loads((ROOT / "src" / "config" / "localized-routes.json").read_text())
+PAGE_HEAD_IDS = {"/": "home", "/tools": "tools", "/tools/debate-timer": "debateTimer", "/tools/debate-motion-generator": "motionGenerator", "/tools/debate-flow-sheet": "flowSheet", "/tools/speech-time-calculator": "speechTimeCalculator"}
+
+def localized_sections():
+    sections = []
+    for language, heading in (("hu", "Magyar"), ("es", "Español")):
+        heads = json.loads((ROOT / "src" / "locales" / f"{language}.json").read_text())["pageHead"]
+        lines = []
+        for route, paths in LOCALIZED_ROUTES.items():
+            head = heads[PAGE_HEAD_IDS[route]]
+            title, description = (head[key].replace("{{brand}}", BRAND).replace("{{product}}", PRODUCT) for key in ("title", "description"))
+            lines.append(f"- [{title}]({BASE}{paths[language]}): {description}")
+        sections.append(f"## {heading}\n\n" + "\n".join(lines))
+    return "\n\n".join(sections)
+
 def llms_txt():
     """public/llms.txt: a plain summary for AI agents, from the same facts as the pages."""
     guides = "\n".join(f'- [{p["h1"]}]({page_url(p["slug"])}): {p["description"]}' for p in PAGES)
@@ -341,6 +357,8 @@ Free to use, no account needed, and they run in the browser.
 
 - [All free debate tools]({BASE}/tools): every tool below on one page
 {tools}
+
+{localized_sections()}
 
 ## Guides
 

@@ -9,7 +9,9 @@ const catalog = (language: string) => JSON.parse(readFileSync(`src/locales/${lan
 const en = catalog("en");
 const es = catalog("es");
 const hu = catalog("hu");
-const BRAND = "DebateLab by Pi-Stack";
+const site = JSON.parse(readFileSync("src/config/site.json", "utf8"));
+const BRAND = site.brand;
+const head = (text: string) => text.replace("{{brand}}", BRAND).replace("{{product}}", site.product);
 const LANGUAGE_NAMES = { en: "English", es: "Español", hu: "Magyar" } as const;
 /** The switcher's own name in whichever language is showing. */
 const SWITCHER_NAME = new RegExp(`^(${[en, es, hu].map((strings) => strings.langSwitcher.label).join("|")})$`);
@@ -108,26 +110,29 @@ test("loc-switcher: sign-in and not-found pages carry the language switcher", as
   await evidence.shot("04-not-found-es");
 });
 
-test("loc-links: ?lang= and the /es and /hu home pages open the landing page in that language", async ({ page, evidence }) => {
+test("loc-links: ?lang= opens the landing page in that language, and /es and /hu are pages of their own", async ({ page, evidence }) => {
   await page.goto("/?lang=hu");
   await expect(page.locator("html")).toHaveAttribute("lang", "hu");
-  await expect(page).toHaveTitle(hu.pageHead.home.title.replace("{{brand}}", BRAND));
+  await expect(page).toHaveTitle(head(hu.pageHead.home.title));
   // The choice is kept and the address drops the parameter.
   await expect.poll(() => new URL(page.url()).search).toBe("");
   await evidence.shot("01-landing-lang-hu");
 
   await page.goto("/es");
-  await expect.poll(() => new URL(page.url()).pathname).toBe("/");
   await expect(page.locator("html")).toHaveAttribute("lang", "es");
-  await expect(page).toHaveTitle(es.pageHead.home.title.replace("{{brand}}", BRAND));
+  await expect(page).toHaveTitle(head(es.pageHead.home.title));
+  expect(new URL(page.url()).pathname).toBe("/es");
   await evidence.shot("02-landing-es");
 
   await page.goto("/hu");
-  await expect.poll(() => new URL(page.url()).pathname).toBe("/");
+  await expect(page.locator("html")).toHaveAttribute("lang", "hu");
+  // Start leads into the app in Hungarian, and the choice survives a reload.
+  await page.getByRole("link", { name: hu.nav.startTrial }).first().click();
+  await expect.poll(() => new URL(page.url()).pathname).not.toBe("/hu");
   await expect(page.locator("html")).toHaveAttribute("lang", "hu");
   await page.reload();
   await expect(page.locator("html")).toHaveAttribute("lang", "hu");
-  await evidence.shot("03-landing-hu-after-reload");
+  await evidence.shot("03-start-from-hu");
 });
 
 test("loc-server-error: a refused promo code reads in the interface language", async ({ signedIn: page, user, evidence }) => {

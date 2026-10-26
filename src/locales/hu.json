@@ -895,17 +895,17 @@
   "hero": {
     "headline": "Készíts eseteket és gyakorolj fordulókat MI-vel",
     "subheadline": "A DebateLab egy MI-alapú vitafelkészítő és gyakorló alkalmazás diákoknak és versenyvitázóknak, amely strukturált eseteket épít, megtalálja az érvek gyenge pontjait, hivatkozásokkal kutat bizonyítékokat, és időzített gyakorlófordulókat futtat egy MI-ellenféllel szemben.",
-    "trialBadge": "3 napos ingyenes próba",
+    "trialBadge": "{{trialDays}} napos ingyenes próba",
     "requestsBadge": "Napi MI-felkészülés",
     "requestsBadgeValue": "Benne van",
-    "proBadge": "$5/hó Pro",
+    "proBadge": "${{proMonthly}}/hó Pro",
     "cta": "Próba indítása",
     "ctaSecondary": "Árak megtekintése",
     "trustBullet1": "Bankkártya nem szükséges",
     "trustBullet2": "Bármikor lemondható",
     "trustBullet3": "Bármely formátummal működik",
     "announcement": "Új 2026-ban: gyorsabb bejelentkezés, Drive-exportálás, folyamatábrák és okosabb felkészülési eszközök",
-    "trialBadgeValue": "3 nap",
+    "trialBadgeValue": "{{trialDays}} nap",
     "preview": {
       "topicLabel": "Indítvány",
       "topicValue": "Tiltsák be az iskolák a telefonokat?",
@@ -996,15 +996,15 @@
     "subtitle": "Kezdj ingyen, frissíts amikor készen állsz.",
     "trial": "Próba",
     "trialPrice": "$0",
-    "trialPeriod": "3 napig",
+    "trialPeriod": "{{trialDays}} napig",
     "pro": "Pro",
-    "proPrice": "$5",
+    "proPrice": "${{proMonthly}}",
     "proPeriod": "/hó + adó",
     "recommended": "Ajánlott",
     "trialFeature1": "Kezdő MI-felkészülési hozzáférés",
     "trialFeature2": "Mind a {{modes}} felkészülési mód és a {{utilities}} segédeszköz",
     "trialFeature3": "Kezdő modellek",
-    "trialFeature4": "3 napos hozzáférés",
+    "trialFeature4": "{{trialDays}} napos hozzáférés",
     "proFeature1": "Bővített MI-felkészülési hozzáférés",
     "proFeature2": "Mind a {{modes}} felkészülési mód és a {{utilities}} segédeszköz",
     "proFeature3": "Mind a 10 modell, köztük a Claude Opus és Sonnet, a GPT-6.1 Sol és a Gemini",
@@ -1022,7 +1022,7 @@
   "faq": {
     "title": "Gyakran ismételt kérdések",
     "q1": "Mennyibe kerül a DebateLab?",
-    "a1": "{{asOf}} állapot szerint a DebateLab 3 napos ingyenes próbát kínál bankkártya nélkül. Ezután a Pro $5/hó + adó, bővített hozzáféréssel és mind a 10 modellel. Nincs állandó ingyenes csomag.",
+    "a1": "{{asOf}} állapot szerint a {{product}} {{trialDays}} napos ingyenes próbát kínál bankkártya nélkül. Ezután a Pro ${{proMonthly}}/hó + adó, bővített hozzáféréssel és mind a 10 modellel. Nincs állandó ingyenes csomag.",
     "q2": "Mit kapok a Pro-val?",
     "a2": "Bővített MI-felkészülési hozzáférés mind a 10 modellel, köztük a Claude Opus és Sonnet, a GPT-6.1 Sol és a Gemini modellekkel, Active Grounding™ kutatással és elsőbbségi támogatással.",
     "q3": "Lemondhatom az előfizetésem?",
@@ -2591,7 +2591,7 @@
   },
   "shortAnswer": {
     "question": "Melyik a legjobb MI-alapú vitagyakorló eszköz?",
-    "answer": "Attól függ, mire van szükséged. {{asOf}} állapot szerint a DebateLab azoknak a diákoknak és versenyvitázóknak való, akik egy helyen szeretnének eseteket építeni, gyenge pontokat találni, bizonyítékokat ellenőrizni és időzített gyakorlófordulókat futtatni angolul, spanyolul vagy magyarul: 3 napos ingyenes próba bankkártya nélkül, utána $5/hó + adó. Ha ingyen szeretnél MI-ellenféllel gyakorolni World Schools vagy Asian Parliamentary stílusban, a debatelab.ai, egy másik termék, azt írja magáról, hogy ingyenes. Ha főleg ötletelésre vagy írási segítségre van szükséged bármilyen témában, egy általános asszisztens, például a ChatGPT rugalmasabb.",
+    "answer": "Attól függ, mire van szükséged. {{asOf}} állapot szerint a {{product}} azoknak a diákoknak és versenyvitázóknak való, akik egy helyen szeretnének eseteket építeni, gyenge pontokat találni, bizonyítékokat ellenőrizni és időzített gyakorlófordulókat futtatni angolul, spanyolul vagy magyarul: {{trialDays}} napos ingyenes próba bankkártya nélkül, utána ${{proMonthly}}/hó + adó. Ha ingyen szeretnél MI-ellenféllel gyakorolni World Schools vagy Asian Parliamentary stílusban, a debatelab.ai, egy másik termék, azt írja magáról, hogy ingyenes. Ha főleg ötletelésre vagy írási segítségre van szükséged bármilyen témában, egy általános asszisztens, például a ChatGPT rugalmasabb.",
     "compare": "MI-alapú vitaeszközök összehasonlítása"
   },
   "sessionQuota": {
@@ -2618,7 +2618,7 @@
   },
   "pageHead": {
     "home": {
-      "title": "{{brand}} | MI-alapú vitafelkészülés, érvek és cáfolatok",
+      "title": "{{product}} – MI-alapú vitafelkészítés és gyakorlás diákoknak",
       "description": "A {{product}} MI-alapú app vitára készülő diákoknak: esetépítés, cáfolatok, bizonyítékok, coaching és időzített gyakorlókörök egy MI-ellenféllel szemben."
     },
     "terms": {

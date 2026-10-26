@@ -1,5 +1,6 @@
 import site from '@/config/site.json';
 import { englishHead, type PageHeadId } from './head-text';
+import { localizedPath, type PageLanguage } from './localized-routes';
 
 /**
  * Heads and structured data for the free tools under /tools. pages.ts spreads
@@ -43,11 +44,25 @@ export interface FaqEntry {
 const ORGANIZATION_ID = `${ORIGIN}/#organization`;
 const WEBSITE_ID = `${ORIGIN}/#website`;
 
-function breadcrumbs(route: ToolRoute, name: string) {
+/**
+ * A tool page in Hungarian or Spanish: its head in that language, the hub's
+ * name for the breadcrumb, and when its copy last changed. English pages pass none.
+ */
+export interface ToolPageLocale {
+  language: Exclude<PageLanguage, 'en'>;
+  title: string;
+  description: string;
+  hubName: string;
+  modified: string;
+}
+
+const pageUrl = (route: ToolRoute, locale?: ToolPageLocale) => `${ORIGIN}${localizedPath(route, locale?.language ?? 'en')}`;
+
+function breadcrumbs(route: ToolRoute, name: string, locale?: ToolPageLocale) {
   const items = [
-    { name: BRAND, url: `${ORIGIN}/` },
-    { name: 'Free debate tools', url: `${ORIGIN}/tools` },
-    ...(route === '/tools' ? [] : [{ name, url: `${ORIGIN}${route}` }]),
+    { name: BRAND, url: `${ORIGIN}${localizedPath('/', locale?.language ?? 'en')}` },
+    { name: locale?.hubName ?? 'Free debate tools', url: pageUrl('/tools', locale) },
+    ...(route === '/tools' ? [] : [{ name, url: pageUrl(route, locale) }]),
   ];
   return {
     '@type': 'BreadcrumbList',
@@ -55,42 +70,45 @@ function breadcrumbs(route: ToolRoute, name: string) {
   };
 }
 
-function webPage(route: ToolRoute, type = 'WebPage') {
-  const head = TOOL_PAGE_HEADS[route];
+function webPage(route: ToolRoute, type: string, locale?: ToolPageLocale) {
+  const head = locale ?? TOOL_PAGE_HEADS[route];
   return {
     '@type': type,
-    '@id': `${ORIGIN}${route}#webpage`,
-    url: `${ORIGIN}${route}`,
+    '@id': `${pageUrl(route, locale)}#webpage`,
+    url: pageUrl(route, locale),
     name: head.title,
     description: head.description,
+    ...(locale ? { inLanguage: locale.language } : {}),
     isPartOf: { '@id': WEBSITE_ID },
-    dateModified: TOOL_PAGES_MODIFIED[route],
+    dateModified: locale?.modified ?? TOOL_PAGES_MODIFIED[route],
   };
 }
 
 /** One tool page: the web app itself, where it sits, and its FAQ. No ratings or reviews: there are none to report. */
-export function toolStructuredData(route: ToolPageRoute, name: string, faq: readonly FaqEntry[]) {
+export function toolStructuredData(route: ToolPageRoute, name: string, faq: readonly FaqEntry[], locale?: ToolPageLocale) {
+  const url = pageUrl(route, locale);
   return {
     '@context': 'https://schema.org',
     '@graph': [
       {
         '@type': 'WebApplication',
-        '@id': `${ORIGIN}${route}#app`,
+        '@id': `${url}#app`,
         name,
-        url: `${ORIGIN}${route}`,
-        description: TOOL_PAGE_HEADS[route].description,
+        url,
+        description: (locale ?? TOOL_PAGE_HEADS[route]).description,
+        ...(locale ? { inLanguage: locale.language } : {}),
         applicationCategory: 'EducationalApplication',
         operatingSystem: 'Any (web browser)',
         isAccessibleForFree: true,
         offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
         publisher: { '@id': ORGANIZATION_ID },
-        dateModified: TOOL_PAGES_MODIFIED[route],
+        dateModified: locale?.modified ?? TOOL_PAGES_MODIFIED[route],
       },
-      webPage(route),
-      breadcrumbs(route, name),
+      webPage(route, 'WebPage', locale),
+      breadcrumbs(route, name, locale),
       {
         '@type': 'FAQPage',
-        '@id': `${ORIGIN}${route}#faq`,
+        '@id': `${url}#faq`,
         mainEntity: faq.map((entry) => ({
           '@type': 'Question',
           name: entry.question,
@@ -101,23 +119,23 @@ export function toolStructuredData(route: ToolPageRoute, name: string, faq: read
   };
 }
 
-export function hubStructuredData(tools: readonly { route: ToolPageRoute; name: string }[]) {
+export function hubStructuredData(tools: readonly { route: ToolPageRoute; name: string }[], locale?: ToolPageLocale) {
   return {
     '@context': 'https://schema.org',
     '@graph': [
       {
-        ...webPage('/tools', 'CollectionPage'),
+        ...webPage('/tools', 'CollectionPage', locale),
         mainEntity: {
           '@type': 'ItemList',
           itemListElement: tools.map((tool, index) => ({
             '@type': 'ListItem',
             position: index + 1,
             name: tool.name,
-            url: `${ORIGIN}${tool.route}`,
+            url: pageUrl(tool.route, locale),
           })),
         },
       },
-      breadcrumbs('/tools', 'Free debate tools'),
+      breadcrumbs('/tools', locale?.hubName ?? 'Free debate tools', locale),
     ],
   };
 }
