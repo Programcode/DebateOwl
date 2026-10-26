@@ -33,11 +33,11 @@ Free to use, no account needed, and they run in the browser.
 
 ## Magyar
 
-- [DebateLab – MI-alapú vitafelkészítés és gyakorlás diákoknak](https://debate.pi-stack.org/hu): A DebateLab MI-alapú app vitára készülő diákoknak: esetépítés, cáfolatok, bizonyítékok, coaching és időzített gyakorlókörök egy MI-ellenféllel szemben.
-- [Ingyenes vitaeszközök: időmérő, indítványok, jegyzetlapok | DebateLab by Pi-Stack](https://debate.pi-stack.org/hu/tools): Ingyenes, fiók nélkül használható vitaeszközök: formátumhoz igazodó időmérő, indítványgenerátor, nyomtatható jegyzetlapok és beszédidő-kalkulátor.
-- [Ingyenes vitaidőmérő PF, LD, Policy, BP és World Schools formátumhoz | DebateLab by Pi-Stack](https://debate.pi-stack.org/hu/tools/vita-idozito): Ingyenes vitaidőmérő PF, LD, Policy, BP, World Schools és Asian Parliamentary beállításokkal: védett idő, POI-jelzés és felkészülési idő.
-- [Indítványgenerátor: 300 gyakorló vitaindítvány | DebateLab by Pi-Stack](https://debate.pi-stack.org/hu/tools/vitatema-generator): Húzz egy véletlen vitaindítványt, vagy hármat a vétógyakorláshoz, 300 eredeti gyakorló indítványból, téma, nehézség és típus szerint rendezve.
-- [Nyomtatható vitajegyzetlap-generátor | DebateLab by Pi-Stack](https://debate.pi-stack.org/hu/tools/flow-lap): Egyoldalas, nyomtatható vitajegyzetlap minden beszédhez külön oszloppal PF, LD, Policy, BP, World Schools vagy Asian Parliamentary formátumhoz.
+- [DebateLab – MI-alapú vitafelkészülés és gyakorlás diákoknak](https://debate.pi-stack.org/hu): A DebateLab MI-alapú app vitára készülő diákoknak: esetépítés, cáfolatok, bizonyítékok, coaching és időzített gyakorlókörök egy MI-ellenféllel szemben.
+- [Ingyenes vitaeszközök: időmérő, vitatételek, jegyzetlapok | DebateLab by Pi-Stack](https://debate.pi-stack.org/hu/tools): Ingyenes, fiók nélkül használható vitaeszközök: formátumhoz igazodó időmérő, vitatétel-generátor, nyomtatható jegyzetlapok és beszédidő-kalkulátor.
+- [Ingyenes vitaidőmérő PF, LD, Policy, BP és World Schools formátumhoz | DebateLab by Pi-Stack](https://debate.pi-stack.org/hu/tools/vitaidomero): Ingyenes vitaidőmérő PF, LD, Policy, BP, World Schools és Asian Parliamentary beállításokkal: védett idő, POI-jelzés és felkészülési idő.
+- [Vitatétel-generátor: 300 gyakorló vitatétel | DebateLab by Pi-Stack](https://debate.pi-stack.org/hu/tools/vitatetel-generator): Húzz egy véletlen vitatételt, vagy hármat a vétógyakorláshoz, 300 eredeti gyakorló tételből, téma, nehézség és típus szerint rendezve.
+- [Nyomtatható vitajegyzetlap-generátor | DebateLab by Pi-Stack](https://debate.pi-stack.org/hu/tools/jegyzetlap): Egyoldalas, nyomtatható vitajegyzetlap minden beszédhez külön oszloppal PF, LD, Policy, BP, World Schools vagy Asian Parliamentary formátumhoz.
 - [Beszédidő-kalkulátor vitabeszédekhez | DebateLab by Pi-Stack](https://debate.pi-stack.org/hu/tools/beszedido-kalkulator): Illessz be egy beszédet, és megmutatjuk a szószámát, hogy lassú, átlagos és gyors tempóban mennyi ideig tart, és mely vitabeszéd-idősávokba fér bele.
 
 ## Español

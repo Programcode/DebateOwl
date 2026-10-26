@@ -1,8 +1,8 @@
 {
   "/": { "hu": "/hu", "es": "/es" },
   "/tools": { "hu": "/hu/tools", "es": "/es/tools" },
-  "/tools/debate-timer": { "hu": "/hu/tools/vita-idozito", "es": "/es/tools/cronometro-debate" },
-  "/tools/debate-motion-generator": { "hu": "/hu/tools/vitatema-generator", "es": "/es/tools/generador-mociones" },
-  "/tools/debate-flow-sheet": { "hu": "/hu/tools/flow-lap", "es": "/es/tools/hoja-de-flujo" },
+  "/tools/debate-timer": { "hu": "/hu/tools/vitaidomero", "es": "/es/tools/cronometro-debate" },
+  "/tools/debate-motion-generator": { "hu": "/hu/tools/vitatetel-generator", "es": "/es/tools/generador-mociones" },
+  "/tools/debate-flow-sheet": { "hu": "/hu/tools/jegyzetlap", "es": "/es/tools/hoja-de-flujo" },
   "/tools/speech-time-calculator": { "hu": "/hu/tools/beszedido-kalkulator", "es": "/es/tools/calculadora-tiempo-discurso" }
 }

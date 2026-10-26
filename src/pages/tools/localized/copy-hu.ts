@@ -37,21 +37,21 @@ export const COPY_HU: LocalizedToolsCopy = {
       ],
       faq: [],
       cta: {
-        title: 'Ha már nem csak órára van szükséged',
+        title: 'Ha már nem csak időmérőre van szükséged',
         body: 'A {product} fizetős gyakorlóalkalmazás vitázóknak: egy tétel bármelyik oldalára megírja az eset vázlatát, cáfolatokat javasol, és Vitapárbaj-fordulókat futtat egy MI-ellenféllel.',
       },
     },
 
     '/tools/debate-timer': {
       title: 'Ingyenes vitaidőmérő minden formátumhoz',
-      intro: 'Válassz formátumot, és az időmérő már tudja a beszédek sorrendjét, a védett perceket és az oldalak felkészülési idejét. Nem kell hozzá fiók, teljes egészében ebben a lapban fut, és az oldal újratöltése után is megtartja a fordulót.',
+      intro: 'Válassz formátumot, és az időmérő már tudja a beszédek sorrendjét, a védett perceket és az oldalak felkészülési idejét. Nem kell hozzá fiók, teljes egészében ebben a böngészőlapon fut, és az oldal újratöltése után is megtartja a fordulót.',
       sections: [
         {
           heading: 'Így vezess le vele egy fordulót',
           steps: [
             'Válaszd ki a formátumot. A felső beszédgombok a hivatalos sorrendet követik, és oldalanként más a színük.',
             'Amikor a beszélő elkezdi, nyomd meg az Indítás gombot vagy a szóközt. Technikai gond esetén nyomd meg újra a szüneteltetéshez: az óra pontosan megőrzi a hátralévő időt.',
-            'A következő beszédre a nyíl gombbal vagy a jobbra nyíl billentyűvel lépsz. Minden beszéd tiszta órával indul, a felkészülési keretek viszont megmaradnak.',
+            'A következő beszédre a nyíl gombbal vagy a jobb nyílbillentyűvel lépsz. Minden beszéd tiszta órával indul, a felkészülési keretek viszont megmaradnak.',
             'Beszédek között koppints az egyik oldal felkészülési keretére, amikor az az oldal elkezd készülni, és koppints újra, amikor a beszélő feláll.',
             'Vetítsd ki az időmérőt a Teljes képernyő gombbal, hogy a beszélők a terem elejéről is lássák az órát.',
           ],
@@ -59,7 +59,7 @@ export const COPY_HU: LocalizedToolsCopy = {
             {
               heading: 'Billentyűparancsok',
               paragraphs: [
-                'Előbb kattints az időmérőre. Utána a szóköz indít és megállít, az R nullázza a szüneteltetett beszédet, a balra és jobbra nyíl pedig beszédet vált. Amíg fut az óra, a képernyő ébren marad, ha a böngésző engedi.',
+                'Előbb kattints az időmérőre. Utána a szóköz indít és megállít, az R nullázza a szüneteltetett beszédet, a bal és a jobb nyílbillentyű pedig beszédet vált. Amíg fut az óra, nem kapcsol ki a képernyő, ha a böngésző engedi.',
               ],
             },
           ],
@@ -87,7 +87,7 @@ export const COPY_HU: LocalizedToolsCopy = {
             'British Parliamentary: nyolc 7 perces beszéd, közbekérdezés 1:00 és 6:00 között, 15 másodperc türelmi idő. A csapatok a tétel kihirdetése után, a forduló előtt kapnak 15 percet a felkészülésre.',
             'World Schools: hat 8 perces beszéd, közbekérdezés az első és az utolsó perc kivételével, majd két 4 perces válaszbeszéd (reply), előbb az Opposition, közbekérdezés nélkül.',
             'Asian Parliamentary: hat 7 perces beszéd és két 4 perces válaszbeszéd, 15 másodperc türelmi idő; az UADC kézikönyve szerint a forduló előtt 30 perc a felkészülés.',
-            'Iskolai 4-6-6-3: oldalanként 4 perces bevezető, 6 perces R1, 6 perces R2 és 3 perces záró beszéd, fordulón belüli felkészülési idő nélkül.',
+            'Iskolai 4-6-6-3: oldalanként 4 perces bevezető, 6 perces első cáfolat (az időmérőn R1), 6 perces második cáfolat (R2) és 3 perces záróbeszéd, fordulón belüli felkészülési idő nélkül.',
           ],
         },
         {
@@ -102,19 +102,19 @@ export const COPY_HU: LocalizedToolsCopy = {
             {
               heading: 'Nyitás a védett percben',
               paragraphs: [
-                'BP-ben vagy World Schoolsban gyakorold, hogy a beszéd vázlatát és az első érvedet az 1:00-s kopogás előtt mondod el, amikor senki nem szakíthat félbe. Indítsd el a PM vagy az első Proposition-beszédet, és állítsd meg az órát a kopogásnál: ha még mindig a bemutatkozásnál tartasz, írd át a nyitást.',
+                'BP-ben vagy World Schoolsban gyakorold, hogy a beszéd vázlatát és az első érvedet az 1:00-s kopogás előtt mondod el, amikor senki nem szakíthat félbe. Indítsd el a PM vagy az első Proposition-beszédet, és állítsd meg az órát a kopogásnál: ha még mindig a bevezetésnél tartasz, írd át a nyitást.',
               ],
             },
             {
               heading: 'A felkészülési keret beosztása',
               paragraphs: [
-                'A Public Forum-csapatoknak az egész fordulóra három perc jut. Gyakorlóforduló előtt beszéljétek meg, hogyan osztjátok be, például egy percet az összegzés előtt és kettőt a final focus előtt, és ehhez a tervhez mérve futtassátok a keretet. Azok a csapatok, amelyek beosztják a felkészülési idejüket, nem égetik el már az első cáfolatnál.',
+                'A Public Forum-csapatoknak az egész fordulóra három perc jut. Gyakorlóforduló előtt beszéljétek meg, hogyan osztjátok be, például egy percet az összegzés előtt és kettőt a final focus előtt, és ehhez a tervhez mérve futtassátok a keretet. Azok a csapatok, amelyek beosztják a felkészülési idejüket, nem élik fel már az első cáfolatnál.',
               ],
             },
             {
               heading: 'POI-létra',
               paragraphs: [
-                'Mondj el egy hétperces BP-beszédet, miközben a társad a nyitott szakaszban minden betelt percnél felajánl egy közbekérdezést. Kettőt fogadj el, a többit udvariasan utasítsd el. A WUDC-kézikönyv azt kéri, hogy minden beszélő fogadjon el legalább egyet, ezért tanuld meg ott elfogadni, ahol neked jól jön.',
+                'Mondj el egy hétperces BP-beszédet, miközben a társad a nyitott szakaszban percenként felajánl egy közbekérdezést. Kettőt fogadj el, a többit udvariasan utasítsd el. A WUDC-kézikönyv azt kéri, hogy minden beszélő fogadjon el legalább egyet, ezért tanuld meg ott elfogadni, ahol neked jól jön.',
               ],
             },
           ],
@@ -144,7 +144,7 @@ export const COPY_HU: LocalizedToolsCopy = {
           answer: 'Public Forum-, Lincoln-Douglas- és Policy-fordulóban mindkét oldal saját keretet kap, az NSDA szerinti 3, 4, illetve 8 perccel. Koppints az oldal keretére az indításhoz, és újra a leállításhoz. Ha elindítasz egy keretet, a beszéd szünetel, az elfogyott keret pedig nullán megáll.',
         },
         {
-          question: 'Elveszik a forduló, ha újratöltöm az oldalt?',
+          question: 'Elvész a forduló, ha újratöltöm az oldalt?',
           answer: 'Nem. Az időmérő ebben a böngészőben menti a formátumot, az aktuális beszédet és mindkét felkészülési keretet, a valós időhöz igazítva, így egy futó beszéd újratöltés után is a helyes időnél jár. A mentett forduló a böngésződben marad, nem töltjük fel.',
         },
       ],
@@ -196,7 +196,7 @@ export const COPY_HU: LocalizedToolsCopy = {
             {
               heading: 'Tételválasztás és vétó',
               paragraphs: [
-                'Húzz három tételt. Mindkét csapat kap két percet, hogy titokban rangsorolja őket, majd mindkét oldal kihúz egyet. A megmaradt tételről vitáztok. A gyakorlattal a csapatok megtanulják gyorsan felmérni, melyik tétel kedvez nekik, és ez minden olyan formátumban számít, ahol választani lehet a tételek közül.',
+                'Húzz három tételt. Mindkét csapat kap két percet, hogy titokban rangsorolja őket, majd mindkét oldal kizár (megvétóz) egyet. A megmaradt tételről vitáztok. A gyakorlattal a csapatok megtanulják gyorsan felmérni, melyik tétel kedvez nekik, és ez minden olyan formátumban számít, ahol választani lehet a tételek közül.',
               ],
             },
             {
@@ -223,7 +223,7 @@ export const COPY_HU: LocalizedToolsCopy = {
       faq: [
         {
           question: 'Honnan származnak a tételek?',
-          answer: 'Mind a {total} tételt gyakorlóanyagnak írtuk ehhez az oldalhoz. Egyik sem versenyek tételarchívumából való, így órán vagy szakkörön is használhatod őket anélkül, hogy azon kellene gondolkodnod, látták-e már a diákjaid az adott fordulót.',
+          answer: 'Mind a {total} tételt gyakorlóanyagnak írtuk ehhez az oldalhoz. Egyik sem versenyek tételarchívumából való, így órán vagy szakkörön is használhatod őket anélkül, hogy azon kellene gondolkodnod, látták-e már a diákjaid az adott tételt.',
         },
         {
           question: 'Vannak magyar nyelvű tételek is?',
@@ -239,11 +239,11 @@ export const COPY_HU: LocalizedToolsCopy = {
         },
         {
           question: 'Hogyan működik a háromtételes húzás?',
-          answer: 'A Három tétel húzása három különböző tételt húz a szűrőidnek megfelelően. Használd vétógyakorlathoz: mindkét oldal kihúz egyet, és a megmaradtról vitáztok, ahogy egyes versenyeken a csapatok választhatnak. Újabb húzásnál a generátor kerüli az imént látott tételeket, amíg van elég másik.',
+          answer: 'A Három tétel húzása három különböző tételt húz a szűrőidnek megfelelően. Használd vétógyakorlathoz: mindkét oldal kizár (megvétóz) egyet, és a megmaradtról vitáztok, ahogy egyes versenyeken a csapatok választhatnak. Újabb húzásnál a generátor kerüli az imént látott tételeket, amíg van elég másik.',
         },
         {
           question: 'Alkalmasak a tételek iskolai használatra?',
-          answer: 'Iskolai és egyetemi vitázóknak írtuk őket: egyik tétel sem kér senkit arra, hogy kegyetlenséget védjen, és egyik sem céloz vallást, etnikumot vagy élő személyt. A kezdő tételekhez nem kell utánanézni semminek; a haladók feltételeznek némi közgazdasági, jogi vagy politikai tájékozottságot.',
+          answer: 'Iskolai és egyetemi vitázóknak írtuk őket: egyik tétel sem kér senkit arra, hogy kegyetlenséget védjen, és egyik sem irányul vallás, etnikai csoport vagy élő személy ellen. A kezdő tételekhez nem kell utánanézni semminek; a haladók feltételeznek némi közgazdasági, jogi vagy politikai tájékozottságot.',
         },
       ],
       cta: {
@@ -305,7 +305,7 @@ export const COPY_HU: LocalizedToolsCopy = {
         },
         {
           question: 'Mi kerül az alsó sávba?',
-          answer: 'Public Forumban, Lincoln-Douglasban és Policyben minden crossfire- vagy keresztkérdés-szakasz saját dobozt kap, azoknak a válaszoknak, amelyeket később fel akarsz használni. A parlamenti formátumokban nincs kérdezési szakasz, így ott a sáv egyetlen doboz a közbekérdezéseknek és a döntési jegyzeteknek.',
+          answer: 'Public Forumban, Lincoln-Douglasban és Policyben minden crossfire- vagy keresztkérdés-szakasz saját dobozt kap, azoknak a válaszoknak, amelyeket később fel akarsz használni. A parlamenti formátumokban nincs kérdezési szakasz, így ott a sáv egyetlen doboz a közbekérdezéseknek és a bírói döntéshez szükséges jegyzeteknek.',
         },
         {
           question: 'Ráírhatom a lapra a tételt és a bíró nevét?',
@@ -314,7 +314,7 @@ export const COPY_HU: LocalizedToolsCopy = {
       ],
       cta: {
         title: 'Térképezd fel a fordulót a képernyőn',
-        body: 'A {product} Folyamatábra eszközével diagramként rendezheted el az állításokat és a válaszokat, szerkesztheted és exportálhatod, az MI-eszközök mellett, amelyek bármelyik oldalra esetet és cáfolatot írnak.',
+        body: 'A {product} Folyamatábra eszközével diagramként rendezheted el az állításokat és a válaszokat, szerkesztheted és exportálhatod. Mellette az MI-eszközök bármelyik oldalra esetet és cáfolatot írnak.',
       },
     },
 
@@ -338,7 +338,7 @@ export const COPY_HU: LocalizedToolsCopy = {
         {
           heading: 'Ha túl hosszú a beszéd',
           steps: [
-            'Előbb a felvezetést húzd. A köszönetek, a tétel megismétlése és a „most rátérek arra, hogy” másodperceket visznek el, és semmit nem nyernek vele.',
+            'Előbb a felvezetést húzd. A köszönetek, a tétel megismétlése és a „most rátérek arra, hogy” másodperceket visznek el, és semmit nem adnak hozzá.',
             'Vond össze a példákat. Egy jól kifejtett példa többet ér három felsoroltnál.',
             'A mérlegelést tartsd meg. Ha valaminek mennie kell, a leírást húzd, ne az összehasonlítást. A bírók azon döntenek, miért fontosabb az érved, ezért az a mondat marad.',
             'Mérd újra hangosan. Illeszd be az új vázlatot, aztán mondd el a [vitaidőmérőn](/tools/debate-timer). A becslés közel visz, de az igazat az előadás mondja meg.',
@@ -347,7 +347,7 @@ export const COPY_HU: LocalizedToolsCopy = {
         {
           heading: 'Tempógyakorlat',
           paragraphs: [
-            'Fogj egy 400 szavas szöveget. Olvasd fel egyszer a természetes tempódban az időmérőn, aztán úgy, hogy pontosan három perc legyen, aztán két és fél percre. Aki szándékosan tud tempót váltani, az le tud lassítani a fontos mondatnál, és gyorsan tud haladni az összegzésben, és ez többet ér bármelyik egyetlen tempónál.',
+            'Fogj egy 400 szavas szöveget. Olvasd fel egyszer a természetes tempódban az időmérőn, aztán úgy, hogy pontosan három perc legyen, aztán két és fél percre. Aki szándékosan tud tempót váltani, az le tud lassítani a fontos mondatnál, és gyorsan tud haladni az összegzésben, és ez többet ér, mint bármelyik tempó önmagában.',
             'Ha a beszédet gyakorlófordulóban is kipróbálod, nyomtass a társaidnak [jegyzetlapot](/tools/debate-flow-sheet), hogy utána összevethessétek, mi jutott át belőle.',
           ],
         },
@@ -376,7 +376,7 @@ export const COPY_HU: LocalizedToolsCopy = {
       ],
       cta: {
         title: 'Gyakorold hangosan, vitapartnerrel',
-        body: 'A {product} Vitapárbaj-fordulóiban elmondhatsz egy időre mért beszédet, megkapod rá egy MI-ellenfél válaszát, és a fordulót értékelik is, így a vázlatodat valódi válaszokkal teszteled, nem csak az órával.',
+        body: 'A {product} Vitapárbaj-fordulóiban elmondhatsz egy időre mért beszédet, megkapod rá egy MI-ellenfél válaszát, és a forduló végén értékelést is kapsz, így a vázlatodat valódi válaszokkal teszteled, nem csak az órával.',
       },
     },
   },
