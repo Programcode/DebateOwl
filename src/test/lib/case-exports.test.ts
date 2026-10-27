@@ -10,8 +10,8 @@ import { NEW_CASE, OLD_CASE } from '../helpers/cases';
 const drawn = vi.hoisted(() => [] as string[]);
 
 vi.mock('jspdf', () => ({
-  jsPDF: function FakePdf() {
-    const doc = {
+  jsPDF: function FakePdf(): object {
+    const doc: Record<string, unknown> = {
       internal: { pageSize: { width: 210, height: 297 } },
       // No font files to load in a test.
       addFileToVFS: undefined,
@@ -19,10 +19,10 @@ vi.mock('jspdf', () => ({
       splitTextToSize: (value: string) => [value],
       getNumberOfPages: () => 1,
     };
-    return new Proxy(doc, { get: (target, key) => (key in target ? Reflect.get(target, key) : () => undefined) });
+    return new Proxy(doc, { get: (target, key): unknown => (key in target ? Reflect.get(target, key) : (): undefined => undefined) });
   },
 }));
-vi.mock('jspdf-autotable', () => ({ default: () => undefined }));
+vi.mock('jspdf-autotable', () => ({ default: (): void => undefined }));
 
 /** The text of one file inside a .docx (a zip), read through its central directory. */
 function zipEntry(zip: Buffer, name: string): string {
