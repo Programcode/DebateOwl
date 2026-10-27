@@ -87,10 +87,29 @@ const AppLayout = lazy(() => {
   void preloadStartupRoute(window.location.pathname);
   return appLayoutLoader();
 });
-const OnboardingTour = lazy(() => import("@/components/features/onboarding/OnboardingTour")
-  .then(({ OnboardingTour: Tour }) => ({ default: Tour })));
-const DebateOwlIntro = lazy(() => import("@/components/features/onboarding/DebateOwlIntro")
-  .then(({ DebateOwlIntro: Intro }) => ({ default: Intro })));
+type OnboardingTourComponent = typeof import("@/components/features/onboarding/OnboardingTour").OnboardingTour;
+
+// Loaded while the welcome is open, so closing it can show the Start debate step
+// without waiting on a second chunk.
+let onboardingTourComponent: OnboardingTourComponent | null = null;
+let onboardingTourPromise: Promise<OnboardingTourComponent> | null = null;
+
+function loadOnboardingTour(): Promise<OnboardingTourComponent> {
+  if (onboardingTourComponent) return Promise.resolve(onboardingTourComponent);
+  // A failed fetch has to be retryable. Keeping the rejected promise would
+  // leave the Start debate step closed for the rest of the page.
+  onboardingTourPromise ??= import("@/components/features/onboarding/OnboardingTour").then((mod) => {
+    onboardingTourComponent = mod.OnboardingTour;
+    return mod.OnboardingTour;
+  }).catch((error: unknown) => {
+    onboardingTourPromise = null;
+    throw error;
+  });
+  return onboardingTourPromise;
+}
+
+const FirstRun = lazy(() => import("@/components/features/onboarding/FirstRun")
+  .then(({ FirstRun: Run }) => ({ default: Run })));
 
 // TanStack Query refetches after an `offline` then `online` pair, but a page
 // opened offline never sees `offline`. Retry whatever failed once the
@@ -285,37 +304,45 @@ export function RouteContent({ children }: { children: ReactNode }) {
 }
 
 /**
- * The one-time DebateOwl welcome opens over the signed-in app once its layout has loaded.
- * The onboarding tour waits for it to close; without the welcome the tour mounts as before.
+ * One first-run moment. The owl welcome, when it is due, opens over the signed-in
+ * app once its layout has loaded. Closing it continues straight into the tour's
+ * Start debate step. With no welcome, the tour mounts as before.
  */
 function AppWelcome() {
-  const [introOpen, setIntroOpen] = useState(() => shouldShowIntro({
+  const [showIntro] = useState(() => shouldShowIntro({
     search: window.location.search,
     storage: browserStorage(),
     env: import.meta.env,
   }));
   const [layoutReady, setLayoutReady] = useState(false);
+  const userId = useAuth().user?.id;
+  // A missing account is not a finished tour. `hasCompletedOnboarding` says so
+  // only because there is nobody to show it to yet.
+  const tourCompleted = useOnboardingStore((state) => Boolean(userId) && hasCompletedOnboarding(state, userId));
 
   useEffect(() => {
-    if (!introOpen) return;
+    if (!showIntro) return;
     let live = true;
+    void loadOnboardingTour().catch((): void => undefined);
     appLayoutLoader().then(() => { if (live) setLayoutReady(true); }, (): void => undefined);
     return () => { live = false; };
-  }, [introOpen]);
+  }, [showIntro]);
 
-  if (!introOpen) return <OptionalOnboardingTour />;
+  if (!showIntro) return <OptionalOnboardingTour continueFromIntro={false} />;
   if (!layoutReady) return null;
   return (
     <Suspense fallback={null}>
-      <DebateOwlIntro onClose={() => {
-        markIntroSeen(browserStorage());
-        setIntroOpen(false);
-      }} />
+      <FirstRun
+        showIntro
+        tourCompleted={tourCompleted}
+        onIntroSeen={() => markIntroSeen(browserStorage())}
+        tour={(continueFromIntro) => <OptionalOnboardingTour continueFromIntro={continueFromIntro} />}
+      />
     </Suspense>
   );
 }
 
-function OptionalOnboardingTour() {
+function OptionalOnboardingTour({ continueFromIntro }: { continueFromIntro: boolean }) {
   const location = useLocation();
   const userId = useAuth().user?.id;
   const completed = useOnboardingStore((state) => hasCompletedOnboarding(state, userId));
@@ -331,17 +358,22 @@ function OptionalOnboardingTour() {
   if (!userId || !shouldLoadTour) return null;
 
   // Keyed by account, so one account's half-finished tour never carries into the next.
-  return <TimedOnboardingTour key={userId} userId={userId} />;
+  return <TimedOnboardingTour key={userId} userId={userId} continueFromIntro={continueFromIntro} />;
 }
 
-function TimedOnboardingTour({ userId }: { userId: string }) {
+function TimedOnboardingTour({ userId, continueFromIntro }: { userId: string; continueFromIntro: boolean }) {
   const [eligibleAt] = useState(() => typeof performance === "undefined" ? 0 : performance.now());
+  const [Tour, setTour] = useState<OnboardingTourComponent | null>(() => onboardingTourComponent);
 
-  return (
-    <Suspense fallback={null}>
-      <OnboardingTour eligibleAt={eligibleAt} userId={userId} />
-    </Suspense>
-  );
+  useEffect(() => {
+    if (Tour) return;
+    let live = true;
+    loadOnboardingTour().then((Loaded) => { if (live) setTour(() => Loaded); }, (): void => undefined);
+    return () => { live = false; };
+  }, [Tour]);
+
+  if (!Tour) return null;
+  return <Tour eligibleAt={eligibleAt} userId={userId} continueFromIntro={continueFromIntro} />;
 }
 
 /**

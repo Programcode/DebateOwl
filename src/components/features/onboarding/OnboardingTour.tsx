@@ -1,5 +1,5 @@
 // src/components/features/onboarding/OnboardingTour.tsx
-import { useEffect, useCallback, useMemo, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useCallback, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import Joyride, { ACTIONS, CallBackProps, EVENTS, STATUS, Step } from 'react-joyride';
 import { useLocation } from 'react-router-dom';
@@ -26,7 +26,16 @@ function useCompactLayout() {
     return compact;
 }
 
-export function OnboardingTour({ eligibleAt, userId }: { eligibleAt?: number; userId: string }) {
+export function OnboardingTour({
+    eligibleAt,
+    userId,
+    continueFromIntro = false,
+}: {
+    eligibleAt?: number;
+    userId: string;
+    /** The owl welcome just closed, so the Start debate step opens before the next paint. */
+    continueFromIntro?: boolean;
+}) {
     const { t } = useTranslation();
     const hasCompletedOnboarding = useOnboardingStore((state) => completedFor(state, userId));
     const { isTourRunning, setOnboardingComplete, startTour, stopTour } = useOnboardingStore();
@@ -118,6 +127,15 @@ export function OnboardingTour({ eligibleAt, userId }: { eligibleAt?: number; us
         setTourSteps(resolveTourSteps());
         setScrollOffset((document.querySelector('header')?.getBoundingClientRect().height ?? 0) + 24);
     }, [resolveTourSteps]);
+
+    // The welcome and this step are one moment: open the spotlight before paint,
+    // while the dialog's close is still the thing the student just did.
+    useLayoutEffect(() => {
+        if (!continueFromIntro || hasCompletedOnboarding || location.pathname !== '/app') return;
+        if (!document.querySelector('[data-tour="current-debate"]')) return;
+        prepareTour();
+        startTour();
+    }, [continueFromIntro, hasCompletedOnboarding, location.pathname, prepareTour, startTour]);
 
     // Start tour automatically for new users
     useEffect(() => {
