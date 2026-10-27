@@ -255,7 +255,7 @@ export function SparringRound({
                 // What you're answering stays in view above the composer, not below it in the transcript.
                 <article className="rounded-lg border-2 border-border bg-card p-4 sm:p-5" aria-labelledby="sparring-latest-opponent">
                   <div className="flex items-center gap-2.5">
-                    <OwlAvatar pose="arguing" size={32} label={t('sparring.opponentAvatarAlt', 'The owl, your AI opponent')} />
+                    <OwlAvatar pose="arguing" size={32} blink label={t('sparring.opponentAvatarAlt', 'The owl, your AI opponent')} />
                     <h2 id="sparring-latest-opponent" className="text-sm font-extrabold text-heading">{t('sparring.round.latestOpponent', 'Opponent’s last speech')}</h2>
                     <span className="truncate text-xs text-muted-foreground">{t(`sparring.turns.${latestOpponentSpeech.turnId}`, latestOpponentSpeech.role)}</span>
                   </div>
@@ -304,7 +304,7 @@ export function SparringRound({
                 // The opponent's speech as it is written, in the place it will be read.
                 <article data-testid="sparring-live-speech" className="rounded-lg border-2 border-brand-tint-border bg-card p-4 motion-safe:animate-in fade-in-0 duration-200 sm:p-5" aria-busy="true" aria-labelledby="sparring-live-opponent">
                   <div className="flex items-center gap-2.5">
-                    <OwlAvatar pose="arguing" size={32} label={t('sparring.opponentAvatarAlt', 'The owl, your AI opponent')} />
+                    <OwlAvatar pose="arguing" size={32} blink label={t('sparring.opponentAvatarAlt', 'The owl, your AI opponent')} />
                     <h2 id="sparring-live-opponent" className="text-sm font-extrabold text-heading">{t('sparring.round.opponentSpeaking', 'Opponent is speaking')}</h2>
                     {currentTurn && <span className="truncate text-xs text-muted-foreground">{t(`sparring.turns.${currentTurn.id}`, currentTurn.label)}</span>}
                   </div>
@@ -389,7 +389,7 @@ export function SparringRound({
                 return (
                   <div key={turn.id} className={cn('flex items-center gap-3 rounded-md px-3 py-2.5 text-sm transition-colors duration-300', current && 'bg-brand-tint text-foreground', complete && 'text-muted-foreground', !current && !complete && 'text-muted-foreground')}>
                     <span className={cn('flex h-7 w-7 shrink-0 items-center justify-center rounded-full border-2 text-xs font-bold tabular-nums transition-colors duration-300', complete ? 'border-success bg-success text-success-foreground' : current ? 'border-brand bg-brand text-white shadow-[0_2px_0_var(--do-primary-ledge)]' : 'border-border-strong text-muted-foreground')}>
-                      {complete ? <Check className="h-3.5 w-3.5 motion-safe:animate-in zoom-in-50 duration-300 ease-overshoot" strokeWidth={3.5} aria-label={t('sparring.round.completeStatus', 'Complete')} /> : index + 1}
+                      {complete ? <Check className="success-pop h-3.5 w-3.5" strokeWidth={3.5} aria-label={t('sparring.round.completeStatus', 'Complete')} /> : index + 1}
                     </span>
                     <span className="min-w-0 flex-1">
                       <span className="block truncate font-bold">{t(`sparring.turns.${turn.id}`, turn.label)}</span>

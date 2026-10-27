@@ -138,7 +138,7 @@ const HeroPreview = () => {
         <Reveal onLoad delay={0.1} className="relative mx-auto w-full max-w-2xl lg:mx-0 lg:max-w-none">
             <div className="absolute -inset-8 bg-linear-to-r from-plume-400/25 via-plume-200/20 to-[rgb(255_196_20/0.22)] blur-3xl" />
             {/* The owl points the visitor at the product. */}
-            <Owl pose="point" size={140} priority className="absolute -bottom-10 -left-6 z-20 hidden -scale-x-100 sm:block lg:-left-12" />
+            <Owl pose="point" size={140} priority breathe={false} className="absolute -bottom-10 -left-6 z-20 hidden -scale-x-100 sm:block lg:-left-12" />
             <div className="relative overflow-hidden rounded-xl border-2 border-border bg-card shadow-2xl">
                 {/* Browser chrome */}
                 <div className="flex items-center border-b-2 border-border px-5 py-3">
