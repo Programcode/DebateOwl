@@ -537,6 +537,7 @@ def render_page(page):
   <meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large" />
   <link rel="canonical" href="{page_url(page["slug"])}" />
   <meta name="author" content="{esc(ORGANIZATION["name"])}" />
+  <meta name="msvalidate.01" content="8FC8FD530126287EF8AD3977BFB24C17" />
 {ICON_LINKS}
   <meta property="og:type" content="article" />
   <meta property="og:site_name" content="{BRAND}" />
