@@ -15,7 +15,7 @@ test("a signed-in user generates a case grounded in a saved Library source", asy
   // exceeded the Edge Function's 200 KB body limit before sources loaded server-side.
   await page.getByRole("textbox", { name: "Content", exact: true })
     .fill(`${marker} Tallinn ridership rose 14 percent after fares were removed. ${"Detailed ridership evidence. ".repeat(9_000)}`);
-  await page.getByRole("button", { name: "Save to library" }).click();
+  await page.getByRole("button", { name: "Save to Library" }).click();
   await expect(page.getByText("Grounding active")).toBeVisible();
 
   const userId = await user.userId();

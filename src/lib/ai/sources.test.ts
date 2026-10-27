@@ -105,6 +105,6 @@ describe('autosaveDiscoveredSources', () => {
     ], 'attack', DEBATE);
 
     expect(toast).toHaveBeenCalledOnce();
-    expect(vi.mocked(toast).mock.calls[0][0]).toMatchObject({ title: 'Added 2 sources to your library' });
+    expect(vi.mocked(toast).mock.calls[0][0]).toMatchObject({ title: 'Added 2 sources to your Library' });
   });
 });

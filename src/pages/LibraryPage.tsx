@@ -291,7 +291,7 @@ export default function LibraryPage() {
     });
   };
   const showSaved = (title: string) => {
-    toast({ title: t('libraryPage.sourceSaved', { title, defaultValue: 'Saved {{title}} to your library' }) });
+    toast({ title: t('libraryPage.sourceSaved', { title, defaultValue: 'Saved {{title}} to the Library' }) });
   };
 
   const handleAdd = async () => {

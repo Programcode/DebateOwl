@@ -9,7 +9,7 @@ async function addSource(page: Page, title: string, content: string) {
   await page.getByRole("button", { name: "Add source" }).click();
   await page.getByRole("textbox", { name: "Title", exact: true }).fill(title);
   await page.getByRole("textbox", { name: "Content", exact: true }).fill(content);
-  await page.getByRole("button", { name: "Save to library" }).click();
+  await page.getByRole("button", { name: "Save to Library" }).click();
   await expect(page.getByRole("switch", { name: `Toggle ${title}` })).toBeChecked();
 }
 
@@ -185,7 +185,7 @@ test("lib-dedupe and lib-layout: a page saved once per debate, and long titles k
   await page.getByRole("button", { name: "Add source" }).click();
   await page.getByRole("textbox", { name: "Import from URL" }).fill("http://example.org/estudios/deberes-escolares-primaria?utm_source=x#top");
   await page.getByRole("button", { name: "Import URL" }).click();
-  await expect(page.getByText("This page is already in this debate's library.")).toBeVisible();
+  await expect(page.getByText("This page is already in this debate's Library.")).toBeVisible();
   expect(imported).toBe(false);
   await evidence.shot("02-duplicate-warning");
   const { data } = await admin.from("sources").select("id").eq("user_id", userId);

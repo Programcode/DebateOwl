@@ -120,7 +120,7 @@ test('real staging session persists, starts a debate, writes and removes a sourc
       const sourceInsert = page.waitForResponse((response) =>
         response.request().method() === 'POST' && response.url().includes('/rest/v1/sources')
       );
-      await page.getByRole('button', { name: 'Save to library' }).click();
+      await page.getByRole('button', { name: 'Save to Library' }).click();
       expect((await sourceInsert).ok()).toBe(true);
       sourceCreated = true;
       await expect(page.getByText(sourceTitle, { exact: true })).toBeVisible();
