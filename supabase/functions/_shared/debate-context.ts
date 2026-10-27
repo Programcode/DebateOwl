@@ -181,11 +181,12 @@ function digestCase(data: Record<string, unknown>): string {
     text(structure.thesis, 300) && `Thesis: ${text(structure.thesis, 300)}`,
     text(structure.framework, 240) && `Framework: ${text(structure.framework, 240)}`,
     ...contentions.slice(0, 4).map((item, index) => lines([
-      `Contention ${index + 1}: ${text(item.claim, 200)}`,
-      text(item.reasoning, 320) && `  Warrant: ${text(item.reasoning, 320)}`,
-      text(item.impact, 240) && `  Impact: ${text(item.impact, 240)}`,
+      `Argument ${index + 1}: ${text(item.title, 80) ? `${text(item.title, 80)}. ` : ""}${text(item.claim, 200)}`,
+      text(item.reasoning, 320) && `  Explanation: ${text(item.reasoning, 320)}`,
+      text(item.impact, 240) && `  Why it matters: ${text(item.impact, 240)}`,
     ])),
-    ...counters.slice(0, 3).map((item) => `Prepared answer to "${text(item.targetArgument, 120)}": ${text(item.counterpoint, 200)}`),
+    ...list(data.whyWeWin).slice(0, 3).map((item) => text(item, 240) && `Why we win: ${text(item, 240)}`),
+    ...counters.slice(0, 3).map((item) => `If they say "${text(item.targetArgument, 120)}", we answer: ${text(item.counterpoint, 200)}`),
   ]);
 }
 

@@ -51,34 +51,59 @@ const usage = { prompt_tokens: 120, completion_tokens: 80, total_tokens: 200, co
 
 const contention = (index) => ({
   id: String(index + 1),
+  title: `Fares shut people out ${index + 1}`,
   claim: `${MARK} contention ${index + 1}: fares block the riders who need transit most`,
   reasoning: "Fares are a regressive barrier concentrated on low-income riders.",
-  evidence: "Comparable jurisdictions report ridership gains after fare removal.",
+  evidence: "UITP reported in 2024 that comparable cities gained riders after removing fares.",
   needsSource: false,
   impact: "More people reach work, school, and healthcare.",
 });
 
+const counter = (index) => ({
+  targetArgument: [
+    "The lost farebox revenue has to come from somewhere.",
+    "Free buses will be overcrowded and dirty.",
+    "People do not value what they do not pay for.",
+    "Drivers will not leave their cars anyway.",
+    "Only tourists and the well-off benefit.",
+    "Cities cannot afford the extra buses.",
+  ][index],
+  counterpoint: `${MARK} answer ${index + 1}: fare collection itself costs a large share of what it brings in, so the real gap is far smaller.`,
+  ...(index % 2 === 0 ? { source: "UITP, 2024" } : {}),
+});
+
+// The role decides the shape, as the real prompt asks: the Introductor may
+// define an unclear term, R2 leans on "If they say…", and the Conclusor
+// brings reasons why we win instead of new arguments.
 const generate = (user) => {
   const length = /^Length: (\w+)/m.exec(user)?.[1] ?? "standard";
+  const role = /^Role: (\w+)/m.exec(user)?.[1] ?? "r1";
   const count = { brief: 2, standard: 3, comprehensive: 4 }[length] ?? 3;
+  const conc = role === "conc";
   return {
+    opening: {
+      hook: `${MARK} opening hook: picture a nurse who skips the night bus because the fare is a tenth of her shift's pay.`,
+      ...(role === "intro" ? { definition: "By free public transport we mean no fare at the point of use, paid for from public budgets." } : {}),
+    },
     caseStructure: {
-      thesis: `${MARK} case thesis: free transit is a net public good`,
-      framework: "Net societal benefit, weighed on access and cost.",
-      keyDefinitions: ["Public transport: publicly funded scheduled transit."],
-      burdenOfProof: "We must show the policy produces a net gain in practice.",
+      thesis: conc
+        ? `${MARK} case thesis: here is why free transit won this debate`
+        : `${MARK} case thesis: today we will show ${count} arguments that prove free transit is a net public good`,
     },
-    contentions: Array.from({ length: count }, (_, index) => contention(index)),
-    predictedOpponentCase: {
-      likelyArguments: ["The lost farebox revenue has to come from somewhere."],
-      strategicWeaknesses: ["Assumes fare revenue is the only funding model."],
-      keyClashes: ["Who actually bears the cost."],
-    },
-    counters: [{
-      targetArgument: "Funding gap",
-      counterpoint: "Fare collection itself carries substantial overhead.",
-      rebuttal: "Net cost is far below headline farebox revenue.",
-    }],
+    contentions: conc ? [] : Array.from({ length: count }, (_, index) => contention(index)),
+    counters: conc ? [] : Array.from({ length: role === "r2" ? 6 : 3 }, (_, index) => counter(index)),
+    ...(conc ? {
+      whyWeWin: [
+        "Their funding worry never answered our point that fare collection eats most of the fare.",
+        "Only our side showed who actually gets to work, school, and the doctor.",
+        "Even if some buses get busier, a full bus is the policy working.",
+      ].slice(0, length === "brief" ? 2 : 3),
+    } : {}),
+    closingLine: "That is why it is clear that free public transport pays for itself in the lives it opens up.",
+    sources: [
+      { org: "UITP", year: "2024", claim: "Ridership rose after fares were removed", url: "https://www.uitp.org/free-fares-2024" },
+      { org: "Eurostat", year: "2023", claim: "Low-income households spend more of their budget on transport" },
+    ],
     metadata: { side: "pro", format: "custom", generatedAt: new Date().toISOString() },
   };
 };

@@ -9,6 +9,7 @@ import { GenerateForm } from '@/components/features/generate/GenerateForm';
 import { GenerateResults } from '@/components/features/generate/GenerateResults';
 import { generateCase, isAIAuthError, isAIRateLimitError, isTimeoutError, type DiscoveredSource } from '@/lib/ai/client';
 import type { GenerateInput } from '@/lib/ai/schemas/generate';
+import { mergeCaseSources } from '@debatelab/core/ai/case-view';
 import { useToast } from '@/hooks/use-toast';
 import { useSubscriptionError } from '@/hooks/use-subscription-error';
 import { getUserFacingAIError } from '@/lib/ai/error-display';
@@ -185,11 +186,13 @@ export default function GeneratePage() {
         if (useSessionStore.getState().generateResult !== base) return;
         const regenerated = {
           ...base,
-          ...(section === 'structure' ? { caseStructure: next.caseStructure } : {}),
+          // A new opening replaces an older case's exordio and its framework, burden and definitions.
+          ...(section === 'opening' ? { opening: next.opening, exordio: next.exordio, caseStructure: next.caseStructure } : {}),
           ...(section === 'contentions' ? { contentions: next.contentions } : {}),
-          ...(section === 'opponent' ? { predictedOpponentCase: next.predictedOpponentCase } : {}),
-          ...(section === 'counters' ? { counters: next.counters } : {}),
-          ...(section === 'exordio' ? { exordio: next.exordio } : {}),
+          ...(section === 'counters' ? { counters: next.counters, predictedOpponentCase: next.predictedOpponentCase } : {}),
+          ...(section === 'whyWeWin' ? { whyWeWin: next.whyWeWin } : {}),
+          ...(section === 'closing' ? { closingLine: next.closingLine } : {}),
+          sources: mergeCaseSources(base.sources, next.sources),
           metadata: next.metadata,
         };
         setGenerateResult(regenerated);

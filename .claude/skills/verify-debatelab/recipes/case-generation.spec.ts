@@ -1,5 +1,5 @@
 import { readFile } from "node:fs/promises";
-import { admin, AI_TIMEOUT, aiResponse, chooseForMotion, type Evidence, expect, expectProviderCalls, fake, LIVE, signIn, startDebate, test } from "./fixtures";
+import { admin, AI_TIMEOUT, aiResponse, chooseForMotion, type Evidence, expect, expectProviderCalls, fake, LIVE, providerCalls, signIn, startDebate, test } from "./fixtures";
 
 // Feature map: features/case-generation.md.
 const motion = "This House would make public transport free at the point of use";
@@ -149,6 +149,54 @@ test("gen-flowchart: the Flowchart builds from the Current Debate's case, and it
   await evidence.shot("02-built-from-case-hu");
 });
 
+test("gen-roles: the speaker role shapes the case: Introductor, R2 and Conclusor", async ({ signedIn: page, evidence }) => {
+  await openGenerate(page);
+  const pickRole = async (name: string) => {
+    await page.getByRole("combobox", { name: "Speaker Role" }).click();
+    await page.getByRole("option", { name }).click();
+  };
+  const run = async (role: string) => {
+    const response = aiResponse(page, "generate");
+    await page.getByRole("button", { name: "Generate debate case" }).click();
+    const body = await response;
+    const call = (await providerCalls()).filter((item) => item.feature === "generate").at(-1);
+    expect(call?.user).toContain(`Role: ${role}`);
+    return body.output as unknown as CaseOutput & { opening?: { definition?: string }; counters: unknown[]; whyWeWin?: string[]; closingLine?: string };
+  };
+
+  await pickRole("Introductor (4 min)");
+  const intro = await run("intro");
+  await expect(page.getByText(intro.caseStructure.thesis).first()).toBeVisible();
+  await expect(page.getByRole("button", { name: "Regenerate Opening" })).toBeVisible();
+  if (intro.opening?.definition) await expect(page.getByText("What we mean:")).toBeVisible();
+  if (!LIVE) expect(intro.opening?.definition).toBeTruthy();
+  await evidence.shot("01-introductor");
+  await evidence.aria("01-introductor");
+
+  await pickRole("R2 - Rebuttal/Build (6 min)");
+  const r2 = await run("r2");
+  await expect(page.getByText(r2.caseStructure.thesis).first()).toBeVisible();
+  // Only the Introductor defines a term.
+  expect(r2.opening?.definition).toBeFalsy();
+  await expect(page.getByText("What we mean:")).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Regenerate If they say…" })).toBeVisible();
+  await expect(page.getByText("They say", { exact: true })).toHaveCount(r2.counters.length);
+  if (!LIVE) expect(r2.counters).toHaveLength(6);
+  await evidence.shot("02-r2");
+  await evidence.aria("02-r2");
+
+  await pickRole("Conclusor (3 min)");
+  const conc = await run("conc");
+  expect(conc.contentions).toEqual([]);
+  expect(conc.whyWeWin?.length ?? 0).toBeGreaterThanOrEqual(2);
+  await expect(page.getByRole("button", { name: "Regenerate Why we win" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Regenerate Arguments" })).toHaveCount(0);
+  for (const reason of conc.whyWeWin ?? []) await expect(page.getByText(reason).first()).toBeVisible();
+  if (conc.closingLine) await expect(page.getByText(conc.closingLine).first()).toBeVisible();
+  await evidence.shot("03-conclusor");
+  await evidence.aria("03-conclusor");
+});
+
 test("gen-research: generation researches the web and cites what it found", async ({ signedIn: page, evidence }) => {
   const { body } = await generate(page);
   await evidence.json("01-generate-response", body);
@@ -202,7 +250,7 @@ test("gen-regenerate: regenerating one section keeps the rest of the case and it
   await expect(overlay).toBeVisible();
   await expect(page.getByText(thesis).first()).toBeVisible();
   await expect(page.getByRole("button", { name: "PDF", exact: true })).toBeVisible();
-  await expect(page.getByRole("button", { name: "Regenerate Case Structure" })).toBeDisabled();
+  await expect(page.getByRole("button", { name: "Regenerate Opening" })).toBeDisabled();
   // The form button reads "Generating..." while busy, so find it by its tour anchor.
   await expect(page.locator('[data-tour="generate-button"]')).toBeDisabled();
   await evidence.shot("02-regenerating-one-section");
@@ -214,7 +262,7 @@ test("gen-regenerate: regenerating one section keeps the rest of the case and it
   await expect(page.getByText("Section regenerated").first()).toBeVisible({ timeout: AI_TIMEOUT });
   await expect(overlay).toHaveCount(0);
   await expect(page.getByText(thesis).first()).toBeVisible();
-  await expect(page.getByRole("button", { name: "Regenerate Case Structure" })).toBeEnabled();
+  await expect(page.getByRole("button", { name: "Regenerate Opening" })).toBeEnabled();
   await evidence.shot("03-regenerated");
 });
 

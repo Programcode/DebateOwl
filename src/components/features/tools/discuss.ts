@@ -42,7 +42,9 @@ export function generateDiscussPrompt(result: GenerateOutput, t: TFunction) {
     `**${t('discuss.generate.thesis', 'Thesis')}:** ${result.caseStructure.thesis}`,
     '',
     `**${t('discuss.generate.arguments', 'Arguments')}:**`,
-    ...result.contentions.map((contention, index) => `${index + 1}. ${contention.claim}`),
+    ...(result.contentions.length
+      ? result.contentions.map((contention, index) => `${index + 1}. ${contention.title ?? contention.claim}`)
+      : (result.whyWeWin ?? []).map((reason, index) => `${index + 1}. ${reason}`)),
     '',
     t('discuss.generate.ask', 'Can we refine this?'),
   ].join('\n');

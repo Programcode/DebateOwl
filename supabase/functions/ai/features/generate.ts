@@ -12,7 +12,7 @@ import {
   getResearchSources,
   withResearchPreferences,
 } from "../../_shared/research.ts";
-import { enforceGenerateControls } from "../../_shared/control-enforcement.ts";
+import { enforceGenerateControls, enforceGenerateSources } from "../../_shared/control-enforcement.ts";
 import { boundPromptSources } from "../../_shared/prompts.ts";
 import { JEV_MODEL } from "../../_shared/jev.ts";
 import {
@@ -112,6 +112,13 @@ export async function handleGenerate(ctx: FeatureContext): Promise<Response> {
     metadata.provider = provider;
   }
   enforceGenerateControls(output, side, format, length, role);
+  // Links the model saw in this request: research pages, search results, Library origins.
+  enforceGenerateSources(output, [
+    ...research.readContent.map((page) => page.url),
+    ...research.searches.flatMap((search) => search.results.map((result) => result.url)),
+    ...research.rankedResults.map((result) => result.url),
+    ...boundPromptSources(sources).flatMap((source) => source.origin ? [source.origin] : []),
+  ].filter((url): url is string => typeof url === "string" && url.length > 0));
 
   // Build discovered sources from research
   const activeAssessmentByKey = new Map(sourceAssessments.map((assessment) => [assessment.key, assessment]));

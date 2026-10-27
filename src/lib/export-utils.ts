@@ -1,5 +1,6 @@
 import i18n from '@/i18n';
 import type { GenerateOutput } from './ai/schemas/generate';
+import { readCase, sourceLine } from '@debatelab/core/ai/case-view';
 import type { AttackOutput } from './ai/schemas/attack';
 import type { BrainstormOutput } from './ai/schemas/brainstorm';
 import type { FactoidsOutput } from './ai/schemas/factoids';
@@ -15,6 +16,11 @@ import {
   getSparringWinnerLabel,
 } from './export-sparring-labels';
 
+/** What every case export needs; the older sections are optional. */
+function hasCaseData(result: GenerateOutput | undefined): result is GenerateOutput {
+  return Boolean(result?.metadata && result.caseStructure && Array.isArray(result.contentions) && Array.isArray(result.counters));
+}
+
 /** Triggers a browser download from a Blob. */
 export function saveBlob(blob: Blob, filename: string): void {
   const url = URL.createObjectURL(blob);
@@ -29,24 +35,17 @@ export function saveBlob(blob: Blob, filename: string): void {
 
 export async function exportCaseToDocx(result: GenerateOutput): Promise<boolean> {
   try {
-    if (
-      !result?.metadata ||
-      !result.caseStructure ||
-      !Array.isArray(result.contentions) ||
-      !result.predictedOpponentCase ||
-      !Array.isArray(result.counters)
-    ) {
+    if (!hasCaseData(result)) {
       throw new Error('Missing required case data for export.');
     }
 
     // Dynamically import heavy libraries only when needed
     const { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType } = await import('docx');
 
-    const thesis = result.caseStructure.thesis?.trim() || 'Untitled Thesis';
+    const view = readCase(result);
+    const thesis = view.opening.roadmap || 'Untitled Thesis';
     const motion = (result.metadata as Record<string, unknown>)?.motion as string | undefined;
     const thesisTitle = motion || thesis.split('.')[0] || thesis;
-    const framework = result.caseStructure.framework?.trim() || 'No framework provided.';
-    const burdenOfProof = result.caseStructure.burdenOfProof?.trim() || 'No burden of proof provided.';
     const sideLabel = result.metadata.side === 'pro'
       ? i18n.t('export.proposition')
       : result.metadata.side === 'con'
@@ -58,61 +57,43 @@ export async function exportCaseToDocx(result: GenerateOutput): Promise<boolean>
       ? formatEuropeanDate(generatedAtDate)
       : 'Unknown';
 
-    const contentions = Array.isArray(result.contentions) ? result.contentions : [];
-    const contentionsSection = contentions.length > 0
-      ? contentions.flatMap((c, i) => {
-        const claim = c?.claim || 'Untitled argument';
-        const reasoning = c?.reasoning || 'No reasoning provided.';
-        const evidence = c?.evidence || 'No evidence provided.';
-        const impact = c?.impact || 'No impact provided.';
-        return [
-          new Paragraph({
-            children: [new TextRun({ text: `Argument ${i + 1}: ${claim}`, bold: true, size: 28 })],
-            spacing: { before: 200, after: 100 },
-          }),
-          new Paragraph({
-            children: [new TextRun({ text: `${i18n.t('export.reasoning')}: `, italics: true }), new TextRun(reasoning)],
-            spacing: { after: 100 },
-          }),
-          new Paragraph({
-            children: [new TextRun({ text: `${i18n.t('export.evidence')}: `, italics: true }), new TextRun(evidence)],
-            spacing: { after: 100 },
-          }),
-          new Paragraph({
-            children: [new TextRun({ text: `${i18n.t('export.impact')}: `, italics: true }), new TextRun(impact)],
-            spacing: { after: 300 },
-          }),
-        ];
-      })
-      : [new Paragraph({ text: i18n.t('export.noArguments'), spacing: { after: 200 } })];
+    const heading = (text: string, before = 0) =>
+      new Paragraph({ text: text.toUpperCase(), heading: HeadingLevel.HEADING_2, ...(before ? { spacing: { before } } : {}) });
+    const labelled = (label: string, text: string, after = 100, bold = false) => new Paragraph({
+      children: [new TextRun({ text: `${label}: `, ...(bold ? { bold: true } : { italics: true }) }), new TextRun(text)],
+      spacing: { after },
+    });
+    const bullets = (items: string[]) => items.map((item) => new Paragraph({ text: '• ' + item, spacing: { after: 100 } }));
+    const legacyBlock = (label: string, text: string | undefined) => text ? [labelled(label, text, 200, true)] : [];
 
-    const predictedArguments = Array.isArray(result.predictedOpponentCase.likelyArguments)
-      ? result.predictedOpponentCase.likelyArguments
-      : [];
-    const predictedSection = predictedArguments.length > 0
-      ? predictedArguments.map(arg => new Paragraph({ text: "• " + arg, spacing: { after: 100 } }))
-      : [new Paragraph({ text: i18n.t('export.noOpponentArgs'), spacing: { after: 100 } })];
+    const openingSection = [
+      ...(view.opening.hook ? [new Paragraph({ children: [new TextRun({ text: view.opening.hook, italics: true })], spacing: { after: 200 } })] : []),
+      ...(view.opening.definition ? [labelled(i18n.t('export.definition'), view.opening.definition, 200, true)] : []),
+      ...(view.opening.roadmap ? [new Paragraph({ text: view.opening.roadmap, spacing: { after: 200 } })] : []),
+      ...legacyBlock(i18n.t('export.framework'), view.legacy.framework),
+      ...legacyBlock(i18n.t('export.burdenOfProof'), view.legacy.burdenOfProof),
+      ...(view.legacy.definitions.length ? [labelled(i18n.t('export.keyDefinitions'), view.legacy.definitions.join('; '), 200, true)] : []),
+    ];
 
-    const counters = Array.isArray(result.counters) ? result.counters : [];
-    const countersSection = counters.length > 0
-      ? counters.flatMap(c => {
-        const target = c?.targetArgument || 'Unknown target';
-        const counterpoint = c?.counterpoint || 'No counterpoint provided.';
-        const rebuttal = c?.rebuttal || 'No rebuttal provided.';
-        return [
-          new Paragraph({
-            children: [new TextRun({ text: `${i18n.t('export.target')}: `, bold: true }), new TextRun(target)],
-          }),
-          new Paragraph({
-            children: [new TextRun({ text: `${i18n.t('export.counter')}: `, italics: true }), new TextRun(counterpoint)],
-          }),
-          new Paragraph({
-            children: [new TextRun({ text: `${i18n.t('export.rebuttal')}: `, italics: true }), new TextRun(rebuttal)],
-            spacing: { after: 200 },
-          }),
-        ];
-      })
-      : [new Paragraph({ text: i18n.t('export.noCounters'), spacing: { after: 200 } })];
+    const argumentsSection = view.arguments.flatMap((argument, i) => [
+      new Paragraph({
+        children: [new TextRun({ text: `${i18n.t('export.argumentNumber', { number: i + 1 })}: ${argument.title ?? argument.point}`, bold: true, size: 28 })],
+        spacing: { before: 200, after: 100 },
+      }),
+      ...(argument.title && argument.point ? [labelled(i18n.t('export.point'), argument.point)] : []),
+      ...(argument.explanation ? [labelled(i18n.t('export.explanation'), argument.explanation)] : []),
+      ...(argument.evidence ? [labelled(i18n.t('export.evidence'), argument.evidence)] : []),
+      ...(argument.whyItMatters ? [labelled(i18n.t('export.whyItMatters'), argument.whyItMatters, 300)] : []),
+    ]);
+
+    const answersSection = view.ifTheySay.flatMap((answer) => [
+      new Paragraph({
+        children: [new TextRun({ text: `${i18n.t('export.theySay')}: `, bold: true }), new TextRun(answer.theySay)],
+      }),
+      labelled(i18n.t('export.weAnswer'), answer.weAnswer, answer.inRound || answer.source ? 100 : 200),
+      ...(answer.inRound ? [labelled(i18n.t('export.rebuttal'), answer.inRound, answer.source ? 100 : 200)] : []),
+      ...(answer.source ? [labelled(i18n.t('export.source'), answer.source, 200)] : []),
+    ]);
 
     const doc = new Document({
       sections: [
@@ -140,40 +121,16 @@ export async function exportCaseToDocx(result: GenerateOutput): Promise<boolean>
               spacing: { after: 400 },
             }),
 
-            // Exordio (if present)
-            ...(result.exordio ? [
-              new Paragraph({ text: i18n.t('export.exordio').toUpperCase(), heading: HeadingLevel.HEADING_2 }),
-              new Paragraph({
-                children: [new TextRun({ text: `${i18n.t('export.hook')}: `, bold: true }), new TextRun(result.exordio.hook || '')],
-                spacing: { after: 100 },
-              }),
-              new Paragraph({
-                children: [new TextRun({ text: `${i18n.t('export.transition')}: `, bold: true }), new TextRun(result.exordio.transition || '')],
-                spacing: { after: 400 },
-              }),
+            ...(openingSection.length ? [heading(i18n.t('export.opening')), ...openingSection] : []),
+            ...(argumentsSection.length ? [heading(i18n.t('export.arguments'), 200), ...argumentsSection] : []),
+            ...(view.whyWeWin.length ? [heading(i18n.t('export.whyWeWin'), 200), ...bullets(view.whyWeWin)] : []),
+            ...(answersSection.length || view.legacy.likelyArguments.length ? [
+              heading(i18n.t('export.ifTheySay'), 400),
+              ...answersSection,
+              ...(view.legacy.likelyArguments.length ? [new Paragraph({ children: [new TextRun({ text: i18n.t('export.predictedOpponent'), bold: true })], spacing: { before: 200, after: 100 } }), ...bullets(view.legacy.likelyArguments)] : []),
             ] : []),
-
-            // Thesis & Framework
-            new Paragraph({ text: i18n.t('export.thesis').toUpperCase(), heading: HeadingLevel.HEADING_2 }),
-            new Paragraph({ text: thesis, spacing: { after: 200 } }),
-
-            new Paragraph({ text: i18n.t('export.framework').toUpperCase(), heading: HeadingLevel.HEADING_2 }),
-            new Paragraph({ text: framework, spacing: { after: 200 } }),
-
-            new Paragraph({ text: i18n.t('export.burdenOfProof').toUpperCase(), heading: HeadingLevel.HEADING_2 }),
-            new Paragraph({ text: burdenOfProof, spacing: { after: 400 } }),
-
-            // Contentions
-            new Paragraph({ text: i18n.t('export.arguments').toUpperCase(), heading: HeadingLevel.HEADING_2 }),
-            ...contentionsSection,
-
-            // Predictions
-            new Paragraph({ text: i18n.t('export.predictedOpponent').toUpperCase(), heading: HeadingLevel.HEADING_2, spacing: { before: 400 } }),
-            ...predictedSection,
-
-            // Counters
-            new Paragraph({ text: i18n.t('export.counters').toUpperCase(), heading: HeadingLevel.HEADING_2, spacing: { before: 400 } }),
-            ...countersSection,
+            ...(view.closingLine ? [heading(i18n.t('export.closingLine'), 400), new Paragraph({ children: [new TextRun({ text: view.closingLine, bold: true })], spacing: { after: 200 } })] : []),
+            ...(view.sources.length ? [heading(i18n.t('export.sources'), 400), ...bullets(view.sources.map(sourceLine))] : []),
           ],
         },
       ],
@@ -552,13 +509,7 @@ async function callGoogleDocsEdgeFunction(
 }
 
 export async function exportCaseToGoogleDocs(result: GenerateOutput): Promise<GoogleDocsExportResult> {
-  if (
-    !result?.metadata ||
-    !result.caseStructure ||
-    !Array.isArray(result.contentions) ||
-    !result.predictedOpponentCase ||
-    !Array.isArray(result.counters)
-  ) {
+  if (!hasCaseData(result)) {
     return { success: false, error: 'Missing required case data for export.' };
   }
   return callGoogleDocsEdgeFunction('generate', result);

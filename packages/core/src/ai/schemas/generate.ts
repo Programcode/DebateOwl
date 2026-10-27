@@ -14,8 +14,11 @@ export const GenerateInputSchema = z.object({
 
 export type GenerateInput = z.infer<typeof GenerateInputSchema>;
 
+// Each argument reads Title, Point (claim), Explanation (reasoning), Evidence and
+// Why it matters (impact). The keys stay as they were so saved cases keep loading.
 export const ContentionSchema = z.object({
   id: z.string(),
+  title: z.string().optional(),
   claim: z.string(),
   reasoning: z.string(),
   evidence: z.string(),
@@ -24,30 +27,57 @@ export const ContentionSchema = z.object({
   impact: z.string(),
 });
 
+/** Older cases only: the Introductor's hook and bridge, now part of the opening. */
 export const ExordioSchema = z.object({
   hook: z.string(),
   transition: z.string(),
 });
 
+export const OpeningSchema = z.object({
+  hook: z.string(),
+  /** One line defining a motion term, only when the term is genuinely unclear. */
+  definition: z.string().optional(),
+});
+
+/** One "If they say…" item: their claim, our answer, and an optional source. */
+export const CounterSchema = z.object({
+  targetArgument: z.string(),
+  counterpoint: z.string(),
+  /** Older cases only: a second, in-round phrasing of the answer. */
+  rebuttal: z.string().optional(),
+  source: z.string().optional(),
+});
+
+export const CaseSourceSchema = z.object({
+  org: z.string(),
+  year: z.string().optional(),
+  claim: z.string(),
+  url: z.string().optional(),
+});
+
 export const GenerateOutputSchema = z.object({
+  opening: OpeningSchema.optional(),
   exordio: ExordioSchema.optional(),
+  // thesis is the opening's "we will show N arguments that prove…" line. The
+  // other three are older cases' sections, shown only when they have content.
   caseStructure: z.object({
     thesis: z.string(),
-    framework: z.string(),
-    keyDefinitions: z.array(z.string()),
-    burdenOfProof: z.string(),
+    framework: z.string().optional(),
+    keyDefinitions: z.array(z.string()).optional(),
+    burdenOfProof: z.string().optional(),
   }),
   contentions: z.array(ContentionSchema),
+  /** Older cases only; new cases fold the opponent's arguments into counters. */
   predictedOpponentCase: z.object({
-    likelyArguments: z.array(z.string()),
-    strategicWeaknesses: z.array(z.string()),
-    keyClashes: z.array(z.string()),
-  }),
-  counters: z.array(z.object({
-    targetArgument: z.string(),
-    counterpoint: z.string(),
-    rebuttal: z.string(),
-  })),
+    likelyArguments: z.array(z.string()).optional(),
+    strategicWeaknesses: z.array(z.string()).optional(),
+    keyClashes: z.array(z.string()).optional(),
+  }).optional(),
+  counters: z.array(CounterSchema),
+  /** Conclusor only: two or three summaries of why our side wins. */
+  whyWeWin: z.array(z.string()).optional(),
+  closingLine: z.string().optional(),
+  sources: z.array(CaseSourceSchema).optional(),
   metadata: z.object({
     side: z.enum(['pro', 'con']),
     format: z.string(),
@@ -71,3 +101,5 @@ export const GenerateOutputSchema = z.object({
 
 export type GenerateOutput = z.infer<typeof GenerateOutputSchema>;
 export type Contention = z.infer<typeof ContentionSchema>;
+export type Counter = z.infer<typeof CounterSchema>;
+export type CaseSource = z.infer<typeof CaseSourceSchema>;

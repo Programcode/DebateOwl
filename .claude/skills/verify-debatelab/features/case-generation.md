@@ -1,6 +1,6 @@
 # Case generation
 
-A signed-in user enters a motion on Generate and receives a structured debate case: thesis, framework, contentions, the predicted opponent case, and counters. The case can be saved to the account and reopened from History, or exported as PDF or DOCX.
+A signed-in user enters a motion on Generate and receives a structured debate case: an opening (hook and "we will show N arguments" line), arguments (title, point, explanation, evidence, why it matters), an "If they say…" list, a closing line and a sources list. The role shapes it: the Introductor may add one definition line, R2 has more "If they say…" answers, and the Conclusor has 2-3 "Why we win" points instead of new arguments. Saved cases from before still show their old sections (framework, burden of proof, definitions, predicted arguments) when they have content. The case can be saved to the account and reopened from History, or exported as PDF or DOCX.
 
 ## Sub-features
 
@@ -10,8 +10,9 @@ A signed-in user enters a motion on Generate and receives a structured debate ca
 - `gen-quota` shows the dialog `Daily Access Paused` when the account has no quota, without calling the provider.
 - `gen-save` saves a one-off case (the motion dialog answered with `Not now, use it once`) under a title into `cases` with `debate_id: null`. It appears in History under `One-off and unsorted work`, including from a fresh browser context.
 - `gen-regenerate` regenerates one section. Only that section shows the overlay `Regenerating <section>…`; the rest of the case and the result toolbar stay on screen, and every regenerate button and the form's submit button are disabled until it finishes.
+- `gen-roles` shows the role's shape: on `/app/generate` pick the `Speaker Role` option `Introductor (4 min)` and the Opening card holds a `What we mean:` line; pick `R2 - Rebuttal/Build (6 min)` and `If they say…` lists six answers; pick `Conclusor (3 min)` and `Why we win` replaces `Arguments`.
 - `gen-export` downloads a `.pdf` (starting with `%PDF`) and a `.docx` (starting with `PK`).
-- `gen-flowchart` builds a flowchart from the Current Debate's case. `/app/flowchart` opens the template; the button `Build from current case` replaces it with the thesis, one node per contention (claim and evidence), the predicted attacks, and the counters, fitted to the canvas. Node titles the app wrote (`Thesis`, `Argument 1`) follow the UI language.
+- `gen-flowchart` builds a flowchart from the Current Debate's case. `/app/flowchart` opens the template; the button `Build from current case` replaces it with the thesis, one node per argument (title, point and evidence, or a Conclusor's reasons why we win), what the other side will say, and our answers, fitted to the canvas. Node titles the app wrote (`Thesis`, `Argument 1`) follow the UI language.
 
 ## How to get to it (user POV)
 
@@ -33,7 +34,7 @@ Preconditions:
 - **Cut off.** Call `await fake.truncate("generate")`, start the debate, and generate. The first reply stops halfway with `finish_reason: "length"`; the Edge Function retries once with a larger cap, and the case appears with no error. `fake.requests()` has two `generate` entries, the second with a larger `maxTokens`. Fake mode only.
 - **Cancel.** While a generation runs, the results column shows `Writing your case…` and a `Cancel` button. Cancel stops the request and shows no error.
 - **Quota.** Update `user_settings` to set `daily_limit_override: 0` through `admin`, start the debate, then generate. The dialog shows `Daily Access Paused`. `fake.requests()` has no `generate` entry.
-- **Regenerate a section.** After generating, click the button named `Regenerate Arguments` (the section titles are `Case Structure`, `Arguments`, `Predicted Opponent Case`, `Prepared Counters`). Hold the request with `page.route("**/functions/v1/ai", ...)` to check the in-flight state: a `status` with `Regenerating Arguments` is visible and `Regenerate Case Structure` is disabled. The toast `Section regenerated` follows. A full generation shows no toast: the result appears in place (and scrolls into view on phones).
+- **Regenerate a section.** After generating, click the button named `Regenerate Arguments` (the section titles are `Opening`, `Arguments`, `If they say…` and `Closing line`; a Conclusor case shows `Why we win` instead of `Arguments` and `If they say…`). Hold the request with `page.route("**/functions/v1/ai", ...)` to check the in-flight state: a `status` with `Regenerating Arguments` is visible and `Regenerate Opening` is disabled. The toast `Section regenerated` follows. A full generation shows no toast: the result appears in place (and scrolls into view on phones).
 - **Flowchart.** After generating in the debate, open `/app/flowchart` and click the button named `Build from current case` (Hungarian: `Létrehozás a jelenlegi esetből`). It appears only when the case belongs to the Current Debate, or to one-off work while no debate is chosen. The contention claims are visible, and an edge is a button named `From Thesis to Argument 1`.
 - **Export.** Wait for `page.waitForEvent("download")` while clicking the button named `PDF` or `DOCX` (use `exact`). Check the suggested filename's extension and the file's magic bytes.
 

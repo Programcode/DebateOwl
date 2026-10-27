@@ -43,7 +43,7 @@ test("live-generate: a case fills in section by section while the model writes i
   // Before the answer is complete, the draft shows what is written so far.
   const draft = page.getByTestId("live-draft");
   await expect(draft).toBeVisible({ timeout: AI_TIMEOUT });
-  await expect(draft.getByRole("region", { name: "Case Structure" })).toBeVisible();
+  await expect(draft.getByRole("region", { name: "Opening" })).toBeVisible();
   await expect(draft.getByTestId("live-caret")).toHaveCount(1);
   await expect(draft.getByRole("button", { name: "Cancel" })).toBeVisible();
   await evidence.shot("01-writing-live");

@@ -2,6 +2,7 @@
 // Professional PDF export for all debate features using jsPDF
 import i18n from '@/i18n';
 import type { GenerateOutput } from './ai/schemas/generate';
+import { readCase, sourceLine } from '@debatelab/core/ai/case-view';
 import type { AttackOutput } from './ai/schemas/attack';
 import type { BrainstormOutput } from './ai/schemas/brainstorm';
 import type { FactoidsOutput } from './ai/schemas/factoids';
@@ -341,7 +342,7 @@ export async function exportCaseToPdf(result: GenerateOutput): Promise<boolean> 
             doc.setFontSize(12);
             doc.setFont(PDF_FONT, 'bold');
             doc.setTextColor(...COLORS.dark);
-            doc.text(i18n.t('export.contentionNumber', { number: index + 1 }), margin + textIndent, pdf.y);
+            doc.text(i18n.t('export.argumentNumber', { number: index + 1 }), margin + textIndent, pdf.y);
             pdf.y += 5;
 
             // Claim text
@@ -374,36 +375,34 @@ export async function exportCaseToPdf(result: GenerateOutput): Promise<boolean> 
             pdf.y += 6;
         };
 
-        // Exordio (if present)
-        if (result.exordio) {
-            addSectionTitle(i18n.t('export.exordio'), COLORS.primary);
-            if (result.exordio.hook) {
-                addSubsectionLabel(i18n.t('export.hook'));
-                addParagraph(result.exordio.hook, 2);
-            }
-            if (result.exordio.transition) {
-                addSubsectionLabel(i18n.t('export.transition'));
-                addParagraph(result.exordio.transition, 2);
-            }
-            addSeparator(COLORS.primary);
-        }
+        const view = readCase(result);
 
-        // Case Structure: one section heading, then a label for each part, so no heading repeats.
-        addSectionTitle(i18n.t('export.caseStructure'));
-        addSubsectionLabel(i18n.t('export.thesis'));
-        addParagraph(result.caseStructure?.thesis || i18n.t('export.noThesis'), 2);
-        if (result.caseStructure?.framework) {
-            addSubsectionLabel(i18n.t('export.framework'));
-            addParagraph(result.caseStructure.framework, 2);
+        // Opening: hook, an unclear term when there is one, and the roadmap.
+        // Older cases add their framework, burden and definitions here.
+        addSectionTitle(i18n.t('export.opening'), COLORS.primary);
+        if (view.opening.hook) addParagraph(view.opening.hook, 2);
+        if (view.opening.definition) {
+            addSubsectionLabel(i18n.t('export.definition'));
+            addParagraph(view.opening.definition, 2);
         }
-        if (result.caseStructure?.burdenOfProof) {
+        addSubsectionLabel(i18n.t('export.roadmap'));
+        addParagraph(view.opening.roadmap || i18n.t('export.noThesis'), 2);
+        if (view.legacy.framework) {
+            addSubsectionLabel(i18n.t('export.framework'));
+            addParagraph(view.legacy.framework, 2);
+        }
+        if (view.legacy.burdenOfProof) {
             addSubsectionLabel(i18n.t('export.burdenOfProof'));
-            addParagraph(result.caseStructure.burdenOfProof, 2);
+            addParagraph(view.legacy.burdenOfProof, 2);
+        }
+        if (view.legacy.definitions.length) {
+            addSubsectionLabel(i18n.t('export.keyDefinitions'));
+            addBulletList(view.legacy.definitions);
         }
         addSeparator(COLORS.success);
 
         // Arguments with accent bars
-        if (result.contentions?.length) {
+        if (view.arguments.length) {
             addSectionTitle(i18n.t('export.arguments'), COLORS.success);
 
             // Cycle through accent colors for visual variety
@@ -414,33 +413,51 @@ export async function exportCaseToPdf(result: GenerateOutput): Promise<boolean> 
                 [139, 92, 246], // Purple
             ];
 
-            result.contentions.forEach((c, i) => {
+            view.arguments.forEach((argument, i) => {
                 const details: { label: string; text: string }[] = [];
-                if (c.reasoning) details.push({ label: i18n.t('export.reasoning'), text: c.reasoning });
-                if (c.evidence) details.push({ label: i18n.t('export.evidence'), text: c.evidence });
-                if (c.impact) details.push({ label: i18n.t('export.impact'), text: c.impact });
+                if (argument.title && argument.point) details.push({ label: i18n.t('export.point'), text: argument.point });
+                if (argument.explanation) details.push({ label: i18n.t('export.explanation'), text: argument.explanation });
+                if (argument.evidence) details.push({ label: i18n.t('export.evidence'), text: argument.evidence });
+                if (argument.whyItMatters) details.push({ label: i18n.t('export.whyItMatters'), text: argument.whyItMatters });
 
-                addContentionBlock(i, c.claim || '', details, accentColors[i % accentColors.length]);
+                addContentionBlock(i, argument.title ?? argument.point, details, accentColors[i % accentColors.length]);
             });
             addSeparator(COLORS.warning);
         }
 
-        // Predicted Opponent Case
-        if (result.predictedOpponentCase?.likelyArguments?.length) {
-            addSectionTitle(i18n.t('export.predictedOpponent'), COLORS.warning);
-            addBulletList(result.predictedOpponentCase.likelyArguments);
-            addSeparator(COLORS.danger);
+        // Conclusor: the reasons we win replace new arguments.
+        if (view.whyWeWin.length) {
+            addSectionTitle(i18n.t('export.whyWeWin'), COLORS.success);
+            view.whyWeWin.forEach((reason, i) => addParagraph(`${i + 1}. ${reason}`, 2));
+            addSeparator(COLORS.warning);
         }
 
-        // Counters
-        if (result.counters?.length) {
-            addSectionTitle(i18n.t('export.counters'), COLORS.danger);
-            result.counters.forEach((c) => {
-                addSubsectionLabel(`${i18n.t('export.target')}: ${c.targetArgument || ''}`);
-                if (c.counterpoint) addParagraph(`${i18n.t('export.counter')}: ${c.counterpoint}`, 4);
-                if (c.rebuttal) addParagraph(`${i18n.t('export.rebuttal')}: ${c.rebuttal}`, 4);
+        // If they say…: their claim, our answer, the source.
+        if (view.ifTheySay.length || view.legacy.likelyArguments.length) {
+            addSectionTitle(i18n.t('export.ifTheySay'), COLORS.danger);
+            view.ifTheySay.forEach((answer) => {
+                addSubsectionLabel(`${i18n.t('export.theySay')}: ${answer.theySay}`);
+                if (answer.weAnswer) addParagraph(`${i18n.t('export.weAnswer')}: ${answer.weAnswer}`, 4);
+                if (answer.inRound) addParagraph(`${i18n.t('export.rebuttal')}: ${answer.inRound}`, 4);
+                if (answer.source) addParagraph(`${i18n.t('export.source')}: ${answer.source}`, 4);
                 pdf.y += 3;
             });
+            if (view.legacy.likelyArguments.length) {
+                addSubsectionLabel(i18n.t('export.predictedOpponent'));
+                addBulletList(view.legacy.likelyArguments);
+            }
+        }
+
+        if (view.closingLine) {
+            addSeparator(COLORS.primary);
+            addSectionTitle(i18n.t('export.closingLine'), COLORS.primary);
+            addParagraph(view.closingLine, 2);
+        }
+
+        if (view.sources.length) {
+            addSeparator(COLORS.secondary);
+            addSectionTitle(i18n.t('export.sources'), COLORS.secondary);
+            addBulletList(view.sources.map(sourceLine));
         }
 
         addFooter();
