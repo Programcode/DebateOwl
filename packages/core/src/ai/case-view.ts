@@ -140,7 +140,7 @@ export function sourceLine(source: CaseSource): string {
  * A regenerated section can cite new sources while the rest of the case still
  * cites the old ones, so the list keeps both, each source once.
  */
-export function mergeCaseSources(current: CaseSource[] | undefined, next: CaseSource[] | undefined): CaseSource[] | undefined {
+export function mergeCaseSources(current: CaseSource[] | null | undefined, next: CaseSource[] | null | undefined): CaseSource[] | undefined {
   const seen = new Set<string>();
   const merged = [...(next ?? []), ...(current ?? [])].filter((source) => {
     const key = (source.url || `${source.org}|${source.claim}`).trim().toLowerCase();

@@ -16,6 +16,23 @@ describe('generated case schema', () => {
     expect(parsed.counters[0].rebuttal).toBe('Net cost is far below headline farebox revenue.');
   });
 
+  it('accepts null where the model was told to leave a field out', () => {
+    const parsed = GenerateOutputSchema.parse({
+      ...NEW_CASE,
+      opening: { hook: 'Hook', definition: null },
+      contentions: [{ ...NEW_CASE.contentions[0], title: null }],
+      counters: [{ ...NEW_CASE.counters[0], source: null }],
+      whyWeWin: null,
+      closingLine: null,
+      sources: [{ org: 'UNICEF', year: null, claim: 'Claim', url: null }],
+    });
+    const view = readCase(parsed);
+    expect(view.opening.definition).toBeUndefined();
+    expect(view.arguments[0].title).toBeUndefined();
+    expect(view.whyWeWin).toEqual([]);
+    expect(view.sources).toEqual([{ org: 'UNICEF', claim: 'Claim', year: undefined, url: undefined }]);
+  });
+
   it('keeps the new sections instead of stripping them as unknown keys', () => {
     const parsed = GenerateOutputSchema.parse({ ...NEW_CASE, whyWeWin: ['They never answered our point.'] });
     expect(parsed.opening?.hook).toBe(NEW_CASE.opening?.hook);
