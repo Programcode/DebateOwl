@@ -20,7 +20,7 @@
     },
     "timer": {
       "question": "Is there a free debate timer that knows each format's speech times?",
-      "answer": "Yes, this one. Pick Public Forum, Lincoln-Douglas, Policy, British Parliamentary, World Schools, Asian Parliamentary or the school 4-6-6-3 format, and it loads the speech order and lengths, shows the protected time when points of information are not allowed, and gives each side a prep bank in Public Forum, Lincoln-Douglas and Policy. It is free, needs no account, and keeps a running round through a page reload."
+      "answer": "Yes: the free {{product}} debate timer on this page. Pick Public Forum, Lincoln-Douglas, Policy, British Parliamentary, World Schools, Asian Parliamentary or the school 4-6-6-3 format, and it loads the speech order and lengths, shows the protected time when points of information are not allowed, and gives each side a prep bank in Public Forum, Lincoln-Douglas and Policy. It is free, needs no account, and keeps a running round through a page reload."
     },
     "motions": {
       "question": "Where can I get random debate motions for practice?",

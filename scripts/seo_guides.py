@@ -91,7 +91,8 @@ GUIDES = {
         ],
     },
     "ai-debate-coach": {
-        "modified": "2026-10-21",
+        "modified": "2026-10-27",
+        "definition": ("What is an AI debate coach?", "AI debate coach", "A chat tool that answers a debater's prep questions about burdens, clash, weighing and speech structure and gives feedback on practice speeches, for the debater to test and adapt."),
         "features": [
             ("Strategy help", "Ask which clash decides the round, what your burden is and where to spend your speaking time, with answers that use your debate's motion and sources."),
             ("Speech structure", "Get an outline for a constructive, rebuttal, summary or reply speech: the order of points and how long to give each one."),
@@ -152,10 +153,13 @@ GUIDES = {
             ("Can the AI coach cite sources?", "Yes. Turn on Citations in Ask and the answer includes sources you can open. Check each one against the original before using it in a round."),
             ("Will the coach write my speeches for me?", "It can draft an outline or a passage, but you will speak better from structure you understand. Use it to find what is missing, then write the speech in your own words."),
             ("How is this different from a general AI chatbot?", "The coach works inside one debate at a time, so it keeps your motion, debate settings and sources in context, and it is set up for debate questions rather than essays."),
+            ("Is there a free AI debate coach?", "Not a permanent one in {product}. The Ask coach comes with the app's 3-day free trial, no credit card needed, and after that with Pro at {pro_price}. The tools you can use free without an account, the debate timer, motion generator, flow sheet and speech time calculator, do not include coaching."),
+            ("Can an AI judge my debate speech?", "Partly. Sparring rounds end with a judged verdict that names the reason for the decision, and the Ask coach can tell you what was unclear, under-warranted or dropped in a speech you paste in. It has not watched you speak and does not know the judges at your tournament, so treat its verdict as practice feedback, not a prediction of a real ballot."),
         ],
     },
     "ai-debate-case-generator": {
-        "modified": "2026-10-21",
+        "modified": "2026-10-27",
+        "definition": ("What is an AI debate case generator?", "AI debate case generator", "A tool that drafts a debate case for a given motion and side, with claims, warrants, impacts and evidence leads, for a debater to verify and adapt."),
         "features": [
             ("Structured case drafts", "Each draft has a thesis, a framework, contentions with warrants and impacts, the case the other side is likely to run, and counters to it."),
             ("Evidence leads", "Every draft is researched on the web and lists the sources it found. Check each one against the original before it goes on a card."),
@@ -172,6 +176,16 @@ GUIDES = {
                     "Counters: first responses to that predicted case.",
                 ]},
                 "Because the opponent case is part of the draft, you start preparing rebuttals at the same time as your own case. When one section is weak, regenerate just that section; the rest of the case stays where it is. Finished cases export to PDF or DOCX.",
+            ]),
+            ("Generated draft vs. finished case: what you still do", [
+                {"table": {"caption": "What the case generator gives you, and what you check before the round", "head": ["Section", "The generator gives", "You check"], "rows": [
+                    ["Thesis", "One sentence on why your side should win", "That it answers the motion exactly as worded and you can say it without notes"],
+                    ["Framework", "The definition, burden or weighing standard to argue for", "That it fits your format, for example a value and criterion in Lincoln-Douglas"],
+                    ["Contentions", "A claim, the warrant that makes it true and the impact that makes it matter", "Which ones clash with the other side; cut the rest to fit your speech time"],
+                    ["Predicted opponent case", "The arguments a strong team on the other side is likely to run", "Which of your contentions answers each one"],
+                    ["Counters", "First responses to the predicted case", "That each response is short enough to deliver as a rebuttal block"],
+                    ["Sources", "The web sources it found, with contentions that still need evidence marked Needs Source", "Open every original, confirm the exact claim and record the full citation"],
+                ]}},
             ]),
             ("From motion to verified case in seven steps", [
                 {"steps": [
@@ -233,6 +247,9 @@ GUIDES = {
             ("Which debate formats does the generator support?", "Set the Current Debate's format to British Parliamentary, Policy, Classroom or Custom, and Generate reads it along with the debate's Instructions. Generate's own speaker roles (introductor, R1, R2 and conclusor) follow the School 4-6-6-3 format. For WSDC, Public Forum and Lincoln-Douglas, use Custom and describe the structure in the Instructions."),
             ("Can I change one part of a case without starting over?", "Yes. Regenerate a single section and the rest of the case stays on screen unchanged."),
             ("Can I export a generated case?", "Yes. Cases export to PDF and DOCX, and cases created in a Current Debate are saved to it automatically."),
+            ("Is there a free AI debate case generator?", "{product}'s case generator is included in the 3-day free trial, with no credit card, and then in Pro at {pro_price}; there is no permanent free plan. Without an account you can use the free debate timer, motion generator, flow sheet and speech time calculator, but not the case generator."),
+            ("Can AI write a Public Forum case?", "It can draft one. Set the Current Debate's format to Custom and describe the Public Forum structure in its Instructions, since Generate's own speaker roles follow School 4-6-6-3. A PF constructive is four minutes, which usually fits two contentions with evidence, so cut the draft to that and verify every source."),
+            ("Is using an AI case generator cheating?", "Using it to draft and research before a round is preparation, but check your league's and your school's rules first: most leagues forbid electronic help during a round. Verify every source, rewrite the case in your own words and make sure you can defend each contention, because a case you cannot explain is easy to beat."),
         ],
     },
     "best-ai-debate-tools": {
@@ -810,7 +827,7 @@ GUIDES = {
     },
     "debateowl-vs-chatgpt": {
         "software": True,
-        "modified": "2026-10-21",
+        "modified": "2026-10-27",
         "features": [
             ("A general assistant", "ChatGPT can brainstorm, explain, draft and revise on any subject, including debate."),
             ("A debate workspace", "{product} organises prep around one motion at a time, with structured cases, an AI opponent, a timer and judged practice rounds."),
@@ -820,6 +837,17 @@ GUIDES = {
             ("The short answer", [
                 "ChatGPT is a general-purpose AI assistant. {product} is a debate practice workspace. Both use large language models, but they are designed for different jobs. If you want to explore an idea, learn background on a topic or tighten a paragraph, a general assistant is flexible and fast. If you want to prepare a specific motion, practise against an opponent at real speech times and get a verdict on your round, a tool built around debate structure saves the setup you would otherwise do by hand in every conversation.",
                 "Many debaters use both. This page explains where each is stronger so you can decide what fits your preparation.",
+                {"table": {"caption": "{product} vs ChatGPT for debate prep (as of October 2026)", "head": ["Feature", "{product}", "ChatGPT"], "rows": [
+                    ["Structured case output", "Every case has a thesis, a framework, contentions with warrants and impacts, the likely opposing case and counters", "Whatever structure you ask for, in each conversation"],
+                    ["Saved sources (Library)", "Sources you add to a debate's Library are given to its prep tools", "You paste the motion and your sources into each new conversation"],
+                    ["Web research with a source list", "Generate researches the motion on the web and lists the sources it found; Ask can answer with citations", "Not tied to one debate; nothing is saved to a Library"],
+                    ["Timed practice round with a verdict", "Sparring runs School 4-6-6-3, Lincoln-Douglas and Public Forum rounds, times each speech and ends with a verdict", "No built-in round, timing or verdict; you role-play and keep time yourself"],
+                    ["Cross-examination drill", "Crossfire drills cross-examination in either direction", "Role-play on request"],
+                    ["Debate timer", "A [free debate timer](/tools/debate-timer) for seven formats, plus a speech timer in the app", "None built in"],
+                    ["Formats", "Case generation, Attack, Ask and Crossfire work for any motion; Sparring has three formats", "Any format you describe"],
+                    ["Languages", "English, Spanish and Hungarian", "Not compared here"],
+                    ["Price", "3-day free trial, then {pro_price}", "Free tier and paid plans; prices not compared here"],
+                ]}},
             ]),
             ("What ChatGPT does well for debaters", [
                 {"list": [
@@ -870,7 +898,9 @@ GUIDES = {
         ],
     },
     "online-debate-timer": {
-        "modified": "2026-10-23",
+        "modified": "2026-10-27",
+        # The first sentence under the H1 points at the timer itself, which owns "online debate timer".
+        "lead": "Need the timer itself? The free {product} debate timer at [/tools/debate-timer](/tools/debate-timer) loads these times for you. Below: speech lengths, cross-examination and prep time for each format, and how to practise against the clock.",
         "features": [
             ("Speech times by format", "The speech order and lengths for Public Forum, Lincoln-Douglas, Policy, British Parliamentary and World Schools under their common rules."),
             ("Cross-ex and prep time", "How long questioning periods and prep time run in each format, next to the speeches."),
@@ -883,13 +913,9 @@ GUIDES = {
             ]),
             ("Speech times by format", [
                 "These are the speech lengths under each format's most common rules. Leagues and tournaments change them, so check the invitation before you practise.",
-                {"list": [
-                    "Public Forum (NSDA): two 4-minute constructives, two 4-minute rebuttals, two 3-minute summaries and two 2-minute final focus speeches, with three 3-minute crossfires and 3 minutes of prep per team.",
-                    "Lincoln-Douglas (NSDA): 6-minute affirmative constructive, 7-minute negative constructive, 4-minute first affirmative rebuttal, 6-minute negative rebuttal and 3-minute second affirmative rebuttal, with two 3-minute cross-examinations and 4 minutes of prep per debater.",
-                    "Policy (NSDA): four 8-minute constructives, each followed by 3 minutes of cross-examination, then four 5-minute rebuttals, with 8 minutes of prep per team.",
-                    "British Parliamentary (WUDC): eight 7-minute speeches. Points of information are allowed except in the first and last minute, and teams prepare for 15 minutes before the round.",
-                    "World Schools (WSDC): six 8-minute substantive speeches with the first and last minute protected, then two 4-minute reply speeches, Opposition first.",
-                ]},
+                # Built from src/lib/free-tools/formats.ts, the free timer's own data, by generate_seo_content.py.
+                {"speech_times": True},
+                "Public Forum's three crossfires follow the constructives, the rebuttals and the summaries; the last is a grand crossfire for all four debaters. British Parliamentary teams prepare for 15 minutes after the motion is released, Asian Parliamentary teams for 30 minutes, and World Schools impromptu motions come with one hour.",
                 "The [free debate timer](/tools/debate-timer) runs any of these speech orders, cross-examination, crossfire and prep time included, with no account. It also has Asian Parliamentary and the school 4-6-6-3 format.",
             ]),
             ("What the {product} timer covers", [
@@ -924,6 +950,9 @@ GUIDES = {
             ("Can I use the timer without looking at the screen?", "Yes. It beeps once at one minute remaining and twice at time up, and you can turn the sound on or off."),
             ("What keyboard shortcuts does the timer have?", "Space starts and stops the clock, R resets it, and the arrow keys change speaker."),
             ("How often should I practise against a timer?", "Every time you practise a speech. Short timed drills several times a week build pacing faster than one long session."),
+            ("How long is a Public Forum speech?", "Under NSDA rules, constructives and rebuttals are 4 minutes, summaries 3 minutes and final focus speeches 2 minutes. Each team also gets 3 minutes of prep, and the three crossfires run 3 minutes each."),
+            ("How long is a Lincoln-Douglas round?", "About 40 minutes under NSDA times: 26 minutes of speeches (6, 7, 4, 6 and 3), two 3-minute cross-examinations and 4 minutes of prep per debater, plus the gaps between speeches and the judge's decision."),
+            ("What is protected time in British Parliamentary?", "The first and last minute of each 7-minute speech, when points of information may not be offered. Under the WUDC manual, POIs are allowed from 1:00 to 6:00, signals sound at 1:00, 6:00 and 7:00, and judges disregard material after 7:15."),
         ],
     },
     "argument-flowchart": {
@@ -1298,7 +1327,7 @@ GUIDES = {
         ],
     },
     "debateowl-vs-windebate": {
-        "modified": "2026-10-23",
+        "modified": "2026-10-27",
         "software": True,
         "features": [
             ("Formats", "As of October 2026, WinDebate names six formats: Public Forum, Lincoln-Douglas, Congressional, Policy, World Schools and British Parliamentary. {product}'s Sparring rounds cover School 4-6-6-3, Lincoln-Douglas and Public Forum."),
@@ -1313,6 +1342,15 @@ GUIDES = {
             ("What {product} offers", [
                 "{product} is an AI debate prep and practice app with {mode_count} prep modes. You start a Current Debate for one motion, add sources to its Library, generate a structured case with a predicted opponent case, find weak links with Attack, research claims with Factoids, ask the Ask coach, drill cross-examination in Crossfire, and run timed Sparring rounds against an AI opponent that end in a verdict. A speech timer and an argument flowchart round it out.",
                 "As of October 2026, {product} has a 3-day free trial with no credit card, then Pro at {pro_price}. The app is available in English, Spanish and Hungarian.",
+            ]),
+            ("Side by side", [
+                {"table": {"caption": "{product} vs WinDebate (as of October 2026, from each product's own site)", "head": ["Feature", "{product}", "WinDebate"], "rows": [
+                    ["Formats named", "Sparring rounds in School 4-6-6-3, Lincoln-Douglas and Public Forum; prep tools work for any motion", "Public Forum, Lincoln-Douglas, Congressional, Policy, World Schools and British Parliamentary"],
+                    ["Practice", "Timed rounds against an AI opponent that end in a verdict, plus Crossfire drills", "Targeted drills for attack, defense, weighing and speeches"],
+                    ["Review", "Cases, sources, rounds and debriefs kept in one Current Debate", "Live Round Assistant, replay review and progress tracking"],
+                    ["Free plan", "3-day free trial, no permanent free plan", "Free tier with 1 research session, 10 drills and 1 Live Assistant round a month"],
+                    ["Paid price", "{pro_price}", "Plus $19.99/month, Pro $39.99/month"],
+                ]}},
             ]),
             ("How to choose", [
                 {"list": [
@@ -1332,7 +1370,7 @@ GUIDES = {
         ],
     },
     "debateowl-vs-debateclub": {
-        "modified": "2026-10-23",
+        "modified": "2026-10-27",
         "software": True,
         "features": [
             ("Audience", "As of October 2026, DebateClub describes itself as training for high-stakes conversations such as negotiations, pitches and meetings. {product} is built for school and competitive debate."),
@@ -1347,6 +1385,15 @@ GUIDES = {
             ("What {product} offers", [
                 "{product} is an AI debate prep and practice app for students and competitive debaters, with {mode_count} prep modes. It builds structured cases with a predicted opponent case, finds weak links with Attack, researches claims with Factoids, drills cross-examination in Crossfire and runs timed Sparring rounds in School 4-6-6-3, Lincoln-Douglas and Public Forum that end in a verdict. Voice mode lets you speak your speeches instead of typing them.",
                 "As of October 2026, {product} has a 3-day free trial with no credit card, then Pro at {pro_price}. The app is available in English, Spanish and Hungarian.",
+            ]),
+            ("Side by side", [
+                {"table": {"caption": "{product} vs DebateClub (as of October 2026, from each product's own site)", "head": ["Feature", "{product}", "DebateClub"], "rows": [
+                    ["Built for", "School and competitive debate", "High-stakes conversations such as negotiations, pitches and meetings"],
+                    ["Formats named", "Sparring rounds in School 4-6-6-3, Lincoln-Douglas and Public Forum", "None"],
+                    ["Practice style", "Timed Sparring rounds you can type or speak, ending in a verdict", "Voice-only sparring with opponent personas and rhetorical technique scoring"],
+                    ["Prep tools", "Cases with a predicted opponent case, Attack, Factoids, Crossfire and a timer", "A prep screen for openings and counters"],
+                    ["Price", "3-day free trial, then {pro_price}", "Free tier with one debate credit; Pro $19/month or $149/year"],
+                ]}},
             ]),
             ("Which fits you", [
                 {"list": [
