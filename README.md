@@ -2,7 +2,7 @@
 
 DebateLab is an AI debate preparation and practice app for competitive debaters. Students keep one Current Debate for the motion they are preparing, build cases and research for both sides, and practise against the AI, with everything saved to that debate.
 
-Live application: [debate.pi-stack.org](https://debate.pi-stack.org)
+Live application: [debateowl.com](https://debateowl.com) (previously debate.pi-stack.org, which now redirects here)
 
 ## What it does
 

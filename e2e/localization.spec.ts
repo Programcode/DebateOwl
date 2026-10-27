@@ -68,7 +68,7 @@ test('every route has its own tab title in each language, and a switch retitles 
 
   for (const language of ['en', 'es', 'hu'] as const) {
     for (const route of APP_ROUTES) expect(titles[language][route]).toMatch(/ · DebateOwl$/);
-    for (const route of PUBLIC_ROUTES) expect(titles[language][route]).toMatch(/ \| DebateOwl by Pi-Stack$/);
+    for (const route of PUBLIC_ROUTES) expect(titles[language][route]).toMatch(/ \| DebateOwl$/);
   }
   expect(titles.hu['/app/attack']).toBe(`${hu.nav.attack} · DebateOwl`);
   expect(titles.es['/no-such-page']).toBe(brand(es.pageHead.notFound.title));

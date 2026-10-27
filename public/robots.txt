@@ -44,4 +44,4 @@ Disallow: /settings
 Disallow: /history
 Disallow: /private
 
-Sitemap: https://debate.pi-stack.org/sitemap.xml
+Sitemap: https://debateowl.com/sitemap.xml

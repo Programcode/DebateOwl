@@ -21,10 +21,10 @@ describe('auth callback URLs', () => {
   });
 
   it('carries a deep link through the callback and drops anything else', () => {
-    expect(authCallbackUrl('https://debate.pi-stack.org')).toBe('https://debate.pi-stack.org/auth/callback');
-    expect(authCallbackUrl('https://debate.pi-stack.org', '/app')).toBe('https://debate.pi-stack.org/auth/callback');
-    expect(authCallbackUrl('https://debate.pi-stack.org', '/app/history')).toBe('https://debate.pi-stack.org/auth/callback?next=%2Fapp%2Fhistory');
-    expect(authCallbackUrl('https://debate.pi-stack.org', '//evil.example')).toBe('https://debate.pi-stack.org/auth/callback');
+    expect(authCallbackUrl('https://debateowl.com')).toBe('https://debateowl.com/auth/callback');
+    expect(authCallbackUrl('https://debateowl.com', '/app')).toBe('https://debateowl.com/auth/callback');
+    expect(authCallbackUrl('https://debateowl.com', '/app/history')).toBe('https://debateowl.com/auth/callback?next=%2Fapp%2Fhistory');
+    expect(authCallbackUrl('https://debateowl.com', '//evil.example')).toBe('https://debateowl.com/auth/callback');
   });
 
   it.each([

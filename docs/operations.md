@@ -36,7 +36,7 @@ If Actions jobs fail within 2 to 5 seconds with no runner and no logs, the accou
 
 ## Frontend hosting on Vercel
 
-Vercel builds and serves the frontend from the Git repository. A push to `main` deploys both projects: `debate-navigator` to `https://debate.pi-stack.org`, and `debatelab-staging` to `https://debatelab-staging.vercel.app`. Any other branch waits for an explicit preview (see [Opt-in previews](#opt-in-previews)). For a staging-pinned preview on the tailnet, use `npm run dev:preview` (see [development.md](development.md#preview-on-the-tailnet)). The production canary runs after each successful Vercel `Production` deployment of `debate-navigator`.
+Vercel builds and serves the frontend from the Git repository. A push to `main` deploys both projects: `debate-navigator` to `https://debateowl.com` (the previous domain, `https://debate.pi-stack.org`, 301s there with the path and query kept; see `vercel.json`), and `debatelab-staging` to `https://debatelab-staging.vercel.app`. Any other branch waits for an explicit preview (see [Opt-in previews](#opt-in-previews)). For a staging-pinned preview on the tailnet, use `npm run dev:preview` (see [development.md](development.md#preview-on-the-tailnet)). The production canary runs after each successful Vercel `Production` deployment of `debate-navigator`.
 
 [`vercel.json`](../vercel.json) owns:
 
@@ -207,7 +207,7 @@ Local development origins must remain bounded to intended ports and hosts.
 
 ## Sign-in email and DNS
 
-Production and staging Supabase Auth send sign-in codes from `DebateLab <auth@debate.pi-stack.org>` through Resend's SMTP relay (`smtp.resend.com`); the relay password lives only in each project's Auth settings. DNS for `pi-stack.org` is the Cloudflare zone. The sending records are:
+Production and staging Supabase Auth send sign-in codes from `DebateOwl <auth@debateowl.com>` through Resend's SMTP relay (`smtp.resend.com`); the relay password lives only in each project's Auth settings. DNS for `pi-stack.org` is the Cloudflare zone. The records below are the ones set up for the previous sender, `auth@debate.pi-stack.org`; `debateowl.com` has the equivalent Resend records in its own Cloudflare zone. The previous sender's records are:
 
 - `send.debate.pi-stack.org`: Resend's SPF (`include:amazonses.com`) and bounce MX, so the bounce domain aligns with the From address.
 - `resend._domainkey.debate.pi-stack.org`: Resend's DKIM key; messages are signed with `d=debate.pi-stack.org`.
@@ -238,7 +238,7 @@ Vercel build variables for Sentry source maps: `SENTRY_AUTH_TOKEN` (an organizat
 
 Choose rollback before changing production:
 
-- Frontend: promote the previous known-good Vercel production deployment (about 10 seconds), or revert the commit on `main` and let Vercel redeploy (one to two minutes). The Vercel project is `debate-navigator`. `vercel inspect debate.pi-stack.org` shows the live deployment, `vercel ls debate-navigator --environment production --status READY` lists the earlier ones, and `vercel rollback <previous-deployment-url> --yes` switches back. On Adam's VPS, `~/ops/rollback/rollback vercel debate-navigator` does all three. After a rollback, Vercel stops putting new `main` deployments live until one is promoted with `vercel promote <deployment-url>`, so promote the fixed deployment once it is ready. A frontend rollback does not touch Supabase: if the bad change came with a migration or function deploy, the old frontend must still work with the new backend.
+- Frontend: promote the previous known-good Vercel production deployment (about 10 seconds), or revert the commit on `main` and let Vercel redeploy (one to two minutes). The Vercel project is `debate-navigator`. `vercel inspect debateowl.com` shows the live deployment, `vercel ls debate-navigator --environment production --status READY` lists the earlier ones, and `vercel rollback <previous-deployment-url> --yes` switches back. On Adam's VPS, `~/ops/rollback/rollback vercel debate-navigator` does all three. After a rollback, Vercel stops putting new `main` deployments live until one is promoted with `vercel promote <deployment-url>`, so promote the fixed deployment once it is ready. A frontend rollback does not touch Supabase: if the bad change came with a migration or function deploy, the old frontend must still work with the new backend.
 - Edge Function: retain the deployed source or artifact baseline and its environment assumptions.
 - Migration: prefer forward corrective migrations. Do not assume an irreversible schema or data change can be rolled back.
 - Configuration: record the prior value without exposing secrets.

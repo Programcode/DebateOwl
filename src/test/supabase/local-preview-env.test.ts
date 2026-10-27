@@ -88,9 +88,9 @@ describe("staging preview Supabase boundary", () => {
   });
 
   it("leaves the normal build on the toggle", () => {
-    expect(resolveSupabaseConfig({}, { getItem: () => null }, "https://debate.pi-stack.org"))
+    expect(resolveSupabaseConfig({}, { getItem: () => null }, "https://debateowl.com"))
       .toEqual({ ...SUPABASE_PROJECTS.production, env: "production" });
-    expect(resolveSupabaseConfig({}, { getItem: () => "staging" }, "https://debate.pi-stack.org"))
+    expect(resolveSupabaseConfig({}, { getItem: () => "staging" }, "https://debateowl.com"))
       .toEqual({ ...SUPABASE_PROJECTS.staging, env: "staging" });
   });
 });

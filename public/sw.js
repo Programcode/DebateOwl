@@ -5,6 +5,13 @@
 const BUILD = { id: 'dev', assets: [] };
 
 const CACHE_PREFIX = 'debate-lab-v6';
+
+// The previous domain. vercel.json 301s every path there to debateowl.com except
+// this file, so a worker installed on it before the move can update to this one,
+// which clears its caches, unregisters itself and reloads its tabs onto the
+// redirect. Nothing is cached or answered there any more.
+const RETIRED_HOSTS = ['debate.pi-stack.org'];
+const RETIRED = RETIRED_HOSTS.includes(self.location.hostname);
 const CACHE_VERSION = `${CACHE_PREFIX}-${BUILD.id}`;
 const APP_SHELL_CACHE = `${CACHE_VERSION}-shell`;
 const RUNTIME_CACHE = `${CACHE_VERSION}-runtime`;
@@ -63,6 +70,10 @@ async function store(cache, url, init) {
 }
 
 self.addEventListener('install', (event) => {
+  if (RETIRED) {
+    event.waitUntil(self.skipWaiting());
+    return;
+  }
   event.waitUntil((async () => {
     const cache = await caches.open(APP_SHELL_CACHE);
     // Hashed assets never change, so the HTTP cache may answer them; the page
@@ -75,7 +86,18 @@ self.addEventListener('install', (event) => {
   })());
 });
 
+async function retire() {
+  await Promise.all((await caches.keys()).map((key) => caches.delete(key)));
+  await self.registration.unregister();
+  const windows = await self.clients.matchAll({ type: 'window' });
+  await Promise.allSettled(windows.map((client) => client.navigate(client.url)));
+}
+
 self.addEventListener('activate', (event) => {
+  if (RETIRED) {
+    event.waitUntil(retire());
+    return;
+  }
   event.waitUntil(
     caches
       .keys()
@@ -149,6 +171,7 @@ async function pageNavigation(event) {
 }
 
 self.addEventListener('message', (event) => {
+  if (RETIRED) return;
   if (event.data?.type !== 'CACHE_VISITED_ASSETS' || !Array.isArray(event.data.urls)) return;
 
   const urls = event.data.urls.slice(0, 200).filter((value) => {
@@ -165,7 +188,7 @@ self.addEventListener('message', (event) => {
 
 self.addEventListener('fetch', (event) => {
   const { request } = event;
-  if (request.method !== 'GET') return;
+  if (RETIRED || request.method !== 'GET') return;
 
   const url = new URL(request.url);
   if (url.origin !== self.location.origin) return;

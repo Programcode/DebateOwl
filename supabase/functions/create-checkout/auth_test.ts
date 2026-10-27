@@ -53,8 +53,8 @@ async function checkoutWithPromo(claim: unknown, expected: { status: number; bod
       method: "POST",
       headers: { "Content-Type": "application/json", ...(authorization ? { Authorization: authorization } : {}) },
       body: JSON.stringify({
-        successUrl: "https://debate.pi-stack.org/app/settings?checkout=success",
-        cancelUrl: "https://debate.pi-stack.org/app/settings?checkout=canceled",
+        successUrl: "https://debateowl.com/app/settings?checkout=success",
+        cancelUrl: "https://debateowl.com/app/settings?checkout=canceled",
         promoCode: "SPRING",
       }),
     });

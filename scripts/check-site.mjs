@@ -36,7 +36,8 @@ function sourcePattern(source) {
     .replace(/:\w+\*/g, '.*');
   return new RegExp(`^${pattern}$`);
 }
-const redirects = vercel.redirects.map((rule) => ({ match: sourcePattern(rule.source), destination: rule.destination }));
+// Rules for another host (the previous domain) never apply to links on this one.
+const redirects = vercel.redirects.filter((rule) => !(rule.has ?? []).some((condition) => condition.type === 'host')).map((rule) => ({ match: sourcePattern(rule.source), destination: rule.destination }));
 const rewrites = vercel.rewrites.map((rule) => ({ match: sourcePattern(rule.source), destination: rule.destination }));
 
 function htmlFiles(directory) {
