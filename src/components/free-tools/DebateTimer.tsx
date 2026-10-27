@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ChevronLeft, ChevronRight, Maximize, Minimize, Pause, Play, RotateCcw, Volume2, VolumeX } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -31,6 +31,16 @@ const SIDE_TONE: Record<RoundSegment['side'], string> = {
   b: 'bg-rose-600 dark:bg-rose-400',
   both: 'bg-slate-500 dark:bg-slate-400',
 };
+
+/** The fewest equal rows of at most `max` chips, as columns: 7 at 4 a row is 4 + 3, never 4 + 2 + 1. */
+const balancedColumns = (count: number, max: number) => Math.ceil(count / Math.ceil(count / max));
+
+// At most 4 speech chips a row on phones, 6 from sm and 8 from md (an iPad shows a whole school round).
+const chipColumns = (count: number) => ({
+  '--chips': balancedColumns(count, 4),
+  '--chips-sm': balancedColumns(count, 6),
+  '--chips-md': balancedColumns(count, 8),
+}) as CSSProperties;
 
 function isTyping(target: EventTarget | null): boolean {
   return target instanceof HTMLElement && (target.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName));
@@ -244,23 +254,29 @@ export function DebateTimer({ storageKey, embedded = false, onFirstStart, footer
         </div>
       )}
 
-      <nav aria-label={t('timer.speeches')} className="overflow-x-auto px-4 pt-4">
-        <ol className="flex gap-2 pb-2">
+      <nav aria-label={t('timer.speeches')} className="px-4 pt-4">
+        {/* Every speech in view, in rows of equal length: 8 speeches are 4 + 4 on a phone and one row from md. */}
+        <ol
+          className="grid grid-cols-[repeat(var(--chips),minmax(0,1fr))] gap-2 pb-2 sm:grid-cols-[repeat(var(--chips-sm),minmax(0,1fr))] md:grid-cols-[repeat(var(--chips-md),minmax(0,1fr))]"
+          style={chipColumns(format.segments.length)}
+        >
           {format.segments.map((entry, index) => (
-            <li key={entry.id} className="shrink-0">
+            <li key={entry.id} className="min-w-0">
               <button
                 type="button"
                 onClick={() => select(index)}
                 aria-current={index === round.segmentIndex ? 'step' : undefined}
                 title={entry.label}
                 className={cn(
-                  'flex min-h-11 items-center gap-2 rounded-md border px-3 text-sm transition-colors focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring',
+                  'flex min-h-11 w-full flex-col items-center justify-center rounded-md border px-1.5 py-1 text-sm leading-tight transition-colors focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring',
                   index === round.segmentIndex ? 'border-primary bg-primary text-primary-foreground' : 'border-border bg-background hover:bg-muted',
                 )}
               >
-                <span className={cn('h-2 w-2 rounded-full', SIDE_TONE[entry.side])} aria-hidden="true" />
-                <span className="font-medium">{entry.short}</span>
-                <span className={index === round.segmentIndex ? 'text-primary-foreground/80' : 'text-muted-foreground'}>{formatDuration(entry.seconds)}</span>
+                <span className="flex max-w-full items-center gap-1.5">
+                  <span className={cn('h-2 w-2 shrink-0 rounded-full', SIDE_TONE[entry.side])} aria-hidden="true" />
+                  <span className="truncate font-medium">{entry.short}</span>
+                </span>
+                <span className={cn('text-xs tabular-nums', index === round.segmentIndex ? 'text-primary-foreground/80' : 'text-muted-foreground')}>{formatDuration(entry.seconds)}</span>
               </button>
             </li>
           ))}

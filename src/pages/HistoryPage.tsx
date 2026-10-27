@@ -28,6 +28,7 @@ import { UnsortedWork } from '@/components/features/debate/UnsortedWork';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { parseSavedCrossfire, SavedCrossfireView } from '@/components/features/crossfire/SavedCrossfireView';
+import { cn } from '@/lib/utils';
 
 /** History scope value for work that belongs to no debate. */
 const OUTSIDE_DEBATES = 'outside';
@@ -38,8 +39,15 @@ const isHistoryTab = (value: string | null): value is HistoryTab => HISTORY_TABS
 
 // Lists scroll with the page on phones; wide screens get a bounded inner list.
 const LIST_CLASS = 'space-y-4 lg:max-h-[500px] lg:overflow-y-auto lg:pr-4';
-// Phones wrap the tabs onto more lines instead of a sideways scroll, each one a 44px target.
-const TAB_CLASS = 'min-h-11 gap-2 sm:min-h-0';
+// Seven tabs never wrap unevenly. Below lg they are one row that scrolls sideways, the last tab
+// fading out to show there is more; Hungarian labels don't fit seven across an iPad. From lg they
+// share the width equally, icon above label. Every touch screen, iPads included, gets 44px targets.
+const TAB_LIST_CLASS = cn(
+  'h-auto w-full justify-start overflow-x-auto snap-x scroll-px-4 pr-8 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden',
+  '[mask-image:linear-gradient(to_right,#000_calc(100%-2.5rem),transparent)]',
+  'lg:grid lg:grid-cols-7 lg:overflow-visible lg:pr-1 lg:[mask-image:none]',
+);
+const TAB_CLASS = 'min-h-11 shrink-0 snap-start gap-2 pointer-fine:min-h-0 lg:min-w-0 lg:flex-col lg:gap-1 lg:whitespace-normal lg:px-2 lg:py-2 lg:text-balance';
 
 export default function HistoryPage() {
   const { t } = useTranslation();
@@ -179,7 +187,7 @@ export default function HistoryPage() {
 
         {scope === OUTSIDE_DEBATES ? <UnsortedWork /> : (
         <Tabs value={tab} onValueChange={setTab} className="space-y-6">
-          <TabsList className="h-auto w-full flex-wrap justify-start">
+          <TabsList className={TAB_LIST_CLASS}>
             <TabsTrigger value="cases" className={TAB_CLASS}><FileText className="h-4 w-4" /> {t('historyPage.tabCases')}</TabsTrigger>
             <TabsTrigger value="chats" className={TAB_CLASS}><MessageCircle className="h-4 w-4" /> {t('historyPage.tabChats')}</TabsTrigger>
             <TabsTrigger value="attacks" className={TAB_CLASS}><Zap className="h-4 w-4" /> {t('historyPage.tabAttacks')}</TabsTrigger>
