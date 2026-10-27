@@ -136,7 +136,7 @@ export default function BrainstormPage() {
                 <BrainstormResults result={brainstormResult} discoveredSources={discoveredSources} onDiscuss={handleDiscuss} onSave={() => void handleSave()} saved={resultSaved} saving={saving} />
               </div>
             ) : (
-              <EmptyState icon={Lightbulb} title={t('brainstorm.emptyTitle')} description={t('brainstorm.emptyDesc')} />
+              <EmptyState size="compact-below-lg" icon={Lightbulb} title={t('brainstorm.emptyTitle')} description={t('brainstorm.emptyDesc')} />
             )}
           </div>
         </div>

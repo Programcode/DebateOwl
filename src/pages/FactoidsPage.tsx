@@ -172,7 +172,7 @@ export default function FactoidsPage() {
                 />
               </div>
             ) : (
-              <EmptyState icon={BookOpen} title={t('factoids.emptyTitle')} description={t('factoids.emptyDesc')} />
+              <EmptyState size="compact-below-lg" icon={BookOpen} title={t('factoids.emptyTitle')} description={t('factoids.emptyDesc')} />
             )}
           </div>
         </div>
