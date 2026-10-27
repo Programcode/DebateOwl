@@ -8,7 +8,7 @@ const USER_ID = '00000000-0000-0000-0000-000000000001';
 
 const copy = {
   en: {
-    welcome: 'Welcome to DebateLab',
+    welcome: 'Welcome to DebateOwl',
     firstDebate: 'Start your first debate here.',
     startDebate: 'Start debate',
     motionField: 'Motion',
@@ -24,7 +24,7 @@ const copy = {
     gateMotion: 'This House would abolish zoos',
   },
   hu: {
-    welcome: 'Üdvözlünk a DebateLabban',
+    welcome: 'Üdvözlünk a DebateOwl-ban',
     firstDebate: 'Itt indíthatod el az első vitádat.',
     startDebate: 'Vita indítása',
     motionField: 'Tétel',

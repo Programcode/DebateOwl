@@ -38,25 +38,25 @@ describe('page titles', () => {
     expect(description()).toBe(PAGE_HEADS['/terms'].description);
 
     await switchTo('hu');
-    expect(document.title).toBe('Felhasználási feltételek | DebateLab by Pi-Stack');
+    expect(document.title).toBe('Felhasználási feltételek | DebateOwl by Pi-Stack');
     await switchTo('es');
-    expect(document.title).toBe('Términos del servicio | DebateLab by Pi-Stack');
+    expect(document.title).toBe('Términos del servicio | DebateOwl by Pi-Stack');
   });
 
   it('translate the 404 page and keep it out of the index', async () => {
     render(<PublicPage route="*" />);
     await switchTo('es');
-    expect(document.title).toBe('Página no encontrada | DebateLab by Pi-Stack');
+    expect(document.title).toBe('Página no encontrada | DebateOwl by Pi-Stack');
     expect(document.head.querySelector<HTMLMetaElement>('meta[name="robots"]')?.content).toBe('noindex, nofollow');
   });
 
-  it('name each app page and DebateLab, in the interface language', async () => {
+  it('name each app page and DebateOwl, in the interface language', async () => {
     render(<GeneratePage />);
-    expect(document.title).toBe('Generate · DebateLab');
+    expect(document.title).toBe('Generate · DebateOwl');
     expect(description()).toBe(PAGE_HEADS['/'].description);
 
     await switchTo('hu');
-    expect(document.title).toBe(`${hu.nav.generate} · DebateLab`);
+    expect(document.title).toBe(`${hu.nav.generate} · DebateOwl`);
     expect(description()).toBe(hu.pageHead.home.description.replace('{{product}}', HEAD_NAMES.product));
   });
 

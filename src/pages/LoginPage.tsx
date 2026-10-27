@@ -330,7 +330,7 @@ export default function LoginPage() {
       <div className="flex w-full max-w-md items-center justify-between gap-4">
         <Link to="/" className="inline-flex min-h-6 items-center gap-1.5 rounded-sm text-sm text-muted-foreground transition-colors hover:text-foreground pointer-coarse:min-h-11">
           <ArrowLeft className="h-4 w-4" aria-hidden="true" />
-          {t('login.backHome', 'Back to DebateLab')}
+          {t('login.backHome', 'Back to DebateOwl')}
         </Link>
         <LanguageSwitcher />
       </div>

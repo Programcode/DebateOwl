@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import site from '@/config/site.json';
 import { OwlMark } from '@/components/brand/Owl';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
@@ -28,7 +29,7 @@ export function PublicPageShell({ children, className }: { children: ReactNode; 
         <div className="container flex h-14 items-center justify-between gap-4 px-4">
           <Link to={home} className="flex items-center gap-2 rounded-md pointer-coarse:min-h-11">
             <OwlMark size={32} alt={t('common.logoAlt')} />
-            <span className="font-display text-lg font-[600] tracking-[-0.01em] text-heading">DebateLab</span>
+            <span className="font-display text-lg font-[600] tracking-[-0.01em] text-heading">{site.product}</span>
           </Link>
           <LanguageSwitcher />
         </div>

@@ -176,7 +176,7 @@ test("auth-deep-link-email-code: a signed-out deep link signs in by email code a
   await page.goto("/app/generate");
   await expect(page).toHaveURL(/\/login$/);
   await expect(page.getByRole("main")).toHaveCount(1);
-  await expect(page.getByRole("heading", { level: 1, name: "Sign in to DebateLab" })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1, name: "Sign in to DebateOwl" })).toBeVisible();
   await evidence.aria("01-login-from-deep-link");
 
   let sentAfter = Date.now();
@@ -230,7 +230,7 @@ test("auth-switch-account: the next account on this browser starts on /app, gets
     await evidence.step("Signed in as a second account; landed on /app, not /app/settings");
 
     // AUTH-07: the second account gets its own tour.
-    const tour = page.getByText("Welcome to DebateLab");
+    const tour = page.getByText("Welcome to DebateOwl");
     await expect(tour).toBeVisible({ timeout: 10_000 });
     await evidence.shot("01-second-account-tour");
     if (await page.getByRole("button", { name: "Open menu" }).isVisible()) {

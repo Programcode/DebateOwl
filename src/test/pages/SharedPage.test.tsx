@@ -49,7 +49,7 @@ describe('a missing share link', () => {
   beforeEach(() => {
     maybeSingle.mockReset();
     document.head.querySelector('meta[name="robots"]')?.remove();
-    document.title = 'DebateLab';
+    document.title = 'DebateOwl';
   });
   afterEach(() => act(() => applyAppLanguage('en')));
 
@@ -62,7 +62,7 @@ describe('a missing share link', () => {
     expect(screen.getByText('This shared content is no longer available')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Back to home' })).toHaveAttribute('href', '/');
     // The heading commits before the passive effect that sets the title and robots meta runs.
-    await waitFor(() => expect(document.title).toBe('Shared link not found · DebateLab'));
+    await waitFor(() => expect(document.title).toBe('Shared link not found · DebateOwl'));
     await waitFor(() =>
       expect(document.head.querySelector('meta[name="robots"]')?.getAttribute('content')).toBe('noindex, nofollow'),
     );
@@ -85,14 +85,14 @@ describe('a missing share link', () => {
 
     expect(await screen.findByRole('heading', { level: 1, name: 'Practice case' })).toBeInTheDocument();
     expect(screen.getByText('A short note')).toBeInTheDocument();
-    expect(document.title).toBe('Shared content · DebateLab');
+    expect(document.title).toBe('Shared content · DebateOwl');
   });
 
   it('keeps naming a missing link after a language switch', async () => {
     maybeSingle.mockResolvedValue({ data: null, error: null });
     renderShare();
-    await waitFor(() => expect(document.title).toBe('Shared link not found · DebateLab'));
+    await waitFor(() => expect(document.title).toBe('Shared link not found · DebateOwl'));
     await act(() => applyAppLanguage('hu'));
-    await waitFor(() => expect(document.title).toBe(`${hu.sharedPage.notFoundTitle} · DebateLab`));
+    await waitFor(() => expect(document.title).toBe(`${hu.sharedPage.notFoundTitle} · DebateOwl`));
   });
 });

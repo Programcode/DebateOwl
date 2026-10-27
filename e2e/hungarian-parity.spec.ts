@@ -49,7 +49,7 @@ test.describe('Hungarian parity', () => {
     await expectHungarianDocument(page);
 
     for (const [path, heading] of [
-      ['/login', 'Bejelentkezés a DebateLabba'],
+      ['/login', 'Bejelentkezés a DebateOwl-ba'],
       ['/terms', 'Felhasználási feltételek'],
       ['/privacy', 'Adatvédelmi irányelvek'],
       ['/expocit/sources', 'Források'],
@@ -79,7 +79,7 @@ test.describe('Hungarian parity', () => {
 
     await expectHungarianDocument(page);
     await expect(page.getByRole('heading', { name: 'Felkészülés' })).toBeVisible({ timeout: 15_000 });
-    await expect(page.locator('.react-joyride__tooltip')).toContainText('Üdvözlünk a DebateLabban', { timeout: 15_000 });
+    await expect(page.locator('.react-joyride__tooltip')).toContainText('Üdvözlünk a DebateOwl-ban', { timeout: 15_000 });
     await expect(page.locator('[data-test-id="button-primary"]')).toContainText('Következő');
     await expect(page.locator('[data-test-id="button-skip"]')).toContainText('Túra kihagyása');
     await page.locator('[data-test-id="button-skip"]').click();

@@ -210,7 +210,7 @@ export const FORMATS: Record<BuiltInFormatId, RoundFormat> = {
     ],
     prepSeconds: 0,
     sources: [],
-    note: 'The school format DebateLab uses for its own sparring rounds: introductor, two rebuttals and a conclusor per side. It is not a national league format.',
+    note: 'The school format DebateOwl uses for its own sparring rounds: introductor, two rebuttals and a conclusor per side. It is not a national league format.',
   },
 };
 

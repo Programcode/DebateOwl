@@ -1,5 +1,6 @@
 // src/components/layout/AppLayout.tsx
 import { OwlMark } from '@/components/brand/Owl';
+import site from '@/config/site.json';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, Outlet, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
@@ -274,7 +275,7 @@ export function AppLayout() {
         <div className="container flex h-16 items-center justify-between px-4 max-[359px]:px-2">
           <Link to="/app" {...homePrefetch} onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-3 shrink-0 rounded-md pointer-coarse:min-h-11">
             <OwlMark size={36} alt={t('common.logoAlt')} />
-            <span className="whitespace-nowrap font-display text-xl font-[600] tracking-[-0.01em] text-heading">DebateLab</span>
+            <span className="whitespace-nowrap font-display text-xl font-[600] tracking-[-0.01em] text-heading">{site.product}</span>
           </Link>
 
           {/* Desktop Nav */}
@@ -405,7 +406,7 @@ export function AppLayout() {
       {/* Footer */}
       <footer className="native-safe-bottom border-t-2 border-border bg-card/60 pt-4">
         <div className="container flex flex-col items-center justify-between gap-2 px-4 text-sm text-muted-foreground md:flex-row">
-          <p className="flex items-center gap-2 font-display text-base font-[600] text-heading"><OwlMark size={24} />DebateLab</p>
+          <p className="flex items-center gap-2 font-display text-base font-[600] text-heading"><OwlMark size={24} />{site.product}</p>
           <div className="flex items-center gap-4">
             <Link to="/terms" {...termsPrefetch} className="inline-flex min-h-6 items-center justify-center rounded-sm transition-colors hover:text-foreground pointer-coarse:min-h-11 pointer-coarse:min-w-11">{t('footer.terms')}</Link>
             <Link to="/privacy" {...privacyPrefetch} className="inline-flex min-h-6 items-center rounded-sm transition-colors hover:text-foreground pointer-coarse:min-h-11">{t('footer.privacy')}</Link>
