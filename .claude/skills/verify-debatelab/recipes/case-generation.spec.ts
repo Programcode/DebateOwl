@@ -209,8 +209,10 @@ test("gen-research: generation researches the web and cites what it found", asyn
   }
   expect(sources.length, "web sources found by research").toBeGreaterThan(0);
   expect(sources.every((source) => /^https?:\/\//.test(source.url))).toBe(true);
-  const panel = page.getByText("Researched sources").locator("..");
+  // The sources fold under the result header; open them as a student would.
+  const panel = page.getByRole("group").filter({ hasText: /^Researched sources/ });
   await expect(panel).toBeVisible();
+  await panel.getByText(/^Researched sources/).click();
   await expect(panel.getByRole("link").first()).toHaveAttribute("href", /^https?:\/\//);
   await evidence.shot("03-researched-sources");
 });
