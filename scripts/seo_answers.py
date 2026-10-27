@@ -12,19 +12,19 @@ ANSWERS = {
         "Which AI debate tool should you use?",
         "It depends on the job. For brainstorming or learning a topic, a general chatbot such as ChatGPT is flexible. For motion-by-motion prep plus timed practice rounds that end in a verdict, a dedicated platform such as {product} fits. As of October 2026, debatelab.ai, a separate product, says it is free and runs World Schools and Asian Parliamentary practice, and WinDebate adds round replay and progress tracking from $19.99/month. Give each tool the same motion and tasks before you decide.",
     ),
-    "debatelab-pricing": (
+    "debateowl-pricing": (
         "How much does {product} cost?",
         "As of October 2026, {product} has a 3-day free trial with no credit card required, then Pro costs {pro_price}. There is no permanent free plan. Whether Pro is worth it depends on how often you prepare: if you debate every week or have a tournament coming, it covers heavy prep weeks with higher daily limits and all 10 models. If you need help only occasionally and want to stay free, a general chatbot's free tier or a free practice tool will suit you better.",
     ),
-    "debatelab-vs-chatgpt": (
+    "debateowl-vs-chatgpt": (
         "Which is better for debate prep, {product} or ChatGPT?",
         "It depends on the task. ChatGPT is better for learning a new topic, open brainstorming and general writing help, and it works for any subject. {product} is better when you are preparing a specific motion: it keeps your cases, sources and practice rounds together, predicts the opposing case, times your speeches and gives a verdict on practice rounds. Many debaters use both, ChatGPT for background and {product} for motion prep and practice. Neither replaces checking original sources.",
     ),
-    "debatelab-vs-windebate": (
+    "debateowl-vs-windebate": (
         "Which is better, {product} or WinDebate?",
         "It depends on your format, budget and how you practise. As of October 2026, WinDebate names six formats including Congressional, Policy and British Parliamentary, has a free tier with monthly limits, and adds live-round capture, replay review and progress tracking, with paid plans from $19.99/month. {product} costs {pro_price} after a 3-day trial, runs full practice rounds against an AI opponent in School 4-6-6-3, Lincoln-Douglas and Public Forum, and works in English, Spanish and Hungarian. Choose WinDebate for Policy, Congress or season tracking, and {product} for low-cost case building and sparring.",
     ),
-    "debatelab-vs-debateclub": (
+    "debateowl-vs-debateclub": (
         "Which is better, {product} or DebateClub?",
         "They solve different problems. As of October 2026, DebateClub is voice-only sparring for high-stakes conversations such as negotiations, pitches and meetings, with opponent personas and rhetorical technique scoring, and Pro costs $19/month. It names no competitive debate formats. {product} is built for school and competitive debate: cases, rebuttals, evidence, a timer and timed rounds in School 4-6-6-3, Lincoln-Douglas and Public Forum, at {pro_price} after a 3-day trial. Choose DebateClub for workplace persuasion practice and {product} for tournament prep.",
     ),

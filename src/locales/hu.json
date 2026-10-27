@@ -1069,7 +1069,7 @@
       "tools/debate-flow-sheet": "Jegyzetlap",
       "tools/speech-time-calculator": "Beszédidő-kalkulátor",
       "best-ai-debate-tools": "A legjobb MI-alapú vitaeszközök",
-      "debatelab-vs-chatgpt": "{{product}} vagy ChatGPT"
+      "debateowl-vs-chatgpt": "{{product}} vagy ChatGPT"
     }
   },
   "finalCta": {
