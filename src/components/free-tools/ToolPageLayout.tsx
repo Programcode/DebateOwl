@@ -115,7 +115,7 @@ export function ToolPageLayout({ route, title, intro, shortAnswer, tool, childre
       <SkipLink />
       <header className="border-b border-border/60 print:hidden">
         <div className="container flex h-14 items-center justify-between gap-4 px-4">
-          <Link to={home} className="flex items-center gap-2 rounded-md pointer-coarse:min-h-11">
+          <Link to={home} aria-label={t('translation:common.homeLink')} className="flex items-center gap-2 rounded-md pointer-coarse:min-h-11">
             <OwlMark size={32} />
             <span className="font-display text-lg font-[600] tracking-[-0.01em] text-heading">{site.product}</span>
           </Link>

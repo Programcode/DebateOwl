@@ -1412,8 +1412,6 @@ GUIDES = {
     },
     "lincoln-douglas-debate": {
         "modified": "2026-10-26",
-        "title": "Lincoln-Douglas Debate: Times, Value and Criterion | {product}",
-        "description": "How a Lincoln-Douglas round runs at NSDA speech times, how a value and criterion work, a worked example case and the neg turn against it, common LD mistakes and a 15-minute drill.",
         "features": [
             ("The NSDA round", "Seven speeches and cross-examinations at 6-3-7-3-4-6-3, with four minutes of prep per debater."),
             ("Framework that does work", "A value and a criterion the rest of the case actually depends on, instead of a label at the top."),
@@ -1483,8 +1481,6 @@ GUIDES = {
     },
     "policy-debate": {
         "modified": "2026-10-26",
-        "title": "Policy Debate (CX): Times, Plans, DAs and Counterplans | {product}",
-        "description": "How a Policy (CX) round runs at the NSDA 8-3-5 times, what the plan, disadvantage, counterplan, topicality and kritik each have to prove, a worked 1NC against an example plan, common mistakes and a 15-minute drill.",
         "features": [
             ("The 8-3-5 round", "Four constructives, four cross-examinations and four rebuttals, with eight minutes of prep per team."),
             ("What each position must prove", "The parts of a plan, a disadvantage, a counterplan, topicality and a kritik, and where each one is usually weak."),
@@ -1562,8 +1558,6 @@ GUIDES = {
     },
     "british-parliamentary-debate": {
         "modified": "2026-10-26",
-        "title": "British Parliamentary Debate: Roles, POIs, Extensions | {product}",
-        "description": "How a British Parliamentary round runs under the WUDC manual: what all eight speakers do on one example motion, how to find an extension, points of information, ranking, common mistakes and a 15-minute drill.",
         "features": [
             ("Eight speakers, four teams", "What the Prime Minister through the Opposition Whip each owe the debate, shown on one practice motion."),
             ("Finding an extension", "Three ways a closing team finds material its opening half has not used, and why a thin one loses to the opening."),
@@ -1639,8 +1633,6 @@ GUIDES = {
     },
     "congress-debate": {
         "modified": "2026-10-26",
-        "title": "Congressional Debate: Speeches and Questioning | {product}",
-        "description": "How a Congressional Debate session runs under the NSDA rules: authorship, sponsorship and later speeches, direct questioning, precedence and recency, a worked example on an original bill, common mistakes and a 15-minute drill.",
         "features": [
             ("Speech and question times", "Three-minute speeches, two minutes of questions after the first two and one minute after the rest."),
             ("Precedence and recency", "How the presiding officer chooses speakers, and what that means for when to stand."),
@@ -1706,8 +1698,6 @@ GUIDES = {
     },
     "debate-clash-points": {
         "modified": "2026-10-26",
-        "title": "Clash and Collapse in Debate: Find the Key Argument | {product}",
-        "description": "How to map the clashes in a debate round, pick the one that decides the ballot, and collapse your last speeches onto it, with a worked example, where each format collapses, common mistakes and a 12-minute drill.",
         "h1": "Clash and Collapse: Find the Key Argument and Go All In",
         "lead": "Map every disagreement, pick the one the judge has to resolve, and spend your last speeches there.",
         "features": [
@@ -1787,8 +1777,6 @@ GUIDES = {
     },
     "how-to-prepare-for-a-debate-tournament": {
         "modified": "2026-10-26",
-        "title": "How to Prepare for a Debate Tournament and Manage Prep Time | {product}",
-        "description": "A two-week debate tournament prep plan, how much prep time each format gives and how to spend it in round, a tournament-day checklist, common mistakes and a 15-minute drill.",
         "h1": "How to Prepare for a Debate Tournament",
         "lead": "Plan the two weeks before, spend in-round prep on purpose, and arrive with a routine for every round.",
         "features": [
@@ -1868,8 +1856,6 @@ GUIDES = {
     },
     "debate-speech-structure": {
         "modified": "2026-10-26",
-        "title": "Debate Speech Structure and Delivery Guide | {product}",
-        "description": "How to structure constructive, rebuttal and final debate speeches, with speech times by format, a timed outline of one speech, delivery and pronunciation habits judges notice, common mistakes and a 15-minute drill.",
         "h1": "Debate Speech Structure and Delivery",
         "lead": "Build every speech so the judge can flow it, then deliver it so they hear every word.",
         "features": [
@@ -1956,8 +1942,6 @@ GUIDES = {
     },
     "debate-fallacies": {
         "modified": "2026-10-26",
-        "title": "Common Debate Fallacies, With Examples and Answers | {product}",
-        "description": "Eight logical fallacies as they appear in real debate arguments, each with a one-sentence answer, when a slippery slope is not a fallacy, common mistakes in calling fallacies, and a 12-minute drill.",
         "features": [
             ("Fallacies in context", "Each fallacy shown inside an argument you could hear in a round, not as a textbook definition."),
             ("One-sentence answers", "A reply for each that explains why the reasoning fails, which is what judges actually reward."),
@@ -2017,8 +2001,6 @@ GUIDES = {
     },
     "debate-motion-analysis": {
         "modified": "2026-10-26",
-        "title": "Debate Motion Analysis: Definitions, Burdens and Clashes | {product}",
-        "description": "How to analyze a debate motion: motion types and what each side must prove, fair definitions and models, stakeholders, a worked analysis of an original motion, common mistakes and a 15-minute drill.",
         "features": [
             ("Motion types", "What \"This House would\", \"believes\", \"regrets\" and actor motions each ask the proposition to prove."),
             ("Definitions and models", "Defining terms fairly enough to survive challenge and narrowly enough to defend."),
@@ -2084,8 +2066,6 @@ GUIDES = {
     },
     "debate-judge-adaptation": {
         "modified": "2026-10-26",
-        "title": "Debate Judge Adaptation: Lay, Flow and Technical Judges | {product}",
-        "description": "How to adapt to lay, flow and technical debate judges: what each rewards, questions to ask before the round, the ordinary intelligent voter standard in BP, a worked example of one argument for two judges, common mistakes and a drill.",
         "features": [
             ("Three kinds of judges", "What lay, flow and technical judges each reward, and what loses them."),
             ("Before the round", "Questions to ask and paradigms to read, so you adapt before your first sentence."),

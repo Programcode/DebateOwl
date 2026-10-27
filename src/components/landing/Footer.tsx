@@ -14,7 +14,7 @@ const Footer = () => {
                 <div className="flex flex-col md:flex-row items-center justify-between gap-6">
                     <div className="flex items-center gap-6">
                         {/* In-app links: no full reload through the startup shell. */}
-                        <Link to="/" className="flex items-center gap-2 pointer-coarse:min-h-11">
+                        <Link to={localizedPath("/", language)} aria-label={t('common.homeLink')} className="flex items-center gap-2 pointer-coarse:min-h-11">
                             <OwlMark size={32} alt={t('common.logoAlt')} />
                             <span className="font-display text-lg font-[600] text-heading">{site.product}</span>
                         </Link>
