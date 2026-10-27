@@ -17,7 +17,7 @@ function ToolGroup({ title, tools }: { title: string; tools: readonly Tool[] }) 
       <CardHeader className="pb-3">
         <CardTitle>{title}</CardTitle>
       </CardHeader>
-      <CardContent className="px-3 pb-3 pt-0">
+      <CardContent className="enter-stagger px-3 pb-3 pt-0">
         {tools.map((tool) => <ToolLink key={tool.key} tool={tool} variant="row" tourId={`mode-${tool.key}`} />)}
       </CardContent>
     </Card>
@@ -92,7 +92,8 @@ export default function HomePage() {
 
   return (
     <div className="container px-4 py-8">
-      <div className="mx-auto min-h-[72vh] max-w-5xl">
+      {/* The header, current debate, tool groups and utilities follow each other in. */}
+      <div className="enter-stagger mx-auto min-h-[72vh] max-w-5xl">
         <PageHeader title={t('home.heading', 'What are you working on?')} />
 
         <CurrentDebateSummary t={t} />

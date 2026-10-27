@@ -577,7 +577,7 @@ export function AskChat({ messages, streamingMessage, isLoading, error, onDismis
         {/* Wraps on a phone: the Hungarian title and two buttons do not fit one 375 px row. */}
         <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
           <div className="flex min-w-0 items-center gap-3">
-            <OwlAvatar pose="coach" size={44} label={t('askChat.coachAvatarAlt', 'The owl, your debate coach')} />
+            <OwlAvatar pose="coach" size={44} blink label={t('askChat.coachAvatarAlt', 'The owl, your debate coach')} />
             <div className="min-w-0">
               <CardTitle>{t('askChat.title')}</CardTitle>
               <CardDescription>{t('askChat.subtitle')}</CardDescription>
@@ -619,7 +619,7 @@ export function AskChat({ messages, streamingMessage, isLoading, error, onDismis
                 // One true status line: what is happening, and how long it has taken once that matters.
                 <p className="flex items-center gap-2.5 text-sm font-bold text-muted-foreground motion-safe:animate-in fade-in-0 duration-200" role="status" aria-live="polite">
                   {/* Decorative: a label here would be announced with every status update. */}
-                  <OwlAvatar pose="coach" size={32} />
+                  <OwlAvatar pose="coach" size={32} blink />
                   <span className="inline-flex items-center gap-2 rounded-[20px] rounded-bl-md border-2 border-border bg-card px-3.5 py-2.5">
                     {searchingWeb ? t('askChat.searchingWeb', 'Searching the web…') : t('askChat.working', 'Working…')}
                     <ThinkingDots className="text-primary" />

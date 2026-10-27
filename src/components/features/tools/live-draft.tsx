@@ -82,7 +82,7 @@ export function LiveToolRun({
   return (
     <div data-testid="live-draft" className="space-y-4" aria-busy="true">
       <div className="flex items-center gap-3 rounded-lg border-2 border-brand-tint-border bg-brand-tint px-3 py-2.5">
-        <OwlAvatar pose={pose ?? (writing ? 'point' : 'idea')} size={36} />
+        <OwlAvatar pose={pose ?? (writing ? 'point' : 'idea')} size={36} blink />
         <p className="flex min-w-0 flex-1 flex-wrap items-center gap-x-2 text-sm font-bold text-foreground">
           <span role="status" aria-live="polite">{writing ? t('tools.live.writingLive', 'Writing live') : status}</span>
           <ThinkingDots className="text-primary" />

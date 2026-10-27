@@ -277,7 +277,8 @@ export function RouteContent({ children }: { children: ReactNode }) {
     <PageLabelProvider value={setPageLabel}>
       <LocalizedRouteErrorBoundary key={location.pathname}>
         <Suspense fallback={<PendingRoute />}>
-          {children}
+          {/* App pages rise in once as they open. Public pages keep their own reveals and fixed bars. */}
+          {location.pathname.startsWith('/app') ? <div className="page-enter">{children}</div> : children}
         </Suspense>
       </LocalizedRouteErrorBoundary>
     </PageLabelProvider>

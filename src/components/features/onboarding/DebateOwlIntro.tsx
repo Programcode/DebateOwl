@@ -141,7 +141,8 @@ function Line({ shown, icon, className, children }: {
       animate={shown ? { opacity: 1, y: 0 } : { opacity: 0, y: 6 }}
       transition={{ duration: 0.32, ease: EASE_OUT }}
     >
-      {icon && <span className="mt-1 flex h-4 w-5 shrink-0 items-center justify-center" aria-hidden="true">{icon}</span>}
+      {/* The icon pops in as its line lands; the check draws itself. */}
+      {icon && <span className={cn('mt-1 flex h-4 w-5 shrink-0 items-center justify-center', shown && 'success-pop [--success-delay:120ms]')} aria-hidden="true">{icon}</span>}
       <span>{children}</span>
     </motion.li>
   );
