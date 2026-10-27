@@ -268,15 +268,16 @@ export function DebateTimer({ storageKey, embedded = false, onFirstStart, footer
                 aria-current={index === round.segmentIndex ? 'step' : undefined}
                 title={entry.label}
                 className={cn(
-                  'flex min-h-11 w-full flex-col items-center justify-center rounded-md border px-1.5 py-1 text-sm leading-tight transition-colors focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring',
+                  'flex h-full min-h-11 w-full flex-col items-center justify-center rounded-md border px-2 py-1 text-[0.8125rem] leading-tight sm:text-sm transition-colors focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring',
                   index === round.segmentIndex ? 'border-primary bg-primary text-primary-foreground' : 'border-border bg-background hover:bg-muted',
                 )}
               >
-                <span className="flex max-w-full items-center gap-1.5">
+                {/* The code gets the full width, so a long one ("A Rebuttal") wraps between words; the side dot sits by the time. */}
+                <span className="max-w-full text-balance break-words font-medium">{entry.short}</span>
+                <span className={cn('flex items-center gap-1 text-xs tabular-nums', index === round.segmentIndex ? 'text-primary-foreground/80' : 'text-muted-foreground')}>
                   <span className={cn('h-2 w-2 shrink-0 rounded-full', SIDE_TONE[entry.side])} aria-hidden="true" />
-                  <span className="truncate font-medium">{entry.short}</span>
+                  {formatDuration(entry.seconds)}
                 </span>
-                <span className={cn('text-xs tabular-nums', index === round.segmentIndex ? 'text-primary-foreground/80' : 'text-muted-foreground')}>{formatDuration(entry.seconds)}</span>
               </button>
             </li>
           ))}
