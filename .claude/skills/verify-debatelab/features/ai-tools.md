@@ -13,7 +13,7 @@ The single-shot coaching tools: Attack finds weaknesses in a pasted argument, Br
 
 ## How to get to it (user POV)
 
-- Header links: `Attack` and `Ask`. `More` menu (desktop) or `Open menu` (mobile): `Brainstorm` and `Factoids`.
+- Home cards under Tools. The phone tab bar lists Tools, not each tool.
 - Routes: `/app/attack`, `/app/brainstorm`, `/app/factoids`, `/app/ask`.
 
 ## Driving it with verify.sh + Playwright

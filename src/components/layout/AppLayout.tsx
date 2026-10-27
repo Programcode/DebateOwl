@@ -4,12 +4,9 @@ import site from '@/config/site.json';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, Outlet, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import * as DialogPrimitive from '@radix-ui/react-dialog';
 import {
   LayoutGrid,
   Settings,
-  Menu,
-  X,
   Clock,
   Database,
   Target,
@@ -29,6 +26,7 @@ import { useCurrentDebate } from '@/lib/stores/debate-store';
 import { navSectionFor } from '@/components/layout/nav-sections';
 import { DebateDialogs, InactiveDebateGate } from '@/components/features/debate/DebateDialogs';
 import { MAIN_CONTENT_ID, SkipLink } from '@/components/layout/SkipLink';
+import { PhoneTabBar } from '@/components/layout/PhoneTabBar';
 import {
   dismissAnnouncement,
   listActiveAnnouncements,
@@ -39,13 +37,6 @@ import {
 const libraryNavItems = [
   { path: '/app/library', key: 'library', icon: Database },
   { path: '/app/history', key: 'history', icon: Clock },
-];
-
-const mobileNavItems = [
-  { path: '/app', key: 'tools', icon: LayoutGrid },
-  { path: '/app/debate', key: 'currentDebate', icon: Target },
-  ...libraryNavItems,
-  { path: '/app/settings', key: 'settings', icon: Settings },
 ];
 
 const desktopLinkClass = cn(
@@ -101,7 +92,6 @@ function filterVisibleAnnouncements(announcements: UserAnnouncement[], now: numb
 }
 
 export function AppLayout() {
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const { t } = useTranslation();
   const { user } = useAuth();
   const userId = user?.id ?? null;
@@ -109,8 +99,8 @@ export function AppLayout() {
   const [announcementsUserId, setAnnouncementsUserId] = useState<string | null>(userId);
   const [dismissError, setDismissError] = useState<{ announcementId: string; message: string } | null>(null);
   const dismissedAnnouncementIds = useRef(new Set<string>());
-  const mobileMenuTriggerRef = useRef<HTMLButtonElement>(null);
   const headerRef = useRef<HTMLElement>(null);
+  const aboveMainRef = useRef<HTMLDivElement>(null);
   const activeRequestRef = useRef<AbortController | null>(null);
   const lastRequestAtRef = useRef<number | null>(null);
   const activeUserIdRef = useRef<string | null>(null);
@@ -173,21 +163,10 @@ export function AppLayout() {
   }, [loadAnnouncements, userId]);
 
   useEffect(() => {
-    setMobileMenuOpen(false);
     setDismissError(null);
     setAnnouncements((current) => filterVisibleAnnouncements(current, Date.now()));
     void loadAnnouncements();
   }, [loadAnnouncements, location.pathname]);
-
-  // The menu is `md:hidden`: widening the window would hide it while it still holds the page modal.
-  useEffect(() => {
-    if (!mobileMenuOpen) return;
-    const wide = window.matchMedia('(min-width: 768px)');
-    const close = () => { if (wide.matches) setMobileMenuOpen(false); };
-    close();
-    wide.addEventListener('change', close);
-    return () => wide.removeEventListener('change', close);
-  }, [mobileMenuOpen]);
 
   useEffect(() => {
     if (announcementsUserId !== userId) return;
@@ -233,6 +212,27 @@ export function AppLayout() {
     };
   }, []);
 
+  // Ask sizes itself from this, so a banner between the header and main is included.
+  // The value is the document offset of main, measured when the chrome above it changes size.
+  useEffect(() => {
+    const chrome = aboveMainRef.current;
+    if (!chrome || typeof ResizeObserver === 'undefined') return;
+    const root = document.documentElement;
+    const apply = () => {
+      const top = Math.max(0, Math.round(chrome.getBoundingClientRect().bottom + window.scrollY));
+      root.style.setProperty('--app-main-top', `${top}px`);
+    };
+    apply();
+    const observer = new ResizeObserver(apply);
+    observer.observe(chrome);
+    window.addEventListener('resize', apply);
+    return () => {
+      observer.disconnect();
+      window.removeEventListener('resize', apply);
+      root.style.removeProperty('--app-main-top');
+    };
+  }, []);
+
   // Dismiss is optimistic: the banner goes at once and comes back only if the server refuses.
   const handleDismissAnnouncement = async (announcementId: string) => {
     const requestUserId = userId;
@@ -263,6 +263,7 @@ export function AppLayout() {
 
   return (
     <div className="native-safe-screen flex flex-col bg-background">
+      <div ref={aboveMainRef}>
       <SkipLink />
       {/* Header: the edge appears once content scrolls under it. */}
       <header
@@ -273,7 +274,7 @@ export function AppLayout() {
         )}
       >
         <div className="container flex h-16 items-center justify-between px-4 max-[359px]:px-2">
-          <Link to="/app" {...homePrefetch} onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-3 shrink-0 rounded-md pointer-coarse:min-h-11">
+          <Link to="/app" {...homePrefetch} className="flex items-center gap-3 shrink-0 rounded-md pointer-coarse:min-h-11">
             <OwlMark size={36} alt={t('common.logoAlt')} />
             <span className="whitespace-nowrap font-display text-xl font-[600] tracking-[-0.01em] text-heading">{site.product}</span>
           </Link>
@@ -322,59 +323,6 @@ export function AppLayout() {
                 <Settings className="h-5 w-5" aria-hidden="true" />
               </NavLink>
             </HeaderTooltip>
-            <DialogPrimitive.Root open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
-              <DialogPrimitive.Trigger asChild>
-                <Button
-                  ref={mobileMenuTriggerRef}
-                  variant="ghost"
-                  size="icon"
-                  className="rounded-full md:hidden text-muted-foreground"
-                  aria-label={mobileMenuOpen ? t('nav.closeMenu') : t('nav.openMenu')}
-                  aria-expanded={mobileMenuOpen}
-                >
-                  {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-                </Button>
-              </DialogPrimitive.Trigger>
-              {/* Mobile Nav: a modal panel under the header, with a scrim over the page. */}
-              <DialogPrimitive.Portal>
-                <DialogPrimitive.Overlay className="fixed inset-0 z-40 bg-[var(--do-overlay)] md:hidden data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=open]:fade-in-0 data-[state=closed]:fade-out-0 ease-out-strong data-[state=open]:duration-180 data-[state=closed]:duration-120" />
-                <DialogPrimitive.Content
-                  aria-describedby={undefined}
-                  className="native-scroll-y native-mobile-menu fixed inset-x-0 top-(--app-header-bottom,8rem) z-40 overflow-y-auto rounded-b-xl border-b-2 border-border bg-card p-3 shadow-xl md:hidden data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=open]:fade-in-0 data-[state=closed]:fade-out-0 data-[state=open]:slide-in-from-top-1 data-[state=closed]:slide-out-to-top-1 ease-out-strong data-[state=open]:duration-180 data-[state=closed]:duration-120"
-                >
-                  <DialogPrimitive.Title className="sr-only">{t('nav.mobileNavigation')}</DialogPrimitive.Title>
-                  <nav aria-label={t('nav.mobileNavigation')}>
-                    <div className="grid gap-1 pb-(--native-safe-bottom,0px)">
-                      {mobileNavItems.map((item) => {
-                        const active = item.key === 'tools' ? section === 'tools'
-                          : item.key === 'currentDebate' ? section === 'debate'
-                          : location.pathname === item.path;
-                        return (
-                          <Link
-                            key={item.path}
-                            to={item.path}
-                            aria-current={location.pathname === item.path ? 'page' : undefined}
-                            onClick={() => setMobileMenuOpen(false)}
-                            className={cn(
-                              "flex min-h-14 items-center gap-3 px-3 py-2.5 rounded-md transition-[color,background-color,transform] duration-150 active:scale-[0.98]",
-                              active ? "bg-brand-tint text-primary" : "text-foreground hover:bg-accent",
-                            )}
-                          >
-                            <span className={cn("flex h-10 w-10 shrink-0 items-center justify-center rounded-sm", active ? "bg-card text-primary shadow-[0_2px_0_var(--do-primary-tint-border)]" : "bg-muted text-muted-foreground")}>
-                              <item.icon className="h-5 w-5" aria-hidden="true" />
-                            </span>
-                            <div>
-                              <div className="font-extrabold">{t(`nav.${item.key}`)}</div>
-                              <div className={cn("text-[0.8125rem]", active ? "text-primary" : "text-muted-foreground")}>{t(`navDesc.${item.key}`)}</div>
-                            </div>
-                          </Link>
-                        );
-                      })}
-                    </div>
-                  </nav>
-                </DialogPrimitive.Content>
-              </DialogPrimitive.Portal>
-            </DialogPrimitive.Root>
           </div>
         </div>
 
@@ -397,6 +345,7 @@ export function AppLayout() {
 
       <DebateDialogs />
       <InactiveDebateGate />
+      </div>
 
       {/* Main Content */}
       <main id={MAIN_CONTENT_ID} className="native-main-content flex-1 focus-visible:outline-hidden">
@@ -413,6 +362,9 @@ export function AppLayout() {
           </div>
         </div>
       </footer>
+
+      {/* After main so keyboard order follows the page, then the bar. Fixed, so the flow is unchanged. */}
+      <PhoneTabBar />
     </div>
   );
 }

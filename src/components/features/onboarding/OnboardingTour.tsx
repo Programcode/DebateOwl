@@ -9,10 +9,10 @@ import { hasCompletedOnboarding as completedFor, useOnboardingStore } from '@/ho
 import { focusCurrentDebate, focusTourPrimary } from '@/lib/onboarding-tour-load';
 import { useDebateStore } from '@/lib/stores/debate-store';
 
-// Below `lg` the header's menu button is the navigation. There the tour draws no
-// overlay, so a tap on the menu (or anything else) still works while it shows,
-// and its tooltip sits under the header (z-50) and the open menu and its scrim
-// (z-40). Joyride draws the tooltip at zIndex + 100.
+// Below `lg` the tour draws no overlay, so a tap still reaches the page.
+// On a phone the bottom tab bar is the navigation; from `md` until `lg` it is
+// the header menu. The tooltip stays under both (z-40) and the header (z-50).
+// Joyride draws the tooltip at zIndex + 100.
 const COMPACT_LAYOUT_QUERY = '(max-width: 1023px)';
 const COMPACT_TOOLTIP_Z_INDEX = 35;
 

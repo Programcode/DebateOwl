@@ -990,9 +990,27 @@ passes AA on every surface; buttons fill with --do-primary (#0A6FF0) and white t
   }
 
   .native-safe-fixed-bottom {
-    bottom: calc(var(--native-safe-bottom, 0px) + 1rem);
+    bottom: calc(1rem + max(var(--native-safe-bottom, 0px), var(--phone-tab-reserve, 0px)));
   }
 
+  /* Phone tab bar. The reserve is the bar's measured height (home indicator included);
+     until that measurement, a fallback keeps the first paint from sitting underneath it.
+     The footer inset moves into the bar, so the two don't stack. */
+  @media (width < 48rem) {
+    :root {
+      --phone-tab-reserve: calc(4.5rem + var(--native-safe-bottom, 0px));
+    }
+
+    .native-safe-screen {
+      padding-bottom: var(--phone-tab-reserve);
+    }
+
+    .native-safe-screen > footer.native-safe-bottom {
+      padding-bottom: 1rem;
+    }
+  }
+
+  /* Set from the phone tab bar only, and only while a text field's keyboard is open. */
   .native-main-content {
     padding-bottom: calc(var(--native-keyboard-height, 0px) * 0.12);
   }
@@ -1053,6 +1071,12 @@ passes AA on every surface; buttons fill with --do-primary (#0A6FF0) and white t
 /* Scroll margin for anchors under the sticky header. Unlayered, so it wins over scroll-mt-* as in v3. */
 [id] {
   scroll-margin-top: 5rem;
+}
+
+@media (width < 48rem) {
+  main [id] {
+    scroll-margin-bottom: var(--phone-tab-reserve, calc(4.5rem + env(safe-area-inset-bottom, 0px)));
+  }
 }
 
 /* Vaul's bottom sheet: 300ms open, 200ms close on the drawer curve (its default is 500ms both ways). */

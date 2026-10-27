@@ -18,7 +18,7 @@ Users save reference texts to their Library. The Library belongs to the Current 
 
 ## How to get to it (user POV)
 
-- Desktop: `More` → `Library`. Mobile: `Open menu` → `Library`. Or go to `/app/library`.
+- Phone (below 768px): bottom tab `Library`. From 768px: header nav `Library`. Or go to `/app/library`.
 - Settings (`/app/settings`) → `Delete all my data`, for the erase path.
 
 ## Driving it with verify.sh + Playwright
