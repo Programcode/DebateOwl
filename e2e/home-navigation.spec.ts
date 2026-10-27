@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect, type Page } from '@playwright/test';
 import { setLocale, stubSupabaseSession } from './helpers/auth';
 
 test.beforeEach(async ({ page }) => {
@@ -171,6 +171,133 @@ test('phone tab bar holds Tools, Current debate, Library, and Settings', async (
   expect(termsBox).not.toBeNull();
   expect(tabBox).not.toBeNull();
   expect(termsBox!.y + termsBox!.height).toBeLessThanOrEqual(tabBox!.y + 1);
+});
+
+async function paintViewport(page: Page, next: { height: number; offsetTop: number; scale: number }) {
+  await page.evaluate((value) => {
+    const viewport = window.visualViewport;
+    if (!viewport) throw new Error('visualViewport is missing');
+    for (const key of ['height', 'offsetTop', 'scale'] as const) {
+      Object.defineProperty(viewport, key, { configurable: true, get: () => value[key] });
+    }
+    viewport.dispatchEvent(new Event('resize'));
+  }, next);
+}
+
+test('phone tab bar hides for a keyboard and returns, and ignores pinch-zoom', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto('/app/ask', { waitUntil: 'domcontentloaded' });
+  const field = page.getByRole('textbox', { name: 'Message to your debate coach' });
+  const tabBar = page.getByRole('navigation', { name: 'Mobile navigation' });
+  await expect(field).toBeVisible({ timeout: 15_000 });
+  await expect(tabBar).toBeVisible();
+
+  await field.focus();
+  await paintViewport(page, { height: 380, offsetTop: 0, scale: 1.5 });
+  await expect(tabBar).toBeVisible();
+
+  await paintViewport(page, { height: 380, offsetTop: 0, scale: 1 });
+  await expect(tabBar).toBeHidden();
+  const hidden = await page.evaluate(() => ({
+    reserve: document.documentElement.style.getPropertyValue('--phone-tab-reserve').trim(),
+    keyboard: document.documentElement.style.getPropertyValue('--native-keyboard-height').trim(),
+  }));
+  expect(hidden.reserve).toBe('0px');
+  expect(Number.parseFloat(hidden.keyboard)).toBeGreaterThan(120);
+
+  await paintViewport(page, { height: 844, offsetTop: 0, scale: 1 });
+  await expect(tabBar).toBeVisible();
+  const shown = await page.evaluate(() => document.documentElement.style.getPropertyValue('--phone-tab-reserve').trim());
+  expect(Number.parseFloat(shown)).toBeGreaterThan(0);
+});
+
+test('Ask composer stays above the tab bar while an announcement is up', async ({ page }) => {
+  await page.route('**/functions/v1/announcements*', (route) => route.fulfill({
+    json: {
+      announcements: [{
+        id: 'aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee',
+        title: 'Scheduled maintenance',
+        body: 'DebateLab will be unavailable for ten minutes.',
+        starts_at: '2026-08-31T12:00:00.000Z',
+        expires_at: null,
+        created_at: '2026-08-31T11:00:00.000Z',
+      }],
+    },
+  }));
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto('/app/ask', { waitUntil: 'domcontentloaded' });
+  await expect(page.getByRole('heading', { name: 'Scheduled maintenance' })).toBeVisible({ timeout: 15_000 });
+  const send = page.getByRole('button', { name: 'Send' });
+  const tabBar = page.getByRole('navigation', { name: 'Mobile navigation' });
+  await expect(send).toBeVisible();
+  await expect(tabBar).toBeVisible();
+  const [sendBox, tabBox, tops] = await Promise.all([
+    send.boundingBox(),
+    tabBar.boundingBox(),
+    page.evaluate(() => ({
+      main: document.documentElement.style.getPropertyValue('--app-main-top').trim(),
+      header: document.documentElement.style.getPropertyValue('--app-header-bottom').trim(),
+    })),
+  ]);
+  expect(sendBox).not.toBeNull();
+  expect(tabBox).not.toBeNull();
+  expect(sendBox!.y + sendBox!.height).toBeLessThanOrEqual(tabBox!.y + 1);
+  expect(Number.parseFloat(tops.main)).toBeGreaterThan(Number.parseFloat(tops.header));
+});
+
+test('a toast at 700px sits above the tab bar', async ({ page }) => {
+  await page.setViewportSize({ width: 700, height: 800 });
+  await page.goto('/app', { waitUntil: 'domcontentloaded' });
+  await expect(page.getByRole('heading', { name: 'Prepare' })).toBeVisible({ timeout: 15_000 });
+  const tabBar = page.getByRole('navigation', { name: 'Mobile navigation' });
+  await expect(tabBar).toBeVisible();
+
+  const toasted = await page.evaluate(async () => {
+    const match = performance.getEntriesByType('resource')
+      .map((entry) => entry.name)
+      .find((name) => name.includes('/sonner'));
+    if (!match) return 'missing';
+    const mod = await import(/* @vite-ignore */ match) as { toast?: { success: (message: string, options: { duration: number }) => void } };
+    if (!mod.toast?.success) return 'no-toast';
+    mod.toast.success('Copied to clipboard', { duration: 60_000 });
+    return 'ok';
+  });
+  expect(toasted).toBe('ok');
+
+  const toast = page.locator('[data-sonner-toast]').last();
+  await expect(toast).toHaveAttribute('data-mounted', 'true');
+  const offset = await page.evaluate(() => {
+    const ol = document.querySelector('[data-sonner-toaster]');
+    return {
+      reserve: Number.parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--phone-tab-reserve')),
+      usedBottom: ol ? Number.parseFloat(getComputedStyle(ol).bottom) : 0,
+    };
+  });
+  expect(offset.reserve).toBeGreaterThan(40);
+  expect(offset.usedBottom).toBeGreaterThan(offset.reserve);
+  // The enter slide starts under the offset. The resting box is what has to clear the bar.
+  await expect.poll(async () => {
+    const [toastBox, tabBox] = await Promise.all([toast.boundingBox(), tabBar.boundingBox()]);
+    if (!toastBox || !tabBox) return Number.POSITIVE_INFINITY;
+    return toastBox.y + toastBox.height - tabBox.y;
+  }).toBeLessThanOrEqual(1);
+});
+
+test('iPad width does not keep a keyboard pad', async ({ page }) => {
+  await page.setViewportSize({ width: 820, height: 1180 });
+  await page.goto('/app/ask', { waitUntil: 'domcontentloaded' });
+  const field = page.getByRole('textbox', { name: 'Message to your debate coach' });
+  await expect(field).toBeVisible({ timeout: 15_000 });
+  await field.focus();
+  await paintViewport(page, { height: 500, offsetTop: 0, scale: 1 });
+  const pad = await page.evaluate(() => ({
+    keyboard: document.documentElement.style.getPropertyValue('--native-keyboard-height').trim(),
+    reserve: document.documentElement.style.getPropertyValue('--phone-tab-reserve').trim(),
+    main: getComputedStyle(document.querySelector('main')!).paddingBottom,
+  }));
+  expect(pad.keyboard).toBe('');
+  expect(pad.reserve).toBe('');
+  expect(pad.main).toBe('0px');
 });
 
 test('iPad portrait keeps the header menu instead of the tab bar', async ({ page }) => {

@@ -473,7 +473,7 @@ export default function AskPage() {
 
 
   return (
-    <div className="container px-4 py-8 max-md:flex max-md:h-[calc(100dvh-var(--app-header-bottom,7.25rem)-var(--phone-tab-reserve,4.5rem))] max-md:flex-col max-md:overflow-hidden max-md:py-4">
+    <div className="container px-4 py-8 max-md:flex max-md:h-[calc(100dvh-var(--app-main-top,var(--app-header-bottom,7.25rem))-var(--phone-tab-reserve,4.5rem))] max-md:flex-col max-md:overflow-hidden max-md:py-4">
       <WorkspaceToolScope context={workspace.context} />
       <div className="mx-auto w-full max-w-5xl max-md:flex max-md:min-h-0 max-md:flex-1 max-md:flex-col">
         <PageHeader title={t('nav.ask')} meta={<DailyUsage />} />

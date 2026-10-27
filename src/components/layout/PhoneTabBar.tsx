@@ -6,13 +6,15 @@ import { cn } from '@/lib/utils';
 import { useRoutePrefetch } from '@/hooks/use-route-prefetch';
 import { useCurrentDebate } from '@/lib/stores/debate-store';
 import { navSectionFor } from '@/components/layout/nav-sections';
-import { KEYBOARD_OPEN_PX, keyboardOverlap } from '@/components/layout/phone-tab-bar';
+import { MAIN_CONTENT_ID } from '@/components/layout/SkipLink';
+import { PHONE_TAB_MEDIA, isTextEntry, keyboardIsOpen, keyboardOverlap } from '@/components/layout/phone-tab-bar';
 
 // Below `md` (768px) only. iPad portrait is 820px and keeps the header menu:
 // four tabs would drop History and repeat the Current debate row already in the header.
 const tabClass = cn(
   'flex min-h-14 min-w-0 touch-manipulation flex-col items-center justify-center gap-0.5 rounded-lg px-1 py-1.5',
   'text-xs font-bold leading-tight text-muted-foreground transition-[color,background-color,transform] duration-150 active:scale-[0.97]',
+  'motion-reduce:transition-none motion-reduce:active:scale-100',
 );
 const tabActiveClass = 'bg-brand-tint text-primary';
 
@@ -54,6 +56,23 @@ function PhoneTab({
   );
 }
 
+function textEntryFocused() {
+  const active = document.activeElement;
+  if (!(active instanceof HTMLElement)) return false;
+  const inputType = active instanceof HTMLInputElement ? active.type : null;
+  return isTextEntry(active.tagName, inputType, active.isContentEditable);
+}
+
+function moveFocusToMain() {
+  const main = document.getElementById(MAIN_CONTENT_ID);
+  if (!(main instanceof HTMLElement)) return;
+  if (!main.hasAttribute('tabindex')) {
+    main.setAttribute('tabindex', '-1');
+    main.addEventListener('blur', () => main.removeAttribute('tabindex'), { once: true });
+  }
+  main.focus({ preventScroll: true });
+}
+
 export function PhoneTabBar() {
   const { t } = useTranslation();
   const location = useLocation();
@@ -64,45 +83,85 @@ export function PhoneTabBar() {
   const [keyboardOpen, setKeyboardOpen] = useState(false);
   const [keyboardPx, setKeyboardPx] = useState(0);
 
+  // The listener exists only while the tab bar does. Wider layouts never write
+  // --native-keyboard-height, so main does not grow a keyboard pad there.
   useEffect(() => {
+    const phone = window.matchMedia(PHONE_TAB_MEDIA);
     const viewport = window.visualViewport;
-    if (!viewport) return;
+    let listening = false;
+
     const update = () => {
-      const overlap = keyboardOverlap(window.innerHeight, viewport.height, viewport.offsetTop);
-      const open = overlap >= KEYBOARD_OPEN_PX;
+      if (!phone.matches || !viewport) return;
+      const open = keyboardIsOpen(
+        window.innerHeight,
+        viewport.height,
+        viewport.offsetTop,
+        viewport.scale,
+        textEntryFocused(),
+      );
+      if (open && navRef.current?.contains(document.activeElement)) moveFocusToMain();
+      const overlap = open ? keyboardOverlap(window.innerHeight, viewport.height, viewport.offsetTop) : 0;
       setKeyboardOpen((current) => (current === open ? current : open));
-      setKeyboardPx((current) => (current === (open ? overlap : 0) ? current : (open ? overlap : 0)));
+      setKeyboardPx((current) => (current === overlap ? current : overlap));
     };
-    update();
-    viewport.addEventListener('resize', update);
-    viewport.addEventListener('scroll', update);
-    return () => {
+    const listen = () => {
+      if (!viewport || listening) return;
+      listening = true;
+      viewport.addEventListener('resize', update);
+      viewport.addEventListener('scroll', update);
+      document.addEventListener('focusin', update);
+      document.addEventListener('focusout', update);
+    };
+    const silence = () => {
+      if (!viewport || !listening) return;
+      listening = false;
       viewport.removeEventListener('resize', update);
       viewport.removeEventListener('scroll', update);
+      document.removeEventListener('focusin', update);
+      document.removeEventListener('focusout', update);
+    };
+    const sync = () => {
+      if (!phone.matches) {
+        silence();
+        setKeyboardOpen(false);
+        setKeyboardPx(0);
+        return;
+      }
+      listen();
+      update();
+    };
+    sync();
+    phone.addEventListener('change', sync);
+    return () => {
+      silence();
+      phone.removeEventListener('change', sync);
     };
   }, []);
 
   // The bar's real height, including the home-indicator inset, is what the page
   // pads by. A keyboard hides the bar, so the focused field can use that space.
+  // At `md` and up both variables are removed, including a value left by a resize.
   useLayoutEffect(() => {
     const root = document.documentElement;
+    const phone = window.matchMedia(PHONE_TAB_MEDIA);
     const nav = navRef.current;
     const apply = () => {
+      if (!phone.matches) {
+        root.style.removeProperty('--phone-tab-reserve');
+        root.style.removeProperty('--native-keyboard-height');
+        return;
+      }
       const reserve = !nav || keyboardOpen ? 0 : Math.round(nav.getBoundingClientRect().height);
       root.style.setProperty('--phone-tab-reserve', `${reserve}px`);
       root.style.setProperty('--native-keyboard-height', `${keyboardOpen ? keyboardPx : 0}px`);
     };
     apply();
-    if (!nav || typeof ResizeObserver === 'undefined') {
-      return () => {
-        root.style.removeProperty('--phone-tab-reserve');
-        root.style.removeProperty('--native-keyboard-height');
-      };
-    }
-    const observer = new ResizeObserver(() => apply());
-    observer.observe(nav);
+    const observer = nav && typeof ResizeObserver !== 'undefined' ? new ResizeObserver(apply) : null;
+    if (nav && observer) observer.observe(nav);
+    phone.addEventListener('change', apply);
     return () => {
-      observer.disconnect();
+      observer?.disconnect();
+      phone.removeEventListener('change', apply);
       root.style.removeProperty('--phone-tab-reserve');
       root.style.removeProperty('--native-keyboard-height');
     };
@@ -119,6 +178,7 @@ export function PhoneTabBar() {
       )}
     >
       {tabs.map((tab) => {
+        // History, billing, and admin are not tabs, so none of these is current there.
         const active = tab.key === 'tools' ? section === 'tools'
           : tab.key === 'currentDebate' ? section === 'debate'
           : path === tab.to;

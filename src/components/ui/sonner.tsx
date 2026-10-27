@@ -14,8 +14,12 @@ const Toaster = ({ ...props }: ToasterProps) => {
       theme={theme}
       closeButton
       className="toaster group"
-      // Keep toasts clear of the home indicator and the rounded corners in the installed app.
-      offset={{ bottom: "calc(24px + var(--native-safe-bottom, 0px))", right: "calc(24px + var(--native-safe-right, 0px))" }}
+      // Sonner uses mobileOffset only at 600px and below. The tab bar runs to 767px, so the
+      // desktop offset carries the same reserve. At 768px and up the reserve is unset.
+      offset={{
+        bottom: "calc(24px + max(var(--phone-tab-reserve, 0px), var(--native-safe-bottom, 0px)))",
+        right: "calc(24px + var(--native-safe-right, 0px))",
+      }}
       mobileOffset={{ bottom: "calc(16px + max(var(--phone-tab-reserve, 0px), var(--native-safe-bottom, 0px)))" }}
       toastOptions={{
         closeButtonAriaLabel: t("common.close"),

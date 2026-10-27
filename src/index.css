@@ -1009,6 +1009,7 @@ passes AA on every surface; buttons fill with --do-primary (#0A6FF0) and white t
     }
   }
 
+  /* Set from the phone tab bar only, and only while a text field's keyboard is open. */
   .native-main-content {
     padding-bottom: calc(var(--native-keyboard-height, 0px) * 0.12);
   }
@@ -1072,7 +1073,7 @@ passes AA on every surface; buttons fill with --do-primary (#0A6FF0) and white t
 }
 
 @media (width < 48rem) {
-  [id] {
+  main [id] {
     scroll-margin-bottom: var(--phone-tab-reserve, calc(4.5rem + env(safe-area-inset-bottom, 0px)));
   }
 }

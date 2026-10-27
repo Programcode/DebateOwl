@@ -108,6 +108,7 @@ export function AppLayout() {
   const dismissedAnnouncementIds = useRef(new Set<string>());
   const mobileMenuTriggerRef = useRef<HTMLButtonElement>(null);
   const headerRef = useRef<HTMLElement>(null);
+  const aboveMainRef = useRef<HTMLDivElement>(null);
   const activeRequestRef = useRef<AbortController | null>(null);
   const lastRequestAtRef = useRef<number | null>(null);
   const activeUserIdRef = useRef<string | null>(null);
@@ -236,6 +237,27 @@ export function AppLayout() {
     };
   }, []);
 
+  // Ask sizes itself from this, so a banner between the header and main is included.
+  // The value is the document offset of main, measured when the chrome above it changes size.
+  useEffect(() => {
+    const chrome = aboveMainRef.current;
+    if (!chrome || typeof ResizeObserver === 'undefined') return;
+    const root = document.documentElement;
+    const apply = () => {
+      const top = Math.max(0, Math.round(chrome.getBoundingClientRect().bottom + window.scrollY));
+      root.style.setProperty('--app-main-top', `${top}px`);
+    };
+    apply();
+    const observer = new ResizeObserver(apply);
+    observer.observe(chrome);
+    window.addEventListener('resize', apply);
+    return () => {
+      observer.disconnect();
+      window.removeEventListener('resize', apply);
+      root.style.removeProperty('--app-main-top');
+    };
+  }, []);
+
   // Dismiss is optimistic: the banner goes at once and comes back only if the server refuses.
   const handleDismissAnnouncement = async (announcementId: string) => {
     const requestUserId = userId;
@@ -266,6 +288,7 @@ export function AppLayout() {
 
   return (
     <div className="native-safe-screen flex flex-col bg-background">
+      <div ref={aboveMainRef}>
       <SkipLink />
       {/* Header: the edge appears once content scrolls under it. */}
       <header
@@ -387,8 +410,6 @@ export function AppLayout() {
         </div>
       </header>
 
-      <PhoneTabBar />
-
       {announcementsUserId === userId && announcements[0] && (
         <AnnouncementBanner
           announcement={announcements[0]}
@@ -402,6 +423,7 @@ export function AppLayout() {
 
       <DebateDialogs />
       <InactiveDebateGate />
+      </div>
 
       {/* Main Content */}
       <main id={MAIN_CONTENT_ID} className="native-main-content flex-1 focus-visible:outline-hidden">
@@ -418,6 +440,9 @@ export function AppLayout() {
           </div>
         </div>
       </footer>
+
+      {/* After main so keyboard order follows the page, then the bar. Fixed, so the flow is unchanged. */}
+      <PhoneTabBar />
     </div>
   );
 }
