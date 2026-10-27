@@ -94,7 +94,7 @@ export default function BrainstormPage() {
     try {
       await saveCurrentBrainstorm((lastRun.current?.data.motion || brainstormForm?.motion || t('generatedArtifacts.brainstormTitle')).slice(0, 300));
       markResultSaved(result);
-      toast({ title: t('resultActions.savedToHistory', 'Saved to History') });
+      toast({ title: t('resultActions.savedToHistory', 'Saved to history') });
     } catch (error) {
       console.error('Failed to save brainstorm:', error);
       toast({ title: t('resultActions.saveFailed', 'Could not save. Try again.'), variant: 'destructive' });
@@ -136,7 +136,7 @@ export default function BrainstormPage() {
                 <BrainstormResults result={brainstormResult} discoveredSources={discoveredSources} onDiscuss={handleDiscuss} onSave={() => void handleSave()} saved={resultSaved} saving={saving} />
               </div>
             ) : (
-              <EmptyState icon={Lightbulb} title={t('brainstorm.emptyTitle')} description={t('brainstorm.emptyDesc')} />
+              <EmptyState size="compact-below-lg" icon={Lightbulb} title={t('brainstorm.emptyTitle')} description={t('brainstorm.emptyDesc')} />
             )}
           </div>
         </div>

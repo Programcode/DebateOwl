@@ -3,6 +3,7 @@ import { useEffect, useCallback, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import Joyride, { ACTIONS, CallBackProps, EVENTS, STATUS, Step } from 'react-joyride';
 import { useLocation } from 'react-router-dom';
+import { Owl } from '@/components/brand/Owl';
 import { Button } from '@/components/ui/button';
 import { hasCompletedOnboarding as completedFor, useOnboardingStore } from '@/hooks/use-onboarding';
 import { useDebateStore } from '@/lib/stores/debate-store';
@@ -80,8 +81,10 @@ export function OnboardingTour({ eligibleAt, userId }: { eligibleAt?: number; us
         {
             target: 'body',
             content: (
-                <div className="text-center">
-                    <h2 className="text-xl font-bold mb-2">{t('onboarding.ready')}</h2>
+                <div className="flex flex-col items-center text-center">
+                    {/* A small celebration, once: the owl in place of the old emoji. */}
+                    <Owl pose="celebrating" size={72} className="mb-2" />
+                    <h2 className="mb-2 text-balance font-display text-xl font-[600] text-heading">{t('onboarding.ready')}</h2>
                     <p className="text-muted-foreground">
                         {t('onboarding.readyDesc')}
                     </p>

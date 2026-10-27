@@ -15,14 +15,14 @@ test("bill-promo: an expired account is blocked, redeems a promo code, and gets 
   if (error) throw error;
   const brainstorm = async () => {
     await page.goto("/app/brainstorm");
-    await page.getByLabel("Motion / Topic *").fill("Public transport should be free");
+    await page.getByLabel("Motion / topic *").fill("Public transport should be free");
     await page.getByRole("button", { name: "Start brainstorming" }).click();
     // No Current Debate, so the motion check asks first; the paywall (or the run) follows it.
     await chooseForMotion(page, "once");
   };
   try {
     await brainstorm();
-    await expect(page.getByRole("dialog").getByText("Free Trial Ended")).toBeVisible({ timeout: AI_TIMEOUT });
+    await expect(page.getByRole("dialog").getByText("Your free trial has ended")).toBeVisible({ timeout: AI_TIMEOUT });
     await evidence.shot("01-blocked");
     expect((await providerCalls()).filter((call) => call.feature === "brainstorm")).toEqual([]);
 
@@ -31,7 +31,7 @@ test("bill-promo: an expired account is blocked, redeems a promo code, and gets 
     await page.getByRole("button", { name: "Have a promo code?" }).click();
     await page.getByPlaceholder("Enter promo code").fill(code);
     await page.getByRole("button", { name: "Apply", exact: true }).click();
-    await expect(page.getByText("Promo code applied!").first()).toBeVisible();
+    await expect(page.getByText("Promo code applied").first()).toBeVisible();
     await evidence.shot("02-promo-applied");
     const { data } = await admin.from("user_settings").select("subscription_tier").eq("user_id", userId).single();
     expect(data?.subscription_tier).toBe("pro");

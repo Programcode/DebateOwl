@@ -336,8 +336,6 @@
     }
   },
   "home": {
-    "title": "DebateLab",
-    "subtitle": "Válassz egy módot a kezdéshez.",
     "prepare": "Felkészülés",
     "practice": "Gyakorlás",
     "utilities": "Eszközök",
@@ -366,15 +364,15 @@
     "heading": "Min dolgozol most?"
   },
   "generate": {
-    "emptyTitle": "Az eseted vár",
-    "emptyDesc": "Töltsd ki az űrlapot egy strukturált vitaeset generálásához érvekkel, bizonyítékokkal és ellen-stratégiákkal.",
+    "emptyTitle": "Az eseted itt jelenik meg",
+    "emptyDesc": "Add meg az indítványt, válassz oldalt, és generálj.",
     "saved": "Eset mentve",
     "savedDesc": "Az eseted mentésre került az előzményekbe.",
     "savePrompt": "Adj meg egy címet ehhez az esethez:",
     "failed": "Generálás sikertelen",
     "timeout": "Időtúllépés",
     "timeoutDesc": "Az MI túl sokáig válaszolt. Próbáld újra.",
-    "authRequired": "Hitelesítés szükséges",
+    "authRequired": "Bejelentkezés szükséges",
     "flowchartImported": "Eset importálva",
     "flowchartImportedDesc": "Az eseted átkerült a folyamatábrákhoz.",
     "flowchartImportFailed": "Import sikertelen",
@@ -394,22 +392,22 @@
     "flowchartOtherDebate": "A folyamatábra csak a jelenlegi vitában létrehozott esetet fogadja. Hozd létre itt az esetet, hogy elküldhesd."
   },
   "attack": {
-    "emptyTitle": "Kíméletlen mód",
-    "emptyDesc": "Illeszd be az érvedet kíméletlen kritikáért, logikai hibák azonosításáért és megvalósítható javításokért.",
+    "emptyTitle": "A kritika itt jelenik meg",
+    "emptyDesc": "Illessz be egy érvet, és megkeressük a gyenge pontjait.",
     "failed": "Támadás elemzés sikertelen",
     "working": "Az eseted átnézése…",
     "previousCritique": "Az előző érvelésed kritikája",
     "previousCritiqueDesc": "A legutóbbi változatodat nem értékeltük, ezért ez a kritika eltérhet az űrlapban lévő szövegtől."
   },
   "brainstorm": {
-    "emptyTitle": "Kreatív szögek feloldása",
-    "emptyDesc": "Írd le az indítványodat szokatlan érvelési szögek felfedezéséhez, kompromisszumok azonosításához és legerősebb pozícióid megtalálásához.",
+    "emptyTitle": "Az érvelési szögek itt jelennek meg",
+    "emptyDesc": "Írj le egy indítványt, és új szögeket keresünk.",
     "failed": "Ötletelés sikertelen",
     "working": "Szempontok keresése…"
   },
   "factoids": {
-    "emptyTitle": "Győztes bizonyítékok",
-    "emptyDesc": "Adj meg egy állítást támogató tények kereséséhez valós hivatkozásokkal, kontextussal és útmutatóval a hatékony felhasználáshoz.",
+    "emptyTitle": "A bizonyítékok itt jelennek meg",
+    "emptyDesc": "Adj meg egy állítást, és hivatkozott bizonyítékot keresünk.",
     "failed": "Kutatás sikertelen",
     "savedToLibrary": "Mentve a könyvtárba",
     "savedToLibraryDesc": "Ez a bizonyíték mostantól elérhető megalapozáshoz.",
@@ -417,7 +415,7 @@
     "working": "Bizonyítékok keresése…"
   },
   "ask": {
-    "failed": "Hiba",
+    "failed": "Valami nem sikerült",
     "timeout": "Időtúllépés",
     "timeoutDesc": "A kérés túl sokáig tartott. Próbáld újra.",
     "saved": "Mentve",
@@ -466,7 +464,7 @@
     "promoAccessUntil": "A Pro hozzáférésed promóciós kódból származik (lejárat: {{date}}). Addig a számlázás beállítása nem kötelező; csak akkor állítsd be, ha ezután is Pro szeretnél maradni.",
     "promoAccess": "A Pro hozzáférésed promóciós kódból származik, így a számlázás beállítása nem kötelező.",
     "accessExpired": "A hozzáférésed lejárt. Válts magasabb csomagra az MI-eszközök további használatához.",
-    "globalSettings": "Globális beállítások",
+    "globalSettings": "Általános",
     "account": "Fiók",
     "accountDesc": "Hogyan jelentkezel be, és másolat minden mentett adatodról.",
     "signedInAs": "Bejelentkezve mint",
@@ -490,7 +488,7 @@
     "envSwitchDesc": "Kijelentkeztetünk és az app újratöltődik {{target}} felé mutatva. Újra be kell jelentkezned.",
     "envSwitchConfirm": "Váltás és kijelentkezés",
     "stagingBanner": "Staging háttérrendszer",
-    "dangerZone": "Veszélyzóna",
+    "dangerZone": "Adatok törlése",
     "dangerDesc": "Véglegesen törli az összes mentett adatodat. Ez csak a fiókodat érinti ({{email}}).",
     "deleteAllData": "Összes adatom törlése",
     "deleteDialogTitle": "Összes adat törlése",
@@ -875,8 +873,9 @@
   },
   "notFound": {
     "title": "404",
-    "message": "Hoppá! Az oldal nem található",
-    "link": "Vissza a kezdőlapra"
+    "message": "Az oldal nem található",
+    "link": "Vissza a kezdőlapra",
+    "description": "Ez a hivatkozás nem vezet sehova. Lehet, hogy elköltözött."
   },
   "footer": {
     "terms": "Feltételek",
@@ -992,7 +991,7 @@
     "judgeSubtitle": "Mélyítsd el az elemzésedet"
   },
   "pricing": {
-    "title": "Egyszerű, átlátható árazás",
+    "title": "Egyszerű, világos árazás",
     "subtitle": "Kezdj ingyen, frissíts amikor készen állsz.",
     "trial": "Próba",
     "trialPrice": "$0",
@@ -1074,7 +1073,7 @@
     }
   },
   "finalCta": {
-    "title": "Készen állsz a következő győztes eseted felépítésére?",
+    "title": "Készen állsz a következő eseted felépítésére?",
     "subtitle": "Csatlakozz a vitázókhoz, akik MI-vel készülnek okosabban.",
     "cta": "DebateLab indítása",
     "freeTrialAvailable": "Ingyenes próba elérhető"
@@ -1124,7 +1123,7 @@
     }
   },
   "rateLimit": {
-    "title": "Kéréslimit túllépve"
+    "title": "Túl sok kérés"
   },
   "generateForm": {
     "motion": "Indítvány / téma",
@@ -1151,9 +1150,9 @@
     "toneFormal": "Formális",
     "toneConversational": "Társalgási",
     "toneAggressive": "Agresszív",
-    "generating": "Eset generálása...",
+    "generating": "Eset generálása…",
     "submit": "Vitaeset generálása",
-    "listening": "Hallgatás... Mondd el az indítványt tisztán",
+    "listening": "Hallgatás… Mondd el az indítványt tisztán",
     "stopListening": "Hallgatás leállítása",
     "startVoice": "Hangbevitel indítása",
     "stopVoice": "Hangbevitel leállítása",
@@ -1437,9 +1436,9 @@
     "options": "Beállítások"
   },
   "limitModal": {
-    "trialEnded": "Ingyenes próba lejárt",
+    "trialEnded": "Lejárt az ingyenes próbaidőszakod",
     "trialEndedDesc": "A {{days}} napos ingyenes próbaidőszakod lejárt. Válts Pro-ra a DebateLab további használatához.",
-    "limitReached": "Napi hozzáférés szünetel",
+    "limitReached": "Elfogyott a napi MI-keret",
     "limitReachedDesc": "Elérted a mai keretet: {{current}} / {{limit}} MI-használatot vettél igénybe. A hozzáférés éjfélkor (UTC) frissül.",
     "weightedDesc": "Ez a modell {{units}} használatnak számít, és ma még {{remaining}} maradt. Válassz könnyebb modellt, vagy várj éjfélig (UTC).",
     "weightedTooLargeDesc": "Ez a modell {{units}} használatnak számít, ami több, mint a napi {{limit}} kereted. Válassz könnyebb modellt.",
@@ -1451,7 +1450,7 @@
     "gotIt": "Rendben",
     "paymentFailed": "Sikertelen fizetés",
     "paymentFailedDesc": "Az utolsó fizetésed sikertelen volt. Frissítsd a fizetési módodat a Beállításokban a DebateLab további használatához.",
-    "subscriptionEnded": "A Pro-előfizetés véget ért",
+    "subscriptionEnded": "Lejárt a Pro-előfizetésed",
     "subscriptionEndedDesc": "A Pro-előfizetésed véget ért. Fizess elő újra a DebateLab további használatához.",
     "subscriptionEndedOnDesc": "A Pro-előfizetésed véget ért ({{date}}). Fizess elő újra a DebateLab további használatához.",
     "updatePayment": "Fizetési mód frissítése",
@@ -1512,12 +1511,12 @@
     "freePeriod_other": "{{count}} napig"
   },
   "onboarding": {
-    "welcome": "Üdvözlünk a DebateLabban! 🎉",
-    "ready": "Készen állsz! 🚀",
-    "readyDesc": "Válaszd azt a módot, amelyre a következő fordulóhoz szükséged van.",
+    "welcome": "Üdvözlünk a DebateLabban",
+    "ready": "Készen állsz",
+    "readyDesc": "Válassz eszközt a következő fordulódhoz.",
     "back": "Vissza",
     "close": "Bezárás",
-    "getStarted": "Kezdjük!",
+    "getStarted": "Kezdjük",
     "next": "Következő",
     "nextWithProgress": "Következő ({step}/{steps})",
     "skip": "Túra kihagyása",
@@ -1530,12 +1529,12 @@
   },
   "debateOwlIntro": {
     "greeting": "Szia, én vagyok a DebateOwl!",
-    "greetingNamed": "Szia, {{name}} vagyok, a DebateOwl baglya!",
+    "greetingNamed": "Szia, {{name}} vagyok!",
     "newLook": "A DebateLab új külsőt kapott.",
     "company": "Veled leszek, amíg valami betöltődik.",
     "sameTools": "Ugyanazok az eszközök, ugyanott, ahol eddig.",
-    "noticeTitle": "A DebateLabből lassan DebateOwl lesz",
-    "noticeBody": "Ugyanaz az alkalmazás, ugyanaz a fiók, ugyanazok a mentett munkák, csak új külsővel és új névvel. Azért váltunk, hogy többen megtaláljanak minket a Google-ben.",
+    "noticeTitle": "A DebateLabból DebateOwl lesz",
+    "noticeBody": "A fiókod és a mentett munkáid ugyanazok maradnak.",
     "skipAnimation": "Animáció kihagyása",
     "done": "Értem"
   },
@@ -1626,8 +1625,8 @@
     "typeField": "Típus",
     "strengthField": "Erősség",
     "labelPlaceholder": "Rövid címke...",
-    "titlePlaceholder": "A folyamatábra címe...",
-    "descPlaceholder": "Leírás...",
+    "titlePlaceholder": "A folyamatábra címe…",
+    "descPlaceholder": "Leírás…",
     "typeArgument": "Érv",
     "typeAttack": "Támadás",
     "typeRebuttal": "Cáfolat",
@@ -1641,7 +1640,7 @@
     "legendAttack": "Támadás",
     "legendRebuttal": "Cáfolat",
     "legendDropped": "Elejtett",
-    "savedToast": "Folyamatábra sikeresen mentve",
+    "savedToast": "Folyamatábra mentve",
     "saveFailedToast": "Nem sikerült menteni a folyamatábrát",
     "loadedToast": "Folyamatábra betöltve",
     "deleteFailedToast": "Nem sikerült törölni a folyamatábrát",
@@ -1797,7 +1796,7 @@
     "duplicateSourceDesc": "Ez az URL vagy fájl már mentve van.",
     "fileReadFailed": "Nem sikerült beolvasni ezt a fájlt.",
     "saveToLibrary": "Mentés a könyvtárba",
-    "addNewTitle": "Új forrás hozzáadása",
+    "addNewTitle": "Forrás hozzáadása",
     "yourKBTitle": "A tudásbázisod",
     "titleLabel": "Cím",
     "originLabel": "Eredet",
@@ -2304,7 +2303,7 @@
     "sourceLibraryEmpty": "Még nincs aktív forrásod a Forráskönyvtárban.",
     "seedQuestionsLabel": "Nyitó kérdések (opcionális)",
     "start": "Keresztkérdezés indítása",
-    "loading": "Keresztkérdezés betöltése...",
+    "loading": "Keresztkérdezés betöltése…",
     "thinking": "Az edző gondolkodik...",
     "retryResponse": "Válasz újrapróbálása",
     "timeout": "A kérés időtúllépés miatt megszakadt",
@@ -2627,10 +2626,10 @@
     "genericProvider": "Az MI-szolgáltató",
     "quota": "{{provider}}: elfogyott a keret. Szólj az oldal adminisztrátorának.",
     "config": "{{provider}}: hibás beállítás. Szólj az oldal adminisztrátorának.",
-    "rateLimit": "{{provider}}: túl sok kérés. Próbáld újra később.",
-    "unavailable": "{{provider}}: átmenetileg nem érhető el. Próbáld újra később.",
+    "rateLimit": "{{provider}}: túl sok kérés. Próbáld újra egy perc múlva.",
+    "unavailable": "{{provider}}: átmenetileg nem érhető el. Próbáld újra egy perc múlva.",
     "safety": "{{provider}}: biztonsági okokból elutasította a kérést. Próbáld másképp megfogalmazni.",
-    "unexpectedProvider": "Az MI-szolgáltató váratlan hibát adott. Próbáld újra később.",
+    "unexpectedProvider": "Az MI-szolgáltató váratlan hibát adott. Próbáld újra egy perc múlva.",
     "invalidOutput": "Az MI válasza hibás formátumban érkezett. Próbáld újra.",
     "unexpected": "Váratlan hiba történt",
     "offline": "Ellenőrizd a kapcsolatot, és próbáld újra.",
@@ -2729,7 +2728,7 @@
     "alreadySubscribed": "Már van előfizetésed. A Beállításokban kezelheted.",
     "promoExpired": "Ez a promóciós kód lejárt",
     "promoExhausted": "Ez a promóciós kód elérte a felhasználási korlátját",
-    "promoApplied": "Promóciós kód beváltva!",
+    "promoApplied": "Promóciós kód beváltva",
     "promoDiscountNoted": "Kedvezménykód rögzítve! Előfizetéskor automatikusan érvényesül.",
     "promoInvalid": "Érvénytelen vagy lejárt promóciós kód",
     "promoAlreadyRedeemed": "Ezt a kódot már beváltottad",

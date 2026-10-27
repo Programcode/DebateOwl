@@ -104,8 +104,17 @@ export default function HomePage() {
 
         <section className="mt-8 border-t-2 border-border pt-6" aria-labelledby="home-utilities-title">
           <h2 id="home-utilities-title" className="text-lg font-extrabold text-heading">{t('home.utilities', 'Utilities')}</h2>
-          <div className="mt-3 flex flex-wrap gap-3">
-            {UTILITY_TOOLS.map((tool) => <ToolLink key={tool.key} tool={tool} variant="tile" tourId={`mode-${tool.key}`} />)}
+          {/* One even row at every width; on phones the icon sits above the label so Hungarian fits. */}
+          <div className="mt-3 grid grid-cols-3 gap-2 sm:gap-3">
+            {UTILITY_TOOLS.map((tool) => (
+              <ToolLink
+                key={tool.key}
+                tool={tool}
+                variant="tile"
+                tourId={`mode-${tool.key}`}
+                className="w-full max-sm:flex-col max-sm:justify-center max-sm:gap-1 max-sm:px-2 max-sm:text-center max-sm:text-sm"
+              />
+            ))}
           </div>
         </section>
       </div>

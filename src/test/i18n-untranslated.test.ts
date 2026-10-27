@@ -13,7 +13,6 @@ import toolsHu from '../locales/tools/hu.json';
  */
 const SAME_AS_ENGLISH: Record<string, string[]> = {
   'Product, plan and file-format names': [
-    'es translation:home.title', 'hu translation:home.title',
     'es translation:settings.tierPro', 'hu translation:settings.tierPro',
     'es translation:pricing.pro', 'hu translation:pricing.pro',
     'es translation:pricingModal.pro', 'hu translation:pricingModal.pro',
@@ -58,7 +57,7 @@ const SAME_AS_ENGLISH: Record<string, string[]> = {
     'es translation:features.sparring', 'es translation:historyPage.tabSparring', 'es translation:debate.kinds.sparring',
   ],
   'Spanish words spelled the same as the English ones': [
-    'es translation:common.error', 'es translation:ask.failed', 'es translation:settings.deleteFailed',
+    'es translation:common.error', 'es translation:settings.deleteFailed',
     'es translation:settings.portalError', 'es translation:admin.error', 'es translation:pricingModal.redeemError',
     'es translation:workspaces.original', 'es translation:login.emailTab', 'es translation:generateForm.toneFormal',
     'es translation:generateForm.roleIntro', 'es translation:generateForm.roleConc',

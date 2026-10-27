@@ -79,7 +79,7 @@ test.describe('Hungarian parity', () => {
 
     await expectHungarianDocument(page);
     await expect(page.getByRole('heading', { name: 'Felkészülés' })).toBeVisible({ timeout: 15_000 });
-    await expect(page.locator('.react-joyride__tooltip')).toContainText('Üdvözlünk a DebateLabban!', { timeout: 15_000 });
+    await expect(page.locator('.react-joyride__tooltip')).toContainText('Üdvözlünk a DebateLabban', { timeout: 15_000 });
     await expect(page.locator('[data-test-id="button-primary"]')).toContainText('Következő');
     await expect(page.locator('[data-test-id="button-skip"]')).toContainText('Túra kihagyása');
     await page.locator('[data-test-id="button-skip"]').click();
