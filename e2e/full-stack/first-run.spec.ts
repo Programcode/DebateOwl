@@ -33,7 +33,7 @@ const copy = {
     firstDebate: "Itt indíthatod el az első vitádat.",
     startDebate: "Vita indítása",
     motionField: "Tétel",
-    library: "Forráskönyvtár",
+    library: "Könyvtár",
     generate: "Generálás",
     finish: "Kezdjük!",
     skip: "Túra kihagyása",
