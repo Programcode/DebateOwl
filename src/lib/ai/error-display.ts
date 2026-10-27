@@ -58,7 +58,7 @@ function describeAIError(error: unknown): string {
     }
 
     if (normalized.includes('rate limit') || normalized.includes('rate_limit') || normalized.includes('too many requests')) {
-      return i18n.t('aiErrors.rateLimit', { provider, defaultValue: '{{provider}} rate limit exceeded. Please try again later.' });
+      return i18n.t('aiErrors.rateLimit', { provider, defaultValue: '{{provider}} rate limit exceeded. Try again in a minute.' });
     }
 
     if (
@@ -67,14 +67,14 @@ function describeAIError(error: unknown): string {
       normalized.includes('service unavailable') ||
       normalized.includes('503')
     ) {
-      return i18n.t('aiErrors.unavailable', { provider, defaultValue: '{{provider}} is temporarily unavailable. Please try again later.' });
+      return i18n.t('aiErrors.unavailable', { provider, defaultValue: '{{provider}} is temporarily unavailable. Try again in a minute.' });
     }
 
     if (normalized.includes('content policy') || normalized.includes('safety') || normalized.includes('blocked')) {
       return i18n.t('aiErrors.safety', { provider, defaultValue: '{{provider}} blocked this request for safety reasons. Try rephrasing your input.' });
     }
 
-    return i18n.t('aiErrors.unexpectedProvider', 'The AI provider returned an unexpected error. Please try again later.');
+    return i18n.t('aiErrors.unexpectedProvider', 'The AI provider returned an unexpected error. Try again in a minute.');
   }
 
   return error instanceof Error ? error.message : i18n.t('aiErrors.unexpected', 'An unexpected error occurred');

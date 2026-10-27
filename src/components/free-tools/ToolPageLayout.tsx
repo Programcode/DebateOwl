@@ -24,7 +24,7 @@ export type FreeTool = { route: ToolPageRoute; name: string; blurb: string };
 /** Long-form copy under a tool: a readable measure and plain headings. */
 export function ToolArticle({ children, className }: { children: ReactNode; className?: string }) {
   return (
-    <div className={cn('mx-auto max-w-[68ch] space-y-10 text-base leading-7 text-foreground [&_a]:text-primary [&_a]:underline [&_a]:underline-offset-4 [&_h2]:text-2xl [&_h2]:font-semibold [&_h2]:tracking-tight [&_h3]:text-lg [&_h3]:font-semibold [&_li]:mt-1 [&_ol]:list-decimal [&_ol]:space-y-1 [&_ol]:pl-6 [&_p]:mt-3 [&_ul]:list-disc [&_ul]:pl-6', className)}>
+    <div className={cn('mx-auto max-w-[68ch] space-y-10 text-base leading-7 text-foreground [&_a:not(.not-prose)]:py-1 [&_a]:text-primary [&_a]:underline [&_a]:underline-offset-4 [&_h2]:text-2xl [&_h2]:font-semibold [&_h2]:tracking-tight [&_h3]:text-lg [&_h3]:font-semibold [&_li]:mt-1 [&_ol]:list-decimal [&_ol]:space-y-1 [&_ol]:pl-6 [&_p]:mt-3 [&_ul]:list-disc [&_ul]:pl-6', className)}>
       {children}
     </div>
   );
@@ -127,11 +127,11 @@ export function ToolPageLayout({ route, title, intro, shortAnswer, tool, childre
       <main id={MAIN_CONTENT_ID} className="container mx-auto px-4 pb-16 pt-6 focus-visible:outline-hidden">
         <nav aria-label={t('layout.breadcrumb')} className="text-sm text-muted-foreground print:hidden">
           <ol className="flex flex-wrap items-center gap-1">
-            <li><Link to={home} className="hover:text-foreground">{site.product}</Link></li>
+            <li><Link to={home} className="inline-flex min-h-6 items-center hover:text-foreground pointer-coarse:min-h-11">{site.product}</Link></li>
             <li aria-hidden="true">/</li>
             {crumb ? (
               <>
-                <li><Link to={hub} className="hover:text-foreground">{t('layout.allTools')}</Link></li>
+                <li><Link to={hub} className="inline-flex min-h-6 items-center hover:text-foreground pointer-coarse:min-h-11">{t('layout.allTools')}</Link></li>
                 <li aria-hidden="true">/</li>
                 <li aria-current="page" className="text-foreground">{crumb}</li>
               </>
@@ -142,7 +142,7 @@ export function ToolPageLayout({ route, title, intro, shortAnswer, tool, childre
         </nav>
         <div className="mx-auto mt-6 max-w-[68ch] print:hidden">
           <h1 className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl">{title}</h1>
-          <div className="mt-3 text-lg leading-8 text-muted-foreground">{intro}</div>
+          <div className="mt-3 text-lg leading-8 text-muted-foreground [&_a]:py-1">{intro}</div>
           {/* Before the tool: the timer, calculator and hub cards carry H2s of their own. */}
           <section aria-labelledby="short-answer" className="mt-8">
             <h2 id="short-answer" className="text-xl font-semibold tracking-tight text-foreground">{shortAnswer.question}</h2>

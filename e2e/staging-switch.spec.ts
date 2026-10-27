@@ -30,7 +30,7 @@ for (const path of ['/', '/login']) {
       const navBox = await page.locator('nav.fixed').boundingBox();
       expect(navBox!.y).toBeGreaterThanOrEqual(stripBox!.y + stripBox!.height - 1);
     }
-    await strip.getByRole('button', { name: 'Switch to Production' }).click({ timeout: 5_000 });
+    await strip.getByRole('button', { name: 'Switch to production' }).click({ timeout: 5_000 });
 
     await expect(strip).toHaveCount(0);
     expect(await page.evaluate(() => localStorage.getItem('debate-supabase-env'))).toBeNull();
@@ -52,7 +52,7 @@ test('switching in one tab reloads the other tabs onto the same project', async 
   const stripIn = (page: typeof other) => page.getByRole('status').filter({ hasText: 'Staging backend' });
   await expect(stripIn(other)).toBeVisible();
 
-  await stripIn(switching).getByRole('button', { name: 'Switch to Production' }).click();
+  await stripIn(switching).getByRole('button', { name: 'Switch to production' }).click();
 
   await expect(stripIn(switching)).toHaveCount(0);
   await expect(stripIn(other)).toHaveCount(0);

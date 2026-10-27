@@ -15,7 +15,7 @@ test.beforeEach(async ({ page }) => {
 });
 
 async function openAppNav(page: Page, label: string) {
-  if ((page.viewportSize()?.width ?? 1280) < 1024) {
+  if ((page.viewportSize()?.width ?? 1280) < 768) {
     await page.getByRole('button', { name: 'Open menu' }).click();
     await page.getByRole('navigation', { name: 'Mobile navigation' })
       .getByRole('link', { name: new RegExp(`^${label}`) })
