@@ -255,20 +255,20 @@ export function DebateTimer({ storageKey, embedded = false, onFirstStart, footer
       )}
 
       <nav aria-label={t('timer.speeches')} className="px-4 pt-4">
-        {/* Every speech in view, in rows of equal length: 8 speeches are 4 + 4 on a phone and one row from md. */}
+        {/* Every speech in view, in rows of equal length (8 speeches are 4 + 4 on a phone, one row from md), every tile as tall as the tallest. */}
         <ol
-          className="grid grid-cols-[repeat(var(--chips),minmax(0,1fr))] gap-2 pb-2 sm:grid-cols-[repeat(var(--chips-sm),minmax(0,1fr))] md:grid-cols-[repeat(var(--chips-md),minmax(0,1fr))]"
+          className="grid auto-rows-fr grid-cols-[repeat(var(--chips),minmax(0,1fr))] gap-2 pb-2 sm:grid-cols-[repeat(var(--chips-sm),minmax(0,1fr))] md:grid-cols-[repeat(var(--chips-md),minmax(0,1fr))]"
           style={chipColumns(format.segments.length)}
         >
           {format.segments.map((entry, index) => (
-            <li key={entry.id} className="min-w-0">
+            <li key={entry.id} className="flex min-w-0">
               <button
                 type="button"
                 onClick={() => select(index)}
                 aria-current={index === round.segmentIndex ? 'step' : undefined}
                 title={entry.label}
                 className={cn(
-                  'flex h-full min-h-11 w-full flex-col items-center justify-center rounded-md border px-2 py-1 text-[0.8125rem] leading-tight sm:text-sm transition-colors focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring',
+                  'flex min-h-11 w-full flex-col items-center justify-center rounded-md border px-2 py-1 text-[0.8125rem] leading-tight sm:text-sm transition-colors focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring',
                   index === round.segmentIndex ? 'border-primary bg-primary text-primary-foreground' : 'border-border bg-background hover:bg-muted',
                 )}
               >

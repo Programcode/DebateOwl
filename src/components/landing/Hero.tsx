@@ -73,8 +73,9 @@ const Hero = () => {
                         {/* Three across at every width, so on a phone they take one short row under the buttons. */}
                         <Reveal onLoad delay={0.15} className="mt-8 grid grid-cols-3 gap-2 sm:gap-3">
                             {planHighlights.map((item) => (
-                                <div key={item.label} className="rounded-lg border-2 border-border bg-card p-3 sm:p-4">
-                                    <p className="text-balance text-[0.6875rem] font-extrabold uppercase leading-4 tracking-[0.04em] text-muted-foreground sm:text-xs sm:tracking-[0.08em]">{item.label}</p>
+                                <div key={item.label} className="rounded-lg border-2 border-border bg-card px-2.5 py-3 max-[379px]:px-2 sm:p-4">
+                                    {/* On phones no extra tracking, so long Spanish and Hungarian labels take two lines at most. */}
+                                    <p className="text-balance text-[0.6875rem] font-extrabold uppercase leading-4 tracking-normal text-muted-foreground hyphens-auto max-[379px]:text-[0.625rem] sm:text-xs sm:tracking-[0.08em] sm:hyphens-manual">{item.label}</p>
                                     <p className="mt-1 text-balance font-display text-base font-[600] text-heading sm:text-lg">{item.value}</p>
                                 </div>
                             ))}
