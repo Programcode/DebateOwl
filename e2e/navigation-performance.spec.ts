@@ -55,7 +55,10 @@ function homeToolLink(page: Page, tool: string) {
 }
 
 async function openHome(page: Page) {
-  if ((page.viewportSize()?.width ?? 1280) < 1024) {
+  const width = page.viewportSize()?.width ?? 1280;
+  if (width < 768) {
+    await page.getByRole('navigation', { name: 'Mobile navigation' }).getByRole('link', { name: 'Tools', exact: true }).click();
+  } else if (width < 1024) {
     await page.getByRole('button', { name: 'Open menu' }).click();
     await page.getByRole('navigation', { name: 'Mobile navigation' }).getByRole('link', { name: /^Tools/ }).click();
   } else {

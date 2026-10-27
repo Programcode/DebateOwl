@@ -233,8 +233,9 @@ test("auth-switch-account: the next account on this browser starts on /app, gets
     const tour = page.getByText("Welcome to DebateLab!");
     await expect(tour).toBeVisible({ timeout: 10_000 });
     await evidence.shot("01-second-account-tour");
+    const tabBar = page.getByRole("navigation", { name: "Mobile navigation" });
     if (await page.getByRole("button", { name: "Open menu" }).isVisible()) {
-      // On phones the tour must not block the header's menu: open it and use it.
+      // iPad keeps the header menu. The tour must not block it.
       await page.getByRole("button", { name: "Open menu" }).click();
       const menu = page.getByRole("navigation", { name: "Mobile navigation" });
       await expect(menu).toBeVisible();
@@ -243,6 +244,14 @@ test("auth-switch-account: the next account on this browser starts on /app, gets
       await expect(page).toHaveURL(/\/app\/history$/);
       await evidence.step("Opened the menu and went to History while the tour showed");
       // The tour waits on /app and picks up again there.
+      await page.goBack();
+      await expect(tour).toBeVisible({ timeout: 10_000 });
+    } else if (await tabBar.isVisible()) {
+      // Phones use the tab bar. History stays on the Home utilities row.
+      await tabBar.getByRole("link", { name: "Library", exact: true }).click();
+      await expect(page).toHaveURL(/\/app\/library$/);
+      await evidence.shot("02-tab-bar-during-tour");
+      await evidence.step("Used the phone tab bar to open Library while the tour showed");
       await page.goBack();
       await expect(tour).toBeVisible({ timeout: 10_000 });
     }

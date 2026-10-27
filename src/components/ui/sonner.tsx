@@ -16,7 +16,7 @@ const Toaster = ({ ...props }: ToasterProps) => {
       className="toaster group"
       // Keep toasts clear of the home indicator and the rounded corners in the installed app.
       offset={{ bottom: "calc(24px + var(--native-safe-bottom, 0px))", right: "calc(24px + var(--native-safe-right, 0px))" }}
-      mobileOffset={{ bottom: "calc(16px + var(--native-safe-bottom, 0px))" }}
+      mobileOffset={{ bottom: "calc(16px + max(var(--phone-tab-reserve, 0px), var(--native-safe-bottom, 0px)))" }}
       toastOptions={{
         closeButtonAriaLabel: t("common.close"),
         // Sonner's stylesheet is unlayered, so it beats Tailwind's layered utilities. The toast surface

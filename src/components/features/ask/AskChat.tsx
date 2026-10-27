@@ -514,7 +514,7 @@ export function AskChat({ messages, streamingMessage, isLoading, error, onDismis
   };
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-3 max-md:flex max-md:min-h-0 max-md:flex-1 max-md:flex-col">
       <div className="flex items-center justify-between gap-2 lg:hidden">
         <Button variant="outline" size="sm" onClick={() => setMobileSidebarOpen(true)}>
           <PanelLeftOpen className="mr-2 h-4 w-4" />
@@ -540,7 +540,7 @@ export function AskChat({ messages, streamingMessage, isLoading, error, onDismis
         </SheetContent>
       </Sheet>
 
-      <div className={cn('grid gap-3', desktopSidebarOpen ? 'lg:grid-cols-[280px_minmax(0,1fr)]' : 'lg:grid-cols-[auto_minmax(0,1fr)]')}>
+      <div className={cn('grid gap-3 max-md:min-h-0 max-md:flex-1', desktopSidebarOpen ? 'lg:grid-cols-[280px_minmax(0,1fr)]' : 'lg:grid-cols-[auto_minmax(0,1fr)]')}>
         <aside className="hidden lg:block">
           {desktopSidebarOpen ? (
             <Card className="flex h-[calc(100dvh-14rem)] min-h-[400px] max-h-[800px] flex-col border-primary/20">
@@ -572,7 +572,7 @@ export function AskChat({ messages, streamingMessage, isLoading, error, onDismis
           )}
         </aside>
 
-    <Card className="flex flex-col h-[calc(100dvh-14rem)] min-h-[400px] max-h-[800px] border-primary/20">
+    <Card className="flex h-[calc(100dvh-14rem)] min-h-[400px] max-h-[800px] flex-col border-primary/20 max-md:h-auto max-md:max-h-none max-md:min-h-0 max-md:flex-1">
       <CardHeader className="shrink-0 border-b-2 border-border bg-brand-tint/50 pb-4">
         {/* Wraps on a phone: the Hungarian title and two buttons do not fit one 375 px row. */}
         <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2">

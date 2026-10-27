@@ -28,6 +28,7 @@ import { useCurrentDebate } from '@/lib/stores/debate-store';
 import { navSectionFor } from '@/components/layout/nav-sections';
 import { DebateDialogs, InactiveDebateGate } from '@/components/features/debate/DebateDialogs';
 import { MAIN_CONTENT_ID, SkipLink } from '@/components/layout/SkipLink';
+import { PhoneTabBar } from '@/components/layout/PhoneTabBar';
 import {
   dismissAnnouncement,
   listActiveAnnouncements,
@@ -175,14 +176,20 @@ export function AppLayout() {
     void loadAnnouncements();
   }, [loadAnnouncements, location.pathname]);
 
-  // The menu is `lg:hidden`: widening the window would hide it while it still holds the page modal.
+  // The menu is only between `md` and `lg`. A phone has the tab bar, and `lg` has the header nav.
+  // Leaving the dialog open across either edge would hide its trigger and keep the page modal.
   useEffect(() => {
     if (!mobileMenuOpen) return;
+    const phone = window.matchMedia('(width < 48rem)');
     const wide = window.matchMedia('(min-width: 1024px)');
-    const close = () => { if (wide.matches) setMobileMenuOpen(false); };
+    const close = () => { if (phone.matches || wide.matches) setMobileMenuOpen(false); };
     close();
+    phone.addEventListener('change', close);
     wide.addEventListener('change', close);
-    return () => wide.removeEventListener('change', close);
+    return () => {
+      phone.removeEventListener('change', close);
+      wide.removeEventListener('change', close);
+    };
   }, [mobileMenuOpen]);
 
   useEffect(() => {
@@ -324,7 +331,7 @@ export function AppLayout() {
                   ref={mobileMenuTriggerRef}
                   variant="ghost"
                   size="icon"
-                  className="rounded-full lg:hidden text-muted-foreground"
+                  className="hidden rounded-full text-muted-foreground md:inline-flex lg:hidden"
                   aria-label={mobileMenuOpen ? t('nav.closeMenu') : t('nav.openMenu')}
                   aria-expanded={mobileMenuOpen}
                 >
@@ -333,10 +340,10 @@ export function AppLayout() {
               </DialogPrimitive.Trigger>
               {/* Mobile Nav: a modal panel under the header, with a scrim over the page. */}
               <DialogPrimitive.Portal>
-                <DialogPrimitive.Overlay className="fixed inset-0 z-40 bg-[var(--do-overlay)] lg:hidden data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=open]:fade-in-0 data-[state=closed]:fade-out-0 ease-out-strong data-[state=open]:duration-180 data-[state=closed]:duration-120" />
+                <DialogPrimitive.Overlay className="fixed inset-0 z-40 bg-[var(--do-overlay)] max-md:hidden lg:hidden data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=open]:fade-in-0 data-[state=closed]:fade-out-0 ease-out-strong data-[state=open]:duration-180 data-[state=closed]:duration-120" />
                 <DialogPrimitive.Content
                   aria-describedby={undefined}
-                  className="native-scroll-y native-mobile-menu fixed inset-x-0 top-(--app-header-bottom,8rem) z-40 overflow-y-auto rounded-b-xl border-b-2 border-border bg-card p-3 shadow-xl lg:hidden data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=open]:fade-in-0 data-[state=closed]:fade-out-0 data-[state=open]:slide-in-from-top-1 data-[state=closed]:slide-out-to-top-1 ease-out-strong data-[state=open]:duration-180 data-[state=closed]:duration-120"
+                  className="native-scroll-y native-mobile-menu fixed inset-x-0 top-(--app-header-bottom,8rem) z-40 overflow-y-auto rounded-b-xl border-b-2 border-border bg-card p-3 shadow-xl max-md:hidden lg:hidden data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=open]:fade-in-0 data-[state=closed]:fade-out-0 data-[state=open]:slide-in-from-top-1 data-[state=closed]:slide-out-to-top-1 ease-out-strong data-[state=open]:duration-180 data-[state=closed]:duration-120"
                 >
                   <DialogPrimitive.Title className="sr-only">{t('nav.mobileNavigation')}</DialogPrimitive.Title>
                   <nav aria-label={t('nav.mobileNavigation')}>
@@ -379,6 +386,8 @@ export function AppLayout() {
           <CurrentDebateMenu variant="mobile" />
         </div>
       </header>
+
+      <PhoneTabBar />
 
       {announcementsUserId === userId && announcements[0] && (
         <AnnouncementBanner

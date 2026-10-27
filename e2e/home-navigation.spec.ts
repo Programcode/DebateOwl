@@ -110,14 +110,19 @@ test('header keeps the brand and controls inside a 320px viewport', async ({ pag
   await page.goto('/app', { waitUntil: 'domcontentloaded' });
   await expect(page.getByRole('heading', { name: 'Prepare' })).toBeVisible({ timeout: 15_000 });
 
-  // Mobile keeps the logo, language, and menu on the first row; Settings and the theme live in the menu and Settings.
+  // A phone keeps the logo, language, and Current debate row. Settings is a tab, not a menu button.
   const languageControl = page.getByRole('button', { name: 'Language' });
-  const menuControl = page.getByRole('button', { name: 'Open menu' });
   const debateControl = page.getByTestId('current-debate-mobile');
-  const controls = [languageControl, menuControl, debateControl];
+  const tabBar = page.getByRole('navigation', { name: 'Mobile navigation' });
+  const controls = [languageControl, debateControl];
 
   await expect(page.getByAltText('DebateLab logo')).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Open menu' })).toBeHidden();
+  await expect(tabBar).toBeVisible();
   for (const control of controls) await expect(control).toBeVisible();
+  for (const label of ['Tools', 'Current debate', 'Library', 'Settings']) {
+    await expect(tabBar.getByRole('link', { name: label, exact: true })).toBeVisible();
+  }
 
   const boxes = await Promise.all(controls.map((control) => control.boundingBox()));
   expect(boxes.every((box) => box && box.x >= 0 && box.x + box.width <= 320)).toBe(true);
@@ -132,21 +137,52 @@ test('desktop header fits without internal or document overflow at supported wid
 
     const navigation = page.getByRole('navigation', { name: 'Main navigation' });
     await expect(navigation).toBeVisible();
+    await expect(page.getByRole('navigation', { name: 'Mobile navigation' })).toHaveCount(0);
+    await expect(page.getByRole('button', { name: 'Open menu' })).toBeHidden();
     expect(await navigation.evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(true);
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
   }
 });
 
-test('mobile menu holds only Tools, Current debate, Library, History, and Settings', async ({ page }) => {
+test('phone tab bar holds Tools, Current debate, Library, and Settings', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto('/app', { waitUntil: 'domcontentloaded' });
-  await page.getByRole('button', { name: 'Open menu' }).click();
+  await expect(page.getByRole('heading', { name: 'Prepare' })).toBeVisible({ timeout: 15_000 });
+  await expect(page.getByRole('button', { name: 'Open menu' })).toBeHidden();
 
-  const mobileNavigation = page.getByRole('navigation', { name: 'Mobile navigation' });
-  const hrefs = await mobileNavigation.getByRole('link').evaluateAll((links) => links.map((link) => link.getAttribute('href')));
-  expect(hrefs).toEqual(['/app', '/app/debate', '/app/library', '/app/history', '/app/settings']);
+  const tabBar = page.getByRole('navigation', { name: 'Mobile navigation' });
+  await expect(tabBar).toBeVisible();
+  const hrefs = await tabBar.getByRole('link').evaluateAll((links) => links.map((link) => link.getAttribute('href')));
+  expect(hrefs).toEqual(['/app', '/app/debate', '/app/library', '/app/settings']);
+  const widths = await tabBar.getByRole('link').evaluateAll((links) => links.map((link) => link.getBoundingClientRect().width));
+  expect(Math.max(...widths) - Math.min(...widths)).toBeLessThan(2);
 
-  await mobileNavigation.getByRole('link', { name: /^Library/ }).click();
+  await tabBar.getByRole('link', { name: 'Library', exact: true }).click();
   await expect(page).toHaveURL(/\/app\/library$/);
+  await expect(tabBar.getByRole('link', { name: 'Library', exact: true })).toHaveAttribute('aria-current', 'page');
+
+  // The page can scroll its end clear of the bar, including the footer.
+  await page.goto('/app/settings', { waitUntil: 'domcontentloaded' });
+  await expect(page.getByRole('heading', { name: 'Settings', exact: true })).toBeVisible({ timeout: 15_000 });
+  const terms = page.getByRole('contentinfo').getByRole('link', { name: 'Terms' });
+  await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+  await expect(terms).toBeVisible();
+  const [termsBox, tabBox] = await Promise.all([terms.boundingBox(), tabBar.boundingBox()]);
+  expect(termsBox).not.toBeNull();
+  expect(tabBox).not.toBeNull();
+  expect(termsBox!.y + termsBox!.height).toBeLessThanOrEqual(tabBox!.y + 1);
+});
+
+test('iPad portrait keeps the header menu instead of the tab bar', async ({ page }) => {
+  await page.setViewportSize({ width: 820, height: 1180 });
+  await page.goto('/app', { waitUntil: 'domcontentloaded' });
+  await expect(page.getByRole('heading', { name: 'Prepare' })).toBeVisible({ timeout: 15_000 });
+  await expect(page.getByRole('button', { name: 'Open menu' })).toBeVisible();
   await expect(page.getByRole('navigation', { name: 'Mobile navigation' })).toHaveCount(0);
+  await expect(page.getByRole('navigation', { name: 'Main navigation' })).toHaveCount(0);
+
+  await page.getByRole('button', { name: 'Open menu' }).click();
+  const menu = page.getByRole('navigation', { name: 'Mobile navigation' });
+  const hrefs = await menu.getByRole('link').evaluateAll((links) => links.map((link) => link.getAttribute('href')));
+  expect(hrefs).toEqual(['/app', '/app/debate', '/app/library', '/app/history', '/app/settings']);
 });

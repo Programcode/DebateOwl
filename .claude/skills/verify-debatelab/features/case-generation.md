@@ -16,7 +16,7 @@ A signed-in user enters a motion on Generate and receives a structured debate ca
 ## How to get to it (user POV)
 
 - The header link `Generate`, or the Home card with `data-tour="mode-generate"`, or `/app/generate`.
-- History: `More` → `History` on desktop, `Open menu` → `History` on mobile, or `/app/history`.
+- History: Home utilities tile `History`, desktop header `History`, or `Open menu` → `History` from 768px until the desktop nav. Phones have no History tab. Or `/app/history`.
 
 ## Driving it with verify.sh + Playwright
 
