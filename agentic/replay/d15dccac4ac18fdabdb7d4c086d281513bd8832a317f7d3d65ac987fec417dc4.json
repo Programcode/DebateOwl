@@ -38,7 +38,7 @@
     "endAnchors": [
       {
         "role": "image",
-        "name": "Logotipo de DebateLab"
+        "name": "Logotipo de DebateOwl"
       },
       {
         "role": "button",
@@ -70,7 +70,7 @@
     "goneAnchors": [
       {
         "role": "image",
-        "name": "DebateLab logo"
+        "name": "DebateOwl logo"
       },
       {
         "role": "button",

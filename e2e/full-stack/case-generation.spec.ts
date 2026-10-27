@@ -16,14 +16,14 @@ test("a signed-in user generates a case grounded in a saved Library source", asy
   await page.getByRole("textbox", { name: "Content", exact: true })
     .fill(`${marker} Tallinn ridership rose 14 percent after fares were removed. ${"Detailed ridership evidence. ".repeat(9_000)}`);
   await page.getByRole("button", { name: "Save to Library" }).click();
-  await expect(page.getByText("Grounding Active")).toBeVisible();
+  await expect(page.getByText("Grounding active")).toBeVisible();
 
   const userId = await user.userId();
   const { data: sources } = await admin.from("sources").select("id,is_active").eq("user_id", userId);
   expect(sources).toEqual([expect.objectContaining({ is_active: true })]);
 
   await page.goto("/app/generate");
-  await page.getByRole("textbox", { name: "Motion / Topic *" }).fill(motion);
+  await page.getByRole("textbox", { name: "Motion / topic *" }).fill(motion);
   await page.getByRole("button", { name: "Generate debate case" }).click();
 
   // A hang (as in the auth relock regression) fails here instead of spinning forever.
@@ -43,10 +43,10 @@ test("a provider failure shows an error and lets the user retry", async ({ signe
   await fake.fail("generate", 500);
   await startDebate(page, motion);
   await page.goto("/app/generate");
-  await page.getByRole("textbox", { name: "Motion / Topic *" }).fill(motion);
+  await page.getByRole("textbox", { name: "Motion / topic *" }).fill(motion);
   await page.getByRole("button", { name: "Generate debate case" }).click();
 
-  await expect(page.getByText("Generation Failed", { exact: true })).toBeVisible({ timeout: 30_000 });
+  await expect(page.getByText("Generation failed", { exact: true })).toBeVisible({ timeout: 30_000 });
   await expect(page.getByRole("button", { name: "Generate debate case" })).toBeEnabled();
 
   await page.getByRole("button", { name: "Generate debate case" }).click();
@@ -57,16 +57,16 @@ test("an account without quota is told why generation is blocked", async ({ sign
   await admin.from("user_settings").update({ daily_limit_override: 0 }).eq("user_id", await user.userId());
   await startDebate(page, motion);
   await page.goto("/app/generate");
-  await page.getByRole("textbox", { name: "Motion / Topic *" }).fill(motion);
+  await page.getByRole("textbox", { name: "Motion / topic *" }).fill(motion);
   await page.getByRole("button", { name: "Generate debate case" }).click();
 
-  await expect(page.getByRole("dialog").getByText("Daily Access Paused")).toBeVisible({ timeout: 30_000 });
+  await expect(page.getByRole("dialog").getByText("Daily AI uses used up")).toBeVisible({ timeout: 30_000 });
   expect((await fake.requests()).filter((request) => request.feature === "generate")).toEqual([]);
 });
 
 test("a saved one-off case persists to the account and reloads from History", async ({ signedIn: page, user }) => {
   await page.goto("/app/generate");
-  await page.getByRole("textbox", { name: "Motion / Topic *" }).fill(motion);
+  await page.getByRole("textbox", { name: "Motion / topic *" }).fill(motion);
   await page.getByRole("button", { name: "Generate debate case" }).click();
   await chooseForMotion(page, "once");
   await expectResult(page, `${MARK} case thesis`);
@@ -93,7 +93,7 @@ test("a saved one-off case persists to the account and reloads from History", as
 test("a generated case exports to PDF and DOCX files", async ({ signedIn: page }) => {
   await startDebate(page, motion);
   await page.goto("/app/generate");
-  await page.getByRole("textbox", { name: "Motion / Topic *" }).fill(motion);
+  await page.getByRole("textbox", { name: "Motion / topic *" }).fill(motion);
   await page.getByRole("button", { name: "Generate debate case" }).click();
   await expectResult(page, `${MARK} case thesis`);
 

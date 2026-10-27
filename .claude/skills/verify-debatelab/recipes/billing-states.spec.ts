@@ -30,14 +30,14 @@ type State = {
 
 const UPGRADE: Text = { en: "Upgrade to Pro", hu: "Váltás Pro-ra" };
 const MANAGE: Text = { en: "Manage subscription", hu: "Előfizetés kezelése" };
-const PAUSED: Text = { en: "Daily Access Paused", hu: "Napi hozzáférés szünetel" };
+const PAUSED: Text = { en: "Daily AI uses used up", hu: "Elfogyott a napi MI-keret" };
 const OK: Text = { en: "OK", hu: "Rendben" };
 
 const STATES: State[] = [
   {
     name: "trial",
     settings: { subscription_tier: "trial", trial_ends_at: at(2.5) },
-    badge: { en: "Free Trial", hu: "Ingyenes próba" },
+    badge: { en: "Free trial", hu: "Ingyenes próba" },
     text: { en: /AI access is active/, hu: /Az MI-hozzáférés aktív/ },
     button: UPGRADE,
     plan: "plan-trial",
@@ -112,7 +112,7 @@ const STATES: State[] = [
     button: { en: "Resubscribe", hu: "Újra előfizetek" },
     plan: null,
     dailyLimit: null,
-    refusal: { title: { en: "Pro Subscription Ended", hu: "A Pro-előfizetés véget ért" }, button: { en: "Resubscribe", hu: "Újra előfizetek" } },
+    refusal: { title: { en: "Your Pro subscription has ended", hu: "Lejárt a Pro-előfizetésed" }, button: { en: "Resubscribe", hu: "Újra előfizetek" } },
   },
 ];
 
@@ -151,7 +151,7 @@ async function chargeAIUnits(userId: string, units: number) {
 
 async function brainstorm(page: Page, language: "en" | "hu" = "en") {
   await page.goto("/app/brainstorm");
-  await page.getByLabel(language === "en" ? "Motion / Topic *" : "Indítvány / téma *").fill("Public transport should be free");
+  await page.getByLabel(language === "en" ? "Motion / topic *" : "Indítvány / téma *").fill("Public transport should be free");
   await page.getByRole("button", { name: language === "en" ? "Start brainstorming" : "Ötletelés indítása" }).click();
   if (language === "en") return chooseForMotion(page, "once");
   const dialog = page.getByRole("dialog", { name: /^(Indítasz egy vitát ezzel a tétellel\?|Ez egy másik tétel)$/ });
@@ -161,7 +161,7 @@ async function brainstorm(page: Page, language: "en" | "hu" = "en") {
 
 async function useHungarian(page: Page) {
   await page.goto("/app/settings");
-  await page.getByLabel("Interface Language").click();
+  await page.getByLabel("Interface language").click();
   await page.getByRole("option", { name: "Magyar" }).click();
   await expect(page.getByText("Előfizetés", { exact: true })).toBeVisible();
 }
@@ -261,7 +261,7 @@ test("bill-states-es: the Spanish subscription card wraps instead of squeezing",
   const userId = await user.userId();
   await followSystemTheme(page);
   await page.goto("/app/settings");
-  await page.getByLabel("Interface Language").click();
+  await page.getByLabel("Interface language").click();
   await page.getByRole("option", { name: "Español" }).click();
   await expect(page.getByText("Suscripción", { exact: true })).toBeVisible();
   const ES: Record<string, { badge: string; button: string }> = {
@@ -316,7 +316,7 @@ test("bill-trial-banner: the trial banner counts down, opens the plans and stays
   await expect(banner).toHaveCount(0);
   // Once the plan has loaded again (the Settings badge), the banner stays away.
   await page.goto("/app/settings");
-  await expect(page.getByTestId("subscription-card").getByText("Free Trial", { exact: true })).toBeVisible();
+  await expect(page.getByTestId("subscription-card").getByText("Free trial", { exact: true })).toBeVisible();
   await expect(page.getByTestId("trial-banner")).toHaveCount(0);
   await evidence.step("Trial banner shows days left, opens the pricing dialog, and stays hidden after dismissal");
 });
@@ -346,12 +346,12 @@ test("bill-access: extended access is served; a past-due payer after the grace i
   });
   await brainstorm(page);
   const dialog = page.getByRole("dialog");
-  await expect(dialog.getByText("Payment Failed", { exact: true })).toBeVisible({ timeout: AI_TIMEOUT });
+  await expect(dialog.getByText("Payment failed", { exact: true })).toBeVisible({ timeout: AI_TIMEOUT });
   await expect(dialog.getByText(/free trial/i)).toHaveCount(0);
   await expect(dialog.getByRole("button", { name: /Upgrade to Pro/ })).toHaveCount(0);
   await evidence.shot("ai-payment-failed-refused");
   await dialog.getByRole("button", { name: "Update payment method" }).click();
   await expect(page).toHaveURL(/\/app\/settings$/);
   await expect(page.getByText("Payment failed", { exact: true })).toBeVisible();
-  await evidence.step("Extended access is served; a past-due payer after the grace gets Payment Failed and goes to Settings");
+  await evidence.step("Extended access is served; a past-due payer after the grace gets Payment failed and goes to Settings");
 });

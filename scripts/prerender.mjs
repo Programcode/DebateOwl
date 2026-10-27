@@ -115,17 +115,42 @@ const shell = readFileSync(join(DIST, 'index.html'), 'utf8');
 const manifest = JSON.parse(readFileSync(join(DIST, '.vite/manifest.json'), 'utf8'));
 writeFileSync(join(DIST, 'app-shell.html'), shell);
 
+/**
+ * The dev server would resolve `import owl from '@/assets/owl/owl-point.svg'`
+ * to /src/assets/owl/owl-point.svg, which dist/ does not have. Every asset the
+ * build emitted is in the manifest, so an import of one resolves to the built,
+ * hashed file instead.
+ */
+function builtAssetUrls() {
+  const root = `${process.cwd()}/`;
+  return {
+    name: 'prerender-built-asset-urls',
+    enforce: 'pre',
+    load(id) {
+      const path = id.split('?')[0];
+      if (!path.startsWith(root)) return undefined;
+      const entry = manifest[path.slice(root.length)];
+      if (!entry || entry.isEntry || entry.isDynamicEntry || /\.[cm]?[jt]sx?$/.test(path)) return undefined;
+      return `export default ${JSON.stringify(`/${entry.file}`)};`;
+    },
+  };
+}
+
 // Vite's SSR loader runs the page modules in Node with the app's own config and aliases.
 const server = await createServer({
   mode: 'production',
   appType: 'custom',
   logLevel: 'warn',
+  plugins: [builtAssetUrls()],
   server: { middlewareMode: true, hmr: false, ws: false },
 });
 try {
   const { prerenderPages } = await server.ssrLoadModule('/src/prerender/entry.tsx');
   const pages = await prerenderPages({ landingModified: landingModified() });
   for (const page of pages) {
+    // A source path in a page is a file the site does not serve.
+    const sourceUrl = page.body.match(/["'(]\/src\/[^"')]*/);
+    if (sourceUrl) throw new Error(`prerender: ${page.route} references ${sourceUrl[0].slice(1)}, which is not in dist/`);
     const out = join(DIST, page.file);
     mkdirSync(dirname(out), { recursive: true });
     writeFileSync(out, pageHtml(shell, page, pageAssets(manifest, page.module, shell)));

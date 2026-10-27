@@ -1,4 +1,5 @@
 import { useTranslation } from "react-i18next";
+import site from '@/config/site.json';
 import { OwlMark } from '@/components/brand/Owl';
 import { useEffect, useState } from "react";
 import { Menu, X, ArrowRight } from "lucide-react";
@@ -40,7 +41,7 @@ const Navbar = () => {
                 <div className="flex h-16 items-center justify-between md:h-20">
                     <Link to="/" className="group flex shrink-0 items-center gap-2 rounded-lg pr-1 pointer-coarse:min-h-11">
                         <OwlMark size={38} alt={t('common.logoAlt')} className="transition-transform duration-200 ease-overshoot group-hover:-rotate-6 group-hover:scale-105" />
-                        <span className="font-display text-[1.375rem] font-[600] leading-none tracking-[-0.01em] text-heading">DebateLab</span>
+                        <span className="font-display text-[1.375rem] font-[600] leading-none tracking-[-0.01em] text-heading">{site.product}</span>
                     </Link>
 
                     <div className="hidden items-center gap-7 lg:flex">

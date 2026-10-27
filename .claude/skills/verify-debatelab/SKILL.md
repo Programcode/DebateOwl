@@ -1,11 +1,11 @@
 ---
 name: verify-debatelab
-description: Launch and drive the real DebateLab web app (React client + local Supabase Auth/Postgres/Edge Functions, with either a fake model provider or real OpenRouter pinned to Claude Haiku 5.5 on the Anthropic BYOK key plus real Exa research) to prove a user-facing feature works, with screenshots, ARIA snapshots, provider calls, and database rows as evidence. Use when asked to verify, demo, reproduce, or screenshot DebateLab behavior in a browser, or before calling a DebateLab UI/Edge Function change done.
+description: Launch and drive the real DebateOwl web app (React client + local Supabase Auth/Postgres/Edge Functions, with either a fake model provider or real OpenRouter pinned to Claude Haiku 5.5 on the Anthropic BYOK key plus real Exa research) to prove a user-facing feature works, with screenshots, ARIA snapshots, provider calls, and database rows as evidence. Use when asked to verify, demo, reproduce, or screenshot DebateOwl behavior in a browser, or before calling a DebateOwl UI/Edge Function change done.
 ---
 
-# Verify DebateLab
+# Verify DebateOwl
 
-DebateLab is a web app. The surface a user touches is the browser client at `/login` and `/app/*`, backed by Supabase Auth, Postgres/RLS, and Deno Edge Functions. This skill runs all of that locally and drives it with Playwright. It has two modes:
+DebateOwl is a web app. The surface a user touches is the browser client at `/login` and `/app/*`, backed by Supabase Auth, Postgres/RLS, and Deno Edge Functions. This skill runs all of that locally and drives it with Playwright. It has two modes:
 
 - **Fake (default, free).** `e2e/full-stack/fake-openrouter.mjs` answers every model call with canned text. Proves wiring, rows, and UI, not model behavior.
 - **Live (`up --live`, costs money).** The same container becomes a recording proxy to real OpenRouter. It rewrites every chat call to `anthropic/claude-haiku-5.5` pinned to the Anthropic provider with fallbacks off, so it bills the Anthropic BYOK key and not OpenRouter credits (override with `VERIFY_LIVE_MODEL`, which must be an `anthropic/` model), records OpenRouter's reply model as proof, and stops forwarding after `--max-calls` (default 400). Edge Functions also get a real Exa key, so web research and verified citations are real.

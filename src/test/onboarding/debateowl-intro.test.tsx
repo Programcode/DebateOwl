@@ -82,7 +82,7 @@ describe('FirstRun', () => {
       />,
     );
 
-    expect(screen.getByRole('dialog', { name: 'DebateLab is slowly becoming DebateOwl' })).toBeTruthy();
+    expect(screen.getByRole('dialog', { name: 'DebateLab is becoming DebateOwl' })).toBeTruthy();
     expect(screen.queryByText('start-debate')).toBeNull();
     fireEvent.click(screen.getByRole('button', { name: 'Skip animation' }));
     expect(storage.getItem(INTRO_SEEN_KEY)).toBeNull();
@@ -107,7 +107,7 @@ describe('FirstRun', () => {
     const tour = vi.fn((continueFromIntro: boolean) => <p>{continueFromIntro ? 'restarted' : 'owner'}</p>);
     render(<FirstRun showIntro={showIntro} tourCompleted onIntroSeen={() => markIntroSeen(storage)} tour={tour} />);
 
-    expect(screen.getByRole('dialog', { name: 'DebateLab is slowly becoming DebateOwl' })).toBeTruthy();
+    expect(screen.getByRole('dialog', { name: 'DebateLab is becoming DebateOwl' })).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: 'Got it' }));
     expect(screen.queryByText('restarted')).toBeNull();
     expect(screen.getByText('owner')).toBeTruthy();
@@ -142,7 +142,7 @@ describe('OnboardingTour continuing from the welcome', () => {
     renderTour(true);
     expect(screen.getByText(/Start your first debate here/)).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Start debate' })).toBeTruthy();
-    expect(screen.queryByRole('dialog', { name: 'DebateLab is slowly becoming DebateOwl' })).toBeNull();
+    expect(screen.queryByRole('dialog', { name: 'DebateLab is becoming DebateOwl' })).toBeNull();
     await waitFor(() => {
       expect(document.activeElement).toBe(document.querySelector('[data-action="primary"]'));
     });
@@ -203,7 +203,7 @@ describe('AppWelcome hands the welcome to the Start debate step', () => {
     fireEvent.click(gotIt);
 
     expect(await screen.findByText(/Start your first debate here/)).toBeTruthy();
-    expect(screen.queryByRole('dialog', { name: 'DebateLab is slowly becoming DebateOwl' })).toBeNull();
+    expect(screen.queryByRole('dialog', { name: 'DebateLab is becoming DebateOwl' })).toBeNull();
     expect(localStorage.getItem(INTRO_SEEN_KEY)).toBeTruthy();
     await waitFor(() => {
       expect(document.activeElement).toBe(document.querySelector('[data-action="primary"]'));
@@ -248,7 +248,7 @@ describe('DebateOwlIntro', () => {
 
   it('Got it marks it seen; Skip animation only skips ahead', () => {
     const storage = renderIntro();
-    expect(screen.getByRole('dialog', { name: 'DebateLab is slowly becoming DebateOwl' })).toBeTruthy();
+    expect(screen.getByRole('dialog', { name: 'DebateLab is becoming DebateOwl' })).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: 'Skip animation' }));
     expect(screen.queryByRole('button', { name: 'Skip animation' })).toBeNull();
     expect(shouldShowIntro({ search: '', storage, env: appEnv })).toBe(true);
@@ -269,6 +269,6 @@ describe('DebateOwlIntro', () => {
 
   it('Ollie introduces itself by name', () => {
     renderIntro();
-    expect(screen.getByText("Hi, I'm Ollie, the DebateOwl owl!")).toBeTruthy();
+    expect(screen.getByText("Hi, I'm Ollie!")).toBeTruthy();
   });
 });

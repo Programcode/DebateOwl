@@ -71,7 +71,8 @@ export function DebateOwlIntro({ onClose, owlName = OWL_NAME }: { onClose: () =>
       >
         <div className="flex flex-col items-center gap-5 px-6 pt-7 sm:flex-row sm:items-center sm:gap-6 sm:px-8 sm:pt-8">
           <motion.div
-            className="grid h-36 w-36 shrink-0 place-items-center rounded-full bg-plume-100 dark:bg-plume-900"
+            // 112 px on phones, the empty-state size, so the whole dialog fits a 390 x 844 screen.
+            className="grid size-28 shrink-0 place-items-center rounded-full bg-plume-100 sm:size-36 dark:bg-plume-900"
             initial={reduceMotion ? false : { scale: 0.6, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             transition={{ type: 'spring', stiffness: 260, damping: 18 }}
@@ -82,7 +83,7 @@ export function DebateOwlIntro({ onClose, owlName = OWL_NAME }: { onClose: () =>
               animate={{ y: 0, opacity: 1 }}
               transition={{ type: 'spring', stiffness: 300, damping: 16, delay: 0.15 }}
             >
-              <Owl pose={pose} size={136} priority />
+              <Owl pose={pose} size={136} priority className="max-sm:size-[106px]!" />
             </motion.span>
           </motion.div>
 
@@ -113,19 +114,20 @@ export function DebateOwlIntro({ onClose, owlName = OWL_NAME }: { onClose: () =>
         </div>
 
         <div className="px-6 pb-6 pt-6 sm:px-8">
-          <DialogTitle className="text-[1.375rem] leading-7">{t('debateOwlIntro.noticeTitle')}</DialogTitle>
+          <DialogTitle className="text-balance text-[1.375rem] leading-7">{t('debateOwlIntro.noticeTitle')}</DialogTitle>
           <DialogDescription className="mt-2 text-base leading-relaxed text-foreground">
             {t('debateOwlIntro.noticeBody')}
           </DialogDescription>
         </div>
 
         <div className="flex min-h-[4.75rem] items-center justify-between gap-3 border-t-2 border-border px-6 py-4 sm:px-8">
-          {settled ? <span /> : (
-            <Button variant="ghost" size="sm" className="-ml-3.5 text-muted-foreground" onClick={() => setSettled(true)}>
+          {settled ? <span className="max-sm:hidden" /> : (
+            <Button variant="ghost" size="sm" className="min-h-11 text-muted-foreground sm:-ml-3.5" onClick={() => setSettled(true)}>
               {t('debateOwlIntro.skipAnimation')}
             </Button>
           )}
-          <Button ref={doneButton} onClick={onClose}>{t('debateOwlIntro.done')}</Button>
+          {/* On phones Got it fills the row, and the whole row once Skip animation is gone. */}
+          <Button ref={doneButton} onClick={onClose} className="min-h-11 max-sm:flex-1">{t('debateOwlIntro.done')}</Button>
         </div>
       </DialogContent>
     </Dialog>

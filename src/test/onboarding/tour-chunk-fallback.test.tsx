@@ -63,7 +63,7 @@ describe('AppWelcome when the tour chunk never loads', () => {
     await waitFor(() => {
       expect(onboardingWarnings()).toHaveLength(1);
     });
-    expect(screen.queryByRole('dialog', { name: 'DebateLab is slowly becoming DebateOwl' })).toBeNull();
+    expect(screen.queryByRole('dialog', { name: 'DebateLab is becoming DebateOwl' })).toBeNull();
     expect(screen.queryByText(/Start your first debate here/)).toBeNull();
     expect(localStorage.getItem(INTRO_SEEN_KEY)).toBeTruthy();
     await waitFor(() => {

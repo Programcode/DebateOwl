@@ -19,7 +19,7 @@ test('a stalled Jam recorder cannot delay the real application', async ({ page, 
   await page.evaluate(() => window.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true })));
   await jamRequest;
   await expect(page.getByRole('heading', { name: /: AI debate prep and practice$/ })).toBeVisible();
-  await expect(page.getByText('DebateLab by Pi-Stack is the official')).toHaveCount(0);
+  await expect(page.getByText('DebateOwl by Pi-Stack is the official')).toHaveCount(0);
 });
 
 test('pagehide removes the Jam frame and a persisted pageshow does not re-add it (synthetic events, stubbed Jam)', async ({ page, browserName }) => {
@@ -56,7 +56,7 @@ test('public routes keep the real UI after refresh', async ({ page }) => {
     await page.goto(path);
     await page.reload();
     await expect(page.getByRole(path === '/' ? 'heading' : 'button', { name: label })).toBeVisible();
-    await expect(page.getByText('DebateLab by Pi-Stack is the official')).toHaveCount(0);
+    await expect(page.getByText('DebateOwl by Pi-Stack is the official')).toHaveCount(0);
   }
 });
 
@@ -65,14 +65,14 @@ test('authenticated routes keep the shell and current page after refresh', async
   await stubSupabaseSession(page);
   for (const [path, heading] of [
     ['/app', 'Prepare'],
-    ['/app/generate', 'Ready to Generate'],
-    ['/app/attack', 'No Mercy Mode'],
+    ['/app/generate', 'Your case will appear here'],
+    ['/app/attack', 'Your critique will appear here'],
   ] as const) {
     await page.goto(path);
     await page.reload();
     await expect(page.locator('header')).toBeVisible();
     await expect(page.getByRole('heading', { name: heading, exact: true })).toBeVisible();
-    await expect(page.getByText('DebateLab by Pi-Stack is the official')).toHaveCount(0);
+    await expect(page.getByText('DebateOwl by Pi-Stack is the official')).toHaveCount(0);
   }
 });
 

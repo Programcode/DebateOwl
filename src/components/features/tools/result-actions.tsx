@@ -38,7 +38,7 @@ export function SaveResultAction({ saved, onSave, disabled = false }: { saved: b
     return (
       <span className="inline-flex h-9 items-center gap-1.5 px-2 text-sm text-muted-foreground" data-testid="result-saved">
         <Check className="h-4 w-4 text-primary" aria-hidden="true" />
-        {t('resultActions.savedToHistory', 'Saved to History')}
+        {t('resultActions.savedToHistory', 'Saved to history')}
       </span>
     );
   }

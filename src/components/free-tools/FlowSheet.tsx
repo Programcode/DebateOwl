@@ -79,8 +79,8 @@ export function FlowSheet() {
             <option value="portrait">{t('flow.portrait')}</option>
           </select>
         </label>
-        <label className="flex min-h-10 items-center gap-2 self-end text-sm font-medium">
-          <input type="checkbox" className="h-4 w-4" checked={strip} onChange={(event) => setStrip(event.target.checked)} />
+        <label className="flex min-h-11 min-w-11 cursor-pointer items-center gap-2 self-end text-sm font-medium">
+          <input type="checkbox" className="h-4 w-4 cursor-pointer" checked={strip} onChange={(event) => setStrip(event.target.checked)} />
           {questions.length > 0 ? t('flow.questionStrip') : t('flow.notesStrip')}
         </label>
         {(['motion', 'round', 'judge'] as const).map((key) => (

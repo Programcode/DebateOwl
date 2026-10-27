@@ -36,7 +36,7 @@ async function prepareMotionFixture(page: Page, reducedMotion: 'no-preference' |
 
 async function openGenerateOptions(page: Page) {
   await page.goto('/app/generate', { waitUntil: 'domcontentloaded' });
-  await expect(page.getByText('Ready to Generate')).toBeVisible({ timeout: STATE_TIMEOUT_MS });
+  await expect(page.getByText('Your case will appear here')).toBeVisible({ timeout: STATE_TIMEOUT_MS });
   const options = page.locator('#generate-more-options');
   expect(await options.evaluate((element) => (element as HTMLElement).inert)).toBe(true);
   await page.getByRole('button', { name: 'More options' }).click();
@@ -51,7 +51,7 @@ async function openGenerateOptions(page: Page) {
 }
 
 async function generateMockCase(page: Page) {
-  await page.getByLabel('Motion / Topic').fill('This House would make public transport free.');
+  await page.getByLabel('Motion / topic').fill('This House would make public transport free.');
   await page.getByRole('button', { name: 'Generate debate case' }).click();
   await page.mouse.move(0, 0);
   await expect(page.getByText('Writing your case…')).toBeVisible({ timeout: STATE_TIMEOUT_MS });
@@ -118,36 +118,36 @@ test('audits applicable empty, loading, result, and option states across feature
   await prepareMotionFixture(page, 'no-preference');
 
   await page.goto('/app/attack', { waitUntil: 'domcontentloaded' });
-  await expect(page.getByText('No Mercy Mode')).toBeVisible({ timeout: STATE_TIMEOUT_MS });
+  await expect(page.getByText('Your critique will appear here')).toBeVisible({ timeout: STATE_TIMEOUT_MS });
   const attackOptions = page.locator('#attack-options');
   await page.getByRole('button', { name: 'More options' }).click();
   await expect(attackOptions).toHaveAttribute('data-open', 'true');
   await page.getByRole('button', { name: 'More options' }).click();
   await expect(attackOptions).toHaveAttribute('data-open', 'false');
   expect(await attackOptions.evaluate((element) => (element as HTMLElement).inert)).toBe(true);
-  await page.getByLabel('Your Argument').fill('Universal transit improves access, reduces congestion, and strengthens civic participation.');
+  await page.getByLabel('Your argument').fill('Universal transit improves access, reduces congestion, and strengthens civic participation.');
   await page.getByRole('button', { name: 'Find weaknesses' }).click();
   await expect(page.getByText('Reviewing your case…')).toBeVisible({ timeout: STATE_TIMEOUT_MS });
-  await expect(page.getByRole('heading', { name: 'Overall Assessment' })).toBeVisible({ timeout: STATE_TIMEOUT_MS });
+  await expect(page.getByRole('heading', { name: 'Overall assessment' })).toBeVisible({ timeout: STATE_TIMEOUT_MS });
   await page.screenshot({ path: testInfo.outputPath('attack-result.png'), fullPage: true });
 
   await openFeatureRoute(page, 'brainstorm');
-  await expect(page.getByText('Unlock Creative Angles')).toBeVisible({ timeout: STATE_TIMEOUT_MS });
-  await page.getByLabel('Motion / Topic').fill('This House would make public transport free.');
+  await expect(page.getByText('Your angles will appear here')).toBeVisible({ timeout: STATE_TIMEOUT_MS });
+  await page.getByLabel('Motion / topic').fill('This House would make public transport free.');
   await page.getByRole('button', { name: 'Start brainstorming' }).click();
   await expect(page.getByText('Finding angles…')).toBeVisible({ timeout: STATE_TIMEOUT_MS });
-  await expect(page.getByRole('heading', { name: 'Top 5 Argument Angles' })).toBeVisible({ timeout: STATE_TIMEOUT_MS });
+  await expect(page.getByRole('heading', { name: 'Top 5 argument angles' })).toBeVisible({ timeout: STATE_TIMEOUT_MS });
 
   await openFeatureRoute(page, 'factoids');
-  await expect(page.getByText('Evidence That Wins')).toBeVisible({ timeout: STATE_TIMEOUT_MS });
+  await expect(page.getByText('Your evidence will appear here')).toBeVisible({ timeout: STATE_TIMEOUT_MS });
   await page.getByLabel('Statement').fill('Free public transport reduces urban congestion.');
-  await page.getByRole('button', { name: 'Find Factoids' }).click();
+  await page.getByRole('button', { name: 'Find factoids' }).click();
   await expect(page.getByText('Searching for evidence…')).toBeVisible({ timeout: STATE_TIMEOUT_MS });
   await expect(page.getByRole('heading', { name: 'Factoids' })).toBeVisible({ timeout: STATE_TIMEOUT_MS });
 
   await openFeatureRoute(page, 'ask');
   await expect(page.getByText('Start a conversation')).toBeVisible({ timeout: STATE_TIMEOUT_MS });
-  await page.getByPlaceholder('Ask your debate coach...').fill('How should I weigh access against cost?');
+  await page.getByPlaceholder('Ask your debate coach…').fill('How should I weigh access against cost?');
   await page.getByRole('button', { name: 'Send message' }).click();
   await expect(page.getByText('Working…')).toBeVisible({ timeout: STATE_TIMEOUT_MS });
   await expect(page.getByText(/Great question about/)).toBeVisible({ timeout: STATE_TIMEOUT_MS });

@@ -95,7 +95,7 @@ test('onboarding starts a fresh delay when a protected route reaches home', asyn
     }));
   });
   await page.goto('/app/generate', { waitUntil: 'domcontentloaded' });
-  await expect(page.getByRole('heading', { name: 'Ready to Generate' })).toBeVisible({ timeout: 15_000 });
+  await expect(page.getByRole('heading', { name: 'Your case will appear here' })).toBeVisible({ timeout: 15_000 });
   // eslint-disable-next-line no-restricted-properties -- observation window: let the first onboarding delay run partway before navigating.
   await page.waitForTimeout(650);
 
@@ -116,7 +116,7 @@ test('header keeps the brand and controls inside a 320px viewport', async ({ pag
   const debateControl = page.getByTestId('current-debate-mobile');
   const controls = [languageControl, menuControl, debateControl];
 
-  await expect(page.getByAltText('DebateLab logo')).toBeVisible();
+  await expect(page.getByAltText('DebateOwl logo')).toBeVisible();
   for (const control of controls) await expect(control).toBeVisible();
 
   const boxes = await Promise.all(controls.map((control) => control.boundingBox()));

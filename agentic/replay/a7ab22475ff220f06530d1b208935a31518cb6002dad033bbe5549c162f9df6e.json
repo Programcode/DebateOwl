@@ -98,7 +98,7 @@
     "goneAnchors": [
       {
         "role": "alertdialog",
-        "name": "Welcome to DebateLab! 🎉Everything in DebateLab belongs to one debate: the motion you are preparing, its sources, and your results. Start your first debate here.Start debate"
+        "name": "Welcome to DebateOwl! 🎉Everything in DebateOwl belongs to one debate: the motion you are preparing, its sources, and your results. Start your first debate here.Start debate"
       },
       {
         "role": "button",
@@ -113,10 +113,10 @@
       },
       {
         "role": "heading",
-        "name": "Welcome to DebateLab! 🎉"
+        "name": "Welcome to DebateOwl! 🎉"
       },
       {
-        "text": "Everything in DebateLab belongs to one debate: the motion you are preparing, its sources, and your results. Start your first debate here."
+        "text": "Everything in DebateOwl belongs to one debate: the motion you are preparing, its sources, and your results. Start your first debate here."
       },
       {
         "role": "button",

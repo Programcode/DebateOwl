@@ -22,7 +22,7 @@ async function tier(userId: string) {
 
 async function brainstorm(page: Page) {
   await page.goto("/app/brainstorm");
-  await page.getByLabel("Motion / Topic *").fill("Public transport should be free");
+  await page.getByLabel("Motion / topic *").fill("Public transport should be free");
   await page.getByRole("button", { name: "Start brainstorming" }).click();
   await chooseForMotion(page, "once");
 }
@@ -74,7 +74,7 @@ test("a promo code redeemed in Settings restores AI access", async ({ signedIn: 
 
   try {
     await brainstorm(page);
-    await expect(page.getByRole("dialog").getByText("Free Trial Ended")).toBeVisible({ timeout: 30_000 });
+    await expect(page.getByRole("dialog").getByText("Your free trial has ended")).toBeVisible({ timeout: 30_000 });
     expect((await fake.requests()).filter((request) => request.feature === "brainstorm")).toEqual([]);
 
     await page.goto("/app/settings");
@@ -83,7 +83,7 @@ test("a promo code redeemed in Settings restores AI access", async ({ signedIn: 
     await page.getByRole("button", { name: "Have a promo code?" }).click();
     await page.getByPlaceholder("Enter promo code").fill(code.toLowerCase());
     await page.getByRole("button", { name: "Apply", exact: true }).click();
-    await expect(page.getByText("Promo code applied!").first()).toBeVisible();
+    await expect(page.getByText("Promo code applied").first()).toBeVisible();
     await expect(page.getByRole("dialog")).toBeHidden();
     await expect(page.getByText("Pro", { exact: true })).toBeVisible();
     expect(await tier(userId)).toBe("pro");

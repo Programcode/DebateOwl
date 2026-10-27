@@ -27,7 +27,7 @@ const ROUTE_MARKERS: Record<Feature, string> = {
   factoids: "You are a debate research specialist",
   ask: "You are a debate coach chat bot",
   sparring: "live debate sparring opponent",
-  crossfire: "You are DebateLab's crossfire coach",
+  crossfire: "You are DebateOwl's crossfire coach",
 };
 
 function promptsFor(example: typeof PROMPT_EXAMPLES[number]) {

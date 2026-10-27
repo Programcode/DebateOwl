@@ -1,6 +1,7 @@
 // src/lib/pdf-export-utils.ts
 // Professional PDF export for all debate features using jsPDF
 import i18n from '@/i18n';
+import site from '@/config/site.json';
 import type { GenerateOutput } from './ai/schemas/generate';
 import type { AttackOutput } from './ai/schemas/attack';
 import type { BrainstormOutput } from './ai/schemas/brainstorm';
@@ -120,11 +121,11 @@ async function createPDFDocument(): Promise<PDFHelpers> {
             doc.text(subtitle, margin, titleLines.length > 1 ? 28 : 26);
         }
 
-        // DebateLab branding - right aligned
+        // Product name, right aligned.
         doc.setFontSize(9);
         doc.setFont(PDF_FONT, 'bold');
         doc.setTextColor(255, 255, 255);
-        doc.text('DebateLab', pageWidth - margin, 10, { align: 'right' });
+        doc.text(site.product, pageWidth - margin, 10, { align: 'right' });
 
         state.y = 50;
         doc.setTextColor(...COLORS.dark);

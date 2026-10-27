@@ -20,6 +20,7 @@ import { OfflineIndicator } from "@/components/OfflineIndicator";
 import { StagingBanner } from "@/components/StagingBanner";
 import { captureException, captureProductEvent, toTelemetrySafeError } from "@/lib/observability";
 import { appLayoutLoader, localizedRouteLoaders, preloadStartupRoute, routeLoaders, type RouteLoader } from "@/lib/route-modules";
+import site from "@/config/site.json";
 import type { PrerenderedRoute } from "@/lib/seo/pages";
 import { PageLabelProvider, usePrivateRouteHead } from "@/lib/seo/use-page-head";
 import { RouteSkeleton, type RouteSkeletonVariant } from "@/components/loading/RouteSkeleton";
@@ -166,7 +167,7 @@ export type RouteFallback = {
 const DEFAULT_ROUTE_FALLBACK: RouteFallback = { variant: "public", label: "Page", labelKey: "common.page" };
 
 const ROUTE_FALLBACKS: Record<string, RouteFallback> = {
-  "/": { variant: "public", label: "DebateLab" },
+  "/": { variant: "public", label: site.product },
   "/terms": { variant: "public", label: "Terms", labelKey: "footer.terms" },
   "/privacy": { variant: "public", label: "Privacy", labelKey: "footer.privacy" },
   "/expocit/sources": { variant: "public", label: "Sources", labelKey: "crossfire.sources" },

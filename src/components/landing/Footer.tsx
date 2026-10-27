@@ -1,4 +1,5 @@
 import { useTranslation } from "react-i18next";
+import site from '@/config/site.json';
 import { OwlMark } from '@/components/brand/Owl';
 import { Link } from "react-router-dom";
 import { localizedPath, useRouteLanguage } from "@/lib/seo/localized-routes";
@@ -15,7 +16,7 @@ const Footer = () => {
                         {/* In-app links: no full reload through the startup shell. */}
                         <Link to="/" className="flex items-center gap-2 pointer-coarse:min-h-11">
                             <OwlMark size={32} alt={t('common.logoAlt')} />
-                            <span className="font-display text-lg font-[600] text-heading">DebateLab</span>
+                            <span className="font-display text-lg font-[600] text-heading">{site.product}</span>
                         </Link>
                     </div>
 

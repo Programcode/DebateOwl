@@ -1,6 +1,6 @@
 /**
  * The one-time DebateOwl welcome: the owl says hello, says what changed (the look only) and that
- * DebateLab is slowly becoming DebateOwl. It opens once per browser, inside the signed-in app.
+ * DebateLab is becoming DebateOwl. It opens once per browser, inside the signed-in app.
  * Closing it continues straight into the product tour's Start debate step.
  */
 export const INTRO_SEEN_KEY = 'debateowl_intro_seen_v1';
