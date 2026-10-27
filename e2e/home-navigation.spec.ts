@@ -95,7 +95,7 @@ test('onboarding starts a fresh delay when a protected route reaches home', asyn
     }));
   });
   await page.goto('/app/generate', { waitUntil: 'domcontentloaded' });
-  await expect(page.getByRole('heading', { name: 'Ready to Generate' })).toBeVisible({ timeout: 15_000 });
+  await expect(page.getByRole('heading', { name: 'Your case will appear here' })).toBeVisible({ timeout: 15_000 });
   // eslint-disable-next-line no-restricted-properties -- observation window: let the first onboarding delay run partway before navigating.
   await page.waitForTimeout(650);
 
@@ -116,7 +116,7 @@ test('header keeps the brand and controls inside a 320px viewport', async ({ pag
   const tabBar = page.getByRole('navigation', { name: 'Mobile navigation' });
   const controls = [languageControl, debateControl];
 
-  await expect(page.getByAltText('DebateLab logo')).toBeVisible();
+  await expect(page.getByAltText('DebateOwl logo')).toBeVisible();
   await expect(page.getByRole('button', { name: 'Open menu' })).toBeHidden();
   await expect(tabBar).toBeVisible();
   for (const control of controls) await expect(control).toBeVisible();
@@ -300,16 +300,15 @@ test('iPad width does not keep a keyboard pad', async ({ page }) => {
   expect(pad.main).toBe('0px');
 });
 
-test('iPad portrait keeps the header menu instead of the tab bar', async ({ page }) => {
+test('iPad portrait keeps the header nav instead of the tab bar', async ({ page }) => {
   await page.setViewportSize({ width: 820, height: 1180 });
   await page.goto('/app', { waitUntil: 'domcontentloaded' });
   await expect(page.getByRole('heading', { name: 'Prepare' })).toBeVisible({ timeout: 15_000 });
-  await expect(page.getByRole('button', { name: 'Open menu' })).toBeVisible();
+  const navigation = page.getByRole('navigation', { name: 'Main navigation' });
+  await expect(navigation).toBeVisible();
   await expect(page.getByRole('navigation', { name: 'Mobile navigation' })).toHaveCount(0);
-  await expect(page.getByRole('navigation', { name: 'Main navigation' })).toHaveCount(0);
-
-  await page.getByRole('button', { name: 'Open menu' }).click();
-  const menu = page.getByRole('navigation', { name: 'Mobile navigation' });
-  const hrefs = await menu.getByRole('link').evaluateAll((links) => links.map((link) => link.getAttribute('href')));
-  expect(hrefs).toEqual(['/app', '/app/debate', '/app/library', '/app/history', '/app/settings']);
+  await expect(page.getByRole('button', { name: 'Open menu' })).toHaveCount(0);
+  const hrefs = await navigation.getByRole('link').evaluateAll((links) => links.map((link) => link.getAttribute('href')));
+  expect(hrefs).toEqual(expect.arrayContaining(['/app', '/app/library', '/app/history']));
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
 });

@@ -149,7 +149,7 @@ export default function AttackPage() {
                 />
               </div>
             ) : (
-              <EmptyState icon={Swords} title={t('attack.emptyTitle')} description={t('attack.emptyDesc')} />
+              <EmptyState size="compact-below-lg" icon={Swords} title={t('attack.emptyTitle')} description={t('attack.emptyDesc')} />
             )}
           </div>
         </div>

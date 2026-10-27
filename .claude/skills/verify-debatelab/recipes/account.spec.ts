@@ -7,7 +7,7 @@ import { admin, AI_TIMEOUT, aiResponse, expect, expectProviderCalls, signIn, tes
 
 test("acct-language: the output language follows the account to a new device and reaches the model", async ({ signedIn: page, user, browser, evidence }) => {
   await page.goto("/app/settings");
-  await page.getByRole("combobox", { name: "AI Output Language" }).click();
+  await page.getByRole("combobox", { name: "AI output language" }).click();
   await page.getByRole("option", { name: "Magyar" }).click();
   await expect.poll(async () => {
     const { data } = await admin.from("user_settings").select("output_language").eq("user_id", await user.userId()).single();
@@ -21,7 +21,7 @@ test("acct-language: the output language follows the account to a new device and
     await other.addInitScript(() => localStorage.setItem("debate-trainer-onboarding", JSON.stringify({ state: { hasCompletedOnboarding: true, isTourRunning: false }, version: 0 })));
     await signIn(other, user);
     await other.goto("/app/attack");
-    await other.getByLabel("Your Argument *").fill("Free transit cuts congestion because riders leave their cars at home.");
+    await other.getByLabel("Your argument *").fill("Free transit cuts congestion because riders leave their cars at home.");
     const response = aiResponse(other, "attack");
     await other.getByRole("button", { name: "Find weaknesses" }).click();
     const body = await response;
@@ -53,8 +53,8 @@ test("flow-edit: a flowchart node is deleted, the chart is saved, and it loads b
   await page.getByRole("button", { name: "Save", exact: true }).click();
   const dialog = page.getByRole("dialog");
   await dialog.getByRole("textbox").fill(title);
-  await dialog.getByRole("button", { name: "Save Flowchart" }).click();
-  await expect(page.getByText("Flowchart saved successfully").first()).toBeVisible();
+  await dialog.getByRole("button", { name: "Save flowchart" }).click();
+  await expect(page.getByText("Flowchart saved").first()).toBeVisible();
   const { data } = await admin.from("flowcharts").select("title,nodes").eq("user_id", await user.userId());
   expect(data?.map((row) => row.title)).toEqual([title]);
   expect(JSON.stringify(data?.[0].nodes)).not.toContain("Argument 1");

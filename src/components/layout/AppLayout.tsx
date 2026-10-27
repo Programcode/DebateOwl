@@ -1,14 +1,12 @@
 // src/components/layout/AppLayout.tsx
 import { OwlMark } from '@/components/brand/Owl';
+import site from '@/config/site.json';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, Outlet, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import * as DialogPrimitive from '@radix-ui/react-dialog';
 import {
   LayoutGrid,
   Settings,
-  Menu,
-  X,
   Clock,
   Database,
   Target,
@@ -41,19 +39,15 @@ const libraryNavItems = [
   { path: '/app/history', key: 'history', icon: Clock },
 ];
 
-const mobileNavItems = [
-  { path: '/app', key: 'tools', icon: LayoutGrid },
-  { path: '/app/debate', key: 'currentDebate', icon: Target },
-  ...libraryNavItems,
-  { path: '/app/settings', key: 'settings', icon: Settings },
-];
-
 const desktopLinkClass = cn(
   "flex h-10 items-center gap-2 px-3 xl:px-3.5 rounded-full text-[0.9375rem] font-bold whitespace-nowrap transition-[color,background-color,transform] duration-150 active:scale-[0.97]",
   "text-muted-foreground hover:text-foreground hover:bg-accent"
 );
 // The plume tint keeps primary text above 4.5:1 in both themes (5.9 light, 7.9 dark).
-const activeLinkClass = "bg-brand-tint text-primary hover:bg-brand-tint hover:text-primary";
+const activeLinkClass = "bg-brand-tint text-primary hover:bg-brand-tint hover:text-primary [&>span]:not-sr-only";
+// From md to lg (iPads) the bar is too narrow for every label, so only the active link shows its
+// label; the others are icons that keep their name for screen readers.
+const navLabelClass = "max-lg:sr-only";
 
 const ANNOUNCEMENT_CACHE_KEY = 'debatelab-announcements';
 
@@ -98,7 +92,6 @@ function filterVisibleAnnouncements(announcements: UserAnnouncement[], now: numb
 }
 
 export function AppLayout() {
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const { t } = useTranslation();
   const { user } = useAuth();
   const userId = user?.id ?? null;
@@ -106,7 +99,6 @@ export function AppLayout() {
   const [announcementsUserId, setAnnouncementsUserId] = useState<string | null>(userId);
   const [dismissError, setDismissError] = useState<{ announcementId: string; message: string } | null>(null);
   const dismissedAnnouncementIds = useRef(new Set<string>());
-  const mobileMenuTriggerRef = useRef<HTMLButtonElement>(null);
   const headerRef = useRef<HTMLElement>(null);
   const aboveMainRef = useRef<HTMLDivElement>(null);
   const activeRequestRef = useRef<AbortController | null>(null);
@@ -171,27 +163,10 @@ export function AppLayout() {
   }, [loadAnnouncements, userId]);
 
   useEffect(() => {
-    setMobileMenuOpen(false);
     setDismissError(null);
     setAnnouncements((current) => filterVisibleAnnouncements(current, Date.now()));
     void loadAnnouncements();
   }, [loadAnnouncements, location.pathname]);
-
-  // The menu is only between `md` and `lg`. A phone has the tab bar, and `lg` has the header nav.
-  // Leaving the dialog open across either edge would hide its trigger and keep the page modal.
-  useEffect(() => {
-    if (!mobileMenuOpen) return;
-    const phone = window.matchMedia('(width < 48rem)');
-    const wide = window.matchMedia('(min-width: 1024px)');
-    const close = () => { if (phone.matches || wide.matches) setMobileMenuOpen(false); };
-    close();
-    phone.addEventListener('change', close);
-    wide.addEventListener('change', close);
-    return () => {
-      phone.removeEventListener('change', close);
-      wide.removeEventListener('change', close);
-    };
-  }, [mobileMenuOpen]);
 
   useEffect(() => {
     if (announcementsUserId !== userId) return;
@@ -299,13 +274,13 @@ export function AppLayout() {
         )}
       >
         <div className="container flex h-16 items-center justify-between px-4 max-[359px]:px-2">
-          <Link to="/app" {...homePrefetch} onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-3 shrink-0 rounded-md pointer-coarse:min-h-11">
+          <Link to="/app" {...homePrefetch} className="flex items-center gap-3 shrink-0 rounded-md pointer-coarse:min-h-11">
             <OwlMark size={36} alt={t('common.logoAlt')} />
-            <span className="whitespace-nowrap font-display text-xl font-[600] tracking-[-0.01em] text-heading">DebateLab</span>
+            <span className="whitespace-nowrap font-display text-xl font-[600] tracking-[-0.01em] text-heading">{site.product}</span>
           </Link>
 
           {/* Desktop Nav */}
-          <nav aria-label={t('nav.mainNavigation')} className="hidden lg:flex min-w-0 flex-1 items-center gap-0.5 xl:gap-1 ml-4">
+          <nav aria-label={t('nav.mainNavigation')} className="hidden md:flex min-w-0 flex-1 items-center gap-0.5 xl:gap-1 ml-4">
             <Link
               to="/app"
               {...homePrefetch}
@@ -314,7 +289,7 @@ export function AppLayout() {
               className={cn(desktopLinkClass, section === 'tools' && activeLinkClass)}
             >
               <LayoutGrid className="h-4 w-4 shrink-0" aria-hidden="true" />
-              <span>{t('nav.tools')}</span>
+              <span className={navLabelClass}>{t('nav.tools')}</span>
             </Link>
             <CurrentDebateMenu variant="desktop" />
             {libraryNavItems.map((item) => (
@@ -327,7 +302,7 @@ export function AppLayout() {
                 activeClassName={activeLinkClass}
               >
                 <item.icon className="h-4 w-4 shrink-0" aria-hidden="true" />
-                <span>{t(`nav.${item.key}`)}</span>
+                <span className={navLabelClass}>{t(`nav.${item.key}`)}</span>
               </NavLink>
             ))}
           </nav>
@@ -342,70 +317,17 @@ export function AppLayout() {
                 to="/app/settings"
                 aria-label={t('nav.settings', 'Settings')}
                 data-tour="nav-settings"
-                className="hidden lg:inline-flex h-10 w-10 items-center justify-center rounded-full text-muted-foreground transition-[color,background-color,transform] duration-150 hover:bg-accent hover:text-foreground active:scale-90 focus-visible:outline-hidden focus-visible:ring-[3px] focus-visible:ring-ring focus-visible:ring-offset-2"
+                className="hidden md:inline-flex h-10 w-10 items-center justify-center rounded-full text-muted-foreground transition-[color,background-color,transform] duration-150 hover:bg-accent hover:text-foreground active:scale-90 focus-visible:outline-hidden focus-visible:ring-[3px] focus-visible:ring-ring focus-visible:ring-offset-2"
                 activeClassName={activeLinkClass}
               >
                 <Settings className="h-5 w-5" aria-hidden="true" />
               </NavLink>
             </HeaderTooltip>
-            <DialogPrimitive.Root open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
-              <DialogPrimitive.Trigger asChild>
-                <Button
-                  ref={mobileMenuTriggerRef}
-                  variant="ghost"
-                  size="icon"
-                  className="hidden rounded-full text-muted-foreground md:inline-flex lg:hidden"
-                  aria-label={mobileMenuOpen ? t('nav.closeMenu') : t('nav.openMenu')}
-                  aria-expanded={mobileMenuOpen}
-                >
-                  {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-                </Button>
-              </DialogPrimitive.Trigger>
-              {/* Mobile Nav: a modal panel under the header, with a scrim over the page. */}
-              <DialogPrimitive.Portal>
-                <DialogPrimitive.Overlay className="fixed inset-0 z-40 bg-[var(--do-overlay)] max-md:hidden lg:hidden data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=open]:fade-in-0 data-[state=closed]:fade-out-0 ease-out-strong data-[state=open]:duration-180 data-[state=closed]:duration-120" />
-                <DialogPrimitive.Content
-                  aria-describedby={undefined}
-                  className="native-scroll-y native-mobile-menu fixed inset-x-0 top-(--app-header-bottom,8rem) z-40 overflow-y-auto rounded-b-xl border-b-2 border-border bg-card p-3 shadow-xl max-md:hidden lg:hidden data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=open]:fade-in-0 data-[state=closed]:fade-out-0 data-[state=open]:slide-in-from-top-1 data-[state=closed]:slide-out-to-top-1 ease-out-strong data-[state=open]:duration-180 data-[state=closed]:duration-120"
-                >
-                  <DialogPrimitive.Title className="sr-only">{t('nav.mobileNavigation')}</DialogPrimitive.Title>
-                  <nav aria-label={t('nav.mobileNavigation')}>
-                    <div className="grid gap-1 pb-(--native-safe-bottom,0px)">
-                      {mobileNavItems.map((item) => {
-                        const active = item.key === 'tools' ? section === 'tools'
-                          : item.key === 'currentDebate' ? section === 'debate'
-                          : location.pathname === item.path;
-                        return (
-                          <Link
-                            key={item.path}
-                            to={item.path}
-                            aria-current={location.pathname === item.path ? 'page' : undefined}
-                            onClick={() => setMobileMenuOpen(false)}
-                            className={cn(
-                              "flex min-h-14 items-center gap-3 px-3 py-2.5 rounded-md transition-[color,background-color,transform] duration-150 active:scale-[0.98]",
-                              active ? "bg-brand-tint text-primary" : "text-foreground hover:bg-accent",
-                            )}
-                          >
-                            <span className={cn("flex h-10 w-10 shrink-0 items-center justify-center rounded-sm", active ? "bg-card text-primary shadow-[0_2px_0_var(--do-primary-tint-border)]" : "bg-muted text-muted-foreground")}>
-                              <item.icon className="h-5 w-5" aria-hidden="true" />
-                            </span>
-                            <div>
-                              <div className="font-extrabold">{t(`nav.${item.key}`)}</div>
-                              <div className={cn("text-[0.8125rem]", active ? "text-primary" : "text-muted-foreground")}>{t(`navDesc.${item.key}`)}</div>
-                            </div>
-                          </Link>
-                        );
-                      })}
-                    </div>
-                  </nav>
-                </DialogPrimitive.Content>
-              </DialogPrimitive.Portal>
-            </DialogPrimitive.Root>
           </div>
         </div>
 
         {/* Mobile Current Debate row */}
-        <div className="container min-w-0 border-t-2 border-border/70 px-4 py-1 max-[359px]:px-2 lg:hidden">
+        <div className="container min-w-0 border-t-2 border-border/70 px-4 py-1 max-[359px]:px-2 md:hidden">
           <CurrentDebateMenu variant="mobile" />
         </div>
       </header>
@@ -433,7 +355,7 @@ export function AppLayout() {
       {/* Footer */}
       <footer className="native-safe-bottom border-t-2 border-border bg-card/60 pt-4">
         <div className="container flex flex-col items-center justify-between gap-2 px-4 text-sm text-muted-foreground md:flex-row">
-          <p className="flex items-center gap-2 font-display text-base font-[600] text-heading"><OwlMark size={24} />DebateLab</p>
+          <p className="flex items-center gap-2 font-display text-base font-[600] text-heading"><OwlMark size={24} />{site.product}</p>
           <div className="flex items-center gap-4">
             <Link to="/terms" {...termsPrefetch} className="inline-flex min-h-6 items-center justify-center rounded-sm transition-colors hover:text-foreground pointer-coarse:min-h-11 pointer-coarse:min-w-11">{t('footer.terms')}</Link>
             <Link to="/privacy" {...privacyPrefetch} className="inline-flex min-h-6 items-center rounded-sm transition-colors hover:text-foreground pointer-coarse:min-h-11">{t('footer.privacy')}</Link>

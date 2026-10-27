@@ -15,10 +15,12 @@ import { ThemeProvider } from "@/components/ThemeProvider";
 import { useSessionStorageSync } from "@/hooks/use-session-storage-sync";
 import { hasCompletedOnboarding, useOnboardingStore } from "@/hooks/use-onboarding";
 import { browserStorage, markIntroSeen, shouldShowIntro } from "@/lib/debateowl-intro";
+import { focusCurrentDebate, noteTourChunkFailure, tourChunkGaveUp } from "@/lib/onboarding-tour-load";
 import { OfflineIndicator } from "@/components/OfflineIndicator";
 import { StagingBanner } from "@/components/StagingBanner";
 import { captureException, captureProductEvent, toTelemetrySafeError } from "@/lib/observability";
 import { appLayoutLoader, localizedRouteLoaders, preloadStartupRoute, routeLoaders, type RouteLoader } from "@/lib/route-modules";
+import site from "@/config/site.json";
 import type { PrerenderedRoute } from "@/lib/seo/pages";
 import { PageLabelProvider, usePrivateRouteHead } from "@/lib/seo/use-page-head";
 import { RouteSkeleton, type RouteSkeletonVariant } from "@/components/loading/RouteSkeleton";
@@ -87,10 +89,32 @@ const AppLayout = lazy(() => {
   void preloadStartupRoute(window.location.pathname);
   return appLayoutLoader();
 });
-const OnboardingTour = lazy(() => import("@/components/features/onboarding/OnboardingTour")
-  .then(({ OnboardingTour: Tour }) => ({ default: Tour })));
-const DebateOwlIntro = lazy(() => import("@/components/features/onboarding/DebateOwlIntro")
-  .then(({ DebateOwlIntro: Intro }) => ({ default: Intro })));
+type OnboardingTourComponent = typeof import("@/components/features/onboarding/OnboardingTour").OnboardingTour;
+
+// Loaded while the welcome is open, so closing it can show the Start debate step
+// without waiting on a second chunk.
+let onboardingTourComponent: OnboardingTourComponent | null = null;
+let onboardingTourPromise: Promise<OnboardingTourComponent> | null = null;
+
+function loadOnboardingTour(): Promise<OnboardingTourComponent> {
+  if (onboardingTourComponent) return Promise.resolve(onboardingTourComponent);
+  // A failed fetch has to be retryable. Keeping the rejected promise would
+  // leave the Start debate step closed for the rest of the page. The second
+  // failure is the last: `noteTourChunkFailure` logs once and the tour owner
+  // continues without it.
+  onboardingTourPromise ??= import("@/components/features/onboarding/OnboardingTour").then((mod) => {
+    onboardingTourComponent = mod.OnboardingTour;
+    return mod.OnboardingTour;
+  }).catch((error: unknown) => {
+    onboardingTourPromise = null;
+    noteTourChunkFailure(error);
+    throw error;
+  });
+  return onboardingTourPromise;
+}
+
+const FirstRun = lazy(() => import("@/components/features/onboarding/FirstRun")
+  .then(({ FirstRun: Run }) => ({ default: Run })));
 
 // TanStack Query refetches after an `offline` then `online` pair, but a page
 // opened offline never sees `offline`. Retry whatever failed once the
@@ -143,7 +167,7 @@ export type RouteFallback = {
 const DEFAULT_ROUTE_FALLBACK: RouteFallback = { variant: "public", label: "Page", labelKey: "common.page" };
 
 const ROUTE_FALLBACKS: Record<string, RouteFallback> = {
-  "/": { variant: "public", label: "DebateLab" },
+  "/": { variant: "public", label: site.product },
   "/terms": { variant: "public", label: "Terms", labelKey: "footer.terms" },
   "/privacy": { variant: "public", label: "Privacy", labelKey: "footer.privacy" },
   "/expocit/sources": { variant: "public", label: "Sources", labelKey: "crossfire.sources" },
@@ -277,7 +301,8 @@ export function RouteContent({ children }: { children: ReactNode }) {
     <PageLabelProvider value={setPageLabel}>
       <LocalizedRouteErrorBoundary key={location.pathname}>
         <Suspense fallback={<PendingRoute />}>
-          {children}
+          {/* App pages rise in once as they open. Public pages keep their own reveals and fixed bars. */}
+          {location.pathname.startsWith('/app') ? <div className="page-enter">{children}</div> : children}
         </Suspense>
       </LocalizedRouteErrorBoundary>
     </PageLabelProvider>
@@ -285,37 +310,44 @@ export function RouteContent({ children }: { children: ReactNode }) {
 }
 
 /**
- * The one-time DebateOwl welcome opens over the signed-in app once its layout has loaded.
- * The onboarding tour waits for it to close; without the welcome the tour mounts as before.
+ * One first-run moment. The owl welcome, when it is due, opens over the signed-in
+ * app once its layout has loaded. Closing it continues straight into the tour's
+ * Start debate step. With no welcome, the tour mounts as before.
+ * Rendered only under RequireAuth, so an account is already signed in.
  */
-function AppWelcome() {
-  const [introOpen, setIntroOpen] = useState(() => shouldShowIntro({
+export function AppWelcome() {
+  const [showIntro] = useState(() => shouldShowIntro({
     search: window.location.search,
     storage: browserStorage(),
     env: import.meta.env,
   }));
   const [layoutReady, setLayoutReady] = useState(false);
+  const userId = useAuth().user?.id;
+  const tourCompleted = useOnboardingStore((state) => hasCompletedOnboarding(state, userId));
 
   useEffect(() => {
-    if (!introOpen) return;
+    if (!showIntro) return;
     let live = true;
+    void loadOnboardingTour().catch((): void => undefined);
     appLayoutLoader().then(() => { if (live) setLayoutReady(true); }, (): void => undefined);
     return () => { live = false; };
-  }, [introOpen]);
+  }, [showIntro]);
 
-  if (!introOpen) return <OptionalOnboardingTour />;
+  if (!showIntro) return <OptionalOnboardingTour continueFromIntro={false} />;
   if (!layoutReady) return null;
   return (
     <Suspense fallback={null}>
-      <DebateOwlIntro onClose={() => {
-        markIntroSeen(browserStorage());
-        setIntroOpen(false);
-      }} />
+      <FirstRun
+        showIntro
+        tourCompleted={tourCompleted}
+        onIntroSeen={() => markIntroSeen(browserStorage())}
+        tour={(continueFromIntro) => <OptionalOnboardingTour continueFromIntro={continueFromIntro} />}
+      />
     </Suspense>
   );
 }
 
-function OptionalOnboardingTour() {
+function OptionalOnboardingTour({ continueFromIntro }: { continueFromIntro: boolean }) {
   const location = useLocation();
   const userId = useAuth().user?.id;
   const completed = useOnboardingStore((state) => hasCompletedOnboarding(state, userId));
@@ -331,17 +363,45 @@ function OptionalOnboardingTour() {
   if (!userId || !shouldLoadTour) return null;
 
   // Keyed by account, so one account's half-finished tour never carries into the next.
-  return <TimedOnboardingTour key={userId} userId={userId} />;
+  return <TimedOnboardingTour key={userId} userId={userId} continueFromIntro={continueFromIntro} />;
 }
 
-function TimedOnboardingTour({ userId }: { userId: string }) {
+function TimedOnboardingTour({ userId, continueFromIntro }: { userId: string; continueFromIntro: boolean }) {
   const [eligibleAt] = useState(() => typeof performance === "undefined" ? 0 : performance.now());
+  const [Tour, setTour] = useState<OnboardingTourComponent | null>(() => onboardingTourComponent);
+  const [gaveUp, setGaveUp] = useState(false);
 
-  return (
-    <Suspense fallback={null}>
-      <OnboardingTour eligibleAt={eligibleAt} userId={userId} />
-    </Suspense>
-  );
+  useEffect(() => {
+    if (Tour || gaveUp) return;
+    let live = true;
+    const giveUp = () => {
+      setGaveUp(true);
+      focusCurrentDebate();
+    };
+    // The welcome's preload counts as the first try when it ran. One more
+    // failure after that, and the page continues without the tour.
+    if (tourChunkGaveUp()) {
+      giveUp();
+      return;
+    }
+    const load = () => {
+      loadOnboardingTour().then((Loaded) => {
+        if (live) setTour(() => Loaded);
+      }, () => {
+        if (!live) return;
+        if (tourChunkGaveUp()) {
+          giveUp();
+          return;
+        }
+        load();
+      });
+    };
+    load();
+    return () => { live = false; };
+  }, [Tour, gaveUp]);
+
+  if (gaveUp || !Tour) return null;
+  return <Tour eligibleAt={eligibleAt} userId={userId} continueFromIntro={continueFromIntro} />;
 }
 
 /**

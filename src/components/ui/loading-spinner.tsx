@@ -32,7 +32,7 @@ export function OwlLoader({ message, pose = 'idea', size = 96, className }: OwlL
   return (
     <div className={cn('flex flex-col items-center justify-center gap-3 text-center', className)}>
       <span className="owl-bob">
-        <Owl pose={pose} size={size} priority />
+        <Owl pose={pose} size={size} priority breathe={false} />
       </span>
       {message ? (
         <p className="flex items-center gap-2 text-sm font-bold text-muted-foreground" role="status" aria-live="polite">

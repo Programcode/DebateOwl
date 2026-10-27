@@ -102,7 +102,7 @@
     "format": "Formato",
     "copy": "Copiar código para insertar",
     "copied": "Código copiado",
-    "attribution": "Cronómetro de DebateLab"
+    "attribution": "Cronómetro de DebateOwl"
   },
   "motions": {
     "region": "Generador de mociones",
@@ -124,7 +124,7 @@
     "copyLink": "Copiar enlace",
     "copied": "Copiado",
     "copyPrompt": "Copia este texto:",
-    "prepCta": "Prepara ambos lados de esta moción en DebateLab",
+    "prepCta": "Prepara ambos lados de esta moción en DebateOwl",
     "topics": {
       "education": "Educación",
       "technology": "Tecnología e IA",

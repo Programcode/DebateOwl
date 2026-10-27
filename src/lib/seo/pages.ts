@@ -9,7 +9,7 @@ export const PRODUCT = site.product;
 export const ORGANIZATION = site.organization;
 /** The organization's own profiles elsewhere, for schema.org sameAs. */
 export const ORGANIZATION_SAME_AS = site.organizationSameAs;
-/** "DebateLab is an AI debate prep and practice app for …", the sentence agents quote. */
+/** "DebateOwl is an AI debate prep and practice app for …", the sentence agents quote. */
 export const DEFINITION = `${PRODUCT} is ${site.definition}.`;
 export const PRICING = site.pricing;
 
@@ -60,7 +60,7 @@ export const PAGE_HEAD_IDS: Record<PrerenderedRoute, PageHeadId> = {
  * every page that has a canonical URL.
  */
 export const SHELL_HEAD = {
-  title: 'DebateLab',
+  title: site.product,
   description: PAGE_HEADS['/'].description,
   robots: 'index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1',
 } as const;

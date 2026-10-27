@@ -9,7 +9,7 @@ import { navSectionFor } from '@/components/layout/nav-sections';
 import { MAIN_CONTENT_ID } from '@/components/layout/SkipLink';
 import { PHONE_TAB_MEDIA, isTextEntry, keyboardIsOpen, keyboardOverlap } from '@/components/layout/phone-tab-bar';
 
-// Below `md` (768px) only. iPad portrait is 820px and keeps the header menu:
+// Below `md` (768px) only. iPad portrait is 820px and keeps the header nav:
 // four tabs would drop History and repeat the Current debate row already in the header.
 const tabClass = cn(
   'flex min-h-14 min-w-0 touch-manipulation flex-col items-center justify-center gap-0.5 rounded-lg px-1 py-1.5',

@@ -30,7 +30,7 @@ test("lib-add, lib-toggle, lib-ground, lib-delete: only active sources ground AI
 
   // Brainstorm prefills the Current Debate's motion, so no motion check opens.
   await page.goto("/app/brainstorm");
-  await expect(page.getByLabel("Motion / Topic *")).toHaveValue(motion);
+  await expect(page.getByLabel("Motion / topic *")).toHaveValue(motion);
   const response = aiResponse(page, "brainstorm");
   await page.getByRole("button", { name: "Start brainstorming" }).click();
   await response;

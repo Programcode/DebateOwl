@@ -24,7 +24,7 @@ const privateRoutes = [
   ['/app', { selector: 'main h1', text: 'What are you working on?' }],
   ['/app/generate', { selector: 'main h1', text: 'Generate' }],
   ['/app/attack', { selector: 'main h1', text: 'Attack' }],
-  ['/app/flowchart', { selector: 'main h1', text: 'Argument Flowchart' }],
+  ['/app/flowchart', { selector: 'main h1', text: 'Argument flowchart' }],
   ['/app/history', { selector: 'main h1', text: 'History' }],
   ['/app/admin', { selector: 'main h1', text: 'Access Denied' }],
 ] as const;
@@ -55,12 +55,8 @@ function homeToolLink(page: Page, tool: string) {
 }
 
 async function openHome(page: Page) {
-  const width = page.viewportSize()?.width ?? 1280;
-  if (width < 768) {
+  if ((page.viewportSize()?.width ?? 1280) < 768) {
     await page.getByRole('navigation', { name: 'Mobile navigation' }).getByRole('link', { name: 'Tools', exact: true }).click();
-  } else if (width < 1024) {
-    await page.getByRole('button', { name: 'Open menu' }).click();
-    await page.getByRole('navigation', { name: 'Mobile navigation' }).getByRole('link', { name: /^Tools/ }).click();
   } else {
     await page.getByRole('navigation', { name: 'Main navigation' }).getByRole('link', { name: 'Tools' }).click();
   }

@@ -32,7 +32,7 @@ const Hero = () => {
 
             <div className="section-container relative z-10">
                 <div className="grid grid-cols-1 items-center gap-14 lg:grid-cols-[1.05fr_0.95fr]">
-                    <div>
+                    <div className="mx-auto w-full max-w-2xl lg:mx-0 lg:max-w-none">
                         <Reveal onLoad className="mb-6">
                             {/* rounded-2xl, not a pill: long Spanish and Hungarian copy wraps cleanly. */}
                             <span className="inline-flex items-start gap-2 rounded-lg border-2 border-brand-tint-border bg-brand-tint px-4 py-2 text-sm font-bold text-foreground">
@@ -70,11 +70,13 @@ const Hero = () => {
                             </a>
                         </Reveal>
 
-                        <Reveal onLoad delay={0.15} className="mt-8 grid gap-3 sm:grid-cols-3">
+                        {/* Three across at every width, so on a phone they take one short row under the buttons. */}
+                        <Reveal onLoad delay={0.15} className="mt-8 grid grid-cols-3 gap-2 sm:gap-3">
                             {planHighlights.map((item) => (
-                                <div key={item.label} className="rounded-lg border-2 border-border bg-card p-4">
-                                    <p className="text-xs font-extrabold uppercase tracking-[0.08em] text-muted-foreground">{item.label}</p>
-                                    <p className="mt-1 font-display text-lg font-[600] text-heading">{item.value}</p>
+                                <div key={item.label} className="rounded-lg border-2 border-border bg-card px-2.5 py-3 max-[379px]:px-2 sm:p-4">
+                                    {/* On phones no extra tracking, so long Spanish and Hungarian labels take two lines at most. */}
+                                    <p className="text-balance text-[0.6875rem] font-extrabold uppercase leading-4 tracking-normal text-muted-foreground hyphens-auto max-[379px]:text-[0.625rem] sm:text-xs sm:tracking-[0.08em] sm:hyphens-manual">{item.label}</p>
+                                    <p className="mt-1 text-balance font-display text-base font-[600] text-heading sm:text-lg">{item.value}</p>
                                 </div>
                             ))}
                         </Reveal>
@@ -133,10 +135,10 @@ const HeroPreview = () => {
     ];
 
     return (
-        <Reveal onLoad delay={0.1} className="relative">
+        <Reveal onLoad delay={0.1} className="relative mx-auto w-full max-w-2xl lg:mx-0 lg:max-w-none">
             <div className="absolute -inset-8 bg-linear-to-r from-plume-400/25 via-plume-200/20 to-[rgb(255_196_20/0.22)] blur-3xl" />
             {/* The owl points the visitor at the product. */}
-            <Owl pose="point" size={140} priority className="absolute -bottom-10 -left-6 z-20 hidden -scale-x-100 sm:block lg:-left-12" />
+            <Owl pose="point" size={140} priority breathe={false} className="absolute -bottom-10 -left-6 z-20 hidden -scale-x-100 sm:block lg:-left-12" />
             <div className="relative overflow-hidden rounded-xl border-2 border-border bg-card shadow-2xl">
                 {/* Browser chrome */}
                 <div className="flex items-center border-b-2 border-border px-5 py-3">

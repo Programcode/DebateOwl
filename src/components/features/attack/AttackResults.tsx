@@ -5,6 +5,7 @@ import { AlertCircle, AlertTriangle, Info, Scale, Lightbulb, MessageSquare, Flam
 import { Badge } from '@/components/ui/badge';
 import { SectionCard } from '@/components/ui/section-card';
 import { Progress } from '@/components/ui/progress';
+import { CountUp } from '@/components/ui/count-up';
 import { Separator } from '@/components/ui/separator';
 import { Markdown } from '@/components/ui/markdown';
 import type { AttackOutput, Weakness } from '@/lib/ai/schemas/attack';
@@ -192,16 +193,17 @@ export function AttackResults({ result, discoveredSources, onDiscuss, onPractice
             <div className="flex items-center justify-between mb-2">
               <span className="text-sm font-medium text-foreground">{t('attackResults.caseStrength')}</span>
               <span className={cn(
-                  'text-lg font-bold',
+                  'text-lg font-bold tabular-nums',
                   overallAssessment.score >= 70 ? 'text-primary' :
                     overallAssessment.score >= 50 ? 'text-amber-600 dark:text-amber-400' : 'text-destructive'
                 )}>
-                  {overallAssessment.score}/100
+                  <CountUp value={overallAssessment.score} />/100
               </span>
             </div>
             <Progress
               value={overallAssessment.score}
               className="h-3"
+              reveal
             />
           </div>
 

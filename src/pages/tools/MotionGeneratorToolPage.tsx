@@ -114,8 +114,8 @@ export default function MotionGeneratorToolPage() {
         </ul>
       </section>
 
-      <ToolCta title="Prep both sides of a motion in DebateLab">
-        <p>Bring any of these motions into DebateLab to generate cases for both sides, brainstorm arguments, and spar against an AI opponent who argues the other side.</p>
+      <ToolCta title="Prep both sides of a motion in DebateOwl">
+        <p>Bring any of these motions into DebateOwl to generate cases for both sides, brainstorm arguments, and spar against an AI opponent who argues the other side.</p>
       </ToolCta>
     </ToolPageLayout>
   );

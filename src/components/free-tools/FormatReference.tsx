@@ -46,7 +46,7 @@ export function FormatReference({ format, headingLevel = 3 }: { format: RoundFor
           {format.sources.map((source, index) => (
             <span key={source.url}>
               {index > 0 && '; '}
-              <a href={source.url} rel="noopener" target="_blank">{source.label}</a>
+              <a href={source.url} rel="noopener" target="_blank" className="inline-block py-1">{source.label}</a>
             </span>
           ))}
         </p>

@@ -5,7 +5,7 @@ import { admin, AI_TIMEOUT, aiResponse, chooseForMotion, expect, expectProviderC
 test("attack-run: Attack analyses a pasted argument", async ({ signedIn: page, evidence }) => {
   const argument = "Free transit cuts congestion because riders leave their cars at home, so cities should abolish fares.";
   await page.goto("/app/attack");
-  await page.getByLabel("Your Argument *").fill(argument);
+  await page.getByLabel("Your argument *").fill(argument);
   await evidence.step("Attack: pasted an argument and clicked Find weaknesses");
   const response = aiResponse(page, "attack");
   await page.getByRole("button", { name: "Find weaknesses" }).click();
@@ -22,7 +22,7 @@ test("attack-run: Attack analyses a pasted argument", async ({ signedIn: page, e
 test("brainstorm-run: Brainstorm returns ranked angles", async ({ signedIn: page, user, evidence }) => {
   const motion = "Universal basic income should replace targeted welfare";
   await page.goto("/app/brainstorm");
-  await page.getByLabel("Motion / Topic *").fill(motion);
+  await page.getByLabel("Motion / topic *").fill(motion);
   const response = aiResponse(page, "brainstorm");
   await page.getByRole("button", { name: "Start brainstorming" }).click();
   // A new account has no Current Debate, so Brainstorm first offers one for this motion.
@@ -47,7 +47,7 @@ test("factoids-run: Factoids researches a statement and keeps only verified cita
   await page.goto("/app/factoids");
   await page.getByLabel("Statement *").fill("Fare-free public transport increases ridership");
   const response = aiResponse(page, "factoids");
-  await page.getByRole("button", { name: "Find Factoids" }).click();
+  await page.getByRole("button", { name: "Find factoids" }).click();
   const body = await response;
   await evidence.json("01-factoids-response", body);
   const factoids = body.output.factoids as Array<{ shortClaim: string; citation: { url?: string; verified: string } }>;
@@ -69,7 +69,7 @@ test("factoids-run: Factoids researches a statement and keeps only verified cita
 
 test("ask-stream: Ask streams a coaching answer and records usage", async ({ signedIn: page, user, evidence }) => {
   await page.goto("/app/ask");
-  await page.getByPlaceholder("Ask your debate coach...").fill("In two sentences, how should I weigh access against cost?");
+  await page.getByPlaceholder("Ask your debate coach…").fill("In two sentences, how should I weigh access against cost?");
   const stream = page.waitForResponse((response) => response.url().endsWith("/functions/v1/ai-stream"), { timeout: AI_TIMEOUT });
   await page.getByRole("button", { name: "Send message" }).click();
   const response = await stream;
@@ -127,7 +127,7 @@ test("ask-bubble: the student's message meets WCAG AA in light and dark, and the
   await followSystemTheme(page);
   const question = "How should I weigh **access** against cost?";
   await page.goto("/app/ask");
-  await page.getByPlaceholder("Ask your debate coach...").fill(question);
+  await page.getByPlaceholder("Ask your debate coach…").fill(question);
   const stream = page.waitForResponse((response) => response.url().endsWith("/functions/v1/ai-stream"), { timeout: AI_TIMEOUT });
   await page.getByRole("button", { name: "Send message" }).click();
   await stream;
@@ -166,7 +166,7 @@ test("ask-cutoff: a streamed answer cut off at its length cap says so under the 
   test.skip(LIVE, "only the fake provider can force a cut-off reply");
   await fake.truncate("ask-stream");
   await page.goto("/app/ask");
-  await page.getByPlaceholder("Ask your debate coach...").fill("How should I weigh access against cost?");
+  await page.getByPlaceholder("Ask your debate coach…").fill("How should I weigh access against cost?");
   const stream = page.waitForResponse((response) => response.url().endsWith("/functions/v1/ai-stream"), { timeout: AI_TIMEOUT });
   await page.getByRole("button", { name: "Send message" }).click();
   const events = await (await stream).text();
@@ -186,7 +186,7 @@ test("ask-cited: Ask in citation mode uses the structured endpoint", async ({ si
   await page.getByRole("button", { name: "Options" }).click();
   await page.locator("#citation-mode").click();
   await page.keyboard.press("Escape");
-  await page.getByPlaceholder("Ask your debate coach...").fill("Which evidence supports fare-free transit?");
+  await page.getByPlaceholder("Ask your debate coach…").fill("Which evidence supports fare-free transit?");
   const response = aiResponse(page, "ask");
   await page.getByRole("button", { name: "Send message" }).click();
   const body = await response;
@@ -202,7 +202,7 @@ test("ask-web: Ask with web search shows the sources it used", async ({ signedIn
   await page.getByRole("button", { name: "Options" }).click();
   await page.locator("#web-search-mode").click();
   await page.keyboard.press("Escape");
-  await page.getByPlaceholder("Ask your debate coach...").fill("What did recent studies find about fare-free public transport ridership?");
+  await page.getByPlaceholder("Ask your debate coach…").fill("What did recent studies find about fare-free public transport ridership?");
   const response = aiResponse(page, "ask");
   await page.getByRole("button", { name: "Send message" }).click();
   const body = await response;

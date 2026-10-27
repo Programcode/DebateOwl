@@ -5,7 +5,7 @@ import { Link, useParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/lib/supabase/client';
-import { Share2 } from 'lucide-react';
+import { EmptyState } from '@/components/ui/empty-state';
 import { formatEuropeanDate } from '@/lib/date-format';
 import { PublicPageShell, useHomePath } from '@/components/layout/PublicPageShell';
 import { usePageLabel } from '@/lib/seo/use-page-head';
@@ -155,13 +155,19 @@ export default function SharedPage() {
 
     if (error || !item) {
         return (
-            <PublicPageShell className="max-w-[65ch] text-center">
-                <Share2 className="mx-auto mb-4 h-8 w-8 text-muted-foreground" aria-hidden="true" />
-                <h1 className="text-2xl font-bold tracking-tight">{t('sharedPage.notFoundTitle')}</h1>
-                <p className="mt-2 text-muted-foreground">{error || t('sharedPage.notFound')}</p>
-                <Button asChild className="mt-6">
-                    <Link to={home}>{t('sharedPage.backHome')}</Link>
-                </Button>
+            <PublicPageShell className="flex min-h-[60vh] max-w-xl flex-col justify-center">
+                {/* Same look as the 404 page. */}
+                <EmptyState
+                    pose="surprised"
+                    headingLevel="h1"
+                    title={t('sharedPage.notFoundTitle')}
+                    description={error || t('sharedPage.notFound')}
+                    action={(
+                        <Button asChild>
+                            <Link to={home}>{t('sharedPage.backHome')}</Link>
+                        </Button>
+                    )}
+                />
             </PublicPageShell>
         );
     }

@@ -17,19 +17,19 @@ import type { NormalizedUsage } from "./cost.ts";
 const ROUTING_CONFIDENCE = 0.55;
 const MAX_ROUTING_STATE_CHARS = 8_000;
 
-// Auto only routes to Claude, which runs on DebateLab's Anthropic key (BYOK in
+// Auto only routes to Claude, which runs on DebateOwl's Anthropic key (BYOK in
 // OpenRouter). Every other family bills OpenRouter credits, so Auto never picks
 // one; a student can still choose one by hand. With one candidate per pool the
 // Jev routing call is skipped (it would bill OpenRouter credits for nothing).
 // Add a candidate only if it is an anthropic/ model: auto-model-router.test.ts
 // and src/test/ai/anthropic-only-guard.test.ts fail otherwise.
 export const FAST_CANDIDATES = {
-  "anthropic/claude-haiku-5.5": "Default for ordinary DebateLab work: cases, rebuttals, coaching, and structured output.",
+  "anthropic/claude-haiku-5.5": "Default for ordinary DebateOwl work: cases, rebuttals, coaching, and structured output.",
 } as const;
 
 // Opus is opt-in only: Auto Pro never routes or falls back to it.
 export const PRO_CANDIDATES = {
-  "anthropic/claude-sonnet-5.5": "Default for professional DebateLab work: nuanced rhetoric, adversarial critique, and long-form writing.",
+  "anthropic/claude-sonnet-5.5": "Default for professional DebateOwl work: nuanced rhetoric, adversarial critique, and long-form writing.",
 } as const;
 
 export type AutoModelRouterJev = (args: CallJevArgs) => Promise<JevDecisionResult>;
@@ -116,7 +116,7 @@ export async function routeAmongCandidates(
       questions: {
         model: {
           type: "choice",
-          instructions: "Which available model is the best fit for this DebateLab request? Prefer the default unless another option has a clear task-specific advantage.",
+          instructions: "Which available model is the best fit for this DebateOwl request? Prefer the default unless another option has a clear task-specific advantage.",
           criteria: candidates,
         },
       },

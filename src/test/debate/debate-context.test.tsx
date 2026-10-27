@@ -73,7 +73,7 @@ describe('Current Debate context plan', () => {
     expect(plan.request.sourceIds).toEqual([uuid(1)]);
   });
 
-  it('keeps live sparring transcript-only and respects Crossfire Source Library', () => {
+  it('keeps live sparring transcript-only and respects Library grounding turned off', () => {
     const sparring = planDebateContext('sparring', 'pro', TEST_DEBATE_ID, inputs());
     expect(sparring.request).toMatchObject({ sourceIds: [], outputs: [] });
     const crossfire = planDebateContext('crossfire', 'both', TEST_DEBATE_ID, inputs(), { includeSources: false });

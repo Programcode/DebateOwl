@@ -1,4 +1,4 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024"><title>DebateLab owl</title><defs>
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024"><title>DebateOwl owl</title><defs>
   <radialGradient id="i-body" cx="0.46" cy="0.26" r="0.8">
     <stop offset="0" stop-color="#2B9BFF"/><stop offset="0.38" stop-color="#0A6FF0"/><stop offset="0.7" stop-color="#0661E2"/><stop offset="0.9" stop-color="#044FC6"/><stop offset="1" stop-color="#0344B6"/>
   </radialGradient>

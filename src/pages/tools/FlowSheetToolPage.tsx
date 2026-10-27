@@ -79,7 +79,7 @@ export default function FlowSheetToolPage() {
       <ToolFaq faq={FAQ} />
 
       <ToolCta title="Map a round on screen">
-        <p>DebateLab&apos;s argument flowchart lets you lay out claims and responses as a diagram you can edit and export, next to AI tools that draft cases and rebuttals for either side.</p>
+        <p>DebateOwl&apos;s argument flowchart lets you lay out claims and responses as a diagram you can edit and export, next to AI tools that draft cases and rebuttals for either side.</p>
       </ToolCta>
     </ToolPageLayout>
   );

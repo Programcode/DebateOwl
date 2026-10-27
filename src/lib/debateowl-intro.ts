@@ -1,6 +1,7 @@
 /**
  * The one-time DebateOwl welcome: the owl says hello, says what changed (the look only) and that
- * DebateLab is slowly becoming DebateOwl. It opens once per browser, inside the signed-in app.
+ * DebateLab is becoming DebateOwl. It opens once per browser, inside the signed-in app.
+ * Closing it continues straight into the product tour's Start debate step.
  */
 export const INTRO_SEEN_KEY = 'debateowl_intro_seen_v1';
 
@@ -56,4 +57,28 @@ export function browserStorage(): IntroStorage | undefined {
   } catch {
     return undefined;
   }
+}
+
+/** The visible part of the first visit. `idle` means nothing is on screen. */
+export type FirstRunStep = 'intro' | 'start-debate' | 'tour' | 'idle';
+
+/**
+ * The welcome and the product tour are one first-run moment.
+ * The welcome, when it is due, opens first. Closing it continues into the tour's
+ * Start debate step when that account has not finished the tour. With no welcome,
+ * an unfinished tour still opens on its own, at that same first step. A finished
+ * tour stays closed, including when `?intro=show` replays the welcome.
+ */
+export function firstRunStep({
+  showIntro,
+  introDismissed,
+  tourCompleted,
+}: {
+  showIntro: boolean;
+  introDismissed: boolean;
+  tourCompleted: boolean;
+}): FirstRunStep {
+  if (showIntro && !introDismissed) return 'intro';
+  if (tourCompleted) return 'idle';
+  return showIntro ? 'start-debate' : 'tour';
 }

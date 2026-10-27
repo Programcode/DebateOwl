@@ -77,7 +77,7 @@ describe('LimitReachedModal', () => {
 
   it.each(['trial_expired', 'trial_ended'] as const)('still offers Pro when the trial has ended (%s)', (variant) => {
     renderModal(variant);
-    expect(screen.getByRole('heading', { name: 'Free Trial Ended' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Your free trial has ended' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Upgrade to Pro' })).toBeInTheDocument();
   });
 
@@ -86,7 +86,7 @@ describe('LimitReachedModal', () => {
     subscription.isPro = false;
     subscription.billingState = 'payment_failed';
     const { onUpgrade, onOpenChange } = renderModal('payment_failed');
-    expect(screen.getByRole('heading', { name: 'Payment Failed' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Payment failed' })).toBeInTheDocument();
     expect(screen.queryByText(/free trial/i)).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /Upgrade to Pro/ })).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Update payment method' }));
@@ -100,7 +100,7 @@ describe('LimitReachedModal', () => {
     subscription.billingState = 'subscription_ended';
     subscription.billingDate = '2026-10-01T12:00:00.000Z';
     const { onUpgrade } = renderModal('subscription_ended');
-    expect(screen.getByRole('heading', { name: 'Pro Subscription Ended' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Your Pro subscription has ended' })).toBeInTheDocument();
     expect(screen.getByText(/Your Pro subscription ended on 1 Oct 2026/)).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Resubscribe' }));
     expect(onUpgrade).toHaveBeenCalled();

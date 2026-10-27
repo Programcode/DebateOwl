@@ -102,7 +102,7 @@
     "format": "Formátum",
     "copy": "Beágyazókód másolása",
     "copied": "Beágyazókód másolva",
-    "attribution": "Időmérő: DebateLab"
+    "attribution": "Időmérő: DebateOwl"
   },
   "motions": {
     "region": "Vitatételgenerátor",
@@ -124,7 +124,7 @@
     "copyLink": "Link másolása",
     "copied": "Másolva",
     "copyPrompt": "Másold ki ezt a szöveget:",
-    "prepCta": "Készülj fel a tétel mindkét oldalára a DebateLabban",
+    "prepCta": "Készülj fel a tétel mindkét oldalára a DebateOwl-ban",
     "topics": {
       "education": "Oktatás",
       "technology": "Technológia és MI",
