@@ -63,6 +63,11 @@ export function DebateOwlIntro({ onClose, owlName = OWL_NAME }: { onClose: () =>
           event.preventDefault();
           doneButton.current?.focus();
         }}
+        // The tour's Next button takes focus as this dialog goes. Restoring
+        // focus here would put it back on the page body.
+        onCloseAutoFocus={(event) => {
+          event.preventDefault();
+        }}
       >
         <div className="flex flex-col items-center gap-5 px-6 pt-7 sm:flex-row sm:items-center sm:gap-6 sm:px-8 sm:pt-8">
           <motion.div

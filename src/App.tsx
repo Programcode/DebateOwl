@@ -15,6 +15,7 @@ import { ThemeProvider } from "@/components/ThemeProvider";
 import { useSessionStorageSync } from "@/hooks/use-session-storage-sync";
 import { hasCompletedOnboarding, useOnboardingStore } from "@/hooks/use-onboarding";
 import { browserStorage, markIntroSeen, shouldShowIntro } from "@/lib/debateowl-intro";
+import { focusCurrentDebate, noteTourChunkFailure, tourChunkGaveUp } from "@/lib/onboarding-tour-load";
 import { OfflineIndicator } from "@/components/OfflineIndicator";
 import { StagingBanner } from "@/components/StagingBanner";
 import { captureException, captureProductEvent, toTelemetrySafeError } from "@/lib/observability";
@@ -97,12 +98,15 @@ let onboardingTourPromise: Promise<OnboardingTourComponent> | null = null;
 function loadOnboardingTour(): Promise<OnboardingTourComponent> {
   if (onboardingTourComponent) return Promise.resolve(onboardingTourComponent);
   // A failed fetch has to be retryable. Keeping the rejected promise would
-  // leave the Start debate step closed for the rest of the page.
+  // leave the Start debate step closed for the rest of the page. The second
+  // failure is the last: `noteTourChunkFailure` logs once and the tour owner
+  // continues without it.
   onboardingTourPromise ??= import("@/components/features/onboarding/OnboardingTour").then((mod) => {
     onboardingTourComponent = mod.OnboardingTour;
     return mod.OnboardingTour;
   }).catch((error: unknown) => {
     onboardingTourPromise = null;
+    noteTourChunkFailure(error);
     throw error;
   });
   return onboardingTourPromise;
@@ -307,8 +311,9 @@ export function RouteContent({ children }: { children: ReactNode }) {
  * One first-run moment. The owl welcome, when it is due, opens over the signed-in
  * app once its layout has loaded. Closing it continues straight into the tour's
  * Start debate step. With no welcome, the tour mounts as before.
+ * Rendered only under RequireAuth, so an account is already signed in.
  */
-function AppWelcome() {
+export function AppWelcome() {
   const [showIntro] = useState(() => shouldShowIntro({
     search: window.location.search,
     storage: browserStorage(),
@@ -316,9 +321,7 @@ function AppWelcome() {
   }));
   const [layoutReady, setLayoutReady] = useState(false);
   const userId = useAuth().user?.id;
-  // A missing account is not a finished tour. `hasCompletedOnboarding` says so
-  // only because there is nobody to show it to yet.
-  const tourCompleted = useOnboardingStore((state) => Boolean(userId) && hasCompletedOnboarding(state, userId));
+  const tourCompleted = useOnboardingStore((state) => hasCompletedOnboarding(state, userId));
 
   useEffect(() => {
     if (!showIntro) return;
@@ -364,15 +367,38 @@ function OptionalOnboardingTour({ continueFromIntro }: { continueFromIntro: bool
 function TimedOnboardingTour({ userId, continueFromIntro }: { userId: string; continueFromIntro: boolean }) {
   const [eligibleAt] = useState(() => typeof performance === "undefined" ? 0 : performance.now());
   const [Tour, setTour] = useState<OnboardingTourComponent | null>(() => onboardingTourComponent);
+  const [gaveUp, setGaveUp] = useState(false);
 
   useEffect(() => {
-    if (Tour) return;
+    if (Tour || gaveUp) return;
     let live = true;
-    loadOnboardingTour().then((Loaded) => { if (live) setTour(() => Loaded); }, (): void => undefined);
+    const giveUp = () => {
+      setGaveUp(true);
+      focusCurrentDebate();
+    };
+    // The welcome's preload counts as the first try when it ran. One more
+    // failure after that, and the page continues without the tour.
+    if (tourChunkGaveUp()) {
+      giveUp();
+      return;
+    }
+    const load = () => {
+      loadOnboardingTour().then((Loaded) => {
+        if (live) setTour(() => Loaded);
+      }, () => {
+        if (!live) return;
+        if (tourChunkGaveUp()) {
+          giveUp();
+          return;
+        }
+        load();
+      });
+    };
+    load();
     return () => { live = false; };
-  }, [Tour]);
+  }, [Tour, gaveUp]);
 
-  if (!Tour) return null;
+  if (gaveUp || !Tour) return null;
   return <Tour eligibleAt={eligibleAt} userId={userId} continueFromIntro={continueFromIntro} />;
 }
 

@@ -1,12 +1,16 @@
-import { fireEvent, render, screen } from '@testing-library/react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import type { User } from '@supabase/supabase-js';
 import { MemoryRouter } from 'react-router-dom';
+import { AppWelcome } from '@/App';
 import { DebateOwlIntro } from '@/components/features/onboarding/DebateOwlIntro';
 import { FirstRun } from '@/components/features/onboarding/FirstRun';
 import { OnboardingTour } from '@/components/features/onboarding/OnboardingTour';
 import { useOnboardingStore } from '@/hooks/use-onboarding';
-import { useDebateStore } from '@/lib/stores/debate-store';
 import { INTRO_SEEN_KEY, firstRunStep, markIntroSeen, shouldShowIntro } from '@/lib/debateowl-intro';
+import { noteTourChunkFailure, resetTourChunkLoadForTests } from '@/lib/onboarding-tour-load';
+import { AuthContext, type AuthContextValue } from '@/lib/supabase/auth-context';
+import { useDebateStore } from '@/lib/stores/debate-store';
 
 function memoryStorage(initial: Record<string, string> = {}) {
   const values = new Map(Object.entries(initial));
@@ -128,17 +132,24 @@ describe('OnboardingTour continuing from the welcome', () => {
   function renderTour(continueFromIntro: boolean) {
     return render(
       <MemoryRouter initialEntries={['/app']}>
-        <div data-tour="current-debate">Current debate</div>
+        <div data-tour="current-debate"><button type="button">Open current debate</button></div>
         <OnboardingTour userId="student-1" continueFromIntro={continueFromIntro} eligibleAt={0} />
       </MemoryRouter>,
     );
   }
 
-  it('opens the Start debate step and not a second welcome dialog', () => {
+  it('opens the Start debate step and not a second welcome dialog', async () => {
     renderTour(true);
     expect(screen.getByText(/Start your first debate here/)).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Start debate' })).toBeTruthy();
     expect(screen.queryByRole('dialog', { name: 'DebateLab is slowly becoming DebateOwl' })).toBeNull();
+    await waitFor(() => {
+      expect(document.activeElement).toBe(document.querySelector('[data-action="primary"]'));
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Skip tour' }));
+    await waitFor(() => {
+      expect(document.activeElement).toBe(document.querySelector('[data-tour="current-debate"] button'));
+    });
   });
 
   it('stays closed when that account has already finished the tour', () => {
@@ -146,6 +157,85 @@ describe('OnboardingTour continuing from the welcome', () => {
     renderTour(true);
     expect(screen.queryByText(/Start your first debate here/)).toBeNull();
     expect(screen.queryByRole('button', { name: 'Start debate' })).toBeNull();
+  });
+});
+
+const signedIn: AuthContextValue = {
+  session: null,
+  user: { id: 'student-1' } as User,
+  loading: false,
+  callbackError: null,
+  clearCallbackError: () => undefined,
+  signInWithGoogle: async () => undefined,
+  signInWithEmailOtp: async () => undefined,
+  verifyEmailOtp: async () => undefined,
+  signInWithDemoCode: async () => undefined,
+  signOut: async () => undefined,
+  leaveEnvironment: async () => undefined,
+  discardTabState: () => undefined,
+};
+
+describe('AppWelcome hands the welcome to the Start debate step', () => {
+  beforeEach(() => {
+    localStorage.clear();
+    resetTourChunkLoadForTests();
+    window.history.pushState({}, '', '/app?intro=show');
+    useOnboardingStore.setState({ completedUserIds: [], legacyCompleted: false, isTourRunning: false });
+    useDebateStore.setState({ currentDebateId: null, dialog: null });
+  });
+
+  afterEach(() => {
+    window.history.pushState({}, '', '/');
+  });
+
+  it('Got it closes the welcome into the tour, with focus on the tour and then the card', async () => {
+    render(
+      <AuthContext.Provider value={signedIn}>
+        <MemoryRouter initialEntries={['/app?intro=show']}>
+          <div data-tour="current-debate"><button type="button">Open current debate</button></div>
+          <AppWelcome />
+        </MemoryRouter>
+      </AuthContext.Provider>,
+    );
+
+    const gotIt = await screen.findByRole('button', { name: 'Got it' }, { timeout: 5000 });
+    expect(gotIt).toHaveFocus();
+    fireEvent.click(gotIt);
+
+    expect(await screen.findByText(/Start your first debate here/)).toBeTruthy();
+    expect(screen.queryByRole('dialog', { name: 'DebateLab is slowly becoming DebateOwl' })).toBeNull();
+    expect(localStorage.getItem(INTRO_SEEN_KEY)).toBeTruthy();
+    await waitFor(() => {
+      expect(document.activeElement).toBe(document.querySelector('[data-action="primary"]'));
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Skip tour' }));
+    await waitFor(() => {
+      expect(document.activeElement).toBe(document.querySelector('[data-tour="current-debate"] button'));
+    });
+  });
+});
+
+describe('a tour chunk that fails to load', () => {
+  beforeEach(() => {
+    localStorage.clear();
+    resetTourChunkLoadForTests();
+  });
+
+  it('retries once, then logs once and remembers the welcome', () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    expect(noteTourChunkFailure(new Error('offline'))).toBe('retry');
+    expect(localStorage.getItem(INTRO_SEEN_KEY)).toBeNull();
+    expect(warn).not.toHaveBeenCalled();
+
+    expect(noteTourChunkFailure(new Error('offline'))).toBe('give-up');
+    expect(localStorage.getItem(INTRO_SEEN_KEY)).toBeTruthy();
+    expect(warn).toHaveBeenCalledTimes(1);
+    expect(String(warn.mock.calls[0]?.[0])).toContain('[Onboarding] Could not load the tour');
+
+    expect(noteTourChunkFailure(new Error('offline'))).toBe('give-up');
+    expect(warn).toHaveBeenCalledTimes(1);
+    warn.mockRestore();
   });
 });
 
