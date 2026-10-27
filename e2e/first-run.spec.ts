@@ -8,13 +8,13 @@ const USER_ID = '00000000-0000-0000-0000-000000000001';
 
 const copy = {
   en: {
-    welcome: 'Welcome to DebateLab!',
+    welcome: 'Welcome to DebateLab',
     firstDebate: 'Start your first debate here.',
     startDebate: 'Start debate',
     motionField: 'Motion',
     library: 'Library',
     generate: 'Generate',
-    ready: "You're Ready!",
+    ready: "You're ready",
     finish: 'Get started',
     generateMotion: 'Motion / topic *',
     generateSubmit: 'Generate debate case',
@@ -24,13 +24,13 @@ const copy = {
     gateMotion: 'This House would abolish zoos',
   },
   hu: {
-    welcome: 'Üdvözlünk a DebateLabban!',
+    welcome: 'Üdvözlünk a DebateLabban',
     firstDebate: 'Itt indíthatod el az első vitádat.',
     startDebate: 'Vita indítása',
     motionField: 'Tétel',
     library: 'Forráskönyvtár',
     generate: 'Generálás',
-    ready: 'Készen állsz!',
+    ready: 'Készen állsz',
     finish: 'Kezdjük',
     generateMotion: 'Indítvány / téma *',
     generateSubmit: 'Vitaeset generálása',
