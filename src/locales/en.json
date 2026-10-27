@@ -234,7 +234,7 @@
     "notifications": "Notifications",
     "loading": "Loading",
     "error": "Error",
-    "logoAlt": "DebateLab logo",
+    "logoAlt": "DebateOwl logo",
     "skipToContent": "Skip to main content",
     "or": "or",
     "back": "Back",
@@ -284,7 +284,7 @@
       "label": "Voice round",
       "sparringDescription": "Speak your speeches and hear the opponent answer aloud. You can still type.",
       "crossfireDescription": "Speak your questions and answers and hear the opponent reply aloud. You can still type.",
-      "privacyLine": "DebateLab never records or stores your audio."
+      "privacyLine": "DebateOwl never records or stores your audio."
     },
     "unavailable": {
       "unsupported": "Voice rounds are not available here because this browser has no speech recognition. Typing works as usual.",
@@ -292,7 +292,7 @@
     },
     "notice": {
       "title": "Before you turn on voice",
-      "noRecording": "DebateLab never records or stores your audio. Only the text of what you said is kept, as in a typed round.",
+      "noRecording": "DebateOwl never records or stores your audio. Only the text of what you said is kept, as in a typed round.",
       "recognition": "Your browser turns your speech into text. In Chrome, that sends your audio to Google; other browsers may send it to their own speech service.",
       "opponent": "The opponent's replies are sent as text to ElevenLabs, which produces the voice you hear.",
       "accept": "Turn on voice"
@@ -336,7 +336,7 @@
     }
   },
   "home": {
-    "title": "DebateLab",
+    "title": "DebateOwl",
     "subtitle": "Choose a mode to start.",
     "prepare": "Prepare",
     "practice": "Practice",
@@ -537,7 +537,7 @@
     "subscriptionEnded": "Your Pro subscription has ended. Resubscribe to keep using AI tools."
   },
   "login": {
-    "title": "Sign in to DebateLab",
+    "title": "Sign in to DebateOwl",
     "subtitle": "Sign in with Google, email, or an admin-issued demo code.",
     "google": "Continue with Google",
     "emailTab": "Email",
@@ -583,7 +583,7 @@
     "redirecting": "Redirecting...",
     "failed": "Could not start sign in",
     "tryAgain": "Please try again.",
-    "backHome": "Back to DebateLab",
+    "backHome": "Back to DebateOwl",
     "sessionExpired": "Your session expired. Sign in again.",
     "errors": {
       "demoNotFound": "Demo code not found.",
@@ -594,7 +594,7 @@
       "rateLimited": "Too many attempts. Try again later.",
       "rateLimitedWait": "Too many attempts. Try again in {{time}}.",
       "codeExpired": "That code is wrong or has expired. Check it or send a new one.",
-      "network": "Can't reach DebateLab. Check your connection and try again.",
+      "network": "Can't reach DebateOwl. Check your connection and try again.",
       "linkExpired": "This sign-in link has expired or was already used. Send a new code.",
       "linkOtherBrowser": "This sign-in link only works in the browser where you asked for it. Send a new code here.",
       "callbackFailed": "Sign-in didn't finish. Try again.",
@@ -735,7 +735,7 @@
       "confirmMakeAdmin": "Make {{email}} an admin?",
       "confirmMakeAdminDesc": "Admins can open the admin page and change other users' roles and plans.",
       "confirmBan": "Ban {{email}}?",
-      "confirmBanDesc": "They can't use DebateLab until you unban them.",
+      "confirmBanDesc": "They can't use DebateOwl until you unban them.",
       "confirmUnban": "Unban {{email}}?",
       "confirmRemoveAdmin": "Remove admin from {{email}}?",
       "confirmRoleDesc": "They become a regular user.",
@@ -881,7 +881,7 @@
   "footer": {
     "terms": "Terms",
     "privacy": "Privacy",
-    "copyright": "© 2026 DebateLab by Pi-Stack. All rights reserved.",
+    "copyright": "© 2026 DebateOwl by Pi-Stack. All rights reserved.",
     "navLabel": "Footer",
     "pricingGuide": "Pricing details",
     "compareTools": "Compare AI debate tools"
@@ -971,7 +971,7 @@
   },
   "useCases": {
     "title": "Built For Everyone in Debate",
-    "description": "Whether you are competing, coaching, or judging, DebateLab gives you the edge.",
+    "description": "Whether you are competing, coaching, or judging, DebateOwl gives you the edge.",
     "forDebaters": "For Debaters",
     "forCoaches": "For Coaches",
     "forJudges": "For Judges",
@@ -1012,7 +1012,7 @@
     "proFeature5": "Active Grounding™ research",
     "startTrial": "Start free trial",
     "subscribe": "Subscribe now",
-    "noFreePlan": "There is no permanent free plan. After your trial ends, a subscription is required to continue using DebateLab.",
+    "noFreePlan": "There is no permanent free plan. After your trial ends, a subscription is required to continue using DebateOwl.",
     "trialBadge": "New Users",
     "trialDesc": "Use the full workflow before deciding on Pro.",
     "proBadge": "Power Users",
@@ -1021,7 +1021,7 @@
   },
   "faq": {
     "title": "Frequently Asked Questions",
-    "q1": "How much does DebateLab cost?",
+    "q1": "How much does DebateOwl cost?",
     "a1": "As of {{asOf}}, {{product}} offers a {{trialDays}}-day free trial with no credit card required. After that, Pro is ${{proMonthly}}/month + tax for expanded access and all 10 models. There is no permanent free plan.",
     "q2": "What do I get with Pro?",
     "a2": "Expanded AI prep access, all 10 models including Claude Opus and Sonnet, GPT-6.1 Sol, and Gemini, Active Grounding™ research, and priority support.",
@@ -1032,8 +1032,8 @@
     "q5": "Can I save and export my work?",
     "a5": "Yes! Save cases, brainstorms, and chats to History. Export to Word, PDF, or Google Docs.",
     "subtitle": "Pricing, workflow, and product details at a glance.",
-    "q6": "What is DebateLab?",
-    "a6": "DebateLab is an AI debate prep and practice app for students and competitive debaters. It has {{modes}} prep modes, including a case generator, a case attacker, evidence research with citations, an AI coach, Crossfire and timed Sparring rounds against an AI opponent, and it is available in English, Spanish and Hungarian.",
+    "q6": "What is DebateOwl?",
+    "a6": "DebateOwl is an AI debate prep and practice app for students and competitive debaters. It has {{modes}} prep modes, including a case generator, a case attacker, evidence research with citations, an AI coach, Crossfire and timed Sparring rounds against an AI opponent, and it is available in English, Spanish and Hungarian.",
     "q7": "Is {{product}} the same as debatelab.ai?",
     "a7": "No. {{brand}} is a separate product at {{host}}."
   },
@@ -1076,7 +1076,7 @@
   "finalCta": {
     "title": "Ready to Build Your Next Winning Case?",
     "subtitle": "Join debaters who prep smarter with AI.",
-    "cta": "Launch DebateLab",
+    "cta": "Launch DebateOwl",
     "freeTrialAvailable": "Free trial available"
   },
   "whatsNew": {
@@ -1438,7 +1438,7 @@
   },
   "limitModal": {
     "trialEnded": "Free Trial Ended",
-    "trialEndedDesc": "Your {{days}}-day free trial has ended. Upgrade to Pro to keep using DebateLab.",
+    "trialEndedDesc": "Your {{days}}-day free trial has ended. Upgrade to Pro to keep using DebateOwl.",
     "limitReached": "Daily Access Paused",
     "limitReachedDesc": "You've used {{current}} of {{limit}} included AI uses today. Access refreshes at midnight UTC.",
     "weightedDesc": "This model counts as {{units}} uses, and you have {{remaining}} left today. Pick a lighter model or wait until midnight UTC.",
@@ -1450,10 +1450,10 @@
     "notNow": "Not now",
     "gotIt": "OK",
     "paymentFailed": "Payment Failed",
-    "paymentFailedDesc": "Your last payment failed. Update your payment method in Settings to keep using DebateLab.",
+    "paymentFailedDesc": "Your last payment failed. Update your payment method in Settings to keep using DebateOwl.",
     "subscriptionEnded": "Pro Subscription Ended",
-    "subscriptionEndedDesc": "Your Pro subscription has ended. Resubscribe to keep using DebateLab.",
-    "subscriptionEndedOnDesc": "Your Pro subscription ended on {{date}}. Resubscribe to keep using DebateLab.",
+    "subscriptionEndedDesc": "Your Pro subscription has ended. Resubscribe to keep using DebateOwl.",
+    "subscriptionEndedOnDesc": "Your Pro subscription ended on {{date}}. Resubscribe to keep using DebateOwl.",
     "updatePayment": "Update payment method",
     "limitReachedGenericDesc": "You've used today's included AI uses. Access refreshes at midnight UTC.",
     "zeroLimitDesc": "This account has no daily AI uses right now. Contact support if this seems wrong.",
@@ -1512,7 +1512,7 @@
     "freePeriod_other": "for {{count}} days"
   },
   "onboarding": {
-    "welcome": "Welcome to DebateLab! 🎉",
+    "welcome": "Welcome to DebateOwl! 🎉",
     "generate": "Generate",
     "generateDesc": "Build a full case for your motion. Brainstorm, Factoids, and Flowchart sit beside it under Prepare.",
     "library": "Library",
@@ -1525,8 +1525,8 @@
     "next": "Next",
     "nextWithProgress": "Next (Step {step} of {steps})",
     "skip": "Skip tour",
-    "debateFirstDesc": "Everything in DebateLab belongs to one debate: the motion you are preparing, its sources, and your results. Start your first debate here.",
-    "debateCurrentDesc": "Everything in DebateLab belongs to your Current Debate: its motion, its sources, and your results. Open or change it here."
+    "debateFirstDesc": "Everything in DebateOwl belongs to one debate: the motion you are preparing, its sources, and your results. Start your first debate here.",
+    "debateCurrentDesc": "Everything in DebateOwl belongs to your Current Debate: its motion, its sources, and your results. Open or change it here."
   },
   "debateOwlIntro": {
     "greeting": "Hi, I'm DebateOwl!",
@@ -1534,8 +1534,8 @@
     "newLook": "DebateLab has a new look.",
     "company": "I'll keep you company while things load.",
     "sameTools": "Same tools as before, in the same spots.",
-    "noticeTitle": "DebateLab is slowly becoming DebateOwl",
-    "noticeBody": "Same app, same account, same saved work, with a new look and name. We're moving to help more people find us on Google.",
+    "noticeTitle": "DebateLab is becoming DebateOwl",
+    "noticeBody": "Same app, same account, same saved work, with a new look and name. The new name helps more people find us on Google.",
     "skipAnimation": "Skip animation",
     "done": "Got it"
   },
@@ -1905,7 +1905,7 @@
     "s2": "How We Use Your Information",
     "p2": "Your information is used to provide and improve our services, generate AI responses, maintain your saved content, and communicate service updates.",
     "s3": "AI Processing",
-    "p3": "Your inputs are sent to OpenRouter for AI processing using the model you select. We do not use your content to train AI models. In a voice round, your browser's speech recognition turns your speech into text; in Chrome, that sends your audio to Google, and other browsers may send it to their own speech service. DebateLab never records or stores your audio. The AI opponent's replies are sent as text to ElevenLabs to produce its voice.",
+    "p3": "Your inputs are sent to OpenRouter for AI processing using the model you select. We do not use your content to train AI models. In a voice round, your browser's speech recognition turns your speech into text; in Chrome, that sends your audio to Google, and other browsers may send it to their own speech service. DebateOwl never records or stores your audio. The AI opponent's replies are sent as text to ElevenLabs to produce its voice.",
     "s4": "Data Storage",
     "p4": "Your data is stored securely using Supabase infrastructure with encryption at rest and in transit.",
     "s5": "Data Sharing",
@@ -1915,9 +1915,9 @@
     "s7": "Cookies and Tracking",
     "p7": "We use essential cookies and browser storage for authentication and preferences. We use PostHog for product analytics and Sentry for error monitoring, structured logs, application metrics, performance tracing, and error-only Session Replay. Sentry does not record ordinary sessions. It records sessions containing captured errors; all replay text and inputs are masked and media is blocked. Sentry receives technical metadata such as routes, browser details, request URLs, methods and status codes, stack traces, timings, and safe event classifications. Automatic collection of user identity, cookies, headers, HTTP bodies, query parameters, AI inputs and outputs, and stack-frame variables is disabled. PostHog autocapture, pageview capture, session recording, and persistent browser storage are disabled. We do not send debate content, chat messages, source titles, or email addresses in analytics events or structured logs.",
     "s8": "Bug Reports with Jam",
-    "p8": "We use Jam, a bug-reporting service run by We are Jam, Inc., so that you can show us a problem by recording it. Jam's scripts load for every visitor to DebateLab, after your first click, tap or key press, or 8 seconds after the page loads, whichever comes first. They open a frame from recorder.jam.dev, which receives the address of the page you are on, your browser and device details and page load timings, and they collect the page's console logs, its network requests and your clicks and key presses so these can be attached to a recording. A recording is made when you open a Jam recording link we sent you and press Start Recording. It contains a video of the screen, window or tab you choose to share, together with that technical data, so it can include anything shown on the page or exchanged with our servers, such as your debate content. While you are signed in, your DebateLab account ID is available to Jam and is attached to any recording you make, which links the recording to your account. Jam processes this data as our service provider and keeps it until it is no longer needed to provide its service; it does not state a fixed retention period. To ask us to delete a recording, or to object to this processing, contact privacy@debatelab.app.",
+    "p8": "We use Jam, a bug-reporting service run by We are Jam, Inc., so that you can show us a problem by recording it. Jam's scripts load for every visitor to DebateOwl, after your first click, tap or key press, or 8 seconds after the page loads, whichever comes first. They open a frame from recorder.jam.dev, which receives the address of the page you are on, your browser and device details and page load timings, and they collect the page's console logs, its network requests and your clicks and key presses so these can be attached to a recording. A recording is made when you open a Jam recording link we sent you and press Start Recording. It contains a video of the screen, window or tab you choose to share, together with that technical data, so it can include anything shown on the page or exchanged with our servers, such as your debate content. While you are signed in, your DebateOwl account ID is available to Jam and is attached to any recording you make, which links the recording to your account. Jam processes this data as our service provider and keeps it until it is no longer needed to provide its service; it does not state a fixed retention period. To ask us to delete a recording, or to object to this processing, contact privacy@debatelab.app.",
     "s9": "Children's Privacy",
-    "p9": "DebateLab is designed for users 13 and older. We do not knowingly collect data from children under 13.",
+    "p9": "DebateOwl is designed for users 13 and older. We do not knowingly collect data from children under 13.",
     "s10": "Changes to This Policy",
     "p10": "We may update this policy periodically. Significant changes will be communicated via email or in-app notification.",
     "s11": "Contact Us",
@@ -1928,28 +1928,28 @@
     "lastUpdated": "Last updated",
     "date": "May 1, 2026",
     "s1": "Acceptance of Terms",
-    "p1": "By using DebateLab, you agree to these terms. If you do not agree, do not use the service.",
+    "p1": "By using DebateOwl, you agree to these terms. If you do not agree, do not use the service.",
     "s2": "Service Description",
-    "p2": "DebateLab is an AI-powered debate preparation tool that provides argument generation, analysis, and coaching features.",
+    "p2": "DebateOwl is an AI-powered debate preparation tool that provides argument generation, analysis, and coaching features.",
     "s3": "Account Requirements",
     "p3": "You may sign in with Google, email-based sign-in, or an admin-issued demo code. Demo codes provide temporary access to a designated account. You are responsible for all activity under your account.",
     "s4": "Subscription and Billing",
     "p4": "Free trials last 3 days with limited requests. Pro subscriptions are $5/month plus tax, billed via Stripe. Cancel anytime from Settings.",
     "s5": "Acceptable Use",
-    "p5": "You may not use DebateLab for harassment, generating harmful content, academic dishonesty in violation of your institution's policies, or any illegal purpose.",
+    "p5": "You may not use DebateOwl for harassment, generating harmful content, academic dishonesty in violation of your institution's policies, or any illegal purpose.",
     "s6": "AI-Generated Content",
     "p6": "AI outputs are provided as-is without guarantees of accuracy. You are responsible for verifying facts and citations before use in competitions.",
     "s7": "Intellectual Property",
-    "p7": "You retain ownership of your inputs. AI-generated outputs are licensed to you for personal and educational use. DebateLab retains rights to the platform and its technology.",
+    "p7": "You retain ownership of your inputs. AI-generated outputs are licensed to you for personal and educational use. DebateOwl retains rights to the platform and its technology.",
     "s8": "Limitation of Liability",
-    "p8": "DebateLab is provided as-is. We are not liable for competition outcomes, inaccurate AI outputs, or service interruptions.",
+    "p8": "DebateOwl is provided as-is. We are not liable for competition outcomes, inaccurate AI outputs, or service interruptions.",
     "s9": "Termination",
     "p9": "We may suspend or terminate accounts that violate these terms. You may delete your account at any time.",
     "s10": "Governing Law",
     "p10": "These terms are governed by applicable law. Disputes will be resolved through binding arbitration."
   },
   "export": {
-    "generatedBy": "Generated by DebateLab",
+    "generatedBy": "Generated by DebateOwl",
     "page": "Page",
     "of": "of",
     "unknown": "Unknown",
@@ -2373,7 +2373,7 @@
   },
   "sourcesPage": {
     "title": "Sources",
-    "intro": "The following sources were consulted during the research and development of DebateLab. They are listed alphabetically by author surname or institutional name, following APA citation conventions.",
+    "intro": "The following sources were consulted during the research and development of DebateOwl. They are listed alphabetically by author surname or institutional name, following APA citation conventions.",
     "references": "References"
   },
   "sourceQuality": {
@@ -2576,7 +2576,7 @@
   },
   "googleDriveAuth": {
     "connect": "Connect Google Drive",
-    "description": "To export to Google Docs, DebateLab needs permission to create files in your Google Drive.",
+    "description": "To export to Google Docs, DebateOwl needs permission to create files in your Google Drive.",
     "failedDesc": "Please try again.",
     "failedTitle": "Could not open Google",
     "redirecting": "Redirecting...",

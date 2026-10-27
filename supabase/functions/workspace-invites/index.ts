@@ -228,9 +228,9 @@ function configuredSender(): { sender: InviteSender; baseUrl: string } {
           ? { "Content-Type": "application/json" }
           : { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
         body: JSON.stringify(format === "mailpit" ? {
-          From: { Email: "workspace@debatelab.local", Name: "DebateLab" },
+          From: { Email: "workspace@debatelab.local", Name: "DebateOwl" },
           To: [{ Email: message.to }],
-          Subject: "Join your DebateLab workspace",
+          Subject: "Join your DebateOwl workspace",
           Text: `Join your workspace: ${message.inviteUrl}`,
           Headers: { "X-Idempotency-Key": message.idempotencyKey },
         } : message),

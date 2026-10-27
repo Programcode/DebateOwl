@@ -340,8 +340,8 @@ describe("Vercel frontend deployment configuration", () => {
     expect(indexHtml).toContain('<meta name="robots" content="noindex, nofollow" />');
     expect(indexHtml).toContain('<meta property="og:image:width" content="1200" />');
     expect(indexHtml).toContain('<meta property="og:image:height" content="630" />');
-    expect(indexHtml).toContain('<meta property="og:image:alt" content="DebateLab debate prep workspace preview" />');
-    expect(indexHtml).toContain('<meta name="twitter:image:alt" content="DebateLab debate prep workspace preview" />');
+    expect(indexHtml).toContain('<meta property="og:image:alt" content="DebateOwl wordmark with the owl, for AI debate prep and practice" />');
+    expect(indexHtml).toContain('<meta name="twitter:image:alt" content="DebateOwl wordmark with the owl, for AI debate prep and practice" />');
     expect(indexHtml).toContain('<link rel="icon" href="/favicon.ico" sizes="48x48" />');
     expect(indexHtml).toContain('<link rel="apple-touch-icon" href="/apple-touch-icon.png" sizes="180x180" />');
     expect(prerender).toContain(publicRobots);

@@ -48,7 +48,7 @@ function EmbedSnippets() {
   // Tall enough that the attribution link shows without scrolling: prep banks and the POI strip add height.
   const height = format.prepSeconds > 0 ? 700 : format.segments.some((segment) => segment.poi) ? 600 : 540;
   const snippet = `<iframe src="${site.origin}/embed/debate-timer?format=${formatId}" title="${format.name} debate timer" width="100%" height="${height}" style="border:0;max-width:760px" allow="screen-wake-lock; fullscreen" allowfullscreen loading="lazy"></iframe>
-<p><a href="${site.origin}/tools/debate-timer">Free debate timer by DebateLab</a></p>`;
+<p><a href="${site.origin}/tools/debate-timer">Free debate timer by DebateOwl</a></p>`;
 
   return (
     <div className="mt-4 space-y-3">
@@ -156,7 +156,7 @@ export default function DebateTimerToolPage() {
       </section>
 
       <ToolCta title="Want an opponent to practise against?">
-        <p>DebateLab&apos;s sparring rounds put you against an AI opponent in Public Forum, Lincoln-Douglas or the school 4-6-6-3 format, with the speech clock built in, and judge the round when you finish.</p>
+        <p>DebateOwl&apos;s sparring rounds put you against an AI opponent in Public Forum, Lincoln-Douglas or the school 4-6-6-3 format, with the speech clock built in, and judge the round when you finish.</p>
       </ToolCta>
     </ToolPageLayout>
   );

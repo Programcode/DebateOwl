@@ -44,7 +44,7 @@ test("the production site loads and guards the app", async ({ page, baseURL }) =
   const errors: string[] = [];
   page.on("pageerror", (error) => errors.push(error.message));
   await page.goto("/");
-  await expect(page).toHaveTitle(/DebateLab/);
+  await expect(page).toHaveTitle(/DebateOwl/);
   await page.goto("/login");
   await expect(page.getByRole("button", { name: "Continue with Google" })).toBeVisible();
   await page.goto("/app/generate");

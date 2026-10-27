@@ -268,7 +268,7 @@ export function WorkspacePracticePanel({
         {selectedThread && (
           <>
             <div className="mt-3 grid max-h-56 gap-2 overflow-y-auto">
-              {threadMessages.map((item) => <p key={item.id} className="rounded-md bg-accent px-2 py-1 text-sm"><span className="font-medium">{item.role === "user" ? t("workspaces.you", "You") : "DebateLab"}:</span> {item.content} {item.status !== "complete" && <span className="text-xs text-muted-foreground">({item.status})</span>}</p>)}
+              {threadMessages.map((item) => <p key={item.id} className="rounded-md bg-accent px-2 py-1 text-sm"><span className="font-medium">{item.role === "user" ? t("workspaces.you", "You") : "DebateOwl"}:</span> {item.content} {item.status !== "complete" && <span className="text-xs text-muted-foreground">({item.status})</span>}</p>)}
             </div>
             <form className="mt-2 flex gap-2" onSubmit={sendThreadMessage}>
               <Input aria-label={t("workspaces.threadMessage", "Team message")} value={message} onChange={(event) => setMessage(event.target.value)} />

@@ -50,7 +50,7 @@ export function GoogleDriveAuthModal({ open, onOpenChange }: GoogleDriveAuthModa
           <DialogDescription className="text-center">
             {t(
               'googleDriveAuth.description',
-              'To export to Google Docs, DebateLab needs permission to create files in your Google Drive.'
+              'To export to Google Docs, DebateOwl needs permission to create files in your Google Drive.'
             )}
           </DialogDescription>
         </DialogHeader>

@@ -35,8 +35,8 @@ const FEATURE_MARKERS: Record<Feature, string> = {
   brainstorm: "You're in the prep room with your team before a tournament round.",
   factoids: "You are a debate research specialist helping a team find cuttable evidence for tournament prep.",
   ask: "You are a debate coach chat bot. Answer the user's question.",
-  sparring: "You are DebateLab's live debate sparring opponent and impartial judge.",
-  crossfire: "You are DebateLab's crossfire coach.",
+  sparring: "You are DebateOwl's live debate sparring opponent and impartial judge.",
+  crossfire: "You are DebateOwl's crossfire coach.",
 };
 
 function occurrences(text: string, value: string): number {

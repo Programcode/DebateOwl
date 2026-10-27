@@ -51,7 +51,7 @@ describe('DebateOwlIntro', () => {
 
   it('Got it marks it seen; Skip animation only skips ahead', () => {
     const storage = renderIntro();
-    expect(screen.getByRole('dialog', { name: 'DebateLab is slowly becoming DebateOwl' })).toBeTruthy();
+    expect(screen.getByRole('dialog', { name: 'DebateLab is becoming DebateOwl' })).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: 'Skip animation' }));
     expect(screen.queryByRole('button', { name: 'Skip animation' })).toBeNull();
     expect(shouldShowIntro({ search: '', storage, env: appEnv })).toBe(true);

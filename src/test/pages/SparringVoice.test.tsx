@@ -193,7 +193,7 @@ describe('SparringPage voice rounds', () => {
     fireEvent.click(screen.getByTestId('voice-mode'));
 
     const notice = await screen.findByTestId('voice-notice');
-    expect(notice).toHaveTextContent('DebateLab never records or stores your audio.');
+    expect(notice).toHaveTextContent('DebateOwl never records or stores your audio.');
     expect(notice).toHaveTextContent('In Chrome, that sends your audio to Google');
     expect(notice).toHaveTextContent('sent as text to ElevenLabs');
     expect(screen.getByTestId('voice-mode')).toHaveAttribute('aria-checked', 'false');

@@ -109,7 +109,7 @@ async function cacheFirst(request) {
 }
 
 function offlinePage() {
-  return new Response('<!doctype html><title>Offline</title><main style="font-family:system-ui;padding:2rem"><h1>Offline</h1><p>DebateLab is unavailable until your connection returns.</p></main>', {
+  return new Response('<!doctype html><title>Offline</title><main style="font-family:system-ui;padding:2rem"><h1>Offline</h1><p>DebateOwl is unavailable until your connection returns.</p></main>', {
     status: 503,
     headers: { 'Content-Type': 'text/html; charset=utf-8' },
   });

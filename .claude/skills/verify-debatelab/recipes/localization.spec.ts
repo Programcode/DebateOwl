@@ -30,10 +30,10 @@ async function chooseLanguage(page: Page, language: keyof typeof LANGUAGE_NAMES)
   await expect(page.locator("html")).toHaveAttribute("lang", language);
 }
 
-/** The tab title once the page has set its own (the shell's is just "DebateLab"). */
+/** The tab title once the page has set its own (the shell's is just "DebateOwl"). */
 async function pageTitle(page: Page, route: string) {
   await page.goto(route);
-  await expect.poll(() => page.title()).not.toBe("DebateLab");
+  await expect.poll(() => page.title()).not.toBe("DebateOwl");
   return page.title();
 }
 
@@ -49,13 +49,13 @@ test("loc-titles: every route's tab title is its own and follows the interface l
   await evidence.json("01-document-titles", titles);
 
   for (const route of APP_ROUTES) {
-    for (const language of ["en", "hu", "es"]) expect(titles[language][route]).toMatch(/ · DebateLab$/);
+    for (const language of ["en", "hu", "es"]) expect(titles[language][route]).toMatch(/ · DebateOwl$/);
   }
   for (const route of PUBLIC_ROUTES) {
     for (const language of ["en", "hu", "es"]) expect(titles[language][route]).toMatch(new RegExp(`\\| ${BRAND}$`));
   }
-  expect(titles.en["/app/generate"]).toBe(`${en.nav.generate} · DebateLab`);
-  expect(titles.hu["/app/generate"]).toBe(`${hu.nav.generate} · DebateLab`);
+  expect(titles.en["/app/generate"]).toBe(`${en.nav.generate} · DebateOwl`);
+  expect(titles.hu["/app/generate"]).toBe(`${hu.nav.generate} · DebateOwl`);
   expect(titles.hu["/no-such-page"]).toBe(hu.pageHead.notFound.title.replace("{{brand}}", BRAND));
   // Each language names every page in its own words (the brand aside).
   for (const route of [...APP_ROUTES, ...PUBLIC_ROUTES]) {
@@ -65,9 +65,9 @@ test("loc-titles: every route's tab title is its own and follows the interface l
   // A switch retitles the page on screen, with no reload.
   await page.goto("/app/attack");
   await chooseLanguage(page, "en");
-  await expect(page).toHaveTitle(`${en.nav.attack} · DebateLab`);
+  await expect(page).toHaveTitle(`${en.nav.attack} · DebateOwl`);
   await chooseLanguage(page, "hu");
-  await expect(page).toHaveTitle(`${hu.nav.attack} · DebateLab`);
+  await expect(page).toHaveTitle(`${hu.nav.attack} · DebateOwl`);
   await evidence.shot("02-attack-title-hu");
 });
 
@@ -96,7 +96,7 @@ test("loc-switcher: sign-in and not-found pages carry the language switcher", as
   await evidence.shot("01-login-en");
   await chooseLanguage(page, "hu");
   await expect(page.getByRole("heading", { level: 1, name: hu.login.title })).toBeVisible();
-  // "Bejelentkezés a DebateLabba" already names the app, so it gets no suffix.
+  // "Bejelentkezés a DebateOwlba" already names the app, so it gets no suffix.
   await expect(page).toHaveTitle(hu.login.title);
   await evidence.shot("02-login-hu");
 

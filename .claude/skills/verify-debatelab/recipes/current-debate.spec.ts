@@ -198,7 +198,7 @@ test("debate-tour: a brand-new account starts its first debate from the onboardi
 
   const tooltip = page.locator(".react-joyride__tooltip");
   const next = page.locator('[data-test-id="button-primary"]');
-  await expect(tooltip).toContainText("Welcome to DebateLab!", { timeout: 15_000 });
+  await expect(tooltip).toContainText("Welcome to DebateOwl!", { timeout: 15_000 });
   await expect(tooltip).toContainText("Start your first debate here.");
   await evidence.shot("01-tour-first-step");
 
