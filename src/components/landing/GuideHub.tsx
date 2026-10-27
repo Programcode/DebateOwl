@@ -17,7 +17,19 @@ const GROUPS = [
 ] as const;
 
 const TOOLS = GROUPS.find((group) => group.id === "tools")!;
-const linkClass = "inline-flex text-muted-foreground underline-offset-4 hover:text-primary hover:underline pointer-coarse:min-h-11 pointer-coarse:items-center";
+const chipClass = "inline-flex shrink-0 items-center whitespace-nowrap rounded-full border-2 border-border bg-card px-3.5 py-1.5 text-sm font-semibold text-foreground transition-colors hover:border-brand-tint-border hover:text-primary pointer-coarse:min-h-11";
+/** One sideways-scrolling row of chips per group on phones; the chips wrap from md up. */
+const chipRowClass = "-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 sm:-mx-6 sm:px-6 md:mx-0 md:flex-wrap md:overflow-visible md:px-0";
+
+const HubHeading = () => {
+    const { t } = useTranslation();
+    return (
+        <Reveal className="mb-8 text-center md:mb-10">
+            <h2 id="guide-hub-title" className="section-heading">{t('guideHub.title')}</h2>
+            <p className="mx-auto mt-4 hidden max-w-2xl text-lg text-muted-foreground md:block">{t('guideHub.subtitle')}</p>
+        </Reveal>
+    );
+};
 
 /**
  * /hu and /es: the guides are in English, so only the free tools show, at their
@@ -26,27 +38,24 @@ const linkClass = "inline-flex text-muted-foreground underline-offset-4 hover:te
 const TranslatedToolsHub = ({ language }: { language: "hu" | "es" }) => {
     const { t } = useTranslation();
     return (
-        <section aria-labelledby="guide-hub-title" className="py-24">
+        <section aria-labelledby="guide-hub-title" className="py-12 md:py-20">
             <div className="section-container">
-                <Reveal className="mb-12 text-center">
-                    <h2 id="guide-hub-title" className="section-heading mb-4">{t('guideHub.title')}</h2>
-                    <p className="mx-auto max-w-2xl text-lg text-muted-foreground">{t('guideHub.subtitle')}</p>
-                </Reveal>
+                <HubHeading />
 
-                <Reveal delay={0.05} className="mx-auto max-w-md">
+                <Reveal delay={0.05} className="mx-auto max-w-2xl">
                     <nav aria-labelledby="guide-hub-tools">
-                        <h3 id="guide-hub-tools" className="mb-3 font-semibold">{t('guideHub.tools')}</h3>
-                        <ul className="space-y-2">
+                        <h3 id="guide-hub-tools" className="mb-3 font-display text-lg font-[600] text-heading">{t('guideHub.tools')}</h3>
+                        <ul className={chipRowClass}>
                             {TOOLS.paths.map((path) => (
-                                <li key={path}>
-                                    <Link to={localizedPath(path, language)} className={linkClass}>{t(`guideHub.links.${path.slice(1)}`)}</Link>
+                                <li key={path} className="shrink-0">
+                                    <Link to={localizedPath(path, language)} className={chipClass}>{t(`guideHub.links.${path.slice(1)}`)}</Link>
                                 </li>
                             ))}
                         </ul>
                     </nav>
                     {/* The English home page lists every guide; a plain link loads it from the server. */}
-                    <p className="mt-6">
-                        <a href="/#guide-hub-title" hrefLang="en" className={linkClass}>{t('guideHub.englishGuides')}</a>
+                    <p className="mt-5">
+                        <a href="/#guide-hub-title" hrefLang="en" className="inline-flex items-center font-semibold text-primary underline-offset-4 hover:underline pointer-coarse:min-h-11">{t('guideHub.englishGuides')}</a>
                     </p>
                 </Reveal>
             </div>
@@ -60,22 +69,19 @@ const GuideHub = () => {
     if (language !== "en") return <TranslatedToolsHub language={language} />;
 
     return (
-        <section aria-labelledby="guide-hub-title" className="py-24">
+        <section aria-labelledby="guide-hub-title" className="py-12 md:py-20">
             <div className="section-container">
-                <Reveal className="mb-12 text-center">
-                    <h2 id="guide-hub-title" className="section-heading mb-4">{t('guideHub.title')}</h2>
-                    <p className="mx-auto max-w-2xl text-lg text-muted-foreground">{t('guideHub.subtitle')}</p>
-                </Reveal>
+                <HubHeading />
 
-                <Reveal delay={0.05} className="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-5">
+                <Reveal delay={0.05} className="grid grid-cols-1 gap-6 md:grid-cols-2 md:gap-8 lg:grid-cols-3">
                     {GROUPS.map((group) => (
                         <nav key={group.id} aria-labelledby={`guide-hub-${group.id}`}>
-                            <h3 id={`guide-hub-${group.id}`} className="mb-3 font-semibold">{t(`guideHub.${group.id}`)}</h3>
-                            <ul className="space-y-2">
+                            <h3 id={`guide-hub-${group.id}`} className="mb-3 font-display text-lg font-[600] text-heading">{t(`guideHub.${group.id}`)}</h3>
+                            <ul className={chipRowClass}>
                                 {group.paths.map((path) => (
-                                    <li key={path}>
+                                    <li key={path} className="shrink-0">
                                         {/* Static pages, not app routes: a plain link loads each from the server. */}
-                                        <a href={path} className={linkClass}>
+                                        <a href={path} className={chipClass}>
                                             {t(`guideHub.links.${path.slice(1)}`)}
                                         </a>
                                     </li>

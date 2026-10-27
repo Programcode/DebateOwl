@@ -1,7 +1,7 @@
 import React from "react";
 import { useTranslation } from "react-i18next";
 import { Reveal } from "./Reveal";
-import { ArrowRight, CheckCircle2, Sparkles } from "lucide-react";
+import { ArrowRight, CheckCircle2 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useRoutePrefetch } from "@/hooks/use-route-prefetch";
 import { Owl } from "@/components/brand/Owl";
@@ -10,20 +10,14 @@ const Hero = () => {
     const { t } = useTranslation();
     const appPrefetch = useRoutePrefetch("/app");
 
-    const planHighlights = [
-        { label: t('hero.trialBadge'), value: t('hero.trialBadgeValue') },
-        { label: t('hero.requestsBadge'), value: t('hero.requestsBadgeValue') },
-        { label: t('hero.proBadge'), value: `${t('pricing.proPrice')}${t('pricing.proPeriod')}` },
-    ];
-
-    const trustBullets = [
+    const trustChips = [
+        t('hero.trialBadge'),
         t('hero.trustBullet1'),
         t('hero.trustBullet2'),
-        t('hero.trustBullet3'),
     ];
 
     return (
-        <section className="relative min-h-dvh overflow-hidden pt-24 pb-20 md:pt-32">
+        <section className="relative overflow-hidden pt-20 pb-10 md:pt-28 md:pb-16 lg:min-h-[44rem] lg:pt-32">
             <div className="absolute inset-0 aurora-bg opacity-80" />
             <div className="absolute inset-0 animated-grid opacity-50" />
             <div className="orb orb-primary w-[420px] h-[420px] -top-44 -left-44 opacity-70" />
@@ -33,12 +27,9 @@ const Hero = () => {
             <div className="section-container relative z-10">
                 <div className="grid grid-cols-1 items-center gap-14 lg:grid-cols-[1.05fr_0.95fr]">
                     <div className="mx-auto w-full max-w-2xl lg:mx-0 lg:max-w-none">
-                        <Reveal onLoad className="mb-6">
-                            {/* rounded-2xl, not a pill: long Spanish and Hungarian copy wraps cleanly. */}
-                            <span className="inline-flex items-start gap-2 rounded-lg border-2 border-brand-tint-border bg-brand-tint px-4 py-2 text-sm font-bold text-foreground">
-                                <Sparkles aria-hidden="true" className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
-                                {t('hero.announcement')}
-                            </span>
+                        {/* Below lg the product preview is hidden, so Ollie greets the visitor here instead. */}
+                        <Reveal onLoad className="mb-3 lg:hidden">
+                            <Owl pose="point" size={88} priority breathe={false} className="-ml-2" />
                         </Reveal>
 
                         <Reveal onLoad delay={0.05}>
@@ -48,43 +39,26 @@ const Hero = () => {
                         </Reveal>
 
                         <Reveal onLoad delay={0.1}>
-                            <p className="mt-6 max-w-2xl text-lg text-muted-foreground md:text-xl">
+                            <p className="mt-4 max-w-xl text-lg text-muted-foreground md:mt-6 md:text-xl">
                                 {t('hero.subheadline')}
                             </p>
                         </Reveal>
 
-                        <Reveal onLoad delay={0.15} className="mt-9 flex flex-col gap-3 sm:flex-row">
+                        <Reveal onLoad delay={0.15} className="mt-7 md:mt-9">
                             <Link
                                 to="/app"
                                 {...appPrefetch}
-                                className="btn-primary-gradient inline-flex items-center justify-center gap-2 px-8 py-4 text-lg"
+                                className="btn-primary-gradient inline-flex w-full items-center justify-center gap-2 px-8 py-4 text-lg sm:w-auto"
                             >
                                 <span className="relative z-10">{t('hero.cta')}</span>
                                 <ArrowRight aria-hidden="true" className="relative z-10 h-5 w-5" />
                             </Link>
-                            <a
-                                href="#pricing"
-                                className="btn-secondary-outline inline-flex items-center justify-center gap-2 px-8 py-4 text-lg"
-                            >
-                                {t('hero.ctaSecondary')}
-                            </a>
                         </Reveal>
 
-                        {/* Three across at every width, so on a phone they take one short row under the buttons. */}
-                        <Reveal onLoad delay={0.15} className="mt-8 grid grid-cols-3 gap-2 sm:gap-3">
-                            {planHighlights.map((item) => (
-                                <div key={item.label} className="rounded-lg border-2 border-border bg-card px-2.5 py-3 max-[379px]:px-2 sm:p-4">
-                                    {/* On phones no extra tracking, so long Spanish and Hungarian labels take two lines at most. */}
-                                    <p className="text-balance text-[0.6875rem] font-extrabold uppercase leading-4 tracking-normal text-muted-foreground hyphens-auto max-[379px]:text-[0.625rem] sm:text-xs sm:tracking-[0.08em] sm:hyphens-manual">{item.label}</p>
-                                    <p className="mt-1 text-balance font-display text-base font-[600] text-heading sm:text-lg">{item.value}</p>
-                                </div>
-                            ))}
-                        </Reveal>
-
-                        <ul className="mt-8 space-y-3">
-                            {trustBullets.map((item) => (
-                                <li key={item} className="flex items-start gap-3 text-sm text-foreground/85">
-                                    <CheckCircle2 aria-hidden="true" className="mt-0.5 h-4 w-4 shrink-0 text-success-text" />
+                        <ul className="mt-5 flex flex-wrap gap-x-4 gap-y-2">
+                            {trustChips.map((item) => (
+                                <li key={item} className="flex items-center gap-1.5 text-sm font-bold text-foreground/85">
+                                    <CheckCircle2 aria-hidden="true" className="h-4 w-4 shrink-0 text-success-text" />
                                     <span>{item}</span>
                                 </li>
                             ))}
@@ -135,10 +109,10 @@ const HeroPreview = () => {
     ];
 
     return (
-        <Reveal onLoad delay={0.1} className="relative mx-auto w-full max-w-2xl lg:mx-0 lg:max-w-none">
+        <Reveal onLoad delay={0.1} className="relative hidden w-full lg:block">
             <div className="absolute -inset-8 bg-linear-to-r from-plume-400/25 via-plume-200/20 to-[rgb(255_196_20/0.22)] blur-3xl" />
             {/* The owl points the visitor at the product. */}
-            <Owl pose="point" size={140} priority breathe={false} className="absolute -bottom-10 -left-6 z-20 hidden -scale-x-100 sm:block lg:-left-12" />
+            <Owl pose="point" size={140} priority breathe={false} className="absolute -bottom-10 -left-12 z-20 -scale-x-100" />
             <div className="relative overflow-hidden rounded-xl border-2 border-border bg-card shadow-2xl">
                 {/* Browser chrome */}
                 <div className="flex items-center border-b-2 border-border px-5 py-3">
