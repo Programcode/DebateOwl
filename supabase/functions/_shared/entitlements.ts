@@ -159,9 +159,9 @@ export async function getConfiguredDailyLimit(userId: string, fallbackLimit: num
 
 // Logged and returned for API callers; the browser shows its own translation of the code.
 const ACCESS_REFUSAL_REASONS: Record<AccessRefusalCode, string> = {
-  trial_ended: "Your free trial has ended. Upgrade to Pro to continue using DebateLab.",
-  payment_failed: "Your last payment failed. Update your payment method to keep using DebateLab.",
-  subscription_ended: "Your Pro subscription has ended. Resubscribe to continue using DebateLab.",
+  trial_ended: "Your free trial has ended. Upgrade to Pro to continue using DebateOwl.",
+  payment_failed: "Your last payment failed. Update your payment method to keep using DebateOwl.",
+  subscription_ended: "Your Pro subscription has ended. Resubscribe to continue using DebateOwl.",
 };
 
 type AccessCheck =

@@ -30,7 +30,7 @@ const CASES: Array<{
   text: RegExp;
   button: string;
 }> = [
-  { name: 'trial', props: { billingState: 'trial', billingDate: DATE, billingDateKind: 'ends' }, badge: 'Free Trial', date: 'Ends on 22 Nov 2026', text: /AI access is active/, button: 'Upgrade to Pro' },
+  { name: 'trial', props: { billingState: 'trial', billingDate: DATE, billingDateKind: 'ends' }, badge: 'Free trial', date: 'Ends on 22 Nov 2026', text: /AI access is active/, button: 'Upgrade to Pro' },
   {
     // QB-02: an override on an expired trial works, so it is not "Expired".
     name: 'extended access',
@@ -87,7 +87,7 @@ const CASES: Array<{
   {
     name: 'legacy free',
     props: { billingState: 'legacy_free', billingDate: DATE, billingDateKind: 'ends', dailyLimit: 50 },
-    badge: 'Legacy Free',
+    badge: 'Legacy free',
     date: 'Ends on 22 Nov 2026',
     text: /AI access is active/,
     button: 'Upgrade to Pro',

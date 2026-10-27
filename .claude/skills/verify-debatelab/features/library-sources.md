@@ -4,7 +4,7 @@ Users save reference texts to their Library. The Library belongs to the Current 
 
 ## Sub-features
 
-- `lib-add` adds a source with a title and content. It shows at once while it saves, then a toast `Saved <title> to the Library`; its toggle is on, and the banner `Grounding Active` shows.
+- `lib-add` adds a source with a title and content. It shows at once while it saves, then a toast `Saved <title> to the Library`; its toggle is on, and the banner `Grounding active` shows.
 - `lib-toggle` pauses a source through its switch, which keeps it out of prompts.
 - `lib-offline` offline, the switch does not move and a toast says `You are offline. Reconnect and try again.` A write that fails online puts the switch back with a toast.
 - `lib-edit-while-switching` the source editor's untouched fields follow the stored source while it is open (a switch that rolls back shows as rolled back), and `Save` sends only the fields edited in the sheet. Text typed while a save runs stays an edit and goes out with the next `Save`.
@@ -36,7 +36,7 @@ Preconditions:
 - **Delete.** Click the button named `Delete <title>` (use `exact`). It deletes at once, with no confirmation, and a toast `Deleted <title>` offers `Undo`, which saves the source again. The switch count drops to 0, and stays 0 after `page.reload()`. `sources` no longer has the title.
 - **Counts.** Insert 7 URL sources through `admin`, 5 with `is_active: true`. `/app` test id `home-current-debate` contains `7 sources (5 active)`; on `/app/ask` test id `debate-context-control` contains `Using 5 sources`.
 - **Import.** In the add panel, fill `Import from URL` and click `Import URL`. The `Import preview` panel appears, then `Save imported source` stores a row whose `origin` is the URL.
-- **Erase.** On Settings, click `Delete all my data`. In the dialog, fill `Type your email to confirm` with `user.email` and click the dialog's `Delete all my data`. The text `Data Deleted` appears, and `sources` for the user is `[]`.
+- **Erase.** On Settings, click `Delete all my data`. In the dialog, fill `Type your email to confirm` with `user.email` and click the dialog's `Delete all my data`. The text `Data deleted` appears, and `sources` for the user is `[]`.
 
 ## Gotchas
 

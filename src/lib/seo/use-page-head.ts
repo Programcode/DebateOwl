@@ -68,7 +68,7 @@ const PageLabelContext = createContext<(label: string | null) => void>(() => und
 export const PageLabelProvider = PageLabelContext.Provider;
 
 /**
- * Names the tab "<label> · DebateLab" instead of the route's label while the
+ * Names the tab "<label> · DebateOwl" instead of the route's label while the
  * page shows it, as a missing share link does. The route keeps writing the
  * title, so a language switch cannot leave the route's label on top.
  */
@@ -84,7 +84,7 @@ export function usePageLabel(label: string | null) {
 const PRIVATE_ROUTE = /^\/(login|auth|app|share)(\/|$)/;
 
 /**
- * Titles each private page "<page> · DebateLab" (the shell's title), gives it the landing
+ * Titles each private page "<page> · DebateOwl" (the shell's title), gives it the landing
  * description, both in the interface language, and marks it noindex while it is on screen.
  * Every other route keeps the shell's head or sets its own.
  */
@@ -94,7 +94,7 @@ export function usePrivateRouteHead(pathname: string, label: string) {
   const description = t('pageHead.home.description', HEAD_NAMES);
   useEffect(() => {
     if (!isPrivate) return;
-    // "Sign in to DebateLab" already names the app.
+    // "Sign in to DebateOwl" already names the app.
     document.title = label.includes(SHELL_HEAD.title) ? label : `${label} · ${SHELL_HEAD.title}`;
     setMeta('description', description);
     setMeta('robots', 'noindex, nofollow');

@@ -110,7 +110,7 @@ async function startVoiceSparring(page: Page) {
 
   await page.getByTestId('voice-mode').click();
   const notice = page.getByTestId('voice-notice');
-  await expect(notice).toContainText('DebateLab never records or stores your audio.');
+  await expect(notice).toContainText('DebateOwl never records or stores your audio.');
   await expect(notice).toContainText('In Chrome, that sends your audio to Google');
   await expect(notice).toContainText('sent as text to ElevenLabs');
   await page.getByRole('button', { name: 'Turn on voice' }).click();
@@ -255,8 +255,8 @@ test('voice mode is hidden with a reason where the browser cannot recognise spee
 });
 
 for (const [locale, label, noticeLine, privacyLine] of [
-  ['es', 'Ronda con voz', 'DebateLab nunca graba ni guarda tu audio.', 'ElevenLabs para la voz del oponente'],
-  ['hu', 'Hangos kör', 'A DebateLab soha nem rögzíti és nem tárolja a hangodat.', 'az ElevenLabsszel az ellenfél hangjához'],
+  ['es', 'Ronda con voz', 'DebateOwl nunca graba ni guarda tu audio.', 'ElevenLabs para la voz del oponente'],
+  ['hu', 'Hangos kör', 'A DebateOwl soha nem rögzíti és nem tárolja a hangodat.', 'az ElevenLabsszel az ellenfél hangjához'],
 ] as const) {
   test(`the voice notice and the privacy page are translated (${locale})`, async ({ page }) => {
     await setLocale(page, locale);

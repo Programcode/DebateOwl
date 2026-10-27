@@ -95,7 +95,7 @@ test("every request carries its debate's material, and Review changes exactly on
   await page.keyboard.press("Escape");
   await expect(sheet).toBeHidden();
   await page.goto("/app/brainstorm");
-  await page.getByLabel("Motion / Topic *").fill("This House would lower the voting age");
+  await page.getByLabel("Motion / topic *").fill("This House would lower the voting age");
   const before = (await fake.requests()).filter((request) => request.feature === "brainstorm").length;
   await page.getByRole("button", { name: "Start brainstorming" }).click();
   await page.getByRole("dialog").getByRole("button", { name: "Use once without saving to a debate" }).click();

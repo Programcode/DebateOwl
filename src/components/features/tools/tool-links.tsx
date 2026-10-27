@@ -53,7 +53,7 @@ export const UTILITY_COUNT = UTILITY_TOOLS.length;
  * A link to a tool. `row` shows the description (Tools page lists); `tile` shows only
  * the label (the debate dashboard and the utility strip).
  */
-export function ToolLink({ tool, variant, tourId }: { tool: Tool; variant: 'row' | 'tile'; tourId?: string }) {
+export function ToolLink({ tool, variant, tourId, className }: { tool: Tool; variant: 'row' | 'tile'; tourId?: string; className?: string }) {
   const { t } = useTranslation();
   const Icon = tool.icon;
   const prefetchHandlers = useRoutePrefetch(tool.href);
@@ -67,6 +67,7 @@ export function ToolLink({ tool, variant, tourId }: { tool: Tool; variant: 'row'
         className={cn(
           'tile flex min-h-11 items-center gap-2 rounded-md px-3.5 py-2 text-[0.9375rem] font-bold text-foreground',
           'focus-visible:outline-hidden focus-visible:ring-[3px] focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background',
+          className,
         )}
       >
         <Icon className="h-4 w-4 shrink-0 text-primary" aria-hidden="true" />

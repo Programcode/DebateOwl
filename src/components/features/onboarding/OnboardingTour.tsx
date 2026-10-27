@@ -1,10 +1,12 @@
 // src/components/features/onboarding/OnboardingTour.tsx
-import { useEffect, useCallback, useMemo, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useCallback, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import Joyride, { ACTIONS, CallBackProps, EVENTS, STATUS, Step } from 'react-joyride';
 import { useLocation } from 'react-router-dom';
+import { Owl } from '@/components/brand/Owl';
 import { Button } from '@/components/ui/button';
 import { hasCompletedOnboarding as completedFor, useOnboardingStore } from '@/hooks/use-onboarding';
+import { focusCurrentDebate, focusTourPrimary } from '@/lib/onboarding-tour-load';
 import { useDebateStore } from '@/lib/stores/debate-store';
 
 // Below `lg` the header's menu button is the navigation. There the tour draws no
@@ -26,7 +28,16 @@ function useCompactLayout() {
     return compact;
 }
 
-export function OnboardingTour({ eligibleAt, userId }: { eligibleAt?: number; userId: string }) {
+export function OnboardingTour({
+    eligibleAt,
+    userId,
+    continueFromIntro = false,
+}: {
+    eligibleAt?: number;
+    userId: string;
+    /** The owl welcome just closed, so the Start debate step opens before the next paint. */
+    continueFromIntro?: boolean;
+}) {
     const { t } = useTranslation();
     const hasCompletedOnboarding = useOnboardingStore((state) => completedFor(state, userId));
     const { isTourRunning, setOnboardingComplete, startTour, stopTour } = useOnboardingStore();
@@ -80,8 +91,10 @@ export function OnboardingTour({ eligibleAt, userId }: { eligibleAt?: number; us
         {
             target: 'body',
             content: (
-                <div className="text-center">
-                    <h2 className="text-xl font-bold mb-2">{t('onboarding.ready')}</h2>
+                <div className="flex flex-col items-center text-center">
+                    {/* A small celebration, once: the owl in place of the old emoji. */}
+                    <Owl pose="celebrating" size={72} className="mb-2" />
+                    <h2 className="mb-2 text-balance font-display text-xl font-[600] text-heading">{t('onboarding.ready')}</h2>
                     <p className="text-muted-foreground">
                         {t('onboarding.readyDesc')}
                     </p>
@@ -118,6 +131,29 @@ export function OnboardingTour({ eligibleAt, userId }: { eligibleAt?: number; us
         setTourSteps(resolveTourSteps());
         setScrollOffset((document.querySelector('header')?.getBoundingClientRect().height ?? 0) + 24);
     }, [resolveTourSteps]);
+
+    // The parent leaves `continueFromIntro` true for the whole Start debate step.
+    // Consume it once the spotlight has opened. `startTour` does not reset
+    // `stepIndex`, and the create-dialog pause still depends on `debateDialog`,
+    // so a later language or debate change must not run this handoff again.
+    // If the card is not in the document yet, leave it pending for the next pass.
+    const handoffPending = useRef(continueFromIntro);
+    useLayoutEffect(() => {
+        if (!handoffPending.current || hasCompletedOnboarding || location.pathname !== '/app') return;
+        if (!document.querySelector('[data-tour="current-debate"]')) return;
+        handoffPending.current = false;
+        prepareTour();
+        startTour();
+    }, [hasCompletedOnboarding, location.pathname, prepareTour, startTour]);
+
+    // Joyride also focuses a hidden beacon. That runs in its mount timeout, so
+    // the visible Next button has to take focus after it. The welcome dialog
+    // has already given up restoring focus to the page body.
+    useEffect(() => {
+        if (!continueFromIntro || hasCompletedOnboarding || !isTourRunning) return;
+        const timer = window.setTimeout(() => { focusTourPrimary(); }, 0);
+        return () => window.clearTimeout(timer);
+    }, [continueFromIntro, hasCompletedOnboarding, isTourRunning]);
 
     // Start tour automatically for new users
     useEffect(() => {
@@ -175,6 +211,9 @@ export function OnboardingTour({ eligibleAt, userId }: { eligibleAt?: number; us
         if (finishedStatuses.includes(status)) {
             setOnboardingComplete(userId);
             setStepIndex(0);
+            // The tooltip is about to unmount. The card it was pointing at is the
+            // control the student can use next.
+            requestAnimationFrame(() => { focusCurrentDebate(); });
         } else if (type === EVENTS.STEP_AFTER || type === EVENTS.TARGET_NOT_FOUND) {
             setStepIndex(index + (action === ACTIONS.PREV ? -1 : 1));
         }

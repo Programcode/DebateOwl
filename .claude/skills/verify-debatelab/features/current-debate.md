@@ -17,7 +17,7 @@ Each student works in one Current Debate at a time: a motion with its own Librar
 - Home (`/app`): the card with test id `home-current-debate`, which says `No current debate` for a new account.
 - Every tool page shows the strip with test id `current-debate-strip` (`Working in: <motion>`), with a `Use once` button for one-off mode.
 - The debate dashboard is `/app/debate`.
-- A new account's onboarding tour starts on `/app` with a `Start debate` button in its first step.
+- A new account's onboarding tour starts on `/app` with a `Start debate` button in its first step. The one-time welcome, when it shows, closes straight into that step. This stack keeps the welcome closed unless the URL is `?intro=show`.
 
 ## Driving it with verify.sh + Playwright
 
@@ -32,12 +32,12 @@ Preconditions:
 - **Use once.** With a debate, submit a different motion. The dialog `This is a different motion` opens. `chooseForMotion(page, "once")`. End state: the provider call's `system` has no debate marker, and the header still names the old debate.
 - **Dashboard.** `/app/debate`: `current-debate-motion` has the motion, `debate-side-pro` reads `In favor`, `debate-side-con` reads `Against`, and `debate-sources` and `debate-recent` list only this debate's work.
 - **Switch.** Click `debateControl(page)`, then the dialog's `Switch debate`, then `Switch to <motion>`. End state: the Library shows only that debate's sources. In History, the `Brainstorms` and `Cases` tabs show only its results.
-- **Tour.** Seed `debate-trainer-onboarding` with `hasCompletedOnboarding: false` once per session (see the recipe), sign in, and click the tooltip's `Start debate`. Fill `Motion`, click `Start debate`, click `[data-test-id="button-primary"]` twice, then `Get started!`. End state: one `debates` row is current, and Generate opens prefilled with no dialog.
+- **Tour.** Seed `debate-trainer-onboarding` with `hasCompletedOnboarding: false` once per session (see the recipe), sign in, and click the tooltip's `Start debate`. Fill `Motion`, click `Start debate`, click `[data-test-id="button-primary"]` twice, then `Get started`. End state: one `debates` row is current, and Generate opens prefilled with no dialog.
 
 ## Gotchas
 
 - The motion dialogs open after the tool's submit button and before its AI request. Create the `aiResponse()` promise before the click, answer the dialog, then await it. Otherwise the wait times out with the dialog still open.
-- `chooseForMotion` scopes itself to the two motion dialogs by name, because the next step may open its own dialog, such as the paywall `Free Trial Ended`.
+- `chooseForMotion` scopes itself to the two motion dialogs by name, because the next step may open its own dialog, such as the paywall `Your free trial has ended`.
 - The Library's `Add source` button is disabled until a Current Debate exists. Start one first.
 - `getByRole("button", { name: "Start" })` also matches the header's `Start debate`. Use `exact: true` for other Start buttons, such as the speech timer's.
 - In live mode, research can save web sources to the Library. Check the rows a recipe added by title rather than counting all of them.

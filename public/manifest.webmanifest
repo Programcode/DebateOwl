@@ -1,6 +1,6 @@
 {
-  "name": "DebateLab",
-  "short_name": "DebateLab",
+  "name": "DebateOwl",
+  "short_name": "DebateOwl",
   "description": "Debate preparation, saved cases, source library, and coaching.",
   "id": "/app",
   "start_url": "/app",

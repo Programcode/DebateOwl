@@ -15,7 +15,7 @@ test.beforeEach(async ({ page }) => {
 });
 
 async function openAppNav(page: Page, label: string) {
-  if ((page.viewportSize()?.width ?? 1280) < 1024) {
+  if ((page.viewportSize()?.width ?? 1280) < 768) {
     await page.getByRole('button', { name: 'Open menu' }).click();
     await page.getByRole('navigation', { name: 'Mobile navigation' })
       .getByRole('link', { name: new RegExp(`^${label}`) })
@@ -111,7 +111,7 @@ test('keeps announcements stable across routes and refreshes on a full reload', 
   await expect(page.getByRole('heading', { name: 'Scheduled maintenance' })).toHaveCount(0);
 
   await openAppNav(page, 'Library');
-  await expect(page.getByRole('heading', { name: 'Source Library', exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Library', exact: true })).toBeVisible();
   await openAppNav(page, 'Tools');
   await expect(page.getByRole('main').getByRole('heading', { name: 'What are you working on?', exact: true })).toBeVisible();
   expect(listRequestCount()).toBe(1);
