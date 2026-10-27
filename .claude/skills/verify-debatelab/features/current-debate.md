@@ -17,7 +17,7 @@ Each student works in one Current Debate at a time: a motion with its own Librar
 - Home (`/app`): the card with test id `home-current-debate`, which says `No current debate` for a new account.
 - Every tool page shows the strip with test id `current-debate-strip` (`Working in: <motion>`), with a `Use once` button for one-off mode.
 - The debate dashboard is `/app/debate`.
-- A new account's onboarding tour starts on `/app` with a `Start debate` button in its first step.
+- A new account's onboarding tour starts on `/app` with a `Start debate` button in its first step. The one-time welcome, when it shows, closes straight into that step. This stack keeps the welcome closed unless the URL is `?intro=show`.
 
 ## Driving it with verify.sh + Playwright
 
