@@ -3,6 +3,7 @@ import {
   enforceAttackControls,
   enforceBrainstormControls,
   enforceGenerateControls,
+  enforceGenerateSources,
   isAskStreamingModeAllowed,
   validateControlInput,
 } from "./control-enforcement.ts";
@@ -220,6 +221,51 @@ Deno.test("generate controls fail closed when the model returns fewer contention
   if ((output.contentions as unknown[]).length !== 1) {
     throw new Error("underlength output must not be padded or fabricated");
   }
+});
+
+Deno.test("a Conclusor case without at least two reasons we win is rejected, not padded", () => {
+  for (const whyWeWin of [undefined, [], ["only one"], ["", "  ", "one"], "not a list"]) {
+    const output: Record<string, unknown> = { contentions: [{}, {}, {}], whyWeWin, metadata: {} };
+    let error: unknown;
+    try {
+      enforceGenerateControls(output, "pro", "custom", "standard", "conc");
+    } catch (caught) {
+      error = caught;
+    }
+    if (!(error instanceof Error) || !error.message.includes("Conclusor")) {
+      throw new Error(`conc output with whyWeWin=${JSON.stringify(whyWeWin)} must be rejected`);
+    }
+  }
+});
+
+Deno.test("case sources keep only links the research or Library supplied", () => {
+  const output: Record<string, unknown> = {
+    sources: [
+      { org: "UNICEF", year: 2025, claim: "Age limits alone do not keep children safe", url: "https://www.unicef.org/report#section" },
+      { org: "Made Up Institute", year: "2024", claim: "Invented figure", url: "https://made-up.example/study" },
+      { org: "Library page", claim: "From the student's sources", url: "https://library.example/page/" },
+      { org: "Script", claim: "Not a web link", url: "javascript:alert(1)" },
+      { org: "", claim: "" },
+      "not a source",
+      { org: "Educo", claim: "1 in 5 pupils are bullied" },
+    ],
+  };
+  enforceGenerateSources(output, ["https://www.unicef.org/report", "https://library.example/page"]);
+  const sources = output.sources as Array<Record<string, unknown>>;
+  const expected = [
+    { org: "UNICEF", claim: "Age limits alone do not keep children safe", year: "2025", url: "https://www.unicef.org/report#section" },
+    { org: "Made Up Institute", claim: "Invented figure", year: "2024" },
+    { org: "Library page", claim: "From the student's sources", url: "https://library.example/page/" },
+    { org: "Script", claim: "Not a web link" },
+    { org: "Educo", claim: "1 in 5 pupils are bullied" },
+  ];
+  if (JSON.stringify(sources) !== JSON.stringify(expected)) {
+    throw new Error(`unexpected sources: ${JSON.stringify(sources)}`);
+  }
+
+  const malformed: Record<string, unknown> = { sources: "UNICEF 2025" };
+  enforceGenerateSources(malformed, []);
+  if ("sources" in malformed) throw new Error("a non-list sources field must be removed");
 });
 
 Deno.test("generate controls fail closed for missing or invalid exact-length fields", () => {

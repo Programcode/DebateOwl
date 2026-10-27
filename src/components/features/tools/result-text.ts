@@ -31,7 +31,7 @@ export function caseText(result: GenerateOutput): string {
   });
   block('WHY WE WIN:', view.whyWeWin.map((reason, i) => `  ${i + 1}. ${reason}`));
   block('IF THEY SAY...', view.ifTheySay.map((answer) =>
-    `  "${answer.theySay}" -> ${answer.weAnswer}${answer.source ? ` (${answer.source})` : ''}`));
+    `  "${answer.theySay}" -> ${answer.weAnswer}${answer.inRound ? ` ${answer.inRound}` : ''}${answer.source ? ` (${answer.source})` : ''}`));
   if (view.closingLine) block('CLOSING LINE:', [`  ${view.closingLine}`]);
   block('SOURCES:', view.sources.map((source) => `  - ${sourceLine(source)}`));
   return lines.join('\n');

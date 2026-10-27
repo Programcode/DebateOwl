@@ -27,12 +27,24 @@ Deno.test("generate length and role controls preserve the output contract", () =
     for (const role of ["intro", "r1", "r2", "conc"] as const) {
       const output: Record<string, unknown> = {
         exordio: { hook: "hook", transition: "transition" },
+        opening: { hook: "hook", definition: "definition" },
         contentions: [{}, {}, {}, {}],
+        counters: [{}],
+        whyWeWin: ["a", "b", "c", "d"],
         metadata: {},
       };
       enforceGenerateControls(output, "pro", "custom", length, role);
-      assert((output.contentions as unknown[]).length === targets[length], `generate.${length} output count`);
+      if (role === "conc") {
+        // The Conclusor brings 2-3 reasons we win and no new arguments.
+        assert((output.contentions as unknown[]).length === 0, `generate.${length}.conc has no contentions`);
+        assert((output.counters as unknown[]).length === 0, `generate.${length}.conc has no counters`);
+        assert((output.whyWeWin as unknown[]).length === (length === "brief" ? 2 : 3), `generate.${length}.conc whyWeWin count`);
+      } else {
+        assert((output.contentions as unknown[]).length === targets[length], `generate.${length} output count`);
+        assert(!("whyWeWin" in output), `generate.${role} has no whyWeWin`);
+      }
       assert((role === "intro") === ("exordio" in output), `generate.${role} exordio shape`);
+      assert((role === "intro") === ("definition" in (output.opening as object)), `generate.${role} definition only for the Introductor`);
     }
   }
 });
