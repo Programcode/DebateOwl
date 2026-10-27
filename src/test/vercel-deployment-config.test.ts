@@ -338,6 +338,8 @@ describe("Vercel frontend deployment configuration", () => {
     expect(headersAt(config, "/")).not.toHaveProperty("X-Robots-Tag");
     expect(headersAt(config, "/app")).toMatchObject({ "X-Robots-Tag": "noindex, nofollow" });
     expect(indexHtml).toContain('<meta name="robots" content="noindex, nofollow" />');
+    expect(indexHtml).toContain('<meta property="og:image" content="https://debate.pi-stack.org/hero-visual.jpg?v=2" />');
+    expect(indexHtml).toContain('<meta name="twitter:image" content="https://debate.pi-stack.org/hero-visual.jpg?v=2" />');
     expect(indexHtml).toContain('<meta property="og:image:width" content="1200" />');
     expect(indexHtml).toContain('<meta property="og:image:height" content="630" />');
     expect(indexHtml).toContain('<meta property="og:image:alt" content="DebateOwl wordmark with the owl, for AI debate prep and practice" />');

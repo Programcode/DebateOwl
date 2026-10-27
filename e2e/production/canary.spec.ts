@@ -41,10 +41,16 @@ async function pickBasicDefault(page: Page, feature: string) {
 }
 
 test("the production site loads and guards the app", async ({ page, baseURL }) => {
+  // The deploy hook can run while the previous HTML is still what the edge serves.
+  // The title still has to become DebateOwl; this only waits that window out.
+  test.setTimeout(200_000);
   const errors: string[] = [];
   page.on("pageerror", (error) => errors.push(error.message));
-  await page.goto("/");
-  await expect(page).toHaveTitle(/DebateOwl/);
+  await expect(async () => {
+    errors.length = 0;
+    await page.goto("/", { waitUntil: "domcontentloaded" });
+    await expect(page).toHaveTitle(/DebateOwl/);
+  }).toPass({ timeout: 3 * 60 * 1000, intervals: [1_000, 5_000, 10_000, 15_000] });
   await page.goto("/login");
   await expect(page.getByRole("button", { name: "Continue with Google" })).toBeVisible();
   await page.goto("/app/generate");

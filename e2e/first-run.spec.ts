@@ -24,7 +24,7 @@ const copy = {
     gateMotion: 'This House would abolish zoos',
   },
   hu: {
-    welcome: 'Üdvözlünk a DebateOwlban!',
+    welcome: 'Üdvözlünk a DebateOwl-ban!',
     firstDebate: 'Itt indíthatod el az első vitádat.',
     startDebate: 'Vita indítása',
     motionField: 'Tétel',

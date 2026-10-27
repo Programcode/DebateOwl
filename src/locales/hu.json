@@ -537,7 +537,7 @@
     "subscriptionEnded": "A Pro-előfizetésed véget ért. Fizess elő újra az MI-eszközök további használatához."
   },
   "login": {
-    "title": "Bejelentkezés a DebateOwlba",
+    "title": "Bejelentkezés a DebateOwl-ba",
     "subtitle": "Jelentkezz be Google-lal, e-maillel vagy adminisztrátor által kiadott demókóddal.",
     "google": "Folytatás Google-lal",
     "emailTab": "E-mail",
@@ -583,7 +583,7 @@
     "redirecting": "Átirányítás...",
     "failed": "Nem sikerült elindítani a bejelentkezést",
     "tryAgain": "Próbáld újra.",
-    "backHome": "Vissza a DebateOwlhoz",
+    "backHome": "Vissza a DebateOwl-hoz",
     "sessionExpired": "A munkameneted lejárt. Jelentkezz be újra.",
     "errors": {
       "demoNotFound": "Nincs ilyen demókód.",
@@ -735,7 +735,7 @@
       "confirmMakeAdmin": "Adminná teszed: {{email}}?",
       "confirmMakeAdminDesc": "Az adminok megnyithatják az adminoldalt, és módosíthatják mások szerepkörét és csomagját.",
       "confirmBan": "Letiltod: {{email}}?",
-      "confirmBanDesc": "Addig nem használhatja a DebateOwlt, amíg fel nem oldod a tiltást.",
+      "confirmBanDesc": "Addig nem használhatja a DebateOwl-t, amíg fel nem oldod a tiltást.",
       "confirmUnban": "Feloldod a tiltást: {{email}}?",
       "confirmRemoveAdmin": "Elveszed az admin jogot: {{email}}?",
       "confirmRoleDesc": "Átlagos felhasználó lesz.",
@@ -1512,7 +1512,7 @@
     "freePeriod_other": "{{count}} napig"
   },
   "onboarding": {
-    "welcome": "Üdvözlünk a DebateOwlban! 🎉",
+    "welcome": "Üdvözlünk a DebateOwl-ban! 🎉",
     "ready": "Készen állsz! 🚀",
     "readyDesc": "Válaszd azt a módot, amelyre a következő fordulóhoz szükséged van.",
     "back": "Vissza",
@@ -1525,8 +1525,8 @@
     "generateDesc": "Készíts teljes esetet a tételedhez. Az Ötletelés, a Tények és a Folyamatábra mellette, a Felkészülés alatt található.",
     "library": "Forráskönyvtár",
     "libraryDesc": "Adj forrásokat az aktuális vitádhoz. Minden eszköz ezekre építi a válaszait.",
-    "debateFirstDesc": "A DebateOwlban minden egy vitához tartozik: a tétel, amelyre készülsz, a forrásai és az eredményeid. Itt indíthatod el az első vitádat.",
-    "debateCurrentDesc": "A DebateOwlban minden az aktuális vitádhoz tartozik: a tételéhez, a forrásaihoz és az eredményeidhez. Itt nyithatod meg vagy cserélheted le."
+    "debateFirstDesc": "A DebateOwl-ban minden egy vitához tartozik: a tétel, amelyre készülsz, a forrásai és az eredményeid. Itt indíthatod el az első vitádat.",
+    "debateCurrentDesc": "A DebateOwl-ban minden az aktuális vitádhoz tartozik: a tételéhez, a forrásaihoz és az eredményeidhez. Itt nyithatod meg vagy cserélheted le."
   },
   "debateOwlIntro": {
     "greeting": "Szia, én vagyok a DebateOwl!",
@@ -1936,7 +1936,7 @@
     "s4": "Előfizetés és számlázás",
     "p4": "Az ingyenes próba 3 napig tart korlátozott kérésekkel. A Pro előfizetés $5/hó plusz adó, Stripe-on keresztül számlázva. Bármikor lemondható a Beállításokból.",
     "s5": "Elfogadható használat",
-    "p5": "Nem használhatod a DebateOwlt zaklatásra, káros tartalom generálására, intézményed szabályzatát sértő akadémiai tisztességtelenségre, vagy bármilyen illegális célra.",
+    "p5": "Nem használhatod a DebateOwl-t zaklatásra, káros tartalom generálására, intézményed szabályzatát sértő akadémiai tisztességtelenségre, vagy bármilyen illegális célra.",
     "s6": "MI által generált tartalom",
     "p6": "Az MI kimenetek jelenlegi állapotukban kerülnek biztosításra, pontossági garancia nélkül. Te vagy felelős a tények és hivatkozások ellenőrzéséért versenyeken való használat előtt.",
     "s7": "Szellemi tulajdon",
@@ -2576,7 +2576,7 @@
   },
   "googleDriveAuth": {
     "connect": "Google Drive csatlakoztatása",
-    "description": "A Google Docsba történő exportáláshoz a DebateOwlnak engedélyre van szüksége fájlok létrehozásához a Google Drive-odban.",
+    "description": "A Google Docsba történő exportáláshoz a DebateOwl-nak engedélyre van szüksége fájlok létrehozásához a Google Drive-odban.",
     "failedDesc": "Próbáld újra.",
     "failedTitle": "Nem sikerült megnyitni a Google-t",
     "redirecting": "Átirányítás...",
