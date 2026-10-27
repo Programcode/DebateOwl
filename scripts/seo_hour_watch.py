@@ -16,7 +16,7 @@ URLS = [
     "https://debateowl.com/",
     "https://debateowl.com/terms",
     "https://debateowl.com/ai-debate-practice",
-    "https://debateowl.com/debatelab-pricing",
+    "https://debateowl.com/debateowl-pricing",
     "https://debateowl.com/llms.txt",
     "https://debateowl.com/sitemap.xml",
 ]

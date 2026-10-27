@@ -18,6 +18,11 @@
       "statusCode": 301
     },
     {
+      "source": "/:locale(hu|es)?/debatelab-:slug(pricing|vs-chatgpt|vs-debateclub|vs-windebate){/}?",
+      "destination": "/debateowl-:slug",
+      "statusCode": 301
+    },
+    {
       "source": "/:page(debatelab|debate-lab|debatelab-ai|debatelab-app|what-is-debatelab|debatelab-by-programcode|about-debatelab)",
       "destination": "/",
       "statusCode": 301

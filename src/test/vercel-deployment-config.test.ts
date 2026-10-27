@@ -124,6 +124,32 @@ describe("Vercel frontend deployment configuration", () => {
     })));
   });
 
+  it("301s the renamed /debatelab-* pages to /debateowl-*, with or without a locale prefix or trailing slash", () => {
+    const rule = (loadConfig().redirects ?? []).find((entry) => entry.source.startsWith("/:locale("));
+    expect(rule).toEqual({
+      source: "/:locale(hu|es)?/debatelab-:slug(pricing|vs-chatgpt|vs-debateclub|vs-windebate){/}?",
+      destination: "/debateowl-:slug",
+      statusCode: 301,
+    });
+    // What path-to-regexp (via @vercel/routing-utils sourceToRegex) compiles that source to.
+    const pattern = /^(?:\/(hu|es))?\/debatelab-(pricing|vs-chatgpt|vs-debateclub|vs-windebate)(?:\/)?$/;
+    const target = (path: string) => {
+      const match = pattern.exec(path);
+      return match ? rule!.destination.replace(":slug", match[2]) : undefined;
+    };
+    for (const slug of ["pricing", "vs-chatgpt", "vs-debateclub", "vs-windebate"]) {
+      for (const prefix of ["", "/hu", "/es"]) {
+        for (const suffix of ["", "/"]) expect(target(`${prefix}/debatelab-${slug}${suffix}`)).toBe(`/debateowl-${slug}`);
+      }
+      // One hop to a generated page; nothing is left at the old address.
+      expect(existsSync(resolve(process.cwd(), "public", `debateowl-${slug}`, "index.html"))).toBe(true);
+      expect(existsSync(resolve(process.cwd(), "public", `debatelab-${slug}`))).toBe(false);
+    }
+    for (const path of ["/debatelab", "/debatelab-alternatives", "/fr/debatelab-pricing", "/debatelab-pricingx", "/debateowl-pricing"]) {
+      expect(target(path), path).toBeUndefined();
+    }
+  });
+
   it("sends only the homepage's ?lang=hu|es links to /hu and /es, so they stop competing with them", () => {
     // Where Vercel sends a path and query: the first redirect whose source is the
     // exact path and whose query conditions match whole values, with each named
@@ -178,7 +204,7 @@ describe("Vercel frontend deployment configuration", () => {
       "/ai-vs-traditional-debate-prep": "/ai-debate-practice",
     };
     const guideRedirects = (loadConfig().redirects ?? [])
-      .filter((rule) => !rule.source.startsWith("/:page(") && !rule.has);
+      .filter((rule) => !rule.source.startsWith("/:page(") && !rule.source.startsWith("/:locale(") && !rule.has);
     const retired = new Set(Object.keys(retiredGuides));
     const pages = readdirSync(resolve(process.cwd(), "public"), { withFileTypes: true })
       .filter((entry) => entry.isDirectory() && existsSync(resolve(process.cwd(), "public", entry.name, "index.html")))

@@ -33,7 +33,7 @@ PLAN_FACTS = (
 # <lastmod>, so bump it only when the copy changes, not on every regeneration.
 # A guide whose own copy changed alone sets "modified" in seo_guides.py instead;
 # no page is dated earlier than CONTENT_DATE, since the shared copy is on every page.
-CONTENT_DATE = "2026-10-26"
+CONTENT_DATE = "2026-10-27"
 # The commit that first added every current guide (git log --diff-filter=A).
 # A new guide sets "published" in its PAGES entry.
 PUBLISHED_DATE = "2026-07-05"
@@ -72,10 +72,10 @@ PAGES = [
     {"slug": "debate-speech-structure", "title": "Debate Speech Structure Guide | {product}", "description": "Learn debate speech structure for every format: opening, rebuttal, summary, final focus, crystallization, and reply speech organization.", "eyebrow": "Strategy guide", "h1": "Debate Speech Structure Guide", "lead": "Structure your speech so the judge can follow every argument and every comparison.", "features": ["Opening structure", "Rebuttal structure", "Final speech structure"], "sections": [["Why structure matters", ["A well-structured speech is easier to flow, easier to judge, and easier to win. The judge should never be confused about where you are."]], ["Opening speech structure", ["State your position, define key terms, present contentions with warrants and impacts, and preview weighing."]], ["Rebuttal and final speech structure", ["Respond to the key clash, extend your offense, weigh the comparison, and frame the ballot. End by telling the judge why you win."]]]},
     {"slug": "debate-motion-analysis", "modified": "2026-10-23", "title": "Debate Motion Analysis Guide | {product}", "description": "Learn how to analyze a debate motion: define terms, identify burdens, map clashes, and build case strategy from the topic release.", "eyebrow": "Strategy guide", "h1": "Debate Motion Analysis Guide", "lead": "From topic to strategy: define, clash, and build a winning case.", "features": ["Definition strategy", "Burden identification", "Clash mapping"], "sections": [["How to analyze a motion", ["Read the motion carefully, define each term, identify what each side must prove, and map the likely clashes.", "To practice on a motion you have not seen, draw one from the [free debate motion generator](/tools/debate-motion-generator)."]], ["Definition strategy", ["Definitions can frame the round. Choose definitions that are fair, defensible, and favorable to your side."]], ["Burden identification", ["Your burden is what you must prove to win. If you do not meet your burden, you lose regardless of how well you argue."]]]},
     {"slug": "best-ai-debate-tools", "title": "Best AI Debate Tools Compared | {product}", "description": "Compare the best AI debate tools for case generation, rebuttal practice, evidence research, flowcharts, coaching, and tournament preparation.", "eyebrow": "Comparison", "h1": "Best AI Debate Tools Compared", "lead": "See how AI debate tools compare on features, formats, and prep workflows."},
-    {"slug": "debatelab-pricing", "title": "{product} Pricing and Plans | {product}", "description": "{product} pricing and plans for AI debate practice: free trial, Pro features, and what is included for students and competitive debaters.", "eyebrow": "Pricing", "h1": "{product} Pricing and Plans", "lead": "See what {product} offers and how to get started with AI debate practice."},
-    {"slug": "debatelab-vs-chatgpt", "title": "{product} vs ChatGPT for Debate Prep | {product}", "description": "Compare {product} vs ChatGPT for debate prep: structured workflows vs generic chat, evidence research, rebuttal drills, case generation, and coaching.", "eyebrow": "Comparison", "h1": "{product} vs ChatGPT for Debate Prep", "lead": "ChatGPT is a general chatbot. {product} is a debate practice workspace.", "features": ["Structured workflows", "Evidence leads", "Practice tools"], "sections": [["What ChatGPT does well", ["ChatGPT is a flexible general-purpose AI. It can brainstorm, draft, and answer questions about any topic, including debate."]], ["What {product} does differently", ["{product} is designed for debate prep workflows: case structure, targeted rebuttals, evidence leads, argument flowcharts, coaching prompts, and timed practice. Each workflow supports a specific prep task."]], ["When to use each", ["Use ChatGPT for general brainstorming and research. Use {product} for structured, repeatable debate practice that mirrors what you do in a round."]]]},
-    {"slug": "debatelab-vs-windebate", "title": "{product} vs WinDebate Comparison | {product}", "description": "Compare {product} vs WinDebate: case generation, rebuttal drills, evidence research, format coverage, pricing, and workflow differences.", "eyebrow": "Comparison", "h1": "{product} vs WinDebate", "lead": "Two AI debate prep platforms compared on features and workflows.", "features": ["Feature comparison", "Format coverage", "Workflow differences"], "sections": [["WinDebate overview", ["WinDebate focuses on research, drills, feedback, and progress tracking for competitive debaters. It covers PF, LD, Congress, Policy, and Worlds."]], ["{product} overview", ["{product} focuses on structured prep workflows: case generation, rebuttal practice, evidence leads, argument flowcharts, coaching prompts, and online debate timers."]], ["How to choose", ["Compare format coverage, feature depth, feedback style, pricing, and which tool fits your actual tournament workflow."]]]},
-    {"slug": "debatelab-vs-debateclub", "title": "{product} vs DebateClub Comparison | {product}", "description": "Compare {product} vs DebateClub: voice debating, case generation, rebuttal drills, evidence research, and workflow differences for competitive debaters.", "eyebrow": "Comparison", "h1": "{product} vs DebateClub", "lead": "Voice sparring vs structured prep: two approaches to AI debate practice.", "features": ["Voice vs text workflows", "Feature comparison", "Prep focus areas"], "sections": [["DebateClub overview", ["DebateClub focuses on voice-based AI debate sparring with real-time feedback in a conversational format."]], ["{product} overview", ["{product} focuses on text-based structured prep: cases, rebuttals, evidence, flowcharts, coaching, and timed practice for tournament preparation."]], ["Which approach fits you", ["If you want voice practice, DebateClub is focused there. If you want structured prep workflows, {product} is designed for that."]]]},
+    {"slug": "debateowl-pricing", "title": "{product} Pricing and Plans | {product}", "description": "{product} pricing and plans for AI debate practice: free trial, Pro features, and what is included for students and competitive debaters.", "eyebrow": "Pricing", "h1": "{product} Pricing and Plans", "lead": "See what {product} offers and how to get started with AI debate practice."},
+    {"slug": "debateowl-vs-chatgpt", "title": "{product} vs ChatGPT for Debate Prep | {product}", "description": "Compare {product} vs ChatGPT for debate prep: structured workflows vs generic chat, evidence research, rebuttal drills, case generation, and coaching.", "eyebrow": "Comparison", "h1": "{product} vs ChatGPT for Debate Prep", "lead": "ChatGPT is a general chatbot. {product} is a debate practice workspace.", "features": ["Structured workflows", "Evidence leads", "Practice tools"], "sections": [["What ChatGPT does well", ["ChatGPT is a flexible general-purpose AI. It can brainstorm, draft, and answer questions about any topic, including debate."]], ["What {product} does differently", ["{product} is designed for debate prep workflows: case structure, targeted rebuttals, evidence leads, argument flowcharts, coaching prompts, and timed practice. Each workflow supports a specific prep task."]], ["When to use each", ["Use ChatGPT for general brainstorming and research. Use {product} for structured, repeatable debate practice that mirrors what you do in a round."]]]},
+    {"slug": "debateowl-vs-windebate", "title": "{product} vs WinDebate Comparison | {product}", "description": "Compare {product} vs WinDebate: case generation, rebuttal drills, evidence research, format coverage, pricing, and workflow differences.", "eyebrow": "Comparison", "h1": "{product} vs WinDebate", "lead": "Two AI debate prep platforms compared on features and workflows.", "features": ["Feature comparison", "Format coverage", "Workflow differences"], "sections": [["WinDebate overview", ["WinDebate focuses on research, drills, feedback, and progress tracking for competitive debaters. It covers PF, LD, Congress, Policy, and Worlds."]], ["{product} overview", ["{product} focuses on structured prep workflows: case generation, rebuttal practice, evidence leads, argument flowcharts, coaching prompts, and online debate timers."]], ["How to choose", ["Compare format coverage, feature depth, feedback style, pricing, and which tool fits your actual tournament workflow."]]]},
+    {"slug": "debateowl-vs-debateclub", "title": "{product} vs DebateClub Comparison | {product}", "description": "Compare {product} vs DebateClub: voice debating, case generation, rebuttal drills, evidence research, and workflow differences for competitive debaters.", "eyebrow": "Comparison", "h1": "{product} vs DebateClub", "lead": "Voice sparring vs structured prep: two approaches to AI debate practice.", "features": ["Voice vs text workflows", "Feature comparison", "Prep focus areas"], "sections": [["DebateClub overview", ["DebateClub focuses on voice-based AI debate sparring with real-time feedback in a conversational format."]], ["{product} overview", ["{product} focuses on text-based structured prep: cases, rebuttals, evidence, flowcharts, coaching, and timed practice for tournament preparation."]], ["Which approach fits you", ["If you want voice practice, DebateClub is focused there. If you want structured prep workflows, {product} is designed for that."]]]},
 ]
 
 def tool_keys(name):
@@ -147,7 +147,7 @@ CLUSTERS = {
         "how-to-flow-in-debate", "debate-clash-points", "debate-speech-structure", "debate-fallacies",
         "debate-motion-analysis", "debate-judge-adaptation", "how-to-prepare-for-a-debate-tournament", "debate-topics-for-students",
     ],
-    "Compare": ["best-ai-debate-tools", "debatelab-vs-chatgpt", "debatelab-vs-debateclub", "debatelab-vs-windebate", "debatelab-pricing"],
+    "Compare": ["best-ai-debate-tools", "debateowl-vs-chatgpt", "debateowl-vs-debateclub", "debateowl-vs-windebate", "debateowl-pricing"],
 }
 RELATED_SIBLINGS = 6
 RELATED_CROSS = 2
@@ -179,7 +179,7 @@ LINK_PHRASES = [
     (r"AI (?:debate )?coach", "ai-debate-coach"),
     (r"AI opponents?|Sparring rounds?", "ai-debate-practice"),
     (r"generated rebuttals?|rebuttal generator", "ai-rebuttal-generator"),
-    (r"ChatGPT|general chatbot", "debatelab-vs-chatgpt"),
+    (r"ChatGPT|general chatbot", "debateowl-vs-chatgpt"),
     (r"debate topics|topic areas", "debate-topics-for-students"),
     (r"speech times?|timed practice", "online-debate-timer"),
     (r"weighing|weigh|compare impacts", "how-to-weigh-in-debate"),
@@ -216,7 +216,7 @@ CLUSTER_ORDER = [slug for cluster in CLUSTERS.values() for slug in cluster]
 PHRASE_PATTERNS = [(re.compile(rf"\b(?:{phrase})\b", re.I), slug) for phrase, slug in LINK_PHRASES]
 ANSWERS = fill(ANSWERS)
 
-NAV = [("AI practice","/ai-debate-practice"),("Case generator","/ai-debate-case-generator"),("Rebuttal practice","/debate-rebuttal-practice"),("Evidence finder","/debate-evidence-finder"),("Pricing","/debatelab-pricing"),("Open app","/app")]
+NAV = [("AI practice","/ai-debate-practice"),("Case generator","/ai-debate-case-generator"),("Rebuttal practice","/debate-rebuttal-practice"),("Evidence finder","/debate-evidence-finder"),("Pricing","/debateowl-pricing"),("Open app","/app")]
 
 SOFTWARE_ID = BASE + "/#software"
 ORGANIZATION_REF = {"@type": "Organization", "@id": BASE + "/#organization", "name": ORGANIZATION, "url": BASE + "/", "logo": BASE + "/icon-1024.png", "sameAs": SITE["organizationSameAs"]}
@@ -371,10 +371,10 @@ def render_block(block, spans_of=lambda: None):
 def about(slug):
     """The About aside. The full definition and plan facts stay on the pricing page (and on / and llms.txt);
     every other guide gets one line, so the same paragraph is not repeated across the site."""
-    if slug == "debatelab-pricing":
+    if slug == "debateowl-pricing":
         body = f'<p>{esc(DEFINITION)} The app is available in English, Spanish and Hungarian.</p><p>{esc(PLAN_FACTS)}</p>'
     else:
-        body = f'<p>{PRODUCT} is an AI debate prep and practice app. See <a href="/">how it works</a> or <a href="/debatelab-pricing">pricing</a>.</p>'
+        body = f'<p>{PRODUCT} is an AI debate prep and practice app. See <a href="/">how it works</a> or <a href="/debateowl-pricing">pricing</a>.</p>'
     return f'<aside class="section article" aria-labelledby="about"><h2 id="about">About {PRODUCT}</h2>{body}</aside>'
 
 def structured_data(page, question, answer, faqs, published, modified):
@@ -458,7 +458,7 @@ def render_page(page):
     {about(page["slug"])}
     <section class="section article" aria-labelledby="related"><h2 id="related">Related {PRODUCT} guides</h2><nav class="links" aria-label="Related guides">{internal_links(page["slug"])}</nav></section>
   </main>
-  <footer class="footer"><div class="wrap">{BRAND}: <a href="/">Home</a> / <a href="/debatelab-pricing">Pricing</a> / <a href="/privacy">Privacy</a> / <a href="/terms">Terms</a> / <a href="/sitemap.xml">Sitemap</a></div></footer>
+  <footer class="footer"><div class="wrap">{BRAND}: <a href="/">Home</a> / <a href="/debateowl-pricing">Pricing</a> / <a href="/privacy">Privacy</a> / <a href="/terms">Terms</a> / <a href="/sitemap.xml">Sitemap</a></div></footer>
 </body>
 </html>
 '''
@@ -502,7 +502,7 @@ def llms_txt():
 ## Main pages
 
 - [Home]({BASE}/): what {PRODUCT} is, the {len(PREP_MODES)} prep modes, pricing and FAQ
-- [Pricing]({page_url("debatelab-pricing")}): trial, Pro and what each includes
+- [Pricing]({page_url("debateowl-pricing")}): trial, Pro and what each includes
 - [Best AI debate tools]({page_url("best-ai-debate-tools")}): how to choose an AI debate tool
 - [Sitemap]({BASE}/sitemap.xml): every public page
 

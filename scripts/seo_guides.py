@@ -808,7 +808,7 @@ GUIDES = {
             ("How do I prepare for a lay judge in PF?", "Run fewer arguments, explain each one plainly, signpost clearly, speak at a normal pace and end every speech with a simple reason to vote for you."),
         ],
     },
-    "debatelab-vs-chatgpt": {
+    "debateowl-vs-chatgpt": {
         "software": True,
         "modified": "2026-10-21",
         "features": [
@@ -1254,7 +1254,7 @@ GUIDES = {
             ("Is a card better than an analytical argument?", "Only if it is accurate and relevant. A strong warrant without a card often beats a weak card that does not survive a question."),
         ],
     },
-    "debatelab-pricing": {
+    "debateowl-pricing": {
         "modified": "2026-10-23",
         "software": True,
         "lead": "A 3-day free trial with no credit card, then one paid plan. Prices on this page were checked in October 2026.",
@@ -1297,7 +1297,7 @@ GUIDES = {
             ("Can I cancel my subscription?", "Yes, any time from the Settings page. You keep access until the end of your billing period."),
         ],
     },
-    "debatelab-vs-windebate": {
+    "debateowl-vs-windebate": {
         "modified": "2026-10-23",
         "software": True,
         "features": [
@@ -1331,7 +1331,7 @@ GUIDES = {
             ("Can I use both?", "Yes. They are separate products, and some debaters use one for prep and another for review."),
         ],
     },
-    "debatelab-vs-debateclub": {
+    "debateowl-vs-debateclub": {
         "modified": "2026-10-23",
         "software": True,
         "features": [

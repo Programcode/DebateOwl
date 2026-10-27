@@ -9,36 +9,33 @@ from googleapiclient.errors import HttpError
 
 TOKEN = Path('/home/codex/.hermes/gsc_token.json')
 SITE_CANDIDATES = [
-    'https://debate.pi-stack.org/',
-    'sc-domain:pi-stack.org',
+    'https://debateowl.com/',
+    'sc-domain:debateowl.com',
 ]
-SITEMAP = 'https://debate.pi-stack.org/sitemap.xml'
+SITEMAP = 'https://debateowl.com/sitemap.xml'
 URLS = [
-    'https://debate.pi-stack.org/',
-    'https://debate.pi-stack.org/ai-debate-practice',
-    'https://debate.pi-stack.org/ai-debate-case-generator',
-    'https://debate.pi-stack.org/debate-rebuttal-practice',
-    'https://debate.pi-stack.org/ai-debate-coach',
-    'https://debate.pi-stack.org/debate-evidence-finder',
-    'https://debate.pi-stack.org/argument-flowchart',
-    'https://debate.pi-stack.org/online-debate-timer',
-    'https://debate.pi-stack.org/how-to-write-a-debate-case',
-    'https://debate.pi-stack.org/how-to-practice-rebuttals',
-    'https://debate.pi-stack.org/how-to-weigh-in-debate',
-    'https://debate.pi-stack.org/best-ai-debate-tools',
-    'https://debate.pi-stack.org/world-schools-debate',
-    'https://debate.pi-stack.org/debate-clash-points',
-    'https://debate.pi-stack.org/how-to-prepare-for-a-debate-tournament',
-    'https://debate.pi-stack.org/debate-speech-structure',
-    'https://debate.pi-stack.org/about-debatelab',
-    'https://debate.pi-stack.org/debatelab',
-    'https://debate.pi-stack.org/debatelab-by-programcode',
-    'https://debate.pi-stack.org/what-is-debatelab',
-    'https://debate.pi-stack.org/debatelab-app',
-    'https://debate.pi-stack.org/debatelab-ai',
-    'https://debate.pi-stack.org/debate-lab',
-    'https://debate.pi-stack.org/terms',
-    'https://debate.pi-stack.org/privacy',
+    'https://debateowl.com/',
+    'https://debateowl.com/ai-debate-practice',
+    'https://debateowl.com/ai-debate-case-generator',
+    'https://debateowl.com/debate-rebuttal-practice',
+    'https://debateowl.com/ai-debate-coach',
+    'https://debateowl.com/debate-evidence-finder',
+    'https://debateowl.com/argument-flowchart',
+    'https://debateowl.com/online-debate-timer',
+    'https://debateowl.com/how-to-write-a-debate-case',
+    'https://debateowl.com/how-to-practice-rebuttals',
+    'https://debateowl.com/how-to-weigh-in-debate',
+    'https://debateowl.com/best-ai-debate-tools',
+    'https://debateowl.com/world-schools-debate',
+    'https://debateowl.com/debate-clash-points',
+    'https://debateowl.com/how-to-prepare-for-a-debate-tournament',
+    'https://debateowl.com/debate-speech-structure',
+    'https://debateowl.com/debateowl-pricing',
+    'https://debateowl.com/debateowl-vs-chatgpt',
+    'https://debateowl.com/debateowl-vs-debateclub',
+    'https://debateowl.com/debateowl-vs-windebate',
+    'https://debateowl.com/terms',
+    'https://debateowl.com/privacy',
 ]
 
 def load_creds():
@@ -67,7 +64,7 @@ def main():
         # Try any property that can cover target.
         for s in sites:
             su=s.get('siteUrl','')
-            if 'pi-stack.org' in su or 'debate.pi-stack.org' in su:
+            if 'debateowl.com' in su:
                 site_url=su
                 break
     if not site_url:

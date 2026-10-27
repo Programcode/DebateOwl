@@ -17,7 +17,7 @@ DebateOwl runs at https://debateowl.com/. It is a separate product from debatela
 ## Main pages
 
 - [Home](https://debateowl.com/): what DebateOwl is, the 8 prep modes, pricing and FAQ
-- [Pricing](https://debateowl.com/debatelab-pricing): trial, Pro and what each includes
+- [Pricing](https://debateowl.com/debateowl-pricing): trial, Pro and what each includes
 - [Best AI debate tools](https://debateowl.com/best-ai-debate-tools): how to choose an AI debate tool
 - [Sitemap](https://debateowl.com/sitemap.xml): every public page
 
@@ -78,7 +78,7 @@ Free to use, no account needed, and they run in the browser.
 - [Debate Speech Structure and Delivery](https://debateowl.com/debate-speech-structure): How to structure constructive, rebuttal and final debate speeches, with speech times by format, a timed outline of one speech, delivery and pronunciation habits judges notice, common mistakes and a 15-minute drill.
 - [Debate Motion Analysis Guide](https://debateowl.com/debate-motion-analysis): How to analyze a debate motion: motion types and what each side must prove, fair definitions and models, stakeholders, a worked analysis of an original motion, common mistakes and a 15-minute drill.
 - [Best AI Debate Tools Compared](https://debateowl.com/best-ai-debate-tools): Compare the best AI debate tools for case generation, rebuttal practice, evidence research, flowcharts, coaching, and tournament preparation.
-- [DebateOwl Pricing and Plans](https://debateowl.com/debatelab-pricing): DebateOwl pricing and plans for AI debate practice: free trial, Pro features, and what is included for students and competitive debaters.
-- [DebateOwl vs ChatGPT for Debate Prep](https://debateowl.com/debatelab-vs-chatgpt): Compare DebateOwl vs ChatGPT for debate prep: structured workflows vs generic chat, evidence research, rebuttal drills, case generation, and coaching.
-- [DebateOwl vs WinDebate](https://debateowl.com/debatelab-vs-windebate): Compare DebateOwl vs WinDebate: case generation, rebuttal drills, evidence research, format coverage, pricing, and workflow differences.
-- [DebateOwl vs DebateClub](https://debateowl.com/debatelab-vs-debateclub): Compare DebateOwl vs DebateClub: voice debating, case generation, rebuttal drills, evidence research, and workflow differences for competitive debaters.
+- [DebateOwl Pricing and Plans](https://debateowl.com/debateowl-pricing): DebateOwl pricing and plans for AI debate practice: free trial, Pro features, and what is included for students and competitive debaters.
+- [DebateOwl vs ChatGPT for Debate Prep](https://debateowl.com/debateowl-vs-chatgpt): Compare DebateOwl vs ChatGPT for debate prep: structured workflows vs generic chat, evidence research, rebuttal drills, case generation, and coaching.
+- [DebateOwl vs WinDebate](https://debateowl.com/debateowl-vs-windebate): Compare DebateOwl vs WinDebate: case generation, rebuttal drills, evidence research, format coverage, pricing, and workflow differences.
+- [DebateOwl vs DebateClub](https://debateowl.com/debateowl-vs-debateclub): Compare DebateOwl vs DebateClub: voice debating, case generation, rebuttal drills, evidence research, and workflow differences for competitive debaters.
