@@ -34,7 +34,7 @@ ANSWERS = {
     ),
     "ai-debate-case-generator": (
         "Can an AI debate case generator write a case I can actually use?",
-        "It can write a usable draft, not a finished case. A good generator gives you a thesis, a framework, contentions with warrants and impacts, the case the other side is likely to run, and counters to it. Treat its citations as research leads: open every source, confirm the exact claim and record the full citation. The judgement calls, such as which contention to cut and where to pre-empt the opposition, stay with you. Rewrite the case in your own words, because judges can hear when you are reading a draft for the first time.",
+        "Yes, as a draft. {product}'s case generator turns a motion into a structured case (thesis, framework, contentions with warrants and impacts, the likely opposing case and counters) and lists the web sources it used, which you then verify and rewrite in your own words. Treat its citations as research leads: open every source and confirm the exact claim. The judgement calls, such as which contention to cut and where to pre-empt the opposition, stay with you.",
     ),
     "debate-rebuttal-practice": (
         "How do you find the weak link in an argument you need to rebut?",
@@ -42,7 +42,7 @@ ANSWERS = {
     ),
     "ai-debate-coach": (
         "Can an AI debate coach actually help you prepare?",
-        "Yes, as a partner for thinking problems through: burdens, clash, weighing, speech structure and why a practice speech did not land. It works best with specific questions that name the format, your side and speaker role, what is already on the table and what you are stuck on. Vague questions get generic answers. Treat any sources it cites as leads to check. An AI coach has not watched you speak and does not know your judges or your partner, so take its conclusions to your human coach or team and let them correct what does not fit.",
+        "Yes. {product}'s Ask coach is an AI debate coach that answers specific prep questions about burdens, clash, weighing and speech structure, and gives feedback on practice speeches; it works best when you name the format, side and speaker role. Vague questions get generic answers. Treat any sources it cites as leads to check. An AI coach has not watched you speak and does not know your judges or your partner, so take its conclusions to your human coach or team.",
     ),
     "debate-evidence-finder": (
         "Can AI find reliable evidence for a debate case?",

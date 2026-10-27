@@ -39,9 +39,11 @@ const Footer = () => {
                         </Link>
                     </nav>
 
-                    <p className="text-sm text-muted-foreground">
-                        {t('footer.copyright')}
-                    </p>
+                    <div className="text-center text-sm text-muted-foreground md:text-right">
+                        {/* The old name, so searchers and answer engines that know it can match the two. */}
+                        <p>{t('footer.formerly')}</p>
+                        <p>{t('footer.copyright')}</p>
+                    </div>
                 </div>
             </div>
         </footer>
