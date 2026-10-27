@@ -58,7 +58,7 @@ describe('a missing share link', () => {
     renderShare();
 
     expect(await screen.findByRole('heading', { level: 1, name: 'Shared link not found' })).toBeInTheDocument();
-    expect(screen.queryByRole('heading', { name: 'Shared Content' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Shared content' })).not.toBeInTheDocument();
     expect(screen.getByText('This shared content is no longer available')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Back to home' })).toHaveAttribute('href', '/');
     // The heading commits before the passive effect that sets the title and robots meta runs.
@@ -85,7 +85,7 @@ describe('a missing share link', () => {
 
     expect(await screen.findByRole('heading', { level: 1, name: 'Practice case' })).toBeInTheDocument();
     expect(screen.getByText('A short note')).toBeInTheDocument();
-    expect(document.title).toBe('Shared Content · DebateLab');
+    expect(document.title).toBe('Shared content · DebateLab');
   });
 
   it('keeps naming a missing link after a language switch', async () => {

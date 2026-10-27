@@ -120,7 +120,7 @@ test('real staging session persists, starts a debate, writes and removes a sourc
       const sourceInsert = page.waitForResponse((response) =>
         response.request().method() === 'POST' && response.url().includes('/rest/v1/sources')
       );
-      await page.getByRole('button', { name: 'Save to Library' }).click();
+      await page.getByRole('button', { name: 'Save to library' }).click();
       expect((await sourceInsert).ok()).toBe(true);
       sourceCreated = true;
       await expect(page.getByText(sourceTitle, { exact: true })).toBeVisible();
@@ -151,9 +151,9 @@ test('real staging session persists, starts a debate, writes and removes a sourc
       await page.goto('/app/ask');
       // Ask's modes live behind the Options popover since the design shell.
       await page.getByRole('button', { name: 'Options' }).click();
-      await page.getByRole('switch', { name: 'Pros/Cons' }).click();
+      await page.getByRole('switch', { name: 'Pros/cons' }).click();
       await page.keyboard.press('Escape');
-      await page.getByPlaceholder('Ask your debate coach...').fill('Reply with one short sentence confirming this staging request.');
+      await page.getByPlaceholder('Ask your debate coach').fill('Reply with one short sentence confirming this staging request.');
       const aiResponse = page.waitForResponse((response) =>
         response.request().method() === 'POST' && response.url().includes('/functions/v1/ai'),
       { timeout: 90_000 });

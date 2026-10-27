@@ -406,7 +406,7 @@ export default function HistoryPage() {
                     icon={Flame}
                     title={t('historyPage.emptyCrossfire', 'No Crossfire rounds yet')}
                     description={t('historyPage.emptyCrossfireDesc', 'Finish a Crossfire round to review its transcript and debrief here.')}
-                    actionLabel={t('historyPage.startCrossfire', 'Start Crossfire')}
+                    actionLabel={t('historyPage.startCrossfire', 'Start crossfire')}
                     onAction={() => navigate('/app/crossfire')}
                   />
                 ) : (

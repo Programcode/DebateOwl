@@ -174,10 +174,10 @@ function DebateContextReview({ plan, motion, usage, pinsReady, resultsComplete }
             <p className="text-sm text-muted-foreground">
               {plan.feature === 'sparring'
                 ? t('debateContext.sparringNoSources', 'Live sparring rounds use only the transcript, the motion, and your debate settings.')
-                : t('debateContext.sourcesOff', 'Source Library is off for this request.')}
+                : t('debateContext.sourcesOff', 'Source library is off for this request.')}
             </p>
           ) : plan.sources.length === 0 ? (
-            <p className="text-sm text-muted-foreground">{t('debateContext.noSources', 'This debate has no Library sources yet.')}</p>
+            <p className="text-sm text-muted-foreground">{t('debateContext.noSources', 'This debate has no library sources yet.')}</p>
           ) : (
             <ul className="space-y-1">
               {plan.sources.map((source) => (
@@ -231,7 +231,7 @@ function statusNote(item: { overLimit: boolean; omittedForSize: boolean; shorten
 function SourceRow({ source, onChange }: { source: ContextSourceItem; onChange: (include: boolean) => void }) {
   const { t } = useTranslation();
   const id = `debate-context-source-${source.id}`;
-  const note = source.included ? statusNote(source, t) : (!source.active ? t('debateContext.inactive', 'Turned off in your Library.') : null);
+  const note = source.included ? statusNote(source, t) : (!source.active ? t('debateContext.inactive', 'Turned off in your library.') : null);
   return (
     <li className="flex items-start gap-3 rounded-md px-1 py-1.5 pointer-coarse:min-h-11">
       <Checkbox id={id} checked={source.included} onCheckedChange={(checked) => onChange(checked === true)} className="mt-0.5 pointer-coarse:after:-top-2" />

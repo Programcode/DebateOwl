@@ -20,7 +20,7 @@ async function addSource(page: Page, title: string, content: string) {
   await page.getByRole("button", { name: "Add source" }).click();
   await page.getByRole("textbox", { name: "Title", exact: true }).fill(title);
   await page.getByRole("textbox", { name: "Content", exact: true }).fill(content);
-  await page.getByRole("button", { name: "Save to Library" }).click();
+  await page.getByRole("button", { name: "Save to library" }).click();
   await expect(page.getByRole("switch", { name: `Toggle ${title}` })).toBeChecked();
 }
 
@@ -95,7 +95,7 @@ test("every request carries its debate's material, and Review changes exactly on
   await page.keyboard.press("Escape");
   await expect(sheet).toBeHidden();
   await page.goto("/app/brainstorm");
-  await page.getByLabel("Motion / Topic *").fill("This House would lower the voting age");
+  await page.getByLabel("Motion / topic *").fill("This House would lower the voting age");
   const before = (await fake.requests()).filter((request) => request.feature === "brainstorm").length;
   await page.getByRole("button", { name: "Start brainstorming" }).click();
   await page.getByRole("dialog").getByRole("button", { name: "Use once without saving to a debate" }).click();

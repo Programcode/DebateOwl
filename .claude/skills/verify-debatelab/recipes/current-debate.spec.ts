@@ -16,7 +16,7 @@ async function addSource(page: Page, title: string, content: string) {
   await page.getByRole("button", { name: "Add source" }).click();
   await page.getByRole("textbox", { name: "Title", exact: true }).fill(title);
   await page.getByRole("textbox", { name: "Content", exact: true }).fill(content);
-  await page.getByRole("button", { name: "Save to Library" }).click();
+  await page.getByRole("button", { name: "Save to library" }).click();
   await expect(page.getByRole("switch", { name: `Toggle ${title}` })).toBeChecked();
 }
 
@@ -56,7 +56,7 @@ test("debate-start, debate-scope, debate-once, debate-switch: two debates keep t
 
   await page.goto("/app/brainstorm");
   await expect(page.getByTestId("current-debate-strip")).toContainText(`Working in: ${HOMEWORK}`);
-  await expect(page.getByLabel("Motion / Topic *")).toHaveValue(HOMEWORK);
+  await expect(page.getByLabel("Motion / topic *")).toHaveValue(HOMEWORK);
   let before = await callCount("brainstorm");
   const homeworkRun = aiResponse(page, "brainstorm");
   await page.getByRole("button", { name: "Start brainstorming" }).click();
@@ -80,7 +80,7 @@ test("debate-start, debate-scope, debate-once, debate-switch: two debates keep t
   await evidence.shot("03-library-in-zoo-debate");
 
   await page.goto("/app/generate");
-  await expect(page.getByRole("textbox", { name: "Motion / Topic *" })).toHaveValue(ZOOS);
+  await expect(page.getByRole("textbox", { name: "Motion / topic *" })).toHaveValue(ZOOS);
   before = await callCount("generate");
   const zooRun = aiResponse(page, "generate");
   await page.getByRole("button", { name: "Generate debate case" }).click();
@@ -94,7 +94,7 @@ test("debate-start, debate-scope, debate-once, debate-switch: two debates keep t
 
   // A different motion asks first; "use once" keeps it out of every debate.
   await page.goto("/app/brainstorm");
-  await page.getByLabel("Motion / Topic *").fill("This House would lower the voting age");
+  await page.getByLabel("Motion / topic *").fill("This House would lower the voting age");
   before = await callCount("brainstorm");
   const oneOffRun = aiResponse(page, "brainstorm");
   await page.getByRole("button", { name: "Start brainstorming" }).click();
@@ -155,7 +155,7 @@ test("debate-start, debate-scope, debate-once, debate-switch: two debates keep t
 test("debate-offer: with no Current Debate, a tool offers to start one for the motion it was given", async ({ signedIn: page, user, evidence }) => {
   const motion = "This House would abolish zoos";
   await page.goto("/app/generate");
-  await page.getByRole("textbox", { name: "Motion / Topic *" }).fill(motion);
+  await page.getByRole("textbox", { name: "Motion / topic *" }).fill(motion);
   const run = aiResponse(page, "generate");
   await page.getByRole("button", { name: "Generate debate case" }).click();
 
@@ -214,9 +214,9 @@ test("debate-tour: a brand-new account starts its first debate from the onboardi
   await next.click();
   await expect(tooltip).toContainText("Generate");
   await next.click();
-  await page.getByRole("button", { name: "Get started!" }).click();
+  await page.getByRole("button", { name: "Get started" }).click();
   await expect(tooltip).toHaveCount(0);
-  await evidence.step("Tour: Library → Generate → Get started!");
+  await evidence.step("Tour: Library → Generate → Get started");
 
   const userId = await user.userId();
   const { data: debates } = await admin.from("debates").select("id,motion").eq("user_id", userId);
@@ -227,7 +227,7 @@ test("debate-tour: a brand-new account starts its first debate from the onboardi
   // The first tool already works inside that debate, with no motion check.
   await page.locator('main [data-tour="mode-generate"]').click();
   await expect(page.getByTestId("current-debate-strip")).toContainText(`Working in: ${motion}`);
-  await expect(page.getByRole("textbox", { name: "Motion / Topic *" })).toHaveValue(motion);
+  await expect(page.getByRole("textbox", { name: "Motion / topic *" })).toHaveValue(motion);
   const run = aiResponse(page, "generate");
   await page.getByRole("button", { name: "Generate debate case" }).click();
   await run;

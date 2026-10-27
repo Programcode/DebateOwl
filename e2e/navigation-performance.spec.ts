@@ -24,7 +24,7 @@ const privateRoutes = [
   ['/app', { selector: 'main h1', text: 'What are you working on?' }],
   ['/app/generate', { selector: 'main h1', text: 'Generate' }],
   ['/app/attack', { selector: 'main h1', text: 'Attack' }],
-  ['/app/flowchart', { selector: 'main h1', text: 'Argument Flowchart' }],
+  ['/app/flowchart', { selector: 'main h1', text: 'Argument flowchart' }],
   ['/app/history', { selector: 'main h1', text: 'History' }],
   ['/app/admin', { selector: 'main h1', text: 'Access Denied' }],
 ] as const;

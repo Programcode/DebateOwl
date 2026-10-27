@@ -14,7 +14,7 @@ async function addSource(page: Page, title: string, content: string) {
   await page.getByRole("button", { name: "Add source" }).click();
   await page.getByRole("textbox", { name: "Title", exact: true }).fill(title);
   await page.getByRole("textbox", { name: "Content", exact: true }).fill(content);
-  await page.getByRole("button", { name: "Save to Library" }).click();
+  await page.getByRole("button", { name: "Save to library" }).click();
   await expect(page.getByRole("switch", { name: `Toggle ${title}` })).toBeChecked();
 }
 
