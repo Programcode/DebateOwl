@@ -15,7 +15,7 @@
     "features": "Features",
     "pricing": "Pricing",
     "howItWorks": "How it works",
-    "startTrial": "Start trial",
+    "startTrial": "Start free trial",
     "settings": "Settings",
     "openMenu": "Open menu",
     "closeMenu": "Close menu",
@@ -234,6 +234,7 @@
     "loading": "Loading",
     "error": "Error",
     "logoAlt": "DebateOwl logo",
+    "homeLink": "DebateOwl home",
     "skipToContent": "Skip to main content",
     "or": "or",
     "back": "Back",
@@ -895,7 +896,7 @@
     "headline": "{{product}}: AI debate prep and practice",
     "subheadline": "Prepare cases and practice rounds with AI.",
     "trialBadge": "{{trialDays}}-day free trial",
-    "cta": "Start trial",
+    "cta": "Start free trial",
     "trustBullet1": "No credit card required",
     "trustBullet2": "Cancel anytime",
     "preview": {
@@ -1037,7 +1038,7 @@
   },
   "finalCta": {
     "title": "Ready to build your next case?",
-    "cta": "Launch DebateOwl"
+    "cta": "Start free trial"
   },
   "rateLimit": {
     "title": "Too many requests"
@@ -2587,44 +2588,44 @@
   },
   "pageHead": {
     "home": {
-      "title": "{{brand}} | AI Debate Prep, Cases & Rebuttals",
-      "description": "{{product}} is an AI debate prep and practice app for students and debaters: cases, rebuttals, evidence, coaching and timed rounds against an AI opponent."
+      "title": "{{product}}: AI debate prep and practice",
+      "description": "{{product}} helps students and debaters prepare cases, rebuttals and evidence with AI, then practice timed rounds against an AI opponent."
     },
     "terms": {
       "title": "Terms of Service | {{brand}}",
-      "description": "The terms for using {{brand}}: accounts, subscriptions and billing, acceptable use, AI-generated content, intellectual property, and liability."
+      "description": "The terms for using {{brand}}, covering accounts, subscriptions and billing, acceptable use, AI-generated content, intellectual property and liability."
     },
     "privacy": {
       "title": "Privacy Policy | {{brand}}",
-      "description": "How {{brand}} collects, uses, stores, and shares your information, how AI requests are processed, and the rights you have over your data."
+      "description": "How {{brand}} collects, uses, stores and shares your information, how it processes AI requests, and which rights you have over your data."
     },
     "sources": {
       "title": "Sources | {{brand}}",
-      "description": "The sources consulted during the research and development of {{brand}}, listed alphabetically by author surname or institutional name."
+      "description": "The books, articles and institutions consulted while researching and building {{brand}}, listed alphabetically by author or institution name."
     },
     "notFound": {
       "title": "Page not found | {{brand}}",
       "description": "This page does not exist on {{brand}}."
     },
     "tools": {
-      "title": "Free Debate Tools: Timer, Motions, Flow Sheets | {{brand}}",
-      "description": "Free debate tools that need no account: a format-aware round timer, a practice motion generator, printable flow sheets and a speech time calculator."
+      "title": "Free Debate Tools | {{brand}}",
+      "description": "Free debate tools that need no account: a round timer for every format, a practice motion generator, printable flow sheets and a speech time calculator."
     },
     "debateTimer": {
-      "title": "Free Debate Timer for PF, LD, Policy, BP & World Schools | {{brand}}",
-      "description": "A free debate timer with presets for Public Forum, LD, Policy, BP, World Schools and Asian Parliamentary: protected time, POI knocks and prep banks."
+      "title": "Free Debate Timer | {{brand}}",
+      "description": "Free debate timer with presets for Public Forum, LD, Policy, BP, World Schools and Asian Parliamentary, including protected time and POI knocks."
     },
     "motionGenerator": {
-      "title": "Debate Motion Generator: 300 Practice Motions | {{brand}}",
-      "description": "Draw a random debate motion, or three for a veto drill, from 300 original practice motions sorted by topic, difficulty and type. THW and Resolved wording."
+      "title": "Debate Motion Generator | {{brand}}",
+      "description": "Free debate motion generator that draws one random motion, or three for a veto drill, from 300 original practice motions sorted by topic and type."
     },
     "flowSheet": {
-      "title": "Printable Debate Flow Sheet Generator | {{brand}}",
-      "description": "Print a one-page debate flow sheet with a column for every speech in PF, LD, Policy, BP, World Schools or Asian Parliamentary, on A4 or Letter."
+      "title": "Printable Debate Flow Sheets | {{brand}}",
+      "description": "Free printable debate flow sheets with a column for every speech in PF, LD, Policy, BP, World Schools or Asian Parliamentary, on A4 or Letter."
     },
     "speechTimeCalculator": {
-      "title": "Speech Time Calculator for Debate Speeches | {{brand}}",
-      "description": "Paste a speech to see its word count, how long it takes to deliver at slow, average and fast pace, and which debate speech slots it fits. Runs in your browser."
+      "title": "Speech Time Calculator | {{brand}}",
+      "description": "Free speech time calculator that counts the words in a debate speech and shows how long it takes at a slow, average or fast pace."
     }
   },
   "validation": {

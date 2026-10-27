@@ -87,7 +87,7 @@ test('landing CTA enters the app without replacing the document', async ({ page 
   await page.goto('/');
   await page.evaluate(() => { document.documentElement.dataset.e2eDocument = 'original'; });
   const initialDocumentRequests = documentRequests;
-  await page.getByRole('link', { name: 'Start trial' }).first().click();
+  await page.getByRole('link', { name: 'Start free trial' }).first().click();
 
   await expect(page).toHaveURL(/\/app$/);
   expect(documentRequests).toBe(initialDocumentRequests);

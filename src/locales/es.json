@@ -15,7 +15,7 @@
     "features": "Funciones",
     "pricing": "Precios",
     "howItWorks": "Cómo funciona",
-    "startTrial": "Prueba gratis",
+    "startTrial": "Comenzar prueba gratis",
     "settings": "Ajustes",
     "openMenu": "Abrir menú",
     "closeMenu": "Cerrar menú",
@@ -234,6 +234,7 @@
     "loading": "Cargando",
     "error": "Error",
     "logoAlt": "Logotipo de DebateOwl",
+    "homeLink": "Inicio de DebateOwl",
     "skipToContent": "Saltar al contenido principal",
     "or": "o",
     "back": "Atrás",
@@ -895,7 +896,7 @@
     "headline": "{{product}}: preparación y práctica de debate con IA",
     "subheadline": "Prepara casos y practica rondas con IA.",
     "trialBadge": "Prueba gratis de {{trialDays}} días",
-    "cta": "Prueba gratis",
+    "cta": "Comenzar prueba gratis",
     "trustBullet1": "Sin tarjeta de crédito",
     "trustBullet2": "Cancela cuando quieras",
     "preview": {
@@ -1037,7 +1038,7 @@
   },
   "finalCta": {
     "title": "¿Listo para construir tu próximo caso?",
-    "cta": "Lanzar DebateOwl"
+    "cta": "Comenzar prueba gratis"
   },
   "rateLimit": {
     "title": "Demasiadas solicitudes"
@@ -2587,8 +2588,8 @@
   },
   "pageHead": {
     "home": {
-      "title": "{{product}} – Preparación y práctica de debate con IA para estudiantes",
-      "description": "{{product}} es una app con IA para preparar y practicar debates: casos, refutaciones, evidencia, coaching y rondas cronometradas contra un oponente de IA."
+      "title": "{{product}}: preparación y práctica de debate con IA",
+      "description": "{{product}} ayuda a estudiantes y debatientes a preparar casos, refutaciones y evidencia con IA, y a practicar rondas cronometradas contra un oponente de IA."
     },
     "terms": {
       "title": "Términos del servicio | {{brand}}",
@@ -2607,24 +2608,24 @@
       "description": "Esta página no existe en {{brand}}."
     },
     "tools": {
-      "title": "Herramientas de debate gratis: cronómetro, mociones, hojas de flujo | {{brand}}",
-      "description": "Herramientas de debate gratis y sin cuenta: cronómetro por formato, generador de mociones, hojas de flujo imprimibles y calculadora de tiempo de discurso."
+      "title": "Herramientas de debate gratis | {{brand}}",
+      "description": "Gratis y sin cuenta: un cronómetro para cada formato, un generador de mociones, hojas de flujo imprimibles y una calculadora de tiempo de discurso."
     },
     "debateTimer": {
-      "title": "Cronómetro de debate gratis para PF, LD, Policy, BP y World Schools | {{brand}}",
-      "description": "Cronómetro de debate gratis con ajustes para PF, LD, Policy, BP, World Schools y Asian Parliamentary: tiempo protegido, avisos de POI y preparación."
+      "title": "Cronómetro de debate gratis | {{brand}}",
+      "description": "Cronómetro de debate gratis con ajustes para PF, LD, Policy, BP, World Schools y Asian Parliamentary, con tiempo protegido y avisos de POI."
     },
     "motionGenerator": {
-      "title": "Generador de mociones de debate: 300 mociones de práctica | {{brand}}",
-      "description": "Saca una moción de debate al azar, o tres para practicar el veto, de entre 300 mociones originales ordenadas por tema, dificultad y tipo."
+      "title": "Generador de mociones de debate | {{brand}}",
+      "description": "Generador gratis de mociones de debate que saca una moción al azar, o tres para practicar el veto, de 300 mociones originales por tema y tipo."
     },
     "flowSheet": {
-      "title": "Generador de hojas de flujo de debate imprimibles | {{brand}}",
-      "description": "Imprime una hoja de flujo de una página con una columna por discurso en PF, LD, Policy, BP, World Schools o Asian Parliamentary, en A4 o Carta."
+      "title": "Hojas de flujo de debate imprimibles | {{brand}}",
+      "description": "Hojas de flujo de debate gratis e imprimibles, con una columna por discurso en PF, LD, Policy, BP, World Schools o Asian Parliamentary, en A4 o Carta."
     },
     "speechTimeCalculator": {
-      "title": "Calculadora de tiempo para discursos de debate | {{brand}}",
-      "description": "Pega un discurso para ver cuántas palabras tiene, cuánto dura a ritmo lento, medio o rápido y en qué turnos de debate cabe. Funciona en tu navegador."
+      "title": "Calculadora de tiempo de discurso | {{brand}}",
+      "description": "Calculadora gratis que cuenta las palabras de un discurso de debate y muestra cuánto dura a ritmo lento, medio o rápido y en qué turnos cabe."
     }
   },
   "validation": {

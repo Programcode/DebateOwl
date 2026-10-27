@@ -15,7 +15,7 @@
     "features": "Funkciók",
     "pricing": "Árak",
     "howItWorks": "Hogyan működik",
-    "startTrial": "Próba indítása",
+    "startTrial": "Ingyenes próba indítása",
     "settings": "Beállítások",
     "openMenu": "Menü megnyitása",
     "closeMenu": "Menü bezárása",
@@ -234,6 +234,7 @@
     "loading": "Betöltés",
     "error": "Hiba",
     "logoAlt": "DebateOwl logó",
+    "homeLink": "DebateOwl főoldal",
     "skipToContent": "Ugrás a fő tartalomra",
     "or": "vagy",
     "back": "Vissza",
@@ -895,7 +896,7 @@
     "headline": "{{product}}: MI-alapú vitafelkészítés és gyakorlás",
     "subheadline": "Készíts eseteket és gyakorolj fordulókat MI-vel.",
     "trialBadge": "{{trialDays}} napos ingyenes próba",
-    "cta": "Próba indítása",
+    "cta": "Ingyenes próba indítása",
     "trustBullet1": "Bankkártya nem szükséges",
     "trustBullet2": "Bármikor lemondható",
     "preview": {
@@ -1037,7 +1038,7 @@
   },
   "finalCta": {
     "title": "Készen állsz a következő eseted felépítésére?",
-    "cta": "DebateOwl indítása"
+    "cta": "Ingyenes próba indítása"
   },
   "rateLimit": {
     "title": "Túl sok kérés"
@@ -2587,8 +2588,8 @@
   },
   "pageHead": {
     "home": {
-      "title": "{{product}} – MI-alapú vitafelkészülés és gyakorlás diákoknak",
-      "description": "A {{product}} MI-alapú app vitára készülő diákoknak: esetépítés, cáfolatok, bizonyítékok, coaching és időzített gyakorlókörök egy MI-ellenféllel szemben."
+      "title": "{{product}}: MI-alapú vitafelkészülés és gyakorlás",
+      "description": "A {{product}} MI segítségével készít fel diákokat és vitázókat: esetek, cáfolatok és bizonyítékok, majd időzített gyakorlókörök egy MI-ellenféllel."
     },
     "terms": {
       "title": "Felhasználási feltételek | {{brand}}",
@@ -2607,24 +2608,24 @@
       "description": "Ez az oldal nem létezik a {{brand}} webhelyén."
     },
     "tools": {
-      "title": "Ingyenes vitaeszközök: időmérő, vitatételek, jegyzetlapok | {{brand}}",
+      "title": "Ingyenes vitaeszközök | {{brand}}",
       "description": "Ingyenes, fiók nélkül használható vitaeszközök: formátumhoz igazodó időmérő, vitatétel-generátor, nyomtatható jegyzetlapok és beszédidő-kalkulátor."
     },
     "debateTimer": {
-      "title": "Ingyenes vitaidőmérő PF, LD, Policy, BP és World Schools formátumhoz | {{brand}}",
-      "description": "Ingyenes vitaidőmérő PF, LD, Policy, BP, World Schools és Asian Parliamentary beállításokkal: védett idő, POI-jelzés és felkészülési idő."
+      "title": "Ingyenes vitaidőmérő | {{brand}}",
+      "description": "Ingyenes vitaidőmérő PF, LD, Policy, BP, World Schools és Asian Parliamentary beállításokkal, védett idővel, POI-jelzéssel és felkészülési idővel."
     },
     "motionGenerator": {
-      "title": "Vitatétel-generátor: 300 gyakorló vitatétel | {{brand}}",
-      "description": "Húzz egy véletlen vitatételt, vagy hármat a vétógyakorláshoz, 300 eredeti gyakorló tételből, téma, nehézség és típus szerint rendezve."
+      "title": "Vitatétel-generátor | {{brand}}",
+      "description": "Ingyenes vitatétel-generátor, amely egy véletlen tételt, vagy vétógyakorláshoz hármat húz 300 eredeti, téma és típus szerint rendezett tételből."
     },
     "flowSheet": {
-      "title": "Nyomtatható vitajegyzetlap-generátor | {{brand}}",
-      "description": "Egyoldalas, nyomtatható vitajegyzetlap minden beszédhez külön oszloppal PF, LD, Policy, BP, World Schools vagy Asian Parliamentary formátumhoz."
+      "title": "Nyomtatható vitajegyzetlapok | {{brand}}",
+      "description": "Ingyenes, nyomtatható vitajegyzetlap minden beszédhez külön oszloppal PF, LD, Policy, BP, World Schools vagy Asian Parliamentary formátumhoz."
     },
     "speechTimeCalculator": {
-      "title": "Beszédidő-kalkulátor vitabeszédekhez | {{brand}}",
-      "description": "Illessz be egy beszédet, és megmutatjuk a szószámát, hogy lassú, átlagos és gyors tempóban mennyi ideig tart, és mely vitabeszéd-idősávokba fér bele."
+      "title": "Beszédidő-kalkulátor | {{brand}}",
+      "description": "Ingyenes beszédidő-kalkulátor, amely megszámolja egy vitabeszéd szavait, és megmutatja, mennyi ideig tart lassú, átlagos és gyors tempóban."
     }
   },
   "validation": {
