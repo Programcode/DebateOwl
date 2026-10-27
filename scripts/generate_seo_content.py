@@ -19,6 +19,7 @@ BASE = SITE["origin"]
 BRAND = SITE["brand"]
 PRODUCT = SITE["product"]
 ORGANIZATION = SITE["organization"]
+FORMERLY = SITE["formerly"]
 PRICING = SITE["pricing"]
 # Prices and plan facts are stated "as of" this month; move it when they are rechecked.
 FACTS_AS_OF = date.fromisoformat(SITE["factsCheckedOn"]).strftime("%B %Y")
@@ -107,6 +108,82 @@ def free_tools():
     return tools
 
 FREE_TOOLS = free_tools()
+
+def round_formats():
+    """The built-in formats in src/lib/free-tools/formats.ts, which the free timer runs, in
+    BUILT_IN_FORMAT_IDS order: name, speeches [(short, seconds, poi)], questioning
+    [(kind, seconds)], prep seconds, grace seconds and source labels. Fails on anything it cannot read."""
+    source = (ROOT / "src" / "lib" / "free-tools" / "formats.ts").read_text()
+    ids = re.findall(r"'(\w+)'", re.search(r"BUILT_IN_FORMAT_IDS = \[([^\]]+)\]", source).group(1))
+    seconds = lambda text: int(text) * 60 if text else 0
+    nsda = re.findall(r"const NSDA_MANUAL: FormatSource = \{\s*label: '([^']+)',\s*url: '([^']+)',", source)
+    formats = []
+    for format_id in ids:
+        block = re.search(rf"^  {format_id}: \{{\n(.*?)^  \}},$", source, re.S | re.M)
+        if not block:
+            raise SystemExit(f"Could not find format {format_id} in formats.ts")
+        body = block.group(1)
+        segment_lines = [line for line in body.splitlines() if re.match(r"\s+(speech|question|reply)\(", line)]
+        speeches, questioning = [], []
+        for line in segment_lines:
+            kind = re.match(r"\s+(\w+)\(", line).group(1)
+            args = re.findall(r"'([^']*)'", line)
+            minutes = re.findall(r"(\d+) \* MIN", line)
+            if kind == "question":
+                questioning.append((args[4], seconds(minutes[0])))
+            else:
+                speeches.append((args[1], seconds(minutes[0]), "protectedEnds" in line))
+        prep = re.search(r"prepSeconds: (?:(\d+) \* MIN|0)", body)
+        grace = re.search(r"graceSeconds: (\d+)", body)
+        if len(segment_lines) != body.count("speech(") + body.count("question(") + body.count("reply(") or not speeches or not prep:
+            raise SystemExit(f"Could not read every segment of format {format_id} in formats.ts")
+        formats.append({
+            "id": format_id,
+            "name": re.search(r"^    name: '([^']+)'", body, re.M).group(1),
+            "speeches": speeches,
+            "questioning": questioning,
+            "prep": seconds(prep.group(1)),
+            "grace": int(grace.group(1)) if grace else 0,
+            "sources": re.findall(r"label: '([^']+)', url: '([^']+)'", body) + (nsda if re.search(r"sources: \[NSDA_MANUAL\]", body) else []),
+        })
+    return formats
+
+ROUND_FORMATS = round_formats()
+
+def clock(total):
+    return f"{total // 60}:{total % 60:02d}"
+
+def speech_times_table():
+    """The speech-times table on /online-debate-timer, built from the free timer's own format data
+    so the guide and /tools/debate-timer cannot disagree."""
+    rows = []
+    for f in ROUND_FORMATS:
+        rules = "; ".join(f"[{label}]({url})" for label, url in f["sources"]) or f"{PRODUCT}'s own school format"
+        speeches = ", ".join(f"{short}: {length // 60}" for short, length, _ in f["speeches"])
+        if f["grace"]:
+            speeches += f" ({f['grace']} s grace)"
+        if f["questioning"]:
+            kinds = sorted({kind for kind, _ in f["questioning"]})
+            lengths = sorted({length for _, length in f["questioning"]})
+            label = " / ".join(kinds)
+            questioning = f"{len(f['questioning'])} × {'/'.join(str(l // 60) for l in lengths)} min {label}"
+        else:
+            questioning = "None"
+        prep = f"{f['prep'] // 60} min" if f["prep"] else "None in round"
+        protected = [length for _, length, poi in f["speeches"] if poi]
+        if protected:
+            length = protected[0]
+            poi = f"POIs from {clock(60)} to {clock(length - 60)} of each {length // 60}-minute speech; first and last minute protected"
+            if len(protected) < len(f["speeches"]):
+                poi += "; no POIs in replies"
+        else:
+            poi = "No POIs"
+        rows.append([f["name"], speeches, questioning, prep, poi, rules])
+    return {"table": {
+        "caption": f"Debate speech times by format (as of {date.fromisoformat(CONTENT_DATE).strftime('%B %Y')})",
+        "head": ["Format", "Speeches in order (minutes)", "Cross-ex", "Prep per side", "POI / protected time", "Rules"],
+        "rows": rows,
+    }}
 TOKENS = {
     "{product}": PRODUCT,
     "{pro_price}": PRO_PRICE,
@@ -219,12 +296,20 @@ ANSWERS = fill(ANSWERS)
 NAV = [("AI practice","/ai-debate-practice"),("Case generator","/ai-debate-case-generator"),("Rebuttal practice","/debate-rebuttal-practice"),("Evidence finder","/debate-evidence-finder"),("Pricing","/debateowl-pricing"),("Open app","/app")]
 
 SOFTWARE_ID = BASE + "/#software"
-ORGANIZATION_REF = {"@type": "Organization", "@id": BASE + "/#organization", "name": ORGANIZATION, "url": BASE + "/", "logo": BASE + "/icon-1024.png", "sameAs": SITE["organizationSameAs"]}
+# The home page defines the full Organization node (src/lib/seo/pages.ts); guides inline
+# the same name, URL and logo so a crawler reading one guide sees one name for one entity.
+ORGANIZATION_REF = {
+    "@type": "Organization",
+    "@id": BASE + "/#organization",
+    "name": ORGANIZATION["name"],
+    "url": BASE + "/",
+    "logo": {"@type": "ImageObject", "url": BASE + ORGANIZATION["logo"]["path"], "width": ORGANIZATION["logo"]["width"], "height": ORGANIZATION["logo"]["height"]},
+}
 SOFTWARE = {
     "@type": "SoftwareApplication",
     "@id": SOFTWARE_ID,
     "name": PRODUCT,
-    "alternateName": BRAND,
+    "alternateName": SITE["alternateName"],
     "description": DEFINITION,
     "applicationCategory": "EducationalApplication",
     "operatingSystem": "Web",
@@ -243,6 +328,11 @@ def page_url(slug):
 
 def esc(s):
     return html.escape(s, quote=True)
+
+def long_date_dmy(iso):
+    """"27 October 2026"."""
+    value = date.fromisoformat(iso)
+    return f"{value.day} {value.strftime('%B')} {value.year}"
 
 def long_date(iso):
     value = date.fromisoformat(iso)
@@ -356,6 +446,8 @@ def render_block(block, spans_of=lambda: None):
         return "<ol>" + "".join(f"<li>{linked(item, spans_of())}</li>" for item in block["steps"]) + "</ol>"
     if "list" in block:
         return "<ul>" + "".join(f"<li>{linked(item, spans_of())}</li>" for item in block["list"]) + "</ul>"
+    if "speech_times" in block:
+        block = speech_times_table()
     if "table" in block:
         table = block["table"]
         head = "".join(f'<th scope="col">{esc(cell)}</th>' for cell in table["head"])
@@ -368,13 +460,16 @@ def render_block(block, spans_of=lambda: None):
     rows = "".join(f"<p><strong>{esc(label)}</strong> {esc(text)}</p>" for label, text in example["rows"])
     return f'<div class="card"><h3>{esc(example["title"])}</h3>{rows}</div>'
 
+# The brand name as a link to the home page, so every guide passes the brand anchor to /.
+HOME_LINK = f'<a href="/">{esc(PRODUCT)}</a>'
+
 def about(slug):
     """The About aside. The full definition and plan facts stay on the pricing page (and on / and llms.txt);
     every other guide gets one line, so the same paragraph is not repeated across the site."""
     if slug == "debateowl-pricing":
-        body = f'<p>{esc(DEFINITION)} The app is available in English, Spanish and Hungarian.</p><p>{esc(PLAN_FACTS)}</p>'
+        body = f'<p>{HOME_LINK}{esc(DEFINITION[len(PRODUCT):])} The app is available in English, Spanish and Hungarian.</p><p>{esc(PLAN_FACTS)}</p>'
     else:
-        body = f'<p>{PRODUCT} is an AI debate prep and practice app. See <a href="/">how it works</a> or <a href="/debateowl-pricing">pricing</a>.</p>'
+        body = f'<p>{HOME_LINK} is an AI debate prep and practice app. See <a href="/">how it works</a> or <a href="/debateowl-pricing">pricing</a>.</p>'
     return f'<aside class="section article" aria-labelledby="about"><h2 id="about">About {PRODUCT}</h2>{body}</aside>'
 
 def structured_data(page, question, answer, faqs, published, modified):
@@ -384,9 +479,25 @@ def structured_data(page, question, answer, faqs, published, modified):
         {"@type": "FAQPage", "mainEntity": [{"@type": "Question", "name": q, "acceptedAnswer": {"@type": "Answer", "text": a}} for q, a in [(question, answer), *faqs]]},
         {"@type": "BreadcrumbList", "itemListElement": [{"@type": "ListItem", "position": 1, "name": BRAND, "item": BASE + "/"}, {"@type": "ListItem", "position": 2, "name": page["h1"], "item": page_url(page["slug"])}]},
     ]
+    if page.get("definition"):
+        question, term, text = page["definition"]
+        graph.append({"@type": "DefinedTerm", "name": term, "description": text, "url": page_url(page["slug"]) + "#definition"})
     if page.get("software"):
         graph.append(SOFTWARE)
     return json_script({"@context": "https://schema.org", "@graph": graph})
+
+# The same icon links as index.html, so every guide names the favicon and a 192px icon.
+ICON_LINKS = """  <link rel="icon" href="/favicon.ico" sizes="48x48" />
+  <link rel="icon" type="image/png" href="/favicon.png" sizes="48x48" />
+  <link rel="icon" type="image/png" href="/icon-192.png" sizes="192x192" />
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png" sizes="180x180" />"""
+
+def definition_block(page):
+    """A "What is ...?" definition straight after the short answer: the plain sentence an answer engine quotes."""
+    if not page.get("definition"):
+        return ""
+    question, term, text = page["definition"]
+    return f'<section class="article section" aria-label="Definition"><dl id="definition"><dt><strong>{esc(question)}</strong></dt><dd>{esc(text)}</dd></dl></section>'
 
 def render_page(page):
     question, answer = lead_answer(page)
@@ -425,6 +536,8 @@ def render_page(page):
   <meta name="description" content="{esc(page["description"])}" />
   <meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large" />
   <link rel="canonical" href="{page_url(page["slug"])}" />
+  <meta name="author" content="{esc(ORGANIZATION["name"])}" />
+{ICON_LINKS}
   <meta property="og:type" content="article" />
   <meta property="og:site_name" content="{BRAND}" />
   <meta property="og:title" content="{esc(page["title"])}" />
@@ -449,8 +562,9 @@ def render_page(page):
   <main class="wrap">
     <nav class="breadcrumb" aria-label="Breadcrumb"><a href="/">{PRODUCT}</a> / <span aria-current="page">{esc(page["h1"])}</span></nav>
     <article>
-      <header class="hero"><span class="eyebrow">{esc(page["eyebrow"])}</span><h1>{esc(page["h1"])}</h1><p class="lead">{esc(page["lead"])}</p><p class="dates">{dates}</p><div class="cta">{cta}</div></header>
+      <header class="hero"><span class="eyebrow">{esc(page["eyebrow"])}</span><h1>{esc(page["h1"])}</h1><p class="lead">{linked(page["lead"])}</p><p class="dates">{dates}</p><p class="dates">By the <a href="/">{esc(PRODUCT)} team</a></p><div class="cta">{cta}</div></header>
       <section class="answer" aria-labelledby="short-answer"><h2 id="short-answer">{esc(question)}</h2><p>{esc(answer)}</p></section>
+      {definition_block(page)}
       <section class="grid" aria-label="Highlights">{feature_cards}</section>
       <div class="article section">{"".join(article)}</div>
       <section class="section faq article" aria-labelledby="faq"><h2 id="faq">Frequently asked questions</h2>{faq_html}</section>
@@ -487,7 +601,7 @@ def llms_txt():
 
 > {DEFINITION}
 
-{BRAND} runs at {BASE}/. It is a separate product from debatelab.ai.
+{BRAND} runs at {BASE}/. It is a separate product from debatelab.ai. {BRAND} was called {FORMERLY["name"]} ({FORMERLY["host"]}) until {long_date_dmy(FORMERLY["until"])}.
 
 ## Key facts (as of {FACTS_AS_OF})
 
