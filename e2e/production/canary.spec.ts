@@ -98,7 +98,7 @@ test("the canary account gets a streamed answer from a real model", async ({ pag
   await signInAsCanary(page, { aiRequest: true });
   await page.goto("/app/ask");
   await pickBasicDefault(page, "ask");
-  await page.getByPlaceholder("Ask your debate coach...").fill("Reply with one short sentence: what is a rebuttal?");
+  await page.getByPlaceholder("Ask your debate coach").fill("Reply with one short sentence: what is a rebuttal?");
   const stream = page.waitForResponse((response) => response.url().endsWith("/functions/v1/ai-stream"), { timeout: 90_000 });
   await page.getByRole("button", { name: "Send message" }).click();
   const response = await stream;
@@ -120,7 +120,7 @@ test("the canary account generates a case", async ({ page }) => {
   await signInAsCanary(page, { aiRequest: true });
   await page.goto("/app/generate");
   await pickBasicDefault(page, "generate");
-  await page.getByRole("textbox", { name: "Motion / Topic *" }).fill("This House would make public transport free");
+  await page.getByRole("textbox", { name: "Motion / topic *" }).fill("This House would make public transport free");
   const generated = page.waitForResponse((response) => response.url().endsWith("/functions/v1/ai") && response.request().method() === "POST", { timeout: 150_000 });
   await page.getByRole("button", { name: "Generate debate case" }).click();
   // Use the motion once so the canary account does not collect production debates.

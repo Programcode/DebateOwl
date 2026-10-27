@@ -53,7 +53,10 @@ const desktopLinkClass = cn(
   "text-muted-foreground hover:text-foreground hover:bg-accent"
 );
 // The plume tint keeps primary text above 4.5:1 in both themes (5.9 light, 7.9 dark).
-const activeLinkClass = "bg-brand-tint text-primary hover:bg-brand-tint hover:text-primary";
+const activeLinkClass = "bg-brand-tint text-primary hover:bg-brand-tint hover:text-primary [&>span]:not-sr-only";
+// From md to lg (iPads) the bar is too narrow for every label, so only the active link shows its
+// label; the others are icons that keep their name for screen readers.
+const navLabelClass = "max-lg:sr-only";
 
 const ANNOUNCEMENT_CACHE_KEY = 'debatelab-announcements';
 
@@ -176,10 +179,10 @@ export function AppLayout() {
     void loadAnnouncements();
   }, [loadAnnouncements, location.pathname]);
 
-  // The menu is `lg:hidden`: widening the window would hide it while it still holds the page modal.
+  // The menu is `md:hidden`: widening the window would hide it while it still holds the page modal.
   useEffect(() => {
     if (!mobileMenuOpen) return;
-    const wide = window.matchMedia('(min-width: 1024px)');
+    const wide = window.matchMedia('(min-width: 768px)');
     const close = () => { if (wide.matches) setMobileMenuOpen(false); };
     close();
     wide.addEventListener('change', close);
@@ -276,7 +279,7 @@ export function AppLayout() {
           </Link>
 
           {/* Desktop Nav */}
-          <nav aria-label={t('nav.mainNavigation')} className="hidden lg:flex min-w-0 flex-1 items-center gap-0.5 xl:gap-1 ml-4">
+          <nav aria-label={t('nav.mainNavigation')} className="hidden md:flex min-w-0 flex-1 items-center gap-0.5 xl:gap-1 ml-4">
             <Link
               to="/app"
               {...homePrefetch}
@@ -285,7 +288,7 @@ export function AppLayout() {
               className={cn(desktopLinkClass, section === 'tools' && activeLinkClass)}
             >
               <LayoutGrid className="h-4 w-4 shrink-0" aria-hidden="true" />
-              <span>{t('nav.tools')}</span>
+              <span className={navLabelClass}>{t('nav.tools')}</span>
             </Link>
             <CurrentDebateMenu variant="desktop" />
             {libraryNavItems.map((item) => (
@@ -298,7 +301,7 @@ export function AppLayout() {
                 activeClassName={activeLinkClass}
               >
                 <item.icon className="h-4 w-4 shrink-0" aria-hidden="true" />
-                <span>{t(`nav.${item.key}`)}</span>
+                <span className={navLabelClass}>{t(`nav.${item.key}`)}</span>
               </NavLink>
             ))}
           </nav>
@@ -313,7 +316,7 @@ export function AppLayout() {
                 to="/app/settings"
                 aria-label={t('nav.settings', 'Settings')}
                 data-tour="nav-settings"
-                className="hidden lg:inline-flex h-10 w-10 items-center justify-center rounded-full text-muted-foreground transition-[color,background-color,transform] duration-150 hover:bg-accent hover:text-foreground active:scale-90 focus-visible:outline-hidden focus-visible:ring-[3px] focus-visible:ring-ring focus-visible:ring-offset-2"
+                className="hidden md:inline-flex h-10 w-10 items-center justify-center rounded-full text-muted-foreground transition-[color,background-color,transform] duration-150 hover:bg-accent hover:text-foreground active:scale-90 focus-visible:outline-hidden focus-visible:ring-[3px] focus-visible:ring-ring focus-visible:ring-offset-2"
                 activeClassName={activeLinkClass}
               >
                 <Settings className="h-5 w-5" aria-hidden="true" />
@@ -325,7 +328,7 @@ export function AppLayout() {
                   ref={mobileMenuTriggerRef}
                   variant="ghost"
                   size="icon"
-                  className="rounded-full lg:hidden text-muted-foreground"
+                  className="rounded-full md:hidden text-muted-foreground"
                   aria-label={mobileMenuOpen ? t('nav.closeMenu') : t('nav.openMenu')}
                   aria-expanded={mobileMenuOpen}
                 >
@@ -334,10 +337,10 @@ export function AppLayout() {
               </DialogPrimitive.Trigger>
               {/* Mobile Nav: a modal panel under the header, with a scrim over the page. */}
               <DialogPrimitive.Portal>
-                <DialogPrimitive.Overlay className="fixed inset-0 z-40 bg-[var(--do-overlay)] lg:hidden data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=open]:fade-in-0 data-[state=closed]:fade-out-0 ease-out-strong data-[state=open]:duration-180 data-[state=closed]:duration-120" />
+                <DialogPrimitive.Overlay className="fixed inset-0 z-40 bg-[var(--do-overlay)] md:hidden data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=open]:fade-in-0 data-[state=closed]:fade-out-0 ease-out-strong data-[state=open]:duration-180 data-[state=closed]:duration-120" />
                 <DialogPrimitive.Content
                   aria-describedby={undefined}
-                  className="native-scroll-y native-mobile-menu fixed inset-x-0 top-(--app-header-bottom,8rem) z-40 overflow-y-auto rounded-b-xl border-b-2 border-border bg-card p-3 shadow-xl lg:hidden data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=open]:fade-in-0 data-[state=closed]:fade-out-0 data-[state=open]:slide-in-from-top-1 data-[state=closed]:slide-out-to-top-1 ease-out-strong data-[state=open]:duration-180 data-[state=closed]:duration-120"
+                  className="native-scroll-y native-mobile-menu fixed inset-x-0 top-(--app-header-bottom,8rem) z-40 overflow-y-auto rounded-b-xl border-b-2 border-border bg-card p-3 shadow-xl md:hidden data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=open]:fade-in-0 data-[state=closed]:fade-out-0 data-[state=open]:slide-in-from-top-1 data-[state=closed]:slide-out-to-top-1 ease-out-strong data-[state=open]:duration-180 data-[state=closed]:duration-120"
                 >
                   <DialogPrimitive.Title className="sr-only">{t('nav.mobileNavigation')}</DialogPrimitive.Title>
                   <nav aria-label={t('nav.mobileNavigation')}>
@@ -376,7 +379,7 @@ export function AppLayout() {
         </div>
 
         {/* Mobile Current Debate row */}
-        <div className="container min-w-0 border-t-2 border-border/70 px-4 py-1 max-[359px]:px-2 lg:hidden">
+        <div className="container min-w-0 border-t-2 border-border/70 px-4 py-1 max-[359px]:px-2 md:hidden">
           <CurrentDebateMenu variant="mobile" />
         </div>
       </header>

@@ -65,8 +65,8 @@ test('authenticated routes keep the shell and current page after refresh', async
   await stubSupabaseSession(page);
   for (const [path, heading] of [
     ['/app', 'Prepare'],
-    ['/app/generate', 'Ready to Generate'],
-    ['/app/attack', 'No Mercy Mode'],
+    ['/app/generate', 'Your case will appear here'],
+    ['/app/attack', 'Your critique will appear here'],
   ] as const) {
     await page.goto(path);
     await page.reload();

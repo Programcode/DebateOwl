@@ -84,21 +84,21 @@ describe('accessible names and headings', () => {
   it('names Generate selects from their visible labels', () => {
     render(<GenerateForm onSubmit={() => {}} isLoading={false} debatePrefill={false} />);
     expect(screen.getByRole('combobox', { name: 'Side' })).toBeInTheDocument();
-    expect(screen.getByRole('combobox', { name: 'Speaker Role' })).toBeInTheDocument();
+    expect(screen.getByRole('combobox', { name: 'Speaker role' })).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: 'More options' }));
-    expect(screen.getByRole('combobox', { name: 'Case Length' })).toBeInTheDocument();
-    expect(screen.getByRole('combobox', { name: 'Audience Level' })).toBeInTheDocument();
+    expect(screen.getByRole('combobox', { name: 'Case length' })).toBeInTheDocument();
+    expect(screen.getByRole('combobox', { name: 'Audience level' })).toBeInTheDocument();
     expect(screen.getByRole('combobox', { name: 'Tone' })).toBeInTheDocument();
   });
 
   it('names Attack switches from their labels and selects from theirs', () => {
     render(<AttackForm onSubmit={() => {}} isLoading={false} debateContext={false} />);
     fireEvent.click(screen.getByRole('button', { name: /More options/ }));
-    expect(screen.getByRole('switch', { name: 'Detect Fallacies' })).toHaveAccessibleDescription('Identify logical fallacies in the argument');
-    expect(screen.getByRole('switch', { name: 'Analyze Weighing' })).toHaveAccessibleDescription('Evaluate impact comparison and prioritization');
-    expect(screen.getByRole('combobox', { name: 'Attack Intensity' })).toBeInTheDocument();
-    expect(screen.getByRole('combobox', { name: 'Judge Paradigm' })).toBeInTheDocument();
+    expect(screen.getByRole('switch', { name: 'Detect fallacies' })).toHaveAccessibleDescription('Identify logical fallacies in the argument');
+    expect(screen.getByRole('switch', { name: 'Analyze weighing' })).toHaveAccessibleDescription('Evaluate impact comparison and prioritization');
+    expect(screen.getByRole('combobox', { name: 'Attack intensity' })).toBeInTheDocument();
+    expect(screen.getByRole('combobox', { name: 'Judge paradigm' })).toBeInTheDocument();
   });
 
   it('names the timer progress bar with the current speech and a numeric value', async () => {

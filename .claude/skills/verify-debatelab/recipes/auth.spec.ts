@@ -230,7 +230,7 @@ test("auth-switch-account: the next account on this browser starts on /app, gets
     await evidence.step("Signed in as a second account; landed on /app, not /app/settings");
 
     // AUTH-07: the second account gets its own tour.
-    const tour = page.getByText("Welcome to DebateOwl!");
+    const tour = page.getByText("Welcome to DebateOwl");
     await expect(tour).toBeVisible({ timeout: 10_000 });
     await evidence.shot("01-second-account-tour");
     if (await page.getByRole("button", { name: "Open menu" }).isVisible()) {

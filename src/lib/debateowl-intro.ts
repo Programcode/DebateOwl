@@ -1,6 +1,6 @@
 /**
- * The one-time welcome: the owl says hello, and that DebateLab is becoming DebateOwl.
- * It opens once per browser, inside the signed-in app.
+ * The one-time DebateOwl welcome: the owl says hello, says what changed (the look only) and that
+ * DebateLab is becoming DebateOwl. It opens once per browser, inside the signed-in app.
  */
 export const INTRO_SEEN_KEY = 'debateowl_intro_seen_v1';
 

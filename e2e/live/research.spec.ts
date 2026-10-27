@@ -8,7 +8,7 @@ const httpLink = /^https?:\/\//;
 
 test("case generation researches the web and cites what it found", async ({ signedIn: page, user }) => {
   await page.goto("/app/generate");
-  await page.getByRole("textbox", { name: "Motion / Topic *" }).fill("This House would make public transport free at the point of use");
+  await page.getByRole("textbox", { name: "Motion / topic *" }).fill("This House would make public transport free at the point of use");
   const response = aiResponse(page, "generate");
   await page.getByRole("button", { name: "Generate debate case" }).click();
   await chooseForMotion(page, "once");
@@ -35,7 +35,7 @@ test("Factoids returns verified evidence with working citations", async ({ signe
   await page.goto("/app/factoids");
   await page.getByLabel("Statement *").fill("Fare-free public transport increases ridership");
   const response = aiResponse(page, "factoids");
-  await page.getByRole("button", { name: "Find Factoids" }).click();
+  await page.getByRole("button", { name: "Find factoids" }).click();
   const body = await response;
 
   // The server keeps only factoids whose citation matches fetched research.
@@ -55,7 +55,7 @@ test("Ask with web search shows the sources it used", async ({ signedIn: page })
   await page.getByRole("button", { name: "Options" }).click();
   await page.locator("#web-search-mode").click();
   await page.keyboard.press("Escape");
-  await page.getByPlaceholder("Ask your debate coach...").fill("What did recent studies find about fare-free public transport ridership?");
+  await page.getByPlaceholder("Ask your debate coach…").fill("What did recent studies find about fare-free public transport ridership?");
   const response = aiResponse(page, "ask");
   await page.getByRole("button", { name: "Send message" }).click();
   const body = await response;

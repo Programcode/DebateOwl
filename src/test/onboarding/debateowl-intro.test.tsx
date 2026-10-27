@@ -72,6 +72,6 @@ describe('DebateOwlIntro', () => {
 
   it('Ollie introduces itself by name', () => {
     renderIntro();
-    expect(screen.getByText("Hi, I'm Ollie, the DebateOwl owl!")).toBeTruthy();
+    expect(screen.getByText("Hi, I'm Ollie!")).toBeTruthy();
   });
 });

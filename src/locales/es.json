@@ -336,8 +336,6 @@
     }
   },
   "home": {
-    "title": "DebateOwl",
-    "subtitle": "Elige un modo para comenzar.",
     "prepare": "Preparar",
     "practice": "Practicar",
     "utilities": "Utilidades",
@@ -366,15 +364,15 @@
     "heading": "¿En qué estás trabajando?"
   },
   "generate": {
-    "emptyTitle": "Tu caso te espera",
-    "emptyDesc": "Completa el formulario para generar un caso de debate estructurado con argumentos, evidencia y contra-estrategias.",
+    "emptyTitle": "Tu caso aparecerá aquí",
+    "emptyDesc": "Añade una moción, elige tu lado y genera.",
     "saved": "Caso guardado",
     "savedDesc": "Tu caso ha sido guardado en el historial.",
     "savePrompt": "Ingresa un título para este caso:",
     "failed": "Error al generar",
     "timeout": "Tiempo agotado",
     "timeoutDesc": "La IA tardó demasiado en responder. Inténtalo de nuevo.",
-    "authRequired": "Autenticación requerida",
+    "authRequired": "Inicia sesión para continuar",
     "flowchartImported": "Caso importado",
     "flowchartImportedDesc": "Tu caso se importó a Diagramas.",
     "flowchartImportFailed": "Error al importar",
@@ -394,22 +392,22 @@
     "flowchartOtherDebate": "El diagrama solo acepta un caso generado en el debate actual. Genera el caso aquí para enviarlo."
   },
   "attack": {
-    "emptyTitle": "Modo sin piedad",
-    "emptyDesc": "Pega tu argumento para recibir críticas despiadadas, identificar falacias lógicas y obtener mejoras accionables.",
+    "emptyTitle": "Tu crítica aparecerá aquí",
+    "emptyDesc": "Pega un argumento para encontrar sus puntos débiles.",
     "failed": "Error en el análisis de ataque",
     "working": "Revisando tu caso…",
     "previousCritique": "Crítica de tu argumento anterior",
     "previousCritiqueDesc": "Tu última versión no se revisó, así que esta crítica puede no coincidir con el texto del formulario."
   },
   "brainstorm": {
-    "emptyTitle": "Desbloquea ángulos creativos",
-    "emptyDesc": "Describe tu moción para explorar ángulos de argumentación no convencionales, identificar compromisos y encontrar tus posiciones más fuertes.",
+    "emptyTitle": "Tus ángulos aparecerán aquí",
+    "emptyDesc": "Describe una moción para explorar nuevos ángulos.",
     "failed": "Error en la lluvia de ideas",
     "working": "Buscando enfoques…"
   },
   "factoids": {
-    "emptyTitle": "Evidencia que gana",
-    "emptyDesc": "Ingresa una afirmación para encontrar datos de apoyo con citas reales, contexto y guía sobre cómo usarlos efectivamente.",
+    "emptyTitle": "Tu evidencia aparecerá aquí",
+    "emptyDesc": "Escribe una afirmación para encontrar evidencia con citas.",
     "failed": "Error en la investigación",
     "savedToLibrary": "Guardado en biblioteca",
     "savedToLibraryDesc": "Esta evidencia ahora está disponible para fundamentación.",
@@ -417,7 +415,7 @@
     "working": "Buscando evidencia…"
   },
   "ask": {
-    "failed": "Error",
+    "failed": "Algo salió mal",
     "timeout": "Tiempo agotado",
     "timeoutDesc": "La solicitud tardó demasiado. Inténtalo de nuevo.",
     "saved": "Guardado",
@@ -466,7 +464,7 @@
     "promoAccessUntil": "Tu acceso Pro viene de un código promocional y dura hasta el {{date}}. Hasta entonces la facturación es opcional; configúrala solo si quieres seguir en Pro después de esa fecha.",
     "promoAccess": "Tu acceso Pro viene de un código promocional, así que la facturación es opcional.",
     "accessExpired": "Tu acceso ha caducado. Mejora el plan para seguir usando las herramientas de IA.",
-    "globalSettings": "Ajustes globales",
+    "globalSettings": "Ajustes generales",
     "account": "Cuenta",
     "accountDesc": "Cómo inicias sesión y una copia de todo lo guardado en tu cuenta.",
     "signedInAs": "Sesión iniciada como",
@@ -490,7 +488,7 @@
     "envSwitchDesc": "Se cerrará tu sesión y la app se recargará apuntando a {{target}}. Tendrás que iniciar sesión de nuevo.",
     "envSwitchConfirm": "Cambiar y cerrar sesión",
     "stagingBanner": "Backend de staging",
-    "dangerZone": "Zona de peligro",
+    "dangerZone": "Eliminar datos",
     "dangerDesc": "Elimina permanentemente todos tus datos guardados. Solo afecta a tu cuenta ({{email}}).",
     "deleteAllData": "Eliminar todos mis datos",
     "deleteDialogTitle": "Eliminar todos los datos",
@@ -875,8 +873,9 @@
   },
   "notFound": {
     "title": "404",
-    "message": "¡Ups! Página no encontrada",
-    "link": "Volver al inicio"
+    "message": "Página no encontrada",
+    "link": "Volver al inicio",
+    "description": "Ese enlace no lleva a ninguna parte. Puede que se haya movido."
   },
   "footer": {
     "terms": "Términos",
@@ -950,7 +949,7 @@
     "crossfireDesc": "Practica preguntas y respuestas precisas en un intercambio cronometrado.",
     "sparring": "Sparring",
     "sparringDesc": "Practica una ronda cronometrada contra un oponente y revisa la tarjeta de puntuación.",
-    "library": "Biblioteca de fuentes",
+    "library": "Biblioteca",
     "libraryDesc": "Gestiona fuentes que fundamentan las respuestas de IA con evidencia real.",
     "timer": "Cronómetro de debate",
     "timerDesc": "Practica con controles de tiempo precisos de torneo.",
@@ -992,7 +991,7 @@
     "judgeSubtitle": "Profundiza tu análisis"
   },
   "pricing": {
-    "title": "Precios simples y transparentes",
+    "title": "Precios simples y claros",
     "subtitle": "Comienza gratis, mejora cuando estés listo.",
     "trial": "Prueba",
     "trialPrice": "$0",
@@ -1074,7 +1073,7 @@
     }
   },
   "finalCta": {
-    "title": "¿Listo para construir tu próximo caso ganador?",
+    "title": "¿Listo para construir tu próximo caso?",
     "subtitle": "Únete a debatientes que se preparan mejor con IA.",
     "cta": "Lanzar DebateOwl",
     "freeTrialAvailable": "Prueba gratuita disponible"
@@ -1124,7 +1123,7 @@
     }
   },
   "rateLimit": {
-    "title": "Límite de solicitudes excedido"
+    "title": "Demasiadas solicitudes"
   },
   "generateForm": {
     "motion": "Moción / tema",
@@ -1151,9 +1150,9 @@
     "toneFormal": "Formal",
     "toneConversational": "Conversacional",
     "toneAggressive": "Agresivo",
-    "generating": "Generando caso...",
+    "generating": "Generando caso…",
     "submit": "Generar caso de debate",
-    "listening": "Escuchando... Dicta tu moción claramente",
+    "listening": "Escuchando… Dicta tu moción claramente",
     "stopListening": "Dejar de escuchar",
     "startVoice": "Iniciar entrada de voz",
     "stopVoice": "Detener entrada de voz",
@@ -1437,9 +1436,9 @@
     "options": "Opciones"
   },
   "limitModal": {
-    "trialEnded": "Prueba gratuita finalizada",
+    "trialEnded": "Tu prueba gratuita ha terminado",
     "trialEndedDesc": "Tu prueba gratuita de {{days}} días ha terminado. Mejora a Pro para seguir usando DebateOwl.",
-    "limitReached": "Acceso diario pausado",
+    "limitReached": "Usos diarios de IA agotados",
     "limitReachedDesc": "Has usado {{current}} de {{limit}} usos de IA incluidos hoy. El acceso se renueva a medianoche UTC.",
     "weightedDesc": "Este modelo cuenta como {{units}} usos y te quedan {{remaining}} hoy. Elige un modelo más ligero o espera a la medianoche UTC.",
     "weightedTooLargeDesc": "Este modelo cuenta como {{units}} usos, más que tu límite diario de {{limit}}. Elige un modelo más ligero.",
@@ -1451,7 +1450,7 @@
     "gotIt": "Entendido",
     "paymentFailed": "Pago fallido",
     "paymentFailedDesc": "Tu último pago falló. Actualiza tu método de pago en Ajustes para seguir usando DebateOwl.",
-    "subscriptionEnded": "Suscripción Pro finalizada",
+    "subscriptionEnded": "Tu suscripción Pro ha terminado",
     "subscriptionEndedDesc": "Tu suscripción Pro ha terminado. Vuelve a suscribirte para seguir usando DebateOwl.",
     "subscriptionEndedOnDesc": "Tu suscripción Pro terminó el {{date}}. Vuelve a suscribirte para seguir usando DebateOwl.",
     "updatePayment": "Actualizar método de pago",
@@ -1512,12 +1511,12 @@
     "freePeriod_other": "durante {{count}} días"
   },
   "onboarding": {
-    "welcome": "¡Bienvenido a DebateOwl! 🎉",
-    "ready": "¡Estás listo! 🚀",
-    "readyDesc": "Elige el modo que se ajuste a lo que necesitas para la próxima ronda.",
+    "welcome": "Bienvenido a DebateOwl",
+    "ready": "Estás listo",
+    "readyDesc": "Elige una herramienta para tu próxima ronda.",
     "back": "Atrás",
     "close": "Cerrar",
-    "getStarted": "¡Comenzar!",
+    "getStarted": "Comenzar",
     "next": "Siguiente",
     "nextWithProgress": "Siguiente (paso {step} de {steps})",
     "skip": "Saltar tour",
@@ -1530,12 +1529,12 @@
   },
   "debateOwlIntro": {
     "greeting": "¡Hola, soy DebateOwl!",
-    "greetingNamed": "¡Hola, soy {{name}}, el búho de DebateOwl!",
+    "greetingNamed": "¡Hola, soy {{name}}!",
     "newLook": "DebateLab tiene un aspecto nuevo.",
     "company": "Te haré compañía mientras algo carga.",
     "sameTools": "Las mismas herramientas de siempre, en su sitio.",
     "noticeTitle": "DebateLab se está convirtiendo en DebateOwl",
-    "noticeBody": "La misma app, la misma cuenta y el mismo trabajo guardado, con un aspecto y un nombre nuevos. El nombre nuevo ayuda a que más gente nos encuentre en Google.",
+    "noticeBody": "Tu cuenta y tu trabajo guardado siguen igual.",
     "skipAnimation": "Saltar animación",
     "done": "Entendido"
   },
@@ -1626,8 +1625,8 @@
     "typeField": "Tipo",
     "strengthField": "Fuerza",
     "labelPlaceholder": "Etiqueta corta...",
-    "titlePlaceholder": "Título del diagrama...",
-    "descPlaceholder": "Descripción...",
+    "titlePlaceholder": "Título del diagrama…",
+    "descPlaceholder": "Descripción…",
     "typeArgument": "Argumento",
     "typeAttack": "Ataque",
     "typeRebuttal": "Refutación",
@@ -1641,10 +1640,10 @@
     "legendAttack": "Ataque",
     "legendRebuttal": "Refutación",
     "legendDropped": "Abandonado",
-    "savedToast": "Diagrama guardado exitosamente",
-    "saveFailedToast": "Error al guardar diagrama",
+    "savedToast": "Diagrama guardado",
+    "saveFailedToast": "No se pudo guardar el diagrama",
     "loadedToast": "Diagrama cargado",
-    "deleteFailedToast": "Error al eliminar diagrama",
+    "deleteFailedToast": "No se pudo eliminar el diagrama",
     "starter": {
       "thesisLabel": "Tu tesis",
       "thesisDesc": "Haz clic para editar o añadir nuevos nodos",
@@ -1756,7 +1755,7 @@
     "openCrossfireAria": "Abrir ronda de interrogatorio: {{title}}"
   },
   "libraryPage": {
-    "title": "Biblioteca de fuentes",
+    "title": "Biblioteca",
     "addSource": "Añadir fuente",
     "cancel": "Cancelar",
     "clearAll": "Borrar todo",
@@ -1797,8 +1796,8 @@
     "duplicateSourceDesc": "Esta URL o archivo ya está guardado.",
     "fileReadFailed": "No se pudo leer este archivo.",
     "saveToLibrary": "Guardar en biblioteca",
-    "addNewTitle": "Añadir nueva fuente",
-    "yourKBTitle": "Tu base de conocimiento",
+    "addNewTitle": "Añadir una fuente",
+    "yourKBTitle": "Tu biblioteca",
     "titleLabel": "Título",
     "originLabel": "Origen",
     "contentLabel": "Contenido",
@@ -2304,7 +2303,7 @@
     "sourceLibraryEmpty": "Aún no tienes fuentes activas en tu Biblioteca.",
     "seedQuestionsLabel": "Preguntas iniciales (opcional)",
     "start": "Iniciar interrogatorio",
-    "loading": "Cargando el interrogatorio...",
+    "loading": "Cargando el interrogatorio…",
     "thinking": "El coach está pensando...",
     "retryResponse": "Reintentar respuesta",
     "timeout": "La solicitud agotó el tiempo",
@@ -2539,7 +2538,7 @@
     "instructionsNotUsed": "Se incluyen los ajustes de tu debate. Las instrucciones libres no se usan aquí, así que no pueden cambiar cómo se desarrolla este intercambio.",
     "sourcesHeading": "Fuentes de la biblioteca",
     "sparringNoSources": "Las rondas de sparring en vivo usan solo la transcripción, la moción y los ajustes de tu debate.",
-    "sourcesOff": "La biblioteca de fuentes está desactivada para esta solicitud.",
+    "sourcesOff": "La biblioteca está desactivada para esta solicitud.",
     "noSources": "Este debate aún no tiene fuentes en la biblioteca.",
     "resultsHeading": "Resultados guardados",
     "sparringNoResults": "Los resultados guardados quedan fuera de las rondas en vivo para que el oponente y el juez respondan solo a lo que se dice.",
@@ -2627,10 +2626,10 @@
     "genericProvider": "El proveedor de IA",
     "quota": "{{provider}} superó su cuota. Avisa al administrador del sitio.",
     "config": "{{provider}} no está bien configurado. Avisa al administrador del sitio.",
-    "rateLimit": "{{provider}} superó el límite de solicitudes. Inténtalo más tarde.",
-    "unavailable": "{{provider}} no está disponible por ahora. Inténtalo más tarde.",
+    "rateLimit": "{{provider}} superó el límite de solicitudes. Inténtalo de nuevo en un minuto.",
+    "unavailable": "{{provider}} no está disponible por ahora. Inténtalo de nuevo en un minuto.",
     "safety": "{{provider}} bloqueó esta solicitud por seguridad. Prueba a reformularla.",
-    "unexpectedProvider": "El proveedor de IA devolvió un error inesperado. Inténtalo más tarde.",
+    "unexpectedProvider": "El proveedor de IA devolvió un error inesperado. Inténtalo de nuevo en un minuto.",
     "invalidOutput": "La respuesta de la IA llegó con un formato incorrecto. Inténtalo de nuevo.",
     "unexpected": "Se produjo un error inesperado",
     "offline": "Comprueba tu conexión e inténtalo de nuevo.",
@@ -2729,7 +2728,7 @@
     "alreadySubscribed": "Ya tienes una suscripción. Gestiónala desde Ajustes.",
     "promoExpired": "Este código promocional ha caducado",
     "promoExhausted": "Este código promocional ha alcanzado su límite de usos",
-    "promoApplied": "¡Código promocional aplicado!",
+    "promoApplied": "Código promocional aplicado",
     "promoDiscountNoted": "¡Código de descuento guardado! Se aplicará cuando mejores tu plan.",
     "promoInvalid": "Código promocional no válido o caducado",
     "promoAlreadyRedeemed": "Ya has canjeado este código",
