@@ -19,18 +19,17 @@ const FAQ = () => {
     ];
 
     return (
-        <section id="faq" aria-labelledby="faq-title" className="bg-secondary/5 py-24">
+        <section id="faq" aria-labelledby="faq-title" className="bg-secondary/5 py-12 md:py-20">
             <div className="section-container max-w-3xl">
-                <Reveal className="mb-12 text-center">
-                    <h2 id="faq-title" className="section-heading mb-4">{t('faq.title')}</h2>
-                    <p className="text-muted-foreground">{t('faq.subtitle')}</p>
+                <Reveal className="mb-6 text-center md:mb-10">
+                    <h2 id="faq-title" className="section-heading">{t('faq.title')}</h2>
                 </Reveal>
 
                 {/* Native disclosure: closed answers stay in the HTML, so crawlers and find-in-page see them. */}
                 <Reveal delay={0.05}>
                     {faqs.map((faq) => (
                         <details key={faq.question} className="group border-b">
-                            <summary className="flex cursor-pointer list-none items-center justify-between gap-4 rounded-sm py-4 text-left text-lg font-medium transition-colors duration-150 hover:text-primary focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring [&::-webkit-details-marker]:hidden">
+                            <summary className="flex cursor-pointer list-none items-center justify-between gap-4 rounded-sm py-4 text-left font-bold md:text-lg transition-colors duration-150 hover:text-primary focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring [&::-webkit-details-marker]:hidden">
                                 {faq.question}
                                 <ChevronDown aria-hidden="true" className="h-4 w-4 shrink-0 transition-transform duration-150 ease-out-strong group-open:rotate-180" />
                             </summary>

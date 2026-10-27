@@ -1,6 +1,6 @@
 import { useTranslation } from "react-i18next";
 import { Reveal } from "./Reveal";
-import { ArrowRight, Sparkles } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useRoutePrefetch } from "@/hooks/use-route-prefetch";
 
@@ -9,7 +9,7 @@ const FinalCTA = () => {
     const appPrefetch = useRoutePrefetch("/app");
 
     return (
-        <section className="relative overflow-hidden py-24">
+        <section className="relative overflow-hidden py-14 md:py-24">
             <div className="absolute inset-0 bg-linear-to-br from-primary/10 via-secondary/10 to-[rgb(255_196_20/0.14)]" />
             <div className="absolute inset-0 animated-grid opacity-45" />
 
@@ -18,19 +18,10 @@ const FinalCTA = () => {
 
             <div className="section-container relative z-10">
                 <Reveal className="mx-auto max-w-3xl text-center">
-                    <div className="mb-6 inline-flex items-center gap-2 rounded-full border-2 border-brand-tint-border bg-brand-tint px-4 py-2 text-sm font-bold text-foreground">
-                        <Sparkles aria-hidden="true" className="h-4 w-4 text-primary" />
-                        {t('finalCta.freeTrialAvailable')}
-                    </div>
-
                     <h2 className="section-heading">{t('finalCta.title')}</h2>
 
-                    <p className="mt-6 text-lg text-muted-foreground md:text-xl">
-                        {t('finalCta.subtitle')}
-                    </p>
-
-                    <div className="mt-10 inline-flex">
-                        <Link to="/app" {...appPrefetch} className="btn-primary-gradient inline-flex items-center gap-3 px-10 py-5 text-lg">
+                    <div className="mt-8 flex justify-center">
+                        <Link to="/app" {...appPrefetch} className="btn-primary-gradient inline-flex w-full items-center justify-center gap-3 px-10 py-4 text-lg sm:w-auto md:py-5">
                             <span className="relative z-10">{t('finalCta.cta')}</span>
                             <ArrowRight aria-hidden="true" className="relative z-10 h-5 w-5" />
                         </Link>
