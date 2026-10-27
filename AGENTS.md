@@ -26,7 +26,7 @@ The local Supabase stack still uses shared default ports and container names. In
 
 ## Deployment
 
-The frontend is hosted on Vercel at `https://debate.pi-stack.org`. Merging to `main` starts a Vercel production deployment, so a merge ships the frontend. Supabase migrations and Edge Functions are not deployed to production by that merge; production deploys are separate authorized operations. Staging syncs itself from `main` within about 5 minutes through a VPS timer; [docs/staging.md](docs/staging.md) is the one place for staging access, seed data, and the sync. `npm run backend:status` (read-only) lists what the linked project is missing; run it before any backend deploy.
+The frontend is hosted on Vercel at `https://debateowl.com`. Merging to `main` starts a Vercel production deployment, so a merge ships the frontend. Supabase migrations and Edge Functions are not deployed to production by that merge; production deploys are separate authorized operations. Staging syncs itself from `main` within about 5 minutes through a VPS timer; [docs/staging.md](docs/staging.md) is the one place for staging access, seed data, and the sync. `npm run backend:status` (read-only) lists what the linked project is missing; run it before any backend deploy.
 
 Vercel previews are opt-in. A push to `main` deploys both Vercel projects (production, and the staging project's site, which also tracks `main`). A push to any other branch does not create a deployment and does not count toward the daily cap. Request a hosted preview only when there is a real UI change to check. From the repo root, with the Vercel CLI logged in (`vercel login`, or `VERCEL_TOKEN` in the environment; never in the repo):
 

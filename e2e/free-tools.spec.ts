@@ -1,6 +1,6 @@
 import { test, expect, type Page } from '@playwright/test';
 
-const ORIGIN = 'https://debate.pi-stack.org';
+const ORIGIN = 'https://debateowl.com';
 const TOOL_PAGES = [
   { path: '/tools', h1: 'Free debate tools', type: 'CollectionPage' },
   { path: '/tools/debate-timer', h1: 'Free debate timer for every format', type: 'WebApplication' },

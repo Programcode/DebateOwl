@@ -108,7 +108,7 @@ async function runScenario({
         action_link: "https://supabase.test/verify",
         email_otp: "123456",
         hashed_token: "test-token-hash",
-        redirect_to: "https://debate.pi-stack.org",
+        redirect_to: "https://debateowl.com",
         verification_type: "magiclink",
         id: "33333333-3333-4333-8333-333333333333",
         email: demoCode.email,

@@ -1,4 +1,4 @@
-DebateOwl by Pi-Stack
-Site: https://debate.pi-stack.org/
+DebateOwl
+Site: https://debateowl.com/
 Purpose: AI debate preparation for students and competitive debaters.
 Key pages: /, /ai-debate-practice, /ai-debate-case-generator, /debate-rebuttal-practice, /debatelab-pricing

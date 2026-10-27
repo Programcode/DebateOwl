@@ -46,7 +46,7 @@ Deno.test("create-portal answers a Stripe failure with a fixed error, not Stripe
     new Request("http://127.0.0.1/functions/v1/create-portal", {
       method: "POST",
       headers: { "Content-Type": "application/json", ...(authorization ? { Authorization: authorization } : {}) },
-      body: JSON.stringify({ returnUrl: "https://debate.pi-stack.org/app/settings" }),
+      body: JSON.stringify({ returnUrl: "https://debateowl.com/app/settings" }),
     });
   await runBearerCases(handleRequest, sendWithReturnUrl, [{
     label: "Stripe rejects the portal session",

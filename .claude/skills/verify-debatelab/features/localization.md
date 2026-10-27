@@ -1,6 +1,6 @@
 # Localization
 
-The interface runs in English, Spanish and Hungarian. Every page names itself in the tab title in the interface language ("Generálás · DebateOwl" in the app, "Felhasználási feltételek | DebateOwl by Pi-Stack" on public pages), form validation and server refusals read in that language, the language switcher sits in every header, and `?lang=es|hu|en` links and the Hungarian and Spanish pages (`/hu`, `/es`, `/hu/tools/…`, `/es/tools/…`) open the app in that language.
+The interface runs in English, Spanish and Hungarian. Every page names itself in the tab title in the interface language ("Generálás · DebateOwl" in the app, "Felhasználási feltételek | DebateOwl" on public pages), form validation and server refusals read in that language, the language switcher sits in every header, and `?lang=es|hu|en` links and the Hungarian and Spanish pages (`/hu`, `/es`, `/hu/tools/…`, `/es/tools/…`) open the app in that language.
 
 ## Sub-features
 

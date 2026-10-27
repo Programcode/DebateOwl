@@ -1,7 +1,7 @@
 {
-  "origin": "https://debate.pi-stack.org",
+  "origin": "https://debateowl.com",
   "product": "DebateOwl",
-  "brand": "DebateOwl by Pi-Stack",
+  "brand": "DebateOwl",
   "organization": "Pi-Stack",
   "organizationSameAs": ["https://pi-stack.org/"],
   "factsCheckedOn": "2026-10-20",

@@ -288,7 +288,7 @@ PROD_SUPABASE_ANON_KEY=... PROD_CANARY_EMAIL=... PROD_CANARY_PASSWORD=... \
 npx playwright test --config=playwright.production.config.ts
 ```
 
-`e2e/production/canary.spec.ts` checks `https://debate.pi-stack.org` directly:
+`e2e/production/canary.spec.ts` checks `https://debateowl.com` directly:
 
 - the site loads and signed-out app routes redirect to Login;
 - every browser-facing Edge Function answers a preflight that allows the site origin (`workspace-invites` is excluded until production enables Workspaces);

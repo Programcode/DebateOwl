@@ -9,6 +9,7 @@ type StripeCustomerLike = {
 };
 
 const ALLOWED_CHECKOUT_CALLBACKS = new Set([
+  "https://debateowl.com",
   "https://debate.pi-stack.org",
   "http://localhost:8080",
   "http://127.0.0.1:8080",

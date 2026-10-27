@@ -1,6 +1,7 @@
 import { HttpError, requireUser } from "../_shared/auth.ts";
 
 const ALLOWED_ORIGINS = [
+  "https://debateowl.com",
   "https://debate.pi-stack.org",
   "http://localhost:8080",
   "http://127.0.0.1:8080",
@@ -355,7 +356,7 @@ export async function handleRequest(req: Request, dependencies?: Dependencies) {
         if (!Number.isFinite(expiresAt) || expiresAt <= Date.now()) {
           throw new HttpError(503, "Invitation email is unavailable");
         }
-        const baseUrl = (delivery.baseUrl || "https://debate.pi-stack.org")
+        const baseUrl = (delivery.baseUrl || "https://debateowl.com")
           .replace(/\/$/, "");
         try {
           await delivery.sender({
