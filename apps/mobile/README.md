@@ -1,6 +1,6 @@
-# DebateLab mobile
+# DebateOwl mobile
 
-The DebateLab iOS app, built with Expo and Expo Router. It shares `@debatelab/core` and the translation catalogs with the website and talks to the staging Supabase project by default.
+The DebateOwl iOS app, built with Expo and Expo Router. It shares `@debatelab/core` and the translation catalogs with the website and talks to the staging Supabase project by default.
 
 Agent and contributor rules are in [AGENTS.md](AGENTS.md). Running it on an iPhone with Expo Go is described in [docs/development.md](../../docs/development.md#mobile-app).
 
