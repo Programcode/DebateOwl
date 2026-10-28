@@ -38,7 +38,7 @@ ANSWERS = {
     ),
     "debate-rebuttal-practice": (
         "How do you find the weak link in an argument you need to rebut?",
-        "Start with the warrant, because a claim without a warrant gives the judge nothing to weigh, so the reason behind a claim is usually the link to attack. Then choose your move: deny the claim, attack the warrant, mitigate the impact, turn it or outweigh it. Write each answer as a short block with a tag line, the response and why it matters, and deliver it in under forty-five seconds. An AI analysis can point out missing warrants and overclaimed impacts, but in round you still adapt each block to what the opponent actually said.",
+        "Start with the reason behind the claim: does it actually prove the point? An unexplained claim gives the judge little reason to believe it. Then choose your move: deny the claim, challenge the reason, reduce the claimed harm, turn it or outweigh it. Write each answer as a short block with a tag line, the response and why it matters, and deliver it in under forty-five seconds. An AI analysis can point out missing reasons and overstated effects, but in round you still adapt each block to what the opponent actually said.",
     ),
     "ai-debate-coach": (
         "Can an AI debate coach actually help you prepare?",
@@ -46,7 +46,7 @@ ANSWERS = {
     ),
     "debate-evidence-finder": (
         "Can AI find reliable evidence for a debate case?",
-        "AI can find leads, not reliable evidence on its own. It is good at suggesting where to look and which searches to run, but a summary can lose a qualification, mix up two studies or point to a page that says something different. Open every original, check the author, date, publication, method and the text around the quote, and record the full citation. If the evidence is weak, do not read it. Narrow your claim or make the argument analytically, because a clear warrant often beats a card that falls apart under one question.",
+        "AI can find leads, not reliable evidence on its own. It is good at suggesting where to look and which searches to run, but a summary can lose a qualification, mix up two studies or point to a page that says something different. Open every original, check the author, date, publication, method and the text around the quote, and record the full citation. If the evidence is weak, do not read it. Narrow your claim or make the argument analytically, because clear reasoning often beats a quote that falls apart under one question.",
     ),
     "argument-flowchart": (
         "When is an argument flowchart useful for debate prep?",
@@ -58,19 +58,19 @@ ANSWERS = {
     ),
     "how-to-write-a-debate-case": (
         "How do you write a debate case?",
-        "Start with the motion, not the arguments. Define the key terms fairly and write down in one sentence what your side has to prove. Keep two to four arguments, each with a point, an explanation, evidence and why it matters. Open with a hook and what you will show, add \"If they say… we answer…\" replies, end on a closing line, and time a reading aloud. The format changes the details: Public Forum constructives usually fit two arguments, Lincoln-Douglas cases centre on a value and criterion, and BP closing teams prepare an extension instead.",
+        "A {product} case has an opening, two to four arguments (three by default) each with an explanation, evidence and why it matters, \"If they say… we answer…\" replies, a closing line and the sources it used. Start by defining the motion fairly and writing what your side must prove. Check every source, rewrite the draft in your own words and time a reading aloud. Adjust for your format: Public Forum usually fits two arguments; Lincoln-Douglas uses a goal and a test for meeting it; BP closing teams need a new angle.",
     ),
     "how-to-practice-rebuttals": (
         "What is the best way to practise debate rebuttals?",
-        "Use short, frequent drills that copy the pressure of a round: arguments you did not write, a clock, and feedback on one thing. Three or four sessions of 20 to 30 minutes a week, each training one skill, beat one long session. New debaters should start with selection, picking the argument that decides the round, then move on to warrant attacks, grouping and weighing under time. Shadow rebuttals and flipping your own case work alone, while one-sentence answers and rapid fire need a partner. Score each speech on the same five questions to track progress.",
+        "Use short, frequent drills that copy the pressure of a round: arguments you did not write, a clock, and feedback on one thing. Three or four sessions of 20 to 30 minutes a week, each training one skill, beat one long session. New debaters should start with selection, picking the argument that decides the round, then move on to challenging reasons, grouping and weighing under time. Shadow rebuttals and flipping your own case work alone, while one-sentence answers and rapid fire need a partner. Score each speech on the same five questions to track progress.",
     ),
     "public-forum-debate": (
         "How do you prepare for a Public Forum debate round?",
-        "Write cases for both sides, because you often learn your side shortly before the round. A constructive is four minutes, so plan two contentions with warrants and evidence. Decide in advance which one or two issues you would collapse to, since anything you want in final focus has to be in summary first. Treat crossfire as questioning that sets up your next speech. How you present depends on the judge: for lay judges, run fewer arguments, signpost clearly and speak at a normal pace. Under common rules, speeches run 4-4-3-2 minutes with three 3-minute crossfires.",
+        "Write cases for both sides, because you often learn your side shortly before the round. A constructive is four minutes, so plan two arguments, each with an explanation, evidence and why it matters. Decide in advance which one or two issues you would collapse to, since anything you want in final focus has to be in summary first. Treat crossfire as questioning that sets up your next speech. How you present depends on the judge: for lay judges, run fewer arguments, signpost clearly and speak at a normal pace. Under common rules, speeches run 4-4-3-2 minutes with three 3-minute crossfires.",
     ),
     "lincoln-douglas-debate": (
         "How do you build a Lincoln-Douglas debate case?",
-        "Choose a value the resolution should be judged by and a criterion narrow enough to tell the judge which impacts count. Then write two or three contentions that each prove your side meets that criterion, and expect the negative to accept your framework and argue you fail it. Under NSDA rules the affirmative constructive is six minutes and the negative's is seven, which fits one framework and two or three contentions. Prepare cross-examination questions that pin down the opponent's framework, and blocks for the arguments you expect most.",
+        "Choose a value (the goal the judge should protect) and a criterion (the test for meeting that goal). Then write two or three contentions that each prove your side meets that criterion, and expect the negative to accept your framework (how the judge should decide) and argue you fail its test. Under NSDA rules the affirmative constructive is six minutes and the negative's is seven, which fits one framework and two or three contentions. Prepare cross-examination questions that pin down the opponent's framework, and blocks for the arguments you expect most.",
     ),
     "policy-debate": (
         "What do you need to prepare for policy debate?",
@@ -86,7 +86,7 @@ ANSWERS = {
     ),
     "world-schools-debate": (
         "How does World Schools debate work, and how should a team prepare?",
-        "Two teams of three speakers each give eight-minute substantive speeches, then each team gives a four-minute reply, opposition first, delivered by its first or second speaker. Prepare by interpreting the motion: define terms, give a model for policy motions, name the stakeholders and write each side's burden. Practise every role, because first, second, third and reply speakers owe the team different things. Motions are prepared or impromptu, so also practise preparing within an hour. Offer short Points of Information aimed at a warrant, and as a general rule accept at least two.",
+        "Two teams of three speakers each give eight-minute substantive speeches, then each team gives a four-minute reply, opposition first, delivered by its first or second speaker. Prepare by interpreting the motion: define terms, give a model for policy motions, name the stakeholders and write each side's burden. Practise every role, because first, second, third and reply speakers owe the team different things. Motions are prepared or impromptu, so also practise preparing within an hour. Offer short Points of Information aimed at the reason behind a point, and as a general rule accept at least two.",
     ),
     "how-to-weigh-in-debate": (
         "How do you weigh arguments in a debate?",
@@ -94,7 +94,7 @@ ANSWERS = {
     ),
     "how-to-cross-examine-in-debate": (
         "How do you cross-examine well in a debate?",
-        "Ask short, closed questions that get commitments you can use in your next speech, rather than open questions that let the speaker repeat their case. A good line commits the speaker to something, narrows it, then stops before they can explain it away. A three-minute period fits two or three lines, so pick the ones that attack the warrant the round depends on. Repeat any concession in your speech and weigh it, because judges decide on what the next speech does with cross-ex. In World Schools and British Parliamentary, Points of Information do this job instead.",
+        "Ask short, closed questions that get commitments you can use in your next speech, rather than open questions that let the speaker repeat their case. A good line commits the speaker to something, narrows it, then stops before they can explain it away. A three-minute period fits two or three lines, so pick the ones that challenge the reason the round depends on. Repeat any concession in your speech and weigh it, because judges decide on what the next speech does with cross-ex. In World Schools and British Parliamentary, Points of Information do this job instead.",
     ),
     "how-to-prepare-for-a-debate-tournament": (
         "How do you prepare for a debate tournament?",
@@ -102,7 +102,7 @@ ANSWERS = {
     ),
     "how-to-flow-in-debate": (
         "How do you flow a debate round?",
-        "Take notes in columns, one per speech in speaking order, with a separate sheet or section for each side's case. Write each argument's tag in a few words with the warrant underneath, use two colours, and leave space. A short, consistent set of abbreviations lets you keep up. Mark any argument with nothing next to it in the next column as dropped, since most formats treat it as conceded. Paper and a laptop both work. In British Parliamentary and World Schools, many debaters flow by clash instead of strictly by speech.",
+        "Take notes in columns, one per speech in speaking order, with a separate sheet or section for each side's case. Write each argument's tag in a few words with the reason it is true underneath, use two colours, and leave space. A short, consistent set of abbreviations lets you keep up. Mark any argument with nothing next to it in the next column as dropped, since most formats treat it as conceded. Paper and a laptop both work. In British Parliamentary and World Schools, many debaters flow by clash instead of strictly by speech.",
     ),
     "ai-rebuttal-generator": (
         "Is an AI rebuttal generator worth using for debate prep?",
@@ -114,7 +114,7 @@ ANSWERS = {
     ),
     "debate-clash-points": (
         "How do you find the key clash in a debate and collapse to it?",
-        "List every open disagreement on your flow, then ask of each one whether winning it alone wins you the round and whether losing it loses you the round. The clash that passes both tests, and where your warrant is stronger, is the one to go for. In your last speeches, say plainly that you are going for it, respond to the opponent's attacks on it and weigh it against their best point. Drop the rest, unless an argument has been turned against you, which you still have to answer.",
+        "List every open disagreement on your flow, then ask of each one whether winning it alone wins you the round and whether losing it loses you the round. The clash that passes both tests, and where your reasoning is stronger, is the one to go for. In your last speeches, say plainly that you are going for it, respond to the opponent's attacks on it and weigh it against their best point. Drop the rest, unless an argument has been turned against you, which you still have to answer.",
     ),
     "debate-fallacies": (
         "How do you attack a logical fallacy in a debate?",
@@ -126,7 +126,7 @@ ANSWERS = {
     ),
     "debate-speech-structure": (
         "How should you structure and deliver a debate speech?",
-        "Open with a one-sentence roadmap, signpost each section, and give each point as claim, warrant and impact. Constructives build the case and preview weighing; rebuttals start with the arguments the ballot depends on; final speeches collapse to one or two clashes and weigh them without new arguments. Budget each section's time before you speak. When delivering, slow down on signposts and the weighing line, pause so the judge can find their place, and practise any names you need to pronounce.",
+        "Open with a one-sentence roadmap, signpost each section, and explain each point, why it is true and why it matters. Constructives build the case and preview weighing; rebuttals start with the arguments the ballot depends on; final speeches collapse to one or two clashes and weigh them without new arguments. Budget each section's time before you speak. When delivering, slow down on signposts and the weighing line, pause so the judge can find their place, and practise any names you need to pronounce.",
     ),
     "debate-motion-analysis": (
         "How do you analyze a debate motion?",

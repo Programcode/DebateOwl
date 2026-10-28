@@ -54,7 +54,7 @@ GUIDES = {
                 {"h3": "Public Forum (PF)"},
                 "Sparring runs Public Forum with four-minute constructives and rebuttals, three-minute summaries and two-minute final focuses. Use the round to practise the hardest skill in PF: keeping summary and final focus consistent. Before each summary, write the two issues you will collapse on, and check after the round whether your final focus extended exactly those issues and nothing new.",
                 {"h3": "Lincoln-Douglas (LD)"},
-                "The Lincoln-Douglas round follows the standard times: six-minute affirmative constructive, seven-minute negative constructive, four-minute first affirmative rebuttal, six-minute negative rebuttal and three-minute second affirmative rebuttal. The 1AR is where most affirmatives lose. Run it repeatedly against the same negative constructive and practise grouping responses and cross-applying your framework, so four minutes covers seven.",
+                "The Lincoln-Douglas round follows the standard times: six-minute affirmative constructive, seven-minute negative constructive, four-minute first affirmative rebuttal, six-minute negative rebuttal and three-minute second affirmative rebuttal. The 1AR is where most affirmatives lose. Run it repeatedly against the same negative constructive and group similar responses and use the same test for how the judge should decide (your framework) across several arguments. That helps four minutes cover seven.",
             ]),
             ("How to tell whether practice is working", [
                 "Keep a short log for each session on paper or in a document. Track the same four things every time:",
@@ -333,7 +333,7 @@ GUIDES = {
     "debate-rebuttal-practice": {
         "modified": "2026-10-28",
         "features": [
-            ("Find weak warrants", "Paste an argument into Attack and get the links that fail: missing warrants, overclaimed impacts and assumptions the other side never proved."),
+            ("Find gaps in reasoning", "Paste an argument into Attack and get the links that fail: missing reasons, overstated effects and assumptions the other side never proved."),
             ("Build targeted blocks", "Each weakness comes with why it is weak, how the other side will attack it and a stronger version. Turn that into a short block; the analysis stays in your Current Debate."),
             ("Practice weighing and collapse", "Deliver rebuttals in a Sparring round and see in the verdict whether your weighing changed the outcome."),
         ],
@@ -342,12 +342,12 @@ GUIDES = {
                 "Every rebuttal is one of a small number of moves. Naming the move before you speak keeps the response short and makes it obvious to the judge what you have done:",
                 {"list": [
                     "Deny the claim: show the thing they say happens does not happen.",
-                    "Attack the warrant: accept the claim could be true, but show their reason for it does not prove it.",
+                    "Challenge the reason (debaters call this the warrant): accept that the claim could be true, but show that their explanation does not prove it.",
                     "Mitigate the impact: concede the mechanism but show the effect is smaller, rarer or slower than they said.",
                     "Turn it: show their argument actually supports your side.",
                     "Outweigh it: concede the point and show your impact matters more.",
                 ]},
-                "Attacking the warrant is usually the strongest choice, because a claim without a warrant gives the judge nothing to weigh. Turns are the most powerful when they work and the most dangerous when they do not, so practise them before using them in a round.",
+                "Challenging the reason is often the strongest choice, because an unexplained claim gives the judge little reason to believe it. Turns are the most powerful when they work and the most dangerous when they do not, so practise them before using them in a round.",
             ]),
             ("A 20-minute rebuttal drill", [
                 {"steps": [
@@ -364,7 +364,7 @@ GUIDES = {
                 {"example": {"title": "Motion: This house would ban zoos", "rows": [
                     ("Opposition argument:", "Zoos protect endangered species through captive breeding programmes, so a ban would push some species closer to extinction."),
                     ("Weak link:", "The argument assumes that captive breeding requires zoos as they exist now, with public display, rather than conservation centres run for that purpose."),
-                    ("Response (attack the warrant):", "Breeding programmes need specialist facilities and genetic management, not visitors. A ban on zoos as public attractions does not stop sanctuaries and conservation centres from running them."),
+                    ("Response (challenge the reason):", "Breeding programmes need specialist facilities and genetic management, not visitors. A ban on zoos as public attractions does not stop sanctuaries and conservation centres from running them."),
                     ("Response (mitigate):", "Most animals kept in zoos are not part of reintroduction programmes, so even if some breeding is lost, the protection the opposition claims is far smaller than their argument suggests."),
                     ("Weighing:", "Even at full strength, their benefit applies to a small number of species. Our harm, keeping animals in conditions that do not meet their needs for public entertainment, applies to every animal in every zoo."),
                     ("Forty-five second version:", "Their benefit is breeding, but breeding does not need an audience. Ban the attraction, keep the conservation centres, and their argument disappears."),
@@ -379,7 +379,7 @@ GUIDES = {
                 {"h3": "Public Forum (PF)"},
                 "In a four-minute rebuttal, the second-speaking team should answer the attacks made on its own case as well as attacking the opponent's, or those arguments will be hard to bring back in summary. Practise splitting the four minutes, and remember that what is not in summary should not appear in final focus.",
                 {"h3": "Lincoln-Douglas (LD)"},
-                "The 1AR has four minutes to answer seven minutes of negative material. Practise grouping similar responses, cross-applying your framework to several arguments at once, and saying the important responses first so the 2AR has something to extend. For the negative rebuttal, drill collapsing onto the one or two arguments that best outweigh.",
+                "The 1AR has four minutes to answer seven minutes of negative material. Group similar responses and use the same judging test across them. Give the most important answers first so the 2AR has something to build on. For the negative rebuttal, drill collapsing onto the one or two arguments that best outweigh.",
             ]),
             ("Use cross-examination to set up your rebuttal", [
                 "The best rebuttals often start in cross-examination. If an argument rests on an assumption, ask a question that gets the speaker to commit to it, then attack the assumption in your speech. Crossfire lets you practise this against the AI, asking questions or answering them, and each Crossfire ends with a debrief you can turn into new blocks.",
@@ -405,7 +405,7 @@ GUIDES = {
     "how-to-practice-rebuttals": {
         "modified": "2026-10-28",
         "features": [
-            ("A weekly drill plan", "Four short sessions a week, each training one rebuttal skill: selection, warrant attacks, grouping, and weighing under time."),
+            ("A weekly drill plan", "Four short sessions a week, each training one rebuttal skill: choosing what to answer, challenging reasons, grouping responses and weighing under time."),
             ("Drills that work alone or with a partner", "Shadow rebuttals, flip-the-flow, one-sentence answers and rapid-fire rounds, with a version for solo practice and one for teams."),
             ("A way to measure progress", "A five-point checklist to score each practice rebuttal, so you can tell whether the drills are changing your speeches."),
         ],
@@ -418,7 +418,7 @@ GUIDES = {
                 "The drills train four moves, and a finished rebuttal speech makes all four in this order:",
                 {"steps": [
                     "Select. Name the clash that decides the round and answer it first. Do not try to answer every argument.",
-                    "Attack the warrant. A claim without a warrant is an assertion, so break the reason they gave, not the conclusion they drew.",
+                    "Challenge the reason behind the claim (debaters call this the warrant). Show why that reason fails to prove the point.",
                     "Extend. Bring back your own strongest argument, show it survived their responses, and say what it still proves.",
                     "Frame the ballot. End by telling the judge why your side wins the clash that matters. If you do not give them that story, they will write their own.",
                 ]},
@@ -427,7 +427,7 @@ GUIDES = {
                 "Each session takes 20 to 30 minutes. Run them in this order, because each one depends on the skill before it.",
                 {"steps": [
                     "Selection (Monday). Read or listen to a full opposing constructive. Without answering anything, write down the one argument that decides the round if it stands, and one sentence saying why. Repeat with three different speeches. The goal is to stop treating every argument as equally important.",
-                    "Warrant attacks (Tuesday). Take five opposing claims and, for each, write the reason the other side gives for it. Then write one sentence attacking that reason, not the claim. If you cannot find their warrant, your rebuttal is that they never gave one.",
+                    "Challenging reasons (Tuesday). Take five opposing claims and, for each, write the reason the other side gives for it. Then write one sentence attacking that reason, not the claim. If they give no reason, point out that they have not explained why the claim is true.",
                     "Grouping (Thursday). Take a speech with six or more arguments and sort them into two or three groups that share an assumption. Answer each group once. This is the skill that saves the shortest rebuttal speeches in every format.",
                     "Weighing under time (Friday). Give a full rebuttal speech against the clock, and finish with thirty seconds that compare your impact with theirs on one measure: probability, magnitude, timeframe or who is affected.",
                 ]},
@@ -443,7 +443,7 @@ GUIDES = {
                 {"h3": "Rapid fire"},
                 "A partner reads eight short arguments in two minutes. You have two minutes to answer them all. Most debaters run out of time on the first three, which is exactly the habit the drill is meant to break: group, prioritise, move on.",
                 {"h3": "Response ladder"},
-                "For one argument, write five different responses: deny the claim, attack the warrant, mitigate the impact, turn it and outweigh it. Then rank them. Practising all five shows you which kind of response you lean on too much.",
+                "For one argument, write five different responses: deny the claim, challenge the reason, reduce the claimed harm, turn it and outweigh it. Then rank them. Practising all five shows you which kind of response you lean on too much.",
                 {"h3": "Drop audit"},
                 "After a practice round, go through your flow and circle every opposing argument you did not answer. For each one, decide whether dropping it was a choice or an accident. Accidents are what you drill next.",
                 {"h3": "Spar the \"If they say…\" claims"},
@@ -453,10 +453,10 @@ GUIDES = {
                 {"example": {"title": "Motion: This house would lower the voting age to 16", "rows": [
                     ("Opposing argument:", "Sixteen-year-olds lack the life experience to make informed political choices, so lowering the voting age would worsen the quality of democratic decisions."),
                     ("First attempt:", "That is not true, plenty of sixteen-year-olds are very mature and some adults are not informed either, so it is unfair to single out young people."),
-                    ("What went wrong:", "The answer is a counter-assertion followed by a fairness point. It never names the opponent's warrant (experience produces better choices) or explains why the judge should doubt it."),
+                    ("What went wrong:", "The answer is a counter-assertion followed by a fairness point. It never tests the idea that experience produces better choices or explains why the judge should doubt it."),
                     ("Rebuilt response:", "Their argument needs experience to be the thing that makes a vote informed. But we do not test experience for any other voter. Information comes from education, and sixteen-year-olds are still in school, studying the systems they would vote on."),
                     ("Weighing line:", "Even if some young voters are less informed, that harm is small and spread thin, while excluding a whole age group from decisions that affect them for longest is certain and lasting."),
-                    ("Timed version:", "Forty seconds: name their warrant, show it is not applied to anyone else, give the alternative mechanism, close with the weighing."),
+                    ("Timed version:", "Forty seconds: name their reason, show it is not applied to anyone else, give the alternative mechanism, close with the weighing."),
                 ]}},
                 "The rebuilt version is not more clever than the first attempt. It is more organised: it names what the opponent needs, explains why they do not have it, and tells the judge what that means for the round.",
             ]),
@@ -481,7 +481,7 @@ GUIDES = {
                 "Record your practice rebuttals, or have a partner listen, and score each speech on five questions. Give one point for each yes.",
                 {"list": [
                     "Did I answer the argument that decided the round first?",
-                    "Did each response attack a warrant, or at least say which part of the argument it targets?",
+                    "Did each response challenge a reason, or at least say which part of the argument it targets?",
                     "Did I group similar arguments instead of answering them one by one?",
                     "Did I explain why my response matters for the decision, not just that it is true?",
                     "Did I finish inside the time without rushing the last point?",
@@ -492,7 +492,7 @@ GUIDES = {
                 {"h3": "Public Forum (PF)"},
                 "Rebuttals are four minutes. The second-speaking team usually spends part of that time answering responses to its own case, so practise a split: about two and a half minutes on offence and a minute and a half rebuilding. The {product} timer has a Public Forum preset for the full speech order.",
                 {"h3": "Lincoln-Douglas (LD)"},
-                "The four-minute first affirmative rebuttal must answer a seven-minute negative constructive. Practise grouping and cross-applying your framework until you can cover every major argument with time left for one extension.",
+                "The four-minute first affirmative rebuttal must answer a seven-minute negative constructive. Group similar responses and use the same judging test across them, so you can answer every major argument with time left to defend your strongest point.",
                 {"h3": "World Schools (WSDC)"},
                 "Rebuttal runs through every substantive speech. Practise opening each speech with ninety seconds to two minutes of rebuttal before your own material, and for third speakers, practise organising the whole debate into two or three clashes.",
                 {"h3": "British Parliamentary (BP)"},
@@ -503,8 +503,8 @@ GUIDES = {
             ("How often should I practise rebuttals?", "Short, frequent sessions work better than one long one. Three or four sessions of 20 to 30 minutes a week, each focused on one skill, will improve a rebuttal faster than a single full practice round."),
             ("Can I practise rebuttals without a partner?", "Yes. Shadow rebuttals from recorded rounds, flipping your own case and answering a predicted opponent case all work alone. An AI opponent adds a responsive voice when no partner is available."),
             ("What should I practise first as a new debater?", "Selection. Learn to pick the one or two arguments that decide the round before you work on speed or style. Answering the right argument badly still beats answering the wrong one well."),
-            ("How do I know if my rebuttal practice is working?", "Score each practice speech on the same five questions: right argument first, warrant attacked, arguments grouped, impact explained, finished on time. Rising scores over a few weeks mean the drills are working."),
-            ("How should I structure a rebuttal speech?", "Answer the clash that decides the round first, attack the warrants rather than the claims, extend your own strongest argument, and finish by telling the judge why your side wins."),
+            ("How do I know if my rebuttal practice is working?", "Score each practice speech on the same five questions: right argument first, reason challenged, arguments grouped, importance explained, finished on time. Rising scores over a few weeks mean the drills are working."),
+            ("How should I structure a rebuttal speech?", "Answer the clash that decides the round first, challenge the reasons behind the claims, extend your own strongest argument, and finish by telling the judge why your side wins."),
             ("Should I memorise rebuttals?", "Memorise the structure and a few strong lines, not whole speeches. In round you need to adapt each response to what the opponent actually said."),
             ("What is a block file?", "A collection of short prepared answers to the arguments you expect, organised by clash and written for both sides, so rebuttals start from tested material."),
         ],
@@ -592,7 +592,7 @@ GUIDES = {
         "sections": [
             ("What a debate case is", [
                 "A debate case is the argument your side will defend for the whole round, organised so a judge can follow it on first hearing. It is not an essay. An essay can explore; a case has to survive an opponent whose job is to find the weakest sentence in it. That is why good cases are built from small, testable parts: an opening that tells the judge what you will prove, two to four arguments that each prove something specific, answers to what the other side will say, and a closing line the judge remembers.",
-                "The process below works for every format. The format changes the length, the number of arguments and who gives which part, which the format section covers further down.",
+                "A {product} case has an opening, two to four arguments (three by default) each with an explanation, evidence and why it matters, \"If they say… we answer…\" replies, a closing line and the sources it used. The process below works for every format. The format changes the length, the number of arguments and who gives which part, which the format section covers further down.",
             ]),
             ("Eight steps from motion to finished case", [
                 {"steps": [
@@ -623,9 +623,9 @@ GUIDES = {
             ]),
             ("How case structure changes by format", [
                 {"h3": "Public Forum (PF)"},
-                "A four-minute constructive usually fits two arguments, each with evidence, and sometimes a short framework. Because you often do not know your side until shortly before the round, write a case for each side and keep them consistent in style. Put answers to the other side into the second constructive if you speak second.",
+                "A four-minute constructive usually fits two arguments, each with evidence, and sometimes a short explanation of how the judge should decide. Because you often do not know your side until shortly before the round, write a case for each side and keep them consistent in style. Put answers to the other side into the second constructive if you speak second.",
                 {"h3": "Lincoln-Douglas (LD)"},
-                "The case is built around a value and a criterion, followed by contentions that each show how your side meets the criterion. A weak link between contention and criterion is the first thing a good negative will attack, so state it explicitly at the end of every contention.",
+                "The case starts with a value, the goal the judge should protect, and a criterion, the test for meeting that goal. Each argument then shows how your side passes the test. State that link at the end of every argument, because a good negative will attack any gap.",
                 {"h3": "British Parliamentary (BP)"},
                 "Opening Government sets the definition and, for policy motions, a model: what exactly happens, who does it and how it is enforced. Opening Opposition responds to that model. Closing teams do not write a full case of their own; they prepare an extension, a new line of analysis the opening half did not cover.",
                 {"h3": "World Schools (WSDC)"},
@@ -643,12 +643,12 @@ GUIDES = {
                 "If any answer is no, fix that before you practise delivery. Polishing the speech of a case with a missing explanation only makes the gap harder to see.",
             ]),
             ("Where {product} helps", [
-                "Once you have a draft, attack it before an opponent does. Paste an argument into Attack to see which link breaks first, use Brainstorm when you need more angles at step four, and use Factoids to research a single statement you want to rely on. If you would rather start from a draft, the case generator writes a ready-to-read case in the same shape: an opening, arguments with explanation, evidence and why it matters, \"If they say… we answer…\" replies, a closing line and sources. Cut and rewrite it with the steps above.",
+                "Once you have a draft, attack it before an opponent does. Paste an argument into Attack to see which link breaks first, use Brainstorm when you need more angles at step four, and use Factoids to research a single statement you want to rely on. If you would rather start from a draft, the case generator writes a ready-to-read case in the same shape: an opening, two to four arguments (three by default) with explanation, evidence and why it matters, \"If they say… we answer…\" replies, a closing line and sources. Cut and rewrite it with the steps above. For a second speech (R2), the draft brings no new arguments: about two minutes backing up the team's arguments, then about four minutes of \"If they say X, we answer Y\" blocks.",
             ]),
         ],
         "faqs": [
-            ("How many contentions should a debate case have?", "Usually two to four arguments, which some formats call contentions. Public Forum constructives often fit two; formats with longer speeches can take three or four. Fewer well-defended arguments beat many thin ones."),
-            ("What is the difference between a claim and a warrant?", "The claim is what you say is true; the warrant is the reason it is true. In a case, they are the point and its explanation. Judges vote on the reasons, so a claim without one is an assertion that the other side can dismiss."),
+            ("How many contentions should a debate case have?", "Usually two to four arguments. Public Forum constructives often fit two; formats with longer speeches can take three or four. Fewer well-defended arguments beat many thin ones."),
+            ("What goes into each argument?", "Say what is true, explain why it is true, give evidence you have checked and show why it matters. Add a short answer to the response you expect from the other side."),
             ("How long does it take to write a debate case?", "A first draft can take an hour once you have researched the topic. Expect to revise it several times after practice rounds expose its weak points."),
             ("Should I write my case word for word?", "In formats with prepared constructives, such as Public Forum and Lincoln-Douglas, most debaters do. In impromptu formats like BP and WSDC, prepare an outline and key lines instead."),
             ("How do I make a case harder to attack?", "Explain why every point is true, use evidence you have checked, answer the most obvious response inside each argument, and attack the draft yourself before the round."),
@@ -725,7 +725,7 @@ GUIDES = {
                     ("The clash:", "Which system is the more accurate measure of what a student can do on their own?"),
                     ("Weighing question:", "Is the unfairness of a single bad day larger or smaller than the unfairness of unequal help at home?"),
                 ]}},
-                "Ten minutes of this analysis gives a team enough to start writing contentions. The clash and the weighing question tell both sides where the round will be decided.",
+                "Ten minutes of this analysis gives a team enough to start writing arguments. The clash and the weighing question tell both sides where the round will be decided.",
             ]),
             ("How to use a topic list in practice", [
                 {"steps": [
@@ -748,7 +748,7 @@ GUIDES = {
         ],
     },
     "public-forum-debate": {
-        "modified": "2026-10-23",
+        "modified": "2026-10-28",
         "features": [
             ("The PF round, speech by speech", "What each of the eight speeches and three crossfires is for, with the standard times."),
             ("Summary and final focus that agree", "How to collapse to two issues in summary and extend exactly those into final focus."),
@@ -776,11 +776,11 @@ GUIDES = {
             ]),
             ("What each speech has to do", [
                 {"h3": "Constructive"},
-                "Present your case: usually two contentions, each with a claim, a warrant, evidence and an impact. Many teams add a short framework that tells the judge how to weigh the round. The second constructive can include a few responses to the first if time allows.",
+                "Present your case, usually two arguments, each with an explanation, evidence and why it matters. Many teams also tell the judge how to compare the two sides. The second constructive can include a few responses to the first if time allows.",
                 {"h3": "Rebuttal"},
                 "Answer the opponent's case. The team speaking second should also answer the attacks already made on its own case, because arguments left unanswered after second rebuttal are very hard to bring back.",
                 {"h3": "Summary"},
-                "Collapse. Choose the one or two issues you are winning, extend them with their warrants and evidence, answer what the opponent said about them, and start weighing. Everything you want in final focus has to be in summary.",
+                "Collapse. Choose the one or two issues you are winning, explain their reasons and evidence again, answer what the opponent said about them, and start weighing. Everything you want in final focus has to be in summary.",
                 {"h3": "Final focus"},
                 "Tell the judge why you win in two minutes. Extend only what was in your summary, weigh it against the opponent's best remaining argument, and give the judge a simple reason to sign the ballot.",
                 {"h3": "Crossfire"},
@@ -788,12 +788,12 @@ GUIDES = {
             ]),
             ("Worked example: one PF round in outline", [
                 {"example": {"title": "Practice resolution: Resolved: Schools should replace letter grades with pass or fail grading", "rows": [
-                    ("Pro contention 1:", "Letter grades push students toward safe courses they know they can ace; pass or fail grading encourages them to take harder classes and learn more."),
-                    ("Pro contention 2:", "Grade pressure is a leading source of student stress, and removing fine-grained grades reduces it without removing accountability."),
-                    ("Con contention 1:", "Letter grades give students specific feedback about how well they understood the material; pass or fail hides the difference between barely passing and mastery."),
-                    ("Con contention 2:", "Colleges and scholarships use grades to compare applicants; without them, they rely more on test scores and extracurriculars that favour wealthier students."),
+                    ("Pro argument 1:", "Letter grades push students toward safe courses they know they can ace; pass or fail grading encourages them to take harder classes and learn more."),
+                    ("Pro argument 2:", "Grade pressure is a leading source of student stress, and removing fine-grained grades reduces it without removing accountability."),
+                    ("Con argument 1:", "Letter grades give students specific feedback about how well they understood the material; pass or fail hides the difference between barely passing and mastery."),
+                    ("Con argument 2:", "Colleges and scholarships use grades to compare applicants; without them, they rely more on test scores and extracurriculars that favour wealthier students."),
                     ("First crossfire question from Pro:", "Is a letter grade the only way a teacher can tell a student how well they understood the material?"),
-                    ("Pro summary collapse:", "Extend contention 1 and turn the con's feedback argument: comments and rubrics give better feedback than a single letter, so pass or fail grading loses nothing on feedback and gains course choice."),
+                    ("Pro summary collapse:", "Keep argument 1 and turn the con's feedback argument: comments and rubrics give better feedback than a single letter, so pass or fail grading loses nothing on feedback and gains course choice."),
                     ("Con final focus weighing:", "Even if some students take harder courses, the equity harm in admissions affects every student who applies, and it falls on those with the fewest alternatives."),
                 ]}},
                 "The round is decided by which team frames the comparison between learning (Pro) and fair admissions (Con), and keeps that frame consistent from summary to final focus.",
@@ -802,7 +802,7 @@ GUIDES = {
                 {"list": [
                     "They write cases for both sides, because they often learn their side only shortly before the round.",
                     "They read evidence carefully and can produce the full source if asked. Evidence disputes are common in PF, and a misrepresented card can lose the round.",
-                    "They plan the collapse before the round: which contention each side would collapse to, and why.",
+                    "They plan the collapse before the round: which argument each side would focus on, and why.",
                     "They weigh from the rebuttal onward instead of saving it for final focus.",
                     "They adapt to lay judges: fewer arguments, clear signposting, a normal speaking pace and a story the judge can repeat.",
                 ]},
@@ -823,7 +823,7 @@ GUIDES = {
         ],
         "faqs": [
             ("How long is a Public Forum round?", "The speeches and crossfires take 35 minutes, plus each team's preparation time, so most rounds run around 45 minutes."),
-            ("How many contentions should a PF case have?", "Usually two. A four-minute constructive rarely fits more than two contentions with proper warrants and evidence."),
+            ("How many contentions should a PF case have?", "Usually two arguments. A four-minute constructive rarely fits more than two with a clear explanation, evidence and why each matters."),
             ("What is the difference between summary and final focus?", "Summary narrows the round to the issues you are winning and begins the weighing. Final focus extends only those issues and tells the judge why they decide the ballot."),
             ("Can I bring up new arguments in final focus?", "No. New arguments in final focus are generally ignored by judges, because the opponent has no chance to answer them. Anything you want in final focus should be in your summary."),
             ("How do I prepare for a lay judge in PF?", "Run fewer arguments, explain each one plainly, signpost clearly, speak at a normal pace and end every speech with a simple reason to vote for you."),
@@ -1016,7 +1016,7 @@ GUIDES = {
         ],
     },
     "how-to-weigh-in-debate": {
-        "modified": "2026-10-20",
+        "modified": "2026-10-28",
         "features": [
             ("Six ways to compare impacts", "Magnitude, probability, timeframe, reversibility, scope and link strength, with when each one is the right comparison."),
             ("Weighing the weighing", "What to say when your impact wins on one measure and theirs wins on another."),
@@ -1025,7 +1025,7 @@ GUIDES = {
         "sections": [
             ("Why weighing wins rounds", [
                 "Most rounds end with both sides holding some offence. When that happens, the judge needs a reason to prefer one impact over the other. Weighing gives that reason. Without it, the judge has to compare the impacts alone, and a judge left to decide will not always pick yours.",
-                "Weighing is also called impact calculus: comparing impacts on a set of measures to show which one should decide the round. The name differs between circuits; the skill is the same.",
+                "Weighing means comparing which harm or benefit matters more (also called impact calculus). Use a clear measure, such as how likely each outcome is, and explain why that measure should decide the round.",
             ]),
             ("The six measures", [
                 {"list": [
@@ -1066,14 +1066,14 @@ GUIDES = {
         ],
         "faqs": [
             ("What is weighing in debate?", "Comparing your impact with your opponent's to show the judge why yours should decide the round, using measures such as magnitude, probability, timeframe, reversibility, scope and link strength."),
-            ("Is impact calculus the same as weighing?", "Yes. Impact calculus is another name for weighing, used more often in American formats such as Policy and Public Forum."),
+            ("Does weighing mean choosing the biggest harm?", "No. Size is only one measure. A smaller harm may matter more if it is more likely, happens sooner or cannot be undone."),
             ("Which weighing measure is strongest?", "It depends on the round. Probability and link strength are often more persuasive than magnitude, because they compare the arguments the judge actually heard."),
             ("What if my impact loses on magnitude?", "Weigh on a different measure and say why that measure matters more here, for example that your harm is certain and theirs is speculative."),
             ("When should I start weighing?", "In the first speech. Early weighing frames the round; weighing that appears only in the final speech competes with a decision already forming."),
         ],
     },
     "how-to-cross-examine-in-debate": {
-        "modified": "2026-10-20",
+        "modified": "2026-10-28",
         "features": [
             ("Question design", "Short, closed questions that get a commitment, in an order that leads to the point you want to make."),
             ("Time management", "How to choose the two or three lines of questioning that matter in a three-minute period."),
@@ -1081,7 +1081,7 @@ GUIDES = {
         ],
         "sections": [
             ("What cross-examination is for", [
-                "Cross-examination is not a speech. Judges rarely decide a round on what happens in cross-ex itself; they decide on what the next speech does with it. Its jobs are to clarify what the other side is arguing, to get commitments you can use, and to expose a warrant that does not hold.",
+                "Cross-examination is not a speech. Judges rarely decide a round on what happens in cross-ex itself; they decide on what the next speech does with it. Its jobs are to clarify what the other side is arguing, to get commitments you can use, and to expose a reason that does not support the claim (debaters call this the warrant).",
                 "That changes how you ask. You are not trying to win an argument with the speaker. You are collecting material for your speech, so every question should lead to something you can say later.",
             ]),
             ("Designing questions", [
@@ -1095,7 +1095,7 @@ GUIDES = {
                 "Write your opening question for each line before the round. You will adapt the rest, but a prepared first question stops you from opening with something vague.",
             ]),
             ("Managing the time", [
-                "A three-minute period fits two or three lines of questioning, not ten. Pick the lines that attack the warrant the round depends on, and leave minor points for the speech. If an answer is evasive, ask once more in a narrower form, then move on; the judge has seen the evasion.",
+                "A three-minute period fits two or three lines of questioning, not ten. Pick the lines that challenge the reason the round depends on, and leave minor points for the speech. If an answer is evasive, ask once more in a narrower form, then move on; the judge has seen the evasion.",
                 "Common mistakes:",
                 {"list": [
                     "Asking open questions that let the speaker repeat their case.",
@@ -1109,7 +1109,7 @@ GUIDES = {
                 "A concession only counts if the judge hears it again in a speech. Quote it, say what it means for the clash, and weigh it: \"In cross-ex they agreed the plan needs trained staff. They have no source of staff, so the plan does not solve.\" Concessions are strong because the other side cannot easily take them back.",
             ]),
             ("Answering cross-examination", [
-                "When you are the one answering, keep answers short and accurate, and do not concede the warrant your case depends on. If a question rests on an assumption you reject, say so in one sentence. It is fine to say you will answer a point in your speech; it is not fine to filibuster.",
+                "When you are the one answering, keep answers short and accurate, and do not give up the reason your case depends on. If a question rests on an assumption you reject, say so in one sentence. It is fine to say you will answer a point in your speech; it is not fine to filibuster.",
             ]),
             ("Format notes", [
                 {"h3": "Policy and Lincoln-Douglas"},
@@ -1117,7 +1117,7 @@ GUIDES = {
                 {"h3": "Public Forum"},
                 "Crossfire is three minutes, and both speakers can ask and answer. Grand crossfire involves all four debaters. With shared time, short questions and short answers matter even more.",
                 {"h3": "World Schools and British Parliamentary"},
-                "There is no cross-examination period. Points of Information do the same job in fifteen seconds: one sharp question or statement aimed at a weak warrant.",
+                "There is no cross-examination period. Points of Information do the same job in fifteen seconds: one sharp question or statement aimed at a gap in the reasoning.",
             ]),
             ("Practise with {product} Crossfire", [
                 "Crossfire runs a question period against the AI in either direction. Question the AI while it answers from the opposing side, or let the AI question you while you defend your case. Choose a cooperative, evasive or aggressive opponent, so you can practise follow-ups against slippery answers as well as straight ones. Each session ends with a debrief. Attack can also suggest cross-ex questions for an argument, which you can open in Crossfire to practise.",
@@ -1127,12 +1127,12 @@ GUIDES = {
             ("What makes a good cross-examination question?", "It is short, closed and leads somewhere: it gets a commitment you can use in your next speech, rather than inviting the speaker to explain their case again."),
             ("How many questions should I ask in cross-ex?", "Enough for two or three lines of questioning. Quality matters more than count; stop each line before the speaker can explain the problem away."),
             ("What should I do with a concession?", "Repeat it in your next speech, say what it means for the clash and weigh it. A concession the judge never hears again does not help you."),
-            ("How do I answer cross-ex questions well?", "Answer briefly and accurately, reject false assumptions in one sentence, and do not concede the warrant your case depends on."),
+            ("How do I answer cross-ex questions well?", "Answer briefly and accurately, reject false assumptions in one sentence, and do not give up the reason your case depends on."),
             ("Can I practise cross-examination without a partner?", "Yes. Crossfire in {product} lets you question the AI or be questioned by it, with cooperative, evasive or aggressive opponent styles."),
         ],
     },
     "how-to-flow-in-debate": {
-        "modified": "2026-10-23",
+        "modified": "2026-10-28",
         "features": [
             ("Column structure", "One column per speech, so each argument can be followed across the round from where it starts to where it is answered or dropped."),
             ("Abbreviations that keep up", "A short, consistent set of symbols, so you can write as fast as the round moves."),
@@ -1147,7 +1147,7 @@ GUIDES = {
                 {"steps": [
                     "Use one column per speech, left to right in speaking order. In Lincoln-Douglas that is the affirmative constructive, the negative constructive, then each rebuttal.",
                     "Keep a separate sheet, or section, for each side's case. Responses to the affirmative go on the affirmative sheet next to the argument they answer.",
-                    "Write each argument's tag in a few words, with the warrant underneath. The tag tells you where you are; the warrant is what you will attack.",
+                    "Write each argument's short label, with the reason it is true underneath (debaters call this the warrant). The label helps you find the argument; the reason is what you need to test.",
                     "Use two colours, one for each side, so you can see at a glance who said what.",
                     "Leave space. Arguments grow across speeches, and a cramped flow is the one that loses track.",
                 ]},
@@ -1159,8 +1159,8 @@ GUIDES = {
                     "Arrows for causes and leads to, and a crossed arrow for does not lead to.",
                     "Up and down arrows for increase and decrease.",
                     "Short forms for common words: gov for government, econ for economy, ev for evidence.",
-                    "A circled letter or number for each contention, so responses can point to it.",
-                    "A question mark for a warrant the speaker never explained.",
+                    "A circled letter or number for each argument, so responses can point to it.",
+                    "A question mark for a claim the speaker gave no reason for.",
                 ]},
             ]),
             ("Tracking dropped arguments", [
@@ -1179,15 +1179,15 @@ GUIDES = {
             ("What does flowing mean in debate?", "Taking notes on a round in columns, one per speech, so each argument can be followed from where it is made to where it is answered or dropped."),
             ("Should I flow on paper or a laptop?", "Either works. Paper is easier for drawing arrows and links; a laptop is easier to keep tidy. Use whichever you can write on quickly and read under pressure."),
             ("What is a dropped argument?", "An argument the other side never answered. In most formats a dropped argument is treated as conceded, so mark it on your flow and point it out."),
-            ("How do I flow faster?", "Use a consistent set of abbreviations, write tags and warrants rather than full sentences, and practise on recorded rounds before tournaments."),
+            ("How do I flow faster?", "Use a consistent set of abbreviations, write short labels and reasons rather than full sentences, and practise on recorded rounds before tournaments."),
         ],
     },
     "world-schools-debate": {
-        "modified": "2026-10-23",
+        "modified": "2026-10-28",
         "features": [
             ("Motion interpretation", "Define the model, the stakeholders and what each side has to prove before anyone writes a speech."),
             ("Team roles", "What the first, second and third speakers and the reply speaker each owe the team, and how to practise each role."),
-            ("POIs and reply speeches", "Points of Information that test a warrant in fifteen seconds, and reply speeches that frame the debate without new arguments."),
+            ("POIs and reply speeches", "Points of Information that test the reason behind a point in fifteen seconds, and reply speeches that frame the debate without new arguments."),
         ],
         "sections": [
             ("How a World Schools round works", [
@@ -1216,7 +1216,7 @@ GUIDES = {
                 "Practise each role separately. A speaker who can only do one job is a weak point when the team needs to change roles for an impromptu round.",
             ]),
             ("Points of Information", [
-                "Speakers on the other side can offer a Point of Information during a substantive speech, except in the first and last minute, which are protected. The speaker chooses whether to accept, and as a general rule should accept at least two. A good POI is short, under fifteen seconds, and aims at the warrant the speech depends on.",
+                "Speakers on the other side can offer a Point of Information during a substantive speech, except in the first and last minute, which are protected. The speaker chooses whether to accept, and as a general rule should accept at least two. A good POI is short, under fifteen seconds, and tests the reason the speech depends on (debaters call this the warrant).",
                 "Answering POIs matters as much as offering them. Take one, answer it in a sentence, and return to your structure. Turning down every POI usually looks evasive to judges.",
             ]),
             ("Prepare for WSDC with {product}", [
@@ -1237,11 +1237,11 @@ GUIDES = {
         "features": [
             ("Evidence leads", "Research directions for a claim: the kinds of sources that could support it and searches you can run to confirm it."),
             ("Citation checks", "A checklist for each source before it goes on a card: author, date, method and whether the quote says what you claim."),
-            ("Impact links", "Evidence tied to the warrant and the clash it supports, not added to a speech as decoration."),
+            ("Impact links", "Evidence tied to the reason behind the argument and the disagreement it helps resolve, not added to a speech as decoration."),
         ],
         "sections": [
             ("Evidence is not the argument", [
-                "Evidence wins rounds only when it supports a clear warrant. A source should answer a burden in the round, not decorate a speech. Before you look for a card, write the claim it needs to prove in one sentence. If you cannot, more research will not help.",
+                "Evidence helps only when it supports a clear reason why your claim is true (debaters call this the warrant). A source should answer a burden in the round, not decorate a speech. Before you look for a card, write the claim it needs to prove in one sentence. If you cannot, more research will not help.",
                 "The most useful evidence sits on a specific clash: solvency, harms, trade-offs, comparative examples and the weighing.",
             ]),
             ("AI research is a starting point", [
@@ -1268,14 +1268,14 @@ GUIDES = {
                 ]},
             ]),
             ("What to do when the evidence is weak", [
-                "Do not read it. Look for a better source, narrow the claim so the evidence you have does prove it, or make the argument analytically: explain the reasoning without leaning on a card. A clear warrant with no card often beats a weak card that falls apart under one question.",
+                "Do not read it. Look for a better source, narrow the claim so the evidence you have does prove it, or make the argument analytically: explain the reasoning without leaning on a card. A clear explanation with no quoted evidence often beats a weak card that falls apart under one question.",
             ]),
             ("Worked example", [
                 {"example": {"title": "Motion: This house would introduce a four-day school week", "rows": [
                     ("Claim:", "A four-day week improves teacher retention."),
                     ("Lead found:", "A summary says districts that moved to four days saw fewer teachers leave."),
                     ("Check:", "The original study covers a small number of rural districts, and the authors say they cannot separate the schedule from pay changes made at the same time."),
-                    ("Decision:", "Narrow the claim to rural districts, say the evidence suggests but does not prove the effect, and support it with an analytical warrant about recruitment."),
+                    ("Decision:", "Narrow the claim to rural districts, say the evidence suggests but does not prove the effect, and support it with a step-by-step explanation of how recruitment would improve."),
                 ]}},
                 "The weaker claim is easier to defend, and the honesty about the study removes the easiest cross-ex question the other side could ask.",
             ]),
@@ -1285,7 +1285,7 @@ GUIDES = {
             ("How do I verify debate evidence?", "Check the author, date, publication and method, read the text around the quote, and confirm that it says what you claim. Record the full citation."),
             ("What should I do if my evidence is weak?", "Do not read it. Find a better source, narrow your claim, or make the argument analytically without the card."),
             ("Where does {product} keep my sources?", "In the Library for your Current Debate. Sources you mark active are used by the other tools for that debate."),
-            ("Is a card better than an analytical argument?", "Only if it is accurate and relevant. A strong warrant without a card often beats a weak card that does not survive a question."),
+            ("Is a card better than an analytical argument?", "Only if it is accurate and relevant. Strong reasoning without a quote often beats a weak card that does not survive a question."),
         ],
     },
     "debateowl-pricing": {
@@ -1416,10 +1416,10 @@ GUIDES = {
         ],
     },
     "lincoln-douglas-debate": {
-        "modified": "2026-10-26",
+        "modified": "2026-10-28",
         "features": [
             ("The NSDA round", "Seven speeches and cross-examinations at 6-3-7-3-4-6-3, with four minutes of prep per debater."),
-            ("Framework that does work", "A value and a criterion the rest of the case actually depends on, instead of a label at the top."),
+            ("A useful test for the judge", "A value and a criterion the rest of the case actually depends on, instead of a label at the top."),
             ("A worked example and its turn", "One affirmative contention on an original practice resolution, and how a negative turns it under the same criterion."),
         ],
         "sections": [
@@ -1702,7 +1702,7 @@ GUIDES = {
         ],
     },
     "debate-clash-points": {
-        "modified": "2026-10-26",
+        "modified": "2026-10-28",
         "h1": "Clash and Collapse: Find the Key Argument and Go All In",
         "lead": "Map every disagreement, pick the one the judge has to resolve, and spend your last speeches there.",
         "features": [
@@ -1717,7 +1717,7 @@ GUIDES = {
                 {"list": [
                     "Factual or causal: will the policy actually cause the outcome? This is where most rebuttal happens.",
                     "Comparative: both outcomes are real, so which matters more? This is weighing, and it is where most close rounds are decided.",
-                    "Framework: what standard should the judge use? In Lincoln-Douglas this is the value and criterion; in other formats it is the burden each side has accepted.",
+                    "How the judge should decide (the framework): what test should the judge use? In Lincoln-Douglas this is the goal and the test for reaching it; in other formats it is what each side has agreed to prove.",
                 ]},
             ]),
             ("How to find the clash that decides the round", [
@@ -1725,10 +1725,10 @@ GUIDES = {
                 {"steps": [
                     "If we win only this clash, do we win the round?",
                     "If we lose this clash, can we still win?",
-                    "Do we have the stronger warrant here, or only more material?",
+                    "Do we have the stronger reason here, or only more material?",
                     "How much speaking time does it take to win it properly?",
                 ]},
-                "The deciding clash is usually the one where the first answer is yes and the second is no. If two clashes both pass that test, pick the one where your warrant is stronger. A clash you can win in thirty seconds of explanation is worth more than one that needs three minutes of evidence.",
+                "The deciding clash is usually the one where the first answer is yes and the second is no. If two clashes both pass that test, pick the one where your reasoning is stronger. A clash you can win in thirty seconds of explanation is worth more than one that needs three minutes of evidence.",
             ]),
             ("Worked example: from five clashes to one", [
                 {"example": {"title": "Practice motion: This House would replace homework with a longer school day", "rows": [
@@ -1741,7 +1741,7 @@ GUIDES = {
                 "Both teams are now arguing about which clash matters, and that comparison is what a judge writes on the ballot. The team that names the deciding clash first usually sets the terms for the rest of the round.",
             ]),
             ("Collapsing: why fewer arguments win", [
-                "Collapsing means choosing the few arguments you are winning and spending your remaining time on them, instead of extending everything at the same depth. Late speeches are short. Every argument you keep costs time you could spend explaining its warrant and weighing it against the opponent's best point.",
+                "Collapsing means choosing the few arguments you are winning and spending your remaining time on them, instead of extending everything at the same depth. Late speeches are short. Every argument you keep costs time you could spend explaining why it is true and weighing it against the opponent's best point.",
                 "To collapse cleanly, say what you are going for, answer what the opponent said about it, and weigh. If you drop an argument the opponent has turned into a reason to vote against you, you still have to answer the turn, or concede the defence that takes the turn away; otherwise the dropped argument becomes their offense.",
             ]),
             ("Where each format collapses", [
@@ -1781,7 +1781,7 @@ GUIDES = {
         ],
     },
     "how-to-prepare-for-a-debate-tournament": {
-        "modified": "2026-10-26",
+        "modified": "2026-10-28",
         "h1": "How to Prepare for a Debate Tournament",
         "lead": "Plan the two weeks before, spend in-round prep on purpose, and arrive with a routine for every round.",
         "features": [
@@ -1817,7 +1817,7 @@ GUIDES = {
             ("Worked example: a two-week plan on one resolution", [
                 {"example": {"title": "Practice resolution: Resolved: National parks should cap daily visitor numbers", "rows": [
                     ("Days 1 to 3:", "Read on both sides and list the clashes: protecting ecosystems, fair access for people who cannot book ahead, and the effect on towns that depend on park visitors."),
-                    ("Days 4 to 7:", "Write a pro case on ecosystem damage and a con case on fair access, two contentions each, and mark the evidence each claim still needs."),
+                    ("Days 4 to 7:", "Write a pro case on ecosystem damage and a con case on fair access, two arguments each, and mark the evidence each claim still needs."),
                     ("Days 8 to 11:", "Write blocks against the three arguments you expect most, including the claim that timed entry already solves crowding. Run one practice round on each side."),
                     ("Days 12 and 13:", "Fix what lost the practice rounds and check every card against its source."),
                     ("In round, Public Forum:", "Keep at least two of the three prep minutes for summary and final focus, where you choose between the ecosystem and access clashes."),
@@ -1860,7 +1860,7 @@ GUIDES = {
         ],
     },
     "debate-speech-structure": {
-        "modified": "2026-10-26",
+        "modified": "2026-10-28",
         "h1": "Debate Speech Structure and Delivery",
         "lead": "Build every speech so the judge can flow it, then deliver it so they hear every word.",
         "features": [
@@ -1873,17 +1873,17 @@ GUIDES = {
                 "Judges write down what they can follow. A structured speech gives them the place to write each point: a roadmap at the start, a signpost before each argument, and a closing line that tells them what to do with it.",
                 {"list": [
                     "Roadmap: one sentence listing what you will cover, in order.",
-                    "Signposts: \"On their first contention\" or \"Our second argument\" before each section, so the judge knows which part of the flow you are on.",
-                    "Claim, warrant, impact: the point, the reason it is true, and why it matters to the decision.",
+                    "Signposts: \"On their first argument\" or \"Our second argument\" before each section, so the judge knows which part of the flow you are on.",
+                    "For each point, give the reason it is true (debaters call this the warrant) and say why it matters to the decision.",
                     "Weighing: a comparison with the other side's best point, not only a statement that yours is important.",
                     "Close: one sentence that tells the judge why your side wins.",
                 ]},
             ]),
             ("Three speech shapes", [
                 {"h3": "Constructive"},
-                "Open with your position and any definitions the round needs, then give each contention as claim, warrant, evidence and impact. Preview the weighing in the last thirty seconds, so the judge knows how you want the round compared before the other side speaks.",
+                "Open with your position and any definitions the round needs, then give each argument with an explanation, evidence and why it matters. Preview the weighing in the last thirty seconds, so the judge knows how you want the round compared before the other side speaks.",
                 {"h3": "Rebuttal"},
-                "Answer the arguments that decide the round first, attack their warrants rather than their conclusions, and group similar points so one answer covers several. If time allows, rebuild your own case against what was said about it.",
+                "Answer the arguments that decide the round first, challenge the reasons behind their conclusions, and group similar points so one answer covers several. If time allows, rebuild your own case against what was said about it.",
                 {"h3": "Final speech"},
                 "Name the one or two clashes that decide the round, explain why you win each, and weigh. Do not add new arguments: the other side has no chance to answer them, and most judges ignore them.",
             ]),
@@ -1900,7 +1900,7 @@ GUIDES = {
             ("Worked example: a four-minute rebuttal, minute by minute", [
                 {"example": {"title": "Practice motion: This House would let students choose their own school uniform supplier", "rows": [
                     ("0:00 to 0:15, roadmap:", "\"Two responses to their cost argument, one to their identity argument, then why our case still stands.\""),
-                    ("0:15 to 1:30, cost:", "Their warrant is that a single supplier gets bulk discounts. Answer: discounts only matter if they reach families, and a single supplier has no reason to pass them on."),
+                    ("0:15 to 1:30, cost:", "Their reason is that a single supplier gets bulk discounts. Answer: discounts only matter if they reach families, and a single supplier has no reason to pass them on."),
                     ("1:30 to 2:30, identity:", "They say a common supplier keeps uniforms identical. Answer: a design standard does that; who sells the uniform does not change what it looks like."),
                     ("2:30 to 3:30, rebuild:", "Extend our competition argument, because their cost case assumed the supplier passes on savings, and we have shown it does not have to."),
                     ("3:30 to 4:00, weigh and close:", "Families pay every year under a single supplier, while the identity harm is solved by a design rule, so the cost clash decides the debate."),
@@ -1946,7 +1946,7 @@ GUIDES = {
         ],
     },
     "debate-fallacies": {
-        "modified": "2026-10-26",
+        "modified": "2026-10-28",
         "features": [
             ("Fallacies in context", "Each fallacy shown inside an argument you could hear in a round, not as a textbook definition."),
             ("One-sentence answers", "A reply for each that explains why the reasoning fails, which is what judges actually reward."),
@@ -1983,7 +1983,7 @@ GUIDES = {
                     "Naming a fallacy without explaining the gap, which sounds like a dismissal rather than an answer.",
                     "Calling every weak argument a fallacy. A claim with thin evidence is weak; it is not invalid.",
                     "Attacking the person or the source instead of the reasoning, which is itself an ad hominem.",
-                    "Spending a whole rebuttal on one flawed example when the opponent's main warrant stands.",
+                    "Spending a whole rebuttal on one flawed example when the opponent's main reason still holds.",
                     "Forgetting to say what follows: once the step fails, tell the judge what the argument no longer proves.",
                 ]},
             ]),
@@ -2005,7 +2005,7 @@ GUIDES = {
         ],
     },
     "debate-motion-analysis": {
-        "modified": "2026-10-26",
+        "modified": "2026-10-28",
         "features": [
             ("Motion types", "What \"This House would\", \"believes\", \"regrets\" and actor motions each ask the proposition to prove."),
             ("Definitions and models", "Defining terms fairly enough to survive challenge and narrowly enough to defend."),
@@ -2028,7 +2028,7 @@ GUIDES = {
             ]),
             ("Burdens and stakeholders", [
                 "Write each side's burden in one sentence. The proposition's burden comes from the motion; the opposition's is usually to show the proposition fails it, or to defend a better alternative. If you cannot write the burden in a sentence, you do not yet know what the round is about.",
-                "Then list who the motion affects, and how. Stakeholders are where extensions, second contentions and weighing come from: an argument that names who is helped or harmed is easier to compare than one that talks about society in general.",
+                "Then list who the motion affects, and how. Stakeholders are where new angles, further arguments and comparisons come from: an argument that names who is helped or harmed is easier to compare than one that talks about society in general.",
             ]),
             ("Worked example: one motion, analyzed", [
                 {"example": {"title": "Practice motion: This House would let secondary students rate their teachers, with the ratings published", "rows": [
@@ -2048,7 +2048,7 @@ GUIDES = {
                     "A definition so narrow it removes the debate, which judges treat as evading the burden.",
                     "Skipping the model on a policy motion, so the opposition attacks the worst version of your idea.",
                     "Treating stakeholders as a list to recite rather than a source of arguments and weighing.",
-                    "Writing contentions before writing the burdens, then discovering a contention proves something the round does not need.",
+                    "Writing arguments before deciding what your side must prove, then discovering that an argument proves something the round does not need.",
                 ]},
             ]),
             ("A 15-minute motion analysis drill", [
@@ -2070,7 +2070,7 @@ GUIDES = {
         ],
     },
     "debate-judge-adaptation": {
-        "modified": "2026-10-26",
+        "modified": "2026-10-28",
         "features": [
             ("Three kinds of judges", "What lay, flow and technical judges each reward, and what loses them."),
             ("Before the round", "Questions to ask and paradigms to read, so you adapt before your first sentence."),
@@ -2083,8 +2083,8 @@ GUIDES = {
             ("Three kinds of judges", [
                 {"table": {"head": ["Judge", "What they reward", "How to adapt"], "rows": [
                     ["Lay judge (parent, teacher, community member)", "A clear story, plain language, confident delivery", "Fewer arguments, no jargon, a normal speaking pace and a one-sentence reason to vote"],
-                    ["Flow judge (former debater or coach)", "Line-by-line clash, extensions, explicit weighing", "Signpost every response, extend warrants by name, never drop a turned argument"],
-                    ["Technical judge (experienced circuit judge)", "Evidence quality, strategic choices, theory and framework", "Precise extensions, efficient speed if they allow it, clear interpretations on theory"],
+                    ["Flow judge (former debater or coach)", "Line-by-line clash, extensions, explicit weighing", "Signpost every response, repeat the reasons behind your key points, never drop a turned argument"],
+                    ["Technical judge (experienced circuit judge)", "Evidence quality, strategic choices, rules disputes and how the judge should decide (the framework)", "Precise extensions, efficient speed if they allow it, clear interpretations on theory"],
                 ]}},
                 "Most judges sit somewhere between these. A former debater who now judges local tournaments may flow carefully but dislike speed, so read the individual, not the category.",
             ]),
@@ -2100,8 +2100,8 @@ GUIDES = {
                 {"example": {"title": "Practice motion: This House would make public libraries open 24 hours in large cities", "rows": [
                     ("The argument:", "Night-shift workers cannot use libraries during standard hours, so 24-hour opening reaches people current hours exclude."),
                     ("For a lay judge:", "\"Think of a nurse who works nights. Today the library is closed every hour she is free. Opening all night is the only way she gets the same library everyone else has.\" One example, one clear impact, said slowly."),
-                    ("For a flow judge:", "\"Extend our first contention: access for shift workers. Their only answer was cost, but they never contested that current hours exclude this group. Weigh it: exclusion is certain and ongoing; their cost harm depends on staffing numbers they never gave.\""),
-                    ("What stays the same:", "The warrant (current hours exclude a group) and the comparison against cost. Only the framing and pace change."),
+                    ("For a flow judge:", "\"Return to our first argument: access for shift workers. Their only answer was cost, but they never contested that current hours exclude this group. Weigh it: exclusion is certain and ongoing; their cost harm depends on staffing numbers they never gave.\""),
+                    ("What stays the same:", "The reason is still that current hours exclude a group, and you still compare that harm against cost. Only the wording and pace change."),
                 ]}},
                 "Neither version is better in general. The lay version would lose a careful flow judge, who wants to hear which response was dropped, and the flow version would lose a lay judge in the first ten seconds.",
             ]),
@@ -2116,11 +2116,11 @@ GUIDES = {
             ]),
             ("A 15-minute adaptation drill", [
                 {"steps": [
-                    "Two minutes: take one argument from your current case and write its warrant and impact in two sentences.",
+                    "Two minutes: take one argument from your current case and write why it is true and why it matters in two sentences.",
                     "Four minutes: rewrite it as a lay-judge version with one concrete example and no debate vocabulary.",
                     "Four minutes: rewrite it as a flow-judge version with signposts, an extension and an explicit weighing line.",
                     "Four minutes: deliver both, timed at one minute each, and record them.",
-                    "One minute: play both back and check that the warrant is the same in each.",
+                    "One minute: play both back and check that the reason is the same in each.",
                 ]},
                 "In {product}, Ask Coach can explain how a lay judge is likely to hear a block, and Sparring ends each round with a judged verdict that names the reason for the decision, which shows which comparison landed.",
             ]),
