@@ -67,10 +67,11 @@ export function SelectRow<T extends string>({
         testID={testID}
         style={({ pressed }) => [pressed && styles.pressed, disabled && styles.disabled]}>
         <RowFrame first={first}>
-          <Text style={styles.rowLabel} numberOfLines={1}>
+          <Text style={styles.rowLabel}>
             {label}
           </Text>
-          <Text tone="secondary" style={styles.rowValue} numberOfLines={1}>
+          {/* A long choice (Hungarian, Spanish) wraps onto a second line rather than being cut off. */}
+          <Text tone="secondary" style={styles.rowValue} numberOfLines={2}>
             {chosen}
           </Text>
           <Icon name="chevronDown" color={colors.tabInactive} size={18} />
@@ -106,7 +107,8 @@ export function SwitchRow({ label, description, value, onChange, first, disabled
         value={value}
         onValueChange={onChange}
         disabled={disabled}
-        trackColor={{ true: colors.primary, false: colors.segmentTrack }}
+        trackColor={{ true: colors.primaryFill, false: colors.segmentTrack }}
+        thumbColor="#FFFFFF"
       />
     </RowFrame>
   );

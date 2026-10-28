@@ -342,7 +342,7 @@ function RecentSource({ source, first, onPress }: { source: Source; first: boole
       style={({ pressed }) => [styles.sourceRow, !first && { borderTopWidth: 1, borderTopColor: colors.line }, pressed && styles.pressed]}>
       <IconTile name={SOURCE_ICONS[source.type]} size={42} />
       <View style={styles.sourceText}>
-        <Text weight="semibold" style={styles.sourceTitle} numberOfLines={1}>
+        <Text weight="semibold" style={styles.sourceTitle} numberOfLines={2}>
           {source.title || t('libraryPage.untitledSource')}
         </Text>
         <Text tone="faint" style={styles.sourceMeta} numberOfLines={1}>

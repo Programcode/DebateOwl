@@ -178,7 +178,7 @@ export default function DebatesSheet() {
             value={oneOff}
             onValueChange={setOneOff}
             accessibilityLabel={t('mobile.debates.oneOff')}
-            trackColor={{ false: colors.border, true: colors.primary }}
+            trackColor={{ false: colors.border, true: colors.primaryFill }}
             ios_backgroundColor={colors.border}
             thumbColor="#ffffff"
           />

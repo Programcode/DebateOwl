@@ -68,7 +68,7 @@ export function FlowCard({ node, meta, onPress, testID, selected = false }: { no
         {node.data.label}
       </Text>
       {meta ? (
-        <Text tone="faint" style={styles.cardMeta} numberOfLines={1}>
+        <Text tone="faint" style={styles.cardMeta} numberOfLines={2}>
           {meta}
         </Text>
       ) : null}
