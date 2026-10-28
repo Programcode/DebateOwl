@@ -1,7 +1,7 @@
 import '@/lib/i18n';
 
 import { useFonts } from 'expo-font';
-import { DarkTheme, DefaultTheme, Stack, ThemeProvider } from 'expo-router';
+import { DarkTheme, DefaultTheme, Stack, ThemeProvider, useRouter } from 'expo-router';
 import type { NativeStackNavigationOptions } from 'expo-router/native-stack';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
@@ -10,10 +10,12 @@ import { StyleSheet, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 import { AppSidebar } from '@/components/app-sidebar';
+import { KeyboardDoneBar } from '@/components/app-text-input';
 import { ToastHost, ToastProvider } from '@/components/toast';
 import { AuthProvider, useAuth } from '@/lib/auth';
 import { DebateProvider } from '@/lib/debate-context';
 import { useFirstRun } from '@/lib/use-first-run';
+import { useKeyCommand } from '@/lib/key-commands';
 import { ReservedWidth, useSidebarWidth } from '@/lib/layout';
 import { watchNetwork } from '@/lib/network-status';
 import { refreshPush } from '@/lib/push';
@@ -57,6 +59,10 @@ function Root() {
   // A phone that opted in registers again on launch and when the language changes (see refreshPush).
   const userId = session?.user.id;
   useFirstRun(ready ? userId ?? null : null);
+  // iPad hardware keyboard: ⌘N starts a debate, ⌘K opens the switcher (key-commands.ts).
+  const router = useRouter();
+  useKeyCommand('cmd+n', () => router.push('/new-debate'), ready && Boolean(userId));
+  useKeyCommand('cmd+k', () => router.push('/debates'), ready && Boolean(userId));
   useEffect(() => {
     if (!userId || !settingsReady) return;
     refreshPush(userId, language).catch((cause: unknown) => {
@@ -146,6 +152,7 @@ function Root() {
         </ReservedWidth.Provider>
         </View>
         <ToastHost />
+        <KeyboardDoneBar />
       </GestureHandlerRootView>
     </ThemeProvider>
   );

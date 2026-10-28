@@ -11,7 +11,7 @@ export function DocumentStatus({ status, incomplete }: { status: 'loading' | 'mi
     <View style={styles.box} accessibilityRole="alert">
       {status === 'incomplete' && incomplete ? (
         <>
-          <Text weight="semibold" style={styles.title}>
+          <Text accessibilityRole="header" weight="semibold" style={styles.title}>
             {incomplete.title}
           </Text>
           <Text tone="secondary" style={styles.body}>

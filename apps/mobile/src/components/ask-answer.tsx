@@ -88,7 +88,7 @@ export function AskAnswer({
 
       {output?.argumentMap ? (
         <View style={styles.section}>
-          <Text weight="semibold" tone="secondary" style={styles.sectionTitle}>
+          <Text accessibilityRole="header" weight="semibold" tone="secondary" style={styles.sectionTitle}>
             {t('askChat.argumentMap')}
           </Text>
           <Section title={t('askChat.mainClaim')} items={[output.argumentMap.mainClaim]} />
@@ -146,7 +146,7 @@ function Section({ title, items, marker = '•' }: { title: string; items: strin
   if (items.length === 0) return null;
   return (
     <View style={styles.sectionBody}>
-      <Text weight="semibold" tone="secondary" style={styles.sectionTitle}>
+      <Text accessibilityRole="header" weight="semibold" tone="secondary" style={styles.sectionTitle}>
         {title}
       </Text>
       {items.map((item, index) => (

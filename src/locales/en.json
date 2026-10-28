@@ -2987,6 +2987,10 @@
     },
     "tour": {
       "progress": "Step {{step}} of {{steps}}"
+    },
+    "a11y": {
+      "answerReady": "Answer ready",
+      "resultReady": "Ready: {{title}}"
     }
   }
 }

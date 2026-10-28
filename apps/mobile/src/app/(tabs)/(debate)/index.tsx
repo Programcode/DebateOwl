@@ -459,7 +459,7 @@ function SparCard({ onPress }: { onPress: () => void }) {
       ]}>
       <OwlAvatar pose="arguing" size={52} />
       <View style={styles.sparText}>
-        <Text weight="display" style={styles.sparTitle}>
+        <Text accessibilityRole="header" weight="display" style={styles.sparTitle}>
           {t('mobile.debate.spar')}
         </Text>
         <Text style={styles.sparLine}>{t('sparring.format.standard')}</Text>

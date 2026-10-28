@@ -17,9 +17,10 @@ import {
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { AppState, Keyboard, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, TextInput, useWindowDimensions, View } from 'react-native';
+import { AppState, Keyboard, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { AppTextInput } from '@/components/app-text-input';
 import { ActionMenu } from '@/components/action-menu';
 import { MainActionButton, TextButton } from '@/components/buttons';
 import { DocumentScreen } from '@/components/document';
@@ -35,6 +36,7 @@ import { SparringScorecardScreen } from '@/components/sparring-views';
 import { Text } from '@/components/text';
 import { TimerRing } from '@/components/timer-ring';
 import { ToolTitle, WorkingIn } from '@/components/tool-form';
+import { useKeyCommand } from '@/lib/key-commands';
 import { AIError, isAbortError, untilAborted } from '@/lib/ai-request';
 import { useAuth } from '@/lib/auth';
 import { backLabel } from '@/lib/back-label';
@@ -46,6 +48,7 @@ import { sessionQuotaRefusal, useSessionQuota } from '@/lib/session-quota';
 import { decideMotionTarget, shouldPrefillMotion } from '@/lib/motion';
 import { chooseMotionTarget } from '@/lib/motion-gate';
 import { useSettings } from '@/lib/settings';
+import { announceAnswer } from '@/lib/a11y';
 import { attachSparring, judgeSparring, newSparringId, noteJudgedRound, SparringResponseError, sparringDraft, sparringTurn } from '@/lib/sparring';
 import { formatClock } from '@/lib/timer';
 import { tapTurnStart, useKeepAwakeWhile } from '@/lib/timer-signals';
@@ -219,6 +222,8 @@ export default function SparringScreen() {
       setRequest({ status: 'idle' });
       if (!next) return;
       commit(next);
+      // VoiceOver reads the opponent's finished speech, never as it streams in.
+      announceAnswer(generated.content);
       if (next.phase === 'judging') void runJudge(next, forUser);
       else if (currentSparringTurn(next)?.speaker === 'user') tapTurnStart();
     } catch (cause) {
@@ -313,6 +318,9 @@ export default function SparringScreen() {
     }
     if (live.current && owner.current === forUser && startAttempt.current === attempt) begin(side, debateId, forUser);
   };
+
+  // ⌘↩ submits the speech on an iPad keyboard.
+  useKeyCommand('cmd+enter', () => submit());
 
   const submit = () => {
     const latest = sessionRef.current;
@@ -654,7 +662,7 @@ function LiveRound({
             <Text tone="faint" style={styles.guidance}>
               {guidance}
             </Text>
-            <TextInput
+            <AppTextInput
               value={session.draft}
               onChangeText={onDraft}
               maxLength={MAX_SPARRING_SPEECH_CHARS}

@@ -120,7 +120,8 @@ export function PrimaryButton({
       {(foreground) => (
         <>
           {busy ? <ActivityIndicator color={foreground} /> : icon ? <Icon name={icon} color={foreground} size={20} /> : null}
-          <Text weight="display" style={[styles.label, { color: foreground }]} numberOfLines={2}>
+          {/* A floating button sits in the pinned bar, fixed chrome: it grows with Dynamic Type to a cap. */}
+          <Text weight="display" style={[styles.label, { color: foreground }]} numberOfLines={2} maxFontSizeMultiplier={floating ? 1.6 : undefined}>
             {label}
           </Text>
         </>
@@ -158,7 +159,7 @@ export function SecondaryButton({
       {(foreground) => (
         <>
           {icon ? <Icon name={icon} color={foreground} size={20} /> : null}
-          <Text weight="display" style={[styles.label, { color: foreground }]} numberOfLines={2}>
+          <Text weight="display" style={[styles.label, { color: foreground }]} numberOfLines={2} maxFontSizeMultiplier={floating ? 1.6 : undefined}>
             {label}
           </Text>
         </>

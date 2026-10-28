@@ -163,7 +163,7 @@ export function SparringScorecardView({ session, scorecard, transcriptOpen }: { 
 
       <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]} testID="sparring-categories">
         <View style={styles.cardHead}>
-          <Text weight="bold" style={styles.cardTitle}>
+          <Text accessibilityRole="header" weight="bold" style={styles.cardTitle}>
             {t('sparring.scorecard.categoryBalance')}
           </Text>
           <Text tone="faint" style={styles.cardDescription}>
@@ -194,7 +194,7 @@ export function SparringScorecardView({ session, scorecard, transcriptOpen }: { 
       </View>
 
       <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]} testID="sparring-verdict">
-        <Text weight="bold" style={styles.cardTitle}>
+        <Text accessibilityRole="header" weight="bold" style={styles.cardTitle}>
           {t('sparring.scorecard.verdict')}
         </Text>
         <Text tone="secondary" style={styles.verdict} selectable>

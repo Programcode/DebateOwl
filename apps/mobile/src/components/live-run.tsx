@@ -103,7 +103,7 @@ function Block({ block, writing }: { block: DraftBlock; writing: boolean }) {
   if (block.heading) {
     return (
       <View style={styles.inline}>
-        <Text weight="bold" style={styles.heading}>
+        <Text accessibilityRole="header" weight="bold" style={styles.heading}>
           {block.heading}
         </Text>
         {writing ? <Caret /> : null}

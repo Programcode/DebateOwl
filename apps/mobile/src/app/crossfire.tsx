@@ -11,9 +11,10 @@ import {
 import { Stack, useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useReducer, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ActivityIndicator, AppState, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
+import { ActivityIndicator, AppState, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { AppTextInput } from '@/components/app-text-input';
 import { MainActionButton, TextButton } from '@/components/buttons';
 import { ChoiceCards, CrossfireDebriefDocument, CrossfireTranscript } from '@/components/crossfire-views';
 import { DocumentScreen, DocumentTitle, SectionHeading } from '@/components/document';
@@ -28,6 +29,8 @@ import { SegmentedControl } from '@/components/segmented-control';
 import { Text } from '@/components/text';
 import { TimerRing } from '@/components/timer-ring';
 import { ToolTitle, WorkingIn } from '@/components/tool-form';
+import { useKeyCommand } from '@/lib/key-commands';
+import { announceAnswer } from '@/lib/a11y';
 import { abortError, AIError, isAbortError, type ResponseExtras, untilAborted } from '@/lib/ai-request';
 import { useAuth } from '@/lib/auth';
 import { haptics } from '@/lib/haptics';
@@ -244,8 +247,9 @@ export default function CrossfireScreen() {
       });
       if (controller.signal.aborted) return;
       dispatch({ type: 'ai-turn-received', turn: nextTurn(snapshot.turns.length + 1, 'ai', reply.type, reply.text) });
-      // The turn is back with the student.
+      // The turn is back with the student; VoiceOver reads the finished reply.
       haptics.turn();
+      announceAnswer(reply.text);
       afterResponse(forUser, debateId, extras);
       if (reply.signalToken) {
         const signalController = new AbortController();
@@ -389,6 +393,9 @@ export default function CrossfireScreen() {
     }
     if (live.current) beginSession(debateId, forUser);
   };
+
+  // ⌘↩ submits the turn on an iPad keyboard.
+  useKeyCommand('cmd+enter', () => submitTurn());
 
   const submitTurn = () => {
     if (state.phase !== 'active' || !userId) return;
@@ -689,7 +696,7 @@ export default function CrossfireScreen() {
               </Text>
             </View>
             <View style={[styles.inputRow, { borderColor: colors.border, backgroundColor: colors.input }]}>
-              <TextInput
+              <AppTextInput
                 value={draftTurn}
                 onChangeText={setDraftTurn}
                 maxLength={MAX_CROSSFIRE_TURN_CHARS}

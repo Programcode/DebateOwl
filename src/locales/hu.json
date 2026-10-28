@@ -2987,6 +2987,10 @@
     },
     "tour": {
       "progress": "{{step}}. lépés / {{steps}}"
+    },
+    "a11y": {
+      "answerReady": "Kész a válasz",
+      "resultReady": "Elkészült: {{title}}"
     }
   }
 }

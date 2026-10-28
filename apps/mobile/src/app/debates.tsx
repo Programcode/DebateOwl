@@ -1,9 +1,10 @@
 import { useRouter } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ActivityIndicator, Pressable, StyleSheet, Switch, TextInput, View } from 'react-native';
+import { ActivityIndicator, Pressable, StyleSheet, Switch, View } from 'react-native';
 import ReanimatedSwipeable from 'react-native-gesture-handler/ReanimatedSwipeable';
 
+import { AppTextInput } from '@/components/app-text-input';
 import { PrimaryButton, TextButton } from '@/components/buttons';
 import { Card } from '@/components/card';
 import { WEB_SWITCH_THUMB } from '@/components/form-rows';
@@ -115,7 +116,7 @@ export default function DebatesSheet() {
 
       <View style={[styles.search, { backgroundColor: colors.segmentTrack }]}>
         <Icon name="search" color={colors.faint} size={19} />
-        <TextInput
+        <AppTextInput
           value={query}
           onChangeText={setQuery}
           placeholder={t('mobile.debates.search')}
