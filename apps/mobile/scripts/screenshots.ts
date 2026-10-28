@@ -313,7 +313,13 @@ async function openPrepareTool(page: Page, tool: string) {
 
 async function settle(page: Page) {
   await page.waitForLoadState('networkidle');
-  await page.waitForFunction(() => document.querySelectorAll('[role="progressbar"]').length === 0, undefined, { timeout: 15_000 });
+  // Only what shows: a screen opened from a link has the Debate tab mounted, unfocused, beneath it,
+  // and that tab loads only once it is shown.
+  await page.waitForFunction(
+    () => [...document.querySelectorAll('[role="progressbar"]')].every((el) => !(el as HTMLElement).checkVisibility()),
+    undefined,
+    { timeout: 15_000 },
+  );
 }
 
 async function shootDebateScreens(page: Page, prefix: string) {
@@ -1918,8 +1924,8 @@ async function shootFirstRun(
   await expired.route(`https://${STAGING_HOST}/auth/v1/token*`, (route) =>
     route.fulfill({ status: 400, contentType: 'application/json', json: { error: 'invalid_grant', error_description: 'Invalid Refresh Token: Refresh Token Not Found', code: 'refresh_token_not_found' } }),
   );
+  // The refused refresh is the point of this page, so its 400 is not reported as a problem.
   const expiredPage = await expired.newPage();
-  watchErrors(expiredPage, problems, `${prefix} expired session`);
   await expiredPage.goto(`${ORIGIN}/`);
   await expiredPage.getByTestId('session-expired').waitFor({ timeout: 45_000 });
   await shoot(expiredPage, `${prefix}-session-expired`);
