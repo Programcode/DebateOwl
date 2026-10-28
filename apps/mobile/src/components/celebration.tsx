@@ -5,7 +5,6 @@ import Animated, {
   Easing,
   ReduceMotion,
   useAnimatedStyle,
-  useReducedMotion,
   useSharedValue,
   withDelay,
   withSpring,
@@ -21,7 +20,7 @@ import { Text } from './text';
 
 import { haptics } from '@/lib/haptics';
 import { palette, radius } from '@/theme/colors';
-import { DURATION, EASE, SPRING, staggerDelay } from '@/theme/motion';
+import { DURATION, EASE, SPRING, staggerDelay, useReduceMotion } from '@/theme/motion';
 import { useTheme } from '@/theme/use-theme';
 
 /** A number the celebration counts up to, with the label the result already uses for it. */
@@ -87,7 +86,7 @@ export function Celebration({
   const { t } = useTranslation();
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
-  const reduce = useReducedMotion();
+  const reduce = useReduceMotion();
   const shown = stats.slice(0, 3);
   const [leaving, setLeaving] = useState(false);
   const fade = useSharedValue(0);
@@ -317,7 +316,7 @@ function ConfettiPiece({ piece, progress }: { piece: Piece; progress: SharedValu
  * simply there.
  */
 export function PopIn({ index = 0, hold = false, children }: { index?: number; hold?: boolean; children: ReactNode }) {
-  const reduce = useReducedMotion();
+  const reduce = useReduceMotion();
   const pop = useSharedValue(reduce ? 1 : 0);
   useEffect(() => {
     if (reduce) {

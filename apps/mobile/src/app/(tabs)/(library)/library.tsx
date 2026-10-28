@@ -240,7 +240,8 @@ function useLibrary(debateId: string | null) {
       if (synced.current.has(tempId)) continue;
       synced.current.add(tempId);
       if (source.debateId !== debateId) continue;
-      setSources((previous) => (previous && !previous.some((item) => item.id === source.id) ? [source, ...previous] : previous));
+      // The list may hold the note under its temporary id (from the saved copy); the row replaces it, once.
+      setSources((previous) => previous && [source, ...previous.filter((item) => item.id !== tempId && item.id !== source.id)]);
     }
   }, [queued.synced, debateId]);
 

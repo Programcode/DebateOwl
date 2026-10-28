@@ -1,9 +1,11 @@
-import { Easing } from 'react-native-reanimated';
+import { useEffect, useState } from 'react';
+import { AccessibilityInfo } from 'react-native';
+import { Easing, useReducedMotion as useStartupReducedMotion } from 'react-native-reanimated';
 
 /**
  * The website's motion tokens (src/styles/tokens.css, `--do-dur-*` and `--do-ease-*`) for
  * Reanimated. Everything runs on the UI thread; under Reduce Motion each component settles
- * at once (Reanimated's useReducedMotion, and layout animations follow the system setting).
+ * at once (useReduceMotion below; layout animations follow the system setting).
  */
 export const DURATION = {
   instant: 70,
@@ -35,4 +37,40 @@ export const SPRING = {
 /** Rows arrive one after another, 40 ms apart, and never more than eight steps late. */
 export function staggerDelay(index: number): number {
   return Math.min(Math.max(index, 0), 8) * 40;
+}
+
+// The setting as last reported, shared by every component, so one mounted later starts from it.
+let latest: boolean | null = null;
+const listeners = new Set<(reduce: boolean) => void>();
+let watching = false;
+
+function watch() {
+  if (watching) return;
+  watching = true;
+  const report = (reduce: boolean) => {
+    if (latest === reduce) return;
+    latest = reduce;
+    listeners.forEach((listener) => listener(reduce));
+  };
+  AccessibilityInfo.addEventListener('reduceMotionChanged', report);
+  void AccessibilityInfo.isReduceMotionEnabled().then(report, () => undefined);
+}
+
+/**
+ * Whether Reduce Motion is on, kept current while the app runs. It starts from Reanimated's
+ * reading at launch (synchronous, so a first frame never animates by mistake) and follows the
+ * setting when the student changes it in Settings, which Reanimated's own hook does not.
+ */
+export function useReduceMotion(): boolean {
+  const startup = useStartupReducedMotion();
+  const [reduce, setReduce] = useState(() => latest ?? startup);
+  useEffect(() => {
+    watch();
+    listeners.add(setReduce);
+    if (latest !== null) setReduce(latest);
+    return () => {
+      listeners.delete(setReduce);
+    };
+  }, []);
+  return reduce;
 }

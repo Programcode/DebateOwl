@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet } from 'react-native';
-import Animated, { useAnimatedStyle, useReducedMotion, useSharedValue, withSpring, withTiming } from 'react-native-reanimated';
+import Animated, { useAnimatedStyle, useSharedValue, withSpring, withTiming } from 'react-native-reanimated';
 
 import { Icon } from './icon';
 import type { IconName } from './icon-paths';
@@ -8,7 +8,7 @@ import { Text } from './text';
 
 import { haptics } from '@/lib/haptics';
 import { LEDGE, radius } from '@/theme/colors';
-import { SPRING } from '@/theme/motion';
+import { SPRING, useReduceMotion } from '@/theme/motion';
 import { useTheme } from '@/theme/use-theme';
 
 type Look = { face: string; ledge: string; foreground: string; edge?: string; ledgeSize?: number };
@@ -44,7 +44,7 @@ function Tactile({
   children: (foreground: string) => ReactNode;
 }) {
   const { colors, scheme } = useTheme();
-  const reduce = useReducedMotion();
+  const reduce = useReduceMotion();
   const flat = disabled && !busy;
   const ledge = flat ? 0 : (look.ledgeSize ?? LEDGE);
   const face = flat ? colors.disabledFace : look.face;

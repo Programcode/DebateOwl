@@ -3,7 +3,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Crypto from 'expo-crypto';
 
 import { isKnownOffline } from './network-status';
-import { ReadError, updateCopy } from './offline-cache';
+import { copiesWritten, ReadError, updateCopy } from './offline-cache';
 import { createSerialQueue } from './serial-queue';
 import {
   addSource,
@@ -320,6 +320,20 @@ function updateSourceCopies(userId: string, debateId: string, ids: string[], cha
   }
 }
 
+/** The values a write saved for one source, as the server stores them (updateSource and setSourcesActive). */
+function savedValues(item: QueuedWrite, id: string): Restorable {
+  if (item.kind === 'active') return item.ids.includes(id) ? { isActive: item.isActive } : {};
+  if (item.kind !== 'edit' || item.sourceId !== id) return {};
+  const values: Restorable = {};
+  const { title, content, type, origin, folder } = item.patch;
+  if (title !== undefined && title.trim()) values.title = title.trim();
+  if (content !== undefined && content.trim()) values.content = content.trim();
+  if (type !== undefined) values.type = type;
+  if (origin !== undefined) values.origin = origin?.trim() || null;
+  if (folder !== undefined) values.folder = normalizeFolder(folder);
+  return values;
+}
+
 /** The fields a write changes for each source it names. */
 function touched(item: QueuedWrite): { id: string; fields: RestorableField[] }[] {
   if (item.kind === 'edit') return [{ id: item.sourceId, fields: Object.keys(item.patch) as RestorableField[] }];
@@ -339,13 +353,21 @@ function settleBefore(userId: string, item: QueuedWrite, refused: boolean) {
     const held = next[id];
     if (!held) continue;
     const stillQueued = new Set(items.flatMap((other) => touched(other).filter((one) => one.id === id).flatMap((one) => one.fields)));
+    if (!refused) {
+      // A saved write is the server's value now: a newer queued write that is refused goes back to it.
+      const saved = savedValues(item, id);
+      const advanced: Restorable = { ...held };
+      for (const field of fields) if (stillQueued.has(field) && field in saved) (advanced as Record<string, unknown>)[field] = saved[field];
+      next = { ...next, [id]: advanced };
+    }
     const free = fields.filter((field) => field in held && !stillQueued.has(field));
     if (free.length === 0) continue;
     if (refused) {
       const restore = Object.fromEntries(free.map((field) => [field, held[field]])) as Restorable;
       updateSourceCopies(userId, debateId, [id], (source) => ({ ...source, ...restore }));
     }
-    const left = Object.fromEntries(Object.entries(held).filter(([field]) => !free.includes(field as RestorableField))) as Restorable;
+    const current = next[id] ?? held;
+    const left = Object.fromEntries(Object.entries(current).filter(([field]) => !free.includes(field as RestorableField))) as Restorable;
     next = { ...next };
     if (Object.keys(left).length > 0) next[id] = left;
     else delete next[id];
@@ -606,9 +628,6 @@ async function drain() {
       if (item.kind === 'add' && row) {
         synced = new Map(synced).set(item.tempId, row);
         const realId = row.id;
-        // The saved list held the note under its temporary id; it now holds the row, once, so a list
-        // read that fails afterwards never shows the note twice.
-        updateCopy<Source[]>(userId, 'sources', item.input.debateId, (list) => list && [row, ...list.filter((source) => source.id !== item.tempId && source.id !== realId)]);
         // Changes queued while the note was on its way now name its row.
         items = items.map((other) => {
           if (other.kind === 'edit' && other.sourceId === item.tempId) return { ...other, sourceId: realId };
@@ -616,24 +635,34 @@ async function drain() {
           return other;
         });
       }
-      settleBefore(userId, item, false);
+      persist();
+      emit();
       done.forEach((waiter) => waiter.resolve('saved'));
       if (done.length === 0) report.synced += 1;
+      // What a refused newer change goes back to is noted while the copies update, which may still be running.
+      await copiesWritten();
+      if (gen !== generation) break;
+      settleBefore(userId, item, false);
+      persist();
     } else {
       console.warn('The server refused an offline change:', failure.cause instanceof Error ? failure.cause.message : failure.cause);
       const dependents = item.kind === 'add' ? dropWrites(item.tempId, item.key).slice(1) : [];
       const all = [...done, ...dependents.flatMap(takeWaiters)];
+      persist();
+      emit();
       all.forEach((waiter) => waiter.reject(failure.cause));
       if (done.length === 0) report.dropped.push(describe(item));
       // The saved copies still hold the refused change: put back what they showed before it,
       // which needs no network, then read the server's version over that when it answers.
       // Every other queued write stays visible; screens that showed the change read it again.
+      // The values to put back are noted while the copies update, which may still be running.
+      await copiesWritten();
+      if (gen !== generation) break;
       settleBefore(userId, item, true);
+      persist();
       await restoreRefused(userId, item);
       notifySourcesChanged();
     }
-    persist();
-    emit();
   }
   if (gen === generation && (report.synced > 0 || report.dropped.length > 0)) reportListeners.forEach((listener) => listener(report));
 }

@@ -4,7 +4,6 @@ import Animated, {
   cancelAnimation,
   interpolate,
   useAnimatedStyle,
-  useReducedMotion,
   useSharedValue,
   withDelay,
   withRepeat,
@@ -14,7 +13,7 @@ import Animated, {
   type SharedValue,
 } from 'react-native-reanimated';
 
-import { DURATION, EASE, SPRING } from '@/theme/motion';
+import { DURATION, EASE, SPRING, useReduceMotion } from '@/theme/motion';
 import { useTheme } from '@/theme/use-theme';
 
 /**
@@ -89,8 +88,8 @@ const EYES: Partial<Record<OwlPose | 'mark', readonly [EyeBox, EyeBox]>> = {
 // Below this the lids are a pixel or two and a blink reads as flicker.
 const MIN_BLINK_SIZE = 28;
 
-/** Whether iOS's Reduce Motion is on; every moving part of the app checks it. */
-export const useReduceMotion = useReducedMotion;
+/** Whether iOS's Reduce Motion is on, kept current; every moving part of the app checks it. */
+export { useReduceMotion };
 
 /**
  * A blink on this owl's own clock (a period of 4.6 to 7 s and a random phase, fixed for its
@@ -204,7 +203,7 @@ type OwlProps = {
  * pops in on the website's `pop` spring, and `replay` cheers again on demand.
  */
 export function Owl({ pose, size, mirrored, label, style, gesture, breathe = true, replay }: OwlProps) {
-  const reduce = useReducedMotion();
+  const reduce = useReduceMotion();
   const move = gesture === undefined ? GESTURES[pose] : gesture || undefined;
   const eyes = size >= MIN_BLINK_SIZE ? EYES[pose] : undefined;
   const lid = useBlink(!reduce && Boolean(eyes));
@@ -276,7 +275,7 @@ export function Owl({ pose, size, mirrored, label, style, gesture, breathe = tru
  */
 export function OwlAvatar({ pose, size, label, blink = false }: { pose: OwlPose; size: number; label?: string; blink?: boolean }) {
   const { scheme } = useTheme();
-  const reduce = useReducedMotion();
+  const reduce = useReduceMotion();
   // The website zooms the full pose 1.6x about 52% across and 32% down, onto the head and shoulders.
   const zoomed = size * 1.6;
   const offset = { left: -0.52 * (zoomed - size), top: -0.32 * (zoomed - size) };
@@ -303,7 +302,7 @@ export function OwlAvatar({ pose, size, label, blink = false }: { pose: OwlPose;
 /** The owl mark on its tile, as the website's sign-in and header show it; it blinks from 28 points. */
 export function OwlMark({ size }: { size: number }) {
   const { scheme } = useTheme();
-  const reduce = useReducedMotion();
+  const reduce = useReduceMotion();
   const eyes = size >= MIN_BLINK_SIZE ? EYES.mark : undefined;
   const lid = useBlink(!reduce && Boolean(eyes));
   return (
@@ -322,7 +321,7 @@ export function OwlMark({ size }: { size: number }) {
  * 5 points up and down over 2.4 s), blinking as it waits; still under Reduce Motion.
  */
 export function OwlLoader({ pose, size, label }: { pose: OwlPose; size: number; label?: string }) {
-  const reduce = useReducedMotion();
+  const reduce = useReduceMotion();
   const bob = useSharedValue(0);
   useEffect(() => {
     if (reduce) {

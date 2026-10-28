@@ -1,8 +1,8 @@
 import type { ReactNode } from 'react';
 import { Pressable, type PressableProps, type StyleProp, type ViewStyle } from 'react-native';
-import Animated, { useAnimatedStyle, useReducedMotion, useSharedValue, withSpring, withTiming } from 'react-native-reanimated';
+import Animated, { useAnimatedStyle, useSharedValue, withSpring, withTiming } from 'react-native-reanimated';
 
-import { SPRING } from '@/theme/motion';
+import { SPRING, useReduceMotion } from '@/theme/motion';
 
 /**
  * A pressable card or row that gives under the finger: it eases to 97% as a finger lands and
@@ -10,7 +10,7 @@ import { SPRING } from '@/theme/motion';
  * they only press in. Under Reduce Motion it does not move.
  */
 export function PressScale({ children, style, scaleTo = 0.97, onPressIn, onPressOut, ...props }: Omit<PressableProps, 'style' | 'children'> & { children: ReactNode; style?: StyleProp<ViewStyle>; scaleTo?: number }) {
-  const reduce = useReducedMotion();
+  const reduce = useReduceMotion();
   const scale = useSharedValue(1);
   const animated = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
   return (

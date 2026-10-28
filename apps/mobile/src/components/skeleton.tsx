@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
 import { StyleSheet, View, type DimensionValue, type LayoutChangeEvent, type ViewStyle } from 'react-native';
-import Animated, { cancelAnimation, useAnimatedStyle, useReducedMotion, useSharedValue, withDelay, withRepeat, withTiming } from 'react-native-reanimated';
+import Animated, { cancelAnimation, useAnimatedStyle, useSharedValue, withDelay, withRepeat, withTiming } from 'react-native-reanimated';
 import { useTranslation } from 'react-i18next';
 
+import { useReduceMotion } from '@/theme/motion';
 import { radius } from '@/theme/colors';
 import { useTheme } from '@/theme/use-theme';
 
@@ -16,7 +17,7 @@ const SHINE = { light: 'rgba(255,255,255,0.55)', dark: 'rgba(255,255,255,0.06)' 
  */
 export function Skeleton({ width = '100%', height = 14, round = 6, style }: { width?: DimensionValue; height?: number; round?: number; style?: ViewStyle }) {
   const { scheme } = useTheme();
-  const reduce = useReducedMotion();
+  const reduce = useReduceMotion();
   const [span, setSpan] = useState(0);
   const sweep = useSharedValue(0);
   useEffect(() => {

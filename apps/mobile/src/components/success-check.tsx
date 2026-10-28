@@ -3,7 +3,6 @@ import { StyleSheet } from 'react-native';
 import Animated, {
   useAnimatedProps,
   useAnimatedStyle,
-  useReducedMotion,
   useSharedValue,
   withDelay,
   withSequence,
@@ -12,7 +11,7 @@ import Animated, {
 import Svg, { Path } from 'react-native-svg';
 
 import { haptics } from '@/lib/haptics';
-import { EASE } from '@/theme/motion';
+import { EASE, useReduceMotion } from '@/theme/motion';
 import { useTheme } from '@/theme/use-theme';
 
 const AnimatedPath = Animated.createAnimatedComponent(Path);
@@ -27,7 +26,7 @@ const CHECK_LENGTH = 24;
  */
 export function SuccessCheck({ size = 22, delay = 0, haptic = true }: { size?: number; delay?: number; haptic?: boolean }) {
   const { colors } = useTheme();
-  const reduce = useReducedMotion();
+  const reduce = useReduceMotion();
   const pop = useSharedValue(reduce ? 1 : 0);
   const draw = useSharedValue(reduce ? 1 : 0);
 

@@ -5,7 +5,7 @@ import type { TFunction } from 'i18next';
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { StyleSheet, View } from 'react-native';
-import Animated, { useAnimatedStyle, useReducedMotion, useSharedValue, withDelay, withSpring } from 'react-native-reanimated';
+import Animated, { useAnimatedStyle, useSharedValue, withDelay, withSpring } from 'react-native-reanimated';
 
 import { PrimaryButton, SecondaryButton } from './buttons';
 import { PopIn } from './celebration';
@@ -19,7 +19,7 @@ import { confirmDestructive } from '@/lib/confirm';
 import { shareText } from '@/lib/export';
 import { deleteSparringRound } from '@/lib/sparring';
 import { radius } from '@/theme/colors';
-import { SPRING, staggerDelay } from '@/theme/motion';
+import { SPRING, staggerDelay, useReduceMotion } from '@/theme/motion';
 import { useTheme } from '@/theme/use-theme';
 
 const CATEGORY_MAX = 25;
@@ -271,7 +271,7 @@ export function SparringScorecardView({
  * The spring's overshoot never runs past the end of the track. Under Reduce Motion it is full at once.
  */
 function CategoryFill({ share, index, hold, color }: { share: number; index: number; hold: boolean; color: string }) {
-  const reduce = useReducedMotion();
+  const reduce = useReduceMotion();
   const grow = useSharedValue(reduce ? 1 : 0);
   useEffect(() => {
     if (reduce) {

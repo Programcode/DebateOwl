@@ -1,14 +1,14 @@
 import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
-import Animated, { FadeInDown, LinearTransition, useAnimatedStyle, useReducedMotion, useSharedValue, withSpring, withTiming } from 'react-native-reanimated';
+import Animated, { FadeInDown, LinearTransition, useAnimatedStyle, useSharedValue, withSpring, withTiming } from 'react-native-reanimated';
 
 import { Icon } from './icon';
 import type { IconName } from './icon-paths';
 import { Skeleton } from './skeleton';
 
 import { radius } from '@/theme/colors';
-import { SPRING, staggerDelay } from '@/theme/motion';
+import { SPRING, staggerDelay, useReduceMotion } from '@/theme/motion';
 import { useTheme } from '@/theme/use-theme';
 
 export function Card({ children, style }: { children: ReactNode; style?: ViewStyle }) {
@@ -46,7 +46,7 @@ export function ListItemIn({ index, layout = false, style, children }: { index: 
  * put `style` on an Animated.View inside it. Under Reduce Motion it does not move.
  */
 export function usePressScale(scaleTo = 0.97) {
-  const reduce = useReducedMotion();
+  const reduce = useReduceMotion();
   const scale = useSharedValue(1);
   const style = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
   return {

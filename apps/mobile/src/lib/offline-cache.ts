@@ -395,6 +395,11 @@ export function afterWrite(userId: string, scopes: CopyScope[]) {
  * replacement, or undefined to drop it. Reads that started before this call
  * cannot save over it.
  */
+/** Resolves once every copy update asked for so far has run, so a caller can read what they saw. */
+export function copiesWritten(): Promise<void> {
+  return queue(async () => undefined).catch(() => undefined);
+}
+
 export function updateCopy<T>(userId: string, group: CacheGroup, key: string, update: (copy: T | undefined) => T | undefined) {
   const storageKey = entryKey(userId, group, key);
   const gen = generation;

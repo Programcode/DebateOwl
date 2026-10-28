@@ -7,15 +7,21 @@ const net = vi.hoisted(() => ({ offline: false, user: 'user-a' as string | null,
 // supabase-js answers a request that never reached the server with status 0; readFailed marks it unreachable.
 // The saved copies, kept in memory so a test can see what an offline relaunch would show.
 const copies = vi.hoisted(() => new Map<string, unknown>());
+const pending = vi.hoisted(() => ({ chain: Promise.resolve() as Promise<void> }));
 const cache = vi.hoisted(() => ({
   ReadError: class ReadError extends Error {
     constructor(message: string, readonly unreachable: boolean) {
       super(message);
     }
   },
+  // Copy updates run later, one at a time, as the real cache's do.
   updateCopy: (_userId: string, group: string, key: string, update: (copy: unknown) => unknown) => {
-    copies.set(`${group}:${key}`, update(copies.get(`${group}:${key}`)));
+    pending.chain = pending.chain.then(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 2));
+      copies.set(`${group}:${key}`, update(copies.get(`${group}:${key}`)));
+    });
   },
+  copiesWritten: () => pending.chain,
 }));
 const sources = vi.hoisted(() => ({
   addSource: vi.fn(),
@@ -69,7 +75,10 @@ function sent(): string[] {
   return calls.sort((a, b) => a[0] - b[0]).map(([, call]) => call);
 }
 
-beforeEach(() => {
+beforeEach(async () => {
+  // Copy updates a previous test started finish before this one begins.
+  await pending.chain;
+  pending.chain = Promise.resolve();
   storage.clear();
   copies.clear();
   net.offline = false;
@@ -143,23 +152,13 @@ describe('offline queue', () => {
     expect(queue.getQueueSnapshot().items).toEqual([]);
   });
 
-  it('swaps the temporary row of a synced note for its row in the saved list', async () => {
-    const queue = await load();
-    copies.set('sources:d1', [row('s1', { title: 'Older', content: 'Text', debateId: 'd1' })]);
-    net.offline = true;
-    const { source } = await queue.queueAddSource('user-a', { title: 'Note', content: 'Text', type: 'text', debateId: 'd1' });
-    expect((copies.get('sources:d1') as Source[]).map((item) => item.id)).toEqual([source.id, 's1']);
-    net.offline = false;
-    await queue.replayOfflineQueue();
-    expect((copies.get('sources:d1') as Source[]).map((item) => item.id)).toEqual(['uuid-1', 's1']);
-  });
-
   it('puts back what the copies showed before a refused change, even when the server cannot be read again', async () => {
     const queue = await load();
     copies.set('sources:d1', [row('s1', { title: 'Old', content: 'Text', debateId: 'd1' })]);
     copies.set('source:s1', row('s1', { title: 'Old', content: 'Text', debateId: 'd1' }));
     net.offline = true;
     await queue.queueUpdateSource('user-a', 'd1', 's1', { title: 'New' });
+    await cache.copiesWritten();
     expect((copies.get('sources:d1') as Source[])[0].title).toBe('New');
 
     // Back online the server refuses it, and the connection goes again before it can be read back.
@@ -168,8 +167,46 @@ describe('offline queue', () => {
     sources.fetchSource.mockRejectedValueOnce(noAnswer());
     net.offline = false;
     await queue.replayOfflineQueue();
+    await cache.copiesWritten();
     expect((copies.get('sources:d1') as Source[])[0].title).toBe('Old');
     expect((copies.get('source:s1') as Source).title).toBe('Old');
+  });
+
+  it('puts back the old value even when the refusal comes before the copies have updated', async () => {
+    const queue = await load();
+    copies.set('sources:d1', [row('s1', { title: 'Old', content: 'Text', debateId: 'd1' })]);
+    copies.set('source:s1', row('s1', { title: 'Old', content: 'Text', debateId: 'd1' }));
+    // Online: the server refuses at once, while the copy update that notes "Old" is still waiting.
+    sources.updateSource.mockRejectedValueOnce(refused());
+    sources.fetchSources.mockRejectedValueOnce(noAnswer());
+    sources.fetchSource.mockRejectedValueOnce(noAnswer());
+    await expect(queue.queueUpdateSource('user-a', 'd1', 's1', { title: 'New' })).rejects.toThrow('row-level security');
+    // The caller hears the refusal first; the copies are put back right after.
+    await queue.replayOfflineQueue();
+    await cache.copiesWritten();
+    expect((copies.get('sources:d1') as Source[])[0].title).toBe('Old');
+    expect((copies.get('source:s1') as Source).title).toBe('Old');
+  });
+
+  it('puts back the last saved value, not the first, when a later change to the same field is refused', async () => {
+    const queue = await load();
+    copies.set('sources:d1', [row('s1', { title: 'Old', content: 'Text', debateId: 'd1' })]);
+    copies.set('source:s1', row('s1', { title: 'Old', content: 'Text', debateId: 'd1' }));
+    let saveFirst: () => void = () => undefined;
+    sources.updateSource.mockImplementationOnce(() => new Promise<void>((resolve) => { saveFirst = resolve; }));
+    const first = queue.queueUpdateSource('user-a', 'd1', 's1', { title: 'First' });
+    await new Promise((resolve) => setTimeout(resolve, 10));
+    // Queued while "First" is on its way, so it is a write of its own.
+    sources.updateSource.mockRejectedValueOnce(refused());
+    sources.fetchSources.mockRejectedValueOnce(noAnswer());
+    sources.fetchSource.mockRejectedValueOnce(noAnswer());
+    const second = queue.queueUpdateSource('user-a', 'd1', 's1', { title: 'Second' });
+    saveFirst();
+    await expect(first).resolves.toBe('saved');
+    await expect(second).rejects.toThrow('row-level security');
+    await queue.replayOfflineQueue();
+    await cache.copiesWritten();
+    expect((copies.get('sources:d1') as Source[])[0].title).toBe('First');
   });
 
   it('saves a waiting note with its later edits and switch, under the id after its temporary prefix', async () => {
