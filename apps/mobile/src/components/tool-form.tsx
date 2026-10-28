@@ -77,9 +77,21 @@ export function ToolError({ title, error, onRetry }: { title: string; error: AIE
   );
 }
 
-/** A calm progress state that names what is happening, cycling the website's messages. */
-/** A tool at work: the owl in the tool's pose, the website's progress line, the request's subject and Cancel. */
-export function ToolProgress({ messages, detail, onCancel, pose = 'thinking' }: { messages: string[]; detail?: string; onCancel: () => void; pose?: OwlPose }) {
+/** A tool at work: the owl in the tool's pose, the website's progress line, the elapsed time once it matters, the request's subject and Cancel. */
+export function ToolProgress({
+  messages,
+  detail,
+  elapsed,
+  onCancel,
+  pose = 'thinking',
+}: {
+  messages: string[];
+  detail?: string;
+  /** Seconds since the request started; shown from 5, as the website's ToolRunStatus. */
+  elapsed?: number;
+  onCancel: () => void;
+  pose?: OwlPose;
+}) {
   const { t } = useTranslation();
   const { colors } = useTheme();
   const [index, setIndex] = useState(0);
@@ -93,6 +105,11 @@ export function ToolProgress({ messages, detail, onCancel, pose = 'thinking' }: 
       <Text weight="display" style={styles.progressText} accessibilityRole="progressbar" accessibilityLiveRegion="polite">
         {messages[index]}
       </Text>
+      {elapsed !== undefined && elapsed >= 5 ? (
+        <Text tone="faint" style={styles.progressElapsed}>
+          {t('tools.elapsed', { seconds: elapsed })}
+        </Text>
+      ) : null}
       {detail ? (
         <Text tone="faint" style={styles.progressDetail} numberOfLines={3}>
           {detail}
@@ -115,5 +132,6 @@ const styles = StyleSheet.create({
   errorActions: { flexDirection: 'row', gap: 20 },
   progress: { borderWidth: 2, borderStyle: 'dashed', borderRadius: radius.card + 2, paddingVertical: 36, paddingHorizontal: 20, alignItems: 'center', gap: 12, marginTop: 8 },
   progressText: { fontSize: 18, lineHeight: 24, textAlign: 'center' },
+  progressElapsed: { fontSize: 14, marginTop: -6, fontVariant: ['tabular-nums'] },
   progressDetail: { fontSize: 15, lineHeight: 21, textAlign: 'center' },
 });

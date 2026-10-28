@@ -45,7 +45,8 @@
  *
  * Generate and Attack screenshots never call a model and never save: the
  * page answers the ai function with a fixed case or attack, holds it open
- * for the "generating" shot, and answers case, attack and source writes
+ * for the "generating" shot, streams part of it from inside the page and
+ * holds that open for the "-live" shot, and answers case, attack and source writes
  * locally. The PDF export's HTML (the web export cannot run expo-print) is
  * rendered in a page of its own, and the "Copy as text" output is written
  * next to the screenshots. Brainstorm and Factoids are shot the same way,
@@ -441,14 +442,57 @@ const FAKE_FACTOIDS = {
 
 type FakeFeature = 'generate' | 'brainstorm' | 'factoids';
 
-/** Fakes the tools' AI calls and saves for this page (see the header). `hold` keeps that tool waiting. */
-async function fakeResults(page: Page, hold: FakeFeature | null) {
-  const outputs: Record<string, { output: unknown; discoveredSources: unknown[] }> = {
-    generate: { output: FAKE_CASE, discoveredSources: FAKE_SOURCES },
-    attack: { output: FAKE_ATTACK, discoveredSources: [] },
-    brainstorm: { output: FAKE_BRAINSTORM, discoveredSources: FAKE_SOURCES },
-    factoids: { output: FAKE_FACTOIDS, discoveredSources: FAKE_SOURCES },
-  };
+const FAKE_OUTPUTS: Record<string, { output: unknown; discoveredSources: unknown[] }> = {
+  generate: { output: FAKE_CASE, discoveredSources: FAKE_SOURCES },
+  attack: { output: FAKE_ATTACK, discoveredSources: [] },
+  brainstorm: { output: FAKE_BRAINSTORM, discoveredSources: FAKE_SOURCES },
+  factoids: { output: FAKE_FACTOIDS, discoveredSources: FAKE_SOURCES },
+};
+// The live stream writes this share of the answer's JSON, then stays open.
+const LIVE_HOLD_SHARE = 0.55;
+
+/**
+ * Answers `feature`'s streamed request inside the page (expo/fetch uses the
+ * page's fetch) the way the ai function streams: research, then writing,
+ * then part of the answer's JSON a few characters at a time, and then it
+ * stays open, so a shot catches the live draft. Call before the first navigation.
+ */
+async function fakeLiveStream(page: Page, feature: FakeFeature) {
+  const text = JSON.stringify(FAKE_OUTPUTS[feature].output);
+  await page.addInitScript(({ name, partial }) => {
+    const realFetch = window.fetch.bind(window);
+    window.fetch = async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url;
+      if (!url.endsWith('/functions/v1/ai')) return realFetch(input, init);
+      // expo/fetch may hand over a Request rather than a body.
+      const text = typeof init?.body === 'string' ? init.body : input instanceof Request ? await input.clone().text() : '';
+      const body = text ? (JSON.parse(text) as { feature?: string; stream?: boolean }) : null;
+      if (body?.feature !== name || !body.stream) return realFetch(input, init);
+      // No named helper functions here: tsx wraps them in a __name call the page does not have.
+      const encoder = new TextEncoder();
+      const stream = new ReadableStream<Uint8Array>({
+        async start(controller) {
+          controller.enqueue(encoder.encode('event: phase\ndata: {"phase":"research"}\n\n'));
+          await new Promise((resolve) => setTimeout(resolve, 150));
+          controller.enqueue(encoder.encode('event: phase\ndata: {"phase":"writing"}\n\n'));
+          for (let index = 0; index < partial.length; index += 40) {
+            await new Promise((resolve) => setTimeout(resolve, 5));
+            controller.enqueue(encoder.encode(`event: delta\ndata: ${JSON.stringify({ text: partial.slice(index, index + 40) })}\n\n`));
+          }
+        },
+      });
+      return new Response(stream, { status: 200, headers: { 'content-type': 'text/event-stream' } });
+    };
+  }, { name: feature, partial: text.slice(0, Math.floor(text.length * LIVE_HOLD_SHARE)) });
+}
+
+/**
+ * Fakes the tools' AI calls and saves for this page (see the header). `hold` keeps that tool
+ * waiting; with `live`, it writes part of its answer first (fakeLiveStream).
+ */
+async function fakeResults(page: Page, hold: FakeFeature | null, live = false) {
+  const outputs = FAKE_OUTPUTS;
+  if (hold && live) await fakeLiveStream(page, hold);
   await page.route(`https://${STAGING_HOST}/functions/v1/ai`, async (route) => {
     const feature = (route.request().postDataJSON() as { feature?: string } | null)?.feature;
     if (feature && feature === hold) return; // Never answered: the page shows its progress state.
@@ -487,6 +531,20 @@ async function shootResultScreens(context: BrowserContext, prefix: string, langu
   await waiting.getByTestId('tool-progress').waitFor({ timeout: 15_000 });
   await shoot(waiting, `${prefix}-generating`);
   await waiting.close();
+
+  const writing = await context.newPage();
+  watchErrors(writing, problems, `${prefix} results live`);
+  writing.on('dialog', (dialog) => void dialog.dismiss());
+  await pinSettings(writing, language);
+  await fakeResults(writing, 'generate', true);
+  await writing.goto(`${ORIGIN}/generate?from=prepare`);
+  await writing.getByTestId('generate-motion').waitFor({ timeout: 30_000 });
+  await writing.waitForFunction(() => (document.querySelector('[data-testid="generate-motion"]') as HTMLTextAreaElement | null)?.value.trim());
+  await writing.getByRole('button', { name: /^(Generate debate case|Vitaeset generálása|Generar caso de debate)$/i }).click();
+  await writing.getByTestId('live-draft').waitFor({ timeout: 15_000 });
+  await writing.waitForTimeout(1200);
+  await shoot(writing, `${prefix}-generating-live`);
+  await writing.close();
 
   const page = await open(false);
   await page.goto(`${ORIGIN}/generate?from=prepare`);
@@ -541,20 +599,20 @@ async function shootResultScreens(context: BrowserContext, prefix: string, langu
 }
 
 const TOOLS = {
-  brainstorm: { field: 'brainstorm-motion', submit: /^(Start Brainstorming|Ötletelés Indítása|Comenzar Lluvia de Ideas)$/, document: 'brainstorm-document', working: 'brainstorming' },
-  factoids: { field: 'factoids-claim', submit: /^(Find Factoids|Tények Keresése|Buscar Datos)$/, document: 'factoids-document', working: 'finding-factoids' },
+  brainstorm: { field: 'brainstorm-motion', submit: /^(Start brainstorming|Ötletelés indítása|Comenzar lluvia de ideas)$/i, document: 'brainstorm-document', working: 'brainstorming' },
+  factoids: { field: 'factoids-claim', submit: /^(Find factoids|Tények keresése|Buscar datos)$/i, document: 'factoids-document', working: 'finding-factoids' },
 } as const;
 const FACTOIDS_CLAIM = 'Car-free city centres cut asthma admissions';
 
 /** Brainstorm or Factoids: the form, its progress, the document open and collapsed, and Export, from fixed outputs. */
 async function shootTool(context: BrowserContext, prefix: string, language: string, problems: string[], tool: keyof typeof TOOLS) {
   const spec = TOOLS[tool];
-  const open = async (hold: boolean) => {
+  const open = async (hold: boolean, live = false) => {
     const page = await context.newPage();
     watchErrors(page, problems, `${prefix} ${tool}`);
     page.on('dialog', (dialog) => void dialog.dismiss());
     await pinSettings(page, language);
-    await fakeResults(page, hold ? tool : null);
+    await fakeResults(page, hold ? tool : null, live);
     await page.goto(`${ORIGIN}/prepare`);
     await page.getByTestId(`prepare-tool-${tool}`).waitFor({ timeout: 30_000 });
     await settle(page);
@@ -572,6 +630,13 @@ async function shootTool(context: BrowserContext, prefix: string, language: stri
   await waiting.getByTestId('tool-progress').waitFor({ timeout: 15_000 });
   await shoot(waiting, `${prefix}-${spec.working}`);
   await waiting.close();
+
+  const writing = await open(true, true);
+  await writing.getByRole('button', { name: spec.submit }).click();
+  await writing.getByTestId('live-draft').waitFor({ timeout: 15_000 });
+  await writing.waitForTimeout(1200);
+  await shoot(writing, `${prefix}-${spec.working}-live`);
+  await writing.close();
 
   const page = await open(false);
   await page.getByRole('button', { name: spec.submit }).click();
@@ -1683,12 +1748,12 @@ async function main() {
           }
           if (want('results')) {
             await shootResultScreens(signedIn, prefix, language, problems);
-            shots += 9;
+            shots += 10;
           }
           for (const tool of ['brainstorm', 'factoids'] as const) {
             if (!want(tool)) continue;
             await shootTool(signedIn, prefix, language, problems, tool);
-            shots += 6;
+            shots += 7;
           }
           if (want('timer')) {
             await shootTimerScreens(signedIn, prefix, language, problems);

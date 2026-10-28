@@ -1,3 +1,4 @@
+import { brainstormDraftSections } from '@debatelab/core/ai/live-sections';
 import type { BrainstormInput } from '@debatelab/core/ai/schemas/brainstorm';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
@@ -11,7 +12,8 @@ import { Field } from '@/components/field';
 import { FormGroup, SelectRow } from '@/components/form-rows';
 import { ModelPicker } from '@/components/model-picker';
 import { Text } from '@/components/text';
-import { ToolError, ToolProgress, ToolTitle, WorkingIn } from '@/components/tool-form';
+import { LiveToolRun, useLiveRun } from '@/components/live-run';
+import { ToolError, ToolTitle, WorkingIn } from '@/components/tool-form';
 import { AIError, isAbortError, type AIErrorKind } from '@/lib/ai-request';
 import { useAuth } from '@/lib/auth';
 import { backLabel } from '@/lib/back-label';
@@ -31,8 +33,6 @@ const DEFAULT_FORM: BrainstormInput = { motion: '', side: 'both', context: '', o
 // The last form stays for the session, as on the website; session memory forgets it when the account changes.
 const lastForm = sessionSlot<BrainstormInput>(() => DEFAULT_FORM);
 
-// The website's one progress line while the tool runs.
-const PROGRESS = ['brainstorm.working'];
 
 /** Brainstorm, as the website's BrainstormPage: a native form, a calm wait, then the ideas as a document. */
 export default function BrainstormScreen() {
@@ -60,11 +60,14 @@ export default function BrainstormScreen() {
       return next;
     }), []);
 
+  const liveRun = useLiveRun();
+  const endLiveRun = liveRun.end;
   const abortActive = useCallback(() => {
     requests.current += 1;
     abort.current?.abort();
     abort.current = null;
-  }, []);
+    endLiveRun();
+  }, [endLiveRun]);
 
   useEffect(() => () => {
     live.current = false;
@@ -101,7 +104,13 @@ export default function BrainstormScreen() {
         debateId ? buildDebateContext(forUser, debateId, 'brainstorm', input.side) : Promise.resolve(undefined),
       ]);
       if (!isCurrent()) return;
-      const { result, discoveredSources, truncated, assessments } = await brainstormIdeas(input, { config, language: outputLanguage, debateContext, signal: controller.signal });
+      const { result, discoveredSources, truncated, assessments } = await brainstormIdeas(input, {
+        config,
+        language: outputLanguage,
+        debateContext,
+        signal: controller.signal,
+        live: liveRun.begin(),
+      });
       if (!isCurrent()) return;
       const assessed = await keepSourceAssessments(forUser, debateId, assessments, controller.signal);
       if (!isCurrent()) return;
@@ -145,6 +154,7 @@ export default function BrainstormScreen() {
       if (!(cause instanceof AIError)) console.warn('Brainstorm failed:', cause instanceof Error ? cause.message : cause);
       // A missing debate was deleted elsewhere; reload the list so the app stops using it.
       if (kind === 'debateMissing') void refresh();
+      liveRun.end();
       setError(kind);
       setPhase('form');
     } finally {
@@ -206,7 +216,14 @@ export default function BrainstormScreen() {
       <ToolTitle title={t('nav.brainstorm')} subtitle={t('brainstorm.emptyDesc')} />
       <WorkingIn />
       {working ? (
-        <ToolProgress pose="idea" messages={PROGRESS.map((key) => t(key))} detail={form.motion} onCancel={cancel} />
+        <LiveToolRun
+          label={t('brainstorm.working')}
+          run={liveRun.state}
+          sections={liveRun.state.draft ? brainstormDraftSections(liveRun.state.draft, t) : []}
+          detail={form.motion}
+          onCancel={cancel}
+          pose="idea"
+        />
       ) : (
         <>
           <Field

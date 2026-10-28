@@ -1,3 +1,5 @@
+import { readLiveStream, type LiveGeneration } from '@debatelab/core/ai/live';
+import { recoverRunResult } from '@debatelab/core/ai/run-recovery';
 import { parseSourceAssessments, type SourceAssessmentUpdate } from '@debatelab/core/ai/source-assessments';
 import { fetch } from 'expo/fetch';
 
@@ -26,8 +28,17 @@ export type AIErrorKind =
   | 'debateMissing'
   | 'failed';
 
+/** What the server said about a refusal besides its message, as the website's AISubscriptionError keeps it. */
+export interface AIErrorDetails {
+  code?: string;
+  limit?: number;
+  current?: number;
+  /** The units the refused request would have cost. */
+  units?: number;
+}
+
 export class AIError extends Error {
-  constructor(readonly kind: AIErrorKind, message: string) {
+  constructor(readonly kind: AIErrorKind, message: string, readonly details: AIErrorDetails = {}) {
     super(message);
     this.name = 'AIError';
   }
@@ -76,10 +87,12 @@ async function accessToken(): Promise<string> {
 export function errorFrom(status: number | undefined, payload: Record<string, unknown> | null, fallback: string): AIError {
   const message = typeof payload?.error === 'string' ? payload.error : typeof payload?.message === 'string' ? payload.message : fallback;
   const code = typeof payload?.code === 'string' ? payload.code : undefined;
+  const number = (key: string) => (typeof payload?.[key] === 'number' ? (payload[key] as number) : undefined);
+  const details: AIErrorDetails = { code, limit: number('limit'), current: number('current'), units: number('units') };
   if (status === 401) return new AIError('auth', message);
-  if (code === 'upgrade_required') return new AIError('modelRestricted', message);
+  if (code === 'upgrade_required') return new AIError('modelRestricted', message, details);
   if (status === 402 || code === 'trial_expired' || code === 'limit_reached') {
-    return new AIError(code === 'trial_expired' ? 'trialExpired' : 'limitReached', message);
+    return new AIError(code === 'trial_expired' ? 'trialExpired' : 'limitReached', message, details);
   }
   if (status === 403) return /model|upgrade/i.test(message) ? new AIError('modelRestricted', message) : new AIError('auth', message);
   if (status === 404) return new AIError('debateMissing', message);
@@ -99,7 +112,7 @@ export async function postFunction<T>(
   path: string,
   body: Record<string, unknown>,
   signal: AbortSignal | undefined,
-  run: (response: FunctionResponse) => Promise<T>,
+  run: (response: FunctionResponse, signal: AbortSignal) => Promise<T>,
   timeoutMs = REQUEST_TIMEOUT_MS,
 ): Promise<T> {
   // The deadline and the caller's abort start before the session read, so
@@ -125,7 +138,7 @@ export async function postFunction<T>(
       throw new AIError('network', cause instanceof Error ? cause.message : 'Network request failed');
     });
     if (!response.ok) throw errorFrom(response.status, await payloadOf(response), `Request failed (${response.status})`);
-    return await run(response);
+    return await run(response, controller.signal);
   } catch (error) {
     if (signal?.aborted) throw abortError();
     if (controller.signal.aborted) throw new AIError('timeout', 'The request took too long');
@@ -141,10 +154,65 @@ export async function postFunction<T>(
  * still carry an error, as the website's callSupabaseAI handles.
  */
 export async function functionOutput(response: FunctionResponse): Promise<{ output: unknown; data: Record<string, unknown> }> {
-  const data = await payloadOf(response);
+  return outputOf(await payloadOf(response));
+}
+
+function outputOf(data: Record<string, unknown> | null): { output: unknown; data: Record<string, unknown> } {
   if (typeof data?.error === 'string') throw errorFrom(undefined, data, data.error);
   if (!data?.output) throw new AIError('failed', 'The answer was missing');
   return { output: data.output, data };
+}
+
+function recordOf(value: unknown): Record<string, unknown> | null {
+  return value && typeof value === 'object' && !Array.isArray(value) ? (value as Record<string, unknown>) : null;
+}
+
+const readRunResult = (feature: string) =>
+  supabase.from('ai_run_results').select('result_key,status,body').eq('feature', feature).maybeSingle();
+
+/**
+ * One request to the ai function, read as the website's callSupabaseAI reads
+ * it. With `live`, the answer streams (`stream: true`) and `live` sees the
+ * model's text as it is written; a stream that drops before its answer is
+ * recovered from ai_run_results under the request's own id, as the website
+ * does. Either way `parse` gets the finished answer's `output` and payload.
+ */
+export function postAI<T>(
+  body: Record<string, unknown>,
+  options: { signal?: AbortSignal; live?: LiveGeneration },
+  parse: (answer: { output: unknown; data: Record<string, unknown> }) => T | Promise<T>,
+): Promise<T> {
+  const { live } = options;
+  if (!live) return postFunction('ai', body, options.signal, async (response) => parse(await functionOutput(response)));
+  const startedAt = Date.now();
+  const resultKey = `req_${startedAt}_${Math.random().toString(36).slice(2, 8)}`;
+  const feature = String(body.feature);
+  return postFunction('ai', { ...body, stream: true, resultKey }, options.signal, async (response, signal) => {
+    // A server from before live generation answers with the whole JSON body.
+    if (!(response.headers.get('content-type') ?? '').includes('text/event-stream') || !response.body) {
+      return parse(await functionOutput(response));
+    }
+    const outcome = await readLiveStream(response.body.getReader(), live, signal);
+    let status: number;
+    let payload: unknown;
+    if (outcome.kind === 'result') {
+      status = outcome.status;
+      payload = outcome.body;
+    } else {
+      // The run keeps going and stores its answer before sending it, so it may be waiting.
+      // Offline, the read fails at once and the request fails as a network error.
+      const recovered = await recoverRunResult(readRunResult, feature, resultKey, startedAt, signal, outcome.error.reason === 'stalled' ? Infinity : undefined);
+      if (!recovered) {
+        throw outcome.error.reason === 'unreadable'
+          ? new AIError('failed', 'The streamed answer could not be read')
+          : new AIError('network', outcome.error.message);
+      }
+      status = recovered.status;
+      payload = recovered.body;
+    }
+    if (status < 200 || status >= 300) throw errorFrom(status, recordOf(payload), `Request failed (${status})`);
+    return parse(outputOf(recordOf(payload)));
+  });
 }
 
 /** What a whole answer says besides its output, which the website acts on for every feature (callSupabaseAI). */

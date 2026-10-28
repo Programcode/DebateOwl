@@ -1,3 +1,4 @@
+import { factoidsDraftSections } from '@debatelab/core/ai/live-sections';
 import type { FactoidsInput } from '@debatelab/core/ai/schemas/factoids';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
@@ -12,7 +13,8 @@ import { FormGroup, SelectRow } from '@/components/form-rows';
 import { ModelPicker } from '@/components/model-picker';
 import { SegmentedControl } from '@/components/segmented-control';
 import { Text } from '@/components/text';
-import { ToolError, ToolProgress, ToolTitle, WorkingIn } from '@/components/tool-form';
+import { LiveToolRun, useLiveRun } from '@/components/live-run';
+import { ToolError, ToolTitle, WorkingIn } from '@/components/tool-form';
 import { AIError, isAbortError, type AIErrorKind } from '@/lib/ai-request';
 import { useAuth } from '@/lib/auth';
 import { backLabel } from '@/lib/back-label';
@@ -31,8 +33,6 @@ const SOURCE_COUNTS = Array.from({ length: 13 }, (_, index) => String(index + 3)
 // The last form stays for the session, as on the website; session memory forgets it when the account changes.
 const lastForm = sessionSlot<FactoidsInput>(() => DEFAULT_FORM);
 
-// The website's one progress line while the tool runs.
-const PROGRESS = ['factoids.working'];
 
 /**
  * Factoids, as the website's FactoidsPage. Factoids research a claim, not
@@ -66,11 +66,14 @@ export default function FactoidsScreen() {
       return next;
     }), []);
 
+  const liveRun = useLiveRun();
+  const endLiveRun = liveRun.end;
   const abortActive = useCallback(() => {
     requests.current += 1;
     abort.current?.abort();
     abort.current = null;
-  }, []);
+    endLiveRun();
+  }, [endLiveRun]);
 
   useEffect(() => () => {
     live.current = false;
@@ -109,7 +112,13 @@ export default function FactoidsScreen() {
         debateId ? buildDebateContext(forUser, debateId, 'factoids', input.direction === 'against' ? 'con' : 'pro') : Promise.resolve(undefined),
       ]);
       if (!isCurrent()) return;
-      const { result, discoveredSources, truncated, assessments } = await findFactoids(input, { config, language: outputLanguage, debateContext, signal: controller.signal });
+      const { result, discoveredSources, truncated, assessments } = await findFactoids(input, {
+        config,
+        language: outputLanguage,
+        debateContext,
+        signal: controller.signal,
+        live: liveRun.begin(),
+      });
       if (!isCurrent()) return;
       const assessed = await keepSourceAssessments(forUser, debateId, assessments, controller.signal);
       if (!isCurrent()) return;
@@ -152,6 +161,7 @@ export default function FactoidsScreen() {
       const kind = cause instanceof AIError ? cause.kind : 'failed';
       if (!(cause instanceof AIError)) console.warn('Factoids failed:', cause instanceof Error ? cause.message : cause);
       if (kind === 'debateMissing') void refresh();
+      liveRun.end();
       setError(kind);
       setPhase('form');
     } finally {
@@ -185,7 +195,14 @@ export default function FactoidsScreen() {
       <ToolTitle title={t('nav.factoids')} subtitle={t('factoids.emptyDesc')} />
       <WorkingIn />
       {working ? (
-        <ToolProgress pose="reading" messages={PROGRESS.map((key) => t(key))} detail={form.claim} onCancel={cancel} />
+        <LiveToolRun
+          label={t('factoids.working')}
+          run={liveRun.state}
+          sections={liveRun.state.draft ? factoidsDraftSections(liveRun.state.draft, t) : []}
+          detail={form.claim}
+          onCancel={cancel}
+          pose="reading"
+        />
       ) : (
         <>
           <Field
