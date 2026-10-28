@@ -14,7 +14,7 @@ export default defineConfig({
     unstubEnvs: true,
     // Edge function tests are Deno tests. `npm run test:edge` runs them under
     // the runtime they ship on, so Vitest does not re-run them through a shim.
-    include: ["src/**/*.{test,spec}.{ts,tsx}", "apps/mobile/src/**/*.test.ts"],
+    include: ["src/**/*.{test,spec}.{ts,tsx}", "apps/mobile/src/**/*.test.ts", "packages/core/src/**/*.test.ts"],
   },
   resolve: {
     alias: {

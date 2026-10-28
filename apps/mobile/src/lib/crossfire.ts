@@ -1,3 +1,4 @@
+import { QUOTA_SESSION_KEY } from '@debatelab/core/ai/session-quota';
 import {
   collectDebriefTurnIds,
   CrossfireDebriefSchema,
@@ -40,6 +41,7 @@ export class CrossfireResponseError extends Error {
 }
 
 interface RequestOptions {
+  quotaSession?: string;
   config: FeatureConfig;
   language: string;
   /** Absent for one-off work. */
@@ -56,6 +58,7 @@ function serverTranscript(turns: CrossfireTurn[]) {
 function requestBody(input: Record<string, unknown> & { transcript: CrossfireTurn[] }, options: RequestOptions) {
   return {
     feature: 'crossfire',
+    ...(input.operation !== 'signal' && options.quotaSession && QUOTA_SESSION_KEY.test(options.quotaSession) ? { quotaSession: options.quotaSession } : {}),
     input: { ...input, transcript: serverTranscript(input.transcript), language: options.language },
     provider: PROVIDER,
     model: options.config.model,

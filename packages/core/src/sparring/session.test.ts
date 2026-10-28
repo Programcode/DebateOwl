@@ -8,8 +8,8 @@ import {
   submitSparringSpeech,
   tickSparringTimer,
   type SparringSession,
-} from '@/lib/sparring/session';
-import type { SparringScorecard, SparringSpeech } from '@/lib/ai/schemas/sparring';
+} from './session';
+import type { SparringScorecard, SparringSpeech } from '../ai/schemas/sparring';
 
 const START = 1_000_000;
 let ids = 0;
@@ -62,9 +62,10 @@ describe('sparring round moves', () => {
       expect(next).not.toBeNull();
       session = next!;
       if (session.phase === 'round' && session.turns[session.currentTurnIndex].speaker === 'user') {
-        // The student's clock starts the moment their turn begins.
-        expect(session.timerRunning).toBe(true);
-        expect(session.timerDeadline).toBe(START + turn * 1000 + session.turns[session.currentTurnIndex].timeLimitSeconds * 1000);
+        // The next speech waits for the student's start action.
+        expect(session.timerRunning).toBe(false);
+        expect(session.timerDeadline).toBeNull();
+        expect(session.timerRemainingSeconds).toBe(session.turns[session.currentTurnIndex].timeLimitSeconds);
       }
     }
 
@@ -87,7 +88,8 @@ describe('sparring round moves', () => {
   });
 
   it('refuses a speech after the deadline, even before a tick has noticed', () => {
-    const session = startSparringSession({ motion: 'M', userSide: 'pro', format: 'pf', difficulty: 'hard' }, 'round-3', START);
+    const ready = startSparringSession({ motion: 'M', userSide: 'pro', format: 'pf', difficulty: 'hard' }, 'round-3', START);
+    const session = resumeSparringTimer(ready, START);
     const deadline = session.timerDeadline!;
     expect(submitSparringSpeech(session, 'Late', { now: deadline, createId })).toBeNull();
     expect(submitSparringSpeech(session, '   ', { now: START, createId })).toBeNull();
@@ -97,7 +99,10 @@ describe('sparring round moves', () => {
   });
 
   it('keeps the time left across a pause and counts from the deadline after resuming', () => {
-    const session = startSparringSession({ motion: 'M', userSide: 'pro', format: 'pf', difficulty: 'medium' }, 'round-4', START);
+    const ready = startSparringSession({ motion: 'M', userSide: 'pro', format: 'pf', difficulty: 'medium' }, 'round-4', START);
+    expect(ready.timerRunning).toBe(false);
+    expect(tickSparringTimer(ready, START + 60_200)).toBe(ready);
+    const session = resumeSparringTimer(ready, START);
     // Within the same second the round is unchanged, so nothing re-renders.
     expect(tickSparringTimer(session, START + 400)).toBe(session);
     const paused = pauseSparringTimer(session, START + 60_200);

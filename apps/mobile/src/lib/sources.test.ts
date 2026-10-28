@@ -27,3 +27,34 @@ describe('applySourceAssessments', () => {
     expect(update).not.toHaveBeenCalled();
   });
 });
+
+describe('researched pages', () => {
+  it.each(['Student excerpt', ''])('refreshes a normalized URL and fills only empty content (%j)', async (content) => {
+    const existing = { id: 'saved-page', origin: 'http://www.example.com/report/?utm_source=student', content, metadata: { capturedVia: 'import', note: 'Keep me' } };
+    const read = { eq: vi.fn(() => read), then: (done: (value: unknown) => unknown) => done({ data: [existing], error: null }) };
+    const written = { eq: vi.fn(() => written), then: (done: (value: unknown) => unknown) => done({ error: null }) };
+    const update = vi.fn(() => written);
+    const insert = vi.fn();
+    supabase.from.mockReturnValue({ select: () => read, update, insert });
+    const { saveResearchedSource } = await import('./sources');
+    await expect(saveResearchedSource('user-1', 'debate-1', { title: 'Research title', url: 'https://example.com/report#results', content: 'Research excerpt', qualityLabel: 'strong' }, 'generate')).resolves.toBe(false);
+    expect(insert).not.toHaveBeenCalled();
+    expect(update).toHaveBeenCalledWith({ metadata: { capturedVia: 'generate', note: 'Keep me', url: 'https://example.com/report#results', qualityLabel: 'strong' }, ...(content ? {} : { content: 'Research excerpt' }) });
+    expect(written.eq.mock.calls).toEqual([['user_id', 'user-1'], ['debate_id', 'debate-1'], ['id', 'saved-page']]);
+  });
+
+  it('writes nothing when cancelled while looking for an existing page', async () => {
+    const controller = new AbortController();
+    const read = { eq: () => read, then: (done: (value: unknown) => unknown) => {
+      controller.abort();
+      return done({ data: [], error: null });
+    } };
+    const insert = vi.fn();
+    const update = vi.fn();
+    supabase.from.mockReturnValue({ select: () => read, insert, update });
+    const { saveResearchedSource } = await import('./sources');
+    await expect(saveResearchedSource('user-1', 'debate-1', { title: 'Page', url: 'https://example.com' }, 'generate', controller.signal)).resolves.toBe(false);
+    expect(insert).not.toHaveBeenCalled();
+    expect(update).not.toHaveBeenCalled();
+  });
+});

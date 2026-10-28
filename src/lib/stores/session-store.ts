@@ -34,16 +34,8 @@ interface StreamingAskMessage {
 }
 
 /** Auditable provenance for sources captured from AI research or imports. */
-export interface SourceSemanticMetadata {
-  relevance: number;
-  importance: 0 | 1 | 2 | 3;
-  strength: 0 | 1 | 2 | 3;
-  evaluatedAt: string;
-  useCount: number;
-  caseUseCount: number;
-  lastUsedAt?: string;
-  lastUsedInCase?: boolean;
-}
+export type { SourceSemanticMetadata } from '@debatelab/core/ai/discovered-sources';
+import type { SourceSemanticMetadata } from '@debatelab/core/ai/discovered-sources';
 
 export interface SourceProvenance {
   url?: string;

@@ -1,4 +1,4 @@
-// Server-sent events parsing for the ai-stream Edge Function, shared by the website and the app.
+// Server-Sent Events framing shared by streamed Ask and live generation.
 
 export type ParsedSSEEvent = {
   event: string;
