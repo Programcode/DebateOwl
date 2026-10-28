@@ -8,11 +8,11 @@ import { type ConfigPlugin, withEntitlementsPlist } from 'expo/config-plugins';
 // DEBATELAB_BUILD=dev (set by the `development` profile in eas.json) adds the
 // native modules Expo Go lacks. Without it the config is the one Expo Go has
 // always used. DEBATELAB_APP_GROUP adds the timer's widget extension (its Live
-// Activity, Dynamic Island clock and lock-screen widget), which needs an App
-// Group: set it only when the provisioning profile carries that group.
-// PLACEHOLDER until Adam's Apple Developer account exists: the group to create
-// there is `group.com.adam.debatelab` (it follows the bundle id), registered
-// for both `com.adam.debatelab` and `com.adam.debatelab.ExpoWidgetsTarget`.
+// Activity, Dynamic Island clock and lock-screen widget), which needs the App
+// Group `group.com.pistack.debateowl`, registered for both
+// `com.pistack.debateowl` and `com.pistack.debateowl.ExpoWidgetsTarget`. On a
+// device, set it only when the provisioning profile carries that group; a
+// simulator build is not signed and always can.
 // See docs/development.md#development-build.
 
 type PermissionStrings = { speechRecognition: string; microphone: string };
@@ -26,8 +26,11 @@ if (appGroup && build !== 'dev') {
   throw new Error('DEBATELAB_APP_GROUP only applies to a development build (DEBATELAB_BUILD=dev).');
 }
 
-// Kept from the DebateLab name until Adam decides on the store listing: a new id is a new app in App Store Connect.
-const bundleIdentifier = 'com.adam.debatelab';
+const bundleIdentifier = 'com.pistack.debateowl';
+const APP_GROUP = 'group.com.pistack.debateowl';
+if (appGroup && appGroup !== APP_GROUP) {
+  throw new Error(`DEBATELAB_APP_GROUP must be "${APP_GROUP}", not "${appGroup}".`);
+}
 
 function permissionStrings(projectRoot: string, language: 'en' | 'es' | 'hu'): PermissionStrings {
   const file = path.join(projectRoot, '../../src/locales', `${language}.json`);
@@ -97,8 +100,11 @@ export default ({ projectRoot }: ConfigContext): ExpoConfig => {
         },
       ],
     ],
+    // The EAS project @pi-stack/debateowl, from `eas init`.
+    owner: 'pi-stack',
     extra: {
       websiteUrl: 'https://debateowl.com',
+      eas: { projectId: 'd60fc378-2e30-48b2-bcee-a1b1d1632bf9' },
     },
     experiments: {
       typedRoutes: true,
@@ -127,7 +133,7 @@ export default ({ projectRoot }: ConfigContext): ExpoConfig => {
       'expo-widgets',
       {
         bundleIdentifier: `${bundleIdentifier}.ExpoWidgetsTarget`,
-        groupIdentifier: appGroup,
+        groupIdentifier: APP_GROUP,
         enablePushNotifications: false,
         widgets: [
           // The timer's lock-screen widget (src/widgets/timer-widgets.tsx). The Live
