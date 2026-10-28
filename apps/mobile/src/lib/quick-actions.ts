@@ -7,7 +7,7 @@ import { nativeCapabilities } from './native-capabilities';
 
 /**
  * Home Screen quick actions (a long press on the app icon). The items are
- * static, declared in Info.plist by native-config/round4.ts with titles in the
+ * static, declared in Info.plist by app.config.ts (withRound4) with titles in the
  * device language; expo-quick-actions hands the one the student picked to the
  * app, at launch or while it runs. Each item's type is looked up here, never
  * taken as a route. Expo Go and a build without expo-quick-actions have no

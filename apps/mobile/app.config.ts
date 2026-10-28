@@ -236,7 +236,7 @@ export default ({ projectRoot }: ConfigContext): ExpoConfig => {
       },
     ]);
   }
-  // The Current Debate widget (with the App Group), quick actions and Spotlight; see native-config/round4.ts.
+  // The Current Debate widget (with the App Group), quick actions and Spotlight; see withRound4 above.
   withRound4(config, { appGroup, projectRoot });
   // Registered before Expo applies the plugins list. Mods registered later act
   // first, so this one runs after the plugins have written their entitlements.

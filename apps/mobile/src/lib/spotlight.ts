@@ -5,13 +5,13 @@ import { nativeCapabilities } from './native-capabilities';
 /**
  * Spotlight search for debates and saved cases, through expo-core-spotlight
  * (2.x is the line for SDK 56 and 57; it needs its config plugin, which
- * native-config/round4.ts adds once the package is installed). It is reached
+ * app.config.ts adds once the package is installed). It is reached
  * by its native module name, so nothing here loads in Expo Go, on the web or
  * in a build without the package: there every call is a no-op.
  *
- * TODO(spotlight): install expo-core-spotlight@^2 for the development build,
- * then call indexForSpotlight when the debates list or a debate's cases load,
- * and clearSpotlight on sign-out and after Delete all my data.
+ * The Debate tab indexes the Current Debate's cases and the debate context
+ * clears the index on sign-out. TODO(spotlight): install expo-core-spotlight@^2
+ * for the development build, and clear the index after Delete all my data.
  */
 
 /** One searchable item. Its URL is also its Spotlight identifier, which the package opens when the result is tapped. */

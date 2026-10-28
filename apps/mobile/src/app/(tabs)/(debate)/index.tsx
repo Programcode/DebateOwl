@@ -17,6 +17,7 @@ import { SOURCE_ICONS, sourceMeta } from '@/components/source-display';
 import { Text } from '@/components/text';
 import { WorkRow } from '@/components/work-row';
 import { publishCurrentDebate } from '@/lib/debate-widget';
+import { indexForSpotlight } from '@/lib/spotlight';
 import { useAuth } from '@/lib/auth';
 import { useDebates } from '@/lib/debate-context';
 import {
@@ -238,7 +239,12 @@ function DebateDetails({ debateId, dashboard = false }: { debateId: string; dash
       if (!isCurrent()) return;
       setCounts(nextCounts);
       const shown = currentRef.current;
-      if (shown?.id === debateId) publishCurrentDebate({ debateId, motion: shown.motion, counts: nextCounts });
+      if (shown?.id === debateId) {
+        publishCurrentDebate({ debateId, motion: shown.motion, counts: nextCounts });
+        // Spotlight finds this debate's cases (development build with expo-core-spotlight; a no-op otherwise).
+        const cases = [...pro, ...con].filter((item, index, all) => item.kind === 'case' && all.findIndex((other) => other.id === item.id) === index);
+        void indexForSpotlight('cases', cases.map((item) => ({ url: `debatelab://case/${item.id}` as const, title: item.title, description: shown.motion })));
+      }
       setRecent({ pro, con });
       setSources(nextSources?.slice(0, DASHBOARD_SOURCES) ?? null);
       setFailed(false);

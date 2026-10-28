@@ -20,7 +20,7 @@ import { createWidget, type WidgetEnvironment } from 'expo-widgets';
 // in its props, written by src/lib/debate-widget.ts, which is also the only
 // place that may import this file (creating the widget needs the native
 // module, which Expo Go lacks). The name must match the widget entry in
-// native-config/round4.ts.
+// app.config.ts (withRound4).
 
 export type WidgetStat = { value: number; label: string };
 
