@@ -13,7 +13,7 @@
  * SCREENS=you,timer limits the signed-in screens to those groups: debate,
  * debate-check, library, prepare, practice, you, empty, ask, results, brainstorm,
  * factoids, case-edits, context, limits,
- * timer, voice, crossfire, sparring, flowchart, one-off, history, announcements,
+ * timer, voice, tools, crossfire, sparring, flowchart, one-off, history, announcements,
  * account, model. Sign-in screens are always shot.
  * ONLY=offline runs only the offline reading check (see shootOfflineScreens).
  *
@@ -1638,6 +1638,18 @@ async function shootVoiceScreens(context: BrowserContext, prefix: string, langua
   await page.getByTestId('spoken-delivery').scrollIntoViewIfNeeded();
   await page.waitForTimeout(400);
   await shoot(page, `${prefix}-voice-scorecard`);
+  // The scorecard's PDF (export.web.ts keeps the HTML expo-print would print), rendered as a page of its own.
+  await page.getByTestId('document-more').click();
+  await page.getByRole('menuitem').first().click();
+  const exported = await page.evaluate(() => (window as unknown as { __debatelabExport?: { html?: string; fileName?: string } }).__debatelabExport ?? {});
+  if (!exported.html || !exported.fileName?.startsWith('SparringTranscript_')) problems.push(`${prefix} voice: the scorecard PDF was ${exported.fileName ?? 'not made'}`);
+  else {
+    const pdf = await context.newPage();
+    await pdf.setViewportSize({ width: 794, height: 1123 });
+    await pdf.setContent(exported.html);
+    await pdf.screenshot({ path: join(OUT, `${prefix}-voice-sparring-pdf-html.png`), fullPage: true });
+    await pdf.close();
+  }
   const facts = (await page.getByTestId('delivery-facts').first().textContent()) ?? '';
   if (!/\d/.test(facts) || !facts.includes(lang === 'hu' ? 'hát' : 'um')) problems.push(`${prefix} voice: the delivery facts read "${facts}"`);
   const spoken = await page.evaluate(() => (window as unknown as { __debatelabOpponentVoice?: { segments: number }[] }).__debatelabOpponentVoice ?? []);
@@ -1698,6 +1710,90 @@ async function shootVoiceScreens(context: BrowserContext, prefix: string, langua
   await generate.waitForTimeout(300);
   await shoot(generate, `${prefix}-voice-dictation`);
   await generate.close();
+}
+
+// A saved Crossfire round, as CrossfirePage and the app save it, for the read-only view.
+const SAVED_CROSSFIRE_ID = '00000000-0000-4000-8000-00000000cf02';
+
+/**
+ * The free tools in Practice: the speech time calculator with a speech in
+ * it, the motion generator after drawing three, a drawn motion opened as a
+ * new debate (shown, never saved), and a saved Crossfire round read again
+ * from a fixed row.
+ */
+async function shootPracticeTools(context: BrowserContext, prefix: string, language: string, problems: string[]) {
+  const lang = language === 'hu' ? 'hu' : 'en';
+  const page = await context.newPage();
+  watchErrors(page, problems, `${prefix} practice tools`);
+  await pinSettings(page, language);
+  await page.goto(`${ORIGIN}/practice`);
+  await page.getByTestId('practice-tool-speech-time').click({ timeout: 30_000 });
+  await page.getByTestId('speech-time-text').fill([...SPARRING_TEXT[lang].speeches, ...SPARRING_TEXT[lang].opponent].join('\n\n'));
+  await page.getByTestId('slot-fits').waitFor();
+  const words = Number(await page.getByTestId('word-count').textContent());
+  if (!(words > 100)) problems.push(`${prefix} speech time: counted ${words} words`);
+  await settle(page);
+  await shoot(page, `${prefix}-tools-speech-time`);
+  await page.getByTestId('slot-fits').scrollIntoViewIfNeeded();
+  await page.waitForTimeout(300);
+  await shoot(page, `${prefix}-tools-speech-fits`);
+
+  await page.goto(`${ORIGIN}/practice`);
+  await page.getByTestId('practice-tool-motions').click({ timeout: 30_000 });
+  await page.getByTestId('motion-filter-education').click();
+  await page.getByTestId('motions-draw-three').click();
+  await page.getByTestId('motion-card').nth(2).waitFor();
+  await settle(page);
+  await shoot(page, `${prefix}-tools-motions`);
+  const drawn = (await page.getByTestId('motion-card').first().textContent()) ?? '';
+  await page.getByTestId('motion-card').first().getByRole('button').last().click();
+  await page.getByTestId('new-debate-sheet').waitFor({ timeout: 15_000 });
+  const prefilled = await page.locator('[data-testid="new-debate-sheet"] textarea, [data-testid="new-debate-sheet"] input').first().inputValue();
+  if (!prefilled || !drawn.includes(prefilled)) problems.push(`${prefix} motions: the new debate opened with "${prefilled}" for "${drawn}"`);
+  await settle(page);
+  await shoot(page, `${prefix}-tools-motion-debate`);
+  await page.close();
+
+  const saved = await context.newPage();
+  watchErrors(saved, problems, `${prefix} saved crossfire`);
+  await pinSettings(saved, language);
+  const text = CROSSFIRE_TEXT[lang];
+  const turns = [
+    { id: 'T1', sequence: 1, speaker: 'user', kind: 'question', text: text.questions[0], createdAt: 1, delivery: { speakingSeconds: 6, wordCount: 9, wordsPerMinute: 90, fillerCount: 1, fillers: [{ word: lang === 'hu' ? 'hát' : 'um', count: 1 }], longPauses: 0, longestPauseSeconds: 0 } },
+    { id: 'T2', sequence: 2, speaker: 'ai', kind: 'answer', text: text.answers[0], createdAt: 2 },
+    { id: 'T3', sequence: 3, speaker: 'user', kind: 'question', text: text.questions[1], createdAt: 3 },
+    { id: 'T4', sequence: 4, speaker: 'ai', kind: 'answer', text: text.answers[1], createdAt: 4 },
+  ];
+  const d = text.debrief;
+  await saved.route(`${REST}/crossfires*`, (route) => route.fulfill({
+    status: 200,
+    headers: { 'access-control-allow-origin': '*' },
+    json: {
+      id: SAVED_CROSSFIRE_ID,
+      title: 'This House would ban private cars from city centres',
+      input: { resolution: 'This House would ban private cars from city centres', argument: text.argument, mode: 'question-ai', style: 'cooperative', durationSeconds: 300, seedQuestions: [], useSourceLibrary: false },
+      output: {
+        turns,
+        debrief: {
+          concessionsSecured: [{ turnIds: ['T4'], claim: d.concession }],
+          controlledQuestions: [{ turnIds: ['T1'], claim: d.controlled }],
+          weakOrRepetitiveQuestions: [],
+          evasiveOrIncompleteAnswers: [],
+          missedFollowUps: [{ turnIds: ['T2'], claim: d.missed }],
+          betterFollowUpQuestions: [{ turnIds: ['T2'], question: d.better, reason: d.reason }],
+          strongestExchange: { turnIds: ['T3', 'T4'], claim: d.strongest },
+        },
+        endedReason: 'manual',
+      },
+      created_at: new Date().toISOString(),
+    },
+  }));
+  await saved.goto(`${ORIGIN}/crossfire-round/${SAVED_CROSSFIRE_ID}`);
+  await saved.getByTestId('crossfire-saved').waitFor({ timeout: 30_000 });
+  await saved.getByTestId('spoken-delivery').waitFor();
+  await settle(saved);
+  await shoot(saved, `${prefix}-tools-saved-crossfire`);
+  await saved.close();
 }
 
 /**
@@ -2396,6 +2492,10 @@ async function main() {
           if (want('limits')) {
             await shootLimitSheets(signedIn, prefix, language, problems).catch(failedIn(signedIn, prefix, 'limits'));
             shots += 2;
+          }
+          if (want('tools')) {
+            await shootPracticeTools(signedIn, prefix, language, problems).catch(failedIn(signedIn, prefix, 'tools'));
+            shots += 6;
           }
           if (want('voice')) {
             await shootVoiceScreens(signedIn, prefix, language, problems).catch(failedIn(signedIn, prefix, 'voice'));

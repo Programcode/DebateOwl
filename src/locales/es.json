@@ -2989,6 +2989,13 @@
       "limit": "La cuota de hoy para la voz de ElevenLabs del oponente se agotó, así que la voz de tu dispositivo lee las respuestas.",
       "deliveryDescription": "Estas cifras provienen del reloj y de la transcripción de lo que dijiste. Nadie escuchó tu tono, tu seguridad ni tu volumen, y la transcripción puede omitir palabras.",
       "spoken": "Hablado"
+    },
+    "practice": {
+      "speechTimeDesc": "Cuánto dura un discurso",
+      "speechTimeIntro": "Pega o escribe un discurso para ver cuánto tarda en pronunciarse.",
+      "calcPrivacy": "Se cuenta en este dispositivo. El texto nunca se sube ni se guarda.",
+      "motionsDesc": "Saca una moción de práctica",
+      "motionsIntro": "Mociones de práctica originales, por tema, nivel y tipo."
     }
   }
 }

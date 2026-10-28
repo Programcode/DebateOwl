@@ -9,5 +9,5 @@ export default function PracticeToolScreen() {
   const { t } = useTranslation();
   const { tool } = useLocalSearchParams<{ tool: string }>();
   const entry = PRACTICE_TOOLS.find((item) => item.key === tool);
-  return <PlaceholderScreen tab="practice" title={entry ? t(`nav.${entry.key}`) : undefined} icon={entry?.icon} />;
+  return <PlaceholderScreen tab="practice" title={entry ? ('title' in entry ? t(entry.title, { ns: 'tools' }) : t(`nav.${entry.key}`)) : undefined} icon={entry?.icon} />;
 }

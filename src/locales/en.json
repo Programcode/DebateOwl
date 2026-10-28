@@ -2989,6 +2989,13 @@
       "limit": "Today's allowance for the opponent's ElevenLabs voice is used up, so your device's voice is reading the replies.",
       "deliveryDescription": "These figures come from the clock and the transcript of what you said. Nobody listened for tone, confidence or volume, and the transcript can miss words.",
       "spoken": "Spoken"
+    },
+    "practice": {
+      "speechTimeDesc": "How long a speech runs",
+      "speechTimeIntro": "Paste or type a speech to see how long it takes to deliver.",
+      "calcPrivacy": "Counted on this device. The text is never uploaded or stored.",
+      "motionsDesc": "Draw a practice motion to argue",
+      "motionsIntro": "Original practice motions, by topic, level and type."
     }
   }
 }

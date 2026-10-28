@@ -25,6 +25,8 @@ const TOOL_ROUTES: Record<PracticeTool, Href> = {
   crossfire: { pathname: '/crossfire', params: { from: 'practice' } },
   sparring: { pathname: '/sparring', params: { from: 'practice' } },
   timer: '/timer',
+  'speech-time': { pathname: '/speech-time', params: { from: 'practice' } },
+  motions: { pathname: '/motions', params: { from: 'practice' } },
 };
 
 /**
@@ -90,10 +92,10 @@ export default function PracticeScreen() {
             <IconTile name={tool.icon} size={42} />
             <View style={styles.rowText}>
               <Text weight="semibold" style={styles.rowTitle}>
-                {t(`nav.${tool.key}`)}
+                {'title' in tool ? t(tool.title, { ns: 'tools' }) : t(`nav.${tool.key}`)}
               </Text>
               <Text tone="faint" style={styles.rowMeta} numberOfLines={1}>
-                {t(`navDesc.${tool.key}`)}
+                {'description' in tool ? t(tool.description) : t(`navDesc.${tool.key}`)}
               </Text>
             </View>
             <Icon name="chevronRight" color={colors.tabInactive} size={20} />

@@ -2989,6 +2989,13 @@
       "limit": "Az ellenfél ElevenLabs-hangjának mai kerete elfogyott, ezért a válaszokat az eszközöd hangja olvassa fel.",
       "deliveryDescription": "Ezek a számok az órából és az elhangzottak leiratából származnak. Senki nem figyelte a hangszínedet, a magabiztosságodat vagy a hangerődet, és a leiratból kimaradhatnak szavak.",
       "spoken": "Szóban"
+    },
+    "practice": {
+      "speechTimeDesc": "Mennyi ideig tart egy beszéd",
+      "speechTimeIntro": "Illeszd be vagy írd be a beszédet, és megtudod, mennyi ideig tart elmondani.",
+      "calcPrivacy": "Ezen az eszközön számoljuk. A szöveget nem töltjük fel és nem tároljuk.",
+      "motionsDesc": "Gyakorló vitatétel húzása",
+      "motionsIntro": "Saját gyakorló vitatételek téma, szint és típus szerint."
     }
   }
 }

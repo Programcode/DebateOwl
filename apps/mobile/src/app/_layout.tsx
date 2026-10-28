@@ -126,6 +126,8 @@ function Root() {
             {/* Live practice screens, full screen with no tab bar, as the live round in mock 05. */}
             <Stack.Screen name="timer" options={{ presentation: 'fullScreenModal' }} />
             <Stack.Screen name="timer-format" options={sheet} />
+            <Stack.Screen name="speech-time" />
+            <Stack.Screen name="motions" />
             <Stack.Screen name="crossfire" />
             <Stack.Screen name="crossfire-round/[id]" />
             <Stack.Screen name="sparring/index" />

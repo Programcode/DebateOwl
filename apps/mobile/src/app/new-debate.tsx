@@ -1,4 +1,4 @@
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { StyleSheet, View } from 'react-native';
 
@@ -8,11 +8,16 @@ import { SheetScrollView } from '@/components/sheet';
 import { Text } from '@/components/text';
 import { useDebates } from '@/lib/debate-context';
 
-/** Start a debate: the website's Start new debate dialog (motion, format, role, instructions) plus the judge. It becomes current. */
+/**
+ * Start a debate: the website's Start new debate dialog (motion, format, role,
+ * instructions) plus the judge. It becomes current. The motion generator
+ * opens it with its motion filled in.
+ */
 export default function NewDebateSheet() {
   const { t } = useTranslation();
   const router = useRouter();
   const { create } = useDebates();
+  const { motion } = useLocalSearchParams<{ motion?: string }>();
 
   return (
     <SheetScrollView testID="new-debate-sheet">
@@ -26,6 +31,7 @@ export default function NewDebateSheet() {
         {t('debate.startNewDesc')}
       </Text>
       <DebateForm
+        initial={motion ? { motion } : undefined}
         submitLabel={t('debate.startDebate')}
         onSubmit={async (values) => {
           await create(values);
