@@ -12,7 +12,7 @@ const STATE_BADGES: Record<BillingStateName, { labelKey: string; color: string }
   extended_access: { labelKey: 'settings.tierExtended', color: 'border-success/30 bg-success/15 text-success-text' },
   pro: { labelKey: 'settings.tierPro', color: 'border-amber-500/30 bg-amber-500/15 text-amber-800 dark:text-amber-300' },
   pro_canceling: { labelKey: 'settings.tierPro', color: 'border-amber-500/30 bg-amber-500/15 text-amber-800 dark:text-amber-300' },
-  basic: { labelKey: 'settings.tierBasic', color: 'border-teal-500/30 bg-teal-500/15 text-teal-800 dark:text-teal-300' },
+  basic: { labelKey: 'settings.tierBasic', color: 'border-blue-500/30 bg-blue-500/15 text-blue-800 dark:text-blue-300' },
   payment_failed: { labelKey: 'settings.tierPaymentFailed', color: 'border-destructive/30 bg-destructive/10 text-destructive' },
   legacy_free: { labelKey: 'settings.tierLegacyFree', color: 'border-success/30 bg-success/15 text-success-text' },
   trial_ended: { labelKey: 'settings.tierExpired', color: 'border-destructive/30 bg-destructive/10 text-destructive' },

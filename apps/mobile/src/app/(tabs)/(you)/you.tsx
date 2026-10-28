@@ -359,14 +359,17 @@ function PlanBadge({ state }: { state: BillingStateName }) {
   const { colors, scheme } = useTheme();
   const dark = scheme === 'dark';
   const { labelKey, tone } = STATE_BADGES[state];
+  // The website's outline badges: the state's colour at 15% behind, 30% as the edge, and a darker text.
   const look = {
-    plan: { background: colors.tile, color: colors.tileForeground },
-    pro: { background: dark ? '#2B2108' : '#FFF8DB', color: dark ? '#FFD95A' : '#9A5806' },
-    good: { background: colors.successTint, color: colors.success },
-    bad: { background: dark ? '#33141A' : '#FFEDEE', color: dark ? '#FF8A8E' : '#B32A30' },
+    plan: { tint: '30,141,251', color: dark ? '#7CC0FE' : '#0342A8' },
+    pro: { tint: '243,154,0', color: dark ? '#FFD95A' : '#7A4405' },
+    good: { tint: dark ? '47,211,154' : '20,179,125', color: colors.success },
+    bad: { tint: dark ? '255,107,112' : '210,50,57', color: colors.destructive },
   }[tone];
+  const background = `rgba(${look.tint},${tone === 'bad' ? 0.1 : 0.15})`;
+  const border = `rgba(${look.tint},0.3)`;
   return (
-    <View style={[styles.badge, { backgroundColor: look.background }]}>
+    <View style={[styles.badge, { backgroundColor: background, borderColor: border }]}>
       {tone === 'good' ? <Icon name="check" color={look.color} size={13} /> : null}
       <Text weight="bold" style={[styles.badgeText, { color: look.color }]} testID="subscription-tier">
         {t(labelKey)}
@@ -458,7 +461,7 @@ const styles = StyleSheet.create({
   planBody: { gap: 4 },
   usage: { fontSize: 16 },
   loadingRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  badge: { alignSelf: 'flex-start', flexDirection: 'row', alignItems: 'center', gap: 4, borderRadius: 999, paddingHorizontal: 10, paddingVertical: 4 },
+  badge: { alignSelf: 'flex-start', flexDirection: 'row', alignItems: 'center', gap: 4, borderRadius: 999, borderWidth: 1, paddingHorizontal: 10, paddingVertical: 3 },
   badgeText: { fontSize: 13 },
   setting: { gap: 7 },
   settingLabel: { fontSize: 14, marginLeft: 2 },
