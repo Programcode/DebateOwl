@@ -469,16 +469,19 @@ async function fakeAsk(page: Page, hold: boolean) {
 }
 
 // A made-up case in GenerateOutput's shape, after mock 03: three arguments for a Standard case.
+// A made-up case in the new format (#244): opening, titled arguments, "If they say…", closing line and sources.
 const FAKE_CASE = {
+  opening: {
+    hook: 'Picture a school run where the loudest thing on the street is children talking.',
+    definition: 'City centre: the area inside the inner ring road, with exemptions for disabled drivers and deliveries.',
+  },
   caseStructure: {
-    thesis: 'City centres are shared public space, and private cars take the most of it while costing everyone else their health.',
-    framework: 'City centres are shared public space. The motion asks who gets to use that space, and at what cost to everyone else\'s health.',
-    keyDefinitions: ['City centre: the area inside a city\'s inner ring road', 'Private cars: privately owned passenger vehicles, with exemptions for disabled drivers'],
-    burdenOfProof: 'We must show that removing private cars improves health and access for most people who use the centre.',
+    thesis: 'We will show three arguments that prove city centres work better for everyone without private cars: cleaner air, streets back for people, and buses that run on time.',
   },
   contentions: [
     {
       id: '1',
+      title: 'Clean air',
       claim: 'Clean air is a public health duty',
       reasoning: 'Traffic is the largest source of roadside pollution, and the people who breathe it most are pedestrians, cyclists and residents, not drivers.',
       evidence: 'Low-traffic zones cut roadside NO₂ within their first year, according to the Clean Streets Review.',
@@ -487,7 +490,8 @@ const FAKE_CASE = {
     },
     {
       id: '2',
-      claim: 'Streets back for people',
+      title: 'Streets back for people',
+      claim: 'Cars take most of the street while carrying a minority of the people in it',
       reasoning: 'Parked and moving cars take most of a centre\'s street space while carrying a minority of the people in it.',
       evidence: 'The Street Space Audit found cars use most of the road area; the Footfall Study found shops gain visits when streets close to traffic.',
       needsSource: false,
@@ -495,6 +499,7 @@ const FAKE_CASE = {
     },
     {
       id: '3',
+      title: 'Buses on time',
       claim: 'Transit works when it isn\'t stuck in traffic',
       reasoning: 'Buses lose most of their delay to congestion caused by private cars.',
       evidence: 'Bus journeys became quicker and more reliable after the centre closed to through traffic, per the Clean Streets Review.',
@@ -502,13 +507,16 @@ const FAKE_CASE = {
       impact: 'Faster, more reliable buses make the ban fair to people who cannot walk or cycle.',
     },
   ],
-  predictedOpponentCase: {
-    likelyArguments: ['Shift workers and carers need cars at hours when transit is thin', 'Businesses lose customers who drive in'],
-    strategicWeaknesses: ['Depends on exemptions working in practice'],
-    keyClashes: ['Access for the few against health for the many', 'Shops and footfall'],
-  },
   counters: [
-    { targetArgument: 'Shift workers need cars', counterpoint: 'Exemptions and night buses cover them.', rebuttal: 'Every real ban exempts carers and shift workers, and transit follows demand.' },
+    { targetArgument: 'Shift workers and carers need cars at night', counterpoint: 'Every real ban exempts carers and shift workers, and night buses follow demand.', source: 'Clean Streets Review' },
+    { targetArgument: 'Shops lose customers who drive in', counterpoint: 'Footfall rose when streets closed to traffic: people on foot shop more often than drivers.', source: 'Footfall Study' },
+    { targetArgument: 'It just moves traffic to the suburbs', counterpoint: 'Through traffic falls overall when the centre closes, because some trips stop being made by car at all.' },
+  ],
+  closingLine: 'A city centre should belong to the people in it, not the cars passing through it.',
+  sources: [
+    { org: 'Clean Streets Review', year: '2025', claim: 'Low-traffic zones cut roadside NO₂ within a year', url: 'https://example.org/clean-streets' },
+    { org: 'Street Space Audit', year: '2024', claim: 'Cars use most of the road area in city centres', url: 'https://example.org/street-space' },
+    { org: 'Footfall Study', claim: 'Shops gain visits when streets close to traffic', url: 'https://example.org/footfall' },
   ],
   metadata: {
     side: 'pro',
