@@ -15,8 +15,12 @@ import { HOME_MAX_WIDTH } from '@/lib/layout';
 export function Screen({ children, safeTop, gap, wide }: { children: ReactNode; safeTop?: boolean; gap?: number; wide?: boolean }) {
   const insets = useSafeAreaInsets();
   return (
+    // Fields scroll clear of the keyboard; a tap on a button works with the keyboard up.
     <ScrollView
       contentInsetAdjustmentBehavior="automatic"
+      automaticallyAdjustKeyboardInsets
+      keyboardShouldPersistTaps="handled"
+      keyboardDismissMode="interactive"
       contentContainerStyle={[styles.content, wide && styles.wide, safeTop && { paddingTop: insets.top + 12 }, gap !== undefined && { gap }]}>
       <OfflineNotice />
       {children}

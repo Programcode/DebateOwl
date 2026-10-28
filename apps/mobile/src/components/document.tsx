@@ -128,8 +128,12 @@ export function DocumentScreen({
   return (
     <View style={[styles.root, { backgroundColor: colors.card }]} testID={testID}>
       {header}
+      {/* Tool forms are documents too: fields scroll clear of the keyboard. */}
       <ScrollView
         contentInsetAdjustmentBehavior="automatic"
+        automaticallyAdjustKeyboardInsets
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="interactive"
         contentContainerStyle={[styles.content, { paddingBottom: actions ? barHeight + 8 : 16 + bottom }]}>
         <OfflineNotice />
         {children}
@@ -176,6 +180,9 @@ function RailDocument({
           <ScrollView
             ref={scroll}
             contentInsetAdjustmentBehavior="automatic"
+            automaticallyAdjustKeyboardInsets
+            keyboardShouldPersistTaps="handled"
+            keyboardDismissMode="interactive"
             scrollEventThrottle={32}
             onScroll={(event) => rail.onScroll(event.nativeEvent.contentOffset.y)}
             onContentSizeChange={rail.measure}>
