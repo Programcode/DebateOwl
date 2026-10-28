@@ -9,7 +9,8 @@ import {
   type ReasoningEffort,
 } from '@debatelab/core/contract/model-catalog';
 
-import { billingQuery, supabase } from './supabase';
+import { billingQuery } from './billing-query';
+import { supabase } from './supabase';
 
 /**
  * A tool's model and its settings, picked exactly as the website's settings

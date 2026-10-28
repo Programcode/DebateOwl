@@ -15,8 +15,9 @@
  * account, model. Sign-in screens are always shot.
  * ONLY=offline runs only the offline reading check (see shootOfflineScreens).
  *
- * The iPad sizes are portrait (1024x1366), landscape (1366x1024) and a 600-point
- * window (Split View or Slide Over), which takes the phone layout.
+ * The iPad sizes are portrait (1024x1366), landscape (1366x1024), an 11-inch
+ * iPad Air (820x1180 and 1180x820) and a 600-point window (Split View or Slide
+ * Over), which takes the phone layout.
  *
  * Signed-in screens need a staging session. With STAGING_DEMO_CODE set, the
  * script signs in once through the real sign-in screen and also checks that a
@@ -90,7 +91,8 @@ import { SUPABASE_PROJECTS } from '../../../src/lib/supabase/projects';
 type StorageState = Exclude<BrowserContextOptions['storageState'], string | undefined>;
 
 const DIST = join(__dirname, '../dist');
-const OUT = join(__dirname, '../../../.verify/mobile-shots');
+// SHOTS_DIR moves the screenshots elsewhere, e.g. for a before/after set.
+const OUT = process.env.SHOTS_DIR || join(__dirname, '../../../.verify/mobile-shots');
 const PORT = Number(process.env.PORT);
 const DEMO_CODE = process.env.STAGING_DEMO_CODE?.trim();
 const ONLY = (process.env.ONLY ?? '').split(',').map((value) => value.trim()).filter((value) => value.length > 0);
@@ -106,6 +108,9 @@ const DEVICES = {
   ipad: { viewport: { width: 1024, height: 1366 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true },
   'ipad-landscape': { viewport: { width: 1366, height: 1024 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true },
   'ipad-narrow': { viewport: { width: 600, height: 1366 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true },
+  // An 11-inch iPad Air: portrait takes the regular layout, landscape the wide one.
+  'ipad-air': { viewport: { width: 820, height: 1180 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true },
+  'ipad-air-landscape': { viewport: { width: 1180, height: 820 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true },
 } as const;
 const SCHEMES = ['light', 'dark'] as const;
 const LOCALES = { en: 'en-GB', hu: 'hu-HU' } as const;

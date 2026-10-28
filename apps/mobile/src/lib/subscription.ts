@@ -1,7 +1,8 @@
 import { readBillingState } from '@debatelab/core/supabase/billing';
 import { planDailyLimit, type BillingDateKind, type BillingStateName } from '@debatelab/core/contract/billing-state';
 
-import { billingQuery, supabase } from './supabase';
+import { billingQuery } from './billing-query';
+import { supabase } from './supabase';
 
 /**
  * The plan and today's AI usage, read the way the website's useSubscription

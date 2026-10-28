@@ -17,7 +17,8 @@ import {
 import { readFeatureConfigAfterWrites } from './feature-config-read';
 import i18n, { deviceLanguage } from './i18n';
 import { createSerialQueue } from './serial-queue';
-import { billingQuery, supabase } from './supabase';
+import { billingQuery } from './billing-query';
+import { supabase } from './supabase';
 
 import { applyColorScheme } from '@/theme/apply-color-scheme';
 
