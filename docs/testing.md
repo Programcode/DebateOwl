@@ -154,14 +154,15 @@ npm run verify
 The gate runs, in order:
 
 1. documentation checks
-2. lint
-3. type checking
-4. unit tests
-5. collaboration service tests
-6. native Edge Function tests
-7. production build
-8. production service-worker offline smoke
-9. the desktop Chromium `@smoke` set (`npm run verify:full` adds the full desktop and mobile suite)
+2. the guide jargon check (`npm run seo:jargon`): no generated guide in `public/` other than `/lincoln-douglas-debate` and `/policy-debate` may use framework, contention, warrant or impact calculus more than once in its visible text or its JSON-LD ([`scripts/check_jargon.py`](../scripts/check_jargon.py))
+3. lint
+4. type checking
+5. unit tests
+6. collaboration service tests
+7. native Edge Function tests
+8. production build
+9. production service-worker offline smoke
+10. the desktop Chromium `@smoke` set (`npm run verify:full` adds the full desktop and mobile suite)
 
 It does not start local Supabase, run pgTAP, run WebKit, or use protected staging.
 
