@@ -56,13 +56,13 @@ export function WorkRow({ item, first, onPress }: { item: DebateItem; first: boo
   return (
     <Pressable
       accessibilityRole="button"
-      accessibilityLabel={t('debate.openItemAria', { title: item.title || t(`debate.kinds.${item.kind}`) })}
+      accessibilityLabel={t('mobile.common.openItem', { title: item.title || t(`debate.kinds.${item.kind}`) })}
       onPress={onPress}
       testID="work-row"
       style={({ pressed }) => [styles.row, !first && { borderTopWidth: 1, borderTopColor: colors.line }, pressed && styles.pressed]}>
       <IconTile name={KIND_ICONS[item.kind]} size={42} />
       <View style={styles.rowText}>
-        <Text weight="semibold" style={styles.rowTitle} numberOfLines={1}>
+        <Text weight="semibold" style={styles.rowTitle} numberOfLines={2}>
           {item.title || t(`debate.kinds.${item.kind}`)}
         </Text>
         <Text tone="faint" style={styles.rowMeta} numberOfLines={1}>

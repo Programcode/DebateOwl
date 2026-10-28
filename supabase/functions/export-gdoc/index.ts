@@ -730,7 +730,7 @@ export async function handleRequest(req: Request): Promise<Response> {
     console.log("[GDOC] Function invoked, method:", req.method);
 
     const origin = req.headers.get("origin");
-    const corsHeaders = getCorsHeaders(origin, { allowDevOrigins: true });
+    const corsHeaders = getCorsHeaders(origin);
 
     if (req.method === "OPTIONS") {
         return new Response("ok", { headers: corsHeaders });
@@ -842,28 +842,25 @@ export async function handleRequest(req: Request): Promise<Response> {
 
         if (!createDocResponse.ok) {
             const errorText = await createDocResponse.text();
-            console.error("[GDOC] Failed to create document:", errorText);
+            console.error("[GDOC] Failed to create document:", errorText.slice(0, 2000));
 
             // Parse Google's error for more details
-            let googleError = "Unknown error";
             let googleReason = "";
             try {
                 const parsed = JSON.parse(errorText);
-                googleError = parsed.error?.message || parsed.error_description || errorText;
                 googleReason = parsed.error?.errors?.[0]?.reason || parsed.error?.status || "";
             } catch {
-                googleError = errorText;
+                // Non-JSON errors still use the fixed client message.
             }
 
             if (createDocResponse.status === 401 || createDocResponse.status === 403) {
                 return new Response(JSON.stringify({
                     error: createDocResponse.status === 403
                         ? "Google Drive permission is missing or insufficient. Connect Google Drive and try again."
-                        : `Google API error: ${googleError}. Re-authenticate with Google and try again.`,
+                        : "Google authentication expired. Re-authenticate with Google and try again.",
                     code: createDocResponse.status === 403 ? "DRIVE_SCOPE_REQUIRED" : "AUTH_EXPIRED",
                     googleStatus: createDocResponse.status,
                     googleReason,
-                    details: errorText
                 }), {
                     status: createDocResponse.status,
                     headers: { ...corsHeaders, "Content-Type": "application/json" }
@@ -875,7 +872,6 @@ export async function handleRequest(req: Request): Promise<Response> {
                 code: "GOOGLE_DOC_CREATE_FAILED",
                 googleStatus: createDocResponse.status,
                 googleReason,
-                details: errorText
             }), {
                 status: 502,
                 headers: { ...corsHeaders, "Content-Type": "application/json" }
@@ -914,7 +910,19 @@ export async function handleRequest(req: Request): Promise<Response> {
 
             if (!batchUpdateResponse.ok) {
                 const errorText = await batchUpdateResponse.text();
-                console.error("[GDOC] Failed to update document:", errorText);
+                console.error("[GDOC] Failed to update document:", errorText.slice(0, 2000));
+                // The empty document already exists in the student's Drive.
+                // Reporting success opened that blank file as if the export worked.
+                return new Response(JSON.stringify({
+                    success: false,
+                    error: "The Google Doc was created, but its content could not be saved. Try the export again.",
+                    code: "DOCUMENT_UPDATE_FAILED",
+                    documentUrl,
+                    documentId,
+                }), {
+                    status: 502,
+                    headers: { ...corsHeaders, "Content-Type": "application/json" }
+                });
             }
         }
 

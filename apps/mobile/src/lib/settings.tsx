@@ -1,5 +1,5 @@
 import { getDefaultFeatureConfigs, type FeatureTab } from '@debatelab/core/ai/feature-configs';
-import { readEntitlement } from '@debatelab/core/supabase/entitlement';
+import { readProModelAccess } from '@debatelab/core/supabase/billing';
 import { DEFAULT_MODEL, DEFAULT_PRO_MODEL } from '@debatelab/core/contract/model-catalog';
 import { isAppLanguage, type AppLanguage } from '@debatelab/core/languages';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -17,6 +17,7 @@ import {
 import { readFeatureConfigAfterWrites } from './feature-config-read';
 import i18n, { deviceLanguage } from './i18n';
 import { createSerialQueue } from './serial-queue';
+import { billingQuery } from './billing-query';
 import { supabase } from './supabase';
 
 import { applyColorScheme } from '@/theme/apply-color-scheme';
@@ -88,9 +89,9 @@ function isEmptyObject(value: unknown): boolean {
  * their Pro access can't be read right now.
  */
 async function defaultModelFor(userId: string): Promise<string | null> {
-  const entitlement = await readEntitlement(supabase, userId);
-  if (!entitlement) return null;
-  return entitlement.canAccessProModels ? DEFAULT_PRO_MODEL : DEFAULT_MODEL;
+  const pro = await readProModelAccess(billingQuery(userId));
+  if (pro === null) return null;
+  return pro ? DEFAULT_PRO_MODEL : DEFAULT_MODEL;
 }
 
 /**

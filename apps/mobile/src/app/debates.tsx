@@ -5,6 +5,7 @@ import { ActivityIndicator, Pressable, StyleSheet, Switch, TextInput, View } fro
 
 import { PrimaryButton, TextButton } from '@/components/buttons';
 import { Card } from '@/components/card';
+import { WEB_SWITCH_THUMB } from '@/components/form-rows';
 import { Icon } from '@/components/icon';
 import { SheetScrollView } from '@/components/sheet';
 import { Text } from '@/components/text';
@@ -79,7 +80,7 @@ export default function DebatesSheet() {
   return (
     <SheetScrollView contentContainerStyle={styles.content} testID="debates-sheet">
       <View style={styles.header}>
-        <Text accessibilityRole="header" weight="bold" style={styles.title}>
+        <Text accessibilityRole="header" weight="display" style={styles.title}>
           {t('debate.yourDebates')}
         </Text>
         <TextButton label={t('mobile.common.done')} onPress={() => router.back()} />
@@ -178,9 +179,10 @@ export default function DebatesSheet() {
             value={oneOff}
             onValueChange={setOneOff}
             accessibilityLabel={t('mobile.debates.oneOff')}
-            trackColor={{ false: colors.border, true: colors.primary }}
+            trackColor={{ false: colors.border, true: colors.primaryFill }}
             ios_backgroundColor={colors.border}
             thumbColor="#ffffff"
+            {...WEB_SWITCH_THUMB}
           />
         </View>
       </Card>

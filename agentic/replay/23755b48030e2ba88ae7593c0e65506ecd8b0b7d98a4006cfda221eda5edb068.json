@@ -1,6 +1,6 @@
 {
   "schemaVersion": "trace-1",
-  "createdAt": "2026-10-06T10:49:38.577Z",
+  "createdAt": "2026-10-09T12:08:39.285Z",
   "payload": {
     "actions": [
       {
@@ -45,10 +45,10 @@
       },
       {
         "name": "tap",
-        "summary": "tap button \"Generate Debate Case\"",
+        "summary": "tap button \"Generate debate case\"",
         "target": {
           "role": "button",
-          "name": "Generate Debate Case"
+          "name": "Generate debate case"
         }
       }
     ],
@@ -64,22 +64,17 @@
       "callIndex": 0,
       "agent": "default"
     },
-    "summary": "The new debate is active with the motion “This House would replace school exams with continuous assessment.” Generate completed successfully and displayed “Your debate case is ready,” with the generated case structure and arguments visible.",
+    "summary": "Debate started on motion 'This House would replace school exams with continuous assessment' and a debate case was generated on the Generate page, as confirmed by the current debate strip and the displayed case with thesis, arguments, and counters.",
     "startPath": "/app",
     "endPath": "/app/generate",
     "endAnchors": [
       {
-        "role": "button",
-        "name": "Close"
-      },
-      {
-        "text": "Generate complete"
-      },
-      {
-        "text": "Your debate case is ready."
-      },
-      {
         "text": "Current debate"
+      },
+      {
+        "role": "button",
+        "name": "Current debate: This House would replace school exams with continuous assessment",
+        "testId": "current-debate-desktop"
       },
       {
         "role": "heading",
@@ -93,6 +88,14 @@
       },
       {
         "text": "In favor"
+      },
+      {
+        "role": "button",
+        "name": "Change"
+      },
+      {
+        "role": "button",
+        "name": "Use once"
       }
     ],
     "goneAnchors": [
@@ -100,6 +103,10 @@
         "role": "button",
         "name": "Start debate",
         "testId": "current-debate-desktop"
+      },
+      {
+        "role": "heading",
+        "name": "What are you working on?"
       },
       {
         "text": "No current debate"
@@ -119,11 +126,8 @@
       },
       {
         "text": "Brainstorm"
-      },
-      {
-        "text": "Explore angles for a motion."
       }
     ],
-    "endWaitMs": 15032
+    "endWaitMs": 36219
   }
 }

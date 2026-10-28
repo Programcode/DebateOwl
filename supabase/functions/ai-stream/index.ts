@@ -1,7 +1,7 @@
 // Supabase Edge Function: streaming Ask proxy for DebateLab.
 // Keeps provider keys server-side and uses SSE for progressive UI rendering.
 
-import { createClient, type User } from "https://esm.sh/@supabase/supabase-js@2";
+import { createClient, type User } from "https://esm.sh/@supabase/supabase-js@2.114.0";
 import { getAskModeGuidance } from "../ai/prompt-builder.ts";
 import { isAskStreamingModeAllowed, validateControlInput } from "../_shared/control-enforcement.ts";
 import { boundPromptSources, buildStreamingAskSystemPrompt, type StreamingAskMaterial } from "../_shared/prompts.ts";
@@ -14,14 +14,29 @@ import {
   loadDebateContext,
 } from "../_shared/debate-context-loader.ts";
 import {
+  chargedAgainstCap,
+  excludeFromCap,
   markIncompleteUsage,
   normalizeOpenRouterUsage,
   type NormalizedUsage,
 } from "../_shared/cost.ts";
 import { HttpError, jsonError, requireUser } from "../_shared/auth.ts";
 import { getCorsHeaders } from "../_shared/cors.ts";
-import { checkRateLimit, logUsage } from "../_shared/entitlements.ts";
+import { checkRateLimit, logUsage, refundQuotaReservation } from "../_shared/entitlements.ts";
+import { REFUND_MAX_DELIVERED_CHARS } from "../_shared/usage-limits.ts";
+import { keepWorkerAlive, trackDrain, waitAtMost, workerTimeLeft } from "../_shared/background.ts";
+import {
+  CLAUDE_UNAVAILABLE_CODE,
+  CLAUDE_UNAVAILABLE_MESSAGE,
+  CLAUDE_UNAVAILABLE_STATUS,
+  ClaudeProviderUnavailableError,
+  isClaudeModel,
+  openRouterProviderOptions,
+  providerRequestError,
+  warnIfClaudeNotByok,
+} from "../_shared/provider-routing.ts";
 import { OPENROUTER_API_URL } from "../_shared/research.ts";
+import { MAX_ASK_HISTORY_MESSAGE_CHARS, MAX_ASK_HISTORY_MESSAGES, withPromptCaching } from "../_shared/prompt-budget.ts";
 import {
   AUTO_PRO,
   DEFAULT_MODEL,
@@ -30,13 +45,21 @@ import {
   isAutoModelSelection,
   isModelSelection,
   isReasoningEffort,
-  MAX_REQUEST_OUTPUT_TOKENS,
+  retiredModelSuccessor,
   type ModelCatalogEntry,
   type ModelSelection,
   type ReasoningEffort,
 } from "../_shared/model-catalog.ts";
 import { resolveModelSelection } from "../_shared/auto-model-router.ts";
+import { outputTokenLimit, REPLY_TOKEN_CAPS } from "../_shared/output-caps.ts";
 import { JEV_MODEL } from "../_shared/jev.ts";
+
+// After the close, hold the worker at most this long for the browser to take
+// the last bytes, and never past the wall clock. A client that stopped
+// reading must not hold it to 150 s.
+const DRAIN_CAP_MS = 10_000;
+// Bytes the HTTP layer took on the last read still have to reach the socket.
+const STREAM_SETTLE_MS = 500;
 
 type ChatRole = "user" | "assistant";
 
@@ -50,7 +73,6 @@ const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
 const MAX_INPUT_LENGTH = 50000;
-const MAX_HISTORY_ITEMS = 8;
 const OPENROUTER_PROVIDER = "openrouter" as const;
 
 function jsonResponse(body: Record<string, unknown>, status: number, corsHeaders: Record<string, string>) {
@@ -72,10 +94,10 @@ function sanitizeText(value: unknown, limit: number) {
 
 function normalizeHistory(value: unknown): ChatMessage[] {
   if (!Array.isArray(value)) return [];
-  return value.slice(-MAX_HISTORY_ITEMS).flatMap((item) => {
+  return value.slice(-MAX_ASK_HISTORY_MESSAGES).flatMap((item) => {
     if (!item || typeof item !== "object") return [];
     const role = (item as Record<string, unknown>).role;
-    const content = sanitizeText((item as Record<string, unknown>).content, 6000);
+    const content = sanitizeText((item as Record<string, unknown>).content, MAX_ASK_HISTORY_MESSAGE_CHARS);
     if ((role === "user" || role === "assistant") && content) return [{ role, content }];
     return [];
   });
@@ -92,6 +114,7 @@ export function buildMessages(message: string, history: ChatMessage[], mode: str
 
 
 export async function handleRequest(req: Request): Promise<Response> {
+  const receivedAt = Date.now();
   const corsHeaders = getCorsHeaders(req.headers.get("Origin"));
 
   if (req.method === "OPTIONS") {
@@ -122,7 +145,8 @@ export async function handleRequest(req: Request): Promise<Response> {
     return jsonResponse({ error: "Streaming currently supports Ask only" }, 400, corsHeaders);
   }
 
-  const rawModel = sanitizeText(body.model, 80) || DEFAULT_MODEL;
+  const sentModel = sanitizeText(body.model, 80) || DEFAULT_MODEL;
+  const rawModel = retiredModelSuccessor(sentModel) ?? sentModel;
   if (!isModelSelection(rawModel)) return jsonResponse({ error: "Unsupported model or provider combination" }, 400, corsHeaders);
   const requestedModel: ModelSelection = rawModel;
   const requestedReasoningEffort = body.reasoningEffort === undefined
@@ -181,6 +205,7 @@ export async function handleRequest(req: Request): Promise<Response> {
       code: rateLimit.code,
       limit: rateLimit.limit,
       current: rateLimit.current,
+      units: rateLimit.units,
     }, rateLimit.statusCode || 402, corsHeaders);
   }
 
@@ -213,6 +238,8 @@ export async function handleRequest(req: Request): Promise<Response> {
     }
   } catch (error) {
     const message = error instanceof Error ? error.message : "Model routing failed";
+    // Nothing ran, so nothing is charged.
+    await refundQuotaReservation(user.id, rateLimit);
     return jsonResponse({ error: message.includes("Pro") ? message : "Unable to route this request" }, message.includes("Pro") ? 403 : 500, corsHeaders);
   }
 
@@ -225,19 +252,23 @@ export async function handleRequest(req: Request): Promise<Response> {
     effectiveReasoningEffort: reasoningEffort,
   }));
   const providerKey = Deno.env.get("OPENROUTER_API_KEY");
-  if (!providerKey) return jsonResponse({ error: "OpenRouter is not configured" }, 500, corsHeaders);
+  if (!providerKey) {
+    await refundQuotaReservation(user.id, rateLimit);
+    return jsonResponse({ error: "OpenRouter is not configured" }, 500, corsHeaders);
+  }
 
   const history = normalizeHistory(input.history);
-  const temperature = typeof body.temperature === "number" ? body.temperature : 0.7;
   const startedAt = Date.now();
 
-  const stream = new ReadableStream({
-    async start(controller) {
+  let answering!: Promise<void>;
+  const source = new ReadableStream<Uint8Array>({
+    start: (controller) => answering = (async () => {
       const encoder = new TextEncoder();
       let accumulated = "";
       let streamUsageRaw: Record<string, unknown> | undefined;
       let streamSawDone = false;
       let streamSawFinishReason = false;
+      let streamFinishReason: string | undefined;
       const collectUsage = (): NormalizedUsage => {
         return streamUsageRaw
           ? normalizeOpenRouterUsage(streamUsageRaw)
@@ -263,15 +294,13 @@ export async function handleRequest(req: Request): Promise<Response> {
 
         const payload: Record<string, unknown> = {
           model,
-          messages,
-          max_tokens: Math.min(modelEntry.maxTokens, MAX_REQUEST_OUTPUT_TOKENS),
+          messages: withPromptCaching(model, messages),
+          max_tokens: outputTokenLimit(REPLY_TOKEN_CAPS.ask, reasoningEffort, modelEntry.maxTokens),
           reasoning: { effort: reasoningEffort, exclude: true },
-          // Omitting sort and order keeps OpenRouter's balanced provider load balancing.
-          provider: { require_parameters: true },
+          provider: openRouterProviderOptions(model),
           stream: true,
           stream_options: { include_usage: true },
         };
-        if (modelEntry.supportsTemperature) payload.temperature = temperature;
 
         const response = await fetch(`${OPENROUTER_API_URL}/v1/chat/completions`, {
           method: "POST",
@@ -279,7 +308,10 @@ export async function handleRequest(req: Request): Promise<Response> {
           body: JSON.stringify(payload),
           signal: upstreamAbort.signal,
         });
-        if (!response.ok || !response.body) throw new Error(await response.text() || `OpenRouter ${response.status}`);
+        if (!response.ok || !response.body) {
+          console.error(`[OpenRouter] Stream request failed (${response.status}):`, (await response.text()).slice(0, 2000));
+          throw providerRequestError(model, response.status);
+        }
 
         reader = response.body.getReader();
         const decoder = new TextDecoder();
@@ -294,21 +326,29 @@ export async function handleRequest(req: Request): Promise<Response> {
           }
           let parsed: Record<string, unknown>;
           try { parsed = JSON.parse(data); } catch { return; }
+          // Usage can ride on the error frame itself; keep it so the charge is billed.
+          if (parsed.usage && typeof parsed.usage === "object" && !Array.isArray(parsed.usage)) {
+            streamUsageRaw = { ...streamUsageRaw, ...(parsed.usage as Record<string, unknown>) };
+          }
           if (parsed.error) {
             const providerError = parsed.error;
             const message = providerError && typeof providerError === "object" && "message" in providerError
               ? (providerError as { message?: unknown }).message
               : providerError;
+            if (isClaudeModel(model)) {
+              console.error("[OpenRouter] Stream error:", typeof message === "string" ? message.slice(0, 2000) : "stream error");
+              throw providerRequestError(model, null, accumulated.length > 0);
+            }
             throw new Error(typeof message === "string" ? message : "OpenRouter stream error");
           }
           const delta = (Array.isArray(parsed.choices) ? parsed.choices[0] : undefined) as { delta?: { content?: string }; finish_reason?: unknown } | undefined;
-          if (typeof delta?.finish_reason === "string" && delta.finish_reason) streamSawFinishReason = true;
+          if (typeof delta?.finish_reason === "string" && delta.finish_reason) {
+            streamSawFinishReason = true;
+            streamFinishReason = delta.finish_reason;
+          }
           if (typeof delta?.delta?.content === "string" && delta.delta.content) {
             accumulated += delta.delta.content;
             emit("delta", { text: delta.delta.content });
-          }
-          if (parsed.usage && typeof parsed.usage === "object" && !Array.isArray(parsed.usage)) {
-            streamUsageRaw = { ...streamUsageRaw, ...(parsed.usage as Record<string, unknown>) };
           }
         };
         while (true) {
@@ -337,6 +377,16 @@ export async function handleRequest(req: Request): Promise<Response> {
           throw new Error("OpenRouter stream ended before completion");
         }
 
+        // A cut-off answer that already reached the reader cannot be retried;
+        // the flag tells the user it stopped short. One that spent the whole
+        // cap on reasoning sent nothing, so it fails and the client asks the
+        // structured endpoint, which retries with a larger cap.
+        const replyTruncated = streamFinishReason === "length";
+        if (replyTruncated) {
+          console.warn(`[AI_STREAM] Reply hit its ask cap (${REPLY_TOKEN_CAPS.ask} tokens, ${model}, effort ${reasoningEffort})`);
+          if (!accumulated.trim()) throw new Error("OpenRouter reply was cut off before any text");
+        }
+
         const output = {
           response: accumulated.trim(),
           model,
@@ -345,29 +395,52 @@ export async function handleRequest(req: Request): Promise<Response> {
           generatedAt: new Date().toISOString(),
           followUpQuestions: [],
           uncertainties: accumulated.trim() ? [] : ["The model returned an empty streamed response."],
+          ...(replyTruncated ? { replyTruncated: true } : {}),
         };
 
         if (!req.signal.aborted) {
           try { emit("final", { output, meta: { requestedModel, resolvedModel: model, ...(debateMeta ? { debateContext: debateMeta } : {}) } }); } catch { /* client disconnected after provider completion */ }
         }
+        warnIfClaudeNotByok(model, streamUsageRaw, "ai-stream");
         await logUsage(user.id, "ask", OPENROUTER_PROVIDER, model, collectUsage(), Date.now() - startedAt);
       } catch (err) {
         cancelUpstream();
-        const errorMessage = err instanceof Error ? err.message : "Streaming failed";
+        console.error("[AI_STREAM] Stream failed:", (err instanceof Error ? err.message : String(err)).slice(0, 2000));
         const isAbort = req.signal.aborted || (err instanceof DOMException && err.name === "AbortError");
-        if (!isAbort) {
-          try { emit("error", { message: errorMessage }); } catch { /* client disconnected */ }
-        }
+        // Claude runs only on the Anthropic key, with no fallback provider.
+        // When it fails the student gets an outage message.
+        const claudeUnavailable = !isAbort && err instanceof ClaudeProviderUnavailableError;
         const observedUsage = collectUsage();
+        // A run that produced nothing costs nothing: a provider failure, an
+        // empty reply, or the browser leaving (reload, closed tab, Stop)
+        // before the student read a usable part of the answer. One that
+        // streamed REFUND_MAX_DELIVERED_CHARS or more stays charged, and so
+        // does one the model had finished, however the request ended
+        // afterwards: a short answer is already on screen. A reply cut off at
+        // its cap with no text is not finished; the client asks again.
+        // Refund before the client hears of the failure, so a retry it sends
+        // straight away sees it given back.
+        const answerFinished = (streamSawDone || streamSawFinishReason) && streamFinishReason !== "length";
+        const refunded = !answerFinished && accumulated.length < REFUND_MAX_DELIVERED_CHARS &&
+          await refundQuotaReservation(user.id, rateLimit);
+        // The weekly cap counts real spend, so a refunded run's cost (BYOK
+        // provider charges included) still counts. Only a Claude refusal that cost nothing is logged at 0.
+        const freeRefusal = claudeUnavailable && !err.afterOutput && !accumulated && !chargedAgainstCap(observedUsage);
+        const notCharged = refunded ? { charged: false } : {};
+        if (claudeUnavailable) {
+          try { emit("error", { message: CLAUDE_UNAVAILABLE_MESSAGE, code: CLAUDE_UNAVAILABLE_CODE, status: CLAUDE_UNAVAILABLE_STATUS, ...notCharged }); } catch { /* client disconnected */ }
+        } else if (!isAbort) {
+          try { emit("error", { message: "AI streaming failed. Please try again.", code: "provider_error", ...notCharged }); } catch { /* client disconnected */ }
+        }
         await logUsage(
           user.id,
           "ask",
           OPENROUTER_PROVIDER,
           model,
-          markIncompleteUsage(observedUsage),
+          freeRefusal ? excludeFromCap(markIncompleteUsage(observedUsage)) : markIncompleteUsage(observedUsage),
           Date.now() - startedAt,
           isAbort ? "cancelled" : "error",
-          isAbort ? "client_abort" : "stream_error",
+          isAbort ? "aborted" : claudeUnavailable ? "claude_unavailable" : "provider_error",
         );
       } finally {
         req.signal.removeEventListener("abort", clientAbortHandler);
@@ -376,10 +449,15 @@ export async function handleRequest(req: Request): Promise<Response> {
         reader?.releaseLock();
         try { controller.close(); } catch { /* already closed */ }
       }
-    },
+    })(),
   });
+  // Supabase counts the answer as sent once headers are out and may retire
+  // the worker mid-answer (EarlyDrop) unless the work is registered. It stays
+  // registered until the browser has read the final event.
+  const { body: events, drained } = trackDrain(source);
+  keepWorkerAlive(answering.then(() => waitAtMost(drained, Math.min(DRAIN_CAP_MS, workerTimeLeft(receivedAt)))), STREAM_SETTLE_MS);
 
-  return new Response(stream, {
+  return new Response(events, {
     headers: {
       ...corsHeaders,
       "Content-Type": "text/event-stream; charset=utf-8",

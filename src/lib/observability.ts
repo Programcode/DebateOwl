@@ -31,6 +31,14 @@ export function filterObservabilityBreadcrumb<T extends ConsoleBreadcrumb>(bread
   return isReactCaughtRenderError ? null : breadcrumb;
 }
 
+/** Share links grant read access to whoever holds them; keep their codes out of telemetry. */
+export function redactShareLinks<T extends { transaction?: string; request?: { url?: string } }>(event: T): T {
+  const redact = (value: string) => value.replace(/\/share\/[^/?#\s]+/g, "/share/:code");
+  if (event.transaction) event.transaction = redact(event.transaction);
+  if (event.request?.url) event.request.url = redact(event.request.url);
+  return event;
+}
+
 const SAFE_ERROR_NAME = /^[A-Z][A-Za-z]{0,40}Error$/;
 const CODE_LOCATION = String.raw`(?:[a-z][a-z0-9+.-]*:\/\/|\/)[^\s()]+:\d+:\d+`;
 const V8_STACK_FRAME = new RegExp(String.raw`^\s+at (?:.+ \(${CODE_LOCATION}\)|${CODE_LOCATION})$`);
@@ -66,17 +74,23 @@ const PRODUCT_EVENT_NAMES = new Set([
   "ai_request_failed",
   "ai_request_started",
   "ai_request_succeeded",
+  "ai_stream_recovered",
   "content_exported",
+  "free_tool_used",
   "sparring_round_completed",
   "sparring_session_judged",
   "tool_opened",
 ]);
 
 const STRING_PROPERTY_VALUES: Record<string, ReadonlySet<string>> = {
+  action: new Set(["calculate", "draw", "print", "start"]),
   errorName: new Set([
     "AIAuthError",
+    "AINetworkError",
+    "AIUnknownError",
     "AIModelRestrictionError",
     "AIProviderError",
+    "AIServerError",
     "AIRateLimitError",
     "AIResponseError",
     "AISubscriptionError",
@@ -86,7 +100,8 @@ const STRING_PROPERTY_VALUES: Record<string, ReadonlySet<string>> = {
     "UnknownError",
   ]),
   feature: new Set(["ask", "attack", "brainstorm", "crossfire", "factoids", "generate", "sparring"]),
-  format: new Set(["docx", "google_docs", "ld", "pdf", "pf", "standard"]),
+  format: new Set(["ap", "bp", "custom", "docx", "google_docs", "ld", "pdf", "pf", "policy", "school", "standard", "wsdc"]),
+  freeTool: new Set(["debate-flow-sheet", "debate-motion-generator", "debate-timer", "speech-time-calculator"]),
   model: new Set(AVAILABLE_MODELS.map((model) => model.id)),
   provider: new Set([PROVIDER_ID]),
   tool: new Set([
@@ -143,6 +158,8 @@ async function loadSentry(): Promise<SentryModule | null> {
       // No sendDefaultPii: deprecated, and Sentry ignores it whenever
       // dataCollection is set. The block below is the only PII control.
       beforeBreadcrumb: filterObservabilityBreadcrumb,
+      beforeSend: redactShareLinks,
+      beforeSendTransaction: redactShareLinks,
       dataCollection: {
         userInfo: false,
         cookies: false,

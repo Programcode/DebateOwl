@@ -1,0 +1,35 @@
+{
+  "origin": "https://debateowl.com",
+  "product": "DebateOwl",
+  "brand": "DebateOwl",
+  "alternateName": "Debate Owl",
+  "formerly": {
+    "name": "DebateLab",
+    "host": "debate.pi-stack.org",
+    "until": "2026-10-27"
+  },
+  "organization": {
+    "name": "DebateOwl",
+    "logo": {
+      "path": "/icon-512.png",
+      "width": 512,
+      "height": 512
+    },
+    "description": "DebateOwl (formerly DebateLab at debate.pi-stack.org) is an AI debate prep and practice app for students and competitive debaters.",
+    "sameAs": [
+      "https://www.saashub.com/debatelab",
+      "https://www.uneed.best/tool/debatelab"
+    ],
+    "parent": {
+      "name": "Pi-Stack",
+      "url": "https://pi-stack.org/"
+    }
+  },
+  "factsCheckedOn": "2026-10-20",
+  "definition": "an AI debate prep and practice app for students and competitive debaters that builds structured cases, finds the weak points in arguments, researches evidence with citations and runs timed practice rounds against an AI opponent",
+  "pricing": {
+    "currency": "USD",
+    "trialDays": 3,
+    "proMonthly": "5"
+  }
+}

@@ -16,6 +16,7 @@ Part of the [coding standards](../../CODING_STANDARDS.md). AGENTS.md "Hard bound
 - A suite that writes a real session into a browser restricts its base URL to loopback ([#21](https://github.com/Programcode/DebateLab/pull/21#discussion_r3896484019)).
 - Documentation names the secret, never the account's email or password ([#68](https://github.com/Programcode/DebateLab/pull/68#discussion_r4095363422)).
 - One secret, one purpose. Do not derive signing keys from the service-role key; rotating it would break every outstanding token ([#13](https://github.com/Programcode/DebateLab/pull/13#discussion_r3893649683)).
+- An Edge Function that fetches a user-supplied URL connects only to an address it has just checked against the IANA special-purpose ranges, never to the hostname: `fetch` resolves the name again, so a DNS answer that changes in between (rebinding) would reach a blocked range. `import-source` dials the checked address with [`pinned-fetch.ts`](../../supabase/functions/import-source/pinned-fetch.ts), on every redirect hop. Citation verification does not fetch at all (`verifyUrl` in [`supabase/functions/_shared/research.ts`](../../supabase/functions/_shared/research.ts)). Closed finding [7] of the 2026-08-19 review.
 
 ## Recorded exceptions
 
@@ -24,8 +25,7 @@ These were raised in review, judged valid, and accepted on purpose. Changing the
 - Live provider keys reach same-repository PR jobs in `live-e2e.yml`. Adam accepted this on PR #68; the mitigation is dedicated low-limit keys ([#68](https://github.com/Programcode/DebateLab/pull/68#discussion_r4090563258)).
 - The production canary account's credentials reach `prod-canary.yml` through Actions secrets, approved 2026-09-24 and recorded in AGENTS.md ([#68](https://github.com/Programcode/DebateLab/pull/68#discussion_r4090664336)).
 - Manual canary runs can exhaust the account's daily quota; that shows as a quota error, not a false pass ([#68](https://github.com/Programcode/DebateLab/pull/68#discussion_r4093482054)).
-- CodeRabbit rated the shared preview-origin allowlist from PR #95 as a high retained concern: an approved production preview runs unmerged code that can receive demo-session handoffs ([#95 security review](https://github.com/Programcode/DebateLab/pull/95)). [docs/operations.md](../operations.md#per-pr-previews) describes the current setup. This one has no recorded decision yet.
-- `import-source` checks every resolved A and AAAA address against the IANA special-purpose ranges before each fetch, but the Edge runtime cannot pin the connection to the checked address. A hostname whose DNS answer changes between the check and the connection can still reach a blocked range. Citation verification avoids the same gap by not fetching at all (`verifyUrl` in [`supabase/functions/_shared/research.ts`](../../supabase/functions/_shared/research.ts)). Closing it needs an egress proxy outside the runtime. Raised as finding [7] of the 2026-08-19 security review; this needs Adam's decision.
+- CodeRabbit rated the shared preview-origin allowlist from PR #95 as a high retained concern: an approved production preview runs unmerged code that can receive demo-session handoffs ([#95 security review](https://github.com/Programcode/DebateLab/pull/95)). [docs/operations.md](../operations.md#opt-in-previews) describes the current setup. This one has no recorded decision yet.
 
 ## Telemetry and error reports
 

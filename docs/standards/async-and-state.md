@@ -6,7 +6,7 @@ Part of the [coding standards](../../CODING_STANDARDS.md). Race conditions were 
 
 Read the debate, user, or record ID at the moment of the click, and pass it through the async chain. Do not read a store again after an `await`, because the user may have switched debates or accounts while you waited.
 
-- Clear All read the Current Debate after awaiting auth, so a switch during the wait deleted the other debate's sources ([#72](https://github.com/Programcode/DebateLab/pull/72#discussion_r4112813743)).
+- Clear all read the Current Debate after awaiting auth, so a switch during the wait deleted the other debate's sources ([#72](https://github.com/Programcode/DebateLab/pull/72#discussion_r4112813743)).
 - Workspace research saved its sources into whichever personal debate was active when the response arrived ([#72](https://github.com/Programcode/DebateLab/pull/72#discussion_r4112813741)).
 - A fallback that reads "the current debate" must respect one-off mode; use `activeDebateId()`, not `currentDebateId` ([#72](https://github.com/Programcode/DebateLab/pull/72#discussion_r4112813737)).
 

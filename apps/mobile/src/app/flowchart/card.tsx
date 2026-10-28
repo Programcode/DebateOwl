@@ -22,7 +22,7 @@ export default function AddCardSheet() {
   return (
     <SheetScrollView testID="card-sheet">
       <View style={styles.header}>
-        <Text accessibilityRole="header" weight="bold" style={styles.title}>
+        <Text accessibilityRole="header" weight="display" style={styles.title}>
           {t('flowchart.addNodeDialog')}
         </Text>
         <TextButton label={t('common.cancel')} onPress={() => router.back()} />

@@ -11,7 +11,8 @@ test.describe('login passwordless flows', { tag: '@smoke' }, () => {
     await page.goto('/login', { waitUntil: 'domcontentloaded' });
 
     const googleButton = page.getByRole('button', { name: 'Continue with Google' });
-    const expectedRedirect = `${new URL(page.url()).origin}/app`;
+    // Google returns to the callback route with this sign-in's own PKCE flow id.
+    const expectedRedirect = new RegExp(`^${new URL(page.url()).origin.replace(/[.]/g, '\\.')}/auth/callback\\?sb_flow_id=[0-9a-f]{32}$`);
     await expect(googleButton).toBeVisible();
     await expect(page.getByRole('tab', { name: 'Email' })).toBeVisible();
     await expect(page.getByRole('tab', { name: 'Demo code' })).toBeVisible();
@@ -20,7 +21,7 @@ test.describe('login passwordless flows', { tag: '@smoke' }, () => {
     await googleButton.click();
     const requestUrl = new URL((await requestPromise).url());
     expect(requestUrl.searchParams.get('provider')).toBe('google');
-    expect(requestUrl.searchParams.get('redirect_to')).toBe(expectedRedirect);
+    expect(requestUrl.searchParams.get('redirect_to')).toMatch(expectedRedirect);
   });
 
   test('exchanges a demo-code magic-link hash for a Supabase session', async ({ page }) => {
@@ -55,9 +56,12 @@ test.describe('login passwordless flows', { tag: '@smoke' }, () => {
 
   test('sends an email code and focuses the verification field', async ({ page }) => {
     let requestEmail: string | undefined;
+    let redirectTo: string | null = null;
     let releaseOtpResponse: (() => void) | undefined;
     const otpResponseReleased = new Promise<void>((resolve) => { releaseOtpResponse = resolve; });
-    await page.route('**/auth/v1/otp', async (route) => {
+    // The request carries `?redirect_to=`, the callback the emailed link opens.
+    await page.route('**/auth/v1/otp**', async (route) => {
+      redirectTo = new URL(route.request().url()).searchParams.get('redirect_to');
       const body = route.request().postDataJSON() as { email?: unknown };
       requestEmail = typeof body.email === 'string' ? body.email : undefined;
       await otpResponseReleased;
@@ -78,6 +82,7 @@ test.describe('login passwordless flows', { tag: '@smoke' }, () => {
     await expect(page.getByText('Code sent', { exact: true })).toBeVisible();
     await expect(page.getByRole('textbox', { name: 'Verification code' })).toBeFocused();
     expect(requestEmail).toBe('student@example.com');
+    expect(redirectTo).toMatch(/\/auth\/callback\?sb_flow_id=[0-9a-f]{32}$/);
   });
 
   test('shows a demo-code backend error while keeping the form editable', async ({ page }) => {

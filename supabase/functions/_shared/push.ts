@@ -7,7 +7,7 @@
 // phone. Messages carry fixed copy and IDs only, never debate content, because
 // they show on a lock screen.
 
-import type { SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2";
+import type { SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2.114.0";
 
 export const EXPO_PUSH_SEND_URL = "https://exp.host/--/api/v2/push/send";
 export const EXPO_PUSH_RECEIPTS_URL = "https://exp.host/--/api/v2/push/getReceipts";

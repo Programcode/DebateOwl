@@ -1,5 +1,8 @@
+import { readFileSync } from 'node:fs';
 import { expect, test, type Page } from '@playwright/test';
 import { seedCurrentDebate, setLocale, stubSupabaseSession } from './helpers/auth';
+
+const site = JSON.parse(readFileSync('src/config/site.json', 'utf8')) as { product: string };
 
 function collectRuntimeErrors(page: Page) {
   const errors: string[] = [];
@@ -32,7 +35,8 @@ test.describe('Hungarian parity', () => {
     await page.goto('/', { waitUntil: 'domcontentloaded' });
 
     await expectHungarianDocument(page);
-    await expect(page.getByText('MI-alapú vitafelkészülés, ami előnyt ad minden fordulóban.')).toBeVisible();
+    await expect(page.getByRole('heading', { level: 1, name: `${site.product}: MI-alapú vitafelkészítés és gyakorlás` })).toBeVisible();
+    await expect(page.getByText(/^Attól függ, mire van szükséged\. 2026\. október állapot szerint/)).toBeAttached();
     if ((page.viewportSize()?.width ?? 0) < 768) {
       await expect(page.getByRole('button', { name: 'Menü megnyitása' })).toBeVisible();
     } else {
@@ -45,9 +49,9 @@ test.describe('Hungarian parity', () => {
     await expectHungarianDocument(page);
 
     for (const [path, heading] of [
-      ['/login', 'Bejelentkezés a DebateLab-ba'],
-      ['/terms', 'Felhasználási Feltételek'],
-      ['/privacy', 'Adatvédelmi Irányelvek'],
+      ['/login', 'Bejelentkezés a DebateOwl-ba'],
+      ['/terms', 'Felhasználási feltételek'],
+      ['/privacy', 'Adatvédelmi irányelvek'],
       ['/expocit/sources', 'Források'],
     ] as const) {
       await page.goto(path, { waitUntil: 'domcontentloaded' });
@@ -75,9 +79,9 @@ test.describe('Hungarian parity', () => {
 
     await expectHungarianDocument(page);
     await expect(page.getByRole('heading', { name: 'Felkészülés' })).toBeVisible({ timeout: 15_000 });
-    await expect(page.locator('.react-joyride__tooltip')).toContainText('Üdvözlünk a DebateLab-ban!', { timeout: 15_000 });
+    await expect(page.locator('.react-joyride__tooltip')).toContainText('Üdvözlünk a DebateOwl-ban', { timeout: 15_000 });
     await expect(page.locator('[data-test-id="button-primary"]')).toContainText('Következő');
-    await expect(page.locator('[data-test-id="button-skip"]')).toContainText('Túra Kihagyása');
+    await expect(page.locator('[data-test-id="button-skip"]')).toContainText('Túra kihagyása');
     await page.locator('[data-test-id="button-skip"]').click();
 
     for (const [route, heading] of [
@@ -87,7 +91,7 @@ test.describe('Hungarian parity', () => {
       ['factoids', 'Tények'],
       ['ask', 'Kérdezés'],
     ] as const) {
-      // Tools open from Home; the header keeps only Home, Current debate, Library and History.
+      // Tools open from the Tools page; the header keeps only Tools, Current debate, Library and History.
       // Navigate in-app: a reload would rerun the init script and restart the tour.
       await page.locator('header a[href="/app"]').first().click();
       await page.locator(`main [data-tour="mode-${route}"]`).click();
@@ -131,17 +135,25 @@ test.describe('Hungarian parity', () => {
 
     await page.goto('/app/library', { waitUntil: 'domcontentloaded' });
     await expect(page.getByRole('textbox', { name: 'Források keresése' })).toBeVisible();
-    await page.getByRole('button', { name: 'Forrás Hozzáadása' }).click();
+    await page.getByRole('button', { name: 'Forrás hozzáadása' }).click();
     await expect(page.getByText('Importálás URL-ből')).toBeVisible();
-    await page.getByRole('button', { name: 'Mentés a Könyvtárba' }).click();
-    await expect(page.locator('[data-sonner-toast] [data-close-button]')).toHaveAttribute('aria-label', 'Bezárás');
+    await page.getByRole('button', { name: 'Mentés a könyvtárba' }).click();
+    // Required fields are checked inline, in Hungarian.
+    await expect(page.getByRole('alert').filter({ hasText: 'Adj meg egy címet.' })).toBeVisible();
 
     await page.goto('/app/flowchart', { waitUntil: 'domcontentloaded' });
-    await page.getByRole('button', { name: 'Betöltés' }).click();
-    await expect(page.getByRole('dialog', { name: 'Mentett Folyamatábrák' }).getByRole('button', { name: 'Bezárás' })).toBeVisible();
+    await page.getByRole('button', { name: 'Megnyitás', exact: true }).click();
+    await expect(page.getByRole('dialog', { name: 'Mentett folyamatábrák' }).getByRole('button', { name: 'Bezárás' })).toBeVisible();
+    await page.keyboard.press('Escape');
+    // Deleting a node raises a toast, whose close button is localized too.
+    await page.getByText('1. érv', { exact: true }).click();
+    await page.getByRole('button', { name: 'Törlés' }).last().click();
+    const confirmNodeDelete = page.getByRole('button', { name: 'Csomópont törlése' });
+    if (await confirmNodeDelete.isVisible().catch(() => false)) await confirmNodeDelete.click();
+    await expect(page.locator('[data-sonner-toast] [data-close-button]')).toHaveAttribute('aria-label', 'Bezárás');
 
     await page.goto('/app/timer', { waitUntil: 'domcontentloaded' });
-    await expect(page.getByRole('timer', { name: 'Időmérő kijelző' })).toBeVisible();
+    await expect(page.getByRole('timer', { name: 'Időmérő-kijelző' })).toBeVisible();
     expect(errors, errors.join('\n')).toEqual([]);
   });
 });

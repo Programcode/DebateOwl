@@ -4,6 +4,12 @@ import reactHooks from "eslint-plugin-react-hooks";
 import reactRefresh from "eslint-plugin-react-refresh";
 import tseslint from "typescript-eslint";
 
+// The AI core and feature files behind src/lib/ai/client.ts, by alias or
+// relative path, with or without an extension. The server's same-named
+// modules under supabase/functions/ai/ stay importable.
+const aiInternalImport = String.raw`^(?!.*supabase/functions/)(.*/)?ai/(request|errors|sources|text|features(/.*)?)(\.[cm]?[jt]sx?)?/?$`;
+const aiInternalMessage = "Import AI requests and errors from @/lib/ai/client.";
+
 export default tseslint.config(
   {
     ignores: [
@@ -113,6 +119,26 @@ export default tseslint.config(
       "@typescript-eslint/no-misused-promises": [
         "error",
         { checksConditionals: false, checksVoidReturn: { attributes: false } },
+      ],
+    },
+  },
+  {
+    // App code imports AI requests and errors through src/lib/ai/client.ts
+    // only. The core and feature files behind it are internal.
+    files: ["src/**/*.{ts,tsx}", "e2e/**/*.ts", "agentic/**/*.ts"],
+    ignores: ["src/lib/ai/**"],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        { patterns: [{ regex: aiInternalImport, message: aiInternalMessage }] },
+      ],
+      "no-restricted-syntax": [
+        "error",
+        {
+          // esquery ends a regex at "/", so the pattern spells it as \x2F.
+          selector: `ImportExpression[source.value=/${aiInternalImport.replaceAll("/", "\\x2F")}/]`,
+          message: aiInternalMessage,
+        },
       ],
     },
   },

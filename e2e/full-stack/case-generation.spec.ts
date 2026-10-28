@@ -1,5 +1,5 @@
 import { readFile } from "node:fs/promises";
-import { admin, chooseForMotion, expect, fake, MARK, providerCall, signIn, stackReady, startDebate, test } from "./stack";
+import { admin, chooseForMotion, expect, expectResult, fake, MARK, providerCall, signIn, stackReady, startDebate, test } from "./stack";
 
 test.skip(!stackReady, "Local full stack is required (run ./.superset/db-gate.sh)");
 
@@ -9,25 +9,25 @@ test("a signed-in user generates a case grounded in a saved Library source", asy
   const marker = `SOURCE-${Date.now()}`;
   await startDebate(page, motion);
   await page.goto("/app/library");
-  await page.getByRole("button", { name: "Add Source" }).click();
-  await page.getByRole("textbox", { name: "Source title..." }).fill("Tallinn fare study");
+  await page.getByRole("button", { name: "Add source" }).click();
+  await page.getByRole("textbox", { name: "Title", exact: true }).fill("Tallinn fare study");
   // Imported articles are often this long. Inlining that text in the request
   // exceeded the Edge Function's 200 KB body limit before sources loaded server-side.
-  await page.getByRole("textbox", { name: "Paste source content..." })
+  await page.getByRole("textbox", { name: "Content", exact: true })
     .fill(`${marker} Tallinn ridership rose 14 percent after fares were removed. ${"Detailed ridership evidence. ".repeat(9_000)}`);
   await page.getByRole("button", { name: "Save to Library" }).click();
-  await expect(page.getByText("Grounding Active")).toBeVisible();
+  await expect(page.getByText("Grounding active")).toBeVisible();
 
   const userId = await user.userId();
   const { data: sources } = await admin.from("sources").select("id,is_active").eq("user_id", userId);
   expect(sources).toEqual([expect.objectContaining({ is_active: true })]);
 
   await page.goto("/app/generate");
-  await page.getByRole("textbox", { name: "Motion / Topic *" }).fill(motion);
-  await page.getByRole("button", { name: "Generate Debate Case" }).click();
+  await page.getByRole("textbox", { name: "Motion / topic *" }).fill(motion);
+  await page.getByRole("button", { name: "Generate debate case" }).click();
 
   // A hang (as in the auth relock regression) fails here instead of spinning forever.
-  await expect(page.getByText(`${MARK} case thesis`)).toBeVisible({ timeout: 30_000 });
+  await expectResult(page, `${MARK} case thesis`);
   await expect(page.getByText(`${MARK} contention 3`)).toBeVisible();
 
   const call = await providerCall("generate");
@@ -43,33 +43,33 @@ test("a provider failure shows an error and lets the user retry", async ({ signe
   await fake.fail("generate", 500);
   await startDebate(page, motion);
   await page.goto("/app/generate");
-  await page.getByRole("textbox", { name: "Motion / Topic *" }).fill(motion);
-  await page.getByRole("button", { name: "Generate Debate Case" }).click();
+  await page.getByRole("textbox", { name: "Motion / topic *" }).fill(motion);
+  await page.getByRole("button", { name: "Generate debate case" }).click();
 
-  await expect(page.getByText("Generation Failed", { exact: true })).toBeVisible({ timeout: 30_000 });
-  await expect(page.getByRole("button", { name: "Generate Debate Case" })).toBeEnabled();
+  await expect(page.getByText("Generation failed", { exact: true })).toBeVisible({ timeout: 30_000 });
+  await expect(page.getByRole("button", { name: "Generate debate case" })).toBeEnabled();
 
-  await page.getByRole("button", { name: "Generate Debate Case" }).click();
-  await expect(page.getByText(`${MARK} case thesis`)).toBeVisible({ timeout: 30_000 });
+  await page.getByRole("button", { name: "Generate debate case" }).click();
+  await expectResult(page, `${MARK} case thesis`);
 });
 
 test("an account without quota is told why generation is blocked", async ({ signedIn: page, user }) => {
   await admin.from("user_settings").update({ daily_limit_override: 0 }).eq("user_id", await user.userId());
   await startDebate(page, motion);
   await page.goto("/app/generate");
-  await page.getByRole("textbox", { name: "Motion / Topic *" }).fill(motion);
-  await page.getByRole("button", { name: "Generate Debate Case" }).click();
+  await page.getByRole("textbox", { name: "Motion / topic *" }).fill(motion);
+  await page.getByRole("button", { name: "Generate debate case" }).click();
 
-  await expect(page.getByRole("dialog").getByText("Daily Access Paused")).toBeVisible({ timeout: 30_000 });
+  await expect(page.getByRole("dialog").getByText("Daily AI uses used up")).toBeVisible({ timeout: 30_000 });
   expect((await fake.requests()).filter((request) => request.feature === "generate")).toEqual([]);
 });
 
 test("a saved one-off case persists to the account and reloads from History", async ({ signedIn: page, user }) => {
   await page.goto("/app/generate");
-  await page.getByRole("textbox", { name: "Motion / Topic *" }).fill(motion);
-  await page.getByRole("button", { name: "Generate Debate Case" }).click();
+  await page.getByRole("textbox", { name: "Motion / topic *" }).fill(motion);
+  await page.getByRole("button", { name: "Generate debate case" }).click();
   await chooseForMotion(page, "once");
-  await expect(page.getByText(`${MARK} case thesis`)).toBeVisible({ timeout: 30_000 });
+  await expectResult(page, `${MARK} case thesis`);
 
   const title = `Saved case ${Date.now()}`;
   await page.getByRole("button", { name: "Save", exact: true }).click();
@@ -93,9 +93,9 @@ test("a saved one-off case persists to the account and reloads from History", as
 test("a generated case exports to PDF and DOCX files", async ({ signedIn: page }) => {
   await startDebate(page, motion);
   await page.goto("/app/generate");
-  await page.getByRole("textbox", { name: "Motion / Topic *" }).fill(motion);
-  await page.getByRole("button", { name: "Generate Debate Case" }).click();
-  await expect(page.getByText(`${MARK} case thesis`)).toBeVisible({ timeout: 30_000 });
+  await page.getByRole("textbox", { name: "Motion / topic *" }).fill(motion);
+  await page.getByRole("button", { name: "Generate debate case" }).click();
+  await expectResult(page, `${MARK} case thesis`);
 
   // PDF files start with "%PDF"; DOCX files are ZIP archives starting with "PK".
   for (const [button, extension, magic] of [["PDF", ".pdf", "%PDF"], ["DOCX", ".docx", "PK"]] as const) {

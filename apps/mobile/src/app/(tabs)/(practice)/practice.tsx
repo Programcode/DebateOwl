@@ -104,7 +104,7 @@ export default function PracticeScreen() {
       {/* The list appears once it has loaded, so the tools never wait behind a spinner. */}
       {items === null && !failed ? null : (
         <>
-          <Text accessibilityRole="header" weight="bold" style={styles.section}>
+          <Text accessibilityRole="header" weight="bold" tone="heading" style={styles.section}>
             {t('historyPage.sparringTitle')}
           </Text>
           {items === null ? (

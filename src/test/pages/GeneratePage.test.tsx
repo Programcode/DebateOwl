@@ -42,9 +42,15 @@ const mockSaveCurrentCase = vi.fn();
 const mockRecordResult = vi.fn(async () => 'recorded-case');
 const mockUpdateRecordedResult = vi.fn(async () => undefined);
 const mockAddAskMessage = vi.fn();
+const mockSetPendingFlowchartData = vi.fn();
 const mockSetAskLoading = vi.fn();
 let mockGenerateResult: any = null;
+let mockAutosavedCases: any[] = [];
 let mockGenerateForm: any = { motion: 'Existing motion', side: 'pro', format: 'bp', role: 'intro', length: 'brief', audience: 'beginner', tone: 'formal' };
+let mockGenerateResultDebateId: string | null | undefined;
+const mockSetGenerateResultDebateId = vi.fn((debateId: string | null) => {
+    mockGenerateResultDebateId = debateId;
+});
 
 let mockRegeneratingSection: string | null = null;
 const mockStoreListeners = new Set<() => void>();
@@ -60,15 +66,17 @@ vi.mock('@/lib/stores/session-store', async () => {
         generateLoading: false,
         generateRegeneratingSection: mockRegeneratingSection,
         generateForm: mockGenerateForm,
-        autosavedCases: [] as any[],
+        generateResultDebateId: mockGenerateResultDebateId,
+        autosavedCases: mockAutosavedCases,
         setGenerateResult: mockSetGenerateResult,
         setGenerateLoading: mockSetGenerateLoading,
         setGenerateRegeneratingSection: mockSetRegeneratingSection,
+        setGenerateResultDebateId: mockSetGenerateResultDebateId,
         saveCurrentCase: mockSaveCurrentCase,
         addAskMessage: mockAddAskMessage,
         setAskLoading: mockSetAskLoading,
         askMessages: [] as any[],
-        setPendingFlowchartData: vi.fn(),
+        setPendingFlowchartData: mockSetPendingFlowchartData,
         recordResult: mockRecordResult,
         updateRecordedResult: mockUpdateRecordedResult,
     });
@@ -81,6 +89,10 @@ vi.mock('@/lib/stores/session-store', async () => {
         return state();
     };
     useSessionStore.getState = state;
+    useSessionStore.setState = (patch: { generateResultDebateId?: string | null }) => {
+        if ('generateResultDebateId' in patch) mockGenerateResultDebateId = patch.generateResultDebateId;
+        mockStoreListeners.forEach((listener) => listener());
+    };
     return { useSessionStore };
 });
 
@@ -106,7 +118,7 @@ vi.mock('@/components/features/generate/GenerateForm', () => ({
 }));
 
 vi.mock('@/components/features/generate/GenerateResults', () => ({
-    GenerateResults: ({ result, discoveredSources = [], onDiscuss, onSave, onRegenerateSection, regeneratingSection = null, onPracticeCrossfire }: { result: { caseStructure: { thesis: string } }, discoveredSources?: { title: string }[], onDiscuss: () => void, onSave: () => void, onRegenerateSection?: (section: string) => void, regeneratingSection?: string | null, onPracticeCrossfire?: () => void }) => (
+    GenerateResults: ({ result, discoveredSources = [], onDiscuss, onSave, onRegenerateSection, regeneratingSection = null, onPracticeCrossfire, onImportFlowchart, onUndo }: { result: { caseStructure: { thesis: string } }, discoveredSources?: { title: string }[], onDiscuss: () => void, onSave: () => void, onRegenerateSection?: (section: string) => void, regeneratingSection?: string | null, onPracticeCrossfire?: () => void, onImportFlowchart?: () => void, onUndo?: () => void }) => (
         <div data-testid="generate-results" data-regenerating={regeneratingSection ?? ''}>
             <h1>Results for {result.caseStructure.thesis}</h1>
             <div data-testid="discovered-sources">{discoveredSources.map((source) => source.title).join(',')}</div>
@@ -114,6 +126,8 @@ vi.mock('@/components/features/generate/GenerateResults', () => ({
             <button onClick={onDiscuss}>Discuss</button>
             <button onClick={onSave} data-testid="save-case">Save case</button>
             <button onClick={onPracticeCrossfire} data-testid="open-crossfire">Open Crossfire</button>
+            <button onClick={onImportFlowchart} data-testid="import-flowchart">Import flowchart</button>
+            <button onClick={onUndo} data-testid="undo-case">Undo case</button>
         </div>
     ),
 }));
@@ -126,7 +140,9 @@ describe('GeneratePage Integration', () => {
         enableOneOffMode();
         vi.clearAllMocks();
         mockGenerateResult = null;
+        mockAutosavedCases = [];
         mockRegeneratingSection = null;
+        mockGenerateResultDebateId = undefined;
         mockGenerateForm = { motion: 'Existing motion', side: 'pro', format: 'bp', role: 'intro', length: 'brief', audience: 'beginner', tone: 'formal' };
     });
 
@@ -153,6 +169,62 @@ describe('GeneratePage Integration', () => {
             expect(mockToast).toHaveBeenCalledWith(expect.objectContaining({ variant: 'destructive' }));
         });
         expect(mockToast).not.toHaveBeenCalledWith(expect.objectContaining({ title: 'Case Saved' }));
+    });
+
+    it('imports a case to the Flowchart only from the debate it belongs to', () => {
+        seedCurrentDebate();
+        mockGenerateResult = {
+            caseStructure: { thesis: 'Existing Thesis', framework: '', keyDefinitions: [], burdenOfProof: '' },
+            contentions: [{ id: '1', claim: 'Claim', reasoning: '', evidence: '', needsSource: false, impact: '' }],
+            predictedOpponentCase: { likelyArguments: [], strategicWeaknesses: [], keyClashes: [] },
+            counters: [],
+            metadata: { side: 'pro', format: 'custom', generatedAt: '2026-01-01T00:00:00Z' },
+        };
+        mockGenerateResultDebateId = 'another-debate';
+        const { unmount } = render(<BrowserRouter><GeneratePage /></BrowserRouter>);
+        fireEvent.click(screen.getByTestId('import-flowchart'));
+        expect(mockSetPendingFlowchartData).not.toHaveBeenCalled();
+        expect(mockToast).toHaveBeenCalledWith(expect.objectContaining({ variant: 'destructive' }));
+        unmount();
+
+        mockGenerateResultDebateId = TEST_DEBATE_ID;
+        mockAutosavedCases = [{ id: 'older', title: 'Older', createdAt: 1, data: { ...mockGenerateResult } }];
+        render(<BrowserRouter><GeneratePage /></BrowserRouter>);
+        fireEvent.click(screen.getByTestId('import-flowchart'));
+        expect(mockSetPendingFlowchartData).toHaveBeenCalledTimes(1);
+        expect(mockNavigate).toHaveBeenCalledWith('/app/flowchart');
+
+        // Undo brings back a snapshot, which may come from another debate: it is not imported.
+        fireEvent.click(screen.getByTestId('undo-case'));
+        fireEvent.click(screen.getByTestId('import-flowchart'));
+        expect(mockSetPendingFlowchartData).toHaveBeenCalledTimes(1);
+    });
+
+    it('does not let a regeneration after Undo overwrite the replaced case\'s saved row', async () => {
+        seedCurrentDebate({ motion: 'Test Topic' });
+        const newer = {
+            caseStructure: { thesis: 'Newer thesis' },
+            contentions: [] as any[],
+            predictedOpponentCase: {},
+            counters: [] as any[],
+            metadata: {},
+        };
+        (generateCase as Mock).mockResolvedValueOnce({ result: newer, discoveredSources: [] })
+            .mockResolvedValueOnce({ result: { ...newer, contentions: [{ claim: 'Updated' }] }, discoveredSources: [] });
+        const view = render(<BrowserRouter><GeneratePage /></BrowserRouter>);
+        fireEvent.click(screen.getByTestId('submit-button'));
+        await waitFor(() => expect(mockRecordResult).toHaveBeenCalledTimes(1));
+
+        // The previous snapshot may belong to another debate; Undo puts it on screen.
+        mockGenerateResult = newer;
+        mockAutosavedCases = [{ id: 'older', title: 'Older', createdAt: 1, data: { ...newer, caseStructure: { thesis: 'Older thesis' } } }];
+        view.rerender(<BrowserRouter><GeneratePage /></BrowserRouter>);
+        fireEvent.click(screen.getByTestId('undo-case'));
+
+        fireEvent.click(screen.getByTestId('regenerate-section'));
+        await waitFor(() => expect(generateCase).toHaveBeenCalledTimes(2));
+        await waitFor(() => expect(mockSetGenerateResult).toHaveBeenCalledWith(expect.objectContaining({ contentions: [{ claim: 'Updated' }] })));
+        expect(mockUpdateRecordedResult).not.toHaveBeenCalled();
     });
 
     it('opens Crossfire with the generated resolution and argument', () => {
@@ -331,6 +403,29 @@ describe('GeneratePage Integration', () => {
         expect((generateCase as Mock).mock.calls[1][3]).toBeNull();
     });
 
+    it('regenerates a loaded case with that case\'s motion and debate', async () => {
+        seedCurrentDebate({ motion: 'Existing motion' });
+        mockGenerateResultDebateId = 'loaded-debate';
+        mockGenerateResult = {
+            caseStructure: { thesis: 'Loaded thesis' },
+            contentions: [] as any[],
+            predictedOpponentCase: {},
+            counters: [] as any[],
+            metadata: { side: 'con', format: 'custom', motion: 'Loaded motion', generatedAt: '2026-01-01T00:00:00Z' },
+        };
+        (generateCase as Mock).mockResolvedValue({ result: mockGenerateResult, discoveredSources: [] });
+
+        render(<BrowserRouter><GeneratePage /></BrowserRouter>);
+        fireEvent.click(screen.getByTestId('regenerate-section'));
+
+        await waitFor(() => expect(generateCase).toHaveBeenCalledTimes(1));
+        expect((generateCase as Mock).mock.calls[0][0]).toEqual(expect.objectContaining({
+            motion: 'Loaded motion',
+            side: 'con',
+        }));
+        expect((generateCase as Mock).mock.calls[0][3]).toBe('loaded-debate');
+    });
+
     it('after a reload, regenerates in the Current Debate only when the motion matches', async () => {
         const result = { caseStructure: { thesis: 'Restored' }, contentions: [] as any[], predictedOpponentCase: {}, counters: [] as any[], metadata: {} };
         (generateCase as Mock).mockResolvedValue({ result, discoveredSources: [] });
@@ -361,7 +456,8 @@ describe('GeneratePage Integration', () => {
 
         await waitFor(() => expect(mockToast).toHaveBeenCalledWith(expect.objectContaining({ title: 'Could not save this result to the debate' })));
         expect(mockSetGenerateResult).toHaveBeenCalledWith(result);
-        expect(mockToast).toHaveBeenCalledWith(expect.objectContaining({ title: 'Generate complete' }));
+        // The run itself succeeded: no failure panel and no failure toast.
+        expect(screen.queryByText(/Generation Failed/i)).toBeNull();
         expect(mockToast).not.toHaveBeenCalledWith(expect.objectContaining({ variant: 'destructive', title: expect.stringMatching(/Generation Failed/i) }));
     });
 });

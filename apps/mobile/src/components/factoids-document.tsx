@@ -121,7 +121,7 @@ export function FactoidsDocument({
             accessibilityLabel={t('factoidsResults.verificationStatus')}
             accessibilityValue={{ min: 0, max: 100, now: share }}
             style={[styles.track, { backgroundColor: colors.line }]}>
-            <View style={[styles.fill, { width: `${share}%`, backgroundColor: colors.primary }]} />
+            <View style={[styles.fill, { width: `${share}%`, backgroundColor: colors.primaryFill }]} />
           </View>
           <Text weight="semibold" style={styles.percent}>{`${share}%`}</Text>
         </View>
@@ -133,7 +133,7 @@ export function FactoidsDocument({
         </DocSection>
       ) : null}
 
-      <SectionHeading title={`${t('factoidsResults.found')} ${shown.length} ${t('factoidsResults.factoids')}`} description={t('factoidsResults.factoidsDesc')} />
+      <SectionHeading title={t('factoidsResults.foundCount', { count: shown.length })} description={t('factoidsResults.factoidsDesc')} />
       {items.length > 0 ? (
         <NumberedItems items={items} testID="factoids-items" />
       ) : (

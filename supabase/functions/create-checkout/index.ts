@@ -1,12 +1,14 @@
 // Supabase Edge Function: Create Stripe Checkout Session
 // Creates a Checkout Session for subscription purchase.
 
-import { createClient, type User } from "https://esm.sh/@supabase/supabase-js@2";
-import Stripe from "https://esm.sh/stripe@14.10.0?target=deno";
-import { HttpError, jsonError, requireUser } from "../_shared/auth.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.114.0";
+import { type AuthContext, HttpError, jsonError, requireUser } from "../_shared/auth.ts";
+import { createEdgeStripe, Stripe } from "../_shared/stripe.ts";
 import { getCorsHeaders } from "../_shared/cors.ts";
 import {
+  discountPromotionCode,
   findCustomerOwnedByUser,
+  hasOpenSubscription,
   isAllowedCheckoutRedirectUrl,
 } from "./checkout-security.ts";
 
@@ -21,10 +23,7 @@ if (!STRIPE_SECRET_KEY) throw new Error("Missing required env: STRIPE_SECRET_KEY
 if (!SUPABASE_URL) throw new Error("Missing required env: SUPABASE_URL");
 if (!SUPABASE_SERVICE_ROLE_KEY) throw new Error("Missing required env: SUPABASE_SERVICE_ROLE_KEY");
 
-const stripe = new Stripe(STRIPE_SECRET_KEY, {
-  apiVersion: "2023-10-16",
-  httpClient: Stripe.createFetchHttpClient(),
-});
+const stripe = createEdgeStripe(STRIPE_SECRET_KEY);
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
@@ -46,7 +45,7 @@ class AppError extends Error {
 }
 
 function isDeletedPrice(price: Stripe.Price | Stripe.DeletedPrice): price is Stripe.DeletedPrice {
-  return "deleted" in price && price.deleted;
+  return "deleted" in price && price.deleted === true;
 }
 
 function isActiveRecurringPrice(price: Stripe.Price | Stripe.DeletedPrice): price is Stripe.Price {
@@ -205,14 +204,15 @@ export async function handleRequest(req: Request): Promise<Response> {
   }
 
   // Authenticate user
-  let user: User;
+  let auth: AuthContext;
   try {
-    user = (await requireUser(req)).user;
+    auth = await requireUser(req);
   } catch (error) {
     if (!(error instanceof HttpError)) throw error;
     console.warn("[CHECKOUT] Authentication rejected:", error.message);
     return jsonError(error, corsHeaders);
   }
+  const { user, userClient } = auth;
 
   try {
     let body: unknown;
@@ -248,6 +248,57 @@ export async function handleRequest(req: Request): Promise<Response> {
     }
 
     const resolvedPrice = await resolveCheckoutPriceId();
+
+    // A second Checkout session creates a second subscription on the same
+    // customer. Refuse while one can still bill, and send the student to
+    // Settings to manage the one they have.
+    const { data: existingSubscriptions, error: subscriptionReadError } = await supabase
+      .from("subscriptions")
+      .select("status")
+      .eq("user_id", user.id);
+    if (subscriptionReadError) {
+      console.error(`[CHECKOUT] Could not read subscriptions for ${user.id}: ${subscriptionReadError.code}`);
+      return new Response(JSON.stringify({ error: "Failed to create checkout session" }), {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    if (hasOpenSubscription(existingSubscriptions)) {
+      return new Response(JSON.stringify({
+        error: "You already have a subscription. Manage it from Settings.",
+        code: "already_subscribed",
+      }), {
+        status: 409,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // A promo code is claimed through redeem_promo_code_atomic as the user, so
+    // its expiry, cap, single use and failure lockout apply here too. Only a
+    // discount is accepted, and Checkout applies exactly the Stripe promotion
+    // code stored with it; Stripe's own promo-code field stays closed. A claim
+    // stays counted if Stripe fails below, which keeps the cap.
+    let promotionCode: string | undefined;
+    if (promoCode) {
+      const { data: claim, error: claimError } = await userClient.rpc("redeem_promo_code_atomic", {
+        p_code: promoCode,
+        p_discount_only: true,
+      });
+      if (claimError) {
+        console.error(`[CHECKOUT] Promo claim failed for ${user.id}: ${claimError.code ?? "unknown"}`);
+      }
+      const claimed = discountPromotionCode(claimError ? null : claim);
+      if (!claimed) {
+        return new Response(JSON.stringify({
+          error: "Invalid or expired promo code",
+          code: "promo_invalid",
+        }), {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      promotionCode = claimed;
+    }
 
     // Get or create Stripe customer
     let customerId = await findCustomerIdByUser({ id: user.id, email: user.email });
@@ -287,41 +338,8 @@ export async function handleRequest(req: Request): Promise<Response> {
       subscription_data: {
         metadata: { user_id: user.id },
       },
+      ...(promotionCode && { discounts: [{ promotion_code: promotionCode }] }),
     };
-
-    // Apply promo code if provided
-    if (promoCode) {
-      const { data: promo, error: promoLookupError } = await supabase.from("promo_codes")
-        .select("*")
-        .eq("code", promoCode.toUpperCase())
-        .eq("is_active", true)
-        .maybeSingle();
-
-      if (promoLookupError) {
-        console.warn(`[CHECKOUT] Promo lookup warning for ${promoCode}: ${promoLookupError.message}`);
-      }
-
-      if (promo && promo.type === "discount") {
-        const { data: existingRedemption, error: redemptionLookupError } = await supabase.from("user_promos")
-          .select("id")
-          .eq("user_id", user.id)
-          .eq("promo_code_id", promo.id)
-          .maybeSingle();
-
-        if (redemptionLookupError) {
-          console.warn(`[CHECKOUT] Promo redemption lookup warning for ${promoCode}: ${redemptionLookupError.message}`);
-        }
-
-        if (existingRedemption) {
-          return new Response(JSON.stringify({ error: "You've already redeemed this promo code" }), {
-            status: 400,
-            headers: { ...corsHeaders, "Content-Type": "application/json" },
-          });
-        }
-
-        sessionParams.allow_promotion_codes = true;
-      }
-    }
 
     const session = await stripe.checkout.sessions.create(sessionParams);
 
@@ -333,15 +351,16 @@ export async function handleRequest(req: Request): Promise<Response> {
     });
   } catch (err) {
     if (err instanceof AppError) {
-      return new Response(JSON.stringify({ error: err.message, details: err.details }), {
+      console.error("[CHECKOUT] Configuration error:", err.message.slice(0, 2000));
+      return new Response(JSON.stringify({ error: "Unable to create checkout session. Please try again." }), {
         status: err.status,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
     const { status, message, details } = classifyStripeError(err);
-    console.error("[CHECKOUT] Error:", JSON.stringify({ message, ...details }));
-    return new Response(JSON.stringify({ error: message, details }), {
+    console.error("[CHECKOUT] Error:", JSON.stringify({ message, ...details }).slice(0, 2000));
+    return new Response(JSON.stringify({ error: "Unable to create checkout session. Please try again." }), {
       status,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });

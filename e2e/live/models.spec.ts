@@ -6,7 +6,7 @@ test.describe.configure({ timeout: LIVE_TIMEOUT + 60_000 });
 
 test("Ask streams a live answer", async ({ signedIn: page }) => {
   await page.goto("/app/ask");
-  await page.getByPlaceholder("Ask your debate coach...").fill("In two sentences, how should I weigh access against cost?");
+  await page.getByPlaceholder("Ask your debate coach…").fill("In two sentences, how should I weigh access against cost?");
   const stream = page.waitForResponse((response) => response.url().endsWith("/functions/v1/ai-stream"), { timeout: LIVE_TIMEOUT });
   await page.getByRole("button", { name: "Send message" }).click();
 
@@ -24,15 +24,15 @@ test("Ask streams a live answer", async ({ signedIn: page }) => {
 
 test("Attack and Brainstorm return valid structured analyses", async ({ signedIn: page }) => {
   await page.goto("/app/attack");
-  await page.getByLabel("Your Argument *").fill("Free transit cuts congestion because riders leave their cars at home, so cities should abolish fares.");
+  await page.getByLabel("Your argument *").fill("Free transit cuts congestion because riders leave their cars at home, so cities should abolish fares.");
   const attack = aiResponse(page, "attack");
-  await page.getByRole("button", { name: "Find Weaknesses" }).click();
+  await page.getByRole("button", { name: "Find weaknesses" }).click();
   expect(((await attack).output.weaknesses as unknown[]).length).toBeGreaterThan(0);
 
   await page.goto("/app/brainstorm");
-  await page.getByLabel("Motion / Topic *").fill("Universal basic income should replace targeted welfare");
+  await page.getByLabel("Motion / topic *").fill("Universal basic income should replace targeted welfare");
   const brainstorm = aiResponse(page, "brainstorm");
-  await page.getByRole("button", { name: "Start Brainstorming" }).click();
+  await page.getByRole("button", { name: "Start brainstorming" }).click();
   await chooseForMotion(page, "once");
   expect(((await brainstorm).output.topFive as unknown[]).length).toBeGreaterThan(0);
   await expectProviderCallsHealthy(["attack", "brainstorm"]);

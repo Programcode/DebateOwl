@@ -1,5 +1,5 @@
 BEGIN;
-SELECT plan(28);
+SELECT plan(29);
 
 -- The leaver deletes their account; the stayer shares workspaces, announcements,
 -- and grants with them and must keep everything of their own.
@@ -112,6 +112,8 @@ INSERT INTO public.push_tokens (token, user_id, platform)
 INSERT INTO public.ai_requests (user_id, feature, provider, model)
   VALUES ('ac000000-0000-4000-8000-00000000000a', 'brainstorm', 'openrouter', 'model');
 INSERT INTO public.daily_usage_counters (user_id, usage_date) VALUES ('ac000000-0000-4000-8000-00000000000a', current_date);
+INSERT INTO public.ai_quota_sessions (user_id, feature, session_key) VALUES ('ac000000-0000-4000-8000-00000000000a', 'crossfire', 'cf-leaver');
+INSERT INTO public.ai_run_results (user_id, feature, result_key, status, body) VALUES ('ac000000-0000-4000-8000-00000000000a', 'generate', 'req_1_leaver', 200, '{"output":{}}');
 INSERT INTO public.rate_limits (user_id, limit_type, limit_value) VALUES ('ac000000-0000-4000-8000-00000000000a', 'daily', 5);
 INSERT INTO public.api_keys (user_id, provider, key_ciphertext) VALUES ('ac000000-0000-4000-8000-00000000000a', 'openai', 'LEAVER-CIPHERTEXT');
 INSERT INTO public.user_roles (user_id, role) VALUES ('ac000000-0000-4000-8000-00000000000a', 'admin');
@@ -314,6 +316,15 @@ SELECT ok(
     AND current_setting('test.export') LIKE '%LEAVER-MESSAGE%'
     AND current_setting('test.export') NOT LIKE '%STAYER-PRIVATE%',
   'the export contains the user''s own content and none of another user''s'
+);
+SELECT ok(
+  current_setting('test.export') NOT LIKE '%cus_leaver%'
+    AND current_setting('test.export') NOT LIKE '%stripe_customer_id%'
+    AND current_setting('test.export') NOT LIKE '%daily_limit_override%'
+    AND current_setting('test.export') NOT LIKE '%gifted_trial%'
+    AND current_setting('test.export') NOT LIKE '%pricing_snapshot_id%'
+    AND current_setting('test.export') NOT LIKE '%raw_usage%',
+  'Stripe customer ids, gifted-trial markers, limit overrides, and upstream cost fields stay out of the export'
 );
 SELECT ok(
   current_setting('test.export') NOT LIKE '%LEAVER-CIPHERTEXT%'

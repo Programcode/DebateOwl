@@ -71,7 +71,7 @@ export default function DeleteDataSheet() {
   return (
     <SheetScrollView>
       <View style={styles.header}>
-        <Text accessibilityRole="header" weight="bold" style={styles.title}>
+        <Text accessibilityRole="header" weight="display" style={styles.title}>
           {t('settings.deleteDialogTitle')}
         </Text>
         <TextButton label={t('common.cancel')} onPress={() => router.back()} disabled={deleting} />

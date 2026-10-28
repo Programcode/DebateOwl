@@ -1,5 +1,6 @@
 import { createClient } from "@supabase/supabase-js";
 import { expect, test, type Page } from "@playwright/test";
+import { readAIResponse } from "../helpers/ai-response";
 
 // Production canary. Everything here is read-only except the last two tests,
 // which make real AI requests as the dedicated canary account and run only on
@@ -29,20 +30,27 @@ async function signInAsCanary(page: Page, { aiRequest }: { aiRequest: boolean })
   await page.addInitScript((session) => {
     localStorage.setItem("debate-auth-production", JSON.stringify(session));
     localStorage.setItem("debate-trainer-onboarding", JSON.stringify({ state: { hasCompletedOnboarding: true, isTourRunning: false }, version: 0 }));
+    localStorage.setItem("debateowl_intro_seen_v1", "canary");
   }, data.session);
 }
 
-// GPT-5.6 Luna is the Basic default, so this is the path most users take.
-async function pickLuna(page: Page, feature: string) {
+// Claude Haiku 5.5 is the Basic default, so this is the path most users take.
+async function pickBasicDefault(page: Page, feature: string) {
   await page.getByRole("combobox", { name: `Select AI model for ${feature}` }).click();
-  await page.getByRole("option", { name: /GPT-5\.6 Luna/ }).first().click();
+  await page.getByRole("option", { name: /Claude Haiku 5\.5/ }).first().click();
 }
 
 test("the production site loads and guards the app", async ({ page, baseURL }) => {
+  // The deploy hook can run while the previous HTML is still what the edge serves.
+  // The title still has to become DebateOwl; this only waits that window out.
+  test.setTimeout(200_000);
   const errors: string[] = [];
   page.on("pageerror", (error) => errors.push(error.message));
-  await page.goto("/");
-  await expect(page).toHaveTitle(/DebateLab/);
+  await expect(async () => {
+    errors.length = 0;
+    await page.goto("/", { waitUntil: "domcontentloaded" });
+    await expect(page).toHaveTitle(/DebateOwl/);
+  }).toPass({ timeout: 3 * 60 * 1000, intervals: [1_000, 5_000, 10_000, 15_000] });
   await page.goto("/login");
   await expect(page.getByRole("button", { name: "Continue with Google" })).toBeVisible();
   await page.goto("/app/generate");
@@ -81,7 +89,7 @@ test("the AI function rejects unauthenticated calls instead of crashing", async 
 test("the canary account signs in and loads its account", async ({ page }) => {
   await signInAsCanary(page, { aiRequest: false });
   await page.goto("/app/generate");
-  await expect(page.getByRole("button", { name: "Generate Debate Case" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Generate debate case" })).toBeVisible();
   await page.goto("/app/settings");
   await expect(page.getByText("Pro", { exact: true })).toBeVisible();
 });
@@ -89,8 +97,8 @@ test("the canary account signs in and loads its account", async ({ page }) => {
 test("the canary account gets a streamed answer from a real model", async ({ page }) => {
   await signInAsCanary(page, { aiRequest: true });
   await page.goto("/app/ask");
-  await pickLuna(page, "ask");
-  await page.getByPlaceholder("Ask your debate coach...").fill("Reply with one short sentence: what is a rebuttal?");
+  await pickBasicDefault(page, "ask");
+  await page.getByPlaceholder("Ask your debate coach").fill("Reply with one short sentence: what is a rebuttal?");
   const stream = page.waitForResponse((response) => response.url().endsWith("/functions/v1/ai-stream"), { timeout: 90_000 });
   await page.getByRole("button", { name: "Send message" }).click();
   const response = await stream;
@@ -111,16 +119,15 @@ test("the canary account generates a case", async ({ page }) => {
   test.setTimeout(180_000);
   await signInAsCanary(page, { aiRequest: true });
   await page.goto("/app/generate");
-  await pickLuna(page, "generate");
-  await page.getByRole("textbox", { name: "Motion / Topic *" }).fill("This House would make public transport free");
+  await pickBasicDefault(page, "generate");
+  await page.getByRole("textbox", { name: "Motion / topic *" }).fill("This House would make public transport free");
   const generated = page.waitForResponse((response) => response.url().endsWith("/functions/v1/ai") && response.request().method() === "POST", { timeout: 150_000 });
-  await page.getByRole("button", { name: "Generate Debate Case" }).click();
+  await page.getByRole("button", { name: "Generate debate case" }).click();
   // Use the motion once so the canary account does not collect production debates.
   await page.getByRole("dialog", { name: /^(Start a debate with this motion\?|This is a different motion)$/ })
     .getByRole("button", { name: /^(Not now, use it once|Use once without saving to a debate)$/ })
     .click();
-  const response = await generated;
-  expect(response.status(), "ai generate status").toBe(200);
-  const body = await response.json() as { output: { contentions?: unknown[] } };
+  const { status, body } = await readAIResponse(await generated);
+  expect(status, "ai generate status").toBe(200);
   expect(body.output.contentions, "generated contentions").toHaveLength(3);
 });

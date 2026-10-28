@@ -1,5 +1,6 @@
 import { useTranslation } from 'react-i18next';
-import { Loader2, Play, Square, Volume2 } from 'lucide-react';
+import { LoadingSpinner } from '@/components/ui/loading-spinner';
+import { Play, Square, Volume2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { opponentVoice } from '@/lib/voice/opponent-voice';
 import { useOpponentVoice } from '@/lib/voice/use-opponent-voice';
@@ -17,7 +18,7 @@ export function OpponentVoiceBar({ className }: { className?: string }) {
         <div className="flex flex-wrap items-center justify-between gap-3">
           <span className="flex items-center gap-2 text-foreground" role="status" aria-live="polite">
             {voice.status === 'loading'
-              ? <Loader2 className="h-4 w-4 animate-spin text-primary motion-reduce:animate-none" aria-hidden="true" />
+              ? <LoadingSpinner size="sm" className="text-primary" />
               : <Volume2 className="h-4 w-4 text-primary" aria-hidden="true" />}
             {voice.status === 'loading' && t('voiceRound.opponent.loading')}
             {voice.status === 'speaking' && t('voiceRound.opponent.speaking')}

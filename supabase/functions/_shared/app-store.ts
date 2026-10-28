@@ -18,7 +18,7 @@
 
 import "https://esm.sh/reflect-metadata@0.2.2";
 import * as x509 from "https://esm.sh/@peculiar/x509@2.1.0";
-import type { SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2";
+import type { SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2.114.0";
 import { APPLE_ROOT_CA_G3_PEM } from "./apple-root-ca.ts";
 
 export type AppStoreEnvironment = "Production" | "Sandbox";

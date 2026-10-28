@@ -6,7 +6,7 @@
 // request in ai_requests. Every failure returns a JSON error with a code so
 // the browser can fall back to its own voice and keep the round going.
 
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.114.0";
 import { HttpError, requireUser } from "../_shared/auth.ts";
 import { getCorsHeaders } from "../_shared/cors.ts";
 import { ELEVENLABS_PROVIDER, normalizeElevenLabsUsage } from "../_shared/cost.ts";

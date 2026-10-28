@@ -44,7 +44,7 @@ export default function NewNoteSheet() {
   return (
     <SheetScrollView testID="new-note-sheet">
       <View style={styles.header}>
-        <Text accessibilityRole="header" weight="bold" style={styles.title}>
+        <Text accessibilityRole="header" weight="display" style={styles.title}>
           {t('mobile.library.writeNote')}
         </Text>
         <TextButton label={t('common.cancel')} onPress={() => router.back()} disabled={saving} />

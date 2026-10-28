@@ -1,4 +1,3 @@
-import { LinearGradient } from 'expo-linear-gradient';
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, View, useWindowDimensions, type TextInput } from 'react-native';
@@ -6,12 +5,12 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { MainActionButton, TextButton } from '@/components/buttons';
 import { Field } from '@/components/field';
-import { Icon } from '@/components/icon';
 import { SegmentedControl } from '@/components/segmented-control';
 import { Text } from '@/components/text';
 import { useAuth } from '@/lib/auth';
 import { signInErrorKey } from '@/lib/sign-in-errors';
-import { mainActionGradient } from '@/theme/colors';
+import { Icon } from '@/components/icon';
+import { OwlMark } from '@/components/owl';
 import { useTheme } from '@/theme/use-theme';
 
 type Mode = 'email' | 'demo';
@@ -112,11 +111,9 @@ export default function SignInScreen() {
           centred && styles.centred,
           { paddingTop: insets.top + 32, paddingBottom: insets.bottom + 24 },
         ]}>
-        <LinearGradient {...mainActionGradient} style={styles.logo}>
-          <Icon name="sparkles" color="#ffffff" size={30} />
-        </LinearGradient>
+        <OwlMark size={64} />
         <View style={styles.heading}>
-          <Text accessibilityRole="header" weight="bold" style={styles.title}>
+          <Text accessibilityRole="header" weight="display" style={styles.title}>
             {t('login.title')}
           </Text>
           <Text tone="secondary" style={styles.subtitle}>
@@ -221,9 +218,15 @@ export default function SignInScreen() {
         ) : null}
 
         {status === 'code-sent' ? (
-          <Text accessibilityRole="alert" weight="medium" style={[styles.message, { color: colors.success }]}>
-            {t('login.codeSent')}
-          </Text>
+          // Success is mint and always comes with a check mark, as on the website.
+          <View style={styles.success} accessibilityRole="alert">
+            <View style={[styles.successMark, { backgroundColor: colors.successFill }]}>
+              <Icon name="check" color="#FFFFFF" size={14} />
+            </View>
+            <Text weight="medium" style={[styles.message, styles.successText, { color: colors.success }]}>
+              {t('login.codeSent')}
+            </Text>
+          </View>
         ) : null}
         {status === 'error' && error ? (
           <Text accessibilityRole="alert" weight="medium" style={[styles.message, { color: colors.destructive }]}>
@@ -236,11 +239,13 @@ export default function SignInScreen() {
 }
 
 const styles = StyleSheet.create({
+  success: { flexDirection: 'row', alignItems: 'flex-start', gap: 8 },
+  successMark: { width: 22, height: 22, borderRadius: 11, alignItems: 'center', justifyContent: 'center', marginTop: 1 },
+  successText: { flex: 1 },
   root: { flex: 1 },
   // Phone-width on iPad, centred.
   content: { paddingHorizontal: 24, gap: 24, width: '100%', maxWidth: 460, alignSelf: 'center' },
   centred: { flexGrow: 1, justifyContent: 'center' },
-  logo: { width: 60, height: 60, borderRadius: 17, alignItems: 'center', justifyContent: 'center' },
   heading: { gap: 8 },
   title: { fontSize: 32, lineHeight: 38, letterSpacing: -0.8 },
   subtitle: { fontSize: 17, lineHeight: 24 },

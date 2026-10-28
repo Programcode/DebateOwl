@@ -1,0 +1,203 @@
+{
+  "footer": {
+    "freeTools": "Herramientas de debate gratis"
+  },
+  "home": {
+    "freeTools": "¿Solo necesitas un cronómetro de rondas, una moción de práctica o una hoja de flujo? Esas herramientas son gratis y no necesitan cuenta."
+  },
+  "layout": {
+    "allTools": "Herramientas de debate gratis",
+    "breadcrumb": "Ruta de navegación",
+    "faq": "Preguntas frecuentes",
+    "otherTools": "Más herramientas gratis",
+    "ctaPricing": "Empieza con {{trialDays}} días de prueba gratis, sin tarjeta. Después, {{product}} cuesta {{proMonthly}} $ al mes más impuestos.",
+    "ctaButton": "Empezar la prueba gratis"
+  },
+  "shortAnswer": {
+    "hub": {
+      "question": "¿Qué herramientas de debate gratis puedo usar sin crear una cuenta?",
+      "answer": "Cuatro, todas gratis y sin registro: un cronómetro de rondas que conoce el orden y la duración de los discursos de siete formatos, un generador que saca mociones de un banco de {{total}} mociones de práctica originales, una hoja de flujo imprimible con una columna por discurso y una calculadora de duración de discursos. Funcionan en tu navegador, y el cronómetro guarda ahí tu ronda, no en un servidor."
+    },
+    "timer": {
+      "question": "¿Hay algún cronómetro de debate gratis que conozca los tiempos de cada formato?",
+      "answer": "Sí, este. Elige Public Forum, Lincoln-Douglas, Policy, British Parliamentary, World Schools, Asian Parliamentary o el formato escolar 4-6-6-3, y carga el orden y la duración de los discursos, muestra el tiempo protegido en que no se admiten puntos de información y, en Public Forum, Lincoln-Douglas y Policy, da a cada lado su reserva de tiempo de preparación. Es gratis, no necesita cuenta y conserva la ronda en curso aunque recargues la página."
+    },
+    "motions": {
+      "question": "¿Dónde consigo mociones de debate al azar para practicar?",
+      "answer": "Aquí. El generador saca una moción, o tres para un ejercicio de veto, de {{total}} mociones de práctica originales escritas para este sitio, con filtros de tema, dificultad y tipo de moción, y redacción «Esta Casa» o «Resolved». Es gratis, no necesita cuenta, y las mociones están en inglés."
+    },
+    "flow": {
+      "question": "¿Cómo hago una hoja de flujo para un debate?",
+      "answer": "Elige aquí tu formato y el tamaño del papel, e imprime. La hoja tiene una columna por discurso en orden de intervención, rotulada con el turno de cada orador y coloreada según el lado, y una franja abajo para notas de preguntas cruzadas o puntos de información. Para obtener un PDF, elige Guardar como PDF en el cuadro de impresión. Es gratis y no necesita cuenta."
+    },
+    "calc": {
+      "question": "¿Cuánto tardaré en pronunciar mi discurso?",
+      "answer": "Divide el número de palabras entre tu ritmo de habla. A un ritmo medio de 130 palabras por minuto, un discurso de 520 palabras dura unos 4 minutos; a un ritmo rápido de 160, unos 3 minutos y 15 segundos. Pega el discurso en la calculadora de abajo para ver la duración a ritmo lento, medio, rápido y al tuyo, y en qué turnos de debate cabe. El texto nunca sale de tu navegador."
+    }
+  },
+  "timer": {
+    "region": "Cronómetro de ronda de {{format}}",
+    "format": "Formato",
+    "copyLink": "Copiar enlace a este formato",
+    "linkCopied": "Enlace copiado",
+    "copyLinkPrompt": "Copia este enlace:",
+    "speeches": "Discursos",
+    "bothSides": "Ambos equipos",
+    "clockLabel": "Tiempo restante del discurso",
+    "ready": "Listo",
+    "running": "Hablando",
+    "paused": "En pausa",
+    "overtime": "Tiempo excedido",
+    "grace": "Tiempo de gracia",
+    "poiOpen": "POI abiertos",
+    "protected": "Tiempo protegido",
+    "noPoiInReply": "Réplica: sin POI",
+    "poiWindow": "POI de {{from}} a {{to}}",
+    "poiAnnounceOpen": "Los puntos de información están abiertos.",
+    "poiAnnounceProtected": "Tiempo protegido. Sin puntos de información.",
+    "start": "Iniciar",
+    "pause": "Pausar",
+    "reset": "Reiniciar discurso",
+    "previous": "Discurso anterior",
+    "next": "Discurso siguiente",
+    "soundOn": "Sonido activado",
+    "soundOff": "Sonido desactivado",
+    "fullscreen": "Pantalla completa",
+    "exitFullscreen": "Salir de pantalla completa",
+    "prepGroup": "Tiempo de preparación",
+    "prepFor": "Preparación {{side}}",
+    "startPrep": "Iniciar preparación",
+    "pausePrep": "Detener preparación",
+    "prepUsed": "Preparación agotada",
+    "resetPrep": "Reiniciar ambas reservas de preparación",
+    "keyboardHint": "Haz clic en el cronómetro y usa Espacio para iniciar o pausar, R para reiniciar un discurso en pausa y las flechas para cambiar de discurso."
+  },
+  "custom": {
+    "open": "Crear un formato personalizado",
+    "title": "Formato personalizado",
+    "name": "Nombre del formato",
+    "defaultName": "Formato personalizado",
+    "prepMinutes": "Preparación por equipo (minutos)",
+    "label": "Nombre del discurso",
+    "minutes": "Minutos",
+    "kind": "Tipo",
+    "kindSpeech": "Discurso",
+    "kindQuestions": "Preguntas",
+    "side": "Equipo",
+    "sideA": "Equipo A",
+    "sideB": "Equipo B",
+    "sideBoth": "Ambos",
+    "poi": "POI",
+    "poiHint": "Los POI se abren tras el primer minuto y se cierran un minuto antes del final, en discursos de al menos tres minutos.",
+    "newSpeech": "Discurso {{n}}",
+    "moveUp": "Subir {{label}}",
+    "moveDown": "Bajar {{label}}",
+    "remove": "Quitar {{label}}",
+    "add": "Añadir un discurso",
+    "apply": "Usar este formato",
+    "cancel": "Cancelar",
+    "tooLong": "Este formato es demasiado largo para guardarlo o compartirlo. Acorta algunos nombres de discurso o quita un discurso."
+  },
+  "embed": {
+    "format": "Formato",
+    "copy": "Copiar código para insertar",
+    "copied": "Código copiado",
+    "attribution": "Cronómetro de DebateOwl"
+  },
+  "motions": {
+    "region": "Generador de mociones",
+    "topic": "Temas",
+    "difficulty": "Dificultad",
+    "type": "Tipo de moción",
+    "wording": "Redacción",
+    "wordingHouse": "Esta Casa",
+    "wordingResolved": "Resolved",
+    "drawOne": "Sacar una moción",
+    "drawThree": "Sacar tres",
+    "poolSize_one": "{{count}} moción coincide",
+    "poolSize_other": "{{count}} mociones coinciden",
+    "clearFilters": "Quitar filtros",
+    "empty": "Pulsa Sacar una moción para obtener una, o Sacar tres para un ejercicio de veto.",
+    "optionN": "Opción {{n}}",
+    "infoSlide": "Información:",
+    "copy": "Copiar moción",
+    "copyLink": "Copiar enlace",
+    "copied": "Copiado",
+    "copyPrompt": "Copia este texto:",
+    "prepCta": "Prepara ambos lados de esta moción en DebateOwl",
+    "topics": {
+      "education": "Educación",
+      "technology": "Tecnología e IA",
+      "environment": "Medio ambiente",
+      "economics": "Economía",
+      "politics": "Política",
+      "health": "Salud",
+      "sport": "Deporte",
+      "culture": "Cultura y medios",
+      "ethics": "Ética",
+      "international": "Internacional",
+      "justice": "Justicia y derecho",
+      "society": "Sociedad"
+    },
+    "difficulties": {
+      "novice": "Principiante",
+      "intermediate": "Intermedio",
+      "advanced": "Avanzado"
+    },
+    "types": {
+      "policy": "Política (THW)",
+      "value": "Valor (THBT)",
+      "actor": "Actor",
+      "regret": "Lamento (THR)",
+      "prefer": "Preferencia (THP)"
+    }
+  },
+  "flow": {
+    "region": "Generador de hojas de flujo",
+    "format": "Formato",
+    "paper": "Papel",
+    "letter": "Carta (EE. UU.)",
+    "a4": "A4",
+    "orientation": "Orientación",
+    "landscape": "Horizontal",
+    "portrait": "Vertical",
+    "questionStrip": "Franja de preguntas cruzadas",
+    "notesStrip": "Franja de notas",
+    "motion": "Moción (opcional)",
+    "round": "Ronda (opcional)",
+    "judge": "Juez (opcional)",
+    "motionShort": "Moción:",
+    "roundShort": "Ronda:",
+    "judgeShort": "Juez:",
+    "notesBox": "Puntos de información y notas de la decisión",
+    "print": "Imprimir / guardar como PDF",
+    "printHint": "Elige Guardar como PDF en el cuadro de impresión para obtener un archivo."
+  },
+  "calc": {
+    "region": "Calculadora de duración de discursos",
+    "paste": "Tu discurso",
+    "placeholder": "Pega o escribe aquí tu discurso.",
+    "privacy": "Se cuenta en tu navegador. El texto nunca se sube ni se guarda.",
+    "words_one": "palabra",
+    "words_other": "palabras",
+    "durations": "Duración a cada ritmo",
+    "pace": {
+      "slow": "Lento",
+      "average": "Medio",
+      "fast": "Rápido",
+      "custom": "Tu ritmo"
+    },
+    "wpm": "ppm",
+    "customWpm": "Tus palabras por minuto",
+    "approximate": "Aproximado: la duración real depende de las pausas, el énfasis y la improvisación.",
+    "fitsTitle": "En qué turnos cabe",
+    "fitsAt": "A",
+    "fitsEmpty": "Pega un discurso para ver en qué turnos cabe.",
+    "spare": "sobran {{time}}",
+    "over": "se pasa {{time}}"
+  },
+  "embedClock": {
+    "timeUp": "Se acabó el tiempo.",
+    "remaining": "Queda {{time}}."
+  }
+}

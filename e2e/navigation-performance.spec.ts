@@ -21,12 +21,12 @@ const publicRoutes = [
 ] as const;
 
 const privateRoutes = [
-  ['/app', { selector: 'main h1', text: 'DebateLab' }],
+  ['/app', { selector: 'main h1', text: 'What are you working on?' }],
   ['/app/generate', { selector: 'main h1', text: 'Generate' }],
   ['/app/attack', { selector: 'main h1', text: 'Attack' }],
-  ['/app/flowchart', { selector: 'main h3', text: 'Argument Flowchart' }],
+  ['/app/flowchart', { selector: 'main h1', text: 'Argument flowchart' }],
   ['/app/history', { selector: 'main h1', text: 'History' }],
-  ['/app/admin', { selector: 'main h3', text: 'Access Denied' }],
+  ['/app/admin', { selector: 'main h1', text: 'Access Denied' }],
 ] as const;
 
 const attackContent: ContentMarker = { selector: 'main h1', text: 'Attack' };
@@ -49,17 +49,16 @@ async function skipOnboarding(page: Page) {
   });
 }
 
-// Tools open from Home; the header carries only Home, Current debate, Library and History.
+// Tools open from the Tools page; the header carries only Tools, Current debate, Library and History.
 function homeToolLink(page: Page, tool: string) {
   return page.locator(`main [data-tour="mode-${tool}"]`);
 }
 
 async function openHome(page: Page) {
-  if ((page.viewportSize()?.width ?? 1280) < 1024) {
-    await page.getByRole('button', { name: 'Open menu' }).click();
-    await page.getByRole('navigation', { name: 'Mobile navigation' }).getByRole('link', { name: /^Home/ }).click();
+  if ((page.viewportSize()?.width ?? 1280) < 768) {
+    await page.getByRole('navigation', { name: 'Mobile navigation' }).getByRole('link', { name: 'Tools', exact: true }).click();
   } else {
-    await page.getByRole('navigation', { name: 'Main navigation' }).getByRole('link', { name: 'Home' }).click();
+    await page.getByRole('navigation', { name: 'Main navigation' }).getByRole('link', { name: 'Tools' }).click();
   }
   await expect(page).toHaveURL(/\/app$/);
 }
@@ -91,7 +90,7 @@ test('workspaces stay unavailable without a collaboration endpoint', async ({ pa
   await setLocale(page, 'en');
   await stubSupabaseSession(page);
   await page.goto('/app', { waitUntil: 'domcontentloaded' });
-  await waitForContent(page, { selector: 'main h1', text: 'DebateLab' });
+  await waitForContent(page, { selector: 'main h1', text: 'What are you working on?' });
 
   await expect(page.locator('a[href="/app/workspaces"]')).toHaveCount(0);
   await page.goto('/app/workspaces', { waitUntil: 'domcontentloaded' });
@@ -119,7 +118,7 @@ test('a delayed destination chunk exposes the route fallback without replacing t
   await stubSupabaseSession(page);
   await skipOnboarding(page);
   await page.goto('/app', { waitUntil: 'domcontentloaded' });
-  await waitForContent(page, { selector: 'main h1', text: 'DebateLab' });
+  await waitForContent(page, { selector: 'main h1', text: 'What are you working on?' });
 
   await page.evaluate(() => {
     window.__baselineAppLayout = document.querySelector('header')?.parentElement;
@@ -187,14 +186,14 @@ test('a failed route chunk recovers after the offered reload', async ({ page }) 
 
   await skipOnboarding(page);
   await page.goto('/app', { waitUntil: 'domcontentloaded' });
-  await waitForContent(page, { selector: 'main h1', text: 'DebateLab' });
+  await waitForContent(page, { selector: 'main h1', text: 'What are you working on?' });
   await homeToolLink(page, 'attack').click();
 
   await expect(page.getByRole('heading', { name: 'Unable to load this page' })).toBeVisible();
   await page.getByRole('button', { name: 'Reload' }).click();
   await expect.poll(() => attempts).toBe(2);
   await waitForContent(page, attackContent);
-  await expect(page.locator('header')).toBeVisible();
+  await expect(page.getByRole('banner')).toBeVisible();
 });
 
 async function gotoHome(page: Page) {
@@ -202,7 +201,7 @@ async function gotoHome(page: Page) {
   await stubSupabaseSession(page);
   await skipOnboarding(page);
   await page.goto('/app', { waitUntil: 'domcontentloaded' });
-  await waitForContent(page, { selector: 'main h1', text: 'DebateLab' });
+  await waitForContent(page, { selector: 'main h1', text: 'What are you working on?' });
 }
 
 async function attackLink(page: Page) {
@@ -366,14 +365,13 @@ test('subscription reads stay cached across sibling tool routes', async ({ page 
       await route.fulfill({ json: { announcements: [] } });
       return;
     }
-    if (url.pathname.endsWith('/rest/v1/rpc/effective_entitlement')) {
-      // The plan; the settings store reads it too, to pick default models.
-      subscriptionRequests.push('effective_entitlement');
-      await route.fulfill({ json: [{ tier: 'trial', daily_limit: 5, can_access_pro_models: false }] });
-      return;
-    }
     if (url.pathname.includes('/rest/v1/')) {
-      if (url.pathname.endsWith('/ai_requests')) {
+      const select = url.searchParams.get('select') ?? '';
+      if (url.pathname.endsWith('/user_settings') && select.includes('subscription_tier')) {
+        subscriptionRequests.push('user_settings');
+      } else if (url.pathname.endsWith('/subscriptions')) {
+        subscriptionRequests.push('subscriptions');
+      } else if (url.pathname.endsWith('/ai_requests')) {
         subscriptionRequests.push('ai_requests');
       }
       await route.fulfill({
@@ -390,7 +388,6 @@ test('subscription reads stay cached across sibling tool routes', async ({ page 
   await page.goto('/app/generate');
   await waitForContent(page, { selector: 'main h1', text: 'Generate' });
   await expect.poll(() => subscriptionRequests.filter((name) => name === 'ai_requests').length).toBe(1);
-  const readsBeforeNavigation = [...subscriptionRequests];
 
   await openHome(page);
   await homeToolLink(page, 'attack').click();
@@ -398,6 +395,5 @@ test('subscription reads stay cached across sibling tool routes', async ({ page 
   // eslint-disable-next-line no-restricted-properties -- observation window: no extra subscription request may follow.
   await page.waitForTimeout(100);
 
-  expect(readsBeforeNavigation).toContain('effective_entitlement');
-  expect(subscriptionRequests).toEqual(readsBeforeNavigation);
+  expect(subscriptionRequests).toEqual(['user_settings', 'ai_requests']);
 });

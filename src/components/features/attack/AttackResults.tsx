@@ -5,13 +5,15 @@ import { AlertCircle, AlertTriangle, Info, Scale, Lightbulb, MessageSquare, Flam
 import { Badge } from '@/components/ui/badge';
 import { SectionCard } from '@/components/ui/section-card';
 import { Progress } from '@/components/ui/progress';
+import { CountUp } from '@/components/ui/count-up';
 import { Separator } from '@/components/ui/separator';
 import { Markdown } from '@/components/ui/markdown';
 import type { AttackOutput, Weakness } from '@/lib/ai/schemas/attack';
-import { StaggeredContainer } from '@/components/ui/animated-section';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { ExportToolbar } from '@/components/features/ExportToolbar';
+import { ResultHeader } from '@/components/features/tools/ResultHeader';
+import { ResearchedSources } from '@/components/features/tools/ResearchedSources';
 import { GoogleDriveAuthModal } from '@/components/features/export/GoogleDriveAuthModal';
 import { SourceQualityList } from '@/components/features/shared/SourceQualityList';
 import type { DiscoveredSource } from '@/lib/ai/client';
@@ -28,7 +30,7 @@ interface AttackResultsProps {
 
 const severityConfig = {
   critical: { icon: AlertCircle, color: 'text-destructive', bg: 'bg-destructive/10', border: 'border-destructive/30' },
-  major: { icon: AlertTriangle, color: 'text-amber-500', bg: 'bg-amber-500/10', border: 'border-amber-500/30' },
+  major: { icon: AlertTriangle, color: 'text-amber-600 dark:text-amber-400', bg: 'bg-amber-500/10', border: 'border-amber-500/30' },
   minor: { icon: Info, color: 'text-primary', bg: 'bg-primary/10', border: 'border-primary/30' },
 };
 
@@ -39,7 +41,7 @@ function WeaknessCard({ weakness }: { weakness: Weakness }) {
   const Icon = config.icon;
 
   return (
-    <div className={cn('rounded-lg border p-4 space-y-3 motion-list-item card-hover-glow', config.border, config.bg)}>
+    <div className={cn('rounded-lg border p-4 space-y-3 motion-list-item', config.border, config.bg)}>
       <div className="flex items-start justify-between gap-2">
         <div className="flex items-start gap-2">
           <Icon className={cn('h-5 w-5 mt-0.5', config.color)} />
@@ -52,7 +54,7 @@ function WeaknessCard({ weakness }: { weakness: Weakness }) {
                 {t(`attackResults.types.${weakness.type}`, weakness.type)}
               </Badge>
             </div>
-            <h4 className="mt-1 font-medium text-foreground">{weakness.description}</h4>
+            <h3 className="mt-1 font-medium text-foreground">{weakness.description}</h3>
           </div>
         </div>
       </div>
@@ -66,7 +68,7 @@ function WeaknessCard({ weakness }: { weakness: Weakness }) {
       <div className="space-y-2 text-sm">
         <div>
           <span className="font-medium text-muted-foreground">{t('attackResults.whyWeak')} </span>
-          <Markdown className="inline">{weakness.whyWeak}</Markdown>
+          <Markdown inline>{weakness.whyWeak}</Markdown>
         </div>
         <div>
           <span className="font-medium text-muted-foreground">{t('attackResults.opponentAttack')} </span>
@@ -159,18 +161,28 @@ export function AttackResults({ result, discoveredSources, onDiscuss, onPractice
   };
 
   return (
-    <StaggeredContainer className="space-y-6">
+    <div className="space-y-6">
       <GoogleDriveAuthModal open={showDriveAuth} onOpenChange={setShowDriveAuth} />
-      {/* Researched sources with quality provenance */}
-      {discoveredSources && discoveredSources.length > 0 && (
-        <div className="rounded-lg border bg-card/50 p-4">
-          <h4 className="mb-2 text-sm font-medium">{t('sourceQuality.researchedSources')}</h4>
-          <SourceQualityList sources={discoveredSources} />
-          <p className="mt-2 text-xs text-muted-foreground">
-            {t('sourceQuality.fallbackNote')}
-          </p>
-        </div>
-      )}
+      <ResultHeader
+        title={t('attackResults.resultTitle', 'Critique')}
+        actions={(
+          <ExportToolbar
+            onPdf={handlePdfExport}
+            onDocx={handleDocxExport}
+            onGoogleDocs={handleGoogleDocsExport}
+            isExportingGDocs={isExportingGDocs}
+            onDiscuss={onDiscuss}
+            discussLabel={t('attackResults.discuss')}
+            secondaryActions={onPracticeCrossfire ? (
+              <Button variant="outline" size="sm" onClick={onPracticeCrossfire}>
+                <Flame className="mr-2 h-4 w-4" />
+                {t('crossfire.openFromResult', 'Open in Crossfire')}
+              </Button>
+            ) : undefined}
+          />
+        )}
+      />
+      <ResearchedSources sources={discoveredSources} />
       {/* Overall Assessment */}
       <SectionCard
         title={t('attackResults.overall')}
@@ -181,52 +193,37 @@ export function AttackResults({ result, discoveredSources, onDiscuss, onPractice
             <div className="flex items-center justify-between mb-2">
               <span className="text-sm font-medium text-foreground">{t('attackResults.caseStrength')}</span>
               <span className={cn(
-                  'text-lg font-bold',
+                  'text-lg font-bold tabular-nums',
                   overallAssessment.score >= 70 ? 'text-primary' :
-                    overallAssessment.score >= 50 ? 'text-amber-500' : 'text-destructive'
+                    overallAssessment.score >= 50 ? 'text-amber-600 dark:text-amber-400' : 'text-destructive'
                 )}>
-                  {overallAssessment.score}/100
+                  <CountUp value={overallAssessment.score} />/100
               </span>
             </div>
             <Progress
               value={overallAssessment.score}
               className="h-3"
+              reveal
             />
-            <div className="mt-3">
-              <ExportToolbar
-                onPdf={handlePdfExport}
-                onDocx={handleDocxExport}
-                onGoogleDocs={handleGoogleDocsExport}
-                isExportingGDocs={isExportingGDocs}
-                onDiscuss={onDiscuss}
-                discussLabel={t('attackResults.discuss')}
-                secondaryActions={onPracticeCrossfire ? (
-                  <Button variant="outline" size="sm" onClick={onPracticeCrossfire}>
-                    <Flame className="mr-2 h-4 w-4" />
-                    {t('crossfire.openFromResult', 'Open in Crossfire')}
-                  </Button>
-                ) : undefined}
-              />
-            </div>
           </div>
 
           <div className="flex gap-4 text-sm">
             <div className="flex items-center gap-1">
               <div className="h-3 w-3 rounded-full bg-destructive" />
-              <span>{criticalCount} {t('attackResults.critical')}</span>
+              <span>{t('attackResults.criticalCount', { count: criticalCount })}</span>
             </div>
             <div className="flex items-center gap-1">
               <div className="h-3 w-3 rounded-full bg-amber-500" />
-              <span>{majorCount} {t('attackResults.major')}</span>
+              <span>{t('attackResults.majorCount', { count: majorCount })}</span>
             </div>
             <div className="flex items-center gap-1">
               <div className="h-3 w-3 rounded-full bg-primary" />
-              <span>{minorCount} {t('attackResults.minor')}</span>
+              <span>{t('attackResults.minorCount', { count: minorCount })}</span>
             </div>
           </div>
 
           <div>
-            <h4 className="text-sm font-medium text-muted-foreground mb-2">{t('attackResults.strengths')}</h4>
+            <h3 className="text-sm font-medium text-muted-foreground mb-2">{t('attackResults.strengths')}</h3>
             <ul className="space-y-1">
               {strengthAreas.map((strength, i) => (
                 <li key={i} className="flex items-baseline gap-2 text-sm">
@@ -308,12 +305,12 @@ export function AttackResults({ result, discoveredSources, onDiscuss, onPractice
         >
           <div className="space-y-4">
             <div>
-              <h4 className="text-sm font-medium text-muted-foreground mb-1">{t('attackResults.currentWeighing')}</h4>
+              <h3 className="text-sm font-medium text-muted-foreground mb-1">{t('attackResults.currentWeighing')}</h3>
               <p className="text-foreground">{weighingAnalysis.currentWeighing}</p>
             </div>
             <Separator />
             <div>
-              <h4 className="text-sm font-medium text-muted-foreground mb-2">{t('attackResults.missingComparisons')}</h4>
+              <h3 className="text-sm font-medium text-muted-foreground mb-2">{t('attackResults.missingComparisons')}</h3>
               <ul className="space-y-1">
                 {(weighingAnalysis.missingComparisons ?? []).map((comparison, i) => (
                   <li key={i} className="flex items-start gap-2 text-sm">
@@ -325,7 +322,7 @@ export function AttackResults({ result, discoveredSources, onDiscuss, onPractice
             </div>
             <Separator />
             <div>
-              <h4 className="text-sm font-medium text-muted-foreground mb-2">{t('attackResults.improvements')}</h4>
+              <h3 className="text-sm font-medium text-muted-foreground mb-2">{t('attackResults.improvements')}</h3>
               <ul className="space-y-1">
                 {(weighingAnalysis.improvementSuggestions ?? []).map((suggestion, i) => (
                   <li key={i} className="flex items-start gap-2 text-sm">
@@ -338,6 +335,6 @@ export function AttackResults({ result, discoveredSources, onDiscuss, onPractice
           </div>
         </SectionCard>
       )}
-    </StaggeredContainer >
+    </div>
   );
 }

@@ -1,5 +1,5 @@
 import { useTranslation } from "react-i18next";
-import { motion } from "framer-motion";
+import { Reveal } from "./Reveal";
 import {
     BookOpen,
     Zap,
@@ -32,41 +32,37 @@ const Features = () => {
     ];
 
     return (
-        <section id="features" className="relative py-24">
+        <section id="features" className="relative py-12 md:py-20">
             <div className="absolute inset-0 pointer-events-none">
-                <div className="orb orb-primary left-0 top-1/2 h-96 w-96 -translate-y-1/2 opacity-40" />
+                {/* Positioned with top, not a translate, so nothing can override it. */}
+                <div className="orb orb-primary left-0 top-[calc(50%-12rem)] h-96 w-96 opacity-40" />
                 <div className="orb orb-accent bottom-0 right-0 h-80 w-80 opacity-40" />
             </div>
 
             <div className="section-container relative z-10">
-                <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    whileInView={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.5 }}
-                    viewport={{ once: true }}
-                    className="mb-12 text-center"
-                >
-                    <h2 className="text-3xl font-bold md:text-4xl lg:text-5xl tracking-tight">
-                        {t('features.title')}
-                    </h2>
-                </motion.div>
+                <Reveal className="mb-8 text-center md:mb-12">
+                    <h2 className="section-heading">{t('features.title')}</h2>
+                </Reveal>
 
-                <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+                {/* Phones get icon tiles, two across; the one-line description joins from sm up. */}
+                <div className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3 lg:grid-cols-4">
                     {features.map((feature, index) => (
-                        <motion.div
+                        <Reveal
                             key={feature.title}
-                            initial={{ opacity: 0, y: 20 }}
-                            whileInView={{ opacity: 1, y: 0 }}
-                            transition={{ duration: 0.5, delay: index * 0.06 }}
-                            viewport={{ once: true }}
-                            className="feature-card group tilt-card"
+                            delay={index * 0.03}
+                            // An odd last tile takes the whole row while the grid is two across.
+                            className={index === features.length - 1 && features.length % 2 ? "h-full max-md:col-span-2" : "h-full"}
                         >
-                            <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-xl border border-primary/20 bg-primary/10 transition-colors group-hover:border-primary/40">
-                                <feature.icon className="h-6 w-6 text-primary transition-transform duration-300 group-hover:scale-110 group-hover:rotate-3 motion-reduce:group-hover:scale-100 motion-reduce:group-hover:rotate-0" />
+                            <div className="feature-card flex h-full flex-col gap-3 p-4 sm:p-5">
+                                <div className="flex h-10 w-10 items-center justify-center rounded-md bg-brand-tint shadow-[0_3px_0_var(--do-primary-tint-border)]">
+                                    <feature.icon aria-hidden="true" className="h-5 w-5 text-primary" />
+                                </div>
+                                <div>
+                                    <h3 className="font-display text-base font-[600] leading-snug text-heading sm:text-lg">{feature.title}</h3>
+                                    <p className="mt-1 hidden text-sm text-muted-foreground sm:block">{feature.description}</p>
+                                </div>
                             </div>
-                            <h3 className="mb-2 text-xl font-semibold text-foreground">{feature.title}</h3>
-                            <p className="text-sm leading-relaxed text-muted-foreground transition-colors duration-300 group-hover:text-foreground/80">{feature.description}</p>
-                        </motion.div>
+                        </Reveal>
                     ))}
                 </div>
             </div>

@@ -24,6 +24,7 @@ import { openRowId } from '@/lib/open-pane';
 import { fetchSources, removeSource, subscribeSourcesChanged, type Source, type SourceType } from '@/lib/sources';
 import { useCopyHolder } from '@/lib/use-copy-holder';
 import { useTheme } from '@/theme/use-theme';
+import { EmptyState } from '@/components/empty-state';
 
 type Filter = 'all' | SourceType;
 
@@ -91,14 +92,17 @@ function LibrarySplit({ wide, onAdd }: { wide: boolean; onAdd: (kind: AddSourceK
   const clearSelected = useCallback((id: string) => {
     setSelected((previous) => (previous?.id === id ? null : previous));
   }, []);
-  const listWidth = width - (wide ? SIDEBAR_WIDTH : 0) >= LIBRARY_ROOMY_WIDTH ? LIST_WIDTH.libraryRoomy : LIST_WIDTH.library;
+  const available = width - (wide ? SIDEBAR_WIDTH : 0);
+  // With nothing open the list takes the whole width, as the website's Library does; an open
+  // source splits it, and the list keeps 40% (at least its usual width) so titles stay readable.
+  const listWidth = Math.max(available >= LIBRARY_ROOMY_WIDTH ? LIST_WIDTH.libraryRoomy : LIST_WIDTH.library, Math.round(available * 0.4));
 
   return (
     <View style={styles.split}>
       <ScrollView
-        style={[styles.listPane, { width: listWidth, borderRightColor: colors.line }]}
+        style={shown ? [styles.listPane, { width: listWidth, borderRightColor: colors.line }] : styles.listPaneFull}
         contentInsetAdjustmentBehavior="automatic"
-        contentContainerStyle={styles.listContent}>
+        contentContainerStyle={[styles.listContent, !shown && styles.listContentFull]}>
         <OfflineNotice />
         <LibraryHeader title={t('mobile.tabs.library')} onAdd={onAdd} disabled={!debateId} />
         <OneOffNotice message="debate.oneOffActive" />
@@ -121,18 +125,11 @@ function LibrarySplit({ wide, onAdd }: { wide: boolean; onAdd: (kind: AddSourceK
           />
         ) : null}
       </ScrollView>
-      <ScrollView style={styles.detailPane} contentInsetAdjustmentBehavior="automatic" contentContainerStyle={styles.detailContent} testID={shown ? 'source-sheet' : 'source-empty'}>
-        {shown && userId ? (
+      {shown && userId ? (
+        <ScrollView style={styles.detailPane} contentInsetAdjustmentBehavior="automatic" contentContainerStyle={styles.detailContent} testID="source-sheet">
           <SourceView key={`${userId}:${debateId}:${shown}`} id={shown} />
-        ) : (
-          <View style={styles.pick}>
-            <Icon name="library" color={colors.tabInactive} size={30} />
-            <Text tone="faint" style={styles.body}>
-              {t('mobile.library.pickSource')}
-            </Text>
-          </View>
-        )}
-      </ScrollView>
+        </ScrollView>
+      ) : null}
     </View>
   );
 }
@@ -202,8 +199,8 @@ function SourceList({
   const remove = async (source: Source) => {
     if (!userId) return false;
     const confirmed = await confirmDestructive({
-      title: t('libraryPage.deleteSourceTitle'),
-      message: t('libraryPage.deleteSourceDesc'),
+      title: t('mobile.library.deleteSourceTitle'),
+      message: t('mobile.library.deleteSourceDesc'),
       confirm: t('common.delete'),
       cancel: t('common.cancel'),
     });
@@ -255,23 +252,9 @@ function SourceList({
       ) : null}
 
       {sources.length === 0 ? (
-        <Card>
-          <Text weight="semibold" style={styles.emptyTitle}>
-            {t('libraryPage.emptyTitle')}
-          </Text>
-          <Text tone="secondary" style={styles.body}>
-            {t('libraryPage.emptyDesc')}
-          </Text>
-        </Card>
+        <EmptyState pose="reading" title={t('libraryPage.emptyTitle')} description={t('libraryPage.emptyDesc')} />
       ) : visible.length === 0 ? (
-        <Card>
-          <Text weight="semibold" style={styles.emptyTitle}>
-            {t('libraryPage.noMatchingSources')}
-          </Text>
-          <Text tone="secondary" style={styles.body}>
-            {t('libraryPage.noMatchingSourcesDesc')}
-          </Text>
-        </Card>
+        <EmptyState pose="surprised" title={t('libraryPage.noMatchingSources')} description={t('libraryPage.noMatchingSourcesDesc')} />
       ) : (
         <Card style={styles.list}>
           {visible.map((source, index) => (
@@ -344,10 +327,10 @@ function SourceRow({
         style={({ pressed }) => [styles.row, { backgroundColor: selected ? colors.tile : colors.card }, pressed && styles.pressed]}>
         <IconTile name={SOURCE_ICONS[source.type]} size={42} />
         <View style={styles.rowText}>
-          <Text weight="semibold" style={[styles.rowTitle, selected && { color: colors.chipSelectedForeground }]} numberOfLines={1}>
+          <Text weight="semibold" style={[styles.rowTitle, selected && { color: colors.chipSelectedForeground }]} numberOfLines={2}>
             {source.title || t('libraryPage.untitledSource')}
           </Text>
-          <Text tone="faint" style={styles.rowMeta} numberOfLines={1}>
+          <Text tone="faint" style={styles.rowMeta} numberOfLines={2}>
             {sourceMeta(t, source)}
           </Text>
         </View>
@@ -359,7 +342,6 @@ function SourceRow({
 const styles = StyleSheet.create({
   loading: { marginTop: 32 },
   body: { fontSize: 15, lineHeight: 21 },
-  emptyTitle: { fontSize: 17 },
   chipRow: { marginHorizontal: -20, flexGrow: 0 },
   chips: { gap: 8, paddingHorizontal: 20 },
   list: { padding: 0, gap: 0, overflow: 'hidden' },
@@ -372,8 +354,9 @@ const styles = StyleSheet.create({
   deleteLabel: { color: '#ffffff', fontSize: 13 },
   split: { flex: 1, flexDirection: 'row' },
   listPane: { flexGrow: 0, flexShrink: 0, borderRightWidth: StyleSheet.hairlineWidth },
+  listPaneFull: { flex: 1 },
+  listContentFull: { width: '100%', maxWidth: 880, alignSelf: 'center' },
   listContent: { paddingHorizontal: 20, paddingBottom: 32, gap: 16 },
   detailPane: { flex: 1 },
   detailContent: { width: '100%', maxWidth: 700, alignSelf: 'center', paddingHorizontal: 36, paddingTop: 14, paddingBottom: 48, gap: 14 },
-  pick: { alignItems: 'center', gap: 10, paddingTop: 120 },
 });

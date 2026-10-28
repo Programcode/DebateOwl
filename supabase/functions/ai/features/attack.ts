@@ -15,20 +15,21 @@ import type { FeatureContext } from "./types.ts";
 // ATTACK: Use deep research for evidence-based critique
 export async function handleAttack(ctx: FeatureContext): Promise<Response> {
   const feature = "attack" as const;
-  const { userId, provider, model, temperature, reasoningEffort, workSignal, researchDeps, startTime, researchUsageForLog, recordMainResult, buildSystemPromptFor, input: sanitizedInput } = ctx;
+  const { userId, provider, model, reasoningEffort, workSignal, researchDeps, startTime, researchUsageForLog, recordMainResult, buildSystemPromptFor, input: sanitizedInput } = ctx;
   const caseText = String(sanitizedInput.caseText || "");
   const detectFallacies = typeof sanitizedInput.detectFallacies === "boolean" ? sanitizedInput.detectFallacies : true;
   const analyzeWeighing = typeof sanitizedInput.analyzeWeighing === "boolean" ? sanitizedInput.analyzeWeighing : true;
 
   // Research the topic to find counter-evidence
   console.log("[ATTACK] Starting deep research for case analysis");
+  ctx.stream?.phase("research");
   const research = await deepResearch(caseText.slice(0, 500), "", researchDeps, DEEP_RESEARCH);
   const searchContext = buildResearchContext(research);
 
   const systemPrompt = await buildSystemPromptFor(feature, research);
   const userPrompt = buildUserPrompt(feature, sanitizedInput, searchContext);
   const messages = [{ role: "user", content: userPrompt }];
-  const aiResult = recordMainResult(await callAI(provider, model, systemPrompt, messages, temperature, reasoningEffort, workSignal));
+  const aiResult = recordMainResult(await callAI(provider, model, systemPrompt, messages, reasoningEffort, "attack", workSignal, ctx.stream));
   const output = cleanGeneratedText(aiResult.output);
   enforceAttackControls(output, detectFallacies, analyzeWeighing);
 

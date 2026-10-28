@@ -20,21 +20,21 @@ export function useFlowColors() {
   return {
     type: {
       thesis: colors.primary,
-      contention: dark ? '#34d399' : '#10b981',
-      attack: dark ? '#f87171' : '#ef4444',
-      rebuttal: dark ? '#60a5fa' : '#3b82f6',
-      dropped: dark ? '#fbbf24' : '#f59e0b',
+      contention: dark ? '#2FD39A' : '#14B37D',
+      attack: dark ? '#FF6B70' : '#F0454B',
+      rebuttal: dark ? '#4CA6FD' : '#1E8DFB',
+      dropped: dark ? '#FFC414' : '#F39A00',
     } satisfies Record<FlowNodeType, string>,
     /** Column headings and link labels, a shade darker than the rules for contrast. */
     heading: {
       yourCase: colors.primary,
-      attacks: dark ? '#f87171' : '#dc2626',
-      rebuttals: dark ? '#60a5fa' : '#2563eb',
+      attacks: dark ? '#FF6B70' : '#D23239',
+      rebuttals: dark ? '#4CA6FD' : '#0A6FF0',
     },
     via: {
       support: colors.faint,
-      attack: dark ? '#f87171' : '#dc2626',
-      rebuttal: dark ? '#60a5fa' : '#2563eb',
+      attack: dark ? '#FF6B70' : '#D23239',
+      rebuttal: dark ? '#4CA6FD' : '#0A6FF0',
     } satisfies Record<FlowEdgeKind, string>,
     cardFill: dark ? colors.card : colors.input,
   };
@@ -68,7 +68,7 @@ export function FlowCard({ node, meta, onPress, testID, selected = false }: { no
         {node.data.label}
       </Text>
       {meta ? (
-        <Text tone="faint" style={styles.cardMeta} numberOfLines={1}>
+        <Text tone="faint" style={styles.cardMeta} numberOfLines={2}>
           {meta}
         </Text>
       ) : null}
@@ -164,7 +164,7 @@ export function MapTreeView({ doc, onOpen, selectedId }: { doc: FlowchartDocumen
 }
 
 const styles = StyleSheet.create({
-  card: { borderWidth: 1, borderLeftWidth: 4, borderRadius: radius.field, paddingHorizontal: 11, paddingVertical: 10, marginBottom: 10 },
+  card: { borderWidth: 2, borderLeftWidth: 4, borderRadius: radius.field, paddingHorizontal: 11, paddingVertical: 10, marginBottom: 10 },
   cardLabel: { fontSize: 14.5, lineHeight: 19 },
   cardMeta: { fontSize: 12.5, lineHeight: 17, marginTop: 3 },
   pressed: { opacity: 0.7 },

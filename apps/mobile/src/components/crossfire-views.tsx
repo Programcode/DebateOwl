@@ -211,7 +211,7 @@ export function CrossfireDebriefDocument({ debrief }: { debrief: CrossfireDebrie
 const styles = StyleSheet.create({
   group: { gap: 7 },
   groupLabel: { fontSize: 14, marginLeft: 4 },
-  cards: { borderWidth: 1, borderRadius: radius.field, overflow: 'hidden' },
+  cards: { borderWidth: 2, borderRadius: radius.field, overflow: 'hidden' },
   card: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 15, paddingVertical: 11, minHeight: 56 },
   cardText: { flex: 1, gap: 2 },
   cardLabel: { fontSize: 16.5 },
@@ -219,7 +219,7 @@ const styles = StyleSheet.create({
   checkSpace: { width: 20 },
   pressed: { opacity: 0.7 },
   tags: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 4 },
-  empty: { borderWidth: 1, borderStyle: 'dashed', borderRadius: radius.card, padding: 22 },
+  empty: { borderWidth: 2, borderStyle: 'dashed', borderRadius: radius.card, padding: 22 },
   emptyText: { fontSize: 15, lineHeight: 21, textAlign: 'center' },
   turns: { gap: 10 },
   turn: { borderWidth: 1, borderRadius: 18, paddingHorizontal: 14, paddingVertical: 11, gap: 5, maxWidth: '92%' },

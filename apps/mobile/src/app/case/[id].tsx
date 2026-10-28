@@ -74,6 +74,8 @@ export default function CaseScreen() {
       outline
       notice={doc.notice}
       header={<DocumentHeader backLabel={back} onShare={() => run(() => shareText(title, caseToText(output)))} actions={actions} />}
+      // "Attack this case" is the longer label, so it gets the wider button.
+      actionWidths={[1.3, 1]}
       actions={
         <>
           <SecondaryButton

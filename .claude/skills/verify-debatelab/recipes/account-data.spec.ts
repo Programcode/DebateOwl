@@ -5,15 +5,15 @@ import { admin, createDemoUser, deleteDemoUser, expect, fake, signIn, startDebat
 
 // Feature map: features/account-data.md. Mirrors e2e/full-stack/account-deletion.spec.ts.
 // Each test seeds a bystander account and proves the action touched only the
-// recipe's own demo user. Delete All My Data is e2e/full-stack/account-data.spec.ts.
+// recipe's own demo user. Delete all my data is e2e/full-stack/account-data.spec.ts.
 
 const accountUrl = `${process.env.LOCAL_SUPABASE_URL}/functions/v1/account`;
 
 async function addSource(page: Page, title: string, content: string) {
   await page.goto("/app/library");
-  await page.getByRole("button", { name: "Add Source" }).click();
-  await page.getByRole("textbox", { name: "Source title..." }).fill(title);
-  await page.getByRole("textbox", { name: "Paste source content..." }).fill(content);
+  await page.getByRole("button", { name: "Add source" }).click();
+  await page.getByRole("textbox", { name: "Title", exact: true }).fill(title);
+  await page.getByRole("textbox", { name: "Content", exact: true }).fill(content);
   await page.getByRole("button", { name: "Save to Library" }).click();
   await expect(page.getByRole("switch", { name: `Toggle ${title}` })).toBeChecked();
 }

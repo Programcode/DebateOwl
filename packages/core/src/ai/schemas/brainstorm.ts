@@ -2,7 +2,8 @@
 import { z } from 'zod';
 
 export const BrainstormInputSchema = z.object({
-  motion: z.string().min(1, 'Motion is required'),
+  // A catalog key, not text: the form shows it in the interface language.
+  motion: z.string().min(1, 'validation.motionRequired'),
   side: z.enum(['pro', 'con', 'both']),
   context: z.string().optional(),
   outputMode: z.enum(['mindmap', 'buckets', 'topfive']),

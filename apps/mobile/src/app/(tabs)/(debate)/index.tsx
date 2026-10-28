@@ -1,4 +1,3 @@
-import { LinearGradient } from 'expo-linear-gradient';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -29,8 +28,9 @@ import { HOME_COLUMNS_WIDTH, useLayoutClass } from '@/lib/layout';
 import { fetchSources, type Source } from '@/lib/sources';
 import { useAnnouncements } from '@/lib/use-announcements';
 import { useCopyHolder } from '@/lib/use-copy-holder';
-import { mainActionGradient, radius } from '@/theme/colors';
+import { radius } from '@/theme/colors';
 import { useTheme } from '@/theme/use-theme';
+import { Owl, OwlAvatar } from '@/components/owl';
 
 const RECENT_LIMIT = 3;
 /** The iPad dashboard lists more work, and the newest sources beside it (iPad mock A). */
@@ -87,8 +87,10 @@ export default function DebateScreen() {
         <AnnouncementBanner announcements={announcements} />
         <SwitcherPill onPress={openSwitcher} />
         <OneOffNotice />
+        {/* Mirrored, so the owl points across at Start debate, as on the website's home. */}
+        <Owl pose="point" size={112} mirrored style={styles.emptyOwl} />
         <View style={styles.emptyText}>
-          <Text accessibilityRole="header" weight="bold" style={styles.emptyTitle}>
+          <Text accessibilityRole="header" weight="display" style={styles.emptyTitle}>
             {t('debate.noCurrentTitle')}
           </Text>
           <Text tone="secondary" style={styles.body}>
@@ -106,7 +108,7 @@ export default function DebateScreen() {
         <AnnouncementBanner announcements={announcements} style={styles.banner} />
         <SwitcherPill onPress={openSwitcher} />
         <OneOffNotice style={styles.notice} />
-        <Text accessibilityRole="header" weight="bold" style={[styles.motion, styles.motionWide]} testID="current-debate-motion">
+        <Text accessibilityRole="header" weight="display" style={[styles.motion, styles.motionWide]} testID="current-debate-motion">
           {current.motion}
         </Text>
         <DebateDetails key={current.id} debateId={current.id} dashboard />
@@ -119,7 +121,7 @@ export default function DebateScreen() {
       <AnnouncementBanner announcements={announcements} style={styles.banner} />
       <SwitcherPill onPress={openSwitcher} />
       <OneOffNotice style={styles.notice} />
-      <Text accessibilityRole="header" weight="bold" style={styles.motion} testID="current-debate-motion">
+      <Text accessibilityRole="header" weight="display" style={styles.motion} testID="current-debate-motion">
         {current.motion}
       </Text>
       <DebateDetails key={current.id} debateId={current.id} />
@@ -227,7 +229,7 @@ function DebateDetails({ debateId, dashboard = false }: { debateId: string; dash
   const spar = <SparCard onPress={() => router.push({ pathname: '/sparring', params: { from: 'debate' } })} />;
   const prepare = (
     <>
-      <Text accessibilityRole="header" weight="bold" style={styles.section}>
+      <Text accessibilityRole="header" weight="bold" tone="heading" style={styles.section}>
         {t('mobile.tabs.prepare')}
       </Text>
       <View style={styles.grid}>
@@ -246,7 +248,7 @@ function DebateDetails({ debateId, dashboard = false }: { debateId: string; dash
   const pickUp = (
     <>
       <View style={[styles.sectionRow, twoColumns && styles.columnTop]}>
-        <Text accessibilityRole="header" weight="bold" style={[styles.section, styles.sectionTitle]}>
+        <Text accessibilityRole="header" weight="bold" tone="heading" style={[styles.section, styles.sectionTitle]}>
           {t('mobile.debate.pickUp')}
         </Text>
         <TextButton
@@ -317,7 +319,7 @@ function DebateDetails({ debateId, dashboard = false }: { debateId: string; dash
         {pickUp}
         {failed ? null : (
           <>
-            <Text accessibilityRole="header" weight="bold" style={styles.section}>
+            <Text accessibilityRole="header" weight="bold" tone="heading" style={styles.section}>
               {t('mobile.debate.recentSources')}
             </Text>
             {recentSources}
@@ -340,7 +342,7 @@ function RecentSource({ source, first, onPress }: { source: Source; first: boole
       style={({ pressed }) => [styles.sourceRow, !first && { borderTopWidth: 1, borderTopColor: colors.line }, pressed && styles.pressed]}>
       <IconTile name={SOURCE_ICONS[source.type]} size={42} />
       <View style={styles.sourceText}>
-        <Text weight="semibold" style={styles.sourceTitle} numberOfLines={1}>
+        <Text weight="semibold" style={styles.sourceTitle} numberOfLines={2}>
           {source.title || t('libraryPage.untitledSource')}
         </Text>
         <Text tone="faint" style={styles.sourceMeta} numberOfLines={1}>
@@ -365,19 +367,22 @@ function Stat({ value, label }: { value: number | undefined; label: string }) {
   );
 }
 
+// The website's primary look, a card-sized tactile button: a blue face on its ledge, which it sinks onto while pressed.
 function SparCard({ onPress }: { onPress: () => void }) {
   const { t } = useTranslation();
+  const { colors } = useTheme();
   return (
     <Pressable
       accessibilityRole="button"
       onPress={onPress}
-      style={({ pressed }) => [styles.spar, pressed && styles.pressed]}>
-      <LinearGradient {...mainActionGradient} style={StyleSheet.absoluteFill} />
-      <View style={styles.sparIcon}>
-        <Icon name="swords" color="#ffffff" size={24} />
-      </View>
+      style={({ pressed }) => [
+        styles.spar,
+        { backgroundColor: colors.primaryFill, borderBottomColor: colors.primaryLedge },
+        pressed && styles.sparPressed,
+      ]}>
+      <OwlAvatar pose="arguing" size={52} />
       <View style={styles.sparText}>
-        <Text weight="bold" style={styles.sparTitle}>
+        <Text weight="display" style={styles.sparTitle}>
           {t('mobile.debate.spar')}
         </Text>
         <Text style={styles.sparLine}>{t('sparring.format.standard')}</Text>
@@ -430,29 +435,24 @@ const styles = StyleSheet.create({
   notice: { marginTop: 12 },
   emptyText: { gap: 8 },
   emptyTitle: { fontSize: 28, lineHeight: 34, letterSpacing: -0.6 },
+  emptyOwl: { alignSelf: 'flex-start', marginTop: 8, marginBottom: -6 },
   motion: { fontSize: 27, lineHeight: 32, letterSpacing: -0.6, marginTop: 12, marginBottom: 15 },
   stats: { flexDirection: 'row', gap: 24, marginTop: 13, marginBottom: 15, marginHorizontal: 2 },
   statValue: { fontSize: 21, lineHeight: 26, letterSpacing: -0.2 },
   statLabel: { fontSize: 15 },
   spar: {
-    borderRadius: radius.card + 2,
-    overflow: 'hidden',
+    borderRadius: radius.card,
+    borderBottomWidth: 5,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 14,
-    paddingVertical: 17,
-    paddingHorizontal: 17,
+    paddingVertical: 16,
+    paddingHorizontal: 16,
   },
-  sparIcon: {
-    width: 46,
-    height: 46,
-    borderRadius: 13,
-    backgroundColor: 'rgba(255,255,255,0.2)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
+  // Sinks onto its ledge, as the website's buttons do.
+  sparPressed: { borderBottomWidth: 0, marginTop: 5 },
   sparText: { flex: 1, gap: 2 },
-  sparTitle: { color: '#ffffff', fontSize: 18, lineHeight: 23 },
+  sparTitle: { color: '#ffffff', fontSize: 19, lineHeight: 24 },
   sparLine: { color: 'rgba(255,255,255,0.88)', fontSize: 14.5, lineHeight: 20 },
   banner: { marginBottom: 14 },
   section: { fontSize: 18.5, lineHeight: 24, letterSpacing: -0.2, marginTop: 20, marginBottom: 9, marginHorizontal: 2 },
@@ -465,7 +465,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
-    borderWidth: 1,
+    borderWidth: 2,
     borderRadius: radius.card,
     paddingVertical: 12,
     paddingHorizontal: 10,

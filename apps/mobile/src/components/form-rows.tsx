@@ -1,6 +1,6 @@
 import { useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Pressable, StyleSheet, Switch, View } from 'react-native';
+import { Platform, Pressable, StyleSheet, Switch, View } from 'react-native';
 
 import { ActionMenu } from './action-menu';
 import { Icon } from './icon';
@@ -67,10 +67,11 @@ export function SelectRow<T extends string>({
         testID={testID}
         style={({ pressed }) => [pressed && styles.pressed, disabled && styles.disabled]}>
         <RowFrame first={first}>
-          <Text style={styles.rowLabel} numberOfLines={1}>
+          <Text style={styles.rowLabel}>
             {label}
           </Text>
-          <Text tone="secondary" style={styles.rowValue} numberOfLines={1}>
+          {/* A long choice (Hungarian, Spanish) wraps onto a second line rather than being cut off. */}
+          <Text tone="secondary" style={styles.rowValue} numberOfLines={2}>
             {chosen}
           </Text>
           <Icon name="chevronDown" color={colors.tabInactive} size={18} />
@@ -106,16 +107,25 @@ export function SwitchRow({ label, description, value, onChange, first, disabled
         value={value}
         onValueChange={onChange}
         disabled={disabled}
-        trackColor={{ true: colors.primary, false: colors.segmentTrack }}
+        trackColor={{ true: colors.primaryFill, false: colors.segmentTrack }}
+        thumbColor="#FFFFFF"
+        {...WEB_SWITCH_THUMB}
       />
     </RowFrame>
   );
 }
 
+/**
+ * React Native Web draws a switched-on thumb in its own teal unless told
+ * otherwise; iOS takes thumbColor for both states. Web-only, so not in the
+ * native types.
+ */
+export const WEB_SWITCH_THUMB = (Platform.OS === 'web' ? { activeThumbColor: '#FFFFFF' } : {}) as object;
+
 const styles = StyleSheet.create({
   group: { gap: 7 },
   groupLabel: { fontSize: 14, marginLeft: 4 },
-  groupCard: { borderWidth: 1, borderRadius: radius.field, overflow: 'hidden' },
+  groupCard: { borderWidth: 2, borderRadius: radius.field, overflow: 'hidden' },
   footer: { fontSize: 13, lineHeight: 18, marginLeft: 4 },
   row: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 15, minHeight: 50, paddingVertical: 8 },
   rowLabel: { fontSize: 16.5, flexShrink: 1 },

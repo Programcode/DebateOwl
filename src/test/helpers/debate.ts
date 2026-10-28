@@ -26,7 +26,7 @@ export function seedCurrentDebate(overrides: Partial<Debate> = {}): Debate {
 }
 
 export function resetDebates() {
-  useDebateStore.setState({ ownerUserId: null, debates: [], currentDebateId: null, oneOff: false, hydrated: false, dialog: null, dialogMotion: "" });
+  useDebateStore.setState({ ownerUserId: null, debates: [], currentDebateId: null, oneOff: false, hydrated: false, loadFailed: false, dialog: null, dialogMotion: "" });
 }
 
 /** One-off mode: tools neither read from nor save to a debate. */

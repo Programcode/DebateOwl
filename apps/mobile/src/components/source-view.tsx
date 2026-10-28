@@ -86,7 +86,7 @@ export function SourceView({ id, onDone }: { id: string; onDone?: () => void }) 
         </Text>
       ) : (
         <>
-          <Text accessibilityRole="header" weight="bold" style={styles.title} selectable>
+          <Text accessibilityRole="header" weight="display" style={styles.title} selectable>
             {source.title || t('libraryPage.untitledSource')}
           </Text>
           {url ? (
@@ -125,7 +125,7 @@ const styles = StyleSheet.create({
   loading: { marginTop: 32 },
   body: { fontSize: 15, lineHeight: 21 },
   title: { fontSize: 23, lineHeight: 29, letterSpacing: -0.4 },
-  origin: { flexDirection: 'row', alignItems: 'center', gap: 9, borderWidth: 1, borderRadius: 12, paddingHorizontal: 13, minHeight: 46 },
+  origin: { flexDirection: 'row', alignItems: 'center', gap: 9, borderWidth: 2, borderRadius: 12, paddingHorizontal: 13, minHeight: 46 },
   originText: { flex: 1, fontSize: 15 },
   pressed: { opacity: 0.7 },
   text: { fontSize: 16, lineHeight: 24 },

@@ -65,7 +65,7 @@ export function AskHistory({
         contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 24 }]}
         testID="ask-history">
         <View style={styles.header}>
-          <Text accessibilityRole="header" weight="bold" style={styles.title}>
+          <Text accessibilityRole="header" weight="display" style={styles.title}>
             {t('askChat.savedChats')}
           </Text>
           <TextButton label={t('mobile.common.done')} onPress={onClose} />

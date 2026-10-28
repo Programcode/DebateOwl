@@ -11,6 +11,7 @@ import { AskHistory } from '@/components/ask-history';
 import { TextButton } from '@/components/buttons';
 import { Chip } from '@/components/chip';
 import { ModelChips } from '@/components/model-picker';
+import { FadingScrollRow } from '@/components/edge-fade';
 import { Icon } from '@/components/icon';
 import type { IconName } from '@/components/icon-paths';
 import { OneOffNotice } from '@/components/one-off-notice';
@@ -30,6 +31,7 @@ import { useCopyHolder } from '@/lib/use-copy-holder';
 import { radius } from '@/theme/colors';
 import { fontFamily } from '@/theme/fonts';
 import { useTheme } from '@/theme/use-theme';
+import { Owl, OwlAvatar } from '@/components/owl';
 
 const NO_OPTIONS: AskOptions = { citationMode: false, webSearch: false, prosConsMode: false, argumentMapMode: false };
 const NEW_CHAT: ChatRecord = { chatId: null, debateId: null, persisted: 0 };
@@ -42,7 +44,8 @@ const OPTION_CHIPS: { key: keyof AskOptions; label: string; icon: IconName }[] =
   { key: 'argumentMapMode', label: 'askChat.modeArgMap', icon: 'map' },
 ];
 
-const THINKING = ['askChat.thinking', 'askChat.researching', 'askChat.analyzing', 'askChat.generatingResponse', 'askChat.almostThere'];
+// The website's one progress line while the coach answers.
+const THINKING = ['askChat.working'];
 
 const PLAN_ERRORS = new Set<AIErrorKind>(['trialExpired', 'limitReached', 'modelRestricted']);
 const RETRYABLE_ERRORS = new Set<AIErrorKind>(['network', 'timeout', 'failed', 'rateLimit']);
@@ -243,13 +246,15 @@ export default function AskScreen() {
           });
         } catch (streamError) {
           if (isAbortError(streamError) || !isCurrent()) throw streamError;
-          if (received) {
+          // Whitespace alone is not an answer (main #187): a model that spent its cap on
+          // reasoning may send a newline first. Ask the structured endpoint then.
+          if (received.trim()) {
             setNotice(`${t('ask.streamInterrupted')} ${t('ask.streamInterruptedDesc')}`);
             result = { response: received.trim(), followUpQuestions: [], uncertainties: [t('ask.streamInterrupted')] };
           } else if (isFinalAskError(streamError)) {
             throw streamError;
           } else {
-            // Nothing arrived: ask once more without streaming, as the website does.
+            // Nothing usable arrived: ask once more without streaming, as the website does.
             setStreaming(null);
             result = await askOnce(askRequest, controller.signal, keepExtras);
           }
@@ -360,7 +365,7 @@ export default function AskScreen() {
           </Pressable>
         )}
         <View style={styles.headerText}>
-          <Text accessibilityRole="header" weight="bold" style={styles.headerTitle} numberOfLines={split ? 1 : undefined}>
+          <Text accessibilityRole="header" weight="display" style={styles.headerTitle} numberOfLines={split ? 1 : undefined}>
             {title}
           </Text>
           {subtitle ? (
@@ -395,7 +400,8 @@ export default function AskScreen() {
         <OneOffNotice />
         {messages.length === 0 && streaming === null && !busy ? (
           <View style={styles.empty}>
-            <Text weight="semibold" style={styles.emptyTitle}>
+            <Owl pose="point" size={112} />
+            <Text weight="display" style={styles.emptyTitle}>
               {t('askChat.startConversation')}
             </Text>
             <Text tone="secondary" style={styles.emptyBody}>
@@ -406,7 +412,7 @@ export default function AskScreen() {
 
         {messages.map((message) =>
           message.role === 'user' ? (
-            <View key={message.id} style={[styles.bubble, { backgroundColor: colors.primary }]}>
+            <View key={message.id} style={[styles.bubble, { backgroundColor: colors.primaryFill }]}>
               <Text style={[styles.bubbleText, { color: colors.onPrimary }]} selectable>
                 {message.content}
               </Text>
@@ -444,7 +450,9 @@ export default function AskScreen() {
 
       <View style={[styles.composer, { paddingBottom: Math.max(insets.bottom, 12), borderTopColor: colors.line, backgroundColor: colors.tabBar }]}>
         <View style={styles.composerColumn}>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chips} style={styles.chipRow} keyboardShouldPersistTaps="handled">
+          {split ? (
+            // iPad: every option shows, wrapping onto a second line when the column is narrow.
+            <View style={styles.chipsWrap}>
             {OPTION_CHIPS.map((chip) => (
               <Chip
                 key={chip.key}
@@ -457,7 +465,24 @@ export default function AskScreen() {
             ))}
             {/* The next question reads the model again, after this change is saved. */}
             <ModelChips feature="ask" onChange={() => (config.current = null)} />
-          </ScrollView>
+            </View>
+          ) : (
+            // iPhone: one sideways row, faded at the edge to show it scrolls.
+            <FadingScrollRow color={colors.background} id="ask-chips-fade" style={styles.chipRow} contentContainerStyle={styles.chips} keyboardShouldPersistTaps="handled">
+            {OPTION_CHIPS.map((chip) => (
+              <Chip
+                key={chip.key}
+                label={t(chip.label)}
+                icon={chip.icon}
+                selected={options[chip.key]}
+                accessibilityRole="switch"
+                onPress={() => setOptions((previous) => ({ ...previous, [chip.key]: !previous[chip.key] }))}
+              />
+            ))}
+            {/* The next question reads the model again, after this change is saved. */}
+            <ModelChips feature="ask" onChange={() => (config.current = null)} />
+            </FadingScrollRow>
+          )}
           <View style={[styles.inputRow, { borderColor: colors.border, backgroundColor: colors.input }]}>
             <TextInput
               value={input}
@@ -477,7 +502,7 @@ export default function AskScreen() {
               accessibilityState={{ disabled: busy || !input.trim() }}
               disabled={busy || !input.trim()}
               onPress={() => void send(input, messages)}
-              style={[styles.send, { backgroundColor: colors.primary }, (busy || !input.trim()) && styles.sendDisabled]}
+              style={[styles.send, { backgroundColor: colors.primaryFill }, (busy || !input.trim()) && styles.sendDisabled]}
               testID="ask-send">
               {busy ? <ActivityIndicator color={colors.onPrimary} size="small" /> : <Icon name="arrowUp" color={colors.onPrimary} size={19} />}
             </Pressable>
@@ -536,7 +561,7 @@ function Thinking() {
   }, []);
   return (
     <View style={styles.thinking} accessibilityRole="progressbar" accessibilityLiveRegion="polite">
-      <ActivityIndicator size="small" />
+      <OwlAvatar pose="coach" size={32} />
       <Text tone="secondary" style={styles.thinkingText}>
         {t(THINKING[index])}
       </Text>
@@ -555,8 +580,8 @@ const styles = StyleSheet.create({
   headerSubtitle: { fontSize: 13.5, lineHeight: 18 },
   messages: { flex: 1 },
   messagesContent: { paddingHorizontal: 20, paddingTop: 18, paddingBottom: 24, gap: 16, width: '100%', maxWidth: 720, alignSelf: 'center' },
-  empty: { alignItems: 'center', gap: 6, paddingTop: 48, paddingHorizontal: 12 },
-  emptyTitle: { fontSize: 18 },
+  empty: { alignItems: 'center', gap: 6, paddingTop: 24, paddingHorizontal: 12 },
+  emptyTitle: { fontSize: 20 },
   emptyBody: { fontSize: 15.5, lineHeight: 22, textAlign: 'center' },
   bubble: { alignSelf: 'flex-end', maxWidth: '80%', paddingHorizontal: 16, paddingVertical: 11, borderTopLeftRadius: 20, borderTopRightRadius: 20, borderBottomLeftRadius: 20, borderBottomRightRadius: 6 },
   bubbleText: { fontSize: 17, lineHeight: 24 },
@@ -564,19 +589,20 @@ const styles = StyleSheet.create({
   thinking: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   thinkingText: { fontSize: 15 },
   notice: { fontSize: 14, lineHeight: 19 },
-  error: { borderWidth: 1, borderRadius: radius.card, padding: 14, gap: 4 },
+  error: { borderWidth: 2, borderRadius: radius.card, padding: 14, gap: 4 },
   errorTitle: { fontSize: 16 },
   errorBody: { fontSize: 15, lineHeight: 21 },
   errorActions: { flexDirection: 'row', gap: 20 },
   composer: { borderTopWidth: StyleSheet.hairlineWidth, paddingTop: 10 },
   // The same centred column as the messages, so the composer lines up on iPad.
   composerColumn: { width: '100%', maxWidth: 720, alignSelf: 'center', paddingHorizontal: 16, gap: 10 },
-  chipRow: { flexGrow: 0, marginHorizontal: -16 },
+  chipRow: { marginHorizontal: -16 },
+  chipsWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   chips: { gap: 8, paddingHorizontal: 16 },
   inputRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    borderWidth: 1,
+    borderWidth: 2,
     borderRadius: 24,
     paddingLeft: 16,
     paddingRight: 6,

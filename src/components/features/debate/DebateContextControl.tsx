@@ -16,7 +16,7 @@ import type { DebateContextFeature, DebateContextSide } from '../../../../supaba
 interface DebateContextControlProps {
   feature: DebateContextFeature;
   side: DebateContextSide;
-  /** False when this request will not read Library sources, as in Crossfire with Source Library off. */
+  /** False when this request will not read Library sources, as in Crossfire with Library grounding off. */
   includeSources?: boolean;
   /** The debate the request will use when it is not the Current Debate, such as a reopened chat. */
   debateId?: string | null;
@@ -60,23 +60,27 @@ export function DebateContextControl({ feature, side, includeSources = true, deb
 
   const summary = useMemo(() => {
     if (!plan) return null;
-    const sentSources = plan.sources.filter((source) => source.included && !source.overLimit).length;
-    const sentOutputs = plan.outputs.filter((output) => output.included && !output.overLimit && !output.empty);
+    // "Sent" means it reaches the model; anything chosen but over the limit or too large did not fit.
+    const sent = (item: { included: boolean; overLimit: boolean; omittedForSize: boolean }) => item.included && !item.overLimit && !item.omittedForSize;
+    const chosenSources = plan.sources.filter((source) => source.included).length;
+    const sentSources = plan.sources.filter(sent).length;
+    const chosenOutputs = plan.outputs.filter((output) => output.included && !output.empty);
+    const sentOutputs = chosenOutputs.filter(sent);
+    const count = (key: 'sourceCount' | 'resultCount', used: number, chosen: number) => used === chosen
+      ? t(`debateContext.${key}`, { count: used })
+      : `${t(`debateContext.${key}Of`, { used, count: chosen })} ${t('debateContext.didntFit', { count: chosen - used })}`;
     const parts = [
-      sentSources > 0 && t('debateContext.sourceCount', { count: sentSources }),
-      sentOutputs.length > 0 && t('debateContext.resultCount', { count: sentOutputs.length }),
+      chosenSources > 0 && count('sourceCount', sentSources, chosenSources),
+      chosenOutputs.length > 0 && count('resultCount', sentOutputs.length, chosenOutputs.length),
     ].filter((part): part is string => Boolean(part));
     const names = sentOutputs.map((output) => output.side === 'pro' || output.side === 'con'
       ? t('debateContext.resultName', { kind: t(`debate.kinds.${output.ref.kind}`), side: t(`debate.side.${output.side}`) })
       : t(`debate.kinds.${output.ref.kind}`));
-    const leftOut = plan.sources.filter((source) => source.omittedForSize || source.overLimit).length
-      + plan.outputs.filter((output) => output.omittedForSize || output.overLimit).length;
     return {
       text: parts.length > 0
         ? t('debateContext.using', { list: listFormat(i18n.resolvedLanguage ?? 'en', parts) })
         : t('debateContext.usingMotionOnly'),
       names: names.join(', '),
-      leftOut,
     };
   }, [i18n.resolvedLanguage, plan, t]);
 
@@ -84,11 +88,11 @@ export function DebateContextControl({ feature, side, includeSources = true, deb
   const base = `flex flex-wrap items-center gap-x-3 gap-y-1 rounded-lg border px-3 py-2 text-sm ${className}`;
 
   if (!debateId || !plan || !summary) {
+    // With no Current Debate the page's debate strip already says so; one notice is enough.
+    if (!(oneOff && debateIdOverride === undefined)) return null;
     return (
       <p className={`${base} border-dashed border-border bg-muted/40 text-muted-foreground`} data-testid="debate-context-control">
-        {oneOff && debateIdOverride === undefined
-          ? t('debateContext.oneOff', 'One-off mode: no Current Debate material will be used or saved.')
-          : t('debateContext.noDebate', 'No Current Debate, so no debate material will be used.')}
+        {t('debateContext.oneOff', 'One-off mode: no Current Debate material will be used or saved.')}
       </p>
     );
   }
@@ -98,9 +102,6 @@ export function DebateContextControl({ feature, side, includeSources = true, deb
       <p className="min-w-0 flex-1 basis-56">
         <span className="font-medium text-foreground">{summary.text}</span>
         {summary.names && <span className="text-muted-foreground">: {summary.names}</span>}
-        {summary.leftOut > 0 && (
-          <span className="block text-xs text-muted-foreground">{t('debateContext.leftOut', { count: summary.leftOut })}</span>
-        )}
       </p>
       <Button type="button" size="sm" variant="ghost" onClick={() => setOpen(true)} aria-haspopup="dialog">
         {t('debateContext.review', 'Review')}
@@ -159,7 +160,7 @@ function DebateContextReview({ plan, motion, usage, pinsReady, resultsComplete }
       <div className="space-y-6 px-5 py-4">
         <section aria-labelledby="debate-context-debate" className="space-y-1 text-sm">
           <h3 id="debate-context-debate" className="font-medium">{t('debateContext.debateHeading', 'Debate')}</h3>
-          {motion && <p className="break-words text-foreground">{motion}</p>}
+          {motion && <p className="wrap-break-word text-foreground">{motion}</p>}
           <p className="text-muted-foreground">
             {plan.policy.instructions
               ? t('debateContext.instructionsUsed', 'Your debate settings and instructions are included.')
@@ -173,7 +174,7 @@ function DebateContextReview({ plan, motion, usage, pinsReady, resultsComplete }
             <p className="text-sm text-muted-foreground">
               {plan.feature === 'sparring'
                 ? t('debateContext.sparringNoSources', 'Live sparring rounds use only the transcript, the motion, and your debate settings.')
-                : t('debateContext.sourcesOff', 'Source Library is off for this request.')}
+                : t('debateContext.sourcesOff', 'Library is off for this request.')}
             </p>
           ) : plan.sources.length === 0 ? (
             <p className="text-sm text-muted-foreground">{t('debateContext.noSources', 'This debate has no Library sources yet.')}</p>
@@ -232,10 +233,10 @@ function SourceRow({ source, onChange }: { source: ContextSourceItem; onChange: 
   const id = `debate-context-source-${source.id}`;
   const note = source.included ? statusNote(source, t) : (!source.active ? t('debateContext.inactive', 'Turned off in your Library.') : null);
   return (
-    <li className="flex items-start gap-3 rounded-md px-1 py-1.5">
-      <Checkbox id={id} checked={source.included} onCheckedChange={(checked) => onChange(checked === true)} className="mt-0.5" />
+    <li className="flex items-start gap-3 rounded-md px-1 py-1.5 pointer-coarse:min-h-11">
+      <Checkbox id={id} checked={source.included} onCheckedChange={(checked) => onChange(checked === true)} className="mt-0.5 pointer-coarse:after:-top-2" />
       <label htmlFor={id} className="min-w-0 flex-1 cursor-pointer text-sm">
-        <span className="block break-words">{source.title}</span>
+        <span className="block wrap-break-word">{source.title}</span>
         {note && <span className="block text-xs text-muted-foreground">{note}</span>}
       </label>
     </li>
@@ -248,10 +249,10 @@ function OutputRow({ output, onChange, onPin, pinDisabled }: { output: ContextOu
   const note = output.included ? statusNote(output, t) : null;
   const kind = t(`debate.kinds.${output.ref.kind}`);
   return (
-    <li className="flex items-start gap-3 rounded-md px-1 py-1.5">
-      <Checkbox id={id} checked={output.included} onCheckedChange={(checked) => onChange(checked === true)} className="mt-0.5" />
+    <li className="flex items-start gap-3 rounded-md px-1 py-1.5 pointer-coarse:min-h-11">
+      <Checkbox id={id} checked={output.included} onCheckedChange={(checked) => onChange(checked === true)} className="mt-0.5 pointer-coarse:after:-top-2" />
       <label htmlFor={id} className="min-w-0 flex-1 cursor-pointer text-sm">
-        <span className="block break-words">{output.title || kind}</span>
+        <span className="block wrap-break-word">{output.title || kind}</span>
         <span className="block text-xs text-muted-foreground">
           {output.side ? t('debateContext.resultMeta', { kind, side: t(`debate.side.${output.side}`) }) : kind}
           {output.pinned && `, ${t('debateContext.pinned', 'pinned')}`}

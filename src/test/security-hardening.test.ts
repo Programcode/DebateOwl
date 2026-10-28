@@ -29,15 +29,15 @@ describe('security hardening regressions', () => {
     expect(migration).toContain('REVOKE INSERT, UPDATE, DELETE ON public.user_settings');
     expect(migration).toContain('GRANT UPDATE (language, theme, feature_configs, custom_system_prompt, updated_at)');
     expect(migration).toContain('REVOKE INSERT, UPDATE, DELETE ON public.ai_requests');
-    expect(entitlements).toContain('const NO_ACCESS: SubscriptionInfo = { tier: "expired", dailyLimit: 0');
-    expect(entitlements).toContain('if (error || !row || typeof row.tier !== "string" || typeof row.daily_limit !== "number") return NO_ACCESS;');
+    expect(entitlements).toContain('if (!user) return { tier: "expired", dailyLimit: 0');
     for (const source of [ai, stream]) expect(source).toContain('from "../_shared/entitlements.ts"');
   });
 
   it('uses one server-only atomic quota reservation from every billable entrypoint', () => {
     expect(migration).toContain('ON CONFLICT (user_id, usage_date) DO UPDATE');
     expect(migration).toContain("auth.role() <> 'service_role'");
-    for (const source of [entitlements, importer]) expect(source).toContain('consume_daily_quota');
+    expect(entitlements).toContain('consume_ai_quota');
+    expect(importer).toContain('consume_daily_quota');
     expect(entitlements).toContain('Unable to verify your quota');
     expect(entitlements).not.toContain('return { allowed: true }; // Fail open');
     expect(entitlements).not.toContain('return { allowed: true };\n  } catch');
@@ -76,8 +76,8 @@ describe('security hardening regressions', () => {
 
   it('uses allowlisted model/provider pairs and SSRF-safe citation verification', () => {
     expect(modelCatalog).toContain('id: "z-ai/glm-5.3-flash"');
-    expect(modelCatalog).toContain('id: "anthropic/claude-sonnet-5"');
-    expect(modelCatalog).toContain('id: "openai/gpt-5.6-luna"');
+    expect(modelCatalog).toContain('id: "anthropic/claude-haiku-5.5"');
+    expect(modelCatalog).toContain('id: "openai/gpt-6-luna"');
     expect(modelCatalog).toContain('id: "google/gemini-3.8-flash"');
     expect(ai).toContain('function modelForRequest');
     expect(stream).toContain('isModelSelection(rawModel)');

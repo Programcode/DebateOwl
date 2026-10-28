@@ -6,7 +6,7 @@ Staging is the Supabase project `debate-trainer-staging` (`brifeyypjauyusmkptkx`
 
 ## Get in
 
-**On your phone or laptop, for a PR.** Every PR gets a `debatelab-staging` Vercel preview; its link is in the Vercel comment on the PR. That build is pinned to staging, whatever the browser's saved toggle says. Previews sit behind Vercel login, so sign in to Vercel once on each device. The permanent staging site is `https://debatelab-staging.vercel.app`, built from `main`.
+**On your phone or laptop, for a PR.** A pull request does not get a Vercel preview unless someone requests one ([operations.md](operations.md#opt-in-previews)). The preview to open is `debatelab-staging`: it is pinned to staging, whatever the browser's saved toggle says. Previews sit behind Vercel login, so sign in to Vercel once on each device. The permanent staging site is `https://debatelab-staging.vercel.app`, built from `main`.
 
 **Sign in.** Two ways:
 

@@ -1,35 +1,55 @@
-// Entitlement behaviour that ai/, ai-stream/ and voice/ share.
+// Entitlement behaviour that ai/ and ai-stream/ now share. The two copies had
+// drifted on the gift-trial fallback; these tests pin the surviving semantics.
 
 for (const [key, value] of Object.entries({
   SUPABASE_URL: "https://supabase.test",
   SUPABASE_SERVICE_ROLE_KEY: "test-service-role-key",
 })) Deno.env.set(key, value);
 
-const { getSubscriptionInfo, checkRateLimit } = await import("./entitlements.ts");
-const { entitlementRows } = await import("./testing/entitlement.ts");
+const { getSubscriptionInfo, checkRateLimit, getConfiguredDailyLimit, checkUserBanned, normalizeErrorCode } = await import("./entitlements.ts");
+const { MODEL_QUOTA_UNITS, WEEKLY_AI_BUDGET_USD } = await import("./usage-limits.ts");
 
 function json(body: unknown, status = 200): Response {
   return Response.json(body, { status });
 }
 
+const DAY = 24 * 60 * 60 * 1000;
+const future = () => new Date(Date.now() + DAY).toISOString();
+const past = () => new Date(Date.now() - DAY).toISOString();
+
 interface Routes {
-  entitlement?: unknown;
-  entitlementStatus?: number;
+  user_settings?: unknown;
   user_roles?: unknown;
-  rate_limits?: unknown;
+  subscriptions?: unknown | ((url: URL) => Response);
+  rate_limits?: unknown | ((url: URL) => Response);
   quota?: unknown;
+  onQuota?: (body: Record<string, unknown>) => void;
+  requests?: string[];
 }
 
 async function withSupabase<T>(routes: Routes, run: () => Promise<T>): Promise<T> {
   const originalFetch = globalThis.fetch;
-  globalThis.fetch = (async (input: Request | URL | string) => {
+  globalThis.fetch = (async (input: Request | URL | string, init?: RequestInit) => {
     const url = new URL(input instanceof Request ? input.url : String(input));
-    if (url.pathname.includes("/rpc/effective_entitlement")) {
-      return json(routes.entitlement ?? entitlementRows("trial"), routes.entitlementStatus ?? 200);
-    }
+    if (url.pathname.includes("/rest/v1/user_settings")) return json(routes.user_settings ?? null);
     if (url.pathname.includes("/rest/v1/user_roles")) return json(routes.user_roles ?? { role: "user" });
-    if (url.pathname.includes("/rest/v1/rate_limits")) return json(routes.rate_limits ?? null);
-    if (url.pathname.includes("/rpc/consume_daily_quota")) return json(routes.quota ?? [{ allowed: true, current_count: 1 }]);
+    if (url.pathname.endsWith("/rest/v1/app_store_subscriptions")) return Response.json([]);
+    if (url.pathname.includes("/rest/v1/subscriptions")) {
+      return typeof routes.subscriptions === "function" ? routes.subscriptions(url) : json(routes.subscriptions ?? []);
+    }
+    if (url.pathname.includes("/rest/v1/rate_limits")) {
+      routes.requests?.push(`${url.pathname}${url.search}`);
+      const order = url.searchParams.get("order") ?? "";
+      if (order.includes("updated_at")) {
+        return json({ message: "column rate_limits.updated_at does not exist", code: "42703" }, 400);
+      }
+      if (typeof routes.rate_limits === "function") return routes.rate_limits(url);
+      return json(routes.rate_limits ?? null);
+    }
+    if (url.pathname.includes("/rpc/consume_ai_quota")) {
+      routes.onQuota?.(JSON.parse(String(init?.body ?? "{}")));
+      return json(routes.quota ?? [{ allowed: true, current_count: 1 }]);
+    }
     throw new Error(`Unexpected request: ${url}`);
   }) as typeof fetch;
   try {
@@ -43,61 +63,55 @@ function assertEquals(actual: unknown, expected: unknown, message: string) {
   if (actual !== expected) throw new Error(`${message}: expected ${expected}, got ${actual}`);
 }
 
-// The tier rules live in effective_entitlement() and are tested in
-// supabase/tests/app_store_entitlements_test.sql. These tests cover what stays
-// here: reading the plan, failing closed, and the quota and ban checks.
-
-Deno.test("the plan comes from effective_entitlement for that user", async () => {
-  let body = "";
-  const originalFetch = globalThis.fetch;
-  globalThis.fetch = (async (input: Request | URL | string, init?: RequestInit) => {
-    body = String(init?.body ?? (input instanceof Request ? await input.text() : ""));
-    return json(entitlementRows("basic", { trial_ends_at: "2099-01-01T00:00:00.000Z" }));
-  }) as typeof fetch;
-  try {
+Deno.test("a missing settings row fails closed instead of granting a trial", async () => {
+  await withSupabase({ user_settings: null }, async () => {
     const info = await getSubscriptionInfo("user-1");
-    assertEquals(JSON.parse(body).p_user_id, "user-1", "p_user_id");
-    assertEquals(info.tier, "basic", "tier");
-    assertEquals(info.dailyLimit, 20, "dailyLimit");
+    assertEquals(info.tier, "expired", "tier");
+    assertEquals(info.dailyLimit, 0, "dailyLimit");
     assertEquals(info.canAccessProModels, false, "canAccessProModels");
-    assertEquals(info.trialEndsAt, "2099-01-01T00:00:00.000Z", "trialEndsAt");
-  } finally {
-    globalThis.fetch = originalFetch;
-  }
-});
-
-Deno.test("a failed or empty plan lookup fails closed instead of granting a trial", async () => {
-  for (const routes of [
-    { entitlement: { code: "PGRST202", message: "not found" }, entitlementStatus: 404 },
-    { entitlement: [] },
-  ]) {
-    await withSupabase(routes, async () => {
-      const info = await getSubscriptionInfo("user-1");
-      assertEquals(info.tier, "expired", "tier");
-      assertEquals(info.dailyLimit, 0, "dailyLimit");
-      assertEquals(info.canAccessProModels, false, "canAccessProModels");
-    });
-  }
-});
-
-Deno.test("expired access with an extra-limit override is still allowed", async () => {
-  await withSupabase({ entitlement: entitlementRows("expired", { daily_limit: 15 }) }, async () => {
-    const result = await checkRateLimit("user-1");
-    assertEquals(result.allowed, true, "allowed");
-    assertEquals(result.limit, 15, "limit");
   });
 });
 
-Deno.test("Pro models are refused below Pro before any quota is consumed", async () => {
-  let quotaConsumed = false;
+Deno.test("an unknown tier still honours an active gift trial", async () => {
+  // ai/ applied this fallback, ai-stream/ did not. The shared module keeps the
+  // permissive-but-limited branch so a gifted trial is not silently voided.
   await withSupabase({
-    entitlement: entitlementRows("basic"),
-    get quota() { quotaConsumed = true; return [{ allowed: true, current_count: 1 }]; },
+    user_settings: { subscription_tier: "something_new", daily_limit_override: null, trial_ends_at: future(), grace_period_ends_at: null },
   }, async () => {
-    const result = await checkRateLimit("user-1", "auto-pro");
-    assertEquals(result.allowed, false, "allowed");
-    assertEquals(result.code, "upgrade_required", "code");
-    assertEquals(quotaConsumed, false, "quota must not be consumed");
+    const info = await getSubscriptionInfo("user-1");
+    assertEquals(info.tier, "trial", "tier");
+    assertEquals(info.dailyLimit, 5, "dailyLimit");
+    assertEquals(info.canAccessProModels, false, "canAccessProModels");
+  });
+});
+
+Deno.test("a lapsed pro subscription falls back to an active gift trial", async () => {
+  await withSupabase({
+    user_settings: { subscription_tier: "pro", daily_limit_override: null, trial_ends_at: future(), grace_period_ends_at: past() },
+    subscriptions: [],
+  }, async () => {
+    const info = await getSubscriptionInfo("user-1");
+    assertEquals(info.tier, "trial", "tier");
+    assertEquals(info.canAccessProModels, false, "canAccessProModels");
+  });
+});
+
+Deno.test("a promo grace period grants pro model access", async () => {
+  await withSupabase({
+    user_settings: { subscription_tier: "pro", daily_limit_override: null, trial_ends_at: null, grace_period_ends_at: future() },
+  }, async () => {
+    const info = await getSubscriptionInfo("user-1");
+    assertEquals(info.tier, "pro", "tier");
+    assertEquals(info.dailyLimit, 50, "dailyLimit");
+    assertEquals(info.canAccessProModels, true, "canAccessProModels");
+  });
+});
+
+Deno.test("daily_limit_override wins over the tier default", async () => {
+  await withSupabase({
+    user_settings: { subscription_tier: "trial", daily_limit_override: 3, trial_ends_at: future(), grace_period_ends_at: null },
+  }, async () => {
+    assertEquals((await getSubscriptionInfo("user-1")).dailyLimit, 3, "dailyLimit");
   });
 });
 
@@ -107,7 +121,7 @@ Deno.test("banned users are refused before any quota is consumed", async () => {
     user_roles: { role: "banned" },
     get quota() { quotaConsumed = true; return [{ allowed: true, current_count: 1 }]; },
   }, async () => {
-    const result = await checkRateLimit("user-1", "openai/gpt-5.6-luna");
+    const result = await checkRateLimit("user-1", "openai/gpt-6-luna");
     assertEquals(result.allowed, false, "allowed");
     assertEquals(result.code, "banned", "code");
     assertEquals(result.statusCode, 403, "statusCode");
@@ -115,14 +129,22 @@ Deno.test("banned users are refused before any quota is consumed", async () => {
   });
 });
 
-Deno.test("anonymous callers bypass the rate limit", async () => {
-  const result = await checkRateLimit(null);
-  assertEquals(result.allowed, true, "allowed");
+Deno.test("a request without a user is refused, not waved through (SC-03)", async () => {
+  let quotaConsumed = false;
+  await withSupabase({
+    get quota() { quotaConsumed = true; return [{ allowed: true, current_count: 1 }]; },
+  }, async () => {
+    const result = await checkRateLimit(null);
+    assertEquals(result.allowed, false, "allowed");
+    assertEquals(result.code, "unauthenticated", "code");
+    assertEquals(result.statusCode, 401, "statusCode");
+    assertEquals(quotaConsumed, false, "quota must not be consumed without a user");
+  });
 });
 
 Deno.test("an exhausted quota reports the limit-reached code", async () => {
   await withSupabase({
-    entitlement: entitlementRows("trial"),
+    user_settings: { subscription_tier: "trial", daily_limit_override: null, trial_ends_at: future(), grace_period_ends_at: null },
     quota: [{ allowed: false, current_count: 5 }],
   }, async () => {
     const result = await checkRateLimit("user-1");
@@ -133,13 +155,225 @@ Deno.test("an exhausted quota reports the limit-reached code", async () => {
   });
 });
 
-Deno.test("expired access is refused with the trial-expired code", async () => {
+const DAY_MS = 24 * 60 * 60 * 1000;
+const daysFromNow = (days: number) => new Date(Date.now() + days * DAY_MS).toISOString();
+
+// Each account without access is refused with a code naming why (QB-13, QB-14).
+for (const [name, routes, code] of [
+  ["an expired trial", { user_settings: { subscription_tier: "trial", daily_limit_override: null, trial_ends_at: past(), grace_period_ends_at: null } }, "trial_ended"],
+  ["a past-due payer after the grace", {
+    user_settings: { subscription_tier: "pro", daily_limit_override: null, trial_ends_at: null, grace_period_ends_at: null },
+    subscriptions: [{ status: "past_due", current_period_start: daysFromNow(-20), current_period_end: daysFromNow(10) }],
+  }, "payment_failed"],
+  ["a former subscriber", {
+    user_settings: { subscription_tier: "expired", daily_limit_override: null, trial_ends_at: daysFromNow(-60), grace_period_ends_at: null },
+    subscriptions: [{ status: "canceled", current_period_start: daysFromNow(-40), current_period_end: daysFromNow(-10), ended_at: daysFromNow(-10) }],
+  }, "subscription_ended"],
+] as const) {
+  Deno.test(`${name} is refused with ${code}`, async () => {
+    let quotaConsumed = false;
+    await withSupabase({
+      ...routes,
+      get quota() { quotaConsumed = true; return [{ allowed: true, current_count: 1 }]; },
+    }, async () => {
+      const result = await checkRateLimit("user-1");
+      assertEquals(result.allowed, false, "allowed");
+      assertEquals(result.code, code, "code");
+      assertEquals(result.statusCode, 402, "statusCode");
+      assertEquals(quotaConsumed, false, "quota must not be consumed");
+    });
+  });
+}
+
+Deno.test("an override on an expired trial keeps working as extended access (QB-02)", async () => {
+  // Adam's decision: daily_limit_override on an expired trial is a deliberate grant.
+  let reserved: Record<string, unknown> | undefined;
   await withSupabase({
-    entitlement: entitlementRows("expired"),
+    user_settings: { subscription_tier: "trial", daily_limit_override: 5, trial_ends_at: past(), grace_period_ends_at: null },
+    onQuota: (body) => { reserved = body; },
   }, async () => {
+    const info = await getSubscriptionInfo("user-1");
+    assertEquals(info.state, "extended_access", "state");
+    assertEquals(info.refusal, null, "refusal");
     const result = await checkRateLimit("user-1");
+    assertEquals(result.allowed, true, "allowed");
+    assertEquals(result.canAccessProModels, false, "canAccessProModels");
+    assertEquals(reserved?.p_limit, 5, "limit reserved against");
+  });
+});
+
+Deno.test("a past-due payer keeps Pro through the payment grace (QB-13)", async () => {
+  await withSupabase({
+    // The tier the old webhook wrote on the first failed invoice.
+    user_settings: { subscription_tier: "expired", daily_limit_override: null, trial_ends_at: null, grace_period_ends_at: null },
+    subscriptions: [{ status: "past_due", current_period_start: daysFromNow(-2), current_period_end: daysFromNow(28) }],
+  }, async () => {
+    const info = await getSubscriptionInfo("user-1");
+    assertEquals(info.state, "payment_failed", "state");
+    assertEquals(info.dailyLimit, 50, "dailyLimit");
+    assertEquals(info.canAccessProModels, true, "canAccessProModels");
+    assertEquals((await checkRateLimit("user-1", "anthropic/claude-sonnet-5.5")).allowed, true, "allowed");
+  });
+});
+
+Deno.test("a failed subscriptions read still serves access the settings row proves", async () => {
+  const originalWarn = console.warn;
+  console.warn = () => {};
+  try {
+    await withSupabase({
+      user_settings: { subscription_tier: "trial", daily_limit_override: null, trial_ends_at: future(), grace_period_ends_at: null },
+      subscriptions: () => json({ message: "boom", code: "XX000" }, 500),
+    }, async () => {
+      assertEquals((await checkRateLimit("user-1")).allowed, true, "allowed");
+    });
+  } finally {
+    console.warn = originalWarn;
+  }
+});
+
+Deno.test("a failed subscriptions read fails closed", async () => {
+  const originalError = console.error;
+  const originalWarn = console.warn;
+  console.error = () => {};
+  console.warn = () => {};
+  try {
+    await withSupabase({
+      user_settings: { subscription_tier: "pro", daily_limit_override: null, trial_ends_at: null, grace_period_ends_at: null },
+      subscriptions: () => json({ message: "boom", code: "XX000" }, 500),
+    }, async () => {
+      const result = await checkRateLimit("user-1");
+      assertEquals(result.allowed, false, "allowed");
+      assertEquals(result.statusCode, 500, "statusCode");
+    });
+  } finally {
+    console.error = originalError;
+    console.warn = originalWarn;
+  }
+});
+
+const proUser = { subscription_tier: "pro", daily_limit_override: null, trial_ends_at: null, grace_period_ends_at: future() };
+
+Deno.test("an expensive model reserves its weighted units and the weekly cap", async () => {
+  let sent: Record<string, unknown> = {};
+  await withSupabase({ user_settings: proUser, onQuota: (body) => { sent = body; } }, async () => {
+    const result = await checkRateLimit("user-1", "anthropic/claude-opus-5.5");
+    assertEquals(result.allowed, true, "allowed");
+    assertEquals(sent.p_units, MODEL_QUOTA_UNITS["anthropic/claude-opus-5.5"], "p_units");
+    assertEquals(sent.p_weekly_cap_usd, WEEKLY_AI_BUDGET_USD, "p_weekly_cap_usd");
+  });
+  await withSupabase({ user_settings: proUser, onQuota: (body) => { sent = body; } }, async () => {
+    await checkRateLimit("user-1", "openai/gpt-6-luna");
+    assertEquals(sent.p_units, 1, "cheap model p_units");
+  });
+});
+
+Deno.test("a weighted refusal says how many requests remain", async () => {
+  await withSupabase({ user_settings: proUser, quota: [{ allowed: false, current_count: 47, denied_by: "daily" }] }, async () => {
+    const result = await checkRateLimit("user-1", "anthropic/claude-opus-5.5");
+    assertEquals(result.code, "limit_reached", "code");
+    assertEquals(result.units, 5, "units");
+    assertEquals(result.reason?.includes("3 left today"), true, "reason mentions remaining requests");
+  });
+});
+
+Deno.test("the weekly budget refusal has its own code", async () => {
+  await withSupabase({ user_settings: proUser, quota: [{ allowed: false, current_count: 2, denied_by: "weekly" }] }, async () => {
+    const result = await checkRateLimit("user-1", "openai/gpt-6-luna");
     assertEquals(result.allowed, false, "allowed");
-    assertEquals(result.code, "trial_expired", "code");
+    assertEquals(result.code, "weekly_budget_reached", "code");
     assertEquals(result.statusCode, 402, "statusCode");
   });
+});
+
+Deno.test("configured daily limits prefer the account row, then the global row", async () => {
+  const requests: string[] = [];
+  const limits = (url: URL) => {
+    if (url.searchParams.get("user_id") === "eq.user-1") return json({ limit_value: 12 });
+    if (url.searchParams.get("user_id") === "is.null") return json({ limit_value: 7 });
+    return json(null);
+  };
+  await withSupabase({ requests, rate_limits: limits }, async () => {
+    assertEquals(await getConfiguredDailyLimit("user-1", 5), 12, "per-user row");
+  });
+  assertEquals(requests.some((query) => query.includes("updated_at")), false, "never orders by updated_at");
+  assertEquals(requests.some((query) => query.includes("order=created_at.desc")), true, "orders by created_at");
+
+  await withSupabase({
+    rate_limits: (url: URL) => url.searchParams.get("user_id") === "is.null" ? json({ limit_value: 7 }) : json(null),
+  }, async () => {
+    assertEquals(await getConfiguredDailyLimit("user-1", 5), 7, "global row");
+  });
+
+  await withSupabase({ rate_limits: null }, async () => {
+    assertEquals(await getConfiguredDailyLimit("user-1", 5), 5, "fallback");
+  });
+});
+
+Deno.test("a rate_limits lookup error is logged and does not invent a limit", async () => {
+  const warnings: string[] = [];
+  const original = console.warn;
+  console.warn = (...args: unknown[]) => {
+    warnings.push(args.map((part) => typeof part === "string" ? part : JSON.stringify(part)).join(" "));
+  };
+  try {
+    await withSupabase({
+      rate_limits: () => json({ message: "column rate_limits.updated_at does not exist", code: "42703" }, 400),
+    }, async () => {
+      assertEquals(await getConfiguredDailyLimit("user-1", 5), 5, "fallback after the error");
+    });
+  } finally {
+    console.warn = original;
+  }
+  assertEquals(warnings.some((line) => line.includes("[RATE LIMIT]") && line.includes("updated_at")), true, "server warning");
+  assertEquals(warnings.some((line) => line.includes("user-1")), false, "warning omits the user id");
+});
+
+Deno.test("a user with no role row is not banned and the lookup does not demand one object", async () => {
+  let accept = "";
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = (async (input: Request | URL | string, init?: RequestInit) => {
+    const request = input instanceof Request ? input : new Request(String(input), init);
+    if (request.url.includes("/rest/v1/user_roles")) {
+      accept = request.headers.get("Accept") ?? request.headers.get("accept") ?? "";
+      return json([]);
+    }
+    throw new Error(`Unexpected request: ${request.url}`);
+  }) as typeof fetch;
+  try {
+    assertEquals(await checkUserBanned("user-1"), false, "not banned");
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+  assertEquals(accept.includes("vnd.pgrst.object"), false, "Accept must not require a single object");
+});
+
+Deno.test("a model heavier than the whole daily limit is not told to wait", async () => {
+  const smallLimit = { ...proUser, daily_limit_override: 3 };
+  await withSupabase({ user_settings: smallLimit, quota: [{ allowed: false, current_count: 0, denied_by: "daily" }] }, async () => {
+    const result = await checkRateLimit("user-1", "anthropic/claude-opus-5.5");
+    assertEquals(result.code, "limit_reached", "code");
+    assertEquals(result.limit, 3, "limit");
+    assertEquals(result.reason?.includes("more than your daily limit of 3"), true, `reason: ${result.reason}`);
+    assertEquals(result.reason?.includes("midnight"), false, "reason must not suggest waiting");
+  });
+});
+
+Deno.test("ai_requests.error_code keeps codes and never stores raw provider text", () => {
+  const warn = console.warn;
+  console.warn = () => undefined;
+  try {
+    for (const [raw, code] of [
+      [undefined, undefined],
+      ["claude_unavailable", "claude_unavailable"],
+      ["elevenlabs_503", "elevenlabs_503"],
+      ["AbortError", "aborted"],
+      ["Request timed out after 120s", "timeout"],
+      ["Rate limit exceeded: too many requests for model x", "rate_limited"],
+      ["OpenRouter error: {\"message\":\"Provider returned error\",\"metadata\":{\"raw\":\"...\"}}", "provider_error"],
+    ] as const) {
+      assertEquals(normalizeErrorCode(raw), code, `normalizeErrorCode(${raw})`);
+    }
+  } finally {
+    console.warn = warn;
+  }
 });

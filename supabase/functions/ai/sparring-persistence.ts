@@ -1,3 +1,5 @@
+import type { JsonOutputSchema } from "../_shared/research.ts";
+
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const MAX_MOTION_LENGTH = 1_200;
 const MAX_LANGUAGE_LENGTH = 32;
@@ -404,41 +406,79 @@ export function parseSparringRequest(value: unknown): { request: SparringRequest
   };
 }
 
-function parseScoreCategory(value: unknown): SparringScorecardRecord["categories"][number] | null {
-  if (!isRecord(value)) return null;
-  const names: SparringScorecardRecord["categories"][number]["name"][] = ["Logic", "Evidence", "Delivery", "Strategy"];
-  const name = typeof value.name === "string" ? names.find((candidate) => candidate === value.name) : undefined;
+const SCORE_CATEGORY_NAMES = ["Logic", "Evidence", "Delivery", "Strategy"] as const;
+const MAX_SCORE_LIST_ITEMS = 12;
+const MAX_TARGETED_POINTS = 8;
+
+/** A provider answer that fails the shape: `path` names the first failing field, never its content. */
+type Checked<T> = { ok: true; value: T } | { ok: false; path: string };
+
+const fail = (path: string): { ok: false; path: string } => ({ ok: false, path });
+
+function checkScoreCategory(value: unknown, path: string): Checked<SparringScorecardRecord["categories"][number]> {
+  if (!isRecord(value)) return fail(path);
+  const name = typeof value.name === "string" ? SCORE_CATEGORY_NAMES.find((candidate) => candidate === value.name) : undefined;
+  if (!name) return fail(`${path}.name`);
+  if (!integerInRange(value.userScore, 0, 25)) return fail(`${path}.userScore`);
+  if (!integerInRange(value.aiScore, 0, 25)) return fail(`${path}.aiScore`);
   const feedback = cleanString(value.feedback, 2_000);
-  if (!name || !feedback || !integerInRange(value.userScore, 0, 25) || !integerInRange(value.aiScore, 0, 25)) return null;
-  return { name, userScore: value.userScore, aiScore: value.aiScore, feedback };
+  if (!feedback) return fail(`${path}.feedback`);
+  return { ok: true, value: { name, userScore: value.userScore, aiScore: value.aiScore, feedback } };
+}
+
+function checkStringList(value: unknown, path: string, maxItems: number, maxLength: number): Checked<string[]> {
+  if (!Array.isArray(value)) return fail(path);
+  if (value.length > maxItems) return fail(`${path}.length`);
+  const items: string[] = [];
+  for (const [index, item] of value.entries()) {
+    const clean = cleanString(item, maxLength);
+    if (!clean) return fail(`${path}[${index}]`);
+    items.push(clean);
+  }
+  return { ok: true, value: items };
+}
+
+/** Validates a scorecard, or names the first field (as `scorecard.<path>`) that is wrong. */
+export function checkSparringScorecard(value: unknown): Checked<SparringScorecardRecord> {
+  if (!isRecord(value)) return fail("scorecard");
+  if (!Array.isArray(value.categories)) return fail("scorecard.categories");
+  if (value.categories.length !== 4) return fail("scorecard.categories.length");
+  const categories: SparringScorecardRecord["categories"] = [];
+  for (const [index, item] of value.categories.entries()) {
+    const category = checkScoreCategory(item, `scorecard.categories[${index}]`);
+    if (!category.ok) return category;
+    categories.push(category.value);
+  }
+  if (new Set(categories.map((category) => category.name)).size !== 4) return fail("scorecard.categories.name");
+  const overallFeedback = cleanString(value.overallFeedback, 4_000);
+  if (!overallFeedback) return fail("scorecard.overallFeedback");
+  const keyMoments = checkStringList(value.keyMoments, "scorecard.keyMoments", MAX_SCORE_LIST_ITEMS, 1_000);
+  if (!keyMoments.ok) return keyMoments;
+  const improvementAreas = checkStringList(value.improvementAreas, "scorecard.improvementAreas", MAX_SCORE_LIST_ITEMS, 1_000);
+  if (!improvementAreas.ok) return improvementAreas;
+  if (!integerInRange(value.userScore, 0, 100)) return fail("scorecard.userScore");
+  if (!integerInRange(value.aiScore, 0, 100)) return fail("scorecard.aiScore");
+  if (value.winner !== "user" && value.winner !== "ai" && value.winner !== "tie") return fail("scorecard.winner");
+  const verdict = cleanString(value.verdict, 2_000);
+  if (!verdict) return fail("scorecard.verdict");
+  return {
+    ok: true,
+    value: {
+      userScore: value.userScore,
+      aiScore: value.aiScore,
+      categories,
+      overallFeedback,
+      keyMoments: keyMoments.value,
+      improvementAreas: improvementAreas.value,
+      winner: value.winner,
+      verdict,
+    },
+  };
 }
 
 export function parseSparringScorecard(value: unknown): SparringScorecardRecord | null {
-  if (!isRecord(value)) return null;
-  const categories = Array.isArray(value.categories) ? value.categories.map(parseScoreCategory) : null;
-  if (!categories || categories.length !== 4 || categories.some((category) => category === null)) return null;
-  const parsedCategories = categories.filter((category): category is SparringScorecardRecord["categories"][number] => category !== null);
-  if (parsedCategories.length !== 4) return null;
-  const requiredNames = new Set(["Logic", "Evidence", "Delivery", "Strategy"]);
-  const categoryNames = parsedCategories.map((category) => category.name);
-  if (new Set(categoryNames).size !== 4 || categoryNames.some((name) => !requiredNames.has(name))) return null;
-  const overallFeedback = cleanString(value.overallFeedback, 4_000);
-  const verdict = cleanString(value.verdict, 2_000);
-  const keyMoments = Array.isArray(value.keyMoments) ? value.keyMoments.map((item) => cleanString(item, 1_000)) : null;
-  const improvementAreas = Array.isArray(value.improvementAreas) ? value.improvementAreas.map((item) => cleanString(item, 1_000)) : null;
-  if (!overallFeedback || !verdict || !keyMoments || !improvementAreas || keyMoments.length > 12 || improvementAreas.length > 12 || keyMoments.some((item) => !item) || improvementAreas.some((item) => !item)) return null;
-  if (!integerInRange(value.userScore, 0, 100) || !integerInRange(value.aiScore, 0, 100)) return null;
-  if (value.winner !== "user" && value.winner !== "ai" && value.winner !== "tie") return null;
-  return {
-    userScore: value.userScore,
-    aiScore: value.aiScore,
-    categories: parsedCategories,
-    overallFeedback,
-    keyMoments: keyMoments.filter((item): item is string => Boolean(item)),
-    improvementAreas: improvementAreas.filter((item): item is string => Boolean(item)),
-    winner: value.winner,
-    verdict,
-  };
+  const checked = checkSparringScorecard(value);
+  return checked.ok ? checked.value : null;
 }
 
 function scorecardMatchesDerivedValues(scorecard: SparringScorecardRecord): boolean {
@@ -448,48 +488,145 @@ function scorecardMatchesDerivedValues(scorecard: SparringScorecardRecord): bool
   return scorecard.userScore === userScore && scorecard.aiScore === aiScore && scorecard.winner === winner;
 }
 
-export function parseSparringProviderOutput(value: unknown, expectedAction: SparringRequest["action"]): SparringProviderOutput | null {
-  if (!isRecord(value) || value.action !== expectedAction) return null;
+/** Validates a provider answer for the action, or names the first field that is wrong. */
+export function checkSparringProviderOutput(value: unknown, expectedAction: SparringRequest["action"]): Checked<SparringProviderOutput> {
+  if (!isRecord(value)) return fail("$");
+  if (value.action !== expectedAction) return fail("action");
   if (expectedAction === "respond") {
-    if (!isRecord(value.speech)) return null;
+    if (!isRecord(value.speech)) return fail("speech");
     const content = cleanString(value.speech.content, MAX_SPEECH_CONTENT_LENGTH);
+    if (!content) return fail("speech.content");
     const strategy = cleanString(value.speech.strategy, 2_000);
-    const targetedPoints = Array.isArray(value.speech.targetedPoints)
-      ? value.speech.targetedPoints.map((point) => cleanString(point, 500))
-      : null;
-    if (!content || !strategy || !targetedPoints || targetedPoints.length > 8 || targetedPoints.some((point) => !point)) return null;
-    return {
-      action: "respond",
-      speech: { content, strategy, targetedPoints: targetedPoints.filter((point): point is string => Boolean(point)) },
-    };
+    if (!strategy) return fail("speech.strategy");
+    const targetedPoints = checkStringList(value.speech.targetedPoints, "speech.targetedPoints", MAX_TARGETED_POINTS, 500);
+    if (!targetedPoints.ok) return targetedPoints;
+    return { ok: true, value: { action: "respond", speech: { content, strategy, targetedPoints: targetedPoints.value } } };
   }
-  const scorecard = parseSparringScorecard(value.scorecard);
-  return scorecard ? { action: "score", scorecard } : null;
+  const scorecard = checkSparringScorecard(value.scorecard);
+  return scorecard.ok ? { ok: true, value: { action: "score", scorecard: scorecard.value } } : scorecard;
+}
+
+export function parseSparringProviderOutput(value: unknown, expectedAction: SparringRequest["action"]): SparringProviderOutput | null {
+  const checked = checkSparringProviderOutput(value, expectedAction);
+  return checked.ok ? checked.value : null;
+}
+
+// Narrative list items some models write as objects instead of strings.
+const LIST_ITEM_TEXT_FIELDS = ["text", "moment", "description"] as const;
+
+function flattenListItems(value: unknown): unknown {
+  if (!Array.isArray(value)) return value;
+  return value.map((item) => {
+    if (!isRecord(item)) return item;
+    const field = LIST_ITEM_TEXT_FIELDS.find((name) => typeof item[name] === "string");
+    return field ? item[field] : item;
+  });
 }
 
 /**
- * Repair the one common provider shape error without filling in omitted data.
- * Some JSON models place scorecard narrative fields beside `scorecard` rather
- * than inside it. Only known fields are moved, then totals and winner are
- * derived from the four validated category scores.
+ * Repair the common provider shape errors without filling in omitted data.
+ * Some models place scorecard narrative fields beside `scorecard` rather than
+ * inside it, or write a key moment or improvement area as an object holding
+ * its text. Only known fields are moved, and only a text, moment, or
+ * description string is taken from an object; then totals and winner are
+ * derived from the four validated category scores. An answer that still does
+ * not parse is returned with those repairs, so its failing field is the real one.
  */
 export function normalizeSparringOutput(value: unknown, expectedAction: SparringRequest["action"]): unknown {
   if (expectedAction !== "score" || !isRecord(value) || value.action !== "score" || !isRecord(value.scorecard)) return value;
 
   const scorecard = { ...value.scorecard };
-  const movableFields = ["keyMoments", "improvementAreas", "winner", "verdict"] as const;
+  const movableFields = ["overallFeedback", "keyMoments", "improvementAreas", "winner", "verdict"] as const;
   for (const field of movableFields) {
     if (scorecard[field] === undefined && value[field] !== undefined) scorecard[field] = value[field];
   }
+  scorecard.keyMoments = flattenListItems(scorecard.keyMoments);
+  scorecard.improvementAreas = flattenListItems(scorecard.improvementAreas);
 
   const parsed = parseSparringScorecard(scorecard);
-  if (!parsed) return value;
+  if (!parsed) return { action: "score", scorecard };
   const userScore = parsed.categories.reduce((total, category) => total + category.userScore, 0);
   const aiScore = parsed.categories.reduce((total, category) => total + category.aiScore, 0);
   const winner = userScore === aiScore ? "tie" : userScore > aiScore ? "user" : "ai";
   return {
     action: "score",
     scorecard: { ...parsed, userScore, aiScore, winner },
+  };
+}
+
+const PROSE = { type: "string" };
+const STRING_LIST = (description: string) => ({ type: "array", items: PROSE, description });
+
+/**
+ * The strict json_schema each sparring call is constrained to. Anthropic's
+ * structured outputs take no numeric or array-size constraints, so the 0-25
+ * category range, the four categories, and the list limits are stated in
+ * descriptions and enforced by checkSparringProviderOutput.
+ */
+export function sparringOutputSchema(action: SparringRequest["action"]): JsonOutputSchema {
+  if (action === "respond") {
+    return {
+      name: "sparring_speech",
+      schema: {
+        type: "object",
+        properties: {
+          action: { type: "string", enum: ["respond"] },
+          speech: {
+            type: "object",
+            properties: {
+              content: PROSE,
+              strategy: PROSE,
+              targetedPoints: STRING_LIST(`At most ${MAX_TARGETED_POINTS} transcript points`),
+            },
+            required: ["content", "strategy", "targetedPoints"],
+            additionalProperties: false,
+          },
+        },
+        required: ["action", "speech"],
+        additionalProperties: false,
+      },
+    };
+  }
+  const score = (description: string) => ({ type: "integer", description });
+  return {
+    name: "sparring_scorecard",
+    schema: {
+      type: "object",
+      properties: {
+        action: { type: "string", enum: ["score"] },
+        scorecard: {
+          type: "object",
+          properties: {
+            userScore: score("Sum of the user's four category scores, 0-100"),
+            aiScore: score("Sum of the AI's four category scores, 0-100"),
+            categories: {
+              type: "array",
+              description: "Exactly four categories, one each of Logic, Evidence, Delivery, Strategy",
+              items: {
+                type: "object",
+                properties: {
+                  name: { type: "string", enum: [...SCORE_CATEGORY_NAMES] },
+                  userScore: score("Integer 0-25"),
+                  aiScore: score("Integer 0-25"),
+                  feedback: PROSE,
+                },
+                required: ["name", "userScore", "aiScore", "feedback"],
+                additionalProperties: false,
+              },
+            },
+            overallFeedback: PROSE,
+            keyMoments: STRING_LIST(`At most ${MAX_SCORE_LIST_ITEMS} key moments, each a plain string`),
+            improvementAreas: STRING_LIST(`At most ${MAX_SCORE_LIST_ITEMS} improvement areas, each a plain string`),
+            winner: { type: "string", enum: ["user", "ai", "tie"] },
+            verdict: PROSE,
+          },
+          required: ["userScore", "aiScore", "categories", "overallFeedback", "keyMoments", "improvementAreas", "winner", "verdict"],
+          additionalProperties: false,
+        },
+      },
+      required: ["action", "scorecard"],
+      additionalProperties: false,
+    },
   };
 }
 

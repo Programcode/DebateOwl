@@ -20,7 +20,7 @@ export function LibraryHeader({ title, onAdd, disabled }: { title: string; onAdd
   ];
   return (
     <View style={styles.header}>
-      <Text accessibilityRole="header" weight="bold" style={styles.title}>
+      <Text accessibilityRole="header" weight="display" style={styles.title}>
         {title}
       </Text>
       <Pressable
@@ -30,7 +30,7 @@ export function LibraryHeader({ title, onAdd, disabled }: { title: string; onAdd
         disabled={disabled}
         onPress={() => setOpen((value) => !value)}
         testID="library-add"
-        style={[styles.plus, { backgroundColor: colors.primary }, disabled && styles.disabled]}>
+        style={[styles.plus, { backgroundColor: colors.primaryFill }, disabled && styles.disabled]}>
         <Icon name="plus" color={colors.onPrimary} size={24} />
       </Pressable>
       {open ? (
@@ -71,7 +71,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     borderWidth: StyleSheet.hairlineWidth,
     overflow: 'hidden',
-    boxShadow: '0 14px 40px -10px rgba(15,23,42,0.4)',
+    boxShadow: '0 14px 40px -10px rgba(11,42,110,0.4)',
   },
   item: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 17, minHeight: 52 },
   itemLabel: { fontSize: 17 },

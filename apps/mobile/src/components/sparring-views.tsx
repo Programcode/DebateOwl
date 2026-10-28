@@ -2,7 +2,6 @@ import type { SparringScorecard, SparringSpeech } from '@debatelab/core/ai/schem
 import { formatRoundTime } from '@debatelab/core/sparring/formats';
 import type { SparringSession } from '@debatelab/core/sparring/session';
 import type { TFunction } from 'i18next';
-import { LinearGradient } from 'expo-linear-gradient';
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { StyleSheet, View } from 'react-native';
@@ -17,7 +16,7 @@ import { backLabel } from '@/lib/back-label';
 import { confirmDestructive } from '@/lib/confirm';
 import { shareText } from '@/lib/export';
 import { deleteSparringRound } from '@/lib/sparring';
-import { mainActionGradient, radius } from '@/theme/colors';
+import { radius } from '@/theme/colors';
 import { useTheme } from '@/theme/use-theme';
 
 const CATEGORY_MAX = 25;
@@ -134,7 +133,7 @@ export function SparringScorecardView({ session, scorecard, transcriptOpen }: { 
         <Text tone="faint" style={styles.eyebrow}>
           {t('sparring.scorecard.eyebrow')}
         </Text>
-        <Text accessibilityRole="header" weight="bold" style={styles.title}>
+        <Text accessibilityRole="header" weight="display" style={styles.title}>
           {winnerText(t, scorecard.winner)}
         </Text>
         <Text tone="faint" style={styles.motion} numberOfLines={3}>
@@ -143,8 +142,10 @@ export function SparringScorecardView({ session, scorecard, transcriptOpen }: { 
       </View>
 
       <View style={styles.totals}>
-        <View style={[styles.total, styles.totalOwn]} accessible accessibilityLabel={`${t('sparring.scorecard.yourScore')}: ${scorecard.userScore}`}>
-          <LinearGradient {...mainActionGradient} style={StyleSheet.absoluteFill} />
+        <View
+          style={[styles.total, styles.totalOwn, { backgroundColor: colors.primaryFill, borderBottomColor: colors.primaryLedge }]}
+          accessible
+          accessibilityLabel={`${t('sparring.scorecard.yourScore')}: ${scorecard.userScore}`}>
           <Text style={[styles.totalLabel, styles.onGradient]}>{t('sparring.scorecard.yourScore')}</Text>
           <Text weight="bold" style={[styles.totalValue, styles.onGradient]} testID="sparring-user-score">
             {scorecard.userScore}
@@ -184,7 +185,7 @@ export function SparringScorecardView({ session, scorecard, transcriptOpen }: { 
               </Text>
             </View>
             <View style={[styles.track, { backgroundColor: colors.line }]}>
-              <View style={[styles.fill, { width: `${(category.userScore / CATEGORY_MAX) * 100}%`, backgroundColor: colors.primary }]} />
+              <View style={[styles.fill, { width: `${(category.userScore / CATEGORY_MAX) * 100}%`, backgroundColor: colors.primaryFill }]} />
               {/* The opponent's score is the tick on the same bar. */}
               <View style={[styles.tick, { left: `${(category.aiScore / CATEGORY_MAX) * 100}%`, backgroundColor: colors.secondary }]} />
             </View>
@@ -281,12 +282,12 @@ const styles = StyleSheet.create({
   motion: { fontSize: 15, lineHeight: 20, marginTop: 2 },
   totals: { flexDirection: 'row', gap: 10 },
   total: { flex: 1, borderRadius: radius.card + 2, paddingHorizontal: 15, paddingVertical: 13, overflow: 'hidden', gap: 2 },
-  totalOwn: { borderWidth: 0 },
-  totalBorder: { borderWidth: 1 },
+  totalOwn: { borderWidth: 0, borderBottomWidth: 4 },
+  totalBorder: { borderWidth: 2 },
   totalLabel: { fontSize: 14.5 },
-  onGradient: { color: '#ffffff' },
+  onGradient: { color: '#FFFFFF' },
   totalValue: { fontSize: 38, lineHeight: 44, letterSpacing: -1, fontVariant: ['tabular-nums'] },
-  card: { borderWidth: 1, borderRadius: radius.card + 1, paddingHorizontal: 16, paddingVertical: 15, gap: 10 },
+  card: { borderWidth: 2, borderRadius: radius.card + 1, paddingHorizontal: 16, paddingVertical: 15, gap: 10 },
   cardHead: { gap: 2, marginBottom: 2 },
   cardTitle: { fontSize: 16.5 },
   cardDescription: { fontSize: 14, lineHeight: 19 },

@@ -6,7 +6,15 @@ for (const [key, value] of Object.entries({
   SUPABASE_SERVICE_ROLE_KEY: "test-service-role-key",
 })) Deno.env.set(key, value);
 
-const { handleRequest } = await import("./index.ts");
+const { handleRequest, sourceTransport } = await import("./index.ts");
+
+// These tests stub the source with globalThis.fetch. Route the pinned transport
+// there, recording the addresses each hop was allowed to dial.
+const dialedAddresses: string[][] = [];
+sourceTransport.get = (url, addresses, headers, signal) => {
+  dialedAddresses.push(addresses);
+  return fetch(url, { headers, signal, redirect: "manual" });
+};
 
 // A body that sends one small chunk every 500 ms forever, or never sends at all.
 function slowBody(mode: "drip" | "stall", onCancel: () => void) {
@@ -43,6 +51,7 @@ async function importAgainstSlowServer(mode: "drip" | "stall") {
     if (url.pathname === "/auth/v1/user") return Response.json({ id: "user-1", aud: "authenticated" });
     if (url.pathname.includes("/rest/v1/user_roles")) return Response.json({ role: "user" });
     if (url.pathname.includes("/rest/v1/rpc/consume_daily_quota")) return Response.json([{ allowed: true, current_count: 1 }]);
+    if (url.pathname.includes("/rest/v1/rpc/refund_daily_quota")) return Response.json(0);
     if (url.pathname.includes("/rest/v1/ai_requests")) return new Response(null, { status: 201 });
     throw new Error(`Unexpected request: ${url}`);
   }) as typeof fetch;
@@ -91,6 +100,7 @@ Deno.test("import-source stops waiting for a request body that never finishes", 
     if (url.pathname === "/auth/v1/user") return Response.json({ id: "user-1", aud: "authenticated" });
     if (url.pathname.includes("/rest/v1/user_roles")) return Response.json({ role: "user" });
     if (url.pathname.includes("/rest/v1/rpc/consume_daily_quota")) return Response.json([{ allowed: true, current_count: 1 }]);
+    if (url.pathname.includes("/rest/v1/rpc/refund_daily_quota")) return Response.json(0);
     if (url.pathname.includes("/rest/v1/ai_requests")) return new Response(null, { status: 201 });
     sourceRequests.push(url.toString());
     throw new Error(`Unexpected request: ${url}`);

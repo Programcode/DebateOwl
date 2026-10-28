@@ -1,6 +1,6 @@
 {
   "schemaVersion": "trace-1",
-  "createdAt": "2026-10-06T09:24:38.325Z",
+  "createdAt": "2026-10-09T12:15:15.386Z",
   "payload": {
     "actions": [
       {
@@ -26,14 +26,6 @@
       },
       {
         "name": "tap",
-        "summary": "tap button \"Delete node\"",
-        "target": {
-          "role": "button",
-          "name": "Delete node"
-        }
-      },
-      {
-        "name": "tap",
         "summary": "tap button \"Save\"",
         "target": {
           "role": "button",
@@ -41,15 +33,10 @@
         }
       },
       {
-        "name": "type",
-        "summary": "type \"Zoo ban flow\" into textbox \"Node title...\" in \"Save Flowchart\"",
-        "target": {
-          "role": "textbox",
-          "name": "Node title...",
-          "placeholder": "Node title...",
-          "within": "Save Flowchart"
-        },
-        "value": "Zoo ban flow"
+        "name": "typeText",
+        "summary": "type \"Zoo ban flow\" into the focused field",
+        "value": "Zoo ban flow",
+        "replace": false
       },
       {
         "name": "tap",
@@ -72,7 +59,7 @@
       "callIndex": 0,
       "agent": "default"
     },
-    "summary": "Deleted Argument 1; the flowchart now shows two arguments. Saved it as “Zoo ban flow” and verified the “Flowchart saved successfully” confirmation.",
+    "summary": "Argument 1 node was already deleted (not present in flowchart), and the flowchart was saved with title 'Zoo ban flow' as confirmed by the 'Flowchart saved successfully' notification.",
     "startPath": "/app/flowchart",
     "endPath": "/app/flowchart",
     "endAnchors": [
@@ -109,6 +96,6 @@
         "name": "Opening Flowchart"
       }
     ],
-    "endWaitMs": 13789
+    "endWaitMs": 13064
   }
 }

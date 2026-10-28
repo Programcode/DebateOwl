@@ -14,16 +14,24 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { GenerateInputSchema, type GenerateInput } from '@/lib/ai/schemas/generate';
 import { LoadingSpinner } from '@/components/ui/loading-spinner';
+import { ListeningIndicator } from '@/components/features/voice/ListeningIndicator';
 import { useDebateMotionPrefill } from '@/components/features/debate/CurrentDebateStrip';
 import { useSessionStore } from '@/lib/stores/session-store';
+import { MAX_MOTION_LENGTH, selectCurrentDebate, useDebateStore } from '@/lib/stores/debate-store';
 import { useSpeechToText } from '@/hooks/use-speech-to-text';
 import { ModelSelector } from '@/components/ModelSelector';
 import { DebateContextControl } from '@/components/features/debate/DebateContextControl';
 import { requestSide } from '../../../../supabase/functions/_shared/debate-context';
 
+
+const GENERATE_ROLES: readonly string[] = GenerateInputSchema.shape.role.options;
+
+function isGenerateRole(value: unknown): value is GenerateInput['role'] {
+  return typeof value === 'string' && GENERATE_ROLES.includes(value);
+}
 
 interface GenerateFormProps {
   onSubmit: (data: GenerateInput) => void;
@@ -32,15 +40,19 @@ interface GenerateFormProps {
   debatePrefill?: boolean;
 }
 
-function OptionSelect<V extends string>({ value, onValueChange, options, triggerClassName }: {
+function OptionSelect<V extends string>({ id, labelId, value, onValueChange, options, triggerClassName }: {
+  id: string;
+  labelId: string;
   value: V;
   onValueChange: (value: V) => void;
   options: { value: V; label: string }[];
   triggerClassName?: string;
 }) {
   return (
-    <Select value={value} onValueChange={(next) => onValueChange(next as V)}>
-      <SelectTrigger className={triggerClassName}>
+    // Radix's hidden native select reports '' when a value is set before its options exist
+    // (the debate's role on first render); no option is empty, so that is never a choice.
+    <Select value={value} onValueChange={(next) => { if (next) onValueChange(next as V); }}>
+      <SelectTrigger id={id} aria-labelledby={labelId} className={triggerClassName}>
         <SelectValue />
       </SelectTrigger>
       <SelectContent>
@@ -84,7 +96,12 @@ export function GenerateForm({ onSubmit, isLoading, debatePrefill = true }: Gene
     return () => subscription.unsubscribe();
   }, [watch, setGenerateForm]);
 
-  useDebateMotionPrefill(() => getValues('motion'), (motion) => setValue('motion', motion, { shouldValidate: true }), !debatePrefill);
+  // Filling in a debate's motion also takes its speaker role, including "Any role".
+  useDebateMotionPrefill(() => getValues('motion'), (motion) => {
+    setValue('motion', motion, { shouldValidate: true });
+    const role = selectCurrentDebate(useDebateStore.getState())?.settings.role;
+    if (isGenerateRole(role)) setValue('role', role);
+  }, !debatePrefill);
 
   // Voice input integration
   const { isListening, transcript, error: voiceError, startListening, stopListening, resetTranscript, hasSupport: hasVoiceSupport } = useSpeechToText();
@@ -109,18 +126,7 @@ export function GenerateForm({ onSubmit, isLoading, debatePrefill = true }: Gene
 
   return (
     <Card className="border-primary/20">
-      <CardHeader className="bg-gradient-to-br from-primary/5 to-transparent">
-        <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
-            <Sparkles className="h-5 w-5 text-primary" />
-          </div>
-          <div>
-            <CardTitle>{t('generateForm.title')}</CardTitle>
-            <CardDescription>{t('generateForm.subtitle')}</CardDescription>
-          </div>
-        </div>
-      </CardHeader>
-      <CardContent className="pt-4">
+      <CardContent className="pt-6">
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           {/* Motion Input with Voice */}
           <div className="space-y-2">
@@ -131,6 +137,7 @@ export function GenerateForm({ onSubmit, isLoading, debatePrefill = true }: Gene
               <Input
                 id="motion"
                 {...register('motion')}
+                maxLength={MAX_MOTION_LENGTH}
                 placeholder={t('generateForm.motionPlaceholder')}
                 className="h-12 flex-1"
               />
@@ -139,7 +146,7 @@ export function GenerateForm({ onSubmit, isLoading, debatePrefill = true }: Gene
                   type="button"
                   variant={isListening ? "destructive" : "outline"}
                   size="icon"
-                  className={`h-12 w-12 shrink-0 ${isListening ? 'animate-pulse' : ''}`}
+                  className="h-12 w-12 shrink-0"
                   onClick={toggleVoice}
                   title={isListening ? t('generateForm.stopListening') : t('generateForm.dictate')}
                   aria-label={isListening ? t('generateForm.stopVoice') : t('generateForm.startVoice')}
@@ -149,13 +156,7 @@ export function GenerateForm({ onSubmit, isLoading, debatePrefill = true }: Gene
               )}
             </div>
             {isListening && (
-              <div className="flex items-center gap-2 text-sm text-primary animate-pulse">
-                <span className="relative flex h-2 w-2">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-                  <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
-                </span>
-                {t('generateForm.listening')}
-              </div>
+              <ListeningIndicator label={t('generateForm.listening')} />
             )}
             {voiceError && (
               <p className="text-sm text-destructive">
@@ -165,7 +166,7 @@ export function GenerateForm({ onSubmit, isLoading, debatePrefill = true }: Gene
               </p>
             )}
             {errors.motion && (
-              <p className="text-sm text-destructive">{errors.motion.message}</p>
+              <p className="text-sm text-destructive">{t(errors.motion.message ?? '')}</p>
             )}
           </div>
 
@@ -173,8 +174,10 @@ export function GenerateForm({ onSubmit, isLoading, debatePrefill = true }: Gene
           <div className="grid gap-4 sm:grid-cols-2">
             {/* Side */}
             <div className="space-y-2">
-              <Label className="text-sm font-medium">{t('generateForm.side')}</Label>
+              <Label id="generate-side-label" htmlFor="generate-side" className="text-sm font-medium">{t('generateForm.side')}</Label>
               <OptionSelect
+                id="generate-side"
+                labelId="generate-side-label"
                 value={currentValues.side}
                 onValueChange={(value) => setValue('side', value)}
                 options={[
@@ -186,11 +189,14 @@ export function GenerateForm({ onSubmit, isLoading, debatePrefill = true }: Gene
 
             {/* Role */}
             <div className="space-y-2">
-              <Label className="text-sm font-medium">{t('generateForm.role')}</Label>
+              <Label id="generate-role-label" htmlFor="generate-role" className="text-sm font-medium">{t('generateForm.role')}</Label>
               <OptionSelect
+                id="generate-role"
+                labelId="generate-role-label"
                 value={currentValues.role}
                 onValueChange={(value) => setValue('role', value)}
                 options={[
+                  { value: 'general', label: t('debate.roleAny', 'Any role') },
                   { value: 'intro', label: t('generateForm.roleIntro') },
                   { value: 'r1', label: t('generateForm.roleR1') },
                   { value: 'r2', label: t('generateForm.roleR2') },
@@ -217,7 +223,7 @@ export function GenerateForm({ onSubmit, isLoading, debatePrefill = true }: Gene
                 <SlidersHorizontal className="h-4 w-4" />
                 {t('generateForm.moreOptions')}
               </span>
-              <ChevronDown className={`h-4 w-4 transition-transform duration-300 ${advancedOpen ? 'rotate-180' : ''}`} />
+              <ChevronDown className={`h-4 w-4 transition-transform duration-150 ease-out-strong ${advancedOpen ? 'rotate-180' : ''}`} />
             </Button>
           </div>
 
@@ -231,8 +237,10 @@ export function GenerateForm({ onSubmit, isLoading, debatePrefill = true }: Gene
             <div className="grid gap-4 pt-1 sm:grid-cols-3">
               {/* Length */}
               <div className="space-y-2 min-w-0">
-                <Label className="text-sm font-medium truncate block">{t('generateForm.length')}</Label>
+                <Label id="generate-length-label" htmlFor="generate-length" className="text-sm font-medium truncate block">{t('generateForm.length')}</Label>
                 <OptionSelect
+                  id="generate-length"
+                  labelId="generate-length-label"
                   value={currentValues.length}
                   onValueChange={(value) => setValue('length', value)}
                   triggerClassName="min-w-0"
@@ -246,8 +254,10 @@ export function GenerateForm({ onSubmit, isLoading, debatePrefill = true }: Gene
 
               {/* Audience */}
               <div className="space-y-2 min-w-0">
-                <Label className="text-sm font-medium truncate block">{t('generateForm.audience')}</Label>
+                <Label id="generate-audience-label" htmlFor="generate-audience" className="text-sm font-medium truncate block">{t('generateForm.audience')}</Label>
                 <OptionSelect
+                  id="generate-audience"
+                  labelId="generate-audience-label"
                   value={currentValues.audience}
                   onValueChange={(value) => setValue('audience', value)}
                   triggerClassName="min-w-0"
@@ -261,8 +271,10 @@ export function GenerateForm({ onSubmit, isLoading, debatePrefill = true }: Gene
 
               {/* Tone */}
               <div className="space-y-2 min-w-0">
-                <Label className="text-sm font-medium truncate block">{t('generateForm.tone')}</Label>
+                <Label id="generate-tone-label" htmlFor="generate-tone" className="text-sm font-medium truncate block">{t('generateForm.tone')}</Label>
                 <OptionSelect
+                  id="generate-tone"
+                  labelId="generate-tone-label"
                   value={currentValues.tone}
                   onValueChange={(value) => setValue('tone', value)}
                   triggerClassName="min-w-0"
@@ -272,7 +284,7 @@ export function GenerateForm({ onSubmit, isLoading, debatePrefill = true }: Gene
                     { value: 'aggressive', label: t('generateForm.toneAggressive') },
                   ]}
                 />
-                <p className="text-[11px] text-muted-foreground">{t('generateForm.styleNote')}</p>
+                <p className="text-xs text-muted-foreground">{t('generateForm.styleNote')}</p>
               </div>
             </div>
           </div>
@@ -282,10 +294,9 @@ export function GenerateForm({ onSubmit, isLoading, debatePrefill = true }: Gene
           <DebateContextControl feature="generate" side={requestSide('generate', currentValues)} hidden={!debatePrefill} />
 
           {/* Submit Button */}
-          <Button type="submit" className="w-full h-12 relative overflow-hidden group" disabled={isLoading} aria-busy={isLoading} data-tour="generate-button">
-            {!isLoading && <span className="absolute inset-0 -translate-x-full group-hover:translate-x-0 bg-gradient-to-r from-transparent via-white/10 to-transparent animate-[shimmer_3s_infinite] pointer-events-none" />}
+          <Button type="submit" size="lg" className="w-full" disabled={isLoading} aria-busy={isLoading} data-tour="generate-button">
             {isLoading ? (
-              <span className="motion-reveal inline-flex items-center">
+              <span className="inline-flex items-center">
                 <LoadingSpinner size="sm" className="mr-2" />
                 {t('generateForm.generating')}
               </span>

@@ -1,4 +1,3 @@
-import { LinearGradient } from 'expo-linear-gradient';
 import type { ReactNode } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -7,7 +6,6 @@ import { Icon } from './icon';
 import type { IconName } from './icon-paths';
 import { Text } from './text';
 
-import { mainActionGradient } from '@/theme/colors';
 import { useTheme } from '@/theme/use-theme';
 
 /** The round button in a live screen's top bar, as mock 05's close and flow buttons. */
@@ -33,7 +31,7 @@ export function LiveTopBar({ left, right, title, subtitle }: { left: ReactNode; 
     <View style={[styles.bar, { paddingTop: insets.top + 6 }]}>
       <View style={styles.side}>{left}</View>
       <View style={styles.titles}>
-        <Text accessibilityRole="header" weight="bold" style={styles.title} numberOfLines={1}>
+        <Text accessibilityRole="header" weight="display" style={styles.title} numberOfLines={1}>
           {title}
         </Text>
         {subtitle ? (
@@ -69,8 +67,9 @@ export function SideControl({ icon, label, onPress, disabled, testID }: { icon: 
   );
 }
 
-/** The one main action of a live screen, in the gradient, with its label under it. */
+/** The one main action of a live screen, a round tactile button on its ledge, with its label under it. */
 export function MainRoundControl({ icon, label, onPress, disabled, testID }: { icon: IconName; label: string; onPress: () => void; disabled?: boolean; testID?: string }) {
+  const { colors } = useTheme();
   return (
     <Pressable
       accessibilityRole="button"
@@ -79,20 +78,24 @@ export function MainRoundControl({ icon, label, onPress, disabled, testID }: { i
       disabled={disabled}
       onPress={onPress}
       testID={testID}
-      style={({ pressed }) => [styles.control, pressed && styles.pressed]}>
-      <View style={[styles.mainHalo, disabled && styles.mainDisabled]}>
-        <View style={styles.mainCircle}>
-          {/* The gradient carries the rounding, so the circle's shadow is not clipped. */}
-          <LinearGradient {...mainActionGradient} style={[StyleSheet.absoluteFill, styles.mainGradient]} />
-          {/* Above the gradient: the web preview paints positioned views over static ones. */}
-          <View style={styles.mainIcon}>
-            <Icon name={icon} color="#ffffff" size={32} />
+      style={styles.control}>
+      {({ pressed }) => (
+        <>
+          <View style={[styles.mainHalo, disabled && styles.mainDisabled]}>
+            <View
+              style={[
+                styles.mainCircle,
+                { backgroundColor: colors.primaryFill, borderBottomColor: colors.primaryLedge },
+                pressed && styles.mainPressed,
+              ]}>
+              <Icon name={icon} color="#ffffff" size={32} />
+            </View>
           </View>
-        </View>
-      </View>
-      <Text tone="faint" style={[styles.controlLabel, styles.mainLabel]} numberOfLines={2}>
-        {label}
-      </Text>
+          <Text tone="faint" style={[styles.controlLabel, styles.mainLabel]} numberOfLines={2}>
+            {label}
+          </Text>
+        </>
+      )}
     </Pressable>
   );
 }
@@ -112,16 +115,17 @@ const styles = StyleSheet.create({
   mainLabel: { maxWidth: 150, textAlign: 'center' },
   sideCircle: { width: 56, height: 56, borderRadius: 28, alignItems: 'center', justifyContent: 'center' },
   sideBorder: { borderWidth: 1 },
-  mainHalo: { width: 100, height: 100, borderRadius: 50, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(56,189,248,0.14)' },
-  mainGradient: { borderRadius: 42 },
+  mainHalo: { width: 100, height: 100, borderRadius: 50, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(10,111,240,0.12)' },
   mainDisabled: { opacity: 0.45 },
-  mainIcon: { position: 'relative' },
   mainCircle: {
     width: 84,
     height: 84,
     borderRadius: 42,
+    borderBottomWidth: 5,
     alignItems: 'center',
     justifyContent: 'center',
-    boxShadow: '0 10px 30px -6px rgba(20,184,166,0.6)',
+    boxShadow: '0 10px 26px -8px rgba(11,42,110,0.45)',
   },
+  // Sinks onto its ledge, as the website's buttons do.
+  mainPressed: { borderBottomWidth: 0, marginTop: 5, boxShadow: 'none' },
 });

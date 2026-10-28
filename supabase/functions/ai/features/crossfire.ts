@@ -3,11 +3,12 @@ import { callAI } from "../provider.ts";
 import { cleanGeneratedText, getCurrentDateContext } from "../text.ts";
 import { buildCrossfireNextTurnPrompt, buildCrossfireDebriefPrompt } from "../prompt-builder.ts";
 import { buildSystemPrompt, type DebatePromptContext, type PromptSource } from "../../_shared/prompts.ts";
-import { validateCrossfireDebrief } from "../../_shared/crossfire-response.ts";
+import { crossfireDebriefSchema, validateCrossfireDebrief } from "../../_shared/crossfire-response.ts";
 import {
   createCrossfireSignalToken,
   type CrossfireInput,
   crossfireReplyOutput,
+  crossfireReplySchema,
   MAX_CROSSFIRE_PROMPT_CHARS,
 } from "./crossfire-input.ts";
 import { prepareVoiceReply, type VoicePayload } from "../../_shared/voice-token.ts";
@@ -29,7 +30,7 @@ export interface CrossfireHandlerOptions {
 // apply, and the combined prompt stays inside a fixed character budget.
 export async function handleCrossfire(ctx: FeatureContext, options: CrossfireHandlerOptions): Promise<Response> {
   const feature = "crossfire" as const;
-  const { userId, provider, model, temperature, reasoningEffort, workSignal, startTime, recordMainResult } = ctx;
+  const { userId, provider, model, reasoningEffort, workSignal, startTime, recordMainResult } = ctx;
   const { input: crossfireInput, sources: crossfireSources, workspaceSources } = options;
 
   if (!crossfireInput) throw new Error("Crossfire input was not validated");
@@ -62,9 +63,13 @@ export async function handleCrossfire(ctx: FeatureContext, options: CrossfireHan
     model,
     systemPrompt,
     [{ role: "user", content: userPrompt }],
-    temperature,
     reasoningEffort,
+    crossfireInput.operation === "next-turn" ? "crossfireTurn" : "crossfireDebrief",
     workSignal,
+    ctx.stream,
+    crossfireInput.operation === "next-turn"
+      ? crossfireReplySchema(crossfireInput.expectedReply)
+      : crossfireDebriefSchema(crossfireInput.transcript),
   ));
   const cleanedOutput = cleanGeneratedText(aiResult.output);
   const output = crossfireInput.operation === "next-turn"

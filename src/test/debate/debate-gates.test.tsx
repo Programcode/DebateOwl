@@ -30,9 +30,14 @@ describe('five-day Current Debate gate', () => {
     expect(dialog).toHaveTextContent('This House would ban homework');
     const buttons = Array.from(dialog.querySelectorAll('button')).map((button) => button.textContent);
     expect(buttons).toEqual(['Switch debate', 'Start new debate', 'Continue']);
-    // Escape does not dismiss it.
-    fireEvent.keyDown(dialog, { key: 'Escape' });
-    expect(screen.getByRole('alertdialog')).toBeInTheDocument();
+  });
+
+  it('treats Escape as Continue, so the gate never traps the user', async () => {
+    seedCurrentDebate({ lastActivityAt: Date.now() - 6 * DAY });
+    renderGate();
+    fireEvent.keyDown(screen.getByRole('alertdialog'), { key: 'Escape' });
+    await waitFor(() => expect(screen.queryByRole('alertdialog')).toBeNull());
+    expect(Date.now() - useDebateStore.getState().debates[0].lastActivityAt).toBeLessThan(1000);
   });
 
   it('stays out of the way before five days and before the server state loads', () => {
@@ -54,6 +59,19 @@ describe('five-day Current Debate gate', () => {
     await waitFor(() => expect(screen.queryByRole('alertdialog')).toBeNull());
     expect(supabaseMock.from).toHaveBeenCalledWith('debates');
     expect(Date.now() - useDebateStore.getState().debates[0].lastActivityAt).toBeLessThan(1000);
+  });
+
+  it('marks a failed debate load so Home stops showing it as loading', async () => {
+    const failing = () => ({
+      select: () => ({
+        order: async () => ({ data: null as unknown, error: { message: 'unavailable' } }),
+        maybeSingle: async () => ({ data: null as unknown, error: null as unknown }),
+      }),
+    }) as unknown as ReturnType<typeof supabaseMock.from>;
+    supabaseMock.from.mockImplementationOnce(failing).mockImplementationOnce(failing);
+    useDebateStore.setState({ hydrated: false, loadFailed: false });
+    await useDebateStore.getState().hydrate();
+    expect(useDebateStore.getState()).toMatchObject({ hydrated: false, loadFailed: true });
   });
 });
 

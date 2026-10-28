@@ -98,10 +98,10 @@ export function ClaimPanel({
 
   const remove = async () => {
     const confirmed = await confirmDestructive({
-      title: t('flowchart.deleteNodeTitle'),
-      message: t('flowchart.deleteNodeDescription', { label: node.data.label }),
-      confirm: t('flowchart.deleteNodeConfirm'),
-      cancel: t('flowchart.deleteNodeCancel'),
+      title: t('mobile.flowchart.deleteNodeTitle'),
+      message: t('mobile.flowchart.deleteNodeDescription', { label: node.data.label }),
+      confirm: t('mobile.flowchart.deleteNodeConfirm'),
+      cancel: t('common.cancel'),
     });
     if (!confirmed) return;
     change((current) => ({ ...current, doc: deleteCard(current.doc, node.id), edited: true }));
@@ -114,7 +114,7 @@ export function ClaimPanel({
         <Text weight="semibold" style={[styles.who, { color: flow.type[node.data.type] }]}>
           {cardKind(t, node)}
         </Text>
-        <Text accessibilityRole="header" weight="bold" style={styles.title} selectable>
+        <Text accessibilityRole="header" weight="display" style={styles.title} selectable>
           {node.data.label}
         </Text>
       </View>
@@ -285,7 +285,7 @@ export function ClaimInspector({ claim, width, onClose }: { claim: { scope: stri
   return (
     <View style={[styles.inspector, { width, paddingTop: covered, borderLeftColor: colors.line, backgroundColor: colors.background }]} testID="claim-inspector">
       <View style={[styles.inspectorHead, { borderBottomColor: colors.line }]}>
-        <Text accessibilityRole="header" weight="bold" style={styles.inspectorTitle}>
+        <Text accessibilityRole="header" weight="display" style={styles.inspectorTitle}>
           {t('export.claim')}
         </Text>
         <Pressable accessibilityRole="button" accessibilityLabel={t('common.close')} hitSlop={8} onPress={onClose} style={styles.remove} testID="claim-close">
@@ -310,7 +310,7 @@ const styles = StyleSheet.create({
   section: { fontSize: 16 },
   block: { gap: 8 },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  list: { borderWidth: 1, borderRadius: radius.field, overflow: 'hidden' },
+  list: { borderWidth: 2, borderRadius: radius.field, overflow: 'hidden' },
   row: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 14, paddingVertical: 11, minHeight: 50 },
   rowText: { flex: 1, gap: 2 },
   rowLabel: { fontSize: 15.5, lineHeight: 21 },

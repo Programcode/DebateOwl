@@ -35,7 +35,7 @@ export function StagingBanner({ reload = reloadPage }: { reload?: () => void }) 
   return (
     <div
       role="status"
-      className="sticky top-0 z-[60] flex h-9 items-center justify-center gap-2 border-b border-amber-500/60 bg-amber-100 px-3 text-sm font-medium text-amber-950 dark:bg-amber-950 dark:text-amber-100"
+      className="sticky top-0 z-60 flex h-9 items-center justify-center gap-2 border-b border-amber-500/60 bg-amber-100 px-3 text-sm font-medium text-amber-950 dark:bg-amber-950 dark:text-amber-100"
     >
       <FlaskConical className="h-4 w-4" aria-hidden="true" />
       {t('settings.stagingBanner', 'Staging backend')}

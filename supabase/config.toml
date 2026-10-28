@@ -66,5 +66,12 @@ otp_length = 6
 max_frequency = "1s"
 
 [auth.email.template.magic_link]
-subject = "Your DebateLab sign-in code"
+subject = "Your DebateOwl sign-in code"
 content_path = "./supabase/templates/magic_link.html"
+
+# A first email sign-in creates the account, so Auth sends this template
+# instead of magic_link. Same subject and code-only body: the code never goes
+# in the subject, and there is no link to open in the wrong browser.
+[auth.email.template.confirmation]
+subject = "Your DebateOwl sign-in code"
+content_path = "./supabase/templates/confirmation.html"

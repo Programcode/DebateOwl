@@ -1,10 +1,11 @@
 import { useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
+import type { TFunction } from 'i18next';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { shouldPrefillMotion } from '@/lib/debate/motion';
 import { useCurrentDebate, useDebateStore, type DebateSide } from '@/lib/stores/debate-store';
-import { useSessionStore } from '@/lib/stores/session-store';
+import { isPendingSource, useSessionStore } from '@/lib/stores/session-store';
 import { useSparringStore } from '@/lib/stores/sparring-store';
 
 // eslint-disable-next-line react-refresh/only-export-components
@@ -12,16 +13,32 @@ export function sideLabelKey(side: DebateSide): string {
   return `debate.side.${side}`;
 }
 
-/** Sources and saved outputs that belong to one debate. */
+/**
+ * Sources and saved outputs that belong to one debate. `activeSources` counts
+ * the sources switched on, the ones a request can use, so every page that
+ * names a count agrees with what Ask, Generate and the others say they use.
+ */
 // eslint-disable-next-line react-refresh/only-export-components
 export function useDebateCounts(debateId: string | null | undefined) {
-  const sources = useSessionStore((state) => debateId ? state.sourceLibrary.filter((source) => source.debateId === debateId).length : 0);
+  // A row still saving is not counted until it is a source the tools can send.
+  const sources = useSessionStore((state) => debateId ? state.sourceLibrary.filter((source) => source.debateId === debateId && !isPendingSource(source)).length : 0);
+  const activeSources = useSessionStore((state) => debateId ? state.sourceLibrary.filter((source) => source.debateId === debateId && source.isActive && !isPendingSource(source)).length : 0);
   const outputs = useSessionStore((state) => debateId ? [
     state.savedCases, state.savedAttacks, state.savedBrainstorms, state.savedFactoids,
     state.savedChats, state.savedFlowcharts, state.savedCrossfires,
   ].reduce((count, list) => count + list.filter((item) => item.debateId === debateId).length, 0) : 0);
   const sparring = useSparringStore((state) => debateId ? state.savedSessions.filter((session) => session.debateId === debateId).length : 0);
-  return { sources, outputs: outputs + sparring };
+  return { sources, activeSources, outputs: outputs + sparring };
+}
+
+/** "3 sources (2 active) · 1 output", with each count in its own plural form. */
+// eslint-disable-next-line react-refresh/only-export-components
+export function debateCountsLabel(t: TFunction, counts: { sources: number; activeSources: number; outputs: number }): string {
+  return t('debate.counts', {
+    sources: t('debate.sourceCount', { count: counts.sources }),
+    active: t('debate.activeCount', { count: counts.activeSources }),
+    outputs: t('debate.outputCount', { count: counts.outputs }),
+  });
 }
 
 /**
@@ -77,7 +94,7 @@ export function CurrentDebateStrip({ side, hidden = false, className = 'mb-6' }:
     <div className={`${base} border-primary/20 bg-primary/5`} data-testid="current-debate-strip">
       <span className="min-w-0 flex-1 basis-48">
         <span className="text-muted-foreground">{t('debate.workingIn', 'Working in:')} </span>
-        <span className="break-words font-medium text-foreground">{debate.motion}</span>
+        <span className="wrap-break-word font-medium text-foreground">{debate.motion}</span>
       </span>
       {side && <Badge variant="outline">{t(sideLabelKey(side))}</Badge>}
       <div className="flex gap-2">

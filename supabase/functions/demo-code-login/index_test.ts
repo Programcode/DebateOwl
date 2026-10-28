@@ -24,9 +24,14 @@ const demoCode = {
   disabled_at: null,
 };
 
+type Attempt = { ip_address: string | null; browser_fingerprint: string | null; failure_reason: string | null; success: boolean; created_at: string };
 type Scenario = {
+  attempts?: Attempt[];
+  ipAddress?: string;
+  browserFingerprint?: string;
   appMetadata?: Record<string, unknown>;
   attemptLookupFails?: boolean;
+  createFails?: boolean;
   currentRole?: string | null;
   existingUser?: boolean;
   redirectTo?: string;
@@ -34,12 +39,15 @@ type Scenario = {
 };
 
 async function runScenario({
+  attempts = [],
+  ipAddress,
+  browserFingerprint,
   appMetadata = {},
   attemptLookupFails = false,
+  createFails = false,
   currentRole = "user",
   existingUser = true,
   redirectTo,
-  userMetadata = {},
 }: Scenario) {
   const calls: Array<{ body: Record<string, unknown> | null; method: string; pathname: string; search: string }> = [];
   const originalFetch = globalThis.fetch;
@@ -52,27 +60,39 @@ async function runScenario({
     calls.push({ body, method: request.method, pathname: url.pathname, search: url.search });
 
     if (url.pathname === "/rest/v1/demo_access_attempts" && request.method !== "POST") {
-      return attemptLookupFails ? jsonResponse({ message: "attempt lookup failed" }, 500) : jsonResponse([]);
+      if (attemptLookupFails) return jsonResponse({ message: "attempt lookup failed" }, 500);
+      const count = attempts.filter((attempt) => {
+        for (const field of ["ip_address", "browser_fingerprint", "success", "created_at"] as const) {
+          const filter = url.searchParams.get(field);
+          if (!filter) continue;
+          if (filter === "is.null" && attempt[field] !== null) return false;
+          if (filter.startsWith("eq.") && String(attempt[field]) !== filter.slice(3)) return false;
+          if (filter.startsWith("gte.") && String(attempt[field]) < filter.slice(4)) return false;
+        }
+        if (url.searchParams.get("or")?.includes("failure_reason.not.in") &&
+          ["rate_limited", "invalid_format"].includes(attempt.failure_reason ?? "")) return false;
+        return true;
+      }).length;
+      return new Response(null, { headers: { "Content-Range": `*/${count}` } });
     }
     if (url.pathname === "/rest/v1/demo_access_codes") return jsonResponse(demoCode);
-    if (url.pathname === "/auth/v1/admin/users" && request.method === "GET") {
-      return jsonResponse({
-        users: existingUser
-          ? [{
-            id: "22222222-2222-4222-8222-222222222222",
-            email: demoCode.email,
-            app_metadata: appMetadata,
-            user_metadata: userMetadata,
-          }]
-          : [],
-      });
+    if (url.pathname === "/rest/v1/rpc/lookup_auth_user_by_email") {
+      return jsonResponse(existingUser
+        ? [{
+          id: "22222222-2222-4222-8222-222222222222",
+          email: demoCode.email,
+          app_metadata: appMetadata,
+        }]
+        : []);
     }
+    if (url.pathname === "/rest/v1/rpc/refund_demo_access_code") return jsonResponse(0);
     if (url.pathname === "/rest/v1/demo_access_attempts") return jsonResponse([], 201);
     if (url.pathname === "/rest/v1/user_roles" && request.method === "GET") {
       return jsonResponse(currentRole === null ? null : { role: currentRole });
     }
     if (url.pathname === "/rest/v1/rpc/consume_demo_access_code") return jsonResponse([{ reserved: true }]);
     if (url.pathname === "/auth/v1/admin/users" && request.method === "POST") {
+      if (createFails) return jsonResponse({ message: "create failed" }, 500);
       return jsonResponse({
         id: "33333333-3333-4333-8333-333333333333",
         email: demoCode.email,
@@ -88,7 +108,7 @@ async function runScenario({
         action_link: "https://supabase.test/verify",
         email_otp: "123456",
         hashed_token: "test-token-hash",
-        redirect_to: "https://debate.pi-stack.org",
+        redirect_to: "https://debateowl.com",
         verification_type: "magiclink",
         id: "33333333-3333-4333-8333-333333333333",
         email: demoCode.email,
@@ -100,10 +120,10 @@ async function runScenario({
   try {
     const response = await handleRequest(new Request("http://127.0.0.1/functions/v1/demo-code-login", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", ...(ipAddress ? { "X-Real-IP": ipAddress } : {}) },
       body: JSON.stringify({
         code: "DEMO-AB12-CD34",
-        ...(attemptLookupFails ? { browserFingerprint: "test-browser" } : {}),
+        ...(browserFingerprint || attemptLookupFails ? { browserFingerprint: browserFingerprint ?? "test-browser" } : {}),
         ...(redirectTo ? { redirectTo } : {}),
       }),
     }));
@@ -137,8 +157,14 @@ Deno.test("matching app_metadata permits demo-account reuse", async () => {
   if (countCalls(calls, "/rest/v1/rpc/consume_demo_access_code") !== 1) {
     throw new Error("matching server binding did not reserve one use");
   }
-  if (countCalls(calls, "/auth/v1/admin/users") !== 1) {
+  if (countCalls(calls, "/rest/v1/rpc/lookup_auth_user_by_email") !== 1) {
+    throw new Error("matching server binding did not look the user up directly");
+  }
+  if (calls.some((call) => call.pathname === "/auth/v1/admin/users" && call.method === "POST")) {
     throw new Error("matching server binding created another Auth user");
+  }
+  if (calls.some((call) => call.pathname === "/auth/v1/admin/users" && call.method === "GET")) {
+    throw new Error("matching server binding paged through auth users");
   }
 });
 
@@ -152,6 +178,17 @@ Deno.test("unrelated Auth account is rejected before code, role, or settings mut
     "/rest/v1/user_settings",
   ]) {
     if (countCalls(calls, pathname) !== 0) throw new Error(`unrelated account mutated ${pathname}`);
+  }
+});
+
+Deno.test("a failed account creation refunds the reserved demo-code use", async () => {
+  const { calls, response } = await runScenario({ existingUser: false, createFails: true });
+  if (response.status !== 500) throw new Error(`failed creation returned ${response.status}`);
+  if (countCalls(calls, "/rest/v1/rpc/consume_demo_access_code") !== 1) {
+    throw new Error("failed creation did not reserve a use");
+  }
+  if (countCalls(calls, "/rest/v1/rpc/refund_demo_access_code") !== 1) {
+    throw new Error("failed creation did not refund the reserved use");
   }
 });
 
@@ -204,5 +241,29 @@ Deno.test("sends sign-in links back to a DebateLab preview but not to a foreign 
   if (!sent.includes(preview)) throw new Error(`preview redirect was dropped: ${sent}`);
   if ((await linkFor("https://evil.example.com/app")).includes("evil.example.com")) {
     throw new Error("foreign redirect was passed to generate_link");
+  }
+});
+
+Deno.test("anonymous demo attempts use a shared unknown bucket and fail closed", async () => {
+  const attempts = Array.from({ length: 10 }, () => ({ ip_address: null, browser_fingerprint: null, success: false, failure_reason: "not_found", created_at: new Date().toISOString() }));
+  const { response, calls } = await runScenario({ attempts });
+  if (response.status !== 429) throw new Error(`unknown bucket returned ${response.status}`);
+  if (countCalls(calls, "/rest/v1/demo_access_codes")) throw new Error("limited unknown caller reached code lookup");
+});
+
+Deno.test("demo limiter excludes its refusals, invalid formats, successes, old and unrelated attempts", async () => {
+  for (const identity of [{}, { ipAddress: "192.0.2.1" }, { browserFingerprint: "test-browser" }]) {
+    const base = { ip_address: "ipAddress" in identity ? identity.ipAddress! : null, browser_fingerprint: "browserFingerprint" in identity ? identity.browserFingerprint! : null, success: false, failure_reason: "not_found", created_at: new Date().toISOString() };
+    const attempts = [
+      ...Array.from({ length: 9 }, () => ({ ...base, failure_reason: null })),
+      ...["rate_limited", "invalid_format"].map((failure_reason) => ({ ...base, failure_reason })),
+      { ...base, success: true },
+      { ...base, created_at: "2000-01-01T00:00:00.000Z" },
+      { ...base, ip_address: "192.0.2.2", browser_fingerprint: "other-browser" },
+    ];
+    const { response } = await runScenario({ ...identity, attempts, existingUser: false });
+    if (response.status !== 200) throw new Error(`excluded attempts locked out caller: ${response.status}`);
+    const limited = await runScenario({ ...identity, attempts: [...attempts, base] });
+    if (limited.response.status !== 429) throw new Error("ten real failures did not limit caller");
   }
 });

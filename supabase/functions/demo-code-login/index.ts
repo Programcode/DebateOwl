@@ -1,4 +1,4 @@
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.114.0";
 import { getCorsHeaders, isAllowedOrigin } from "../_shared/cors.ts";
 import {
   getDemoCodeDenialReason,
@@ -85,6 +85,7 @@ async function isRateLimited(ipAddress: string | null, browserFingerprint: strin
           .select("id", { count: "exact", head: true })
           .eq("ip_address", ipAddress)
           .eq("success", false)
+          .or("failure_reason.is.null,failure_reason.not.in.(rate_limited,invalid_format)")
           .gte("created_at", since)
           .then(({ count, error }) => {
             if (error) throw error;
@@ -101,6 +102,7 @@ async function isRateLimited(ipAddress: string | null, browserFingerprint: strin
           .select("id", { count: "exact", head: true })
           .eq("browser_fingerprint", browserFingerprint)
           .eq("success", false)
+          .or("failure_reason.is.null,failure_reason.not.in.(rate_limited,invalid_format)")
           .gte("created_at", since)
           .then(({ count, error }) => {
             if (error) throw error;
@@ -110,20 +112,41 @@ async function isRateLimited(ipAddress: string | null, browserFingerprint: strin
     );
   }
 
-  if (checks.length === 0) return false;
+  if (checks.length === 0) {
+    checks.push(Promise.resolve(
+      supabase
+          .from("demo_access_attempts")
+          .select("id", { count: "exact", head: true })
+          .is("ip_address", null)
+          .is("browser_fingerprint", null)
+          .eq("success", false)
+          .or("failure_reason.is.null,failure_reason.not.in.(rate_limited,invalid_format)")
+          .gte("created_at", since)
+          .then(({ count, error }) => {
+            if (error) throw error;
+            return count || 0;
+          }),
+    ));
+  }
   const counts = await Promise.all(checks);
   return isDemoCodeRateLimited(counts);
 }
 
 async function findUserByEmail(email: string) {
-  for (let page = 1; page <= 20; page += 1) {
-    const { data, error } = await supabase.auth.admin.listUsers({ page, perPage: 1000 });
-    if (error) throw error;
-    const match = data.users.find((user) => user.email?.toLowerCase() === email.toLowerCase());
-    if (match) return match;
-    if (data.users.length < 1000) return null;
-  }
-  return null;
+  const { data, error } = await supabase.rpc("lookup_auth_user_by_email", { p_email: email });
+  if (error) throw error;
+  const row = Array.isArray(data) ? data[0] : data;
+  if (!row?.id) return null;
+  return {
+    id: row.id as string,
+    email: (row.email as string | null) ?? email,
+    app_metadata: (row.app_metadata ?? {}) as Record<string, unknown>,
+  };
+}
+
+async function refundDemoCodeUse(codeId: string) {
+  const { error } = await supabase.rpc("refund_demo_access_code", { p_code_id: codeId });
+  if (error) console.warn("[DEMO_CODE] use refund failed", error.message);
 }
 
 export async function handleRequest(req: Request) {
@@ -204,6 +227,8 @@ export async function handleRequest(req: Request) {
       });
     }
 
+    // One code shares one Auth user (the email stored on the code). A room signs
+    // in together; this flow does not mint a separate user per browser.
     const existingUser = await findUserByEmail(demoCode.email);
     if (existingUser && !isDemoUserForCode(existingUser.app_metadata, demoCode.id)) {
       await recordAttempt({ codeHash, ipAddress, browserFingerprint, success: false, failureReason: "email_conflict" });
@@ -230,6 +255,7 @@ export async function handleRequest(req: Request) {
     }
 
     // Reserve the use atomically before creating or changing the demo account.
+    // If that work fails, the reservation is refunded below.
     const { data: reservation, error: reservationError } = await supabase.rpc("consume_demo_access_code", {
       p_code_id: demoCode.id,
     });
@@ -243,70 +269,77 @@ export async function handleRequest(req: Request) {
       });
     }
 
-    const userResult = existingUser
-      ? { user: existingUser }
-      : (await supabase.auth.admin.createUser({
+    let reservedCodeId: string | null = demoCode.id;
+    try {
+      const userResult = existingUser
+        ? { user: existingUser }
+        : (await supabase.auth.admin.createUser({
+          email: demoCode.email,
+          email_confirm: true,
+          app_metadata: {
+            demo_access_code_id: demoCode.id,
+          },
+          user_metadata: {
+            demo_label: demoCode.label,
+          },
+        })).data;
+
+      if (!userResult.user) throw new Error("Could not prepare demo user");
+
+      // Never let a demo code grant admin: the schema allows demo_access_codes.role
+      // to be "admin", but self-service demo sign-in must not be a privilege
+      // escalation path. Admin status is granted separately, not through this flow.
+      const grantedRole = getDemoLoginRole(demoCode.role);
+      const { error: roleError } = await supabase
+        .from("user_roles")
+        .upsert({
+          user_id: userResult.user.id,
+          role: grantedRole,
+          updated_at: new Date().toISOString(),
+        }, { onConflict: "user_id" });
+
+      if (roleError) throw roleError;
+
+      // Demo accounts get lifetime Pro access with a high daily cap so the
+      // experience matches what a paying user would see during a demo.
+      const { error: settingsError } = await supabase
+        .from("user_settings")
+        .upsert({
+          user_id: userResult.user.id,
+          subscription_tier: "pro",
+          grace_period_ends_at: "9999-12-31T23:59:59.999Z",
+          daily_limit_override: 999,
+          updated_at: new Date().toISOString(),
+        }, { onConflict: "user_id" });
+
+      if (settingsError) throw settingsError;
+
+      const { data: linkData, error: linkError } = await supabase.auth.admin.generateLink({
+        type: "magiclink",
         email: demoCode.email,
-        email_confirm: true,
-        app_metadata: {
-          demo_access_code_id: demoCode.id,
+        options: {
+          redirectTo: sanitizeRedirectTo(body.redirectTo),
         },
-        user_metadata: {
-          demo_label: demoCode.label,
-        },
-      })).data;
+      });
 
-    if (!userResult.user) throw new Error("Could not prepare demo user");
+      if (linkError) throw linkError;
+      const tokenHash = linkData.properties?.hashed_token;
+      if (!tokenHash) throw new Error("Could not create demo session handoff");
+      reservedCodeId = null;
 
-    // Never let a demo code grant admin: the schema allows demo_access_codes.role
-    // to be "admin", but self-service demo sign-in must not be a privilege
-    // escalation path. Admin status is granted separately, not through this flow.
-    const grantedRole = getDemoLoginRole(demoCode.role);
-    const { error: roleError } = await supabase
-      .from("user_roles")
-      .upsert({
-        user_id: userResult.user.id,
-        role: grantedRole,
-        updated_at: new Date().toISOString(),
-      }, { onConflict: "user_id" });
+      await recordAttempt({ codeHash, ipAddress, browserFingerprint, success: true });
 
-    if (roleError) throw roleError;
-
-    // Demo accounts get lifetime Pro access with a high daily cap so the
-    // experience matches what a paying user would see during a demo.
-    const { error: settingsError } = await supabase
-      .from("user_settings")
-      .upsert({
-        user_id: userResult.user.id,
-        subscription_tier: "pro",
-        grace_period_ends_at: "9999-12-31T23:59:59.999Z",
-        daily_limit_override: 999,
-        updated_at: new Date().toISOString(),
-      }, { onConflict: "user_id" });
-
-    if (settingsError) throw settingsError;
-
-    const { data: linkData, error: linkError } = await supabase.auth.admin.generateLink({
-      type: "magiclink",
-      email: demoCode.email,
-      options: {
-        redirectTo: sanitizeRedirectTo(body.redirectTo),
-      },
-    });
-
-    if (linkError) throw linkError;
-    const tokenHash = linkData.properties?.hashed_token;
-    if (!tokenHash) throw new Error("Could not create demo session handoff");
-
-    await recordAttempt({ codeHash, ipAddress, browserFingerprint, success: true });
-
-    return new Response(JSON.stringify({
-      email: demoCode.email,
-      tokenHash,
-      type: linkData.properties?.verification_type || "magiclink",
-    }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+      return new Response(JSON.stringify({
+        email: demoCode.email,
+        tokenHash,
+        type: linkData.properties?.verification_type || "magiclink",
+      }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    } catch (error) {
+      if (reservedCodeId) await refundDemoCodeUse(reservedCodeId);
+      throw error;
+    }
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";
     console.error("[DEMO_CODE] Error:", message);

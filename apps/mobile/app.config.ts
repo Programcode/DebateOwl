@@ -22,6 +22,7 @@ if (appGroup && build !== 'dev') {
   throw new Error('DEBATELAB_APP_GROUP only applies to a development build (DEBATELAB_BUILD=dev).');
 }
 
+// Kept from the DebateLab name until Adam decides on the store listing: a new id is a new app in App Store Connect.
 const bundleIdentifier = 'com.adam.debatelab';
 
 function permissionStrings(projectRoot: string, language: 'en' | 'es' | 'hu'): PermissionStrings {
@@ -53,8 +54,8 @@ const withoutPushEntitlement: ConfigPlugin = (config) =>
 
 export default ({ projectRoot }: ConfigContext): ExpoConfig => {
   const config: ExpoConfig = {
-    name: 'DebateLab',
-    slug: 'debatelab',
+    name: 'DebateOwl',
+    slug: 'debateowl',
     version: '1.0.0',
     orientation: 'default',
     icon: './assets/images/icon.png',
@@ -69,7 +70,7 @@ export default ({ projectRoot }: ConfigContext): ExpoConfig => {
     },
     android: {
       adaptiveIcon: {
-        backgroundColor: '#E6F4FE',
+        backgroundColor: '#DDF0FF',
         foregroundImage: './assets/images/android-icon-foreground.png',
         backgroundImage: './assets/images/android-icon-background.png',
         monochromeImage: './assets/images/android-icon-monochrome.png',
@@ -85,15 +86,15 @@ export default ({ projectRoot }: ConfigContext): ExpoConfig => {
       [
         'expo-splash-screen',
         {
-          backgroundColor: '#eef4fa',
+          backgroundColor: '#F7FAFE',
           image: './assets/images/splash-icon.png',
-          imageWidth: 76,
-          dark: { backgroundColor: '#0f172a' },
+          imageWidth: 150,
+          dark: { backgroundColor: '#0B1426' },
         },
       ],
     ],
     extra: {
-      websiteUrl: 'https://debate.pi-stack.org',
+      websiteUrl: 'https://debateowl.com',
     },
     experiments: {
       typedRoutes: true,

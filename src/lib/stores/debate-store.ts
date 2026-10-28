@@ -1,6 +1,11 @@
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 import { supabase } from '@/lib/supabase/client';
+import { restoredSessionsBlocked } from '@/lib/supabase/session-expiry';
+import { currentUserId } from '@/lib/supabase/current-user';
+import { MAX_MOTION_LENGTH } from '@debatelab/core/validation/motion';
+
+export { MAX_MOTION_LENGTH };
 
 /** A favor, En contra, both sides, or not side-specific. */
 export type DebateSide = 'pro' | 'con' | 'both' | 'neutral';
@@ -24,7 +29,6 @@ export type DebateDialog = 'switch' | 'create' | null;
 
 /** How long a debate may sit without meaningful work before the app asks about it. */
 export const INACTIVE_DEBATE_MS = 5 * 24 * 60 * 60 * 1000;
-export const MAX_MOTION_LENGTH = 1200;
 export const MAX_INSTRUCTIONS_LENGTH = 2000;
 
 interface DebateRow {
@@ -43,6 +47,8 @@ interface DebateState {
   /** Session-only: tools run without reading from or saving to any debate. */
   oneOff: boolean;
   hydrated: boolean;
+  /** The last load from the server failed, so `hydrated` may stay false; pages stop waiting for it. */
+  loadFailed: boolean;
   dialog: DebateDialog;
   /** Motion to prefill when the create dialog opens from a feature. */
   dialogMotion: string;
@@ -57,6 +63,8 @@ interface DebateState {
   setOneOff: (oneOff: boolean) => void;
   openDialog: (dialog: DebateDialog, motion?: string) => void;
   resetLocalData: () => void;
+  /** Drops another account's debate list before the server copy loads. */
+  prepareForUser: (userId: string) => void;
 }
 
 export function normalizeMotion(motion: string): string {
@@ -93,8 +101,7 @@ function sortDebates(debates: Debate[]): Debate[] {
 }
 
 async function requireUserId(): Promise<string> {
-  const { data } = await supabase.auth.getUser();
-  const userId = data.user?.id;
+  const userId = await currentUserId();
   if (!userId) throw new Error('Sign in to manage debates');
   return userId;
 }
@@ -119,21 +126,30 @@ export const useDebateStore = create<DebateState>()(
       currentDebateId: null as string | null,
       oneOff: false,
       hydrated: false,
+      loadFailed: false,
       dialog: null as DebateDialog,
       dialogMotion: '',
 
       hydrate: async () => {
+        if (restoredSessionsBlocked()) return;
         const epoch = hydrationEpoch;
-        const { data: { user } } = await supabase.auth.getUser();
-        if (epoch !== hydrationEpoch || !user) return;
-        if (get().ownerUserId !== user.id) {
-          set({ ownerUserId: user.id, debates: [], currentDebateId: null, oneOff: false, hydrated: false });
+        const userId = await currentUserId();
+        if (epoch !== hydrationEpoch || !userId) return;
+        if (get().ownerUserId !== userId) {
+          set({ ownerUserId: userId, debates: [], currentDebateId: null, oneOff: false, hydrated: false });
         }
         const writesBefore = debateWrites;
-        const [debatesResult, currentResult] = await Promise.all([
-          supabase.from('debates').select('id,motion,settings,instructions,last_activity_at,created_at').order('last_activity_at', { ascending: false }),
-          supabase.from('current_debates').select('debate_id').maybeSingle(),
-        ]);
+        if (get().loadFailed) set({ loadFailed: false });
+        let debatesResult, currentResult;
+        try {
+          [debatesResult, currentResult] = await Promise.all([
+            supabase.from('debates').select('id,motion,settings,instructions,last_activity_at,created_at').order('last_activity_at', { ascending: false }),
+            supabase.from('current_debates').select('debate_id').maybeSingle(),
+          ]);
+        } catch (error) {
+          if (epoch === hydrationEpoch) set({ loadFailed: true });
+          throw error;
+        }
         if (epoch !== hydrationEpoch) return;
         if (writesBefore !== debateWrites) {
           // A create, switch, edit or delete landed mid-load; this snapshot is older than it.
@@ -142,6 +158,7 @@ export const useDebateStore = create<DebateState>()(
         }
         if (debatesResult.error || currentResult.error) {
           console.warn('[DebateStore] Failed to hydrate debates:', debatesResult.error?.message ?? currentResult.error?.message);
+          set({ loadFailed: true });
           return;
         }
         const debates = ((debatesResult.data ?? []) as DebateRow[]).map(fromRow);
@@ -242,13 +259,20 @@ export const useDebateStore = create<DebateState>()(
 
       resetLocalData: () => {
         hydrationEpoch += 1;
-        set({ ownerUserId: null, debates: [], currentDebateId: null, oneOff: false, hydrated: false, dialog: null, dialogMotion: '' });
+        set({ ownerUserId: null, debates: [], currentDebateId: null, oneOff: false, hydrated: false, loadFailed: false, dialog: null, dialogMotion: '' });
+      },
+
+      prepareForUser: (userId) => {
+        if (get().ownerUserId === userId) return;
+        hydrationEpoch += 1;
+        set({ ownerUserId: userId, debates: [], currentDebateId: null, oneOff: false, hydrated: false, loadFailed: false, dialog: null, dialogMotion: '' });
       },
     }),
     {
       name: 'debatelab-current-debate',
       storage: createJSONStorage(() => localStorage),
       version: 1,
+      merge: mergePersistedDebateState,
       partialize: (state) => ({
         ownerUserId: state.ownerUserId,
         debates: state.debates,
@@ -257,6 +281,18 @@ export const useDebateStore = create<DebateState>()(
     },
   ),
 );
+
+/**
+ * A rehydrate that finishes after sign-in must not restore another account's
+ * debate list. Lists saved before an owner was recorded stay only until this
+ * account is bound.
+ */
+export function mergePersistedDebateState(persistedState: unknown, currentState: DebateState): DebateState {
+  const saved = persistedState && typeof persistedState === 'object' ? persistedState as Partial<DebateState> : {};
+  const savedOwner = typeof saved.ownerUserId === 'string' ? saved.ownerUserId : null;
+  if (currentState.ownerUserId && savedOwner !== currentState.ownerUserId) return currentState;
+  return { ...currentState, ...saved, ownerUserId: savedOwner ?? currentState.ownerUserId };
+}
 
 export function selectCurrentDebate(state: Pick<DebateState, 'debates' | 'currentDebateId'>): Debate | null {
   return state.debates.find((debate) => debate.id === state.currentDebateId) ?? null;

@@ -1,3 +1,4 @@
+import { normalizeSourceUrl } from '../source-url';
 import { validateUrl } from '../validation/url';
 
 export interface SourceSemanticMetadata {
@@ -104,9 +105,17 @@ export const AUTO_SAVED_FOLDER = 'Auto-saved';
 
 /** The researched sources worth keeping in the Library: weak or off-topic ones are dropped unless the case used them. */
 export function retainedDiscoveredSources(sources: DiscoveredSource[]): DiscoveredSource[] {
-  return sources.filter((source) => !source.semantic ||
-    (source.qualityLabel !== 'weak' && source.semantic.relevance >= 0.45) ||
-    source.semantic.lastUsedInCase === true);
+  const seen = new Set<string>();
+  return sources.filter((source) => {
+    const keep = !source.semantic ||
+      (source.qualityLabel !== 'weak' && source.semantic.relevance >= 0.45) ||
+      source.semantic.lastUsedInCase === true;
+    if (!keep) return false;
+    const key = normalizeSourceUrl(source.url) ?? source.url;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
 }
 
 /** The Library row an auto-saved source becomes, apart from its user and debate. */

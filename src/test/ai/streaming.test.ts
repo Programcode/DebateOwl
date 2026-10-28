@@ -17,7 +17,7 @@ vi.mock('@/lib/supabase/client', () => ({
   SUPABASE_URL: 'http://test-supabase.local',
 }));
 
-import { consumeSSEChunk, isAskStreamingSupported, streamAskChat } from '@/lib/ai/streaming';
+import { isAskStreamingSupported, streamAskChat } from '@/lib/ai/streaming';
 import { useSettingsStore } from '@/lib/stores/settings-store';
 
 function streamFromChunks(chunks: string[]): ReadableStream<Uint8Array> {
@@ -41,7 +41,7 @@ function mockFetchOnce(body: BodyInit | null, init: ResponseInit = { status: 200
   return fetchMock;
 }
 
-const streamConfig = { provider: 'openrouter', model: 'gpt-5.4-mini', temperature: 0.7 } as const;
+const streamConfig = { provider: 'openrouter', model: 'gpt-5.4-mini' } as const;
 const streamOptions = {};
 
 beforeEach(() => {
@@ -56,70 +56,39 @@ afterEach(() => {
 });
 
 describe('AI streaming helpers', () => {
-  it('parses complete SSE events', () => {
-    const result = consumeSSEChunk('', 'event: delta\ndata: {"text":"Hello"}\n\n');
-
-    expect(result.buffer).toBe('');
-    expect(result.events).toEqual([{ event: 'delta', data: { text: 'Hello' } }]);
-  });
-
-  it('keeps partial SSE events buffered until complete', () => {
-    const first = consumeSSEChunk('', 'event: delta\ndata: {"text":"Hel');
-    expect(first.events).toEqual([]);
-    expect(first.buffer).toContain('Hel');
-
-    const second = consumeSSEChunk(first.buffer, 'lo"}\n\n');
-    expect(second.events).toEqual([{ event: 'delta', data: { text: 'Hello' } }]);
-    expect(second.buffer).toBe('');
-  });
-
-  it('falls back to raw data string when SSE payload is not valid JSON', () => {
-    const result = consumeSSEChunk('', 'event: status\ndata: not-json-payload\n\n');
-    expect(result.events).toEqual([{ event: 'status', data: 'not-json-payload' }]);
-  });
-
-  it('parses multiple events in a single chunk', () => {
-    const chunk = 'event: delta\ndata: {"text":"A"}\n\nevent: delta\ndata: {"text":"B"}\n\n';
-    const result = consumeSSEChunk('', chunk);
-    expect(result.events).toEqual([
-      { event: 'delta', data: { text: 'A' } },
-      { event: 'delta', data: { text: 'B' } },
-    ]);
-  });
-
   it('enables streaming for basic OpenRouter ask chats', () => {
-    expect(isAskStreamingSupported({ provider: 'openrouter', model: 'openai/gpt-5.6-luna', temperature: 0.7 })).toBe(true);
-    expect(isAskStreamingSupported({ provider: 'openai', model: 'gpt-5.4-mini', temperature: 0.7 })).toBe(false);
-    expect(isAskStreamingSupported({ provider: 'google', model: 'gemini-3-flash-preview', temperature: 0.7 })).toBe(false);
-    expect(isAskStreamingSupported({ provider: 'anthropic', model: 'claude-haiku-4-5-20251001', temperature: 0.7 })).toBe(false);
-    expect(isAskStreamingSupported({ provider: 'unknown' as string, model: 'x', temperature: 0.7 })).toBe(false);
+    expect(isAskStreamingSupported({ provider: 'openrouter', model: 'openai/gpt-6-luna' })).toBe(true);
+    expect(isAskStreamingSupported({ provider: 'openai', model: 'gpt-5.4-mini' })).toBe(false);
+    expect(isAskStreamingSupported({ provider: 'google', model: 'gemini-3-flash-preview' })).toBe(false);
+    expect(isAskStreamingSupported({ provider: 'anthropic', model: 'claude-haiku-4-5-20251001' })).toBe(false);
+    expect(isAskStreamingSupported({ provider: 'unknown' as string, model: 'x' })).toBe(false);
     expect(isAskStreamingSupported(
-      { provider: 'openrouter', model: 'openai/gpt-5.6-luna', temperature: 0.7 },
+      { provider: 'openrouter', model: 'openai/gpt-6-luna' },
       { citationMode: true }
     )).toBe(false);
     expect(isAskStreamingSupported(
-      { provider: 'openrouter', model: 'openai/gpt-5.6-luna', temperature: 0.7 },
+      { provider: 'openrouter', model: 'openai/gpt-6-luna' },
       { webSearch: true }
     )).toBe(false);
     expect(isAskStreamingSupported(
-      { provider: 'openrouter', model: 'openai/gpt-5.6-luna', temperature: 0.7 },
+      { provider: 'openrouter', model: 'openai/gpt-6-luna' },
       { prosConsMode: true }
     )).toBe(false);
     expect(isAskStreamingSupported(
-      { provider: 'openrouter', model: 'openai/gpt-5.6-luna', temperature: 0.7 },
+      { provider: 'openrouter', model: 'openai/gpt-6-luna' },
       { argumentMapMode: true }
     )).toBe(false);
     expect(isAskStreamingSupported(
-      { provider: 'openrouter', model: 'openai/gpt-5.6-luna', temperature: 0.7 },
+      { provider: 'openrouter', model: 'openai/gpt-6-luna' },
       { mode: 'clarify' }
     )).toBe(false);
     expect(isAskStreamingSupported(
-      { provider: 'openrouter', model: 'openai/gpt-5.6-luna', temperature: 0.7 },
+      { provider: 'openrouter', model: 'openai/gpt-6-luna' },
       { mode: 'general' }
     )).toBe(true);
     for (const mode of ['clarify', 'summarize', 'proscons', 'argumentmap']) {
       expect(isAskStreamingSupported(
-        { provider: 'openrouter', model: 'openai/gpt-5.6-luna', temperature: 0.7 },
+        { provider: 'openrouter', model: 'openai/gpt-6-luna' },
         { mode }
       )).toBe(false);
     }

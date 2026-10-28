@@ -1,28 +1,34 @@
 // src/pages/GeneratePage.tsx
 import { useEffect, useRef, useState } from 'react';
+import { useShallow } from 'zustand/react/shallow';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useSessionStore } from '@/lib/stores/session-store';
 import { useSettingsStore } from '@/lib/stores/settings-store';
 import { GenerateForm } from '@/components/features/generate/GenerateForm';
 import { GenerateResults } from '@/components/features/generate/GenerateResults';
-import { generateCase, askChat, isAIAuthError, isAIRateLimitError, isTimeoutError, type DiscoveredSource } from '@/lib/ai/client';
+import { generateCase, isAIAuthError, isAIRateLimitError, isTimeoutError, type DiscoveredSource } from '@/lib/ai/client';
 import type { GenerateInput } from '@/lib/ai/schemas/generate';
 import { useToast } from '@/hooks/use-toast';
 import { useSubscriptionError } from '@/hooks/use-subscription-error';
 import { getUserFacingAIError } from '@/lib/ai/error-display';
-import { LimitReachedModal, ModelRestrictedModal, PricingModal } from '@/components/features/subscription';
-import { MarkerType, type Node as ReactFlowNode, type Edge as ReactFlowEdge } from 'reactflow';
+import { DailyUsage, SubscriptionErrorModals } from '@/components/features/subscription';
+import { caseHasFlowchart, flowchartFromCase } from '@/lib/flowchart';
 
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Save } from 'lucide-react';
-import { StreamingIndicator } from '@/components/ui/streaming-indicator';
-import { AnimatedSection } from '@/components/ui/animated-section';
+import { Check, Save, Target } from 'lucide-react';
+import { Owl } from '@/components/brand/Owl';
+import { EmptyState } from '@/components/ui/empty-state';
+import { PageHeader } from '@/components/layout/PageHeader';
+import { ToolRunErrorPanel, isCanceled, useRevealResults, useToolRun } from '@/components/features/tools/tool-run';
+import { LiveToolRun } from '@/components/features/tools/live-draft';
+import { generateDraftSections } from '@/components/features/tools/live-sections';
+import { generateDiscussPrompt, openDiscussion } from '@/components/features/tools/discuss';
+import { markResultSaved, useResultSaved } from '@/components/features/tools/result-actions';
 import { prefillFromGenerate } from '@/lib/crossfire/prefill';
-import { useReducedMotion } from 'framer-motion';
 import { WorkspaceToolScope, useWorkspaceToolScope } from '@/components/features/workspace/WorkspaceToolScope';
 import { workspaceRouteState } from '@/lib/workspace/tool-context';
 import { activeDebateId, sameMotion, selectCurrentDebate, useDebateStore } from '@/lib/stores/debate-store';
@@ -32,38 +38,58 @@ import { useDebateMotionGate } from '@/components/features/debate/DebateMotionGa
 
 export default function GeneratePage() {
   const workspace = useWorkspaceToolScope('generate');
-  const { generateResult, generateLoading, generateRegeneratingSection: regeneratingSection, generateForm, setGenerateResult, setGenerateLoading, setGenerateRegeneratingSection, saveCurrentCase, addAskMessage, setAskLoading, askMessages, setPendingFlowchartData, autosavedCases, recordResult, updateRecordedResult } = useSessionStore();
+  const { generateResult, generateLoading, generateRegeneratingSection: regeneratingSection, generateForm, generateResultDebateId, setGenerateResult, setGenerateLoading, setGenerateRegeneratingSection, setGenerateResultDebateId, saveCurrentCase, setPendingFlowchartData, autosavedCases, recordResult, updateRecordedResult } = useSessionStore(useShallow((state) => ({
+    generateResult: state.generateResult,
+    generateLoading: state.generateLoading,
+    generateRegeneratingSection: state.generateRegeneratingSection,
+    generateForm: state.generateForm,
+    generateResultDebateId: state.generateResultDebateId,
+    setGenerateResult: state.setGenerateResult,
+    setGenerateLoading: state.setGenerateLoading,
+    setGenerateRegeneratingSection: state.setGenerateRegeneratingSection,
+    setGenerateResultDebateId: state.setGenerateResultDebateId,
+    saveCurrentCase: state.saveCurrentCase,
+    setPendingFlowchartData: state.setPendingFlowchartData,
+    autosavedCases: state.autosavedCases,
+    recordResult: state.recordResult,
+    updateRecordedResult: state.updateRecordedResult,
+  })));
   const debateGate = useDebateMotionGate({ disabled: Boolean(workspace.context) });
   // The debate row this page's current result was recorded into, if any.
   const [recordedCaseId, setRecordedCaseId] = useState<string | null>(null);
+  // Undo shows an autosaved snapshot, which is not the recorded case.
+  const [restoredSnapshot, setRestoredSnapshot] = useState(false);
   // Debate the current result belongs to (null for one-off); undefined after a reload.
   const [resultDebateId, setResultDebateId] = useState<string | null | undefined>(undefined);
   const { getFeatureConfig } = useSettingsStore();
   const config = getFeatureConfig('generate');
-  const askConfig = getFeatureConfig('ask');
   const { toast } = useToast();
   const navigate = useNavigate();
   const subError = useSubscriptionError();
   const { t } = useTranslation();
-  const shouldReduceMotion = useReducedMotion();
   const [saveDialogOpen, setSaveDialogOpen] = useState(false);
-  const [successfulGenerationSequence, setSuccessfulGenerationSequence] = useState(0);
-  const resultsAnchorRef = useRef<HTMLDivElement>(null);
-
+  const run = useToolRun('generate');
+  const results = useRevealResults();
+  // On phones the answer sits below the form; bring it into view once the model starts writing.
+  const drafting = Boolean(run.liveState.draft);
+  const revealResults = results.reveal;
   useEffect(() => {
-    if (successfulGenerationSequence === 0) return;
-    const timer = window.setTimeout(() => {
-      resultsAnchorRef.current?.scrollIntoView({ behavior: shouldReduceMotion ? 'auto' : 'smooth', block: 'start' });
-    }, 100);
-    return () => window.clearTimeout(timer);
-  }, [shouldReduceMotion, successfulGenerationSequence]);
+    if (drafting) revealResults();
+  }, [drafting, revealResults]);
+  const lastRun = useRef<{ data: GenerateInput; debateId: string | null } | null>(null);
   const [saveTitle, setSaveTitle] = useState('');
   const [discoveredSources, setDiscoveredSources] = useState<DiscoveredSource[]>([]);
+  const resultSaved = useResultSaved(generateResult);
 
   const handleUndo = () => {
     const prev = (autosavedCases || []).find(item => item.data !== generateResult);
     if (prev) {
       setGenerateResult(prev.data);
+      // A snapshot does not record its debate or its saved row. Unknown keeps it out of
+      // the Flowchart, and a regeneration then cannot overwrite the replaced case's row.
+      useSessionStore.setState({ generateResultDebateId: undefined });
+      setResultDebateId(undefined);
+      setRestoredSnapshot(true);
       // Autosaved snapshots do not carry researched sources; drop the panel
       // rather than showing provenance that belongs to a different case.
       setDiscoveredSources([]);
@@ -77,9 +103,13 @@ export default function GeneratePage() {
 
   const submitGenerate = async (data: GenerateInput, debateId: string | null) => {
     const target = { debateId };
+    lastRun.current = { data, debateId };
+    const signal = run.start();
     setGenerateLoading(true);
     try {
-      const { result, discoveredSources: sources } = await generateCase(data, config, workspace.context ?? undefined, workspace.context ? undefined : target.debateId);
+      const { result, discoveredSources: sources } = await generateCase(data, config, workspace.context ?? undefined, workspace.context ? undefined : target.debateId, signal, run.live());
+      // A canceled request can still resolve (its last step ignores the signal); never publish it.
+      if (signal.aborted) return;
       // Always stamp with real local time and motion
       if (result.metadata) {
         result.metadata.generatedAt = new Date().toISOString();
@@ -88,27 +118,31 @@ export default function GeneratePage() {
       setDiscoveredSources(sources);
       setGenerateResult(result);
       setRecordedCaseId(null);
+      setRestoredSnapshot(false);
       setResultDebateId(target.debateId);
+      setGenerateResultDebateId(target.debateId);
       await workspace.attach(data, result);
       if (target.debateId) {
-        setRecordedCaseId(await recordInDebate(() => recordResult('case', { title: data.motion, input: data, output: result, debateId: target.debateId, side: data.side })));
+        const recordedId = await recordInDebate(() => recordResult('case', { title: data.motion, input: data, output: result, debateId: target.debateId, side: data.side }));
+        setRecordedCaseId(recordedId);
+        if (recordedId) markResultSaved(result);
       }
-      setSuccessfulGenerationSequence((sequence) => sequence + 1);
-      toast({ title: t('generate.complete', 'Generate complete'), description: t('generate.completeDesc', 'Your debate case is ready.'), variant: 'success' });
+      results.reveal();
     } catch (error) {
+      if (isCanceled(error, signal)) return;
       console.error('Failed to generate case:', error);
 
       // Handle subscription errors with modals
       if (subError.handleSubscriptionError(error)) return;
 
       if (isAIAuthError(error)) {
-        toast({ title: t('generate.authRequired'), description: error.message, variant: "destructive" });
+        run.setError({ title: t('generate.authRequired'), description: getUserFacingAIError(error) });
       } else if (isAIRateLimitError(error)) {
-        toast({ title: t('rateLimit.title'), description: `${error.message}${error.limit ? ` (${error.current}/${error.limit} uses)` : ''}`, variant: "destructive" });
+        run.setError({ title: t('rateLimit.title'), description: getUserFacingAIError(error) });
       } else if (isTimeoutError(error)) {
-        toast({ title: t('generate.timeout'), description: t('generate.timeoutDesc'), variant: "destructive" });
+        run.setError({ title: t('generate.timeout'), description: t('generate.timeoutDesc') });
       } else {
-        toast({ title: t('generate.failed'), description: getUserFacingAIError(error), variant: "destructive" });
+        run.setError({ title: t('generate.failed'), description: getUserFacingAIError(error) });
       }
     } finally {
       setGenerateLoading(false);
@@ -117,26 +151,31 @@ export default function GeneratePage() {
 
   const handleRegenerateSection = (section: string) => {
     if (generateLoading || regeneratingSection) return;
-    if (!generateForm?.motion || !generateResult) {
+    const motion = generateResult?.metadata?.motion?.trim() || generateForm?.motion;
+    if (!motion || !generateResult) {
       toast({ title: t('generate.regenerateUnavailable', 'Cannot regenerate yet'), description: t('generate.regenerateUnavailableDesc', 'Generate a case first, then retry a section.'), variant: 'destructive' });
       return;
     }
 
     const data: GenerateInput = {
-      motion: generateForm.motion,
-      side: generateForm.side || 'pro',
-      format: generateForm.format || 'custom',
-      role: generateForm.role || 'r1',
-      length: generateForm.length || 'standard',
-      audience: generateForm.audience || 'intermediate',
-      tone: generateForm.tone || 'formal',
+      motion,
+      side: generateResult.metadata?.side || generateForm?.side || 'pro',
+      format: generateForm?.format || 'custom',
+      role: generateForm?.role || 'r1',
+      length: generateForm?.length || 'standard',
+      audience: generateForm?.audience || 'intermediate',
+      tone: generateForm?.tone || 'formal',
     };
 
     // Regenerate against the result's own debate, never whichever is current now.
+    // A loaded case records that debate on the store; this page's state only
+    // knows it until the student leaves and comes back.
     const current = selectCurrentDebate(useDebateStore.getState());
     const debateId = resultDebateId !== undefined
       ? resultDebateId
-      : sameMotion(current?.motion, data.motion) ? activeDebateId() : null;
+      : generateResultDebateId !== undefined
+        ? generateResultDebateId
+        : sameMotion(current?.motion, data.motion) ? activeDebateId() : null;
     // One section at a time: each regeneration merges into the result it started from.
     const base = generateResult;
     setGenerateRegeneratingSection(section);
@@ -156,10 +195,15 @@ export default function GeneratePage() {
         setGenerateResult(regenerated);
         setDiscoveredSources(sources);
         await workspace.attach({ ...data, regeneratedSection: section }, regenerated);
-        if (recordedCaseId) await updateRecordedResult('case', recordedCaseId, regenerated);
+        if (recordedCaseId && !restoredSnapshot) {
+          await updateRecordedResult('case', recordedCaseId, regenerated);
+          markResultSaved(regenerated);
+        }
         toast({ title: t('generate.regenerated', 'Section regenerated'), description: t('generate.regeneratedDesc', 'The selected section has been refreshed.'), variant: 'success' });
       })
       .catch((error) => {
+        // Out of uses: the same dialog as a full generation, not a toast.
+        if (subError.handleSubscriptionError(error)) return;
         console.error('Failed to regenerate section:', error);
         toast({ title: t('generate.failed'), description: getUserFacingAIError(error), variant: 'destructive' });
       })
@@ -175,10 +219,24 @@ export default function GeneratePage() {
   const confirmSave = async () => {
     const title = saveTitle.trim();
     if (!title) return;
+    // The case on screen when Save was confirmed is the one saved, even if a regenerate lands meanwhile.
+    const saving = useSessionStore.getState().generateResult;
     try {
       await saveCurrentCase(title);
+      markResultSaved(saving);
       setSaveDialogOpen(false);
-      toast({ title: t('generate.saved'), description: t('generate.savedDesc') });
+      toast({
+        title: t('generate.saved'),
+        description: t('generate.savedDesc'),
+        variant: 'success',
+        // The owl celebrates beside the success check, so the meaning never rests on the owl or the colour.
+        icon: (
+          <span className="flex items-center gap-2">
+            <Owl pose="celebrating" size={44} priority className="-my-2" />
+            <span className="flex size-8 items-center justify-center rounded-full bg-success-tint text-success-text"><Check className="size-4" strokeWidth={3} /></span>
+          </span>
+        ),
+      });
     } catch (error) {
       console.error('Failed to save case:', error);
       toast({
@@ -189,43 +247,8 @@ export default function GeneratePage() {
     }
   };
 
-  const handleDiscuss = async () => {
-    if (!generateResult) return;
-
-    const summary = `I'd like to discuss the case we just generated.
-    
-    **Thesis:** ${generateResult.caseStructure.thesis}
-    
-    **Arguments:**
-    ${generateResult.contentions.map((c, i) => `${i + 1}. ${c.claim}`).join('\n')}
-    
-    Can we refine this?`;
-
-    addAskMessage({ role: 'user', content: summary });
-    navigate('/app/ask');
-
-    setAskLoading(true);
-    try {
-      const history = [...askMessages, { role: 'user', content: summary }].map(m => ({
-        role: m.role as 'user' | 'assistant',
-        content: m.content
-      }));
-
-      const result = await askChat(summary, history, 'general', askConfig);
-
-      addAskMessage({
-        role: 'assistant',
-        content: result.response,
-        output: result
-      });
-    } catch (error) {
-      console.error('Failed to discuss result:', error);
-      if (!subError.handleSubscriptionError(error)) {
-        toast({ title: t('chat.error'), description: t('chat.errorDesc'), variant: "destructive" });
-      }
-    } finally {
-      setAskLoading(false);
-    }
+  const handleDiscuss = () => {
+    if (generateResult) openDiscussion(navigate, generateDiscussPrompt(generateResult, t));
   };
 
   const handlePracticeCrossfire = () => {
@@ -239,119 +262,19 @@ export default function GeneratePage() {
   };
 
   const handleImportFlowchart = () => {
-    if (!generateResult?.caseStructure || !generateResult?.contentions) {
+    if (!caseHasFlowchart(generateResult)) {
       toast({ title: t('generate.flowchartImportFailed'), description: t('generate.flowchartNoData'), variant: "destructive" });
+      return;
+    }
+    // The flowchart files its chart in the current debate, so only that debate's case goes there.
+    const { oneOff, currentDebateId } = useDebateStore.getState();
+    if (!workspace.context && (generateResultDebateId === undefined || generateResultDebateId !== (oneOff ? null : currentDebateId))) {
+      toast({ title: t('generate.flowchartImportFailed'), description: t('generate.flowchartOtherDebate'), variant: "destructive" });
       return;
     }
 
     try {
-      const nodes: ReactFlowNode[] = [];
-      const edges: ReactFlowEdge[] = [];
-      const centerX = 400;
-
-      // Thesis
-      nodes.push({
-        id: 'thesis',
-        type: 'custom',
-        position: { x: centerX, y: 50 },
-        data: {
-          label: 'Thesis',
-          description: generateResult.caseStructure.thesis,
-          type: 'thesis'
-        }
-      });
-
-      // Contentions — use 'contention' type to match FlowchartPage nodeColors/nodeIcons
-      const contentions = generateResult.contentions;
-      contentions.forEach((c, i) => {
-        const id = `c-${i}`;
-        const xPos = centerX + ((i - (contentions.length - 1) / 2) * 300);
-
-        nodes.push({
-          id,
-          type: 'custom',
-          position: { x: xPos, y: 250 },
-          data: {
-            label: `Argument ${i + 1}`,
-            description: c.claim,
-            type: 'contention',
-            strength: 'strong'
-          }
-        });
-
-        edges.push({
-          id: `e-thesis-${id}`,
-          source: 'thesis',
-          target: id,
-          animated: true,
-          markerEnd: { type: MarkerType.ArrowClosed }
-        });
-      });
-
-      // Attacks (Predicted Opponent Case)
-      if (generateResult.predictedOpponentCase?.likelyArguments) {
-        const attacks = generateResult.predictedOpponentCase.likelyArguments;
-        attacks.forEach((arg, i) => {
-          const id = `a-${i}`;
-          const xPos = centerX + ((i - (attacks.length - 1) / 2) * 300);
-
-          nodes.push({
-            id,
-            type: 'custom',
-            position: { x: xPos, y: 450 },
-            data: {
-              label: `Attack ${i + 1}`,
-              description: arg,
-              type: 'attack'
-            }
-          });
-
-          const targetContentionId = contentions.length ? `c-${i % contentions.length}` : 'thesis';
-          edges.push({
-            id: `e-${targetContentionId}-${id}`,
-            source: targetContentionId,
-            target: id,
-            label: 'Attack',
-            style: { stroke: '#ef4444', strokeWidth: 2 },
-            markerEnd: { type: MarkerType.ArrowClosed }
-          });
-        });
-      }
-
-      // Counters / Rebuttals — link each to its target contention
-      if (generateResult.counters?.length) {
-        generateResult.counters.forEach((counter, i) => {
-          const id = `r-${i}`;
-          // Find the contention this counter targets
-          const targetIdx = contentions.findIndex(
-            (c) => c.claim.toLowerCase().includes(counter.targetArgument?.toLowerCase() ?? '')
-          );
-          const parentId = targetIdx >= 0 ? `c-${targetIdx}` : 'thesis';
-          const parentNode = nodes.find((n) => n.id === parentId);
-          const xPos = parentNode ? parentNode.position.x + 50 : centerX + (i * 250);
-
-          nodes.push({
-            id,
-            type: 'custom',
-            position: { x: xPos, y: 650 },
-            data: {
-              label: `Rebuttal ${i + 1}`,
-              description: counter.rebuttal || counter.counterpoint,
-              type: 'rebuttal'
-            }
-          });
-
-          edges.push({
-            id: `e-${parentId}-${id}`,
-            source: parentId,
-            target: id,
-            style: { stroke: '#3b82f6' },
-            markerEnd: { type: MarkerType.ArrowClosed }
-          });
-        });
-      }
-
-      setPendingFlowchartData({ nodes, edges });
+      setPendingFlowchartData(flowchartFromCase(generateResult, t));
       navigate('/app/flowchart');
       toast({ title: t('generate.flowchartImported'), description: t('generate.flowchartImportedDesc') });
     } catch (error) {
@@ -365,47 +288,43 @@ export default function GeneratePage() {
     <div className="container py-8 px-4">
       <WorkspaceToolScope context={workspace.context} />
       <div className="max-w-6xl mx-auto">
-        <AnimatedSection className="mb-8 flex flex-col sm:flex-row sm:items-end justify-between gap-4">
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight text-foreground">{t('nav.generate')}</h1>
-          </div>
-        </AnimatedSection>
+        <PageHeader title={t('nav.generate')} meta={<DailyUsage />} />
         <CurrentDebateStrip side={generateForm?.side} hidden={Boolean(workspace.context)} />
 
         <div className="grid gap-8 grid-cols-1 lg:grid-cols-[440px_minmax(0,1fr)]">
           {/* Form */}
-          <AnimatedSection delay={75} className="lg:sticky lg:top-24 lg:self-start">
+          <div className="lg:sticky lg:top-24 lg:self-start">
             <GenerateForm onSubmit={handleSubmit} isLoading={generateLoading || regeneratingSection !== null} debatePrefill={!workspace.context} />
-          </AnimatedSection>
+          </div>
 
           {/* Results */}
-          <div>
+          <div ref={results.ref} className="scroll-mt-24">
+            {run.error && (
+              <ToolRunErrorPanel
+                error={run.error}
+                onRetry={lastRun.current ? () => void submitGenerate(lastRun.current!.data, lastRun.current!.debateId) : undefined}
+                onDismiss={run.clearError}
+              />
+            )}
             {generateLoading ? (
-              <div key="generate-loading" className="motion-swap motion-shimmer flex min-h-[400px] flex-col items-center justify-center rounded-lg border-2 border-dashed border-border bg-card/50 p-8">
-                <StreamingIndicator messages={[t('generateForm.loadingMsg1'), t('generateForm.loadingMsg2'), t('generateForm.loadingMsg3'), t('generateForm.loadingMsg4'), t('generateForm.loadingMsg5')]} />
-              </div>
+              <LiveToolRun label={t('generate.working', 'Writing your case…')} live={run.liveState} sections={run.liveState.draft ? generateDraftSections(run.liveState.draft, t) : []} onCancel={run.cancel} pose="thinking" />
             ) : generateResult ? (
-              <div ref={resultsAnchorRef} key="generate-results" id="generate-results" className="space-y-4">
+              <div key="generate-results" id="generate-results" className="space-y-4">
                 <GenerateResults
                   result={generateResult}
                   discoveredSources={discoveredSources}
                   onRegenerateSection={handleRegenerateSection}
                   regeneratingSection={regeneratingSection}
                   onDiscuss={handleDiscuss}
-                  onSave={recordedCaseId ? undefined : handleSave}
+                  onSave={handleSave}
+                  saved={resultSaved}
                   onUndo={handleUndo}
                   onImportFlowchart={handleImportFlowchart}
                   onPracticeCrossfire={handlePracticeCrossfire}
                 />
               </div>
             ) : (
-              <div key="generate-empty" className="motion-swap flex min-h-[400px] flex-col items-center justify-center rounded-lg border-2 border-dashed border-border bg-card/50 p-8 text-center">
-                <div className="mb-4 text-6xl">🎯</div>
-                <h3 className="text-lg font-semibold text-foreground mb-2">{t('generate.emptyTitle')}</h3>
-                <p className="text-sm text-muted-foreground max-w-sm">
-                  {t('generate.emptyDesc')}
-                </p>
-              </div>
+              <EmptyState size="compact-below-lg" icon={Target} pose={run.error ? 'surprised' : 'point'} title={t('generate.emptyTitle')} description={t('generate.emptyDesc')} />
             )}
           </div>
         </div>
@@ -413,26 +332,7 @@ export default function GeneratePage() {
     </div>
 
     {debateGate.dialog}
-    <LimitReachedModal
-      open={subError.limitModalOpen}
-      onOpenChange={subError.setLimitModalOpen}
-      variant={subError.limitModalVariant}
-      limit={subError.limitModalLimit}
-      current={subError.limitModalCurrent}
-      onUpgrade={() => { subError.setLimitModalOpen(false); subError.setPricingModalOpen(true); }}
-    />
-    <ModelRestrictedModal
-      open={subError.modelModalOpen}
-      onOpenChange={subError.setModelModalOpen}
-      onUpgrade={() => {
-        subError.setModelModalOpen(false);
-        subError.setPricingModalOpen(true);
-      }}
-    />
-    <PricingModal
-      open={subError.pricingModalOpen}
-      onOpenChange={subError.setPricingModalOpen}
-    />
+    <SubscriptionErrorModals subError={subError} />
     <Dialog open={saveDialogOpen} onOpenChange={setSaveDialogOpen}>
       <DialogContent>
         <DialogHeader>

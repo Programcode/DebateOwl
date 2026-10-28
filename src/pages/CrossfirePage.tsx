@@ -1,4 +1,6 @@
 import { useCallback, useEffect, useMemo, useReducer, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from 'react';
+import { OwlLoader } from '@/components/ui/loading-spinner';
+import { LoadingSpinner } from '@/components/ui/loading-spinner';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { motion, useReducedMotion } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
@@ -8,7 +10,6 @@ import {
   Check,
   Clock3,
   Flame,
-  Loader2,
   MessageSquare,
   Mic,
   RefreshCw,
@@ -49,9 +50,14 @@ import {
   saveCrossfireDraft,
 } from '@/lib/crossfire/storage';
 import { useSessionStore } from '@/lib/stores/session-store';
+import { readableLiveText } from '@/lib/voice/live-text';
+import { LiveCaret, LiveToolRun } from '@/components/features/tools/live-draft';
+import { crossfireDebriefDraftSections } from '@/components/features/tools/live-sections';
+import type { LiveRunState } from '@/components/features/tools/tool-run';
 import { useSettingsStore } from '@/lib/stores/settings-store';
 import { useAuth } from '@/lib/supabase/AuthProvider';
 import { cn } from '@/lib/utils';
+import { ClockAnnouncer, RoundClock } from '@/components/features/practice/RoundClock';
 import { WorkspaceToolScope, useWorkspaceToolScope } from '@/components/features/workspace/WorkspaceToolScope';
 import { CurrentDebateStrip, useDebateMotionPrefill } from '@/components/features/debate/CurrentDebateStrip';
 import { DebateContextControl } from '@/components/features/debate/DebateContextControl';
@@ -70,6 +76,9 @@ import { VoiceModeToggle } from '@/components/features/voice/VoiceModeToggle';
 import { useVoiceAvailability } from '@/lib/voice/availability';
 import { combineDelivery, measureDelivery } from '@/lib/voice/delivery';
 import { opponentVoice } from '@/lib/voice/opponent-voice';
+import { useSubscriptionError } from '@/hooks/use-subscription-error';
+import { DailyUsage, SessionCostNote, SubscriptionErrorModals } from '@/components/features/subscription';
+import { useSessionQuota } from '@/hooks/use-session-quota';
 
 const SESSION_ID_PREFIX = 'crossfire';
 
@@ -114,11 +123,38 @@ function restoreState(userId: string | undefined, prefill: CrossfirePrefill | un
   } : undefined));
 }
 
-function formatRemaining(milliseconds: number): string {
-  const totalSeconds = Math.max(0, Math.ceil(milliseconds / 1_000));
-  const minutes = Math.floor(totalSeconds / 60);
-  const seconds = totalSeconds % 60;
-  return `${minutes}:${String(seconds).padStart(2, '0')}`;
+/**
+ * The live round clock ticks on its own, so the page doesn't re-render twice a second
+ * during a round. It calls onExpire once when time runs out.
+ */
+function CrossfireClock({ endsAt, onExpire }: { endsAt: number; onExpire: () => void }) {
+  const { t } = useTranslation();
+  const [now, setNow] = useState(() => Date.now());
+  const expireRef = useRef(onExpire);
+  expireRef.current = onExpire;
+  const firedRef = useRef(false);
+  useEffect(() => {
+    firedRef.current = false;
+    const tick = () => {
+      const current = Date.now();
+      setNow(current);
+      if (current >= endsAt && !firedRef.current) {
+        firedRef.current = true;
+        expireRef.current();
+      }
+    };
+    tick();
+    const interval = window.setInterval(tick, 250);
+    return () => window.clearInterval(interval);
+  }, [endsAt]);
+  const seconds = Math.max(0, Math.ceil((endsAt - now) / 1_000));
+  return (
+    <div className="rounded-lg border border-border bg-card px-4 py-2 text-center">
+      <span className="flex items-center gap-2 text-xs text-muted-foreground"><Clock3 className="h-3.5 w-3.5" aria-hidden="true" />{t('crossfire.timerLabel')}</span>
+      <RoundClock secondsLeft={seconds} label={t('crossfire.timerLabel')} className="mt-0.5 block text-xl" />
+      <ClockAnnouncer secondsLeft={seconds} running />
+    </div>
+  );
 }
 
 function handleRadioKeys<T extends string>(
@@ -178,7 +214,7 @@ function TurnReferences({ turnIds }: { turnIds: string[] }) {
         <a
           key={turnId}
           href={`#crossfire-turn-${turnId}`}
-          className="rounded-md border border-primary/25 bg-primary/10 px-2 py-1 text-xs font-semibold text-primary hover:bg-primary/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          className="rounded-md border border-primary/25 bg-primary/10 px-2 py-1 text-xs font-semibold text-primary hover:bg-primary/15 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring"
         >
           {turnId}
         </a>
@@ -282,6 +318,8 @@ export default function CrossfirePage() {
   const workspace = useWorkspaceToolScope('crossfire');
   const { t } = useTranslation();
   const { user } = useAuth();
+  const subError = useSubscriptionError();
+  const { handleSubscriptionError } = subError;
   const location = useLocation();
   const navigate = useNavigate();
   const workspaceLaunch = (location.state as { workspaceLaunch?: unknown } | null)?.workspaceLaunch === true;
@@ -313,11 +351,13 @@ export default function CrossfirePage() {
   }, []);
   const stateRef = useRef(state);
   stateRef.current = state;
-  const [now, setNow] = useState(Date.now());
   const [formError, setFormError] = useState('');
   const [storageError, setStorageError] = useState(false);
   const [stateOwnerId, setStateOwnerId] = useState(user?.id);
   const requestRef = useRef<AbortController | null>(null);
+  // The opponent's turn and the debrief as the model writes them.
+  const [liveReply, setLiveReply] = useState('');
+  const [liveDebrief, setLiveDebrief] = useState<LiveRunState>({});
   const artifactRequestIdRef = useRef(workspace.context?.requestId ?? crypto.randomUUID());
   // Autosaves fire on every change; the queue keeps an older one from landing last.
   const [saveArtifact] = useState(() => createArtifactSaveQueue(saveWorkspaceArtifact));
@@ -345,6 +385,12 @@ export default function CrossfirePage() {
   );
   const { getFeatureConfig, outputLanguage } = useSettingsStore();
   const modelConfig = getFeatureConfig('ask');
+  // A round costs one use however many turns it takes; the setup says so.
+  const sessionQuota = useSessionQuota('crossfire', modelConfig, state.phase === 'setup');
+  const [checkingQuota, setCheckingQuota] = useState(false);
+  // Names the latest Start; a newer Start, leaving the page, or switching
+  // accounts makes an earlier one that is still checking quota stale.
+  const startRequestRef = useRef(0);
   const voiceLanguage = isAppLanguage(outputLanguage) ? outputLanguage : 'en';
   const voiceAvailability = useVoiceAvailability();
   // A voice round falls back to typing when the microphone is lost.
@@ -365,6 +411,7 @@ export default function CrossfirePage() {
   }, []);
 
   useEffect(() => () => {
+    startRequestRef.current += 1;
     requestRef.current?.abort();
     abortSignalRequests();
     opponentVoice.stop();
@@ -372,6 +419,8 @@ export default function CrossfirePage() {
 
   useEffect(() => {
     if (stateOwnerId === user?.id) return;
+    startRequestRef.current += 1;
+    setCheckingQuota(false);
     requestRef.current?.abort();
     abortSignalRequests();
     dispatch({ type: 'state-restored', state: restoreState(user?.id, undefined) });
@@ -418,12 +467,6 @@ export default function CrossfirePage() {
     }).catch(() => toast({ title: t('debate.recordFailed', 'Could not save this result to the debate'), variant: 'destructive' }));
   }, [recordResult, roundDebateId, state, t, workspace.context]);
 
-  useEffect(() => {
-    if (state.phase !== 'active') return;
-    setNow(Date.now());
-    const interval = window.setInterval(() => setNow(Date.now()), 500);
-    return () => window.clearInterval(interval);
-  }, [state.phase]);
 
   const runNextTurn = useCallback(async (
     snapshot: Extract<CrossfireState, { phase: 'active' }>,
@@ -432,13 +475,26 @@ export default function CrossfirePage() {
     requestRef.current?.abort();
     const controller = new AbortController();
     requestRef.current = controller;
+    setLiveReply('');
+    const ownsRequest = () => requestRef.current === controller && !controller.signal.aborted;
     try {
       const result = await crossfire({
         operation: 'next-turn',
         config: snapshot.config,
         transcript: snapshot.turns,
         expectedReply,
-      }, modelConfig, { signal: controller.signal, workspaceContext: workspace.context ?? undefined, debateId: workspace.context ? undefined : roundDebateId(snapshot.config.resolution), voice: voiceActive });
+      }, modelConfig, {
+        signal: controller.signal,
+        workspaceContext: workspace.context ?? undefined,
+        debateId: workspace.context ? undefined : roundDebateId(snapshot.config.resolution),
+        quotaSession: snapshot.sessionId,
+        voice: voiceActive,
+        live: {
+          onDraft: (draft) => {
+            if (ownsRequest()) setLiveReply(typeof draft.text === 'string' ? readableLiveText(draft.text) : '');
+          },
+        },
+      });
       if (controller.signal.aborted) return;
       if (!('type' in result)) {
         dispatch({
@@ -472,21 +528,50 @@ export default function CrossfirePage() {
       }
     } catch (error) {
       if (controller.signal.aborted) return;
+      // Out of requests or not allowed this model: the same dialog every tool uses.
+      if (handleSubscriptionError(error) && snapshot.turns.length === 0) {
+        // Nothing was exchanged, so the round never really started: no clock, back to setup.
+        opponentVoice.stop();
+        useDebateContextStore.getState().resetOverride('crossfire');
+        dispatch({
+          type: 'session-reset',
+          prefill: {
+            resolution: snapshot.config.resolution,
+            argument: snapshot.config.argument,
+            seedQuestions: snapshot.config.seedQuestions,
+          },
+        });
+        return;
+      }
       const classified = classifyError(error);
       dispatch({ type: 'request-failed', expectedReply, errorKind: classified.kind, message: classified.message });
+    } finally {
+      if (requestRef.current === controller) setLiveReply('');
     }
-  }, [modelConfig, roundDebateId, voiceActive, voiceLanguage, workspace.context]);
+  }, [handleSubscriptionError, modelConfig, roundDebateId, voiceActive, voiceLanguage, workspace.context]);
 
   const runDebrief = useCallback(async (snapshot: Extract<CrossfireState, { phase: 'debriefing' }>) => {
     requestRef.current?.abort();
     const controller = new AbortController();
     requestRef.current = controller;
+    setLiveDebrief({});
+    const ownsRequest = () => requestRef.current === controller && !controller.signal.aborted;
     try {
       const result = await crossfire({
         operation: 'debrief',
         config: snapshot.config,
         transcript: snapshot.turns,
-      }, modelConfig, { signal: controller.signal, workspaceContext: workspace.context ?? undefined, debateId: workspace.context ? undefined : roundDebateId(snapshot.config.resolution) });
+      }, modelConfig, {
+        signal: controller.signal,
+        workspaceContext: workspace.context ?? undefined,
+        debateId: workspace.context ? undefined : roundDebateId(snapshot.config.resolution),
+        quotaSession: snapshot.sessionId,
+        live: {
+          onDraft: (draft) => {
+            if (ownsRequest()) setLiveDebrief({ phase: 'writing', draft });
+          },
+        },
+      });
       if (controller.signal.aborted) return;
       if ('type' in result) {
         dispatch({
@@ -499,10 +584,14 @@ export default function CrossfirePage() {
       dispatch({ type: 'debrief-received', debrief: result });
     } catch (error) {
       if (controller.signal.aborted) return;
+      // The same limit dialog as a turn; the inline error stays so the debrief can be retried.
+      handleSubscriptionError(error);
       const classified = classifyError(error);
       dispatch({ type: 'debrief-failed', errorKind: classified.kind, message: classified.message });
+    } finally {
+      if (requestRef.current === controller) setLiveDebrief({});
     }
-  }, [modelConfig, roundDebateId, workspace.context]);
+  }, [handleSubscriptionError, modelConfig, roundDebateId, workspace.context]);
 
   const endSession = useCallback((reason: 'manual' | 'timer') => {
     if (state.phase !== 'active') return;
@@ -518,7 +607,8 @@ export default function CrossfirePage() {
           seedQuestions: state.config.seedQuestions,
         },
       });
-      setFormError(t('crossfire.debriefEmptyDesc'));
+      // Ending by hand before any exchange just leaves; only the clock running out needs explaining.
+      setFormError(reason === 'timer' ? t('crossfire.debriefEmptyDesc') : '');
       return;
     }
     const next = crossfireReducer(state, { type: 'session-ended', now: Date.now(), reason });
@@ -526,9 +616,6 @@ export default function CrossfirePage() {
     if (next.phase === 'debriefing') void runDebrief(next);
   }, [runDebrief, state, t]);
 
-  useEffect(() => {
-    if (state.phase === 'active' && now >= state.endsAt) endSession('timer');
-  }, [endSession, now, state]);
 
   const startSession = () => {
     if (state.phase !== 'setup') return;
@@ -538,11 +625,29 @@ export default function CrossfirePage() {
       return;
     }
     setFormError('');
-    debateGate.run(parsed.data.resolution, (target) => beginSession(target.debateId));
+    debateGate.run(parsed.data.resolution, (target) => void beginSession(target.debateId));
   };
 
-  const beginSession = (debateId: string | null) => {
-    if (state.phase !== 'setup') return;
+  const beginSession = async (debateId: string | null) => {
+    // The round starts from the setup as it was when Start was pressed, with
+    // the debate chosen for that motion.
+    const target = stateRef.current;
+    if (target.phase !== 'setup') return;
+    const startRequest = startRequestRef.current + 1;
+    startRequestRef.current = startRequest;
+    // Check today's quota before the clock starts, so a round the server
+    // would refuse never starts. An unknown answer does not block.
+    setCheckingQuota(true);
+    const refusal = await sessionQuota.checkBeforeStart();
+    if (startRequestRef.current !== startRequest) return;
+    setCheckingQuota(false);
+    if (refusal) {
+      handleSubscriptionError(refusal);
+      return;
+    }
+    // Edited, restarted, or restored while the check ran: this Start is stale.
+    if (stateRef.current !== target) return;
+    const current = target;
     debateTargetRef.current = debateId;
     artifactRequestIdRef.current = crypto.randomUUID();
     opponentVoice.beginRound();
@@ -551,7 +656,7 @@ export default function CrossfirePage() {
       sessionId: `${SESSION_ID_PREFIX}-${Date.now()}`,
       now: Date.now(),
     };
-    const next = crossfireReducer(state, action);
+    const next = crossfireReducer(current, action);
     dispatch(action);
     if (next.phase === 'active' && next.request.status === 'pending') {
       void runNextTurn(next, next.request.expectedReply);
@@ -625,9 +730,8 @@ export default function CrossfirePage() {
 
   if (stateOwnerId !== user?.id) {
     return (
-      <div className="container flex min-h-[60vh] items-center justify-center px-4 py-8" role="status">
-        <Loader2 className="h-6 w-6 animate-spin text-primary motion-reduce:animate-none" />
-        <span className="sr-only">{t('crossfire.loading')}</span>
+      <div className="container flex min-h-[60vh] items-center justify-center px-4 py-8">
+        <OwlLoader message={t('crossfire.loading')} />
       </div>
     );
   }
@@ -642,9 +746,11 @@ export default function CrossfirePage() {
               <Flame className="h-5 w-5" />
             </div>
             <h1 className="text-3xl font-bold tracking-tight">{t('crossfire.title')}</h1>
+            <DailyUsage className="mt-1" />
           </header>
           <CurrentDebateStrip hidden={Boolean(workspace.context)} />
           {debateGate.dialog}
+          <SubscriptionErrorModals subError={subError} />
 
           {(formError || storageError) && (
             <Alert variant="destructive">
@@ -720,7 +826,7 @@ export default function CrossfirePage() {
                           (nextMode) => dispatch({ type: 'config-patched', patch: { mode: nextMode } }),
                         )}
                         className={cn(
-                          'rounded-lg border p-4 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+                          'rounded-lg border p-4 text-left transition-colors focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring',
                           selected ? 'border-primary bg-primary/5' : 'border-border hover:bg-muted/50',
                         )}
                       >
@@ -759,7 +865,7 @@ export default function CrossfirePage() {
                           (nextStyle) => dispatch({ type: 'config-patched', patch: { style: nextStyle } }),
                         )}
                         className={cn(
-                          'rounded-lg border p-4 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+                          'rounded-lg border p-4 text-left transition-colors focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring',
                           selected ? 'border-primary bg-primary/5' : 'border-border hover:bg-muted/50',
                         )}
                       >
@@ -796,7 +902,7 @@ export default function CrossfirePage() {
                         }),
                       )}
                       className={cn(
-                        'min-h-11 rounded-md border px-4 text-sm font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+                        'min-h-11 rounded-md border px-4 text-sm font-medium focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring',
                         state.config.durationSeconds === duration ? 'border-primary bg-primary text-primary-foreground' : 'border-border hover:bg-muted',
                       )}
                     >
@@ -845,10 +951,13 @@ export default function CrossfirePage() {
                 hidden={Boolean(workspace.context)}
               />
 
-              <Button data-testid="start-crossfire" size="lg" onClick={startSession} className="w-full sm:w-auto">
-                <Flame className="mr-2 h-4 w-4" />
-                {t('crossfire.start')}
-              </Button>
+              <div className="space-y-2">
+                <Button data-testid="start-crossfire" size="lg" onClick={startSession} disabled={checkingQuota} className="w-full sm:w-auto">
+                  <Flame className="mr-2 h-4 w-4" />
+                  {t('crossfire.start')}
+                </Button>
+                <SessionCostNote units={sessionQuota.units} remaining={sessionQuota.remaining} blocked={sessionQuota.blocked} />
+              </div>
             </CardContent>
           </Card>
         </div>
@@ -869,18 +978,22 @@ export default function CrossfirePage() {
   }
 
   if (state.phase === 'debriefing') {
+    const debriefSections = liveDebrief.draft ? crossfireDebriefDraftSections(liveDebrief.draft, t) : [];
     return (
       <div className={cn(stateMotionClass, 'container px-4 py-8')}>
         <WorkspaceToolScope context={workspace.context} />
         <div className="mx-auto max-w-4xl space-y-6">
           <Transcript turns={state.turns} reduceMotion={shouldReduceMotion} />
+          {state.requestStatus === 'pending' && debriefSections.length > 0 ? (
+            <LiveToolRun label={t('crossfire.debriefLoading')} live={liveDebrief} sections={debriefSections} />
+          ) : (
           <Card>
             <CardContent className="flex min-h-56 flex-col items-center justify-center gap-4 p-8 text-center">
               {state.requestStatus === 'pending' ? (
                 <>
-                  <Loader2 className="h-7 w-7 animate-spin text-primary motion-reduce:animate-none" />
+                  <OwlLoader size={88} />
                   <div>
-                    <h2 className="font-semibold">{t('crossfire.debriefLoading')}</h2>
+                    <h2 className="font-display text-lg font-[600] text-heading">{t('crossfire.debriefLoading')}</h2>
                     <p className="mt-1 text-sm text-muted-foreground">{t('crossfire.debriefSubtitle')}</p>
                   </div>
                 </>
@@ -901,13 +1014,16 @@ export default function CrossfirePage() {
               )}
             </CardContent>
           </Card>
+          )}
+          <SubscriptionErrorModals subError={subError} />
         </div>
       </div>
     );
   }
 
   const inputKind = expectedUserTurnKind(state);
-  const remaining = state.endsAt - now;
+  // The composer stays open while the AI works, so the next turn can be drafted; only sending waits.
+  const composerKind = inputKind ?? (state.config.mode === 'question-ai' ? 'question' : state.turns.length > 0 ? 'answer' : null);
   return (
     <div className={cn(stateMotionClass, 'container px-4 py-6 md:py-8')}>
       <WorkspaceToolScope context={workspace.context} />
@@ -919,19 +1035,17 @@ export default function CrossfirePage() {
               <Badge variant="secondary">{t(`crossfire.style${state.config.style[0].toUpperCase()}${state.config.style.slice(1)}`)}</Badge>
             </div>
             <h1 className="mt-3 text-2xl font-bold tracking-tight">{t('crossfire.title')}</h1>
+            <p className="mt-1 max-w-3xl wrap-break-word text-sm text-muted-foreground">{state.config.resolution}</p>
           </div>
           <div className="flex items-center gap-3">
-            <div className="rounded-lg border border-border bg-card px-4 py-2 text-center" role="timer" aria-label={t('crossfire.timerLabel')}>
-              <span className="flex items-center gap-2 text-xs text-muted-foreground"><Clock3 className="h-3.5 w-3.5" />{t('crossfire.timerLabel')}</span>
-              <span className="mt-0.5 block font-mono text-xl font-semibold tabular-nums">{formatRemaining(remaining)}</span>
-            </div>
+            <CrossfireClock endsAt={state.endsAt} onExpire={() => endSession('timer')} />
             <Button data-testid="end-crossfire" variant="outline" disabled={!canEndCrossfireSession(state)} onClick={() => endSession('manual')}>
               {t('crossfire.endSession')}
             </Button>
           </div>
         </header>
 
-        <Transcript turns={state.turns} reduceMotion={shouldReduceMotion} />
+        <Transcript turns={state.turns} reduceMotion={shouldReduceMotion} live />
 
         {state.voice && !workspace.context && !voiceAvailability.available && (
           <p data-testid="voice-unavailable" className="text-xs leading-5 text-muted-foreground">
@@ -958,17 +1072,26 @@ export default function CrossfirePage() {
           </Alert>
         )}
 
-        {state.request.status === 'pending' && (
+        {state.request.status === 'pending' && (liveReply ? (
+          // The opponent's turn as it is written, styled as the turn it becomes.
+          <article data-testid="crossfire-live-turn" className="mr-auto max-w-[92%] rounded-lg border border-border bg-card p-4" aria-busy="true">
+            <div className="mb-2 flex items-center justify-between gap-4 text-xs text-muted-foreground">
+              <span className="font-semibold text-foreground">T{state.turns.length + 1}</span>
+              <span>{state.request.expectedReply === 'question' ? t('crossfire.question') : t('crossfire.answer')}</span>
+            </div>
+            <p className="whitespace-pre-wrap text-sm leading-relaxed text-foreground">{liveReply}<LiveCaret /></p>
+          </article>
+        ) : (
           <div className="flex items-center gap-3 rounded-lg border border-border/70 bg-card px-4 py-3 text-sm text-muted-foreground" role="status" aria-live="polite">
-            <Loader2 className="h-4 w-4 animate-spin text-primary motion-reduce:animate-none" />
+            <LoadingSpinner size="sm" className="text-primary" />
             {t('crossfire.thinking')}
           </div>
-        )}
+        ))}
 
-        {inputKind && (
+        {composerKind && (
           <Card>
             <CardContent className="space-y-3 p-4 sm:p-5">
-              <Label htmlFor="crossfire-input">{inputKind === 'question' ? t('crossfire.questionLabel') : t('crossfire.answerLabel')}</Label>
+              <Label htmlFor="crossfire-input">{composerKind === 'question' ? t('crossfire.questionLabel') : t('crossfire.answerLabel')}</Label>
               {voiceActive && <VoiceMicControl capture={capture} onStart={startSpeaking} onStop={() => void stopCapture()} />}
               <Textarea
                 id="crossfire-input"
@@ -982,25 +1105,29 @@ export default function CrossfirePage() {
                     void submitTurn();
                   }
                 }}
-                placeholder={voiceActive ? t('voiceRound.mic.draftPlaceholder') : inputKind === 'question' ? t('crossfire.questionPlaceholder') : t('crossfire.answerPlaceholder')}
+                placeholder={voiceActive ? t('voiceRound.mic.draftPlaceholder') : composerKind === 'question' ? t('crossfire.questionPlaceholder') : t('crossfire.answerPlaceholder')}
                 className="min-h-28 resize-y"
               />
               <div className="flex flex-col-reverse gap-2 sm:flex-row sm:items-center sm:justify-between">
                 <span className="text-xs text-muted-foreground">{t('crossfire.charactersRemaining', { count: MAX_CROSSFIRE_TURN_CHARS - draftTurn.length })}</span>
-                <Button data-testid="submit-turn" onClick={() => void submitTurn()} disabled={!draftTurn.trim() && !listening}>
+                <Button data-testid="submit-turn" onClick={() => void submitTurn()} disabled={!inputKind || (!draftTurn.trim() && !listening)}>
                   <Send className="mr-2 h-4 w-4" />
-                  {inputKind === 'question' ? t('crossfire.submitQuestion') : t('crossfire.submitAnswer')}
+                  {composerKind === 'question' ? t('crossfire.submitQuestion') : t('crossfire.submitAnswer')}
                 </Button>
               </div>
             </CardContent>
           </Card>
         )}
       </div>
+      <SubscriptionErrorModals subError={subError} />
     </div>
   );
 }
 
-function Transcript({ turns, reduceMotion }: { turns: CrossfireTurn[]; reduceMotion: boolean | null }) {
+const NEW_TURN_MS = 1_000;
+
+// `live`: the round is running, so the setup hint never shows; the first turn is on its way or the student's to write.
+function Transcript({ turns, reduceMotion, live = false }: { turns: CrossfireTurn[]; reduceMotion: boolean | null; live?: boolean }) {
   const { t } = useTranslation();
   return (
     <section data-testid="crossfire-transcript" aria-label={t('crossfire.transcript')} className="space-y-3">
@@ -1009,16 +1136,18 @@ function Transcript({ turns, reduceMotion }: { turns: CrossfireTurn[]; reduceMot
         <h2 className="font-semibold">{t('crossfire.transcript')}</h2>
       </div>
       {turns.length === 0 ? (
-        <div className="rounded-lg border border-dashed border-border p-8 text-center text-sm text-muted-foreground">{t('crossfire.emptyDesc')}</div>
+        live ? null : <div className="rounded-lg border border-dashed border-border p-8 text-center text-sm text-muted-foreground">{t('crossfire.emptyDesc')}</div>
       ) : (
         <div className="space-y-3" aria-live="polite">
           {turns.map((turn) => (
             <motion.article
               key={turn.id}
               id={`crossfire-turn-${turn.id}`}
-              initial={reduceMotion ? false : { opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: reduceMotion ? 0 : 0.18 }}
+              // Only a turn that just arrived fades in; a phase change re-renders the
+              // transcript without replaying every card.
+              initial={reduceMotion || Date.now() - turn.createdAt > NEW_TURN_MS ? false : { opacity: 0, transform: 'translateY(4px)' }}
+              animate={{ opacity: 1, transform: 'translateY(0px)' }}
+              transition={{ duration: 0.15, ease: [0.23, 1, 0.32, 1] }}
               className={cn(
                 'scroll-mt-24 rounded-lg border p-4',
                 turn.speaker === 'user' ? 'ml-auto max-w-[92%] border-primary/25 bg-primary/5' : 'mr-auto max-w-[92%] border-border bg-card',

@@ -110,7 +110,6 @@ export function streamAsk(request: AskRequest, handlers: { onDelta: (text: strin
     ...(request.debateContext ? { debateContext: request.debateContext } : {}),
     provider: PROVIDER,
     model: request.config.model,
-    temperature: request.config.temperature,
     reasoningEffort: request.config.reasoningEffort,
   };
   return postFunction('ai-stream', body, handlers.signal, async (response) => {
@@ -171,7 +170,6 @@ export function askOnce(request: AskRequest, signal?: AbortSignal, onExtras?: (e
     input: requestInput(request),
     provider: PROVIDER,
     model: request.config.model,
-    temperature: request.config.temperature,
     reasoningEffort: request.config.reasoningEffort,
     // Servers from before Current Debate context read only this field.
     sourceIds: request.debateContext?.sourceIds ?? [],

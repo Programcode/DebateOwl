@@ -1,4 +1,3 @@
-import { entitlementRows } from "../_shared/testing/entitlement.ts";
 // Voice rounds through the real ai entrypoint: audio tags reach only the
 // voice payload, typed requests are untouched, and measured delivery facts
 // reach the judge and the saved round.
@@ -32,30 +31,27 @@ function jsonResponse(body: unknown, status = 200): Response {
 interface Harness {
   providerBodies: Array<{ messages: Array<{ role: string; content: string }> }>;
   savedRounds: Array<Record<string, unknown>>;
-  pushTokenQueries: URLSearchParams[];
-  pushes: Array<Record<string, unknown>>;
   restore: () => void;
 }
 
-const PHONE = "ExponentPushToken[scorerphonetoken000000]";
-
 function install(reply: unknown): Harness {
   const originalFetch = globalThis.fetch;
-  const harness: Harness = {
-    providerBodies: [],
-    savedRounds: [],
-    pushTokenQueries: [],
-    pushes: [],
-    restore: () => { globalThis.fetch = originalFetch; },
-  };
+  const harness: Harness = { providerBodies: [], savedRounds: [], restore: () => { globalThis.fetch = originalFetch; } };
   globalThis.fetch = (async (input: Request | URL | string, init?: RequestInit) => {
     const url = new URL(input instanceof Request ? input.url : String(input));
     if (url.origin === "https://supabase.test") {
       if (url.pathname === "/auth/v1/user") return jsonResponse({ id: USER, aud: "authenticated" });
       if (url.pathname.includes("/rest/v1/user_roles")) return jsonResponse({ role: "user" });
-      if (url.pathname.includes("/rest/v1/rpc/effective_entitlement")) return jsonResponse(entitlementRows("trial", { daily_limit: 50 }));
-      if (url.pathname.includes("/rest/v1/rate_limits")) return jsonResponse({ limit_value: 50 });
-      if (url.pathname.includes("/rest/v1/rpc/consume_daily_quota")) return jsonResponse([{ allowed: true, current_count: 1 }]);
+      if (url.pathname.includes("/rest/v1/user_settings")) return jsonResponse({ subscription_tier: "trial", daily_limit_override: 50, trial_ends_at: "2099-01-01T00:00:00.000Z", grace_period_ends_at: null });
+      if (url.pathname.endsWith("/rest/v1/app_store_subscriptions")) return Response.json([]);
+      if (url.pathname.includes("/rest/v1/subscriptions")) return jsonResponse([]);
+      if (url.pathname.includes("/rest/v1/rate_limits")) {
+        if ((url.searchParams.get("order") ?? "").includes("updated_at")) throw new Error(`rate_limits must not order by updated_at: ${url.search}`);
+        return jsonResponse({ limit_value: 50 });
+      }
+      if (/\/rest\/v1\/rpc\/consume_(daily|ai)_quota$/.test(url.pathname)) return jsonResponse([{ allowed: true, current_count: 1 }]);
+      if (url.pathname.endsWith("/rest/v1/rpc/claim_ai_session_quota")) return jsonResponse([{ allowed: true, charged: true, units: 1, current_count: 1, charge_id: 1 }]);
+      if (/\/rest\/v1\/rpc\/refund_(daily_quota|ai_session_quota)$/.test(url.pathname)) return jsonResponse(1);
       if (url.pathname.includes("/rest/v1/rpc/sparring_request_started_at")) return jsonResponse(new Date().toISOString());
       if (url.pathname.includes("/rest/v1/rpc/claim_sparring_score_session")) {
         const payload = (JSON.parse(String(init?.body)) as { p_payload: { claim_token: string } }).p_payload;
@@ -67,19 +63,7 @@ function install(reply: unknown): Harness {
       }
       if (url.pathname.includes("/rest/v1/global_prompts")) return jsonResponse({ prompt_text: null });
       if (url.pathname.includes("/rest/v1/ai_requests")) return new Response(null, { status: 201 });
-      if (url.pathname.endsWith("/rest/v1/push_tickets")) {
-        return (init?.method ?? "GET") === "GET" ? jsonResponse([]) : new Response(null, { status: 201 });
-      }
-      if (url.pathname.endsWith("/rest/v1/push_tokens")) {
-        harness.pushTokenQueries.push(url.searchParams);
-        return jsonResponse([{ token: PHONE, user_id: USER, locale: "en" }]);
-      }
       throw new Error(`Unhandled Supabase request: ${url}`);
-    }
-    if (url.href === "https://exp.host/--/api/v2/push/send") {
-      const messages = JSON.parse(String(init?.body)) as Array<Record<string, unknown>>;
-      harness.pushes.push(...messages);
-      return jsonResponse({ data: messages.map((_, index) => ({ status: "ok", id: `ticket-${index}` })) });
     }
     if (url.href === "https://openrouter.ai/api/v1/chat/completions") {
       harness.providerBodies.push(JSON.parse(String(init?.body)));
@@ -97,7 +81,7 @@ function aiRequest(body: Record<string, unknown>): Request {
   return new Request("http://127.0.0.1/functions/v1/ai", {
     method: "POST",
     headers: { Authorization: "Bearer test-user-token", "Content-Type": "application/json" },
-    body: JSON.stringify({ model: "openai/gpt-5.6-luna", ...body }),
+    body: JSON.stringify({ model: "openai/gpt-6-luna", ...body }),
   });
 }
 
@@ -299,35 +283,6 @@ Deno.test("measured delivery facts reach the judge and the saved round", async (
     const saved = harness.savedRounds.at(-1)?.turns as Array<Record<string, unknown>>;
     assert(JSON.stringify(saved[0].delivery) === JSON.stringify(DELIVERY), "the measurements were not saved with the speech");
     assert(saved[2].delivery === undefined, "a typed speech gained measurements");
-  } finally {
-    harness.restore();
-  }
-});
-
-Deno.test("a scored round tells only the scorer's phones, without the motion", async () => {
-  const harness = install(SCORECARD);
-  try {
-    const speeches = await completedRound({});
-    const response = await handleRequest(aiRequest({ feature: "sparring", input: { ...sparringContext, action: "score", speeches } }));
-    assert(response.status === 200, `status ${response.status}: ${await response.text()}`);
-    assert(harness.pushTokenQueries.length === 1, "the scorer's tokens were not read once");
-    assert(harness.pushTokenQueries[0].get("user_id") === `in.(${USER})`, "tokens were read for someone other than the scorer");
-    assert(harness.pushes.length === 1, `expected one push, got ${harness.pushes.length}`);
-    const [push] = harness.pushes;
-    assert(push.to === PHONE, "the push went to the wrong token");
-    assert(JSON.stringify(push.data) === JSON.stringify({ kind: "sparring_scored", sessionId: SESSION }), "the push carried more than its kind and round");
-    assert(!JSON.stringify(push).includes("public transport"), "the motion reached the lock screen");
-  } finally {
-    harness.restore();
-  }
-});
-
-Deno.test("an opponent reply sends no push", async () => {
-  const harness = install({ action: "respond", speech: { content: "A plain reply.", strategy: "Hold the line.", targetedPoints: ["cost"] } });
-  try {
-    const response = await handleRequest(aiRequest({ feature: "sparring", input: { ...respondInput, speeches: [userSpeech(0)] } }));
-    assert(response.status === 200, `status ${response.status}`);
-    assert(harness.pushTokenQueries.length === 0 && harness.pushes.length === 0, "a reply sent a push");
   } finally {
     harness.restore();
   }

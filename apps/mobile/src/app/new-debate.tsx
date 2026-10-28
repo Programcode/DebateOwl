@@ -44,7 +44,7 @@ export default function NewDebateSheet() {
   return (
     <SheetScrollView testID="new-debate-sheet">
       <View style={styles.header}>
-        <Text accessibilityRole="header" weight="bold" style={styles.title}>
+        <Text accessibilityRole="header" weight="display" style={styles.title}>
           {t('debate.startNew')}
         </Text>
         <TextButton label={t('common.cancel')} onPress={() => router.back()} disabled={saving} />

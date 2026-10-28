@@ -1,7 +1,7 @@
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ActivityIndicator, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
 import { TextButton } from './buttons';
 import { OneOffNotice } from './one-off-notice';
@@ -11,12 +11,13 @@ import type { AIErrorKind } from '@/lib/ai-request';
 import { useDebates } from '@/lib/debate-context';
 import { radius } from '@/theme/colors';
 import { useTheme } from '@/theme/use-theme';
+import { OwlLoader, type OwlPose } from '@/components/owl';
 
 /** The tool's large title and the line under it. */
 export function ToolTitle({ title, subtitle }: { title: string; subtitle: string }) {
   return (
     <View style={styles.titleBlock}>
-      <Text accessibilityRole="header" weight="bold" style={styles.title}>
+      <Text accessibilityRole="header" weight="display" style={styles.title}>
         {title}
       </Text>
       <Text tone="secondary" style={styles.subtitle}>
@@ -77,7 +78,8 @@ export function ToolError({ title, error, onRetry }: { title: string; error: AIE
 }
 
 /** A calm progress state that names what is happening, cycling the website's messages. */
-export function ToolProgress({ messages, detail, onCancel }: { messages: string[]; detail?: string; onCancel: () => void }) {
+/** A tool at work: the owl in the tool's pose, the website's progress line, the request's subject and Cancel. */
+export function ToolProgress({ messages, detail, onCancel, pose = 'thinking' }: { messages: string[]; detail?: string; onCancel: () => void; pose?: OwlPose }) {
   const { t } = useTranslation();
   const { colors } = useTheme();
   const [index, setIndex] = useState(0);
@@ -87,8 +89,8 @@ export function ToolProgress({ messages, detail, onCancel }: { messages: string[
   }, [messages.length]);
   return (
     <View style={[styles.progress, { borderColor: colors.border, backgroundColor: colors.card }]} testID="tool-progress">
-      <ActivityIndicator size="large" color={colors.primary} />
-      <Text weight="semibold" style={styles.progressText} accessibilityRole="progressbar" accessibilityLiveRegion="polite">
+      <OwlLoader pose={pose} size={96} />
+      <Text weight="display" style={styles.progressText} accessibilityRole="progressbar" accessibilityLiveRegion="polite">
         {messages[index]}
       </Text>
       {detail ? (
@@ -105,13 +107,13 @@ const styles = StyleSheet.create({
   titleBlock: { gap: 4, marginBottom: 2 },
   title: { fontSize: 30, lineHeight: 36, letterSpacing: -0.8 },
   subtitle: { fontSize: 16, lineHeight: 22 },
-  strip: { borderWidth: 1, borderRadius: radius.field, paddingHorizontal: 14, paddingVertical: 10 },
+  strip: { borderWidth: 2, borderRadius: radius.field, paddingHorizontal: 14, paddingVertical: 10 },
   stripText: { fontSize: 14.5, lineHeight: 20 },
-  error: { borderWidth: 1, borderRadius: radius.card, padding: 14, gap: 4 },
+  error: { borderWidth: 2, borderRadius: radius.card, padding: 14, gap: 4 },
   errorTitle: { fontSize: 16 },
   errorBody: { fontSize: 15, lineHeight: 21 },
   errorActions: { flexDirection: 'row', gap: 20 },
-  progress: { borderWidth: 1, borderStyle: 'dashed', borderRadius: radius.card + 2, paddingVertical: 36, paddingHorizontal: 20, alignItems: 'center', gap: 12, marginTop: 8 },
+  progress: { borderWidth: 2, borderStyle: 'dashed', borderRadius: radius.card + 2, paddingVertical: 36, paddingHorizontal: 20, alignItems: 'center', gap: 12, marginTop: 8 },
   progressText: { fontSize: 18, lineHeight: 24, textAlign: 'center' },
   progressDetail: { fontSize: 15, lineHeight: 21, textAlign: 'center' },
 });

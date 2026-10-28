@@ -1,3 +1,5 @@
+import { findSavedPage, normalizeSourceUrl, savedSourceUrl } from '@debatelab/core/source-url';
+import { autoSavedSourceRow, type DiscoveredSource } from '@debatelab/core/ai/discovered-sources';
 import type { SourceSemanticMetadata } from '@debatelab/core/ai/discovered-sources';
 import { SourceImportOutputSchema, type SourceImportOutput } from '@debatelab/core/ai/schemas/source-import';
 import { assessedSemantic, isAssessedSource, type SourceAssessmentUpdate } from '@debatelab/core/ai/source-assessments';
@@ -132,6 +134,7 @@ export async function addSource(
     })
     .select(SOURCE_COLUMNS)
     .single();
+  if (error?.code === '23505') throw new DuplicateSourceError();
   if (error || !data) throw new Error(error?.message ?? 'Could not save the source');
   afterWrite(userId, [{ group: 'sources', key: input.debateId }, ...debateListScopes(input.debateId, 'source')]);
   notifySourcesChanged();
@@ -199,10 +202,47 @@ export async function applySourceAssessments(userId: string, debateId: string, a
   if (failed?.error) throw new Error(failed.error.message);
 }
 
+export class DuplicateSourceError extends Error {
+  constructor() {
+    super('This page is already in the debate Library.');
+    this.name = 'DuplicateSourceError';
+  }
+}
+
+/** Refresh research metadata while preserving the student's title, folder and active choice. */
+export async function saveResearchedSource(userId: string, debateId: string, source: DiscoveredSource, capturedVia: string, signal?: AbortSignal): Promise<boolean> {
+  if (signal?.aborted) return false;
+  const { data, error } = await supabase.from('sources')
+    .select('id,origin,metadata,content').eq('user_id', userId).eq('debate_id', debateId);
+  if (error) throw new Error(error.message);
+  if (signal?.aborted) return false;
+  const candidates = ((data ?? []) as { id: string; origin: string | null; metadata: Record<string, unknown> & { url?: string } | null; content: string }[])
+    .map((row) => ({ ...row, origin: row.origin ?? undefined, metadata: row.metadata ?? undefined, debateId }));
+  const existing = findSavedPage(candidates, debateId, source.url);
+  const row = autoSavedSourceRow(source, capturedVia);
+  if (existing) {
+    const { error: updateError } = await supabase.from('sources').update({
+      metadata: { ...existing.metadata, ...row.metadata },
+      ...(!existing.content.trim() && source.content ? { content: source.content } : {}),
+    }).eq('user_id', userId).eq('debate_id', debateId).eq('id', existing.id);
+    if (updateError) throw new Error(updateError.message);
+    afterWrite(userId, [{ group: 'sources', key: debateId }, { group: 'source', key: existing.id }, ...debateListScopes(debateId, 'source')]);
+    notifySourcesChanged();
+    return false;
+  }
+  try {
+    await addSource(userId, { ...row, debateId });
+    return true;
+  } catch (cause) {
+    if (cause instanceof DuplicateSourceError) return false;
+    throw cause;
+  }
+}
+
 /** The website rejects a URL that is already in the debate's Library. */
 export function isDuplicateOrigin(sources: Source[], origin: string): boolean {
-  const needle = origin.trim().toLowerCase();
-  return Boolean(needle) && sources.some((source) => source.origin?.trim().toLowerCase() === needle);
+  const key = normalizeSourceUrl(origin);
+  return key !== null && sources.some((source) => savedSourceUrl({ origin: source.origin ?? undefined }) === key);
 }
 
 /** Reads a page through the import-source Edge Function, which returns an editable draft. */

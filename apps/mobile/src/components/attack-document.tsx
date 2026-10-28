@@ -147,7 +147,7 @@ export function AttackDocument({ output, sources }: { output: AttackOutput; sour
 }
 
 const styles = StyleSheet.create({
-  score: { borderWidth: 1, borderRadius: 17, paddingHorizontal: 16, paddingVertical: 14, gap: 10 },
+  score: { borderWidth: 2, borderRadius: 17, paddingHorizontal: 16, paddingVertical: 14, gap: 10 },
   scoreRow: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between' },
   scoreLabel: { fontSize: 15 },
   scoreValue: { fontSize: 22 },

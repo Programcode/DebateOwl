@@ -13,9 +13,9 @@ for (const model of MODEL_CATALOG) {
     await page.goto("/app/generate");
     await page.getByRole("combobox", { name: "Select AI model for generate" }).click();
     await page.getByRole("option", { name: new RegExp(`^${model.name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}`) }).click();
-    await page.getByRole("textbox", { name: "Motion / Topic *" }).fill("This House would make public transport free at the point of use");
+    await page.getByRole("textbox", { name: "Motion / topic *" }).fill("This House would make public transport free at the point of use");
     const response = aiResponse(page, "generate");
-    await page.getByRole("button", { name: "Generate Debate Case" }).click();
+    await page.getByRole("button", { name: "Generate debate case" }).click();
     await chooseForMotion(page, "once");
     const body = await response;
     expect(body.output.contentions).toHaveLength(3);

@@ -10,8 +10,9 @@
 // model, fourteen calls, no web research.
 
 import { PROMPT_EXAMPLES } from "../supabase/functions/_shared/prompts/prompt-examples.ts";
+import { openRouterProviderOptions } from "../supabase/functions/_shared/provider-routing.ts";
 
-const [functionsDir, outPath, model = "openai/gpt-5.6-luna", only] = Deno.args;
+const [functionsDir, outPath, model = "anthropic/claude-haiku-5.5", only] = Deno.args;
 const selected = only ? new Set(only.split(",")) : null;
 if (!functionsDir || !outPath) {
   console.error("usage: prompt-examples.ts <functions-dir> <out.json> [model]");
@@ -64,7 +65,7 @@ for (const example of PROMPT_EXAMPLES.filter((item) => !selected || selected.has
       max_tokens: 8_000,
       response_format: { type: "json_object" },
       reasoning: { effort: "low", exclude: true },
-      provider: { require_parameters: true },
+      provider: openRouterProviderOptions(model),
     }),
     // Matches the ai function's request budget; one retry covers a stalled route.
     signal: AbortSignal.timeout(120_000),

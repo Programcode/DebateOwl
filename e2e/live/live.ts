@@ -1,5 +1,6 @@
 import type { Page } from "@playwright/test";
 import { expect, fake } from "../full-stack/stack";
+import { readAIResponse, type AIResponseBody } from "../helpers/ai-response";
 
 // Live runs call real providers, so outputs vary. Assert structure, never text.
 export const LIVE_TIMEOUT = 180_000;
@@ -13,9 +14,10 @@ export function aiResponse(page: Page, feature: string) {
     } catch {
       return false;
     }
-  }, { timeout: LIVE_TIMEOUT }).then(async (response) => {
-    expect(response.status(), `ai ${feature} status`).toBe(200);
-    return response.json() as Promise<{ output: Record<string, unknown>; discoveredSources?: unknown[] }>;
+  }, { timeout: LIVE_TIMEOUT }).then(async (response): Promise<AIResponseBody> => {
+    const { status, body } = await readAIResponse(response);
+    expect(status, `ai ${feature} status`).toBe(200);
+    return body;
   });
 }
 

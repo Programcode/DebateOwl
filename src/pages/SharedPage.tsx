@@ -1,13 +1,22 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
+import { OwlLoader } from '@/components/ui/loading-spinner';
 import { useTranslation } from 'react-i18next';
-import { useParams, useNavigate } from 'react-router-dom';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Link, useParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/lib/supabase/client';
-import { Loader2, Download, ExternalLink, Share2 } from 'lucide-react';
+import { EmptyState } from '@/components/ui/empty-state';
 import { formatEuropeanDate } from '@/lib/date-format';
+import { PublicPageShell, useHomePath } from '@/components/layout/PublicPageShell';
+import { usePageLabel } from '@/lib/seo/use-page-head';
+import { GenerateOutputSchema } from '@/lib/ai/schemas/generate';
+import { AttackOutputSchema } from '@/lib/ai/schemas/attack';
+import { BrainstormOutputSchema } from '@/lib/ai/schemas/brainstorm';
+import { FactoidsOutputSchema } from '@/lib/ai/schemas/factoids';
+import { GenerateResults } from '@/components/features/generate/GenerateResults';
+import { AttackResults } from '@/components/features/attack/AttackResults';
+import { BrainstormResults } from '@/components/features/brainstorm/BrainstormResults';
+import { FactoidsResults } from '@/components/features/factoids/FactoidsResults';
 
 interface SharedItem {
     id: string;
@@ -19,15 +28,91 @@ interface SharedItem {
     view_count: number;
 }
 
+/**
+ * Shared data is public input, so it is checked against the tool's schema before the
+ * tool's own result view renders it. Anything else falls back to plain readable text.
+ */
+function renderSharedResult(item: SharedItem): ReactNode | null {
+    switch (item.item_type) {
+        case 'case':
+        case 'generate': {
+            const parsed = GenerateOutputSchema.safeParse(item.item_data);
+            return parsed.success ? <GenerateResults result={parsed.data} /> : null;
+        }
+        case 'attack': {
+            const parsed = AttackOutputSchema.safeParse(item.item_data);
+            return parsed.success ? <AttackResults result={parsed.data} /> : null;
+        }
+        case 'brainstorm': {
+            const parsed = BrainstormOutputSchema.safeParse(item.item_data);
+            return parsed.success ? <BrainstormResults result={parsed.data} /> : null;
+        }
+        case 'factoids': {
+            const parsed = FactoidsOutputSchema.safeParse(item.item_data);
+            return parsed.success ? <FactoidsResults result={parsed.data} /> : null;
+        }
+        default:
+            return null;
+    }
+}
+
+/** Plain text for any shape we don't have a view for: labels and values, never raw JSON. */
+function PlainValue({ value }: { value: unknown }): ReactNode {
+    if (value === null || value === undefined || value === '') return null;
+    if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
+        return <p className="whitespace-pre-wrap wrap-break-word">{String(value)}</p>;
+    }
+    if (Array.isArray(value)) {
+        return (
+            <ul className="list-disc space-y-2 pl-5">
+                {value.map((entry, index) => <li key={index}><PlainValue value={entry} /></li>)}
+            </ul>
+        );
+    }
+    if (typeof value === 'object') {
+        return (
+            <dl className="space-y-3">
+                {Object.entries(value as Record<string, unknown>).map(([key, entry]) => (
+                    <div key={key}>
+                        <dt className="text-sm font-semibold capitalize text-muted-foreground">{key.replace(/([a-z])([A-Z])/g, '$1 $2')}</dt>
+                        <dd><PlainValue value={entry} /></dd>
+                    </div>
+                ))}
+            </dl>
+        );
+    }
+    return null;
+}
+
 export default function SharedPage() {
     const { t } = useTranslation();
     const { code } = useParams<{ code: string }>();
-    const navigate = useNavigate();
+    const home = useHomePath();
     const [loading, setLoading] = useState(true);
     const [item, setItem] = useState<SharedItem | null>(null);
     const [error, setError] = useState<string | null>(null);
-    const { toast } = useToast();
+    const missing = !loading && (!item || error !== null);
 
+    // The route shell titles every share the same. A missing link names itself.
+    usePageLabel(missing ? t('sharedPage.notFoundTitle') : null);
+
+    // The response stays HTTP 200; this meta keeps it out of the index.
+    useEffect(() => {
+        if (!missing) return;
+        let robots = document.head.querySelector<HTMLMetaElement>('meta[name="robots"]');
+        const created = !robots;
+        if (!robots) {
+            robots = document.createElement('meta');
+            robots.name = 'robots';
+            document.head.appendChild(robots);
+        }
+        const previousRobots = robots.content;
+        robots.content = 'noindex, nofollow';
+        return () => {
+            if (created) robots.remove();
+            else robots.content = previousRobots;
+        };
+    }, [missing]);
 
     useEffect(() => {
         const loadSharedItem = async () => {
@@ -50,7 +135,7 @@ export default function SharedPage() {
                 }
 
                 setItem(data as SharedItem);
-            } catch (err) {
+            } catch {
                 setError(t('sharedPage.loadFailed'));
             } finally {
                 setLoading(false);
@@ -60,103 +145,55 @@ export default function SharedPage() {
         void loadSharedItem();
     }, [code, t]);
 
-    const handleImport = async () => {
-        if (!item) return;
-
-        try {
-            const { data: { user } } = await supabase.auth.getUser();
-
-            if (!user) {
-                toast({
-                    title: t('sharedPage.loginRequired'),
-                    description: t('sharedPage.loginRequiredDesc'),
-                    variant: 'default',
-                });
-                navigate('/login');
-                return;
-            }
-
-            toast({
-                title: t('sharedPage.importNotAvailable'),
-                description: t('sharedPage.importNotAvailableDesc'),
-            });
-        } catch (err) {
-            toast({
-                title: t('common.error'),
-                description: t('sharedPage.importFailed'),
-                variant: 'destructive',
-            });
-        }
-    };
-
     if (loading) {
         return (
-            <div className="min-h-screen flex items-center justify-center bg-background">
-                <Loader2 className="h-8 w-8 animate-spin text-primary" />
-            </div>
+            <PublicPageShell className="flex min-h-[50vh] items-center justify-center">
+                <OwlLoader message={t('common.loading', 'Loading')} />
+            </PublicPageShell>
         );
     }
 
     if (error || !item) {
         return (
-            <div className="min-h-screen flex items-center justify-center bg-background p-4">
-                <Card className="max-w-md w-full">
-                    <CardHeader>
-                        <CardTitle className="flex items-center gap-2">
-                            <Share2 className="h-5 w-5" />
-                            {t('sharedPage.title')}
-                        </CardTitle>
-                        <CardDescription>{error || t('sharedPage.notFound')}</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                        <Button onClick={() => navigate('/app')} className="w-full">
-                            {t('sharedPage.goToApp')}
+            <PublicPageShell className="flex min-h-[60vh] max-w-xl flex-col justify-center">
+                {/* Same look as the 404 page. */}
+                <EmptyState
+                    pose="surprised"
+                    headingLevel="h1"
+                    title={t('sharedPage.notFoundTitle')}
+                    description={error || t('sharedPage.notFound')}
+                    action={(
+                        <Button asChild>
+                            <Link to={home}>{t('sharedPage.backHome')}</Link>
                         </Button>
-                    </CardContent>
-                </Card>
-            </div>
+                    )}
+                />
+            </PublicPageShell>
         );
     }
 
-    return (
-        <div className="min-h-screen bg-background p-4">
-            <div className="max-w-4xl mx-auto">
-                <Card>
-                    <CardHeader>
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <CardTitle className="flex items-center gap-2">
-                                    <Share2 className="h-5 w-5 text-primary" />
-                                    {item.title || t('sharedPage.title')}
-                                </CardTitle>
-                                <CardDescription className="mt-1">
-                                    <Badge variant="secondary" className="mr-2">{item.item_type}</Badge>
-                                    {t('sharedPage.sharedOn')} {formatEuropeanDate(item.created_at)}
-                                    <span className="text-muted-foreground ml-2">• {item.view_count} {t('sharedPage.views')}</span>
-                                </CardDescription>
-                            </div>
-                            <Button onClick={handleImport} className="gap-2">
-                                <Download className="h-4 w-4" />
-                                {t('sharedPage.importToAccount')}
-                            </Button>
-                        </div>
-                    </CardHeader>
-                    <CardContent>
-                        <div className="bg-muted/50 rounded-lg p-4 overflow-auto max-h-[600px]">
-                            <pre className="text-sm whitespace-pre-wrap">
-                                {JSON.stringify(item.item_data, null, 2)}
-                            </pre>
-                        </div>
-                    </CardContent>
-                </Card>
+    const result = renderSharedResult(item);
 
-                <div className="mt-4 text-center">
-                    <Button variant="outline" onClick={() => navigate('/app')} className="gap-2">
-                        <ExternalLink className="h-4 w-4" />
-                        {t('sharedPage.openApp')}
-                    </Button>
+    return (
+        <PublicPageShell className="max-w-4xl">
+            <header className="mb-6 space-y-2">
+                <h1 className="wrap-break-word text-3xl font-bold leading-tight tracking-tight">{item.title || t('sharedPage.title')}</h1>
+                <p className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
+                    <Badge variant="secondary">{item.item_type}</Badge>
+                    {t('sharedPage.sharedOn')} {formatEuropeanDate(item.created_at)}
+                    <span>• {t('sharedPage.viewCount', { count: item.view_count })}</span>
+                </p>
+            </header>
+            {result ?? (
+                <div className="max-w-[65ch] text-base leading-7">
+                    <PlainValue value={item.item_data} />
                 </div>
+            )}
+            <div className="mt-8">
+                <Button asChild variant="outline">
+                    <Link to={home}>{t('sharedPage.openApp')}</Link>
+                </Button>
             </div>
-        </div>
+        </PublicPageShell>
     );
 }

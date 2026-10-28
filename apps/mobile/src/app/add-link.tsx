@@ -21,7 +21,7 @@ import { useTheme } from '@/theme/use-theme';
  * Import from URL does.
  */
 export default function AddLinkSheet() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const router = useRouter();
   const { colors } = useTheme();
   const { session } = useAuth();
@@ -76,7 +76,7 @@ export default function AddLinkSheet() {
   return (
     <SheetScrollView contentContainerStyle={styles.content} testID="add-link-sheet">
       <View style={styles.header}>
-        <Text accessibilityRole="header" weight="bold" style={styles.title}>
+        <Text accessibilityRole="header" weight="display" style={styles.title}>
           {t('mobile.library.pasteLink')}
         </Text>
         <TextButton label={t('common.cancel')} onPress={() => router.back()} disabled={busy === 'save'} />
@@ -115,7 +115,7 @@ export default function AddLinkSheet() {
               <Card>
                 <Field label={t('libraryPage.titleLabel')} value={title} onChangeText={setTitle} editable={busy === null} />
                 <Text tone="faint" style={styles.meta}>
-                  {`${draft.domain} · ${draft.wordCount} ${t('libraryPage.words')}`}
+                  {`${draft.domain} · ${t('libraryPage.wordCount', { count: draft.wordCount, formatted: draft.wordCount.toLocaleString(i18n.language) })}`}
                 </Text>
                 {draft.excerpt ? (
                   <Text tone="secondary" style={styles.body} numberOfLines={5}>

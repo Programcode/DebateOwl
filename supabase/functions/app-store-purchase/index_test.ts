@@ -29,7 +29,7 @@ type ApplyResult = import("../_shared/app-store.ts").ApplyResult;
 
 const chain = await createTestChain();
 const config = { bundleId: TEST_BUNDLE_ID, environments: ["Production" as const], appAppleId: TEST_APP_APPLE_ID };
-const PRO = { tier: "pro", dailyLimit: 50, canAccessProModels: true, trialEndsAt: null, gracePeriodEndsAt: null };
+const PRO = { tier: "pro", state: "pro" as const, refusal: null, dailyLimit: 50, canAccessProModels: true, trialEndsAt: null, gracePeriodEndsAt: null };
 
 function harness(result: ApplyResult = "applied", overrides: Partial<PurchaseDeps> = {}) {
   const applied: ApplyArgs[] = [];

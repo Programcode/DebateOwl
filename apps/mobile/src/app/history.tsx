@@ -35,6 +35,7 @@ import { deleteResult } from '@/lib/results';
 import { deleteSparringRound, sparringDraft } from '@/lib/sparring';
 import { useCopyHolder } from '@/lib/use-copy-holder';
 import { useTheme } from '@/theme/use-theme';
+import { EmptyState } from '@/components/empty-state';
 
 /** What the History lists delete, with the website's confirmation and failure copy. */
 const DELETIONS: Record<'case' | 'sparring', { tab: HistoryTab; title: string; desc: string; failed: string; label: string; run: (userId: string, id: string) => Promise<void> }> = {
@@ -206,7 +207,7 @@ export default function HistoryScreen() {
     <View style={styles.root}>
       <DocumentHeader backLabel={backLabel(t, from, 'debate')} actions={[]} />
       <Screen>
-        <Text accessibilityRole="header" weight="bold" style={styles.title}>
+        <Text accessibilityRole="header" weight="display" style={styles.title}>
           {t('historyPage.title')}
         </Text>
         <ScopePicker label={scopeLabel} onPress={() => setScopeOpen(true)} />
@@ -290,15 +291,9 @@ function TabList({ tab, items, onDelete }: { tab: HistoryTab; items: HistoryItem
   if (items.length === 0) {
     const empty = EMPTY[tab];
     return (
-      <Card>
-        <Text weight="semibold" style={styles.rowTitle}>
-          {t(empty.title)}
-        </Text>
-        <Text tone="secondary" style={styles.body}>
-          {t(empty.desc)}
-        </Text>
+      <EmptyState pose="sleepy" title={t(empty.title)} description={t(empty.desc)}>
         {empty.href ? <TextButton label={t(empty.action)} onPress={() => router.push(empty.href!)} /> : null}
-      </Card>
+      </EmptyState>
     );
   }
   return (
@@ -349,7 +344,7 @@ function HistoryRow({ item, first, onPress, onDelete }: { item: HistoryItem; fir
   const body = (
     <Pressable
       accessibilityRole={onPress ? 'button' : undefined}
-      accessibilityLabel={onPress ? t('debate.openItemAria', { title }) : undefined}
+      accessibilityLabel={onPress ? t('mobile.common.openItem', { title }) : undefined}
       accessibilityActions={onDelete ? [{ name: 'delete', label: t('common.delete') }] : undefined}
       onAccessibilityAction={(event) => {
         if (event.nativeEvent.actionName === 'delete') void remove();
@@ -543,7 +538,7 @@ const styles = StyleSheet.create({
   body: { fontSize: 15, lineHeight: 21 },
   loading: { marginTop: 32 },
   pressed: { opacity: 0.7 },
-  scope: { flexDirection: 'row', alignItems: 'center', gap: 12, borderWidth: 1, borderRadius: 14, paddingVertical: 11, paddingHorizontal: 14 },
+  scope: { flexDirection: 'row', alignItems: 'center', gap: 12, borderWidth: 2, borderRadius: 14, paddingVertical: 11, paddingHorizontal: 14 },
   tabRow: { marginHorizontal: -20, flexGrow: 0 },
   tabs: { gap: 8, paddingHorizontal: 20 },
   list: { padding: 0, gap: 0, overflow: 'hidden' },
@@ -558,6 +553,6 @@ const styles = StyleSheet.create({
   suggestedMotion: { flex: 1 },
   badge: { borderRadius: 999, paddingHorizontal: 9, paddingVertical: 3 },
   badgeText: { fontSize: 12.5 },
-  target: { flexDirection: 'row', alignItems: 'center', gap: 10, borderWidth: 1, borderRadius: 12, paddingVertical: 11, paddingHorizontal: 13 },
+  target: { flexDirection: 'row', alignItems: 'center', gap: 10, borderWidth: 2, borderRadius: 12, paddingVertical: 11, paddingHorizontal: 13 },
   targetText: { flex: 1 },
 });

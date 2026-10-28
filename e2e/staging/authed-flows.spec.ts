@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 import { expect, test, type Page } from '@playwright/test';
+import { readAIResponse } from '../helpers/ai-response';
 
 test.describe.configure({ mode: 'serial' });
 // A failed action throws well inside the test timeout, so the cleanup in `finally` still runs.
@@ -93,7 +94,7 @@ test('real staging session persists, starts a debate, writes and removes a sourc
       await page.reload();
       // Sources belong to a debate, so Library asks for one before it allows adding a source.
       await expect(page.getByTestId('library-debate')).toContainText('Select or create a debate', { timeout: 15_000 });
-      await expect(page.getByRole('button', { name: 'Add Source' })).toBeDisabled();
+      await expect(page.getByRole('button', { name: 'Add source' })).toBeDisabled();
       await page.getByTestId('library-debate').getByRole('button', { name: 'Start debate' }).click();
       const dialog = page.getByRole('dialog', { name: 'Start new debate' });
       await dialog.getByLabel('Motion').fill(motion);
@@ -113,7 +114,7 @@ test('real staging session persists, starts a debate, writes and removes a sourc
     });
 
     await step(page, 'add a source to the debate', async () => {
-      await page.getByRole('button', { name: 'Add Source' }).click();
+      await page.getByRole('button', { name: 'Add source' }).click();
       await page.getByPlaceholder('Source title...').fill(sourceTitle);
       await page.getByPlaceholder('Paste source content...').fill(sourceContent);
       const sourceInsert = page.waitForResponse((response) =>
@@ -148,13 +149,16 @@ test('real staging session persists, starts a debate, writes and removes a sourc
 
     await step(page, 'complete one AI request in Ask', async () => {
       await page.goto('/app/ask');
-      await page.getByLabel('Pros/Cons').click();
-      await page.getByPlaceholder('Ask your debate coach...').fill('Reply with one short sentence confirming this staging request.');
+      // Ask's modes live behind the Options popover since the design shell.
+      await page.getByRole('button', { name: 'Options' }).click();
+      await page.getByRole('switch', { name: 'Pros/cons' }).click();
+      await page.keyboard.press('Escape');
+      await page.getByPlaceholder('Ask your debate coach').fill('Reply with one short sentence confirming this staging request.');
       const aiResponse = page.waitForResponse((response) =>
         response.request().method() === 'POST' && response.url().includes('/functions/v1/ai'),
       { timeout: 90_000 });
       await page.getByRole('button', { name: 'Send message' }).click();
-      expect((await aiResponse).ok()).toBe(true);
+      expect((await readAIResponse(await aiResponse)).status).toBe(200);
       const saveResponseButton = page.getByRole('button', { name: 'Save message' }).last();
       await expect(saveResponseButton).toBeAttached({ timeout: 90_000 });
       const assistantBubble = saveResponseButton.locator('..');

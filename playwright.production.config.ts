@@ -10,7 +10,7 @@ export default defineConfig({
   reporter: process.env.CI ? [["github"], ["list"]] : "list",
   expect: { timeout: 20_000 },
   use: {
-    baseURL: process.env.PROD_URL ?? "https://debate.pi-stack.org",
+    baseURL: process.env.PROD_URL ?? "https://debateowl.com",
     locale: "en-US",
     trace: "off",
     screenshot: "off",

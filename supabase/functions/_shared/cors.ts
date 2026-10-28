@@ -3,11 +3,14 @@
 // This used to be copy-pasted into each function and had drifted: some lists
 // omitted the Playwright port (18080).
 
-export const PUBLIC_WEB_APP_ORIGIN = "https://debate.pi-stack.org";
+export const PUBLIC_WEB_APP_ORIGIN = "https://debateowl.com";
+/** The domain before the move to debateowl.com. It 301s to the new one, but open tabs and PWAs may still call from it. */
+export const PREVIOUS_WEB_APP_ORIGIN = "https://debate.pi-stack.org";
 
 /** Browser origins allowed to call the functions. Index 0 is the fallback. */
 export const ALLOWED_ORIGINS = [
   PUBLIC_WEB_APP_ORIGIN,
+  PREVIOUS_WEB_APP_ORIGIN,
   "http://localhost:8080",
   "http://127.0.0.1:8080",
   "http://localhost:18080",
@@ -69,6 +72,7 @@ export function getCorsHeaders(
     (allowDevOrigins && isDevOrigin(origin as string))
   );
   return {
+    "Vary": "Origin",
     "Access-Control-Allow-Origin": permitted ? origin as string : ALLOWED_ORIGINS[0],
     "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
     "Access-Control-Allow-Methods": methods,

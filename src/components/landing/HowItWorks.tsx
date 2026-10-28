@@ -1,62 +1,44 @@
 import { useTranslation } from "react-i18next";
-import { motion } from "framer-motion";
+import { Reveal } from "./Reveal";
 import { FileSearch, Sparkles, Trophy } from "lucide-react";
 
 const HowItWorks = () => {
     const { t } = useTranslation();
 
     const steps = [
-        { icon: FileSearch, step: "01", title: t('howItWorks.step1Title'), description: t('howItWorks.step1Desc') },
-        { icon: Sparkles, step: "02", title: t('howItWorks.step2Title'), description: t('howItWorks.step2Desc') },
-        { icon: Trophy, step: "03", title: t('howItWorks.step3Title'), description: t('howItWorks.step3Desc') },
+        { icon: FileSearch, step: "1", title: t('howItWorks.step1Title'), description: t('howItWorks.step1Desc') },
+        { icon: Sparkles, step: "2", title: t('howItWorks.step2Title'), description: t('howItWorks.step2Desc') },
+        { icon: Trophy, step: "3", title: t('howItWorks.step3Title'), description: t('howItWorks.step3Desc') },
     ];
 
     return (
-        <section id="how-it-works" className="py-24 relative">
+        <section id="how-it-works" className="relative bg-secondary/10 py-12 md:py-20">
             <div className="section-container">
-                <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    whileInView={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.5 }}
-                    viewport={{ once: true }}
-                    className="text-center mb-16"
-                >
-                    <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-4 tracking-tight">
-                        {t('howItWorks.title')}
-                    </h2>
-                    <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
-                        {t('howItWorks.subtitle')}
-                    </p>
-                </motion.div>
+                <Reveal className="mb-8 text-center md:mb-12">
+                    <h2 className="section-heading">{t('howItWorks.title')}</h2>
+                </Reveal>
 
-                <div className="relative">
-                    <div className="hidden lg:block absolute top-1/2 left-0 right-0 h-px bg-gradient-to-r from-transparent via-primary/30 to-transparent -translate-y-1/2" />
-
-                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 lg:gap-4">
-                        {steps.map((step, index) => (
-                            <motion.div
-                                key={step.step}
-                                initial={{ opacity: 0, y: 20 }}
-                                whileInView={{ opacity: 1, y: 0 }}
-                                transition={{ duration: 0.5, delay: index * 0.15 }}
-                                viewport={{ once: true }}
-                                className="relative flex flex-col items-center text-center"
-                            >
-                                <div className="relative mb-6">
-                                    <div className="w-20 h-20 rounded-full bg-secondary border border-border flex items-center justify-center relative z-10 transition-transform duration-300 hover:scale-110 motion-reduce:hover:scale-100">
-                                        <step.icon className="w-8 h-8 text-primary" />
+                {/* A short list on phones (icon beside the text), three columns from md up. */}
+                <ol className="mx-auto grid max-w-5xl grid-cols-1 gap-3 md:grid-cols-3 md:gap-6">
+                    {steps.map((step, index) => (
+                        <li key={step.step}>
+                            <Reveal delay={index * 0.05} className="flex h-full items-center gap-4 rounded-xl border-2 border-border bg-card p-4 md:flex-col md:p-6 md:text-center">
+                                <div className="relative shrink-0">
+                                    <div className="flex h-14 w-14 items-center justify-center rounded-full border-2 border-border bg-card shadow-[0_3px_0_var(--do-border-strong)] dark:shadow-[0_3px_0_var(--do-ledge-neutral)] md:h-16 md:w-16">
+                                        <step.icon aria-hidden="true" className="h-6 w-6 text-primary md:h-7 md:w-7" />
                                     </div>
-                                    <div className="absolute -top-2 -right-2 w-8 h-8 rounded-full bg-primary flex items-center justify-center text-sm font-bold text-primary-foreground shadow-md">
+                                    <div aria-hidden="true" className="absolute -right-1.5 -top-1.5 flex h-6 w-6 items-center justify-center rounded-full bg-gold font-display text-xs font-[600] text-on-gold shadow-[0_2px_0_var(--do-accent-ledge)]">
                                         {step.step}
                                     </div>
                                 </div>
-
-                                <h3 className="text-xl font-semibold mb-3 text-foreground">{step.title}</h3>
-                                <p className="text-muted-foreground text-sm max-w-xs">{step.description}</p>
-                            </motion.div>
-                        ))}
-                    </div>
-                </div>
+                                <div>
+                                    <h3 className="font-display text-lg font-[600] text-heading md:text-xl">{step.title}</h3>
+                                    <p className="mt-0.5 text-sm text-muted-foreground">{step.description}</p>
+                                </div>
+                            </Reveal>
+                        </li>
+                    ))}
+                </ol>
             </div>
         </section>
     );

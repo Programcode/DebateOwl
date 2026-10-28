@@ -15,7 +15,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Slider } from '@/components/ui/slider';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { FactoidsInputSchema, type FactoidsInput } from '@/lib/ai/schemas/factoids';
 import { LoadingSpinner } from '@/components/ui/loading-spinner';
 
@@ -63,17 +63,6 @@ export function FactoidsForm({ onSubmit, isLoading, debateContext = true }: Fact
 
   return (
     <Card className="border-secondary/30">
-      <CardHeader className="bg-gradient-to-br from-secondary/10 to-transparent">
-        <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-secondary/20">
-            <BookOpen className="h-5 w-5 text-secondary-foreground" />
-          </div>
-          <div>
-            <CardTitle>{t('factoidsForm.title')}</CardTitle>
-            <CardDescription>{t('factoidsForm.subtitle')}</CardDescription>
-          </div>
-        </div>
-      </CardHeader>
       <CardContent className="pt-6">
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
           {/* Claim Input */}
@@ -88,7 +77,7 @@ export function FactoidsForm({ onSubmit, isLoading, debateContext = true }: Fact
               className="h-12"
             />
             {errors.claim && (
-              <p className="text-sm text-destructive">{errors.claim.message}</p>
+              <p className="text-sm text-destructive">{t(errors.claim.message ?? '')}</p>
             )}
           </div>
 
@@ -144,7 +133,7 @@ export function FactoidsForm({ onSubmit, isLoading, debateContext = true }: Fact
                 step={1}
                 onValueChange={([value]) => setValue('sourceCount', value, { shouldDirty: true })}
               />
-              <div className="flex justify-between text-[10px] text-muted-foreground">
+              <div className="flex justify-between text-xs text-muted-foreground">
                 <span>3</span>
                 <span>15</span>
               </div>
@@ -159,7 +148,7 @@ export function FactoidsForm({ onSubmit, isLoading, debateContext = true }: Fact
                 placeholder={t('factoidsForm.regionPlaceholder')}
               />
               {errors.region && (
-                <p className="text-sm text-destructive">{errors.region.message}</p>
+                <p className="text-sm text-destructive">{t(errors.region.message ?? '')}</p>
               )}
             </div>
 
@@ -180,7 +169,7 @@ export function FactoidsForm({ onSubmit, isLoading, debateContext = true }: Fact
           <DebateContextControl feature="factoids" side={requestSide('factoids', currentValues)} hidden={!debateContext} />
 
           {/* Submit Button */}
-          <Button type="submit" className="w-full h-12" disabled={isLoading}>
+          <Button type="submit" size="lg" className="w-full" disabled={isLoading} aria-busy={isLoading}>
             {isLoading ? (
               <>
                 <LoadingSpinner size="sm" className="mr-2" />

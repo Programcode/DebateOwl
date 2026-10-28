@@ -1,16 +1,19 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Target, Shield, Swords, AlertTriangle, MessageSquare, Save, GitBranch, Sparkles, Clipboard, Undo2, Flame } from 'lucide-react';
+import { Target, Shield, Swords, AlertTriangle, MessageSquare, GitBranch, Sparkles, Undo2, Flame } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { SectionCard } from '@/components/ui/section-card';
 import { Separator } from '@/components/ui/separator';
 import { Markdown } from '@/components/ui/markdown';
 import type { GenerateOutput, Contention } from '@/lib/ai/schemas/generate';
-import { StaggeredContainer } from '@/components/ui/animated-section';
 import { toast } from 'sonner';
-import { formatEuropeanDateTime } from '@/lib/date-format';
+import { formatDecimal, formatEuropeanDateTime } from '@/lib/date-format';
 import { ExportToolbar } from '@/components/features/ExportToolbar';
+import { ResultHeader } from '@/components/features/tools/ResultHeader';
+import { CopyResultButton, SaveResultAction } from '@/components/features/tools/result-actions';
+import { caseText } from '@/components/features/tools/result-text';
+import { ResearchedSources } from '@/components/features/tools/ResearchedSources';
 import { GoogleDriveAuthModal } from '@/components/features/export/GoogleDriveAuthModal';
 import { SourceQualityList } from '@/components/features/shared/SourceQualityList';
 import type { DiscoveredSource } from '@/lib/ai/client';
@@ -24,20 +27,22 @@ interface GenerateResultsProps {
   regeneratingSection?: string | null;
   onDiscuss?: () => void;
   onSave?: () => void;
+  /** The case is already in History; shows “Saved” instead of Save. */
+  saved?: boolean;
   onUndo?: () => void;
   onImportFlowchart?: () => void;
   onPracticeCrossfire?: () => void;
 }
 
-function ArgumentCard({ contention, index }: { contention: Contention; index: number }) {
+function ArgumentCard({ contention, index, unverified }: { contention: Contention; index: number; unverified: boolean }) {
   const { t } = useTranslation();
   return (
-    <div className="rounded-lg border border-border bg-card p-4 space-y-3 motion-list-item card-hover-glow">
+    <div className="rounded-lg border border-border bg-card p-4 space-y-3 motion-list-item">
       <div className="flex items-start justify-between gap-2">
-        <h4 className="font-semibold text-foreground">
+        <h3 className="font-semibold text-foreground">
           <span className="text-primary mr-2">#{index + 1}</span>
           {contention.claim}
-        </h4>
+        </h3>
         {contention.needsSource && (
           <Badge variant="outline" className="shrink-0 border-amber-500 text-amber-600">
             <AlertTriangle className="mr-1 h-3 w-3" />
@@ -49,11 +54,16 @@ function ArgumentCard({ contention, index }: { contention: Contention; index: nu
       <div className="space-y-2 text-sm">
         <div>
           <span className="font-medium text-muted-foreground">{t('generateResults.reasoning')} </span>
-          <Markdown className="inline">{contention.reasoning}</Markdown>
+          <Markdown inline>{contention.reasoning}</Markdown>
         </div>
         <div>
           <span className="font-medium text-muted-foreground">{t('generateResults.evidence')} </span>
-          <Markdown className="inline">{contention.evidence}</Markdown>
+          {unverified && !contention.needsSource && (
+            <Badge variant="outline" className="mr-1 border-amber-500/40 bg-amber-500/10 py-0 align-middle text-amber-800 dark:text-amber-300">
+              {t('generateResults.unverified', 'Unverified')}
+            </Badge>
+          )}
+          <Markdown inline>{contention.evidence}</Markdown>
         </div>
         {contention.sourceQuery && (
           <div className="rounded-md bg-muted/50 p-2 text-xs">
@@ -63,7 +73,7 @@ function ArgumentCard({ contention, index }: { contention: Contention; index: nu
         )}
         <div>
           <span className="font-medium text-muted-foreground">{t('generateResults.impact')} </span>
-          <Markdown className="inline">{contention.impact}</Markdown>
+          <Markdown inline>{contention.impact}</Markdown>
         </div>
       </div>
     </div>
@@ -73,48 +83,20 @@ function ArgumentCard({ contention, index }: { contention: Contention; index: nu
 function formatDuration(ms: number | undefined, t: (key: string, options?: Record<string, unknown>) => string) {
   if (!ms || ms < 0) return null;
   if (ms < 1000) return t('generateResults.durationMs', { value: ms });
-  const value = (ms / 1000).toFixed(ms < 10000 ? 1 : 0);
+  const value = formatDecimal(ms / 1000, ms < 10000 ? 1 : 0);
   return t('generateResults.durationS', { value });
 }
 
-export function GenerateResults({ result, discoveredSources, onRegenerateSection, regeneratingSection = null, onDiscuss, onSave, onUndo, onImportFlowchart, onPracticeCrossfire }: GenerateResultsProps) {
+export function GenerateResults({ result, discoveredSources, onRegenerateSection, regeneratingSection = null, onDiscuss, onSave, saved = false, onUndo, onImportFlowchart, onPracticeCrossfire }: GenerateResultsProps) {
   const { t } = useTranslation();
   const [isExportingGDocs, setIsExportingGDocs] = useState(false);
   const [showDriveAuth, setShowDriveAuth] = useState(false);
+  // Read-only views (a shared link) pass no handler, so the cards show no regenerate button.
+  const regenerate = (section: string) => (onRegenerateSection ? () => onRegenerateSection(section) : undefined);
   const regenerateState = (section: string) => ({
     isLoading: regeneratingSection === section,
     regenerateDisabled: regeneratingSection !== null,
   });
-
-  const handleCopyToClipboard = async () => {
-    const lines: string[] = [];
-    lines.push(`THESIS: ${result.caseStructure?.thesis || ''}`);
-    lines.push(`FRAMEWORK: ${result.caseStructure?.framework || ''}`);
-    lines.push('');
-    result.contentions?.forEach((c, i) => {
-      lines.push(`CONTENTION #${i + 1}: ${c.claim}`);
-      lines.push(`  Reasoning: ${c.reasoning}`);
-      lines.push(`  Evidence: ${c.evidence}`);
-      lines.push(`  Impact: ${c.impact}`);
-      lines.push('');
-    });
-    if (result.counters?.length) {
-      lines.push('PREPARED COUNTERS:');
-      result.counters.forEach(c => {
-        lines.push(`  vs "${c.targetArgument}": ${c.counterpoint}`);
-      });
-    }
-    if (!navigator.clipboard?.writeText) {
-      toast.error(t('generateResults.copyFailed', 'Unable to copy to clipboard'));
-      return;
-    }
-    try {
-      await navigator.clipboard.writeText(lines.join('\n'));
-      toast.success(t('generateResults.copiedToClipboard', 'Copied to clipboard'));
-    } catch {
-      toast.error(t('generateResults.copyFailed', 'Unable to copy to clipboard'));
-    }
-  };
 
   const handleGoogleDocsExport = async () => {
     setIsExportingGDocs(true);
@@ -165,7 +147,7 @@ export function GenerateResults({ result, discoveredSources, onRegenerateSection
   if (!result?.caseStructure || !result?.contentions || !result?.predictedOpponentCase || !result?.counters) {
     return (
       <div className="rounded-lg border border-destructive/50 bg-destructive/5 p-6 text-center">
-        <h3 className="text-lg font-semibold text-destructive mb-2">{t('generateResults.incomplete')}</h3>
+        <h2 className="text-lg font-semibold text-destructive mb-2">{t('generateResults.incomplete')}</h2>
         <p className="text-sm text-muted-foreground">
           {t('generateResults.incompleteDesc')}
         </p>
@@ -174,56 +156,42 @@ export function GenerateResults({ result, discoveredSources, onRegenerateSection
   }
 
   const durationText = formatDuration(result.metadata?.durationMs, t);
+  // Without web research, evidence is the model's own claim and is labelled that way.
+  const researched = Boolean(discoveredSources?.length);
   const modelName = result.metadata?.model || result.metadata?.provider;
   const modelText = modelName ? t('generateResults.modelLabel', { value: modelName }) : null;
 
   return (
-    <StaggeredContainer className="space-y-6">
+    <div className="space-y-6">
       <GoogleDriveAuthModal open={showDriveAuth} onOpenChange={setShowDriveAuth} />
-      {/* Researched sources with quality provenance */}
-      {discoveredSources && discoveredSources.length > 0 && (
-        <div className="rounded-lg border bg-card/50 p-4">
-          <h4 className="mb-2 text-sm font-medium">{t('sourceQuality.researchedSources')}</h4>
-          <SourceQualityList sources={discoveredSources} />
-          <p className="mt-2 text-xs text-muted-foreground">
-            {t('sourceQuality.fallbackNote')}
-          </p>
-        </div>
-      )}
-      {/* Metadata */}
-      <div className="space-y-3">
-        <div className="flex items-center gap-2 flex-wrap text-xs text-muted-foreground">
+      <ResultHeader
+        title={t('generateResults.resultTitle', 'Your case')}
+        meta={<>
           <Badge variant={result.metadata?.side === 'pro' ? 'default' : 'secondary'}>
             {result.metadata?.side === 'pro' ? t('generateResults.proposition') : t('generateResults.opposition')}
-          </Badge>          <span>•</span>
-          <span>{result.metadata?.generatedAt ? formatEuropeanDateTime(result.metadata.generatedAt) : ''}</span>
+          </Badge>
+          {result.metadata?.generatedAt && <><span>•</span><span>{formatEuropeanDateTime(result.metadata.generatedAt)}</span></>}
           {modelText && <><span>•</span><span>{modelText}</span></>}
           {durationText && <><span>•</span><span>{durationText}</span></>}
-        </div>
-        <div data-tour="export-section">
+        </>}
+        caveat={researched ? undefined : t('generateResults.unresearchedCaveat', 'AI-generated, and no web research backs this evidence. Check facts and sources before using them in a round.')}
+        actions={(
+        <div data-tour="export-section" className="w-full">
           <ExportToolbar
             onPdf={handlePdfExport}
             onDocx={handleDocxExport}
             onGoogleDocs={handleGoogleDocsExport}
             isExportingGDocs={isExportingGDocs}
-            extraExports={(
-              <Button variant="outline" size="sm" onClick={handleCopyToClipboard}>
-                <Clipboard className="mr-2 h-4 w-4" />
-                {t('generateResults.clipboard', 'Clipboard')}
-              </Button>
-            )}
-            secondaryActions={(onSave || onDiscuss || onImportFlowchart || onUndo || onPracticeCrossfire) ? (
+            extraExports={<CopyResultButton getText={() => caseText(result)} />}
+            evenRows
+            secondaryActions={(onSave || saved || onDiscuss || onImportFlowchart || onUndo || onPracticeCrossfire) ? (
+              // What happens to this case first (keep it, undo a change), then where to take it next.
               <>
-                {onPracticeCrossfire && (
-                  <Button variant="outline" size="sm" onClick={onPracticeCrossfire}>
-                    <Flame className="mr-2 h-4 w-4" />
-                    {t('crossfire.openFromResult', 'Open in Crossfire')}
-                  </Button>
-                )}
-                {onSave && (
-                  <Button variant="outline" size="sm" onClick={onSave}>
-                    <Save className="mr-2 h-4 w-4" />
-                    {t('generateResults.save')}
+                <SaveResultAction saved={saved} onSave={onSave} />
+                {onUndo && (
+                  <Button variant="outline" size="sm" onClick={onUndo} disabled={regeneratingSection !== null}>
+                    <Undo2 className="mr-2 h-4 w-4" />
+                    {t('generateResults.undo', 'Undo')}
                   </Button>
                 )}
                 {onDiscuss && (
@@ -238,17 +206,19 @@ export function GenerateResults({ result, discoveredSources, onRegenerateSection
                     {t('generateResults.flowcharts')}
                   </Button>
                 )}
-                {onUndo && (
-                  <Button variant="outline" size="sm" onClick={onUndo} disabled={regeneratingSection !== null}>
-                    <Undo2 className="mr-2 h-4 w-4" />
-                    {t('generateResults.undo', 'Undo')}
+                {onPracticeCrossfire && (
+                  <Button variant="outline" size="sm" onClick={onPracticeCrossfire}>
+                    <Flame className="mr-2 h-4 w-4" />
+                    {t('crossfire.openFromResult', 'Open in Crossfire')}
                   </Button>
                 )}
               </>
             ) : undefined}
           />
         </div>
-      </div>
+        )}
+      />
+      <ResearchedSources sources={discoveredSources} />
 
       {/* Exordio (Introductor only) */}
       {result.exordio && (result.exordio.hook || result.exordio.transition) && (
@@ -256,17 +226,17 @@ export function GenerateResults({ result, discoveredSources, onRegenerateSection
           title={t('generateResults.exordio')}
           description={t('generateResults.exordioDesc')}
           icon={<Sparkles className="h-5 w-5" />}
-          onRegenerate={() => onRegenerateSection?.('exordio')}
+          onRegenerate={regenerate('exordio')}
           {...regenerateState('exordio')}
         >
           <div className="space-y-4">
             <div>
-              <h4 className="text-sm font-medium text-muted-foreground mb-1">{t('generateResults.hook')}</h4>
+              <h3 className="text-sm font-medium text-muted-foreground mb-1">{t('generateResults.hook')}</h3>
               <p className="text-foreground italic">{result.exordio.hook}</p>
             </div>
             <Separator />
             <div>
-              <h4 className="text-sm font-medium text-muted-foreground mb-1">{t('generateResults.transition')}</h4>
+              <h3 className="text-sm font-medium text-muted-foreground mb-1">{t('generateResults.transition')}</h3>
               <p className="text-foreground">{result.exordio.transition}</p>
             </div>
           </div>
@@ -278,26 +248,26 @@ export function GenerateResults({ result, discoveredSources, onRegenerateSection
         title={t('generateResults.caseStructure')}
         description={t('generateResults.caseStructureDesc')}
         icon={<Target className="h-5 w-5" />}
-        onRegenerate={() => onRegenerateSection?.('structure')}
+        onRegenerate={regenerate('structure')}
         {...regenerateState('structure')}
       >
         <div className="space-y-4">
           <div>
-            <h4 className="text-sm font-medium text-muted-foreground mb-1">{t('generateResults.thesis')}</h4>
+            <h3 className="text-sm font-medium text-muted-foreground mb-1">{t('generateResults.thesis')}</h3>
             <Markdown>{result.caseStructure.thesis}</Markdown>
           </div>
           <Separator />
           <div>
-            <h4 className="text-sm font-medium text-muted-foreground mb-1">{t('generateResults.framework')}</h4>
+            <h3 className="text-sm font-medium text-muted-foreground mb-1">{t('generateResults.framework')}</h3>
             <Markdown>{result.caseStructure.framework}</Markdown>
           </div>
           <Separator />
           <div>
-            <h4 className="text-sm font-medium text-muted-foreground mb-1">{t('generateResults.burdenOfProof')}</h4>
+            <h3 className="text-sm font-medium text-muted-foreground mb-1">{t('generateResults.burdenOfProof')}</h3>
             <Markdown>{result.caseStructure.burdenOfProof}</Markdown>
           </div>
           <div>
-            <h4 className="text-sm font-medium text-muted-foreground mb-2">{t('generateResults.keyDefinitions')}</h4>
+            <h3 className="text-sm font-medium text-muted-foreground mb-2">{t('generateResults.keyDefinitions')}</h3>
             <ul className="list-disc list-inside space-y-1 text-sm text-foreground">
               {result.caseStructure.keyDefinitions?.map((def, i) => (
                 <li key={i}>{def}</li>
@@ -312,12 +282,12 @@ export function GenerateResults({ result, discoveredSources, onRegenerateSection
         title={t('generateResults.arguments')}
         description={`${result.contentions?.length || 0} ${t('generateResults.structuredArguments')}`}
         icon={<Shield className="h-5 w-5" />}
-        onRegenerate={() => onRegenerateSection?.('contentions')}
+        onRegenerate={regenerate('contentions')}
         {...regenerateState('contentions')}
       >
         <div className="space-y-4">
           {result.contentions?.map((contention, index) => (
-            <ArgumentCard key={contention.id} contention={contention} index={index} />
+            <ArgumentCard key={contention.id} contention={contention} index={index} unverified={!researched} />
           ))}
         </div>
       </SectionCard>
@@ -327,12 +297,12 @@ export function GenerateResults({ result, discoveredSources, onRegenerateSection
         title={t('generateResults.predictedOpponent')}
         description={t('generateResults.predictedOpponentDesc')}
         icon={<Swords className="h-5 w-5" />}
-        onRegenerate={() => onRegenerateSection?.('opponent')}
+        onRegenerate={regenerate('opponent')}
         {...regenerateState('opponent')}
       >
         <div className="space-y-4">
           <div>
-            <h4 className="text-sm font-medium text-muted-foreground mb-2">{t('generateResults.likelyArguments')}</h4>
+            <h3 className="text-sm font-medium text-muted-foreground mb-2">{t('generateResults.likelyArguments')}</h3>
             <ul className="space-y-2">
               {result.predictedOpponentCase?.likelyArguments?.map((arg, i) => (
                 <li key={i} className="flex items-start gap-2 text-sm">
@@ -344,11 +314,11 @@ export function GenerateResults({ result, discoveredSources, onRegenerateSection
           </div>
           <Separator />
           <div>
-            <h4 className="text-sm font-medium text-muted-foreground mb-2">{t('generateResults.strategicWeaknesses')}</h4>
+            <h3 className="text-sm font-medium text-muted-foreground mb-2">{t('generateResults.strategicWeaknesses')}</h3>
             <ul className="space-y-2">
               {result.predictedOpponentCase?.strategicWeaknesses?.map((weakness, i) => (
                 <li key={i} className="flex items-start gap-2 text-sm">
-                  <span className="text-amber-500 mt-1">•</span>
+                  <span className="text-amber-600 dark:text-amber-400 mt-1">•</span>
                   <span className="text-foreground">{weakness}</span>
                 </li>
               ))}
@@ -356,7 +326,7 @@ export function GenerateResults({ result, discoveredSources, onRegenerateSection
           </div>
           <Separator />
           <div>
-            <h4 className="text-sm font-medium text-muted-foreground mb-2">{t('generateResults.keyClashes')}</h4>
+            <h3 className="text-sm font-medium text-muted-foreground mb-2">{t('generateResults.keyClashes')}</h3>
             <div className="flex flex-wrap gap-2">
               {result.predictedOpponentCase?.keyClashes?.map((clash, i) => (
                 <Badge key={i} variant="outline">{clash}</Badge>
@@ -370,7 +340,7 @@ export function GenerateResults({ result, discoveredSources, onRegenerateSection
       <SectionCard
         title={t('generateResults.preparedCounters')}
         description={t('generateResults.preparedCountersDesc')}
-        onRegenerate={() => onRegenerateSection?.('counters')}
+        onRegenerate={regenerate('counters')}
         {...regenerateState('counters')}
       >
         <div className="space-y-4">
@@ -392,6 +362,6 @@ export function GenerateResults({ result, discoveredSources, onRegenerateSection
           ))}
         </div>
       </SectionCard>
-    </StaggeredContainer>
+    </div>
   );
 }

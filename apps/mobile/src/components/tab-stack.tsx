@@ -21,8 +21,8 @@ export function TabStack({ largeTitle = true }: { largeTitle?: boolean }) {
         headerShadowVisible: false,
         headerLargeTitleShadowVisible: false,
         headerLargeStyle: { backgroundColor: 'transparent' },
-        headerLargeTitleStyle: { fontFamily: fontFamily.bold, color: colors.foreground },
-        headerTitleStyle: { fontFamily: fontFamily.semibold, color: colors.foreground },
+        headerLargeTitleStyle: { fontFamily: fontFamily.display, color: colors.heading },
+        headerTitleStyle: { fontFamily: fontFamily.display, color: colors.heading },
         headerTintColor: colors.primary,
         contentStyle: { backgroundColor: colors.background },
       }}

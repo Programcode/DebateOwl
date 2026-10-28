@@ -1,18 +1,15 @@
 {
   "schemaVersion": "trace-1",
-  "createdAt": "2026-10-06T08:51:36.896Z",
+  "createdAt": "2026-10-09T08:24:01.480Z",
   "payload": {
     "actions": [
       {
         "name": "tap",
-        "summary": "tap button \"Start debate\" (2 of 2)",
+        "summary": "tap button \"Start debate\"",
         "target": {
           "role": "button",
           "name": "Start debate",
-          "position": {
-            "index": 1,
-            "of": 2
-          }
+          "testId": "current-debate-desktop"
         }
       },
       {
@@ -49,28 +46,28 @@
       },
       {
         "name": "tap",
-        "summary": "tap button \"Add Source\"",
+        "summary": "tap button \"Add source\"",
         "target": {
           "role": "button",
-          "name": "Add Source"
+          "name": "Add source"
         }
       },
       {
         "name": "type",
-        "summary": "type \"Plastic bag levy study\" into textbox \"Source title...\"",
+        "summary": "type \"Plastic bag levy study\" into textbox \"Title\"",
         "target": {
           "role": "textbox",
-          "name": "Source title...",
+          "name": "Title",
           "placeholder": "Source title..."
         },
         "value": "Plastic bag levy study"
       },
       {
         "name": "type",
-        "summary": "type \"After a 5p levy, single-use bag sales a…\" into textbox \"Paste source content...\"",
+        "summary": "type \"After a 5p levy, single-use bag sales a…\" into textbox \"Content\"",
         "target": {
           "role": "textbox",
-          "name": "Paste source content...",
+          "name": "Content",
           "placeholder": "Paste source content..."
         },
         "value": "After a 5p levy, single-use bag sales at major retailers fell by more than 95 percent."
@@ -96,26 +93,21 @@
       "callIndex": 0,
       "agent": "default"
     },
-    "summary": "Started the debate “This House would ban single-use plastics” and added “Plastic bag levy study” to the Library with the requested content. The Library shows the source and a “Source Added” confirmation.",
+    "summary": "Successfully started a debate on 'This House would ban single-use plastics' and added a source titled 'Plastic bag levy study' with the specified content in the Library. The library now shows 1 source, and the source card displays the correct title and content.",
     "startPath": "/app",
     "endPath": "/app/library",
     "endAnchors": [
       {
-        "role": "button",
-        "name": "Close"
-      },
-      {
-        "text": "Source Added"
-      },
-      {
-        "text": "Your source is now available for grounding."
-      },
-      {
         "text": "Current debate"
       },
       {
+        "role": "button",
+        "name": "Current debate: This House would ban single-use plastics",
+        "testId": "current-debate-desktop"
+      },
+      {
         "role": "heading",
-        "name": "Source Library"
+        "name": "Library"
       },
       {
         "text": "This House would ban single-use plastics"
@@ -125,7 +117,14 @@
         "name": "Change"
       },
       {
-        "text": "All folders"
+        "text": "1 sources · 1 active · 1 folders"
+      },
+      {
+        "text": "Smart"
+      },
+      {
+        "role": "heading",
+        "name": "Your library"
       }
     ],
     "goneAnchors": [
@@ -133,6 +132,10 @@
         "role": "button",
         "name": "Start debate",
         "testId": "current-debate-desktop"
+      },
+      {
+        "role": "heading",
+        "name": "What are you working on?"
       },
       {
         "text": "No current debate"
@@ -152,11 +155,8 @@
       },
       {
         "text": "Brainstorm"
-      },
-      {
-        "text": "Explore angles for a motion."
       }
     ],
-    "endWaitMs": 14336
+    "endWaitMs": 12889
   }
 }

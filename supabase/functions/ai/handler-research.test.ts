@@ -1,4 +1,3 @@
-import { entitlementRows } from "../_shared/testing/entitlement.ts";
 function jsonResponse(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), {
     status,
@@ -19,7 +18,9 @@ for (const [key, value] of Object.entries(environment)) Deno.env.set(key, value)
 
 const { createRequestBudgetSignal, handleRequest } = await import("./index.ts");
 const { handleRequest: handleStreamRequest } = await import("../ai-stream/index.ts");
-const { MAX_REQUEST_OUTPUT_TOKENS, MODEL_CATALOG } = await import("../_shared/model-catalog.ts");
+const { BACKGROUND_MODEL, MODEL_CATALOG } = await import("../_shared/model-catalog.ts");
+const { MAX_ASK_HISTORY_MESSAGES } = await import("../_shared/prompt-budget.ts");
+const { outputTokenLimit, REPLY_TOKEN_CAPS } = await import("../_shared/output-caps.ts");
 
 Deno.test("AI request work shares one deadline signal", () => {
   const caller = new AbortController();
@@ -63,16 +64,17 @@ Deno.test("AI handlers reject malformed controls before quota or provider work",
   try {
     const response = await handleRequest(new Request("http://127.0.0.1/functions/v1/ai", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { Authorization: "Bearer test-user-token", "Content-Type": "application/json" },
       body: JSON.stringify({
         feature: "ask",
-        model: "openai/gpt-5.6-luna",
+        model: "openai/gpt-6-luna",
         input: { message: "Question", mode: "\u200Bgeneral", citationMode: "false" },
       }),
     }));
     if (response.status !== 400) throw new Error(`non-streaming handler returned ${response.status}`);
     if (!(await response.text()).includes("ask.citationMode")) throw new Error("non-streaming error hid the invalid control");
-    if (calls.length !== 0) throw new Error(`non-streaming validation performed remote work: ${calls.join(", ")}`);
+    if (calls.length !== 1 || !calls[0].endsWith("/auth/v1/user")) throw new Error(`non-streaming validation performed quota or provider work: ${calls.join(", ")}`);
+    calls.length = 0;
 
     for (const [feature, input] of [
       ["ask", { message: "Question", mode: "general", language: "zz" }],
@@ -94,12 +96,13 @@ Deno.test("AI handlers reject malformed controls before quota or provider work",
     ] as const) {
       const languageResponse = await handleRequest(new Request("http://127.0.0.1/functions/v1/ai", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ feature, model: "openai/gpt-5.6-luna", input }),
+        headers: { Authorization: "Bearer test-user-token", "Content-Type": "application/json" },
+        body: JSON.stringify({ feature, model: "openai/gpt-6-luna", input }),
       }));
       if (languageResponse.status !== 400) throw new Error(`${feature} invalid language returned ${languageResponse.status}`);
       if (!(await languageResponse.text()).includes(`${feature}.language`)) throw new Error(`${feature} invalid language was accepted`);
-      if (calls.length !== 0) throw new Error(`${feature} language validation performed remote work: ${calls.join(", ")}`);
+      if (calls.length !== 1 || !calls[0].endsWith("/auth/v1/user")) throw new Error(`${feature} language validation performed quota or provider work: ${calls.join(", ")}`);
+      calls.length = 0;
     }
 
     const streamResponse = await handleStreamRequest(new Request("http://127.0.0.1/functions/v1/ai-stream", {
@@ -110,7 +113,7 @@ Deno.test("AI handlers reject malformed controls before quota or provider work",
       },
       body: JSON.stringify({
         feature: "ask",
-        model: "openai/gpt-5.6-luna",
+        model: "openai/gpt-6-luna",
         input: { message: "Question", mode: "general", citationMode: "false" },
       }),
     }));
@@ -147,7 +150,7 @@ Deno.test("AI handler rejects missing, empty, and invalid bearer tokens with the
       },
       body: JSON.stringify({
         feature: "ask",
-        model: "openai/gpt-5.6-luna",
+        model: "openai/gpt-6-luna",
         input: { message: "Question", mode: "general" },
       }),
     }));
@@ -187,9 +190,21 @@ Deno.test("factoids handler carries Exa filters and consulted-source metadata ac
     if (url.origin === "https://supabase.test") {
       if (url.pathname === "/auth/v1/user") return jsonResponse({ id: "user-1", aud: "authenticated" });
       if (url.pathname.includes("/rest/v1/user_roles")) return jsonResponse({ role: "user" });
-      if (url.pathname.includes("/rest/v1/rpc/effective_entitlement")) return jsonResponse(entitlementRows("trial", { daily_limit: 50 }));
-      if (url.pathname.includes("/rest/v1/rate_limits")) return jsonResponse({ limit_value: 50 });
-      if (url.pathname.includes("/rest/v1/rpc/consume_daily_quota")) {
+      if (url.pathname.includes("/rest/v1/user_settings")) {
+        return jsonResponse({
+          subscription_tier: "trial",
+          daily_limit_override: 50,
+          trial_ends_at: "2099-01-01T00:00:00.000Z",
+          grace_period_ends_at: null,
+        });
+      }
+      if (url.pathname.endsWith("/rest/v1/app_store_subscriptions")) return Response.json([]);
+      if (url.pathname.includes("/rest/v1/subscriptions")) return jsonResponse([]);
+      if (url.pathname.includes("/rest/v1/rate_limits")) {
+        if ((url.searchParams.get("order") ?? "").includes("updated_at")) throw new Error(`rate_limits must not order by updated_at: ${url.search}`);
+        return jsonResponse({ limit_value: 50 });
+      }
+      if (/\/rest\/v1\/rpc\/consume_(daily|ai)_quota$/.test(url.pathname)) {
         return jsonResponse([{ allowed: true, current_count: 1 }]);
       }
       if (url.pathname.includes("/rest/v1/global_prompts")) return jsonResponse({ prompt_text: null });
@@ -263,7 +278,7 @@ Deno.test("factoids handler carries Exa filters and consulted-source metadata ac
       },
       body: JSON.stringify({
         feature: "factoids",
-        model: "openai/gpt-5.6-luna",
+        model: "openai/gpt-6-luna",
         input: {
           claim: "solar energy costs",
           direction: "for",
@@ -318,9 +333,21 @@ Deno.test("Ask marks only surviving URL and research context as available", asyn
     if (url.origin === "https://supabase.test") {
       if (url.pathname === "/auth/v1/user") return jsonResponse({ id: "user-1", aud: "authenticated" });
       if (url.pathname.includes("/rest/v1/user_roles")) return jsonResponse({ role: "user" });
-      if (url.pathname.includes("/rest/v1/rpc/effective_entitlement")) return jsonResponse(entitlementRows("trial", { daily_limit: 50 }));
-      if (url.pathname.includes("/rest/v1/rate_limits")) return jsonResponse({ limit_value: 50 });
-      if (url.pathname.includes("/rest/v1/rpc/consume_daily_quota")) {
+      if (url.pathname.includes("/rest/v1/user_settings")) {
+        return jsonResponse({
+          subscription_tier: "trial",
+          daily_limit_override: 50,
+          trial_ends_at: "2099-01-01T00:00:00.000Z",
+          grace_period_ends_at: null,
+        });
+      }
+      if (url.pathname.endsWith("/rest/v1/app_store_subscriptions")) return Response.json([]);
+      if (url.pathname.includes("/rest/v1/subscriptions")) return jsonResponse([]);
+      if (url.pathname.includes("/rest/v1/rate_limits")) {
+        if ((url.searchParams.get("order") ?? "").includes("updated_at")) throw new Error(`rate_limits must not order by updated_at: ${url.search}`);
+        return jsonResponse({ limit_value: 50 });
+      }
+      if (/\/rest\/v1\/rpc\/consume_(daily|ai)_quota$/.test(url.pathname)) {
         return jsonResponse([{ allowed: true, current_count: 1 }]);
       }
       if (url.pathname.includes("/rest/v1/global_prompts")) return jsonResponse({ prompt_text: null });
@@ -366,7 +393,7 @@ Deno.test("Ask marks only surviving URL and research context as available", asyn
     const response = await handleRequest(new Request("http://127.0.0.1/functions/v1/ai", {
       method: "POST",
       headers: { Authorization: "Bearer test-user-token", "Content-Type": "application/json" },
-      body: JSON.stringify({ feature: "ask", model: "openai/gpt-5.6-luna", input }),
+      body: JSON.stringify({ feature: "ask", model: "openai/gpt-6-luna", input }),
     }));
     if (response.status !== 200) throw new Error(`Ask handler returned ${response.status}: ${await response.text()}`);
     const mainRequest = providerBodies.find((body) => {
@@ -379,15 +406,51 @@ Deno.test("Ask marks only surviving URL and research context as available", asyn
     return {
       system: String(messages.find((message) => message.role === "system")?.content ?? ""),
       user: String(messages.at(-1)?.content ?? ""),
+      messages,
       body: await response.json(),
     };
   };
 
   try {
     const emptySearch = await runAsk({ message: "What is current evidence?", mode: "general", citationMode: true });
+    // The search decision and follow-up queries are background steps on the
+    // fixed cheap model; only the answer uses the model the user picked.
+    const helperModels = providerBodies.flatMap((body) => {
+      const content = (body.messages as Array<{ content?: unknown }>).at(-1)?.content;
+      return typeof content === "string" && content.startsWith("Message:") ? [] : [body.model];
+    });
+    if (helperModels.length !== 2 || helperModels.some((model) => model !== BACKGROUND_MODEL)) {
+      throw new Error(`research helpers did not use the background model: ${JSON.stringify(helperModels)}`);
+    }
+    // The background model is Claude, so research steps on a GPT request
+    // must stay on the Anthropic key too, while the GPT answer is not pinned.
+    for (const body of providerBodies) {
+      const routing = body.provider as Record<string, unknown>;
+      const pinned = JSON.stringify(routing.only) === '["anthropic"]' && routing.allow_fallbacks === false;
+      if (pinned !== String(body.model).startsWith("anthropic/")) {
+        throw new Error(`wrong provider routing for ${String(body.model)}: ${JSON.stringify(routing)}`);
+      }
+    }
+    if (providerBodies.filter((body) => body.model === "openai/gpt-6-luna").length !== 1) {
+      throw new Error("Ask answer did not use the requested model");
+    }
     if (!emptySearch.user.includes("Research Context: NONE")) throw new Error("empty search was marked available");
     if (emptySearch.user.includes("WEB RESEARCH RESULTS") || emptySearch.system.includes("RESEARCH CITATION RULES:")) {
       throw new Error("empty search context leaked into the Ask provider prompt");
+    }
+
+    // Only the latest earlier messages reach the model, and only as chat turns.
+    const history = Array.from({ length: 10 }, (_, index) => ({
+      role: index === 5 ? "system" : index % 2 === 0 ? "user" : "assistant",
+      content: `Earlier turn ${index}`,
+    }));
+    const longChat = await runAsk({ message: "And the counterargument?", mode: "general", history });
+    const earlier = longChat.messages.slice(1, -1);
+    if (earlier.length !== MAX_ASK_HISTORY_MESSAGES - 1 || earlier.some((message) => message.role === "system")) {
+      throw new Error(`Ask sent unexpected history: ${JSON.stringify(earlier)}`);
+    }
+    if (earlier[0].content !== "Earlier turn 4" || earlier.at(-1)?.content !== "Earlier turn 9") {
+      throw new Error("Ask history did not keep the latest messages");
     }
 
     scenario = "empty-url";
@@ -417,12 +480,23 @@ function supabaseTestResponse(url: URL): Response | undefined {
   if (url.origin !== "https://supabase.test") return undefined;
   if (url.pathname === "/auth/v1/user") return jsonResponse({ id: "user-1", aud: "authenticated" });
   if (url.pathname.includes("/rest/v1/user_roles")) return jsonResponse({ role: "user" });
-  if (url.pathname.includes("/rest/v1/rpc/effective_entitlement")) {
-    const tier = (globalThis as typeof globalThis & { __testTier?: "trial" | "pro" }).__testTier || "trial";
-    return jsonResponse(entitlementRows(tier, { daily_limit: 50 }));
+  const tier = (globalThis as typeof globalThis & { __testTier?: string }).__testTier || "trial";
+  if (url.pathname.includes("/rest/v1/user_settings")) return jsonResponse({
+    subscription_tier: tier,
+    daily_limit_override: 50,
+    trial_ends_at: "2099-01-01T00:00:00.000Z",
+    grace_period_ends_at: null,
+  });
+  // A paid Stripe period means Pro whatever the tier, so only the Pro account has one.
+  if (url.pathname.endsWith("/rest/v1/app_store_subscriptions")) return Response.json([]);
+  if (url.pathname.includes("/rest/v1/subscriptions")) {
+    return jsonResponse(tier === "pro" ? [{ status: "active", current_period_end: "2099-01-01T00:00:00.000Z" }] : []);
   }
-  if (url.pathname.includes("/rest/v1/rate_limits")) return jsonResponse({ limit_value: 50 });
-  if (url.pathname.includes("/rest/v1/rpc/consume_daily_quota")) return jsonResponse([{ allowed: true, current_count: 1 }]);
+  if (url.pathname.includes("/rest/v1/rate_limits")) {
+    if ((url.searchParams.get("order") ?? "").includes("updated_at")) throw new Error(`rate_limits must not order by updated_at: ${url.search}`);
+    return jsonResponse({ limit_value: 50 });
+  }
+  if (/\/rest\/v1\/rpc\/consume_(daily|ai)_quota$/.test(url.pathname)) return jsonResponse([{ allowed: true, current_count: 1 }]);
   if (url.pathname.includes("/rest/v1/global_prompts")) return jsonResponse({ prompt_text: null });
   if (url.pathname.includes("/rest/v1/ai_requests")) return new Response(null, { status: 201 });
   throw new Error(`Unhandled Supabase request: ${url}`);
@@ -496,7 +570,7 @@ Deno.test("AI handler ranks stable library sources and returns bounded assessmen
       headers: { Authorization: "Bearer test-user-token", "Content-Type": "application/json" },
       body: JSON.stringify({
         feature: "ask",
-        model: "openai/gpt-5.6-luna",
+        model: "openai/gpt-6-luna",
         input: { message: "Compare the evidence", mode: "general", webSearch: false },
         sourceIds: [sourceA, sourceB],
       }),
@@ -519,7 +593,7 @@ Deno.test("Crossfire returns newest-exchange signals without making them a reply
   const claimedSignalKeys = new Set<string>();
   globalThis.fetch = (async (input: Request | URL | string, init?: RequestInit) => {
     const url = new URL(input instanceof Request ? input.url : String(input));
-    if (url.origin === "https://supabase.test" && url.pathname.includes("/rest/v1/rpc/consume_daily_quota")) {
+    if (url.origin === "https://supabase.test" && /\/rest\/v1\/rpc\/consume_(daily|ai)_quota$/.test(url.pathname)) {
       const body = JSON.parse(String(init?.body ?? "{}")) as { p_quota_key?: string };
       if (body.p_quota_key?.startsWith("crossfire_signal:")) {
         const allowed = !claimedSignalKeys.has(body.p_quota_key);
@@ -559,7 +633,7 @@ Deno.test("Crossfire returns newest-exchange signals without making them a reply
     headers: { Authorization: "Bearer test-user-token", "Content-Type": "application/json" },
     body: JSON.stringify({
       feature: "crossfire",
-      model: "openai/gpt-5.6-luna",
+      model: "openai/gpt-6-luna",
       input: {
         operation: "next-turn",
         config: config(mode),
@@ -571,7 +645,7 @@ Deno.test("Crossfire returns newest-exchange signals without making them a reply
   const requestSignal = (mode: "question-ai" | "ai-questions-user", transcript: unknown[], reply: { type: "question" | "answer"; text: string }, signalToken: string) => handleRequest(new Request("http://127.0.0.1/functions/v1/ai", {
     method: "POST",
     headers: { Authorization: "Bearer test-user-token", "Content-Type": "application/json" },
-    body: JSON.stringify({ feature: "crossfire", model: "openai/gpt-5.6-luna", input: { operation: "signal", config: config(mode), transcript, reply, signalToken } }),
+    body: JSON.stringify({ feature: "crossfire", model: "openai/gpt-6-luna", input: { operation: "signal", config: config(mode), transcript, reply, signalToken } }),
   }));
 
   try {
@@ -639,7 +713,7 @@ Deno.test("AI handlers use strict OpenRouter routing and server-side reasoning t
       decisionBodies.push(body);
       const questions = body.questions as Record<string, { criteria: Record<string, string> }>;
       const labels = Object.keys(questions.model.criteria);
-      const choice = labels.includes("z-ai/glm-5.3-flash") ? "z-ai/glm-5.3-flash" : "openai/gpt-5.6-sol";
+      const choice = labels.includes("anthropic/claude-haiku-5.5") ? "anthropic/claude-haiku-5.5" : "anthropic/claude-sonnet-5.5";
       return jsonResponse({
         model: "typesafe/jev-1.13",
         answers: {
@@ -673,10 +747,10 @@ Deno.test("AI handlers use strict OpenRouter routing and server-side reasoning t
       if (response.status !== 200) throw new Error(`${entry.id} returned ${response.status}: ${await response.text()}`);
     }
     for (const effort of ["low", "medium", "high"]) {
-      const response = await requestForModel("anthropic/claude-sonnet-5", "pro", effort);
+      const response = await requestForModel("anthropic/claude-sonnet-5.5", "pro", effort);
       if (response.status !== 200) throw new Error(`Pro ${effort} returned ${response.status}: ${await response.text()}`);
     }
-    for (const model of ["deepseek/deepseek-v4-flash-0731", "deepseek/deepseek-v4-pro-0813", "z-ai/glm-5.3-flash"]) {
+    for (const model of ["deepseek/deepseek-v4.1-flash", "deepseek/deepseek-v4-pro-0813", "z-ai/glm-5.3-flash"]) {
       const response = await requestForModel(model, "pro", "medium");
       if (response.status !== 200) throw new Error(`Pro medium ${model} returned ${response.status}: ${await response.text()}`);
     }
@@ -686,7 +760,7 @@ Deno.test("AI handlers use strict OpenRouter routing and server-side reasoning t
     const autoFastBasic = await requestForModel("auto-fast", "trial");
     if (autoFastBasic.status !== 200) throw new Error(`Basic Auto Fast returned ${autoFastBasic.status}: ${await autoFastBasic.text()}`);
     const autoFastPayload = await autoFastBasic.json();
-    if (autoFastPayload.meta?.requestedModel !== "auto-fast" || autoFastPayload.meta?.resolvedModel !== "z-ai/glm-5.3-flash") {
+    if (autoFastPayload.meta?.requestedModel !== "auto-fast" || autoFastPayload.meta?.resolvedModel !== "anthropic/claude-haiku-5.5") {
       throw new Error(`Auto Fast metadata was wrong: ${JSON.stringify(autoFastPayload.meta)}`);
     }
     const autoProBasic = await requestForModel("auto-pro", "trial");
@@ -694,24 +768,37 @@ Deno.test("AI handlers use strict OpenRouter routing and server-side reasoning t
     const autoPro = await requestForModel("auto-pro", "pro");
     if (autoPro.status !== 200) throw new Error(`Pro Auto Pro returned ${autoPro.status}: ${await autoPro.text()}`);
     const autoProPayload = await autoPro.json();
-    if (autoProPayload.meta?.resolvedModel !== "openai/gpt-5.6-sol") {
+    if (autoProPayload.meta?.resolvedModel !== "anthropic/claude-sonnet-5.5") {
       throw new Error(`Auto Pro metadata was wrong: ${JSON.stringify(autoProPayload.meta)}`);
     }
 
     if (openRouterBodies.length !== MODEL_CATALOG.length + 8) throw new Error(`unexpected OpenRouter call count: ${openRouterBodies.length}`);
-    if (decisionBodies.length !== 2) throw new Error(`unexpected Decisions call count: ${decisionBodies.length}`);
+    // Auto Fast and Auto Pro each have one Claude candidate, so neither calls Jev.
+    if (decisionBodies.length !== 0) throw new Error(`unexpected Decisions call count: ${decisionBodies.length}`);
     for (let index = 0; index < MODEL_CATALOG.length; index += 1) {
       const entry = MODEL_CATALOG[index];
       const body = openRouterBodies[index];
       if (body.model !== entry.id) throw new Error(`wrong routed model: ${String(body.model)}`);
-      if (body.max_tokens !== MAX_REQUEST_OUTPUT_TOKENS) throw new Error(`output cap was not enforced for ${entry.id}`);
+      const effort = entry.isProOnly ? "high" : "low";
+      if (body.max_tokens !== outputTokenLimit(REPLY_TOKEN_CAPS.ask, effort, entry.maxTokens)) throw new Error(`Ask output cap was not enforced for ${entry.id}`);
       const reasoning = body.reasoning as Record<string, unknown>;
       const provider = body.provider as Record<string, unknown>;
       if (reasoning.effort !== (entry.isProOnly ? "high" : "low")) throw new Error(`tier effort was not enforced for ${entry.id}`);
       if (reasoning.exclude !== true || provider.require_parameters !== true) throw new Error(`strict reasoning route missing for ${entry.id}`);
       if ("sort" in provider || "order" in provider) throw new Error(`sort/order disabled balanced routing for ${entry.id}`);
+      // Claude runs only on the Anthropic key (BYOK); every other family keeps
+      // OpenRouter's balanced routing across providers.
+      if (entry.id.startsWith("anthropic/")) {
+        if (JSON.stringify(provider.only) !== '["anthropic"]' || provider.allow_fallbacks !== false) {
+          throw new Error(`Claude was not pinned to Anthropic without fallbacks: ${JSON.stringify(provider)}`);
+        }
+      } else if ("only" in provider || "allow_fallbacks" in provider) {
+        throw new Error(`non-Claude route was restricted for ${entry.id}: ${JSON.stringify(provider)}`);
+      }
       if ((body.response_format as Record<string, unknown>)?.type !== "json_object") throw new Error(`JSON response format missing for ${entry.id}`);
-      if (entry.supportsTemperature !== ("temperature" in body)) throw new Error(`temperature support mismatch for ${entry.id}`);
+      // With require_parameters, one endpoint without temperature support
+      // turns the whole request into a routing 404 (Claude Opus 5 did).
+      if ("temperature" in body) throw new Error(`temperature was sent for ${entry.id}`);
     }
     for (const [offset, effort] of ["low", "medium", "high"].entries()) {
       const body = openRouterBodies[MODEL_CATALOG.length + offset];
@@ -721,8 +808,13 @@ Deno.test("AI handlers use strict OpenRouter routing and server-side reasoning t
       const body = openRouterBodies[MODEL_CATALOG.length + offset];
       if ((body.reasoning as Record<string, unknown>).effort !== "low") throw new Error("unsupported Pro medium was not lowered");
     }
-    if (openRouterBodies.at(-2)?.model !== "z-ai/glm-5.3-flash") throw new Error("Auto Fast did not call GLM");
-    if (openRouterBodies.at(-1)?.model !== "openai/gpt-5.6-sol") throw new Error("Auto Pro did not call Sol");
+    if (openRouterBodies.at(-2)?.model !== "anthropic/claude-haiku-5.5") throw new Error("Auto Fast did not call Haiku");
+    if (openRouterBodies.at(-1)?.model !== "anthropic/claude-sonnet-5.5") throw new Error("Auto Pro did not call Sonnet");
+
+    // A stale client still sending a retired ID reaches its successor, not a 400.
+    const retired = await requestForModel("anthropic/claude-sonnet-5", "pro");
+    if (retired.status !== 200) throw new Error(`retired Sonnet 5 returned ${retired.status}: ${await retired.text()}`);
+    if (openRouterBodies.at(-1)?.model !== "anthropic/claude-sonnet-5.5") throw new Error("retired Sonnet 5 did not reach Sonnet 5.5");
   } finally {
     globalThis.fetch = originalFetch;
     if (originalTier === undefined) delete testState.__testTier;
@@ -763,17 +855,17 @@ Deno.test("streaming OpenRouter usage records zero and missing costs distinctly"
     const withZero = await handleStreamRequest(new Request("http://127.0.0.1/functions/v1/ai-stream", {
       method: "POST",
       headers: { Authorization: "Bearer test-user-token", "Content-Type": "application/json" },
-      body: JSON.stringify({ feature: "ask", model: "openai/gpt-5.6-luna", input: { message: "Hello", mode: "general" } }),
+      body: JSON.stringify({ feature: "ask", model: "openai/gpt-6-luna", input: { message: "Hello", mode: "general" } }),
     }));
     await withZero.text();
-    if (streamBodies[0]?.max_tokens !== MAX_REQUEST_OUTPUT_TOKENS) throw new Error("stream output cap was not enforced");
+    if (streamBodies[0]?.max_tokens !== outputTokenLimit(REPLY_TOKEN_CAPS.ask, "low", 128_000)) throw new Error("stream Ask output cap was not enforced");
     if (usageRows.at(-1)?.cost_usd !== 0) throw new Error(`zero stream cost was not logged: ${JSON.stringify(usageRows.at(-1))}`);
 
     includeUsage = false;
     const withoutUsage = await handleStreamRequest(new Request("http://127.0.0.1/functions/v1/ai-stream", {
       method: "POST",
       headers: { Authorization: "Bearer test-user-token", "Content-Type": "application/json" },
-      body: JSON.stringify({ feature: "ask", model: "openai/gpt-5.6-luna", input: { message: "Hello", mode: "general" } }),
+      body: JSON.stringify({ feature: "ask", model: "openai/gpt-6-luna", input: { message: "Hello", mode: "general" } }),
     }));
     await withoutUsage.text();
     if (usageRows.at(-1)?.cost_usd !== null) throw new Error(`missing stream cost was estimated: ${JSON.stringify(usageRows.at(-1))}`);
@@ -804,7 +896,7 @@ Deno.test("streaming rejects provider errors and incomplete EOFs, while acceptin
   const request = () => new Request("http://127.0.0.1/functions/v1/ai-stream", {
     method: "POST",
     headers: { Authorization: "Bearer test-user-token", "Content-Type": "application/json" },
-    body: JSON.stringify({ feature: "ask", model: "openai/gpt-5.6-luna", input: { message: "Hello", mode: "general" } }),
+    body: JSON.stringify({ feature: "ask", model: "openai/gpt-6-luna", input: { message: "Hello", mode: "general" } }),
   });
 
   const testState = globalThis as typeof globalThis & { __testTier?: string };
@@ -813,14 +905,14 @@ Deno.test("streaming rejects provider errors and incomplete EOFs, while acceptin
   try {
     frames = `data: ${JSON.stringify({ error: { message: "provider exploded" } })}`;
     const providerError = await (await handleStreamRequest(request())).text();
-    if (providerError.includes("event: final") || !providerError.includes("event: error") || !providerError.includes("provider exploded")) {
+    if (providerError.includes("event: final") || !providerError.includes("event: error") || providerError.includes("provider exploded") || !providerError.includes('"code":"provider_error"')) {
       throw new Error(`provider error was not surfaced as an SSE error: ${providerError}`);
     }
     if (usageRows.at(-1)?.cost_usd !== null) throw new Error("provider error published a cost");
 
     frames = `data: ${JSON.stringify({ choices: [{ delta: { content: "partial" } }] })}\n\n`;
     const incomplete = await (await handleStreamRequest(request())).text();
-    if (incomplete.includes("event: final") || !incomplete.includes("event: error") || !incomplete.includes("ended before completion")) {
+    if (incomplete.includes("event: final") || !incomplete.includes("event: error") || incomplete.includes("ended before completion") || !incomplete.includes('"code":"provider_error"')) {
       throw new Error(`incomplete EOF was treated as success: ${incomplete}`);
     }
     if (usageRows.at(-1)?.cost_usd !== null) throw new Error("incomplete EOF published a cost");
@@ -873,7 +965,7 @@ Deno.test("cancelled JSON repair keeps observed tokens but makes the total cost 
     const response = await handleRequest(new Request("http://127.0.0.1/functions/v1/ai", {
       method: "POST",
       headers: { Authorization: "Bearer test-user-token", "Content-Type": "application/json" },
-      body: JSON.stringify({ feature: "ask", model: "openai/gpt-5.6-luna", input: { message: "Hello", mode: "general" } }),
+      body: JSON.stringify({ feature: "ask", model: "openai/gpt-6-luna", input: { message: "Hello", mode: "general" } }),
       signal: caller.signal,
     }));
     if (response.status !== 500) throw new Error(`cancelled repair returned ${response.status}`);
@@ -935,7 +1027,7 @@ Deno.test("stream terminal events stop an open upstream promptly", async () => {
   const request = (signal?: AbortSignal) => new Request("http://127.0.0.1/functions/v1/ai-stream", {
     method: "POST",
     headers: { Authorization: "Bearer test-user-token", "Content-Type": "application/json" },
-    body: JSON.stringify({ feature: "ask", model: "openai/gpt-5.6-luna", input: { message: "Hello", mode: "general" } }),
+    body: JSON.stringify({ feature: "ask", model: "openai/gpt-6-luna", input: { message: "Hello", mode: "general" } }),
     signal,
   });
   const withTimeout = async <T>(promise: Promise<T>, label: string): Promise<T> => await Promise.race([
@@ -963,7 +1055,7 @@ Deno.test("stream terminal events stop an open upstream promptly", async () => {
 
     scenario = "error";
     const errorText = await withTimeout((await handleStreamRequest(request())).text(), "error stream");
-    if (errorText.includes("event: final") || !errorText.includes("provider exploded")) throw new Error(`provider error was not emitted: ${errorText}`);
+    if (errorText.includes("event: final") || !errorText.includes("event: error") || errorText.includes("provider exploded") || !errorText.includes('"code":"provider_error"')) throw new Error(`provider error was not emitted: ${errorText}`);
     await withTimeout(upstreamCancelled, "error upstream cancellation");
     if (usageRows.at(-1)?.cost_usd !== null) throw new Error("provider error published a cost");
   } finally {

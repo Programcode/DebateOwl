@@ -26,7 +26,7 @@ import type { FeatureContext } from "./types.ts";
 // GENERATE: Use deep research for evidence-backed arguments
 export async function handleGenerate(ctx: FeatureContext): Promise<Response> {
   const feature = "generate" as const;
-  const { req, userId, provider, model, temperature, reasoningEffort, workSignal, sources, sourceAssessments, sourceDecisionCandidates, researchDeps, startTime, researchUsageForLog, recordMainResult, buildSystemPromptFor, input: sanitizedInput } = ctx;
+  const { req, userId, provider, model, reasoningEffort, workSignal, sources, sourceAssessments, sourceDecisionCandidates, researchDeps, startTime, researchUsageForLog, recordMainResult, buildSystemPromptFor, input: sanitizedInput } = ctx;
   const motion = String(sanitizedInput.motion || sanitizedInput.topic || "");
   const side = String(sanitizedInput.side || "pro");
   const format = String(sanitizedInput.format || "custom");
@@ -35,6 +35,7 @@ export async function handleGenerate(ctx: FeatureContext): Promise<Response> {
 
   // Perform deep research to find supporting evidence
   console.log("[GENERATE] Starting deep research for motion:", motion);
+  ctx.stream?.phase("research");
   const research = await deepResearch(motion, "", researchDeps, withResearchPreferences(DEEP_RESEARCH, {
     preferredSourceType: "any",
   }));
@@ -81,7 +82,7 @@ export async function handleGenerate(ctx: FeatureContext): Promise<Response> {
   const systemPrompt = await buildSystemPromptFor(feature, research);
   const userPrompt = buildUserPrompt(feature, sanitizedInput, searchContext);
   const messages = [{ role: "user", content: userPrompt }];
-  const aiResult = recordMainResult(await callAI(provider, model, systemPrompt, messages, temperature, reasoningEffort, workSignal));
+  const aiResult = recordMainResult(await callAI(provider, model, systemPrompt, messages, reasoningEffort, "generate", workSignal, ctx.stream));
   const output = cleanGeneratedText(aiResult.output);
 
   // Preserve model evidence warnings when research exists. If research
@@ -128,6 +129,7 @@ export async function handleGenerate(ctx: FeatureContext): Promise<Response> {
   ].slice(0, 10);
   // The case is already complete, so this optional check must not inherit
   // an almost spent request budget and turn a finished case into a 500.
+  ctx.stream?.phase("checking");
   const caseUsage = await identifyCaseSourceUsage({
     caseText: JSON.stringify(output),
     sources: usageCandidates,

@@ -1,4 +1,5 @@
 import {
+  checkSparringProviderOutput,
   claimSparringScoreSession,
   completeClaimedSparringScoreSession,
   createSparringSpeechIntegrityToken,
@@ -79,6 +80,84 @@ Deno.test("normalizes misplaced score fields and derives totals and winner", () 
   if (!normalized || typeof normalized !== "object" || Array.isArray(normalized)) throw new Error("normalized output was not an object");
   for (const field of ["keyMoments", "improvementAreas", "winner", "verdict"]) {
     if (field in normalized) throw new Error(`top-level score field was not removed: ${field}`);
+  }
+});
+
+Deno.test("repairs a stray overallFeedback and object list items, the shapes Sonnet returns", () => {
+  const raw = {
+    action: "score",
+    scorecard: {
+      userScore: 0,
+      aiScore: 0,
+      categories: [
+        { name: "Logic", userScore: 20, aiScore: 10, feedback: "Logic feedback" },
+        { name: "Evidence", userScore: 20, aiScore: 15, feedback: "Evidence feedback" },
+        { name: "Delivery", userScore: 20, aiScore: 14, feedback: "Delivery feedback" },
+        { name: "Strategy", userScore: 20, aiScore: 13, feedback: "Strategy feedback" },
+      ],
+      keyMoments: [{ moment: "Con R1 dropped the cost warrant" }, { text: "Pro R2 weighed probability" }, "A plain moment"],
+      improvementAreas: [{ description: "Signpost the second contention" }],
+      winner: "user",
+      verdict: "User edge",
+    },
+    overallFeedback: "The user controlled the comparison.",
+  };
+  const parsed = parseSparringProviderOutput(normalizeSparringOutput(raw, "score"), "score");
+  if (!parsed || parsed.action !== "score") throw new Error("the repaired scorecard was rejected");
+  if (parsed.scorecard.overallFeedback !== "The user controlled the comparison.") throw new Error("overallFeedback was not moved into the scorecard");
+  if (JSON.stringify(parsed.scorecard.keyMoments) !== JSON.stringify(["Con R1 dropped the cost warrant", "Pro R2 weighed probability", "A plain moment"])) {
+    throw new Error(`keyMoments were not flattened: ${JSON.stringify(parsed.scorecard.keyMoments)}`);
+  }
+  if (parsed.scorecard.improvementAreas[0] !== "Signpost the second contention") throw new Error("improvementAreas were not flattened");
+
+  // An object without a known text field is not guessed at.
+  const unknownItem = { ...raw, scorecard: { ...raw.scorecard, keyMoments: [{ note: "?" }] } };
+  const checked = checkSparringProviderOutput(normalizeSparringOutput(unknownItem, "score"), "score");
+  if (checked.ok || checked.path !== "scorecard.keyMoments[0]") throw new Error(`unexpected result: ${JSON.stringify(checked)}`);
+});
+
+Deno.test("a rejected reply names the failing field and never echoes the model's text", () => {
+  const card = (scorecard: Record<string, unknown>) => ({
+    action: "score",
+    scorecard: {
+      userScore: 80,
+      aiScore: 52,
+      categories: [
+        { name: "Logic", userScore: 20, aiScore: 10, feedback: "SECRET feedback" },
+        { name: "Evidence", userScore: 20, aiScore: 15, feedback: "f" },
+        { name: "Delivery", userScore: 20, aiScore: 14, feedback: "f" },
+        { name: "Strategy", userScore: 20, aiScore: 13, feedback: "f" },
+      ],
+      overallFeedback: "SECRET overall",
+      keyMoments: ["k"],
+      improvementAreas: ["i"],
+      winner: "user",
+      verdict: "SECRET verdict",
+      ...scorecard,
+    },
+  });
+  const pathFor = (value: unknown, action: "score" | "respond" = "score") => {
+    const checked = checkSparringProviderOutput(value, action);
+    if (checked.ok) throw new Error("an invalid reply was accepted");
+    if (/SECRET/.test(checked.path)) throw new Error("the path carried model text");
+    return checked.path;
+  };
+  const categories = card({}).scorecard.categories;
+  const cases: Array<[unknown, string]> = [
+    [card({ verdict: undefined }), "scorecard.verdict"],
+    [card({ categories: categories.slice(0, 3) }), "scorecard.categories.length"],
+    [card({ categories: [categories[0], { ...categories[1], userScore: 30 }, categories[2], categories[3]] }), "scorecard.categories[1].userScore"],
+    [card({ categories: [categories[0], categories[0], categories[2], categories[3]] }), "scorecard.categories.name"],
+    [card({ keyMoments: Array(13).fill("k") }), "scorecard.keyMoments.length"],
+    [card({ winner: "judge" }), "scorecard.winner"],
+    [{ action: "respond", speech: { content: "SECRET speech", targetedPoints: [] } }, "action"],
+  ];
+  for (const [value, path] of cases) {
+    const found = pathFor(value);
+    if (found !== path) throw new Error(`expected ${path}, got ${found}`);
+  }
+  if (pathFor({ action: "respond", speech: { content: "SECRET speech", targetedPoints: [] } }, "respond") !== "speech.strategy") {
+    throw new Error("a speech without a strategy did not name speech.strategy");
   }
 });
 

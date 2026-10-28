@@ -8,9 +8,9 @@ const httpLink = /^https?:\/\//;
 
 test("case generation researches the web and cites what it found", async ({ signedIn: page, user }) => {
   await page.goto("/app/generate");
-  await page.getByRole("textbox", { name: "Motion / Topic *" }).fill("This House would make public transport free at the point of use");
+  await page.getByRole("textbox", { name: "Motion / topic *" }).fill("This House would make public transport free at the point of use");
   const response = aiResponse(page, "generate");
-  await page.getByRole("button", { name: "Generate Debate Case" }).click();
+  await page.getByRole("button", { name: "Generate debate case" }).click();
   await chooseForMotion(page, "once");
   const body = await response;
 
@@ -22,6 +22,8 @@ test("case generation researches the web and cites what it found", async ({ sign
 
   const panel = page.getByText("Researched sources").locator("..");
   await expect(panel).toBeVisible();
+  // The sources are folded under the result header; open them.
+  await page.getByText("Researched sources").click();
   await expect(panel.getByRole("link").first()).toHaveAttribute("href", httpLink);
 
   const { data } = await admin.from("ai_requests").select("feature,status").eq("user_id", await user.userId()).eq("feature", "generate");
@@ -33,7 +35,7 @@ test("Factoids returns verified evidence with working citations", async ({ signe
   await page.goto("/app/factoids");
   await page.getByLabel("Statement *").fill("Fare-free public transport increases ridership");
   const response = aiResponse(page, "factoids");
-  await page.getByRole("button", { name: "Find Factoids" }).click();
+  await page.getByRole("button", { name: "Find factoids" }).click();
   const body = await response;
 
   // The server keeps only factoids whose citation matches fetched research.
@@ -49,8 +51,11 @@ test("Factoids returns verified evidence with working citations", async ({ signe
 
 test("Ask with web search shows the sources it used", async ({ signedIn: page }) => {
   await page.goto("/app/ask");
+  // The Ask switches live in the Options popover above the message box.
+  await page.getByRole("button", { name: "Options" }).click();
   await page.locator("#web-search-mode").click();
-  await page.getByPlaceholder("Ask your debate coach...").fill("What did recent studies find about fare-free public transport ridership?");
+  await page.keyboard.press("Escape");
+  await page.getByPlaceholder("Ask your debate coach…").fill("What did recent studies find about fare-free public transport ridership?");
   const response = aiResponse(page, "ask");
   await page.getByRole("button", { name: "Send message" }).click();
   const body = await response;
@@ -67,10 +72,10 @@ test("a web page imports into the Library", async ({ signedIn: page, user }) => 
   // Sources belong to a debate, so the Library needs a Current Debate first.
   await startDebate(page, "This House would make public transport free");
   await page.goto("/app/library");
-  await page.getByRole("button", { name: "Add Source" }).click();
+  await page.getByRole("button", { name: "Add source" }).click();
   await page.getByRole("textbox", { name: "Import from URL" }).fill(url);
   await page.getByRole("button", { name: "Import URL" }).click();
-  await expect(page.getByText("Source Ready", { exact: true })).toBeVisible({ timeout: 60_000 });
+  await expect(page.getByText("Import preview", { exact: true })).toBeVisible({ timeout: 60_000 });
   await page.getByRole("button", { name: "Save imported source" }).click();
 
   await expect.poll(async () => {

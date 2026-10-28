@@ -1,26 +1,32 @@
 // src/components/layout/AppLayout.tsx
+import { OwlMark } from '@/components/brand/Owl';
+import site from '@/config/site.json';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, Outlet, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
-  Home,
+  LayoutGrid,
   Settings,
-  Menu,
-  X,
   Clock,
   Database,
   Target,
 } from 'lucide-react';
 import { NavLink } from '@/components/NavLink';
 import { Button } from '@/components/ui/button';
+import { HeaderTooltip } from '@/components/layout/HeaderTooltip';
 import { cn } from '@/lib/utils';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { LanguageSwitcher } from '@/components/LanguageSwitcher';
 import { AnnouncementBanner } from '@/components/layout/AnnouncementBanner';
+import { TrialBanner } from '@/components/features/subscription/TrialBanner';
 import { useRoutePrefetch } from '@/hooks/use-route-prefetch';
 import { useAuth } from '@/lib/supabase/AuthProvider';
 import { CurrentDebateMenu } from '@/components/features/debate/CurrentDebateMenu';
+import { useCurrentDebate } from '@/lib/stores/debate-store';
+import { navSectionFor } from '@/components/layout/nav-sections';
 import { DebateDialogs, InactiveDebateGate } from '@/components/features/debate/DebateDialogs';
+import { MAIN_CONTENT_ID, SkipLink } from '@/components/layout/SkipLink';
+import { PhoneTabBar } from '@/components/layout/PhoneTabBar';
 import {
   dismissAnnouncement,
   listActiveAnnouncements,
@@ -28,41 +34,73 @@ import {
 } from '@/lib/announcements';
 import { filterVisibleAnnouncements } from '@debatelab/core/announcements';
 
-// Features live on Home and the Current Debate dashboard, not in the header.
+// Features live on Tools and the Current Debate dashboard, not in the header.
 const libraryNavItems = [
   { path: '/app/library', key: 'library', icon: Database },
   { path: '/app/history', key: 'history', icon: Clock },
 ];
 
-const mobileNavItems = [
-  { path: '/app', key: 'home', icon: Home },
-  { path: '/app/debate', key: 'currentDebate', icon: Target },
-  ...libraryNavItems,
-  { path: '/app/settings', key: 'settings', icon: Settings },
-];
-
 const desktopLinkClass = cn(
-  "motion-press nav-glow flex items-center gap-1.5 px-2 xl:px-3 py-2 rounded-md text-sm font-medium whitespace-nowrap",
+  "flex h-10 items-center gap-2 px-3 xl:px-3.5 rounded-full text-[0.9375rem] font-bold whitespace-nowrap transition-[color,background-color,transform] duration-150 active:scale-[0.97]",
   "text-muted-foreground hover:text-foreground hover:bg-accent"
 );
+// The plume tint keeps primary text above 4.5:1 in both themes (5.9 light, 7.9 dark).
+const activeLinkClass = "bg-brand-tint text-primary hover:bg-brand-tint hover:text-primary [&>span]:not-sr-only";
+// From md to lg (iPads) the bar is too narrow for every label, so only the active link shows its
+// label; the others are icons that keep their name for screen readers.
+const navLabelClass = "max-lg:sr-only";
+
+const ANNOUNCEMENT_CACHE_KEY = 'debatelab-announcements';
+
+// The banner renders from the last fetch on reload, so it doesn't push the page down later.
+function readCachedAnnouncements(userId: string | null): UserAnnouncement[] {
+  if (!userId) return [];
+  try {
+    const cached = JSON.parse(sessionStorage.getItem(ANNOUNCEMENT_CACHE_KEY) ?? 'null') as { userId: string; announcements: UserAnnouncement[] } | null;
+    return cached?.userId === userId ? filterVisibleAnnouncements(cached.announcements, Date.now()) : [];
+  } catch {
+    return [];
+  }
+}
+
+function writeCachedAnnouncements(userId: string, announcements: UserAnnouncement[]) {
+  try {
+    sessionStorage.setItem(ANNOUNCEMENT_CACHE_KEY, JSON.stringify({ userId, announcements }));
+  } catch {
+    // Storage can be full or blocked; the banner then just waits for the fetch.
+  }
+}
+
+function useScrolled() {
+  const [scrolled, setScrolled] = useState(() => typeof window !== 'undefined' && window.scrollY > 0);
+  useEffect(() => {
+    const update = () => setScrolled(window.scrollY > 0);
+    update();
+    window.addEventListener('scroll', update, { passive: true });
+    return () => window.removeEventListener('scroll', update);
+  }, []);
+  return scrolled;
+}
 
 const ANNOUNCEMENTS_STALE_MS = 60_000;
 
 export function AppLayout() {
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [announcements, setAnnouncements] = useState<UserAnnouncement[]>([]);
-  const [announcementsUserId, setAnnouncementsUserId] = useState<string | null>(null);
-  const [dismissingId, setDismissingId] = useState<string | null>(null);
-  const [dismissError, setDismissError] = useState<{ announcementId: string; message: string } | null>(null);
-  const dismissedAnnouncementIds = useRef(new Set<string>());
-  const mobileMenuTriggerRef = useRef<HTMLButtonElement>(null);
-  const activeRequestRef = useRef<AbortController | null>(null);
-  const lastRequestAtRef = useRef<number | null>(null);
-  const activeUserIdRef = useRef<string | null>(null);
   const { t } = useTranslation();
   const { user } = useAuth();
   const userId = user?.id ?? null;
+  const [announcements, setAnnouncements] = useState<UserAnnouncement[]>(() => readCachedAnnouncements(userId));
+  const [announcementsUserId, setAnnouncementsUserId] = useState<string | null>(userId);
+  const [dismissError, setDismissError] = useState<{ announcementId: string; message: string } | null>(null);
+  const dismissedAnnouncementIds = useRef(new Set<string>());
+  const headerRef = useRef<HTMLElement>(null);
+  const aboveMainRef = useRef<HTMLDivElement>(null);
+  const activeRequestRef = useRef<AbortController | null>(null);
+  const lastRequestAtRef = useRef<number | null>(null);
+  const activeUserIdRef = useRef<string | null>(null);
   const location = useLocation();
+  const hasDebate = Boolean(useCurrentDebate());
+  const section = navSectionFor(location.pathname, hasDebate);
+  const scrolled = useScrolled();
   const homePrefetch = useRoutePrefetch('/app');
   const termsPrefetch = useRoutePrefetch('/terms');
   const privacyPrefetch = useRoutePrefetch('/privacy');
@@ -85,11 +123,13 @@ export function AppLayout() {
     try {
       const active = await listActiveAnnouncements(controller.signal);
       if (controller.signal.aborted || activeUserIdRef.current !== userId) return;
-      setAnnouncementsUserId(userId);
-      setAnnouncements(filterVisibleAnnouncements(
+      const visible = filterVisibleAnnouncements(
         active.filter((announcement) => !dismissedAnnouncementIds.current.has(announcement.id)),
         Date.now(),
-      ));
+      );
+      setAnnouncementsUserId(userId);
+      setAnnouncements(visible);
+      writeCachedAnnouncements(userId, visible);
     } catch (error) {
       if (!controller.signal.aborted && activeUserIdRef.current === userId && activeRequestRef.current === controller) {
         lastRequestAtRef.current = null;
@@ -108,8 +148,7 @@ export function AppLayout() {
     lastRequestAtRef.current = null;
     dismissedAnnouncementIds.current.clear();
     setAnnouncementsUserId(userId);
-    setAnnouncements([]);
-    setDismissingId(null);
+    setAnnouncements(readCachedAnnouncements(userId));
     setDismissError(null);
     if (userId) void loadAnnouncements(true);
 
@@ -117,7 +156,6 @@ export function AppLayout() {
   }, [loadAnnouncements, userId]);
 
   useEffect(() => {
-    setMobileMenuOpen(false);
     setDismissError(null);
     setAnnouncements((current) => filterVisibleAnnouncements(current, Date.now()));
     void loadAnnouncements();
@@ -135,62 +173,117 @@ export function AppLayout() {
     return () => window.clearTimeout(timer);
   }, [announcements, announcementsUserId, userId]);
 
+  // The mobile menu opens just below the whole header (two rows on phones), whatever its height.
+  // Size comes from the observer's border box, which is already laid out. Reading
+  // getBoundingClientRect on scroll forced a layout on every frame of /app.
   useEffect(() => {
-    const closeMenus = (event: KeyboardEvent) => {
-      if (event.key !== 'Escape') return;
-      setMobileMenuOpen(false);
-      if (mobileMenuOpen) mobileMenuTriggerRef.current?.focus();
+    const header = headerRef.current;
+    if (!header || typeof ResizeObserver === 'undefined') return;
+    const root = document.documentElement;
+    const bannerOffset = () => {
+      const raw = root.style.getPropertyValue('--staging-banner-height').trim();
+      if (!raw) return 0;
+      if (raw.endsWith('rem')) {
+        const rootFont = parseFloat(getComputedStyle(root).fontSize);
+        return (parseFloat(raw) || 0) * (Number.isFinite(rootFont) ? rootFont : 16);
+      }
+      return parseFloat(raw) || 0;
     };
-    document.addEventListener('keydown', closeMenus);
-    return () => document.removeEventListener('keydown', closeMenus);
-  }, [mobileMenuOpen]);
+    const apply = (height: number) => {
+      root.style.setProperty('--app-header-bottom', `${Math.round(height + bannerOffset())}px`);
+    };
+    const observer = new ResizeObserver((entries) => {
+      const entry = entries[0];
+      if (!entry) return;
+      const box = entry.borderBoxSize?.[0];
+      apply(box ? box.blockSize : header.offsetHeight);
+    });
+    observer.observe(header);
+    return () => {
+      observer.disconnect();
+      root.style.removeProperty('--app-header-bottom');
+    };
+  }, []);
 
+  // Ask sizes itself from this, so a banner between the header and main is included.
+  // The value is the document offset of main, measured when the chrome above it changes size.
+  useEffect(() => {
+    const chrome = aboveMainRef.current;
+    if (!chrome || typeof ResizeObserver === 'undefined') return;
+    const root = document.documentElement;
+    const apply = () => {
+      const top = Math.max(0, Math.round(chrome.getBoundingClientRect().bottom + window.scrollY));
+      root.style.setProperty('--app-main-top', `${top}px`);
+    };
+    apply();
+    const observer = new ResizeObserver(apply);
+    observer.observe(chrome);
+    window.addEventListener('resize', apply);
+    return () => {
+      observer.disconnect();
+      window.removeEventListener('resize', apply);
+      root.style.removeProperty('--app-main-top');
+    };
+  }, []);
+
+  // Dismiss is optimistic: the banner goes at once and comes back only if the server refuses.
   const handleDismissAnnouncement = async (announcementId: string) => {
     const requestUserId = userId;
+    const dismissed = announcements.find((announcement) => announcement.id === announcementId);
+    if (!dismissed || !requestUserId) return;
+    dismissedAnnouncementIds.current.add(announcementId);
+    setDismissError(null);
+    const remaining = announcements.filter((announcement) => announcement.id !== announcementId);
+    setAnnouncements(remaining);
+    writeCachedAnnouncements(requestUserId, remaining);
     try {
-      setDismissingId(announcementId);
-      setDismissError(null);
       await dismissAnnouncement(announcementId);
-      if (activeUserIdRef.current !== requestUserId) return;
-      dismissedAnnouncementIds.current.add(announcementId);
-      setAnnouncements((current) => current.filter((announcement) => announcement.id !== announcementId));
     } catch (error) {
       if (activeUserIdRef.current !== requestUserId) return;
+      dismissedAnnouncementIds.current.delete(announcementId);
+      setAnnouncements((current) => {
+        const restored = [dismissed, ...current.filter((announcement) => announcement.id !== announcementId)];
+        // The cache is what the next page load renders first, so it has to come back too.
+        writeCachedAnnouncements(requestUserId, restored);
+        return restored;
+      });
       setDismissError({
         announcementId,
         message: error instanceof Error ? error.message : t('announcements.dismissError'),
       });
-    } finally {
-      if (activeUserIdRef.current === requestUserId) setDismissingId(null);
     }
   };
 
   return (
     <div className="native-safe-screen flex flex-col bg-background">
-      {/* Header */}
-      <header className="native-safe-top sticky top-[var(--staging-banner-height,0px)] z-50 border-b border-border/60 bg-card/70 backdrop-blur-xl shadow-[0_1px_3px_hsl(var(--foreground)/0.04)]">
+      <div ref={aboveMainRef}>
+      <SkipLink />
+      {/* Header: the edge appears once content scrolls under it. */}
+      <header
+        ref={headerRef}
+        className={cn(
+          "native-safe-top sticky top-(--staging-banner-height,0px) z-50 border-b-2 bg-card/85 backdrop-blur-xl transition-[border-color,box-shadow] duration-200",
+          scrolled ? "border-border shadow-[0_6px_16px_-12px_rgb(11_42_110/0.25)] dark:shadow-[0_6px_16px_-10px_rgb(0_0_0/0.6)]" : "border-transparent",
+        )}
+      >
         <div className="container flex h-16 items-center justify-between px-4 max-[359px]:px-2">
-          <Link to="/app" {...homePrefetch} onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-3 shrink-0">
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10 overflow-hidden shrink-0">
-              <img src="/favicon-72.png" alt={t('common.logoAlt')} width={36} height={36} className="h-full w-full object-cover" />
-            </div>
-            <div>
-              <h1 className="text-lg font-semibold tracking-tight text-foreground whitespace-nowrap">DebateLab</h1>
-            </div>
+          <Link to="/app" {...homePrefetch} className="flex items-center gap-3 shrink-0 rounded-md pointer-coarse:min-h-11">
+            <OwlMark size={36} alt={t('common.logoAlt')} />
+            <span className="whitespace-nowrap font-display text-xl font-[600] tracking-[-0.01em] text-heading">{site.product}</span>
           </Link>
 
           {/* Desktop Nav */}
-          <nav aria-label={t('nav.mainNavigation')} className="hidden lg:flex min-w-0 flex-1 items-center gap-0.5 xl:gap-1 ml-4">
-            <NavLink
+          <nav aria-label={t('nav.mainNavigation')} className="hidden md:flex min-w-0 flex-1 items-center gap-0.5 xl:gap-1 ml-4">
+            <Link
               to="/app"
-              end
+              {...homePrefetch}
               data-tour="nav-home"
-              className={desktopLinkClass}
-              activeClassName="bg-primary/10 text-primary nav-active-pill"
+              aria-current={location.pathname === '/app' ? 'page' : undefined}
+              className={cn(desktopLinkClass, section === 'tools' && activeLinkClass)}
             >
-              <Home className="h-4 w-4 shrink-0" aria-hidden="true" />
-              <span>{t('nav.home')}</span>
-            </NavLink>
+              <LayoutGrid className="h-4 w-4 shrink-0" aria-hidden="true" />
+              <span className={navLabelClass}>{t('nav.tools')}</span>
+            </Link>
             <CurrentDebateMenu variant="desktop" />
             {libraryNavItems.map((item) => (
               <NavLink
@@ -199,71 +292,37 @@ export function AppLayout() {
                 end
                 data-tour={`nav-${item.key}`}
                 className={desktopLinkClass}
-                activeClassName="bg-primary/10 text-primary nav-active-pill"
+                activeClassName={activeLinkClass}
               >
                 <item.icon className="h-4 w-4 shrink-0" aria-hidden="true" />
-                <span>{t(`nav.${item.key}`)}</span>
+                <span className={navLabelClass}>{t(`nav.${item.key}`)}</span>
               </NavLink>
             ))}
           </nav>
 
           <div className="flex items-center gap-1.5 max-[359px]:gap-1 shrink-0">
             <LanguageSwitcher />
-            <ThemeToggle />
-            <NavLink
-              to="/app/settings"
-              aria-label={t('nav.settings', 'Settings')}
-              data-tour="nav-settings"
-              className="motion-press hidden lg:inline-flex h-10 w-10 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-              activeClassName="bg-primary/10 text-primary"
-            >
-              <Settings className="h-5 w-5" aria-hidden="true" />
-            </NavLink>
-            <Button
-              ref={mobileMenuTriggerRef}
-              variant="ghost"
-              size="icon"
-              className="lg:hidden text-muted-foreground"
-              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              aria-label={mobileMenuOpen ? t('nav.closeMenu') : t('nav.openMenu')}
-              aria-expanded={mobileMenuOpen}
-            >
-              {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-            </Button>
+            <div className="hidden lg:block">
+              <ThemeToggle />
+            </div>
+            <HeaderTooltip label={t('nav.settings', 'Settings')}>
+              <NavLink
+                to="/app/settings"
+                aria-label={t('nav.settings', 'Settings')}
+                data-tour="nav-settings"
+                className="hidden md:inline-flex h-10 w-10 items-center justify-center rounded-full text-muted-foreground transition-[color,background-color,transform] duration-150 hover:bg-accent hover:text-foreground active:scale-90 focus-visible:outline-hidden focus-visible:ring-[3px] focus-visible:ring-ring focus-visible:ring-offset-2"
+                activeClassName={activeLinkClass}
+              >
+                <Settings className="h-5 w-5" aria-hidden="true" />
+              </NavLink>
+            </HeaderTooltip>
           </div>
         </div>
 
         {/* Mobile Current Debate row */}
-        <div className="container min-w-0 border-t border-border/60 px-4 py-1 max-[359px]:px-2 lg:hidden">
+        <div className="container min-w-0 border-t-2 border-border/70 px-4 py-1 max-[359px]:px-2 md:hidden">
           <CurrentDebateMenu variant="mobile" />
         </div>
-
-        {/* Mobile Nav */}
-        {mobileMenuOpen && (
-          <nav className="motion-reveal native-scroll-y native-mobile-menu overflow-y-auto border-t border-border bg-card p-4 lg:hidden" aria-label={t('nav.mobileNavigation')}>
-            <div className="grid gap-1 pb-[var(--native-safe-bottom,0px)]">
-              {mobileNavItems.map((item) => (
-                <NavLink
-                  key={item.path}
-                  to={item.path}
-                  end
-                  onClick={() => setMobileMenuOpen(false)}
-                  className={cn(
-                    "motion-press flex items-center gap-3 px-3 py-2.5 rounded-lg",
-                    "text-muted-foreground hover:text-foreground hover:bg-accent"
-                  )}
-                  activeClassName="bg-primary/10 text-primary font-semibold"
-                >
-                  <item.icon className="h-5 w-5" />
-                  <div>
-                    <div className="font-medium">{t(`nav.${item.key}`)}</div>
-                    <div className="text-xs opacity-70">{t(`navDesc.${item.key}`)}</div>
-                  </div>
-                </NavLink>
-              ))}
-            </div>
-          </nav>
-        )}
       </header>
 
       {announcementsUserId === userId && announcements[0] && (
@@ -271,30 +330,34 @@ export function AppLayout() {
           announcement={announcements[0]}
           position={1}
           total={announcements.length}
-          dismissing={dismissingId === announcements[0].id}
           error={dismissError?.announcementId === announcements[0].id ? dismissError.message : null}
           onDismiss={() => handleDismissAnnouncement(announcements[0].id)}
         />
       )}
+      <TrialBanner />
 
       <DebateDialogs />
       <InactiveDebateGate />
+      </div>
 
       {/* Main Content */}
-      <main className="native-main-content flex-1">
+      <main id={MAIN_CONTENT_ID} className="native-main-content flex-1 focus-visible:outline-hidden">
         <Outlet />
       </main>
 
       {/* Footer */}
-      <footer className="native-safe-bottom border-t border-border bg-card/50 pt-4">
+      <footer className="native-safe-bottom border-t-2 border-border bg-card/60 pt-4">
         <div className="container flex flex-col items-center justify-between gap-2 px-4 text-sm text-muted-foreground md:flex-row">
-          <p className="font-medium">DebateLab</p>
+          <p className="flex items-center gap-2 font-display text-base font-[600] text-heading"><OwlMark size={24} />{site.product}</p>
           <div className="flex items-center gap-4">
-            <Link to="/terms" {...termsPrefetch} className="motion-press rounded-sm hover:text-foreground transition-colors">{t('footer.terms')}</Link>
-            <Link to="/privacy" {...privacyPrefetch} className="motion-press rounded-sm hover:text-foreground transition-colors">{t('footer.privacy')}</Link>
+            <Link to="/terms" {...termsPrefetch} className="inline-flex min-h-6 items-center justify-center rounded-sm transition-colors hover:text-foreground pointer-coarse:min-h-11 pointer-coarse:min-w-11">{t('footer.terms')}</Link>
+            <Link to="/privacy" {...privacyPrefetch} className="inline-flex min-h-6 items-center rounded-sm transition-colors hover:text-foreground pointer-coarse:min-h-11">{t('footer.privacy')}</Link>
           </div>
         </div>
       </footer>
+
+      {/* After main so keyboard order follows the page, then the bar. Fixed, so the flow is unchanged. */}
+      <PhoneTabBar />
     </div>
   );
 }

@@ -21,7 +21,7 @@ Preconditions:
 - **Open the tool.** Create a workspace for the motion, click `R1`, and on a phone click `Working panel` first (one pane at a time). Open the `Practice` details if closed and click `Crossfire` or `Sparring` (`exact: true`).
 - **Hold one save.** `page.route("**/rest/v1/rpc/save_workspace_artifact")` holds the first request whose `p_progress` matches a partial value (Crossfire: a resolution ending in ` n`; Sparring: a draft of `Coding`). The recipe types up to that value and waits until the save is held before typing the rest: the queue keeps only the newest pending save, so a value typed straight through can be merged away and never sent. The page keeps one save in flight, so no other save may be sent while it is held (`sentWhileHeld()` is 0); newer changes wait in the queue.
 - **Release and check.** Let the held save through and wait for its answer. Polling `admin.from("workspace_artifacts")` for the workspace and tool must return one row with the full text, and it must still hold that text once every save the page sent has been answered.
-- **Sparring.** Click `Start round` and wait for the textbox `Draft for <turn>` (`AI_TIMEOUT`). Click `Pause clock` before typing, because a running clock saves every tick and would hide a stale save.
+- **Sparring.** Click `Start round` and wait for the textbox `Draft for <turn>` (`AI_TIMEOUT`). Each turn opens with a stopped clock and a `Start speaking` button; typing would start it. Click `Start speaking`, then `Pause clock`, before typing, because a running clock saves every tick and would hide a stale save.
 
 ## Gotchas
 

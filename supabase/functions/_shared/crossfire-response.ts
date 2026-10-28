@@ -1,3 +1,5 @@
+import type { JsonOutputSchema } from "./research.ts";
+
 export const MAX_CROSSFIRE_REPLY_CHARS = 2_500;
 export const MAX_CROSSFIRE_DEBRIEF_ITEMS = 8;
 export const MAX_CROSSFIRE_REFERENCE_IDS = 6;
@@ -34,14 +36,13 @@ function crossfireReferenceIds(
   value: unknown,
   validIds: Set<string>,
   fieldName: string,
+  maxIds = MAX_CROSSFIRE_REFERENCE_IDS,
 ): { value: string[] } | { error: string } {
-  if (
-    !Array.isArray(value) || value.length < 1 ||
-    value.length > MAX_CROSSFIRE_REFERENCE_IDS
-  ) {
+  if (!Array.isArray(value) || value.length < 1 || value.length > maxIds) {
     return {
-      error:
-        `${fieldName}.turnIds must contain 1-${MAX_CROSSFIRE_REFERENCE_IDS} IDs`,
+      error: maxIds === 1
+        ? `${fieldName}.turnIds must cite exactly one turn`
+        : `${fieldName}.turnIds must contain 1-${maxIds} IDs`,
     };
   }
   const ids: string[] = [];
@@ -66,11 +67,12 @@ function crossfireDebriefItem(
   value: unknown,
   validIds: Set<string>,
   fieldName: string,
+  maxIds = MAX_CROSSFIRE_REFERENCE_IDS,
 ): { value: CrossfireDebriefItem } | { error: string } {
   if (!isRecord(value) || !hasOnlyKeys(value, ["turnIds", "claim"])) {
     return { error: `${fieldName} is invalid` };
   }
-  const turnIds = crossfireReferenceIds(value.turnIds, validIds, fieldName);
+  const turnIds = crossfireReferenceIds(value.turnIds, validIds, fieldName, maxIds);
   if ("error" in turnIds) return turnIds;
   if (
     typeof value.claim !== "string" || !value.claim.trim() ||
@@ -79,6 +81,77 @@ function crossfireDebriefItem(
     return { error: `${fieldName}.claim is invalid` };
   }
   return { value: { turnIds: turnIds.value, claim: value.claim.trim() } };
+}
+
+/**
+ * The provider-side shape of a debrief, mirroring validateCrossfireDebrief.
+ * Turn IDs are pinned to the transcript's, so a reply cannot cite a turn that
+ * does not exist. Counts, lengths, and duplicates stay with the validator.
+ */
+const SINGLE_TURN_DEBRIEF_FIELDS = [
+  "concessionsSecured",
+  "controlledQuestions",
+  "weakOrRepetitiveQuestions",
+  "evasiveOrIncompleteAnswers",
+] as const;
+
+export function crossfireDebriefSchema(transcript: Array<{ id: string }>): JsonOutputSchema {
+  const ids = [...new Set(transcript.map((turn) => turn.id))];
+  const idItems = ids.length ? { type: "string", enum: ids } : { type: "string" };
+  const singleTurnIds = { type: "array", minItems: 1, maxItems: 1, items: idItems };
+  const exchangeTurnIds = {
+    type: "array",
+    minItems: 1,
+    maxItems: MAX_CROSSFIRE_REFERENCE_IDS,
+    items: idItems,
+  };
+  const singleItem = {
+    type: "object",
+    properties: { turnIds: singleTurnIds, claim: { type: "string" } },
+    required: ["turnIds", "claim"],
+    additionalProperties: false,
+  };
+  const exchangeItem = {
+    type: "object",
+    properties: { turnIds: exchangeTurnIds, claim: { type: "string" } },
+    required: ["turnIds", "claim"],
+    additionalProperties: false,
+  };
+  const singleItems = { type: "array", items: singleItem };
+  const exchangeItems = { type: "array", items: exchangeItem };
+  return {
+    name: "crossfire_debrief",
+    schema: {
+      type: "object",
+      properties: {
+        concessionsSecured: singleItems,
+        controlledQuestions: singleItems,
+        weakOrRepetitiveQuestions: singleItems,
+        evasiveOrIncompleteAnswers: singleItems,
+        missedFollowUps: exchangeItems,
+        betterFollowUpQuestions: {
+          type: "array",
+          items: {
+            type: "object",
+            properties: { turnIds: exchangeTurnIds, question: { type: "string" }, reason: { type: "string" } },
+            required: ["turnIds", "question", "reason"],
+            additionalProperties: false,
+          },
+        },
+        strongestExchange: { anyOf: [exchangeItem, { type: "null" }] },
+      },
+      required: [
+        "concessionsSecured",
+        "controlledQuestions",
+        "weakOrRepetitiveQuestions",
+        "evasiveOrIncompleteAnswers",
+        "missedFollowUps",
+        "betterFollowUpQuestions",
+        "strongestExchange",
+      ],
+      additionalProperties: false,
+    },
+  };
 }
 
 export function validateCrossfireDebrief(
@@ -123,10 +196,14 @@ export function validateCrossfireDebrief(
       };
     }
     for (let index = 0; index < rawItems.length; index += 1) {
+      const maxIds = (SINGLE_TURN_DEBRIEF_FIELDS as readonly string[]).includes(field)
+        ? 1
+        : MAX_CROSSFIRE_REFERENCE_IDS;
       const item = crossfireDebriefItem(
         rawItems[index],
         validIds,
         `${field}[${index}]`,
+        maxIds,
       );
       if ("error" in item) return item;
       items[field].push(item.value);

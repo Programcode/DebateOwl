@@ -5,6 +5,7 @@
  * which bypassed both.
  */
 import type { Page } from '@playwright/test';
+import { fulfillQuotaCheck } from '../helpers/quota';
 
 const CORS_HEADERS = {
   'access-control-allow-origin': '*',
@@ -14,7 +15,7 @@ const CORS_HEADERS = {
 };
 
 // The client rejects a generate response whose contention count does not match
-// the requested length (see expectedContentionCount in src/lib/ai/client.ts).
+// the requested length (see expectedContentionCount in src/lib/ai/features/generate.ts).
 const CONTENTION_COUNT: Record<string, number> = { brief: 2, standard: 3, comprehensive: 4 };
 
 const CONTENTIONS = [
@@ -162,6 +163,7 @@ export async function stubAIResponses(page: Page) {
       await route.fulfill({ status: 200, headers: CORS_HEADERS, body: 'ok' });
       return;
     }
+    if (await fulfillQuotaCheck(route, CORS_HEADERS)) return;
     const body = (route.request().postDataJSON() ?? {}) as AiRequest;
     const motion = typeof body.input?.motion === 'string' ? body.input.motion : 'the motion';
     const message = typeof body.input?.message === 'string' ? body.input.message : 'this';

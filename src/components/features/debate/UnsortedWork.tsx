@@ -56,7 +56,7 @@ function UnsortedRow({ entry, debates }: { entry: UnsortedEntry; debates: Debate
     <li className="space-y-3 rounded-lg border bg-card p-4" data-testid="unsorted-item">
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div className="min-w-0">
-          <p className="break-words font-semibold">{title}</p>
+          <p className="wrap-break-word font-semibold">{title}</p>
           <p className="text-xs text-muted-foreground">
             {entry.kind === 'item' ? t(`debate.kinds.${entry.item.kind}`) : t('debate.kinds.source', 'Source')}
             {' · '}
@@ -70,7 +70,7 @@ function UnsortedRow({ entry, debates }: { entry: UnsortedEntry; debates: Debate
       {suggestion && (
         <p className="text-sm">
           <Badge variant="secondary" className="mr-2">{t('debate.suggested', 'Suggested')}</Badge>
-          <span className="break-words">{suggestion.motion}</span>
+          <span className="wrap-break-word">{suggestion.motion}</span>
         </p>
       )}
       {debates.length > 0 && (
@@ -102,7 +102,7 @@ export function UnsortedWork() {
   ].sort((a, b) => (b.kind === 'item' ? b.item.createdAt : b.createdAt) - (a.kind === 'item' ? a.item.createdAt : a.createdAt));
 
   if (entries.length === 0) {
-    return <EmptyState icon={Inbox} title={t('debate.unsortedEmpty', 'Nothing outside your debates')} description={t('debate.unsortedEmptyDesc', 'One-off results and older unsorted work appear here.')} />;
+    return <EmptyState pose="sleepy" icon={Inbox} title={t('debate.unsortedEmpty', 'Nothing outside your debates')} description={t('debate.unsortedEmptyDesc', 'One-off results and older unsorted work appear here.')} />;
   }
 
   return (

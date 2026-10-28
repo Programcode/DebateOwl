@@ -1,7 +1,10 @@
 import { useTranslation } from 'react-i18next';
+import { PublicPageShell } from '@/components/layout/PublicPageShell';
+import { usePageHead } from '@/lib/seo/use-page-head';
 
 export default function SourcesPage() {
   const { t } = useTranslation();
+  usePageHead('/expocit/sources');
   const sources = [
     {
       authors: "AITHAL, V.; SILVER, J.",
@@ -126,11 +129,10 @@ export default function SourcesPage() {
   ];
 
   return (
-    <div className="min-h-screen bg-background">
-      <main className="container mx-auto max-w-3xl px-4 py-10">
+    <PublicPageShell className="max-w-[65ch]">
         <h1 className="text-3xl font-bold tracking-tight text-foreground">{t('sourcesPage.title')}</h1>
 
-        <div className="mt-8 space-y-6 text-sm leading-6 text-foreground">
+        <div className="mt-8 space-y-6 text-base leading-7 text-foreground">
           <section>
             <p className="text-muted-foreground">
               {t('sourcesPage.intro')}
@@ -149,7 +151,7 @@ export default function SourcesPage() {
                     href={source.url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-primary underline underline-offset-2 break-words [overflow-wrap:anywhere] hover:text-primary/80 transition-colors"
+                    className="inline-flex min-h-6 max-w-full items-center text-primary underline underline-offset-2 wrap-anywhere hover:text-primary/80 transition-colors pointer-coarse:min-h-11"
                   >
                     {source.url}
                   </a>
@@ -158,7 +160,6 @@ export default function SourcesPage() {
             </ol>
           </section>
         </div>
-      </main>
-    </div>
+    </PublicPageShell>
   );
 }

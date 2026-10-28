@@ -1,6 +1,7 @@
 /**
  * Screenshots of the web export at iPhone and iPad sizes, light and dark,
- * English and Hungarian, into .verify/mobile-shots/ at the repository root.
+ * English, Hungarian and Spanish, into .verify/mobile-shots/ at the repository root.
+ * Every shot also lists the texts it cuts off, in clipped.json.
  * The web export is close to the native app but not the same: it has no
  * native tab bar, large titles, sheets or gestures.
  *
@@ -15,8 +16,9 @@
  * account, model. Sign-in screens are always shot.
  * ONLY=offline runs only the offline reading check (see shootOfflineScreens).
  *
- * The iPad sizes are portrait (1024x1366), landscape (1366x1024) and a 600-point
- * window (Split View or Slide Over), which takes the phone layout.
+ * The iPad sizes are portrait (1024x1366), landscape (1366x1024), an 11-inch
+ * iPad Air (820x1180 and 1180x820) and a 600-point window (Split View or Slide
+ * Over), which takes the phone layout.
  *
  * Signed-in screens need a staging session. With STAGING_DEMO_CODE set, the
  * script signs in once through the real sign-in screen and also checks that a
@@ -90,7 +92,8 @@ import { SUPABASE_PROJECTS } from '../../../src/lib/supabase/projects';
 type StorageState = Exclude<BrowserContextOptions['storageState'], string | undefined>;
 
 const DIST = join(__dirname, '../dist');
-const OUT = join(__dirname, '../../../.verify/mobile-shots');
+// SHOTS_DIR moves the screenshots elsewhere, e.g. for a before/after set.
+const OUT = process.env.SHOTS_DIR || join(__dirname, '../../../.verify/mobile-shots');
 const PORT = Number(process.env.PORT);
 const DEMO_CODE = process.env.STAGING_DEMO_CODE?.trim();
 const ONLY = (process.env.ONLY ?? '').split(',').map((value) => value.trim()).filter((value) => value.length > 0);
@@ -106,11 +109,15 @@ const DEVICES = {
   ipad: { viewport: { width: 1024, height: 1366 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true },
   'ipad-landscape': { viewport: { width: 1366, height: 1024 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true },
   'ipad-narrow': { viewport: { width: 600, height: 1366 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true },
+  // An 11-inch iPad Air: portrait takes the regular layout, landscape the wide one.
+  'ipad-air': { viewport: { width: 820, height: 1180 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true },
+  'ipad-air-landscape': { viewport: { width: 1180, height: 820 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true },
 } as const;
 const SCHEMES = ['light', 'dark'] as const;
-const LOCALES = { en: 'en-GB', hu: 'hu-HU' } as const;
+// Spanish runs use the English fake model text; only the interface is Spanish.
+const LOCALES = { en: 'en-GB', hu: 'hu-HU', es: 'es-ES' } as const;
 const SIGNED_IN_ROUTES = { prepare: '/prepare', practice: '/practice', you: '/you' };
-const NOTIFICATIONS = { en: 'Notifications', hu: 'Értesítések' } as const;
+const NOTIFICATIONS = { en: 'Notifications', hu: 'Értesítések', es: 'Notificaciones' } as const;
 const REST = `https://${STAGING_HOST}/rest/v1`;
 
 const TYPES: Record<string, string> = {
@@ -148,17 +155,52 @@ function serve(): Promise<Server> {
  * While `offline()` is true, the browser's own "Failed to load resource" errors are expected.
  */
 function watchErrors(page: Page, problems: string[], label: string, offline = () => false) {
+  // A project without the App Store migration answers the plan's App Store
+  // read with a 404 (PGRST205), which the plan reader takes as no App Store
+  // rows. The browser logs each one; only those are expected.
+  let appStoreMisses = 0;
+  page.on('response', (response) => {
+    if (response.status() === 404 && response.url().includes('/rest/v1/app_store_subscriptions')) appStoreMisses += 1;
+  });
   page.on('pageerror', (error) => problems.push(`${label}: ${error.message}`));
   page.on('console', (message) => {
     if (message.type() !== 'error') return;
     if (offline() && message.text().startsWith('Failed to load resource')) return;
+    if (appStoreMisses > 0 && message.text().includes('status of 404')) {
+      appStoreMisses -= 1;
+      return;
+    }
     problems.push(`${label}: ${message.text()}`);
+  });
+}
+
+/** Texts cut off in each shot (see clippedTexts), written to clipped.json at the end of the run. */
+const clipped: Record<string, string[]> = {};
+
+/**
+ * React Native Web draws a truncated <Text> with an ellipsis or a line clamp;
+ * this lists every such text that does not fit, so a run reports clipping
+ * instead of leaving it to the eye. Some truncation is by design (a long title
+ * in a one-line row); the list says which.
+ */
+async function clippedTexts(page: Page): Promise<string[]> {
+  return page.evaluate(() => {
+    const cut: string[] = [];
+    for (const element of Array.from(document.querySelectorAll<HTMLElement>('div, span'))) {
+      const style = getComputedStyle(element);
+      const ellipsis = style.textOverflow === 'ellipsis' && element.scrollWidth > element.clientWidth + 1;
+      const clamped = style.webkitLineClamp !== 'none' && style.webkitLineClamp !== '' && element.scrollHeight > element.clientHeight + 1;
+      if ((ellipsis || clamped) && element.offsetParent !== null && element.textContent?.trim()) cut.push(element.textContent.trim().slice(0, 80));
+    }
+    return Array.from(new Set(cut));
   });
 }
 
 async function shoot(page: Page, name: string) {
   // Let fonts and the colour scheme settle after hydration.
   await page.evaluate(() => document.fonts.ready);
+  const cut = await clippedTexts(page);
+  if (cut.length > 0) clipped[name] = cut;
   // The Delete all my data field shows the email as its placeholder, as on the website.
   await page.screenshot({ path: join(OUT, `${name}.png`), mask: [page.getByTestId('account-email'), page.getByTestId('delete-data-confirmation')] });
 }
@@ -441,7 +483,7 @@ async function shootResultScreens(context: BrowserContext, prefix: string, langu
   await waiting.getByTestId('generate-motion').waitFor({ timeout: 30_000 });
   await waiting.waitForFunction(() => (document.querySelector('[data-testid="generate-motion"]') as HTMLTextAreaElement | null)?.value.trim());
   await shoot(waiting, `${prefix}-generate-form`);
-  await waiting.getByRole('button', { name: /^(Generate Debate Case|Vitaeset Generálása|Generar Caso de Debate)$/ }).click();
+  await waiting.getByRole('button', { name: /^(Generate debate case|Vitaeset generálása|Generar caso de debate)$/i }).click();
   await waiting.getByTestId('tool-progress').waitFor({ timeout: 15_000 });
   await shoot(waiting, `${prefix}-generating`);
   await waiting.close();
@@ -450,14 +492,14 @@ async function shootResultScreens(context: BrowserContext, prefix: string, langu
   await page.goto(`${ORIGIN}/generate?from=prepare`);
   await page.getByTestId('generate-motion').waitFor({ timeout: 30_000 });
   await page.waitForFunction(() => (document.querySelector('[data-testid="generate-motion"]') as HTMLTextAreaElement | null)?.value.trim());
-  await page.getByRole('button', { name: /^(Generate Debate Case|Vitaeset Generálása|Generar Caso de Debate)$/ }).click();
+  await page.getByRole('button', { name: /^(Generate debate case|Vitaeset generálása|Generar caso de debate)$/i }).click();
   await page.getByTestId('case-document').waitFor({ timeout: 30_000 });
   await page.waitForTimeout(400);
   await shoot(page, `${prefix}-case`);
   // A wide iPad shows the outline rail: jumping to a part scrolls that part's heading to the top of the case.
   const outline = page.getByTestId('document-outline');
   if (await outline.isVisible()) {
-    const part = /^(Case Structure|Eset Struktúra|Estructura del Caso)$/;
+    const part = /^(Case structure|Esetstruktúra|Estructura del caso)$/i;
     const heading = page.getByTestId('case-document').getByRole('heading', { name: part });
     const before = (await heading.boundingBox())?.y ?? 0;
     await outline.getByRole('menuitem').filter({ hasText: part }).click();
@@ -491,7 +533,7 @@ async function shootResultScreens(context: BrowserContext, prefix: string, langu
   await page.getByTestId('attack-case-text').waitFor({ timeout: 15_000 });
   await page.waitForFunction(() => (document.querySelector('[data-testid="attack-case-text"]') as HTMLTextAreaElement | null)?.value.startsWith('THESIS:'));
   await shoot(page, `${prefix}-attack-form`);
-  await page.getByRole('button', { name: /^(Find Weaknesses|Gyengeségek Keresése|Encontrar Debilidades)$/ }).click();
+  await page.getByRole('button', { name: /^(Find weaknesses|Gyengeségek keresése|Encontrar debilidades)$/i }).click();
   await page.getByTestId('attack-document').waitFor({ timeout: 30_000 });
   await page.waitForTimeout(400);
   await shoot(page, `${prefix}-attack-result`);
@@ -1698,6 +1740,8 @@ async function main() {
   }
 
   console.log(`${shots} screenshots in ${OUT}`);
+  await writeFile(join(OUT, 'clipped.json'), JSON.stringify(clipped, null, 2));
+  console.log(`${Object.keys(clipped).length} shots with clipped text (clipped.json)`);
   if (problems.length > 0) {
     console.error(problems.join('\n'));
     process.exitCode = 1;

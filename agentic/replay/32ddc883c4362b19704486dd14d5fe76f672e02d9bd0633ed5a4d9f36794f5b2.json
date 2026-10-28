@@ -1,14 +1,14 @@
 {
   "schemaVersion": "trace-1",
-  "createdAt": "2026-10-06T08:52:18.270Z",
+  "createdAt": "2026-10-09T17:44:08.490Z",
   "payload": {
     "actions": [
       {
         "name": "tap",
-        "summary": "tap combobox \"Idioma de Salida IA\"",
+        "summary": "tap combobox \"Idioma de salida IA\"",
         "target": {
           "role": "combobox",
-          "name": "Idioma de Salida IA"
+          "name": "Idioma de salida IA"
         }
       },
       {
@@ -32,7 +32,7 @@
       "callIndex": 0,
       "agent": "default"
     },
-    "summary": "Changed “Idioma de Salida IA” to Magyar. The settings page now visibly shows Magyar as the selected output language.",
+    "summary": "Set AI output language to Magyar. The 'Idioma de salida IA' combobox now displays 'Magyar'.",
     "startPath": "/app/settings",
     "endPath": "/app/settings",
     "endAnchors": [
@@ -45,6 +45,6 @@
         "text": "English"
       }
     ],
-    "endWaitMs": 17571
+    "endWaitMs": 12369
   }
 }

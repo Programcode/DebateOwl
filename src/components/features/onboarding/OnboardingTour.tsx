@@ -1,15 +1,47 @@
 // src/components/features/onboarding/OnboardingTour.tsx
-import { useEffect, useCallback, useMemo, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useCallback, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import Joyride, { ACTIONS, CallBackProps, EVENTS, STATUS, Step } from 'react-joyride';
 import { useLocation } from 'react-router-dom';
+import { Owl } from '@/components/brand/Owl';
 import { Button } from '@/components/ui/button';
-import { useOnboardingStore } from '@/hooks/use-onboarding';
+import { hasCompletedOnboarding as completedFor, useOnboardingStore } from '@/hooks/use-onboarding';
+import { focusCurrentDebate, focusTourPrimary } from '@/lib/onboarding-tour-load';
 import { useDebateStore } from '@/lib/stores/debate-store';
 
-export function OnboardingTour({ eligibleAt }: { eligibleAt?: number } = {}) {
+// Below `lg` the tour draws no overlay, so a tap still reaches the page.
+// On a phone the bottom tab bar is the navigation; from `md` until `lg` it is
+// the header menu. The tooltip stays under both (z-40) and the header (z-50).
+// Joyride draws the tooltip at zIndex + 100.
+const COMPACT_LAYOUT_QUERY = '(max-width: 1023px)';
+const COMPACT_TOOLTIP_Z_INDEX = 35;
+
+function useCompactLayout() {
+    const [compact, setCompact] = useState(() => typeof window !== 'undefined' && window.matchMedia?.(COMPACT_LAYOUT_QUERY).matches === true);
+    useEffect(() => {
+        const query = window.matchMedia?.(COMPACT_LAYOUT_QUERY);
+        if (!query) return;
+        const update = () => setCompact(query.matches);
+        query.addEventListener('change', update);
+        return () => query.removeEventListener('change', update);
+    }, []);
+    return compact;
+}
+
+export function OnboardingTour({
+    eligibleAt,
+    userId,
+    continueFromIntro = false,
+}: {
+    eligibleAt?: number;
+    userId: string;
+    /** The owl welcome just closed, so the Start debate step opens before the next paint. */
+    continueFromIntro?: boolean;
+}) {
     const { t } = useTranslation();
-    const { isTourRunning, hasCompletedOnboarding, setOnboardingComplete, startTour, stopTour } = useOnboardingStore();
+    const hasCompletedOnboarding = useOnboardingStore((state) => completedFor(state, userId));
+    const { isTourRunning, setOnboardingComplete, startTour, stopTour } = useOnboardingStore();
+    const compactLayout = useCompactLayout();
     const location = useLocation();
     const currentDebateId = useDebateStore((state) => state.currentDebateId);
     const debateDialog = useDebateStore((state) => state.dialog);
@@ -22,7 +54,7 @@ export function OnboardingTour({ eligibleAt }: { eligibleAt?: number } = {}) {
             target: '[data-tour="current-debate"]',
             content: (
                 <div>
-                    <h2 className="text-xl font-bold mb-2">{t('onboarding.welcome')}</h2>
+                    <h2 className="mb-2 font-display text-xl font-[600] text-heading">{t('onboarding.welcome')}</h2>
                     <p className="text-muted-foreground">
                         {currentDebateId ? t('onboarding.debateCurrentDesc') : t('onboarding.debateFirstDesc')}
                     </p>
@@ -38,9 +70,10 @@ export function OnboardingTour({ eligibleAt }: { eligibleAt?: number } = {}) {
             ...(currentDebateId ? {} : {
                 styles: {
                     buttonNext: {
-                        backgroundColor: 'transparent',
-                        border: '1px solid hsl(var(--border))',
-                        color: 'hsl(var(--foreground))',
+                        backgroundColor: 'var(--do-surface)',
+                        border: '2px solid var(--do-border-strong)',
+                        boxShadow: '0 3px 0 var(--do-border-strong)',
+                        color: 'hsl(var(--primary))',
                     },
                 },
             }),
@@ -58,8 +91,10 @@ export function OnboardingTour({ eligibleAt }: { eligibleAt?: number } = {}) {
         {
             target: 'body',
             content: (
-                <div className="text-center">
-                    <h2 className="text-xl font-bold mb-2">{t('onboarding.ready')}</h2>
+                <div className="flex flex-col items-center text-center">
+                    {/* A small celebration, once: the owl in place of the old emoji. */}
+                    <Owl pose="celebrating" size={72} className="mb-2" />
+                    <h2 className="mb-2 text-balance font-display text-xl font-[600] text-heading">{t('onboarding.ready')}</h2>
                     <p className="text-muted-foreground">
                         {t('onboarding.readyDesc')}
                     </p>
@@ -97,28 +132,60 @@ export function OnboardingTour({ eligibleAt }: { eligibleAt?: number } = {}) {
         setScrollOffset((document.querySelector('header')?.getBoundingClientRect().height ?? 0) + 24);
     }, [resolveTourSteps]);
 
+    // The parent leaves `continueFromIntro` true for the whole Start debate step.
+    // Consume it once the spotlight has opened. `startTour` does not reset
+    // `stepIndex`, and the create-dialog pause still depends on `debateDialog`,
+    // so a later language or debate change must not run this handoff again.
+    // If the card is not in the document yet, leave it pending for the next pass.
+    const handoffPending = useRef(continueFromIntro);
+    useLayoutEffect(() => {
+        if (!handoffPending.current || hasCompletedOnboarding || location.pathname !== '/app') return;
+        if (!document.querySelector('[data-tour="current-debate"]')) return;
+        handoffPending.current = false;
+        prepareTour();
+        startTour();
+    }, [hasCompletedOnboarding, location.pathname, prepareTour, startTour]);
+
+    // Joyride also focuses a hidden beacon. That runs in its mount timeout, so
+    // the visible Next button has to take focus after it. The welcome dialog
+    // has already given up restoring focus to the page body.
+    useEffect(() => {
+        if (!continueFromIntro || hasCompletedOnboarding || !isTourRunning) return;
+        const timer = window.setTimeout(() => { focusTourPrimary(); }, 0);
+        return () => window.clearTimeout(timer);
+    }, [continueFromIntro, hasCompletedOnboarding, isTourRunning]);
+
     // Start tour automatically for new users
     useEffect(() => {
         if (hasCompletedOnboarding || location.pathname !== '/app') return;
 
-        // Small delay to ensure DOM is ready on the mode overview.
-        const autoStartDelay = typeof performance === 'undefined' || eligibleAt === undefined
-            ? 500
-            : Math.max(0, 500 - (performance.now() - eligibleAt));
-        const timer = setTimeout(() => {
-            prepareTour();
-            startTour();
-        }, autoStartDelay);
-        return () => clearTimeout(timer);
+        // Start as soon as the first target exists, not after a fixed delay; give up waiting after 500ms.
+        const startedAt = typeof performance === 'undefined' ? Date.now() : performance.now();
+        const waitedBefore = typeof performance === 'undefined' || eligibleAt === undefined ? 0 : startedAt - eligibleAt;
+        const autoStartDelay = Math.max(0, 500 - waitedBefore);
+        const deadline = startedAt + autoStartDelay;
+        let frame = 0;
+        const tryStart = () => {
+            const now = typeof performance === 'undefined' ? Date.now() : performance.now();
+            if (document.querySelector('[data-tour="current-debate"]') || now >= deadline) {
+                prepareTour();
+                startTour();
+                return;
+            }
+            frame = requestAnimationFrame(tryStart);
+        };
+        frame = requestAnimationFrame(tryStart);
+        return () => cancelAnimationFrame(frame);
     }, [eligibleAt, hasCompletedOnboarding, location.pathname, prepareTour, startTour]);
 
     useEffect(() => {
         if (isTourRunning) prepareTour();
     }, [isTourRunning, location.pathname, prepareTour]);
 
-    // Prevent broken tooltips if user navigates away from the app mid-tour
+    // The tour belongs to the Tools page. Leaving it pauses the tour, so a step never
+    // floats over another page's form pointing at nothing; it resumes on return.
     useEffect(() => {
-        if (isTourRunning && !location.pathname.startsWith('/app')) {
+        if (isTourRunning && location.pathname !== '/app') {
             stopTour();
         }
     }, [isTourRunning, location.pathname, stopTour]);
@@ -142,12 +209,15 @@ export function OnboardingTour({ eligibleAt }: { eligibleAt?: number } = {}) {
         const finishedStatuses: string[] = [STATUS.FINISHED, STATUS.SKIPPED];
 
         if (finishedStatuses.includes(status)) {
-            setOnboardingComplete();
+            setOnboardingComplete(userId);
             setStepIndex(0);
+            // The tooltip is about to unmount. The card it was pointing at is the
+            // control the student can use next.
+            requestAnimationFrame(() => { focusCurrentDebate(); });
         } else if (type === EVENTS.STEP_AFTER || type === EVENTS.TARGET_NOT_FOUND) {
             setStepIndex(index + (action === ACTIONS.PREV ? -1 : 1));
         }
-    }, [setOnboardingComplete]);
+    }, [setOnboardingComplete, userId]);
 
     return (
         <Joyride
@@ -155,6 +225,7 @@ export function OnboardingTour({ eligibleAt }: { eligibleAt?: number } = {}) {
             stepIndex={stepIndex}
             run={isTourRunning && debateDialog === null}
             continuous
+            disableOverlay={compactLayout}
             scrollOffset={scrollOffset}
             scrollToFirstStep
             showSkipButton
@@ -164,20 +235,20 @@ export function OnboardingTour({ eligibleAt }: { eligibleAt?: number } = {}) {
                 options: {
                     arrowColor: 'hsl(var(--popover))',
                     backgroundColor: 'hsl(var(--popover))',
-                    overlayColor: 'hsl(var(--background) / 0.72)',
+                    overlayColor: 'var(--do-overlay)',
                     primaryColor: 'hsl(var(--primary))',
                     textColor: 'hsl(var(--popover-foreground))',
                     // Hungarian footer labels wrap at Joyride's default 380px.
                     width: 'min(440px, calc(100vw - 2rem))',
-                    zIndex: 10000,
+                    zIndex: compactLayout ? COMPACT_TOOLTIP_Z_INDEX - 100 : 10000,
                 },
                 tooltip: {
                     backgroundColor: 'hsl(var(--popover))',
-                    border: '1px solid hsl(var(--border))',
-                    borderRadius: '0.5rem',
-                    boxShadow: '0 20px 45px hsl(var(--foreground) / 0.18)',
+                    border: '2px solid hsl(var(--border))',
+                    borderRadius: '24px',
+                    boxShadow: 'var(--app-shadow-xl)',
                     color: 'hsl(var(--popover-foreground))',
-                    padding: '1rem',
+                    padding: '1.25rem',
                 },
                 tooltipContent: {
                     textAlign: 'left',
@@ -185,11 +256,15 @@ export function OnboardingTour({ eligibleAt }: { eligibleAt?: number } = {}) {
                 buttonClose: {
                     color: 'hsl(var(--muted-foreground))',
                 },
+                // The tour's buttons press like the app's (.btn in index.css draws the ledge).
                 buttonNext: {
-                    backgroundColor: 'hsl(var(--primary))',
-                    borderRadius: '0.375rem',
-                    color: 'hsl(var(--primary-foreground))',
-                    padding: '0.5rem 1rem',
+                    backgroundColor: 'var(--do-primary)',
+                    borderRadius: '14px',
+                    boxShadow: '0 3px 0 var(--do-primary-ledge)',
+                    color: '#FFFFFF',
+                    fontFamily: 'var(--font-display)',
+                    fontWeight: 600,
+                    padding: '0.625rem 1rem',
                 },
                 buttonBack: {
                     color: 'hsl(var(--muted-foreground))',
@@ -214,7 +289,7 @@ export function OnboardingTour({ eligibleAt }: { eligibleAt?: number } = {}) {
 function TourCopy({ title, description }: { title: string; description: string }) {
     return (
         <div>
-            <h3 className="font-semibold mb-1">{title}</h3>
+            <h3 className="mb-1 font-extrabold text-heading">{title}</h3>
             <p className="text-sm text-muted-foreground">{description}</p>
         </div>
     );

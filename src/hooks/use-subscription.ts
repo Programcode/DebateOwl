@@ -1,72 +1,204 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase/client';
 import { useAuth } from '@/lib/supabase/AuthProvider';
-import { readEntitlement, type SubscriptionTier } from '@debatelab/core/supabase/entitlement';
+import {
+  APP_STORE_BILLING_COLUMNS,
+  appStoreBillingRows,
+  isMissingTableError,
+  planDailyLimit,
+  resolveBillingState,
+  type BillingAppStoreRow,
+  type BillingDateKind,
+  type BillingStateName,
+  type BillingSubscriptionRow,
+} from '../../supabase/functions/_shared/billing-state';
 
-export type { SubscriptionTier };
+export type SubscriptionTier = 'trial' | 'basic' | 'pro' | 'legacy_free' | 'expired';
+export type { BillingDateKind, BillingStateName };
+
+// The server's tier defaults (supabase/functions/_shared/usage-limits.ts).
+const DEFAULT_LIMITS = { pro: 50, basic: 20, trial: 5 };
 
 interface SubscriptionState {
   tier: SubscriptionTier;
+  /** The state the server resolves too (billing-state.ts); Settings shows it. */
+  billingState: BillingStateName;
+  /** The date that goes with the state: trial end, renewal, cancellation, payment grace end, or when Pro ended. */
+  billingDate: string | null;
+  billingDateKind: BillingDateKind | null;
+  /** A Stripe subscription can still bill, so the next step is Manage subscription, not Checkout. */
+  hasOpenSubscription: boolean;
+  /** An App Store subscription from the iOS app, which only Apple's settings can cancel. */
+  hasAppStoreSubscription: boolean;
   isPro: boolean;
   isTrialActive: boolean;
   isExpired: boolean;
   hasStripeBilling: boolean;
   dailyLimit: number;
   dailyUsed: number;
+  /** AI requests left today, or null while it is unknown (loading, failed read, signed out). Never block on null. */
+  remainingToday: number | null;
   trialEndsAt: string | null;
   gracePeriodEndsAt: string | null;
   loading: boolean;
   refresh: () => Promise<void>;
+  /** Re-reads usage and returns what is left today, or null when it cannot be read. */
+  checkRemainingToday: () => Promise<number | null>;
 }
 
-type SubscriptionSnapshot = Omit<SubscriptionState, 'loading' | 'refresh' | 'isPro' | 'isTrialActive' | 'isExpired'>;
+interface BillingRow extends BillingSubscriptionRow {
+  stripe_customer_id?: string | null;
+}
+
+type SubscriptionSnapshot = Omit<SubscriptionState, 'loading' | 'refresh' | 'checkRemainingToday' | 'isPro' | 'isTrialActive' | 'isExpired' | 'remainingToday'> & {
+  usageKnown: boolean;
+};
 
 const SUBSCRIPTION_STALE_TIME_MS = 60_000;
 const SIGNED_OUT_SNAPSHOT: SubscriptionSnapshot = {
   tier: 'trial',
+  billingState: 'trial',
+  billingDate: null,
+  billingDateKind: null,
+  hasOpenSubscription: false,
+  hasAppStoreSubscription: false,
   hasStripeBilling: false,
   dailyLimit: 5,
   dailyUsed: 0,
+  usageKnown: false,
   trialEndsAt: null,
   gracePeriodEndsAt: null,
 };
 const SIGNED_IN_FALLBACK: SubscriptionSnapshot = {
   tier: 'expired',
+  billingState: 'trial_ended',
+  billingDate: null,
+  billingDateKind: null,
+  hasOpenSubscription: false,
+  hasAppStoreSubscription: false,
   hasStripeBilling: false,
   dailyLimit: 0,
   dailyUsed: 0,
+  usageKnown: false,
   trialEndsAt: null,
   gracePeriodEndsAt: null,
 };
 
 async function fetchSubscription(userId: string): Promise<SubscriptionSnapshot> {
-  // The plan merges Stripe, App Store, promo and trial access on the server,
-  // the same answer the AI functions enforce.
-  const entitlement = await readEntitlement(supabase, userId);
-  if (!entitlement) {
-    console.warn('[useSubscription] Failed to load the plan');
-    throw new Error('Could not load the plan');
-  }
+  let snapshot = { ...SIGNED_IN_FALLBACK };
+  let hasAccess = false;
 
-  const todayStart = new Date();
-  todayStart.setUTCHours(0, 0, 0, 0);
-  const { count, error: usageError } = await supabase
-    .from('ai_requests')
-    .select('*', { count: 'exact', head: true })
-    .eq('user_id', userId)
-    .gte('created_at', todayStart.toISOString());
-  if (usageError) {
-    console.warn('[useSubscription] Failed to load daily usage:', usageError.message);
-  }
+  try {
+    const { data, error: settingsError } = await supabase
+      .from('user_settings')
+      .select('subscription_tier, daily_limit_override, trial_ends_at, grace_period_ends_at')
+      .eq('user_id', userId)
+      .maybeSingle();
 
-  return {
-    tier: entitlement.tier,
-    hasStripeBilling: entitlement.hasStripeBilling,
-    dailyLimit: entitlement.dailyLimit,
-    dailyUsed: usageError ? 0 : count || 0,
-    trialEndsAt: entitlement.trialEndsAt,
-    gracePeriodEndsAt: entitlement.gracePeriodEndsAt,
-  };
+    if (settingsError) {
+      console.warn('[useSubscription] Failed to load user settings:', settingsError.message);
+      throw new Error(settingsError.message);
+    }
+
+    if (data) {
+      let billingRows: BillingRow[] = [];
+
+      const { data: billingData, error: billingError } = await supabase
+        .from('subscriptions')
+        // `*`: the frontend ships on merge, before migrations, so naming a new
+        // column (payment_failed_at) would fail this read until it lands.
+        .select('*')
+        .eq('user_id', userId)
+        .order('current_period_end', { ascending: false, nullsFirst: false })
+        .limit(10);
+
+      if (billingError) {
+        console.warn('[useSubscription] Failed to load Stripe billing state:', billingError.message);
+      } else {
+        billingRows = billingData || [];
+      }
+
+      // App Store subscriptions come from the iOS app. A database without
+      // their table has none.
+      let appStoreRows: BillingAppStoreRow[] = [];
+      const { data: storeData, error: storeError } = await supabase
+        .from('app_store_subscriptions')
+        .select(APP_STORE_BILLING_COLUMNS)
+        .eq('user_id', userId);
+      const storeFailed = Boolean(storeError) && !isMissingTableError(storeError);
+      if (storeFailed) console.warn('[useSubscription] Failed to load App Store billing state:', storeError?.message);
+      else if (!storeError) appStoreRows = appStoreBillingRows(storeData);
+
+      // The same resolver the AI functions use, so Settings never says
+      // "Expired" to an account the server serves (QB-02).
+      const billing = resolveBillingState(data, billingRows, new Date(), appStoreRows);
+      // Without the App Store rows, what was read can still prove access. A
+      // "no access" could be wrong for an App Store subscriber, so the plan is
+      // unknown and the query retries, as the AI functions refuse to decide.
+      if (storeFailed && !billing.hasAccess) throw new Error(`App Store lookup failed: ${storeError?.message}`);
+      hasAccess = billing.hasAccess;
+      snapshot = {
+        ...snapshot,
+        tier: billing.tier,
+        billingState: billing.state,
+        billingDate: billing.date,
+        billingDateKind: billing.dateKind,
+        hasOpenSubscription: billing.hasOpenSubscription,
+        hasAppStoreSubscription: billing.hasAppStoreSubscription,
+        dailyLimit: planDailyLimit(billing, data.daily_limit_override, DEFAULT_LIMITS),
+        hasStripeBilling: billingRows.some((row) => Boolean(row.stripe_customer_id)),
+        trialEndsAt: data.trial_ends_at,
+        gracePeriodEndsAt: data.grace_period_ends_at,
+      };
+    }
+
+    // The server lets a per-account rate_limits row replace the plan's limit
+    // (getConfiguredDailyLimit). Global rows are server-only, so the remaining
+    // count is an estimate: warn with it, and let the server's 402 decide.
+    let limitKnown = true;
+    // An account with no access is refused before the server reads rate_limits.
+    if (data && hasAccess) {
+      const { data: ownLimit, error: limitError } = await supabase
+        .from('rate_limits')
+        .select('limit_value')
+        .eq('user_id', userId)
+        .eq('limit_type', 'daily_requests')
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (limitError) {
+        console.warn('[useSubscription] rate_limits lookup failed:', limitError.message);
+        limitKnown = false;
+      }
+      else if (typeof ownLimit?.limit_value === 'number') snapshot.dailyLimit = ownLimit.limit_value;
+    }
+
+    // The server's own counter (daily_usage_counters through ai_usage_today):
+    // model-weighted units, one charge per Crossfire or Sparring round, refunds
+    // given back. Counting logged rows would disagree with what the server
+    // enforces, so an unreadable counter leaves the count unknown (QB-03).
+    const counted = await readAIUsageToday();
+    if (counted === null) return { ...snapshot, usageKnown: false };
+    return { ...snapshot, dailyUsed: counted, usageKnown: limitKnown && Boolean(data) };
+  } catch (error) {
+    console.warn('[useSubscription] Failed to load:', error);
+    throw error;
+  }
+}
+
+/** Today's charged AI units from the server's counter, or null when it cannot be read. */
+async function readAIUsageToday(): Promise<number | null> {
+  try {
+    const { data, error } = await supabase.rpc('ai_usage_today');
+    return !error && typeof data === 'number' ? data : null;
+  } catch {
+    return null;
+  }
+}
+
+function remainingRequests(snapshot: SubscriptionSnapshot, usageKnown: boolean): number | null {
+  if (!usageKnown) return null;
+  return Math.max(0, snapshot.dailyLimit - snapshot.dailyUsed);
 }
 
 export function useSubscription(): SubscriptionState {
@@ -81,7 +213,8 @@ export function useSubscription(): SubscriptionState {
   const snapshot = userId
     ? query.isError ? SIGNED_IN_FALLBACK : query.data ?? SIGNED_IN_FALLBACK
     : SIGNED_OUT_SNAPSHOT;
-  const { tier, dailyLimit, dailyUsed, trialEndsAt, gracePeriodEndsAt, hasStripeBilling } = snapshot;
+  const { tier, billingState, billingDate, billingDateKind, hasOpenSubscription, hasAppStoreSubscription, dailyLimit, dailyUsed, trialEndsAt, gracePeriodEndsAt, hasStripeBilling } = snapshot;
+  const usageKnown = Boolean(userId) && !query.isError && snapshot.usageKnown;
 
   const isPro = tier === 'pro' || tier === 'legacy_free';
   const isTrialActive = tier === 'trial';
@@ -89,18 +222,29 @@ export function useSubscription(): SubscriptionState {
 
   return {
     tier,
+    billingState,
+    billingDate,
+    billingDateKind,
+    hasOpenSubscription,
+    hasAppStoreSubscription,
     isPro,
     isTrialActive,
     isExpired,
     hasStripeBilling,
     dailyLimit,
     dailyUsed,
+    remainingToday: remainingRequests(snapshot, usageKnown),
     trialEndsAt,
     gracePeriodEndsAt,
     loading: Boolean(userId) && query.isPending,
     refresh: async () => {
       if (!userId) return;
       await query.refetch();
+    },
+    checkRemainingToday: async () => {
+      if (!userId) return null;
+      const result = await query.refetch();
+      return result.isError || !result.data ? null : remainingRequests(result.data, result.data.usageKnown);
     },
   };
 }

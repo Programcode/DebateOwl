@@ -8,12 +8,12 @@ Deno.test("allows the isolated staging browser origin", () => {
 
 Deno.test("falls back to the public origin for an unknown caller", () => {
   const headers = getCorsHeaders("https://evil.example.com");
-  assertEquals(headers["Access-Control-Allow-Origin"], "https://debate.pi-stack.org");
-  assertEquals(ALLOWED_ORIGINS[0], "https://debate.pi-stack.org");
+  assertEquals(headers["Access-Control-Allow-Origin"], "https://debateowl.com");
+  assertEquals(ALLOWED_ORIGINS[0], "https://debateowl.com");
 });
 
 Deno.test("falls back when no origin header is present", () => {
-  assertEquals(getCorsHeaders(null)["Access-Control-Allow-Origin"], "https://debate.pi-stack.org");
+  assertEquals(getCorsHeaders(null)["Access-Control-Allow-Origin"], "https://debateowl.com");
 });
 
 Deno.test("rejects a hostname that merely starts with localhost", () => {
@@ -26,7 +26,7 @@ Deno.test("rejects a hostname that merely starts with localhost", () => {
 
 Deno.test("only echoes a dev origin when the function opts in", () => {
   const origin = "http://192.168.1.14:8080";
-  assertEquals(getCorsHeaders(origin)["Access-Control-Allow-Origin"], "https://debate.pi-stack.org");
+  assertEquals(getCorsHeaders(origin)["Access-Control-Allow-Origin"], "https://debateowl.com");
   assertEquals(
     getCorsHeaders(origin, { allowDevOrigins: true })["Access-Control-Allow-Origin"],
     origin,
@@ -63,4 +63,18 @@ Deno.test("rejects other Vercel projects and lookalike hosts", () => {
   ]) {
     assertEquals(isAllowedOrigin(origin), false, origin);
   }
+});
+
+Deno.test("dynamic CORS responses vary by Origin for allowed, rejected and absent origins", () => {
+  for (const origin of [ALLOWED_ORIGINS[0], "http://127.0.0.1:18080", "https://evil.example", null]) {
+    assertEquals(getCorsHeaders(origin).Vary, "Origin");
+  }
+});
+
+Deno.test("still allows the previous domain after the move to debateowl.com", () => {
+  for (const origin of ["https://debateowl.com", "https://debate.pi-stack.org"]) {
+    assertEquals(isAllowedOrigin(origin), true, origin);
+    assertEquals(getCorsHeaders(origin)["Access-Control-Allow-Origin"], origin);
+  }
+  assertEquals(isAllowedOrigin("https://debateowl.com.evil.example"), false);
 });

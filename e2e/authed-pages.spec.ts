@@ -100,7 +100,7 @@ test('visible Ask advanced controls use the non-streaming contract', async ({ pa
         outputLanguage: 'en',
         theme: 'light',
         featureConfigs: {
-          ask: { provider: 'openai', model: 'gpt-5.4-mini', temperature: 0.7 },
+          ask: { provider: 'openai', model: 'gpt-5.4-mini' },
         },
       },
       version: 0,
@@ -130,10 +130,12 @@ test('visible Ask advanced controls use the non-streaming contract', async ({ pa
 
   await page.goto('/app/ask', { waitUntil: 'domcontentloaded' });
   await page.getByRole('button', { name: 'Clarify' }).click();
-  for (const name of ['Citations', 'Web search', 'Pros/Cons', 'Arg Map']) {
+  await page.getByRole('button', { name: 'Options' }).click();
+  for (const name of ['Citations', 'Web search', 'Pros/cons', 'Arg map']) {
     await page.getByRole('switch', { name }).click();
   }
-  await page.getByPlaceholder('Ask your debate coach...').fill('Which assumptions should I define?');
+  await page.keyboard.press('Escape');
+  await page.getByPlaceholder('Ask your debate coach…').fill('Which assumptions should I define?');
   await page.getByRole('button', { name: 'Send message' }).click();
 
   await expect(page.getByText('Clarification contract response')).toBeVisible();

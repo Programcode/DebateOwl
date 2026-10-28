@@ -17,20 +17,20 @@ import type { NormalizedUsage } from "./cost.ts";
 const ROUTING_CONFIDENCE = 0.55;
 const MAX_ROUTING_STATE_CHARS = 8_000;
 
-const FAST_CANDIDATES = {
-  "z-ai/glm-5.3-flash": "Default for ordinary structured DebateLab work and efficient long-context requests.",
-  "openai/gpt-5.6-luna": "Best for short latency-sensitive conversation and simple coaching.",
-  "google/gemini-3.8-flash": "Best for very long input, multilingual output, or broad context handling.",
-  "deepseek/deepseek-v4-flash-0731": "Best for logic-heavy analysis, adversarial attack, or structured reasoning at low cost.",
+// Auto only routes to Claude, which runs on DebateOwl's Anthropic key (BYOK in
+// OpenRouter). Every other family bills OpenRouter credits, so Auto never picks
+// one; a student can still choose one by hand. With one candidate per pool the
+// Jev routing call is skipped (it would bill OpenRouter credits for nothing).
+// Add a candidate only if it is an anthropic/ model: auto-model-router.test.ts
+// and src/test/ai/anthropic-only-guard.test.ts fail otherwise.
+export const FAST_CANDIDATES = {
+  "anthropic/claude-haiku-5.5": "Default for ordinary DebateOwl work: cases, rebuttals, coaching, and structured output.",
 } as const;
 
-const PRO_CANDIDATES = {
-  "openai/gpt-5.6-sol": "Best for complex structured reasoning and reliable multi-part analysis.",
-  "anthropic/claude-opus-5": "Best for nuanced rhetoric, adversarial critique, and demanding long-form writing.",
-  "anthropic/claude-sonnet-5": "Balanced choice for professional work when no specialist clearly wins.",
+// Opus is opt-in only: Auto Pro never routes or falls back to it.
+export const PRO_CANDIDATES = {
+  "anthropic/claude-sonnet-5.5": "Default for professional DebateOwl work: nuanced rhetoric, adversarial critique, and long-form writing.",
 } as const;
-
-type AutoCandidate = keyof typeof FAST_CANDIDATES | keyof typeof PRO_CANDIDATES;
 
 export type AutoModelRouterJev = (args: CallJevArgs) => Promise<JevDecisionResult>;
 
@@ -72,8 +72,8 @@ function routingState(args: ResolveModelSelectionArgs) {
   };
 }
 
-function fallbackFor(selection: typeof AUTO_FAST | typeof AUTO_PRO): AutoCandidate {
-  return selection === AUTO_FAST ? "z-ai/glm-5.3-flash" : "anthropic/claude-sonnet-5";
+function fallbackFor(selection: typeof AUTO_FAST | typeof AUTO_PRO): string {
+  return selection === AUTO_FAST ? "anthropic/claude-haiku-5.5" : "anthropic/claude-sonnet-5.5";
 }
 
 function isAbort(error: unknown, signal?: AbortSignal): boolean {
@@ -89,9 +89,26 @@ export async function resolveModelSelection(args: ResolveModelSelectionArgs): Pr
     return { requestedModel, resolvedModel: requestedModel, modelEntry, usedFallback: false };
   }
   if (requestedModel === AUTO_PRO && !canAccessProModels) throw new Error("Auto Pro requires Pro access");
+  const candidates: Readonly<Record<string, string>> = requestedModel === AUTO_FAST ? FAST_CANDIDATES : PRO_CANDIDATES;
+  return await routeAmongCandidates(args, candidates, fallbackFor(requestedModel));
+}
 
-  const candidates = requestedModel === AUTO_FAST ? FAST_CANDIDATES : PRO_CANDIDATES;
-  const fallback = fallbackFor(requestedModel);
+/**
+ * Picks one of `candidates` with Jev, or `fallback` when Jev is unsure, fails,
+ * or names something outside the pool. A single-candidate pool resolves to it
+ * without a Jev call. Exported for tests; callers use resolveModelSelection.
+ */
+export async function routeAmongCandidates(
+  args: ResolveModelSelectionArgs,
+  candidates: Readonly<Record<string, string>>,
+  fallback: string,
+): Promise<ResolvedModelSelection> {
+  const { requestedModel } = args;
+  const fallbackEntry = getModelCatalogEntry(fallback);
+  if (!fallbackEntry) throw new Error(`Missing fallback model: ${fallback}`);
+  if (Object.keys(candidates).length === 1 && Object.hasOwn(candidates, fallback)) {
+    return { requestedModel, resolvedModel: fallback, modelEntry: fallbackEntry, usedFallback: false };
+  }
   let jev: JevDecisionResult | undefined;
   try {
     jev = await (args.callJevImpl ?? callJev)({
@@ -99,7 +116,7 @@ export async function resolveModelSelection(args: ResolveModelSelectionArgs): Pr
       questions: {
         model: {
           type: "choice",
-          instructions: "Which available model is the best fit for this DebateLab request? Prefer the default unless another option has a clear task-specific advantage.",
+          instructions: "Which available model is the best fit for this DebateOwl request? Prefer the default unless another option has a clear task-specific advantage.",
           criteria: candidates,
         },
       },
@@ -107,10 +124,8 @@ export async function resolveModelSelection(args: ResolveModelSelectionArgs): Pr
     });
   } catch (error) {
     if (isAbort(error, args.signal)) throw error;
-    const modelEntry = getModelCatalogEntry(fallback);
-    if (!modelEntry) throw new Error(`Missing fallback model: ${fallback}`);
     const jevUsage = getJevErrorUsage(error);
-    return { requestedModel, resolvedModel: fallback, modelEntry, usedFallback: true, ...(jevUsage ? { jevUsage } : {}) };
+    return { requestedModel, resolvedModel: fallback, modelEntry: fallbackEntry, usedFallback: true, ...(jevUsage ? { jevUsage } : {}) };
   }
 
   const answer = jev.answers.model;

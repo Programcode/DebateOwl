@@ -12,6 +12,17 @@ export async function signIn(page: Page, user: DemoUser) {
   await expect(page).toHaveURL(/\/app$/, { timeout: 20_000 });
 }
 
+/**
+ * Waits for a tool's finished result to show `text`. A live draft shows the
+ * text while the request is still running, before the result is saved and
+ * billed, so seeing the text alone does not mean the run is done.
+ */
+export async function expectResult(page: Page, text: string, timeout = 30_000) {
+  await expect(page.getByText(text).first()).toBeVisible({ timeout });
+  await expect(page.getByTestId("live-draft")).toHaveCount(0, { timeout });
+  await expect(page.getByText(text).first()).toBeVisible();
+}
+
 /** The visible Current Debate control: the header menu on desktop, the second header row on mobile. */
 export function debateControl(page: Page) {
   return page.locator('[data-testid="current-debate-desktop"]:visible, [data-testid="current-debate-mobile"]:visible').first();
@@ -63,6 +74,12 @@ export const test = base.extend<Fixtures>({
     // Any uncaught exception fails the test, even when the visible flow passes.
     const errors: string[] = [];
     page.on("pageerror", (error) => errors.push(error.message));
+    // Jam starts on the first click, mid-test, and wraps window.fetch. With
+    // it, Playwright stops seeing the streamed `ai` responses these flows
+    // wait on. Real users are unaffected; tests that cover Jam itself live in
+    // the browser-only specs. Serve empty modules so it never starts here.
+    await page.context().route("https://js.jam.dev/**", (route) =>
+      route.fulfill({ status: 200, contentType: "text/javascript", body: "" }));
     // Init scripts rerun on every load, so seed only what the app has not written.
     await page.addInitScript(() => {
       const seed = (key: string, state: Record<string, unknown>) => {

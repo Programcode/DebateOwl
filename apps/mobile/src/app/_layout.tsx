@@ -14,7 +14,7 @@ import { DebateProvider } from '@/lib/debate-context';
 import { watchNetwork } from '@/lib/network-status';
 import { refreshPush } from '@/lib/push';
 import { SettingsProvider, useSettings } from '@/lib/settings';
-import { interFonts } from '@/theme/fonts';
+import { appFonts } from '@/theme/fonts';
 import { useTheme } from '@/theme/use-theme';
 
 void SplashScreen.preventAutoHideAsync();
@@ -32,7 +32,7 @@ export default function RootLayout() {
 }
 
 function Root() {
-  const [fontsLoaded, fontError] = useFonts(interFonts);
+  const [fontsLoaded, fontError] = useFonts(appFonts);
   const { session, loading, settled } = useAuth();
   const { ready: settingsReady, language } = useSettings();
   const { scheme, colors } = useTheme();

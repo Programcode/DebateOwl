@@ -1,12 +1,12 @@
-import { admin, createDemoUser, deleteDemoUser, expect, MARK, providerCall, signIn, stackReady, startDebate, test } from "./stack";
+import { admin, createDemoUser, deleteDemoUser, expect, expectResult, MARK, providerCall, signIn, stackReady, startDebate, test } from "./stack";
 import type { Page } from "@playwright/test";
 
 test.skip(!stackReady, "Local full stack is required (run ./.superset/db-gate.sh)");
 
 async function addSource(page: Page, title: string, content: string) {
-  await page.getByRole("button", { name: "Add Source" }).click();
-  await page.getByRole("textbox", { name: "Source title..." }).fill(title);
-  await page.getByRole("textbox", { name: "Paste source content..." }).fill(content);
+  await page.getByRole("button", { name: "Add source" }).click();
+  await page.getByRole("textbox", { name: "Title", exact: true }).fill(title);
+  await page.getByRole("textbox", { name: "Content", exact: true }).fill(content);
   await page.getByRole("button", { name: "Save to Library" }).click();
   await expect(page.getByRole("switch", { name: `Toggle ${title}` })).toBeChecked();
 }
@@ -20,9 +20,9 @@ test("only active Library sources ground AI requests, and deletions persist", as
   await expect(page.getByRole("switch", { name: "Toggle Paused study" })).not.toBeChecked();
 
   await page.goto("/app/brainstorm");
-  await page.getByLabel("Motion / Topic *").fill("Public transport should be free");
-  await page.getByRole("button", { name: "Start Brainstorming" }).click();
-  await expect(page.getByText(`${MARK} idea 1`)).toBeVisible({ timeout: 30_000 });
+  await page.getByLabel("Motion / topic *").fill("Public transport should be free");
+  await page.getByRole("button", { name: "Start brainstorming" }).click();
+  await expectResult(page, `${MARK} idea 1`);
   const call = await providerCall("brainstorm");
   expect(call.system).toContain("ACTIVE-SOURCE-MARKER");
   expect(call.system).not.toContain("PAUSED-SOURCE-MARKER");
@@ -38,7 +38,7 @@ test("only active Library sources ground AI requests, and deletions persist", as
   expect(data?.map((row) => row.title)).toEqual(["Active study"]);
 });
 
-test("Delete All My Data erases the account's saved work and nobody else's", async ({ signedIn: page, user }) => {
+test("Delete all my data erases the account's saved work and nobody else's", async ({ signedIn: page, user }) => {
   const other = await createDemoUser("bystander");
   try {
     // A signed-in session creates the bystander's rows, so this also proves the erase is scoped by user.
@@ -57,11 +57,11 @@ test("Delete All My Data erases the account's saved work and nobody else's", asy
     const otherId = await other.userId();
 
     await page.goto("/app/settings");
-    await page.getByRole("button", { name: "Delete All My Data" }).click();
+    await page.getByRole("button", { name: "Delete all my data" }).click();
     const dialog = page.getByRole("dialog");
     await dialog.getByLabel("Type your email to confirm").fill(user.email);
-    await dialog.getByRole("button", { name: "Delete All My Data" }).click();
-    await expect(page.getByText("Data Deleted").first()).toBeVisible();
+    await dialog.getByRole("button", { name: "Delete all my data" }).click();
+    await expect(page.getByText("Data deleted").first()).toBeVisible();
 
     const { data: mine } = await admin.from("sources").select("id").eq("user_id", userId);
     expect(mine).toEqual([]);
@@ -79,7 +79,7 @@ test("Delete All My Data erases the account's saved work and nobody else's", asy
 
 test("the output language setting follows the account and reaches the model", async ({ signedIn: page, user, browser }) => {
   await page.goto("/app/settings");
-  await page.getByRole("combobox", { name: "AI Output Language" }).click();
+  await page.getByRole("combobox", { name: "AI output language" }).click();
   await page.getByRole("option", { name: "Magyar" }).click();
   await expect.poll(async () => {
     const { data } = await admin.from("user_settings").select("output_language").eq("user_id", await user.userId()).single();
@@ -93,8 +93,8 @@ test("the output language setting follows the account and reaches the model", as
     await other.addInitScript(() => localStorage.setItem("debate-trainer-onboarding", JSON.stringify({ state: { hasCompletedOnboarding: true, isTourRunning: false }, version: 0 })));
     await signIn(other, user);
     await other.goto("/app/attack");
-    await other.getByLabel("Your Argument *").fill("Free transit cuts congestion.");
-    await other.getByRole("button", { name: "Find Weaknesses" }).click();
+    await other.getByLabel("Your argument *").fill("Free transit cuts congestion.");
+    await other.getByRole("button", { name: "Find weaknesses" }).click();
     await expect(other.getByText(`${MARK} weakness`)).toBeVisible({ timeout: 30_000 });
     expect((await providerCall("attack")).user).toContain("Language: Hungarian (hu)");
   } finally {
@@ -108,8 +108,8 @@ test("a saved flowchart is stored on the account", async ({ signedIn: page, user
   await page.getByRole("button", { name: "Save", exact: true }).click();
   const dialog = page.getByRole("dialog");
   await dialog.getByRole("textbox").fill(title);
-  await dialog.getByRole("button", { name: "Save Flowchart" }).click();
-  await expect(page.getByText("Flowchart saved successfully")).toBeVisible();
+  await dialog.getByRole("button", { name: "Save flowchart" }).click();
+  await expect(page.getByText("Flowchart saved")).toBeVisible();
 
   const { data } = await admin.from("flowcharts").select("title").eq("user_id", await user.userId());
   expect(data?.map((row) => row.title)).toEqual([title]);

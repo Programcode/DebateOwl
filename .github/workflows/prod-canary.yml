@@ -18,9 +18,14 @@ concurrency:
 
 jobs:
   canary:
+    # Vercel names the deployment environment after the project. The live site
+    # is debate-navigator; debatelab-staging's "production" is staging, so it
+    # must not start the canary. Plain 'Production' is the pre-2026-10 name.
     if: >-
       github.event_name != 'deployment_status' ||
-      (github.event.deployment_status.state == 'success' && github.event.deployment.environment == 'Production')
+      (github.event.deployment_status.state == 'success' &&
+       (github.event.deployment.environment == 'Production – debate-navigator' ||
+        github.event.deployment.environment == 'Production'))
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
