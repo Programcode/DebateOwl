@@ -54,25 +54,20 @@ const CONTENTIONS = [
 ];
 
 const generate = (motion: string, length: string) => ({
+  opening: { hook: 'Picture a nurse who skips the night bus because the fare is a tenth of her shift.' },
   caseStructure: {
     thesis: `We support the motion that ${motion}`,
-    framework: 'Net societal benefit, weighed on access and cost.',
-    keyDefinitions: ['Public transport: publicly funded scheduled transit.'],
-    burdenOfProof: 'We must show the policy produces a net gain in practice.',
   },
   contentions: CONTENTIONS.slice(0, CONTENTION_COUNT[length] ?? 2),
-  predictedOpponentCase: {
-    likelyArguments: ['The lost farebox revenue has to come from somewhere.'],
-    strategicWeaknesses: ['Assumes fare revenue is the only funding model.'],
-    keyClashes: ['Who actually bears the cost.'],
-  },
   counters: [
     {
-      targetArgument: 'Funding gap',
-      counterpoint: 'Fare collection itself carries substantial overhead.',
-      rebuttal: 'Net cost is far below headline farebox revenue.',
+      targetArgument: 'The lost farebox revenue has to come from somewhere.',
+      counterpoint: 'Fare collection itself carries substantial overhead, so the net cost is far below headline farebox revenue.',
+      source: 'UITP, 2024',
     },
   ],
+  closingLine: 'That is why free public transport pays for itself.',
+  sources: [{ org: 'UITP', year: '2024', claim: 'Ridership rose after fares were removed' }],
   metadata: { side: 'pro', format: 'bp', generatedAt: new Date().toISOString() },
 });
 

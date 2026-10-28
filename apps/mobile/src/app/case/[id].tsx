@@ -1,3 +1,4 @@
+import { readCase } from '@debatelab/core/ai/case-view';
 import type { CaseSection } from '@debatelab/core/ai/generate-output';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
@@ -77,14 +78,16 @@ export default function CaseScreen() {
     else setNotice(`${t('generate.flowchartImportFailed')}. ${t(outcome === 'noData' ? 'generate.flowchartNoData' : 'generate.flowchartOtherDebate')}`);
   };
 
-  // The website's section cards, in their order; the opening shows only when the case has one.
+  // The website's section cards that can be regenerated, in their order, each only when the case shows it.
+  const view = readCase(output);
   const sections: { key: CaseSection; title: string }[] = [
-    ...(output.exordio && (output.exordio.hook || output.exordio.transition) ? [{ key: 'exordio' as const, title: t('generateResults.exordio') }] : []),
-    { key: 'contentions', title: t('generateResults.arguments') },
-    { key: 'structure', title: t('generateResults.caseStructure') },
-    { key: 'opponent', title: t('generateResults.predictedOpponent') },
-    { key: 'counters', title: t('generateResults.preparedCounters') },
-  ];
+    { key: 'opening' as const, title: t('generateResults.opening'), shown: Boolean(view.opening.hook || view.opening.definition || view.opening.roadmap || view.legacy.framework || view.legacy.burdenOfProof || view.legacy.definitions.length) },
+    { key: 'contentions' as const, title: t('generateResults.arguments'), shown: view.arguments.length > 0 },
+    { key: 'reinforce' as const, title: t('generateResults.reinforce'), shown: view.reinforce.length > 0 },
+    { key: 'whyWeWin' as const, title: t('generateResults.whyWeWin'), shown: view.whyWeWin.length > 0 },
+    { key: 'counters' as const, title: t('generateResults.ifTheySay'), shown: view.ifTheySay.length > 0 || view.legacy.likelyArguments.length > 0 || view.legacy.weaknesses.length > 0 || view.legacy.clashes.length > 0 },
+    { key: 'closing' as const, title: t('generateResults.closingLine'), shown: Boolean(view.closingLine) },
+  ].filter((section) => section.shown).map(({ key, title }) => ({ key, title }));
   const regeneratingTitle = sections.find((section) => section.key === edits.regenerating)?.title;
 
   const actions: HeaderAction[] = [

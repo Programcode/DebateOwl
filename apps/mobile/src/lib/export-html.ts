@@ -1,3 +1,4 @@
+import { readCase, sourceLine } from '@debatelab/core/ai/case-view';
 import type { AttackOutput } from '@debatelab/core/ai/schemas/attack';
 import type { BrainstormOutput } from '@debatelab/core/ai/schemas/brainstorm';
 import type { FactoidsOutput } from '@debatelab/core/ai/schemas/factoids';
@@ -37,6 +38,8 @@ const STYLE = `
   li { margin-bottom: 3px; }
   .tag { display: inline-block; border: 1px solid #CDD7E4; border-radius: 6px; padding: 0 6px; font-size: 9pt; font-weight: 700; margin-right: 4px; }
   .critical { color: #D23239; border-color: #D23239; }
+  .hook { font-style: italic; }
+  .closing { font-weight: 600; }
   .major { color: #A15C06; border-color: #A15C06; }
   .minor { color: #0556D6; border-color: #0556D6; }
   footer { margin-top: 26px; color: #8494AB; font-size: 9pt; text-align: center; }
@@ -64,35 +67,52 @@ export function caseExportHtml(result: GenerateOutput, t: Translate): string {
   const title = result.metadata?.motion || t('export.debateCase');
   const parts: string[] = [];
 
-  parts.push(`<div class="framing"><p><span class="label">${escape(t('export.thesis'))}:</span> ${escape(result.caseStructure?.thesis || t('export.noThesis'))}</p>${
-    result.caseStructure?.framework ? `<p><span class="label">${escape(t('export.framework'))}:</span> ${escape(result.caseStructure.framework)}</p>` : ''
-  }</div>`);
-  if (result.exordio && (result.exordio.hook || result.exordio.transition)) {
-    parts.push(`<h2>${escape(t('export.exordio'))}</h2>`);
-    if (result.exordio.hook) parts.push(paragraph(t('export.hook'), result.exordio.hook));
-    if (result.exordio.transition) parts.push(paragraph(t('export.transition'), result.exordio.transition));
+  const view = readCase(result);
+  const label = (key: string) => escape(t(key));
+
+  // Opening: hook, an unclear term when there is one, and the roadmap; older cases add their framework, burden and definitions.
+  parts.push(`<h2>${label('export.opening')}</h2>`);
+  if (view.opening.hook) parts.push(`<p class="hook">${escape(view.opening.hook)}</p>`);
+  if (view.opening.definition) parts.push(paragraph(t('export.definition'), view.opening.definition));
+  parts.push(paragraph(t('export.roadmap'), view.opening.roadmap || t('export.untitledCase')));
+  if (view.legacy.framework) parts.push(paragraph(t('export.legacyJudgeBy'), view.legacy.framework));
+  if (view.legacy.burdenOfProof) parts.push(paragraph(t('export.legacyMustShow'), view.legacy.burdenOfProof));
+  if (view.legacy.definitions.length) parts.push(`<h3>${label('export.legacyDefinitions')}</h3>${bullets(view.legacy.definitions)}`);
+
+  if (view.arguments.length) {
+    parts.push(`<h2>${label('export.arguments')}</h2>`);
+    view.arguments.forEach((argument, i) => {
+      parts.push(`<div class="block"><h3><span class="number">${escape(t('export.argumentNumber', { number: i + 1 }))}</span>${escape(argument.title ?? argument.point)}</h3>${
+        argument.title && argument.point ? paragraph(t('export.point'), argument.point) : ''
+      }${argument.explanation ? paragraph(t('export.explanation'), argument.explanation) : ''}${
+        argument.evidence ? paragraph(t('export.evidence'), argument.evidence) : ''
+      }${argument.whyItMatters ? paragraph(t('export.whyItMatters'), argument.whyItMatters) : ''}</div>`);
+    });
   }
-  if (result.caseStructure?.burdenOfProof) parts.push(paragraph(t('export.burdenOfProof'), result.caseStructure.burdenOfProof));
-  if (result.caseStructure?.keyDefinitions?.length) parts.push(`<h3>${escape(t('export.keyDefinitions'))}</h3>${bullets(result.caseStructure.keyDefinitions)}`);
 
-  parts.push(`<h2>${escape(t('export.arguments'))}</h2>`);
-  if (!result.contentions?.length) parts.push(`<p>${escape(t('export.noArguments'))}</p>`);
-  result.contentions?.forEach((c, i) => {
-    parts.push(`<div class="block"><h3><span class="number">${escape(t('export.contentionNumber', { number: i + 1 }))}</span>${escape(c.claim)}</h3>${
-      c.reasoning ? paragraph(t('export.reasoning'), c.reasoning) : ''
-    }${c.evidence ? paragraph(t('export.evidence'), c.evidence) : ''}${c.impact ? paragraph(t('export.impact'), c.impact) : ''}</div>`);
-  });
+  // R2: the team's earlier arguments, backed up, instead of new ones.
+  if (view.reinforce.length) {
+    parts.push(`<h2>${label('export.reinforce')}</h2>`);
+    view.reinforce.forEach((item) => parts.push(`<div class="block">${item.argument ? `<h3>${escape(item.argument)}</h3>` : ''}<p>${escape(item.text)}</p></div>`));
+  }
 
-  parts.push(`<h2>${escape(t('export.predictedOpponent'))}</h2>`);
-  parts.push(result.predictedOpponentCase?.likelyArguments?.length ? bullets(result.predictedOpponentCase.likelyArguments) : `<p>${escape(t('export.noOpponentArgs'))}</p>`);
+  // Conclusor: the reasons we win replace new arguments.
+  if (view.whyWeWin.length) {
+    parts.push(`<h2>${label('export.whyWeWin')}</h2><ol>${view.whyWeWin.map((reason) => `<li>${escape(reason)}</li>`).join('')}</ol>`);
+  }
 
-  parts.push(`<h2>${escape(t('export.counters'))}</h2>`);
-  if (!result.counters?.length) parts.push(`<p>${escape(t('export.noCounters'))}</p>`);
-  result.counters?.forEach((c) => {
-    parts.push(`<div class="block"><h3>${escape(t('export.target'))}: ${escape(c.targetArgument)}</h3>${
-      c.counterpoint ? paragraph(t('export.counter'), c.counterpoint) : ''
-    }${c.rebuttal ? paragraph(t('export.rebuttal'), c.rebuttal) : ''}</div>`);
-  });
+  if (view.ifTheySay.length || view.legacy.likelyArguments.length) {
+    parts.push(`<h2>${label('export.ifTheySay')}</h2>`);
+    view.ifTheySay.forEach((answer) => {
+      parts.push(`<div class="block"><h3>${label('export.theySay')}: ${escape(answer.theySay)}</h3>${
+        answer.weAnswer ? paragraph(t('export.weAnswer'), answer.weAnswer) : ''
+      }${answer.inRound ? paragraph(t('export.legacySayItLike'), answer.inRound) : ''}${answer.source ? paragraph(t('export.source'), answer.source) : ''}</div>`);
+    });
+    if (view.legacy.likelyArguments.length) parts.push(`<h3>${label('export.legacyAlsoSay')}</h3>${bullets(view.legacy.likelyArguments)}`);
+  }
+
+  if (view.closingLine) parts.push(`<h2>${label('export.closingLine')}</h2><p class="closing">${escape(view.closingLine)}</p>`);
+  if (view.sources.length) parts.push(`<h2>${label('export.sources')}</h2>${bullets(view.sources.map(sourceLine))}`);
 
   return page(title, `${side} • ${format} ${t('export.format')}`, parts.join(''), t);
 }

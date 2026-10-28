@@ -8,7 +8,7 @@ import {
 import { transformBrainstormResponse } from '@debatelab/core/ai/brainstorm-output';
 import type { LiveGeneration } from '@debatelab/core/ai/live';
 import { factoidsRequestInput, selectVerifiedFactoids } from '@debatelab/core/ai/factoids-output';
-import { expectedContentionCount, transformGenerateResponse } from '@debatelab/core/ai/generate-output';
+import { hasExpectedArguments, transformGenerateResponse } from '@debatelab/core/ai/generate-output';
 import { AttackOutputSchema, type AttackInput, type AttackOutput } from '@debatelab/core/ai/schemas/attack';
 import { BrainstormOutputSchema, type BrainstormInput, type BrainstormOutput } from '@debatelab/core/ai/schemas/brainstorm';
 import { FactoidsOutputSchema, type FactoidsInput, type FactoidsOutput } from '@debatelab/core/ai/schemas/factoids';
@@ -86,7 +86,7 @@ export function generateCase(input: GenerateInput, options: RequestOptions): Pro
     const parsed = GenerateOutputSchema.safeParse(transformGenerateResponse(output as Record<string, unknown>));
     if (!parsed.success) throw new AIError('failed', 'AI response did not match the expected generate schema.');
     const result = parsed.data;
-    if (result.contentions.length !== expectedContentionCount(input.length)) {
+    if (!hasExpectedArguments(result, input)) {
       throw new AIError('failed', 'AI response did not contain the expected number of contentions.');
     }
     result.metadata.generatedAt = new Date().toISOString();
@@ -309,7 +309,7 @@ export async function deleteResult(userId: string, kind: ResultKind, id: string)
 /** The guard the website's results pages use: an old or broken row shows a notice instead of a crash. */
 export function isCompleteCase(output: unknown): output is GenerateOutput {
   const value = output as Partial<GenerateOutput> | null;
-  return Boolean(value?.caseStructure && Array.isArray(value.contentions) && value.predictedOpponentCase && Array.isArray(value.counters));
+  return Boolean(value?.caseStructure && Array.isArray(value.contentions) && Array.isArray(value.counters));
 }
 
 export function isCompleteAttack(output: unknown): output is AttackOutput {

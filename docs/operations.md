@@ -102,7 +102,7 @@ No staging run passed after 2026-09-23. Until 2026-10-01 the job did not run, be
 
 ## Staging sync
 
-Staging is project `debate-trainer-staging` (`brifeyypjauyusmkptkx`). Production is `debate-trainer` (`uziwdtkzofptihahfooo`). Staging syncs itself: a timer on the VPS applies migrations and deploys changed Edge Functions to staging within about 5 minutes of every commit on `main`. It sets the `staging-sync` commit status, and on failure it opens the **Staging is out of sync with main** issue. No per-run authorization is needed for staging. [staging.md](staging.md) covers the timer, its credential, the seed, and how to get in.
+Staging is project `brifeyypjauyusmkptkx` ("DebateOwl Staging"). Production is `uziwdtkzofptihahfooo` ("DebateOwl"). Scripts go by ref; the display names can change. Staging syncs itself: a timer on the VPS applies migrations and deploys changed Edge Functions to staging within about 5 minutes of every commit on `main`. It sets the `staging-sync` commit status, and on failure it opens the **Staging is out of sync with main** issue. No per-run authorization is needed for staging. [staging.md](staging.md) covers the timer, its credential, the seed, and how to get in.
 
 Before a production backend deploy, check that the commit's `staging-sync` status is green and that `Protected staging E2E` passed for it. Then follow [Supabase changes](#supabase-changes) with the list of migrations and functions that `npm run backend:status` reports for production.
 

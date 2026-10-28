@@ -36,7 +36,7 @@ function debate(side: "pro" | "con" | "both", outputs: DebatePromptContext["outp
   };
 }
 
-const PRO_CASE_DIGEST = "Thesis: Primary homework costs family time and sleep for almost no learning gain.\nContention 1: Homework adds little for young pupils\n  Warrant: Studies find small or no gains before age 11.\n  Impact: Pupils lose rest and play for no benefit.";
+const PRO_CASE_DIGEST = "Thesis: Primary homework costs family time and sleep for almost no learning gain.\nArgument 1: Homework adds little for young pupils\n  Explanation: Studies find small or no gains before age 11.\n  Why it matters: Pupils lose rest and play for no benefit.";
 
 const RESEARCH = `=== WEB RESEARCH RESULTS ===
 
@@ -67,7 +67,7 @@ export const PROMPT_EXAMPLES: PromptExample[] = [
     feature: "generate",
     side: "con",
     input: { motion: MOTION, side: "con", format: "custom", role: "conc", length: "brief", audience: "beginner", tone: "formal", language: "es" },
-    debateContext: debate("con", [{ kind: "case", side: "con", title: "Our R1 case", digest: "Thesis: Short homework builds reading habits a ban would break.\nContention 1: Reading at home improves literacy\n  Impact: Weak readers fall further behind." }]),
+    debateContext: debate("con", [{ kind: "case", side: "con", title: "Our R1 case", digest: "Thesis: Short homework builds reading habits a ban would break.\nArgument 1: Reading at home improves literacy\n  Why it matters: Weak readers fall further behind." }]),
     searchContext: RESEARCH,
   },
   {

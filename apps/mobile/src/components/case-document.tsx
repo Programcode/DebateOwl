@@ -1,24 +1,13 @@
+import { readCase, sourceLabel, type CaseArgument } from '@debatelab/core/ai/case-view';
 import type { DiscoveredSource } from '@debatelab/core/ai/discovered-sources';
-import type { Contention, GenerateOutput } from '@debatelab/core/ai/schemas/generate';
+import type { GenerateOutput } from '@debatelab/core/ai/schemas/generate';
 import * as WebBrowser from 'expo-web-browser';
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, StyleSheet, View } from 'react-native';
 
 import { hostOf, shorten, type CitationTarget } from './citation-target';
-import {
-  Bullets,
-  Callout,
-  Divider,
-  DocSection,
-  FramingCard,
-  Labeled,
-  NumberedItems,
-  Paragraph,
-  Quote,
-  SubHeading,
-  Tag,
-} from './document';
+import { Bullets, Callout, Divider, DocSection, Labeled, NumberedItems, Quote, SubHeading, Tag } from './document';
 import { Icon } from './icon';
 import { Text } from './text';
 
@@ -35,8 +24,8 @@ const MIN_TITLE_MATCH = 4;
  * each one whose title or site it mentions, then for Library sources it names,
  * as Ask's answers match them. Numbers stay the same across arguments.
  */
-function argumentChips(contention: Contention, usage: SourceUsage[], library: Source[]): CitationTarget[] {
-  const text = `${contention.claim} ${contention.reasoning} ${contention.evidence} ${contention.impact}`.toLocaleLowerCase();
+function argumentChips(argument: CaseArgument, usage: SourceUsage[], library: Source[]): CitationTarget[] {
+  const text = [argument.title, argument.point, argument.explanation, argument.evidence, argument.whyItMatters].filter(Boolean).join(' ').toLocaleLowerCase();
   const mentions = (title: string) => {
     const needle = title.trim().toLocaleLowerCase();
     return needle.length >= MIN_TITLE_MATCH && text.includes(needle);
@@ -62,7 +51,13 @@ function argumentChips(contention: Contention, usage: SourceUsage[], library: So
   return chips;
 }
 
-/** Every part of the website's GenerateResults, in mock 03's document style. */
+/**
+ * Every part of the website's GenerateResults, in mock 03's document style:
+ * the opening, the arguments (or R2's backed-up arguments, or a Conclusor's
+ * reasons why we win), "If they say… we answer…", the closing line and the
+ * sources. Older cases' sections come through `readCase`'s legacy part and
+ * show only when they have content, under the website's plain names.
+ */
 export function CaseDocument({
   output,
   library,
@@ -77,27 +72,40 @@ export function CaseDocument({
 }) {
   const { t } = useTranslation();
   const { colors } = useTheme();
+  const view = useMemo(() => readCase(output), [output]);
+  const { opening, legacy } = view;
   const chipsByArgument = useMemo(
-    () => output.contentions.map((contention) => argumentChips(contention, output.metadata?.sourceUsage ?? [], library)),
-    [output, library],
+    () => view.arguments.map((argument) => argumentChips(argument, output.metadata?.sourceUsage ?? [], library)),
+    [view, output, library],
   );
+  // Without web research, evidence is the model's own claim and is labelled that way, as on the website.
+  const researched = sources.length > 0;
 
-  const items = output.contentions.map((contention, index) => {
+  const items = view.arguments.map((argument, index) => {
     const chips = chipsByArgument[index];
-    const pieces = chips.length || (contention.evidence.trim() ? 1 : 0);
+    const pieces = chips.length || (argument.evidence ? 1 : 0);
     return {
-      key: `${index}`,
-      title: contention.claim,
+      key: argument.id || `${index}`,
+      title: argument.title ?? argument.point,
       summary: pieces > 0
         ? t('mobile.results.evidenceCount', { count: pieces })
-        : contention.needsSource ? t('generateResults.needsSource') : t('mobile.results.noEvidence'),
+        : argument.needsSource ? t('generateResults.needsSource') : t('mobile.results.noEvidence'),
       body: (
         <>
-          {contention.needsSource ? <Tag label={t('generateResults.needsSource')} color={colors.warning} icon="alert" /> : null}
-          <Paragraph text={contention.reasoning} />
-          {contention.evidence.trim() ? <Quote text={contention.evidence} chips={chips} onCite={onCite} /> : null}
-          {contention.sourceQuery ? <Labeled label={t('generateResults.searchSuggestion')} text={contention.sourceQuery} /> : null}
-          {contention.impact ? <Labeled label={t('generateResults.impact')} text={contention.impact} /> : null}
+          {argument.needsSource ? <Tag label={t('generateResults.needsSource')} color={colors.warning} icon="alert" /> : null}
+          {argument.title && argument.point ? <Labeled label={t('generateResults.point')} text={argument.point} /> : null}
+          {argument.explanation ? <Labeled label={t('generateResults.explanation')} text={argument.explanation} /> : null}
+          {argument.evidence ? (
+            <View style={styles.evidence}>
+              <View style={styles.evidenceHead}>
+                <SubHeading>{t('generateResults.evidence').replace(/:$/, '')}</SubHeading>
+                {!researched && !argument.needsSource ? <Tag label={t('generateResults.unverified')} color={colors.warning} /> : null}
+              </View>
+              <Quote text={argument.evidence} chips={chips} onCite={onCite} />
+            </View>
+          ) : null}
+          {argument.sourceQuery ? <Labeled label={t('generateResults.searchSuggestion')} text={argument.sourceQuery} /> : null}
+          {argument.whyItMatters ? <Labeled label={t('generateResults.whyItMatters')} text={argument.whyItMatters} /> : null}
         </>
       ),
     };
@@ -111,75 +119,191 @@ export function CaseDocument({
     : null;
   const model = output.metadata?.model || output.metadata?.provider;
   const footer = [model ? t('generateResults.modelLabel', { value: model }) : null, duration].filter(Boolean).join(' • ');
-  const definitions = output.caseStructure.keyDefinitions ?? [];
+  const hasOpening = Boolean(opening.hook || opening.definition || opening.roadmap || legacy.framework || legacy.burdenOfProof || legacy.definitions.length);
+  const hasAnswers = view.ifTheySay.length > 0 || legacy.likelyArguments.length > 0 || legacy.weaknesses.length > 0 || legacy.clashes.length > 0;
 
   return (
     <>
-      <FramingCard
-        blocks={[
-          { label: t('generateResults.thesis'), text: output.caseStructure.thesis },
-          { label: t('generateResults.framework'), text: output.caseStructure.framework },
-        ].filter((block) => block.text?.trim())}
-      />
-
-      {output.exordio && (output.exordio.hook || output.exordio.transition) ? (
-        <DocSection title={t('generateResults.exordio')} description={t('generateResults.exordioDesc')}>
-          <SubHeading>{t('generateResults.hook')}</SubHeading>
-          <Text style={styles.italic} selectable>
-            {output.exordio.hook}
+      {researched ? null : (
+        <View style={[styles.caveat, { backgroundColor: colors.tile, borderColor: colors.tileBorder }]} testID="case-unresearched">
+          <Icon name="alert" color={colors.warning} size={16} />
+          <Text tone="secondary" style={styles.caveatText}>
+            {t('generateResults.unresearchedCaveat')}
           </Text>
-          <Divider />
-          <SubHeading>{t('generateResults.transition')}</SubHeading>
-          <Text style={styles.body} selectable>
-            {output.exordio.transition}
+        </View>
+      )}
+
+      {hasOpening ? (
+        <DocSection title={t('generateResults.opening')} description={t('generateResults.openingDesc')} testID="case-opening">
+          {opening.hook ? <Quote text={opening.hook} italic /> : null}
+          {opening.definition ? <Labeled label={t('generateResults.definition')} text={opening.definition} /> : null}
+          {opening.roadmap ? (
+            <>
+              <SubHeading>{t('generateResults.roadmap')}</SubHeading>
+              <Text style={styles.body} selectable>
+                {opening.roadmap}
+              </Text>
+            </>
+          ) : null}
+          {legacy.framework ? (
+            <>
+              <SubHeading>{t('generateResults.legacyJudgeBy')}</SubHeading>
+              <Text style={styles.body} selectable>
+                {legacy.framework}
+              </Text>
+            </>
+          ) : null}
+          {legacy.burdenOfProof ? (
+            <>
+              <SubHeading>{t('generateResults.legacyMustShow')}</SubHeading>
+              <Text style={styles.body} selectable>
+                {legacy.burdenOfProof}
+              </Text>
+            </>
+          ) : null}
+          {legacy.definitions.length ? (
+            <>
+              <SubHeading>{t('generateResults.legacyDefinitions')}</SubHeading>
+              <Bullets items={legacy.definitions} />
+            </>
+          ) : null}
+        </DocSection>
+      ) : null}
+
+      {items.length > 0 ? (
+        <View style={styles.group}>
+          <View style={styles.groupHead}>
+            <Text accessibilityRole="header" weight="bold" tone="heading" style={styles.groupTitle}>
+              {t('generateResults.arguments')}
+            </Text>
+            <Text tone="faint" style={styles.groupDescription}>
+              {t('generateResults.argumentCount', { count: items.length })}
+            </Text>
+          </View>
+          <NumberedItems items={items} testID="case-arguments" outline />
+        </View>
+      ) : null}
+
+      {view.reinforce.length > 0 ? (
+        <DocSection title={t('generateResults.reinforce')} description={t('generateResults.reinforceDesc')} testID="case-reinforce">
+          {view.reinforce.map((item, index) => (
+            <View key={index} style={styles.stack}>
+              {index > 0 ? <Divider /> : null}
+              {item.argument ? (
+                <Text weight="bold" style={styles.itemTitle} selectable>
+                  {item.argument}
+                </Text>
+              ) : null}
+              <Text style={styles.body} selectable>
+                {item.text}
+              </Text>
+            </View>
+          ))}
+        </DocSection>
+      ) : null}
+
+      {view.whyWeWin.length > 0 ? (
+        <DocSection title={t('generateResults.whyWeWin')} description={t('generateResults.whyWeWinDesc')} testID="case-why-we-win">
+          {view.whyWeWin.map((reason, index) => (
+            <View key={index} style={styles.reason}>
+              <Text weight="bold" style={[styles.reasonNumber, { color: colors.primary }]}>
+                {index + 1}.
+              </Text>
+              <Text style={[styles.body, styles.flex]} selectable>
+                {reason}
+              </Text>
+            </View>
+          ))}
+        </DocSection>
+      ) : null}
+
+      {hasAnswers ? (
+        <DocSection title={t('generateResults.ifTheySay')} description={t('generateResults.ifTheySayDesc')} testID="case-if-they-say">
+          {view.ifTheySay.map((answer, index) => (
+            <View key={index} style={styles.stack}>
+              {index > 0 ? <Divider /> : null}
+              {answer.theySay ? (
+                <View style={styles.theySay}>
+                  <Tag label={t('generateResults.theySay')} color={colors.destructive} />
+                  <Text weight="semibold" style={styles.theySayText} selectable>
+                    {answer.theySay}
+                  </Text>
+                </View>
+              ) : null}
+              {answer.weAnswer ? <Labeled label={t('generateResults.weAnswer')} text={answer.weAnswer} /> : null}
+              {answer.inRound ? (
+                <Callout title={t('generateResults.legacySayItLike').replace(/:$/, '')}>
+                  <Text style={styles.body} selectable>
+                    {answer.inRound}
+                  </Text>
+                </Callout>
+              ) : null}
+              {answer.source ? (
+                <Text tone="faint" style={styles.small} selectable>
+                  <Text weight="semibold" tone="faint" style={styles.small}>
+                    {t('generateResults.source')}{' '}
+                  </Text>
+                  {answer.source}
+                </Text>
+              ) : null}
+            </View>
+          ))}
+          {legacy.likelyArguments.length ? (
+            <>
+              <SubHeading>{t('generateResults.legacyAlsoSay')}</SubHeading>
+              <Bullets items={legacy.likelyArguments} color={colors.destructive} />
+            </>
+          ) : null}
+          {legacy.weaknesses.length ? (
+            <>
+              <SubHeading>{t('generateResults.legacyWeakSpots')}</SubHeading>
+              <Bullets items={legacy.weaknesses} color={colors.warning} />
+            </>
+          ) : null}
+          {legacy.clashes.length ? (
+            <>
+              <SubHeading>{t('generateResults.legacyDecidingPoints')}</SubHeading>
+              <Bullets items={legacy.clashes} />
+            </>
+          ) : null}
+        </DocSection>
+      ) : null}
+
+      {view.closingLine ? (
+        <DocSection title={t('generateResults.closingLine')} description={t('generateResults.closingLineDesc')} testID="case-closing">
+          <Text weight="semibold" style={styles.closing} selectable>
+            {view.closingLine}
           </Text>
         </DocSection>
       ) : null}
 
-      <NumberedItems items={items} testID="case-arguments" outline />
-
-      <DocSection title={t('generateResults.caseStructure')} description={t('generateResults.caseStructureDesc')}>
-        <SubHeading>{t('generateResults.burdenOfProof')}</SubHeading>
-        <Paragraph text={output.caseStructure.burdenOfProof} tone="foreground" />
-        <Divider />
-        <SubHeading>{t('generateResults.keyDefinitions')}</SubHeading>
-        {definitions.length > 0 ? <Bullets items={definitions} /> : <Text tone="faint">{t('generateResults.noDefinitions')}</Text>}
-      </DocSection>
-
-      <DocSection title={t('generateResults.predictedOpponent')} description={t('generateResults.predictedOpponentDesc')}>
-        <SubHeading>{t('generateResults.likelyArguments')}</SubHeading>
-        <Bullets items={output.predictedOpponentCase.likelyArguments ?? []} color={colors.destructive} />
-        <Divider />
-        <SubHeading>{t('generateResults.strategicWeaknesses')}</SubHeading>
-        <Bullets items={output.predictedOpponentCase.strategicWeaknesses ?? []} color={colors.warning} />
-        <Divider />
-        <SubHeading>{t('generateResults.keyClashes')}</SubHeading>
-        <View style={styles.tags}>
-          {(output.predictedOpponentCase.keyClashes ?? []).map((clash, index) => (
-            <Tag key={index} label={clash} />
-          ))}
-        </View>
-      </DocSection>
-
-      <DocSection title={t('generateResults.preparedCounters')} description={t('generateResults.preparedCountersDesc')}>
-        {output.counters.map((counter, index) => (
-          <View key={index} style={styles.counter}>
-            {index > 0 ? <Divider /> : null}
-            <View style={styles.counterTarget}>
-              <Tag label={t('generateResults.target')} color={colors.destructive} />
-              <Text weight="semibold" style={styles.counterTargetText} selectable>
-                {counter.targetArgument}
+      {view.sources.length > 0 ? (
+        <DocSection title={t('generateResults.sources')} description={t('generateResults.sourcesDesc')} testID="case-sources">
+          {view.sources.map((source, index) => {
+            const url = source.url;
+            const label = [sourceLabel(source), source.claim].filter(Boolean).join(' – ');
+            return url ? (
+              <Pressable
+                key={index}
+                accessibilityRole="link"
+                accessibilityHint={hostOf(url)}
+                onPress={() => void WebBrowser.openBrowserAsync(url)}
+                style={({ pressed }) => [styles.caseSource, pressed && styles.pressed]}>
+                <Text style={[styles.body, styles.flex]}>
+                  <Text weight="semibold">{sourceLabel(source)}</Text>
+                  {source.claim ? `${source.org ? ' – ' : ''}${source.claim}` : ''}
+                  <Text style={{ color: colors.primary }}>{` – ${hostOf(url)}`}</Text>
+                </Text>
+                <Icon name="globe" color={colors.primary} size={16} />
+              </Pressable>
+            ) : (
+              <Text key={index} style={styles.body} selectable>
+                {label}
               </Text>
-            </View>
-            <Labeled label={t('generateResults.counter')} text={counter.counterpoint} />
-            <Callout title={t('generateResults.rebuttal').replace(/:$/, '')}>
-              <Text style={styles.body} selectable>
-                {counter.rebuttal}
-              </Text>
-            </Callout>
-          </View>
-        ))}
-      </DocSection>
+            );
+          })}
+        </DocSection>
+      ) : null}
 
       <ResearchedSources sources={sources} />
 
@@ -227,11 +351,24 @@ export function ResearchedSources({ sources }: { sources: DiscoveredSource[] }) 
 
 const styles = StyleSheet.create({
   body: { fontSize: 15.5, lineHeight: 22 },
-  italic: { fontSize: 15.5, lineHeight: 22, fontStyle: 'italic' },
-  tags: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
-  counter: { gap: 8 },
-  counterTarget: { flexDirection: 'row', alignItems: 'flex-start', gap: 8 },
-  counterTargetText: { flex: 1, fontSize: 15.5, lineHeight: 21 },
+  flex: { flex: 1 },
+  small: { fontSize: 13.5, lineHeight: 19 },
+  caveat: { flexDirection: 'row', alignItems: 'flex-start', gap: 8, borderWidth: 2, borderRadius: 14, padding: 12 },
+  caveatText: { flex: 1, fontSize: 14, lineHeight: 20 },
+  group: { gap: 8 },
+  groupHead: { gap: 2, marginHorizontal: 2 },
+  groupTitle: { fontSize: 19, lineHeight: 25, letterSpacing: -0.2 },
+  groupDescription: { fontSize: 14, lineHeight: 19 },
+  evidence: { gap: 6 },
+  evidenceHead: { flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' },
+  stack: { gap: 8 },
+  itemTitle: { fontSize: 16, lineHeight: 22 },
+  reason: { flexDirection: 'row', alignItems: 'flex-start', gap: 8 },
+  reasonNumber: { fontSize: 15.5, lineHeight: 22, minWidth: 20 },
+  theySay: { flexDirection: 'row', alignItems: 'flex-start', gap: 8, flexWrap: 'wrap' },
+  theySayText: { flex: 1, minWidth: 160, fontSize: 15.5, lineHeight: 21 },
+  closing: { fontSize: 16.5, lineHeight: 24 },
+  caseSource: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 4 },
   footer: { fontSize: 13, textAlign: 'center', marginTop: 6 },
   source: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 8 },
   sourceText: { flex: 1, gap: 2 },

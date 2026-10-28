@@ -5,7 +5,7 @@ import { AIResponseError } from '../errors';
 import { callSupabaseAI, withOutputLanguage } from '../request';
 import type { LiveGeneration } from '../live';
 import { autosaveDiscoveredSources, parseDiscoveredSources, type ResultWithSources } from '../sources';
-import { transformGenerateResponse, expectedContentionCount } from '@debatelab/core/ai/generate-output';
+import { transformGenerateResponse, expectedContentionCount, hasExpectedArguments } from '@debatelab/core/ai/generate-output';
 
 /** Validates the transformed generate response before it can be rendered or persisted alongside sources. */
 function validateGenerateOutput(output: unknown): GenerateOutput {
@@ -29,7 +29,7 @@ export async function generateCase(input: GenerateInput, config: ProviderConfig,
       const data = rawData as { output: unknown; discoveredSources?: unknown };
       const result = validateGenerateOutput(transformGenerateResponse(data.output as Record<string, unknown>));
       const expectedCount = expectedContentionCount(input.length);
-      if (result.contentions.length !== expectedCount) {
+      if (!hasExpectedArguments(result, input)) {
         throw new AIResponseError('AI response did not contain the expected number of contentions.', {
           details: { expectedCount, actualCount: result.contentions.length },
         });
