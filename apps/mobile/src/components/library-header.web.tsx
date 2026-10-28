@@ -3,6 +3,9 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
+/** Menus are fixed chrome: iOS's own menus stop growing at large accessibility sizes. */
+const MENU_MAX_FONT_SCALE = 1.6;
+
 import { Icon } from './icon';
 import type { IconName } from './icon-paths';
 import { SORT_LABELS, TYPE_FILTERS, type AddSourceKind, type LibraryHeaderProps } from './library-options';
@@ -51,7 +54,7 @@ export function LibraryHeader({ title, onAdd, disabled, sort, onSort, filter, on
       }}
       style={({ pressed }) => [styles.item, divider && { borderTopWidth: 1, borderTopColor: colors.line }, pressed && { backgroundColor: colors.line }, item.disabled && styles.disabled]}>
       <View style={styles.check}>{item.on ? <Icon name="check" color={colors.primary} size={18} /> : null}</View>
-      <Text style={[styles.itemLabel, item.destructive && { color: colors.destructive }]} numberOfLines={2}>
+      <Text style={[styles.itemLabel, item.destructive && { color: colors.destructive }]} numberOfLines={2} maxFontSizeMultiplier={MENU_MAX_FONT_SCALE}>
         {item.label}
       </Text>
       {item.icon ? <Icon name={item.icon} color={item.destructive ? colors.destructive : colors.foreground} size={21} /> : null}
@@ -96,7 +99,7 @@ export function LibraryHeader({ title, onAdd, disabled, sort, onSort, filter, on
             {sections.map((section, index) => (
               <View key={section.title ?? index} style={index > 0 && { borderTopWidth: 6, borderTopColor: colors.line }}>
                 {section.title ? (
-                  <Text tone="faint" weight="semibold" style={styles.section}>
+                  <Text tone="faint" weight="semibold" style={styles.section} maxFontSizeMultiplier={MENU_MAX_FONT_SCALE}>
                     {section.title}
                   </Text>
                 ) : null}
