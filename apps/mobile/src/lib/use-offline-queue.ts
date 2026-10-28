@@ -37,18 +37,20 @@ export function useQueuedWrites(userId: string | null): QueueSnapshot {
 export function useOfflineQueue(): void {
   const { t } = useTranslation();
   const toast = useToast();
-  const { session, loading } = useAuth();
+  const { session, loading, settled } = useAuth();
   const { offline } = useOfflineStatus();
   const userId = session?.user.id ?? null;
   const queued = useQueuedWrites(userId);
   const waiting = waitingCount(queued) > 0;
 
   // The stored session is read before auth settles; until then the account is unknown, not signed out.
+  // No session counts as signed out (which removes stored queues) only once auth has settled: an early
+  // read that failed must not delete an account's unsynced work.
   useEffect(() => {
-    if (loading) return;
+    if (loading || (!userId && !settled)) return;
     setQueueOwner(userId);
     if (userId) void replayOfflineQueue();
-  }, [loading, userId]);
+  }, [loading, settled, userId]);
 
   useEffect(() => {
     if (!loading && userId && !offline) void replayOfflineQueue();

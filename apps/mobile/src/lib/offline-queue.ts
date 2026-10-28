@@ -174,15 +174,16 @@ export function subscribeQueueReports(listener: (report: QueueReport) => void): 
   };
 }
 
-function persist() {
+/** Saves the queue; resolves whether the phone kept it. */
+function persist(): Promise<boolean> {
   const userId = owner;
   const gen = generation;
   const saved = items.map((item) => ({ ...item }));
   const savedBefore = { ...before };
   const confirming = awaitingSave;
   awaitingSave = [];
-  if (!userId) return;
-  void storage(async () => {
+  if (!userId) return Promise.resolve(true);
+  return storage(async () => {
     if (gen !== generation) return;
     // A stored queue that could not be read is never written over: it may hold unsynced work.
     if (!hydrated) throw new Error('The offline changes on this phone could not be read.');
@@ -197,23 +198,27 @@ function persist() {
     });
   }).then(
     () => {
+      const recovered = storageTroubled;
       storageTroubled = false;
       confirming.forEach(({ waiter }) => waiter.resolve('queued'));
+      // Sending waited while the queue could not be stored; it can go on now.
+      if (recovered && gen === generation) void replayOfflineQueue();
+      return true;
     },
     (cause: unknown) => {
       warn('Could not keep the offline changes')(cause);
-      // The changes stay queued and still sync while the app is open; the student hears once that
-      // they are not on the phone yet, and the save is tried again shortly.
+      // The changes stay queued and still sync once the phone can store them; until then nothing is
+      // sent (a sent change could not be retired) and new writes are refused (adopt).
       confirming.forEach(({ waiter }) => waiter.resolve('queued'));
-      if (gen !== generation || !hydrated) return;
-      if (!storageTroubled) {
-        storageTroubled = true;
-        storageListeners.forEach((listener) => listener());
-      }
+      if (gen !== generation || !hydrated) return false;
+      // Told after the caller's own "saved on this phone" message, and for every change made meanwhile.
+      if (!storageTroubled || confirming.length > 0) setTimeout(() => storageListeners.forEach((listener) => listener()), 0);
+      storageTroubled = true;
       clearTimeout(retrySave);
       retrySave = setTimeout(() => {
-        if (gen === generation) persist();
+        if (gen === generation) void persist();
       }, 5000);
+      return false;
     },
   );
 }
@@ -304,6 +309,8 @@ async function adopt(userId: string) {
     if (owner !== userId) throw new Error('This change belongs to another account.');
     if (!hydrated) throw new Error('The changes saved on this phone could not be read. Try again.');
   }
+  // The phone cannot store the queue right now: a new change could not be kept, nor a sent one retired.
+  if (storageTroubled) throw new Error('Changes cannot be saved on this phone right now. Try again.');
 }
 
 const isWaitingForNetwork = () => isKnownOffline() || items.some((item) => item.waiting);
@@ -720,9 +727,9 @@ function describe(item: QueuedWrite): QueueReport['dropped'][number] {
 async function drain() {
   const userId = owner;
   const gen = generation;
-  if (!userId || paused > 0) return;
+  if (!userId || paused > 0 || storageTroubled) return;
   await ready;
-  if (gen !== generation || items.length === 0 || paused > 0) return;
+  if (gen !== generation || items.length === 0 || paused > 0 || storageTroubled) return;
   if (isKnownOffline() || !(await signedInAs(userId))) {
     if (gen === generation) parkAll();
     return;
@@ -769,7 +776,8 @@ async function drain() {
       await copiesWritten();
       if (gen !== generation) break;
       settleBefore(userId, item, false);
-      persist();
+      // A sent change the phone cannot retire would be sent again after a relaunch: stop until it can.
+      if (!(await persist())) break;
     } else {
       console.warn('The server refused an offline change:', failure.cause instanceof Error ? failure.cause.message : failure.cause);
       const dependents = item.kind === 'add' ? dropWrites(item.tempId, item.key).slice(1) : [];

@@ -188,23 +188,24 @@ describe('offline queue', () => {
     expect(sent()).toEqual(['edit s9 {"title":"Other debate"}']);
   });
 
-  it('keeps a change it could not store, says so once, and stores it with the next save that works', async () => {
+  it('keeps a change it could not store and says so, but sends nothing and takes no new write until it can', async () => {
     const queue = await load();
     const troubles: number[] = [];
     queue.subscribeStorageTrouble(() => troubles.push(1));
     net.offline = true;
-    // The save fails, and so does its retry: the note stays queued and still syncs while the app is open.
-    net.failSet = 2;
+    // Every save fails while this lasts: the note stays queued in memory.
+    net.failSet = 1000;
     await expect(queue.queueAddSource('user-a', { title: 'Kept in memory', content: 'Text', type: 'text', debateId: 'd1' })).resolves.toMatchObject({ status: 'queued' });
     await new Promise((resolve) => setTimeout(resolve, 300));
     expect(troubles).toHaveLength(1);
     expect(queue.getQueueSnapshot().items).toHaveLength(1);
 
-    await queue.queueAddSource('user-a', { title: 'Next', content: 'Text', type: 'text', debateId: 'd1' });
-    await new Promise((resolve) => setTimeout(resolve, 50));
-    const stored = [...storage.values()].join('');
-    expect(stored).toContain('Kept in memory');
-    expect(stored).toContain('Next');
+    // A sent change could not be retired, so nothing is sent, and a new change is refused.
+    net.offline = false;
+    await queue.replayOfflineQueue();
+    expect(sources.addSource).not.toHaveBeenCalled();
+    await expect(queue.queueUpdateSource('user-a', 'd1', 's1', { title: 'Newer' })).rejects.toThrow('cannot be saved on this phone');
+    expect(sources.updateSource).not.toHaveBeenCalled();    net.failSet = 0;
   });
 
   it('never writes over a stored queue it could not read, and keeps it once a read works', async () => {
