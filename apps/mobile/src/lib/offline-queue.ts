@@ -487,6 +487,27 @@ export async function queueSetSourcesActive(userId: string, debateId: string, so
 }
 
 /**
+ * Clear all for a debate: lets a replay that is running finish, then drops every write still
+ * queued for that debate (its waiting notes, edits and switches), so none comes back after the
+ * server clears the Library. Call it before clearLibrary.
+ */
+export async function discardQueuedForDebate(userId: string, debateId: string): Promise<void> {
+  await adopt(userId);
+  if (running) await running.catch(() => undefined);
+  if (owner !== userId) return;
+  const debateOf = (item: QueuedWrite) => (item.kind === 'add' ? item.input.debateId : item.debateId);
+  const dropped = items.filter((item) => debateOf(item) === debateId);
+  if (dropped.length === 0) return;
+  items = items.filter((item) => debateOf(item) !== debateId);
+  const forgotten = new Set(dropped.flatMap((item) => touched(item).map((one) => one.id)));
+  before = Object.fromEntries(Object.entries(before).filter(([id]) => !forgotten.has(id)));
+  updateCopy<Source[]>(userId, 'sources', debateId, (list) => list?.filter((source) => !isLocalSourceId(source.id)));
+  dropped.forEach((item) => takeWaiters(item.key).forEach((waiter) => waiter.reject(new Error('The Library was cleared before this change was saved.'))));
+  persist();
+  emit();
+}
+
+/**
  * Removes a note that has not reached the server, as deleting it does. False
  * while the note is on its way: the caller asks again once it has synced.
  */
@@ -576,8 +597,11 @@ async function send(userId: string, item: QueuedWrite): Promise<Source | undefin
     }
     // This path skips addSource's refresh of the saved copies, which still hold the note under its
     // temporary id: they take the row, once, so the note opens and edits offline after a restart.
+    // A patch above drops the saved list (updateSource), so the list is also read back from the
+    // server, which just answered; if that read fails, the swap keeps whatever list was saved.
     updateCopy<Source[]>(userId, 'sources', input.debateId, (list) => list && [saved, ...list.filter((source) => source.id !== item.tempId && source.id !== id)]);
     updateCopy<Source | null>(userId, 'source', id, () => saved);
+    await fetchSources(userId, input.debateId).catch(() => undefined);
     notifySourcesChanged();
     return saved;
   }

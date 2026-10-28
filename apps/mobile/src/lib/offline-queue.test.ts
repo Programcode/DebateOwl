@@ -152,6 +152,24 @@ describe('offline queue', () => {
     expect(queue.getQueueSnapshot().items).toEqual([]);
   });
 
+  it('clears every write queued for a debate before Clear all, so none comes back', async () => {
+    const queue = await load();
+    copies.set('sources:d1', [row('s1', { title: 'Kept', content: 'Text', debateId: 'd1' })]);
+    net.offline = true;
+    const note = queue.queueAddSource('user-a', { title: 'Waiting note', content: 'Text', type: 'text', debateId: 'd1' });
+    await note;
+    await queue.queueUpdateSource('user-a', 'd2', 's9', { title: 'Other debate' });
+    await queue.discardQueuedForDebate('user-a', 'd1');
+    await cache.copiesWritten();
+    expect(queue.getQueueSnapshot().items.map((item) => item.kind === 'add' ? item.input.debateId : item.debateId)).toEqual(['d2']);
+    expect((copies.get('sources:d1') as Source[]).map((item) => item.id)).toEqual(['s1']);
+
+    net.offline = false;
+    await queue.replayOfflineQueue();
+    expect(sources.addSource).not.toHaveBeenCalled();
+    expect(sent()).toEqual(['edit s9 {"title":"Other debate"}']);
+  });
+
   it('puts back what the copies showed before a refused change, even when the server cannot be read again', async () => {
     const queue = await load();
     copies.set('sources:d1', [row('s1', { title: 'Old', content: 'Text', debateId: 'd1' })]);
@@ -244,6 +262,8 @@ describe('offline queue', () => {
     await cache.copiesWritten();
     expect((copies.get('sources:d1') as Source[]).map((item) => item.id)).toEqual(['uuid-1']);
     expect((copies.get('source:uuid-1') as Source).title).toBe('Final');
+    // updateSource drops the saved list, so the list is read back from the server.
+    expect(sources.fetchSources).toHaveBeenCalledWith('user-a', 'd1');
   });
 
   it('sends a change made while its note is on the way with the row id', async () => {

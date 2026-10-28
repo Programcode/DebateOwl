@@ -134,7 +134,15 @@ export function mergeRegeneratedSection(base: GenerateOutput, next: GenerateOutp
     ...base,
     // A new opening replaces an older case's exordio and its framework, burden and definitions.
     ...(section === 'opening' ? { opening: next.opening, exordio: next.exordio, caseStructure: next.caseStructure } : {}),
-    ...(section === 'contentions' ? { contentions: next.contentions } : {}),
+    // An older R2 or Conclusor case kept its body in contentions; a new run answers with reinforce or
+    // whyWeWin and no arguments, so those come across too rather than the section going empty.
+    ...(section === 'contentions'
+      ? {
+          contentions: next.contentions,
+          ...(next.contentions.length === 0 && next.reinforce?.length ? { reinforce: next.reinforce } : {}),
+          ...(next.contentions.length === 0 && next.whyWeWin?.length ? { whyWeWin: next.whyWeWin } : {}),
+        }
+      : {}),
     ...(section === 'counters' ? { counters: next.counters, predictedOpponentCase: next.predictedOpponentCase } : {}),
     ...(section === 'reinforce' ? { reinforce: next.reinforce } : {}),
     ...(section === 'whyWeWin' ? { whyWeWin: next.whyWeWin } : {}),
