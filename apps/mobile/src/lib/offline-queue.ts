@@ -125,6 +125,10 @@ let snapshot: QueueSnapshot = { owner, items, synced };
 let running: Promise<void> | null = null;
 // While Clear all asks the server, nothing replays: a queued note must not land in a Library being cleared.
 let paused = 0;
+// Whether this account's stored queue has been read. Until it has, nothing is written over it.
+let hydrated = false;
+// Writes that wait for the connection, told "queued" only once the queue holding them is saved.
+let awaitingSave: { key: string; waiter: Waiter }[] = [];
 let again = false;
 let keys = 0;
 
@@ -163,12 +167,52 @@ function persist() {
   const gen = generation;
   const saved = items.map((item) => ({ ...item }));
   const savedBefore = { ...before };
+  const confirming = awaitingSave;
+  awaitingSave = [];
   if (!userId) return;
   void storage(async () => {
     if (gen !== generation) return;
-    if (saved.length === 0) await AsyncStorage.removeItem(storageKey(userId));
-    else await AsyncStorage.setItem(storageKey(userId), JSON.stringify({ userId, items: saved, before: savedBefore }));
-  }).catch(warn('Could not keep the offline changes'));
+    // A stored queue that could not be read is never written over: it may hold unsynced work.
+    if (!hydrated) throw new Error('The offline changes on this phone could not be read.');
+    const write = () =>
+      saved.length === 0
+        ? AsyncStorage.removeItem(storageKey(userId))
+        : AsyncStorage.setItem(storageKey(userId), JSON.stringify({ userId, items: saved, before: savedBefore }));
+    // One retry for a passing storage error before anyone hears the change was not kept.
+    await write().catch(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 200));
+      await write();
+    });
+  }).then(
+    () => confirming.forEach(({ waiter }) => waiter.resolve('queued')),
+    (cause: unknown) => {
+      warn('Could not keep the offline changes')(cause);
+      if (gen === generation && confirming.length > 0) void unkeep(userId, confirming, cause);
+    },
+  );
+}
+
+/**
+ * Writes that were to wait for the connection but could not be kept on the phone: they leave the
+ * queue, the copies go back to what they showed, and whoever made them hears it, so a draft
+ * stays open instead of being lost on the next launch.
+ */
+async function unkeep(userId: string, failed: { key: string; waiter: Waiter }[], cause: unknown) {
+  const keys = new Set(failed.map((one) => one.key));
+  const gone = items.filter((item) => keys.has(item.key) && item.key !== inFlight);
+  for (const item of gone) {
+    if (item.kind === 'add') {
+      dropWrites(item.tempId, item.key);
+      updateCopy<Source[]>(userId, 'sources', item.input.debateId, (list) => list?.filter((source) => source.id !== item.tempId));
+    } else {
+      items = items.filter((other) => other.key !== item.key);
+    }
+  }
+  await copiesWritten();
+  for (const item of gone) if (item.kind !== 'add') settleBefore(userId, item, true);
+  const error = new Error('This change could not be kept on this phone. Try again.', { cause });
+  failed.forEach(({ waiter }) => waiter.reject(error));
+  emit();
 }
 
 function parse(raw: string | null, userId: string): { items: QueuedWrite[]; before: Record<string, Restorable> } {
@@ -184,6 +228,32 @@ function parse(raw: string | null, userId: string): { items: QueuedWrite[]; befo
   } catch {
     return none;
   }
+}
+
+/**
+ * Reads the account's stored queue, once more after a passing failure. Writes from an earlier
+ * launch go ahead of any made since; until a read succeeds nothing is written over the store.
+ */
+async function hydrate(userId: string, gen: number) {
+  let raw: string | null;
+  try {
+    raw = await AsyncStorage.getItem(storageKey(userId)).catch(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 200));
+      return AsyncStorage.getItem(storageKey(userId));
+    });
+  } catch (cause) {
+    warn('Could not read the offline changes')(cause);
+    return;
+  }
+  if (gen !== generation) return;
+  const loaded = parse(raw, userId);
+  hydrated = true;
+  if (loaded.items.length === 0) return;
+  // Nobody waits for writes from an earlier launch: they show as waiting until they sync.
+  const known = new Set(items.map((item) => item.key));
+  items = [...loaded.items.filter((item) => !known.has(item.key)).map((item) => ({ ...item, waiting: true })), ...items];
+  before = { ...loaded.before, ...before };
+  emit();
 }
 
 /**
@@ -204,16 +274,13 @@ export function setQueueOwner(userId: string | null) {
   synced = new Map();
   inFlight = null;
   emit();
+  hydrated = false;
+  awaitingSave = [];
   ready = storage(async () => {
     const stale = (await AsyncStorage.getAllKeys()).filter((key) => key.startsWith(`${PREFIX}:`) && (userId === null || key !== storageKey(userId)));
     if (stale.length > 0) await AsyncStorage.multiRemove(stale);
     if (!userId) return;
-    const loaded = parse(await AsyncStorage.getItem(storageKey(userId)), userId);
-    if (gen !== generation || loaded.items.length === 0) return;
-    // Nobody waits for writes from an earlier launch: they show as waiting until they sync.
-    items = loaded.items.map((item) => ({ ...item, waiting: true }));
-    before = loaded.before;
-    emit();
+    await hydrate(userId, gen);
   }).catch(warn('Could not read the offline changes'));
 }
 
@@ -223,13 +290,20 @@ async function adopt(userId: string) {
   else if (owner !== userId) throw new Error('This change belongs to another account.');
   await ready;
   if (owner !== userId) throw new Error('This change belongs to another account.');
+  // The stored queue could not be read at launch: try again before adding to it.
+  if (!hydrated) {
+    const gen = generation;
+    ready = storage(() => hydrate(userId, gen)).catch(warn('Could not read the offline changes'));
+    await ready;
+  }
 }
 
 const isWaitingForNetwork = () => isKnownOffline() || items.some((item) => item.waiting);
 
 function attach(key: string, waiter: Waiter, waiting: boolean) {
   if (waiting) {
-    waiter.resolve('queued');
+    // Told "queued" once the queue holding it is saved (persist), never before.
+    awaitingSave.push({ key, waiter });
     return;
   }
   waiters.set(key, [...(waiters.get(key) ?? []), waiter]);
@@ -247,7 +321,7 @@ function parkAll() {
   items = items.map((item) => (item.waiting ? item : { ...item, waiting: true }));
   const parked = waiters;
   waiters = new Map();
-  parked.forEach((list) => list.forEach((waiter) => waiter.resolve('queued')));
+  parked.forEach((list, key) => list.forEach((waiter) => awaitingSave.push({ key, waiter })));
   persist();
   emit();
 }

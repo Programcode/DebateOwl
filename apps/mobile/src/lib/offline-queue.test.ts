@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Source } from './sources';
 
 const storage = vi.hoisted(() => new Map<string, string>());
-const net = vi.hoisted(() => ({ offline: false, user: 'user-a' as string | null, uuids: 0 }));
+const net = vi.hoisted(() => ({ offline: false, user: 'user-a' as string | null, uuids: 0, failGet: 0, failSet: 0 }));
 // supabase-js answers a request that never reached the server with status 0; readFailed marks it unreachable.
 // The saved copies, kept in memory so a test can see what an offline relaunch would show.
 const copies = vi.hoisted(() => new Map<string, unknown>());
@@ -35,8 +35,20 @@ const sources = vi.hoisted(() => ({
 
 vi.mock('@react-native-async-storage/async-storage', () => ({
   default: {
-    getItem: async (key: string) => storage.get(key) ?? null,
-    setItem: async (key: string, value: string) => void storage.set(key, value),
+    getItem: async (key: string) => {
+      if (net.failGet > 0 && key.includes('user-')) {
+        net.failGet -= 1;
+        throw new Error('storage unavailable');
+      }
+      return storage.get(key) ?? null;
+    },
+    setItem: async (key: string, value: string) => {
+      if (net.failSet > 0) {
+        net.failSet -= 1;
+        throw new Error('storage full');
+      }
+      storage.set(key, value);
+    },
     removeItem: async (key: string) => void storage.delete(key),
     getAllKeys: async () => [...storage.keys()],
     multiRemove: async (keys: string[]) => keys.forEach((key) => storage.delete(key)),
@@ -84,6 +96,8 @@ beforeEach(async () => {
   net.offline = false;
   net.user = 'user-a';
   net.uuids = 0;
+  net.failGet = 0;
+  net.failSet = 0;
   vi.clearAllMocks();
   sources.addSource.mockImplementation(async (_userId: string, input: { id: string; title: string; content: string; debateId: string }) => row(input.id, input));
   sources.updateSource.mockResolvedValue(undefined);
@@ -172,6 +186,38 @@ describe('offline queue', () => {
     await queue.replayOfflineQueue();
     expect(sources.addSource).not.toHaveBeenCalled();
     expect(sent()).toEqual(['edit s9 {"title":"Other debate"}']);
+  });
+
+  it('tells the caller when a change cannot be kept on the phone, and keeps nothing half-saved', async () => {
+    const queue = await load();
+    copies.set('sources:d1', []);
+    net.offline = true;
+    // The save fails, and so does its retry.
+    net.failSet = 2;
+    await expect(queue.queueAddSource('user-a', { title: 'Lost?', content: 'Text', type: 'text', debateId: 'd1' })).rejects.toThrow('could not be kept');
+    await cache.copiesWritten();
+    expect(queue.getQueueSnapshot().items).toEqual([]);
+    expect(copies.get('sources:d1')).toEqual([]);
+  });
+
+  it('never writes over a stored queue it could not read, and keeps it once a read works', async () => {
+    let queue = await load();
+    net.offline = true;
+    await queue.queueAddSource('user-a', { title: 'From last week', content: 'Text', type: 'text', debateId: 'd1' });
+    const stored = [...storage.values()].join('');
+    expect(stored).toContain('From last week');
+
+    // A relaunch whose reads keep failing (at launch and again before the write, each with its retry):
+    // an offline write is refused and the store is untouched.
+    net.failGet = 4;
+    queue = await load();
+    await expect(queue.queueAddSource('user-a', { title: 'Today', content: 'Text', type: 'text', debateId: 'd1' })).rejects.toThrow();
+    expect([...storage.values()].join('')).toContain('From last week');
+
+    // The next write reads the store again, keeps last week's note first and adds today's.
+    await queue.queueAddSource('user-a', { title: 'Today again', content: 'Text', type: 'text', debateId: 'd1' });
+    const titles = queue.getQueueSnapshot().items.map((item) => (item.kind === 'add' ? item.input.title : ''));
+    expect(titles).toEqual(['From last week', 'Today again']);
   });
 
   it('puts back what the copies showed before a refused change, even when the server cannot be read again', async () => {
