@@ -137,13 +137,13 @@ Stop it with `$PREVIEW down "debatelab mobile expo-go"` when you are done.
 
 ### Development build
 
-A development build is the app's own binary with `expo-dev-client`, so it loads JavaScript from Metro like Expo Go but carries native modules Expo Go lacks: speech recognition for dictation now, and later Google sign-in (Expo Go cannot receive OAuth redirects) and the lock-screen timer. Its Info.plist also gets the 120 Hz key, which Expo Go ignores. JavaScript-only changes never need a new build.
+A development build is the app's own binary with `expo-dev-client`, so it loads JavaScript from Metro like Expo Go but carries native modules Expo Go lacks: speech recognition for voice rounds and dictation, the timer's Live Activity and lock-screen widget (with an App Group), and later Google sign-in (Expo Go cannot receive OAuth redirects). Its Info.plist also gets the 120 Hz key, which Expo Go ignores. JavaScript-only changes never need a new build.
 
 [`apps/mobile/app.config.ts`](../apps/mobile/app.config.ts) builds one config with two switches:
 
 - No `DEBATELAB_BUILD`: the Expo Go and web export config, unchanged.
 - `DEBATELAB_BUILD=dev`: adds `expo-dev-client`, `expo-speech-recognition` with the microphone and speech prompts (English in Info.plist, Spanish and Hungarian as `InfoPlist.strings` from `mobile.permissions` in the catalogs) and `CFBundleAllowMixedLocalizations`. The `development` profile in [`apps/mobile/eas.json`](../apps/mobile/eas.json) sets it.
-- `DEBATELAB_APP_GROUP=group.<id>`, only with `dev`: adds the `expo-widgets` extension (`ExpoWidgetsTarget`, bundle `com.adam.debatelab.ExpoWidgetsTarget`) and the App Group on both targets, which a Live Activity needs. Set it only when the provisioning profile carries that group; a borrowed wildcard profile does not. EAS does not see your shell, so it goes in the profile's `env` in `eas.json`, committed with the build.
+- `DEBATELAB_APP_GROUP=group.<id>`, only with `dev`: adds the `expo-widgets` extension (`ExpoWidgetsTarget`, bundle `com.adam.debatelab.ExpoWidgetsTarget`) with the timer's lock-screen widget (`DebateTimerWidget`) and Live Activity, `NSSupportsLiveActivities`, and the App Group on both targets. The group to register in Adam's Apple Developer account is `group.com.adam.debatelab`, on both bundle ids. Set it only when the provisioning profile carries that group; a borrowed wildcard profile does not. EAS does not see your shell, so it goes in the profile's `env` in `eas.json`, committed with the build.
 
 `nativeCapabilities()` in `apps/mobile/src/lib/native-capabilities.ts` tells the app at runtime what the binary has. Feature code checks it and never imports a dev-build module at the top level, so Expo Go keeps working.
 
