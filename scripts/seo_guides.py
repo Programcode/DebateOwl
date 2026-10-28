@@ -175,7 +175,7 @@ GUIDES = {
                     "Closing line: one sentence that ties back to the opening.",
                     "Sources: every source the case cites, with the organisation, the year, the claim it supports and the link.",
                 ]},
-                "Your speaker role shapes the speech. The introductor gets the opening and short headline arguments, plus one line on what a motion term means when it is genuinely unclear. R1 gets the full arguments. R2 briefly reinforces the team's arguments, then gives five to eight answers to the other side. The conclusor brings no new arguments: it gets two or three reasons why your side won and the closing line.",
+                "Your speaker role shapes the speech. The introductor gets the opening and short headline arguments, plus one line on what a motion term means when it is genuinely unclear. R1 gets the full arguments. R2 brings no new arguments: it spends about two minutes backing up the team's arguments, then answers the other side with five or six \"If they say…\" blocks. The conclusor brings no new arguments: it gets two or three reasons why your side won and the closing line.",
                 "Because the answers to the other side are part of the draft, you start preparing rebuttals at the same time as your own case. When one section is weak, regenerate just that section; the rest of the case stays where it is. Finished cases export to PDF or DOCX.",
             ]),
             ("Generated draft vs. finished case: what you still do", [
@@ -191,7 +191,7 @@ GUIDES = {
                 {"steps": [
                     "Start a Current Debate with the exact motion wording. Small wording changes, such as should against would, change the burden.",
                     "Add the sources you already trust to the Library. Active sources are used when the case is generated, so the draft builds on your research instead of ignoring it.",
-                    "Choose your side and speaker role: introductor, R1, R2 or conclusor. Under More options, set the length (two, three or four arguments), the audience level and the tone. If you need a particular angle, for example a principled argument or an economic one, put it in the Current Debate's Instructions.",
+                    "Choose your side and speaker role: introductor, R1, R2 or conclusor. Under More options, set the length, the audience level and the tone. Length sets two, three or four arguments for the introductor and R1, and for R2 how many \"If they say…\" answers you get. If you need a particular angle, for example a principled argument or an economic one, put it in the Current Debate's Instructions.",
                     "Generate the case. Generate researches the motion on the web every time, lists the sources it found under the draft, and saves the relevant ones to the debate's Library.",
                     "Read the \"If they say…\" answers first and decide which of your arguments actually meets each claim. Cut arguments that do not clash with anything.",
                     "Regenerate any section that is vague, then verify every evidence lead against its original source.",
