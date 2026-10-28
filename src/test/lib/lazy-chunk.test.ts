@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { isChunkLoadError, loadChunk } from '@/lib/lazy-chunk';
+import { isChunkLoadError, loadChunk, namedChunk } from '@/lib/lazy-chunk';
 import { resetStaleChunkReloadForTests } from '@/lib/reload-stale-chunk';
 
 const PENDING = Symbol('pending');
@@ -47,6 +47,10 @@ describe('loadChunk', () => {
     const result = await settled(loadChunk(() => Promise.reject(new RangeError('bug in the page')), reload));
     expect(result).toEqual({ rejected: expect.objectContaining({ name: 'RangeError' }) });
     expect(reload).not.toHaveBeenCalled();
+  });
+
+  it('fails with a named error when a module lacks the export a lazy component asked for', async () => {
+    await expect(namedChunk(() => Promise.resolve({ AppLayout: (): null => null }), 'Layout' as 'AppLayout')).rejects.toMatchObject({ name: 'ChunkLoadError' });
   });
 
   it('recognizes each browser’s missing-module message', () => {

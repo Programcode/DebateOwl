@@ -64,8 +64,12 @@ export function aiFailureStage(error: unknown, stage: AIFailureStage = 'request'
   return isResponseError(error) ? 'parse' : stage;
 }
 
-/** The HTTP status that goes with a failure, when one is known and plausible. */
+/**
+ * The HTTP status that goes with a failure, when one is known and plausible.
+ * A TimeoutError's 408 is the browser's own deadline, not a server answer.
+ */
 export function aiFailureHttpStatus(error: unknown): number | undefined {
+  if (isTimeoutError(error)) return undefined;
   const status = error instanceof AIError ? error.statusCode : undefined;
   return Number.isInteger(status) && status! >= 100 && status! <= 599 ? status : undefined;
 }

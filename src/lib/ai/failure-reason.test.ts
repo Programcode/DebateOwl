@@ -32,7 +32,7 @@ import {
   AIUnknownError,
   TimeoutError,
 } from '@/lib/ai/errors';
-import { aiFailureCode, aiFailureRecovery, aiFailureStage } from '@/lib/ai/failure-reason';
+import { aiFailureCode, aiFailureHttpStatus, aiFailureRecovery, aiFailureStage } from '@/lib/ai/failure-reason';
 import { callSupabaseAI } from '@/lib/ai/request';
 
 const config = { provider: 'openrouter' as const, model: 'openai/gpt-6-luna', reasoningEffort: 'low' as const };
@@ -57,6 +57,11 @@ describe('AI failure reasons', () => {
   ] as const)('%s maps to %s with %s', (error, code, recovery) => {
     expect(aiFailureCode(error)).toBe(code);
     expect(aiFailureRecovery(error)).toBe(recovery);
+  });
+
+  it('sends no status for the browser\'s own timeout', () => {
+    expect(aiFailureHttpStatus(new TimeoutError())).toBeUndefined();
+    expect(aiFailureHttpStatus(new AIServerError('boom', { statusCode: 503 }))).toBe(503);
   });
 
   it('reports a caller abort as aborted whatever the error says', () => {

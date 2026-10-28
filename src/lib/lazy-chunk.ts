@@ -17,8 +17,8 @@ export function isChunkLoadError(error: unknown): boolean {
 
 /** A chunk that loaded as nothing and could not be reloaded. Named for the route error boundary and Sentry. */
 class ChunkLoadError extends Error {
-  constructor() {
-    super('A page file did not load.');
+  constructor(message = 'A page file did not load.') {
+    super(message);
     this.name = 'ChunkLoadError';
   }
 }
@@ -48,7 +48,11 @@ export function loadChunk<T>(load: () => Promise<T | null | undefined>, reload: 
 
 /** One named export of a code-split module, as a lazy component's `{ default }`. */
 export function namedChunk<M, K extends keyof M>(load: () => Promise<M | null | undefined>, name: K): Promise<{ default: M[K] }> {
-  return loadChunk(load).then((module) => ({ default: module[name] }));
+  return loadChunk(load).then((module) => {
+    // A renamed export would otherwise reach React as an invalid element type.
+    if (module[name] === undefined) throw new ChunkLoadError(`The page file has no ${String(name)} export.`);
+    return { default: module[name] };
+  });
 }
 
 /** React.lazy through loadChunk. Every lazy component in the app goes through here. */
