@@ -23,6 +23,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AppTextInput } from '@/components/app-text-input';
 import { ActionMenu } from '@/components/action-menu';
 import { MainActionButton, TextButton } from '@/components/buttons';
+import { Celebration } from '@/components/celebration';
 import { DocumentScreen } from '@/components/document';
 import { DocumentHeader } from '@/components/document-header';
 import { Field } from '@/components/field';
@@ -32,7 +33,7 @@ import { LiveTopBar, MainRoundControl, RoundIconButton, SideControl } from '@/co
 import { SegmentedControl } from '@/components/segmented-control';
 import { ContextLine } from '@/components/context-line';
 import { SessionCostNote } from '@/components/session-cost-note';
-import { SparringScorecardScreen } from '@/components/sparring-views';
+import { SparringScorecardScreen, winnerText } from '@/components/sparring-views';
 import { Text } from '@/components/text';
 import { TimerRing } from '@/components/timer-ring';
 import { ToolTitle, WorkingIn } from '@/components/tool-form';
@@ -121,6 +122,8 @@ export default function SparringScreen() {
   const roundQuota = useSessionQuota('sparring');
   // Start waits for the round's cost; a second tap meanwhile does nothing.
   const [checkingQuota, setCheckingQuota] = useState(false);
+  // The round judged while this screen watched celebrates once; a round reopened or kept from earlier does not.
+  const [celebrating, setCelebrating] = useState<string | null>(null);
 
   // Another account starts with no round: the session slot was already cleared, and this screen's copy goes too.
   useEffect(() => {
@@ -174,6 +177,7 @@ export default function SparringScreen() {
       setRequest({ status: 'idle' });
       if (!completed) return;
       commit(completed);
+      setCelebrating(completed.id);
       // The server saved the judged round before it answered; file it in its debate.
       if (completed.debateId) {
         attachSparring(forUser, completed.id, completed.debateId, completed.userSide).catch((cause: unknown) => {
@@ -350,6 +354,7 @@ export default function SparringScreen() {
     setRequest({ status: 'idle' });
     setNotice('');
     setSubmissionError('');
+    setCelebrating(null);
     commit(null);
   };
 
@@ -450,16 +455,37 @@ export default function SparringScreen() {
   }
 
   if (session.phase === 'complete' && session.scorecard) {
+    const celebrate = celebrating === session.id;
     return (
-      <SparringScorecardScreen
-        session={{ ...session, scorecard: session.scorecard }}
-        from={from}
-        notice={notice}
-        onRestart={restart}
-        onDeleted={() => {
-          if (sessionRef.current?.id === session.id) restart();
-        }}
-      />
+      <View style={styles.flex}>
+        <SparringScorecardScreen
+          session={{ ...session, scorecard: session.scorecard }}
+          from={from}
+          notice={notice}
+          onRestart={restart}
+          onDeleted={() => {
+            if (sessionRef.current?.id === session.id) restart();
+          }}
+          holdEntrance={celebrate}
+        />
+        {celebrate ? (
+          <Celebration
+            eyebrow={t('sparring.round.complete')}
+            title={winnerText(t, session.scorecard.winner)}
+            stats={[
+              { key: 'score', label: t('sparring.scorecard.yourScore'), value: session.scorecard.userScore },
+              { key: 'speeches', label: t('export.sparringSpeeches'), value: session.speeches.length },
+              {
+                key: 'time',
+                label: t('export.sparringTimeUsed'),
+                value: Math.round(session.speeches.reduce((total, speech) => total + speech.timeUsedSeconds, 0)),
+                format: formatRoundTime,
+              },
+            ]}
+            onDone={() => setCelebrating(null)}
+          />
+        ) : null}
+      </View>
     );
   }
 

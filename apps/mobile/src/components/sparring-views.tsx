@@ -5,8 +5,10 @@ import type { TFunction } from 'i18next';
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { StyleSheet, View } from 'react-native';
+import Animated, { useAnimatedStyle, useReducedMotion, useSharedValue, withDelay, withSpring } from 'react-native-reanimated';
 
 import { PrimaryButton, SecondaryButton } from './buttons';
+import { PopIn } from './celebration';
 import { Bullets, DocSection, DocumentScreen, Paragraph } from './document';
 import { DocumentHeader } from './document-header';
 import { Text } from './text';
@@ -17,6 +19,7 @@ import { confirmDestructive } from '@/lib/confirm';
 import { shareText } from '@/lib/export';
 import { deleteSparringRound } from '@/lib/sparring';
 import { radius } from '@/theme/colors';
+import { SPRING, staggerDelay } from '@/theme/motion';
 import { useTheme } from '@/theme/use-theme';
 
 const CATEGORY_MAX = 25;
@@ -50,12 +53,15 @@ export function SparringScorecardScreen({
   notice,
   onRestart,
   onDeleted,
+  holdEntrance,
 }: {
   session: SparringSession & { scorecard: SparringScorecard };
   from: string | undefined;
   notice?: string;
   onRestart: () => void;
   onDeleted: () => void;
+  /** The cards and bars wait while a celebration covers them, and arrive as it goes. */
+  holdEntrance?: boolean;
 }) {
   const { t } = useTranslation();
   const { session: auth } = useAuth();
@@ -113,7 +119,7 @@ export function SparringScorecardScreen({
           <PrimaryButton label={t('sparring.scorecard.restart')} onPress={onRestart} floating testID="sparring-restart" />
         </>
       }>
-      <SparringScorecardView session={session} scorecard={session.scorecard} transcriptOpen={transcriptOpen} />
+      <SparringScorecardView session={session} scorecard={session.scorecard} transcriptOpen={transcriptOpen} holdEntrance={holdEntrance} />
     </DocumentScreen>
   );
 }
@@ -122,9 +128,21 @@ export function SparringScorecardScreen({
  * The round review from mock 06: both totals, the four categories as bars
  * instead of the website's radar chart, and the judge's verdict. Below them
  * come the website's category notes, key moments, what to work on next and
- * the overall feedback, and the transcript when Replay opens it.
+ * the overall feedback, and the transcript when Replay opens it. The totals and
+ * cards pop in one after another and the bars fill on a spring, once
+ * `holdEntrance` is off.
  */
-export function SparringScorecardView({ session, scorecard, transcriptOpen }: { session: SparringSession; scorecard: SparringScorecard; transcriptOpen: boolean }) {
+export function SparringScorecardView({
+  session,
+  scorecard,
+  transcriptOpen,
+  holdEntrance = false,
+}: {
+  session: SparringSession;
+  scorecard: SparringScorecard;
+  transcriptOpen: boolean;
+  holdEntrance?: boolean;
+}) {
   const { t } = useTranslation();
   const { colors } = useTheme();
   return (
@@ -141,66 +159,72 @@ export function SparringScorecardView({ session, scorecard, transcriptOpen }: { 
         </Text>
       </View>
 
-      <View style={styles.totals}>
-        <View
-          style={[styles.total, styles.totalOwn, { backgroundColor: colors.primaryFill, borderBottomColor: colors.primaryLedge }]}
-          accessible
-          accessibilityLabel={`${t('sparring.scorecard.yourScore')}: ${scorecard.userScore}`}>
-          <Text style={[styles.totalLabel, styles.onGradient]}>{t('sparring.scorecard.yourScore')}</Text>
-          <Text weight="bold" style={[styles.totalValue, styles.onGradient]} testID="sparring-user-score">
-            {scorecard.userScore}
-          </Text>
-        </View>
-        <View style={[styles.total, { backgroundColor: colors.card, borderColor: colors.border }, styles.totalBorder]} accessible accessibilityLabel={`${t('sparring.scorecard.opponentScore')}: ${scorecard.aiScore}`}>
-          <Text tone="faint" style={styles.totalLabel}>
-            {t('sparring.scorecard.opponentScore')}
-          </Text>
-          <Text weight="bold" tone="secondary" style={styles.totalValue}>
-            {scorecard.aiScore}
-          </Text>
-        </View>
-      </View>
-
-      <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]} testID="sparring-categories">
-        <View style={styles.cardHead}>
-          <Text accessibilityRole="header" weight="bold" style={styles.cardTitle}>
-            {t('sparring.scorecard.categoryBalance')}
-          </Text>
-          <Text tone="faint" style={styles.cardDescription}>
-            {t('sparring.scorecard.categoryDescription')}
-          </Text>
-        </View>
-        {scorecard.categories.map((category) => (
+      <PopIn index={0} hold={holdEntrance}>
+        <View style={styles.totals}>
           <View
-            key={category.name}
-            style={styles.category}
+            style={[styles.total, styles.totalOwn, { backgroundColor: colors.primaryFill, borderBottomColor: colors.primaryLedge }]}
             accessible
-            accessibilityLabel={`${t(`sparring.category.${category.name}`)}. ${t('sparring.scorecard.accessibleCategoryScore', { user: category.userScore, opponent: category.aiScore })}`}>
-            <View style={styles.categoryLine}>
-              <Text weight="semibold" style={styles.categoryName}>
-                {t(`sparring.category.${category.name}`)}
-              </Text>
-              <Text tone="faint" style={styles.categoryScores}>
-                {t('mobile.sparring.versus', { user: category.userScore, opponent: category.aiScore })}
-              </Text>
-            </View>
-            <View style={[styles.track, { backgroundColor: colors.line }]}>
-              <View style={[styles.fill, { width: `${(category.userScore / CATEGORY_MAX) * 100}%`, backgroundColor: colors.primaryFill }]} />
-              {/* The opponent's score is the tick on the same bar. */}
-              <View style={[styles.tick, { left: `${(category.aiScore / CATEGORY_MAX) * 100}%`, backgroundColor: colors.secondary }]} />
-            </View>
+            accessibilityLabel={`${t('sparring.scorecard.yourScore')}: ${scorecard.userScore}`}>
+            <Text style={[styles.totalLabel, styles.onGradient]}>{t('sparring.scorecard.yourScore')}</Text>
+            <Text weight="bold" style={[styles.totalValue, styles.onGradient]} testID="sparring-user-score">
+              {scorecard.userScore}
+            </Text>
           </View>
-        ))}
-      </View>
+          <View style={[styles.total, { backgroundColor: colors.card, borderColor: colors.border }, styles.totalBorder]} accessible accessibilityLabel={`${t('sparring.scorecard.opponentScore')}: ${scorecard.aiScore}`}>
+            <Text tone="faint" style={styles.totalLabel}>
+              {t('sparring.scorecard.opponentScore')}
+            </Text>
+            <Text weight="bold" tone="secondary" style={styles.totalValue}>
+              {scorecard.aiScore}
+            </Text>
+          </View>
+        </View>
+      </PopIn>
 
-      <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]} testID="sparring-verdict">
-        <Text accessibilityRole="header" weight="bold" style={styles.cardTitle}>
-          {t('sparring.scorecard.verdict')}
-        </Text>
-        <Text tone="secondary" style={styles.verdict} selectable>
-          {scorecard.verdict}
-        </Text>
-      </View>
+      <PopIn index={1} hold={holdEntrance}>
+        <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]} testID="sparring-categories">
+          <View style={styles.cardHead}>
+            <Text accessibilityRole="header" weight="bold" style={styles.cardTitle}>
+              {t('sparring.scorecard.categoryBalance')}
+            </Text>
+            <Text tone="faint" style={styles.cardDescription}>
+              {t('sparring.scorecard.categoryDescription')}
+            </Text>
+          </View>
+          {scorecard.categories.map((category, index) => (
+            <View
+              key={category.name}
+              style={styles.category}
+              accessible
+              accessibilityLabel={`${t(`sparring.category.${category.name}`)}. ${t('sparring.scorecard.accessibleCategoryScore', { user: category.userScore, opponent: category.aiScore })}`}>
+              <View style={styles.categoryLine}>
+                <Text weight="semibold" style={styles.categoryName}>
+                  {t(`sparring.category.${category.name}`)}
+                </Text>
+                <Text tone="faint" style={styles.categoryScores}>
+                  {t('mobile.sparring.versus', { user: category.userScore, opponent: category.aiScore })}
+                </Text>
+              </View>
+              <View style={[styles.track, { backgroundColor: colors.line }]}>
+                <CategoryFill share={category.userScore / CATEGORY_MAX} index={index} hold={holdEntrance} color={colors.primaryFill} />
+                {/* The opponent's score is the tick on the same bar. */}
+                <View style={[styles.tick, { left: `${(category.aiScore / CATEGORY_MAX) * 100}%`, backgroundColor: colors.secondary }]} />
+              </View>
+            </View>
+          ))}
+        </View>
+      </PopIn>
+
+      <PopIn index={2} hold={holdEntrance}>
+        <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]} testID="sparring-verdict">
+          <Text accessibilityRole="header" weight="bold" style={styles.cardTitle}>
+            {t('sparring.scorecard.verdict')}
+          </Text>
+          <Text tone="secondary" style={styles.verdict} selectable>
+            {scorecard.verdict}
+          </Text>
+        </View>
+      </PopIn>
 
       <DocSection title={t('sparring.scorecard.categoryNotes')} description={t('sparring.scorecard.categoryNotesDescription')}>
         {scorecard.categories.map((category) => (
@@ -240,6 +264,24 @@ export function SparringScorecardView({ session, scorecard, transcriptOpen }: { 
       ) : null}
     </View>
   );
+}
+
+/**
+ * A category's bar, grown from empty on a spring after the cards arrive, one bar after another.
+ * The spring's overshoot never runs past the end of the track. Under Reduce Motion it is full at once.
+ */
+function CategoryFill({ share, index, hold, color }: { share: number; index: number; hold: boolean; color: string }) {
+  const reduce = useReducedMotion();
+  const grow = useSharedValue(reduce ? 1 : 0);
+  useEffect(() => {
+    if (reduce) {
+      grow.set(1);
+      return;
+    }
+    if (!hold) grow.set(withDelay(120 + staggerDelay(index) * 2, withSpring(1, SPRING.settle)));
+  }, [grow, hold, index, reduce]);
+  const style = useAnimatedStyle(() => ({ width: `${Math.min(1, Math.max(0, share * grow.value)) * 100}%` }));
+  return <Animated.View style={[styles.fill, { backgroundColor: color }, style]} />;
 }
 
 /** Every speech of a round, who gave it, and the time it took, as the website's transcript. */

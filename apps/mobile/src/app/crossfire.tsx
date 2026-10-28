@@ -8,6 +8,7 @@ import {
   type CrossfireState,
   type CrossfireTurn,
 } from '@debatelab/core/crossfire/schemas';
+import { formatRoundTime } from '@debatelab/core/sparring/formats';
 import { Stack, useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useReducer, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -16,6 +17,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AppTextInput } from '@/components/app-text-input';
 import { MainActionButton, TextButton } from '@/components/buttons';
+import { Celebration } from '@/components/celebration';
 import { ChoiceCards, CrossfireDebriefDocument, CrossfireTranscript } from '@/components/crossfire-views';
 import { DocumentScreen, DocumentTitle, SectionHeading } from '@/components/document';
 import { DocumentHeader } from '@/components/document-header';
@@ -126,6 +128,8 @@ export default function CrossfireScreen() {
   const roundQuota = useSessionQuota('crossfire');
   // Start waits for the round's cost; a second tap meanwhile does nothing.
   const [checkingQuota, setCheckingQuota] = useState(false);
+  // The round whose debrief arrived while this screen watched celebrates once; a kept or restarted one does not.
+  const [celebrating, setCelebrating] = useState<string | null>(null);
   // The debate chosen when the round started; null for one-off rounds.
   const debateTarget = useRef<string | null>(crossfireDraft.get()?.debateId ?? null);
   const [draftTurn, setDraftTurn] = useState('');
@@ -292,6 +296,8 @@ export default function CrossfireScreen() {
       // The effect below saves the finished round from the state it reaches, with any signal that came in meanwhile.
       if (debateId) pendingRecord.current = { sessionId: snapshot.sessionId, forUser, debateId };
       dispatch({ type: 'debrief-received', debrief });
+      // Shown only if the reducer took the debrief: the screen checks the round reached complete.
+      setCelebrating(snapshot.sessionId);
       // Review choices cover the round; its last request clears them, as on the website.
       resetContextChoices('crossfire');
       afterResponse(forUser, debateId, extras);
@@ -431,6 +437,7 @@ export default function CrossfireScreen() {
     abortSignals();
     debateTarget.current = null;
     dispatch({ type: 'session-reset' });
+    setCelebrating(null);
     setDraftTurn('');
     setFormError('');
     setNotice('');
@@ -553,20 +560,34 @@ export default function CrossfireScreen() {
   }
 
   if (state.phase === 'complete') {
+    const celebrate = celebrating === state.sessionId;
     return (
-      <DocumentScreen
-        testID="crossfire-complete"
-        header={<DocumentHeader backLabel={backLabel(t, from, 'practice')} actions={[]} />}
-        notice={notice}
-        actions={<MainActionButton label={t('crossfire.restart')} onPress={restart} />}>
-        <DocumentTitle title={t('crossfire.debriefTitle')} meta={state.config.resolution} />
-        <Text tone="secondary" style={styles.subtitle}>
-          {t('crossfire.debriefSubtitle')}
-        </Text>
-        <CrossfireDebriefDocument debrief={state.debrief} />
-        <SectionHeading title={t('crossfire.transcript')} />
-        <CrossfireTranscript turns={state.turns} />
-      </DocumentScreen>
+      <View style={styles.flex}>
+        <DocumentScreen
+          testID="crossfire-complete"
+          header={<DocumentHeader backLabel={backLabel(t, from, 'practice')} actions={[]} />}
+          notice={notice}
+          actions={<MainActionButton label={t('crossfire.restart')} onPress={restart} />}>
+          <DocumentTitle title={t('crossfire.debriefTitle')} meta={state.config.resolution} />
+          <Text tone="secondary" style={styles.subtitle}>
+            {t('crossfire.debriefSubtitle')}
+          </Text>
+          <CrossfireDebriefDocument debrief={state.debrief} holdEntrance={celebrate} />
+          <SectionHeading title={t('crossfire.transcript')} />
+          <CrossfireTranscript turns={state.turns} />
+        </DocumentScreen>
+        {celebrate ? (
+          <Celebration
+            eyebrow={t('crossfire.title')}
+            title={t('sparring.round.complete')}
+            stats={[
+              { key: 'concessions', label: t('crossfire.concessionsSecured'), value: state.debrief.concessionsSecured.length },
+              { key: 'time', label: t('export.sparringTimeUsed'), value: Math.max(0, Math.round((state.endedAt - state.startedAt) / 1000)), format: formatRoundTime },
+            ]}
+            onDone={() => setCelebrating(null)}
+          />
+        ) : null}
+      </View>
     );
   }
 

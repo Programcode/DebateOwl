@@ -273,6 +273,19 @@ async function shoot(page: Page, name: string) {
   await page.screenshot({ path: join(OUT, `${name}.png`), mask: [page.getByTestId('account-email'), page.getByTestId('delete-data-confirmation')] });
 }
 
+/**
+ * A finished round or case opens under its celebration: shoot it as `name`, then tap it away
+ * (unless it already went on its own) and wait until the screen underneath is clear.
+ */
+async function shootCelebration(page: Page, name: string) {
+  const celebration = page.getByTestId('celebration');
+  await celebration.waitFor({ timeout: 30_000 });
+  await page.waitForTimeout(400);
+  await shoot(page, name);
+  await celebration.click({ timeout: 2_000 }).catch(() => {});
+  await celebration.waitFor({ state: 'detached', timeout: 5_000 });
+}
+
 /** Answers user_settings reads with the run's language and the System theme (see the header). */
 async function pinSettings(page: Page, language: string) {
   await pinDebateActivity(page, 0);
@@ -722,6 +735,7 @@ async function shootResultScreens(context: BrowserContext, prefix: string, langu
   await page.getByTestId('generate-motion').waitFor({ timeout: 30_000 });
   await page.waitForFunction(() => (document.querySelector('[data-testid="generate-motion"]') as HTMLTextAreaElement | null)?.value.trim());
   await page.getByRole('button', { name: /^(Generate debate case|Vitaeset generálása|Generar caso de debate)$/i }).click();
+  await shootCelebration(page, `${prefix}-case-celebration`);
   await page.getByTestId('case-document').waitFor({ timeout: 30_000 });
   await page.waitForTimeout(400);
   await shoot(page, `${prefix}-case`);
@@ -1498,6 +1512,7 @@ async function shootCrossfireScreens(context: BrowserContext, prefix: string, la
   await shoot(page, `${prefix}-crossfire-exchange`);
 
   await page.getByTestId('crossfire-end').click();
+  await shootCelebration(page, `${prefix}-crossfire-celebration`);
   await page.getByTestId('crossfire-debrief').waitFor({ timeout: 15_000 });
   await page.waitForTimeout(400);
   await shoot(page, `${prefix}-crossfire-debrief`);
@@ -1642,6 +1657,7 @@ async function shootSparringScreens(context: BrowserContext, prefix: string, lan
   await shoot(page, `${prefix}-sparring-judging`);
   fake.release('score');
 
+  await shootCelebration(page, `${prefix}-sparring-celebration`);
   await page.getByTestId('sparring-scorecard').waitFor({ timeout: 15_000 });
   await page.waitForTimeout(400);
   await shoot(page, `${prefix}-sparring-scorecard`);

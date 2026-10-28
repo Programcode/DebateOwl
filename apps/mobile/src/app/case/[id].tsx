@@ -3,10 +3,12 @@ import type { CaseSection } from '@debatelab/core/ai/generate-output';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { StyleSheet, View } from 'react-native';
 
 import { ActionMenu } from '@/components/action-menu';
 import { PrimaryButton, SecondaryButton } from '@/components/buttons';
 import { CaseDocument } from '@/components/case-document';
+import { Celebration, clearCelebration, hasCelebration } from '@/components/celebration';
 import { openCitation } from '@/components/citation-target';
 import { DocumentScreen, DocumentTitle } from '@/components/document';
 import { DocumentHeader, type HeaderAction } from '@/components/document-header';
@@ -37,6 +39,9 @@ export default function CaseScreen() {
   const { setNotice } = doc;
   const edits = useCaseEdits(doc.state.status === 'ready' ? doc.state.key : null, setNotice);
   const shareLink = useShareLink(setNotice);
+  // Only the case Generate just made celebrates, once; a saved case reopened, or this one after Back, does not.
+  const [celebrate, setCelebrate] = useState(() => hasCelebration(id));
+  useEffect(() => clearCelebration(id), [id]);
 
   // Problems from saving a fresh result are told once, on arrival.
   useEffect(() => {
@@ -113,60 +118,82 @@ export default function CaseScreen() {
     ...(result.savedId ? [{ key: 'delete', label: t('common.delete'), symbol: 'trash' as const, icon: 'trash' as const, destructive: true, onPress: () => void doc.remove() }] : []),
   ];
 
+  const argumentCount = view.arguments.length;
+  const sourceCount = view.sources.length;
+
   return (
-    <DocumentScreen
-      testID="case-document"
-      outline
-      notice={doc.notice}
-      noticeTone={doc.noticeTone}
-      header={<DocumentHeader backLabel={back} onShare={() => run(() => shareText(title, caseToText(output)))} actions={actions} />}
-      // "Attack this case" is the longer label, so it gets the wider button.
-      actionWidths={[1.3, 1]}
-      actions={
-        <>
-          <SecondaryButton
-            floating
-            icon="shield"
-            label={t('mobile.results.attackThisCase')}
-            onPress={() => router.push({ pathname: '/attack', params: { caseKey: key } })}
-            testID="attack-this-case"
-          />
-          <PrimaryButton floating icon="download" label={t('common.export')} onPress={() => setExportOpen(true)} disabled={doc.busy} testID="export-button" />
-        </>
-      }>
-      <DocumentTitle title={title} meta={t('mobile.results.generatedMeta', { side, when: formatWhen(generatedAt) })} />
-      {regeneratingTitle ? <RegeneratingStrip title={regeneratingTitle} /> : null}
-      <CaseDocument output={output} library={doc.library} sources={result.sources} onCite={(target) => openCitation(router, target)} />
-      <ActionMenu
-        visible={regenerateOpen}
-        title={t('mobile.results.regenerateSection')}
-        testID="regenerate-menu"
-        items={sections.map((section) => ({ key: section.key, label: t('common.regenerate', { title: section.title }), icon: 'reset' as const }))}
-        cancelLabel={t('common.cancel')}
-        onClose={() => setRegenerateOpen(false)}
-        onSelect={(choice) => void edits.regenerate(choice as CaseSection)}
-      />
-      <ActionMenu
-        visible={exportOpen}
-        title={t('common.export')}
-        testID="export-menu"
-        items={[
-          { key: 'pdf', label: t('common.pdf'), icon: 'file' },
-          { key: 'copy', label: t('mobile.results.copyText'), icon: 'copy' },
-          // The website's Word export, built by the same code (packages/core/src/export/docx.ts).
-          { key: 'docx', label: t('common.docx'), icon: 'file' },
-        ]}
-        cancelLabel={t('common.cancel')}
-        onClose={() => setExportOpen(false)}
-        onSelect={(choice) => {
-          if (choice === 'pdf') run(() => sharePdf(caseExportHtml(output, t), caseExportFileName(output), title));
-          if (choice === 'docx') run(() => shareCaseDocx(output, t, title));
-          if (choice === 'copy') run(async () => {
-            await copyText(caseToText(output));
-            setNotice(t('generateResults.copiedToClipboard'));
-          });
-        }}
-      />
-    </DocumentScreen>
+    <View style={styles.root}>
+      <DocumentScreen
+        testID="case-document"
+        outline
+        notice={doc.notice}
+        noticeTone={doc.noticeTone}
+        header={<DocumentHeader backLabel={back} onShare={() => run(() => shareText(title, caseToText(output)))} actions={actions} />}
+        // "Attack this case" is the longer label, so it gets the wider button.
+        actionWidths={[1.3, 1]}
+        actions={
+          <>
+            <SecondaryButton
+              floating
+              icon="shield"
+              label={t('mobile.results.attackThisCase')}
+              onPress={() => router.push({ pathname: '/attack', params: { caseKey: key } })}
+              testID="attack-this-case"
+            />
+            <PrimaryButton floating icon="download" label={t('common.export')} onPress={() => setExportOpen(true)} disabled={doc.busy} testID="export-button" />
+          </>
+        }>
+        <DocumentTitle title={title} meta={t('mobile.results.generatedMeta', { side, when: formatWhen(generatedAt) })} />
+        {regeneratingTitle ? <RegeneratingStrip title={regeneratingTitle} /> : null}
+        <CaseDocument output={output} library={doc.library} sources={result.sources} onCite={(target) => openCitation(router, target)} />
+        <ActionMenu
+          visible={regenerateOpen}
+          title={t('mobile.results.regenerateSection')}
+          testID="regenerate-menu"
+          items={sections.map((section) => ({ key: section.key, label: t('common.regenerate', { title: section.title }), icon: 'reset' as const }))}
+          cancelLabel={t('common.cancel')}
+          onClose={() => setRegenerateOpen(false)}
+          onSelect={(choice) => void edits.regenerate(choice as CaseSection)}
+        />
+        <ActionMenu
+          visible={exportOpen}
+          title={t('common.export')}
+          testID="export-menu"
+          items={[
+            { key: 'pdf', label: t('common.pdf'), icon: 'file' },
+            { key: 'copy', label: t('mobile.results.copyText'), icon: 'copy' },
+            // The website's Word export, built by the same code (packages/core/src/export/docx.ts).
+            { key: 'docx', label: t('common.docx'), icon: 'file' },
+          ]}
+          cancelLabel={t('common.cancel')}
+          onClose={() => setExportOpen(false)}
+          onSelect={(choice) => {
+            if (choice === 'pdf') run(() => sharePdf(caseExportHtml(output, t), caseExportFileName(output), title));
+            if (choice === 'docx') run(() => shareCaseDocx(output, t, title));
+            if (choice === 'copy') run(async () => {
+              await copyText(caseToText(output));
+              setNotice(t('generateResults.copiedToClipboard'));
+            });
+          }}
+        />
+      </DocumentScreen>
+      {celebrate ? (
+        <Celebration
+          eyebrow={t('export.debateCase')}
+          title={title}
+          stats={[
+            { key: 'arguments', label: t('generateResults.arguments'), value: argumentCount },
+            ...(sourceCount > 0 ? [{ key: 'sources', label: t('generateResults.sources'), value: sourceCount }] : []),
+          ]}
+          // keepOpenResult already tapped success when the case arrived.
+          haptic={false}
+          onDone={() => setCelebrate(false)}
+        />
+      ) : null}
+    </View>
   );
 }
+
+const styles = StyleSheet.create({
+  root: { flex: 1 },
+});
