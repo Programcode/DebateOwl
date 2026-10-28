@@ -19,7 +19,7 @@ import { validateUrl } from '@/lib/validation/url';
 import { browserIsOffline, isBrowserNetworkFailure } from '@/lib/ai/client';
 import { useCurrentDebate, useDebateStore } from '@/lib/stores/debate-store';
 import { importSourceFile, SourceFileImportError } from '@/lib/source-file-import';
-import { libraryFolders, matchesLibrarySearch, sortLibrarySources, type LibrarySort } from '@debatelab/core/library';
+import { libraryFolders, matchesLibrarySearch, normalizeFolder, sortLibrarySources, type LibrarySort } from '@debatelab/core/library';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -467,7 +467,8 @@ export default function LibraryPage() {
   }, [folderKey, selectedFolder]);
   const visibleSources = sortLibrarySources(
     sourceLibrary
-      .filter((source) => selectedFolder === 'all' || (source.folder || 'General') === selectedFolder)
+      // The chips list trimmed names, so a legacy folder saved with spaces still matches its chip.
+      .filter((source) => selectedFolder === 'all' || normalizeFolder(source.folder) === selectedFolder)
       .filter((source) => matchesLibrarySearch(source, searchQuery)),
     sortBy,
   );

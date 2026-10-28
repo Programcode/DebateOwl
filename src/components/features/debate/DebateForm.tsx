@@ -58,7 +58,8 @@ export function DebateForm({ initial, submitLabel, pendingLabel, onSubmit, onCan
     setSaving(true);
     setError('');
     try {
-      await onSubmit({ motion: motion.trim(), settings: { format, role }, instructions: instructions.trim() });
+      // Settings this form does not show (the judge the iOS app sets) are kept.
+      await onSubmit({ motion: motion.trim(), settings: { ...initial?.settings, format, role }, instructions: instructions.trim() });
     } catch (submitError) {
       setError(submitError instanceof Error ? submitError.message : t('debate.saveFailed', 'Could not save the debate.'));
     } finally {
