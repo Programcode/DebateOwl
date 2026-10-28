@@ -9,6 +9,7 @@ import { Icon } from './icon';
 import { folderLabel } from './source-display';
 import { Text } from './text';
 
+import { haptics } from '@/lib/haptics';
 import type { Source } from '@/lib/sources';
 import { radius } from '@/theme/colors';
 import { useTheme } from '@/theme/use-theme';
@@ -79,7 +80,10 @@ export function FolderBar({
       <Switch
         value={allOn}
         disabled={sources.length === 0}
-        onValueChange={onSetActive}
+        onValueChange={(value) => {
+          haptics.tap();
+          onSetActive(value);
+        }}
         accessibilityLabel={`${t('libraryPage.useForGrounding')}: ${name}`}
         trackColor={{ true: colors.primaryFill, false: colors.segmentTrack }}
         ios_backgroundColor={colors.segmentTrack}

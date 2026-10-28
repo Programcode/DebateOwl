@@ -74,7 +74,6 @@ export function useSourceActions() {
     const debateId = sources[0]?.debateId;
     if (!userId || !debateId) return false;
     if (refuseOffline(t('libraryPage.offlineTitle'))) return false;
-    haptics.tap();
     try {
       await setSourcesActive(userId, debateId, sources.map((source) => source.id), isActive);
       return true;

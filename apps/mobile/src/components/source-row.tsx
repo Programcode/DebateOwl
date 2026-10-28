@@ -10,6 +10,7 @@ import { Icon } from './icon';
 import { folderLabel, SOURCE_ICONS, sourceMeta } from './source-display';
 import { Text } from './text';
 
+import { haptics } from '@/lib/haptics';
 import type { Source } from '@/lib/sources';
 import { radius } from '@/theme/colors';
 import { useTheme } from '@/theme/use-theme';
@@ -93,6 +94,7 @@ export function SourceRow({
   };
   const toggle = () => {
     swipeable.current?.close();
+    haptics.tap();
     actions.onToggle(!source.isActive);
   };
 
@@ -168,7 +170,10 @@ export function SourceRow({
                 </View>
                 <Switch
                   value={source.isActive}
-                  onValueChange={(value) => actions.onToggle(value)}
+                  onValueChange={(value) => {
+                    haptics.tap();
+                    actions.onToggle(value);
+                  }}
                   accessibilityLabel={t('libraryPage.toggleSourceLabel', { title })}
                   trackColor={{ true: colors.primaryFill, false: colors.segmentTrack }}
                   ios_backgroundColor={colors.segmentTrack}

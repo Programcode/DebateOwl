@@ -24,6 +24,7 @@ interface ShownToast extends ToastOptions {
 }
 
 const ToastContext = createContext<(toast: ToastOptions) => void>(() => {});
+const ShownContext = createContext<{ toast: ShownToast | null; close: () => void }>({ toast: null, close: () => {} });
 
 /** Shows a short message above the tab bar, as the website's toasts do. A newer toast replaces the one showing. */
 export function useToast(): (toast: ToastOptions) => void {
@@ -39,7 +40,8 @@ const TAB_BAR = 56;
 let ids = 0;
 
 /**
- * The app's toasts. Form sheets are drawn above the root view, so a sheet
+ * The app's toasts: the provider holds the one showing, and `ToastHost` draws
+ * it above the screens. Form sheets are drawn above the root view, so a sheet
  * keeps its own inline messages and the toast shows once the sheet closes.
  */
 export function ToastProvider({ children }: { children: ReactNode }) {
@@ -62,13 +64,18 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     };
   }, [toast]);
 
-  const value = useMemo(() => show, [show]);
+  const shown = useMemo(() => ({ toast, close: () => setToast(null) }), [toast]);
   return (
-    <ToastContext.Provider value={value}>
-      {children}
-      {toast ? <ToastView key={toast.id} toast={toast} onClose={() => setToast(null)} /> : null}
+    <ToastContext.Provider value={show}>
+      <ShownContext.Provider value={shown}>{children}</ShownContext.Provider>
     </ToastContext.Provider>
   );
+}
+
+/** Draws the toast showing; put it once above the screens. */
+export function ToastHost() {
+  const { toast, close } = useContext(ShownContext);
+  return toast ? <ToastView key={toast.id} toast={toast} onClose={close} /> : null;
 }
 
 function ToastView({ toast, onClose }: { toast: ShownToast; onClose: () => void }) {

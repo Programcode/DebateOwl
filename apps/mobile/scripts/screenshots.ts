@@ -865,6 +865,10 @@ async function fakeLibrary(page: Page) {
     const object = (request.headers()['accept'] ?? '').includes('vnd.pgrst.object');
     const debate = url.searchParams.get('debate_id')?.replace(/^eq\./, '');
     if (url.pathname.endsWith('/source_folders')) {
+      if (request.method() === 'POST') {
+        const body = request.postDataJSON() as { name?: string } | { name?: string }[];
+        for (const row of Array.isArray(body) ? body : [body]) if (row.name && !folders.includes(row.name)) folders.push(row.name);
+      }
       return route.fulfill({ status: request.method() === 'GET' ? 200 : 201, headers: CORS, json: request.method() === 'GET' ? folders.map((name) => ({ name })) : [] });
     }
     if (debate && !rows) rows = librarySources(debate);
@@ -915,6 +919,16 @@ async function shootLibraryScreens(page: Page, prefix: string, problems: string[
   await page.getByTestId('folder-chip').filter({ hasText: 'Evidence' }).click();
   await page.getByTestId('folder-bar').waitFor();
   await shoot(page, `${prefix}-library-folder`);
+
+  // New folder asks for a name (window.prompt in the web preview) and stays chosen once it is saved.
+  page.once('dialog', (dialog) => void dialog.accept('Field notes'));
+  await page.getByTestId('library-more').click();
+  await page.getByTestId('library-more-menu').getByRole('menuitem').nth(-2).click();
+  await page.getByTestId('folder-bar').filter({ hasText: 'Field notes' }).waitFor({ timeout: 15_000 });
+  await settle(page);
+  await page.waitForTimeout(500);
+  if ((await page.getByTestId('folder-bar').filter({ hasText: 'Field notes' }).count()) === 0) throw new Error('The new folder did not stay chosen');
+  await shoot(page, `${prefix}-library-new-folder`);
 
   await page.getByTestId('library-add').click();
   await page.getByRole('menu').waitFor();

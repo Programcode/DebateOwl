@@ -219,10 +219,14 @@ function useLibrary(debateId: string | null) {
   );
   useEffect(() => subscribeSourcesChanged(() => void load()), [load]);
 
-  // A folder that no longer exists here (renamed, deleted, or only another debate's) shows all folders again.
+  // A folder that no longer exists here (renamed or deleted elsewhere, or only another debate's)
+  // shows all folders again. Checked only when the folder list reloads: a folder just created or
+  // renamed here is chosen before its reload lands, and the reload then lists it.
+  const chosen = useRef(folder);
+  chosen.current = folder;
   useEffect(() => {
-    if (folder !== ALL && !folders.includes(folder) && !(sources ?? []).some((source) => source.folder === folder)) setFolder(ALL);
-  }, [folder, folders, sources]);
+    if (chosen.current !== ALL && !folders.includes(chosen.current)) setFolder(ALL);
+  }, [folders]);
 
   const inFolder = useMemo(
     () => (sources ?? []).filter((source) => folder === ALL || normalizeFolder(source.folder) === folder),
