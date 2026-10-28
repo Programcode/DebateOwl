@@ -1,5 +1,5 @@
-import { useEffect, useRef } from 'react';
-import { Animated, Easing, Image, type ImageSourcePropType, type ImageStyle, StyleSheet, View } from 'react-native';
+import { useEffect, useRef, useState } from 'react';
+import { AccessibilityInfo, Animated, Easing, Image, type ImageSourcePropType, type ImageStyle, StyleSheet, View } from 'react-native';
 
 import { useTheme } from '@/theme/use-theme';
 
@@ -103,10 +103,32 @@ export function OwlMark({ size }: { size: number }) {
   );
 }
 
-/** The owl bobbing gently while a request runs, where the website shows OwlLoader. */
+/** Whether iOS's Reduce Motion is on, kept current while the screen shows. */
+function useReduceMotion(): boolean {
+  const [reduce, setReduce] = useState(false);
+  useEffect(() => {
+    let active = true;
+    void AccessibilityInfo.isReduceMotionEnabled().then((value) => {
+      if (active) setReduce(value);
+    });
+    const subscription = AccessibilityInfo.addEventListener('reduceMotionChanged', setReduce);
+    return () => {
+      active = false;
+      subscription.remove();
+    };
+  }, []);
+  return reduce;
+}
+
+/** The owl bobbing gently while a request runs, where the website shows OwlLoader; still under Reduce Motion. */
 export function OwlLoader({ pose, size, label }: { pose: OwlPose; size: number; label?: string }) {
   const bob = useRef(new Animated.Value(0)).current;
+  const reduceMotion = useReduceMotion();
   useEffect(() => {
+    if (reduceMotion) {
+      bob.setValue(0);
+      return;
+    }
     const loop = Animated.loop(
       Animated.sequence([
         Animated.timing(bob, { toValue: 1, duration: 600, easing: Easing.inOut(Easing.quad), useNativeDriver: true }),
@@ -115,7 +137,7 @@ export function OwlLoader({ pose, size, label }: { pose: OwlPose; size: number; 
     );
     loop.start();
     return () => loop.stop();
-  }, [bob]);
+  }, [bob, reduceMotion]);
   return (
     // Labelled, it is the progress indicator; unlabelled, a progress line beside it speaks and the owl is decoration.
     <Animated.View
