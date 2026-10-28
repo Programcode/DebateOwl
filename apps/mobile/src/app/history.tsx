@@ -80,16 +80,14 @@ const EMPTY: Record<HistoryTab, { title: string; desc: string; action: string; h
 
 /**
  * Where a History row opens, or null when the app cannot open it. Chats load
- * back into Ask, as the website's Resume does, and a Sparring round opens its
- * scorecard, as the website's Load does. The website cannot reopen a
- * Crossfire round, so neither can the app.
+ * back into Ask, as the website's Resume does, a Sparring round opens its
+ * scorecard, as the website's Load does, and a Crossfire round opens its
+ * debrief and transcript to read (crossfire-round/[id]).
  */
 function historyHref(item: HistoryItem): Href | null {
   switch (item.kind) {
     case 'chat':
       return { pathname: '/ask', params: { chat: item.id } };
-    case 'crossfire':
-      return null;
     default:
       return workHref(item, 'history');
   }

@@ -2883,7 +2883,9 @@
       "resume": "Resume",
       "replay": "Replay",
       "versus": "{{user}} vs {{opponent}}",
-      "roundsFailed": "Could not load your sparring rounds."
+      "roundsFailed": "Could not load your sparring rounds.",
+      "exportPdf": "Export as PDF",
+      "exportFailed": "The PDF could not be made. Try again."
     },
     "brainstorm": {
       "strengths": {

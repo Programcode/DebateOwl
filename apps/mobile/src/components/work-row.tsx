@@ -27,9 +27,9 @@ export const KIND_ICONS: Record<DebateItemKind, IconName> = {
 export type OpenedFrom = 'debate' | 'prepare' | 'practice' | 'history';
 
 /**
- * Where a saved item opens. Cases, attacks, brainstorms, factoids and Sparring
- * rounds open read-only as documents, a flowchart opens on the Flowchart screen, and
- * Practice work opens the Practice tab.
+ * Where a saved item opens. Cases, attacks, brainstorms, factoids, Sparring
+ * and Crossfire rounds open read-only as documents, a flowchart opens on the
+ * Flowchart screen, and Practice work opens the Practice tab.
  */
 export function workHref(item: DebateItem, from: OpenedFrom): Href {
   switch (item.kind) {
@@ -45,6 +45,8 @@ export function workHref(item: DebateItem, from: OpenedFrom): Href {
       return { pathname: '/flowchart', params: { id: item.id, from } };
     case 'sparring':
       return { pathname: '/sparring/[id]', params: { id: item.id, from } };
+    case 'crossfire':
+      return { pathname: '/crossfire-round/[id]', params: { id: item.id, from } };
     default:
       return '/practice';
   }

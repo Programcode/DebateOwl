@@ -1,8 +1,10 @@
 import { QUOTA_SESSION_KEY } from '@debatelab/core/ai/session-quota';
 import {
   collectDebriefTurnIds,
+  CrossfireConfigSchema,
   CrossfireDebriefSchema,
   CrossfireReplySchema,
+  CrossfireTranscriptSchema,
   CrossfireTurnSignalSchema,
   type CrossfireAIInput,
   type CrossfireConfig,
@@ -19,7 +21,7 @@ import { parseVoicePayload, type VoicePayload } from '@debatelab/core/voice/payl
 import { abortError, AIError, functionOutput, postFunction, PROVIDER, responseExtras, type ResponseExtras } from './ai-request';
 import { debateListScopes } from './debates';
 import type { FeatureConfig } from './feature-config';
-import { afterWrite } from './offline-cache';
+import { afterWrite, cachedRead, readFailed, type CopyMark } from './offline-cache';
 import { sessionSlot } from './session-memory';
 import { supabase } from './supabase';
 
@@ -229,3 +231,38 @@ export const crossfireDraft = sessionSlot<{ state: CrossfireState; debateId: str
  * screen, as the website's route state: taken once, when the screen opens.
  */
 export const crossfirePrefill = sessionSlot<CrossfirePrefill | null>(() => null);
+
+/** A saved round as it was recorded: the transcript with its signals and delivery, and the debrief. */
+export interface SavedCrossfire {
+  id: string;
+  title: string;
+  createdAt: number;
+  config: CrossfireConfig | null;
+  turns: CrossfireTurn[];
+  debrief: CrossfireDebrief | null;
+}
+
+async function loadCrossfireRound(userId: string, id: string): Promise<SavedCrossfire | null> {
+  const { data, error, status } = await supabase.from('crossfires').select('id,title,input,output,created_at').eq('user_id', userId).eq('id', id).maybeSingle();
+  if (error) throw readFailed(error, status);
+  if (!data) return null;
+  const row = data as { id: string; title: string | null; input: unknown; output: unknown; created_at: string };
+  const output = row.output && typeof row.output === 'object' ? (row.output as Record<string, unknown>) : {};
+  // The website's own rows, read with its schemas; a part that does not parse is left out, not guessed.
+  const turns = CrossfireTranscriptSchema.safeParse(output.turns);
+  const debrief = CrossfireDebriefSchema.safeParse(output.debrief);
+  const config = CrossfireConfigSchema.safeParse(row.input);
+  return {
+    id: row.id,
+    title: row.title ?? '',
+    createdAt: new Date(row.created_at).getTime(),
+    config: config.success ? config.data : null,
+    turns: turns.success ? turns.data : [],
+    debrief: debrief.success ? debrief.data : null,
+  };
+}
+
+/** A saved round, for reading it again from History or the Debate tab. */
+export function fetchCrossfireRound(userId: string, id: string, mark?: CopyMark): Promise<SavedCrossfire | null> {
+  return cachedRead(userId, 'crossfire', id, () => loadCrossfireRound(userId, id), mark);
+}

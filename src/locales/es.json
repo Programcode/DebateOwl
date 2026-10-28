@@ -2883,7 +2883,9 @@
       "resume": "Reanudar",
       "replay": "Repasar",
       "versus": "{{user}} vs. {{opponent}}",
-      "roundsFailed": "No se pudieron cargar tus rondas de sparring."
+      "roundsFailed": "No se pudieron cargar tus rondas de sparring.",
+      "exportPdf": "Exportar como PDF",
+      "exportFailed": "No se pudo crear el PDF. Inténtalo de nuevo."
     },
     "brainstorm": {
       "strengths": {

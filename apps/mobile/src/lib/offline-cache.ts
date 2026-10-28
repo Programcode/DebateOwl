@@ -39,6 +39,8 @@ const LIMITS = {
   /** Judged Sparring rounds per debate, and each saved round. */
   'sparring-rounds': 20,
   sparring: 40,
+  /** Saved Crossfire rounds, each opened on its own. */
+  crossfire: 20,
   /** History's six lists of a debate, and the work outside every debate (`one-off`). */
   history: 20,
 } as const;

@@ -3,6 +3,9 @@ import type { BrainstormOutput } from '@debatelab/core/ai/schemas/brainstorm';
 import type { FactoidsOutput } from '@debatelab/core/ai/schemas/factoids';
 import type { GenerateOutput } from '@debatelab/core/ai/schemas/generate';
 import { mapRows, type FlowchartDocument, type FlowNodeType } from '@debatelab/core/flowchart';
+import { formatRoundTime } from '@debatelab/core/sparring/formats';
+import type { SparringSession } from '@debatelab/core/sparring/session';
+import { LONG_PAUSE_SECONDS } from '@debatelab/core/voice/delivery';
 
 import { mapMeta, typeLabel, viaLabel } from './flowchart-text';
 
@@ -220,4 +223,70 @@ export function flowchartExportHtml(title: string, meta: string, doc: FlowchartD
       node.data.description ? `<p class="description">${escape(node.data.description)}</p>` : ''}${note && note !== typeLabel(t, node.data.type) ? `<div class="meta">${escape(note)}</div>` : ''}</div></div>`;
   });
   return page(title, meta, FLOW_STYLE + rows.join(''), t);
+}
+
+/** The website's file name (exportSparringToPdf): the day the round was last updated. */
+export function sparringExportFileName(session: SparringSession): string {
+  return `SparringTranscript_${new Date(session.updatedAt).toISOString().slice(0, 10)}.pdf`;
+}
+
+const sparringSide = (side: SparringSession['userSide'], t: Translate) => (side === 'pro' ? t('export.proposition') : t('export.opposition'));
+
+/**
+ * The website's Sparring PDF (exportSparringToPdf): the round's set-up, the
+ * totals, every category with its feedback, the judge's verdict, key
+ * moments and what to work on, and the transcript. A speech the student
+ * spoke aloud also lists its measured delivery, as the scorecard does.
+ */
+export function sparringExportHtml(session: SparringSession, t: Translate): string {
+  const scorecard = session.scorecard;
+  const format = t(`sparring.format.${session.format}`, { defaultValue: session.format.toUpperCase() });
+  const difficulty = t(`sparring.difficulty.${session.difficulty}`, { defaultValue: session.difficulty });
+  const used = session.speeches.reduce((total, speech) => total + speech.timeUsedSeconds, 0);
+  const limit = session.speeches.reduce((total, speech) => total + speech.timeLimitSeconds, 0);
+  const winner = scorecard?.winner === 'user' ? t('export.sparringUser') : scorecard?.winner === 'ai' ? t('export.sparringOpponent') : t('export.sparringTie');
+  const parts: string[] = [TABLE_STYLE];
+  parts.push(`<h2>${escape(t('export.sparringConfiguration'))}</h2>`);
+  parts.push(paragraph(t('export.motion'), session.motion));
+  parts.push(paragraph(t('export.sparringFormat'), format));
+  parts.push(paragraph(t('export.side'), sparringSide(session.userSide, t)));
+  parts.push(paragraph(t('export.sparringDifficulty'), difficulty));
+
+  parts.push(`<h2>${escape(t('export.sparringTotals'))}</h2>`);
+  parts.push(scorecard
+    ? table(
+      [t('export.sparringUser'), t('export.sparringScore'), t('export.sparringOpponent'), t('export.sparringScore'), t('export.sparringResult')],
+      [[t('export.sparringUser'), `${scorecard.userScore}/100`, t('export.sparringOpponent'), `${scorecard.aiScore}/100`, `${t('export.sparringWinner')}: ${winner}`]],
+    )
+    : `<p>${escape(t('export.sparringScorecardUnavailable'))}</p>`);
+  parts.push(paragraph(t('export.sparringSpeeches'), String(session.speeches.length)));
+  parts.push(paragraph(t('export.sparringTimeUsed'), `${formatRoundTime(used)} / ${formatRoundTime(limit)}`));
+
+  if (scorecard) {
+    parts.push(`<h2>${escape(t('export.sparringCategories'))}</h2>`);
+    parts.push(table(
+      [t('export.sparringCategory'), t('export.sparringUser'), t('export.sparringOpponent'), t('export.sparringFeedback')],
+      scorecard.categories.map((category) => [t(`sparring.category.${category.name}`, { defaultValue: category.name }), `${category.userScore}/25`, `${category.aiScore}/25`, category.feedback]),
+    ));
+    parts.push(`<h2>${escape(t('export.sparringFeedback'))}</h2><p>${escape(scorecard.verdict)}</p><p>${escape(scorecard.overallFeedback)}</p>`);
+    if (scorecard.keyMoments.length) parts.push(`<h2>${escape(t('export.sparringKeyMoments'))}</h2>${bullets(scorecard.keyMoments)}`);
+    if (scorecard.improvementAreas.length) parts.push(`<h2>${escape(t('export.sparringImprovementAreas'))}</h2>${bullets(scorecard.improvementAreas)}`);
+  }
+
+  parts.push(`<h2>${escape(t('export.sparringTranscript'))}</h2>`);
+  if (session.speeches.length === 0) parts.push(`<p>${escape(t('export.sparringNoTranscript'))}</p>`);
+  session.speeches.forEach((speech, index) => {
+    const delivery = speech.delivery
+      ? paragraph(t('voiceRound.delivery.title'), [
+        `${t('voiceRound.delivery.pace')}: ${t('voiceRound.delivery.wordsPerMinute', { count: speech.delivery.wordsPerMinute })}`,
+        `${t('voiceRound.delivery.fillers')}: ${speech.delivery.fillerCount}`,
+        `${t('voiceRound.delivery.longPauses', { seconds: LONG_PAUSE_SECONDS })}: ${speech.delivery.longPauses}`,
+      ].join(' · '))
+      : '';
+    parts.push(`<div class="block"><h3><span class="number">${index + 1}.</span>${escape(t(`sparring.turns.${speech.turnId}`, { defaultValue: speech.role }))}</h3>${
+      paragraph(t('export.side'), sparringSide(speech.side, t))}${
+      paragraph(t('export.sparringTimeUsed'), `${formatRoundTime(speech.timeUsedSeconds)} / ${formatRoundTime(speech.timeLimitSeconds)}`)}${
+      delivery}${speech.content.split(/\n{2,}/).map((block) => `<p>${escape(block)}</p>`).join('')}</div>`);
+  });
+  return page(t('export.sparringTranscript'), `${sparringSide(session.userSide, t)} | ${format} | ${difficulty}`, parts.join(''), t);
 }

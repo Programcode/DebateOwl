@@ -2883,7 +2883,9 @@
       "resume": "Folytatás",
       "replay": "Visszanézés",
       "versus": "{{user}} – {{opponent}}",
-      "roundsFailed": "Nem sikerült betölteni a vitapárbaj-fordulóidat."
+      "roundsFailed": "Nem sikerült betölteni a vitapárbaj-fordulóidat.",
+      "exportPdf": "Exportálás PDF-be",
+      "exportFailed": "Nem sikerült elkészíteni a PDF-et. Próbáld újra."
     },
     "brainstorm": {
       "strengths": {
