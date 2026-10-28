@@ -11,14 +11,18 @@ import { FolderSelect } from './folder-select';
 import { FormGroup, SelectRow, SwitchRow } from './form-rows';
 import { Icon } from './icon';
 import { folderLabel, SOURCE_ICONS, sourceMeta } from './source-display';
+import { WaitingToSync } from './source-row';
 import { Text } from './text';
 import { useToast } from './toast';
 
 import { useAuth } from '@/lib/auth';
 import { formatRelativeDate } from '@/lib/dates';
 import { haptics } from '@/lib/haptics';
+import { currentSourceId, isLocalSourceId, queuedSource, queueUpdateSource, waitingSourceIds, withQueuedWrite, type QueuedPatch } from '@/lib/offline-queue';
 import { useSourceActions } from '@/lib/source-actions';
-import { fetchSource, updateSource, type Source, type SourcePatch, type SourceType } from '@/lib/sources';
+import { fetchSource, type Source, type SourceType } from '@/lib/sources';
+import { useOfflineStatus } from '@/lib/network-status';
+import { useQueuedWrites } from '@/lib/use-offline-queue';
 import { useCopyHolder } from '@/lib/use-copy-holder';
 import { useLibraryFolders } from '@/lib/use-library-folders';
 import { radius } from '@/theme/colors';
@@ -40,6 +44,9 @@ type Draft = Pick<Source, 'title' | 'content' | 'type'> & { origin: string };
  * title, type, origin and text; Save sends only what was changed.
  * The source sheet shows it with a Done button; the iPad Library shows it
  * beside the list. Mount it with a key per source, so a new selection never shows the last one.
+ * Edits, the switch and moves go through the offline queue; a note that has
+ * not reached the server is read from the queue, and its temporary id gives way
+ * to the row's once it syncs.
  */
 export function SourceView({ id, onDone, onRemoved }: { id: string; onDone?: () => void; onRemoved?: () => void }) {
   const { t, i18n } = useTranslation();
@@ -55,15 +62,23 @@ export function SourceView({ id, onDone, onRemoved }: { id: string; onDone?: () 
   const [saveError, setSaveError] = useState('');
   const copies = useCopyHolder();
   const actions = useSourceActions();
-  const { folders } = useLibraryFolders(source?.debateId ?? null);
+  const queued = useQueuedWrites(userId);
+  const realId = currentSourceId(queued, id);
+  const local = isLocalSourceId(realId);
+  // What shows: a waiting note from the queue, or the row read with the queued changes on top.
+  const view: Source | null | undefined = local ? queuedSource(queued, realId) : source && withQueuedWrite(queued, source);
+  const waiting = view ? waitingSourceIds(queued).has(view.id) : false;
+  const { offline } = useOfflineStatus();
+  const { folders } = useLibraryFolders(view?.debateId ?? null);
 
   // The same read as the source sheet. Leaving the screen drops the saved copy it is showing.
+  // A note that waits has no row to read yet.
   useFocusEffect(
     useCallback(() => {
-      if (!userId) return;
+      if (!userId || local) return;
       let active = true;
       setFailed(false);
-      fetchSource(userId, id, copies.mark())
+      fetchSource(userId, realId, copies.mark())
         .then((next) => {
           if (!active) return;
           setSource(next);
@@ -77,51 +92,57 @@ export function SourceView({ id, onDone, onRemoved }: { id: string; onDone?: () 
         active = false;
         copies.release();
       };
-    }, [userId, id, copies]),
+    }, [userId, realId, local, copies]),
   );
 
-  const url = webUrl(source?.origin ?? null);
+  const url = webUrl(view?.origin ?? null);
 
   const toggle = async (isActive: boolean) => {
-    if (!source) return;
-    setSource({ ...source, isActive });
-    if (!(await actions.setActive([source], isActive))) setSource((current) => current && { ...current, isActive: source.isActive });
+    if (!view) return;
+    const before = view.isActive;
+    setSource((current) => current && { ...current, isActive });
+    if (!(await actions.setActive([view], isActive))) setSource((current) => current && { ...current, isActive: before });
   };
   const move = async (folder: string) => {
-    if (!source) return;
-    setSource({ ...source, folder });
-    if (!(await actions.move(source, folder))) setSource((current) => current && { ...current, folder: source.folder });
+    if (!view) return;
+    const before = view.folder;
+    setSource((current) => current && { ...current, folder });
+    if (!(await actions.move(view, folder))) setSource((current) => current && { ...current, folder: before });
   };
   const remove = async () => {
-    if (!source) return;
-    if (await actions.remove(source)) (onRemoved ?? onDone)?.();
+    if (!view) return;
+    if (await actions.remove(view)) (onRemoved ?? onDone)?.();
   };
 
   const edit = () => {
-    if (!source) return;
+    if (!view) return;
     setSaved(false);
     setSaveError('');
-    setDraft({ title: source.title, content: source.content, type: source.type, origin: source.origin ?? '' });
+    setDraft({ title: view.title, content: view.content, type: view.type, origin: view.origin ?? '' });
   };
   const save = async () => {
-    if (!source || !draft || !userId || !source.debateId || saving) return;
+    if (!view || !draft || !userId || !view.debateId || saving) return;
     if (!draft.title.trim() || !draft.content.trim()) return;
     // Only what was edited is written, so a switch flipped meanwhile is kept.
-    const patch: SourcePatch = {};
-    if (draft.title.trim() !== source.title) patch.title = draft.title;
-    if (draft.content.trim() !== source.content) patch.content = draft.content;
-    if (draft.type !== source.type) patch.type = draft.type;
-    if (draft.origin.trim() !== (source.origin ?? '')) patch.origin = draft.origin;
+    const patch: QueuedPatch = {};
+    if (draft.title.trim() !== view.title) patch.title = draft.title;
+    if (draft.content.trim() !== view.content) patch.content = draft.content;
+    if (draft.type !== view.type) patch.type = draft.type;
+    if (draft.origin.trim() !== (view.origin ?? '')) patch.origin = draft.origin;
     setSaving(true);
     setSaveError('');
     try {
-      await updateSource(userId, source.debateId, source.id, patch);
-      setSource({ ...source, title: draft.title.trim(), content: draft.content.trim(), type: draft.type, origin: draft.origin.trim() || null });
+      // Offline the edit waits on the phone; the marker below says so instead of the mint confirmation.
+      const status = await queueUpdateSource(userId, view.debateId, view.id, patch);
+      setSource((current) => current && { ...current, title: draft.title.trim(), content: draft.content.trim(), type: draft.type, origin: draft.origin.trim() || null });
       setDraft(null);
-      setSaved(true);
-      haptics.success();
-      // A sheet sits above the toast, so the sheet says it here; the iPad pane gets the toast too.
-      if (!onDone) toast({ tone: 'success', title: t('libraryPage.sourceUpdated'), message: t('libraryPage.sourceUpdatedDesc') });
+      setSaved(status === 'saved');
+      if (status === 'queued') haptics.tap();
+      else {
+        haptics.success();
+        // A sheet sits above the toast, so the sheet says it here; the iPad pane gets the toast too.
+        if (!onDone) toast({ tone: 'success', title: t('libraryPage.sourceUpdated'), message: t('libraryPage.sourceUpdatedDesc') });
+      }
     } catch (cause) {
       console.warn('Could not save the source:', cause instanceof Error ? cause.message : cause);
       haptics.warning();
@@ -131,25 +152,25 @@ export function SourceView({ id, onDone, onRemoved }: { id: string; onDone?: () 
     }
   };
 
-  const semantic = source?.metadata?.semantic;
-  const words = source ? source.content.trim().split(/\s+/).filter(Boolean).length : 0;
+  const semantic = view?.metadata?.semantic;
+  const words = view ? view.content.trim().split(/\s+/).filter(Boolean).length : 0;
 
   return (
     <>
       <View style={styles.header}>
         <View style={styles.headerText}>
-          {source ? (
+          {view ? (
             <View style={styles.kind}>
-              <IconTile name={SOURCE_ICONS[source.type]} size={30} />
+              <IconTile name={SOURCE_ICONS[view.type]} size={30} />
               <Text tone="faint" style={styles.meta} numberOfLines={2}>
-                {sourceMeta(t, source)}
+                {sourceMeta(t, view)}
               </Text>
             </View>
           ) : null}
         </View>
         {draft ? (
           <TextButton label={t('common.cancel')} onPress={() => setDraft(null)} disabled={saving} />
-        ) : source ? (
+        ) : view ? (
           <TextButton label={t('mobile.library.edit')} onPress={edit} />
         ) : null}
         {onDone && !draft ? <TextButton label={t('mobile.common.done')} onPress={onDone} /> : null}
@@ -159,9 +180,9 @@ export function SourceView({ id, onDone, onRemoved }: { id: string; onDone?: () 
         <Text tone="secondary" style={styles.body}>
           {t('mobile.library.loadFailed')}
         </Text>
-      ) : source === undefined ? (
+      ) : view === undefined ? (
         <ActivityIndicator style={styles.loading} accessibilityRole="progressbar" />
-      ) : source === null ? (
+      ) : view === null ? (
         <Text tone="secondary" style={styles.body}>
           {t('mobile.library.sourceMissing')}
         </Text>
@@ -206,12 +227,19 @@ export function SourceView({ id, onDone, onRemoved }: { id: string; onDone?: () 
       ) : (
         <>
           <Text accessibilityRole="header" weight="display" style={styles.title} selectable>
-            {source.title || t('libraryPage.untitledSource')}
+            {view.title || t('libraryPage.untitledSource')}
           </Text>
           <Text tone="faint" style={styles.meta}>
-            {[folderLabel(t, source.folder), formatRelativeDate(source.createdAt), t('libraryPage.wordCount', { count: words, formatted: words.toLocaleString(i18n.language) })].join(' · ')}
+            {[folderLabel(t, view.folder), formatRelativeDate(view.createdAt), t('libraryPage.wordCount', { count: words, formatted: words.toLocaleString(i18n.language) })].join(' · ')}
           </Text>
-          {saved ? (
+          {waiting ? (
+            <View style={styles.waiting}>
+              <WaitingToSync />
+              <Text tone="faint" style={styles.waitingText}>
+                {offline ? t('mobile.offlineQueue.syncsWhenOnline') : t('mobile.offlineQueue.syncingSoon')}
+              </Text>
+            </View>
+          ) : saved ? (
             <View accessibilityRole="alert" style={[styles.saved, { backgroundColor: colors.successTint, borderColor: colors.successFill }]}>
               <View style={[styles.check, { backgroundColor: colors.successFill }]}>
                 <Icon name="check" color="#FFFFFF" size={13} />
@@ -233,9 +261,9 @@ export function SourceView({ id, onDone, onRemoved }: { id: string; onDone?: () 
               </Text>
               <Icon name="externalLink" color={colors.primary} size={17} />
             </Pressable>
-          ) : source.origin ? (
+          ) : view.origin ? (
             <Text tone="faint" style={styles.meta}>
-              {source.origin}
+              {view.origin}
             </Text>
           ) : null}
           {semantic ? (
@@ -257,22 +285,22 @@ export function SourceView({ id, onDone, onRemoved }: { id: string; onDone?: () 
               first
               label={t('libraryPage.useForGrounding')}
               description={t('libraryPage.useForGroundingDesc')}
-              value={source.isActive}
+              value={view.isActive}
               onChange={(value) => void toggle(value)}
             />
           </FormGroup>
-          <FolderSelect folders={folders} value={source.folder} onChange={(folder) => void move(folder)} />
+          <FolderSelect folders={folders} value={view.folder} onChange={(folder) => void move(folder)} />
           <View style={styles.actions}>
             <View style={styles.action}>
-              <SecondaryButton icon="copy" label={t('common.copy')} onPress={() => void actions.copy(source)} />
+              <SecondaryButton icon="copy" label={t('common.copy')} onPress={() => void actions.copy(view)} />
             </View>
             <View style={styles.action}>
-              <SecondaryButton icon="share" label={t('mobile.library.share')} onPress={() => actions.share(source)} />
+              <SecondaryButton icon="share" label={t('mobile.library.share')} onPress={() => actions.share(view)} />
             </View>
           </View>
           <Card>
             <Text style={styles.text} selectable>
-              {source.content}
+              {view.content}
             </Text>
           </Card>
           <Pressable
@@ -309,6 +337,8 @@ const styles = StyleSheet.create({
   qualityText: { fontSize: 14, lineHeight: 19 },
   actions: { flexDirection: 'row', gap: 10 },
   action: { flex: 1 },
+  waiting: { gap: 4, alignItems: 'flex-start' },
+  waitingText: { fontSize: 13.5, lineHeight: 18 },
   saved: { flexDirection: 'row', alignItems: 'center', gap: 9, borderWidth: 2, borderRadius: radius.field, paddingVertical: 9, paddingHorizontal: 12 },
   check: { width: 20, height: 20, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
   savedText: { flex: 1, fontSize: 14.5 },

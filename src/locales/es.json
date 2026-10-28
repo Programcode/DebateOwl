@@ -2712,9 +2712,6 @@
       "done": "Listo",
       "openItem": "Abrir {{title}}"
     },
-    "offline": {
-      "notice": "Sin conexión: se muestran las copias guardadas. La IA y el guardado esperan a la conexión."
-    },
     "debates": {
       "search": "Buscar mociones",
       "noMatches": "Ningún debate coincide con tu búsqueda.",
@@ -2991,6 +2988,45 @@
     "a11y": {
       "answerReady": "Respuesta lista",
       "resultReady": "Listo: {{title}}"
+    },
+    "share": {
+      "shareLink": "Compartir enlace",
+      "linkCopied": "Enlace copiado",
+      "failed": "No se pudo crear el enlace para compartir. Inténtalo de nuevo.",
+      "limitReached": "Has alcanzado el límite diario de enlaces compartidos ({{limit}}). Inténtalo de nuevo mañana.",
+      "tooLarge": "Es demasiado grande para compartirlo como enlace.",
+      "signIn": "Vuelve a iniciar sesión para compartir un enlace.",
+      "timeout": "Crear el enlace tardó demasiado. Inténtalo de nuevo.",
+      "openWebsite": "Abrir en el sitio web",
+      "unknownKind": "Este contenido compartido solo se puede abrir en el sitio web."
+    },
+    "widget": {
+      "spar": "Entrenar",
+      "description": "Tu moción y tu preparación de un vistazo."
+    },
+    "quickActions": {
+      "startTimer": "Iniciar cronómetro"
+    },
+    "offlineQueue": {
+      "notice": "Sin conexión: se muestran copias guardadas. Las notas nuevas, los cambios en las fuentes y los interruptores se sincronizan cuando vuelvas a tener conexión. La IA y los demás cambios esperan a la conexión.",
+      "pending_one": "{{count}} cambio se sincronizará cuando vuelvas a tener conexión",
+      "pending_other": "{{count}} cambios se sincronizarán cuando vuelvas a tener conexión",
+      "syncing_one": "{{count}} cambio está esperando para sincronizarse",
+      "syncing_other": "{{count}} cambios están esperando para sincronizarse",
+      "waiting": "Pendiente de sincronizar",
+      "syncsWhenOnline": "Guardado en este teléfono. Se sincroniza cuando vuelvas a tener conexión.",
+      "syncingSoon": "Guardado en este teléfono. Se sincroniza en cuanto se pueda conectar con el servidor.",
+      "noteQueuedTitle": "Nota guardada en este teléfono",
+      "noteQueuedDesc": "Se añadirá a la Biblioteca cuando vuelvas a tener conexión.",
+      "changeQueuedTitle": "Guardado en este teléfono",
+      "changeQueuedDesc": "Se sincroniza cuando vuelvas a tener conexión.",
+      "synced_one": "{{count}} cambio sincronizado",
+      "synced_other": "{{count}} cambios sincronizados",
+      "refusedTitle_one": "No se pudo guardar {{count}} cambio",
+      "refusedTitle_other": "No se pudieron guardar {{count}} cambios",
+      "refusedDesc_one": "El servidor lo rechazó, así que se quitó de este teléfono.",
+      "refusedDesc_other": "El servidor los rechazó, así que se quitaron de este teléfono.",
+      "noteRefused": "El servidor rechazó la nota \"{{title}}\", así que se quitó de este teléfono."
     }
   }
 }

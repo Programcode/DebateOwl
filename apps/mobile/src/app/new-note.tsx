@@ -12,11 +12,14 @@ import { useToast } from '@/components/toast';
 import { useAuth } from '@/lib/auth';
 import { useDebates } from '@/lib/debate-context';
 import { haptics } from '@/lib/haptics';
-import { addSource } from '@/lib/sources';
+import { queueAddSource } from '@/lib/offline-queue';
 import { useLibraryFolders } from '@/lib/use-library-folders';
 import { useTheme } from '@/theme/use-theme';
 
-/** Write a note: a text source in the Current Debate, like the website's manual entry. */
+/**
+ * Write a note: a text source in the Current Debate, like the website's manual
+ * entry. Offline it is kept on the phone and added once the connection is back.
+ */
 export default function NewNoteSheet() {
   const { t } = useTranslation();
   const router = useRouter();
@@ -39,8 +42,10 @@ export default function NewNoteSheet() {
     setSaving(true);
     setError('');
     try {
-      await addSource(userId, { title: title.trim(), content: content.trim(), type: 'text', folder, debateId: current.id });
-      toast({ tone: 'success', title: t('libraryPage.sourceSaved', { title: title.trim() }) });
+      const { status } = await queueAddSource(userId, { title: title.trim(), content: content.trim(), type: 'text', folder, debateId: current.id });
+      toast(status === 'saved'
+        ? { tone: 'success', title: t('libraryPage.sourceSaved', { title: title.trim() }) }
+        : { tone: 'info', title: t('mobile.offlineQueue.noteQueuedTitle'), message: t('mobile.offlineQueue.noteQueuedDesc') });
       router.back();
     } catch (cause) {
       console.warn('Could not save the note:', cause instanceof Error ? cause.message : cause);

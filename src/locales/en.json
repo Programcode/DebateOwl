@@ -2712,9 +2712,6 @@
       "done": "Done",
       "openItem": "Open {{title}}"
     },
-    "offline": {
-      "notice": "Offline: showing saved copies. AI and saving wait for the connection."
-    },
     "debates": {
       "search": "Search motions",
       "noMatches": "No debates match your search.",
@@ -2991,6 +2988,45 @@
     "a11y": {
       "answerReady": "Answer ready",
       "resultReady": "Ready: {{title}}"
+    },
+    "share": {
+      "shareLink": "Share link",
+      "linkCopied": "Link copied",
+      "failed": "Could not create a share link. Try again.",
+      "limitReached": "You've reached the daily share limit ({{limit}}). Try again tomorrow.",
+      "tooLarge": "This is too large to share as a link.",
+      "signIn": "Sign in again to share a link.",
+      "timeout": "Creating the link took too long. Try again.",
+      "openWebsite": "Open on the website",
+      "unknownKind": "This shared item can only be opened on the website."
+    },
+    "widget": {
+      "spar": "Spar",
+      "description": "Your motion and preparation at a glance."
+    },
+    "quickActions": {
+      "startTimer": "Start timer"
+    },
+    "offlineQueue": {
+      "notice": "Offline: showing saved copies. New notes, source edits and switches sync when you're back online. AI and other changes wait for the connection.",
+      "pending_one": "{{count}} change will sync when you're back online",
+      "pending_other": "{{count}} changes will sync when you're back online",
+      "syncing_one": "{{count}} change is waiting to sync",
+      "syncing_other": "{{count}} changes are waiting to sync",
+      "waiting": "Waiting to sync",
+      "syncsWhenOnline": "Saved on this phone. It syncs when you're back online.",
+      "syncingSoon": "Saved on this phone. It syncs as soon as the server can be reached.",
+      "noteQueuedTitle": "Note saved on this phone",
+      "noteQueuedDesc": "It's added to your Library when you're back online.",
+      "changeQueuedTitle": "Saved on this phone",
+      "changeQueuedDesc": "It syncs when you're back online.",
+      "synced_one": "{{count}} change synced",
+      "synced_other": "{{count}} changes synced",
+      "refusedTitle_one": "{{count}} change could not be saved",
+      "refusedTitle_other": "{{count}} changes could not be saved",
+      "refusedDesc_one": "The server refused it, so it was removed from this phone.",
+      "refusedDesc_other": "The server refused them, so they were removed from this phone.",
+      "noteRefused": "The server refused the note \"{{title}}\", so it was removed from this phone."
     }
   }
 }

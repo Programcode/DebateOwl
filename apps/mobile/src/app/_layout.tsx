@@ -16,6 +16,8 @@ import { AuthProvider, useAuth } from '@/lib/auth';
 import { DebateProvider } from '@/lib/debate-context';
 import { useFirstRun } from '@/lib/use-first-run';
 import { useKeyCommand } from '@/lib/key-commands';
+import { useQuickActions } from '@/lib/quick-actions';
+import { useOfflineQueue } from '@/lib/use-offline-queue';
 import { ReservedWidth, useSidebarWidth } from '@/lib/layout';
 import { watchNetwork } from '@/lib/network-status';
 import { refreshPush } from '@/lib/push';
@@ -55,10 +57,14 @@ function Root() {
 
   // Offline, reads answer from saved copies and the screens say so.
   useEffect(() => watchNetwork(), []);
+  // Notes, source edits and Active switches made offline sync when the connection returns.
+  useOfflineQueue();
 
   // A phone that opted in registers again on launch and when the language changes (see refreshPush).
   const userId = session?.user.id;
   useFirstRun(ready ? userId ?? null : null);
+  // Home Screen quick actions (development build with expo-quick-actions; nothing in Expo Go).
+  useQuickActions(ready);
   // iPad hardware keyboard: ⌘N starts a debate, ⌘K opens the switcher (key-commands.ts).
   const router = useRouter();
   useKeyCommand('cmd+n', () => router.push('/new-debate'), ready && Boolean(userId));
@@ -148,6 +154,8 @@ function Root() {
           <Stack.Protected guard={session === null}>
             <Stack.Screen name="sign-in" />
           </Stack.Protected>
+          {/* A shared link opens signed in or out; after the sign-in group, so a signed-out launch still starts on sign-in. */}
+          <Stack.Screen name="share/[code]" />
         </Stack>
         </ReservedWidth.Provider>
         </View>

@@ -25,7 +25,7 @@ export interface SourceRowActions {
 }
 
 /** The website's quality badges: used in a case, importance and strength. */
-function QualityBadges({ source, showFolder, compact }: { source: Source; showFolder: boolean; compact: boolean }) {
+function QualityBadges({ source, showFolder, compact, pending }: { source: Source; showFolder: boolean; compact: boolean; pending: boolean }) {
   const { t } = useTranslation();
   const { colors } = useTheme();
   const semantic = source.metadata?.semantic;
@@ -40,6 +40,7 @@ function QualityBadges({ source, showFolder, compact }: { source: Source; showFo
   );
   return (
     <View style={styles.badges}>
+      {pending ? <WaitingToSync /> : null}
       {showFolder ? (
         <View style={[styles.badge, styles.folderBadge, { backgroundColor: colors.segmentTrack, borderColor: colors.segmentTrack }]}>
           <Icon name="folder" color={colors.secondary} size={12} />
@@ -55,11 +56,26 @@ function QualityBadges({ source, showFolder, compact }: { source: Source; showFo
   );
 }
 
+/** A queued change that waits for the connection (offline-queue.ts). */
+export function WaitingToSync() {
+  const { t } = useTranslation();
+  const { colors } = useTheme();
+  return (
+    <View style={[styles.badge, styles.folderBadge, { backgroundColor: colors.line, borderColor: colors.line }]} testID="waiting-to-sync">
+      <Icon name="cloudOff" color={colors.faint} size={12} />
+      <Text weight="semibold" style={[styles.badgeText, { color: colors.faint }]} numberOfLines={1}>
+        {t('mobile.offlineQueue.waiting')}
+      </Text>
+    </View>
+  );
+}
+
 /**
  * A Library source. Its switch says whether the AI uses it, as on the
  * website, and a source that is off is dimmed. Swipe left to delete (with
  * Undo), swipe right to turn it on or off, and press and hold for a preview
- * and the menu. On iPad, `selectInstead` opens it beside the list.
+ * and the menu. On iPad, `selectInstead` opens it beside the list. A
+ * `pending` source has a change that waits for the connection.
  */
 export function SourceRow({
   source,
@@ -69,6 +85,7 @@ export function SourceRow({
   selectInstead = false,
   showFolder = true,
   compact = false,
+  pending = false,
   actions,
 }: {
   source: Source;
@@ -80,6 +97,7 @@ export function SourceRow({
   showFolder?: boolean;
   /** Beside an open source on iPad, whose pane shows the rankings: only the folder and use. */
   compact?: boolean;
+  pending?: boolean;
   actions: SourceRowActions;
 }) {
   const { t } = useTranslation();
@@ -169,7 +187,7 @@ export function SourceRow({
                     <Text tone="faint" style={styles.rowMeta} numberOfLines={3}>
                       {source.isActive ? sourceMeta(t, source) : `${t('mobile.library.turnedOff')} · ${sourceMeta(t, source)}`}
                     </Text>
-                    <QualityBadges source={source} showFolder={showFolder} compact={compact} />
+                    <QualityBadges source={source} showFolder={showFolder} compact={compact} pending={pending} />
                   </View>
                 </View>
               )}

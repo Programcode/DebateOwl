@@ -6,8 +6,8 @@ import { folderLabel } from '@/components/source-display';
 import { useAuth } from './auth';
 import { copyText, shareText } from './export';
 import { haptics } from './haptics';
-import { isKnownOffline } from './network-status';
-import { addSource, removeSource, setSourcesActive, updateSource, type Source } from './sources';
+import { cancelQueuedSource, isLocalSourceId, queueAddSource, queueSetSourcesActive, queueUpdateSource } from './offline-queue';
+import { addSource, removeSource, type Source } from './sources';
 
 /** A source as plain text: its title, where it came from, and its text, as the website copies it. */
 export function sourceText(source: Pick<Source, 'title' | 'content' | 'origin'>, withOrigin = false): string {
@@ -17,8 +17,9 @@ export function sourceText(source: Pick<Source, 'title' | 'content' | 'origin'>,
 /**
  * What the Library does to one source, with the website's messages: delete
  * at once with Undo, switch it on or off for the AI, move it, copy or share it.
- * A change that does not reach the server never looks saved; the caller puts
- * the row back when a write resolves false.
+ * Switches and moves go through the offline queue: offline they wait for the
+ * connection and still count as made. A change the server refuses never looks
+ * saved; the caller puts the row back when a write resolves false.
  */
 export function useSourceActions() {
   const { t } = useTranslation();
@@ -26,15 +27,32 @@ export function useSourceActions() {
   const { session } = useAuth();
   const userId = session?.user.id ?? null;
 
-  /** Offline, nothing is written, so the change is refused up front, as on the website. */
-  const refuseOffline = useCallback((title: string) => {
-    if (!isKnownOffline()) return false;
-    toast({ tone: 'error', title, message: t('libraryPage.offlineNotSaved') });
+  /** A note that has not reached the server is taken out of the queue; Undo queues it again. */
+  const removeQueued = useCallback((source: Source): boolean => {
+    if (!userId || !source.debateId) return false;
+    if (!cancelQueuedSource(userId, source.id)) {
+      // On its way to the server right now; once it has synced it deletes as any source does.
+      toast({ tone: 'error', title: t('common.error'), message: t('libraryPage.deleteFailed') });
+      return false;
+    }
+    haptics.success();
+    toast({
+      title: t('libraryPage.sourceDeletedTitle', { title: source.title }),
+      action: {
+        label: t('common.undo'),
+        onPress: () => {
+          queueAddSource(userId, { title: source.title, content: source.content, type: source.type, origin: source.origin, folder: source.folder, isActive: source.isActive, debateId: source.debateId! })
+            .then(() => haptics.success())
+            .catch(() => toast({ tone: 'error', title: t('libraryPage.restoreFailed') }));
+        },
+      },
+    });
     return true;
-  }, [t, toast]);
+  }, [t, toast, userId]);
 
   const remove = useCallback(async (source: Source): Promise<boolean> => {
     if (!userId || !source.debateId) return false;
+    if (isLocalSourceId(source.id)) return removeQueued(source);
     try {
       await removeSource(userId, source.id, source.debateId);
     } catch (cause) {
@@ -67,36 +85,36 @@ export function useSourceActions() {
       },
     });
     return true;
-  }, [t, toast, userId]);
+  }, [removeQueued, t, toast, userId]);
 
   const setActive = useCallback(async (sources: Source[], isActive: boolean, folder?: string): Promise<boolean> => {
     const failedTitle = folder ? t('libraryPage.folderUpdateFailed') : t('libraryPage.toggleFailed');
     const debateId = sources[0]?.debateId;
     if (!userId || !debateId) return false;
-    if (refuseOffline(t('libraryPage.offlineTitle'))) return false;
     try {
-      await setSourcesActive(userId, debateId, sources.map((source) => source.id), isActive);
+      await queueSetSourcesActive(userId, debateId, sources.map((source) => source.id), isActive);
       return true;
     } catch (cause) {
       console.warn('Could not change the source:', cause instanceof Error ? cause.message : cause);
-      toast({ tone: 'error', title: failedTitle, message: isKnownOffline() ? t('libraryPage.offlineNotSaved') : t('libraryPage.toggleFailedDesc') });
+      toast({ tone: 'error', title: failedTitle, message: t('libraryPage.toggleFailedDesc') });
       return false;
     }
-  }, [refuseOffline, t, toast, userId]);
+  }, [t, toast, userId]);
 
   const move = useCallback(async (source: Source, folder: string): Promise<boolean> => {
     if (!userId || !source.debateId || folder === source.folder) return false;
-    if (refuseOffline(t('libraryPage.saveFailed'))) return false;
     try {
-      await updateSource(userId, source.debateId, source.id, { folder });
-      toast({ tone: 'success', title: t('libraryPage.sourceUpdated'), message: `${t('libraryPage.folder')}: ${folderLabel(t, folder)}` });
+      const status = await queueUpdateSource(userId, source.debateId, source.id, { folder });
+      toast(status === 'saved'
+        ? { tone: 'success', title: t('libraryPage.sourceUpdated'), message: `${t('libraryPage.folder')}: ${folderLabel(t, folder)}` }
+        : { tone: 'info', title: t('mobile.offlineQueue.changeQueuedTitle'), message: t('mobile.offlineQueue.changeQueuedDesc') });
       return true;
     } catch (cause) {
       console.warn('Could not move the source:', cause instanceof Error ? cause.message : cause);
       toast({ tone: 'error', title: t('libraryPage.saveFailed') });
       return false;
     }
-  }, [refuseOffline, t, toast, userId]);
+  }, [t, toast, userId]);
 
   const copy = useCallback(async (source: Source) => {
     try {

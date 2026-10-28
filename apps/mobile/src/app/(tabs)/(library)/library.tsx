@@ -25,6 +25,7 @@ import { confirmDestructive, promptText } from '@/lib/confirm';
 import { useDebates } from '@/lib/debate-context';
 import { haptics } from '@/lib/haptics';
 import { LIBRARY_ROOMY_WIDTH, LIST_WIDTH, useContentWidth, useLayoutClass } from '@/lib/layout';
+import { currentSourceId, waitingSourceIds, withQueuedWrites } from '@/lib/offline-queue';
 import { openRowId } from '@/lib/open-pane';
 import { pickSourceFile } from '@/lib/pick-source-file';
 import { useSourceActions } from '@/lib/source-actions';
@@ -32,6 +33,7 @@ import { holdPickedFile } from '@/lib/source-file';
 import { clearLibrary, createFolder, deleteFolder, fetchSources, renameFolder, subscribeSourcesChanged, type Source } from '@/lib/sources';
 import { useCopyHolder } from '@/lib/use-copy-holder';
 import { useLibraryFolders } from '@/lib/use-library-folders';
+import { useQueuedWrites } from '@/lib/use-offline-queue';
 import { useTheme } from '@/theme/use-theme';
 
 const ALL = '\u0000all';
@@ -62,13 +64,15 @@ function LibraryView({ debateId, layout }: { debateId: string | null; layout: Re
   const library = useLibrary(debateId);
   // On iPad the selection belongs to the account it was made in; signing out clears it.
   const [selected, setSelected] = useState<{ userId: string; id: string } | null>(null);
-  const shown = layout !== 'phone' && selected && selected.userId === userId ? selected.id : null;
+  // A waiting note that has synced stays open under its row's id.
+  const shown = layout !== 'phone' && selected && selected.userId === userId ? currentSourceId(library.queued, selected.id) : null;
 
   // A refresh that no longer has the open source closes the detail pane. Searching does not: `sources` is the full list.
+  // A note that has just synced counts until the list is read again.
   useEffect(() => {
     if (!shown || library.sources === null) return;
-    if (openRowId(shown, library.sources) === null) setSelected(null);
-  }, [shown, library.sources]);
+    if (openRowId(shown, [...library.sources, ...library.queued.synced.values()]) === null) setSelected(null);
+  }, [shown, library.sources, library.queued]);
 
   const onAdd = async (kind: AddSourceKind) => {
     if (kind === 'link') return router.push('/add-link');
@@ -161,6 +165,9 @@ function LibraryView({ debateId, layout }: { debateId: string | null; layout: Re
       <ScrollView
         style={shown ? [styles.listPane, { width: listWidth, borderRightColor: colors.line }] : styles.listPaneFull}
         contentInsetAdjustmentBehavior="automatic"
+        automaticallyAdjustKeyboardInsets
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="interactive"
         contentContainerStyle={[styles.listContent, !shown && styles.listContentFull]}>
         <OfflineNotice />
         {header}
@@ -170,7 +177,7 @@ function LibraryView({ debateId, layout }: { debateId: string | null; layout: Re
         {body}
       </ScrollView>
       {shown && userId ? (
-        <ScrollView style={styles.detailPane} contentInsetAdjustmentBehavior="automatic" contentContainerStyle={styles.detailContent} testID="source-sheet">
+        <ScrollView style={styles.detailPane} contentInsetAdjustmentBehavior="automatic" automaticallyAdjustKeyboardInsets keyboardShouldPersistTaps="handled" keyboardDismissMode="interactive" contentContainerStyle={styles.detailContent} testID="source-sheet">
           <SourceView key={`${userId}:${debateId}:${shown}`} id={shown} onRemoved={() => setSelected(null)} />
         </ScrollView>
       ) : null}
@@ -184,8 +191,9 @@ type Library = ReturnType<typeof useLibrary>;
 function useLibrary(debateId: string | null) {
   const { session } = useAuth();
   const userId = session?.user.id ?? null;
-  const [sources, setSources] = useState<Source[] | null>(null);
+  const [fetched, setSources] = useState<Source[] | null>(null);
   const [failed, setFailed] = useState(false);
+  const queued = useQueuedWrites(userId);
   const [query, setQuery] = useState('');
   const [filter, setFilter] = useState<SourceTypeFilter>('all');
   const [sort, setSort] = useState<LibrarySort>('smart');
@@ -219,6 +227,20 @@ function useLibrary(debateId: string | null) {
   );
   useEffect(() => subscribeSourcesChanged(() => void load()), [load]);
 
+  // Changes that wait for the connection show on top of what was read, online or from the saved copy.
+  const sources = useMemo(() => (fetched && debateId ? withQueuedWrites(queued, debateId, fetched) : fetched), [fetched, queued, debateId]);
+  const waiting = useMemo(() => waitingSourceIds(queued), [queued]);
+  // A note that syncs takes its row's place at once, before the list is read again.
+  const synced = useRef(new Set(queued.synced.keys()));
+  useEffect(() => {
+    for (const [tempId, source] of queued.synced) {
+      if (synced.current.has(tempId)) continue;
+      synced.current.add(tempId);
+      if (source.debateId !== debateId) continue;
+      setSources((previous) => (previous && !previous.some((item) => item.id === source.id) ? [source, ...previous] : previous));
+    }
+  }, [queued.synced, debateId]);
+
   // A folder that no longer exists here (renamed or deleted elsewhere, or only another debate's)
   // shows all folders again. Checked only when the folder list reloads: a folder just created or
   // renamed here is chosen before its reload lands, and the reload then lists it.
@@ -242,7 +264,7 @@ function useLibrary(debateId: string | null) {
     setSources((previous) => previous?.map((source) => (ids.includes(source.id) ? { ...source, ...change } : source)) ?? previous);
   }, []);
 
-  return { userId, debateId: debateId!, sources, setSources, failed, load, query, setQuery, filter, setFilter, sort, setSort, folder, setFolder, folders, inFolder, visible, patch };
+  return { userId, debateId: debateId!, sources, setSources, queued, waiting, failed, load, query, setQuery, filter, setFilter, sort, setSort, folder, setFolder, folders, inFolder, visible, patch };
 }
 
 function LibraryBody({ library, selectedId, onSelect }: { library: Library; selectedId: string | null; onSelect?: (source: Source) => void }) {
@@ -251,7 +273,7 @@ function LibraryBody({ library, selectedId, onSelect }: { library: Library; sele
   const toast = useToast();
   const actions = useSourceActions();
   const activeWrites = useRef({ seq: 0, latest: new Map<string, number>(), confirmed: new Map<string, boolean>() });
-  const { sources, failed, folders, folder, inFolder, visible, patch, userId, debateId } = library;
+  const { sources, failed, folders, folder, inFolder, visible, patch, userId, debateId, waiting } = library;
 
   if (failed && !sources) {
     return (
@@ -379,6 +401,7 @@ function LibraryBody({ library, selectedId, onSelect }: { library: Library; sele
               selectInstead={Boolean(onSelect)}
               showFolder={folder === ALL}
               compact={Boolean(selectedId)}
+              pending={waiting.has(source.id)}
               actions={{
                 onOpen: () => (onSelect ? onSelect(source) : router.push({ pathname: '/source/[id]', params: { id: source.id } })),
                 onToggle: (isActive) => void toggle([source], isActive),

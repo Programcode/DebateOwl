@@ -153,8 +153,9 @@ export async function addSource(
   const folderResult = await supabase
     .from('source_folders')
     .upsert({ user_id: userId, name: folder }, { onConflict: 'user_id,name' });
-  if (folderResult.error) throw new Error(folderResult.error.message);
-  const { data, error } = await supabase
+  // A write that got no answer throws readFailed's unreachable error, so the offline queue keeps it.
+  if (folderResult.error) throw readFailed(folderResult.error, folderResult.status);
+  const { data, error, status } = await supabase
     .from('sources')
     .insert({
       ...(input.id ? { id: input.id, created_at: new Date(input.createdAt ?? Date.now()).toISOString() } : {}),
@@ -171,7 +172,8 @@ export async function addSource(
     .select(SOURCE_COLUMNS)
     .single();
   if (error?.code === '23505') throw new DuplicateSourceError();
-  if (error || !data) throw new Error(error?.message ?? 'Could not save the source');
+  if (error) throw readFailed(error, status);
+  if (!data) throw new Error('Could not save the source');
   afterWrite(userId, [{ group: 'sources', key: input.debateId }, FOLDER_COPIES, ...debateListScopes(input.debateId, 'source')]);
   notifySourcesChanged();
   return fromRow(data as SourceRow);
@@ -271,8 +273,8 @@ async function loadFolders(userId: string, debateId: string): Promise<string[]> 
 }
 
 async function saveFolderName(userId: string, name: string) {
-  const { error } = await supabase.from('source_folders').upsert({ user_id: userId, name }, { onConflict: 'user_id,name' });
-  if (error) throw new Error(error.message);
+  const { error, status } = await supabase.from('source_folders').upsert({ user_id: userId, name }, { onConflict: 'user_id,name' });
+  if (error) throw readFailed(error, status);
 }
 
 /** Saves an empty folder, as the website's New folder does. */
@@ -351,8 +353,8 @@ export function setSourcesActive(userId: string, debateId: string, ids: string[]
   if (ids.length === 0) return Promise.resolve();
   activePending += 1;
   return activeWrites(async () => {
-    const { error } = await supabase.from('sources').update({ is_active: isActive }).eq('user_id', userId).eq('debate_id', debateId).in('id', ids);
-    if (error) throw new Error(error.message);
+    const { error, status } = await supabase.from('sources').update({ is_active: isActive }).eq('user_id', userId).eq('debate_id', debateId).in('id', ids);
+    if (error) throw readFailed(error, status);
     afterWrite(userId, [{ group: 'sources', key: debateId }, ...ids.map((id) => ({ group: 'source' as const, key: id }))]);
   }).finally(() => {
     activePending -= 1;
@@ -377,8 +379,8 @@ export async function updateSource(userId: string, debateId: string, id: string,
   if (Object.keys(row).length === 0) return;
   const write = async () => {
     if (typeof row.folder === 'string') await saveFolderName(userId, row.folder);
-    const { error } = await supabase.from('sources').update(row).eq('user_id', userId).eq('debate_id', debateId).eq('id', id);
-    if (error) throw new Error(error.message);
+    const { error, status } = await supabase.from('sources').update(row).eq('user_id', userId).eq('debate_id', debateId).eq('id', id);
+    if (error) throw readFailed(error, status);
   };
   await (patch.isActive !== undefined ? activeWrites(write) : write());
   afterWrite(userId, [{ group: 'sources', key: debateId }, { group: 'source', key: id }, ...(row.folder ? [FOLDER_COPIES] : [])]);
@@ -460,6 +462,7 @@ export function subscribeSourcesChanged(listener: () => void): () => void {
   };
 }
 
-function notifySourcesChanged() {
+/** Screens showing sources read them again; the offline queue calls it when the server refuses a queued change. */
+export function notifySourcesChanged() {
   listeners.forEach((listener) => listener());
 }
