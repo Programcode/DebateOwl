@@ -52,6 +52,8 @@ function prerenderedModule(loader: RouteLoader<{ default: ComponentType }>) {
 const LandingPage = prerenderedPage("/");
 const TermsPage = prerenderedPage("/terms");
 const PrivacyPage = prerenderedPage("/privacy");
+const AboutPage = prerenderedPage("/about");
+const ContactPage = prerenderedPage("/contact");
 // The Hungarian and Spanish addresses in src/config/localized-routes.json.
 const LOCALIZED_PAGES = LOCALIZED_PATHS.map((entry) => ({ ...entry, Page: prerenderedModule(localizedRouteLoaders[entry.path]) }));
 const HomePage = lazy(routeLoaders["/app"]);
@@ -170,6 +172,8 @@ const ROUTE_FALLBACKS: Record<string, RouteFallback> = {
   "/": { variant: "public", label: site.product },
   "/terms": { variant: "public", label: "Terms", labelKey: "footer.terms" },
   "/privacy": { variant: "public", label: "Privacy", labelKey: "footer.privacy" },
+  "/about": { variant: "public", label: "About", labelKey: "footer.about" },
+  "/contact": { variant: "public", label: "Contact", labelKey: "footer.contact" },
   "/expocit/sources": { variant: "public", label: "Sources", labelKey: "crossfire.sources" },
   "/login": { variant: "public", label: "Sign in", labelKey: "login.title" },
   "/auth/callback": { variant: "public", label: "Sign in", labelKey: "login.title" },
@@ -449,6 +453,8 @@ function AppRoutes() {
           ))}
           <Route path="/terms" element={<RouteContent><TermsPage /></RouteContent>} />
           <Route path="/privacy" element={<RouteContent><PrivacyPage /></RouteContent>} />
+          <Route path="/about" element={<RouteContent><AboutPage /></RouteContent>} />
+          <Route path="/contact" element={<RouteContent><ContactPage /></RouteContent>} />
           <Route path="/expocit/sources" element={<RouteContent><SourcesPage /></RouteContent>} />
           <Route path="/login" element={<RouteContent><LoginPage /></RouteContent>} />
           <Route path={AUTH_CALLBACK_PATH} element={<RouteContent><AuthCallbackPage /></RouteContent>} />

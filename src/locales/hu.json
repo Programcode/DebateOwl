@@ -880,6 +880,8 @@
   "footer": {
     "terms": "Feltételek",
     "privacy": "Adatvédelem",
+    "about": "Rólunk",
+    "contact": "Kapcsolat",
     "copyright": "© 2026 Pi-Stack. Minden jog fenntartva.",
     "formerly": "{{product}}, korábban DebateLab.",
     "navLabel": "Lábléc",
@@ -1821,7 +1823,7 @@
   "privacyPage": {
     "title": "Adatvédelmi irányelvek",
     "lastUpdated": "Utolsó frissítés",
-    "date": "2026. október 23.",
+    "date": "2026. október 28.",
     "s1": "Gyűjtött információk",
     "p1": "Gyűjtjük a fiók létrehozásakor megadott adatokat, például a nevedet és az e-mail-címedet, amelyek Google- vagy e-mailes bejelentkezésből származhatnak, valamint a használati adatokat, például a generált tartalmakat, a mentett elemeket és az interakciós mintákat. Adminisztrátor által kiadott demókód használatakor a kódot a demo-fiókod hitelesítéséhez dolgozzuk fel.",
     "s2": "Hogyan használjuk az információidat",
@@ -1837,18 +1839,43 @@
     "s7": "Sütik és nyomkövetés",
     "p7": "Alapvető sütiket és böngészőtárhelyet használunk a hitelesítéshez és a beállításokhoz. A PostHogot termékanalitikához, a Sentryt pedig hibamegfigyeléshez, strukturált naplókhoz, alkalmazásmetrikákhoz, teljesítménykövetéshez és kizárólag hibákhoz kapcsolódó munkamenet-visszajátszáshoz használjuk. A Sentry nem rögzít szokásos munkameneteket. A rögzített hibát tartalmazó munkameneteket rögzíti; a visszajátszásokban minden szöveg és beviteli érték maszkolva van, a médiatartalom pedig blokkolva. A Sentry technikai metaadatokat kap, például útvonalakat, böngészőadatokat, kérés-URL-eket, metódusokat és állapotkódokat, veremkövetéseket, időzítéseket és biztonságos eseménybesorolásokat. A felhasználói azonosítók, sütik, fejlécek, HTTP-törzsek, lekérdezési paraméterek, MI-bemenetek és -kimenetek, valamint veremkeret-változók automatikus gyűjtése le van tiltva. A PostHog automatikus eseménygyűjtése, oldalmegtekintés-követése, munkamenet-rögzítése és tartós böngészőtárhelye ki van kapcsolva. Az analitikai eseményekben és strukturált naplókban nem küldünk vitatartalmat, chatüzeneteket, forráscímeket vagy e-mail-címeket.",
     "s8": "Hibabejelentés a Jammel",
-    "p8": "A Jamet, a We are Jam, Inc. hibabejelentő szolgáltatását használjuk, hogy egy problémát felvétellel megmutathass nekünk. A Jam szkriptjei a DebateOwl minden látogatójánál betöltődnek: az első kattintásod, koppintásod vagy billentyűleütésed után, vagy 8 másodperccel az oldal betöltése után, attól függően, melyik következik be előbb. Megnyitnak egy keretet a recorder.jam.dev címről, amely megkapja az éppen megnyitott oldal címét, a böngésződ és az eszközöd adatait, valamint az oldal betöltési időit, és összegyűjtik az oldal konzolnaplóit, hálózati kéréseit, valamint a kattintásaidat és billentyűleütéseidet, hogy ezek egy felvételhez csatolhatók legyenek. Felvétel akkor készül, ha megnyitsz egy általunk küldött Jam-felvételi linket, és megnyomod a „Start Recording” gombot. A felvétel a megosztásra kiválasztott képernyőről, ablakról vagy lapról készült videót tartalmazza ezekkel a technikai adatokkal együtt, így benne lehet minden, ami az oldalon megjelenik, vagy amit az oldal a szervereinkkel vált, például a vitatartalmaid. Amíg be vagy jelentkezve, a DebateOwl-fiókod azonosítója elérhető a Jam számára, és minden általad készített felvételhez csatolódik, így a felvétel a fiókodhoz kapcsolható. A Jam ezeket az adatokat a szolgáltatónkként kezeli, és addig őrzi meg, amíg a szolgáltatása nyújtásához szükségesek; rögzített megőrzési időt nem ad meg. Ha szeretnéd, hogy töröljünk egy felvételt, vagy tiltakozni szeretnél ez ellen az adatkezelés ellen, írj nekünk: privacy@debatelab.app.",
+    "p8": "A Jamet, a We are Jam, Inc. hibabejelentő szolgáltatását használjuk, hogy egy problémát felvétellel megmutathass nekünk. A Jam szkriptjei a DebateOwl minden látogatójánál betöltődnek: az első kattintásod, koppintásod vagy billentyűleütésed után, vagy 8 másodperccel az oldal betöltése után, attól függően, melyik következik be előbb. Megnyitnak egy keretet a recorder.jam.dev címről, amely megkapja az éppen megnyitott oldal címét, a böngésződ és az eszközöd adatait, valamint az oldal betöltési időit, és összegyűjtik az oldal konzolnaplóit, hálózati kéréseit, valamint a kattintásaidat és billentyűleütéseidet, hogy ezek egy felvételhez csatolhatók legyenek. Felvétel akkor készül, ha megnyitsz egy általunk küldött Jam-felvételi linket, és megnyomod a „Start Recording” gombot. A felvétel a megosztásra kiválasztott képernyőről, ablakról vagy lapról készült videót tartalmazza ezekkel a technikai adatokkal együtt, így benne lehet minden, ami az oldalon megjelenik, vagy amit az oldal a szervereinkkel vált, például a vitatartalmaid. Amíg be vagy jelentkezve, a DebateOwl-fiókod azonosítója elérhető a Jam számára, és minden általad készített felvételhez csatolódik, így a felvétel a fiókodhoz kapcsolható. A Jam ezeket az adatokat a szolgáltatónkként kezeli, és addig őrzi meg, amíg a szolgáltatása nyújtásához szükségesek; rögzített megőrzési időt nem ad meg. Ha szeretnéd, hogy töröljünk egy felvételt, vagy tiltakozni szeretnél ez ellen az adatkezelés ellen, írj nekünk: {{privacyEmail}}.",
     "s9": "Gyermekek adatvédelme",
     "p9": "A DebateOwl 13 éves és idősebb felhasználóknak készült. Tudatosan nem gyűjtünk adatot 13 év alatti gyermekektől.",
     "s10": "Irányelvek módosítása",
     "p10": "Időszakosan frissíthetjük ezt az irányelvet. A jelentős változásokról emailben vagy alkalmazáson belüli értesítéssel tájékoztatunk.",
     "s11": "Kapcsolat",
-    "p11": "Adatvédelmi kérdésekkel vagy adatkérésekkel fordulj hozzánk: privacy@debatelab.app."
+    "p11": "Adatvédelmi kérdésekkel vagy adatkérésekkel fordulj hozzánk: {{privacyEmail}}."
+  },
+  "aboutPage": {
+    "title": "A {{product}} bemutatása",
+    "question": "Mi az a {{product}}?",
+    "answer": "A <home>{{product}}</home> MI-alapú vitafelkészítő és gyakorló alkalmazás diákoknak és versenyzőknek. Segít megírni az esetet, megtalálni egy érvelés gyenge pontjait, hivatkozásokkal ellátott bizonyítékot keresni, és időre gyakorolni egy MI-ellenféllel.",
+    "makerHeading": "Ki készíti",
+    "maker": "A {{product}} alkalmazást egy diák fejlesztő építi, és a <pistack>Pi-Stack</pistack> adja ki.",
+    "nameHeading": "A név",
+    "name": "A {{product}} neve {{date}}-ig DebateLab volt, a debate.pi-stack.org címen.",
+    "pricingHeading": "Árak",
+    "pricing": "{{trialDays}} napos ingyenes próbaidőszak, utána havi {{price}} + adó. <pricing>Mit tartalmaznak a csomagok</pricing>.",
+    "languagesHeading": "Nyelvek",
+    "languages": "Angol, spanyol és magyar.",
+    "linksHeading": "Továbbiak a {{product}} alkalmazásról"
+  },
+  "contactPage": {
+    "title": "Kapcsolat",
+    "question": "Hogyan léphetek kapcsolatba a {{product}} csapatával?",
+    "answer": "Írj e-mailt ide: <email>{{email}}</email>. E-mailben válaszolunk.",
+    "topicsHeading": "Miről írhatsz",
+    "support": "Segítség a fiókoddal, a számlázással vagy azzal kapcsolatban, ha valami nem működik a <home>{{product}}</home> alkalmazásban.",
+    "privacy": "Adatvédelmi és adatkérések, például az adataid másolata vagy a fiókod törlése: <email>{{email}}</email>.",
+    "feedback": "Visszajelzés, ötletek, és bármi, amit szívesen látnál a {{product}} alkalmazásban.",
+    "tipHeading": "Hogy gyorsabban segíthessünk",
+    "tip": "Ha valami nem működik, írd le, mit csináltál, mire számítottál, és mi történt helyette. Jelszót vagy bankkártyaadatot soha ne küldj."
   },
   "termsPage": {
     "title": "Felhasználási feltételek",
     "lastUpdated": "Utolsó frissítés",
-    "date": "2026. május 1.",
+    "date": "2026. október 28.",
     "s1": "Feltételek elfogadása",
     "p1": "A DebateOwl használatával elfogadod ezeket a feltételeket. Ha nem értesz egyet, ne használd a szolgáltatást.",
     "s2": "Szolgáltatás leírása",
@@ -1868,7 +1895,9 @@
     "s9": "Megszüntetés",
     "p9": "Felfüggeszthetjük vagy megszüntethetjük a feltételeket sértő fiókokat. Bármikor törölheted a fiókodat.",
     "s10": "Irányadó jog",
-    "p10": "Ezekre a feltételekre az alkalmazandó jog vonatkozik. A vitákat kötelező érvényű választottbírósági eljárással rendezzük."
+    "p10": "Ezekre a feltételekre az alkalmazandó jog vonatkozik. A vitákat kötelező érvényű választottbírósági eljárással rendezzük.",
+    "s11": "Kapcsolat",
+    "p11": "Kérdésed van ezekkel a feltételekkel kapcsolatban? Írj nekünk: {{contactEmail}}. Adatvédelmi kérdésekkel vagy adatkérésekkel ide írj: {{privacyEmail}}."
   },
   "export": {
     "generatedBy": "A DebateOwl készítette",
@@ -2630,6 +2659,14 @@
     "speechTimeCalculator": {
       "title": "Beszédidő-kalkulátor | {{brand}}",
       "description": "Ingyenes beszédidő-kalkulátor, amely megszámolja egy vitabeszéd szavait, és megmutatja, mennyi ideig tart lassú, átlagos és gyors tempóban."
+    },
+    "about": {
+      "title": "A {{product}} bemutatása | {{brand}}",
+      "description": "A {{product}} MI-alapú vitafelkészítő és gyakorló alkalmazás diákoknak és versenyzőknek, amelyet egy diák fejlesztő épít, és a Pi-Stack ad ki."
+    },
+    "contact": {
+      "title": "Kapcsolat | {{brand}}",
+      "description": "Így írhatsz a {{product}} csapatának e-mailben fiókkal vagy számlázással kapcsolatos segítségért, adatvédelmi kérésekkel és visszajelzéssel."
     }
   },
   "validation": {

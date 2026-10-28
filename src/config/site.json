@@ -8,6 +8,8 @@
     "host": "debate.pi-stack.org",
     "until": "2026-10-27"
   },
+  "contactEmail": "hello@debateowl.com",
+  "privacyEmail": "privacy@debateowl.com",
   "organization": {
     "name": "DebateOwl",
     "logo": {

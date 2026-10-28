@@ -19,6 +19,8 @@ DebateOwl runs at https://debateowl.com/. It is a separate product from debatela
 - [Home](https://debateowl.com/): what DebateOwl is, the 8 prep modes, pricing and FAQ
 - [Pricing](https://debateowl.com/debateowl-pricing): trial, Pro and what each includes
 - [Best AI debate tools](https://debateowl.com/best-ai-debate-tools): how to choose an AI debate tool
+- [About](https://debateowl.com/about): what DebateOwl is, who makes it and its former name
+- [Contact](https://debateowl.com/contact): email hello@debateowl.com for support and feedback, privacy@debateowl.com for privacy and data requests
 - [Sitemap](https://debateowl.com/sitemap.xml): every public page
 
 ## Free tools

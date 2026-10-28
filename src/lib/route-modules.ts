@@ -32,6 +32,8 @@ export const routeLoaders = {
   "/": landingLoader,
   "/terms": cacheLoader(() => import("@/pages/TermsPage")),
   "/privacy": cacheLoader(() => import("@/pages/PrivacyPage")),
+  "/about": cacheLoader(() => import("@/pages/AboutPage")),
+  "/contact": cacheLoader(() => import("@/pages/ContactPage")),
   "/expocit/sources": cacheLoader(() => import("@/pages/SourcesPage")),
   "/login": cacheLoader(() => import("@/pages/LoginPage")),
   "/auth/callback": cacheLoader(() => import("@/pages/AuthCallbackPage")),

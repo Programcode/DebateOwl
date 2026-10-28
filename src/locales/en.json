@@ -880,6 +880,8 @@
   "footer": {
     "terms": "Terms",
     "privacy": "Privacy",
+    "about": "About",
+    "contact": "Contact",
     "copyright": "© 2026 Pi-Stack. All rights reserved.",
     "formerly": "{{product}}, formerly DebateLab.",
     "navLabel": "Footer",
@@ -1821,7 +1823,7 @@
   "privacyPage": {
     "title": "Privacy Policy",
     "lastUpdated": "Last updated",
-    "date": "October 23, 2026",
+    "date": "October 28, 2026",
     "s1": "Information We Collect",
     "p1": "We collect information you provide when creating an account, including your name and email from Google sign-in or email sign-in, plus usage data such as generated content, saved items, and interaction patterns. If you use an admin-issued demo code, we process that code to authenticate your demo account.",
     "s2": "How We Use Your Information",
@@ -1837,18 +1839,43 @@
     "s7": "Cookies and Tracking",
     "p7": "We use essential cookies and browser storage for authentication and preferences. We use PostHog for product analytics and Sentry for error monitoring, structured logs, application metrics, performance tracing, and error-only Session Replay. Sentry does not record ordinary sessions. It records sessions containing captured errors; all replay text and inputs are masked and media is blocked. Sentry receives technical metadata such as routes, browser details, request URLs, methods and status codes, stack traces, timings, and safe event classifications. Automatic collection of user identity, cookies, headers, HTTP bodies, query parameters, AI inputs and outputs, and stack-frame variables is disabled. PostHog autocapture, pageview capture, session recording, and persistent browser storage are disabled. We do not send debate content, chat messages, source titles, or email addresses in analytics events or structured logs.",
     "s8": "Bug Reports with Jam",
-    "p8": "We use Jam, a bug-reporting service run by We are Jam, Inc., so that you can show us a problem by recording it. Jam's scripts load for every visitor to DebateOwl, after your first click, tap or key press, or 8 seconds after the page loads, whichever comes first. They open a frame from recorder.jam.dev, which receives the address of the page you are on, your browser and device details and page load timings, and they collect the page's console logs, its network requests and your clicks and key presses so these can be attached to a recording. A recording is made when you open a Jam recording link we sent you and press Start Recording. It contains a video of the screen, window or tab you choose to share, together with that technical data, so it can include anything shown on the page or exchanged with our servers, such as your debate content. While you are signed in, your DebateOwl account ID is available to Jam and is attached to any recording you make, which links the recording to your account. Jam processes this data as our service provider and keeps it until it is no longer needed to provide its service; it does not state a fixed retention period. To ask us to delete a recording, or to object to this processing, contact privacy@debatelab.app.",
+    "p8": "We use Jam, a bug-reporting service run by We are Jam, Inc., so that you can show us a problem by recording it. Jam's scripts load for every visitor to DebateOwl, after your first click, tap or key press, or 8 seconds after the page loads, whichever comes first. They open a frame from recorder.jam.dev, which receives the address of the page you are on, your browser and device details and page load timings, and they collect the page's console logs, its network requests and your clicks and key presses so these can be attached to a recording. A recording is made when you open a Jam recording link we sent you and press Start Recording. It contains a video of the screen, window or tab you choose to share, together with that technical data, so it can include anything shown on the page or exchanged with our servers, such as your debate content. While you are signed in, your DebateOwl account ID is available to Jam and is attached to any recording you make, which links the recording to your account. Jam processes this data as our service provider and keeps it until it is no longer needed to provide its service; it does not state a fixed retention period. To ask us to delete a recording, or to object to this processing, contact {{privacyEmail}}.",
     "s9": "Children's Privacy",
     "p9": "DebateOwl is designed for users 13 and older. We do not knowingly collect data from children under 13.",
     "s10": "Changes to This Policy",
     "p10": "We may update this policy periodically. Significant changes will be communicated via email or in-app notification.",
     "s11": "Contact Us",
-    "p11": "For privacy questions or data requests, contact us at privacy@debatelab.app."
+    "p11": "For privacy questions or data requests, contact us at {{privacyEmail}}."
+  },
+  "aboutPage": {
+    "title": "About {{product}}",
+    "question": "What is {{product}}?",
+    "answer": "<home>{{product}}</home> is an AI debate prep and practice app for students and competitive debaters. It helps you write a case, find the weak points in an argument, research evidence with citations and practice timed rounds against an AI opponent.",
+    "makerHeading": "Who makes it",
+    "maker": "{{product}} is built by a student developer and made by <pistack>Pi-Stack</pistack>.",
+    "nameHeading": "The name",
+    "name": "{{product}} was called DebateLab, at debate.pi-stack.org, until {{date}}.",
+    "pricingHeading": "Pricing",
+    "pricing": "A {{trialDays}}-day free trial, then {{price}}/month + tax. <pricing>See what the plans include</pricing>.",
+    "languagesHeading": "Languages",
+    "languages": "English, Spanish and Hungarian.",
+    "linksHeading": "More about {{product}}"
+  },
+  "contactPage": {
+    "title": "Contact {{product}}",
+    "question": "How do I contact {{product}}?",
+    "answer": "Email <email>{{email}}</email>. We reply by email.",
+    "topicsHeading": "What to write about",
+    "support": "Help with your account, billing or something in <home>{{product}}</home> that is not working.",
+    "privacy": "Privacy and data requests, such as a copy of your data or deleting your account: <email>{{email}}</email>.",
+    "feedback": "Feedback, ideas and anything you would like {{product}} to do.",
+    "tipHeading": "To help us answer",
+    "tip": "If something is not working, say what you did, what you expected and what happened instead. Never send passwords or card details."
   },
   "termsPage": {
     "title": "Terms of Service",
     "lastUpdated": "Last updated",
-    "date": "May 1, 2026",
+    "date": "October 28, 2026",
     "s1": "Acceptance of Terms",
     "p1": "By using DebateOwl, you agree to these terms. If you do not agree, do not use the service.",
     "s2": "Service Description",
@@ -1868,7 +1895,9 @@
     "s9": "Termination",
     "p9": "We may suspend or terminate accounts that violate these terms. You may delete your account at any time.",
     "s10": "Governing Law",
-    "p10": "These terms are governed by applicable law. Disputes will be resolved through binding arbitration."
+    "p10": "These terms are governed by applicable law. Disputes will be resolved through binding arbitration.",
+    "s11": "Contact",
+    "p11": "Questions about these terms? Email {{contactEmail}}. For privacy questions or data requests, email {{privacyEmail}}."
   },
   "export": {
     "generatedBy": "Generated by DebateOwl",
@@ -2630,6 +2659,14 @@
     "speechTimeCalculator": {
       "title": "Speech Time Calculator | {{brand}}",
       "description": "Free speech time calculator that counts the words in a debate speech and shows how long it takes at a slow, average or fast pace."
+    },
+    "about": {
+      "title": "About {{product}} | {{brand}}",
+      "description": "{{product}} is an AI debate prep and practice app for students and competitive debaters, built by a student developer and made by Pi-Stack."
+    },
+    "contact": {
+      "title": "Contact | {{brand}}",
+      "description": "How to email {{product}} for help with your account or billing, privacy and data requests, and feedback on the AI debate prep app."
     }
   },
   "validation": {

@@ -1,4 +1,5 @@
 import { useTranslation } from 'react-i18next';
+import site from '@/config/site.json';
 import { PublicPageShell } from '@/components/layout/PublicPageShell';
 import { usePageHead } from '@/lib/seo/use-page-head';
 
@@ -17,7 +18,7 @@ export default function PrivacyPage() {
           {sections.map((n) => (
             <section key={n}>
               <h2 className="text-lg font-semibold">{n}. {t(`privacyPage.s${n}`)}</h2>
-              <p>{t(`privacyPage.p${n}`)}</p>
+              <p>{t(`privacyPage.p${n}`, { privacyEmail: site.privacyEmail })}</p>
             </section>
           ))}
         </div>

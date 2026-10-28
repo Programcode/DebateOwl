@@ -15,6 +15,8 @@ import { TOOL_PAGES as ES_TOOL_PAGES } from '@/pages/tools/localized/es';
 import LandingPage from '@/pages/LandingPage';
 import TermsPage from '@/pages/TermsPage';
 import PrivacyPage from '@/pages/PrivacyPage';
+import AboutPage from '@/pages/AboutPage';
+import ContactPage from '@/pages/ContactPage';
 import NotFound from '@/pages/NotFound';
 import SourcesPage from '@/pages/SourcesPage';
 import { PRACTICE_TOOLS, PREPARE_TOOLS, PREP_MODE_COUNT, UTILITY_TOOLS } from '@/components/features/tools/tool-links';
@@ -171,7 +173,7 @@ function localizedLandingStructuredData(head: PageHead, language: PageLanguage, 
 }
 
 /** Home, then the page: the trail the guides and tool pages already carry. */
-function breadcrumbList(route: '/terms' | '/privacy' | '/expocit/sources', name: string) {
+function breadcrumbList(route: '/terms' | '/privacy' | '/about' | '/contact' | '/expocit/sources', name: string) {
   return {
     '@type': 'BreadcrumbList',
     itemListElement: [
@@ -187,6 +189,21 @@ function legalStructuredData(route: '/terms' | '/privacy', page: 'termsPage' | '
     '@graph': [
       webPage(route, isoDate(i18n.t(`${page}.date`, { lng: 'en' }))),
       breadcrumbList(route, i18n.t(`${page}.title`, { lng: 'en' })),
+    ],
+  };
+}
+
+// The day the About and Contact copy last changed; move it when their text does.
+const ABOUT_CONTACT_MODIFIED = '2026-10-28';
+
+/** /about as an AboutPage about the Organization the home page defines; /contact as a ContactPage. */
+function aboutContactStructuredData(route: '/about' | '/contact') {
+  const about = route === '/about';
+  return {
+    '@context': 'https://schema.org',
+    '@graph': [
+      { ...webPage(route, ABOUT_CONTACT_MODIFIED), '@type': about ? 'AboutPage' : 'ContactPage', about: { '@id': ORGANIZATION_ID } },
+      breadcrumbList(route, i18n.t(about ? 'footer.about' : 'footer.contact', { lng: 'en' })),
     ],
   };
 }
@@ -269,6 +286,14 @@ export async function prerenderPages({ landingModified }: { landingModified?: st
       body: render('/privacy', PrivacyPage),
       structuredData: legalStructuredData('/privacy', 'privacyPage'),
     },
+    ...(['/about', '/contact'] as const).map((route) => ({
+      route,
+      file: `${route.slice(1)}/index.html`,
+      module: route === '/about' ? 'src/pages/AboutPage.tsx' : 'src/pages/ContactPage.tsx',
+      head: PAGE_HEADS[route],
+      body: render(route, route === '/about' ? AboutPage : ContactPage),
+      structuredData: aboutContactStructuredData(route),
+    })),
     // The tool pages render their own JSON-LD in the body.
     ...TOOL_PAGES.map(({ route, module, Page }) => ({
       ...alternatesOf(route),
