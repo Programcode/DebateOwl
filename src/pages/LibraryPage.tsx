@@ -19,6 +19,7 @@ import { validateUrl } from '@/lib/validation/url';
 import { browserIsOffline, isBrowserNetworkFailure } from '@/lib/ai/client';
 import { useCurrentDebate, useDebateStore } from '@/lib/stores/debate-store';
 import { importSourceFile, SourceFileImportError } from '@/lib/source-file-import';
+import { libraryFolders, matchesLibrarySearch, normalizeFolder, sortLibrarySources, type LibrarySort } from '@debatelab/core/library';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -240,7 +241,7 @@ export default function LibraryPage() {
   const [newFolderName, setNewFolderName] = useState('');
   const [newFolderOpen, setNewFolderOpen] = useState(false);
   const [folderRenameValue, setFolderRenameValue] = useState('');
-  const [sortBy, setSortBy] = useState<'smart' | 'mostUsed' | 'importance' | 'strength' | 'newest' | 'oldest' | 'title' | 'folder'>('smart');
+  const [sortBy, setSortBy] = useState<LibrarySort>('smart');
   const [importUrl, setImportUrl] = useState('');
   const [isImportingUrl, setIsImportingUrl] = useState(false);
   const [selectedSourceId, setSelectedSourceId] = useState<string | null>(null);
@@ -457,59 +458,20 @@ export default function LibraryPage() {
   const firstLoadPending = serverHydration === 'pending' && sourceLibrary.length === 0;
   const hasActiveSources = activeSourceCount > 0;
   // Folder names are account-wide; hide the ones only other debates use, but keep new empty ones.
-  const otherDebateFolders = new Set(allSources.filter((source) => source.debateId !== currentDebate?.id).map((source) => source.folder || 'General'));
-  const thisDebateFolders = sourceLibrary.map(s => s.folder || 'General').filter(Boolean);
-  const folders = Array.from(new Set([
-    ...(sourceFolders || ['General']).filter((folder) => folder === 'General' || !otherDebateFolders.has(folder) || thisDebateFolders.includes(folder)),
-    ...thisDebateFolders,
-  ])).sort();
+  const otherDebateFolders = allSources.filter((source) => source.debateId !== currentDebate?.id).map((source) => source.folder || 'General');
+  const folders = libraryFolders(sourceFolders || ['General'], sourceLibrary, otherDebateFolders);
   const folderKey = folders.join('\n');
   useEffect(() => {
     // A folder picked in another debate may not exist here.
     if (selectedFolder !== 'all' && !folderKey.split('\n').includes(selectedFolder)) setSelectedFolder('all');
   }, [folderKey, selectedFolder]);
-  const visibleSources = sourceLibrary
-    .filter((source) => selectedFolder === 'all' || (source.folder || 'General') === selectedFolder)
-    .filter((source) => {
-      const query = searchQuery.trim().toLowerCase();
-      if (!query) return true;
-      return [
-        source.title,
-        source.content,
-        source.origin || '',
-        source.folder || 'General',
-      ].some((value) => value.toLowerCase().includes(query));
-    })
-    .slice()
-    .sort((a, b) => {
-      const aSemantic = a.metadata?.semantic;
-      const bSemantic = b.metadata?.semantic;
-      switch (sortBy) {
-        case 'smart':
-          return Number(Boolean(bSemantic?.lastUsedInCase)) - Number(Boolean(aSemantic?.lastUsedInCase)) ||
-            (bSemantic?.importance ?? 0) - (aSemantic?.importance ?? 0) ||
-            (bSemantic?.strength ?? 0) - (aSemantic?.strength ?? 0) ||
-            (b.metadata?.qualityScore ?? 0) - (a.metadata?.qualityScore ?? 0) ||
-            b.createdAt - a.createdAt;
-        case 'mostUsed':
-          return (bSemantic?.useCount ?? 0) - (aSemantic?.useCount ?? 0) || b.createdAt - a.createdAt;
-        case 'importance':
-          return (bSemantic?.importance ?? 0) - (aSemantic?.importance ?? 0) || b.createdAt - a.createdAt;
-        case 'strength':
-          return (bSemantic?.strength ?? 0) - (aSemantic?.strength ?? 0) || b.createdAt - a.createdAt;
-        case 'oldest':
-          return a.createdAt - b.createdAt;
-        case 'title':
-          return (a.title || '').localeCompare(b.title || '');
-        case 'folder': {
-          const folderCmp = (a.folder || 'General').localeCompare(b.folder || 'General');
-          return folderCmp !== 0 ? folderCmp : (a.title || '').localeCompare(b.title || '');
-        }
-        case 'newest':
-        default:
-          return b.createdAt - a.createdAt;
-      }
-    });
+  const visibleSources = sortLibrarySources(
+    sourceLibrary
+      // The chips list trimmed names, so a legacy folder saved with spaces still matches its chip.
+      .filter((source) => selectedFolder === 'all' || normalizeFolder(source.folder) === selectedFolder)
+      .filter((source) => matchesLibrarySearch(source, searchQuery)),
+    sortBy,
+  );
   const selectedSource = selectedSourceId ? sourceLibrary.find((source) => source.id === selectedSourceId) || null : null;
 
   useEffect(() => {

@@ -2697,7 +2697,12 @@
       "loadFailed": "No se pudo cargar tu debate.",
       "viewAria": "Mostrar la preparación de",
       "recentSources": "Fuentes recientes",
-      "seeAll": "Ver todo"
+      "seeAll": "Ver todo",
+      "judge": "Juez",
+      "judgePlaceholder": "Juez lego, un padre voluntario",
+      "judgeHint": "La IA adapta sus argumentos a este juez.",
+      "deleteTitle": "¿Eliminar este debate?",
+      "settings": "Ajustes del debate"
     },
     "common": {
       "done": "Listo",
@@ -2762,7 +2767,33 @@
       "sourceMissing": "Esta fuente ya no está en tu biblioteca.",
       "openPage": "Abre la página en el navegador",
       "deleteSourceTitle": "¿Eliminar fuente?",
-      "deleteSourceDesc": "Esto eliminará la fuente de tu biblioteca sincronizada."
+      "deleteSourceDesc": "Esto eliminará la fuente de tu biblioteca sincronizada.",
+      "importFile": "Importar un archivo",
+      "more": "Más",
+      "show": "Mostrar",
+      "turnOn": "Activar",
+      "turnOff": "Desactivar",
+      "turnedOff": "Desactivada para la IA",
+      "moveTo": "Mover a carpeta",
+      "share": "Compartir",
+      "edit": "Editar",
+      "open": "Abrir",
+      "folderOn": "{{active}} de {{total}} activadas",
+      "folderEmpty": "Aún no hay fuentes en esta carpeta.",
+      "renamePrompt": "Las fuentes de este debate pasan al nuevo nombre.",
+      "details": "Detalles",
+      "file": {
+        "tooLarge": "El archivo es demasiado grande. Importa archivos de menos de 8 MB.",
+        "unsupported": "Tipo de archivo no compatible. Importa TXT, Markdown, CSV, JSON, PDF o DOCX.",
+        "empty": "No se encontró texto legible en este archivo.",
+        "parsePdf": "No se pudo procesar el PDF.",
+        "parseDocx": "No se pudo procesar el DOCX.",
+        "truncated": "Archivo grande recortado a la primera sección legible.",
+        "short": "Se extrajo poco texto. Revísalo antes de guardar.",
+        "invalidJson": "JSON no válido. Se importó como texto sin formato.",
+        "pdfPages_one": "El PDF tiene {{pages}} páginas. Se importaron las primeras {{imported}}.",
+        "pdfPages_other": "El PDF tiene {{pages}} páginas. Se importaron las primeras {{imported}}."
+      }
     },
     "ask": {
       "placeholder": "Pregunta a tu coach",

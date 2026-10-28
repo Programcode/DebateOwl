@@ -126,7 +126,8 @@ export default function PracticeScreen() {
                   key={round.id}
                   item={{ id: round.id, kind: 'sparring', title: round.motion, createdAt: round.updatedAt }}
                   first={index === 0}
-                  onPress={() => router.push({ pathname: '/sparring/[id]', params: { id: round.id, from: 'practice' } })}
+                  from="practice"
+                  onDeleted={() => void load()}
                 />
               ))}
             </Card>

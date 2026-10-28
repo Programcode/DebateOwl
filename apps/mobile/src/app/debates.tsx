@@ -2,6 +2,7 @@ import { useRouter } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, Pressable, StyleSheet, Switch, TextInput, View } from 'react-native';
+import ReanimatedSwipeable from 'react-native-gesture-handler/ReanimatedSwipeable';
 
 import { PrimaryButton, TextButton } from '@/components/buttons';
 import { Card } from '@/components/card';
@@ -10,9 +11,11 @@ import { Icon } from '@/components/icon';
 import { SheetScrollView } from '@/components/sheet';
 import { Text } from '@/components/text';
 import { useAuth } from '@/lib/auth';
+import { confirmDestructive } from '@/lib/confirm';
 import { useDebates } from '@/lib/debate-context';
 import { fetchSourceCounts, type Debate } from '@/lib/debates';
 import { formatRelativeDate, isToday } from '@/lib/dates';
+import { haptics } from '@/lib/haptics';
 import { useCopyHolder } from '@/lib/use-copy-holder';
 import { radius } from '@/theme/colors';
 import { fontFamily } from '@/theme/fonts';
@@ -27,7 +30,8 @@ export default function DebatesSheet() {
   const { t } = useTranslation();
   const router = useRouter();
   const { colors } = useTheme();
-  const { status, debates, current, oneOff, setOneOff, switchTo, refresh } = useDebates();
+  const { status, debates, current, oneOff, setOneOff, switchTo, refresh, remove } = useDebates();
+  const [deleting, setDeleting] = useState<string | null>(null);
   const { session } = useAuth();
   const userId = session?.user.id ?? null;
   const [query, setQuery] = useState('');
@@ -74,6 +78,29 @@ export default function DebatesSheet() {
       setError(t('debate.switchFailed'));
     } finally {
       setSwitching(null);
+    }
+  };
+
+  // The website deletes any debate but the current one, after its warning; its sources and saved work go too.
+  const removeDebate = async (debate: Debate) => {
+    if (deleting || switching) return;
+    const confirmed = await confirmDestructive({
+      title: t('mobile.debate.deleteTitle'),
+      message: `${debate.motion}\n\n${t('debate.deleteWarning')}`,
+      confirm: t('common.delete'),
+      cancel: t('common.cancel'),
+    });
+    if (!confirmed) return;
+    setDeleting(debate.id);
+    setError('');
+    try {
+      await remove(debate.id);
+      haptics.success();
+    } catch {
+      haptics.warning();
+      setError(t('debate.deleteFailed'));
+    } finally {
+      setDeleting(null);
     }
   };
 
@@ -128,19 +155,18 @@ export default function DebatesSheet() {
             const when = isToday(debate.lastActivityAt)
               ? t('mobile.debates.activeToday')
               : formatRelativeDate(debate.lastActivityAt);
-            return (
+            const row = (
               <Pressable
-                key={debate.id}
                 accessibilityRole="button"
                 accessibilityLabel={t('debate.switchToAria', { motion: debate.motion })}
-                accessibilityState={{ selected: isCurrent, busy: switching === debate.id }}
+                accessibilityState={{ selected: isCurrent, busy: switching === debate.id || deleting === debate.id }}
+                accessibilityActions={isCurrent ? undefined : [{ name: 'delete', label: t('common.delete') }]}
+                onAccessibilityAction={(event) => {
+                  if (event.nativeEvent.actionName === 'delete') void removeDebate(debate);
+                }}
                 disabled={switching !== null}
                 onPress={() => void pick(debate)}
-                style={({ pressed }) => [
-                  styles.row,
-                  index > 0 && { borderTopWidth: 1, borderTopColor: colors.line },
-                  pressed && styles.pressed,
-                ]}>
+                style={({ pressed }) => [styles.row, { backgroundColor: colors.card }, pressed && styles.pressed]}>
                 <View style={styles.rowText}>
                   <Text weight="semibold" style={styles.motion}>
                     {debate.motion}
@@ -151,12 +177,37 @@ export default function DebatesSheet() {
                       : t('mobile.debates.meta', { sources: t('mobile.debates.sourceCount', { count: sources }), when })}
                   </Text>
                 </View>
-                {switching === debate.id ? (
+                {switching === debate.id || deleting === debate.id ? (
                   <ActivityIndicator />
                 ) : isCurrent ? (
                   <Icon name="check" color={colors.primary} size={22} />
                 ) : null}
               </Pressable>
+            );
+            const divider = index > 0 && { borderTopWidth: 1, borderTopColor: colors.line };
+            // The current debate cannot be deleted, as on the website.
+            if (isCurrent) return <View key={debate.id} style={divider}>{row}</View>;
+            return (
+              <ReanimatedSwipeable
+                key={debate.id}
+                friction={2}
+                rightThreshold={40}
+                overshootRight={false}
+                containerStyle={divider}
+                renderRightActions={() => (
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel={t('debate.deleteAria', { motion: debate.motion })}
+                    onPress={() => void removeDebate(debate)}
+                    style={[styles.deleteAction, { backgroundColor: colors.destructive }]}>
+                    <Icon name="trash" color="#ffffff" size={20} />
+                    <Text weight="semibold" style={styles.deleteLabel}>
+                      {t('common.delete')}
+                    </Text>
+                  </Pressable>
+                )}>
+                {row}
+              </ReanimatedSwipeable>
             );
           })}
         </Card>
@@ -177,7 +228,10 @@ export default function DebatesSheet() {
           </View>
           <Switch
             value={oneOff}
-            onValueChange={setOneOff}
+            onValueChange={(value) => {
+              haptics.tap();
+              setOneOff(value);
+            }}
             accessibilityLabel={t('mobile.debates.oneOff')}
             trackColor={{ false: colors.border, true: colors.primaryFill }}
             ios_backgroundColor={colors.border}
@@ -213,7 +267,9 @@ const styles = StyleSheet.create({
   searchInput: { flex: 1, fontSize: 16.5, fontFamily: fontFamily.regular, paddingVertical: 10 },
   loading: { marginVertical: 24 },
   body: { fontSize: 15, lineHeight: 21 },
-  list: { padding: 0, gap: 0 },
+  list: { padding: 0, gap: 0, overflow: 'hidden' },
+  deleteAction: { width: 92, alignItems: 'center', justifyContent: 'center', gap: 3 },
+  deleteLabel: { color: '#ffffff', fontSize: 13 },
   row: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 13, paddingHorizontal: 16 },
   rowText: { flex: 1, gap: 3 },
   motion: { fontSize: 16.5, lineHeight: 22 },

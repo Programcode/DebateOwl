@@ -2697,7 +2697,12 @@
       "loadFailed": "Could not load your debate.",
       "viewAria": "Show preparation for",
       "recentSources": "Recent sources",
-      "seeAll": "See all"
+      "seeAll": "See all",
+      "judge": "Judge",
+      "judgePlaceholder": "Lay judge, a parent volunteer",
+      "judgeHint": "The AI adapts its arguments to this judge.",
+      "deleteTitle": "Delete this debate?",
+      "settings": "Debate settings"
     },
     "common": {
       "done": "Done",
@@ -2762,7 +2767,33 @@
       "sourceMissing": "This source is no longer in your Library.",
       "openPage": "Opens the page in the browser",
       "deleteSourceTitle": "Delete source?",
-      "deleteSourceDesc": "This removes the source from your synced library."
+      "deleteSourceDesc": "This removes the source from your synced library.",
+      "importFile": "Import a file",
+      "more": "More",
+      "show": "Show",
+      "turnOn": "Turn on",
+      "turnOff": "Turn off",
+      "turnedOff": "Off for AI",
+      "moveTo": "Move to folder",
+      "share": "Share",
+      "edit": "Edit",
+      "open": "Open",
+      "folderOn": "{{active}} of {{total}} on",
+      "folderEmpty": "No sources in this folder yet.",
+      "renamePrompt": "Sources in this debate move to the new name.",
+      "details": "Details",
+      "file": {
+        "tooLarge": "File is too large. Import files under 8 MB.",
+        "unsupported": "Unsupported file type. Import TXT, Markdown, CSV, JSON, PDF, or DOCX.",
+        "empty": "No readable text was found in this file.",
+        "parsePdf": "Could not parse PDF.",
+        "parseDocx": "Could not parse DOCX.",
+        "truncated": "Large file truncated to the first readable section.",
+        "short": "Short extraction. Review the text before saving.",
+        "invalidJson": "Invalid JSON. Imported as raw text.",
+        "pdfPages_one": "PDF has {{pages}} pages. Imported the first {{imported}}.",
+        "pdfPages_other": "PDF has {{pages}} pages. Imported the first {{imported}}."
+      }
     },
     "ask": {
       "placeholder": "Ask your coach",

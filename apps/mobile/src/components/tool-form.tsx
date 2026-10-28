@@ -10,6 +10,7 @@ import { Text } from './text';
 import type { AIErrorKind } from '@/lib/ai-request';
 import { useDailyUsage } from '@/lib/usage';
 import { useDebates } from '@/lib/debate-context';
+import { haptics } from '@/lib/haptics';
 import { radius } from '@/theme/colors';
 import { useTheme } from '@/theme/use-theme';
 import { OwlLoader, type OwlPose } from '@/components/owl';
@@ -72,6 +73,8 @@ export function ToolError({ title, error, onRetry }: { title: string; error: AIE
   const { t } = useTranslation();
   const router = useRouter();
   const { colors } = useTheme();
+  // A failed request warns once, when its message appears.
+  useEffect(() => haptics.warning(), [error]);
   return (
     <View accessibilityRole="alert" style={[styles.error, { borderColor: colors.border, backgroundColor: colors.card }]} testID="tool-error">
       <Text weight="semibold" style={styles.errorTitle}>

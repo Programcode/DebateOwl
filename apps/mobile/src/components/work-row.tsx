@@ -1,4 +1,4 @@
-import type { Href } from 'expo-router';
+import { Link, useRouter, type Href } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { Pressable, StyleSheet, View } from 'react-native';
 
@@ -9,6 +9,7 @@ import { Text } from './text';
 
 import { formatWhen } from '@/lib/dates';
 import type { DebateItem, DebateItemKind } from '@/lib/debates';
+import { canDeleteWork, hasDocumentText, useWorkActions } from '@/lib/work-actions';
 import { useTheme } from '@/theme/use-theme';
 
 export const KIND_ICONS: Record<DebateItemKind, IconName> = {
@@ -49,28 +50,87 @@ export function workHref(item: DebateItem, from: OpenedFrom): Href {
   }
 }
 
-/** One saved result or round, with its kind and when it was made. */
-export function WorkRow({ item, first, onPress }: { item: DebateItem; first: boolean; onPress: () => void }) {
+/**
+ * One saved result or round, with its kind and when it was made. With `from`,
+ * it is a link with a preview and a menu (Open, Discuss, Share, and Delete for
+ * a case or a Sparring round, as the website's History allows).
+ */
+export function WorkRow({
+  item,
+  first,
+  onPress,
+  from,
+  onDeleted,
+}: {
+  item: DebateItem;
+  first: boolean;
+  onPress?: () => void;
+  from?: OpenedFrom;
+  onDeleted?: () => void;
+}) {
   const { t } = useTranslation();
   const { colors } = useTheme();
-  return (
+  const router = useRouter();
+  const actions = useWorkActions();
+  const title = item.title || t(`debate.kinds.${item.kind}`);
+  const href = from ? workHref(item, from) : null;
+  // Practice work opens the Practice tab, which has nothing to preview, so it is a plain row that navigates itself.
+  const linked = href !== null && href !== '/practice';
+  const row = (
     <Pressable
       accessibilityRole="button"
-      accessibilityLabel={t('mobile.common.openItem', { title: item.title || t(`debate.kinds.${item.kind}`) })}
-      onPress={onPress}
+      accessibilityLabel={t('mobile.common.openItem', { title })}
+      onPress={linked ? onPress : onPress ?? (href ? () => router.navigate(href) : undefined)}
       testID="work-row"
-      style={({ pressed }) => [styles.row, !first && { borderTopWidth: 1, borderTopColor: colors.line }, pressed && styles.pressed]}>
-      <IconTile name={KIND_ICONS[item.kind]} size={42} />
-      <View style={styles.rowText}>
-        <Text weight="semibold" style={styles.rowTitle} numberOfLines={2}>
-          {item.title || t(`debate.kinds.${item.kind}`)}
-        </Text>
-        <Text tone="faint" style={styles.rowMeta} numberOfLines={1}>
-          {t('mobile.debate.itemMeta', { kind: t(`debate.kinds.${item.kind}`), when: formatWhen(item.createdAt) })}
-        </Text>
-      </View>
-      <Icon name="chevronRight" color={colors.tabInactive} size={20} />
+      // One flat style object: inside a Link's slot the web preview hands it to the DOM as is.
+      style={StyleSheet.flatten([!first && { borderTopWidth: 1, borderTopColor: colors.line }, { backgroundColor: colors.card }])}>
+      {({ pressed }) => (
+        <View style={[styles.row, pressed && styles.pressed]}>
+          <IconTile name={KIND_ICONS[item.kind]} size={42} />
+          <View style={styles.rowText}>
+            <Text weight="semibold" style={styles.rowTitle} numberOfLines={2}>
+              {title}
+            </Text>
+            <Text tone="faint" style={styles.rowMeta} numberOfLines={1}>
+              {t('mobile.debate.itemMeta', { kind: t(`debate.kinds.${item.kind}`), when: formatWhen(item.createdAt) })}
+            </Text>
+          </View>
+          <Icon name="chevronRight" color={colors.tabInactive} size={20} />
+        </View>
+      )}
     </Pressable>
+  );
+  if (!linked) return row;
+  const document = hasDocumentText(item);
+  return (
+    <Link href={href} asChild>
+      <Link.Trigger>{row}</Link.Trigger>
+      <Link.Preview />
+      <Link.Menu>
+        {document ? (
+          <Link.MenuAction icon="bubble.left.and.bubble.right" onPress={() => void actions.discuss(item)}>
+            {t('common.discuss')}
+          </Link.MenuAction>
+        ) : null}
+        {document ? (
+          <Link.MenuAction icon="square.and.arrow.up" onPress={() => void actions.share(item)}>
+            {t('mobile.library.share')}
+          </Link.MenuAction>
+        ) : null}
+        {canDeleteWork(item) ? (
+          <Link.MenuAction
+            icon="trash"
+            destructive
+            onPress={() => {
+              void actions.remove(item).then((removed) => {
+                if (removed) onDeleted?.();
+              });
+            }}>
+            {t('common.delete')}
+          </Link.MenuAction>
+        ) : null}
+      </Link.Menu>
+    </Link>
   );
 }
 

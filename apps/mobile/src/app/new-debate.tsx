@@ -1,45 +1,18 @@
 import { useRouter } from 'expo-router';
-import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
-import { MainActionButton, TextButton } from '@/components/buttons';
-import { Card } from '@/components/card';
-import { Field } from '@/components/field';
-import { Icon } from '@/components/icon';
+import { TextButton } from '@/components/buttons';
+import { DebateForm } from '@/components/debate-form';
 import { SheetScrollView } from '@/components/sheet';
 import { Text } from '@/components/text';
 import { useDebates } from '@/lib/debate-context';
-import { DEBATE_FORMATS, MAX_MOTION_LENGTH, type DebateFormat } from '@/lib/debates';
-import { useTheme } from '@/theme/use-theme';
 
-/** Start a debate: motion and format, like the website's Start new debate dialog. It becomes current. */
+/** Start a debate: the website's Start new debate dialog (motion, format, role, instructions) plus the judge. It becomes current. */
 export default function NewDebateSheet() {
   const { t } = useTranslation();
   const router = useRouter();
-  const { colors } = useTheme();
   const { create } = useDebates();
-  const [motion, setMotion] = useState('');
-  const [format, setFormat] = useState<DebateFormat>('custom');
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState('');
-
-  const submit = async () => {
-    // The button stays disabled until there is a motion, as on the website.
-    if (!motion.trim()) return;
-    setSaving(true);
-    setError('');
-    try {
-      // The website's form saves the role too; it has no role picker here yet, so it keeps the default.
-      await create({ motion, settings: { format, role: 'general' } });
-      // Closes this sheet and the switcher under it, if it was opened from there.
-      router.dismissAll();
-    } catch (cause) {
-      console.warn('Could not create the debate:', cause instanceof Error ? cause.message : cause);
-      setError(t('debate.saveFailed'));
-      setSaving(false);
-    }
-  };
 
   return (
     <SheetScrollView testID="new-debate-sheet">
@@ -47,64 +20,18 @@ export default function NewDebateSheet() {
         <Text accessibilityRole="header" weight="display" style={styles.title}>
           {t('debate.startNew')}
         </Text>
-        <TextButton label={t('common.cancel')} onPress={() => router.back()} disabled={saving} />
+        <TextButton label={t('common.cancel')} onPress={() => router.back()} />
       </View>
       <Text tone="secondary" style={styles.body}>
         {t('debate.startNewDesc')}
       </Text>
-
-      <Field
-        label={t('debate.motion')}
-        placeholder={t('debate.motionPlaceholder')}
-        value={motion}
-        onChangeText={setMotion}
-        maxLength={MAX_MOTION_LENGTH}
-        multiline
-        autoFocus
-        editable={!saving}
-        style={styles.motion}
-      />
-
-      <View style={styles.group}>
-        <Text weight="medium" tone="secondary" style={styles.label}>
-          {t('debate.format')}
-        </Text>
-        <Card style={styles.list}>
-          {DEBATE_FORMATS.map((value, index) => {
-            const selected = value === format;
-            return (
-              <Pressable
-                key={value}
-                accessibilityRole="radio"
-                accessibilityState={{ selected, disabled: saving }}
-                disabled={saving}
-                onPress={() => setFormat(value)}
-                style={({ pressed }) => [
-                  styles.option,
-                  index > 0 && { borderTopWidth: 1, borderTopColor: colors.line },
-                  pressed && styles.pressed,
-                ]}>
-                <Text weight={selected ? 'semibold' : 'regular'} style={styles.optionLabel}>
-                  {t(`debate.formats.${value}`)}
-                </Text>
-                {selected ? <Icon name="check" color={colors.primary} size={21} /> : null}
-              </Pressable>
-            );
-          })}
-        </Card>
-      </View>
-
-      {error ? (
-        <Text accessibilityRole="alert" weight="medium" style={[styles.body, { color: colors.destructive }]}>
-          {error}
-        </Text>
-      ) : null}
-
-      <MainActionButton
-        label={t('debate.startDebate')}
-        busy={saving}
-        disabled={!motion.trim()}
-        onPress={() => void submit()}
+      <DebateForm
+        submitLabel={t('debate.startDebate')}
+        onSubmit={async (values) => {
+          await create(values);
+          // Closes this sheet and the switcher under it, if it was opened from there.
+          router.dismissAll();
+        }}
       />
     </SheetScrollView>
   );
@@ -114,11 +41,4 @@ const styles = StyleSheet.create({
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
   title: { fontSize: 21, lineHeight: 26, letterSpacing: -0.3, flexShrink: 1 },
   body: { fontSize: 15, lineHeight: 21 },
-  motion: { minHeight: 96, paddingTop: 13, paddingBottom: 13, textAlignVertical: 'top' },
-  group: { gap: 7 },
-  label: { fontSize: 14, marginLeft: 4 },
-  list: { padding: 0, gap: 0 },
-  option: { flexDirection: 'row', alignItems: 'center', minHeight: 48, paddingHorizontal: 16, gap: 12 },
-  optionLabel: { flex: 1, fontSize: 16 },
-  pressed: { opacity: 0.6 },
 });

@@ -2697,7 +2697,12 @@
       "loadFailed": "Nem sikerült betölteni a vitát.",
       "viewAria": "Felkészülés megjelenítése",
       "recentSources": "Legutóbbi források",
-      "seeAll": "Összes"
+      "seeAll": "Összes",
+      "judge": "Bíró",
+      "judgePlaceholder": "Laikus bíró, önkéntes szülő",
+      "judgeHint": "Az MI ehhez a bíróhoz igazítja az érveit.",
+      "deleteTitle": "Törlöd ezt a vitát?",
+      "settings": "A vita beállításai"
     },
     "common": {
       "done": "Kész",
@@ -2762,7 +2767,33 @@
       "sourceMissing": "Ez a forrás már nincs a könyvtáradban.",
       "openPage": "Megnyitja az oldalt a böngészőben",
       "deleteSourceTitle": "Törlöd a forrást?",
-      "deleteSourceDesc": "Ezzel eltávolítod a forrást a szinkronizált könyvtáradból."
+      "deleteSourceDesc": "Ezzel eltávolítod a forrást a szinkronizált könyvtáradból.",
+      "importFile": "Fájl importálása",
+      "more": "Továbbiak",
+      "show": "Megjelenítés",
+      "turnOn": "Bekapcsolás",
+      "turnOff": "Kikapcsolás",
+      "turnedOff": "MI-nek kikapcsolva",
+      "moveTo": "Áthelyezés mappába",
+      "share": "Megosztás",
+      "edit": "Szerkesztés",
+      "open": "Megnyitás",
+      "folderOn": "{{total}} forrásból {{active}} bekapcsolva",
+      "folderEmpty": "Ebben a mappában még nincs forrás.",
+      "renamePrompt": "A vita forrásai átkerülnek az új nevű mappába.",
+      "details": "Részletek",
+      "file": {
+        "tooLarge": "A fájl túl nagy. 8 MB-nál kisebb fájlt importálj.",
+        "unsupported": "Nem támogatott fájltípus. TXT, Markdown, CSV, JSON, PDF vagy DOCX fájlt importálj.",
+        "empty": "Ebben a fájlban nincs olvasható szöveg.",
+        "parsePdf": "Nem sikerült feldolgozni a PDF-et.",
+        "parseDocx": "Nem sikerült feldolgozni a DOCX-fájlt.",
+        "truncated": "A nagy fájlból csak az első olvasható rész került be.",
+        "short": "Kevés szöveg került ki. Mentés előtt nézd át.",
+        "invalidJson": "Érvénytelen JSON. Nyers szövegként került be.",
+        "pdfPages_one": "A PDF {{pages}} oldalas. Az első {{imported}} oldal került be.",
+        "pdfPages_other": "A PDF {{pages}} oldalas. Az első {{imported}} oldal került be."
+      }
     },
     "ask": {
       "placeholder": "Kérdezd az edződet",

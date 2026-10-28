@@ -9,6 +9,7 @@ import { useEffect } from 'react';
 import { StyleSheet } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
+import { ToastHost, ToastProvider } from '@/components/toast';
 import { AuthProvider, useAuth } from '@/lib/auth';
 import { DebateProvider } from '@/lib/debate-context';
 import { watchNetwork } from '@/lib/network-status';
@@ -24,7 +25,9 @@ export default function RootLayout() {
     <AuthProvider>
       <SettingsProvider>
         <DebateProvider>
-          <Root />
+          <ToastProvider>
+            <Root />
+          </ToastProvider>
         </DebateProvider>
       </SettingsProvider>
     </AuthProvider>
@@ -89,10 +92,13 @@ function Root() {
             <Stack.Screen name="(tabs)" />
             <Stack.Screen name="debates" options={sheet} />
             <Stack.Screen name="new-debate" options={sheet} />
+            <Stack.Screen name="edit-debate" options={sheet} />
+            <Stack.Screen name="debate-check" options={sheet} />
             <Stack.Screen name="delete-account" options={sheet} />
             <Stack.Screen name="delete-data" options={sheet} />
             <Stack.Screen name="add-link" options={sheet} />
             <Stack.Screen name="new-note" options={sheet} />
+            <Stack.Screen name="add-file" options={sheet} />
             <Stack.Screen name="source/[id]" options={sheet} />
             {/* The website's limit and model dialogs; short, so the sheet stops at half height. */}
             <Stack.Screen name="limit" options={{ ...sheet, sheetAllowedDetents: [0.56, 0.86] }} />
@@ -126,6 +132,7 @@ function Root() {
             <Stack.Screen name="sign-in" />
           </Stack.Protected>
         </Stack>
+        <ToastHost />
       </GestureHandlerRootView>
     </ThemeProvider>
   );

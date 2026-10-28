@@ -5,6 +5,7 @@ import { Icon } from './icon';
 import type { IconName } from './icon-paths';
 import { Text } from './text';
 
+import { haptics } from '@/lib/haptics';
 import { radius } from '@/theme/colors';
 import { useTheme } from '@/theme/use-theme';
 
@@ -38,7 +39,12 @@ export function Chip({
       accessibilityRole={accessibilityRole}
       accessibilityLabel={accessibilityLabel}
       accessibilityState={accessibilityRole === 'switch' || accessibilityRole === 'radio' ? { checked: Boolean(selected) } : { selected: Boolean(selected) }}
-      onPress={onPress}
+      onPress={() => {
+        // A switch chip taps; a filter, tab or radio chip ticks like a picker.
+        if (accessibilityRole === 'switch') haptics.tap();
+        else if (!selected) haptics.select();
+        onPress();
+      }}
       testID={testID}
       style={({ pressed }) => [
         styles.chip,
