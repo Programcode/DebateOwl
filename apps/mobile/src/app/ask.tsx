@@ -245,13 +245,15 @@ export default function AskScreen() {
           });
         } catch (streamError) {
           if (isAbortError(streamError) || !isCurrent()) throw streamError;
-          if (received) {
+          // Whitespace alone is not an answer (main #187): a model that spent its cap on
+          // reasoning may send a newline first. Ask the structured endpoint then.
+          if (received.trim()) {
             setNotice(`${t('ask.streamInterrupted')} ${t('ask.streamInterruptedDesc')}`);
             result = { response: received.trim(), followUpQuestions: [], uncertainties: [t('ask.streamInterrupted')] };
           } else if (isFinalAskError(streamError)) {
             throw streamError;
           } else {
-            // Nothing arrived: ask once more without streaming, as the website does.
+            // Nothing usable arrived: ask once more without streaming, as the website does.
             setStreaming(null);
             result = await askOnce(askRequest, controller.signal, keepExtras);
           }
