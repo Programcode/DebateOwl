@@ -27,6 +27,10 @@ import { useTheme } from '@/theme/use-theme';
 
 void SplashScreen.preventAutoHideAsync();
 
+// A screen opened straight from a link (a share link, the widget, a quick action) has the tabs
+// beneath it, so Back and the iPad sidebar always have the tabs to return to.
+export const unstable_settings = { anchor: '(tabs)' };
+
 export default function RootLayout() {
   return (
     <AuthProvider>

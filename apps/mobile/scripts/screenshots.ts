@@ -15,6 +15,7 @@
  * factoids, case-edits, context, limits, sidebar, first-run, share,
  * timer, crossfire, sparring, flowchart, one-off, history, announcements,
  * account, model. Sign-in screens are always shot.
+ * KEEP_GOING=1 carries on past a failed group (see groupFailed).
  * ONLY=offline runs only the offline reading check (see shootOfflineScreens).
  *
  * The iPad sizes are portrait (1024x1366), landscape (1366x1024), an 11-inch
@@ -1753,6 +1754,22 @@ async function shootSidebar(context: BrowserContext, prefix: string, language: s
   await sidebar.getByTestId('sidebar-item-generate').click();
   await page.getByTestId('generate-motion').waitFor({ timeout: 30_000 });
 
+  // A tool opened cold, as from a link: the sidebar still replaces it, and Back reaches the tabs.
+  await page.goto(`${ORIGIN}/generate`);
+  await page.getByTestId('generate-motion').waitFor({ timeout: 30_000 });
+  await sidebar.getByTestId('sidebar-item-ask').click();
+  await page.waitForURL('**/ask**');
+  await sidebar.getByTestId('sidebar-item-attack').click();
+  await page.waitForURL('**/attack**');
+  // The app's own Back (browser history on the web does not follow the stack).
+  await page.getByTestId('document-back').filter({ visible: true }).click();
+  await page.waitForURL((url) => url.pathname === '/', { timeout: 15_000 });
+  // The dashboard drops a load it loses focus during, so let it finish before covering it again.
+  await page.getByTestId('current-debate-motion').waitFor({ timeout: 30_000 });
+  await settle(page);
+  await sidebar.getByTestId('sidebar-item-generate').click();
+  await page.getByTestId('generate-motion').waitFor({ timeout: 30_000 });
+
   for (const section of ['practice', 'library']) {
     const toggle = sidebar.getByTestId(`sidebar-toggle-${section}`);
     await toggle.click();
@@ -2104,11 +2121,26 @@ async function shootModelPicker(context: BrowserContext, prefix: string, languag
 }
 
 /** Shoots whatever page of the group is open when it fails, and names the group in the error. */
+/**
+ * KEEP_GOING=1 records a failed group and runs the rest, so one flaky step
+ * does not cost every later shot; the run still exits with 1 and lists them.
+ */
+const KEEP_GOING = process.env.KEEP_GOING === '1';
+const groupFailures: string[] = [];
+
+function groupFailed(label: string, error: unknown): number {
+  const message = `${label}: ${(error instanceof Error ? error.message : String(error)).split('\n')[0]}`;
+  if (!KEEP_GOING) throw new Error(message);
+  console.error(`FAILED ${message}`);
+  groupFailures.push(message);
+  return 0;
+}
+
 function failedIn(context: BrowserContext, prefix: string, group: string) {
-  return async (error: unknown) => {
+  return async (error: unknown): Promise<number> => {
     const page = context.pages().at(-1);
     if (page) await shoot(page, `${prefix}-failed-${group}`).catch(() => undefined);
-    throw new Error(`${group}: ${error instanceof Error ? error.message : String(error)}`);
+    return groupFailed(`${prefix} ${group}`, error);
   };
 }
 
@@ -2430,7 +2462,7 @@ async function main() {
           if (want('debate')) {
             await shootDebateScreens(tabPage, prefix).catch(async (error: unknown) => {
               await shoot(tabPage, `${prefix}-failed`);
-              throw error;
+              groupFailed(prefix, error);
             });
             shots += 10;
           }
@@ -2441,7 +2473,7 @@ async function main() {
           if (want('library')) {
             await shootLibraryScreens(tabPage, prefix, problems).catch(async (error: unknown) => {
               await shoot(tabPage, `${prefix}-failed`);
-              throw error;
+              groupFailed(prefix, error);
             });
             shots += 14;
           }
@@ -2557,8 +2589,8 @@ async function main() {
   console.log(`${shots} screenshots in ${OUT}`);
   await writeFile(join(OUT, 'clipped.json'), JSON.stringify(clipped, null, 2));
   console.log(`${Object.keys(clipped).length} shots with clipped text (clipped.json)`);
-  if (problems.length > 0) {
-    console.error(problems.join('\n'));
+  if (problems.length > 0 || groupFailures.length > 0) {
+    console.error([...groupFailures, ...problems].join('\n'));
     process.exitCode = 1;
   }
 }

@@ -22,11 +22,14 @@ const COLLAPSED_KEY = 'debateowl.sidebar.collapsed';
 /** The part of a navigator's state the sidebar reads. */
 type AnyState = { key?: string; index?: number; routes: { name: string; state?: unknown }[] };
 
+// Screens the root layout declares; the stack holding any of them is the root stack.
+const ROOT_SCREENS = new Set(['(tabs)', 'ask', 'history', 'generate', 'case/[id]', 'attack/index', 'attack/[id]', 'brainstorm/index', 'brainstorm/[id]', 'factoids/index', 'factoids/[id]', 'flowchart/index', 'crossfire', 'sparring/index', 'sparring/[id]', 'share/[code]']);
+
 /** The root stack: the navigator that holds the tabs and every screen pushed above them. */
 function rootStack(state: AnyState | undefined): AnyState | undefined {
   let current = state;
   while (current) {
-    if (current.routes.some((route) => route.name === '(tabs)')) return current;
+    if (current.routes.some((route) => ROOT_SCREENS.has(route.name))) return current;
     const focused = current.routes[current.index ?? current.routes.length - 1];
     current = focused?.state as AnyState | undefined;
   }
@@ -100,7 +103,11 @@ export function AppSidebar({ width }: { width: number }) {
       if (!asset) return;
       file = holdPickedFile(asset);
     }
-    if (stack?.key && stack.routes.length > 1) navigation.dispatch({ type: 'POP_TO_TOP', target: stack.key });
+    // Close the screens above the tabs. With no tabs in the stack (a cold link before the anchor
+    // could add them), start the stack again from the tabs, so tools never pile up.
+    if (stack?.key && !stack.routes.some((route) => route.name === '(tabs)')) {
+      navigation.dispatch({ type: 'RESET', payload: { index: 0, routes: [{ name: '(tabs)' }] }, target: stack.key });
+    } else if (stack?.key && stack.routes.length > 1) navigation.dispatch({ type: 'POP_TO_TOP', target: stack.key });
     if (target.kind === 'tab') router.navigate(target.href);
     else if (target.kind === 'pickFile') router.push({ pathname: '/add-file', params: { file: file! } });
     else router.push({ pathname: target.pathname as never, params: { ...(from ? { from } : {}), ...target.params } });
