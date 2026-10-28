@@ -494,7 +494,10 @@ async function fakeResults(page: Page, hold: FakeFeature | null, live = false) {
   const outputs = FAKE_OUTPUTS;
   if (hold && live) await fakeLiveStream(page, hold);
   await page.route(`https://${STAGING_HOST}/functions/v1/ai`, async (route) => {
-    const feature = (route.request().postDataJSON() as { feature?: string } | null)?.feature;
+    const body = route.request().postDataJSON() as { feature?: string; quotaCheck?: boolean } | null;
+    const feature = body?.feature;
+    // Crossfire, opened from a case or an attack, asks what a round costs.
+    if (body?.quotaCheck) return route.fulfill({ status: 200, headers: { 'access-control-allow-origin': '*' }, json: FAKE_QUOTA });
     if (feature && feature === hold) return; // Never answered: the page shows its progress state.
     const json = feature ? outputs[feature] : undefined;
     if (json) return route.fulfill({ status: 200, headers: { 'access-control-allow-origin': '*' }, json });
