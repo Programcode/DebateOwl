@@ -12,6 +12,7 @@ const cache = vi.hoisted(() => ({
     }
   },
   updateCopy: () => undefined,
+  afterWrite: vi.fn(),
 }));
 const sources = vi.hoisted(() => ({
   addSource: vi.fn(),
@@ -125,6 +126,8 @@ describe('offline queue', () => {
     expect(reports).toEqual([{ synced: 1, dropped: [{ kind: 'active' }] }]);
     expect(queue.getQueueSnapshot().items).toEqual([]);
     expect(sources.notifySourcesChanged).toHaveBeenCalled();
+    // The saved copies that showed the refused switch go too, so a relaunch offline never shows it.
+    expect(cache.afterWrite).toHaveBeenCalledWith('user-a', [{ group: 'sources', key: 'd1' }, { group: 'source', key: 's2' }]);
 
     // Online with nothing waiting, a refusal reaches the caller and nothing stays queued.
     sources.updateSource.mockRejectedValueOnce(refused());

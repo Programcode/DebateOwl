@@ -3,7 +3,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Crypto from 'expo-crypto';
 
 import { isKnownOffline } from './network-status';
-import { ReadError, updateCopy } from './offline-cache';
+import { afterWrite, ReadError, updateCopy } from './offline-cache';
 import { createSerialQueue } from './serial-queue';
 import {
   addSource,
@@ -433,6 +433,13 @@ function dropWrites(tempId: string, addKey: string): string[] {
   return removed;
 }
 
+/** The saved copies a refused write changed when it was queued (updateSourceCopies). */
+function refusedCopies(item: QueuedWrite): { group: 'sources' | 'source'; key: string }[] {
+  const debateId = item.kind === 'add' ? item.input.debateId : item.debateId;
+  const ids = item.kind === 'add' ? [] : item.kind === 'edit' ? [item.sourceId] : item.ids;
+  return [{ group: 'sources', key: debateId }, ...ids.filter((id) => !isLocalSourceId(id)).map((id) => ({ group: 'source' as const, key: id }))];
+}
+
 /** Whether no answer came back from the server: those writes stay queued. */
 function unanswered(cause: unknown): boolean {
   return cause instanceof ReadError && cause.unreachable;
@@ -540,7 +547,9 @@ async function drain() {
       const all = [...done, ...dependents.flatMap(takeWaiters)];
       all.forEach((waiter) => waiter.reject(failure.cause));
       if (done.length === 0) report.dropped.push(describe(item));
-      // Screens that showed the change read the server's version again.
+      // The saved copies still hold the refused change; drop them, so no screen, open now or
+      // later (a relaunch, offline), shows it. Screens that showed it read the server's version again.
+      afterWrite(userId, refusedCopies(item));
       notifySourcesChanged();
     }
     persist();

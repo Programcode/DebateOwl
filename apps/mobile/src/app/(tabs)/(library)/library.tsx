@@ -176,9 +176,11 @@ function LibraryView({ debateId, layout }: { debateId: string | null; layout: Re
         {noDebate}
         {body}
       </ScrollView>
-      {shown && userId ? (
+      {shown && selected && userId ? (
         <ScrollView style={styles.detailPane} contentInsetAdjustmentBehavior="automatic" automaticallyAdjustKeyboardInsets keyboardShouldPersistTaps="handled" keyboardDismissMode="interactive" contentContainerStyle={styles.detailContent} testID="source-sheet">
-          <SourceView key={`${userId}:${debateId}:${shown}`} id={shown} onRemoved={() => setSelected(null)} />
+          {/* Keyed by the id that was opened: a note that syncs swaps its local id for the row's, and the
+              view follows that itself, so an edit in progress survives the sync. */}
+          <SourceView key={`${userId}:${debateId}:${selected.id}`} id={selected.id} onRemoved={() => setSelected(null)} />
         </ScrollView>
       ) : null}
     </View>
