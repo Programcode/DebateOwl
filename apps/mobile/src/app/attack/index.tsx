@@ -12,11 +12,13 @@ import { Field } from '@/components/field';
 import { FormGroup, SelectRow, SwitchRow } from '@/components/form-rows';
 import { ModelPicker } from '@/components/model-picker';
 import { Text } from '@/components/text';
+import { ContextLine } from '@/components/context-line';
 import { LiveToolRun, useLiveRun } from '@/components/live-run';
 import { ToolError, ToolTitle, WorkingIn } from '@/components/tool-form';
 import { AIError, isAbortError, type AIErrorKind } from '@/lib/ai-request';
 import { useAuth } from '@/lib/auth';
 import { backLabel } from '@/lib/back-label';
+import { resetContextChoices } from '@/lib/context-plan';
 import { buildDebateContext } from '@/lib/context-request';
 import { useDebates } from '@/lib/debate-context';
 import { keepOpenResult, openResult } from '@/lib/open-results';
@@ -132,6 +134,8 @@ export default function AttackScreen() {
         signal: controller.signal,
         live: liveRun.begin(),
       });
+      // Review choices cover one request, as on the website.
+      resetContextChoices('attack');
       if (!isCurrent()) return;
       const assessed = await keepSourceAssessments(forUser, debateId, assessments, controller.signal);
       if (!isCurrent()) return;
@@ -251,6 +255,7 @@ export default function AttackScreen() {
             />
           </FormGroup>
           <ModelPicker feature="attack" />
+          <ContextLine feature="attack" side={'both'} />
           {error ? <ToolError title={t('attack.failed')} error={error} onRetry={() => void submit()} /> : null}
         </>
       )}

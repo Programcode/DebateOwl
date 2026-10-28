@@ -1,3 +1,4 @@
+import { requestSide } from '@debatelab/core/contract/debate-context';
 import { factoidsDraftSections } from '@debatelab/core/ai/live-sections';
 import type { FactoidsInput } from '@debatelab/core/ai/schemas/factoids';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -13,11 +14,13 @@ import { FormGroup, SelectRow } from '@/components/form-rows';
 import { ModelPicker } from '@/components/model-picker';
 import { SegmentedControl } from '@/components/segmented-control';
 import { Text } from '@/components/text';
+import { ContextLine } from '@/components/context-line';
 import { LiveToolRun, useLiveRun } from '@/components/live-run';
 import { ToolError, ToolTitle, WorkingIn } from '@/components/tool-form';
 import { AIError, isAbortError, type AIErrorKind } from '@/lib/ai-request';
 import { useAuth } from '@/lib/auth';
 import { backLabel } from '@/lib/back-label';
+import { resetContextChoices } from '@/lib/context-plan';
 import { buildDebateContext } from '@/lib/context-request';
 import { useDebates } from '@/lib/debate-context';
 import { keepOpenResult } from '@/lib/open-results';
@@ -120,6 +123,8 @@ export default function FactoidsScreen() {
         signal: controller.signal,
         live: liveRun.begin(),
       });
+      // Review choices cover one request, as on the website.
+      resetContextChoices('factoids');
       if (!isCurrent()) return;
       const assessed = await keepSourceAssessments(forUser, debateId, assessments, controller.signal);
       if (!isCurrent()) return;
@@ -276,6 +281,7 @@ export default function FactoidsScreen() {
             placeholder={t('factoidsForm.timeframePlaceholder')}
             testID="factoids-timeframe"
           />
+          <ContextLine feature="factoids" side={requestSide('factoids', form)} />
           {error ? <ToolError title={t('factoids.failed')} error={error} onRetry={() => void submit({ ...form, claim: form.claim.trim() })} /> : null}
         </>
       )}

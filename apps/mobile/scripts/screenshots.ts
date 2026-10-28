@@ -11,7 +11,7 @@
  * ONLY=iphone-light-en limits a run to the combinations whose name starts with it;
  * separate several with commas (ONLY=iphone-light-en,ipad-dark-hu).
  * SCREENS=you,timer limits the signed-in screens to those groups: debate,
- * library, prepare, practice, you, empty, ask, results, brainstorm, factoids, case-edits, limits,
+ * library, prepare, practice, you, empty, ask, results, brainstorm, factoids, case-edits, context, limits,
  * timer, crossfire, sparring, flowchart, one-off, history, announcements,
  * account, model. Sign-in screens are always shot.
  * ONLY=offline runs only the offline reading check (see shootOfflineScreens).
@@ -768,6 +768,43 @@ async function shootCaseEdits(context: BrowserContext, prefix: string, language:
   await shoot(page, `${prefix}-case-saved`);
   await page.close();
   finish(seen);
+}
+
+/**
+ * The debate context line on Generate and its Review sheet, from the
+ * account's real Current Debate. Turning an item off lives in memory only;
+ * pin writes are answered locally, so nothing is saved.
+ */
+async function shootContextReview(context: BrowserContext, prefix: string, language: string, problems: string[]) {
+  const page = await context.newPage();
+  watchErrors(page, problems, `${prefix} context`);
+  await pinSettings(page, language);
+  await page.route(`${REST}/debate_context_pins*`, (route) =>
+    route.request().method() === 'GET' ? route.continue() : route.fulfill({ status: 201, headers: { 'access-control-allow-origin': '*' }, body: '' }),
+  );
+  await page.goto(`${ORIGIN}/generate?from=prepare`);
+  await page.getByTestId('generate-motion').waitFor({ timeout: 30_000 });
+  const line = page.getByTestId('debate-context-line');
+  await line.waitFor({ timeout: 30_000 });
+  await line.scrollIntoViewIfNeeded();
+  await settle(page);
+  await shoot(page, `${prefix}-context-line`);
+  await line.getByRole('button').click();
+  const sheet = page.getByTestId('context-review-sheet');
+  await sheet.waitFor({ timeout: 15_000 });
+  await page.waitForFunction(() => document.querySelectorAll('[role="checkbox"]').length > 0, undefined, { timeout: 15_000 });
+  await page.waitForTimeout(500);
+  await shoot(page, `${prefix}-context-review`);
+  // Leave the first source out of the next request, and pin the first saved result.
+  await sheet.getByRole('checkbox').first().click();
+  const pin = sheet.getByTestId('debate-context-pin').first();
+  if (await pin.count()) {
+    await pin.click();
+    await page.waitForTimeout(400);
+  }
+  await page.getByTestId('debate-context-reset').waitFor({ timeout: 15_000 });
+  await shoot(page, `${prefix}-context-review-changed`);
+  await page.close();
 }
 
 /**
@@ -1937,6 +1974,10 @@ async function main() {
           if (want('case-edits')) {
             await shootCaseEdits(signedIn, prefix, language, problems).catch(failedIn(signedIn, prefix, 'case-edits'));
             shots += 5;
+          }
+          if (want('context')) {
+            await shootContextReview(signedIn, prefix, language, problems).catch(failedIn(signedIn, prefix, 'context'));
+            shots += 3;
           }
           if (want('limits')) {
             await shootLimitSheets(signedIn, prefix, language, problems).catch(failedIn(signedIn, prefix, 'limits'));

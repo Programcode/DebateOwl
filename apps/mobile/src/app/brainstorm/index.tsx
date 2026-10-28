@@ -1,3 +1,4 @@
+import { requestSide } from '@debatelab/core/contract/debate-context';
 import { brainstormDraftSections } from '@debatelab/core/ai/live-sections';
 import type { BrainstormInput } from '@debatelab/core/ai/schemas/brainstorm';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -12,11 +13,13 @@ import { Field } from '@/components/field';
 import { FormGroup, SelectRow } from '@/components/form-rows';
 import { ModelPicker } from '@/components/model-picker';
 import { Text } from '@/components/text';
+import { ContextLine } from '@/components/context-line';
 import { LiveToolRun, useLiveRun } from '@/components/live-run';
 import { ToolError, ToolTitle, WorkingIn } from '@/components/tool-form';
 import { AIError, isAbortError, type AIErrorKind } from '@/lib/ai-request';
 import { useAuth } from '@/lib/auth';
 import { backLabel } from '@/lib/back-label';
+import { resetContextChoices } from '@/lib/context-plan';
 import { buildDebateContext } from '@/lib/context-request';
 import { useDebates } from '@/lib/debate-context';
 import { decideMotionTarget, shouldPrefillMotion } from '@/lib/motion';
@@ -112,6 +115,8 @@ export default function BrainstormScreen() {
         signal: controller.signal,
         live: liveRun.begin(),
       });
+      // Review choices cover one request, as on the website.
+      resetContextChoices('brainstorm');
       if (!isCurrent()) return;
       const assessed = await keepSourceAssessments(forUser, debateId, assessments, controller.signal);
       if (!isCurrent()) return;
@@ -282,6 +287,7 @@ export default function BrainstormScreen() {
             style={styles.context}
             testID="brainstorm-context"
           />
+          <ContextLine feature="brainstorm" side={requestSide('brainstorm', form)} />
           {error ? <ToolError title={t('brainstorm.failed')} error={error} onRetry={() => void submit()} /> : null}
         </>
       )}

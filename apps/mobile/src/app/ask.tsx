@@ -16,11 +16,13 @@ import { FadingScrollRow } from '@/components/edge-fade';
 import { Icon } from '@/components/icon';
 import type { IconName } from '@/components/icon-paths';
 import { OneOffNotice } from '@/components/one-off-notice';
+import { ContextLine } from '@/components/context-line';
 import { DailyUsageLine } from '@/components/tool-form';
 import { Text } from '@/components/text';
 import { AIError, isAbortError, type AIErrorKind, type ResponseExtras } from '@/lib/ai-request';
 import { askOnce, canStream, isFinalAskError, isMessageWithinBudget, streamAsk, type AskMode, type AskOptions } from '@/lib/ask';
 import { pickAskFiles, readAskFiles, type AskAttachment } from '@/lib/ask-attachments';
+import { resetContextChoices } from '@/lib/context-plan';
 import { buildDebateContext } from '@/lib/context-request';
 import type { FeatureConfig } from '@/lib/feature-config';
 import { useAuth } from '@/lib/auth';
@@ -295,6 +297,8 @@ export default function AskScreen() {
       }
 
       if (!isCurrent()) return;
+      // Review choices cover one question, as on the website.
+      resetContextChoices('ask');
       // A whole answer ranks the Library sources it used and says when the question was shortened, as on the website.
       if (whole.extras) {
         const { truncated, assessments } = whole.extras;
@@ -530,6 +534,9 @@ export default function AskScreen() {
         {streaming !== null && streaming !== '' ? <AskAnswer content={streaming} streaming library={library} /> : null}
         {loading && !streaming ? <Thinking /> : null}
         {opening ? <ActivityIndicator style={styles.opening} accessibilityRole="progressbar" /> : null}
+
+        {/* What the next question sends, below the conversation as the website shows it above its input. */}
+        {!busy ? <ContextLine feature="ask" side="both" debateId={chatDebateId} excludeChatId={record.chatId} /> : null}
 
         {notice ? (
           <Text tone="secondary" accessibilityRole="alert" style={styles.notice}>

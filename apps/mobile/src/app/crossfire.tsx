@@ -21,6 +21,7 @@ import { DocumentHeader } from '@/components/document-header';
 import { Field } from '@/components/field';
 import { FormGroup, SwitchRow } from '@/components/form-rows';
 import { Icon } from '@/components/icon';
+import { ContextLine } from '@/components/context-line';
 import { SessionCostNote } from '@/components/session-cost-note';
 import { LiveTopBar, RoundIconButton } from '@/components/round-controls';
 import { SegmentedControl } from '@/components/segmented-control';
@@ -30,6 +31,7 @@ import { ToolTitle, WorkingIn } from '@/components/tool-form';
 import { abortError, AIError, isAbortError, type ResponseExtras, untilAborted } from '@/lib/ai-request';
 import { useAuth } from '@/lib/auth';
 import { backLabel } from '@/lib/back-label';
+import { resetContextChoices } from '@/lib/context-plan';
 import { buildDebateContext } from '@/lib/context-request';
 import {
   countActiveSources,
@@ -280,6 +282,8 @@ export default function CrossfireScreen() {
       // The effect below saves the finished round from the state it reaches, with any signal that came in meanwhile.
       if (debateId) pendingRecord.current = { sessionId: snapshot.sessionId, forUser, debateId };
       dispatch({ type: 'debrief-received', debrief });
+      // Review choices cover the round; its last request clears them, as on the website.
+      resetContextChoices('crossfire');
       afterResponse(forUser, debateId, extras);
     } catch (cause) {
       if (controller.signal.aborted || isAbortError(cause)) return;
@@ -521,6 +525,7 @@ export default function CrossfireScreen() {
             disabled
           />
         </FormGroup>
+        <ContextLine feature="crossfire" side="both" includeSources={config.useSourceLibrary} />
         <SessionCostNote quota={roundQuota.quota} />
         {formError ? (
           <Text accessibilityRole="alert" style={[styles.formError, { color: colors.destructive }]} testID="crossfire-form-error">

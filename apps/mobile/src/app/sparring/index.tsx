@@ -29,6 +29,7 @@ import { FormGroup, SelectRow, SwitchRow } from '@/components/form-rows';
 import { Icon } from '@/components/icon';
 import { LiveTopBar, MainRoundControl, RoundIconButton, SideControl } from '@/components/round-controls';
 import { SegmentedControl } from '@/components/segmented-control';
+import { ContextLine } from '@/components/context-line';
 import { SessionCostNote } from '@/components/session-cost-note';
 import { SparringScorecardScreen } from '@/components/sparring-views';
 import { Text } from '@/components/text';
@@ -411,6 +412,7 @@ export default function SparringScreen() {
             disabled
           />
         </FormGroup>
+        <ContextLine feature="sparring" side="both" />
         <SessionCostNote quota={roundQuota.quota} />
         {formError ? (
           <Text accessibilityRole="alert" style={[styles.formError, { color: colors.destructive }]} testID="sparring-form-error">
