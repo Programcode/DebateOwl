@@ -2832,7 +2832,8 @@
       "reset": "Visszaállítás"
     },
     "crossfire": {
-      "voiceLater": "Az alkalmazás következő verziójával érkezik."
+      "voiceLater": "Az alkalmazás következő verziójával érkezik.",
+      "prefillHeld": "Még tart egy kör, ezért az eseted nem került be. Fejezd be ezt a kört, majd nyisd meg újra a Keresztkérdezést az esetedből."
     },
     "sparring": {
       "chooseSide": "Melyik oldalon állsz?",

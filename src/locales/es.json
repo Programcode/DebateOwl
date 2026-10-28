@@ -2832,7 +2832,8 @@
       "reset": "Reiniciar"
     },
     "crossfire": {
-      "voiceLater": "Llegará con la versión de la app."
+      "voiceLater": "Llegará con la versión de la app.",
+      "prefillHeld": "Todavía hay una ronda en curso, así que tu caso no se importó. Termina esta ronda y vuelve a abrir el Interrogatorio desde tu caso."
     },
     "sparring": {
       "chooseSide": "¿Qué postura defiendes?",

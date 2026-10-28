@@ -118,17 +118,17 @@ export function useResultDocument<K extends ResultKind>(kind: K, id: string) {
 
   // A held result changed elsewhere (a regenerated section, an undo, a save from its sheet) shows here.
   const readyKey = state.status === 'ready' ? state.key : null;
+  const stateRef = useRef(state);
+  stateRef.current = state;
   useEffect(() => {
     if (!readyKey) return;
     return subscribeOpenResults(() => {
       const held = openResult(readyKey, kind);
-      if (!held || !live.current) return;
-      setState((previous) => {
-        if (previous.status !== 'ready' || previous.key !== readyKey || previous.result === held) return previous;
-        // Saved from the Save case sheet: the website's "Case saved" confirmation.
-        if (!previous.result.savedId && held.savedId) setNotice(`${t('generate.saved')}. ${t('generate.savedDesc')}`, 'success');
-        return { status: 'ready', key: readyKey, result: held };
-      });
+      const shown = stateRef.current;
+      if (!held || !live.current || shown.status !== 'ready' || shown.key !== readyKey || shown.result === held) return;
+      setState({ status: 'ready', key: readyKey, result: held });
+      // Saved from the Save case sheet: the website's "Case saved" confirmation.
+      if (!shown.result.savedId && held.savedId) setNotice(`${t('generate.saved')}. ${t('generate.savedDesc')}`, 'success');
     });
   }, [kind, readyKey, setNotice, t]);
 

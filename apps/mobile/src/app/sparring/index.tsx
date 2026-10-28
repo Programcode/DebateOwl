@@ -115,6 +115,8 @@ export default function SparringScreen() {
   // Each side choice gets a number; a slower earlier one never starts a round over a newer one.
   const startAttempt = useRef(0);
   const roundQuota = useSessionQuota('sparring');
+  // Start waits for the round's cost; a second tap meanwhile does nothing.
+  const [checkingQuota, setCheckingQuota] = useState(false);
 
   // Another account starts with no round: the session slot was already cleared, and this screen's copy goes too.
   useEffect(() => {
@@ -263,8 +265,11 @@ export default function SparringScreen() {
     }
     setFormError('');
     // A round the day's uses cannot cover opens the limit sheet before its clock starts, as on the website.
+    if (checkingQuota) return;
+    setCheckingQuota(true);
     const refusal = sessionQuotaRefusal(await roundQuota.check());
     if (!live.current) return;
+    setCheckingQuota(false);
     if (refusal) {
       openRefusal(router, refusal, 'sparring');
       return;
@@ -352,7 +357,7 @@ export default function SparringScreen() {
       <DocumentScreen
         testID="sparring-setup"
         header={<DocumentHeader backLabel={backLabel(t, from, 'practice')} actions={[]} />}
-        actions={<MainActionButton label={t('sparring.setup.startRound')} onPress={() => void start()} />}>
+        actions={<MainActionButton label={t('sparring.setup.startRound')} busy={checkingQuota} onPress={() => void start()} />}>
         <ToolTitle title={t('nav.sparring')} subtitle={t('mobile.debate.sparSide')} />
         <WorkingIn />
         <Field

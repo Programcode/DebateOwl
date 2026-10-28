@@ -1,5 +1,7 @@
+import type { DiscoveredSource } from '@debatelab/core/ai/discovered-sources';
 import { mergeRegeneratedSection, type CaseSection } from '@debatelab/core/ai/generate-output';
 import type { GenerateInput, GenerateOutput } from '@debatelab/core/ai/schemas/generate';
+import type { SourceAssessmentUpdate } from '@debatelab/core/ai/source-assessments';
 import { useRouter } from 'expo-router';
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -58,6 +60,15 @@ function regenerationInput(result: OpenResult<'case'>): GenerateInput | null {
   };
 }
 
+async function keepResearch(userId: string, debateId: string | null, assessments: SourceAssessmentUpdate[], sources: DiscoveredSource[]) {
+  try {
+    await keepSourceAssessments(userId, debateId, assessments);
+    await autosaveSources(userId, sources, 'generate', debateId);
+  } catch (cause) {
+    console.warn('Could not keep the regenerated case\'s sources:', cause instanceof Error ? cause.message : cause);
+  }
+}
+
 export function useCaseEdits(key: string | null, setNotice: (text: string) => void) {
   const { t } = useTranslation();
   const router = useRouter();
@@ -110,8 +121,9 @@ export function useCaseEdits(key: string | null, setNotice: (text: string) => vo
       changed();
       setNotice(`${t('generate.regenerated')}. ${t('generate.regeneratedDesc')}`);
       await saveOutput(forUser, base.savedId, merged);
-      await keepSourceAssessments(forUser, base.debateId, assessments, controller.signal);
-      await autosaveSources(forUser, discoveredSources, 'generate', base.debateId, controller.signal);
+      // The rankings and researched sources are the new generation's, kept even if the student
+      // leaves now; their failure is not the regeneration's, which already landed.
+      void keepResearch(forUser, base.debateId, assessments, discoveredSources);
     } catch (cause) {
       if (controller.signal.aborted || isAbortError(cause)) return;
       if (openRefusal(router, cause, 'generate')) return;

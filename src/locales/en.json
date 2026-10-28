@@ -2832,7 +2832,8 @@
       "reset": "Reset"
     },
     "crossfire": {
-      "voiceLater": "Coming with the app build."
+      "voiceLater": "Coming with the app build.",
+      "prefillHeld": "A round is still running, so your case was not brought in. End this round, then open Crossfire from your case again."
     },
     "sparring": {
       "chooseSide": "Which side are you on?",

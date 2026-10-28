@@ -1,4 +1,5 @@
 import type { FeatureTab } from '@debatelab/core/ai/feature-configs';
+import { DEFAULT_MODEL } from '@debatelab/core/contract/model-catalog';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -10,6 +11,7 @@ import { SheetScrollView } from '@/components/sheet';
 import { Text } from '@/components/text';
 import { useAuth } from '@/lib/auth';
 import { formatDate } from '@/lib/dates';
+import { isProOnlyModel } from '@/lib/feature-config';
 import { LIMIT_TITLES, limitMessage, limitVariant } from '@/lib/refusal';
 import { useSettings } from '@/lib/settings';
 import { fetchSubscription, type Subscription } from '@/lib/subscription';
@@ -29,7 +31,7 @@ export default function LimitSheet() {
   const params = useLocalSearchParams<{ kind?: string; feature?: string; code?: string; limit?: string; current?: string; units?: string }>();
   const { session } = useAuth();
   const userId = session?.user.id ?? null;
-  const { setFeatureConfig } = useSettings();
+  const { readFeatureConfig, setFeatureConfig } = useSettings();
   const [plan, setPlan] = useState<Subscription | null>(null);
   const [switching, setSwitching] = useState(false);
 
@@ -55,12 +57,14 @@ export default function LimitSheet() {
 
   if (params.kind === 'model') {
     const feature = FEATURES.has(params.feature as FeatureTab) ? (params.feature as FeatureTab) : null;
-    // The website only closes its dialog; here the tool's reasoning is set to low, so the retry works.
+    // The website only closes its dialog. Here the tool moves to what the plan allows, so the
+    // retry is not refused again: low reasoning, and the free default when its model is Pro-only.
     const switchToLow = async () => {
-      if (!feature) return close();
+      if (!feature || !userId) return close();
       setSwitching(true);
       try {
-        await setFeatureConfig(feature, { reasoningEffort: 'low' });
+        const current = await readFeatureConfig(userId, feature);
+        await setFeatureConfig(feature, isProOnlyModel(current.model) ? { model: DEFAULT_MODEL, reasoningEffort: 'low' } : { reasoningEffort: 'low' });
       } catch (cause) {
         console.warn('Could not switch to low reasoning:', cause instanceof Error ? cause.message : cause);
       }

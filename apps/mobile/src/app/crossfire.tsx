@@ -120,12 +120,15 @@ export default function CrossfireScreen() {
   });
   const [state, dispatch] = useReducer(crossfireReducer, imported, restoredState);
   const roundQuota = useSessionQuota('crossfire');
+  // Start waits for the round's cost; a second tap meanwhile does nothing.
+  const [checkingQuota, setCheckingQuota] = useState(false);
   // The debate chosen when the round started; null for one-off rounds.
   const debateTarget = useRef<string | null>(crossfireDraft.get()?.debateId ?? null);
   const [draftTurn, setDraftTurn] = useState('');
   const [now, setNow] = useState(() => Date.now());
   const [formError, setFormError] = useState('');
-  const [notice, setNotice] = useState('');
+  // A case or an attack opened in Crossfire while a round runs is not brought in, as on the website; say so.
+  const [notice, setNotice] = useState(() => (imported && state.phase !== 'setup' ? t('mobile.crossfire.prefillHeld') : ''));
   const [activeSources, setActiveSources] = useState<number | null>(null);
   const requestRef = useRef<AbortController | null>(null);
   // The finished round still to be recorded in its debate.
@@ -343,8 +346,11 @@ export default function CrossfireScreen() {
     setFormError('');
     const forUser = userId;
     // A round the day's uses cannot cover opens the limit sheet before its clock starts, as on the website.
+    if (checkingQuota) return;
+    setCheckingQuota(true);
     const refusal = sessionQuotaRefusal(await roundQuota.check());
     if (!live.current) return;
+    setCheckingQuota(false);
     if (refusal) {
       openRefusal(router, refusal, 'ask');
       return;
@@ -426,7 +432,7 @@ export default function CrossfireScreen() {
       <DocumentScreen
         testID="crossfire-setup"
         header={<DocumentHeader backLabel={backLabel(t, from, 'practice')} actions={[]} />}
-        actions={<MainActionButton label={t('crossfire.start')} onPress={() => void startSession()} />}>
+        actions={<MainActionButton label={t('crossfire.start')} busy={checkingQuota} onPress={() => void startSession()} />}>
         <ToolTitle title={t('crossfire.title')} subtitle={t('crossfire.setupDescription')} />
         <WorkingIn />
         {imported?.source ? (
