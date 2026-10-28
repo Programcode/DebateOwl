@@ -1869,7 +1869,7 @@
     "support": "Ayuda con tu cuenta, la facturación o algo de <home>{{product}}</home> que no funciona.",
     "privacy": "Solicitudes de privacidad y de datos, como una copia de tus datos o borrar tu cuenta: <email>{{email}}</email>.",
     "feedback": "Comentarios, ideas y cualquier cosa que te gustaría que hiciera {{product}}.",
-    "tipHeading": "Para ayudarte antes",
+    "tipHeading": "Para ayudarte mejor",
     "tip": "Si algo no funciona, cuéntanos qué hiciste, qué esperabas y qué pasó en su lugar. Nunca envíes contraseñas ni datos de tarjeta."
   },
   "termsPage": {
@@ -1897,7 +1897,7 @@
     "s10": "Ley aplicable",
     "p10": "Estos términos se rigen por la ley aplicable. Las disputas se resolverán mediante arbitraje vinculante.",
     "s11": "Contacto",
-    "p11": "¿Tienes preguntas sobre estos términos? Escríbenos a {{contactEmail}}. Para preguntas de privacidad o solicitudes de datos, escribe a {{privacyEmail}}."
+    "p11": "¿Tienes preguntas sobre estos términos? Escríbenos a <contact>{{contactEmail}}</contact>. Para preguntas de privacidad o solicitudes de datos, escribe a <privacy>{{privacyEmail}}</privacy>."
   },
   "export": {
     "generatedBy": "Generado por DebateOwl",

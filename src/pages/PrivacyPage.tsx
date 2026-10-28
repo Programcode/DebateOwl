@@ -10,7 +10,7 @@ export default function PrivacyPage() {
   const sections = Array.from({ length: 11 }, (_, i) => i + 1);
 
   return (
-    <PublicPageShell className="max-w-[65ch]">
+    <PublicPageShell className="max-w-[65ch]" footer>
         <h1 className="text-3xl font-bold tracking-tight text-foreground">{t('privacyPage.title')}</h1>
         <p className="mt-2 text-sm text-muted-foreground">{t('privacyPage.lastUpdated')}: {t('privacyPage.date')}</p>
 

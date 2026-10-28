@@ -1897,7 +1897,7 @@
     "s10": "Irányadó jog",
     "p10": "Ezekre a feltételekre az alkalmazandó jog vonatkozik. A vitákat kötelező érvényű választottbírósági eljárással rendezzük.",
     "s11": "Kapcsolat",
-    "p11": "Kérdésed van ezekkel a feltételekkel kapcsolatban? Írj nekünk: {{contactEmail}}. Adatvédelmi kérdésekkel vagy adatkérésekkel ide írj: {{privacyEmail}}."
+    "p11": "Kérdésed van ezekkel a feltételekkel kapcsolatban? Írj nekünk: <contact>{{contactEmail}}</contact>. Adatvédelmi kérdésekkel vagy adatkérésekkel ide írj: <privacy>{{privacyEmail}}</privacy>."
   },
   "export": {
     "generatedBy": "A DebateOwl készítette",
