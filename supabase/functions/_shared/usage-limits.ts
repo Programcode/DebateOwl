@@ -38,7 +38,9 @@ export const MODEL_QUOTA_UNITS: Readonly<Record<string, number>> = {
  * Weekly cap on a user's AI spend, in USD, per calendar week starting Monday
  * 00:00 UTC. Only ai_requests.cap_cost_usd counts: the full logged cost of
  * each request, including Claude calls billed to our own BYOK Anthropic key,
- * plus Exa and ElevenLabs. Set to null to turn the cap off.
+ * plus Exa and ElevenLabs. Set to null to turn the cap off for everyone. One
+ * account's cap is changed or lifted in user_settings (weekly_budget_override_usd,
+ * weekly_budget_unlimited); see getWeeklyBudgetUsd in entitlements.ts.
  */
 export const WEEKLY_AI_BUDGET_USD: number | null = 2;
 

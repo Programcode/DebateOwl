@@ -6,7 +6,7 @@ for (const [key, value] of Object.entries({
   SUPABASE_SERVICE_ROLE_KEY: "test-service-role-key",
 })) Deno.env.set(key, value);
 
-const { getSubscriptionInfo, checkRateLimit, getConfiguredDailyLimit, checkUserBanned, normalizeErrorCode } = await import("./entitlements.ts");
+const { getSubscriptionInfo, checkRateLimit, peekRateLimit, getConfiguredDailyLimit, checkUserBanned, normalizeErrorCode } = await import("./entitlements.ts");
 const { MODEL_QUOTA_UNITS, WEEKLY_AI_BUDGET_USD } = await import("./usage-limits.ts");
 
 function json(body: unknown, status = 200): Response {
@@ -18,11 +18,12 @@ const future = () => new Date(Date.now() + DAY).toISOString();
 const past = () => new Date(Date.now() - DAY).toISOString();
 
 interface Routes {
-  user_settings?: unknown;
+  user_settings?: unknown | ((url: URL) => Response);
   user_roles?: unknown;
   subscriptions?: unknown | ((url: URL) => Response);
   rate_limits?: unknown | ((url: URL) => Response);
   quota?: unknown;
+  peek?: unknown;
   onQuota?: (body: Record<string, unknown>) => void;
   requests?: string[];
 }
@@ -31,7 +32,9 @@ async function withSupabase<T>(routes: Routes, run: () => Promise<T>): Promise<T
   const originalFetch = globalThis.fetch;
   globalThis.fetch = (async (input: Request | URL | string, init?: RequestInit) => {
     const url = new URL(input instanceof Request ? input.url : String(input));
-    if (url.pathname.includes("/rest/v1/user_settings")) return json(routes.user_settings ?? null);
+    if (url.pathname.includes("/rest/v1/user_settings")) {
+      return typeof routes.user_settings === "function" ? routes.user_settings(url) : json(routes.user_settings ?? null);
+    }
     if (url.pathname.includes("/rest/v1/user_roles")) return json(routes.user_roles ?? { role: "user" });
     if (url.pathname.includes("/rest/v1/subscriptions")) {
       return typeof routes.subscriptions === "function" ? routes.subscriptions(url) : json(routes.subscriptions ?? []);
@@ -49,6 +52,7 @@ async function withSupabase<T>(routes: Routes, run: () => Promise<T>): Promise<T
       routes.onQuota?.(JSON.parse(String(init?.body ?? "{}")));
       return json(routes.quota ?? [{ allowed: true, current_count: 1 }]);
     }
+    if (url.pathname.includes("/rpc/peek_ai_quota")) return json(routes.peek ?? [{ current_count: 0, week_spend_usd: 0 }]);
     throw new Error(`Unexpected request: ${url}`);
   }) as typeof fetch;
   try {
@@ -281,6 +285,55 @@ Deno.test("the weekly budget refusal has its own code", async () => {
     assertEquals(result.allowed, false, "allowed");
     assertEquals(result.code, "weekly_budget_reached", "code");
     assertEquals(result.statusCode, 402, "statusCode");
+  });
+});
+
+async function sentWeeklyCap(settings: Routes["user_settings"]): Promise<unknown> {
+  let sent: Record<string, unknown> = {};
+  await withSupabase({ user_settings: settings, onQuota: (body) => { sent = body; } }, async () => {
+    assertEquals((await checkRateLimit("user-1", "openai/gpt-6-luna")).allowed, true, "allowed");
+  });
+  return sent.p_weekly_cap_usd;
+}
+
+Deno.test("an account without a weekly override gets the global cap", async () => {
+  assertEquals(await sentWeeklyCap({ ...proUser, weekly_budget_override_usd: null, weekly_budget_unlimited: false }), WEEKLY_AI_BUDGET_USD, "p_weekly_cap_usd");
+});
+
+Deno.test("a weekly override replaces the global cap", async () => {
+  // PostgREST sends numeric as a number or a string.
+  assertEquals(await sentWeeklyCap({ ...proUser, weekly_budget_override_usd: 25, weekly_budget_unlimited: false }), 25, "number");
+  assertEquals(await sentWeeklyCap({ ...proUser, weekly_budget_override_usd: "7.5", weekly_budget_unlimited: false }), 7.5, "string");
+  assertEquals(await sentWeeklyCap({ ...proUser, weekly_budget_override_usd: 0, weekly_budget_unlimited: false }), 0, "zero");
+});
+
+Deno.test("an unlimited account skips the weekly cap, even with an override set", async () => {
+  assertEquals(await sentWeeklyCap({ ...proUser, weekly_budget_override_usd: 1, weekly_budget_unlimited: true }), null, "p_weekly_cap_usd");
+});
+
+Deno.test("a failed override read keeps the global cap instead of lifting it", async () => {
+  const originalWarn = console.warn;
+  console.warn = () => {};
+  try {
+    const settings = (url: URL) => (url.searchParams.get("select") ?? "").includes("weekly_budget")
+      ? json({ message: "column user_settings.weekly_budget_unlimited does not exist", code: "42703" }, 400)
+      : json(proUser);
+    assertEquals(await sentWeeklyCap(settings), WEEKLY_AI_BUDGET_USD, "p_weekly_cap_usd");
+  } finally {
+    console.warn = originalWarn;
+  }
+});
+
+Deno.test("the pre-round quota check uses the account's weekly cap", async () => {
+  const spent = [{ current_count: 1, week_spend_usd: (WEEKLY_AI_BUDGET_USD ?? 0) + 3 }];
+  await withSupabase({ user_settings: proUser, peek: spent }, async () => {
+    assertEquals((await peekRateLimit("user-1", "openai/gpt-6-luna")).code, "weekly_budget_reached", "global cap");
+  });
+  await withSupabase({ user_settings: { ...proUser, weekly_budget_unlimited: true }, peek: spent }, async () => {
+    assertEquals((await peekRateLimit("user-1", "openai/gpt-6-luna")).allowed, true, "unlimited");
+  });
+  await withSupabase({ user_settings: { ...proUser, weekly_budget_override_usd: 100 }, peek: spent }, async () => {
+    assertEquals((await peekRateLimit("user-1", "openai/gpt-6-luna")).allowed, true, "raised cap");
   });
 });
 
