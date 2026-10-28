@@ -7,9 +7,13 @@ import { type ConfigPlugin, withEntitlementsPlist } from 'expo/config-plugins';
 // One config for Expo Go, the web export and the development build.
 // DEBATELAB_BUILD=dev (set by the `development` profile in eas.json) adds the
 // native modules Expo Go lacks. Without it the config is the one Expo Go has
-// always used. DEBATELAB_APP_GROUP adds the lock-screen timer's widget
-// extension, which needs an App Group: set it only when the provisioning
-// profile carries that group. See docs/development.md#development-build.
+// always used. DEBATELAB_APP_GROUP adds the timer's widget extension (its Live
+// Activity, Dynamic Island clock and lock-screen widget), which needs an App
+// Group: set it only when the provisioning profile carries that group.
+// PLACEHOLDER until Adam's Apple Developer account exists: the group to create
+// there is `group.com.adam.debatelab` (it follows the bundle id), registered
+// for both `com.adam.debatelab` and `com.adam.debatelab.ExpoWidgetsTarget`.
+// See docs/development.md#development-build.
 
 type PermissionStrings = { speechRecognition: string; microphone: string };
 
@@ -125,7 +129,17 @@ export default ({ projectRoot }: ConfigContext): ExpoConfig => {
         bundleIdentifier: `${bundleIdentifier}.ExpoWidgetsTarget`,
         groupIdentifier: appGroup,
         enablePushNotifications: false,
-        widgets: [],
+        widgets: [
+          // The timer's lock-screen widget (src/widgets/timer-widgets.tsx). The Live
+          // Activity and Dynamic Island need no entry: the extension draws every
+          // Live Activity the app starts.
+          {
+            name: 'DebateTimerWidget',
+            displayName: 'DebateOwl timer',
+            description: 'The speech or prep clock running in the DebateOwl timer.',
+            ios: { supportedFamilies: ['accessoryRectangular', 'accessoryCircular', 'accessoryInline'] },
+          },
+        ],
       },
     ]);
   }

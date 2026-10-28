@@ -2860,7 +2860,16 @@
       "speechOf": "Speech {{n}} of {{of}}",
       "ofTotal": "of {{total}}",
       "next": "Next speech",
-      "reset": "Reset"
+      "reset": "Reset",
+      "widgetTitle": "DebateOwl timer",
+      "widgetIdle": "No speech is on the clock.",
+      "poiSignal": "Points of information open or close",
+      "knock": "A knock",
+      "keepsRunning": "The clock keeps running when you close the timer.",
+      "editFormat": "Edit this format",
+      "deleteFormat": "Delete this format",
+      "deleteFormatTitle": "Delete “{{name}}”?",
+      "deleteFormatMessage": "It is removed from this device. The round on the timer keeps its speeches."
     },
     "crossfire": {
       "voiceLater": "Coming with the app build.",

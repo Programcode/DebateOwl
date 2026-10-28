@@ -2860,7 +2860,16 @@
       "speechOf": "{{n}}. beszéd / {{of}}",
       "ofTotal": "összesen {{total}}",
       "next": "Következő beszéd",
-      "reset": "Visszaállítás"
+      "reset": "Visszaállítás",
+      "widgetTitle": "DebateOwl időmérő",
+      "widgetIdle": "Most nem fut beszéd.",
+      "poiSignal": "Megnyílik vagy lezárul a POI-idő",
+      "knock": "Kopogás",
+      "keepsRunning": "Ha bezárod az időmérőt, az óra tovább fut.",
+      "editFormat": "Formátum szerkesztése",
+      "deleteFormat": "Formátum törlése",
+      "deleteFormatTitle": "Törlöd ezt: „{{name}}”?",
+      "deleteFormatMessage": "Törlődik erről az eszközről. Az időmérőn lévő forduló megtartja a beszédeit."
     },
     "crossfire": {
       "voiceLater": "Az alkalmazás következő verziójával érkezik.",

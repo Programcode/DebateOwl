@@ -20,6 +20,10 @@ import { initReactI18next } from 'react-i18next';
 import en from '../../../../src/locales/en.json';
 import es from '../../../../src/locales/es.json';
 import hu from '../../../../src/locales/hu.json';
+// The free tools' catalogs (timer, speech-time calculator, motion generator), as the website's `tools` namespace.
+import toolsEn from '../../../../src/locales/tools/en.json';
+import toolsEs from '../../../../src/locales/tools/es.json';
+import toolsHu from '../../../../src/locales/tools/hu.json';
 
 /** The device language when DebateLab has it, otherwise English. Signed in, the account's choice wins (see settings.tsx). */
 export function deviceLanguage(): AppLanguage {
@@ -29,7 +33,11 @@ export function deviceLanguage(): AppLanguage {
 
 // Bundled resources make init synchronous; the returned promise cannot reject.
 void i18n.use(initReactI18next).init({
-  resources: { en: { translation: en }, es: { translation: es }, hu: { translation: hu } },
+  resources: {
+    en: { translation: en, tools: toolsEn },
+    es: { translation: es, tools: toolsEs },
+    hu: { translation: hu, tools: toolsHu },
+  },
   lng: deviceLanguage(),
   fallbackLng: 'en',
   interpolation: { escapeValue: false },

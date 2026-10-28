@@ -2860,7 +2860,16 @@
       "speechOf": "Discurso {{n}} de {{of}}",
       "ofTotal": "de {{total}}",
       "next": "Siguiente discurso",
-      "reset": "Reiniciar"
+      "reset": "Reiniciar",
+      "widgetTitle": "Cronómetro de DebateOwl",
+      "widgetIdle": "No hay ningún discurso en marcha.",
+      "poiSignal": "Se abren o se cierran los POI",
+      "knock": "Un golpe",
+      "keepsRunning": "El reloj sigue en marcha aunque cierres el cronómetro.",
+      "editFormat": "Editar este formato",
+      "deleteFormat": "Eliminar este formato",
+      "deleteFormatTitle": "¿Eliminar «{{name}}»?",
+      "deleteFormatMessage": "Se elimina de este dispositivo. La ronda del cronómetro conserva sus discursos."
     },
     "crossfire": {
       "voiceLater": "Llegará con la versión de la app.",

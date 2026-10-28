@@ -130,6 +130,8 @@ const SCHEMES = ['light', 'dark'] as const;
 const LOCALES = { en: 'en-GB', hu: 'hu-HU', es: 'es-ES' } as const;
 const SIGNED_IN_ROUTES = { prepare: '/prepare', practice: '/practice', you: '/you' };
 const NOTIFICATIONS = { en: 'Notifications', hu: 'Értesítések', es: 'Notificaciones' } as const;
+// The Timer format menu's custom format entry.
+const TIMER_NEW_FORMAT = { en: 'Build a custom format', hu: 'Saját formátum készítése', es: 'Crear un formato personalizado' } as const;
 const REST = `https://${STAGING_HOST}/rest/v1`;
 
 const TYPES: Record<string, string> = {
@@ -1566,9 +1568,14 @@ async function shootSparringScreens(context: BrowserContext, prefix: string, lan
 }
 
 /**
- * The Timer from the Practice tab: idle, running, and after time up. The page's
- * clock is Playwright's, so minutes pass at once; the web preview records the
- * signals it would sound (timer-signals.web.ts) and the run checks them.
+ * The Timer from the Practice tab, on the website's free timer: idle,
+ * running, and over time on the school format; a British Parliamentary
+ * speech with points of information open; Public Forum prep; and the custom
+ * format sheet. The page's clock is Playwright's, so minutes pass at once;
+ * the web preview records the signals it would sound (timer-signals.web.ts)
+ * and what the Lock Screen would show (live-activity.web.ts), and the run
+ * checks both. The round is kept in the page's storage, so each run starts
+ * from a cleared one.
  */
 async function shootTimerScreens(context: BrowserContext, prefix: string, language: string, problems: string[]) {
   const page = await context.newPage();
@@ -1576,27 +1583,67 @@ async function shootTimerScreens(context: BrowserContext, prefix: string, langua
   await pinSettings(page, language);
   await page.clock.install();
   await page.goto(`${ORIGIN}/practice`);
+  await page.evaluate(() => {
+    localStorage.removeItem('debatelab.timer.session');
+    localStorage.removeItem('debatelab.timer.formats');
+  });
+  await page.reload();
   await page.getByTestId('practice-tool-timer').click({ timeout: 30_000 });
   await page.getByTestId('timer-screen').waitFor({ timeout: 15_000 });
   await settle(page);
   await shoot(page, `${prefix}-timer`);
 
-  // The first Standard speech is 4:00. After 1:14 it shows 2:46 and keeps running.
+  // The school format's first speech is 4:00. After 1:14 it shows 2:46 and keeps running.
   await page.getByTestId('timer-toggle').click();
   await page.clock.fastForward('01:14');
   await page.getByTestId('timer-time').filter({ hasText: '2:46' }).waitFor();
+  const activity = await page.evaluate(() => (window as unknown as { __debatelabTimerActivity?: { state: { kind: string; pausedAt: number | null } | null } }).__debatelabTimerActivity);
+  if (activity?.state?.kind !== 'speech' || activity.state.pausedAt !== null) problems.push(`${prefix} timer: the Lock Screen state was ${JSON.stringify(activity)}`);
   await shoot(page, `${prefix}-timer-running`);
 
-  // Past the last minute and on to time up: one beep, then two.
-  await page.clock.fastForward('01:50');
+  // Past the last minute and on into overtime: one beep, then two, and the clock counts on.
+  // runFor ticks through the marks; a jump (fastForward) reads as a return from the background, where only time up sounds.
+  await page.clock.runFor('01:50');
   await page.getByTestId('timer-time').filter({ hasText: '0:56' }).waitFor();
   await page.clock.fastForward('01:00');
-  await page.getByTestId('timer-time').filter({ hasText: '0:00' }).waitFor();
+  await page.getByTestId('timer-time').filter({ hasText: '+0:04' }).waitFor();
   await page.waitForTimeout(100);
-  const signals = await page.evaluate(() => (window as unknown as { __debatelabTimerSignals?: { signal: string; sound: boolean }[] }).__debatelabTimerSignals ?? []);
-  const heard = signals.map((item) => item.signal).join(',');
+  const signals = async () => (await page.evaluate(() => (window as unknown as { __debatelabTimerSignals?: { signal: string }[] }).__debatelabTimerSignals ?? [])).map((item) => item.signal).join(',');
+  const heard = await signals();
   if (heard !== 'beep,double-beep') throw new Error(`Timer signals were ${heard || 'none'}, expected beep,double-beep`);
   await shoot(page, `${prefix}-timer-time-up`);
+  await page.getByTestId('timer-toggle').click();
+
+  // British Parliamentary: 1:30 into the PM's speech, points of information are open and the knock sounded.
+  await page.getByTestId('timer-format').click();
+  await page.getByTestId('timer-format-menu').getByRole('menuitem', { name: 'British Parliamentary' }).click();
+  await page.getByTestId('timer-time').filter({ hasText: '7:00' }).waitFor();
+  await page.getByTestId('timer-toggle').click();
+  await page.clock.runFor('01:30');
+  await page.getByTestId('timer-time').filter({ hasText: '5:30' }).waitFor();
+  await page.getByTestId('timer-poi').waitFor();
+  await page.waitForTimeout(100);
+  const withKnock = await signals();
+  if (withKnock !== 'beep,double-beep,knock') problems.push(`${prefix} timer: BP signals were ${withKnock}, expected a knock when POIs opened`);
+  await shoot(page, `${prefix}-timer-bp-poi`);
+  await page.getByTestId('timer-toggle').click();
+
+  // Public Forum prep: the first team's bank runs while the speech waits.
+  await page.getByTestId('timer-format').click();
+  await page.getByTestId('timer-format-menu').getByRole('menuitem', { name: 'Public Forum' }).click();
+  await page.getByTestId('timer-prep-a').click();
+  await page.clock.fastForward('00:40');
+  await page.getByTestId('timer-prep-a').filter({ hasText: '2:20' }).waitFor();
+  await page.getByTestId('timer-prep-a').scrollIntoViewIfNeeded();
+  await shoot(page, `${prefix}-timer-prep`);
+  await page.getByTestId('timer-prep-a').click();
+
+  // The custom format sheet starts from the format on the timer.
+  await page.getByTestId('timer-format').click();
+  await page.getByTestId('timer-format-menu').getByRole('menuitem', { name: TIMER_NEW_FORMAT[language as keyof typeof TIMER_NEW_FORMAT] }).click();
+  await page.getByTestId('timer-format-sheet').waitFor({ timeout: 15_000 });
+  await settle(page);
+  await shoot(page, `${prefix}-timer-format`);
   await page.close();
 }
 
@@ -2219,7 +2266,7 @@ async function main() {
           }
           if (want('timer')) {
             await shootTimerScreens(signedIn, prefix, language, problems);
-            shots += 3;
+            shots += 6;
           }
           if (want('crossfire')) {
             await shootCrossfireScreens(signedIn, prefix, language, problems).catch(failedIn(signedIn, prefix, 'crossfire'));

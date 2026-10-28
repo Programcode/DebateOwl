@@ -9,6 +9,7 @@ import { useEffect } from 'react';
 import { StyleSheet } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
+import { TimerRunner } from '@/components/timer-runner';
 import { ToastHost, ToastProvider } from '@/components/toast';
 import { AuthProvider, useAuth } from '@/lib/auth';
 import { DebateProvider } from '@/lib/debate-context';
@@ -124,6 +125,7 @@ function Root() {
             <Stack.Screen name="flowchart/maps" options={sheet} />
             {/* Live practice screens, full screen with no tab bar, as the live round in mock 05. */}
             <Stack.Screen name="timer" options={{ presentation: 'fullScreenModal' }} />
+            <Stack.Screen name="timer-format" options={sheet} />
             <Stack.Screen name="crossfire" />
             <Stack.Screen name="sparring/index" />
             <Stack.Screen name="sparring/[id]" />
@@ -133,6 +135,8 @@ function Root() {
           </Stack.Protected>
         </Stack>
         <ToastHost />
+        {/* The timer's signals and Live Activity keep going while the timer screen is closed. */}
+        <TimerRunner />
       </GestureHandlerRootView>
     </ThemeProvider>
   );
