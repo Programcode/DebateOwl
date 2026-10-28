@@ -1,4 +1,4 @@
-import { cachedRead, pickFailure, readAll, readFailed, updateCopy, type CopyMark, type CopyScope } from './offline-cache';
+import { afterWrite, cachedRead, pickFailure, readAll, readFailed, updateCopy, type CopyMark, type CopyScope } from './offline-cache';
 import { supabase } from './supabase';
 
 /**
@@ -24,10 +24,29 @@ export interface Debate {
 }
 
 export const MAX_MOTION_LENGTH = 1200;
+export const MAX_INSTRUCTIONS_LENGTH = 2000;
+/** The website's free-text judge note; its prompts read it as "Judge expectations". */
+export const MAX_JUDGE_LENGTH = 200;
+/** How long a debate may sit without meaningful work before the app asks about it, as on the website. */
+export const INACTIVE_DEBATE_MS = 5 * 24 * 60 * 60 * 1000;
+
+export function isDebateInactive(debate: Pick<Debate, 'lastActivityAt'>, now = Date.now()): boolean {
+  return now - debate.lastActivityAt > INACTIVE_DEBATE_MS;
+}
 
 /** The web DebateForm's formats, in its order. */
 export const DEBATE_FORMATS = ['custom', 'bp', 'policy', 'classroom'] as const;
 export type DebateFormat = (typeof DEBATE_FORMATS)[number];
+
+/** The web DebateForm's roles, in its order, with its labels. */
+export const DEBATE_ROLES = ['general', 'intro', 'r1', 'r2', 'conc'] as const;
+export const ROLE_LABEL_KEYS: Record<(typeof DEBATE_ROLES)[number], string> = {
+  general: 'debate.roleAny',
+  intro: 'generateForm.roleIntro',
+  r1: 'generateForm.roleR1',
+  r2: 'generateForm.roleR2',
+  conc: 'generateForm.roleConc',
+};
 
 const DEBATE_COLUMNS = 'id,motion,settings,instructions,last_activity_at,created_at';
 
@@ -111,13 +130,18 @@ async function loadDebates(userId: string): Promise<DebateList> {
 /** Creates a debate and makes it current, as the website's create dialog does. */
 export async function createDebate(
   userId: string,
-  input: { motion: string; settings: DebateSettings },
+  input: { motion: string; settings: DebateSettings; instructions?: string },
 ): Promise<Debate> {
   const motion = input.motion.trim();
   if (!motion) throw new Error('A debate needs a motion');
   const { data, error } = await supabase
     .from('debates')
-    .insert({ user_id: userId, motion: motion.slice(0, MAX_MOTION_LENGTH), settings: input.settings, instructions: '' })
+    .insert({
+      user_id: userId,
+      motion: motion.slice(0, MAX_MOTION_LENGTH),
+      settings: input.settings,
+      instructions: (input.instructions ?? '').trim().slice(0, MAX_INSTRUCTIONS_LENGTH),
+    })
     .select(DEBATE_COLUMNS)
     .single();
   if (error || !data) throw new Error(error?.message ?? 'Could not create debate');
@@ -136,6 +160,68 @@ export async function switchDebate(userId: string, debateId: string): Promise<nu
     .eq('id', debateId)
     .eq('user_id', userId);
   // As the Debate provider shows it: the switch counts as activity even when the timestamp was not saved.
+  keepInCopy(userId, (list) => ({ ...list, debates: sortDebates(list.debates.map((item) => (item.id === debateId ? { ...item, lastActivityAt: now } : item))) }));
+  return now;
+}
+
+/** Saves a debate's motion, settings and instructions, as the website's Edit settings does. */
+export async function updateDebate(
+  userId: string,
+  current: Debate,
+  patch: { motion?: string; settings?: DebateSettings; instructions?: string },
+): Promise<Debate> {
+  const next: Debate = {
+    ...current,
+    ...(patch.motion !== undefined ? { motion: patch.motion.trim().slice(0, MAX_MOTION_LENGTH) || current.motion } : {}),
+    ...(patch.settings !== undefined ? { settings: patch.settings } : {}),
+    ...(patch.instructions !== undefined ? { instructions: patch.instructions.trim().slice(0, MAX_INSTRUCTIONS_LENGTH) } : {}),
+  };
+  const { error } = await supabase
+    .from('debates')
+    .update({ motion: next.motion, settings: next.settings, instructions: next.instructions, updated_at: new Date().toISOString() })
+    .eq('id', current.id)
+    .eq('user_id', userId);
+  if (error) throw new Error(error.message);
+  keepInCopy(userId, (list) => ({ ...list, debates: list.debates.map((item) => (item.id === next.id ? next : item)) }));
+  return next;
+}
+
+/**
+ * Deletes a debate. Its sources and saved work go with it (the database
+ * cascades), as the website warns, so every copy that may hold them is dropped.
+ */
+export async function deleteDebate(userId: string, debateId: string): Promise<void> {
+  const { error } = await supabase.from('debates').delete().eq('id', debateId).eq('user_id', userId);
+  if (error) throw new Error(error.message);
+  keepInCopy(userId, (list) => ({
+    debates: list.debates.filter((item) => item.id !== debateId),
+    currentId: list.currentId === debateId ? null : list.currentId,
+  }));
+  afterWrite(userId, [
+    { group: 'sources', key: debateId },
+    { group: 'sources', prefix: 'folders:' },
+    { group: 'source' },
+    { group: 'history', key: debateId },
+    { group: 'debate-lists', about: debateId },
+    { group: 'flowcharts', key: debateId },
+    { group: 'chats', key: debateId },
+    { group: 'sparring-rounds', about: debateId },
+    // Saved documents do not say their debate in their keys, so all of them go.
+    { group: 'result:case' },
+    { group: 'result:attack' },
+    { group: 'result:brainstorm' },
+    { group: 'result:factoids' },
+    { group: 'flowchart' },
+    { group: 'chat' },
+    { group: 'sparring' },
+  ]);
+}
+
+/** "Continue" in the five-day check: the student is still preparing this debate. */
+export async function continueDebate(userId: string, debateId: string): Promise<number> {
+  const now = Date.now();
+  const { error } = await supabase.from('debates').update({ last_activity_at: new Date(now).toISOString() }).eq('id', debateId).eq('user_id', userId);
+  if (error) throw new Error(error.message);
   keepInCopy(userId, (list) => ({ ...list, debates: sortDebates(list.debates.map((item) => (item.id === debateId ? { ...item, lastActivityAt: now } : item))) }));
   return now;
 }

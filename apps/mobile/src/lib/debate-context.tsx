@@ -3,10 +3,13 @@ import { AppState } from 'react-native';
 
 import { useAuth } from './auth';
 import {
+  continueDebate,
   createDebate,
+  deleteDebate,
   fetchDebates,
   sortDebates,
   switchDebate,
+  updateDebate,
   type Debate,
   type DebateSettings,
 } from './debates';
@@ -23,8 +26,14 @@ type DebateContextValue = {
   /** The debate that new work attaches to right now, or null for one-off work. */
   activeDebateId: string | null;
   refresh: () => Promise<void>;
-  create: (input: { motion: string; settings: DebateSettings }) => Promise<Debate>;
+  create: (input: { motion: string; settings: DebateSettings; instructions?: string }) => Promise<Debate>;
   switchTo: (id: string) => Promise<void>;
+  /** The website's Edit settings: motion, format, role, judge and instructions. */
+  update: (id: string, patch: { motion?: string; settings?: DebateSettings; instructions?: string }) => Promise<void>;
+  /** Deletes a debate with its sources and saved work. */
+  remove: (id: string) => Promise<void>;
+  /** "Continue" in the five-day check. */
+  continueCurrent: () => Promise<void>;
   setOneOff: (oneOff: boolean) => void;
   /** After Delete all my data: drops this account's debates and Current Debate here, whether or not a reload works. */
   forgetDebates: (userId: string) => void;
@@ -97,11 +106,11 @@ export function DebateProvider({ children }: { children: ReactNode }) {
       // The account is read when the student acts. If the owner changed while
       // the write ran, the write still happened for that account, so it is
       // reported as done but not shown to whoever is signed in now.
-      create: async ({ motion, settings }) => {
+      create: async ({ motion, settings, instructions }) => {
         const forUser = owner.current;
         if (!forUser) throw new Error('Sign in to manage debates');
         const gen = generation.current;
-        const debate = await createDebate(forUser, { motion, settings });
+        const debate = await createDebate(forUser, { motion, settings, instructions });
         if (generation.current !== gen) return debate;
         writes.current += 1;
         setDebates((previous) => sortDebates([debate, ...previous.filter((item) => item.id !== debate.id)]));
@@ -120,6 +129,36 @@ export function DebateProvider({ children }: { children: ReactNode }) {
         setDebates((previous) => sortDebates(previous.map((item) => (item.id === id ? { ...item, lastActivityAt: at } : item))));
         setCurrentId(id);
         setOneOff(false);
+      },
+      update: async (id, patch) => {
+        const forUser = owner.current;
+        const debate = debates.find((item) => item.id === id);
+        if (!forUser || !debate) throw new Error('Debate not found');
+        const gen = generation.current;
+        const next = await updateDebate(forUser, debate, patch);
+        if (generation.current !== gen) return;
+        writes.current += 1;
+        setDebates((previous) => previous.map((item) => (item.id === id ? next : item)));
+      },
+      remove: async (id) => {
+        const forUser = owner.current;
+        if (!forUser) throw new Error('Sign in to manage debates');
+        const gen = generation.current;
+        await deleteDebate(forUser, id);
+        if (generation.current !== gen) return;
+        writes.current += 1;
+        setDebates((previous) => previous.filter((item) => item.id !== id));
+        setCurrentId((previous) => (previous === id ? null : previous));
+      },
+      continueCurrent: async () => {
+        const forUser = owner.current;
+        if (!forUser || !currentId) return;
+        const gen = generation.current;
+        const id = currentId;
+        const at = await continueDebate(forUser, id);
+        if (generation.current !== gen) return;
+        writes.current += 1;
+        setDebates((previous) => sortDebates(previous.map((item) => (item.id === id ? { ...item, lastActivityAt: Math.max(item.lastActivityAt, at) } : item))));
       },
       setOneOff,
       forgetDebates: (forUser) => {

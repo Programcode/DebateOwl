@@ -1,4 +1,4 @@
-import { useFocusEffect, useRouter } from 'expo-router';
+import { Link, useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
@@ -14,17 +14,20 @@ import { Screen } from '@/components/screen';
 import { SegmentedControl } from '@/components/segmented-control';
 import { SOURCE_ICONS, sourceMeta } from '@/components/source-display';
 import { Text } from '@/components/text';
-import { WorkRow, workHref } from '@/components/work-row';
+import { WorkRow } from '@/components/work-row';
 import { useAuth } from '@/lib/auth';
 import { useDebates } from '@/lib/debate-context';
 import {
   fetchDebateCounts,
   fetchRecentWork,
+  ROLE_LABEL_KEYS,
+  type Debate,
   type DebateCounts,
   type DebateItem,
   type DebateSide,
 } from '@/lib/debates';
 import { HOME_COLUMNS_WIDTH, useLayoutClass } from '@/lib/layout';
+import { useSourceActions } from '@/lib/source-actions';
 import { fetchSources, type Source } from '@/lib/sources';
 import { useAnnouncements } from '@/lib/use-announcements';
 import { useCopyHolder } from '@/lib/use-copy-holder';
@@ -111,6 +114,7 @@ export default function DebateScreen() {
         <Text accessibilityRole="header" weight="display" style={[styles.motion, styles.motionWide]} testID="current-debate-motion">
           {current.motion}
         </Text>
+        <DebateSettingsCard debate={current} />
         <DebateDetails key={current.id} debateId={current.id} dashboard />
       </Screen>
     );
@@ -124,8 +128,52 @@ export default function DebateScreen() {
       <Text accessibilityRole="header" weight="display" style={styles.motion} testID="current-debate-motion">
         {current.motion}
       </Text>
+      <DebateSettingsCard debate={current} />
       <DebateDetails key={current.id} debateId={current.id} />
     </Screen>
+  );
+}
+
+/**
+ * The website's settings card under the motion (format and instructions), with
+ * the role and judge the app's form adds, and Edit settings.
+ */
+function DebateSettingsCard({ debate }: { debate: Debate }) {
+  const { t } = useTranslation();
+  const router = useRouter();
+  const { colors } = useTheme();
+  const { format, role, judge } = debate.settings;
+  const facts = [
+    format ? `${t('debate.format')}: ${t(`debate.formats.${format}`, { defaultValue: format })}` : null,
+    role ? `${t('debate.role')}: ${role in ROLE_LABEL_KEYS ? t(ROLE_LABEL_KEYS[role as keyof typeof ROLE_LABEL_KEYS]) : role}` : null,
+    judge ? `${t('mobile.debate.judge')}: ${judge}` : null,
+  ].filter(Boolean);
+  return (
+    <View style={[styles.settings, { borderColor: colors.border }]} testID="debate-settings">
+      <View style={styles.settingsText}>
+        {facts.length > 0 ? (
+          <Text tone="secondary" style={styles.settingsFacts}>
+            {facts.join(' · ')}
+          </Text>
+        ) : null}
+        {debate.instructions ? (
+          <Text style={styles.settingsInstructions} numberOfLines={3}>
+            {debate.instructions}
+          </Text>
+        ) : null}
+      </View>
+      <Pressable
+        accessibilityRole="button"
+        onPress={() => router.push('/edit-debate')}
+        testID="edit-debate"
+        hitSlop={6}
+        style={({ pressed }) => [styles.editButton, { backgroundColor: colors.tile }, pressed && styles.pressed]}>
+        <Icon name="pencil" color={colors.tileForeground} size={15} />
+        <Text weight="semibold" style={[styles.editLabel, { color: colors.tileForeground }]} numberOfLines={1}>
+          {t('debate.editSettings')}
+        </Text>
+      </Pressable>
+    </View>
   );
 }
 
@@ -274,7 +322,7 @@ function DebateDetails({ debateId, dashboard = false }: { debateId: string; dash
       ) : (
         <Card style={styles.list}>
           {items.map((item, index) => (
-            <WorkRow key={`${item.kind}-${item.id}`} item={item} first={index === 0} onPress={() => router.navigate(workHref(item, 'debate'))} />
+            <WorkRow key={`${item.kind}-${item.id}`} item={item} first={index === 0} from="debate" onDeleted={() => void load(() => true)} />
           ))}
         </Card>
       )}
@@ -303,7 +351,7 @@ function DebateDetails({ debateId, dashboard = false }: { debateId: string; dash
   ) : (
     <Card style={styles.list}>
       {sources.map((source, index) => (
-        <RecentSource key={source.id} source={source} first={index === 0} onPress={() => router.push({ pathname: '/source/[id]', params: { id: source.id } })} />
+        <RecentSource key={source.id} source={source} first={index === 0} />
       ))}
     </Card>
   );
@@ -330,8 +378,29 @@ function DebateDetails({ debateId, dashboard = false }: { debateId: string; dash
   );
 }
 
-/** A source in the dashboard's Recent sources; it opens in the source sheet. */
-function RecentSource({ source, first, onPress }: { source: Source; first: boolean; onPress: () => void }) {
+/** A source in the dashboard's Recent sources; it opens in the source sheet, with a preview and Copy and Share on a long press. */
+function RecentSource({ source, first }: { source: Source; first: boolean }) {
+  const { t } = useTranslation();
+  const actions = useSourceActions();
+  return (
+    <Link href={{ pathname: '/source/[id]', params: { id: source.id } }} asChild>
+      <Link.Trigger>
+        <RecentSourceRow source={source} first={first} />
+      </Link.Trigger>
+      <Link.Preview />
+      <Link.Menu>
+        <Link.MenuAction icon="doc.on.doc" onPress={() => void actions.copy(source)}>
+          {t('common.copy')}
+        </Link.MenuAction>
+        <Link.MenuAction icon="square.and.arrow.up" onPress={() => actions.share(source)}>
+          {t('mobile.library.share')}
+        </Link.MenuAction>
+      </Link.Menu>
+    </Link>
+  );
+}
+
+function RecentSourceRow({ source, first, onPress }: { source: Source; first: boolean; onPress?: () => void }) {
   const { t } = useTranslation();
   const { colors } = useTheme();
   return (
@@ -436,7 +505,13 @@ const styles = StyleSheet.create({
   emptyText: { gap: 8 },
   emptyTitle: { fontSize: 28, lineHeight: 34, letterSpacing: -0.6 },
   emptyOwl: { alignSelf: 'flex-start', marginTop: 8, marginBottom: -6 },
-  motion: { fontSize: 27, lineHeight: 32, letterSpacing: -0.6, marginTop: 12, marginBottom: 15 },
+  motion: { fontSize: 27, lineHeight: 32, letterSpacing: -0.6, marginTop: 12, marginBottom: 10 },
+  settings: { flexDirection: 'row', alignItems: 'flex-start', gap: 12, borderTopWidth: 1, borderBottomWidth: 1, paddingVertical: 10, marginBottom: 15 },
+  settingsText: { flex: 1, gap: 3 },
+  settingsFacts: { fontSize: 14, lineHeight: 19 },
+  settingsInstructions: { fontSize: 14.5, lineHeight: 20 },
+  editButton: { flexDirection: 'row', alignItems: 'center', gap: 5, borderRadius: radius.pill, paddingHorizontal: 11, minHeight: 32 },
+  editLabel: { fontSize: 14 },
   stats: { flexDirection: 'row', gap: 24, marginTop: 13, marginBottom: 15, marginHorizontal: 2 },
   statValue: { fontSize: 21, lineHeight: 26, letterSpacing: -0.2 },
   statLabel: { fontSize: 15 },
