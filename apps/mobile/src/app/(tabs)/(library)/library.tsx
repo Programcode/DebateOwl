@@ -330,7 +330,7 @@ function SourceRow({
           <Text weight="semibold" style={[styles.rowTitle, selected && { color: colors.chipSelectedForeground }]} numberOfLines={2}>
             {source.title || t('libraryPage.untitledSource')}
           </Text>
-          <Text tone="faint" style={styles.rowMeta} numberOfLines={1}>
+          <Text tone="faint" style={styles.rowMeta} numberOfLines={2}>
             {sourceMeta(t, source)}
           </Text>
         </View>

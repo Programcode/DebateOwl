@@ -1,6 +1,6 @@
 import { useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Pressable, StyleSheet, Switch, View } from 'react-native';
+import { Platform, Pressable, StyleSheet, Switch, View } from 'react-native';
 
 import { ActionMenu } from './action-menu';
 import { Icon } from './icon';
@@ -109,10 +109,18 @@ export function SwitchRow({ label, description, value, onChange, first, disabled
         disabled={disabled}
         trackColor={{ true: colors.primaryFill, false: colors.segmentTrack }}
         thumbColor="#FFFFFF"
+        {...WEB_SWITCH_THUMB}
       />
     </RowFrame>
   );
 }
+
+/**
+ * React Native Web draws a switched-on thumb in its own teal unless told
+ * otherwise; iOS takes thumbColor for both states. Web-only, so not in the
+ * native types.
+ */
+export const WEB_SWITCH_THUMB = (Platform.OS === 'web' ? { activeThumbColor: '#FFFFFF' } : {}) as object;
 
 const styles = StyleSheet.create({
   group: { gap: 7 },

@@ -5,6 +5,7 @@ import { ActivityIndicator, Pressable, StyleSheet, Switch, TextInput, View } fro
 
 import { PrimaryButton, TextButton } from '@/components/buttons';
 import { Card } from '@/components/card';
+import { WEB_SWITCH_THUMB } from '@/components/form-rows';
 import { Icon } from '@/components/icon';
 import { SheetScrollView } from '@/components/sheet';
 import { Text } from '@/components/text';
@@ -181,6 +182,7 @@ export default function DebatesSheet() {
             trackColor={{ false: colors.border, true: colors.primaryFill }}
             ios_backgroundColor={colors.border}
             thumbColor="#ffffff"
+            {...WEB_SWITCH_THUMB}
           />
         </View>
       </Card>
