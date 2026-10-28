@@ -2032,10 +2032,10 @@
       "hard": "Kíméletlen"
     },
     "roleGuidance": {
-      "introductor": "Kezdj exordióval, határozd meg a kulcsfogalmakat, állítsd fel a keretet és a tézist, majd ismertesd az érvelés menetét. A teljes érveket hagyd az R1-re.",
-      "r1": "Építsd fel a fő érveket állítással, indoklással, alátámasztással és hatással. A végén előzd meg vagy válaszold meg a legerősebb ellenérvet.",
-      "r2": "Mélyítsd el az R1 érveit, válaszolj közvetlenül az ellenfélnek, nevezd meg a fő ütközési pontokat, és mérd össze a hatásokat. Ne csak ismételd az esetet.",
-      "conclusor": "Ne hozz új érvet. Kristályosítsd ki a döntő ütközési pontokat, mérlegeld a fordulót, és zárd le azzal, miért a te oldalad nyer."
+      "introductor": "Kezdj egy figyelemfelkeltő nyitással, mondd ki: „N érvvel bizonyítjuk, hogy…”, és röviden mutasd be az érveket. A téma egy szavát csak akkor magyarázd el egy mondatban, ha nem egyértelmű. A teljes érveket hagyd az R1-nek.",
+      "r1": "Fejtsd ki teljesen az érveket: az állítást, hogy miért igaz, a bizonyítékot forrással és évszámmal, és hogy miért fontos. A végén válaszolj arra, amit a másik csapat a legvalószínűbben mond.",
+      "r2": "Ne hozz új érvet. Kb. 2 percben erősítsd meg a csapatod érveit, majd kb. 4 percben válaszolj az övéikre: „Ha azt mondják…, mi azt feleljük…”.",
+      "conclusor": "Ne hozz új érvet. Mondj két-három okot, amiért az oldalad nyert, és zárj egy világos zárómondattal."
     },
     "category": {
       "Logic": "Logika",

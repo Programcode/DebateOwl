@@ -2032,10 +2032,10 @@
       "hard": "Despiadado"
     },
     "roleGuidance": {
-      "introductor": "Abre con un exordio, define los términos clave, fija el marco y la tesis, y presenta la hoja de ruta. Reserva los argumentos completos para R1.",
-      "r1": "Construye los argumentos centrales con afirmaciones, razonamientos, apoyo e impactos. Usa la parte final para anticipar o responder a la oposición más fuerte.",
-      "r2": "Amplía R1, responde directamente al oponente, identifica los choques centrales y compara los impactos. No te limites a repetir el caso.",
-      "conclusor": "No añadas argumentos nuevos. Cristaliza los choques decisivos, sopesa la ronda y cierra explicando por qué gana tu lado."
+      "introductor": "Empieza con un gancho, di «vamos a demostrar N argumentos que prueban que…» y presenta cada argumento en pocas palabras. Explica una palabra de la moción en una línea solo si no está clara. Deja los argumentos completos para el R1.",
+      "r1": "Desarrolla los argumentos completos: la idea, por qué es cierta, la evidencia con su fuente y año, y por qué importa. Usa la última parte para responder lo que probablemente dirán.",
+      "r2": "No traigas argumentos nuevos. Dedica unos 2 minutos a reforzar los argumentos de tu equipo y unos 4 minutos a responder los suyos: «Si dicen…, respondemos…».",
+      "conclusor": "No añadas argumentos nuevos. Da dos o tres razones por las que tu lado ganó y termina con una frase de cierre clara."
     },
     "category": {
       "Logic": "Lógica",

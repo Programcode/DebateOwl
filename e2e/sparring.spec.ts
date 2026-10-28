@@ -129,7 +129,7 @@ test('uses the school 4-6-6-3 roles and coaching in the default round', async ({
 
   await expect(page.getByRole('region', { name: 'Transcript' }).getByText('Opponent response 1:')).toBeVisible();
   await expect(page.getByRole('textbox', { name: 'Draft for Pro R1' })).toBeVisible();
-  await expect(page.getByText(/Build the core arguments with claims, warrants, support, and impacts/)).toBeVisible();
+  await expect(page.getByText(/Build the arguments in full: the point, why it is true, evidence with its source and year/)).toBeVisible();
   expect(actions).toEqual(['respond']);
 });
 
