@@ -17,11 +17,13 @@ import { useCaseEdits } from '@/lib/case-edits';
 import { useDebates } from '@/lib/debate-context';
 import { formatWhen } from '@/lib/dates';
 import { copyText, sharePdf, shareText } from '@/lib/export';
+import { shareCaseDocx } from '@/lib/export-docx';
 import { caseExportFileName, caseExportHtml } from '@/lib/export-html';
 import { caseToText, discussCaseMessage } from '@/lib/result-text';
 import { buildFlowchartFromCase, crossfireFromCase } from '@/lib/result-links';
 import { isCompleteCase } from '@/lib/results';
 import { arrivalNoticeText, useResultDocument } from '@/lib/use-result-document';
+import { useShareLink } from '@/lib/use-share-link';
 
 /** A generated case read as a document, as in mock 03. */
 export default function CaseScreen() {
@@ -34,6 +36,7 @@ export default function CaseScreen() {
   const [regenerateOpen, setRegenerateOpen] = useState(false);
   const { setNotice } = doc;
   const edits = useCaseEdits(doc.state.status === 'ready' ? doc.state.key : null, setNotice);
+  const shareLink = useShareLink(setNotice);
 
   // Problems from saving a fresh result are told once, on arrival.
   useEffect(() => {
@@ -89,6 +92,7 @@ export default function CaseScreen() {
     { key: 'closing' as const, title: t('generateResults.closingLine'), shown: Boolean(view.closingLine) },
   ].filter((section) => section.shown).map(({ key, title }) => ({ key, title }));
   const regeneratingTitle = sections.find((section) => section.key === edits.regenerating)?.title;
+  const savedId = result.savedId;
 
   const actions: HeaderAction[] = [
     ...(edits.regenerating
@@ -104,6 +108,8 @@ export default function CaseScreen() {
     ...(doc.autoSaved.length > 0
       ? [{ key: 'undo-sources', label: t('autoSavedSources.undo'), symbol: 'arrow.uturn.backward' as const, icon: 'history' as const, onPress: () => void doc.undoAutoSaved() }]
       : []),
+    // Only a saved case can be shared: the link is made from its row.
+    ...(savedId ? [{ key: 'share-link', label: t('mobile.share.shareLink'), symbol: 'link' as const, icon: 'link' as const, onPress: () => void shareLink('case', savedId, title, output) }] : []),
     ...(result.savedId ? [{ key: 'delete', label: t('common.delete'), symbol: 'trash' as const, icon: 'trash' as const, destructive: true, onPress: () => void doc.remove() }] : []),
   ];
 
@@ -147,11 +153,14 @@ export default function CaseScreen() {
         items={[
           { key: 'pdf', label: t('common.pdf'), icon: 'file' },
           { key: 'copy', label: t('mobile.results.copyText'), icon: 'copy' },
+          // The website's Word export, built by the same code (packages/core/src/export/docx.ts).
+          { key: 'docx', label: t('common.docx'), icon: 'file' },
         ]}
         cancelLabel={t('common.cancel')}
         onClose={() => setExportOpen(false)}
         onSelect={(choice) => {
           if (choice === 'pdf') run(() => sharePdf(caseExportHtml(output, t), caseExportFileName(output), title));
+          if (choice === 'docx') run(() => shareCaseDocx(output, t, title));
           if (choice === 'copy') run(async () => {
             await copyText(caseToText(output));
             setNotice(t('generateResults.copiedToClipboard'));

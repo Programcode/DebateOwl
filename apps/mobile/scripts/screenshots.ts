@@ -12,7 +12,7 @@
  * separate several with commas (ONLY=iphone-light-en,ipad-dark-hu).
  * SCREENS=you,timer limits the signed-in screens to those groups: debate,
  * debate-check, library, prepare, practice, you, empty, ask, results, brainstorm,
- * factoids, case-edits, context, limits, sidebar,
+ * factoids, case-edits, context, limits, sidebar, first-run, share,
  * timer, crossfire, sparring, flowchart, one-off, history, announcements,
  * account, model. Sign-in screens are always shot.
  * ONLY=offline runs only the offline reading check (see shootOfflineScreens).
@@ -142,8 +142,20 @@ const REST = `https://${STAGING_HOST}/rest/v1`;
  */
 const FUNCTIONS_ORIGIN = process.env.FUNCTIONS_ORIGIN;
 
+/**
+ * FONT_SCALE draws a Dynamic Type size (src/theme/font-scale.web.ts): 3.1 is
+ * iOS's largest accessibility size for body text. Use it with SHOTS_DIR, so
+ * the large-text shots do not replace the usual ones.
+ */
+const FONT_SCALE = Number(process.env.FONT_SCALE ?? '1');
+
 async function newContext(browser: Browser, options: BrowserContextOptions): Promise<BrowserContext> {
   const context = await browser.newContext(options);
+  if (FONT_SCALE > 0 && FONT_SCALE !== 1) {
+    await context.addInitScript((scale) => {
+      (window as unknown as { __debateowlFontScale?: number }).__debateowlFontScale = scale;
+    }, FONT_SCALE);
+  }
   if (FUNCTIONS_ORIGIN && FUNCTIONS_ORIGIN !== ORIGIN) {
     // Context routes run after page routes, so a page that fakes a function keeps its fake.
     await context.route(`https://${STAGING_HOST}/functions/v1/**`, async (route) => {
@@ -176,8 +188,8 @@ const TYPES: Record<string, string> = {
 function serve(): Promise<Server> {
   const server = createServer((req, res) => {
     const path = normalize(decodeURIComponent(new URL(req.url ?? '/', ORIGIN).pathname)).replace(/^(\.\.[/\\])+/, '');
-    // A dynamic route such as /case/<id> is exported once, as case/[id].html.
-    const candidates = [join(DIST, path), join(DIST, `${path}.html`), join(DIST, path, 'index.html'), join(DIST, dirname(path), '[id].html')];
+    // A dynamic route such as /case/<id> is exported once, as case/[id].html (share/[code].html for /share/<code>).
+    const candidates = [join(DIST, path), join(DIST, `${path}.html`), join(DIST, path, 'index.html'), join(DIST, dirname(path), '[id].html'), join(DIST, dirname(path), '[code].html')];
     const file = candidates.find((candidate) => candidate.startsWith(DIST) && existsSync(candidate) && statSync(candidate).isFile());
     if (!file) {
       res.writeHead(404).end('Not found');
@@ -832,6 +844,7 @@ const MENU = {
   regenerate: /^(Regenerate a section|Szakasz újragenerálása|Regenerar una sección)$/,
   arguments: /^(Regenerate Arguments|Érvek újragenerálása|Regenerar Argumentos)$/,
   save: /^(Save|Mentés|Guardar)$/,
+  shareLink: /^(Share link|Link megosztása|Compartir enlace)$/,
 };
 
 /**
@@ -1762,6 +1775,136 @@ async function shootSidebar(context: BrowserContext, prefix: string, language: s
   return 2;
 }
 
+/**
+ * A share link, end to end on staging: the made-up saved case's Share link
+ * calls the real `share` function (one new link), and the link's code opens
+ * the in-app viewer, which reads it back with the public get_shared_item RPC.
+ */
+async function shootShareLink(context: BrowserContext, prefix: string, language: string, problems: string[]): Promise<number> {
+  const page = await context.newPage();
+  watchErrors(page, problems, `${prefix} share`);
+  await pinSettings(page, language);
+  await fakeSavedCase(page);
+  await page.goto(`${ORIGIN}/case/${SAVED_CASE_ID}`);
+  await page.getByTestId('case-document').waitFor({ timeout: 30_000 });
+  await page.getByTestId('document-more').click();
+  await page.getByRole('menuitem', { name: MENU.shareLink }).last().click();
+  await page.waitForFunction(() => Boolean((window as unknown as { __debatelabExport?: { sharedUrl?: string } }).__debatelabExport?.sharedUrl), undefined, { timeout: 30_000 });
+  const url = await page.evaluate(() => (window as unknown as { __debatelabExport?: { sharedUrl?: string } }).__debatelabExport?.sharedUrl ?? '');
+  const code = /^\/share\/([A-Za-z0-9_-]+)$/.exec(new URL(url).pathname)?.[1];
+  if (!code) throw new Error(`The share link has no code: ${new URL(url).host}${new URL(url).pathname.replace(/[^/]+$/, '…')}`);
+  console.log(`${prefix}: share link on ${new URL(url).host}, a ${code.length}-character code`);
+  await page.close();
+
+  const viewer = await context.newPage();
+  watchErrors(viewer, problems, `${prefix} shared view`);
+  await viewer.goto(`${ORIGIN}/share/${code}`);
+  await viewer.getByTestId('shared-document').waitFor({ timeout: 30_000 });
+  await viewer.getByTestId('case-opening').waitFor();
+  await settle(viewer);
+  await shoot(viewer, `${prefix}-shared-case`);
+  await viewer.close();
+  return 1;
+}
+
+/**
+ * The first run and two account notices, each in a context of its own:
+ * Ollie's welcome (asked for with ?intro=show, as on the website) and the
+ * tour's first and last steps; the trial reminder, from a user_settings read
+ * answered as a trial ending in two days with no subscription rows; and the
+ * expired-session notice, from a stored session whose refresh the page
+ * answers with invalid_grant. Nothing is written.
+ */
+async function shootFirstRun(
+  browser: Browser,
+  options: BrowserContextOptions,
+  session: StorageState,
+  prefix: string,
+  language: string,
+  problems: string[],
+): Promise<number> {
+  let shots = 0;
+  const welcome = await newContext(browser, { ...options, storageState: session });
+  const page = await welcome.newPage();
+  watchErrors(page, problems, `${prefix} welcome`);
+  await pinSettings(page, language);
+  await page.goto(`${ORIGIN}/?intro=show`);
+  await page.getByTestId('debateowl-intro').waitFor({ timeout: 30_000 });
+  // The owl's lines land over 6.6 seconds.
+  await page.waitForTimeout(7_000);
+  await shoot(page, `${prefix}-welcome`);
+  await page.getByTestId('intro-done').click();
+  await page.getByTestId('tour-step-debate').waitFor();
+  await shoot(page, `${prefix}-tour-debate`);
+  for (const step of ['library', 'generate', 'ready']) {
+    await page.getByTestId('tour-next').click();
+    await page.getByTestId(`tour-step-${step}`).waitFor();
+  }
+  await shoot(page, `${prefix}-tour-ready`);
+  await page.getByTestId('tour-next').click();
+  await page.getByTestId('tour-step-ready').waitFor({ state: 'detached' });
+  shots += 3;
+  await page.unrouteAll({ behavior: 'ignoreErrors' });
+  await welcome.close();
+
+  const trial = await newContext(browser, { ...options, storageState: session });
+  const trialPage = await trial.newPage();
+  watchErrors(trialPage, problems, `${prefix} trial`);
+  await pinSettings(trialPage, language);
+  const endsAt = new Date(Date.now() + 2 * 24 * 60 * 60 * 1000 + 60 * 60 * 1000).toISOString();
+  await trialPage.route(`${REST}/user_settings*`, async (route) => {
+    if (route.request().method() !== 'GET' || !route.request().url().includes('trial_ends_at')) return route.fallback();
+    // A read still running when the context closes ends quietly: Playwright's error would print the request's headers.
+    try {
+      const response = await route.fetch();
+      const body: unknown = await response.json();
+      const asTrial = (row: Record<string, unknown>) => ({ ...row, subscription_tier: 'trial', trial_ends_at: endsAt, grace_period_ends_at: null, daily_limit_override: null });
+      await route.fulfill({ response, json: Array.isArray(body) ? body.map((row) => asTrial(row as Record<string, unknown>)) : asTrial(body as Record<string, unknown>) });
+    } catch {
+      await route.abort().catch(() => undefined);
+    }
+  });
+  for (const table of ['subscriptions', 'app_store_subscriptions']) {
+    await trialPage.route(`${REST}/${table}*`, (route) => route.fulfill({ status: 200, contentType: 'application/json', json: [] }));
+  }
+  await trialPage.goto(`${ORIGIN}/`);
+  await trialPage.getByTestId('trial-banner').waitFor({ timeout: 30_000 });
+  await settle(trialPage);
+  await shoot(trialPage, `${prefix}-trial-banner`);
+  await trialPage.getByTestId('trial-banner-dismiss').click();
+  await trialPage.getByTestId('trial-banner').waitFor({ state: 'detached' });
+  shots += 1;
+  await trialPage.unrouteAll({ behavior: 'ignoreErrors' });
+  await trial.close();
+
+  // The stored session's access token has expired and the server refuses its refresh token.
+  const expired = await newContext(browser, { ...options, storageState: session });
+  await expired.addInitScript(() => {
+    for (const key of Object.keys(localStorage)) {
+      if (!key.includes('auth')) continue;
+      try {
+        const value = JSON.parse(localStorage.getItem(key) ?? 'null') as { expires_at?: number } | null;
+        if (value && typeof value === 'object' && 'expires_at' in value) localStorage.setItem(key, JSON.stringify({ ...value, expires_at: 1 }));
+      } catch {
+        // Not a session.
+      }
+    }
+  });
+  await expired.route(`https://${STAGING_HOST}/auth/v1/token*`, (route) =>
+    route.fulfill({ status: 400, contentType: 'application/json', json: { error: 'invalid_grant', error_description: 'Invalid Refresh Token: Refresh Token Not Found', code: 'refresh_token_not_found' } }),
+  );
+  const expiredPage = await expired.newPage();
+  watchErrors(expiredPage, problems, `${prefix} expired session`);
+  await expiredPage.goto(`${ORIGIN}/`);
+  await expiredPage.getByTestId('session-expired').waitFor({ timeout: 45_000 });
+  await shoot(expiredPage, `${prefix}-session-expired`);
+  shots += 1;
+  await expiredPage.unrouteAll({ behavior: 'ignoreErrors' });
+  await expired.unrouteAll({ behavior: 'ignoreErrors' });
+  await expired.close();
+  return shots;
+}
+
 async function shootEmptyDebate(page: Page, prefix: string) {
   await page.route(`${REST}/current_debates*`, (route) =>
     route.fulfill({ status: 200, contentType: 'application/json', json: [] }),
@@ -2321,6 +2464,13 @@ async function main() {
           }
           if (want('sidebar') && device.startsWith('ipad')) {
             shots += await shootSidebar(signedIn, prefix, language, problems).catch(failedIn(signedIn, prefix, 'sidebar'));
+          }
+          // Each run makes one real share link on staging, so English only.
+          if (want('share') && language === 'en') {
+            shots += await shootShareLink(signedIn, prefix, language, problems).catch(failedIn(signedIn, prefix, 'share'));
+          }
+          if (want('first-run')) {
+            shots += await shootFirstRun(browser, { ...options, colorScheme: scheme, locale }, session, prefix, language, problems).catch(failedIn(signedIn, prefix, 'first-run'));
           }
           if (want('ask')) {
             await shootAskScreens(signedIn, prefix, language, problems).catch(failedIn(signedIn, prefix, 'ask'));
