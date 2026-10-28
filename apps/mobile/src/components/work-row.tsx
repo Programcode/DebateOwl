@@ -1,4 +1,4 @@
-import { Link, type Href } from 'expo-router';
+import { Link, useRouter, type Href } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { Pressable, StyleSheet, View } from 'react-native';
 
@@ -70,14 +70,17 @@ export function WorkRow({
 }) {
   const { t } = useTranslation();
   const { colors } = useTheme();
+  const router = useRouter();
   const actions = useWorkActions();
   const title = item.title || t(`debate.kinds.${item.kind}`);
   const href = from ? workHref(item, from) : null;
+  // Practice work opens the Practice tab, which has nothing to preview, so it is a plain row that navigates itself.
+  const linked = href !== null && href !== '/practice';
   const row = (
     <Pressable
       accessibilityRole="button"
       accessibilityLabel={t('mobile.common.openItem', { title })}
-      onPress={onPress}
+      onPress={linked ? onPress : onPress ?? (href ? () => router.navigate(href) : undefined)}
       testID="work-row"
       // One flat style object: inside a Link's slot the web preview hands it to the DOM as is.
       style={StyleSheet.flatten([!first && { borderTopWidth: 1, borderTopColor: colors.line }, { backgroundColor: colors.card }])}>
@@ -97,8 +100,7 @@ export function WorkRow({
       )}
     </Pressable>
   );
-  // Practice work opens the Practice tab, which has nothing to preview.
-  if (!href || href === '/practice') return row;
+  if (!linked) return row;
   const document = hasDocumentText(item);
   return (
     <Link href={href} asChild>
