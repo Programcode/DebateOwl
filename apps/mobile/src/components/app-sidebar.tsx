@@ -15,7 +15,7 @@ import { Text } from './text';
 import { useDebates } from '@/lib/debate-context';
 import { haptics } from '@/lib/haptics';
 import { SIDEBAR_MAX_FONT_SCALE } from '@/lib/layout';
-import { DURATION, SPRING } from '@/theme/motion';
+import { DURATION, motionSetting, SPRING } from '@/theme/motion';
 import { pickSourceFile } from '@/lib/pick-source-file';
 import { holdPickedFile } from '@/lib/source-file';
 import { useTheme } from '@/theme/use-theme';
@@ -239,7 +239,7 @@ function SidebarGroup({
     if (loaded) setOpened(true);
   }, [loaded]);
   return (
-    <Animated.View layout={LinearTransition.duration(DURATION.fast)} style={styles.group} testID={`sidebar-section-${section.key}`}>
+    <Animated.View layout={LinearTransition.duration(DURATION.fast).reduceMotion(motionSetting(reduce))} style={styles.group} testID={`sidebar-section-${section.key}`}>
       {/* A heading for VoiceOver's rotor that also opens and closes the section, as iPadOS sidebar headers do. */}
       <Pressable
         accessibilityRole="header"
@@ -266,9 +266,9 @@ function SidebarGroup({
             return (
               <Animated.View
                 key={item.key}
-                entering={opened ? FadeInUp.delay(index * 25).duration(DURATION.fast) : undefined}
-                exiting={FadeOutUp.duration(DURATION.quick)}
-                layout={LinearTransition.duration(DURATION.fast)}>
+                entering={opened ? FadeInUp.delay(index * 25).duration(DURATION.fast).reduceMotion(motionSetting(reduce)) : undefined}
+                exiting={FadeOutUp.duration(DURATION.quick).reduceMotion(motionSetting(reduce))}
+                layout={LinearTransition.duration(DURATION.fast).reduceMotion(motionSetting(reduce))}>
               <PressScale
                 accessibilityRole="button"
                 aria-selected={selected}

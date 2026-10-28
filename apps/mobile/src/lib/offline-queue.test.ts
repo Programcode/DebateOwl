@@ -227,6 +227,7 @@ describe('offline queue', () => {
 
   it('saves changes folded into a note whose insert landed but whose answer was lost', async () => {
     const queue = await load();
+    copies.set('sources:d1', []);
     net.offline = true;
     const { source } = await queue.queueAddSource('user-a', { title: 'Draft', content: 'Text', type: 'text', debateId: 'd1' });
     await queue.queueUpdateSource('user-a', 'd1', source.id, { title: 'Final' });
@@ -239,6 +240,10 @@ describe('offline queue', () => {
     await queue.replayOfflineQueue();
     expect(sources.updateSource).toHaveBeenCalledWith('user-a', 'd1', 'uuid-1', { title: 'Final', isActive: false });
     expect(queue.getQueueSnapshot().items).toHaveLength(0);
+    // No refresh follows this path, so the saved copies take the row: the note opens offline after a restart.
+    await cache.copiesWritten();
+    expect((copies.get('sources:d1') as Source[]).map((item) => item.id)).toEqual(['uuid-1']);
+    expect((copies.get('source:uuid-1') as Source).title).toBe('Final');
   });
 
   it('sends a change made while its note is on the way with the row id', async () => {

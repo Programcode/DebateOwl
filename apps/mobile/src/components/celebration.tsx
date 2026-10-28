@@ -209,7 +209,9 @@ function StatTile({ stat, index, animate, last }: { stat: CelebrationStat; index
 /** The number alone re-renders while it counts, on the display's frames, eased out over 600 ms. */
 function CountUp({ value, format, delay, animate, tick }: { value: number; format: (value: number) => string; delay: number; animate: boolean; tick: boolean }) {
   const { colors } = useTheme();
-  const [current, setCurrent] = useState(animate ? 0 : value);
+  const [counted, setCurrent] = useState(animate ? 0 : value);
+  // Reduce Motion turned on mid-count (or never counting) shows the final number, never a frozen one.
+  const current = animate ? counted : value;
   useEffect(() => {
     if (!animate) return;
     let frame = 0;

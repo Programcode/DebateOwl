@@ -8,7 +8,7 @@ import type { IconName } from './icon-paths';
 import { Skeleton } from './skeleton';
 
 import { radius } from '@/theme/colors';
-import { SPRING, staggerDelay, useReduceMotion } from '@/theme/motion';
+import { motionSetting, SPRING, staggerDelay, useReduceMotion } from '@/theme/motion';
 import { useTheme } from '@/theme/use-theme';
 
 export function Card({ children, style }: { children: ReactNode; style?: ViewStyle }) {
@@ -33,8 +33,12 @@ export function IconTile({ name, size = 40 }: { name: IconName; size?: number })
  * under it the row is simply there. Keep press feedback on a view inside it, never on this one.
  */
 export function ListItemIn({ index, layout = false, style, children }: { index: number; layout?: boolean; style?: StyleProp<ViewStyle>; children: ReactNode }) {
+  const reduce = useReduceMotion();
   return (
-    <Animated.View entering={FadeInDown.delay(staggerDelay(index)).duration(220)} layout={layout ? LinearTransition.duration(200) : undefined} style={style}>
+    <Animated.View
+      entering={FadeInDown.delay(staggerDelay(index)).duration(220).reduceMotion(motionSetting(reduce))}
+      layout={layout ? LinearTransition.duration(200).reduceMotion(motionSetting(reduce)) : undefined}
+      style={style}>
       {children}
     </Animated.View>
   );

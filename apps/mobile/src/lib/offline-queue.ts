@@ -569,9 +569,17 @@ async function send(userId: string, item: QueuedWrite): Promise<Source | undefin
     if ((existing.origin ?? null) !== input.origin) patch.origin = input.origin;
     if (existing.folder !== input.folder) patch.folder = input.folder;
     if (existing.isActive !== input.isActive) patch.isActive = input.isActive;
-    if (Object.keys(patch).length === 0) return existing;
-    await updateSource(userId, input.debateId, id, patch);
-    return { ...existing, ...patch };
+    let saved = existing;
+    if (Object.keys(patch).length > 0) {
+      await updateSource(userId, input.debateId, id, patch);
+      saved = { ...existing, ...patch };
+    }
+    // This path skips addSource's refresh of the saved copies, which still hold the note under its
+    // temporary id: they take the row, once, so the note opens and edits offline after a restart.
+    updateCopy<Source[]>(userId, 'sources', input.debateId, (list) => list && [saved, ...list.filter((source) => source.id !== item.tempId && source.id !== id)]);
+    updateCopy<Source | null>(userId, 'source', id, () => saved);
+    notifySourcesChanged();
+    return saved;
   }
 }
 

@@ -10,7 +10,7 @@ import { OwlAvatar, useReduceMotion, type OwlPose } from './owl';
 import { Text } from './text';
 import { ToolProgress } from './tool-form';
 
-import { SPRING } from '@/theme/motion';
+import { motionSetting, SPRING } from '@/theme/motion';
 import { radius } from '@/theme/colors';
 import { useTheme } from '@/theme/use-theme';
 
@@ -163,6 +163,7 @@ export function LiveToolRun({
   /** The tool's own owl before the answer starts; the phase picks it otherwise. */
   pose?: OwlPose;
 }) {
+  const reduceMotion = useReduceMotion();
   const { t } = useTranslation();
   const { colors } = useTheme();
   const status = usePhaseLabel(run.phase, label);
@@ -196,7 +197,7 @@ export function LiveToolRun({
       {sections.map((section, sectionIndex) => (
         <Reanimated.View
           key={section.id}
-          entering={FadeInDown.springify().damping(SPRING.pop.damping).stiffness(SPRING.pop.stiffness)}
+          entering={FadeInDown.springify().damping(SPRING.pop.damping).stiffness(SPRING.pop.stiffness).reduceMotion(motionSetting(reduceMotion))}
           accessibilityLabel={section.title}
           style={[styles.section, { backgroundColor: colors.card, borderColor: colors.border }]}>
           <Text accessibilityRole="header" weight="display" tone="heading" style={styles.sectionTitle}>

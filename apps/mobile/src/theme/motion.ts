@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { AccessibilityInfo } from 'react-native';
-import { Easing, useReducedMotion as useStartupReducedMotion } from 'react-native-reanimated';
+import { Easing, ReduceMotion, useReducedMotion as useStartupReducedMotion } from 'react-native-reanimated';
 
 /**
  * The website's motion tokens (src/styles/tokens.css, `--do-dur-*` and `--do-ease-*`) for
@@ -73,4 +73,12 @@ export function useReduceMotion(): boolean {
     };
   }, []);
   return reduce;
+}
+
+/**
+ * For layout animations (entering, exiting, layout): Reanimated's default follows the setting it
+ * read at launch, so each one is told the live setting from useReduceMotion instead.
+ */
+export function motionSetting(reduce: boolean): ReduceMotion {
+  return reduce ? ReduceMotion.Always : ReduceMotion.Never;
 }
