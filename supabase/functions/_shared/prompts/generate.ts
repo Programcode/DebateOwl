@@ -32,9 +32,13 @@ Builds the team's case in full. A short opening line, then the arguments in dept
 R2 brings NO new arguments: leave contentions as an empty array. The speech has four parts, in this order:
 1. Opening (a few sentences). A hook that turns the motion around ("Schools present themselves as safe, but if that were true, thousands of children would not be suffering in silence every day."), then who is speaking and what they will prove: "I'm the R2 of my team, and I'm here to show that...". Put the hook in opening.hook and the "I'm the R2..." line in caseStructure.thesis.
 2. Backing up our case (about 2 minutes, write it in reinforce). Go back to the arguments the Introductor and R1 already made and make them stronger. Each item names the earlier argument it returns to ("Our second argument was about bullying.") and then, in one spoken paragraph of about 100-130 words: the strongest fact for it with its source and year ("In Spain, 1 in 5 pupils has been bullied (Educo, 2022)"), what that means in plain words, one more fact or study if the research has it, and a sentence that ties it back to the motion ("If schools were really safe, these numbers would not look like this."). Never introduce a point the team has not made. If CURRENT DEBATE CONTEXT includes the team's earlier case, back up those arguments by name; otherwise back up the strongest arguments for our side as "our first argument" and "our second argument".
-3. If they say... (about 4 minutes, the bulk of the speech, written in counters). Each item quotes what the other side has said or will say, in their words ("Schools have emergency plans to protect pupils."), then our answer in 2-3 short spoken sentences, about 35-55 words: first say straight away why their point does not hold ("Emergency plans do not stop everyday problems like bullying."), then back it with one fact and its source when the research has one. End at least half of the answers on a pointed question or a short punchline ("If that were true, why are there still so many cases?", "Every case matters. Safety is for everyone, not just most pupils."). Answer the point, not the person.
+3. If they say... (about 4 minutes, the bulk of the speech, written in counters). The other side usually has only 2-3 arguments, so write one block for each of their 2-3 most likely arguments, no more. The speaker underlines the blocks the other side actually used, then speaks them and builds on them, so each block must be complete enough to say in full. Each item:
+   - targetArgument: their argument as they would put it, in one sentence ("Teachers and the school solve almost all bullying.").
+   - counterpoint: a full spoken answer of about 90-120 words, built like this: start by saying straight away why their point does not hold ("That is what the adults see, but more than 60% of pupils say their school does nothing."); give the strongest fact against it with its source and year; say in plain words what that means for real people ("There is a gap between what teachers say and what pupils live."); tie it to our own case by name ("This is exactly our second argument: ..."); and end on a firm line or a pointed question ("If the rules worked, why does 1 in 5 pupils still suffer?").
+   - source: the source of that fact as "Organisation, year".
+   Answer the argument, not the person.
 4. Closing line: one sentence that sums up and ends the speech, like "That is why it is clear that schools are NOT truly safe. Thank you."
-Keep the sentences short and direct, the way a confident student speaks in class: say "we", never hedge ("This is a fair question", "we do not pretend"), and never describe a study's method. The whole speech, opening to closing line, should be about 650-750 words.
+Keep the sentences short and direct, the way a confident student speaks in class: say "we", never hedge ("This is a fair question", "we do not pretend"), and never describe a study's method. The whole speech, opening to closing line, should be about 600-700 words.
 
 --- CONCLUSOR (3 minutes) ---
 Closes the debate. NO new arguments: leave contentions and counters as empty arrays. Instead write whyWeWin: 2-3 short paragraphs, each summarising one reason our side won the debate, drawing on what the team already argued. Then the closing line. The opening is one sentence that sets up the summary.
@@ -117,7 +121,7 @@ TEAM CONSISTENCY: If CURRENT DEBATE CONTEXT includes an earlier case or brainsto
 REQUIREMENTS:
 1. Side must be exactly "pro" or "con".
 2. Generate contentions appropriate to the role (see above).
-3. Except for the Conclusor, include 5-8 counters, one per likely opposing claim (R2: the exact number the Length Instruction gives).
+3. Introductor and R1: include 5-8 counters, one per likely opposing claim. R2: the exact number of counters the Length Instruction gives, one per likely opposing argument. Conclusor: none.
 4. Use attached WEB RESEARCH when present. Cite only sources that appear in it.
 5. Set needsSource to false only when the attached research supports the contention. Set it to true when the contention still needs evidence.
 6. Write the ENTIRE output in the language specified by the user. All arguments, evidence, descriptions, and analysis must be in that language.
@@ -131,10 +135,10 @@ export function buildGenerateUserPrompt(input: Record<string, unknown>, searchCo
   const role = asString(input.role, "intro");
   const lengthInstruction = role === "r2"
     ? ({
-      brief: "Return no contentions. Return exactly 2 reinforce items and exactly 5 counters.",
-      standard: "Return no contentions. Return exactly 2 reinforce items and exactly 6 counters.",
-      comprehensive: "Return no contentions. Return exactly 2 reinforce items and exactly 8 counters.",
-    }[length] || "Return no contentions. Return exactly 2 reinforce items and exactly 6 counters.")
+      brief: "Return no contentions. Return exactly 2 reinforce items and exactly 2 counters, each answer about 70-90 words.",
+      standard: "Return no contentions. Return exactly 2 reinforce items and exactly 3 counters, each answer about 90-120 words.",
+      comprehensive: "Return no contentions. Return exactly 2 reinforce items and exactly 3 counters, each answer about 120-150 words.",
+    }[length] || "Return no contentions. Return exactly 2 reinforce items and exactly 3 counters, each answer about 90-120 words.")
     : role === "conc"
     ? ({
       brief: "Return no contentions and no counters. Return exactly 2 whyWeWin items, each two or three sentences.",

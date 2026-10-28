@@ -75,6 +75,13 @@ const counter = (index) => ({
   ...(index % 2 === 0 ? { source: "UITP, 2024" } : {}),
 });
 
+// R2's answers are full spoken blocks the speaker underlines and builds on.
+const r2Answer = (index) => ({
+  ...counter(index),
+  counterpoint: `${MARK} answer ${index + 1}: that is not what the numbers show. Fare collection itself costs a large share of what it brings in, so the real gap is far smaller than they say (UITP, 2024). For a family on a low income, that difference is the bus to work or the walk. This is exactly our first argument: fares shut out the people who need transit most. If the money were really the problem, why do cities that dropped fares keep them dropped?`,
+  source: "UITP, 2024",
+});
+
 // The role decides the shape, as the real prompt asks: the Introductor may
 // define an unclear term, R2 backs up the team's arguments and then answers
 // theirs, and the Conclusor brings reasons why we win. Neither R2 nor the
@@ -85,7 +92,8 @@ const generate = (user) => {
   const count = { brief: 2, standard: 3, comprehensive: 4 }[length] ?? 3;
   const conc = role === "conc";
   const r2 = role === "r2";
-  const answers = { brief: 5, standard: 6, comprehensive: 8 }[length] ?? 6;
+  // R2: one full answer for each of their 2-3 likely arguments.
+  const answers = length === "brief" ? 2 : 3;
   return {
     opening: {
       hook: `${MARK} opening hook: picture a nurse who skips the night bus because the fare is a tenth of her shift's pay.`,
@@ -99,7 +107,7 @@ const generate = (user) => {
           : `${MARK} case thesis: today we will show ${count} arguments that prove free transit is a net public good`,
     },
     contentions: conc || r2 ? [] : Array.from({ length: count }, (_, index) => contention(index)),
-    counters: conc ? [] : Array.from({ length: r2 ? answers : 3 }, (_, index) => counter(index)),
+    counters: conc ? [] : Array.from({ length: r2 ? answers : 3 }, (_, index) => (r2 ? r2Answer(index) : counter(index))),
     ...(r2 ? {
       reinforce: [
         { argument: "Our first argument: fares shut people out", text: `${MARK} backing up: our first argument was that fares shut out the riders who need transit most. Eurostat found in 2023 that low-income households spend more of their budget on transport. If fares were fair, those numbers would not look like this.` },

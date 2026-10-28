@@ -242,7 +242,7 @@ Deno.test("an R2 case must back up the team's arguments and answer theirs, or it
   const cases: Array<[string, Record<string, unknown>]> = [
     ["no reinforce", { reinforce: [], counters: [{}, {}, {}, {}, {}], contentions: [], metadata: {} }],
     ["only blank reinforce", { reinforce: [{ argument: "Our first", text: "  " }], counters: [{}, {}, {}, {}, {}], contentions: [], metadata: {} }],
-    ["too few answers", { reinforce: [{ argument: "Our first", text: "Backed up." }], counters: [{}, {}], contentions: [], metadata: {} }],
+    ["too few answers", { reinforce: [{ argument: "Our first", text: "Backed up." }], counters: [{}], contentions: [], metadata: {} }],
   ];
   for (const [label, output] of cases) {
     let rejected = false;
@@ -257,7 +257,7 @@ Deno.test("an R2 case must back up the team's arguments and answer theirs, or it
   // New arguments from the model are dropped: R2 brings none.
   const output: Record<string, unknown> = {
     reinforce: [{ argument: "Our first", text: "Backed up." }],
-    counters: [{}, {}, {}, {}, {}],
+    counters: [{}, {}, {}],
     contentions: [{ claim: "A new point", whyItMatters: "x" }],
     metadata: {},
   };
