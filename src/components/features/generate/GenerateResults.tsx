@@ -1,12 +1,13 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Target, Shield, Swords, AlertTriangle, MessageSquare, GitBranch, Sparkles, Undo2, Flame } from 'lucide-react';
+import { Shield, Swords, AlertTriangle, MessageSquare, GitBranch, Sparkles, Undo2, Flame, Trophy, Quote, BookOpen } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { SectionCard } from '@/components/ui/section-card';
 import { Separator } from '@/components/ui/separator';
 import { Markdown } from '@/components/ui/markdown';
-import type { GenerateOutput, Contention } from '@/lib/ai/schemas/generate';
+import type { GenerateOutput } from '@/lib/ai/schemas/generate';
+import { readCase, sourceLabel, type CaseArgument } from '@debatelab/core/ai/case-view';
 import { toast } from 'sonner';
 import { formatDecimal, formatEuropeanDateTime } from '@/lib/date-format';
 import { ExportToolbar } from '@/components/features/ExportToolbar';
@@ -34,16 +35,16 @@ interface GenerateResultsProps {
   onPracticeCrossfire?: () => void;
 }
 
-function ArgumentCard({ contention, index, unverified }: { contention: Contention; index: number; unverified: boolean }) {
+function ArgumentCard({ argument, index, unverified }: { argument: CaseArgument; index: number; unverified: boolean }) {
   const { t } = useTranslation();
   return (
     <div className="rounded-lg border border-border bg-card p-4 space-y-3 motion-list-item">
       <div className="flex items-start justify-between gap-2">
         <h3 className="font-semibold text-foreground">
           <span className="text-primary mr-2">#{index + 1}</span>
-          {contention.claim}
+          {argument.title ?? argument.point}
         </h3>
-        {contention.needsSource && (
+        {argument.needsSource && (
           <Badge variant="outline" className="shrink-0 border-amber-500 text-amber-600">
             <AlertTriangle className="mr-1 h-3 w-3" />
             {t('generateResults.needsSource')}
@@ -52,30 +53,55 @@ function ArgumentCard({ contention, index, unverified }: { contention: Contentio
       </div>
 
       <div className="space-y-2 text-sm">
-        <div>
-          <span className="font-medium text-muted-foreground">{t('generateResults.reasoning')} </span>
-          <Markdown inline>{contention.reasoning}</Markdown>
-        </div>
-        <div>
-          <span className="font-medium text-muted-foreground">{t('generateResults.evidence')} </span>
-          {unverified && !contention.needsSource && (
-            <Badge variant="outline" className="mr-1 border-amber-500/40 bg-amber-500/10 py-0 align-middle text-amber-800 dark:text-amber-300">
-              {t('generateResults.unverified', 'Unverified')}
-            </Badge>
-          )}
-          <Markdown inline>{contention.evidence}</Markdown>
-        </div>
-        {contention.sourceQuery && (
-          <div className="rounded-md bg-muted/50 p-2 text-xs">
-            <span className="font-medium">{t('generateResults.searchSuggestion')} </span>
-            <code className="text-primary">{contention.sourceQuery}</code>
+        {argument.title && argument.point && (
+          <div>
+            <span className="font-medium text-muted-foreground">{t('generateResults.point')} </span>
+            <Markdown inline>{argument.point}</Markdown>
           </div>
         )}
-        <div>
-          <span className="font-medium text-muted-foreground">{t('generateResults.impact')} </span>
-          <Markdown inline>{contention.impact}</Markdown>
-        </div>
+        {argument.explanation && (
+          <div>
+            <span className="font-medium text-muted-foreground">{t('generateResults.explanation')} </span>
+            <Markdown inline>{argument.explanation}</Markdown>
+          </div>
+        )}
+        {argument.evidence && (
+          <div>
+            <span className="font-medium text-muted-foreground">{t('generateResults.evidence')} </span>
+            {unverified && !argument.needsSource && (
+              <Badge variant="outline" className="mr-1 border-amber-500/40 bg-amber-500/10 py-0 align-middle text-amber-800 dark:text-amber-300">
+                {t('generateResults.unverified', 'Unverified')}
+              </Badge>
+            )}
+            <Markdown inline>{argument.evidence}</Markdown>
+          </div>
+        )}
+        {argument.sourceQuery && (
+          <div className="rounded-md bg-muted/50 p-2 text-xs">
+            <span className="font-medium">{t('generateResults.searchSuggestion')} </span>
+            <code className="text-primary">{argument.sourceQuery}</code>
+          </div>
+        )}
+        {argument.whyItMatters && (
+          <div>
+            <span className="font-medium text-muted-foreground">{t('generateResults.whyItMatters')} </span>
+            <Markdown inline>{argument.whyItMatters}</Markdown>
+          </div>
+        )}
       </div>
+    </div>
+  );
+}
+
+/** A labelled bullet list for an older case's section; nothing when it is empty. */
+function LegacyList({ title, items }: { title: string; items: string[] }) {
+  if (!items.length) return null;
+  return (
+    <div>
+      <h3 className="text-sm font-medium text-muted-foreground mb-2">{title}</h3>
+      <ul className="list-disc list-inside space-y-1 text-sm text-foreground">
+        {items.map((item, i) => <li key={i}>{item}</li>)}
+      </ul>
     </div>
   );
 }
@@ -144,7 +170,7 @@ export function GenerateResults({ result, discoveredSources, onRegenerateSection
   };
 
   // Guard against incomplete result data
-  if (!result?.caseStructure || !result?.contentions || !result?.predictedOpponentCase || !result?.counters) {
+  if (!result?.caseStructure || !Array.isArray(result?.contentions) || !Array.isArray(result?.counters)) {
     return (
       <div className="rounded-lg border border-destructive/50 bg-destructive/5 p-6 text-center">
         <h2 className="text-lg font-semibold text-destructive mb-2">{t('generateResults.incomplete')}</h2>
@@ -155,6 +181,8 @@ export function GenerateResults({ result, discoveredSources, onRegenerateSection
     );
   }
 
+  const view = readCase(result);
+  const { opening, legacy } = view;
   const durationText = formatDuration(result.metadata?.durationMs, t);
   // Without web research, evidence is the model's own claim and is labelled that way.
   const researched = Boolean(discoveredSources?.length);
@@ -220,148 +248,182 @@ export function GenerateResults({ result, discoveredSources, onRegenerateSection
       />
       <ResearchedSources sources={discoveredSources} />
 
-      {/* Exordio (Introductor only) */}
-      {result.exordio && (result.exordio.hook || result.exordio.transition) && (
+      {/* Opening: the hook, an unclear term when the Introductor needs one, and the roadmap. */}
+      {(opening.hook || opening.definition || opening.roadmap || legacy.framework || legacy.burdenOfProof || legacy.definitions.length > 0) && (
         <SectionCard
-          title={t('generateResults.exordio')}
-          description={t('generateResults.exordioDesc')}
+          title={t('generateResults.opening')}
+          description={t('generateResults.openingDesc')}
           icon={<Sparkles className="h-5 w-5" />}
-          onRegenerate={regenerate('exordio')}
-          {...regenerateState('exordio')}
+          onRegenerate={regenerate('opening')}
+          {...regenerateState('opening')}
         >
           <div className="space-y-4">
-            <div>
-              <h3 className="text-sm font-medium text-muted-foreground mb-1">{t('generateResults.hook')}</h3>
-              <p className="text-foreground italic">{result.exordio.hook}</p>
-            </div>
-            <Separator />
-            <div>
-              <h3 className="text-sm font-medium text-muted-foreground mb-1">{t('generateResults.transition')}</h3>
-              <p className="text-foreground">{result.exordio.transition}</p>
-            </div>
+            {opening.hook && <Markdown className="italic">{opening.hook}</Markdown>}
+            {opening.definition && (
+              <div className="text-sm">
+                <span className="font-medium text-muted-foreground">{t('generateResults.definition')} </span>
+                <Markdown inline>{opening.definition}</Markdown>
+              </div>
+            )}
+            {opening.roadmap && (
+              <div>
+                <h3 className="text-sm font-medium text-muted-foreground mb-1">{t('generateResults.roadmap')}</h3>
+                <Markdown>{opening.roadmap}</Markdown>
+              </div>
+            )}
+            {/* Older cases kept these as their own sections; they show under plain names. */}
+            {legacy.framework && (
+              <div>
+                <h3 className="text-sm font-medium text-muted-foreground mb-1">{t('generateResults.legacyJudgeBy')}</h3>
+                <Markdown>{legacy.framework}</Markdown>
+              </div>
+            )}
+            {legacy.burdenOfProof && (
+              <div>
+                <h3 className="text-sm font-medium text-muted-foreground mb-1">{t('generateResults.legacyMustShow')}</h3>
+                <Markdown>{legacy.burdenOfProof}</Markdown>
+              </div>
+            )}
+            <LegacyList title={t('generateResults.legacyDefinitions')} items={legacy.definitions} />
           </div>
         </SectionCard>
       )}
 
-      {/* Case Structure */}
-      <SectionCard
-        title={t('generateResults.caseStructure')}
-        description={t('generateResults.caseStructureDesc')}
-        icon={<Target className="h-5 w-5" />}
-        onRegenerate={regenerate('structure')}
-        {...regenerateState('structure')}
-      >
-        <div className="space-y-4">
-          <div>
-            <h3 className="text-sm font-medium text-muted-foreground mb-1">{t('generateResults.thesis')}</h3>
-            <Markdown>{result.caseStructure.thesis}</Markdown>
+      {view.arguments.length > 0 && (
+        <SectionCard
+          title={t('generateResults.arguments')}
+          description={t('generateResults.argumentCount', { count: view.arguments.length })}
+          icon={<Shield className="h-5 w-5" />}
+          onRegenerate={regenerate('contentions')}
+          {...regenerateState('contentions')}
+        >
+          <div className="space-y-4">
+            {view.arguments.map((argument, index) => (
+              <ArgumentCard key={argument.id} argument={argument} index={index} unverified={!researched} />
+            ))}
           </div>
-          <Separator />
-          <div>
-            <h3 className="text-sm font-medium text-muted-foreground mb-1">{t('generateResults.framework')}</h3>
-            <Markdown>{result.caseStructure.framework}</Markdown>
-          </div>
-          <Separator />
-          <div>
-            <h3 className="text-sm font-medium text-muted-foreground mb-1">{t('generateResults.burdenOfProof')}</h3>
-            <Markdown>{result.caseStructure.burdenOfProof}</Markdown>
-          </div>
-          <div>
-            <h3 className="text-sm font-medium text-muted-foreground mb-2">{t('generateResults.keyDefinitions')}</h3>
-            <ul className="list-disc list-inside space-y-1 text-sm text-foreground">
-              {result.caseStructure.keyDefinitions?.map((def, i) => (
-                <li key={i}>{def}</li>
-              )) || <li className="text-muted-foreground">{t('generateResults.noDefinitions')}</li>}
-            </ul>
-          </div>
-        </div>
-      </SectionCard>
+        </SectionCard>
+      )}
 
-      {/* Contentions */}
-      <SectionCard
-        title={t('generateResults.arguments')}
-        description={`${result.contentions?.length || 0} ${t('generateResults.structuredArguments')}`}
-        icon={<Shield className="h-5 w-5" />}
-        onRegenerate={regenerate('contentions')}
-        {...regenerateState('contentions')}
-      >
-        <div className="space-y-4">
-          {result.contentions?.map((contention, index) => (
-            <ArgumentCard key={contention.id} contention={contention} index={index} unverified={!researched} />
-          ))}
-        </div>
-      </SectionCard>
+      {/* R2: the team's earlier arguments, backed up, instead of new ones. */}
+      {view.reinforce.length > 0 && (
+        <SectionCard
+          title={t('generateResults.reinforce')}
+          description={t('generateResults.reinforceDesc')}
+          icon={<Shield className="h-5 w-5" />}
+          onRegenerate={regenerate('reinforce')}
+          {...regenerateState('reinforce')}
+        >
+          <div className="space-y-4">
+            {view.reinforce.map((item, i) => (
+              <div key={i} className="rounded-lg border border-border bg-card p-4 space-y-2 motion-list-item">
+                {item.argument && <h3 className="font-semibold text-foreground">{item.argument}</h3>}
+                <Markdown className="text-sm">{item.text}</Markdown>
+              </div>
+            ))}
+          </div>
+        </SectionCard>
+      )}
 
-      {/* Predicted Opponent Case */}
-      <SectionCard
-        title={t('generateResults.predictedOpponent')}
-        description={t('generateResults.predictedOpponentDesc')}
-        icon={<Swords className="h-5 w-5" />}
-        onRegenerate={regenerate('opponent')}
-        {...regenerateState('opponent')}
-      >
-        <div className="space-y-4">
-          <div>
-            <h3 className="text-sm font-medium text-muted-foreground mb-2">{t('generateResults.likelyArguments')}</h3>
-            <ul className="space-y-2">
-              {result.predictedOpponentCase?.likelyArguments?.map((arg, i) => (
-                <li key={i} className="flex items-start gap-2 text-sm">
-                  <span className="text-destructive mt-1">•</span>
-                  <span className="text-foreground">{arg}</span>
-                </li>
-              ))}
-            </ul>
-          </div>
-          <Separator />
-          <div>
-            <h3 className="text-sm font-medium text-muted-foreground mb-2">{t('generateResults.strategicWeaknesses')}</h3>
-            <ul className="space-y-2">
-              {result.predictedOpponentCase?.strategicWeaknesses?.map((weakness, i) => (
-                <li key={i} className="flex items-start gap-2 text-sm">
-                  <span className="text-amber-600 dark:text-amber-400 mt-1">•</span>
-                  <span className="text-foreground">{weakness}</span>
-                </li>
-              ))}
-            </ul>
-          </div>
-          <Separator />
-          <div>
-            <h3 className="text-sm font-medium text-muted-foreground mb-2">{t('generateResults.keyClashes')}</h3>
-            <div className="flex flex-wrap gap-2">
-              {result.predictedOpponentCase?.keyClashes?.map((clash, i) => (
-                <Badge key={i} variant="outline">{clash}</Badge>
-              ))}
-            </div>
-          </div>
-        </div>
-      </SectionCard>
+      {/* Conclusor: the reasons we win take the place of new arguments. */}
+      {view.whyWeWin.length > 0 && (
+        <SectionCard
+          title={t('generateResults.whyWeWin')}
+          description={t('generateResults.whyWeWinDesc')}
+          icon={<Trophy className="h-5 w-5" />}
+          onRegenerate={regenerate('whyWeWin')}
+          {...regenerateState('whyWeWin')}
+        >
+          <ol className="space-y-3">
+            {view.whyWeWin.map((reason, i) => (
+              <li key={i} className="flex items-start gap-3 text-sm">
+                <span className="font-semibold text-primary">{i + 1}.</span>
+                <Markdown inline>{reason}</Markdown>
+              </li>
+            ))}
+          </ol>
+        </SectionCard>
+      )}
 
-      {/* Prepared Counters */}
-      <SectionCard
-        title={t('generateResults.preparedCounters')}
-        description={t('generateResults.preparedCountersDesc')}
-        onRegenerate={regenerate('counters')}
-        {...regenerateState('counters')}
-      >
-        <div className="space-y-4">
-          {result.counters?.map((counter, i) => (
-            <div key={i} className="rounded-lg border border-border p-4 space-y-2">
-              <div className="flex items-center gap-2">
-                <Badge variant="destructive" className="text-xs">{t('generateResults.target')}</Badge>
-                <span className="text-sm font-medium text-foreground">{counter?.targetArgument}</span>
+      {(view.ifTheySay.length > 0 || legacy.likelyArguments.length > 0 || legacy.weaknesses.length > 0 || legacy.clashes.length > 0) && (
+        <SectionCard
+          title={t('generateResults.ifTheySay')}
+          description={t('generateResults.ifTheySayDesc')}
+          icon={<Swords className="h-5 w-5" />}
+          onRegenerate={regenerate('counters')}
+          {...regenerateState('counters')}
+        >
+          <div className="space-y-4">
+            {view.ifTheySay.map((answer, i) => (
+              <div key={i} className="rounded-lg border border-border p-4 space-y-2">
+                {answer.theySay && (
+                  <div className="flex items-start gap-2">
+                    <Badge variant="destructive" className="shrink-0 text-xs">{t('generateResults.theySay')}</Badge>
+                    <span className="text-sm font-medium text-foreground">{answer.theySay}</span>
+                  </div>
+                )}
+                {answer.weAnswer && (
+                  <div className="text-sm">
+                    <span className="font-medium text-muted-foreground">{t('generateResults.weAnswer')} </span>
+                    <Markdown inline>{answer.weAnswer}</Markdown>
+                  </div>
+                )}
+                {answer.inRound && (
+                  <div className="bg-muted/50 rounded-md p-2">
+                    <span className="text-xs font-medium text-muted-foreground">{t('generateResults.legacySayItLike')} </span>
+                    <span className="text-sm text-foreground">{answer.inRound}</span>
+                  </div>
+                )}
+                {answer.source && (
+                  <p className="text-xs text-muted-foreground">
+                    <span className="font-medium">{t('generateResults.source')}</span> {answer.source}
+                  </p>
+                )}
               </div>
-              <div>
-                <span className="text-sm font-medium text-muted-foreground">{t('generateResults.counter')} </span>
-                <span className="text-sm text-foreground">{counter?.counterpoint}</span>
-              </div>
-              <div className="bg-muted/50 rounded-md p-2">
-                <span className="text-xs font-medium text-muted-foreground">{t('generateResults.rebuttal')} </span>
-                <span className="text-sm text-foreground">{counter?.rebuttal}</span>
-              </div>
-            </div>
-          ))}
-        </div>
-      </SectionCard>
+            ))}
+            <LegacyList title={t('generateResults.legacyAlsoSay')} items={legacy.likelyArguments} />
+            <LegacyList title={t('generateResults.legacyWeakSpots')} items={legacy.weaknesses} />
+            <LegacyList title={t('generateResults.legacyDecidingPoints')} items={legacy.clashes} />
+          </div>
+        </SectionCard>
+      )}
+
+      {view.closingLine && (
+        <SectionCard
+          title={t('generateResults.closingLine')}
+          description={t('generateResults.closingLineDesc')}
+          icon={<Quote className="h-5 w-5" />}
+          onRegenerate={regenerate('closing')}
+          {...regenerateState('closing')}
+        >
+          <Markdown className="font-medium">{view.closingLine}</Markdown>
+        </SectionCard>
+      )}
+
+      {view.sources.length > 0 && (
+        <SectionCard
+          title={t('generateResults.sources')}
+          description={t('generateResults.sourcesDesc')}
+          icon={<BookOpen className="h-5 w-5" />}
+        >
+          <ul className="space-y-2 text-sm">
+            {view.sources.map((source, i) => (
+              <li key={i} className="min-w-0 break-words">
+                <span className="font-medium text-foreground">{sourceLabel(source)}</span>
+                {source.claim && <span className="text-foreground">{source.org ? ' – ' : ''}{source.claim}</span>}
+                {source.url && (
+                  <>
+                    {' – '}
+                    <a href={source.url} target="_blank" rel="noopener noreferrer" className="text-primary underline underline-offset-2 break-all">
+                      {source.url}
+                    </a>
+                  </>
+                )}
+              </li>
+            ))}
+          </ul>
+        </SectionCard>
+      )}
     </div>
   );
 }

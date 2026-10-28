@@ -12,9 +12,8 @@ import { cleanGeneratedOutput } from '../text';
  * This handles cases where the AI returns a different structure than requested.
  */
 function transformGenerateResponse(response: Record<string, unknown>): GenerateOutput {
-  // If already in correct format, return as-is (with exordio preserved)
-  if (response.caseStructure && response.contentions && response.predictedOpponentCase && response.counters && response.metadata) {
-    // Ensure exordio is properly structured if present
+  // Already in the expected shape (a new case, or an older one with its extra sections).
+  if (response.caseStructure && response.contentions && response.counters && response.metadata) {
     const result = response as unknown as GenerateOutput;
     if (response.exordio && typeof response.exordio === 'object') {
       const ex = response.exordio as Record<string, unknown>;
@@ -47,23 +46,15 @@ function transformGenerateResponse(response: Record<string, unknown>): GenerateO
     impact: c.impact || c.analysis || '',
   }));
 
-  // Transform rebuttals to counters
+  // Transform rebuttals to "If they say…" answers
   const rebuttals = (response.rebuttals as Array<{ attack?: string; response?: string }>) || [];
-  const counters = rebuttals.map(r => ({
-    targetArgument: r.attack || '',
-    counterpoint: r.response || '',
-    rebuttal: r.response || '',
-  }));
-
-  // Transform potentialWeaknesses to predictedOpponentCase
-  const weaknesses = (response.potentialWeaknesses as string[]) || [];
+  const counters = rebuttals
+    .filter((r) => r.attack || r.response)
+    .map((r) => ({ targetArgument: r.attack || '', counterpoint: r.response || '' }));
 
   const result: GenerateOutput = {
     caseStructure: {
       thesis: (response.thesis as string) || (response.title as string) || '',
-      framework: 'General framework',
-      keyDefinitions: [],
-      burdenOfProof: 'We must prove that ' + ((response.thesis as string) || '').slice(0, 50),
     },
     contentions: transformedContentions.length > 0 ? transformedContentions : [{
       id: '1',
@@ -74,16 +65,7 @@ function transformGenerateResponse(response: Record<string, unknown>): GenerateO
       sourceQuery: '',
       impact: 'Impact here',
     }],
-    predictedOpponentCase: {
-      likelyArguments: weaknesses.slice(0, 3),
-      strategicWeaknesses: weaknesses,
-      keyClashes: ['Main clash point'],
-    },
-    counters: counters.length > 0 ? counters : [{
-      targetArgument: 'Opponent argument',
-      counterpoint: 'Our counter',
-      rebuttal: 'Rebuttal text',
-    }],
+    counters,
     metadata: {
       side: (response.side as 'pro' | 'con') || 'pro',
       format: 'custom',
@@ -137,7 +119,12 @@ export async function generateCase(input: GenerateInput, config: ProviderConfig,
       const data = rawData as { output: unknown; discoveredSources?: unknown };
       const result = validateGenerateOutput(transformGenerateResponse(data.output as Record<string, unknown>));
       const expectedCount = expectedContentionCount(input.length);
-      if (result.contentions.length !== expectedCount) {
+      // R2 backs up the team's arguments and a Conclusor sums up why we win,
+      // so neither brings new arguments. An older backend still sends both
+      // the usual argument count.
+      const noNewArguments = (input.role === 'r2' && Boolean(result.reinforce?.length))
+        || (input.role === 'conc' && Boolean(result.whyWeWin?.length));
+      if (!noNewArguments && result.contentions.length !== expectedCount) {
         throw new AIResponseError('AI response did not contain the expected number of contentions.', {
           details: { expectedCount, actualCount: result.contentions.length },
         });

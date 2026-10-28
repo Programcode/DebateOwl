@@ -14,8 +14,13 @@ export const GenerateInputSchema = z.object({
 
 export type GenerateInput = z.infer<typeof GenerateInputSchema>;
 
+// New fields accept null as well as absence: models often send null for a
+// field the prompt says to omit.
+// Each argument reads Title, Point (claim), Explanation (reasoning), Evidence and
+// Why it matters (impact). The keys stay as they were so saved cases keep loading.
 export const ContentionSchema = z.object({
   id: z.string(),
+  title: z.string().nullish(),
   claim: z.string(),
   reasoning: z.string(),
   evidence: z.string(),
@@ -24,30 +29,69 @@ export const ContentionSchema = z.object({
   impact: z.string(),
 });
 
+/** Older cases only: the Introductor's hook and bridge, now part of the opening. */
 export const ExordioSchema = z.object({
   hook: z.string(),
   transition: z.string(),
 });
 
+export const OpeningSchema = z.object({
+  hook: z.string(),
+  /** One line defining a motion term, only when the term is genuinely unclear. */
+  definition: z.string().nullish(),
+});
+
+/** One "If they say…" item: their claim, our answer, and an optional source. */
+export const CounterSchema = z.object({
+  targetArgument: z.string(),
+  counterpoint: z.string(),
+  /** Older cases only: a second, in-round phrasing of the answer. */
+  rebuttal: z.string().optional(),
+  source: z.string().nullish(),
+});
+
+/**
+ * R2 only: one block backing up an argument the team already made, in the
+ * style "Our second argument was about bullying…", instead of new arguments.
+ */
+export const ReinforceSchema = z.object({
+  /** Which earlier argument this backs up, e.g. "Our second argument: bullying". */
+  argument: z.string(),
+  text: z.string(),
+});
+
+export const CaseSourceSchema = z.object({
+  org: z.string(),
+  year: z.string().nullish(),
+  claim: z.string(),
+  url: z.string().nullish(),
+});
+
 export const GenerateOutputSchema = z.object({
+  opening: OpeningSchema.nullish(),
   exordio: ExordioSchema.optional(),
+  // thesis is the opening's "we will show N arguments that prove…" line. The
+  // other three are older cases' sections, shown only when they have content.
   caseStructure: z.object({
     thesis: z.string(),
-    framework: z.string(),
-    keyDefinitions: z.array(z.string()),
-    burdenOfProof: z.string(),
+    framework: z.string().optional(),
+    keyDefinitions: z.array(z.string()).optional(),
+    burdenOfProof: z.string().optional(),
   }),
   contentions: z.array(ContentionSchema),
+  /** Older cases only; new cases fold the opponent's arguments into counters. */
   predictedOpponentCase: z.object({
-    likelyArguments: z.array(z.string()),
-    strategicWeaknesses: z.array(z.string()),
-    keyClashes: z.array(z.string()),
-  }),
-  counters: z.array(z.object({
-    targetArgument: z.string(),
-    counterpoint: z.string(),
-    rebuttal: z.string(),
-  })),
+    likelyArguments: z.array(z.string()).optional(),
+    strategicWeaknesses: z.array(z.string()).optional(),
+    keyClashes: z.array(z.string()).optional(),
+  }).optional(),
+  counters: z.array(CounterSchema),
+  /** R2 only: about two minutes backing up the team's arguments. */
+  reinforce: z.array(ReinforceSchema).nullish(),
+  /** Conclusor only: two or three summaries of why our side wins. */
+  whyWeWin: z.array(z.string()).nullish(),
+  closingLine: z.string().nullish(),
+  sources: z.array(CaseSourceSchema).nullish(),
   metadata: z.object({
     side: z.enum(['pro', 'con']),
     format: z.string(),
@@ -71,3 +115,6 @@ export const GenerateOutputSchema = z.object({
 
 export type GenerateOutput = z.infer<typeof GenerateOutputSchema>;
 export type Contention = z.infer<typeof ContentionSchema>;
+export type Counter = z.infer<typeof CounterSchema>;
+export type CaseSource = z.infer<typeof CaseSourceSchema>;
+export type Reinforcement = z.infer<typeof ReinforceSchema>;
