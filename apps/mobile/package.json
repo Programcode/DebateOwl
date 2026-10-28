@@ -6,7 +6,8 @@
   "scripts": {
     "start": "expo start --go",
     "export:web": "expo export --platform web",
-    "typecheck": "tsc --noEmit && tsc --noEmit -p scripts"
+    "typecheck": "tsc --noEmit && tsc --noEmit -p scripts",
+    "eas-build-post-install": "node scripts/patch-expo-widgets-bundle.mjs"
   },
   "dependencies": {
     "@debatelab/core": "*",
