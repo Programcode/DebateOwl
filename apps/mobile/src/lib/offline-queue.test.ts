@@ -148,6 +148,22 @@ describe('offline queue', () => {
     expect(queue.currentSourceId(queue.getQueueSnapshot(), source.id)).toBe('uuid-1');
   });
 
+  it('saves changes folded into a note whose insert landed but whose answer was lost', async () => {
+    const queue = await load();
+    net.offline = true;
+    const { source } = await queue.queueAddSource('user-a', { title: 'Draft', content: 'Text', type: 'text', debateId: 'd1' });
+    await queue.queueUpdateSource('user-a', 'd1', source.id, { title: 'Final' });
+    await queue.queueSetSourcesActive('user-a', 'd1', [source.id], false);
+    // The first insert reached the server as "Draft"; this replay's insert is refused as a duplicate.
+    sources.addSource.mockRejectedValueOnce(new sources.DuplicateSourceError('duplicate key'));
+    sources.fetchSource.mockResolvedValueOnce(row('uuid-1', { title: 'Draft', content: 'Text', debateId: 'd1' }));
+
+    net.offline = false;
+    await queue.replayOfflineQueue();
+    expect(sources.updateSource).toHaveBeenCalledWith('user-a', 'd1', 'uuid-1', { title: 'Final', isActive: false });
+    expect(queue.getQueueSnapshot().items).toHaveLength(0);
+  });
+
   it('sends a change made while its note is on the way with the row id', async () => {
     const queue = await load();
     let answer!: () => void;

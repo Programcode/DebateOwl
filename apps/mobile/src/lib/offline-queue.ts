@@ -455,8 +455,20 @@ async function send(userId: string, item: QueuedWrite): Promise<Source | undefin
   } catch (cause) {
     if (!(cause instanceof DuplicateSourceError)) throw cause;
     const existing = await fetchSource(userId, id);
-    if (existing?.id === id) return existing;
-    throw cause;
+    if (existing?.id !== id) throw cause;
+    // The insert reached the server but its answer did not. Changes made since were folded into this
+    // note, so the saved row may predate them: save the fields that differ before calling it synced.
+    const { input } = item;
+    const patch: SourcePatch = {};
+    if (existing.title !== input.title) patch.title = input.title;
+    if (existing.content !== input.content) patch.content = input.content;
+    if (existing.type !== input.type) patch.type = input.type;
+    if ((existing.origin ?? null) !== input.origin) patch.origin = input.origin;
+    if (existing.folder !== input.folder) patch.folder = input.folder;
+    if (existing.isActive !== input.isActive) patch.isActive = input.isActive;
+    if (Object.keys(patch).length === 0) return existing;
+    await updateSource(userId, input.debateId, id, patch);
+    return { ...existing, ...patch };
   }
 }
 

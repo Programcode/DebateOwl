@@ -1,6 +1,6 @@
 import { useFocusEffect } from 'expo-router';
 import * as WebBrowser from 'expo-web-browser';
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
 
@@ -20,7 +20,7 @@ import { formatRelativeDate } from '@/lib/dates';
 import { haptics } from '@/lib/haptics';
 import { currentSourceId, isLocalSourceId, queuedSource, queueUpdateSource, waitingSourceIds, withQueuedWrite, type QueuedPatch } from '@/lib/offline-queue';
 import { useSourceActions } from '@/lib/source-actions';
-import { fetchSource, type Source, type SourceType } from '@/lib/sources';
+import { fetchSource, subscribeSourcesChanged, type Source, type SourceType } from '@/lib/sources';
 import { useOfflineStatus } from '@/lib/network-status';
 import { useQueuedWrites } from '@/lib/use-offline-queue';
 import { useCopyHolder } from '@/lib/use-copy-holder';
@@ -71,6 +71,11 @@ export function SourceView({ id, onDone, onRemoved }: { id: string; onDone?: () 
   const { offline } = useOfflineStatus();
   const { folders } = useLibraryFolders(view?.debateId ?? null);
 
+  // A write anywhere, a queued change syncing or one the server refused reads the row again,
+  // so the view ends on what the server holds, never on an edit that did not save.
+  const [reloads, setReloads] = useState(0);
+  useEffect(() => subscribeSourcesChanged(() => setReloads((count) => count + 1)), []);
+
   // The same read as the source sheet. Leaving the screen drops the saved copy it is showing.
   // A note that waits has no row to read yet.
   useFocusEffect(
@@ -92,7 +97,8 @@ export function SourceView({ id, onDone, onRemoved }: { id: string; onDone?: () 
         active = false;
         copies.release();
       };
-    }, [userId, realId, local, copies]),
+      // eslint-disable-next-line react-hooks/exhaustive-deps -- `reloads` only asks for the read again.
+    }, [userId, realId, local, copies, reloads]),
   );
 
   const url = webUrl(view?.origin ?? null);
@@ -134,7 +140,10 @@ export function SourceView({ id, onDone, onRemoved }: { id: string; onDone?: () 
     try {
       // Offline the edit waits on the phone; the marker below says so instead of the mint confirmation.
       const status = await queueUpdateSource(userId, view.debateId, view.id, patch);
-      setSource((current) => current && { ...current, title: draft.title.trim(), content: draft.content.trim(), type: draft.type, origin: draft.origin.trim() || null });
+      // A saved edit shows at once; a queued one shows through the queue until it syncs or is refused.
+      if (status === 'saved') {
+        setSource((current) => current && { ...current, title: draft.title.trim(), content: draft.content.trim(), type: draft.type, origin: draft.origin.trim() || null });
+      }
       setDraft(null);
       setSaved(status === 'saved');
       if (status === 'queued') haptics.tap();
