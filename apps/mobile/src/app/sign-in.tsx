@@ -31,7 +31,7 @@ export default function SignInScreen() {
   const insets = useSafeAreaInsets();
   // On iPad the form sits in the middle of the screen instead of under the status bar.
   const centred = useWindowDimensions().width >= 700;
-  const { signInWithEmailOtp, verifyEmailOtp, signInWithDemoCode } = useAuth();
+  const { signInWithEmailOtp, verifyEmailOtp, signInWithDemoCode, sessionExpired } = useAuth();
   const [mode, setMode] = useState<Mode>('email');
   const [status, setStatus] = useState<Status>('idle');
   const [codeSent, setCodeSent] = useState(false);
@@ -217,6 +217,15 @@ export default function SignInScreen() {
           </View>
         ) : null}
 
+        {sessionExpired && status !== 'code-sent' ? (
+          // The website's login notice after the server ended the session; it goes once a sign-in succeeds.
+          <View style={[styles.notice, { backgroundColor: colors.tile, borderColor: colors.tileBorder }]} accessibilityRole="alert" testID="session-expired">
+            <Icon name="alert" color={colors.primary} size={18} />
+            <Text weight="medium" style={[styles.message, styles.noticeText, { color: colors.tileText }]}>
+              {t('login.sessionExpired')}
+            </Text>
+          </View>
+        ) : null}
         {status === 'code-sent' ? (
           // Success is mint and always comes with a check mark, as on the website.
           <View style={styles.success} accessibilityRole="alert">
@@ -242,6 +251,8 @@ const styles = StyleSheet.create({
   success: { flexDirection: 'row', alignItems: 'flex-start', gap: 8 },
   successMark: { width: 22, height: 22, borderRadius: 11, alignItems: 'center', justifyContent: 'center', marginTop: 1 },
   successText: { flex: 1 },
+  notice: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, borderWidth: 2, borderRadius: 14, padding: 12 },
+  noticeText: { flex: 1 },
   root: { flex: 1 },
   // Phone-width on iPad, centred.
   content: { paddingHorizontal: 24, gap: 24, width: '100%', maxWidth: 460, alignSelf: 'center' },

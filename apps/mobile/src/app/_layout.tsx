@@ -13,6 +13,7 @@ import { AppSidebar } from '@/components/app-sidebar';
 import { ToastHost, ToastProvider } from '@/components/toast';
 import { AuthProvider, useAuth } from '@/lib/auth';
 import { DebateProvider } from '@/lib/debate-context';
+import { useFirstRun } from '@/lib/use-first-run';
 import { ReservedWidth, useSidebarWidth } from '@/lib/layout';
 import { watchNetwork } from '@/lib/network-status';
 import { refreshPush } from '@/lib/push';
@@ -55,6 +56,7 @@ function Root() {
 
   // A phone that opted in registers again on launch and when the language changes (see refreshPush).
   const userId = session?.user.id;
+  useFirstRun(ready ? userId ?? null : null);
   useEffect(() => {
     if (!userId || !settingsReady) return;
     refreshPush(userId, language).catch((cause: unknown) => {
@@ -111,6 +113,8 @@ function Root() {
             <Stack.Screen name="limit" options={{ ...sheet, sheetAllowedDetents: [0.56, 0.86] }} />
             <Stack.Screen name="save-case" options={{ ...sheet, sheetAllowedDetents: [0.56, 0.86] }} />
             <Stack.Screen name="context-review" options={sheet} />
+            {/* Ollie's welcome and the first-run tour, at full height so the owl and the buttons both fit. */}
+            <Stack.Screen name="welcome" options={{ ...sheet, sheetAllowedDetents: [1] }} />
             {/* Full screen above the tabs, as in mock 07. */}
             <Stack.Screen name="ask" />
             {/* History, full screen above the tabs like the documents it opens. */}

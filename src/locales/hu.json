@@ -2981,6 +2981,12 @@
       "noDebate": "Nincs aktuális vita",
       "collapseHint": "Elrejti a szakasz eszközeit",
       "expandHint": "Megjeleníti a szakasz eszközeit"
+    },
+    "trialBanner": {
+      "seePlan": "Csomag megtekintése"
+    },
+    "tour": {
+      "progress": "{{step}}. lépés / {{steps}}"
     }
   }
 }

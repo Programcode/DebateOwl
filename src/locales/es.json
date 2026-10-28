@@ -2981,6 +2981,12 @@
       "noDebate": "Ningún debate actual",
       "collapseHint": "Oculta las herramientas de esta sección",
       "expandHint": "Muestra las herramientas de esta sección"
+    },
+    "trialBanner": {
+      "seePlan": "Ver plan"
+    },
+    "tour": {
+      "progress": "Paso {{step}} de {{steps}}"
     }
   }
 }

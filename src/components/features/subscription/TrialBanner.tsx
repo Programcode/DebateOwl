@@ -6,16 +6,7 @@ import { useSubscription } from '@/hooks/use-subscription';
 import { useAuth } from '@/lib/supabase/AuthProvider';
 import { BILLING_ACTION_LABELS, billingAction } from '@/lib/billing/plan';
 import { PricingModal } from './PricingModal';
-
-const DAY_MS = 24 * 60 * 60 * 1000;
-
-/** Calendar days from today to the trial's end on the reader's clock; 0 on its last day. */
-function trialDaysLeft(endsAt: string, now = new Date()): number | null {
-  const end = new Date(endsAt);
-  if (Number.isNaN(end.getTime()) || end.getTime() <= now.getTime()) return null;
-  const startOfDay = (date: Date) => new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime();
-  return Math.round((startOfDay(end) - startOfDay(now)) / DAY_MS);
-}
+import { trialDaysLeft } from '@debatelab/core/trial';
 
 function dismissedKey(userId: string, endsAt: string) {
   return `debatelab:trial-banner-dismissed:${userId}:${endsAt}`;

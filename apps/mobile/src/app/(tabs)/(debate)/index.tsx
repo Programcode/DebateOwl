@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
 
 import { AnnouncementBanner } from '@/components/announcement-banner';
+import { TrialBanner } from '@/components/trial-banner';
 import { MainActionButton, TextButton } from '@/components/buttons';
 import { Card, IconTile } from '@/components/card';
 import { Icon } from '@/components/icon';
@@ -88,6 +89,7 @@ export default function DebateScreen() {
     return (
       <Screen safeTop>
         <AnnouncementBanner announcements={announcements} />
+        <TrialBanner />
         <SwitcherPill onPress={openSwitcher} />
         <OneOffNotice />
         {/* Mirrored, so the owl points across at Start debate, as on the website's home. */}
@@ -109,6 +111,7 @@ export default function DebateScreen() {
     return (
       <Screen safeTop gap={0} wide>
         <AnnouncementBanner announcements={announcements} style={styles.banner} />
+        <TrialBanner style={styles.banner} />
         <SwitcherPill onPress={openSwitcher} />
         <OneOffNotice style={styles.notice} />
         <Text accessibilityRole="header" weight="display" style={[styles.motion, styles.motionWide]} testID="current-debate-motion">
@@ -123,6 +126,7 @@ export default function DebateScreen() {
   return (
     <Screen safeTop gap={0}>
       <AnnouncementBanner announcements={announcements} style={styles.banner} />
+      <TrialBanner style={styles.banner} />
       <SwitcherPill onPress={openSwitcher} />
       <OneOffNotice style={styles.notice} />
       <Text accessibilityRole="header" weight="display" style={styles.motion} testID="current-debate-motion">
