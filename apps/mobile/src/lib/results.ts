@@ -324,7 +324,14 @@ export function isCompleteAttack(output: unknown): output is AttackOutput {
  */
 export function readBrainstorm(output: unknown): BrainstormOutput | null {
   if (!output || typeof output !== 'object' || Array.isArray(output)) return null;
-  const parsed = BrainstormOutputSchema.safeParse(transformBrainstormResponse(output as Record<string, unknown>));
+  let normalized: unknown;
+  try {
+    normalized = transformBrainstormResponse(output as Record<string, unknown>);
+  } catch {
+    // The transform reads fields before the schema checks them; data it cannot read is not a brainstorm.
+    return null;
+  }
+  const parsed = BrainstormOutputSchema.safeParse(normalized);
   return parsed.success ? parsed.data : null;
 }
 

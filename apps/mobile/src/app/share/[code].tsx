@@ -45,6 +45,16 @@ type State =
  * on the website.
  */
 function readShared(item: SharedItem): Shown | null {
+  // A reader that normalises before its schema check can throw on hostile data (a `toString` that is not a
+  // function); that is unreadable data, shown with the website fallback, never a screen stuck loading.
+  try {
+    return readSharedUnchecked(item);
+  } catch {
+    return null;
+  }
+}
+
+function readSharedUnchecked(item: SharedItem): Shown | null {
   switch (item.itemType) {
     case 'case':
     case 'generate': {
@@ -90,10 +100,14 @@ export default function SharedItemScreen() {
   useEffect(() => {
     if (!code) return;
     let active = true;
-    void readSharedItem(code).then((read) => {
-      if (!active) return;
-      setHeld({ code, state: read.status === 'found' ? { status: 'ready', item: read.item, shown: readShared(read.item) } : read });
-    });
+    void readSharedItem(code)
+      .then((read) => {
+        if (!active) return;
+        setHeld({ code, state: read.status === 'found' ? { status: 'ready', item: read.item, shown: readShared(read.item) } : read });
+      })
+      .catch(() => {
+        if (active) setHeld({ code, state: { status: 'failed' } });
+      });
     return () => {
       active = false;
     };
