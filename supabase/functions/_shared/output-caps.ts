@@ -58,6 +58,17 @@ const REASONING_SHARE_PERCENT: Record<ReasoningEffort, number> = { low: 20, medi
 const REASONING_HEADROOM: Record<ReasoningEffort, number> = { low: 2_048, medium: 4_096, high: 8_192 };
 
 /**
+ * More reasoning room than the effort's floor, for a reply that measured it.
+ * A case is long JSON written after a lot of planning: Claude Haiku at low
+ * effort reasoned for 6,000-10,000 tokens on an R2 case, far past its share
+ * of 15,000, and one reply was cut off and finished only at 128 s of the
+ * 130 s budget. The room only bounds the reply, so it costs nothing unless used.
+ */
+export const REASONING_FLOOR_TOKENS: Partial<Record<ReplyCap, number>> = {
+  generate: 10_000,
+};
+
+/**
  * The max_tokens to send so the reply keeps `replyTokens` after reasoning:
  * after Claude's full budget, and after the headroom for every other model.
  * Bounded by the model's own limit.
@@ -66,7 +77,9 @@ export function outputTokenLimit(
   replyTokens: number,
   effort: ReasoningEffort,
   modelMaxTokens: number,
+  reasoningFloor = 0,
 ): number {
   const afterBudget = Math.ceil((replyTokens * 100) / (100 - REASONING_SHARE_PERCENT[effort]));
-  return Math.min(modelMaxTokens, Math.max(afterBudget, replyTokens + REASONING_HEADROOM[effort]));
+  const headroom = Math.max(REASONING_HEADROOM[effort], reasoningFloor);
+  return Math.min(modelMaxTokens, Math.max(afterBudget, replyTokens + headroom));
 }
