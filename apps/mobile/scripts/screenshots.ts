@@ -1,6 +1,7 @@
 /**
  * Screenshots of the web export at iPhone and iPad sizes, light and dark,
- * English and Hungarian, into .verify/mobile-shots/ at the repository root.
+ * English, Hungarian and Spanish, into .verify/mobile-shots/ at the repository root.
+ * Every shot also lists the texts it cuts off, in clipped.json.
  * The web export is close to the native app but not the same: it has no
  * native tab bar, large titles, sheets or gestures.
  *
@@ -113,9 +114,10 @@ const DEVICES = {
   'ipad-air-landscape': { viewport: { width: 1180, height: 820 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true },
 } as const;
 const SCHEMES = ['light', 'dark'] as const;
-const LOCALES = { en: 'en-GB', hu: 'hu-HU' } as const;
+// Spanish runs use the English fake model text; only the interface is Spanish.
+const LOCALES = { en: 'en-GB', hu: 'hu-HU', es: 'es-ES' } as const;
 const SIGNED_IN_ROUTES = { prepare: '/prepare', practice: '/practice', you: '/you' };
-const NOTIFICATIONS = { en: 'Notifications', hu: 'Értesítések' } as const;
+const NOTIFICATIONS = { en: 'Notifications', hu: 'Értesítések', es: 'Notificaciones' } as const;
 const REST = `https://${STAGING_HOST}/rest/v1`;
 
 const TYPES: Record<string, string> = {
@@ -172,9 +174,33 @@ function watchErrors(page: Page, problems: string[], label: string, offline = ()
   });
 }
 
+/** Texts cut off in each shot (see clippedTexts), written to clipped.json at the end of the run. */
+const clipped: Record<string, string[]> = {};
+
+/**
+ * React Native Web draws a truncated <Text> with an ellipsis or a line clamp;
+ * this lists every such text that does not fit, so a run reports clipping
+ * instead of leaving it to the eye. Some truncation is by design (a long title
+ * in a one-line row); the list says which.
+ */
+async function clippedTexts(page: Page): Promise<string[]> {
+  return page.evaluate(() => {
+    const cut: string[] = [];
+    for (const element of Array.from(document.querySelectorAll<HTMLElement>('div, span'))) {
+      const style = getComputedStyle(element);
+      const ellipsis = style.textOverflow === 'ellipsis' && element.scrollWidth > element.clientWidth + 1;
+      const clamped = style.webkitLineClamp !== 'none' && style.webkitLineClamp !== '' && element.scrollHeight > element.clientHeight + 1;
+      if ((ellipsis || clamped) && element.offsetParent !== null && element.textContent?.trim()) cut.push(element.textContent.trim().slice(0, 80));
+    }
+    return Array.from(new Set(cut));
+  });
+}
+
 async function shoot(page: Page, name: string) {
   // Let fonts and the colour scheme settle after hydration.
   await page.evaluate(() => document.fonts.ready);
+  const cut = await clippedTexts(page);
+  if (cut.length > 0) clipped[name] = cut;
   // The Delete all my data field shows the email as its placeholder, as on the website.
   await page.screenshot({ path: join(OUT, `${name}.png`), mask: [page.getByTestId('account-email'), page.getByTestId('delete-data-confirmation')] });
 }
@@ -1714,6 +1740,8 @@ async function main() {
   }
 
   console.log(`${shots} screenshots in ${OUT}`);
+  await writeFile(join(OUT, 'clipped.json'), JSON.stringify(clipped, null, 2));
+  console.log(`${Object.keys(clipped).length} shots with clipped text (clipped.json)`);
   if (problems.length > 0) {
     console.error(problems.join('\n'));
     process.exitCode = 1;
