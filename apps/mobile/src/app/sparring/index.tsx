@@ -342,6 +342,8 @@ export default function SparringScreen() {
     else void capture.stop();
     const latest = sessionRef.current;
     if (!latest || latest.id !== before.id || latest.currentTurnIndex !== before.currentTurnIndex) return;
+    // Send pressed while listening, and nothing was heard: there is no speech to send yet.
+    if (!latest.draft.trim()) return;
     const delivery = voiceActiveRef.current ? measureDelivery(capture.getTake(), outputLanguage) : null;
     const next = submitSparringSpeech(latest, latest.draft, { now: Date.now(), createId: newSparringId, delivery });
     if (!next) {
@@ -399,8 +401,14 @@ export default function SparringScreen() {
     });
   };
 
-  // Recognised words join the draft, so the student can see and fix them.
-  const capture = useSpeechCapture(outputLanguage, (text) => updateDraft(appendDictation(sessionRef.current?.draft ?? '', text, MAX_SPARRING_SPEECH_CHARS)));
+  // Recognised words join the draft, so the student can see and fix them. They
+  // never start the clock: speaking starts it (onStart), and the last words
+  // after a Reset must not set the reset turn running again.
+  const capture = useSpeechCapture(outputLanguage, (text) => move((round, now) => ({
+    ...round,
+    draft: appendDictation(round.draft, text, MAX_SPARRING_SPEECH_CHARS),
+    updatedAt: now,
+  })));
   // Each turn of each round is measured on its own, and a start still waiting for permission does not carry over.
   const turnKey = session ? `${session.id}:${currentSparringTurn(session)?.id ?? ''}` : '';
   const cancelCapture = capture.cancel;

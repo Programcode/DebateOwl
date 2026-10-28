@@ -34,6 +34,11 @@ export interface CaptureOptions {
 
 const emptyTake = (): SpeechTake => ({ text: '', speakingMs: 0, pausesMs: [] });
 
+// iOS has one recognizer for the app, and every capture listens to its events.
+// Only one capture may use it at a time: starting one cancels any other, so a
+// screen left listening under another never hears, or ends, the new one's session.
+const owner: { current: SpeechCapture | null } = { current: null };
+
 export class SpeechCapture {
   private state: CaptureState = { listening: false, interim: '', error: null };
   private listeners = new Set<() => void>();
@@ -84,6 +89,7 @@ export class SpeechCapture {
   private detach() {
     this.subscriptions.forEach((subscription) => subscription.remove());
     this.subscriptions = [];
+    if (owner.current === this) owner.current = null;
   }
 
   private finishListening() {
@@ -124,7 +130,9 @@ export class SpeechCapture {
   }
 
   start = async (): Promise<boolean> => {
-    if (this.want) return false;
+    if (this.want || this.state.listening) return false;
+    if (owner.current && owner.current !== this) owner.current.cancel();
+    owner.current = this;
     this.set({ error: null });
     this.want = true;
     const attempt = ++this.attempt;

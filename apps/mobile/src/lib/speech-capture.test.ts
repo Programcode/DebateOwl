@@ -103,4 +103,20 @@ describe('speech capture', () => {
     expect(await starting).toBe(false);
     expect(fake.starts).toBe(0);
   });
+
+  it('lets one capture use the recognizer at a time: starting another cancels the first', async () => {
+    const fake = fakeRecognizer();
+    const heard: string[] = [];
+    const first = new SpeechCapture(fake.recognizer, { lang: 'en-US', onFinalText: (text) => heard.push(`first: ${text}`) });
+    const second = new SpeechCapture(fake.recognizer, { lang: 'en-US', onFinalText: (text) => heard.push(`second: ${text}`) });
+    await first.start();
+    await second.start();
+    expect(first.getState().listening).toBe(false);
+    // The first no longer hears the shared recognizer, nor restarts when the second's session ends.
+    fake.heard('only for the second');
+    fake.emit('end');
+    expect(heard).toEqual(['second: only for the second']);
+    expect(fake.starts).toBe(3);
+    await second.stop();
+  });
 });

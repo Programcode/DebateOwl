@@ -71,6 +71,17 @@ async function requestSegmentAudio(feature: VoiceFeature, segment: VoiceSegment,
 }
 
 let clipNumber = 0;
+/** How long a clip may play past its length, or at all when its length never loads, before the device voice goes on. */
+const CLIP_SLACK_MS = 5_000;
+const CLIP_WITHOUT_LENGTH_MS = 20_000;
+
+function deleteClip(clip: File | null) {
+  try {
+    clip?.delete();
+  } catch {
+    // Already gone; iOS clears the cache anyway.
+  }
+}
 
 class OpponentVoice {
   private state: OpponentVoiceState = { status: 'idle', engine: null, notice: null };
@@ -157,14 +168,23 @@ class OpponentVoice {
     if (segments.length > 0 && !this.providerOff) {
       this.setState({ status: 'loading', engine: 'elevenlabs', notice: null });
       // Fetch one segment ahead so speech does not stall between segments.
-      let pending = this.load(utterance.feature, segments[0], signal);
-      for (; next < segments.length; next += 1) {
-        const clip = await pending;
-        if (run !== this.run) return;
-        if (!clip) break;
-        pending = next + 1 < segments.length ? this.load(utterance.feature, segments[next + 1], signal) : Promise.resolve(null);
-        const played = await this.playClip(clip, run);
-        if (!played) return;
+      let pending: Promise<File | null> = this.load(utterance.feature, segments[0], signal);
+      try {
+        for (; next < segments.length; next += 1) {
+          const clip = await pending;
+          pending = Promise.resolve(null);
+          if (run !== this.run) {
+            deleteClip(clip);
+            return;
+          }
+          if (!clip) break;
+          pending = next + 1 < segments.length ? this.load(utterance.feature, segments[next + 1], signal) : Promise.resolve(null);
+          const played = await this.playClip(clip, run);
+          if (!played) return;
+        }
+      } finally {
+        // A segment fetched ahead for a reply that stopped is not played; its file goes too.
+        void pending.then(deleteClip);
       }
     }
     if (run !== this.run) return;
@@ -204,15 +224,19 @@ class OpponentVoice {
       this.setState({ status: 'speaking', engine: 'elevenlabs' });
       const player = createAudioPlayer(clip.uri);
       this.player = player;
+      const startedAt = Date.now();
       await new Promise<void>((resolve) => {
         const subscription = player.addListener('playbackStatusUpdate', (status) => {
           if (!status.didJustFinish) return;
           subscription.remove();
           resolve();
         });
-        // Stopping releases the player; the run check below ends the wait.
         const check = setInterval(() => {
-          if (run === this.run && this.player === player) return;
+          // Stopping releases the player. A clip that never reports its end (it
+          // failed to load, or a call interrupted it) gives up after its length
+          // and some slack, so the rest of the reply still gets read.
+          const limit = (player.duration > 0 ? player.duration * 1_000 : CLIP_WITHOUT_LENGTH_MS) + CLIP_SLACK_MS;
+          if (run === this.run && this.player === player && Date.now() - startedAt < limit) return;
           clearInterval(check);
           subscription.remove();
           resolve();
@@ -222,11 +246,7 @@ class OpponentVoice {
       if (this.player === player) this.releasePlayer();
       return run === this.run;
     } finally {
-      try {
-        clip.delete();
-      } catch {
-        // The cache is cleared by iOS anyway.
-      }
+      deleteClip(clip);
     }
   }
 

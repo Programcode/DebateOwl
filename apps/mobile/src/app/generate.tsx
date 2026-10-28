@@ -64,9 +64,14 @@ export default function GenerateScreen() {
   const abort = useRef<AbortController | null>(null);
   const live = useRef(true);
   const liveRun = useLiveRun();
-  // Dictation fills the motion, as the website's microphone beside it does.
+  // Dictation fills the motion, as the website's microphone beside it does. The
+  // ref holds words that arrived before the last ones were drawn.
+  const motionRef = useRef(form.motion);
+  motionRef.current = form.motion;
   const dictation = useSpeechCapture(language, (text) => {
-    setForm({ motion: appendDictation(lastForm.get().motion, text, MAX_MOTION_LENGTH) });
+    const motion = appendDictation(motionRef.current, text, MAX_MOTION_LENGTH);
+    motionRef.current = motion;
+    setForm({ motion });
     setMotionError(false);
   });
 
