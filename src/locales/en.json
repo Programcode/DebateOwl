@@ -912,11 +912,19 @@
       "modeGenerate": "Generate",
       "modeCrossfire": "Crossfire",
       "modeSparring": "Sparring",
-      "sampleCaseTitle": "Case outline",
-      "sampleClaimLabel": "Claim",
-      "sampleClaim": "Banning phones during class protects uninterrupted learning.",
-      "sampleEvidenceLabel": "Evidence cue",
-      "sampleEvidence": "Compare time on task with the cost of enforcement.",
+      "sampleCase": {
+        "title": "Ready-to-read case",
+        "openingLabel": "Opening",
+        "opening": "Two arguments show phones belong outside class.",
+        "argumentLabel": "Argument",
+        "argument": "Notifications break concentration.",
+        "evidenceLabel": "Evidence",
+        "evidence": "A refocus-time study, with source and year.",
+        "ifTheySayLabel": "If they say…",
+        "ifTheySay": "\"Emergencies!\" We answer: the office can call home.",
+        "closingLabel": "Closing",
+        "closing": "No phones, lessons students hear."
+      },
       "sampleCrossfireTitle": "Crossfire exchange",
       "sampleQuestionLabel": "Question",
       "sampleQuestion": "What changes after the ban?",
@@ -932,7 +940,7 @@
   "features": {
     "title": "Everything you need to win",
     "generate": "Case generator",
-    "generateDesc": "Full cases with evidence.",
+    "generateDesc": "Opening, arguments with evidence, \"If they say…\" replies, closing.",
     "attack": "Case attacker",
     "attackDesc": "Find the weak points first.",
     "brainstorm": "Brainstorm",
@@ -959,7 +967,7 @@
     "step1Title": "Research",
     "step1Desc": "AI gathers cited sources for your motion.",
     "step2Title": "Generate",
-    "step2Desc": "Get arguments, evidence and counters.",
+    "step2Desc": "Get an opening, arguments with evidence, \"If they say…\" replies and a closing line.",
     "step3Title": "Practice",
     "step3Desc": "Drill with a coach, timer and sparring."
   },
@@ -1000,7 +1008,11 @@
     "q6": "What is DebateOwl?",
     "a6": "DebateOwl is an AI debate prep and practice app for students and competitive debaters. It has {{modes}} prep modes, including a case generator, a case attacker, evidence research with citations, an AI coach, Crossfire and timed Sparring rounds against an AI opponent, and it is available in English, Spanish and Hungarian.",
     "q7": "Is {{product}} the same as debatelab.ai?",
-    "a7": "No. {{brand}} is a separate product at {{host}}."
+    "a7": "No. {{brand}} is a separate product at {{host}}.",
+    "q8": "What does a {{product}} case include?",
+    "a8": "{{caseFormat}}",
+    "q9": "Is {{product}} free?",
+    "a9": "{{freePlan}}"
   },
   "guideHub": {
     "title": "Debate guides and free tools",

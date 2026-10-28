@@ -114,9 +114,9 @@ GUIDES = {
             ("Five coaching conversations worth having before a tournament", [
                 {"steps": [
                     "Burden check: ask what each side has to prove for the motion to stand or fall, and where the line between them sits. Many rounds are lost on a burden nobody named.",
-                    "Clash map: ask for the three places where the cases will meet. Plan your speeches around those, not around your own contentions.",
+                    "Clash map: ask for the three places where the cases will meet. Plan your speeches around those, not around your own arguments.",
                     "Weighing rehearsal: give the coach your impact and the likely opposing impact and ask for the comparison in two sentences. Repeat until you can say it without notes.",
-                    "Speech audit: paste a practice speech and ask which claim had no warrant, which point ran too long, and what a judge would remember from it.",
+                    "Speech audit: paste a practice speech and ask which point never said why it is true, which point ran too long, and what a judge would remember from it.",
                     "Opponent prediction: ask how a strong team on the other side would frame the debate, then ask what your first response to that framing should be.",
                 ]},
             ]),
@@ -138,7 +138,7 @@ GUIDES = {
                 {"h3": "Public Forum (PF)"},
                 "Use coaching to plan the summary before the round. Ask which two issues you can realistically extend from constructive through final focus, and what the second rebuttal must frontline so those issues survive. Also ask for crossfire questions that set up your summary rather than score points.",
                 {"h3": "Lincoln-Douglas (LD)"},
-                "LD coaching is often framework coaching. Ask the coach whether your criterion actually measures your value, how your contentions link back to the criterion, and when it is safer to concede the opponent's framework and show that you win under it anyway.",
+                "In LD, much of the coaching is about how the judge should decide the round: your value and criterion. Ask the coach whether your criterion actually measures your value, how each argument ties back to the criterion, and when it is safer to accept the opponent's value and criterion (their framework) and show that you win under them anyway.",
             ]),
             ("Getting answers with sources", [
                 "When a coaching answer depends on facts, turn on Citations in Ask. The coach then answers with sources you can open. Treat those as leads: read the original, confirm it says what the answer claims, and only then use it in a speech. Adding your own trusted articles to the Library has the same effect from the other direction, because active sources that fit the question are used in its answers for that debate.",
@@ -268,13 +268,13 @@ GUIDES = {
                 {"h3": "Research and citation tools"},
                 "AI search and research assistants are strongest at finding sources quickly. They help with evidence but not with turning evidence into arguments, rebuttals or speeches.",
                 {"h3": "Dedicated debate platforms"},
-                "These are built around debate concepts: cases with contentions, rebuttals, opponents and verdicts. They vary a great deal in which formats they model and whether they let you practise or only generate text.",
+                "These are built around debate concepts: cases with arguments, rebuttals, opponents and verdicts. They vary a great deal in which formats they model and whether they let you practise or only generate text.",
                 {"h3": "Practice utilities"},
                 "Timers, flowing templates and argument maps. Often simple, sometimes not AI-based at all, and still essential for practice that matches tournament conditions.",
             ]),
             ("Eight criteria for comparing AI debate tools", [
                 {"steps": [
-                    "Structure: does the output separate claim, warrant and impact, or is it a wall of text?",
+                    "Structure: does each argument say what is true, why, and why it matters, or is it a wall of text?",
                     "Format awareness: does it know your speech order, times and roles, or treat every debate as an essay?",
                     "Sources: can you see where a claim comes from, and can you add your own material for it to use?",
                     "Opposition: does it predict and argue the other side, or only help with yours?",
@@ -289,7 +289,7 @@ GUIDES = {
                 "Reviews and feature lists only go so far. The fairest comparison is to give every tool the same motion and the same tasks:",
                 {"steps": [
                     "Pick a motion in your format that you know well, so you can judge the quality of the answers.",
-                    "Ask each tool for a case on one side. Score it on structure and on whether the warrants actually prove the claims.",
+                    "Ask each tool for a case on one side. Score it on structure and on whether the reasons it gives actually prove its points.",
                     "Ask each tool for the strongest argument against that case. Score whether it found the real weak point or a generic objection.",
                     "Paste one of your own past speeches and ask what it would change. Score how specific the feedback is.",
                     "Ask for evidence on one factual claim. Open every source and score how many check out.",
@@ -302,7 +302,7 @@ GUIDES = {
                     ("Task:", "Find the weakest link in the proposition argument that compulsory voting produces a more representative government."),
                     ("Strong answer:", "Points out that turnout and representation are different: compelled voters who know little about the candidates may vote randomly or for the first name on the ballot, so higher turnout may not mean preferences are better represented."),
                     ("Weak answer:", "Says compulsory voting violates freedom. That is an opposition argument, not an attack on the proposition's link, and it does not engage with representation at all."),
-                    ("How to score it:", "Give the point only if the tool attacked the warrant (why more voters means better representation) rather than changing the subject."),
+                    ("How to score it:", "Give the point only if the tool attacked the reason behind the claim (why more voters means better representation) rather than changing the subject."),
                 ]}},
                 "Running the same task through several tools shows quickly which ones understand debate structure and which ones produce plausible but generic text.",
             ]),
@@ -314,7 +314,7 @@ GUIDES = {
                 {"h3": "Public Forum (PF)"},
                 "PF depends on evidence and on keeping summary and final focus consistent. Strong source handling matters more here than in most formats, along with practice rounds that use real PF speech times.",
                 {"h3": "Lincoln-Douglas (LD)"},
-                "LD needs tools that handle value and criterion, not just policy arguments. Test whether a tool can defend a framework and link contentions to it, and whether it can practise the time-pressured 1AR.",
+                "LD needs tools that handle value and criterion, not just policy arguments. Test whether a tool can defend a value and criterion (the framework the judge decides by) and tie each argument back to it, and whether it can practise the time-pressured 1AR.",
             ]),
             ("Where {product} fits", [
                 "{product} is a dedicated debate platform that keeps every case, source, round and debrief inside one Current Debate. It covers case generation with \"If they say…\" answers to the other side, Library sources that ground its answers, Attack for finding weak links, Brainstorm, Factoids for checking claims, an Ask coaching chat with optional citations, Crossfire and full Sparring rounds with a verdict, a speech timer and an argument flowchart.",
@@ -525,7 +525,7 @@ GUIDES = {
                 {"list": [
                     "An overall assessment: a score out of 100, a short summary and what the argument does well, so you know which parts not to waste time on.",
                     "Weaknesses, usually three to six, each marked critical, major or minor and labelled as evidential, logical or structural.",
-                    "For each weakness: the quoted words, why the link is weak (missing warrant, no evidence, no link, non-unique, turned or outweighed), and a response to say in round.",
+                    "For each weakness: the quoted words, why the link is weak (no reason it is true, no evidence, no link, not unique to their side, turned or outweighed), and a response to say in round.",
                     "Fallacies detected, with where they appear and how to call them out without sounding like a textbook.",
                     "Cross-examination questions, each tied to one weakness and written so that a short honest answer exposes the gap.",
                     "A weighing analysis: the weighing the argument relies on, the comparisons it never makes, and how to out-weigh it.",
@@ -536,14 +536,14 @@ GUIDES = {
                 {"h3": "Attack intensity"},
                 "Mild gives constructive criticism, useful when you are checking your own case. Moderate balances strengths and weaknesses. Ruthless looks hardest for anything a strong opponent could exploit, which is what you want when preparing against an opposing case.",
                 {"h3": "Judge paradigm"},
-                "Logic-Heavy prioritises broken reasoning and missing warrants. Values-Focused looks at framework and principle, which suits Lincoln-Douglas and principled motions. Policy/Impact concentrates on links, probability and the size of impacts, which suits policy-style motions and Public Forum.",
+                "Logic-Heavy prioritises broken reasoning and points that never say why they are true. Values-Focused looks at principles and how the judge should decide, which suits Lincoln-Douglas and principled motions. Policy/Impact concentrates on links, probability and how big the harms and benefits are, which suits policy-style motions and Public Forum.",
                 {"h3": "Fallacies and weighing"},
                 "Both checks are on by default. Turn fallacy detection off when you only want substantive responses; keep weighing analysis on almost always, because unweighed rebuttal is the most common reason good responses do not win rounds.",
             ]),
             ("Worked example: one argument through Attack", [
                 {"example": {"title": "Motion: This house would tax sugary drinks", "rows": [
                     ("Argument pasted:", "A sugar tax reduces consumption, because higher prices make people buy less. Lower consumption means less obesity, which saves lives and reduces the burden on public health systems."),
-                    ("Critical weakness, logical:", "Quoted: lower consumption means less obesity. The argument assumes people who buy fewer sugary drinks do not replace those calories with other foods. Without that warrant, the impact does not follow from the mechanism."),
+                    ("Critical weakness, logical:", "Quoted: lower consumption means less obesity. The argument assumes people who buy fewer sugary drinks do not replace those calories with other foods. Without that step, the health benefit does not follow from the mechanism."),
                     ("Response to say:", "Even if people buy fewer fizzy drinks, they can get the same sugar from sweets, juice and snacks that are not taxed. Cutting one source of calories is not the same as cutting calories."),
                     ("Major weakness, evidential:", "Quoted: saves lives. The argument gives no estimate of how much consumption falls or how that translates into health outcomes, so the judge cannot weigh the size of the benefit."),
                     ("Cross-ex question:", "If someone stops buying a sugary drink but buys a chocolate bar instead, has the tax reduced their sugar intake?"),
@@ -566,7 +566,7 @@ GUIDES = {
                 {"h3": "Public Forum (PF)"},
                 "Use Policy/Impact for most PF resolutions. Prepare the response and the cross-ex question together, because PF crossfire is where you get the opponent to commit to the assumption you attack in rebuttal.",
                 {"h3": "Lincoln-Douglas (LD)"},
-                "Run Values-Focused on the negative case to find where its contentions fail to link to its own criterion. That gap often lets you win under their framework as well as yours.",
+                "Run Values-Focused on the negative case to find where its arguments fail to tie back to its own criterion. That gap often lets you win under their value and criterion as well as yours.",
                 {"h3": "World Schools and British Parliamentary"},
                 "Motions are often released shortly before the round, so use Attack in practice on likely arguments for motion areas you expect, and build a bank of responses to the reasoning that recurs across motions, such as slippery slopes, unproven behaviour change and ignored alternatives.",
             ]),
@@ -1289,7 +1289,7 @@ GUIDES = {
         ],
     },
     "debateowl-pricing": {
-        "modified": "2026-10-23",
+        "modified": "2026-10-28",
         "software": True,
         "lead": "A 3-day free trial with no credit card, then one paid plan. Prices on this page were checked in October 2026.",
         "features": [

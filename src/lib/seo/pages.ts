@@ -1,5 +1,6 @@
 import site from '@/config/site.json';
 import { englishHead, type PageHeadId } from './head-text';
+import { CASE_FORMAT } from './site-text';
 import { TOOL_PAGE_HEAD_IDS, TOOL_PAGE_HEADS } from './tool-pages';
 
 /** Brand and domain strings live in src/config/site.json; nothing else should hardcode them. */
@@ -29,9 +30,9 @@ export function organizationNode() {
     sameAs,
   };
 }
-/** "DebateOwl is an AI debate prep and practice app for …", the sentence agents quote. */
-export const DEFINITION = `${PRODUCT} is ${site.definition}.`;
 export const PRICING = site.pricing;
+/** The SoftwareApplication description: what it is, then what a case contains. The guides' copy in generate_seo_content.py matches. */
+export const SOFTWARE_DESCRIPTION = `${site.tagline} ${CASE_FORMAT}`;
 
 /** The month prices and plan facts were last checked, as "October 2026" in the given language. */
 export function factsAsOf(language: string): string {
