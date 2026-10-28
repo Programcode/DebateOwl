@@ -119,21 +119,23 @@ async function fetchSubscription(userId: string): Promise<SubscriptionSnapshot> 
       }
 
       // App Store subscriptions come from the iOS app. A database without
-      // their table has none; any other failure only loses that source.
+      // their table has none.
       let appStoreRows: BillingAppStoreRow[] = [];
       const { data: storeData, error: storeError } = await supabase
         .from('app_store_subscriptions')
         .select(APP_STORE_BILLING_COLUMNS)
         .eq('user_id', userId);
-      if (storeError) {
-        if (!isMissingTableError(storeError)) console.warn('[useSubscription] Failed to load App Store billing state:', storeError.message);
-      } else {
-        appStoreRows = appStoreBillingRows(storeData);
-      }
+      const storeFailed = Boolean(storeError) && !isMissingTableError(storeError);
+      if (storeFailed) console.warn('[useSubscription] Failed to load App Store billing state:', storeError?.message);
+      else if (!storeError) appStoreRows = appStoreBillingRows(storeData);
 
       // The same resolver the AI functions use, so Settings never says
       // "Expired" to an account the server serves (QB-02).
       const billing = resolveBillingState(data, billingRows, new Date(), appStoreRows);
+      // Without the App Store rows, what was read can still prove access. A
+      // "no access" could be wrong for an App Store subscriber, so the plan is
+      // unknown and the query retries, as the AI functions refuse to decide.
+      if (storeFailed && !billing.hasAccess) throw new Error(`App Store lookup failed: ${storeError?.message}`);
       hasAccess = billing.hasAccess;
       snapshot = {
         ...snapshot,

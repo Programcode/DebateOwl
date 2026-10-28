@@ -12,6 +12,7 @@ let rateLimitResult: { data: { limit_value: number } | null; error: { message: s
 const ACTIVE_TRIAL: Record<string, unknown> = { subscription_tier: 'trial', daily_limit_override: null, trial_ends_at: '2099-01-01T00:00:00.000Z', grace_period_ends_at: null };
 let settingsRow: Record<string, unknown> = ACTIVE_TRIAL;
 let subscriptionRows: Record<string, unknown>[] = [];
+let appStoreResult: { data: unknown; error: { message: string; code?: string } | null } = { data: [], error: null };
 
 // ai_usage_today: the server's weighted counter, the only source of the count.
 let usageToday: { data: number | null; error: { message: string } | null } = { data: 1, error: null };
@@ -36,6 +37,8 @@ function builder(table: string) {
     then: (resolve: (value: unknown) => void, reject?: (reason: unknown) => void) => Promise.resolve(
       table === 'subscriptions'
         ? { data: subscriptionRows, error: null }
+        : table === 'app_store_subscriptions'
+          ? appStoreResult
         : table === 'ai_requests'
           ? { count: 1, error: null }
           : { data: null, error: null },
@@ -125,6 +128,7 @@ describe('useSubscription billing states', () => {
     rateLimitResult = { data: null, error: null };
     usageToday = { data: 0, error: null };
     subscriptionRows = [];
+    appStoreResult = { data: [], error: null };
   });
 
   async function load() {
@@ -171,5 +175,32 @@ describe('useSubscription billing states', () => {
     expect(state.billingDate).toBe(endedAt);
     expect(state.dailyLimit).toBe(0);
     expect(state.hasOpenSubscription).toBe(false);
+  });
+
+  it('gives an App Store Pro subscriber Pro, with the App Store renewal', async () => {
+    settingsRow = { subscription_tier: 'trial', daily_limit_override: null, trial_ends_at: at(-30), grace_period_ends_at: null };
+    appStoreResult = { data: [{ expires_at: at(20), grace_period_expires_at: null, revoked_at: null, upgraded: false, auto_renew: true, app_store_products: { tier: 'pro' } }], error: null };
+    const state = await load();
+    expect(state.billingState).toBe('pro');
+    expect(state.dailyLimit).toBe(50);
+    expect(state.hasAppStoreSubscription).toBe(true);
+  });
+
+  it('reads a database without the App Store table as no App Store rows', async () => {
+    settingsRow = { subscription_tier: 'trial', daily_limit_override: null, trial_ends_at: at(-30), grace_period_ends_at: null };
+    appStoreResult = { data: null, error: { message: 'Could not find the table', code: 'PGRST205' } };
+    const state = await load();
+    expect(state.billingState).toBe('trial_ended');
+    expect(state.remainingToday).toBe(0);
+  });
+
+  // The rows read prove no access, but the App Store row that would grant it
+  // could not be read: the plan is unknown, never a definite "Expired" with
+  // nothing left today (the AI functions refuse to decide here too).
+  it('leaves the plan unknown when the App Store read fails and nothing else grants access', async () => {
+    settingsRow = { subscription_tier: 'trial', daily_limit_override: null, trial_ends_at: at(-30), grace_period_ends_at: null };
+    appStoreResult = { data: null, error: { message: 'upstream timeout', code: '57014' } };
+    const state = await load();
+    expect(state.remainingToday).toBeNull();
   });
 });
