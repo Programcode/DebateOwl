@@ -21,6 +21,7 @@ import { buildDebateContext } from '@/lib/context-request';
 import { useDebates } from '@/lib/debate-context';
 import { keepOpenResult, openResult } from '@/lib/open-results';
 import { caseToText } from '@/lib/result-text';
+import { openRefusal } from '@/lib/refusal';
 import { arrivalNotices, attackCase, autosaveSources, fetchResult, isCompleteCase, keepSourceAssessments, recordResult } from '@/lib/results';
 import { sessionSlot } from '@/lib/session-memory';
 import { useSettings } from '@/lib/settings';
@@ -165,8 +166,10 @@ export default function AttackScreen() {
       if (!(cause instanceof AIError)) console.warn('Attack failed:', cause instanceof Error ? cause.message : cause);
       if (kind === 'debateMissing') void refresh();
       liveRun.end();
-      setError(kind);
       setPhase('form');
+      // A limit or model refusal opens the website's dialog as a sheet, not an inline error.
+      if (openRefusal(router, cause, 'attack')) return;
+      setError(kind);
     } finally {
       if (requests.current === request) abort.current = null;
     }

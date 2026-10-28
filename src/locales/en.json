@@ -2816,7 +2816,8 @@
       "deleteBrainstormTitle": "Delete brainstorm?",
       "deleteBrainstormDesc": "This removes the brainstorm from your history.",
       "deleteFactoidsTitle": "Delete factoids?",
-      "deleteFactoidsDesc": "This removes the factoids from your history."
+      "deleteFactoidsDesc": "This removes the factoids from your history.",
+      "buildFlowchart": "Build flowchart from case"
     },
     "attack": {
       "caseRequired": "Paste or write the case you want attacked."

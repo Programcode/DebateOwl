@@ -29,6 +29,7 @@ import { FormGroup, SelectRow, SwitchRow } from '@/components/form-rows';
 import { Icon } from '@/components/icon';
 import { LiveTopBar, MainRoundControl, RoundIconButton, SideControl } from '@/components/round-controls';
 import { SegmentedControl } from '@/components/segmented-control';
+import { SessionCostNote } from '@/components/session-cost-note';
 import { SparringScorecardScreen } from '@/components/sparring-views';
 import { Text } from '@/components/text';
 import { TimerRing } from '@/components/timer-ring';
@@ -38,6 +39,8 @@ import { useAuth } from '@/lib/auth';
 import { backLabel } from '@/lib/back-label';
 import { useDebates } from '@/lib/debate-context';
 import { fetchFeatureConfig } from '@/lib/feature-config';
+import { openRefusal } from '@/lib/refusal';
+import { sessionQuotaRefusal, useSessionQuota } from '@/lib/session-quota';
 import { decideMotionTarget, shouldPrefillMotion } from '@/lib/motion';
 import { chooseMotionTarget } from '@/lib/motion-gate';
 import { useSettings } from '@/lib/settings';
@@ -110,6 +113,7 @@ export default function SparringScreen() {
   const owner = useRef(userId);
   // Each side choice gets a number; a slower earlier one never starts a round over a newer one.
   const startAttempt = useRef(0);
+  const roundQuota = useSessionQuota('sparring');
 
   // Another account starts with no round: the session slot was already cleared, and this screen's copy goes too.
   useEffect(() => {
@@ -174,8 +178,9 @@ export default function SparringScreen() {
       if (controller.signal.aborted || isAbortError(cause)) return;
       if (cause instanceof AIError && cause.kind === 'debateMissing') void refresh();
       setRequest({ status: 'failed', failure: classify(cause, true) });
+      openRefusal(router, cause, 'sparring');
     }
-  }, [commit, outputLanguage, refresh, t]);
+  }, [commit, outputLanguage, refresh, router, t]);
 
   const runTurn = useCallback(async (snapshot: SparringSession, forUser: string) => {
     const turn = currentSparringTurn(snapshot);
@@ -216,8 +221,9 @@ export default function SparringScreen() {
       if (controller.signal.aborted || isAbortError(cause)) return;
       if (cause instanceof AIError && cause.kind === 'debateMissing') void refresh();
       setRequest({ status: 'failed', failure: classify(cause, false) });
+      openRefusal(router, cause, 'sparring');
     }
-  }, [commit, outputLanguage, refresh, runJudge]);
+  }, [commit, outputLanguage, refresh, router, runJudge]);
 
   // The clock counts down from its deadline; the tick only redraws it, and coming back from the background redraws at once.
   const timerRunning = session?.timerRunning ?? false;
@@ -249,12 +255,19 @@ export default function SparringScreen() {
     else tapTurnStart();
   };
 
-  const start = () => {
+  const start = async () => {
     if (motion.trim().length < MIN_MOTION_CHARS) {
       setFormError(t('sparring.setup.motionTooShort'));
       return;
     }
     setFormError('');
+    // A round the day's uses cannot cover opens the limit sheet before its clock starts, as on the website.
+    const refusal = sessionQuotaRefusal(await roundQuota.check());
+    if (!live.current) return;
+    if (refusal) {
+      openRefusal(router, refusal, 'sparring');
+      return;
+    }
     setSideMenu(true);
   };
 
@@ -338,7 +351,7 @@ export default function SparringScreen() {
       <DocumentScreen
         testID="sparring-setup"
         header={<DocumentHeader backLabel={backLabel(t, from, 'practice')} actions={[]} />}
-        actions={<MainActionButton label={t('sparring.setup.startRound')} onPress={start} />}>
+        actions={<MainActionButton label={t('sparring.setup.startRound')} onPress={() => void start()} />}>
         <ToolTitle title={t('nav.sparring')} subtitle={t('mobile.debate.sparSide')} />
         <WorkingIn />
         <Field
@@ -398,6 +411,7 @@ export default function SparringScreen() {
             disabled
           />
         </FormGroup>
+        <SessionCostNote quota={roundQuota.quota} />
         {formError ? (
           <Text accessibilityRole="alert" style={[styles.formError, { color: colors.destructive }]} testID="sparring-form-error">
             {formError}

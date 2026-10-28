@@ -2816,7 +2816,8 @@
       "deleteBrainstormTitle": "Törlöd az ötletelést?",
       "deleteBrainstormDesc": "Ez eltávolítja az ötletelést az előzményeid közül.",
       "deleteFactoidsTitle": "Törlöd a tényeket?",
-      "deleteFactoidsDesc": "Ez eltávolítja a tényeket az előzményeid közül."
+      "deleteFactoidsDesc": "Ez eltávolítja a tényeket az előzményeid közül.",
+      "buildFlowchart": "Folyamatábra az esetből"
     },
     "attack": {
       "caseRequired": "Illeszd be vagy írd le a megtámadandó esetet."

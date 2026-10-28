@@ -15,6 +15,7 @@ import { FadingScrollRow } from '@/components/edge-fade';
 import { Icon } from '@/components/icon';
 import type { IconName } from '@/components/icon-paths';
 import { OneOffNotice } from '@/components/one-off-notice';
+import { DailyUsageLine } from '@/components/tool-form';
 import { Text } from '@/components/text';
 import { AIError, isAbortError, type AIErrorKind, type ResponseExtras } from '@/lib/ai-request';
 import { askOnce, canStream, isFinalAskError, isMessageWithinBudget, streamAsk, type AskOptions } from '@/lib/ask';
@@ -24,6 +25,7 @@ import { useAuth } from '@/lib/auth';
 import { ChatSaveError, fetchChat, saveChat, type ChatMessage, type ChatRecord } from '@/lib/chats';
 import { useDebates } from '@/lib/debate-context';
 import { LIST_WIDTH, useLayoutClass } from '@/lib/layout';
+import { openRefusal } from '@/lib/refusal';
 import { keepSourceAssessments } from '@/lib/results';
 import { useSettings } from '@/lib/settings';
 import { fetchSources, type Source } from '@/lib/sources';
@@ -294,6 +296,8 @@ export default function AskScreen() {
       // A missing debate was deleted elsewhere; reload the list so the app stops using it.
       if (kind === 'debateMissing') void refresh();
       setError({ kind, question: message });
+      // The question stays as not sent, and the website's dialog opens too.
+      openRefusal(router, cause, 'ask');
     } finally {
       if (isCurrent()) {
         setLoading(false);
@@ -407,6 +411,7 @@ export default function AskScreen() {
             <Text tone="secondary" style={styles.emptyBody}>
               {t('askChat.startDesc')}
             </Text>
+            <DailyUsageLine />
           </View>
         ) : null}
 

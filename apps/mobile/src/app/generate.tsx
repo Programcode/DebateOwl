@@ -23,6 +23,7 @@ import { useDebates } from '@/lib/debate-context';
 import { decideMotionTarget, shouldPrefillMotion } from '@/lib/motion';
 import { chooseMotionTarget } from '@/lib/motion-gate';
 import { keepOpenResult } from '@/lib/open-results';
+import { openRefusal } from '@/lib/refusal';
 import { arrivalNotices, autosaveSources, generateCase, keepSourceAssessments, recordResult } from '@/lib/results';
 import { sessionSlot } from '@/lib/session-memory';
 import { useSettings } from '@/lib/settings';
@@ -146,8 +147,10 @@ export default function GenerateScreen() {
       // A missing debate was deleted elsewhere; reload the list so the app stops using it.
       if (kind === 'debateMissing') void refresh();
       liveRun.end();
-      setError(kind);
       setPhase('form');
+      // A limit or model refusal opens the website's dialog as a sheet, not an inline error.
+      if (openRefusal(router, cause, 'generate')) return;
+      setError(kind);
     } finally {
       if (requests.current === request) abort.current = null;
     }

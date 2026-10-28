@@ -2816,7 +2816,8 @@
       "deleteBrainstormTitle": "¿Eliminar la lluvia de ideas?",
       "deleteBrainstormDesc": "Esto elimina la lluvia de ideas de tu historial.",
       "deleteFactoidsTitle": "¿Eliminar los datos?",
-      "deleteFactoidsDesc": "Esto elimina los datos de tu historial."
+      "deleteFactoidsDesc": "Esto elimina los datos de tu historial.",
+      "buildFlowchart": "Crear diagrama desde el caso"
     },
     "attack": {
       "caseRequired": "Pega o escribe el caso que quieres atacar."

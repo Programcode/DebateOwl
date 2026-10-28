@@ -8,12 +8,13 @@ import { OneOffNotice } from './one-off-notice';
 import { Text } from './text';
 
 import type { AIErrorKind } from '@/lib/ai-request';
+import { useDailyUsage } from '@/lib/usage';
 import { useDebates } from '@/lib/debate-context';
 import { radius } from '@/theme/colors';
 import { useTheme } from '@/theme/use-theme';
 import { OwlLoader, type OwlPose } from '@/components/owl';
 
-/** The tool's large title and the line under it. */
+/** The tool's large title, the line under it, and today's AI uses left, as the website's PageHeader. */
 export function ToolTitle({ title, subtitle }: { title: string; subtitle: string }) {
   return (
     <View style={styles.titleBlock}>
@@ -23,7 +24,20 @@ export function ToolTitle({ title, subtitle }: { title: string; subtitle: string
       <Text tone="secondary" style={styles.subtitle}>
         {subtitle}
       </Text>
+      <DailyUsageLine />
     </View>
+  );
+}
+
+/** "3 of 5 AI uses left today"; nothing while the count is unknown or the plan has no daily uses. */
+export function DailyUsageLine() {
+  const { t } = useTranslation();
+  const usage = useDailyUsage();
+  if (!usage) return null;
+  return (
+    <Text tone="faint" style={styles.usage} testID="daily-usage">
+      {t('dailyLimit.remaining', { count: usage.remaining, limit: usage.limit })}
+    </Text>
   );
 }
 
@@ -124,6 +138,7 @@ const styles = StyleSheet.create({
   titleBlock: { gap: 4, marginBottom: 2 },
   title: { fontSize: 30, lineHeight: 36, letterSpacing: -0.8 },
   subtitle: { fontSize: 16, lineHeight: 22 },
+  usage: { fontSize: 14, lineHeight: 19, marginTop: 2 },
   strip: { borderWidth: 2, borderRadius: radius.field, paddingHorizontal: 14, paddingVertical: 10 },
   stripText: { fontSize: 14.5, lineHeight: 20 },
   error: { borderWidth: 2, borderRadius: radius.card, padding: 14, gap: 4 },

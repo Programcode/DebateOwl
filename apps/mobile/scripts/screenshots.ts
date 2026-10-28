@@ -11,7 +11,7 @@
  * ONLY=iphone-light-en limits a run to the combinations whose name starts with it;
  * separate several with commas (ONLY=iphone-light-en,ipad-dark-hu).
  * SCREENS=you,timer limits the signed-in screens to those groups: debate,
- * library, prepare, practice, you, empty, ask, results, brainstorm, factoids,
+ * library, prepare, practice, you, empty, ask, results, brainstorm, factoids, limits,
  * timer, crossfire, sparring, flowchart, one-off, history, announcements,
  * account, model. Sign-in screens are always shot.
  * ONLY=offline runs only the offline reading check (see shootOfflineScreens).
@@ -587,6 +587,25 @@ async function shootResultScreens(context: BrowserContext, prefix: string, langu
   await pdf.close();
   console.log(`${prefix}: PDF file name ${exported.fileName}, copied ${exported.copied.length} characters`);
 
+  // The case's menu leads on: Open in Crossfire with the case filled in, and the case built into a map.
+  // Nothing is saved: the Crossfire form is not started and the map is not saved.
+  await page.getByTestId('document-more').click();
+  await page.getByRole('menu').waitFor();
+  await shoot(page, `${prefix}-case-menu`);
+  await page.getByRole('menu').getByRole('menuitem').first().click();
+  await page.getByTestId('crossfire-imported').waitFor({ timeout: 15_000 });
+  await settle(page);
+  await shoot(page, `${prefix}-crossfire-from-case`);
+  await page.goBack();
+  await page.getByTestId('case-document').waitFor({ timeout: 15_000 });
+  await page.getByTestId('document-more').click();
+  await page.getByRole('menu').getByRole('menuitem').nth(1).click();
+  await page.getByTestId('flowchart-screen').waitFor({ timeout: 15_000 });
+  await page.waitForTimeout(500);
+  await shoot(page, `${prefix}-flowchart-from-case`);
+  await page.goBack();
+  await page.getByTestId('case-document').waitFor({ timeout: 15_000 });
+
   await page.getByTestId('attack-this-case').click();
   await page.getByTestId('attack-case-text').waitFor({ timeout: 15_000 });
   await page.waitForFunction(() => (document.querySelector('[data-testid="attack-case-text"]') as HTMLTextAreaElement | null)?.value.startsWith('THESIS:'));
@@ -595,6 +614,14 @@ async function shootResultScreens(context: BrowserContext, prefix: string, langu
   await page.getByTestId('attack-document').waitFor({ timeout: 30_000 });
   await page.waitForTimeout(400);
   await shoot(page, `${prefix}-attack-result`);
+  // The case stays mounted under the attack, so its menu is looked up inside the attack.
+  await page.getByTestId('attack-document').getByTestId('document-more').click();
+  await page.getByRole('menu').last().getByRole('menuitem').first().click();
+  await page.getByTestId('crossfire-imported').waitFor({ timeout: 15_000 });
+  // Not settle(): the attack's score meter (a progressbar) stays mounted under Crossfire.
+  await page.waitForLoadState('networkidle');
+  await page.waitForTimeout(400);
+  await shoot(page, `${prefix}-crossfire-from-attack`);
   await page.close();
 }
 
@@ -664,6 +691,39 @@ async function shootTool(context: BrowserContext, prefix: string, language: stri
   await pdf.close();
   console.log(`${prefix} ${tool}: PDF file name ${exported.fileName}, copied ${exported.copied.length} characters`);
   await page.close();
+}
+
+/**
+ * The limit and model sheets: Generate answered with the ai function's
+ * refusals (402 limit_reached with its counts, then 403 upgrade_required).
+ * Nothing is sent to a model; "Use low reasoning instead" is never pressed.
+ */
+async function shootLimitSheets(context: BrowserContext, prefix: string, language: string, problems: string[]) {
+  const refusals = [
+    { name: 'limit-sheet', status: 402, json: { error: 'Daily limit reached', code: 'limit_reached', limit: 20, current: 20, units: 1 } },
+    { name: 'model-sheet', status: 403, json: { error: 'This model requires a Pro subscription.', code: 'upgrade_required' } },
+  ];
+  for (const refusal of refusals) {
+    const page = await context.newPage();
+    // The browser logs the refused request itself; only that error is expected.
+    const seen: string[] = [];
+    watchErrors(page, seen, `${prefix} ${refusal.name}`);
+    page.on('dialog', (dialog) => void dialog.dismiss());
+    await pinSettings(page, language);
+    await page.route(`https://${STAGING_HOST}/functions/v1/ai`, (route) =>
+      route.fulfill({ status: refusal.status, headers: { 'access-control-allow-origin': '*' }, json: refusal.json }),
+    );
+    await page.goto(`${ORIGIN}/generate?from=prepare`);
+    await page.getByTestId('generate-motion').waitFor({ timeout: 30_000 });
+    await page.waitForFunction(() => (document.querySelector('[data-testid="generate-motion"]') as HTMLTextAreaElement | null)?.value.trim());
+    await page.getByRole('button', { name: /^(Generate debate case|Vitaeset generálása|Generar caso de debate)$/i }).click();
+    await page.getByTestId('limit-sheet').waitFor({ timeout: 15_000 });
+    await settle(page);
+    await page.waitForTimeout(500);
+    await shoot(page, `${prefix}-${refusal.name}`);
+    await page.close();
+    problems.push(...seen.filter((problem) => !problem.includes(`status of ${refusal.status}`)));
+  }
 }
 
 // Made-up saved maps in the website's React Flow shape, after mock A.
@@ -908,11 +968,15 @@ const CROSSFIRE_TEXT = {
 } as const;
 
 /** Fakes Crossfire's AI calls and its save for this page (see the header). Replies follow the request, as the client checks them. */
+// The round's cost, as the ai function answers a quotaCheck: one use, 16 of 20 left today.
+const FAKE_QUOTA = { quota: { allowed: true, units: 1, limit: 20, current: 4 } };
+
 async function fakeCrossfire(page: Page, language: keyof typeof CROSSFIRE_TEXT) {
   const text = CROSSFIRE_TEXT[language];
   await page.route(`https://${STAGING_HOST}/functions/v1/ai`, async (route) => {
     const body = route.request().postDataJSON() as { feature?: string; input?: { operation?: string; expectedReply?: 'question' | 'answer'; transcript?: { id: string }[] } } | null;
     if (body?.feature !== 'crossfire') return route.abort();
+    if ((body as { quotaCheck?: boolean }).quotaCheck) return route.fulfill({ status: 200, headers: { 'access-control-allow-origin': '*' }, json: FAKE_QUOTA });
     const input = body.input ?? {};
     const turns = input.transcript ?? [];
     const exchange = Math.floor(turns.length / 2) % text.answers.length;
@@ -927,8 +991,9 @@ async function fakeCrossfire(page: Page, language: keyof typeof CROSSFIRE_TEXT) 
     } else {
       const d = text.debrief;
       output = {
-        concessionsSecured: [{ turnIds: ['T3', 'T4'], claim: d.concession }],
-        controlledQuestions: [{ turnIds: ['T1', 'T2'], claim: d.controlled }],
+        // Concessions and controlled questions name one turn each (SingleTurnReferenceSchema).
+        concessionsSecured: [{ turnIds: ['T4'], claim: d.concession }],
+        controlledQuestions: [{ turnIds: ['T1'], claim: d.controlled }],
         weakOrRepetitiveQuestions: [],
         evasiveOrIncompleteAnswers: [],
         missedFollowUps: [{ turnIds: ['T2'], claim: d.missed }],
@@ -958,6 +1023,10 @@ async function shootCrossfireScreens(context: BrowserContext, prefix: string, la
   await page.getByTestId('crossfire-argument').fill(text.argument);
   await settle(page);
   await shoot(page, `${prefix}-crossfire-setup`);
+  // The round's cost sits above the start button, below the fold on a phone.
+  await page.getByTestId('session-cost').scrollIntoViewIfNeeded();
+  await page.waitForTimeout(300);
+  await shoot(page, `${prefix}-crossfire-cost`);
 
   await page.getByRole('button', { name: /^(Start crossfire|Keresztkérdezés indítása|Iniciar interrogatorio)$/ }).click();
   await page.getByTestId('crossfire-live').waitFor({ timeout: 15_000 });
@@ -1026,6 +1095,7 @@ async function fakeSparring(page: Page, language: keyof typeof SPARRING_TEXT) {
   await page.route(`https://${STAGING_HOST}/functions/v1/ai`, async (route) => {
     const body = route.request().postDataJSON() as { feature?: string; input?: { action?: 'respond' | 'score'; speeches?: { speaker: string }[] } } | null;
     if (body?.feature !== 'sparring') return route.abort();
+    if ((body as { quotaCheck?: boolean }).quotaCheck) return route.fulfill({ status: 200, headers: { 'access-control-allow-origin': '*' }, json: FAKE_QUOTA });
     const action = body.input?.action ?? 'respond';
     if (holding[action]) await new Promise<void>((resolve) => { held[action] = resolve; });
     let output: unknown;
@@ -1078,6 +1148,10 @@ async function shootSparringScreens(context: BrowserContext, prefix: string, lan
   await page.getByRole('menuitem', { name: 'Lincoln-Douglas' }).click();
   await settle(page);
   await shoot(page, `${prefix}-sparring-setup`);
+  // The round's cost sits above the start button, below the fold on a phone.
+  await page.getByTestId('session-cost').scrollIntoViewIfNeeded();
+  await page.waitForTimeout(300);
+  await shoot(page, `${prefix}-sparring-cost`);
 
   fake.hold('respond');
   await page.getByRole('button', { name: /^(Start round|Forduló indítása|Iniciar ronda)$/ }).click();
@@ -1747,25 +1821,29 @@ async function main() {
             shots += 3;
           }
           if (want('results')) {
-            await shootResultScreens(signedIn, prefix, language, problems);
-            shots += 10;
+            await shootResultScreens(signedIn, prefix, language, problems).catch(failedIn(signedIn, prefix, 'results'));
+            shots += 14;
           }
           for (const tool of ['brainstorm', 'factoids'] as const) {
             if (!want(tool)) continue;
             await shootTool(signedIn, prefix, language, problems, tool);
             shots += 7;
           }
+          if (want('limits')) {
+            await shootLimitSheets(signedIn, prefix, language, problems).catch(failedIn(signedIn, prefix, 'limits'));
+            shots += 2;
+          }
           if (want('timer')) {
             await shootTimerScreens(signedIn, prefix, language, problems);
             shots += 3;
           }
           if (want('crossfire')) {
-            await shootCrossfireScreens(signedIn, prefix, language, problems);
-            shots += 3;
+            await shootCrossfireScreens(signedIn, prefix, language, problems).catch(failedIn(signedIn, prefix, 'crossfire'));
+            shots += 4;
           }
           if (want('sparring')) {
             await shootSparringScreens(signedIn, prefix, language, problems);
-            shots += 6;
+            shots += 7;
           }
           if (want('flowchart')) {
             await shootFlowchart(signedIn, prefix, language, problems);

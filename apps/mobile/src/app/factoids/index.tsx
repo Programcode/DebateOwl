@@ -21,6 +21,7 @@ import { backLabel } from '@/lib/back-label';
 import { buildDebateContext } from '@/lib/context-request';
 import { useDebates } from '@/lib/debate-context';
 import { keepOpenResult } from '@/lib/open-results';
+import { openRefusal } from '@/lib/refusal';
 import { arrivalNotices, autosaveSources, findFactoids, keepSourceAssessments, recordResult } from '@/lib/results';
 import { sessionSlot } from '@/lib/session-memory';
 import { useSettings } from '@/lib/settings';
@@ -162,8 +163,10 @@ export default function FactoidsScreen() {
       if (!(cause instanceof AIError)) console.warn('Factoids failed:', cause instanceof Error ? cause.message : cause);
       if (kind === 'debateMissing') void refresh();
       liveRun.end();
-      setError(kind);
       setPhase('form');
+      // A limit or model refusal opens the website's dialog as a sheet, not an inline error.
+      if (openRefusal(router, cause, 'factoids')) return;
+      setError(kind);
     } finally {
       if (requests.current === request) abort.current = null;
     }

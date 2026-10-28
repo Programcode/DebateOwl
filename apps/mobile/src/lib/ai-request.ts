@@ -84,6 +84,8 @@ async function accessToken(): Promise<string> {
   return token;
 }
 
+const REFUSAL_CODES = new Set(['limit_reached', 'weekly_budget_reached', 'trial_ended', 'trial_expired', 'payment_failed', 'subscription_ended']);
+
 export function errorFrom(status: number | undefined, payload: Record<string, unknown> | null, fallback: string): AIError {
   const message = typeof payload?.error === 'string' ? payload.error : typeof payload?.message === 'string' ? payload.message : fallback;
   const code = typeof payload?.code === 'string' ? payload.code : undefined;
@@ -91,8 +93,9 @@ export function errorFrom(status: number | undefined, payload: Record<string, un
   const details: AIErrorDetails = { code, limit: number('limit'), current: number('current'), units: number('units') };
   if (status === 401) return new AIError('auth', message);
   if (code === 'upgrade_required') return new AIError('modelRestricted', message, details);
-  if (status === 402 || code === 'trial_expired' || code === 'limit_reached') {
-    return new AIError(code === 'trial_expired' ? 'trialExpired' : 'limitReached', message, details);
+  // Every access or quota refusal the server sends, as the website's isSubscriptionRefusalCode.
+  if (status === 402 || (code !== undefined && REFUSAL_CODES.has(code))) {
+    return new AIError(code === 'trial_expired' || code === 'trial_ended' ? 'trialExpired' : 'limitReached', message, details);
   }
   if (status === 403) return /model|upgrade/i.test(message) ? new AIError('modelRestricted', message) : new AIError('auth', message);
   if (status === 404) return new AIError('debateMissing', message);
@@ -106,6 +109,14 @@ export async function payloadOf(response: { json: () => Promise<unknown> }): Pro
 }
 
 export type FunctionResponse = Awaited<ReturnType<typeof fetch>>;
+
+const settledListeners = new Set<() => void>();
+
+/** Called after every AI request ends, however it ends, as the website refreshes its usage count (refreshAIUsage). */
+export function onAIRequestSettled(listener: () => void): () => void {
+  settledListeners.add(listener);
+  return () => settledListeners.delete(listener);
+}
 
 /** One POST with the website's headers, its timeout (200 s unless the feature sets its own) and the caller's abort. */
 export async function postFunction<T>(
@@ -146,6 +157,7 @@ export async function postFunction<T>(
   } finally {
     clearTimeout(timeout);
     signal?.removeEventListener('abort', abortForCaller);
+    settledListeners.forEach((listener) => listener());
   }
 }
 
