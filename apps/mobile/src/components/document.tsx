@@ -63,6 +63,31 @@ function PinnedBar({
   );
 }
 
+export type NoticeTone = 'info' | 'success';
+
+/** A short notice above the pinned buttons: dark, or mint with a check mark when it confirms something done. */
+function DocumentNotice({ text, tone = 'info', bottom }: { text: string; tone?: NoticeTone; bottom: number }) {
+  const { colors } = useTheme();
+  const success = tone === 'success';
+  return (
+    <View
+      accessibilityRole="alert"
+      accessibilityLiveRegion="polite"
+      style={[styles.notice, success && [styles.noticeRow, { borderColor: colors.successFill }], { bottom, backgroundColor: success ? colors.successTint : colors.foreground }]}
+      testID="document-notice">
+      {/* As the website's success toast: the mint check carries the meaning, the text stays readable. */}
+      {success ? (
+        <View style={[styles.noticeCheck, { backgroundColor: colors.successFill }]}>
+          <Icon name="check" color={colors.successTint} size={15} />
+        </View>
+      ) : null}
+      <Text weight={success ? 'semibold' : 'regular'} style={[styles.noticeText, { color: success ? colors.success : colors.background }]}>
+        {text}
+      </Text>
+    </View>
+  );
+}
+
 /** The scrolling page under the header, leaving room for the pinned actions. */
 export function DocumentScreen({
   header,
@@ -70,6 +95,7 @@ export function DocumentScreen({
   actions,
   actionWidths,
   notice,
+  noticeTone,
   testID,
   outline = false,
 }: {
@@ -79,6 +105,8 @@ export function DocumentScreen({
   /** How the pinned buttons share the width, such as [1, 1.4]; equally when absent. */
   actionWidths?: number[];
   notice?: string;
+  /** A notice that confirms something done, such as a save: mint with a check mark. */
+  noticeTone?: NoticeTone;
   testID?: string;
   /** A saved document: on a wide iPad window its headed parts are listed in a rail beside it (iPad mock A). */
   outline?: boolean;
@@ -92,7 +120,7 @@ export function DocumentScreen({
   const [barHeight, setBarHeight] = useState(PINNED_FADE + PINNED_HEIGHT + bottom);
   if (outline && layout !== 'phone' && width >= RAIL_MIN_WIDTH) {
     return (
-      <RailDocument header={header} actions={actions} actionWidths={actionWidths} notice={notice} testID={testID}>
+      <RailDocument header={header} actions={actions} actionWidths={actionWidths} notice={notice} noticeTone={noticeTone} testID={testID}>
         {children}
       </RailDocument>
     );
@@ -106,15 +134,7 @@ export function DocumentScreen({
         <OfflineNotice />
         {children}
       </ScrollView>
-      {notice ? (
-        <View
-          accessibilityRole="alert"
-          accessibilityLiveRegion="polite"
-          style={[styles.notice, { bottom: actions ? barHeight - PINNED_FADE + 8 : bottom, backgroundColor: colors.foreground }]}
-          testID="document-notice">
-          <Text style={[styles.noticeText, { color: colors.background }]}>{notice}</Text>
-        </View>
-      ) : null}
+      {notice ? <DocumentNotice text={notice} tone={noticeTone} bottom={actions ? barHeight - PINNED_FADE + 8 : bottom} /> : null}
       {actions ? <PinnedBar actions={actions} actionWidths={actionWidths} bottom={bottom} onHeight={setBarHeight} /> : null}
     </View>
   );
@@ -127,6 +147,7 @@ function RailDocument({
   actions,
   actionWidths,
   notice,
+  noticeTone,
   testID,
 }: {
   header: ReactNode;
@@ -134,6 +155,7 @@ function RailDocument({
   actions?: ReactNode;
   actionWidths?: number[];
   notice?: string;
+  noticeTone?: NoticeTone;
   testID?: string;
 }) {
   const { colors } = useTheme();
@@ -162,15 +184,7 @@ function RailDocument({
               <OutlineProvider outline={rail.outline}>{children}</OutlineProvider>
             </View>
           </ScrollView>
-          {notice ? (
-            <View
-              accessibilityRole="alert"
-              accessibilityLiveRegion="polite"
-              style={[styles.notice, { bottom: actions ? barHeight - PINNED_FADE + 8 : bottom, backgroundColor: colors.foreground }]}
-              testID="document-notice">
-              <Text style={[styles.noticeText, { color: colors.background }]}>{notice}</Text>
-            </View>
-          ) : null}
+          {notice ? <DocumentNotice text={notice} tone={noticeTone} bottom={actions ? barHeight - PINNED_FADE + 8 : bottom} /> : null}
           {actions ? <PinnedBar actions={actions} actionWidths={actionWidths} bottom={bottom} rail onHeight={setBarHeight} /> : null}
         </View>
       </View>
@@ -450,7 +464,9 @@ const styles = StyleSheet.create({
   pinnedRowRail: { paddingLeft: 16, paddingRight: 24 },
   pressed: { opacity: 0.7 },
   notice: { position: 'absolute', left: 24, right: 24, borderRadius: 14, paddingHorizontal: 16, paddingVertical: 11, alignSelf: 'center', maxWidth: 560 },
-  noticeText: { fontSize: 15, lineHeight: 20, textAlign: 'center' },
+  noticeRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, borderWidth: 2 },
+  noticeCheck: { width: 24, height: 24, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
+  noticeText: { fontSize: 15, lineHeight: 20, textAlign: 'center', flexShrink: 1 },
   titleBlock: { gap: 6, marginBottom: 4 },
   title: { fontSize: 30, lineHeight: 36, letterSpacing: -0.8 },
   meta: { fontSize: 15, lineHeight: 20 },

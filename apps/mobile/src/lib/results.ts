@@ -19,7 +19,7 @@ import type { DebateContextRequest } from '@debatelab/core/contract/debate-conte
 import { AIError, postAI, PROVIDER, responseExtras, type ResponseExtras } from './ai-request';
 import type { FeatureConfig } from './feature-config';
 import { debateListScopes, deletedListScopes } from './debates';
-import { afterWrite, cachedRead, readFailed, type CopyMark } from './offline-cache';
+import { afterWrite, cachedRead, readFailed, updateCopy, type CopyMark } from './offline-cache';
 import { saveResearchedSource, applySourceAssessments, fetchSourceIdsInFolder, removeSource } from './sources';
 import { supabase } from './supabase';
 
@@ -238,6 +238,15 @@ export async function recordResult<K extends ResultKind>(
   if (error || !data) throw new Error(error?.message ?? `Could not save the ${kind}`);
   afterWrite(userId, debateListScopes(record.debateId, kind));
   return (data as { id: string }).id;
+}
+
+/** Replaces a saved result's output, as the website's updateRecordedResult after a regenerated section. */
+export async function updateResult<K extends ResultKind>(userId: string, kind: K, id: string, output: OutputFor[K]): Promise<void> {
+  const { data, error } = await supabase.from(TABLES[kind]).update({ output }).eq('user_id', userId).eq('id', id).select('id');
+  if (error) throw new Error(error.message);
+  if (!data || data.length === 0) throw new Error(`The ${kind} is no longer saved`);
+  // The saved copy reads the new output offline too.
+  updateCopy<SavedResult<K> | null>(userId, `result:${kind}`, id, (copy) => (copy ? { ...copy, output } : copy));
 }
 
 /** Saves a case outside any debate, as the website's Save button does for unrecorded work. */

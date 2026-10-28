@@ -11,7 +11,7 @@
  * ONLY=iphone-light-en limits a run to the combinations whose name starts with it;
  * separate several with commas (ONLY=iphone-light-en,ipad-dark-hu).
  * SCREENS=you,timer limits the signed-in screens to those groups: debate,
- * library, prepare, practice, you, empty, ask, results, brainstorm, factoids, limits,
+ * library, prepare, practice, you, empty, ask, results, brainstorm, factoids, case-edits, limits,
  * timer, crossfire, sparring, flowchart, one-off, history, announcements,
  * account, model. Sign-in screens are always shot.
  * ONLY=offline runs only the offline reading check (see shootOfflineScreens).
@@ -693,6 +693,83 @@ async function shootTool(context: BrowserContext, prefix: string, language: stri
   await page.close();
 }
 
+const MENU = {
+  regenerate: /^(Regenerate a section|Szakasz újragenerálása|Regenerar una sección)$/,
+  arguments: /^(Regenerate Arguments|Érvek újragenerálása|Regenerar Argumentos)$/,
+  save: /^(Save|Mentés|Guardar)$/,
+};
+
+/**
+ * Regenerate, Undo and Save on a case, from the fixed case: the regenerate
+ * menu, a regeneration held open, the case after it, the Save case sheet and
+ * the saved confirmation. The case's first save to its debate is answered
+ * with an error, so the case stays unsaved and offers Save; the Save sheet's
+ * write is answered locally. Nothing reaches a model or the database.
+ */
+async function shootCaseEdits(context: BrowserContext, prefix: string, language: string, problems: string[]) {
+  const open = async (holdRegeneration: boolean) => {
+    const page = await context.newPage();
+    const seen: string[] = [];
+    watchErrors(page, seen, `${prefix} case edits`);
+    page.on('dialog', (dialog) => void dialog.dismiss());
+    await pinSettings(page, language);
+    await fakeResults(page, null);
+    let generations = 0;
+    await page.route(`https://${STAGING_HOST}/functions/v1/ai`, async (route) => {
+      generations += 1;
+      if (holdRegeneration && generations > 1) return; // Never answered: the strip shows.
+      return route.fulfill({ status: 200, headers: { 'access-control-allow-origin': '*' }, json: FAKE_OUTPUTS.generate });
+    });
+    let caseWrites = 0;
+    await page.route(`${REST}/cases*`, (route) => {
+      if (route.request().method() !== 'POST') return route.continue();
+      caseWrites += 1;
+      return caseWrites === 1
+        ? route.fulfill({ status: 500, headers: { 'access-control-allow-origin': '*' }, json: { message: 'screenshot: not recorded' } })
+        : route.fulfill({ status: 201, json: FAKE_ROW('cases') });
+    });
+    await page.goto(`${ORIGIN}/generate?from=prepare`);
+    await page.getByTestId('generate-motion').waitFor({ timeout: 30_000 });
+    await page.waitForFunction(() => (document.querySelector('[data-testid="generate-motion"]') as HTMLTextAreaElement | null)?.value.trim());
+    await page.getByRole('button', { name: /^(Generate debate case|Vitaeset generálása|Generar caso de debate)$/i }).click();
+    await page.getByTestId('case-document').waitFor({ timeout: 30_000 });
+    await page.waitForTimeout(3800); // The arrival notice fades.
+    return { page, seen };
+  };
+  const regenerateArguments = async (page: Page, shotMenu: boolean) => {
+    await page.getByTestId('document-more').click();
+    await page.getByRole('menuitem', { name: MENU.regenerate }).click();
+    await page.getByTestId('regenerate-menu').waitFor();
+    if (shotMenu) await shoot(page, `${prefix}-regenerate-menu`);
+    await page.getByTestId('regenerate-menu').getByRole('menuitem', { name: MENU.arguments }).click();
+  };
+  const finish = (seen: string[]) => problems.push(...seen.filter((problem) => !problem.includes('status of 500')));
+
+  const held = await open(true);
+  await regenerateArguments(held.page, true);
+  await held.page.getByTestId('regenerating').waitFor({ timeout: 15_000 });
+  await shoot(held.page, `${prefix}-case-regenerating`);
+  await held.page.close();
+  finish(held.seen);
+
+  const { page, seen } = await open(false);
+  await regenerateArguments(page, false);
+  await page.getByTestId('document-notice').waitFor({ timeout: 15_000 });
+  await shoot(page, `${prefix}-case-regenerated`);
+  await page.waitForTimeout(3800);
+  await page.getByTestId('document-more').click();
+  await page.getByRole('menuitem', { name: MENU.save }).click();
+  await page.getByTestId('save-case-sheet').waitFor({ timeout: 15_000 });
+  await page.waitForTimeout(500);
+  await shoot(page, `${prefix}-save-case`);
+  await page.getByTestId('save-case-confirm').click();
+  await page.getByTestId('save-case-sheet').waitFor({ state: 'detached', timeout: 15_000 });
+  await page.getByTestId('document-notice').waitFor({ timeout: 15_000 });
+  await shoot(page, `${prefix}-case-saved`);
+  await page.close();
+  finish(seen);
+}
+
 /**
  * The limit and model sheets: Generate answered with the ai function's
  * refusals (402 limit_reached with its counts, then 403 upgrade_required).
@@ -928,7 +1005,35 @@ async function shootAskScreens(context: BrowserContext, prefix: string, language
   await streaming.getByTestId('ask-streaming').waitFor({ timeout: 15_000 });
   await streaming.waitForTimeout(STREAM_HOLD_WORDS * 15 + 600);
   await shoot(streaming, `${prefix}-ask-streaming`);
+  // Stop keeps the answer so far, marked as stopped; the chat write is answered locally.
+  await streaming.getByTestId('ask-stop').click();
+  await streaming.getByTestId('ask-answer').waitFor({ timeout: 15_000 });
+  await streaming.waitForTimeout(300);
+  await shoot(streaming, `${prefix}-ask-stopped`);
   await streaming.close();
+
+  // Clarify mode with a text file attached, then the answer saved to the Library's Ask folder.
+  // The file is read in the page; the source write is answered locally.
+  const clarify = await ask(false);
+  for (const table of ['sources', 'source_folders']) {
+    await clarify.route(`${REST}/${table}*`, (route) =>
+      route.request().method() === 'GET' ? route.continue() : route.fulfill({ status: 201, json: FAKE_ROW(table) }),
+    );
+  }
+  await clarify.getByTestId('ask-mode-clarify').click();
+  const chooser = clarify.waitForEvent('filechooser');
+  await clarify.getByTestId('ask-attach').click();
+  await (await chooser).setFiles({ name: 'rebuttal-notes.md', mimeType: 'text/markdown', buffer: Buffer.from('# Notes\n\nNight buses: routes added in year one.\n') });
+  await clarify.getByTestId('ask-attachments').waitFor({ timeout: 15_000 });
+  await clarify.getByTestId('ask-input').fill(ASK_QUESTION);
+  await shoot(clarify, `${prefix}-ask-attached`);
+  await clarify.getByTestId('ask-send').click();
+  await clarify.getByTestId('ask-answer').waitFor({ timeout: 15_000 });
+  await clarify.getByTestId('ask-save').click();
+  await clarify.getByTestId('ask-saved').waitFor({ timeout: 15_000 });
+  await clarify.waitForTimeout(300);
+  await shoot(clarify, `${prefix}-ask-saved`);
+  await clarify.close();
 }
 
 // A made-up Crossfire exchange and debrief, in English and Hungarian, so the Hungarian shots carry no English model text.
@@ -1817,8 +1922,8 @@ async function main() {
             shots += 2;
           }
           if (want('ask')) {
-            await shootAskScreens(signedIn, prefix, language, problems);
-            shots += 3;
+            await shootAskScreens(signedIn, prefix, language, problems).catch(failedIn(signedIn, prefix, 'ask'));
+            shots += 6;
           }
           if (want('results')) {
             await shootResultScreens(signedIn, prefix, language, problems).catch(failedIn(signedIn, prefix, 'results'));
@@ -1828,6 +1933,10 @@ async function main() {
             if (!want(tool)) continue;
             await shootTool(signedIn, prefix, language, problems, tool);
             shots += 7;
+          }
+          if (want('case-edits')) {
+            await shootCaseEdits(signedIn, prefix, language, problems).catch(failedIn(signedIn, prefix, 'case-edits'));
+            shots += 5;
           }
           if (want('limits')) {
             await shootLimitSheets(signedIn, prefix, language, problems).catch(failedIn(signedIn, prefix, 'limits'));

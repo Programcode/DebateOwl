@@ -96,6 +96,7 @@ function Root() {
             <Stack.Screen name="source/[id]" options={sheet} />
             {/* The website's limit and model dialogs; short, so the sheet stops at half height. */}
             <Stack.Screen name="limit" options={{ ...sheet, sheetAllowedDetents: [0.56, 0.86] }} />
+            <Stack.Screen name="save-case" options={{ ...sheet, sheetAllowedDetents: [0.56, 0.86] }} />
             {/* Full screen above the tabs, as in mock 07. */}
             <Stack.Screen name="ask" />
             {/* History, full screen above the tabs like the documents it opens. */}
