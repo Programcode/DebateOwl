@@ -19,7 +19,7 @@ describe('loadChunk', () => {
   beforeEach(() => resetStaleChunkReloadForTests());
 
   it('returns a module that loaded', async () => {
-    const module = { default: () => null };
+    const module = { default: (): null => null };
     await expect(loadChunk(() => Promise.resolve(module), () => false)).resolves.toBe(module);
   });
 

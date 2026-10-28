@@ -45,7 +45,7 @@ describe('activation events', () => {
 
   it('sends nothing without an account or when storage cannot remember', () => {
     captureFirstAISuccess('ask');
-    const blocked = { getItem: () => { throw new Error('blocked'); }, setItem: () => undefined };
+    const blocked = { getItem: () => { throw new Error('blocked'); }, setItem: (): void => undefined };
     expect(captureOncePerAccount('welcome_completed', 'user-a', undefined, blocked)).toBe(false);
     expect(captureOncePerAccount('welcome_completed', 'user-a', undefined, null)).toBe(false);
     expect(captureProductEventMock).not.toHaveBeenCalled();

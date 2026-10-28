@@ -13,7 +13,7 @@ vi.mock('@/lib/observability', () => ({
 
 vi.mock('@/lib/supabase/client', () => ({
   getActiveAccessToken: () => 'token',
-  getActiveUserId: () => null,
+  getActiveUserId: (): null => null,
   invokeAuthenticatedFunction: invokeMock,
   invokeAuthenticatedFunctionWith: invokeMock,
   supabase: { auth: { getSession: vi.fn() } },
