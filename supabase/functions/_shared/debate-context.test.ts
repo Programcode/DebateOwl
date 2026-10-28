@@ -2,6 +2,8 @@ import {
   boundOutputDigests,
   type DebateOutputCandidate,
   digestOutput,
+  MAX_CASE_DIGEST_CHARS,
+  MAX_CASE_PARAGRAPH_CHARS,
   MAX_CONTEXT_OUTPUTS,
   MAX_OUTPUT_DIGEST_CHARS,
   MAX_OUTPUTS_TOTAL_CHARS,
@@ -91,7 +93,9 @@ Deno.test("digests are bounded and whole results are dropped, never cut, when th
     contentions: Array.from({ length: 10 }, (_, n) => ({ claim: `Claim ${n}`, reasoning: "R".repeat(2_000), impact: "I".repeat(2_000) })),
   };
   const digest = digestOutput("case", longCase);
-  assert(digest.length <= MAX_OUTPUT_DIGEST_CHARS, "one result exceeded its digest bound");
+  assert(digest.length <= MAX_CASE_DIGEST_CHARS, "one case exceeded its digest bound");
+  const longAttack = { weaknesses: Array.from({ length: 10 }, () => ({ description: "D".repeat(2_000), howOpponentAttacks: "H".repeat(2_000) })) };
+  assert(digestOutput("attack", longAttack).length <= MAX_OUTPUT_DIGEST_CHARS, "an attack exceeded its digest bound");
   const items = Array.from({ length: 5 }, (_, n) => ({ id: String(n), digest }));
   const bounded = boundOutputDigests(items);
   const used = bounded.included.reduce((total, item) => total + item.digest.length, 0);
@@ -100,6 +104,34 @@ Deno.test("digests are bounded and whole results are dropped, never cut, when th
   assert(bounded.included.every((item) => item.digest === digest), "an included result was shortened");
   const empty = boundOutputDigests([{ digest: "" }]);
   assert(empty.empty.length === 1 && empty.omittedForSize.length === 0, "an empty result was reported as too large");
+});
+
+Deno.test("a case's R2 backing-up paragraphs, If they say answers and Conclusor reasons reach the prompt in full", () => {
+  const paragraph = (label: string) => `${label} opens the paragraph. ${"Evidence and explanation follow here. ".repeat(28)}${label} ENDS HERE.`;
+  const r2 = {
+    contentions: [],
+    reinforce: [
+      { argument: "Our first argument: fare-free transport helps those who need it most.", text: paragraph("Backing one") },
+      { argument: "Our second argument: free buses are faster.", text: paragraph("Backing two") },
+    ],
+    counters: Array.from({ length: 6 }, (_, n) => ({ targetArgument: `Their claim ${n + 1}`, counterpoint: paragraph(`Answer ${n + 1}`) })),
+    whyWeWin: [paragraph("Reason one")],
+  };
+  assert(paragraph("x").length > 1_000, "the test paragraphs should be as long as a real R2's");
+  const digest = digestOutput("case", r2);
+  for (const label of ["Backing one", "Backing two", "Answer 1", "Answer 6", "Reason one"]) {
+    assert(digest.includes(`${label} ENDS HERE.`), `${label} was cut`);
+  }
+  assert(!digest.includes("…"), "nothing in a normal R2 should be shortened");
+  assert(boundOutputDigests([{ digest }]).included.length === 1, "a full R2 must fit the total budget");
+
+  const huge = digestOutput("case", {
+    reinforce: [{ argument: "A", text: "R".repeat(50_000) }],
+    counters: Array.from({ length: 20 }, () => ({ targetArgument: "T".repeat(5_000), counterpoint: "C".repeat(50_000) })),
+  });
+  assert(huge.length <= MAX_CASE_DIGEST_CHARS, "a huge case exceeded its digest bound");
+  assert(!huge.includes("R".repeat(MAX_CASE_PARAGRAPH_CHARS)), "one paragraph exceeded its bound");
+  assert((huge.match(/If they say/g) ?? []).length <= 8, "more than 8 answers were kept");
 });
 
 Deno.test("each feature receives only the debate material its guarantees allow", () => {
