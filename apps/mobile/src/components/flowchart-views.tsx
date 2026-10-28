@@ -164,7 +164,7 @@ export function MapTreeView({ doc, onOpen, selectedId }: { doc: FlowchartDocumen
 }
 
 const styles = StyleSheet.create({
-  card: { borderWidth: 1, borderLeftWidth: 4, borderRadius: radius.field, paddingHorizontal: 11, paddingVertical: 10, marginBottom: 10 },
+  card: { borderWidth: 2, borderLeftWidth: 4, borderRadius: radius.field, paddingHorizontal: 11, paddingVertical: 10, marginBottom: 10 },
   cardLabel: { fontSize: 14.5, lineHeight: 19 },
   cardMeta: { fontSize: 12.5, lineHeight: 17, marginTop: 3 },
   pressed: { opacity: 0.7 },

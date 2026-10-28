@@ -24,6 +24,7 @@ import { openRowId } from '@/lib/open-pane';
 import { fetchSources, removeSource, subscribeSourcesChanged, type Source, type SourceType } from '@/lib/sources';
 import { useCopyHolder } from '@/lib/use-copy-holder';
 import { useTheme } from '@/theme/use-theme';
+import { EmptyState } from '@/components/empty-state';
 
 type Filter = 'all' | SourceType;
 
@@ -202,8 +203,8 @@ function SourceList({
   const remove = async (source: Source) => {
     if (!userId) return false;
     const confirmed = await confirmDestructive({
-      title: t('libraryPage.deleteSourceTitle'),
-      message: t('libraryPage.deleteSourceDesc'),
+      title: t('mobile.library.deleteSourceTitle'),
+      message: t('mobile.library.deleteSourceDesc'),
       confirm: t('common.delete'),
       cancel: t('common.cancel'),
     });
@@ -255,23 +256,9 @@ function SourceList({
       ) : null}
 
       {sources.length === 0 ? (
-        <Card>
-          <Text weight="semibold" style={styles.emptyTitle}>
-            {t('libraryPage.emptyTitle')}
-          </Text>
-          <Text tone="secondary" style={styles.body}>
-            {t('libraryPage.emptyDesc')}
-          </Text>
-        </Card>
+        <EmptyState pose="reading" title={t('libraryPage.emptyTitle')} description={t('libraryPage.emptyDesc')} />
       ) : visible.length === 0 ? (
-        <Card>
-          <Text weight="semibold" style={styles.emptyTitle}>
-            {t('libraryPage.noMatchingSources')}
-          </Text>
-          <Text tone="secondary" style={styles.body}>
-            {t('libraryPage.noMatchingSourcesDesc')}
-          </Text>
-        </Card>
+        <EmptyState pose="surprised" title={t('libraryPage.noMatchingSources')} description={t('libraryPage.noMatchingSourcesDesc')} />
       ) : (
         <Card style={styles.list}>
           {visible.map((source, index) => (
@@ -359,7 +346,6 @@ function SourceRow({
 const styles = StyleSheet.create({
   loading: { marginTop: 32 },
   body: { fontSize: 15, lineHeight: 21 },
-  emptyTitle: { fontSize: 17 },
   chipRow: { marginHorizontal: -20, flexGrow: 0 },
   chips: { gap: 8, paddingHorizontal: 20 },
   list: { padding: 0, gap: 0, overflow: 'hidden' },

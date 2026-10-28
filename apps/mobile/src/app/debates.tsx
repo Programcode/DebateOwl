@@ -79,7 +79,7 @@ export default function DebatesSheet() {
   return (
     <SheetScrollView contentContainerStyle={styles.content} testID="debates-sheet">
       <View style={styles.header}>
-        <Text accessibilityRole="header" weight="bold" style={styles.title}>
+        <Text accessibilityRole="header" weight="display" style={styles.title}>
           {t('debate.yourDebates')}
         </Text>
         <TextButton label={t('mobile.common.done')} onPress={() => router.back()} />

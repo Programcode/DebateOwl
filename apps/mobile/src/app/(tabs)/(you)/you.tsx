@@ -1,6 +1,8 @@
+import type { BillingDateKind, BillingStateName } from '@debatelab/core/contract/billing-state';
 import { APP_LANGUAGES, type AppLanguage } from '@debatelab/core/languages';
 import { useFocusEffect, useRouter } from 'expo-router';
 import * as WebBrowser from 'expo-web-browser';
+import type { TFunction } from 'i18next';
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, AppState, Linking, Pressable, StyleSheet, View } from 'react-native';
@@ -22,18 +24,50 @@ import { shareJson } from '@/lib/export';
 import { disablePush, enablePush, readPushState, type PushState } from '@/lib/push';
 import { createPushSwitch, type PushSwitchView } from '@/lib/push-switch';
 import { useSettings, type ThemePreference } from '@/lib/settings';
-import { fetchSubscription, type Subscription, type SubscriptionTier } from '@/lib/subscription';
+import { fetchSubscription, type Subscription } from '@/lib/subscription';
 import { supabaseEnv } from '@/lib/supabase-config';
 import { websitePage } from '@/lib/website';
 import { useTheme } from '@/theme/use-theme';
 
-const TIER_LABELS: Record<SubscriptionTier, string> = {
-  trial: 'settings.tierTrial',
-  basic: 'settings.tierBasic',
-  pro: 'settings.tierPro',
-  legacy_free: 'settings.tierLegacyFree',
-  expired: 'settings.tierExpired',
+type BadgeTone = 'plan' | 'pro' | 'good' | 'bad';
+
+/** The website's plan badges (SubscriptionStatus.tsx): the state's label in its tint; mint ones carry a check mark. */
+const STATE_BADGES: Record<BillingStateName, { labelKey: string; tone: BadgeTone }> = {
+  trial: { labelKey: 'settings.tierTrial', tone: 'plan' },
+  extended_access: { labelKey: 'settings.tierExtended', tone: 'good' },
+  pro: { labelKey: 'settings.tierPro', tone: 'pro' },
+  pro_canceling: { labelKey: 'settings.tierPro', tone: 'pro' },
+  basic: { labelKey: 'settings.tierBasic', tone: 'plan' },
+  payment_failed: { labelKey: 'settings.tierPaymentFailed', tone: 'bad' },
+  legacy_free: { labelKey: 'settings.tierLegacyFree', tone: 'good' },
+  trial_ended: { labelKey: 'settings.tierExpired', tone: 'bad' },
+  subscription_ended: { labelKey: 'settings.tierExpired', tone: 'bad' },
 };
+
+const DATE_LABELS: Partial<Record<BillingDateKind, string>> = {
+  ends: 'settings.endsOn',
+  renews: 'settings.renewsOn',
+  cancels: 'settings.cancelsOn',
+};
+
+/** What the state means, in the website's words. */
+function planDescription(t: TFunction, subscription: Subscription): string {
+  const date = subscription.billingDate ? formatDate(subscription.billingDate) : null;
+  switch (subscription.billingState) {
+    case 'extended_access':
+      return t('settings.extendedAccessDesc', { count: subscription.dailyLimit });
+    case 'payment_failed':
+      return subscription.billingDateKind === 'grace_ends' && date
+        ? `${t('settings.paymentFailedDesc')} ${t('settings.paymentGraceUntil', { date })}`
+        : t('settings.paymentFailedNoAccess');
+    case 'subscription_ended':
+      return date ? t('settings.subscriptionEndedOn', { date }) : t('settings.subscriptionEnded');
+    case 'trial_ended':
+      return t('settings.accessExpired');
+    default:
+      return t('settings.accessActive');
+  }
+}
 
 const LANGUAGE_OPTIONS = (Object.keys(APP_LANGUAGES) as AppLanguage[]).map((value) => ({
   value,
@@ -110,7 +144,7 @@ export default function YouScreen() {
         </Pressable>
       </Card>
 
-      <Text accessibilityRole="header" weight="bold" style={styles.section}>
+      <Text accessibilityRole="header" weight="bold" tone="heading" style={styles.section}>
         {t('settings.globalSettings')}
       </Text>
       <Card>
@@ -148,7 +182,7 @@ export default function YouScreen() {
 
       <NotificationsCard userId={session?.user.id} />
 
-      <Text accessibilityRole="header" weight="bold" style={styles.section}>
+      <Text accessibilityRole="header" weight="bold" tone="heading" style={styles.section}>
         {t('settings.account')}
       </Text>
       <Card style={styles.list}>
@@ -190,7 +224,7 @@ export default function YouScreen() {
         </Pressable>
       </Card>
 
-      <Text accessibilityRole="header" weight="bold" style={styles.section}>
+      <Text accessibilityRole="header" weight="bold" tone="heading" style={styles.section}>
         {t('settings.dangerZone')}
       </Text>
       <Card style={styles.list}>
@@ -320,6 +354,27 @@ function NotificationsCard({ userId }: { userId: string | undefined }) {
   );
 }
 
+function PlanBadge({ state }: { state: BillingStateName }) {
+  const { t } = useTranslation();
+  const { colors, scheme } = useTheme();
+  const dark = scheme === 'dark';
+  const { labelKey, tone } = STATE_BADGES[state];
+  const look = {
+    plan: { background: colors.tile, color: colors.tileForeground },
+    pro: { background: dark ? '#2B2108' : '#FFF8DB', color: dark ? '#FFD95A' : '#9A5806' },
+    good: { background: colors.successTint, color: colors.success },
+    bad: { background: dark ? '#33141A' : '#FFEDEE', color: dark ? '#FF8A8E' : '#B32A30' },
+  }[tone];
+  return (
+    <View style={[styles.badge, { backgroundColor: look.background }]}>
+      {tone === 'good' ? <Icon name="check" color={look.color} size={13} /> : null}
+      <Text weight="bold" style={[styles.badgeText, { color: look.color }]} testID="subscription-tier">
+        {t(labelKey)}
+      </Text>
+    </View>
+  );
+}
+
 function SubscriptionCard({ userId }: { userId: string | undefined }) {
   const { t } = useTranslation();
   const { colors } = useTheme();
@@ -358,16 +413,7 @@ function SubscriptionCard({ userId }: { userId: string | undefined }) {
         <Text weight="semibold" style={styles.planTitle}>
           {t('settings.subscription')}
         </Text>
-        {subscription ? (
-          <View style={[styles.badge, { backgroundColor: subscription.tier === 'expired' ? colors.segmentTrack : colors.tile }]}>
-            <Text
-              weight="semibold"
-              style={[styles.badgeText, { color: subscription.tier === 'expired' ? colors.secondary : colors.tileForeground }]}
-              testID="subscription-tier">
-              {t(TIER_LABELS[subscription.tier])}
-            </Text>
-          </View>
-        ) : null}
+        {subscription ? <PlanBadge state={subscription.billingState} /> : null}
       </View>
       {failed && !subscription ? (
         <>
@@ -385,9 +431,9 @@ function SubscriptionCard({ userId }: { userId: string | undefined }) {
         </View>
       ) : (
         <View style={styles.planBody}>
-          {subscription.tier === 'trial' && subscription.trialEndsAt ? (
-            <Text tone="secondary" style={styles.small}>
-              {t('settings.ends')} {formatDate(subscription.trialEndsAt)}
+          {subscription.billingDate && subscription.billingDateKind && DATE_LABELS[subscription.billingDateKind] ? (
+            <Text tone="secondary" style={styles.small} testID="billing-date">
+              {t(DATE_LABELS[subscription.billingDateKind]!, { date: formatDate(subscription.billingDate) })}
             </Text>
           ) : null}
           {subscription.dailyUsed !== null ? (
@@ -396,7 +442,7 @@ function SubscriptionCard({ userId }: { userId: string | undefined }) {
             </Text>
           ) : null}
           <Text tone="secondary" style={styles.small}>
-            {t(subscription.tier === 'expired' ? 'settings.accessExpired' : 'settings.accessActive')}
+            {planDescription(t, subscription)}
           </Text>
         </View>
       )}
@@ -412,7 +458,7 @@ const styles = StyleSheet.create({
   planBody: { gap: 4 },
   usage: { fontSize: 16 },
   loadingRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  badge: { alignSelf: 'flex-start', borderRadius: 999, paddingHorizontal: 10, paddingVertical: 4 },
+  badge: { alignSelf: 'flex-start', flexDirection: 'row', alignItems: 'center', gap: 4, borderRadius: 999, paddingHorizontal: 10, paddingVertical: 4 },
   badgeText: { fontSize: 13 },
   setting: { gap: 7 },
   settingLabel: { fontSize: 14, marginLeft: 2 },

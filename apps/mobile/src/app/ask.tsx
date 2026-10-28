@@ -30,6 +30,7 @@ import { useCopyHolder } from '@/lib/use-copy-holder';
 import { radius } from '@/theme/colors';
 import { fontFamily } from '@/theme/fonts';
 import { useTheme } from '@/theme/use-theme';
+import { Owl, OwlAvatar } from '@/components/owl';
 
 const NO_OPTIONS: AskOptions = { citationMode: false, webSearch: false, prosConsMode: false, argumentMapMode: false };
 const NEW_CHAT: ChatRecord = { chatId: null, debateId: null, persisted: 0 };
@@ -42,7 +43,8 @@ const OPTION_CHIPS: { key: keyof AskOptions; label: string; icon: IconName }[] =
   { key: 'argumentMapMode', label: 'askChat.modeArgMap', icon: 'map' },
 ];
 
-const THINKING = ['askChat.thinking', 'askChat.researching', 'askChat.analyzing', 'askChat.generatingResponse', 'askChat.almostThere'];
+// The website's one progress line while the coach answers.
+const THINKING = ['askChat.working'];
 
 const PLAN_ERRORS = new Set<AIErrorKind>(['trialExpired', 'limitReached', 'modelRestricted']);
 const RETRYABLE_ERRORS = new Set<AIErrorKind>(['network', 'timeout', 'failed', 'rateLimit']);
@@ -360,7 +362,7 @@ export default function AskScreen() {
           </Pressable>
         )}
         <View style={styles.headerText}>
-          <Text accessibilityRole="header" weight="bold" style={styles.headerTitle} numberOfLines={split ? 1 : undefined}>
+          <Text accessibilityRole="header" weight="display" style={styles.headerTitle} numberOfLines={split ? 1 : undefined}>
             {title}
           </Text>
           {subtitle ? (
@@ -395,7 +397,8 @@ export default function AskScreen() {
         <OneOffNotice />
         {messages.length === 0 && streaming === null && !busy ? (
           <View style={styles.empty}>
-            <Text weight="semibold" style={styles.emptyTitle}>
+            <Owl pose="point" size={112} />
+            <Text weight="display" style={styles.emptyTitle}>
               {t('askChat.startConversation')}
             </Text>
             <Text tone="secondary" style={styles.emptyBody}>
@@ -406,7 +409,7 @@ export default function AskScreen() {
 
         {messages.map((message) =>
           message.role === 'user' ? (
-            <View key={message.id} style={[styles.bubble, { backgroundColor: colors.primary }]}>
+            <View key={message.id} style={[styles.bubble, { backgroundColor: colors.primaryFill }]}>
               <Text style={[styles.bubbleText, { color: colors.onPrimary }]} selectable>
                 {message.content}
               </Text>
@@ -477,7 +480,7 @@ export default function AskScreen() {
               accessibilityState={{ disabled: busy || !input.trim() }}
               disabled={busy || !input.trim()}
               onPress={() => void send(input, messages)}
-              style={[styles.send, { backgroundColor: colors.primary }, (busy || !input.trim()) && styles.sendDisabled]}
+              style={[styles.send, { backgroundColor: colors.primaryFill }, (busy || !input.trim()) && styles.sendDisabled]}
               testID="ask-send">
               {busy ? <ActivityIndicator color={colors.onPrimary} size="small" /> : <Icon name="arrowUp" color={colors.onPrimary} size={19} />}
             </Pressable>
@@ -536,7 +539,7 @@ function Thinking() {
   }, []);
   return (
     <View style={styles.thinking} accessibilityRole="progressbar" accessibilityLiveRegion="polite">
-      <ActivityIndicator size="small" />
+      <OwlAvatar pose="coach" size={32} />
       <Text tone="secondary" style={styles.thinkingText}>
         {t(THINKING[index])}
       </Text>
@@ -555,8 +558,8 @@ const styles = StyleSheet.create({
   headerSubtitle: { fontSize: 13.5, lineHeight: 18 },
   messages: { flex: 1 },
   messagesContent: { paddingHorizontal: 20, paddingTop: 18, paddingBottom: 24, gap: 16, width: '100%', maxWidth: 720, alignSelf: 'center' },
-  empty: { alignItems: 'center', gap: 6, paddingTop: 48, paddingHorizontal: 12 },
-  emptyTitle: { fontSize: 18 },
+  empty: { alignItems: 'center', gap: 6, paddingTop: 24, paddingHorizontal: 12 },
+  emptyTitle: { fontSize: 20 },
   emptyBody: { fontSize: 15.5, lineHeight: 22, textAlign: 'center' },
   bubble: { alignSelf: 'flex-end', maxWidth: '80%', paddingHorizontal: 16, paddingVertical: 11, borderTopLeftRadius: 20, borderTopRightRadius: 20, borderBottomLeftRadius: 20, borderBottomRightRadius: 6 },
   bubbleText: { fontSize: 17, lineHeight: 24 },
@@ -564,7 +567,7 @@ const styles = StyleSheet.create({
   thinking: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   thinkingText: { fontSize: 15 },
   notice: { fontSize: 14, lineHeight: 19 },
-  error: { borderWidth: 1, borderRadius: radius.card, padding: 14, gap: 4 },
+  error: { borderWidth: 2, borderRadius: radius.card, padding: 14, gap: 4 },
   errorTitle: { fontSize: 16 },
   errorBody: { fontSize: 15, lineHeight: 21 },
   errorActions: { flexDirection: 'row', gap: 20 },
@@ -576,7 +579,7 @@ const styles = StyleSheet.create({
   inputRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    borderWidth: 1,
+    borderWidth: 2,
     borderRadius: 24,
     paddingLeft: 16,
     paddingRight: 6,

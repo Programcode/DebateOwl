@@ -23,6 +23,6 @@ export function IconTile({ name, size = 40 }: { name: IconName; size?: number })
 }
 
 const styles = StyleSheet.create({
-  card: { borderWidth: 1, borderRadius: radius.card, padding: 16, gap: 12 },
+  card: { borderWidth: 2, borderRadius: radius.card, padding: 16, gap: 12 },
   tile: { borderRadius: radius.tile, alignItems: 'center', justifyContent: 'center' },
 });

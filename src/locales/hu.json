@@ -2670,7 +2670,7 @@
       "subtitle": "Használd az e-mail-címedet vagy az esemény szervezőjétől kapott demókódot.",
       "errors": {
         "tooManyAttempts": "Túl sok próbálkozás. Várj néhány percet, és próbáld újra.",
-        "network": "Nem sikerült elérni a DebateLabot. Ellenőrizd a kapcsolatot, és próbáld újra.",
+        "network": "Nem sikerült elérni a DebateOwl-t. Ellenőrizd a kapcsolatot, és próbáld újra.",
         "codeInvalidOrExpired": "A kód hibás vagy lejárt. Kérj újat.",
         "demoCodeNotFound": "Nem találjuk ezt a demókódot. Ellenőrizd, és próbáld újra.",
         "demoCodeDisabled": "Ezt a demókódot kikapcsolták. Kérj újat az esemény szervezőjétől.",
@@ -2681,7 +2681,7 @@
     },
     "placeholder": {
       "title": "Még nincs az appban",
-      "body": "A DebateLab ezen része hamarosan az appba is megérkezik. Addig a weboldalon használhatod."
+      "body": "A DebateOwl ezen része hamarosan az appba is megérkezik. Addig a weboldalon használhatod."
     },
     "debate": {
       "statSources_one": "forrás",
@@ -2700,7 +2700,8 @@
       "seeAll": "Összes"
     },
     "common": {
-      "done": "Kész"
+      "done": "Kész",
+      "openItem": "Megnyitás: {{title}}"
     },
     "offline": {
       "notice": "Offline: a mentett másolatokat látod. Az MI és a mentés megvárja a kapcsolatot."
@@ -2760,7 +2761,9 @@
       "saveFailed": "Nem sikerült menteni a forrást. Próbáld újra.",
       "sourceMissing": "Ez a forrás már nincs a könyvtáradban.",
       "openPage": "Megnyitja az oldalt a böngészőben",
-      "pickSource": "Válassz egy forrást, hogy itt elolvasd."
+      "pickSource": "Válassz egy forrást, hogy itt elolvasd.",
+      "deleteSourceTitle": "Törlöd a forrást?",
+      "deleteSourceDesc": "Ezzel eltávolítod a forrást a szinkronizált könyvtáradból."
     },
     "ask": {
       "placeholder": "Kérdezd az edződet",
@@ -2917,7 +2920,10 @@
       "newMap": "Új térkép",
       "discardTitle": "Új térképet kezdesz?",
       "discardDesc": "A mentetlen térképed helyére a kezdő térkép kerül.",
-      "startNew": "Új kezdése"
+      "startNew": "Új kezdése",
+      "deleteNodeTitle": "Csomópont törlése?",
+      "deleteNodeDescription": "A(z) „{{label}}” csomópont és minden kapcsolata törlődik. Ez a művelet nem vonható vissza.",
+      "deleteNodeConfirm": "Csomópont törlése"
     },
     "document": {
       "onThisPage": "Ezen az oldalon"
@@ -2926,8 +2932,8 @@
       "loadFailed": "Nem sikerült betölteni az előzményeidet."
     },
     "permissions": {
-      "speechRecognition": "A DebateLab szöveggé alakítja a hangodat, amikor kérdést, keresztkérdezési választ vagy vitapárbaj-beszédet diktálsz. A hangot az Apple dolgozza fel a felismeréshez.",
-      "microphone": "A DebateLab a mikrofont használja, amíg kérdést, keresztkérdezési választ vagy vitapárbaj-beszédet diktálsz."
+      "speechRecognition": "A DebateOwl szöveggé alakítja a hangodat, amikor kérdést, keresztkérdezési választ vagy vitapárbaj-beszédet diktálsz. A hangot az Apple dolgozza fel a felismeréshez.",
+      "microphone": "A DebateOwl a mikrofont használja, amíg kérdést, keresztkérdezési választ vagy vitapárbaj-beszédet diktálsz."
     }
   }
 }

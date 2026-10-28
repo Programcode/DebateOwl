@@ -31,7 +31,8 @@ const SOURCE_COUNTS = Array.from({ length: 13 }, (_, index) => String(index + 3)
 // The last form stays for the session, as on the website; session memory forgets it when the account changes.
 const lastForm = sessionSlot<FactoidsInput>(() => DEFAULT_FORM);
 
-const PROGRESS = ['factoidsForm.loadingMsg1', 'factoidsForm.loadingMsg2', 'factoidsForm.loadingMsg3', 'factoidsForm.loadingMsg4', 'factoidsForm.loadingMsg5'];
+// The website's one progress line while the tool runs.
+const PROGRESS = ['factoids.working'];
 
 /**
  * Factoids, as the website's FactoidsPage. Factoids research a claim, not
@@ -181,10 +182,10 @@ export default function FactoidsScreen() {
       testID="factoids-screen"
       header={<DocumentHeader backLabel={backLabel(t, from, 'prepare')} actions={[]} />}
       actions={working ? undefined : <MainActionButton label={t('factoidsForm.submit')} onPress={() => void submit({ ...form, claim: form.claim.trim() })} />}>
-      <ToolTitle title={t('nav.factoids')} subtitle={t('factoidsForm.subtitle')} />
+      <ToolTitle title={t('nav.factoids')} subtitle={t('factoids.emptyDesc')} />
       <WorkingIn />
       {working ? (
-        <ToolProgress messages={PROGRESS.map((key) => t(key))} detail={form.claim} onCancel={cancel} />
+        <ToolProgress pose="reading" messages={PROGRESS.map((key) => t(key))} detail={form.claim} onCancel={cancel} />
       ) : (
         <>
           <Field

@@ -1,14 +1,69 @@
-import { LinearGradient } from 'expo-linear-gradient';
-import { ActivityIndicator, Pressable, StyleSheet } from 'react-native';
+import type { ReactNode } from 'react';
+import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
 
 import { Icon } from './icon';
 import type { IconName } from './icon-paths';
 import { Text } from './text';
 
-import { mainActionGradient, radius } from '@/theme/colors';
+import { LEDGE, radius } from '@/theme/colors';
 import { useTheme } from '@/theme/use-theme';
 
-/** The one main action on a screen, in the website's Start Trial gradient. */
+type Look = { face: string; ledge: string; foreground: string; edge?: string; ledgeSize?: number };
+
+/**
+ * The website's tactile button (`.btn` in src/index.css): a face on a solid
+ * ledge, which sinks onto the ledge while pressed. Disabled buttons go flat and
+ * grey; a busy one keeps its face. The ledge sits inside the button's height,
+ * so nothing moves around it.
+ */
+function Tactile({
+  look,
+  onPress,
+  disabled,
+  busy,
+  floating,
+  testID,
+  accessibilityLabel,
+  children,
+}: {
+  look: Look;
+  onPress: () => void;
+  disabled?: boolean;
+  busy?: boolean;
+  floating?: boolean;
+  testID?: string;
+  accessibilityLabel?: string;
+  children: (foreground: string) => ReactNode;
+}) {
+  const { colors, scheme } = useTheme();
+  const flat = disabled && !busy;
+  const ledge = flat ? 0 : (look.ledgeSize ?? LEDGE);
+  const face = flat ? colors.disabledFace : look.face;
+  const foreground = flat ? colors.disabledText : look.foreground;
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={accessibilityLabel}
+      accessibilityState={{ disabled: disabled || busy, busy }}
+      disabled={disabled || busy}
+      onPress={onPress}
+      testID={testID}
+      style={[styles.tactile, { backgroundColor: flat ? 'transparent' : look.ledge }, floating && scheme === 'light' && !flat && styles.floating]}>
+      {({ pressed }) => (
+        <View
+          style={[
+            styles.face,
+            { backgroundColor: face, marginTop: pressed ? ledge : 0, marginBottom: pressed ? 0 : ledge },
+            look.edge && !flat ? { borderWidth: 2, borderColor: look.edge } : null,
+          ]}>
+          {children(foreground)}
+        </View>
+      )}
+    </Pressable>
+  );
+}
+
+/** The one main action on a screen: the website's primary button, a size up. */
 export function MainActionButton({
   label,
   onPress,
@@ -20,24 +75,22 @@ export function MainActionButton({
   busy?: boolean;
   disabled?: boolean;
 }) {
-  const inactive = disabled || busy;
+  const { colors } = useTheme();
   return (
-    <Pressable
-      accessibilityRole="button"
-      accessibilityState={{ disabled: inactive, busy }}
-      disabled={inactive}
-      onPress={onPress}
-      style={({ pressed }) => [styles.main, (pressed || inactive) && styles.dimmed]}>
-      <LinearGradient {...mainActionGradient} style={StyleSheet.absoluteFill} />
-      {busy ? <ActivityIndicator color="#ffffff" /> : null}
-      <Text weight="semibold" style={styles.mainLabel}>
-        {label}
-      </Text>
-    </Pressable>
+    <Tactile look={{ face: colors.primaryFill, ledge: colors.primaryLedge, foreground: colors.onPrimary, ledgeSize: 5 }} onPress={onPress} busy={busy} disabled={disabled}>
+      {(foreground) => (
+        <>
+          {busy ? <ActivityIndicator color={foreground} /> : null}
+          <Text weight="display" style={[styles.mainLabel, { color: foreground }]}>
+            {label}
+          </Text>
+        </>
+      )}
+    </Tactile>
   );
 }
 
-/** A solid button for a screen's action when the gradient is taken or would be too loud, as in the mocks' sheets. */
+/** A screen's action when it is not the one main action, or a destructive one. */
 export function PrimaryButton({
   label,
   icon,
@@ -59,30 +112,24 @@ export function PrimaryButton({
   testID?: string;
 }) {
   const { colors, scheme } = useTheme();
-  const inactive = disabled || busy;
-  const foreground = destructive ? '#ffffff' : colors.onPrimary;
+  const look = destructive
+    ? { face: colors.destructive, ledge: colors.destructiveLedge, foreground: scheme === 'dark' ? colors.background : '#FFFFFF' }
+    : { face: colors.primaryFill, ledge: colors.primaryLedge, foreground: colors.onPrimary };
   return (
-    <Pressable
-      accessibilityRole="button"
-      accessibilityState={{ disabled: inactive, busy }}
-      disabled={inactive}
-      onPress={onPress}
-      testID={testID}
-      style={({ pressed }) => [
-        styles.primary,
-        { backgroundColor: destructive ? colors.destructive : colors.primary },
-        floating && scheme === 'light' && styles.primaryShadow,
-        (pressed || inactive) && styles.dimmed,
-      ]}>
-      {busy ? <ActivityIndicator color={foreground} /> : icon ? <Icon name={icon} color={foreground} size={20} /> : null}
-      <Text weight="semibold" style={[styles.primaryLabel, { color: foreground }]}>
-        {label}
-      </Text>
-    </Pressable>
+    <Tactile look={look} onPress={onPress} busy={busy} disabled={disabled} floating={floating} testID={testID}>
+      {(foreground) => (
+        <>
+          {busy ? <ActivityIndicator color={foreground} /> : icon ? <Icon name={icon} color={foreground} size={20} /> : null}
+          <Text weight="display" style={[styles.label, { color: foreground }]}>
+            {label}
+          </Text>
+        </>
+      )}
+    </Tactile>
   );
 }
 
-/** The outlined button beside a primary one, as "Attack this case" in mock 03. */
+/** The website's outline button: a white face with a strong edge and blue text, beside a primary one. */
 export function SecondaryButton({
   label,
   icon,
@@ -99,25 +146,24 @@ export function SecondaryButton({
   testID?: string;
 }) {
   const { colors, scheme } = useTheme();
+  const look = {
+    face: scheme === 'dark' ? '#1C2A44' : colors.card,
+    ledge: colors.neutralLedge,
+    edge: colors.borderStrong,
+    foreground: colors.primary,
+    ledgeSize: 3,
+  };
   return (
-    <Pressable
-      accessibilityRole="button"
-      accessibilityState={{ disabled }}
-      disabled={disabled}
-      onPress={onPress}
-      testID={testID}
-      style={({ pressed }) => [
-        styles.primary,
-        styles.secondary,
-        { backgroundColor: colors.input, borderColor: colors.border },
-        floating && scheme === 'light' && styles.secondaryShadow,
-        (pressed || disabled) && styles.dimmed,
-      ]}>
-      {icon ? <Icon name={icon} color={colors.foreground} size={20} /> : null}
-      <Text weight="semibold" style={styles.primaryLabel} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8}>
-        {label}
-      </Text>
-    </Pressable>
+    <Tactile look={look} onPress={onPress} disabled={disabled} floating={floating} testID={testID}>
+      {(foreground) => (
+        <>
+          {icon ? <Icon name={icon} color={foreground} size={20} /> : null}
+          <Text weight="display" style={[styles.label, { color: foreground }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8}>
+            {label}
+          </Text>
+        </>
+      )}
+    </Tactile>
   );
 }
 
@@ -154,31 +200,20 @@ export function TextButton({
 }
 
 const styles = StyleSheet.create({
-  main: {
-    minHeight: 52,
-    borderRadius: radius.card - 2,
-    overflow: 'hidden',
+  tactile: { borderRadius: radius.card, minHeight: 52 },
+  face: {
+    flexGrow: 1,
+    minHeight: 48,
+    borderRadius: radius.card,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
-    paddingHorizontal: 20,
+    paddingHorizontal: 18,
   },
-  mainLabel: { color: '#ffffff', fontSize: 17 },
-  primary: {
-    minHeight: 52,
-    borderRadius: radius.card - 2,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    paddingHorizontal: 20,
-  },
-  primaryLabel: { fontSize: 17, flexShrink: 1 },
-  primaryShadow: { boxShadow: '0 6px 18px -8px rgba(2,132,199,0.6)' },
-  // The mock's outlined button has almost no side padding, so its label fits half the width.
-  secondary: { borderWidth: 1, paddingHorizontal: 6, gap: 6 },
-  secondaryShadow: { boxShadow: '0 6px 18px -8px rgba(15,23,42,0.35)' },
+  floating: { boxShadow: '0 8px 20px -10px rgba(11,42,110,0.45)' },
+  mainLabel: { fontSize: 18, letterSpacing: 0.2 },
+  label: { fontSize: 17, letterSpacing: 0.2, flexShrink: 1 },
   dimmed: { opacity: 0.6 },
   text: { minHeight: 44, alignItems: 'center', justifyContent: 'center' },
   textLabel: { fontSize: 16 },

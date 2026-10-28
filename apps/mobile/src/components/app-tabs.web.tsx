@@ -30,8 +30,8 @@ export default function AppTabs() {
         <TabList
           accessibilityRole="tablist"
           style={[styles.sidebar, { backgroundColor: colors.card, borderRightColor: colors.line, paddingTop: insets.top + 18 }]}>
-          <Text accessibilityRole="header" weight="bold" style={styles.sidebarTitle}>
-            {t('home.title')}
+          <Text accessibilityRole="header" weight="bold" tone="heading" style={styles.sidebarTitle}>
+            DebateOwl
           </Text>
           {TABS.map((tab) => (
             <TabTrigger key={tab.name} name={tab.name} href={tab.href} asChild>
@@ -109,7 +109,7 @@ const SidebarButton = forwardRef<View, TabTriggerSlotProps & { icon: IconName; l
       {...props}
       accessibilityRole="tab"
       accessibilityState={{ selected: isFocused }}
-      style={[styles.sidebarRow, isFocused && { backgroundColor: colors.primary }]}>
+      style={[styles.sidebarRow, isFocused && { backgroundColor: colors.primaryFill }]}>
       <Icon name={icon} color={isFocused ? colors.onPrimary : colors.primary} size={22} />
       <Text weight={isFocused ? 'semibold' : 'regular'} style={[styles.sidebarLabel, { color }]} numberOfLines={1}>
         {label}

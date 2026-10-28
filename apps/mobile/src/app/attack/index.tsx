@@ -35,7 +35,8 @@ const DEFAULT_FORM: AttackInput = {
 };
 const lastForm = sessionSlot<AttackInput>(() => DEFAULT_FORM);
 
-const PROGRESS = ['attackForm.loadingMsg1', 'attackForm.loadingMsg2', 'attackForm.loadingMsg3', 'attackForm.loadingMsg4', 'attackForm.loadingMsg5'];
+// The website's one progress line while the tool runs.
+const PROGRESS = ['attack.working'];
 
 /**
  * Attack, as the website's AttackPage. Opened from a case, the case's text
@@ -168,10 +169,11 @@ export default function AttackScreen() {
       testID="attack-screen"
       header={<DocumentHeader backLabel={backLabel(t, caseKey ? 'case' : from, 'practice')} actions={[]} />}
       actions={attacking ? undefined : <MainActionButton label={t('attackForm.submit')} onPress={() => void submit()} />}>
-      <ToolTitle title={t('nav.attack')} subtitle={t('attackForm.subtitle')} />
+      <ToolTitle title={t('nav.attack')} subtitle={t('attack.emptyDesc')} />
       <WorkingIn />
       {attacking ? (
         <ToolProgress
+          pose="skeptical"
           messages={PROGRESS.map((key) => t(key))}
           onCancel={() => {
             abortActive();

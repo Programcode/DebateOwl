@@ -58,7 +58,7 @@ export function AnnouncementBanner({ announcements, style }: { announcements: An
 }
 
 const styles = StyleSheet.create({
-  banner: { flexDirection: 'row', alignItems: 'flex-start', gap: 12, borderWidth: 1, borderRadius: radius.card, padding: 14 },
+  banner: { flexDirection: 'row', alignItems: 'flex-start', gap: 12, borderWidth: 2, borderRadius: radius.card, padding: 14 },
   text: { flex: 1, gap: 3 },
   titleRow: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'baseline', columnGap: 8 },
   title: { fontSize: 16, lineHeight: 21 },

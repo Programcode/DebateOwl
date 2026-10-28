@@ -20,7 +20,7 @@ export function LibraryHeader({ title, onAdd, disabled }: { title: string; onAdd
   ];
   return (
     <View style={styles.header}>
-      <Text accessibilityRole="header" weight="bold" style={styles.title}>
+      <Text accessibilityRole="header" weight="display" style={styles.title}>
         {title}
       </Text>
       <Pressable
@@ -30,7 +30,7 @@ export function LibraryHeader({ title, onAdd, disabled }: { title: string; onAdd
         disabled={disabled}
         onPress={() => setOpen((value) => !value)}
         testID="library-add"
-        style={[styles.plus, { backgroundColor: colors.primary }, disabled && styles.disabled]}>
+        style={[styles.plus, { backgroundColor: colors.primaryFill }, disabled && styles.disabled]}>
         <Icon name="plus" color={colors.onPrimary} size={24} />
       </Pressable>
       {open ? (

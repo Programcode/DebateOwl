@@ -156,7 +156,7 @@ function unwrapFragment(node: ReactNode): ReactNode {
 export function DocumentTitle({ title, meta }: { title: string; meta?: string }) {
   return (
     <View style={styles.titleBlock}>
-      <Text accessibilityRole="header" weight="bold" style={styles.title} selectable>
+      <Text accessibilityRole="header" weight="display" style={styles.title} selectable>
         {title}
       </Text>
       {meta ? (
@@ -313,7 +313,7 @@ export function SectionHeading({ title, description }: { title: string; descript
   const anchor = useOutlineAnchor(title);
   return (
     <View ref={anchor} style={[styles.sectionHead, styles.sectionHeading]}>
-      <Text accessibilityRole="header" weight="bold" style={styles.sectionTitle}>
+      <Text accessibilityRole="header" weight="bold" tone="heading" style={styles.sectionTitle}>
         {title}
       </Text>
       {description ? (
@@ -332,7 +332,7 @@ export function DocSection({ title, description, children, testID }: { title: st
   return (
     <View ref={anchor} style={styles.section} testID={testID}>
       <View style={styles.sectionHead}>
-        <Text accessibilityRole="header" weight="bold" style={styles.sectionTitle}>
+        <Text accessibilityRole="header" weight="bold" tone="heading" style={styles.sectionTitle}>
           {title}
         </Text>
         {description ? (
@@ -424,12 +424,12 @@ const styles = StyleSheet.create({
   titleBlock: { gap: 6, marginBottom: 4 },
   title: { fontSize: 30, lineHeight: 36, letterSpacing: -0.8 },
   meta: { fontSize: 15, lineHeight: 20 },
-  framing: { borderWidth: 1, borderRadius: radius.card + 1, paddingHorizontal: 16, paddingVertical: 14, gap: 12 },
+  framing: { borderWidth: 2, borderRadius: radius.card + 1, paddingHorizontal: 16, paddingVertical: 14, gap: 12 },
   framingBlock: { gap: 4 },
   framingLabel: { fontSize: 15 },
   framingText: { fontSize: 15.5, lineHeight: 22.5 },
   items: { gap: 10 },
-  itemCard: { borderWidth: 1, borderRadius: radius.card + 1, overflow: 'hidden' },
+  itemCard: { borderWidth: 2, borderRadius: radius.card + 1, overflow: 'hidden' },
   itemHeader: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 16, paddingVertical: 13, minHeight: 64 },
   itemNumber: { fontSize: 17, minWidth: 14 },
   itemNumberOpen: { alignSelf: 'flex-start', marginTop: 1 },
@@ -449,7 +449,7 @@ const styles = StyleSheet.create({
   sectionHeading: { marginTop: 8 },
   sectionTitle: { fontSize: 19, lineHeight: 25, letterSpacing: -0.2 },
   sectionDescription: { fontSize: 14, lineHeight: 19 },
-  sectionCard: { borderWidth: 1, borderRadius: radius.card + 1, padding: 16, gap: 12 },
+  sectionCard: { borderWidth: 2, borderRadius: radius.card + 1, padding: 16, gap: 12 },
   subHeading: { fontSize: 14, lineHeight: 19 },
   bullets: { gap: 6 },
   bullet: { flexDirection: 'row', gap: 8 },

@@ -2670,7 +2670,7 @@
       "subtitle": "Use your email or a demo code from your event host.",
       "errors": {
         "tooManyAttempts": "Too many attempts. Wait a few minutes and try again.",
-        "network": "Could not reach DebateLab. Check your connection and try again.",
+        "network": "Could not reach DebateOwl. Check your connection and try again.",
         "codeInvalidOrExpired": "That code is wrong or has expired. Request a new one.",
         "demoCodeNotFound": "We could not find that demo code. Check it and try again.",
         "demoCodeDisabled": "This demo code has been turned off. Ask your event host for a new one.",
@@ -2681,7 +2681,7 @@
     },
     "placeholder": {
       "title": "Not in the app yet",
-      "body": "This part of DebateLab is on its way to the app. Until then, use it on the website."
+      "body": "This part of DebateOwl is on its way to the app. Until then, use it on the website."
     },
     "debate": {
       "statSources_one": "source",
@@ -2700,7 +2700,8 @@
       "seeAll": "See all"
     },
     "common": {
-      "done": "Done"
+      "done": "Done",
+      "openItem": "Open {{title}}"
     },
     "offline": {
       "notice": "Offline: showing saved copies. AI and saving wait for the connection."
@@ -2760,7 +2761,9 @@
       "saveFailed": "Could not save the source. Try again.",
       "sourceMissing": "This source is no longer in your Library.",
       "openPage": "Opens the page in the browser",
-      "pickSource": "Pick a source to read it here."
+      "pickSource": "Pick a source to read it here.",
+      "deleteSourceTitle": "Delete source?",
+      "deleteSourceDesc": "This removes the source from your synced library."
     },
     "ask": {
       "placeholder": "Ask your coach",
@@ -2917,7 +2920,10 @@
       "newMap": "New map",
       "discardTitle": "Start a new map?",
       "discardDesc": "Your unsaved map will be replaced by the starter map.",
-      "startNew": "Start new"
+      "startNew": "Start new",
+      "deleteNodeTitle": "Delete node?",
+      "deleteNodeDescription": "{{label}} and all of its connections will be removed. This cannot be undone.",
+      "deleteNodeConfirm": "Delete node"
     },
     "document": {
       "onThisPage": "On this page"
@@ -2926,8 +2932,8 @@
       "loadFailed": "Could not load your history."
     },
     "permissions": {
-      "speechRecognition": "DebateLab turns your voice into text when you dictate a question, a Crossfire answer or a Sparring speech. Apple processes the audio to recognize it.",
-      "microphone": "DebateLab uses the microphone while you dictate a question, a Crossfire answer or a Sparring speech."
+      "speechRecognition": "DebateOwl turns your voice into text when you dictate a question, a Crossfire answer or a Sparring speech. Apple processes the audio to recognize it.",
+      "microphone": "DebateOwl uses the microphone while you dictate a question, a Crossfire answer or a Sparring speech."
     }
   }
 }

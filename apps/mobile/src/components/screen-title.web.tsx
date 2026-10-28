@@ -5,7 +5,7 @@ import { Text } from './text';
 /** The web preview has no native header, so the large title is drawn in the content. */
 export function ScreenTitle({ title }: { title: string }) {
   return (
-    <Text accessibilityRole="header" weight="bold" style={styles.title}>
+    <Text accessibilityRole="header" weight="display" style={styles.title}>
       {title}
     </Text>
   );

@@ -17,7 +17,7 @@ import {
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ActivityIndicator, AppState, Keyboard, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, TextInput, useWindowDimensions, View } from 'react-native';
+import { AppState, Keyboard, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, TextInput, useWindowDimensions, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ActionMenu } from '@/components/action-menu';
@@ -47,6 +47,7 @@ import { tapTurnStart, useKeepAwakeWhile } from '@/lib/timer-signals';
 import { radius } from '@/theme/colors';
 import { fontFamily } from '@/theme/fonts';
 import { useTheme } from '@/theme/use-theme';
+import { OwlAvatar, OwlLoader } from '@/components/owl';
 
 const TICK_MS = 250;
 const MIN_MOTION_CHARS = 8;
@@ -581,7 +582,7 @@ function LiveRound({
           </View>
         ) : waiting ? (
           <View style={[styles.caption, styles.centredCard, { backgroundColor: colors.card, borderColor: colors.border }]} testID={judging ? 'sparring-judging' : 'sparring-thinking'}>
-            <ActivityIndicator color={colors.primary} />
+            <OwlLoader pose="arguing" size={88} />
             <Text weight="semibold" style={styles.captionTitle} accessibilityRole="progressbar" accessibilityLiveRegion="polite">
               {judging ? t('sparring.round.judgeWeighing') : t('sparring.round.opponentThinking')}
             </Text>
@@ -598,9 +599,12 @@ function LiveRound({
             onPress={() => setExpanded((value) => !value)}
             style={[styles.caption, { backgroundColor: colors.card, borderColor: colors.border }]}
             testID="sparring-opponent-speech">
-            <Text tone="faint" weight="medium" style={styles.captionLabel}>
-              {`${t('sparring.opponent')} · ${t(`sparring.turns.${lastAi.turnId}`)}`}
-            </Text>
+            <View style={styles.speaker}>
+              <OwlAvatar pose="arguing" size={28} label={t('sparring.opponentAvatarAlt')} />
+              <Text tone="faint" weight="medium" style={[styles.captionLabel, styles.speakerLabel]}>
+                {`${t('sparring.opponent')} · ${t(`sparring.turns.${lastAi.turnId}`)}`}
+              </Text>
+            </View>
             <Text style={styles.speechText} numberOfLines={expanded ? undefined : keyboard ? 2 : 4}>
               {lastAi.content}
             </Text>
@@ -665,6 +669,8 @@ function LiveRound({
 }
 
 const styles = StyleSheet.create({
+  speaker: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  speakerLabel: { flex: 1 },
   root: { flex: 1 },
   flex: { flex: 1 },
   motion: { minHeight: 96, paddingTop: 13, paddingBottom: 13, textAlignVertical: 'top' },
@@ -680,14 +686,14 @@ const styles = StyleSheet.create({
   status: { fontSize: 14, lineHeight: 19, textAlign: 'center', maxWidth: 200 },
   time: { letterSpacing: -2, fontVariant: ['tabular-nums'] },
   notice: { fontSize: 14.5, lineHeight: 20 },
-  caption: { borderWidth: 1, borderRadius: radius.card, paddingHorizontal: 16, paddingVertical: 14, gap: 6 },
+  caption: { borderWidth: 2, borderRadius: radius.card, paddingHorizontal: 16, paddingVertical: 14, gap: 6 },
   centredCard: { alignItems: 'center', paddingVertical: 20, gap: 8 },
   captionTitle: { fontSize: 16.5, textAlign: 'center' },
   captionText: { fontSize: 15, lineHeight: 21 },
   centred: { textAlign: 'center' },
   captionLabel: { fontSize: 13.5 },
   speechText: { fontSize: 17, lineHeight: 25 },
-  composer: { borderWidth: 1, borderRadius: radius.card, paddingHorizontal: 16, paddingTop: 12, paddingBottom: 10, gap: 6 },
+  composer: { borderWidth: 2, borderRadius: radius.card, paddingHorizontal: 16, paddingTop: 12, paddingBottom: 10, gap: 6 },
   guidance: { fontSize: 14, lineHeight: 19 },
   input: { minHeight: 150, fontSize: 17, lineHeight: 24, fontFamily: fontFamily.regular, textAlignVertical: 'top', paddingTop: 4 },
   words: { fontSize: 13, alignSelf: 'flex-end', fontVariant: ['tabular-nums'] },

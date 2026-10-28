@@ -115,7 +115,7 @@ export function SwitchRow({ label, description, value, onChange, first, disabled
 const styles = StyleSheet.create({
   group: { gap: 7 },
   groupLabel: { fontSize: 14, marginLeft: 4 },
-  groupCard: { borderWidth: 1, borderRadius: radius.field, overflow: 'hidden' },
+  groupCard: { borderWidth: 2, borderRadius: radius.field, overflow: 'hidden' },
   footer: { fontSize: 13, lineHeight: 18, marginLeft: 4 },
   row: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 15, minHeight: 50, paddingVertical: 8 },
   rowLabel: { fontSize: 16.5, flexShrink: 1 },

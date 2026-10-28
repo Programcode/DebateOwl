@@ -38,7 +38,8 @@ const DEFAULT_FORM: GenerateInput = {
 };
 const lastForm = sessionSlot<GenerateInput>(() => DEFAULT_FORM);
 
-const PROGRESS = ['generateForm.loadingMsg1', 'generateForm.loadingMsg2', 'generateForm.loadingMsg3', 'generateForm.loadingMsg4', 'generateForm.loadingMsg5'];
+// The website's one progress line while the case is written.
+const PROGRESS = ['generate.working'];
 
 /** Generate, as the website's GeneratePage: a native form, a calm wait, then the case as a document. */
 export default function GenerateScreen() {
@@ -194,7 +195,7 @@ export default function GenerateScreen() {
       testID="generate-screen"
       header={<DocumentHeader backLabel={backLabel(t, from, 'prepare')} actions={[]} />}
       actions={generating ? undefined : <MainActionButton label={t('generateForm.submit')} onPress={() => void submit()} />}>
-      <ToolTitle title={t('nav.generate')} subtitle={t('generateForm.subtitle')} />
+      <ToolTitle title={t('nav.generate')} subtitle={t('generate.emptyDesc')} />
       <WorkingIn />
       {generating ? (
         <ToolProgress messages={PROGRESS.map((key) => t(key))} detail={form.motion} onCancel={cancel} />

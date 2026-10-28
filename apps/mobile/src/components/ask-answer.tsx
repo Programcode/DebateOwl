@@ -8,6 +8,7 @@ import { ScrollView, StyleSheet, View } from 'react-native';
 import { Chip, CiteBadge } from './chip';
 import { firstUrl, hostOf, openCitation, shorten, type CitationTarget } from './citation-target';
 import { MarkdownView } from './markdown-view';
+import { OwlAvatar } from './owl';
 import { Text } from './text';
 
 import type { Source } from '@/lib/sources';
@@ -43,6 +44,7 @@ export function AskAnswer({ content, output, streaming, library }: { content: st
 
   return (
     <View style={styles.answer} testID={streaming ? 'ask-streaming' : 'ask-answer'}>
+      <OwlAvatar pose="coach" size={30} label={t('askChat.coachAvatarAlt')} />
       {content || streaming ? (
         <MarkdownView source={content} claims={claims} streaming={streaming} onCite={(n) => open(targets[n - 1])} />
       ) : null}

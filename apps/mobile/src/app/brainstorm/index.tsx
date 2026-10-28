@@ -31,7 +31,8 @@ const DEFAULT_FORM: BrainstormInput = { motion: '', side: 'both', context: '', o
 // The last form stays for the session, as on the website; session memory forgets it when the account changes.
 const lastForm = sessionSlot<BrainstormInput>(() => DEFAULT_FORM);
 
-const PROGRESS = ['brainstormForm.loadingMsg1', 'brainstormForm.loadingMsg2', 'brainstormForm.loadingMsg3', 'brainstormForm.loadingMsg4', 'brainstormForm.loadingMsg5'];
+// The website's one progress line while the tool runs.
+const PROGRESS = ['brainstorm.working'];
 
 /** Brainstorm, as the website's BrainstormPage: a native form, a calm wait, then the ideas as a document. */
 export default function BrainstormScreen() {
@@ -202,10 +203,10 @@ export default function BrainstormScreen() {
       testID="brainstorm-screen"
       header={<DocumentHeader backLabel={backLabel(t, from, 'prepare')} actions={[]} />}
       actions={working ? undefined : <MainActionButton label={t('brainstormForm.submit')} onPress={() => void submit()} />}>
-      <ToolTitle title={t('nav.brainstorm')} subtitle={t('brainstormForm.subtitle')} />
+      <ToolTitle title={t('nav.brainstorm')} subtitle={t('brainstorm.emptyDesc')} />
       <WorkingIn />
       {working ? (
-        <ToolProgress messages={PROGRESS.map((key) => t(key))} detail={form.motion} onCancel={cancel} />
+        <ToolProgress pose="idea" messages={PROGRESS.map((key) => t(key))} detail={form.motion} onCancel={cancel} />
       ) : (
         <>
           <Field

@@ -152,7 +152,7 @@ export function AskChatPane({
         </Pressable>
       </View>
       <ScrollView contentContainerStyle={[styles.paneContent, { paddingBottom: insets.bottom + 24 }]}>
-        <Text accessibilityRole="header" weight="bold" style={styles.paneTitle}>
+        <Text accessibilityRole="header" weight="display" style={styles.paneTitle}>
           {t('nav.ask')}
         </Text>
         <ChatRows chats={mine ? state.chats : null} failed={mine && state.failed} openChatId={openChatId} onPick={onPick} highlightOpen />

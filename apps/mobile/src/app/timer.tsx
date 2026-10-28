@@ -222,7 +222,7 @@ const styles = StyleSheet.create({
   speechRow: { flexGrow: 0, alignSelf: 'stretch', marginHorizontal: -20 },
   // Centred when they fit, as on iPad; scrolling from the start when they don't.
   speeches: { gap: 8, paddingHorizontal: 20, flexGrow: 1, justifyContent: 'center' },
-  signals: { alignSelf: 'center', maxWidth: 520, width: '100%', borderWidth: 1, borderRadius: 14, paddingHorizontal: 14, paddingVertical: 11, gap: 3 },
+  signals: { alignSelf: 'center', maxWidth: 520, width: '100%', borderWidth: 2, borderRadius: 14, paddingHorizontal: 14, paddingVertical: 11, gap: 3 },
   signalTitle: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 2 },
   signalText: { fontSize: 14, lineHeight: 19 },
   controls: { position: 'absolute', left: 0, right: 0, bottom: 0, flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-evenly', paddingTop: 12 },

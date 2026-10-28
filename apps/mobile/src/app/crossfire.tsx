@@ -653,7 +653,7 @@ export default function CrossfireScreen() {
                 accessibilityState={{ disabled: !canSend }}
                 disabled={!canSend}
                 onPress={submitTurn}
-                style={[styles.send, { backgroundColor: colors.primary }, !canSend && styles.sendDisabled]}
+                style={[styles.send, { backgroundColor: colors.primaryFill }, !canSend && styles.sendDisabled]}
                 testID="crossfire-send">
                 <Icon name="arrowUp" color={colors.onPrimary} size={19} />
               </Pressable>
@@ -688,18 +688,18 @@ const styles = StyleSheet.create({
   notice: { fontSize: 14, lineHeight: 19 },
   thinking: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   thinkingText: { fontSize: 15 },
-  error: { borderWidth: 1, borderRadius: radius.card, padding: 14, gap: 4 },
+  error: { borderWidth: 2, borderRadius: radius.card, padding: 14, gap: 4 },
   errorTitle: { fontSize: 16, textAlign: 'center' },
   errorBody: { fontSize: 15, lineHeight: 21 },
   errorActions: { flexDirection: 'row', gap: 20 },
-  debriefWait: { borderWidth: 1, borderStyle: 'dashed', borderRadius: radius.card + 2, paddingVertical: 30, paddingHorizontal: 20, alignItems: 'center', gap: 10 },
+  debriefWait: { borderWidth: 2, borderStyle: 'dashed', borderRadius: radius.card + 2, paddingVertical: 30, paddingHorizontal: 20, alignItems: 'center', gap: 10 },
   waitBody: { fontSize: 15, lineHeight: 21, textAlign: 'center' },
   composer: { borderTopWidth: StyleSheet.hairlineWidth, paddingTop: 10 },
   composerColumn: { width: '100%', maxWidth: 720, alignSelf: 'center', paddingHorizontal: 16, gap: 6 },
   composerLabelRow: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', gap: 12, marginHorizontal: 6 },
   composerLabel: { fontSize: 13.5 },
   composerCount: { fontSize: 12.5 },
-  inputRow: { flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderRadius: 24, paddingLeft: 16, paddingRight: 6, paddingVertical: 6, minHeight: 48 },
+  inputRow: { flexDirection: 'row', alignItems: 'center', borderWidth: 2, borderRadius: 24, paddingLeft: 16, paddingRight: 6, paddingVertical: 6, minHeight: 48 },
   input: { flex: 1, fontSize: 17, fontFamily: fontFamily.regular, paddingTop: 7, paddingBottom: 7, maxHeight: 140 },
   send: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' },
   sendDisabled: { opacity: 0.45 },

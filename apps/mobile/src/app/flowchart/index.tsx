@@ -252,7 +252,7 @@ export default function FlowchartScreen() {
         await deleteFlowchart(forUser, savedId);
         if (owner.current !== forUser) return;
         forgetDraft(at.scope, at.key);
-        setNotice(t('flowchart.deletedToast'));
+        setNotice(t('flowchart.deletedNamed', { title: at.draft.title }));
         // The screen then opens the debate's next newest map, or the starter map.
         if (requestedId) setRequestedId(null);
         else setAttempt((n) => n + 1);
@@ -293,7 +293,7 @@ export default function FlowchartScreen() {
   const page = (
     <ScrollView contentInsetAdjustmentBehavior="automatic" contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 32 }]}>
       <View style={styles.head}>
-        <Text accessibilityRole="header" weight="bold" style={styles.title}>
+        <Text accessibilityRole="header" weight="display" style={styles.title}>
           {t('nav.flowchart')}
         </Text>
         {draft && scope ? (

@@ -94,7 +94,7 @@ export default function PrepareScreen() {
         ))}
       </Card>
 
-      <Text accessibilityRole="header" weight="bold" style={styles.section}>
+      <Text accessibilityRole="header" weight="bold" tone="heading" style={styles.section}>
         {t('mobile.prepare.saved')}
       </Text>
       {/* The Current Debate's results stay listed in one-off mode, as on the Debate tab and the website's home. */}

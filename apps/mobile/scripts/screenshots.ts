@@ -153,10 +153,21 @@ function serve(): Promise<Server> {
  * While `offline()` is true, the browser's own "Failed to load resource" errors are expected.
  */
 function watchErrors(page: Page, problems: string[], label: string, offline = () => false) {
+  // A project without the App Store migration answers the plan's App Store
+  // read with a 404 (PGRST205), which the plan reader takes as no App Store
+  // rows. The browser logs each one; only those are expected.
+  let appStoreMisses = 0;
+  page.on('response', (response) => {
+    if (response.status() === 404 && response.url().includes('/rest/v1/app_store_subscriptions')) appStoreMisses += 1;
+  });
   page.on('pageerror', (error) => problems.push(`${label}: ${error.message}`));
   page.on('console', (message) => {
     if (message.type() !== 'error') return;
     if (offline() && message.text().startsWith('Failed to load resource')) return;
+    if (appStoreMisses > 0 && message.text().includes('status of 404')) {
+      appStoreMisses -= 1;
+      return;
+    }
     problems.push(`${label}: ${message.text()}`);
   });
 }
@@ -446,7 +457,7 @@ async function shootResultScreens(context: BrowserContext, prefix: string, langu
   await waiting.getByTestId('generate-motion').waitFor({ timeout: 30_000 });
   await waiting.waitForFunction(() => (document.querySelector('[data-testid="generate-motion"]') as HTMLTextAreaElement | null)?.value.trim());
   await shoot(waiting, `${prefix}-generate-form`);
-  await waiting.getByRole('button', { name: /^(Generate Debate Case|Vitaeset Generálása|Generar Caso de Debate)$/ }).click();
+  await waiting.getByRole('button', { name: /^(Generate debate case|Vitaeset generálása|Generar caso de debate)$/i }).click();
   await waiting.getByTestId('tool-progress').waitFor({ timeout: 15_000 });
   await shoot(waiting, `${prefix}-generating`);
   await waiting.close();
@@ -455,14 +466,14 @@ async function shootResultScreens(context: BrowserContext, prefix: string, langu
   await page.goto(`${ORIGIN}/generate?from=prepare`);
   await page.getByTestId('generate-motion').waitFor({ timeout: 30_000 });
   await page.waitForFunction(() => (document.querySelector('[data-testid="generate-motion"]') as HTMLTextAreaElement | null)?.value.trim());
-  await page.getByRole('button', { name: /^(Generate Debate Case|Vitaeset Generálása|Generar Caso de Debate)$/ }).click();
+  await page.getByRole('button', { name: /^(Generate debate case|Vitaeset generálása|Generar caso de debate)$/i }).click();
   await page.getByTestId('case-document').waitFor({ timeout: 30_000 });
   await page.waitForTimeout(400);
   await shoot(page, `${prefix}-case`);
   // A wide iPad shows the outline rail: jumping to a part scrolls that part's heading to the top of the case.
   const outline = page.getByTestId('document-outline');
   if (await outline.isVisible()) {
-    const part = /^(Case Structure|Eset Struktúra|Estructura del Caso)$/;
+    const part = /^(Case structure|Esetstruktúra|Estructura del caso)$/i;
     const heading = page.getByTestId('case-document').getByRole('heading', { name: part });
     const before = (await heading.boundingBox())?.y ?? 0;
     await outline.getByRole('menuitem').filter({ hasText: part }).click();
@@ -496,7 +507,7 @@ async function shootResultScreens(context: BrowserContext, prefix: string, langu
   await page.getByTestId('attack-case-text').waitFor({ timeout: 15_000 });
   await page.waitForFunction(() => (document.querySelector('[data-testid="attack-case-text"]') as HTMLTextAreaElement | null)?.value.startsWith('THESIS:'));
   await shoot(page, `${prefix}-attack-form`);
-  await page.getByRole('button', { name: /^(Find Weaknesses|Gyengeségek Keresése|Encontrar Debilidades)$/ }).click();
+  await page.getByRole('button', { name: /^(Find weaknesses|Gyengeségek keresése|Encontrar debilidades)$/i }).click();
   await page.getByTestId('attack-document').waitFor({ timeout: 30_000 });
   await page.waitForTimeout(400);
   await shoot(page, `${prefix}-attack-result`);

@@ -52,7 +52,7 @@ export default function DeleteAccountSheet() {
   return (
     <SheetScrollView>
       <View style={styles.header}>
-        <Text accessibilityRole="header" weight="bold" style={styles.title}>
+        <Text accessibilityRole="header" weight="display" style={styles.title}>
           {t('settings.deleteAccountDialogTitle')}
         </Text>
         <TextButton label={t('common.cancel')} onPress={() => router.back()} disabled={deleting} />

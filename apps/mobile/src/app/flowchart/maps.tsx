@@ -144,7 +144,7 @@ export default function SavedMapsSheet() {
   return (
     <SheetScrollView testID="maps-sheet">
       <View style={styles.header}>
-        <Text accessibilityRole="header" weight="bold" style={styles.title}>
+        <Text accessibilityRole="header" weight="display" style={styles.title}>
           {t('flowchart.savedFlowcharts')}
         </Text>
         <TextButton label={t('common.close')} onPress={() => router.back()} />
@@ -195,7 +195,7 @@ const styles = StyleSheet.create({
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
   title: { fontSize: 21, lineHeight: 26, letterSpacing: -0.3, flexShrink: 1 },
   body: { fontSize: 15, lineHeight: 21 },
-  list: { borderWidth: 1, borderRadius: radius.field, overflow: 'hidden' },
+  list: { borderWidth: 2, borderRadius: radius.field, overflow: 'hidden' },
   row: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 15, paddingVertical: 11, minHeight: 56 },
   rowText: { flex: 1, gap: 2 },
   rowTitle: { fontSize: 16 },
