@@ -3,6 +3,7 @@ import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import Svg, { Defs, LinearGradient, Rect, Stop } from 'react-native-svg';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { SuccessCheck } from './success-check';
 import { Chip, CiteBadge } from './chip';
 import type { CitationTarget } from './citation-target';
 import { Icon } from './icon';
@@ -77,9 +78,7 @@ function DocumentNotice({ text, tone = 'info', bottom }: { text: string; tone?: 
       testID="document-notice">
       {/* As the website's success toast: the mint check carries the meaning, the text stays readable. */}
       {success ? (
-        <View style={[styles.noticeCheck, { backgroundColor: colors.successFill }]}>
-          <Icon name="check" color={colors.successTint} size={15} />
-        </View>
+        <SuccessCheck size={24} haptic={false} />
       ) : null}
       <Text weight={success ? 'semibold' : 'regular'} style={[styles.noticeText, { color: success ? colors.success : colors.background }]}>
         {text}

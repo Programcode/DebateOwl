@@ -150,8 +150,21 @@ const FUNCTIONS_ORIGIN = process.env.FUNCTIONS_ORIGIN;
  */
 const FONT_SCALE = Number(process.env.FONT_SCALE ?? '1');
 
+/**
+ * Screenshots show each screen at rest: contexts prefer reduced motion, which the app's
+ * animations follow (Reanimated and react-native-web read prefers-reduced-motion), so
+ * confetti, count-ups, entrances and springs land at once. MOTION=1 plays them; with
+ * RECORD_DIR set, every page is also recorded as a video there.
+ */
+const MOTION = process.env.MOTION === '1';
+const RECORD_DIR = process.env.RECORD_DIR;
+
 async function newContext(browser: Browser, options: BrowserContextOptions): Promise<BrowserContext> {
-  const context = await browser.newContext(options);
+  const context = await browser.newContext({
+    reducedMotion: MOTION ? 'no-preference' : 'reduce',
+    ...(RECORD_DIR && options.viewport ? { recordVideo: { dir: RECORD_DIR, size: options.viewport } } : {}),
+    ...options,
+  });
   if (FONT_SCALE > 0 && FONT_SCALE !== 1) {
     await context.addInitScript((scale) => {
       (window as unknown as { __debateowlFontScale?: number }).__debateowlFontScale = scale;
@@ -316,7 +329,7 @@ async function settle(page: Page) {
   // Only what shows: a screen opened from a link has the Debate tab mounted, unfocused, beneath it,
   // and that tab loads only once it is shown.
   await page.waitForFunction(
-    () => [...document.querySelectorAll('[role="progressbar"]')].every((el) => !(el as HTMLElement).checkVisibility()),
+    () => Array.from(document.querySelectorAll('[role="progressbar"]')).every((el) => !(el as HTMLElement).checkVisibility()),
     undefined,
     { timeout: 15_000 },
   );

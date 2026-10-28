@@ -5,6 +5,7 @@ import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
 
+import { SuccessCheck } from './success-check';
 import { Chip, CiteBadge } from './chip';
 import { FadingScrollRow } from './edge-fade';
 import { firstUrl, hostOf, openCitation, shorten, type CitationTarget } from './citation-target';
@@ -113,9 +114,7 @@ function SaveToLibrary({ onSave }: { onSave: () => Promise<boolean> }) {
   if (state === 'saved') {
     return (
       <View style={styles.saved} accessibilityRole="text" testID="ask-saved">
-        <View style={[styles.savedCheck, { backgroundColor: colors.successFill }]}>
-          <Icon name="check" color={colors.successTint} size={13} />
-        </View>
+        <SuccessCheck size={20} haptic={false} />
         <Text weight="semibold" style={[styles.saveText, { color: colors.success }]}>
           {t('ask.saved')}
         </Text>

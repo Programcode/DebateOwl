@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
 
+import { SuccessCheck } from './success-check';
 import { MainActionButton, SecondaryButton, TextButton } from './buttons';
 import { Card, IconTile } from './card';
 import { Field } from './field';
@@ -250,9 +251,7 @@ export function SourceView({ id, onDone, onRemoved }: { id: string; onDone?: () 
             </View>
           ) : saved ? (
             <View accessibilityRole="alert" style={[styles.saved, { backgroundColor: colors.successTint, borderColor: colors.successFill }]}>
-              <View style={[styles.check, { backgroundColor: colors.successFill }]}>
-                <Icon name="check" color="#FFFFFF" size={13} />
-              </View>
+              <SuccessCheck size={20} haptic={false} />
               <Text weight="semibold" style={[styles.savedText, { color: colors.success }]}>
                 {t('libraryPage.sourceUpdatedDesc')}
               </Text>

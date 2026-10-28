@@ -3,6 +3,7 @@ import { AccessibilityInfo, Pressable, StyleSheet, View } from 'react-native';
 import Animated, { FadeInDown, FadeOutDown } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { SuccessCheck } from './success-check';
 import { Icon } from './icon';
 import { Text } from './text';
 
@@ -92,9 +93,7 @@ function ToastView({ toast, onClose }: { toast: ShownToast; onClose: () => void 
         testID="toast"
         style={[styles.toast, { backgroundColor: face, borderColor: scheme === 'dark' ? colors.border : face }]}>
         {toast.tone === 'success' ? (
-          <View style={[styles.badge, { backgroundColor: colors.successFill }]}>
-            <Icon name="check" color="#FFFFFF" size={15} />
-          </View>
+          <SuccessCheck size={22} delay={120} haptic={false} />
         ) : toast.tone === 'error' ? (
           <Icon name="alert" color={scheme === 'dark' ? colors.destructive : '#FF9FA2'} size={20} />
         ) : null}

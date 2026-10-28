@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, View, useWindowDimensions, type TextInput } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { SuccessCheck } from '@/components/success-check';
 import { MainActionButton, TextButton } from '@/components/buttons';
 import { Field } from '@/components/field';
 import { SegmentedControl } from '@/components/segmented-control';
@@ -229,8 +230,8 @@ export default function SignInScreen() {
         {status === 'code-sent' ? (
           // Success is mint and always comes with a check mark, as on the website.
           <View style={styles.success} accessibilityRole="alert">
-            <View style={[styles.successMark, { backgroundColor: colors.successFill }]}>
-              <Icon name="check" color="#FFFFFF" size={14} />
+            <View style={styles.successMark}>
+              <SuccessCheck size={22} />
             </View>
             <Text weight="medium" style={[styles.message, styles.successText, { color: colors.success }]}>
               {t('login.codeSent')}
