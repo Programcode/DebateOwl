@@ -1639,8 +1639,9 @@ async function shootVoiceScreens(context: BrowserContext, prefix: string, langua
   await page.waitForTimeout(400);
   await shoot(page, `${prefix}-voice-scorecard`);
   // The scorecard's PDF (export.web.ts keeps the HTML expo-print would print), rendered as a page of its own.
+  // A wide iPad's outline rail is a menu too; the export is the item named PDF in every language.
   await page.getByTestId('document-more').click();
-  await page.getByRole('menuitem').first().click();
+  await page.getByRole('menuitem', { name: /PDF/ }).click();
   const exported = await page.evaluate(() => (window as unknown as { __debatelabExport?: { html?: string; fileName?: string } }).__debatelabExport ?? {});
   if (!exported.html || !exported.fileName?.startsWith('SparringTranscript_')) problems.push(`${prefix} voice: the scorecard PDF was ${exported.fileName ?? 'not made'}`);
   else {
