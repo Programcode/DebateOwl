@@ -24,7 +24,7 @@ export interface SourceRowActions {
 }
 
 /** The website's quality badges: used in a case, importance and strength. */
-function QualityBadges({ source, showFolder }: { source: Source; showFolder: boolean }) {
+function QualityBadges({ source, showFolder, compact }: { source: Source; showFolder: boolean; compact: boolean }) {
   const { t } = useTranslation();
   const { colors } = useTheme();
   const semantic = source.metadata?.semantic;
@@ -32,7 +32,7 @@ function QualityBadges({ source, showFolder }: { source: Source; showFolder: boo
     <View
       key={key}
       style={[styles.badge, primary ? { backgroundColor: colors.tile, borderColor: colors.chipSelectedBorder } : { borderColor: colors.border }]}>
-      <Text weight="semibold" style={[styles.badgeText, { color: primary ? colors.chipSelectedForeground : colors.secondary }]} numberOfLines={1}>
+      <Text weight="semibold" style={[styles.badgeText, { color: primary ? colors.chipSelectedForeground : colors.secondary }]} numberOfLines={2}>
         {label}
       </Text>
     </View>
@@ -48,8 +48,8 @@ function QualityBadges({ source, showFolder }: { source: Source; showFolder: boo
         </View>
       ) : null}
       {semantic?.lastUsedInCase ? badge('used', t('sourceQuality.usedInCase'), true) : null}
-      {semantic ? badge('importance', t('sourceQuality.importance', { level: t(`sourceQuality.levels.${semantic.importance}`) })) : null}
-      {semantic ? badge('strength', t('sourceQuality.strength', { level: t(`sourceQuality.levels.${semantic.strength}`) })) : null}
+      {semantic && !compact ? badge('importance', t('sourceQuality.importance', { level: t(`sourceQuality.levels.${semantic.importance}`) })) : null}
+      {semantic && !compact ? badge('strength', t('sourceQuality.strength', { level: t(`sourceQuality.levels.${semantic.strength}`) })) : null}
     </View>
   );
 }
@@ -67,6 +67,7 @@ export function SourceRow({
   selected = false,
   selectInstead = false,
   showFolder = true,
+  compact = false,
   actions,
 }: {
   source: Source;
@@ -76,6 +77,8 @@ export function SourceRow({
   selectInstead?: boolean;
   /** Off while the list shows one folder. */
   showFolder?: boolean;
+  /** Beside an open source on iPad, whose pane shows the rankings: only the folder and use. */
+  compact?: boolean;
   actions: SourceRowActions;
 }) {
   const { t } = useTranslation();
@@ -158,10 +161,10 @@ export function SourceRow({
                   <Text weight="semibold" style={[styles.rowTitle, selected && { color: colors.chipSelectedForeground }]} numberOfLines={2}>
                     {title}
                   </Text>
-                  <Text tone="faint" style={styles.rowMeta} numberOfLines={2}>
+                  <Text tone="faint" style={styles.rowMeta} numberOfLines={3}>
                     {source.isActive ? sourceMeta(t, source) : `${t('mobile.library.turnedOff')} · ${sourceMeta(t, source)}`}
                   </Text>
-                  <QualityBadges source={source} showFolder={showFolder} />
+                  <QualityBadges source={source} showFolder={showFolder} compact={compact} />
                 </View>
                 <Switch
                   value={source.isActive}

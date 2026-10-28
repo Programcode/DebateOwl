@@ -303,9 +303,12 @@ async function shootDebateScreens(page: Page, prefix: string) {
 
 /** Scrolls a sheet's own scroll view to its end; the web preview draws sheets as pages. */
 async function scrollToEnd(page: Page, testId: string) {
+  // The sheet's own scroll view, or the page or a wrapper around it, whichever scrolls at this size.
   await page.getByTestId(testId).evaluate((root) => {
-    for (const element of [root, ...Array.from(root.querySelectorAll<HTMLElement>('*'))]) {
-      if (element.scrollHeight > element.clientHeight + 1 && getComputedStyle(element).overflowY !== 'visible') element.scrollTo({ top: element.scrollHeight });
+    const candidates = [document.scrollingElement, root, ...Array.from(root.querySelectorAll<HTMLElement>('*'))];
+    for (let element = root.parentElement; element; element = element.parentElement) candidates.push(element);
+    for (const element of candidates) {
+      if (element && element.scrollHeight > element.clientHeight + 1) element.scrollTo({ top: element.scrollHeight });
     }
   });
   await page.waitForTimeout(300);

@@ -141,7 +141,7 @@ export function SourceView({ id, onDone, onRemoved }: { id: string; onDone?: () 
           {source ? (
             <View style={styles.kind}>
               <IconTile name={SOURCE_ICONS[source.type]} size={30} />
-              <Text tone="faint" style={styles.meta} numberOfLines={1}>
+              <Text tone="faint" style={styles.meta} numberOfLines={2}>
                 {sourceMeta(t, source)}
               </Text>
             </View>

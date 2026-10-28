@@ -360,6 +360,7 @@ function LibraryBody({ library, selectedId, onSelect }: { library: Library; sele
               selected={selectedId === source.id}
               selectInstead={Boolean(onSelect)}
               showFolder={folder === ALL}
+              compact={Boolean(selectedId)}
               actions={{
                 onOpen: () => (onSelect ? onSelect(source) : router.push({ pathname: '/source/[id]', params: { id: source.id } })),
                 onToggle: (isActive) => void toggle([source], isActive),
