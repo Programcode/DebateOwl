@@ -85,7 +85,8 @@ export function CaseDocument({
     const chips = chipsByArgument[index];
     const pieces = chips.length || (argument.evidence ? 1 : 0);
     return {
-      key: argument.id || `${index}`,
+      // By position: a model can repeat an id, and two arguments must never open and close together.
+      key: `${index}`,
       title: argument.title ?? argument.point,
       summary: pieces > 0
         ? t('mobile.results.evidenceCount', { count: pieces })

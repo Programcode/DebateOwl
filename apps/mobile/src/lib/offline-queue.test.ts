@@ -152,14 +152,18 @@ describe('offline queue', () => {
     expect(queue.getQueueSnapshot().items).toEqual([]);
   });
 
-  it('clears every write queued for a debate before Clear all, so none comes back', async () => {
+  it('drops the writes queued for a debate once Clear all succeeds, and keeps them when it fails', async () => {
     const queue = await load();
     copies.set('sources:d1', [row('s1', { title: 'Kept', content: 'Text', debateId: 'd1' })]);
     net.offline = true;
     const note = queue.queueAddSource('user-a', { title: 'Waiting note', content: 'Text', type: 'text', debateId: 'd1' });
     await note;
     await queue.queueUpdateSource('user-a', 'd2', 's9', { title: 'Other debate' });
-    await queue.discardQueuedForDebate('user-a', 'd1');
+    // A clear the server refuses keeps everything queued.
+    await expect(queue.clearQueuedDebate('user-a', 'd1', async () => { throw new Error('clear failed'); })).rejects.toThrow('clear failed');
+    expect(queue.getQueueSnapshot().items).toHaveLength(2);
+    net.offline = true;
+    await queue.clearQueuedDebate('user-a', 'd1', async () => undefined);
     await cache.copiesWritten();
     expect(queue.getQueueSnapshot().items.map((item) => item.kind === 'add' ? item.input.debateId : item.debateId)).toEqual(['d2']);
     expect((copies.get('sources:d1') as Source[]).map((item) => item.id)).toEqual(['s1']);

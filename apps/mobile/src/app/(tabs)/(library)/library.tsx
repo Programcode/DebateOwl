@@ -26,7 +26,7 @@ import { confirmDestructive, promptText } from '@/lib/confirm';
 import { useDebates } from '@/lib/debate-context';
 import { haptics } from '@/lib/haptics';
 import { LIBRARY_ROOMY_WIDTH, LIST_WIDTH, useContentWidth, useLayoutClass } from '@/lib/layout';
-import { currentSourceId, discardQueuedForDebate, waitingSourceIds, withQueuedWrites } from '@/lib/offline-queue';
+import { clearQueuedDebate, currentSourceId, waitingSourceIds, withQueuedWrites } from '@/lib/offline-queue';
 import { openRowId } from '@/lib/open-pane';
 import { pickSourceFile } from '@/lib/pick-source-file';
 import { useSourceActions } from '@/lib/source-actions';
@@ -103,9 +103,8 @@ function LibraryView({ debateId, layout }: { debateId: string | null; layout: Re
     const confirmed = await confirmDestructive({ title: t('libraryPage.clearAll'), message: t('libraryPage.clearConfirm'), confirm: t('libraryPage.clearAll'), cancel: t('common.cancel') });
     if (!confirmed) return;
     try {
-      // Notes and changes still waiting to sync would come back after the clear; they go first.
-      await discardQueuedForDebate(userId, debateId);
-      await clearLibrary(userId, debateId);
+      // Notes and changes still waiting to sync would come back after the clear; they go once it succeeds.
+      await clearQueuedDebate(userId, debateId, () => clearLibrary(userId, debateId));
       setSelected(null);
       library.setSources([]);
       toast({ tone: 'success', title: t('common.deleted'), message: t('libraryPage.clearSuccess') });

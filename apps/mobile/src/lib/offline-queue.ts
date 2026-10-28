@@ -123,6 +123,8 @@ let waiters = new Map<string, Waiter[]>();
 let inFlight: string | null = null;
 let snapshot: QueueSnapshot = { owner, items, synced };
 let running: Promise<void> | null = null;
+// While Clear all asks the server, nothing replays: a queued note must not land in a Library being cleared.
+let paused = 0;
 let again = false;
 let keys = 0;
 
@@ -487,14 +489,24 @@ export async function queueSetSourcesActive(userId: string, debateId: string, so
 }
 
 /**
- * Clear all for a debate: lets a replay that is running finish, then drops every write still
- * queued for that debate (its waiting notes, edits and switches), so none comes back after the
- * server clears the Library. Call it before clearLibrary.
+ * Clear all for a debate: lets a replay that is running finish and holds the queue while `clear`
+ * asks the server; only once it succeeds are the debate's queued writes (its waiting notes, edits
+ * and switches) dropped, so none comes back. A clear that fails keeps them, and the queue resumes.
  */
-export async function discardQueuedForDebate(userId: string, debateId: string): Promise<void> {
+export async function clearQueuedDebate(userId: string, debateId: string, clear: () => Promise<void>): Promise<void> {
   await adopt(userId);
-  if (running) await running.catch(() => undefined);
-  if (owner !== userId) return;
+  paused += 1;
+  try {
+    if (running) await running.catch(() => undefined);
+    await clear();
+    if (owner === userId) dropDebateWrites(userId, debateId);
+  } finally {
+    paused -= 1;
+    void replayOfflineQueue();
+  }
+}
+
+function dropDebateWrites(userId: string, debateId: string) {
   const debateOf = (item: QueuedWrite) => (item.kind === 'add' ? item.input.debateId : item.debateId);
   const dropped = items.filter((item) => debateOf(item) === debateId);
   if (dropped.length === 0) return;
@@ -626,9 +638,9 @@ function describe(item: QueuedWrite): QueueReport['dropped'][number] {
 async function drain() {
   const userId = owner;
   const gen = generation;
-  if (!userId) return;
+  if (!userId || paused > 0) return;
   await ready;
-  if (gen !== generation || items.length === 0) return;
+  if (gen !== generation || items.length === 0 || paused > 0) return;
   if (isKnownOffline() || !(await signedInAs(userId))) {
     if (gen === generation) parkAll();
     return;
