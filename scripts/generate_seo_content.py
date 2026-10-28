@@ -576,7 +576,7 @@ def render_page(page):
     {about(page["slug"])}
     <section class="section article" aria-labelledby="related"><h2 id="related">Related {PRODUCT} guides</h2><nav class="links" aria-label="Related guides">{internal_links(page["slug"])}</nav></section>
   </main>
-  <footer class="footer"><div class="wrap">{BRAND}: <a href="/">Home</a> / <a href="/debateowl-pricing">Pricing</a> / <a href="/privacy">Privacy</a> / <a href="/terms">Terms</a> / <a href="/sitemap.xml">Sitemap</a></div></footer>
+  <footer class="footer"><div class="wrap">{BRAND}: <a href="/">Home</a> / <a href="/debateowl-pricing">Pricing</a> / <a href="/privacy">Privacy</a> / <a href="/terms">Terms</a> / <a href="/about">About</a> / <a href="/contact">Contact</a> / <a href="/sitemap.xml">Sitemap</a></div></footer>
 </body>
 </html>
 '''
@@ -622,6 +622,8 @@ def llms_txt():
 - [Home]({BASE}/): what {PRODUCT} is, the {len(PREP_MODES)} prep modes, pricing and FAQ
 - [Pricing]({page_url("debateowl-pricing")}): trial, Pro and what each includes
 - [Best AI debate tools]({page_url("best-ai-debate-tools")}): how to choose an AI debate tool
+- [About]({BASE}/about): what {PRODUCT} is, who makes it and its former name
+- [Contact]({BASE}/contact): email {SITE["contactEmail"]} for support and feedback, {SITE["privacyEmail"]} for privacy and data requests
 - [Sitemap]({BASE}/sitemap.xml): every public page
 
 ## Free tools

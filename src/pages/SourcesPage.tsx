@@ -129,7 +129,7 @@ export default function SourcesPage() {
   ];
 
   return (
-    <PublicPageShell className="max-w-[65ch]">
+    <PublicPageShell className="max-w-[65ch]" footer>
         <h1 className="text-3xl font-bold tracking-tight text-foreground">{t('sourcesPage.title')}</h1>
 
         <div className="mt-8 space-y-6 text-base leading-7 text-foreground">
