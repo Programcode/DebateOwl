@@ -592,7 +592,7 @@ GUIDES = {
         "sections": [
             ("What a debate case is", [
                 "A debate case is the argument your side will defend for the whole round, organised so a judge can follow it on first hearing. It is not an essay. An essay can explore; a case has to survive an opponent whose job is to find the weakest sentence in it. That is why good cases are built from small, testable parts: an opening that tells the judge what you will prove, two to four arguments that each prove something specific, answers to what the other side will say, and a closing line the judge remembers.",
-                "A {product} case has an opening, two to four arguments (three by default) each with an explanation, evidence and why it matters, \"If they say… we answer…\" replies, a closing line and the sources it used. The process below works for every format. The format changes the length, the number of arguments and who gives which part, which the format section covers further down.",
+                "Every case {product} writes follows that shape, so you can hold a generated draft next to your own and compare them part by part. The process below works for every format. The format changes the length, the number of arguments and who gives which part, which the format section covers further down.",
             ]),
             ("Eight steps from motion to finished case", [
                 {"steps": [

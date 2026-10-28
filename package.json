@@ -23,6 +23,7 @@
     "preview": "vite preview",
     "smoke:jev": "node scripts/smoke-jev.mjs",
     "seo:indexnow": "python3 scripts/indexnow_submit.py",
+    "seo:jargon": "python3 scripts/check_jargon.py --max 1",
     "test": "vitest run",
     "test:collaboration": "vitest run --config services/collaboration/vitest.config.ts",
     "start:collaboration": "tsx services/collaboration/src/index.ts",
@@ -35,7 +36,7 @@
     "test:sw": "node scripts/test-service-worker-offline.mjs",
     "test:e2e:staging": "playwright test --project=staging",
     "test:agentic": "bash .claude/skills/verify-debatelab/bin/verify.sh e2e run",
-    "verify": "npm run docs:check && npm run lint && npm run typecheck && npm test && npm run test:collaboration && npm run test:edge && npm run build && npm run test:sw && P=$(bash .superset/e2e-port.sh) && CI=1 PORT=$P PLAYWRIGHT_BASE_URL=http://127.0.0.1:$P npm run test:e2e:smoke",
+    "verify": "npm run docs:check && npm run seo:jargon && npm run lint && npm run typecheck && npm test && npm run test:collaboration && npm run test:edge && npm run build && npm run test:sw && P=$(bash .superset/e2e-port.sh) && CI=1 PORT=$P PLAYWRIGHT_BASE_URL=http://127.0.0.1:$P npm run test:e2e:smoke",
     "verify:full": "npm run verify && P=$(bash .superset/e2e-port.sh) && CI=1 PORT=$P PLAYWRIGHT_BASE_URL=http://127.0.0.1:$P npm run test:e2e"
   },
   "dependencies": {
