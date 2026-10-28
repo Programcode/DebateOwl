@@ -2,7 +2,7 @@
 
 **Current.** The one place that says how to reach staging, what is on it, and how it stays in sync with `main`.
 
-Staging is the Supabase project `debate-trainer-staging` (`brifeyypjauyusmkptkx`). Production is `debate-trainer` (`uziwdtkzofptihahfooo`). Staging has its own users, data, and secrets. Nothing on staging can read or write production.
+Staging is the Supabase project `brifeyypjauyusmkptkx` (named "DebateOwl Staging" in the dashboard). Production is `uziwdtkzofptihahfooo` ("DebateOwl"). Scripts identify projects by ref only; the names are display labels and can change. Staging has its own users, data, and secrets. Nothing on staging can read or write production.
 
 ## Get in
 
@@ -43,7 +43,7 @@ Staging deliberately has no Stripe or ElevenLabs secrets. Checkout, the billing 
 A user systemd timer on Adam's VPS, `debatelab-staging-sync.timer`, runs [`ops/staging-sync/run.sh`](../ops/staging-sync/run.sh) every 5 minutes. When `origin/main` has a commit it has not synced, it:
 
 1. checks that commit out in a dedicated clone at `~/ops/debatelab-staging-sync/repo` (it never runs `npm install`);
-2. runs [`scripts/staging-sync.mjs`](../scripts/staging-sync.mjs), which refuses unless the Supabase CLI sees `brifeyypjauyusmkptkx` named `debate-trainer-staging`, passes `--project-ref brifeyypjauyusmkptkx` to every CLI call, applies pending migrations, deploys new or changed Edge Functions except the hidden `workspace-invites`, and then checks that nothing is left pending. A function counts as changed when git has changed it since its last deploy, or when the source staging runs (from `supabase functions download`) differs byte for byte from the commit. The second check catches an older checkout deployed by hand;
+2. runs [`scripts/staging-sync.mjs`](../scripts/staging-sync.mjs), which refuses unless the Supabase CLI can see `brifeyypjauyusmkptkx` (by ref, so renaming the project in the dashboard doesn't break it) and `SUPABASE_PROJECT_ID`, if set, is that same ref, passes `--project-ref brifeyypjauyusmkptkx` to every CLI call, applies pending migrations, deploys new or changed Edge Functions except the hidden `workspace-invites`, and then checks that nothing is left pending. A function counts as changed when git has changed it since its last deploy, or when the source staging runs (from `supabase functions download`) differs byte for byte from the commit. The second check catches an older checkout deployed by hand;
 3. reruns the seed;
 4. sets the `staging-sync` commit status on that commit, and opens or comments on the GitHub issue **Staging is out of sync with main** when anything fails. A later successful sync closes the issue.
 
@@ -57,7 +57,7 @@ PRs that change `supabase/migrations/` or `supabase/functions/` get a comment sa
 
 The timer uses the Supabase CLI login already on the VPS (`~/.supabase/access-token`). It is a classic personal access token for Adam's account, so it reaches production too. The scripts' ref checks keep the sync itself on staging, but they are not a security boundary. Anyone who can merge to `main` can change those scripts, and the timer will run the new code with that token within 5 minutes. A malicious or broken merge could read or change production, including its database and secrets. Today that is the same trust as the other agents on the VPS that use this token, and only Adam merges to `main`.
 
-To shrink it, replace the token with a Supabase scoped token limited to `debate-trainer-staging` (Database and Edge Functions read-write) and pass it to the service as `SUPABASE_ACCESS_TOKEN`. Then a bad merge can touch staging only.
+To shrink it, replace the token with a Supabase scoped token limited to the staging project `brifeyypjauyusmkptkx` (Database and Edge Functions read-write) and pass it to the service as `SUPABASE_ACCESS_TOKEN`. Then a bad merge can touch staging only.
 
 ### Operate it
 
