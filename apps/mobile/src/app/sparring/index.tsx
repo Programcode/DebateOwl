@@ -567,7 +567,7 @@ function LiveRound({
   onSubmit: () => void;
   onRetry: () => void;
 }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { width, height } = useWindowDimensions();
@@ -731,7 +731,7 @@ function LiveRound({
               testID="sparring-input"
             />
             <Text tone="faint" style={styles.words}>
-              {t('sparring.round.wordCount', { count: words })}
+              {t('sparring.round.wordCount', { count: words, formatted: words.toLocaleString(i18n.language) })}
             </Text>
           </View>
         ) : null}

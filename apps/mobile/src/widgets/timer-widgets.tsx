@@ -9,7 +9,7 @@ import type { TimerActivityState } from '@/lib/timer';
 // the app running. Each layout runs in the widget extension's own runtime
 // ('widget' directive), so it cannot use anything outside its function: every
 // string comes in the props, in the app's language, and the colours are the
-// app's plume blue (side A), coral (side B) and ink (both sides).
+// timer screen's dark side colours: plume blue (side A), rose (side B) and slate (both sides).
 //
 // Only live-activity.ts loads this file, and only in a build that has the
 // widget extension (nativeCapabilities().liveActivity). Expo Go never does.
@@ -24,7 +24,7 @@ export interface TimerWidgetProps {
 const DebateTimerActivity = (props: TimerActivityState, environment: LiveActivityEnvironment) => {
   'widget';
   const HOUR = 3_600_000;
-  const accent = props.side === 'a' ? '#4CA6FD' : props.side === 'b' ? '#FF8A8E' : '#A9B7C9';
+  const accent = props.side === 'a' ? '#4CA6FD' : props.side === 'b' ? '#FF8AA8' : '#8E9FB6';
   const at = props.pausedAt ?? Date.now();
   // A speech past its limit counts on as overtime; iOS marks the activity stale at the limit.
   const over = props.kind === 'speech' && (environment.isStale === true || at >= props.endsAt);
