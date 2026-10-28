@@ -2761,7 +2761,6 @@
       "saveFailed": "Nem sikerült menteni a forrást. Próbáld újra.",
       "sourceMissing": "Ez a forrás már nincs a könyvtáradban.",
       "openPage": "Megnyitja az oldalt a böngészőben",
-      "pickSource": "Válassz egy forrást, hogy itt elolvasd.",
       "deleteSourceTitle": "Törlöd a forrást?",
       "deleteSourceDesc": "Ezzel eltávolítod a forrást a szinkronizált könyvtáradból."
     },

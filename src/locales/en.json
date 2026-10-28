@@ -2761,7 +2761,6 @@
       "saveFailed": "Could not save the source. Try again.",
       "sourceMissing": "This source is no longer in your Library.",
       "openPage": "Opens the page in the browser",
-      "pickSource": "Pick a source to read it here.",
       "deleteSourceTitle": "Delete source?",
       "deleteSourceDesc": "This removes the source from your synced library."
     },
