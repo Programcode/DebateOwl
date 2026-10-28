@@ -12,6 +12,7 @@ import { useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useSyncExternalStore } from 'react';
 
 import { useAuth } from './auth';
+import { GONE, keepText, keptText, onTextForgotten } from './context-texts';
 import { sessionSlot } from './session-memory';
 import { supabase } from './supabase';
 
@@ -26,7 +27,11 @@ import { supabase } from './supabase';
  * The list holds titles, sides and dates only. Which items a request includes
  * does not depend on their text, so the text (a source's content, a result's
  * output, a chat's messages) is read only for the items the plan will send,
- * and kept for the session, so the size limits are checked on what is sent.
+ * and kept (context-texts.ts) under a version the list reports: a case's
+ * generatedAt (Regenerate and Undo change it), a chat's message count, a
+ * round's updated_at. Attacks, brainstorms, factoids and Crossfire rounds are
+ * never edited. Sources have no such column, so their text is read again
+ * after each list read. A row deleted since the list read is left out.
  */
 
 type ResultKind = Exclude<DebateContextOutputKind, 'sparring'>;
@@ -46,11 +51,11 @@ interface ContextMaterial {
   results: Partial<Record<ResultKind, PlanResult[]>>;
   sparring: PlanSparringSession[];
   pins: DebateOutputRef[];
+  /** The version of each item's text, by `source:<id>` or `<kind>:<id>`. */
+  versions: Map<string, string>;
 }
 
 const material = sessionSlot(() => new Map<string, ContextMaterial>());
-/** Text read for items a plan sends, by debate and `source:<id>` or `<kind>:<id>`. */
-const texts = sessionSlot(() => new Map<string, unknown>());
 const overrides = sessionSlot((): Partial<Record<DebateContextFeature, DebateContextOverride>> => ({}));
 /** The latest list read per debate; an older read that ends later is dropped. */
 const loads = new Map<string, number>();
@@ -69,13 +74,15 @@ function subscribe(listener: () => void) {
   return () => listeners.delete(listener);
 }
 
+// A write that forgot a row's text redraws the plans on screen, which read it again.
+onTextForgotten(emit);
+
 function rowsOf<T>(result: { data: unknown; error: { message: string } | null }): T[] {
   if (result.error) throw new Error(result.error.message);
   return (result.data ?? []) as T[];
 }
 
 const time = (value: string) => new Date(value).getTime();
-const textKey = (debateId: string, key: string) => `${debateId}|${key}`;
 
 /**
  * Reads a debate's list of material: its sources, saved results and judged
@@ -91,8 +98,13 @@ export async function loadContextMaterial(userId: string, debateId: string): Pro
     supabase.from('sources').select('id,title,type,is_active').eq('user_id', userId).eq('debate_id', debateId).order('created_at', { ascending: false }),
     supabase.from('debate_context_pins').select('item_kind,item_id').eq('user_id', userId).eq('debate_id', debateId),
     supabase.from('sparring_sessions').select('id,motion,user_side,updated_at').eq('user_id', userId).eq('debate_id', debateId),
-    supabase.from('chats').select('id,title,side,created_at').eq('user_id', userId).eq('debate_id', debateId),
-    ...RESULT_KINDS.map((kind) => supabase.from(RESULT_TABLES[kind]).select('id,title,side,created_at').eq('user_id', userId).eq('debate_id', debateId)),
+    supabase.from('chats').select('id,title,side,created_at,messages(count)').eq('user_id', userId).eq('debate_id', debateId),
+    ...RESULT_KINDS.map((kind) =>
+      supabase
+        .from(RESULT_TABLES[kind])
+        .select(kind === 'case' ? 'id,title,side,created_at,version:output->metadata->>generatedAt' : 'id,title,side,created_at')
+        .eq('user_id', userId)
+        .eq('debate_id', debateId)),
   ]);
   // A newer read started meanwhile: it decides.
   const superseded = material.get().get(debateId);
@@ -110,38 +122,49 @@ export async function loadContextMaterial(userId: string, debateId: string): Pro
     : ((pins.data ?? []) as { item_kind: unknown; item_id: unknown }[]).flatMap((row) =>
         isDebateContextOutputKind(row.item_kind) && typeof row.item_id === 'string' ? [{ kind: row.item_kind, id: row.item_id }] : []);
   const held = material.get().get(debateId);
+  const versions = new Map<string, string>();
   const next: ContextMaterial = {
     debateId,
-    sources: rowsOf<{ id: string; title: string; type: string | null; is_active: boolean }>(sources).map((row) => ({
+    sources: rowsOf<{ id: string; title: string; type: string | null; is_active: boolean }>(sources).map((row) => {
+      // No column says when a source changed, so its text is read again after each list read.
+      versions.set(`source:${row.id}`, `list:${load}`);
+      return {
       id: row.id,
       title: row.title,
       content: '',
       type: row.type ?? 'text',
       debateId,
       isActive: row.is_active,
-    })),
-    results: { chat: rowsOf<{ id: string; title: string; side: string | null; created_at: string }>(chats).map(resultRow) },
-    sparring: rowsOf<{ id: string; motion: string; user_side: string | null; updated_at: string }>(sparring).map((row) => ({
-      id: row.id,
-      motion: row.motion,
-      debateId,
-      userSide: row.user_side,
-      updatedAt: time(row.updated_at),
-    })),
+      };
+    }),
+    results: {
+      chat: rowsOf<{ id: string; title: string; side: string | null; created_at: string; messages?: { count?: number }[] }>(chats).map((row) => {
+        versions.set(`chat:${row.id}`, `messages:${row.messages?.[0]?.count ?? 0}`);
+        return resultRow(row);
+      }),
+    },
+    sparring: rowsOf<{ id: string; motion: string; user_side: string | null; updated_at: string }>(sparring).map((row) => {
+      versions.set(`sparring:${row.id}`, row.updated_at);
+      return {
+        id: row.id,
+        motion: row.motion,
+        debateId,
+        userSide: row.user_side,
+        updatedAt: time(row.updated_at),
+      };
+    }),
     // A pin changed while this read ran is newer than what the read saw.
     pins: held && (pinEdits.get(debateId) ?? 0) !== pinsAtStart ? held.pins : loadedPins,
+    versions,
   };
   RESULT_KINDS.forEach((kind, index) => {
-    next.results[kind] = rowsOf<{ id: string; title: string; side: string | null; created_at: string }>(results[index]).map(resultRow);
+    next.results[kind] = rowsOf<{ id: string; title: string; side: string | null; created_at: string; version?: string | null }>(results[index]).map((row) => {
+      // Only a case is ever edited (Regenerate, Undo); its generatedAt changes with it.
+      versions.set(`${kind}:${row.id}`, kind === 'case' ? `generated:${row.version ?? ''}` : 'saved');
+      return resultRow(row);
+    });
   });
   material.get().set(debateId, next);
-  // Text kept as "nothing usable yet" (an unjudged round, a chat with no messages) is read again.
-  for (const [key, value] of texts.get()) {
-    if (!key.startsWith(`${debateId}|`)) continue;
-    const unjudged = key.includes('|sparring:') && !(value as { scorecard?: unknown } | undefined)?.scorecard;
-    const emptyChat = key.includes('|chat:') && Array.isArray(value) && value.length === 0;
-    if (unjudged || emptyChat) texts.get().delete(key);
-  }
   emit();
   return next;
 }
@@ -150,7 +173,13 @@ export async function loadContextMaterial(userId: string, debateId: string): Pro
 async function loadTexts(userId: string, debateId: string, keys: string[]): Promise<void> {
   const ids = (prefix: string) => keys.filter((key) => key.startsWith(`${prefix}:`)).map((key) => key.slice(prefix.length + 1));
   const reads: PromiseLike<void>[] = [];
-  const keep = (key: string, value: unknown) => texts.get().set(textKey(debateId, key), value);
+  // Versions as the list read reported them when the read started.
+  const versions = material.get().get(debateId)?.versions ?? new Map<string, string>();
+  const found = new Set<string>();
+  const keep = (key: string, value: unknown) => {
+    found.add(key);
+    keepText(debateId, key, versions.get(key) ?? '', value);
+  };
   const sourceIds = ids('source');
   if (sourceIds.length > 0) {
     reads.push(supabase.from('sources').select('id,content').eq('user_id', userId).in('id', sourceIds).then((result) => {
@@ -182,6 +211,8 @@ async function loadTexts(userId: string, debateId: string, keys: string[]): Prom
     }));
   }
   await Promise.all(reads);
+  // A row deleted since the list read has no text; the plan leaves it out.
+  for (const key of keys) if (!found.has(key)) keepText(debateId, key, versions.get(key) ?? '', GONE);
   emit();
 }
 
@@ -197,17 +228,25 @@ interface PlanOptions {
  * items whose text is still to be read.
  */
 function planFor(held: ContextMaterial, feature: DebateContextFeature, side: DebateContextSide, options: PlanOptions): { plan: DebateContextPlan } | { missing: string[] } {
-  const known = texts.get();
-  const text = (key: string) => known.get(textKey(held.debateId, key));
+  const text = (key: string) => keptText(held.debateId, key, held.versions.get(key) ?? '');
+  const present = (key: string) => text(key)?.value !== GONE;
+  const value = (key: string) => {
+    const kept = text(key)?.value;
+    return kept === GONE ? undefined : kept;
+  };
   const inputs = {
-    sourceLibrary: held.sources.map((source) => ({ ...source, content: (text(`source:${source.id}`) as string | undefined) ?? '' })),
+    sourceLibrary: held.sources
+      .filter((source) => present(`source:${source.id}`))
+      .map((source) => ({ ...source, content: (value(`source:${source.id}`) as string | undefined) ?? '' })),
     results: Object.fromEntries(
-      Object.entries(held.results).map(([kind, rows]) => [kind, rows?.map((row) => ({ ...row, data: text(`${kind}:${row.id}`) }))]),
+      Object.entries(held.results).map(([kind, rows]) => [
+        kind,
+        rows?.filter((row) => present(`${kind}:${row.id}`)).map((row) => ({ ...row, data: value(`${kind}:${row.id}`) })),
+      ]),
     ) as ContextMaterial['results'],
-    sparringSessions: held.sparring.map((session) => {
-      const saved = text(`sparring:${session.id}`) as { userSide?: unknown; scorecard?: unknown } | undefined;
-      return { ...session, scorecard: saved?.scorecard };
-    }),
+    sparringSessions: held.sparring
+      .filter((session) => present(`sparring:${session.id}`))
+      .map((session) => ({ ...session, scorecard: (value(`sparring:${session.id}`) as { scorecard?: unknown } | undefined)?.scorecard })),
     pins: held.pins,
     override: overrides.get()[feature],
     excludeChatId: options.excludeChatId ?? null,
@@ -218,14 +257,17 @@ function planFor(held: ContextMaterial, feature: DebateContextFeature, side: Deb
     ...plan.sources.filter((source) => source.included && !source.overLimit).map((source) => `source:${source.id}`),
     ...plan.outputs.filter((output) => output.included && !output.overLimit).map((output) => outputKey(output.ref)),
   ];
-  const missing = sent.filter((key) => !known.has(textKey(held.debateId, key)));
+  const missing = sent.filter((key) => !text(key));
   return missing.length > 0 ? { missing } : { plan };
 }
 
 /** The plan for a request about to be sent, from the list read now. */
 export async function planRequest(userId: string, debateId: string, feature: DebateContextFeature, side: DebateContextSide, options: PlanOptions = {}): Promise<DebateContextPlan> {
   const held = await loadContextMaterial(userId, debateId);
-  for (let attempt = 0; attempt < 3; attempt += 1) {
+  // Each read settles every key it asks for, found or gone; a gone row can only free its
+  // slot for another, so this ends within one read per item.
+  const items = held.sources.length + held.sparring.length + Object.values(held.results).reduce((sum, rows) => sum + (rows?.length ?? 0), 0);
+  for (let attempt = 0; attempt <= items + 1; attempt += 1) {
     const result = planFor(held, feature, side, options);
     if ('plan' in result) return result.plan;
     await loadTexts(userId, debateId, result.missing);

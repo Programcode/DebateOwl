@@ -19,6 +19,7 @@ import type { DebateContextRequest } from '@debatelab/core/contract/debate-conte
 import { AIError, postAI, PROVIDER, responseExtras, type ResponseExtras } from './ai-request';
 import type { FeatureConfig } from './feature-config';
 import { debateListScopes, deletedListScopes } from './debates';
+import { forgetText } from './context-texts';
 import { afterWrite, cachedRead, readFailed, updateCopy, type CopyMark } from './offline-cache';
 import { saveResearchedSource, applySourceAssessments, fetchSourceIdsInFolder, removeSource } from './sources';
 import { supabase } from './supabase';
@@ -245,8 +246,9 @@ export async function updateResult<K extends ResultKind>(userId: string, kind: K
   const { data, error } = await supabase.from(TABLES[kind]).update({ output }).eq('user_id', userId).eq('id', id).select('id');
   if (error) throw new Error(error.message);
   if (!data || data.length === 0) throw new Error(`The ${kind} is no longer saved`);
-  // The saved copy reads the new output offline too.
+  // The saved copy reads the new output offline too, and the debate context reads it again.
   updateCopy<SavedResult<K> | null>(userId, `result:${kind}`, id, (copy) => (copy ? { ...copy, output } : copy));
+  forgetText(`${kind}:${id}`);
 }
 
 /** Saves a case outside any debate, as the website's Save button does for unrecorded work. */
