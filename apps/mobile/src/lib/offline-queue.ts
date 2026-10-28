@@ -3,12 +3,13 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Crypto from 'expo-crypto';
 
 import { isKnownOffline } from './network-status';
-import { afterWrite, ReadError, updateCopy } from './offline-cache';
+import { ReadError, updateCopy } from './offline-cache';
 import { createSerialQueue } from './serial-queue';
 import {
   addSource,
   DuplicateSourceError,
   fetchSource,
+  fetchSources,
   notifySourcesChanged,
   setSourcesActive,
   updateSource,
@@ -433,11 +434,19 @@ function dropWrites(tempId: string, addKey: string): string[] {
   return removed;
 }
 
-/** The saved copies a refused write changed when it was queued (updateSourceCopies). */
-function refusedCopies(item: QueuedWrite): { group: 'sources' | 'source'; key: string }[] {
+/**
+ * Puts the server's version back into the saved copies a refused write changed when it was queued
+ * (updateSourceCopies). The list copy is read again rather than dropped, so notes still waiting stay
+ * visible offline (they show over it from the queue). A refused new note leaves the list copy.
+ */
+async function restoreRefused(userId: string, item: QueuedWrite): Promise<void> {
   const debateId = item.kind === 'add' ? item.input.debateId : item.debateId;
-  const ids = item.kind === 'add' ? [] : item.kind === 'edit' ? [item.sourceId] : item.ids;
-  return [{ group: 'sources', key: debateId }, ...ids.filter((id) => !isLocalSourceId(id)).map((id) => ({ group: 'source' as const, key: id }))];
+  if (item.kind === 'add') {
+    updateCopy<Source[]>(userId, 'sources', debateId, (list) => list?.filter((source) => source.id !== item.tempId));
+  }
+  const ids = (item.kind === 'edit' ? [item.sourceId] : item.kind === 'active' ? item.ids : []).filter((id) => !isLocalSourceId(id));
+  // A read that fails keeps the copy it had; the next read online replaces it.
+  await Promise.all([fetchSources(userId, debateId), ...ids.map((id) => fetchSource(userId, id))]).catch(() => undefined);
 }
 
 /** Whether no answer came back from the server: those writes stay queued. */
@@ -547,9 +556,10 @@ async function drain() {
       const all = [...done, ...dependents.flatMap(takeWaiters)];
       all.forEach((waiter) => waiter.reject(failure.cause));
       if (done.length === 0) report.dropped.push(describe(item));
-      // The saved copies still hold the refused change; drop them, so no screen, open now or
-      // later (a relaunch, offline), shows it. Screens that showed it read the server's version again.
-      afterWrite(userId, refusedCopies(item));
+      // The saved copies still hold the refused change. A refusal is the server's answer, so read
+      // its version back into them (a relaunch offline then shows that), keeping every other queued
+      // write visible; screens that showed the change read it again.
+      await restoreRefused(userId, item);
       notifySourcesChanged();
     }
     persist();

@@ -12,13 +12,13 @@ const cache = vi.hoisted(() => ({
     }
   },
   updateCopy: () => undefined,
-  afterWrite: vi.fn(),
 }));
 const sources = vi.hoisted(() => ({
   addSource: vi.fn(),
   updateSource: vi.fn(),
   setSourcesActive: vi.fn(),
   fetchSource: vi.fn(),
+  fetchSources: vi.fn(),
   notifySourcesChanged: vi.fn(),
   DuplicateSourceError: class DuplicateSourceError extends Error {},
 }));
@@ -74,6 +74,8 @@ beforeEach(() => {
   sources.addSource.mockImplementation(async (_userId: string, input: { id: string; title: string; content: string; debateId: string }) => row(input.id, input));
   sources.updateSource.mockResolvedValue(undefined);
   sources.setSourcesActive.mockResolvedValue(undefined);
+  sources.fetchSources.mockResolvedValue([]);
+  sources.fetchSource.mockResolvedValue(null);
 });
 
 describe('offline queue', () => {
@@ -126,8 +128,9 @@ describe('offline queue', () => {
     expect(reports).toEqual([{ synced: 1, dropped: [{ kind: 'active' }] }]);
     expect(queue.getQueueSnapshot().items).toEqual([]);
     expect(sources.notifySourcesChanged).toHaveBeenCalled();
-    // The saved copies that showed the refused switch go too, so a relaunch offline never shows it.
-    expect(cache.afterWrite).toHaveBeenCalledWith('user-a', [{ group: 'sources', key: 'd1' }, { group: 'source', key: 's2' }]);
+    // The saved copies that showed the refused switch are read back from the server, so a relaunch offline never shows it.
+    expect(sources.fetchSources).toHaveBeenCalledWith('user-a', 'd1');
+    expect(sources.fetchSource).toHaveBeenCalledWith('user-a', 's2');
 
     // Online with nothing waiting, a refusal reaches the caller and nothing stays queued.
     sources.updateSource.mockRejectedValueOnce(refused());

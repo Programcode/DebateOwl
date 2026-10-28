@@ -140,7 +140,7 @@ function LibraryView({ debateId, layout }: { debateId: string | null; layout: Re
     </Card>
   ) : null;
   const body = debateId ? (
-    <LibraryBody library={library} selectedId={shown} onSelect={layout === 'phone' || !userId ? undefined : (source) => setSelected({ userId, id: source.id })} />
+    <LibraryBody library={library} selectedId={shown} onSelect={layout === 'phone' || !userId ? undefined : (source) => setSelected({ userId, id: source.id })} onRemoved={() => setSelected(null)} />
   ) : null;
 
   if (layout === 'phone') {
@@ -269,7 +269,7 @@ function useLibrary(debateId: string | null) {
   return { userId, debateId: debateId!, sources, setSources, queued, waiting, failed, load, query, setQuery, filter, setFilter, sort, setSort, folder, setFolder, folders, inFolder, visible, patch };
 }
 
-function LibraryBody({ library, selectedId, onSelect }: { library: Library; selectedId: string | null; onSelect?: (source: Source) => void }) {
+function LibraryBody({ library, selectedId, onSelect, onRemoved }: { library: Library; selectedId: string | null; onSelect?: (source: Source) => void; onRemoved?: (id: string) => void }) {
   const { t } = useTranslation();
   const router = useRouter();
   const toast = useToast();
@@ -319,6 +319,8 @@ function LibraryBody({ library, selectedId, onSelect }: { library: Library; sele
   const remove = async (source: Source) => {
     const removed = await actions.remove(source);
     if (removed) library.setSources((previous) => previous?.filter((item) => item.id !== source.id) ?? previous);
+    // Deleting the source open beside the list closes it, as its own Delete does.
+    if (removed && source.id === selectedId) onRemoved?.(source.id);
     return removed;
   };
 
