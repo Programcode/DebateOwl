@@ -36,7 +36,7 @@ test("live-generate: a case fills in section by section while the model writes i
   await fake.streamDelay(80);
   await startDebate(page, motion);
   await page.goto("/app/generate");
-  await expect(page.getByRole("textbox", { name: "Motion / Topic *" })).toHaveValue(motion);
+  await expect(page.getByRole("textbox", { name: "Motion / topic *" })).toHaveValue(motion);
   const request = aiRequest(page, "generate");
   await page.getByRole("button", { name: "Generate debate case" }).click();
 
@@ -68,7 +68,7 @@ test("live-cancel: Cancel stops a live run and leaves no draft or result", async
   await expect(draft).toBeVisible({ timeout: AI_TIMEOUT });
   await draft.getByRole("button", { name: "Cancel" }).click();
   await expect(draft).toHaveCount(0);
-  await expect(page.getByRole("heading", { name: "Ready to Generate" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Your case will appear here" })).toBeVisible();
   await expect(page.getByRole("alert")).toHaveCount(0);
   await evidence.shot("01-canceled");
 });
@@ -77,7 +77,7 @@ test("live-tools: Attack, Brainstorm, Factoids, and cited Ask stream their answe
   await startDebate(page, motion);
 
   await page.goto("/app/attack");
-  await page.getByLabel("Your Argument *").fill("Free transit raises ridership, so it always pays for itself.");
+  await page.getByLabel("Your argument *").fill("Free transit raises ridership, so it always pays for itself.");
   let request = aiRequest(page, "attack");
   await page.getByRole("button", { name: "Find weaknesses" }).click();
   await expectLiveStream(await request);
@@ -92,7 +92,7 @@ test("live-tools: Attack, Brainstorm, Factoids, and cited Ask stream their answe
   await page.goto("/app/factoids");
   await page.getByLabel("Statement *").fill("Free fares increase public transport ridership.");
   request = aiRequest(page, "factoids");
-  await page.getByRole("button", { name: "Find Factoids" }).click();
+  await page.getByRole("button", { name: "Find factoids" }).click();
   await expectLiveStream(await request);
   await evidence.shot("03-factoids");
 
@@ -100,7 +100,7 @@ test("live-tools: Attack, Brainstorm, Factoids, and cited Ask stream their answe
   await page.getByRole("button", { name: "Options" }).click();
   await page.locator("#citation-mode").click();
   await page.keyboard.press("Escape");
-  await page.getByPlaceholder("Ask your debate coach...").fill("How should I weigh access against cost?");
+  await page.getByPlaceholder("Ask your debate coach…").fill("How should I weigh access against cost?");
   request = aiRequest(page, "ask");
   await page.getByRole("button", { name: "Send message" }).click();
   const { body } = await expectLiveStream(await request);

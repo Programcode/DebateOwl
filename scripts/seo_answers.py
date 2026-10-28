@@ -12,19 +12,19 @@ ANSWERS = {
         "Which AI debate tool should you use?",
         "It depends on the job. For brainstorming or learning a topic, a general chatbot such as ChatGPT is flexible. For motion-by-motion prep plus timed practice rounds that end in a verdict, a dedicated platform such as {product} fits. As of October 2026, debatelab.ai, a separate product, says it is free and runs World Schools and Asian Parliamentary practice, and WinDebate adds round replay and progress tracking from $19.99/month. Give each tool the same motion and tasks before you decide.",
     ),
-    "debatelab-pricing": (
+    "debateowl-pricing": (
         "How much does {product} cost?",
         "As of October 2026, {product} has a 3-day free trial with no credit card required, then Pro costs {pro_price}. There is no permanent free plan. Whether Pro is worth it depends on how often you prepare: if you debate every week or have a tournament coming, it covers heavy prep weeks with higher daily limits and all 10 models. If you need help only occasionally and want to stay free, a general chatbot's free tier or a free practice tool will suit you better.",
     ),
-    "debatelab-vs-chatgpt": (
+    "debateowl-vs-chatgpt": (
         "Which is better for debate prep, {product} or ChatGPT?",
         "It depends on the task. ChatGPT is better for learning a new topic, open brainstorming and general writing help, and it works for any subject. {product} is better when you are preparing a specific motion: it keeps your cases, sources and practice rounds together, predicts the opposing case, times your speeches and gives a verdict on practice rounds. Many debaters use both, ChatGPT for background and {product} for motion prep and practice. Neither replaces checking original sources.",
     ),
-    "debatelab-vs-windebate": (
+    "debateowl-vs-windebate": (
         "Which is better, {product} or WinDebate?",
         "It depends on your format, budget and how you practise. As of October 2026, WinDebate names six formats including Congressional, Policy and British Parliamentary, has a free tier with monthly limits, and adds live-round capture, replay review and progress tracking, with paid plans from $19.99/month. {product} costs {pro_price} after a 3-day trial, runs full practice rounds against an AI opponent in School 4-6-6-3, Lincoln-Douglas and Public Forum, and works in English, Spanish and Hungarian. Choose WinDebate for Policy, Congress or season tracking, and {product} for low-cost case building and sparring.",
     ),
-    "debatelab-vs-debateclub": (
+    "debateowl-vs-debateclub": (
         "Which is better, {product} or DebateClub?",
         "They solve different problems. As of October 2026, DebateClub is voice-only sparring for high-stakes conversations such as negotiations, pitches and meetings, with opponent personas and rhetorical technique scoring, and Pro costs $19/month. It names no competitive debate formats. {product} is built for school and competitive debate: cases, rebuttals, evidence, a timer and timed rounds in School 4-6-6-3, Lincoln-Douglas and Public Forum, at {pro_price} after a 3-day trial. Choose DebateClub for workplace persuasion practice and {product} for tournament prep.",
     ),
@@ -34,7 +34,7 @@ ANSWERS = {
     ),
     "ai-debate-case-generator": (
         "Can an AI debate case generator write a case I can actually use?",
-        "It can write a usable draft, not a finished case. A good generator gives you a thesis, a framework, contentions with warrants and impacts, the case the other side is likely to run, and counters to it. Treat its citations as research leads: open every source, confirm the exact claim and record the full citation. The judgement calls, such as which contention to cut and where to pre-empt the opposition, stay with you. Rewrite the case in your own words, because judges can hear when you are reading a draft for the first time.",
+        "Yes, as a draft. {product}'s case generator turns a motion into a structured case (thesis, framework, contentions with warrants and impacts, the likely opposing case and counters) and lists the web sources it used, which you then verify and rewrite in your own words. Treat its citations as research leads: open every source and confirm the exact claim. The judgement calls, such as which contention to cut and where to pre-empt the opposition, stay with you.",
     ),
     "debate-rebuttal-practice": (
         "How do you find the weak link in an argument you need to rebut?",
@@ -42,7 +42,7 @@ ANSWERS = {
     ),
     "ai-debate-coach": (
         "Can an AI debate coach actually help you prepare?",
-        "Yes, as a partner for thinking problems through: burdens, clash, weighing, speech structure and why a practice speech did not land. It works best with specific questions that name the format, your side and speaker role, what is already on the table and what you are stuck on. Vague questions get generic answers. Treat any sources it cites as leads to check. An AI coach has not watched you speak and does not know your judges or your partner, so take its conclusions to your human coach or team and let them correct what does not fit.",
+        "Yes. {product}'s Ask coach is an AI debate coach that answers specific prep questions about burdens, clash, weighing and speech structure, and gives feedback on practice speeches; it works best when you name the format, side and speaker role. Vague questions get generic answers. Treat any sources it cites as leads to check. An AI coach has not watched you speak and does not know your judges or your partner, so take its conclusions to your human coach or team.",
     ),
     "debate-evidence-finder": (
         "Can AI find reliable evidence for a debate case?",

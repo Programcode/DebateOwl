@@ -10,7 +10,7 @@ describe("checkout security", () => {
   it("accepts only configured web callback origins", () => {
     expect(
       isAllowedCheckoutRedirectUrl(
-        "https://debate.pi-stack.org/app/settings?checkout=success",
+        "https://debateowl.com/app/settings?checkout=success",
       ),
     ).toBe(true);
     expect(isAllowedCheckoutRedirectUrl("http://localhost:5173/app/settings")).toBe(true);
@@ -18,7 +18,7 @@ describe("checkout security", () => {
 
   it("rejects arbitrary and lookalike checkout redirect origins", () => {
     expect(isAllowedCheckoutRedirectUrl("https://evil.example/after-payment")).toBe(false);
-    expect(isAllowedCheckoutRedirectUrl("https://debate.pi-stack.org.evil.example/app")).toBe(false);
+    expect(isAllowedCheckoutRedirectUrl("https://debateowl.com.evil.example/app")).toBe(false);
   });
 
   it("only reuses a Stripe customer whose metadata belongs to the authenticated user", () => {

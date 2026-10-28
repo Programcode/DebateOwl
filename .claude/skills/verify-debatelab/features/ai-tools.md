@@ -13,7 +13,7 @@ The single-shot coaching tools: Attack finds weaknesses in a pasted argument, Br
 
 ## How to get to it (user POV)
 
-- Header links: `Attack` and `Ask`. `More` menu (desktop) or `Open menu` (mobile): `Brainstorm` and `Factoids`.
+- Home cards under Tools. The phone tab bar lists Tools, not each tool.
 - Routes: `/app/attack`, `/app/brainstorm`, `/app/factoids`, `/app/ask`.
 
 ## Driving it with verify.sh + Playwright
@@ -22,10 +22,10 @@ Preconditions:
 
 - Doctor passes. The user is signed in.
 
-- **Attack.** On `/app/attack`, fill the field labelled `Your Argument *` and click `Find weaknesses`. The text `FAKE-PROVIDER weakness` appears. `providerCall("attack").user` contains the argument.
-- **Brainstorm.** On `/app/brainstorm`, fill the field labelled `Motion / Topic *` and click `Start brainstorming`. With no Current Debate, the dialog `Start a debate with this motion?` opens first: `chooseForMotion(page, "create")` (or `"once"`). The text `FAKE-PROVIDER idea 1` appears. `providerCall("brainstorm").user` contains `Motion: <motion>`, and the `brainstorms` row is filed in the new debate. With a Current Debate, the field is prefilled and no dialog opens unless the motion differs.
-- **Factoids.** On `/app/factoids`, fill the field labelled `Statement *` and click `Find Factoids`. The text `FAKE-PROVIDER search suggestion` appears.
-- **Ask, streamed.** On `/app/ask`, fill the placeholder `Ask your debate coach...` and click the button named `Send message`. The text `FAKE-PROVIDER streamed answer: ...` appears. `fake.requests()` features contain `ask-stream` and not `ask`. `ai_requests` gets `{feature: "ask", status: "success"}`.
+- **Attack.** On `/app/attack`, fill the field labelled `Your argument *` and click `Find weaknesses`. The text `FAKE-PROVIDER weakness` appears. `providerCall("attack").user` contains the argument.
+- **Brainstorm.** On `/app/brainstorm`, fill the field labelled `Motion / topic *` and click `Start brainstorming`. With no Current Debate, the dialog `Start a debate with this motion?` opens first: `chooseForMotion(page, "create")` (or `"once"`). The text `FAKE-PROVIDER idea 1` appears. `providerCall("brainstorm").user` contains `Motion: <motion>`, and the `brainstorms` row is filed in the new debate. With a Current Debate, the field is prefilled and no dialog opens unless the motion differs.
+- **Factoids.** On `/app/factoids`, fill the field labelled `Statement *` and click `Find factoids`. The text `FAKE-PROVIDER search suggestion` appears.
+- **Ask, streamed.** On `/app/ask`, fill the placeholder `Ask your debate coach…` and click the button named `Send message`. The text `FAKE-PROVIDER streamed answer: ...` appears. `fake.requests()` features contain `ask-stream` and not `ask`. `ai_requests` gets `{feature: "ask", status: "success"}`.
 - **Ask, cut off.** Call `await fake.truncate("ask-stream")` and send. The stream ends with `finish_reason: "length"`, its `final` event's output carries `replyTruncated: true`, and the partial answer stays with `This answer hit its length limit and stops early...` under `Uncertainties:`. No `Response was interrupted` toast. Fake mode only.
 - **Ask, cited.** Open the `Options` button above the message box, click `#citation-mode`, close it with Escape, then send. The text `FAKE-PROVIDER answer` appears, and `providerCall("ask")` fired.
 

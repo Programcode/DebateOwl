@@ -820,7 +820,8 @@ passes AA on every surface; buttons fill with --do-primary (#0A6FF0) and white t
     @apply text-balance font-display text-3xl font-[600] leading-tight tracking-[-0.015em] text-heading md:text-4xl md:leading-10 lg:text-5xl lg:leading-none lg:tracking-[-0.02em];
   }
 
-  /* Backgrounds are static: nothing on the landing page moves on its own. */
+  /* Backgrounds are static: nothing on the landing page moves on its own. The hero owl waves once
+     as it arrives and blinks now and then; it does not breathe there. */
   .animated-grid {
     background-image:
       linear-gradient(hsl(var(--border) / 0.8) 1px, transparent 1px),
@@ -989,9 +990,27 @@ passes AA on every surface; buttons fill with --do-primary (#0A6FF0) and white t
   }
 
   .native-safe-fixed-bottom {
-    bottom: calc(var(--native-safe-bottom, 0px) + 1rem);
+    bottom: calc(1rem + max(var(--native-safe-bottom, 0px), var(--phone-tab-reserve, 0px)));
   }
 
+  /* Phone tab bar. The reserve is the bar's measured height (home indicator included);
+     until that measurement, a fallback keeps the first paint from sitting underneath it.
+     The footer inset moves into the bar, so the two don't stack. */
+  @media (width < 48rem) {
+    :root {
+      --phone-tab-reserve: calc(4.5rem + var(--native-safe-bottom, 0px));
+    }
+
+    .native-safe-screen {
+      padding-bottom: var(--phone-tab-reserve);
+    }
+
+    .native-safe-screen > footer.native-safe-bottom {
+      padding-bottom: 1rem;
+    }
+  }
+
+  /* Set from the phone tab bar only, and only while a text field's keyboard is open. */
   .native-main-content {
     padding-bottom: calc(var(--native-keyboard-height, 0px) * 0.12);
   }
@@ -1052,6 +1071,12 @@ passes AA on every surface; buttons fill with --do-primary (#0A6FF0) and white t
 /* Scroll margin for anchors under the sticky header. Unlayered, so it wins over scroll-mt-* as in v3. */
 [id] {
   scroll-margin-top: 5rem;
+}
+
+@media (width < 48rem) {
+  main [id] {
+    scroll-margin-bottom: var(--phone-tab-reserve, calc(4.5rem + env(safe-area-inset-bottom, 0px)));
+  }
 }
 
 /* Vaul's bottom sheet: 300ms open, 200ms close on the drawer curve (its default is 500ms both ways). */
@@ -1306,6 +1331,181 @@ passes AA on every surface; buttons fill with --do-primary (#0A6FF0) and white t
   }
   50% {
     transform: translateY(-5px);
+  }
+}
+
+/* The owl's motion (components/brand/Owl.tsx). Every move is a transform on its own layer, so
+   nothing reflows, and every move is a keyframe animation, so reduced motion (above) stops it. */
+
+/* Lids: flat until a blink pulls them down over the eye for about a tenth of a second. */
+.owl-lid {
+  position: absolute;
+  border-radius: 50%;
+  background: #1E8DFB;
+  box-shadow: inset 0 calc(var(--owl-lash) * -1.6) 0 #0B2A6E;
+  transform: scaleY(0);
+  transform-origin: 50% 0;
+  animation: owl-blink var(--owl-blink-period, 5.6s) linear var(--owl-blink-delay, 0s) infinite;
+  pointer-events: none;
+}
+
+@keyframes owl-blink {
+  0%, 93%, 100% {
+    transform: scaleY(0);
+  }
+  95% {
+    transform: scaleY(1);
+  }
+  97% {
+    transform: scaleY(0.15);
+  }
+}
+
+/* A slow breath, anchored at the feet. */
+.owl-breathe {
+  transform-origin: 50% 92%;
+  animation: owl-breathe 3.8s var(--do-ease-standard) infinite;
+}
+
+@keyframes owl-breathe {
+  0%, 100% {
+    transform: scale(1, 1);
+  }
+  50% {
+    transform: scale(1.012, 1.028);
+  }
+}
+
+/* Hovering the owl makes it hop once. */
+@media (hover: hover) and (pointer: fine) {
+  .owl:hover > .owl-body {
+    animation: owl-hop 560ms var(--do-ease-standard) both;
+  }
+}
+
+/* One-shot gestures, played when the owl arrives or changes pose. */
+.owl-gesture-wave {
+  transform-origin: 50% 90%;
+  animation: owl-wave 900ms var(--do-ease-standard) 120ms backwards;
+}
+
+.owl-gesture-cheer {
+  transform-origin: 50% 100%;
+  animation: owl-cheer 1100ms var(--do-ease-standard) 80ms backwards;
+}
+
+.owl-gesture-hop {
+  transform-origin: 50% 100%;
+  animation: owl-hop 600ms var(--do-ease-standard) 80ms backwards;
+}
+
+@keyframes owl-wave {
+  0% { transform: rotate(0deg); }
+  18% { transform: rotate(-7deg); }
+  38% { transform: rotate(6deg); }
+  58% { transform: rotate(-4deg); }
+  78% { transform: rotate(2deg); }
+  100% { transform: none; }
+}
+
+/* Two jumps with squash and stretch. */
+@keyframes owl-cheer {
+  0% { transform: translateY(0) scale(1, 1); }
+  10% { transform: translateY(0) scale(1.07, 0.9); }
+  28% { transform: translateY(-14%) scale(0.95, 1.07); }
+  44% { transform: translateY(0) scale(1.06, 0.93); }
+  58% { transform: translateY(-7%) scale(0.98, 1.03) rotate(-3deg); }
+  74% { transform: translateY(0) scale(1.03, 0.97); }
+  88% { transform: translateY(0) scale(0.995, 1.005); }
+  100% { transform: none; }
+}
+
+@keyframes owl-hop {
+  0% { transform: translateY(0) scale(1, 1); }
+  18% { transform: translateY(0) scale(1.05, 0.93); }
+  45% { transform: translateY(-8%) scale(0.97, 1.04); }
+  72% { transform: translateY(0) scale(1.03, 0.97); }
+  100% { transform: none; }
+}
+
+/* An app page rises into place once when it opens (App.tsx RouteContent). It ends on
+   `transform: none`, so fixed and sticky children behave as before once it has played. */
+.page-enter {
+  animation: page-enter 280ms var(--motion-ease-out-strong) backwards;
+}
+
+@keyframes page-enter {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* Sections of a page follow each other in, 60ms apart. */
+.enter-stagger > * {
+  animation: page-enter 360ms var(--motion-ease-out-strong) backwards;
+}
+
+.enter-stagger > :nth-child(2) { animation-delay: 60ms; }
+.enter-stagger > :nth-child(3) { animation-delay: 120ms; }
+.enter-stagger > :nth-child(4) { animation-delay: 180ms; }
+.enter-stagger > :nth-child(5) { animation-delay: 240ms; }
+.enter-stagger > :nth-child(n + 6) { animation-delay: 300ms; }
+
+/* Success: the check's badge pops on the overshoot curve and the tick draws itself in.
+   Apply to a lucide Check (its path is about 23 units long) or to its badge. */
+.success-pop {
+  animation: success-pop 420ms var(--do-ease-overshoot) var(--success-delay, 0ms) backwards;
+}
+
+.success-pop svg.lucide-check path,
+svg.lucide-check.success-pop path,
+[data-sonner-toast][data-type='success'] [data-icon] svg.lucide-check path {
+  stroke-dasharray: 24;
+  animation: check-draw 360ms var(--do-ease-decelerate) calc(var(--success-delay, 0ms) + 140ms) backwards;
+}
+
+@keyframes success-pop {
+  0% {
+    transform: scale(0.4);
+    opacity: 0;
+  }
+  60% {
+    transform: scale(1.14);
+    opacity: 1;
+  }
+  100% {
+    transform: none;
+  }
+}
+
+@keyframes check-draw {
+  from {
+    stroke-dashoffset: 24;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+/* A success toast's icon pops the same way as it arrives. */
+[data-sonner-toast][data-type='success'] [data-icon] {
+  animation: success-pop 420ms var(--do-ease-overshoot) 120ms backwards;
+}
+
+/* A result's progress bar fills from empty once, after the result appears (Progress `reveal`).
+   With no `to` frame it ends on the bar's own value. */
+.progress-reveal {
+  animation: progress-reveal 900ms var(--motion-ease-out-strong) 150ms backwards;
+}
+
+@keyframes progress-reveal {
+  from {
+    transform: translateX(-100%);
   }
 }
 

@@ -327,7 +327,7 @@ export default function GeneratePage() {
                 />
               </div>
             ) : (
-              <EmptyState icon={Target} pose={run.error ? 'surprised' : 'point'} title={t('generate.emptyTitle')} description={t('generate.emptyDesc')} />
+              <EmptyState size="compact-below-lg" icon={Target} pose={run.error ? 'surprised' : 'point'} title={t('generate.emptyTitle')} description={t('generate.emptyDesc')} />
             )}
           </div>
         </div>

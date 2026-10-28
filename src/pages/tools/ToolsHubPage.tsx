@@ -39,7 +39,7 @@ export default function ToolsHubPage() {
       </section>
 
       <ToolCta title="When you want more than a clock">
-        <p>DebateLab is a paid practice app for debaters: it drafts cases for either side of a motion, suggests rebuttals, and runs sparring rounds against an AI opponent.</p>
+        <p>DebateOwl is an AI debate prep and practice app: it drafts cases for either side of a motion, suggests rebuttals, and runs sparring rounds against an AI opponent.</p>
       </ToolCta>
     </ToolPageLayout>
   );

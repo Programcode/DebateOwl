@@ -6,10 +6,28 @@ import { TOOL_PAGE_HEAD_IDS, TOOL_PAGE_HEADS } from './tool-pages';
 export const SITE_ORIGIN = site.origin;
 export const BRAND = site.brand;
 export const PRODUCT = site.product;
-export const ORGANIZATION = site.organization;
-/** The organization's own profiles elsewhere, for schema.org sameAs. */
-export const ORGANIZATION_SAME_AS = site.organizationSameAs;
-/** "DebateLab is an AI debate prep and practice app for …", the sentence agents quote. */
+export const ORGANIZATION_ID = `${SITE_ORIGIN}/#organization`;
+
+/**
+ * The Organization behind the site, named for the product so search engines
+ * see one name for one entity. Pi-Stack, which builds it, is its parent, not a
+ * sameAs: a sameAs profile is the same entity elsewhere.
+ */
+export function organizationNode() {
+  const { name, logo, description, sameAs, parent } = site.organization;
+  return {
+    '@type': 'Organization',
+    '@id': ORGANIZATION_ID,
+    name,
+    alternateName: site.alternateName,
+    url: `${SITE_ORIGIN}/`,
+    logo: { '@type': 'ImageObject', url: `${SITE_ORIGIN}${logo.path}`, width: logo.width, height: logo.height },
+    description,
+    parentOrganization: { '@type': 'Organization', '@id': `${parent.url}#organization`, name: parent.name, url: parent.url },
+    sameAs,
+  };
+}
+/** "DebateOwl is an AI debate prep and practice app for …", the sentence agents quote. */
 export const DEFINITION = `${PRODUCT} is ${site.definition}.`;
 export const PRICING = site.pricing;
 
@@ -60,7 +78,7 @@ export const PAGE_HEAD_IDS: Record<PrerenderedRoute, PageHeadId> = {
  * every page that has a canonical URL.
  */
 export const SHELL_HEAD = {
-  title: 'DebateLab',
+  title: site.product,
   description: PAGE_HEADS['/'].description,
   robots: 'index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1',
 } as const;

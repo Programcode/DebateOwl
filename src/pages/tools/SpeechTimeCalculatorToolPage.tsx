@@ -109,7 +109,7 @@ export default function SpeechTimeCalculatorToolPage() {
       <ToolFaq faq={FAQ} />
 
       <ToolCta title="Practise the speech out loud with a sparring partner">
-        <p>DebateLab&apos;s sparring rounds let you give a timed speech, get an AI opponent&apos;s answer to it, and have the round judged, so you can test a draft against real responses instead of the clock alone.</p>
+        <p>DebateOwl&apos;s sparring rounds let you give a timed speech, get an AI opponent&apos;s answer to it, and have the round judged, so you can test a draft against real responses instead of the clock alone.</p>
       </ToolCta>
     </ToolPageLayout>
   );

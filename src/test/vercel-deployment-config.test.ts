@@ -95,6 +95,23 @@ describe("Vercel frontend deployment configuration", () => {
     expect(config.trailingSlash).toBe(false);
   });
 
+  it("301s every path on the previous domain to debateowl.com except the service worker", () => {
+    const [first] = loadConfig().redirects ?? [];
+    // First, so the old host never reaches a same-host rule. Vercel appends the query.
+    expect(first).toEqual({
+      source: "/:path((?!sw\\.js$).*)",
+      has: [{ type: "host", value: "debate.pi-stack.org" }],
+      destination: "https://debateowl.com/:path",
+      statusCode: 301,
+    });
+    const pattern = new RegExp(`^/(?:${first.source.slice("/:path(".length, -1)})$`);
+    for (const path of ["/", "/hu", "/tools/debate-timer", "/app/history", "/share/abc123", "/sw.json", "/assets/sw.js.map"]) {
+      expect(pattern.test(path), path).toBe(true);
+    }
+    // The old worker must fetch the retiring worker from its own host, unredirected.
+    expect(pattern.test("/sw.js")).toBe(false);
+  });
+
   it("permanently redirects the retired brand pages to the landing page", () => {
     const config = loadConfig();
 
@@ -105,6 +122,32 @@ describe("Vercel frontend deployment configuration", () => {
       destination: "/",
       statusCode: 301,
     })));
+  });
+
+  it("301s the renamed /debatelab-* pages to /debateowl-*, with or without a locale prefix or trailing slash", () => {
+    const rule = (loadConfig().redirects ?? []).find((entry) => entry.source.startsWith("/:locale("));
+    expect(rule).toEqual({
+      source: "/:locale(hu|es)?/debatelab-:slug(pricing|vs-chatgpt|vs-debateclub|vs-windebate){/}?",
+      destination: "/debateowl-:slug",
+      statusCode: 301,
+    });
+    // What path-to-regexp (via @vercel/routing-utils sourceToRegex) compiles that source to.
+    const pattern = /^(?:\/(hu|es))?\/debatelab-(pricing|vs-chatgpt|vs-debateclub|vs-windebate)(?:\/)?$/;
+    const target = (path: string) => {
+      const match = pattern.exec(path);
+      return match ? rule!.destination.replace(":slug", match[2]) : undefined;
+    };
+    for (const slug of ["pricing", "vs-chatgpt", "vs-debateclub", "vs-windebate"]) {
+      for (const prefix of ["", "/hu", "/es"]) {
+        for (const suffix of ["", "/"]) expect(target(`${prefix}/debatelab-${slug}${suffix}`)).toBe(`/debateowl-${slug}`);
+      }
+      // One hop to a generated page; nothing is left at the old address.
+      expect(existsSync(resolve(process.cwd(), "public", `debateowl-${slug}`, "index.html"))).toBe(true);
+      expect(existsSync(resolve(process.cwd(), "public", `debatelab-${slug}`))).toBe(false);
+    }
+    for (const path of ["/debatelab", "/debatelab-alternatives", "/fr/debatelab-pricing", "/debatelab-pricingx", "/debateowl-pricing"]) {
+      expect(target(path), path).toBeUndefined();
+    }
   });
 
   it("sends only the homepage's ?lang=hu|es links to /hu and /es, so they stop competing with them", () => {
@@ -161,7 +204,7 @@ describe("Vercel frontend deployment configuration", () => {
       "/ai-vs-traditional-debate-prep": "/ai-debate-practice",
     };
     const guideRedirects = (loadConfig().redirects ?? [])
-      .filter((rule) => !rule.source.startsWith("/:page(") && !rule.has);
+      .filter((rule) => !rule.source.startsWith("/:page(") && !rule.source.startsWith("/:locale(") && !rule.has);
     const retired = new Set(Object.keys(retiredGuides));
     const pages = readdirSync(resolve(process.cwd(), "public"), { withFileTypes: true })
       .filter((entry) => entry.isDirectory() && existsSync(resolve(process.cwd(), "public", entry.name, "index.html")))
@@ -288,7 +331,11 @@ describe("Vercel frontend deployment configuration", () => {
     expect(serviceWorker).toContain("'/icon-maskable-512.png'");
     expect(serviceWorker).toContain('cache.put(request, response.clone())');
     expect(serviceWorker).toContain('htmlMislabeledAsAsset');
-    expect(serviceWorker).not.toContain('self.skipWaiting()');
+    // A new build waits for the old one's tabs to close. The only exception is the
+    // previous domain, where every page redirects away and the worker removes itself.
+    const [beforeRetired, ...rest] = serviceWorker.split("  if (RETIRED) {\n    event.waitUntil(self.skipWaiting());\n    return;\n  }");
+    expect(rest).toHaveLength(1);
+    expect(beforeRetired + rest.join("")).not.toContain('self.skipWaiting()');
   });
 
   it.each([
@@ -338,10 +385,12 @@ describe("Vercel frontend deployment configuration", () => {
     expect(headersAt(config, "/")).not.toHaveProperty("X-Robots-Tag");
     expect(headersAt(config, "/app")).toMatchObject({ "X-Robots-Tag": "noindex, nofollow" });
     expect(indexHtml).toContain('<meta name="robots" content="noindex, nofollow" />');
+    expect(indexHtml).toContain('<meta property="og:image" content="https://debateowl.com/hero-visual.jpg?v=2" />');
+    expect(indexHtml).toContain('<meta name="twitter:image" content="https://debateowl.com/hero-visual.jpg?v=2" />');
     expect(indexHtml).toContain('<meta property="og:image:width" content="1200" />');
     expect(indexHtml).toContain('<meta property="og:image:height" content="630" />');
-    expect(indexHtml).toContain('<meta property="og:image:alt" content="DebateLab debate prep workspace preview" />');
-    expect(indexHtml).toContain('<meta name="twitter:image:alt" content="DebateLab debate prep workspace preview" />');
+    expect(indexHtml).toContain('<meta property="og:image:alt" content="DebateOwl wordmark with the owl, for AI debate prep and practice" />');
+    expect(indexHtml).toContain('<meta name="twitter:image:alt" content="DebateOwl wordmark with the owl, for AI debate prep and practice" />');
     expect(indexHtml).toContain('<link rel="icon" href="/favicon.ico" sizes="48x48" />');
     expect(indexHtml).toContain('<link rel="apple-touch-icon" href="/apple-touch-icon.png" sizes="180x180" />');
     expect(prerender).toContain(publicRobots);

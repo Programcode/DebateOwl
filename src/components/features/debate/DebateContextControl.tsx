@@ -16,7 +16,7 @@ import type { DebateContextFeature, DebateContextSide } from '../../../../supaba
 interface DebateContextControlProps {
   feature: DebateContextFeature;
   side: DebateContextSide;
-  /** False when this request will not read Library sources, as in Crossfire with Source Library off. */
+  /** False when this request will not read Library sources, as in Crossfire with Library grounding off. */
   includeSources?: boolean;
   /** The debate the request will use when it is not the Current Debate, such as a reopened chat. */
   debateId?: string | null;
@@ -174,7 +174,7 @@ function DebateContextReview({ plan, motion, usage, pinsReady, resultsComplete }
             <p className="text-sm text-muted-foreground">
               {plan.feature === 'sparring'
                 ? t('debateContext.sparringNoSources', 'Live sparring rounds use only the transcript, the motion, and your debate settings.')
-                : t('debateContext.sourcesOff', 'Source Library is off for this request.')}
+                : t('debateContext.sourcesOff', 'Library is off for this request.')}
             </p>
           ) : plan.sources.length === 0 ? (
             <p className="text-sm text-muted-foreground">{t('debateContext.noSources', 'This debate has no Library sources yet.')}</p>

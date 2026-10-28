@@ -18,7 +18,7 @@ const guides = readdirSync(PUBLIC, { withFileTypes: true })
 
 // Pages whose length is set by facts we can state, not by copy we can add: padding a
 // competitor comparison or the pricing page would mean inventing claims.
-const SHORT_BY_DESIGN = new Set(["debatelab-pricing", "debatelab-vs-debateclub", "debatelab-vs-windebate"]);
+const SHORT_BY_DESIGN = new Set(["debateowl-pricing", "debateowl-vs-debateclub", "debateowl-vs-windebate"]);
 const MIN_WORDS = 700;
 const SHARED_SENTENCE_LENGTH = 60;
 const MAX_PAGES_PER_SENTENCE = 3;

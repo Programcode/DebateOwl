@@ -49,4 +49,4 @@ When `shouldReduceMotion` is true, render a static element. Passing the flag to 
 - Keep a confirmation dialog open while its request is pending, and close it only on success. Radix closes on click unless you call `preventDefault()` ([#26](https://github.com/Programcode/DebateLab/pull/26#discussion_r3897947151)).
 - Side effects such as scrolling run on a success signal, not on "loading became false" ([#20](https://github.com/Programcode/DebateLab/pull/20#discussion_r3896378580)).
 - Open a new tab within the click handler. After an awaited request the user activation has expired and popup blockers drop the tab. Show a fallback link ([#63](https://github.com/Programcode/DebateLab/pull/63#discussion_r4081818952)).
-- Close the mobile menu on every navigation inside the persistent layout, including the logo link ([#20](https://github.com/Programcode/DebateLab/pull/20#discussion_r3896378566)).
+- On phones (below `md`) the bottom tab bar is the navigation. From `md` up the header nav is the navigation; there is no menu button at any width, so never show two navs at once ([#20](https://github.com/Programcode/DebateLab/pull/20#discussion_r3896378566)).

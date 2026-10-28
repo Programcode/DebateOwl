@@ -7,7 +7,10 @@
 // - a FAQPage question that is not on the page, a home-page graph whose @id
 //   references do not resolve or whose WebSite and SoftwareApplication are not
 //   named for the product, or a page whose publisher or about names an @id the
-//   home page does not define;
+//   home page does not define, or a home-page Organization not named for the
+//   product or without its logo and parent;
+// - an indexed page without the favicon and 192px icon links, or whose meta
+//   author is not the organization;
 // - an indexed page without its question H2 (#short-answer) as the first H2;
 // - a page whose first heading is not its H1, or a heading that skips a level (H1 to H3);
 // - an image without alt text, a button without a name, or a form field without a label;
@@ -36,7 +39,8 @@ function sourcePattern(source) {
     .replace(/:\w+\*/g, '.*');
   return new RegExp(`^${pattern}$`);
 }
-const redirects = vercel.redirects.map((rule) => ({ match: sourcePattern(rule.source), destination: rule.destination }));
+// Rules for another host (the previous domain) never apply to links on this one.
+const redirects = vercel.redirects.filter((rule) => !(rule.has ?? []).some((condition) => condition.type === 'host')).map((rule) => ({ match: sourcePattern(rule.source), destination: rule.destination }));
 const rewrites = vercel.rewrites.map((rule) => ({ match: sourcePattern(rule.source), destination: rule.destination }));
 
 function htmlFiles(directory) {
@@ -160,9 +164,23 @@ function checkStructuredData(where, data, body) {
     if (byType(type).name !== SITE.product) report(where, `${type}.name is "${byType(type).name}", not the product name "${SITE.product}"`);
   }
   if (!Array.isArray(byType('WebSite').alternateName)) report(where, 'WebSite.alternateName is not a list');
-  const sameAs = byType('Organization').sameAs;
+  const organization = byType('Organization');
+  const sameAs = organization.sameAs;
   if (!Array.isArray(sameAs) || !sameAs.length || sameAs.some((url) => !url.startsWith('https://'))) report(where, 'Organization.sameAs is not a list of https URLs');
+  // One name for one entity: the Organization on this domain is the product, and the company
+  // that builds it is its parent, never a sameAs.
+  if (organization.name !== SITE.product) report(where, `Organization.name is "${organization.name}", not the product name "${SITE.product}"`);
+  const logo = organization.logo ?? {};
+  if (logo['@type'] !== 'ImageObject' || !logo.url?.startsWith(`${SITE_ORIGIN}/`) || !logo.width || !logo.height) report(where, 'Organization.logo is not an ImageObject on this site with a width and height');
+  const parent = organization.parentOrganization ?? {};
+  if (!parent.name || !parent.url) report(where, 'Organization.parentOrganization has no name and url');
+  else if (sameAs?.includes(parent.url)) report(where, `Organization.sameAs lists the parent ${parent.url}`);
+  const alternates = byType('WebSite').alternateName ?? [];
+  if (!alternates.some((name) => name !== SITE.product)) report(where, 'WebSite.alternateName only repeats the name');
 }
+
+// Every page names the favicon and a 192px icon, so search engines can pick one from any page.
+const ICON_LINKS = ['href="/favicon.ico"', 'href="/icon-192.png" sizes="192x192"', 'href="/apple-touch-icon.png"'];
 
 // Canonical URL -> the page's hreflang set, checked for agreement after the loop.
 const hreflangSets = new Map();
@@ -199,6 +217,10 @@ for (const file of htmlFiles(DIST)) {
 
   const robots = html.match(/<meta name="robots" content="([^"]*)"/)?.[1] ?? '';
   const indexed = !/noindex/i.test(robots) && html.includes('<link rel="canonical"');
+  const head = html.slice(0, html.indexOf('<body'));
+  for (const link of ICON_LINKS) if (indexed && !head.includes(link)) report(where, `no icon link with ${link} in the head`);
+  const author = head.match(/<meta name="author" content="([^"]*)"/)?.[1];
+  if (indexed && author !== SITE.organization.name) report(where, `meta author is "${author}", not "${SITE.organization.name}"`);
   if (indexed && !NO_SHORT_ANSWER.has(routeOf(file))) {
     const firstH2 = body.match(/<h2\b([^>]*)>([\s\S]*?)<\/h2>/);
     if (!firstH2 || !/\sid="short-answer"/.test(firstH2[1])) report(where, 'the first H2 is not the #short-answer question');

@@ -27,7 +27,7 @@ Deno.test("streaming Ask keeps the shared identity, language, and evidence rules
 
   for (
     const rule of [
-      "You are DebateLab's debate coach.",
+      "You are DebateOwl's debate coach.",
       "Follow any explicit output-language instruction. Otherwise match the language used by the user.",
       "Never invent facts, statistics, citations, or sources.",
       "Prefer familiar words and short sentences.",

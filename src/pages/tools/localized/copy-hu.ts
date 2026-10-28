@@ -38,7 +38,7 @@ export const COPY_HU: LocalizedToolsCopy = {
       faq: [],
       cta: {
         title: 'Ha már nem csak időmérőre van szükséged',
-        body: 'A {product} fizetős gyakorlóalkalmazás vitázóknak: egy tétel bármelyik oldalára megírja az eset vázlatát, cáfolatokat javasol, és Vitapárbaj-fordulókat futtat egy MI-ellenféllel.',
+        body: 'A {product} MI-alapú vitafelkészítő és gyakorlóalkalmazás: egy tétel bármelyik oldalára megírja az eset vázlatát, cáfolatokat javasol, és Vitapárbaj-fordulókat futtat egy MI-ellenféllel.',
       },
     },
 

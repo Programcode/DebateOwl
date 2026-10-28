@@ -1,4 +1,5 @@
 import { useTranslation } from "react-i18next";
+import site from '@/config/site.json';
 import { OwlMark } from '@/components/brand/Owl';
 import { Link } from "react-router-dom";
 import { localizedPath, useRouteLanguage } from "@/lib/seo/localized-routes";
@@ -13,9 +14,9 @@ const Footer = () => {
                 <div className="flex flex-col md:flex-row items-center justify-between gap-6">
                     <div className="flex items-center gap-6">
                         {/* In-app links: no full reload through the startup shell. */}
-                        <Link to="/" className="flex items-center gap-2 pointer-coarse:min-h-11">
+                        <Link to={localizedPath("/", language)} aria-label={t('common.homeLink')} className="flex items-center gap-2 pointer-coarse:min-h-11">
                             <OwlMark size={32} alt={t('common.logoAlt')} />
-                            <span className="font-display text-lg font-[600] text-heading">DebateLab</span>
+                            <span className="font-display text-lg font-[600] text-heading">{site.product}</span>
                         </Link>
                     </div>
 
@@ -24,7 +25,7 @@ const Footer = () => {
                             {t('tools:footer.freeTools')}
                         </Link>
                         {/* Static guide pages, not app routes: plain links load them from the server. */}
-                        <a href="/debatelab-pricing" className="inline-flex min-h-6 items-center text-muted-foreground hover:text-foreground transition-colors underline-offset-4 hover:underline pointer-coarse:min-h-11 pointer-coarse:min-w-11 pointer-coarse:justify-center">
+                        <a href="/debateowl-pricing" className="inline-flex min-h-6 items-center text-muted-foreground hover:text-foreground transition-colors underline-offset-4 hover:underline pointer-coarse:min-h-11 pointer-coarse:min-w-11 pointer-coarse:justify-center">
                             {t('footer.pricingGuide')}
                         </a>
                         <a href="/best-ai-debate-tools" className="inline-flex min-h-6 items-center text-muted-foreground hover:text-foreground transition-colors underline-offset-4 hover:underline pointer-coarse:min-h-11 pointer-coarse:min-w-11 pointer-coarse:justify-center">
@@ -38,9 +39,11 @@ const Footer = () => {
                         </Link>
                     </nav>
 
-                    <p className="text-sm text-muted-foreground">
-                        {t('footer.copyright')}
-                    </p>
+                    <div className="text-center text-sm text-muted-foreground md:text-right">
+                        {/* The old name, so searchers and answer engines that know it can match the two. */}
+                        <p>{t('footer.formerly')}</p>
+                        <p>{t('footer.copyright')}</p>
+                    </div>
                 </div>
             </div>
         </footer>

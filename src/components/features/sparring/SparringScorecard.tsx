@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Owl, OwlAvatar } from '@/components/brand/Owl';
+import { CountUp } from '@/components/ui/count-up';
 import { useTranslation } from 'react-i18next';
 import { Award, BarChart3, Download, FileText, Lightbulb, Mic, RotateCcw, Sparkles, Target, UserRound, Check } from 'lucide-react';
 import { PolarAngleAxis, PolarGrid, PolarRadiusAxis, Radar, RadarChart, ResponsiveContainer, Tooltip } from 'recharts';
@@ -74,7 +75,7 @@ export function SparringScorecard({ session, scorecard, onRestart, onExport, onE
                   <h2 id="result-heading" className="mt-1 font-display text-2xl font-[600] text-heading">{winnerText}</h2>
                 </div>
               </div>
-              <Badge variant="outline" className={cn('rounded-full px-3 py-1.5 text-xs', winnerTone(scorecard.winner))}>{scorecard.winner === 'user' && <Check className="h-3.5 w-3.5" strokeWidth={3} aria-hidden="true" />}{scorecard.winner === 'tie' ? t('sparring.scorecard.tied', 'Tied') : scorecard.winner === 'user' ? t('sparring.scorecard.winner', 'Winner') : t('sparring.scorecard.keepTraining', 'Keep training')}</Badge>
+              <Badge variant="outline" className={cn('rounded-full px-3 py-1.5 text-xs', winnerTone(scorecard.winner))}>{scorecard.winner === 'user' && <Check className="success-pop h-3.5 w-3.5 [--success-delay:700ms]" strokeWidth={3} aria-hidden="true" />}{scorecard.winner === 'tie' ? t('sparring.scorecard.tied', 'Tied') : scorecard.winner === 'user' ? t('sparring.scorecard.winner', 'Winner') : t('sparring.scorecard.keepTraining', 'Keep training')}</Badge>
             </div>
             <div className="mt-8 grid gap-4 sm:grid-cols-2">
               <ScoreTotal label={t('sparring.scorecard.yourScore', 'Your score')} score={scorecard.userScore} icon={<UserRound className="h-4 w-4" aria-hidden="true" />} isWinner={scorecard.winner === 'user'} topScoreLabel={t('sparring.scorecard.topScore', 'Top score')} />
@@ -196,7 +197,7 @@ function ScoreTotal({ label, score, icon, isWinner, topScoreLabel }: { label: st
   return (
     <div className={cn('rounded-lg border-2 p-4', isWinner ? 'border-brand bg-brand-tint shadow-[0_4px_0_var(--do-primary-tint-border)]' : 'border-border bg-card')}>
       <div className="flex items-center gap-2 text-sm font-bold text-muted-foreground">{icon}{label}{isWinner && <span className="ml-auto text-xs font-extrabold text-primary">{topScoreLabel}</span>}</div>
-      <p className="mt-2 font-display text-5xl font-[600] tracking-[-0.02em] text-heading tabular-nums">{score}<span className="ml-1 text-lg font-normal text-muted-foreground">/100</span></p>
+      <p className="mt-2 font-display text-5xl font-[600] tracking-[-0.02em] text-heading tabular-nums"><CountUp value={score} /><span className="ml-1 text-lg font-normal text-muted-foreground">/100</span></p>
     </div>
   );
 }

@@ -35,7 +35,7 @@ Deno.test("share records the token's user as the creator", async () => {
     label: "valid token",
     authorization: `Bearer ${VALID_TOKEN}`,
     status: 200,
-    body: { shareCode: "abc123", shareUrl: "https://debate.pi-stack.org/share/abc123", expiresAt: "2026-01-01T00:00:00.000Z" },
+    body: { shareCode: "abc123", shareUrl: "https://debateowl.com/share/abc123", expiresAt: "2026-01-01T00:00:00.000Z" },
     authCalls: 1,
   }], (url, _headers, init) => {
     if (url.pathname === "/rest/v1/rpc/consume_daily_quota") return Response.json([{ allowed: true, current_count: 1 }]);

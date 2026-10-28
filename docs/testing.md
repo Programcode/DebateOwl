@@ -129,7 +129,7 @@ The server is never reused. CI uses retries and two workers. On failure, traces,
 
 Playwright starts that server with `VITE_E2E=1`. The client then keeps the environment switcher, but the production fallback is `http://e2e.invalid` instead of the production Supabase project, and a request that still names that project is refused in the browser. `playwright.config.ts` also refuses to start when `VITE_SUPABASE_ENV` or `SUPABASE_URL` already points at production. `E2E_ALLOW_PROD=1` is the explicit override. The production canary uses `playwright.production.config.ts` and does not set `VITE_E2E`. Plain `npm run dev` is unchanged and still defaults to production.
 
-The one-time DebateOwl welcome stays closed whenever `VITE_E2E` or `VITE_LOCAL_PREVIEW` is set, so Playwright, the verify stack and agentic tests never meet it; `?intro=show` opens it anyway and `?intro=skip` keeps it closed in any build. The production canary and the service worker offline test (`npm run test:sw`), which drive production builds, seed `debateowl_intro_seen_v1` instead.
+The one-time DebateOwl welcome stays closed whenever `VITE_E2E` or `VITE_LOCAL_PREVIEW` is set, so Playwright, the verify stack and agentic tests never meet it; `?intro=show` opens it anyway and `?intro=skip` keeps it closed in any build. Closing it continues into the tour's Start debate step when that account has not finished the tour. If that chunk fails twice, the app logs once, remembers the welcome, and continues without the tour. The production canary and the service worker offline test (`npm run test:sw`), which drive production builds, seed `debateowl_intro_seen_v1` instead.
 
 `e2e/hungarian-parity.spec.ts` is the focused Hungarian browser contract. On desktop and mobile Chromium it checks persisted `<html lang="hu">`, public and authenticated page chrome, route titles, onboarding, saved-chat empty state, Library controls, Timer semantics, localized close labels, and runtime errors. It deliberately does not reject arbitrary English text because source titles, user content, model names, and citations may legitimately remain in their source language.
 
@@ -288,7 +288,7 @@ PROD_SUPABASE_ANON_KEY=... PROD_CANARY_EMAIL=... PROD_CANARY_PASSWORD=... \
 npx playwright test --config=playwright.production.config.ts
 ```
 
-`e2e/production/canary.spec.ts` checks `https://debate.pi-stack.org` directly:
+`e2e/production/canary.spec.ts` checks `https://debateowl.com` directly:
 
 - the site loads and signed-out app routes redirect to Login;
 - every browser-facing Edge Function answers a preflight that allows the site origin (`workspace-invites` is excluded until production enables Workspaces);

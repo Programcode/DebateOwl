@@ -16,7 +16,7 @@ test('shows a dark private startup shell while the entry module is delayed', { t
 
   await page.goto('/app', { waitUntil: 'commit' });
   await expect(page.locator('[data-startup-shell]')).toBeVisible();
-  await expect(page.locator('[data-startup-status]')).toHaveText('Loading DebateLab');
+  await expect(page.locator('[data-startup-status]')).toHaveText('Loading DebateOwl');
   await expect.poll(() => page.evaluate(() => ({
     appShell: document.documentElement.classList.contains('app-shell'),
     dark: document.documentElement.classList.contains('dark'),
@@ -49,6 +49,6 @@ test('shows a recoverable message when the static main entry fails', { tag: '@sm
 
   await page.goto('/app', { waitUntil: 'domcontentloaded' });
   await expect(page.locator('[data-bootstrap-error]')).toBeVisible();
-  await expect(page.getByRole('heading', { name: 'Unable to load DebateLab' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Unable to load DebateOwl' })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Reload' })).toBeEnabled();
 });

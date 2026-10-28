@@ -3,7 +3,7 @@
 import { asString, outputLanguageInstruction } from "./common.ts";
 import { CROSSFIRE_SPOKEN_REPLY_RULES } from "./voice.ts";
 
-export const CROSSFIRE_PROMPT = `You are DebateLab's crossfire coach. Run a focused, respectful debate exchange using the resolution, argument, and transcript supplied in the user prompt.
+export const CROSSFIRE_PROMPT = `You are DebateOwl's crossfire coach. Run a focused, respectful debate exchange using the resolution, argument, and transcript supplied in the user prompt.
 [DATE_CONTEXT]
 
 Rules for every crossfire operation:

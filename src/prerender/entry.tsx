@@ -6,7 +6,8 @@ import { StaticRouter } from 'react-router-dom';
 import i18n, { applyAppLanguage } from '@/i18n';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { AuthContext, type AuthContextValue } from '@/lib/supabase/auth-context';
-import { BRAND, DEFINITION, ORGANIZATION, ORGANIZATION_SAME_AS, PAGE_HEAD_IDS, PAGE_HEADS, PRICING, PRODUCT, SITE_ORIGIN, factsAsOf, type PageHead, type PrerenderedRoute } from '@/lib/seo/pages';
+import site from '@/config/site.json';
+import { DEFINITION, ORGANIZATION_ID, PAGE_HEAD_IDS, PAGE_HEADS, PRICING, PRODUCT, SITE_ORIGIN, factsAsOf, organizationNode, type PageHead, type PrerenderedRoute } from '@/lib/seo/pages';
 import { HEAD_NAMES } from '@/lib/seo/head-text';
 import { hreflangAlternates, isLocalizedRoute, LOCALIZED_PATHS, RouteLanguageProvider, type PageLanguage } from '@/lib/seo/localized-routes';
 import { TOOL_PAGES as HU_TOOL_PAGES } from '@/pages/tools/localized/hu';
@@ -53,7 +54,6 @@ export interface PrerenderedPage {
   structuredData?: object;
 }
 
-const ORGANIZATION_ID = `${SITE_ORIGIN}/#organization`;
 const WEBSITE_ID = `${SITE_ORIGIN}/#website`;
 
 /** "May 1, 2026" in the locale file, as 2026-05-01. */
@@ -94,31 +94,26 @@ function landingStructuredData(dateModified: string | undefined) {
   return {
     '@context': 'https://schema.org',
     '@graph': [
-      {
-        '@type': 'Organization',
-        '@id': ORGANIZATION_ID,
-        name: ORGANIZATION,
-        url: `${SITE_ORIGIN}/`,
-        logo: `${SITE_ORIGIN}/icon-1024.png`,
-        sameAs: ORGANIZATION_SAME_AS,
-      },
+      organizationNode(),
       {
         '@type': 'WebSite',
         '@id': WEBSITE_ID,
         url: `${SITE_ORIGIN}/`,
         name: PRODUCT,
-        alternateName: [BRAND, new URL(SITE_ORIGIN).host],
+        // A real alternate spelling, not the name again.
+        alternateName: [site.alternateName, new URL(SITE_ORIGIN).host],
+        inLanguage: ['en', 'hu', 'es'],
         publisher: { '@id': ORGANIZATION_ID },
       },
       {
         '@type': 'SoftwareApplication',
         '@id': `${SITE_ORIGIN}/#software`,
         name: PRODUCT,
-        alternateName: BRAND,
+        alternateName: site.alternateName,
         applicationCategory: 'EducationalApplication',
         operatingSystem: 'Web',
         url: `${SITE_ORIGIN}/`,
-        image: `${SITE_ORIGIN}/hero-visual.jpg`,
+        image: `${SITE_ORIGIN}/hero-visual.jpg?v=2`,
         description: DEFINITION,
         inLanguage: ['en', 'es', 'hu'],
         featureList: APP_TOOLS.map((tool) => i18n.t(`features.${tool.key}`)),
@@ -175,10 +170,24 @@ function localizedLandingStructuredData(head: PageHead, language: PageLanguage, 
   };
 }
 
-function legalStructuredData(route: '/terms' | '/privacy', dateKey: string) {
+/** Home, then the page: the trail the guides and tool pages already carry. */
+function breadcrumbList(route: '/terms' | '/privacy' | '/expocit/sources', name: string) {
+  return {
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      { '@type': 'ListItem', position: 1, name: PRODUCT, item: `${SITE_ORIGIN}/` },
+      { '@type': 'ListItem', position: 2, name, item: `${SITE_ORIGIN}${route}` },
+    ],
+  };
+}
+
+function legalStructuredData(route: '/terms' | '/privacy', page: 'termsPage' | 'privacyPage') {
   return {
     '@context': 'https://schema.org',
-    '@graph': [webPage(route, isoDate(i18n.t(dateKey, { lng: 'en' })))],
+    '@graph': [
+      webPage(route, isoDate(i18n.t(`${page}.date`, { lng: 'en' }))),
+      breadcrumbList(route, i18n.t(`${page}.title`, { lng: 'en' })),
+    ],
   };
 }
 
@@ -250,7 +259,7 @@ export async function prerenderPages({ landingModified }: { landingModified?: st
       module: 'src/pages/TermsPage.tsx',
       head: PAGE_HEADS['/terms'],
       body: render('/terms', TermsPage),
-      structuredData: legalStructuredData('/terms', 'termsPage.date'),
+      structuredData: legalStructuredData('/terms', 'termsPage'),
     },
     {
       route: '/privacy',
@@ -258,7 +267,7 @@ export async function prerenderPages({ landingModified }: { landingModified?: st
       module: 'src/pages/PrivacyPage.tsx',
       head: PAGE_HEADS['/privacy'],
       body: render('/privacy', PrivacyPage),
-      structuredData: legalStructuredData('/privacy', 'privacyPage.date'),
+      structuredData: legalStructuredData('/privacy', 'privacyPage'),
     },
     // The tool pages render their own JSON-LD in the body.
     ...TOOL_PAGES.map(({ route, module, Page }) => ({
@@ -275,6 +284,10 @@ export async function prerenderPages({ landingModified }: { landingModified?: st
       module: 'src/pages/SourcesPage.tsx',
       head: PAGE_HEADS['/expocit/sources'],
       body: render('/expocit/sources', SourcesPage),
+      structuredData: {
+        '@context': 'https://schema.org',
+        '@graph': [webPage('/expocit/sources', undefined), breadcrumbList('/expocit/sources', i18n.t('sourcesPage.title'))],
+      },
     },
     {
       route: '*',

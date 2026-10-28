@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { SectionCard } from '@/components/ui/section-card';
 import { Progress } from '@/components/ui/progress';
+import { CountUp } from '@/components/ui/count-up';
 import type { FactoidsOutput, Factoid } from '@/lib/ai/schemas/factoids';
 import { cn } from '@/lib/utils';
 import { validateUrl } from '@/lib/validation/url';
@@ -79,7 +80,7 @@ function FactoidCard({ factoid, onSave }: { factoid: Factoid, onSave?: FactoidsR
           </div>
         </div>
         <div className="flex flex-col items-end gap-2">
-          <Progress value={factoid.relevanceScore} className="w-16 h-2" />
+          <Progress value={factoid.relevanceScore} className="w-16 h-2" reveal />
           {onSave && (
             <Button
               variant="ghost"
@@ -235,10 +236,10 @@ export function FactoidsResults({ result, discoveredSources, onDiscuss, onSave, 
         <div className="space-y-4">
           <div className="flex items-center gap-4">
             <div className="flex-1">
-              <Progress value={(verifiedCount / totalCount) * 100} className="h-3" />
+              <Progress value={(verifiedCount / totalCount) * 100} className="h-3" reveal />
             </div>
-            <span className="text-sm font-medium text-foreground">
-              {Math.round((verifiedCount / totalCount) * 100)}%
+            <span className="text-sm font-medium tabular-nums text-foreground">
+              <CountUp value={Math.round((verifiedCount / totalCount) * 100)} />%
             </span>
           </div>
         </div>

@@ -101,7 +101,7 @@ Deno.test("export-gdoc does not allow arbitrary LAN origins", async () => {
   const response = await handleRequest(new Request("http://127.0.0.1/functions/v1/export-gdoc", {
     method: "OPTIONS", headers: { Origin: "http://192.168.1.5:8080" },
   }));
-  if (response.headers.get("Access-Control-Allow-Origin") !== "https://debate.pi-stack.org") throw new Error("LAN origin was reflected");
+  if (response.headers.get("Access-Control-Allow-Origin") !== "https://debateowl.com") throw new Error("LAN origin was reflected");
 });
 
 Deno.test("export-gdoc conceals Google error bodies while retaining reauthentication codes and statuses", async () => {

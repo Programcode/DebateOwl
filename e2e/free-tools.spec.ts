@@ -1,6 +1,6 @@
 import { test, expect, type Page } from '@playwright/test';
 
-const ORIGIN = 'https://debate.pi-stack.org';
+const ORIGIN = 'https://debateowl.com';
 const TOOL_PAGES = [
   { path: '/tools', h1: 'Free debate tools', type: 'CollectionPage' },
   { path: '/tools/debate-timer', h1: 'Free debate timer for every format', type: 'WebApplication' },
@@ -46,7 +46,7 @@ test.describe('free debate tools', { tag: '@smoke' }, () => {
       expect(response?.ok()).toBeTruthy();
       await expect(page.getByRole('heading', { level: 1, name: tool.h1 })).toBeVisible();
       await expect(page.locator('link[rel="canonical"]')).toHaveAttribute('href', `${ORIGIN}${tool.path}`);
-      await expect(page).toHaveTitle(/DebateLab/);
+      await expect(page).toHaveTitle(/DebateOwl/);
       const graphs = await page.locator('script[type="application/ld+json"]').allTextContents();
       const types = graphs.flatMap((json) => (JSON.parse(json)['@graph'] as { '@type': string }[]).map((node) => node['@type']));
       expect(types).toContain(tool.type);
@@ -122,7 +122,7 @@ test.describe('free debate tools', { tag: '@smoke' }, () => {
     await expect(page.getByRole('heading', { level: 2, name: 'First Proposition' })).toBeVisible();
     await expect(page.locator('meta[name="robots"]')).toHaveAttribute('content', 'noindex');
     await expect(page.locator('link[rel="canonical"]')).toHaveAttribute('href', `${ORIGIN}/tools/debate-timer`);
-    const attribution = page.getByRole('link', { name: 'Timer by DebateLab' });
+    const attribution = page.getByRole('link', { name: 'Timer by DebateOwl' });
     await expect(attribution).toHaveAttribute('href', `${ORIGIN}/tools/debate-timer`);
     await expect(attribution).not.toHaveAttribute('rel', /nofollow/);
     await expect(page.getByLabel('Format')).toHaveCount(0);

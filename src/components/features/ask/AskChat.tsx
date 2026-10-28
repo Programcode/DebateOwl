@@ -514,7 +514,7 @@ export function AskChat({ messages, streamingMessage, isLoading, error, onDismis
   };
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-3 max-md:flex max-md:min-h-0 max-md:flex-1 max-md:flex-col">
       <div className="flex items-center justify-between gap-2 lg:hidden">
         <Button variant="outline" size="sm" onClick={() => setMobileSidebarOpen(true)}>
           <PanelLeftOpen className="mr-2 h-4 w-4" />
@@ -540,7 +540,7 @@ export function AskChat({ messages, streamingMessage, isLoading, error, onDismis
         </SheetContent>
       </Sheet>
 
-      <div className={cn('grid gap-3', desktopSidebarOpen ? 'lg:grid-cols-[280px_minmax(0,1fr)]' : 'lg:grid-cols-[auto_minmax(0,1fr)]')}>
+      <div className={cn('grid gap-3 max-md:min-h-0 max-md:flex-1', desktopSidebarOpen ? 'lg:grid-cols-[280px_minmax(0,1fr)]' : 'lg:grid-cols-[auto_minmax(0,1fr)]')}>
         <aside className="hidden lg:block">
           {desktopSidebarOpen ? (
             <Card className="flex h-[calc(100dvh-14rem)] min-h-[400px] max-h-[800px] flex-col border-primary/20">
@@ -572,12 +572,12 @@ export function AskChat({ messages, streamingMessage, isLoading, error, onDismis
           )}
         </aside>
 
-    <Card className="flex flex-col h-[calc(100dvh-14rem)] min-h-[400px] max-h-[800px] border-primary/20">
+    <Card className="flex h-[calc(100dvh-14rem)] min-h-[400px] max-h-[800px] flex-col border-primary/20 max-md:h-auto max-md:max-h-none max-md:min-h-0 max-md:flex-1">
       <CardHeader className="shrink-0 border-b-2 border-border bg-brand-tint/50 pb-4">
         {/* Wraps on a phone: the Hungarian title and two buttons do not fit one 375 px row. */}
         <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
           <div className="flex min-w-0 items-center gap-3">
-            <OwlAvatar pose="coach" size={44} label={t('askChat.coachAvatarAlt', 'The owl, your debate coach')} />
+            <OwlAvatar pose="coach" size={44} blink label={t('askChat.coachAvatarAlt', 'The owl, your debate coach')} />
             <div className="min-w-0">
               <CardTitle>{t('askChat.title')}</CardTitle>
               <CardDescription>{t('askChat.subtitle')}</CardDescription>
@@ -619,7 +619,7 @@ export function AskChat({ messages, streamingMessage, isLoading, error, onDismis
                 // One true status line: what is happening, and how long it has taken once that matters.
                 <p className="flex items-center gap-2.5 text-sm font-bold text-muted-foreground motion-safe:animate-in fade-in-0 duration-200" role="status" aria-live="polite">
                   {/* Decorative: a label here would be announced with every status update. */}
-                  <OwlAvatar pose="coach" size={32} />
+                  <OwlAvatar pose="coach" size={32} blink />
                   <span className="inline-flex items-center gap-2 rounded-[20px] rounded-bl-md border-2 border-border bg-card px-3.5 py-2.5">
                     {searchingWeb ? t('askChat.searchingWeb', 'Searching the web…') : t('askChat.working', 'Working…')}
                     <ThinkingDots className="text-primary" />

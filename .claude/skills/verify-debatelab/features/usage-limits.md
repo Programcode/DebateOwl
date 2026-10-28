@@ -6,10 +6,10 @@ Crossfire and Sparring are charged per round, not per call: the round's first ca
 
 ## Sub-features
 
-- `usage-weighted`: with 4 units left, Opus is refused (`Daily Access Paused`, "This model counts as 5 uses, and you have 4 left today.") without a provider call or a counter change; switching to Claude Haiku 5.5 runs and uses 1 unit.
-- `usage-weekly`: with `ai_requests.cap_cost_usd` for this week at or above the budget, the next request opens `Weekly AI Allowance Used` with an `OK` button and no upgrade offer, makes no provider call, and leaves the daily counter alone.
+- `usage-weighted`: with 4 units left, Opus is refused (`Daily AI uses used up`, "This model counts as 5 uses, and you have 4 left today.") without a provider call or a counter change; switching to Claude Haiku 5.5 runs and uses 1 unit.
+- `usage-weekly`: with `ai_requests.cap_cost_usd` for this week at or above the budget, the next request opens `Weekly AI allowance used` with an `OK` button and no upgrade offer, makes no provider call, and leaves the daily counter alone.
 
-- `usage-weekly-sparring`: with the budget reached, the Sparring setup's `session-cost` shows the translated weekly message from the catalog (not the server's English reason) before Start, and Start opens `Weekly AI Allowance Used` without opening a round or calling the provider.
+- `usage-weekly-sparring`: with the budget reached, the Sparring setup's `session-cost` shows the translated weekly message from the catalog (not the server's English reason) before Start, and Start opens `Weekly AI allowance used` without opening a round or calling the provider.
 - `usage-session-sparring` (QB-01): with 1 request left of 5, a Lincoln-Douglas round on Claude Haiku 5.5 runs both opponent replies and the judge; the counter moves 4 to 5 once and `ai_quota_sessions` shows `calls_used: 3`.
 - `usage-session-crossfire` (QB-05, MD-03): an AI-led Crossfire round with two answers and the debrief makes four calls and one charge; the setup hint is gone once the round runs.
 - `usage-refund-reload` (QB-04, MD-13): reloading while Brainstorm streams logs the run `cancelled`/`aborted` and gives its units back. Fake mode only.

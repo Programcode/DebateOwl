@@ -38,7 +38,7 @@ export const COPY_ES: LocalizedToolsCopy = {
       faq: [],
       cta: {
         title: 'Cuando necesitas algo más que un reloj',
-        body: '{product} es una app de práctica de pago para debatientes: redacta casos para cualquiera de los dos lados de una moción, sugiere refutaciones y organiza rondas de Sparring contra un oponente de IA.',
+        body: '{product} es una app de preparación y práctica de debate con IA: redacta casos para cualquiera de los dos lados de una moción, sugiere refutaciones y organiza rondas de Sparring contra un oponente de IA.',
       },
     },
 

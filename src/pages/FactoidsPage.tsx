@@ -121,7 +121,7 @@ export default function FactoidsPage() {
     try {
       await saveCurrentFactoids((lastInput.current?.claim || factoidsForm?.claim || t('generatedArtifacts.factoidsTitle')).slice(0, 300));
       markResultSaved(result);
-      toast({ title: t('resultActions.savedToHistory', 'Saved to History') });
+      toast({ title: t('resultActions.savedToHistory', 'Saved to history') });
     } catch (error) {
       console.error('Failed to save factoids:', error);
       toast({ title: t('resultActions.saveFailed', 'Could not save. Try again.'), variant: 'destructive' });
@@ -172,7 +172,7 @@ export default function FactoidsPage() {
                 />
               </div>
             ) : (
-              <EmptyState icon={BookOpen} title={t('factoids.emptyTitle')} description={t('factoids.emptyDesc')} />
+              <EmptyState size="compact-below-lg" icon={BookOpen} title={t('factoids.emptyTitle')} description={t('factoids.emptyDesc')} />
             )}
           </div>
         </div>

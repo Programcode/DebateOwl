@@ -14,7 +14,7 @@ const port = Number(process.env.PORT ?? 8787);
 const upstream = process.env.UPSTREAM;
 const liveModel = process.env.LIVE_MODEL;
 const chatModel = (requested) => (liveModel === "as-requested" ? requested : liveModel);
-// Claude runs only on DebateLab's Anthropic key (BYOK in OpenRouter): every
+// Claude runs only on DebateOwl's Anthropic key (BYOK in OpenRouter): every
 // Claude call leaves pinned to the Anthropic provider with fallbacks off, and
 // any `models` fallback list is dropped. A rewrite to another family (only
 // as-requested reaches one) keeps just the options that still apply to it.
@@ -216,7 +216,7 @@ const routes = [
   ["brainstorm", "Brainstorm arguments like experienced competitive debaters", brainstorm],
   ["factoids", "You are a debate research specialist", factoids],
   ["sparring", "live debate sparring opponent", (user, system) => sparring(user, system)],
-  ["crossfire", "You are DebateLab's crossfire coach", (user) => crossfire(user)],
+  ["crossfire", "You are DebateOwl's crossfire coach", (user) => crossfire(user)],
   ["ask", "You are a debate coach chat bot", ask],
 ];
 

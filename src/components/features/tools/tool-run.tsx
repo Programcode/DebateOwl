@@ -105,7 +105,7 @@ export function ToolRunStatus({ label, onCancel, pose = 'idea' }: { label: strin
   return (
     <div className="flex min-h-[400px] flex-col items-center justify-center gap-4 rounded-xl border-2 border-dashed border-border-strong bg-card/60 p-8 text-center motion-safe:animate-in fade-in-0 duration-300">
       <span className="owl-bob">
-        <Owl pose={pose} size={120} priority />
+        <Owl pose={pose} size={120} priority breathe={false} />
       </span>
       <p className="flex flex-wrap items-center justify-center gap-x-2 gap-y-1 text-[0.9375rem] font-bold text-foreground">
         <span role="status" aria-live="polite">{label}</span>
