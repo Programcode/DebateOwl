@@ -1,6 +1,7 @@
 import type { ComponentType } from "react";
 import { loadAllAppLanguages } from "@/i18n";
 import { LOCALIZED_PATHS } from "@/lib/seo/localized-routes";
+import { loadChunk, namedChunk } from "@/lib/lazy-chunk";
 
 export type RouteLoader<T> = (() => Promise<T>) & {
   /** The module once it has loaded, so a page can render without suspending. */
@@ -14,7 +15,7 @@ function cacheLoader<T>(loader: () => Promise<T>): RouteLoader<T> {
   const load = () => {
     if (pending) return pending;
 
-    pending = loader().then((module) => {
+    pending = loadChunk(loader).then((module) => {
       loaded = module;
       return module;
     }, (error) => {
@@ -88,8 +89,7 @@ export const localizedRouteLoaders: Record<string, RouteLoader<PageModule>> = Ob
 );
 
 /** The signed-in header and navigation around every /app page. */
-export const appLayoutLoader = cacheLoader(() => import("@/components/layout/AppLayout")
-  .then(({ AppLayout }) => ({ default: AppLayout })));
+export const appLayoutLoader = cacheLoader(() => namedChunk(() => import("@/components/layout/AppLayout"), "AppLayout"));
 
 type RoutePath = keyof typeof routeLoaders;
 

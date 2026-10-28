@@ -9,13 +9,12 @@ import { AttackForm } from '@/components/features/attack/AttackForm';
 import { AttackResults } from '@/components/features/attack/AttackResults';
 import { attackCase, type DiscoveredSource } from '@/lib/ai/client';
 import { useSubscriptionError } from '@/hooks/use-subscription-error';
-import { getUserFacingAIError } from '@/lib/ai/error-display';
 import { DailyUsage, SubscriptionErrorModals } from '@/components/features/subscription';
 import type { AttackInput } from '@/lib/ai/schemas/attack';
 import { useNavigate } from 'react-router-dom';
 import { EmptyState } from '@/components/ui/empty-state';
 import { PageHeader } from '@/components/layout/PageHeader';
-import { ToolRunErrorPanel, isCanceled, useRevealResults, useToolRun } from '@/components/features/tools/tool-run';
+import { ToolRunErrorPanel, isCanceled, toolRunError, useRevealResults, useToolRun } from '@/components/features/tools/tool-run';
 import { LiveToolRun } from '@/components/features/tools/live-draft';
 import { attackDraftSections } from '@/components/features/tools/live-sections';
 import { attackDiscussPrompt, openDiscussion } from '@/components/features/tools/discuss';
@@ -48,7 +47,7 @@ export default function AttackPage() {
   }, [drafting, revealResults]);
   const lastInput = useRef<AttackInput | null>(null);
   const navigate = useNavigate();
-  const subError = useSubscriptionError();
+  const subError = useSubscriptionError('attack');
   const { t } = useTranslation();
   const [discoveredSources, setDiscoveredSources] = useState<DiscoveredSource[]>([]);
   // The text the critique on screen was written for. A critique restored with the page
@@ -85,7 +84,7 @@ export default function AttackPage() {
       if (isCanceled(error, signal)) return;
       console.error('Failed to attack case:', error);
       if (!subError.handleSubscriptionError(error)) {
-        run.setError({ title: t('attack.failed'), description: getUserFacingAIError(error) });
+        run.setError(toolRunError(t('attack.failed'), error));
       }
     } finally {
       setAttackLoading(false);

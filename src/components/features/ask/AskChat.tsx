@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect, useLayoutEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Check, MessageCircle, Send, RotateCcw, Quote, Map, List, HelpCircle, Paperclip, X, Bookmark, Mic, MicOff, Search, Save, PanelLeftOpen, PlusCircle, Square, SlidersHorizontal, ArrowDown, AlertCircle } from 'lucide-react';
 import { Button, ThinkingDots } from '@/components/ui/button';
+import { SignInAgainButton } from '@/components/auth/SignInAgainButton';
 import { Owl, OwlAvatar } from '@/components/brand/Owl';
 import { Input } from '@/components/ui/input';
 import { Markdown } from '@/components/ui/markdown';
@@ -35,6 +36,8 @@ export interface AskChatError {
   title: string;
   description?: string;
   onRetry?: () => void;
+  /** The server refused the session: offer Sign in again instead of Retry. */
+  signIn?: boolean;
 }
 
 interface AskChatProps {
@@ -742,7 +745,7 @@ export function AskChat({ messages, streamingMessage, isLoading, error, onDismis
               {error.description && <p className="text-muted-foreground">{error.description}</p>}
             </div>
             <div className="flex shrink-0 gap-1">
-              {error.onRetry && (
+              {error.signIn ? <SignInAgainButton /> : error.onRetry && (
                 <Button type="button" size="sm" variant="outline" onClick={error.onRetry}>{t('common.retry', 'Retry')}</Button>
               )}
               {onDismissError && (

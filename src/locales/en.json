@@ -2596,7 +2596,8 @@
     "invalidOutput": "The AI's answer came back malformed. Please try again.",
     "unexpected": "An unexpected error occurred",
     "offline": "Check your connection and try again.",
-    "notCharged": "You were not charged for this request."
+    "notCharged": "You were not charged for this request.",
+    "signInAgain": "Sign in again"
   },
   "clock": {
     "timeUp": "Time is up.",

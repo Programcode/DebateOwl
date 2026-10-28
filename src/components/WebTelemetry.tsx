@@ -1,8 +1,9 @@
-import { lazy, Suspense, useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
+import { lazyChunk } from "@/lib/lazy-chunk";
 import { loadOptionalComponent } from "@/components/optional-telemetry";
 
-const Analytics = lazy(() => loadOptionalComponent(() => import("@vercel/analytics/react"), "Analytics"));
-const SpeedInsights = lazy(() => loadOptionalComponent(() => import("@vercel/speed-insights/react"), "SpeedInsights"));
+const Analytics = lazyChunk(() => loadOptionalComponent(() => import("@vercel/analytics/react"), "Analytics"));
+const SpeedInsights = lazyChunk(() => loadOptionalComponent(() => import("@vercel/speed-insights/react"), "SpeedInsights"));
 
 export function WebTelemetry() {
   const [ready, setReady] = useState(false);

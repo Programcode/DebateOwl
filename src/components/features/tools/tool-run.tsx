@@ -4,10 +4,21 @@ import { useTranslation } from 'react-i18next';
 import { AlertCircle, X } from 'lucide-react';
 import { Button, ThinkingDots } from '@/components/ui/button';
 import type { LiveGeneration, LivePhase } from '@/lib/ai/client';
+import { getUserFacingAIError } from '@/lib/ai/error-display';
+import { aiFailureRecovery, type AIFailureRecovery } from '@/lib/ai/failure-reason';
+import { SignInAgainButton } from '@/components/auth/SignInAgainButton';
 
 export interface ToolRunError {
   title: string;
   description?: string;
+  /** The next step. Retry shows unless the failure would repeat (`sign_in`, `none`). */
+  recovery?: AIFailureRecovery;
+}
+
+/** A failed run's panel content: the page's title, the failure's plain reason, and its next step. */
+// eslint-disable-next-line react-refresh/only-export-components
+export function toolRunError(title: string, error: unknown, description: string = getUserFacingAIError(error)): ToolRunError {
+  return { title, description, recovery: aiFailureRecovery(error) };
 }
 
 // The page can unmount mid-run (results still land in the store), so the request
@@ -134,7 +145,9 @@ export function ToolRunErrorPanel({ error, onRetry, onDismiss }: { error: ToolRu
         {error.description && <p className="mt-0.5 text-muted-foreground">{error.description}</p>}
       </div>
       <div className="flex shrink-0 gap-1">
-        {onRetry && <Button type="button" size="sm" variant="outline" onClick={onRetry}>{t('common.retry', 'Retry')}</Button>}
+        {error.recovery === 'sign_in'
+          ? <SignInAgainButton />
+          : onRetry && error.recovery !== 'none' && <Button type="button" size="sm" variant="outline" onClick={onRetry}>{t('common.retry', 'Retry')}</Button>}
         {onDismiss && (
           <Button type="button" size="icon" variant="ghost" className="h-9 w-9" onClick={onDismiss} aria-label={t('common.close', 'Close')}>
             <X className="h-4 w-4" />

@@ -2596,7 +2596,8 @@
     "invalidOutput": "Az MI válasza hibás formátumban érkezett. Próbáld újra.",
     "unexpected": "Váratlan hiba történt",
     "offline": "Ellenőrizd a kapcsolatot, és próbáld újra.",
-    "notCharged": "Ezt a kérést nem számoltuk el."
+    "notCharged": "Ezt a kérést nem számoltuk el.",
+    "signInAgain": "Bejelentkezés újra"
   },
   "clock": {
     "timeUp": "Lejárt az idő.",

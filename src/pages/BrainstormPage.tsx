@@ -10,12 +10,11 @@ import { BrainstormForm } from '@/components/features/brainstorm/BrainstormForm'
 import { BrainstormResults } from '@/components/features/brainstorm/BrainstormResults';
 import { brainstorm, type DiscoveredSource } from '@/lib/ai/client';
 import { useSubscriptionError } from '@/hooks/use-subscription-error';
-import { getUserFacingAIError } from '@/lib/ai/error-display';
 import { DailyUsage, SubscriptionErrorModals } from '@/components/features/subscription';
 import type { BrainstormInput } from '@/lib/ai/schemas/brainstorm';
 import { EmptyState } from '@/components/ui/empty-state';
 import { PageHeader } from '@/components/layout/PageHeader';
-import { ToolRunErrorPanel, isCanceled, useRevealResults, useToolRun } from '@/components/features/tools/tool-run';
+import { ToolRunErrorPanel, isCanceled, toolRunError, useRevealResults, useToolRun } from '@/components/features/tools/tool-run';
 import { LiveToolRun } from '@/components/features/tools/live-draft';
 import { brainstormDraftSections } from '@/components/features/tools/live-sections';
 import { brainstormDiscussPrompt, openDiscussion } from '@/components/features/tools/discuss';
@@ -50,7 +49,7 @@ export default function BrainstormPage() {
   }, [drafting, revealResults]);
   const lastRun = useRef<{ data: BrainstormInput; debateId: string | null } | null>(null);
   const navigate = useNavigate();
-  const subError = useSubscriptionError();
+  const subError = useSubscriptionError('brainstorm');
   const [discoveredSources, setDiscoveredSources] = useState<DiscoveredSource[]>([]);
   const { t } = useTranslation();
   const { toast } = useToast();
@@ -79,7 +78,7 @@ export default function BrainstormPage() {
       if (isCanceled(error, signal)) return;
       console.error('Failed to brainstorm:', error);
       if (!subError.handleSubscriptionError(error)) {
-        run.setError({ title: t('brainstorm.failed'), description: getUserFacingAIError(error) });
+        run.setError(toolRunError(t('brainstorm.failed'), error));
       }
     } finally {
       setBrainstormLoading(false);

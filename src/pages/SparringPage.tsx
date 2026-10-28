@@ -7,6 +7,7 @@ import { useSparringStore } from '@/lib/stores/sparring-store';
 import { useSettingsStore } from '@/lib/stores/settings-store';
 import { AIError, generateSparringTurn, isAISubscriptionError, isInvalidOutputError, judgeSparringSession } from '@/lib/ai/client';
 import { getUserFacingAIError } from '@/lib/ai/error-display';
+import { aiFailureRecovery } from '@/lib/ai/failure-reason';
 import type { SparringRespondInput, SparringScoreInput, SparringSpeech } from '@/lib/ai/schemas/sparring';
 import { SparringSetup, type SparringSetupValues } from '@/components/features/sparring/SparringSetup';
 import { SparringRound } from '@/components/features/sparring/SparringRound';
@@ -48,7 +49,7 @@ export default function SparringPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const location = useLocation();
-  const subError = useSubscriptionError();
+  const subError = useSubscriptionError('sparring');
   const { handleSubscriptionError } = subError;
   const workspaceLaunch = (location.state as { workspaceLaunch?: unknown } | null)?.workspaceLaunch === true;
   const workspaceArtifact = (location.state as { workspaceArtifact?: unknown } | null)?.workspaceArtifact;
@@ -76,6 +77,8 @@ export default function SparringPage() {
   const [liveJudging, setLiveJudging] = useState<LiveRunState>({});
   const [aiError, setAiError] = useState<string | null>(null);
   const [judgingError, setJudgingError] = useState<string | null>(null);
+  // The shown opponent or judge error was a refused session: Sign in again replaces Retry.
+  const [signInRequired, setSignInRequired] = useState(false);
   const [submissionError, setSubmissionError] = useState<string | null>(null);
   const isOnline = useOnlineStatus();
   const [retryNonce, setRetryNonce] = useState(0);
@@ -190,6 +193,7 @@ export default function SparringPage() {
     aiInFlightRef.current = true;
     setAiLoading(true);
     setAiError(null);
+    setSignInRequired(false);
     const { speaker: _speaker, ...turnInput } = currentTurn;
     const input: SparringRespondInput = {
       action: 'respond',
@@ -236,6 +240,7 @@ export default function SparringPage() {
       .catch((error: unknown) => {
         if (aiRequestRef.current !== requestKey) return;
         handleSubscriptionError(error);
+        setSignInRequired(aiFailureRecovery(error) === 'sign_in');
         setAiError(readableError(error, t('sparring.round.aiRequestFailed', 'The AI request failed. Check your connection and try again.')));
       })
       .finally(() => {
@@ -258,6 +263,7 @@ export default function SparringPage() {
     judgeRequestRef.current = requestKey;
     judgeInFlightRef.current = true;
     setJudgingError(null);
+    setSignInRequired(false);
     const input: SparringScoreInput = {
       action: 'score',
       sessionId: session.id,
@@ -287,6 +293,7 @@ export default function SparringPage() {
       .catch((error: unknown) => {
         if (judgeRequestRef.current !== requestKey) return;
         handleSubscriptionError(error);
+        setSignInRequired(aiFailureRecovery(error) === 'sign_in');
         setJudgingError(isInvalidOutputError(error)
           ? `${t('sparring.round.scorecardMalformed', 'The scorecard came back malformed. Try scoring again.')}${error instanceof AIError && error.notCharged ? ` ${t('aiErrors.notCharged')}` : ''}`
           : readableError(error, t('sparring.round.judgeRequestFailed', 'The judge request failed. Check your connection and try again.')));
@@ -452,6 +459,7 @@ export default function SparringPage() {
         aiError={aiError}
         judging={session.phase === 'judging'}
         judgingError={judgingError}
+        signInRequired={signInRequired && Boolean(aiError || judgingError)}
         submissionError={submissionError}
         onSubmit={handleSubmit}
         onRetryAi={retryAi}

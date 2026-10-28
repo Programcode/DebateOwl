@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { useOnlineStatus } from '@/hooks/use-online-status';
 import { AlertCircle, Check, ChevronRight, CirclePause, CirclePlay, Clock3, CloudOff, RotateCcw, Send, UserRound, Wifi } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { SignInAgainButton } from '@/components/auth/SignInAgainButton';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
@@ -39,6 +40,8 @@ interface SparringRoundProps {
   /** The judge's scorecard as the model writes it. */
   liveJudging?: LiveRunState;
   judgingError?: string | null;
+  /** The opponent or judge request was refused for auth: offer Sign in again instead of retrying. */
+  signInRequired?: boolean;
   submissionError?: string | null;
   onSubmit: (content: string, delivery?: SpeechDelivery | null) => void;
   onRetryAi?: () => void;
@@ -66,6 +69,7 @@ export function SparringRound({
   judging = false,
   liveJudging,
   judgingError,
+  signInRequired = false,
   submissionError,
   onSubmit,
   onRetryAi,
@@ -238,7 +242,9 @@ export function SparringRound({
                     <div className="flex h-12 w-12 items-center justify-center rounded-full bg-destructive/10 text-destructive"><AlertCircle className="h-6 w-6" aria-hidden="true" /></div>
                     <h2 className="mt-4 font-display text-xl font-[600] text-heading">{t('sparring.round.scoreFailed', 'Could not score this round')}</h2>
                     <p className="mt-2 max-w-md text-sm leading-6 text-muted-foreground">{judgingError}</p>
-                    <Button type="button" className="mt-5" onClick={onRetryJudging}>{t('sparring.round.retryScoring', 'Try scoring again')}</Button>
+                    {signInRequired
+                      ? <SignInAgainButton size="default" variant="default" className="mt-5" />
+                      : <Button type="button" className="mt-5" onClick={onRetryJudging}>{t('sparring.round.retryScoring', 'Try scoring again')}</Button>}
                   </>
                 ) : (
                   <>
@@ -318,7 +324,9 @@ export function SparringRound({
                         <div className="flex h-12 w-12 items-center justify-center rounded-full bg-destructive/10 text-destructive"><AlertCircle className="h-6 w-6" aria-hidden="true" /></div>
                         <h2 className="mt-4 font-display text-xl font-[600] text-heading">{t('sparring.round.opponentFailed', 'The opponent could not answer')}</h2>
                         <p className="mt-2 max-w-md text-sm leading-6 text-muted-foreground">{aiError}</p>
-                        <Button type="button" className="mt-5" onClick={onRetryAi} disabled={!isOnline} title={!isOnline ? t('sparring.round.offlineRetry', 'Reconnect before retrying.') : undefined}>{t('sparring.round.retryOpponent', 'Retry opponent turn')}</Button>
+                        {signInRequired
+                          ? <SignInAgainButton size="default" variant="default" className="mt-5" />
+                          : <Button type="button" className="mt-5" onClick={onRetryAi} disabled={!isOnline} title={!isOnline ? t('sparring.round.offlineRetry', 'Reconnect before retrying.') : undefined}>{t('sparring.round.retryOpponent', 'Retry opponent turn')}</Button>}
                       </>
                     ) : (
                       <>

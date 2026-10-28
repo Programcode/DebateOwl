@@ -111,6 +111,16 @@ export async function verifySessionAfterRejection(
   }
 }
 
+/**
+ * The student chose Sign in again after a request was refused for auth. Sign
+ * out here only; the login page says the session ended, and RequireAuth sends
+ * them back to the page they were on once they sign in.
+ */
+export async function endSessionToSignInAgain(auth: Pick<SessionAuth, 'signOut'>): Promise<void> {
+  markSessionExpired();
+  await auth.signOut({ scope: 'local' });
+}
+
 /** Test hook: forget the last confirmed refresh. */
 export function resetSessionExpiryCheck(): void {
   checking = false;

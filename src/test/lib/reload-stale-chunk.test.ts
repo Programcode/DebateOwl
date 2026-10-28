@@ -1,5 +1,5 @@
-import { describe, expect, it, vi } from 'vitest';
-import { installStaleChunkReload } from '@/lib/reload-stale-chunk';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { installStaleChunkReload, resetStaleChunkReloadForTests } from '@/lib/reload-stale-chunk';
 
 function fakeWindow() {
   const listeners = new Map<string, (event: Event) => void>();
@@ -24,6 +24,8 @@ function fakeWindow() {
 }
 
 describe('stale chunk reload', () => {
+  beforeEach(() => resetStaleChunkReloadForTests());
+
   it('reloads once when a route chunk is missing and then lets the error stand', () => {
     const { target, listeners, reload } = fakeWindow();
     installStaleChunkReload(target as unknown as Window);
@@ -35,6 +37,8 @@ describe('stale chunk reload', () => {
     expect(first.defaultPrevented).toBe(true);
     expect(reload).toHaveBeenCalledTimes(1);
 
+    // The reloaded document starts with no reload pending; sessionStorage remembers the first.
+    resetStaleChunkReloadForTests();
     const second = new Event('vite:preloadError', { cancelable: true });
     handler!(second);
     expect(second.defaultPrevented).toBe(false);

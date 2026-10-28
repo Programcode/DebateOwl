@@ -2596,7 +2596,8 @@
     "invalidOutput": "La respuesta de la IA llegó con un formato incorrecto. Inténtalo de nuevo.",
     "unexpected": "Se produjo un error inesperado",
     "offline": "Comprueba tu conexión e inténtalo de nuevo.",
-    "notCharged": "No se te ha cobrado esta solicitud."
+    "notCharged": "No se te ha cobrado esta solicitud.",
+    "signInAgain": "Volver a iniciar sesión"
   },
   "clock": {
     "timeUp": "Se acabó el tiempo.",
