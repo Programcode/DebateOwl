@@ -157,6 +157,31 @@ export async function getConfiguredDailyLimit(userId: string, fallbackLimit: num
   return fallbackLimit;
 }
 
+/**
+ * The weekly AI spend cap for this account in USD, or null for no cap.
+ * user_settings.weekly_budget_unlimited lifts it, a non-NULL
+ * weekly_budget_override_usd replaces it (20261028120000_weekly_budget_override.sql),
+ * and otherwise WEEKLY_AI_BUDGET_USD applies. Read apart from
+ * getSubscriptionInfo so a database without the columns only loses the
+ * override instead of failing every request. A failed read keeps the global cap.
+ */
+export async function getWeeklyBudgetUsd(userId: string): Promise<number | null> {
+  const { data, error } = await supabase
+    .from("user_settings")
+    .select("weekly_budget_override_usd, weekly_budget_unlimited")
+    .eq("user_id", userId)
+    .maybeSingle();
+  if (error) {
+    console.warn("[RATE LIMIT] weekly budget override lookup failed:", error.message);
+    return WEEKLY_AI_BUDGET_USD;
+  }
+  if (data?.weekly_budget_unlimited === true) return null;
+  // numeric arrives from PostgREST as a number or a string.
+  const override = data?.weekly_budget_override_usd;
+  const value = override === null || override === undefined ? NaN : Number(override);
+  return Number.isFinite(value) && value >= 0 ? value : WEEKLY_AI_BUDGET_USD;
+}
+
 // Logged and returned for API callers; the browser shows its own translation of the code.
 const ACCESS_REFUSAL_REASONS: Record<AccessRefusalCode, string> = {
   trial_ended: "Your free trial has ended. Upgrade to Pro to continue using DebateOwl.",
@@ -166,7 +191,7 @@ const ACCESS_REFUSAL_REASONS: Record<AccessRefusalCode, string> = {
 
 type AccessCheck =
   | { denied: RateLimitResult }
-  | { denied?: undefined; tier: string; dailyLimit: number; canAccessProModels: boolean };
+  | { denied?: undefined; tier: string; dailyLimit: number; weeklyBudgetUsd: number | null; canAccessProModels: boolean };
 
 // Ban, plan, and model access: everything that refuses a request before quota is read.
 async function checkAccess(userId: string, model?: ModelSelection): Promise<AccessCheck> {
@@ -191,7 +216,7 @@ async function checkAccess(userId: string, model?: ModelSelection): Promise<Acce
     return { denied: { allowed: false, reason: "Your daily request limit is currently set to zero. Contact support if this seems wrong.", code: "limit_reached", limit: 0, current: 0, statusCode: 402 } };
   }
 
-  return { tier: sub.tier, dailyLimit, canAccessProModels: sub.canAccessProModels };
+  return { tier: sub.tier, dailyLimit, weeklyBudgetUsd: await getWeeklyBudgetUsd(userId), canAccessProModels: sub.canAccessProModels };
 }
 
 function quotaDenial(deniedBy: unknown, tier: string, dailyLimit: number, current: number, units: number): RateLimitResult {
@@ -220,7 +245,7 @@ export async function checkRateLimit(userId: string | null, model?: ModelSelecti
   try {
     const access = await checkAccess(userId, model);
     if (access.denied) return access.denied;
-    const { tier, dailyLimit, canAccessProModels } = access;
+    const { tier, dailyLimit, weeklyBudgetUsd, canAccessProModels } = access;
 
     // Atomically reserve today's quota units server-side so concurrent requests
     // can't race past the limit. Expensive models reserve several units, and
@@ -235,7 +260,7 @@ export async function checkRateLimit(userId: string | null, model?: ModelSelecti
         p_session_key: perSession.key,
         p_limit: dailyLimit,
         p_units: units,
-        p_weekly_cap_usd: WEEKLY_AI_BUDGET_USD,
+        p_weekly_cap_usd: weeklyBudgetUsd,
         p_max_calls: SESSION_QUOTA[perSession.feature].maxCalls,
         p_ttl_seconds: SESSION_QUOTA[perSession.feature].ttlSeconds,
       })
@@ -243,7 +268,7 @@ export async function checkRateLimit(userId: string | null, model?: ModelSelecti
         p_user_id: userId,
         p_limit: dailyLimit,
         p_units: units,
-        p_weekly_cap_usd: WEEKLY_AI_BUDGET_USD,
+        p_weekly_cap_usd: weeklyBudgetUsd,
       });
     let { data: quota, error: quotaError } = await reserve(session);
     // A database without 20261022220000_ai_quota_sessions.sql (functions
@@ -281,14 +306,14 @@ export async function peekRateLimit(userId: string, model?: ModelSelection): Pro
   try {
     const access = await checkAccess(userId, model);
     if (access.denied) return { ...access.denied, units: quotaUnitsFor(model) };
-    const { tier, dailyLimit } = access;
+    const { tier, dailyLimit, weeklyBudgetUsd } = access;
     const units = quotaUnitsFor(model);
     const { data, error } = await supabase.rpc("peek_ai_quota", { p_user_id: userId });
     if (error) throw error;
     const row = Array.isArray(data) ? data[0] : data;
     const current = typeof row?.current_count === "number" ? row.current_count : 0;
     const weekSpend = Number(row?.week_spend_usd ?? 0);
-    if (WEEKLY_AI_BUDGET_USD !== null && weekSpend >= WEEKLY_AI_BUDGET_USD) {
+    if (weeklyBudgetUsd !== null && weekSpend >= weeklyBudgetUsd) {
       return quotaDenial("weekly", tier, dailyLimit, current, units);
     }
     if (current + units > dailyLimit) return quotaDenial("daily", tier, dailyLimit, current, units);
