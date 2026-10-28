@@ -408,17 +408,21 @@ function RecentSourceRow({ source, first, onPress }: { source: Source; first: bo
       accessibilityRole="button"
       onPress={onPress}
       testID="recent-source"
-      style={({ pressed }) => [styles.sourceRow, !first && { borderTopWidth: 1, borderTopColor: colors.line }, pressed && styles.pressed]}>
-      <IconTile name={SOURCE_ICONS[source.type]} size={42} />
-      <View style={styles.sourceText}>
-        <Text weight="semibold" style={styles.sourceTitle} numberOfLines={2}>
-          {source.title || t('libraryPage.untitledSource')}
-        </Text>
-        <Text tone="faint" style={styles.sourceMeta} numberOfLines={1}>
-          {sourceMeta(t, source)}
-        </Text>
-      </View>
-      <Icon name="chevronRight" color={colors.tabInactive} size={20} />
+      style={!first ? { borderTopWidth: 1, borderTopColor: colors.line } : undefined}>
+      {({ pressed }) => (
+        <View style={[styles.sourceRow, pressed && styles.pressed]}>
+          <IconTile name={SOURCE_ICONS[source.type]} size={42} />
+          <View style={styles.sourceText}>
+            <Text weight="semibold" style={styles.sourceTitle} numberOfLines={2}>
+              {source.title || t('libraryPage.untitledSource')}
+            </Text>
+            <Text tone="faint" style={styles.sourceMeta} numberOfLines={1}>
+              {sourceMeta(t, source)}
+            </Text>
+          </View>
+          <Icon name="chevronRight" color={colors.tabInactive} size={20} />
+        </View>
+      )}
     </Pressable>
   );
 }
@@ -506,11 +510,11 @@ const styles = StyleSheet.create({
   emptyTitle: { fontSize: 28, lineHeight: 34, letterSpacing: -0.6 },
   emptyOwl: { alignSelf: 'flex-start', marginTop: 8, marginBottom: -6 },
   motion: { fontSize: 27, lineHeight: 32, letterSpacing: -0.6, marginTop: 12, marginBottom: 10 },
-  settings: { flexDirection: 'row', alignItems: 'flex-start', gap: 12, borderTopWidth: 1, borderBottomWidth: 1, paddingVertical: 10, marginBottom: 15 },
-  settingsText: { flex: 1, gap: 3 },
+  settings: { gap: 9, borderTopWidth: 1, borderBottomWidth: 1, paddingVertical: 11, marginBottom: 15 },
+  settingsText: { gap: 3 },
   settingsFacts: { fontSize: 14, lineHeight: 19 },
   settingsInstructions: { fontSize: 14.5, lineHeight: 20 },
-  editButton: { flexDirection: 'row', alignItems: 'center', gap: 5, borderRadius: radius.pill, paddingHorizontal: 11, minHeight: 32 },
+  editButton: { alignSelf: 'flex-start', flexDirection: 'row', alignItems: 'center', gap: 5, borderRadius: radius.pill, paddingHorizontal: 11, minHeight: 32 },
   editLabel: { fontSize: 14 },
   stats: { flexDirection: 'row', gap: 24, marginTop: 13, marginBottom: 15, marginHorizontal: 2 },
   statValue: { fontSize: 21, lineHeight: 26, letterSpacing: -0.2 },

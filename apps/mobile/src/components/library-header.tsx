@@ -2,45 +2,11 @@ import type { LibrarySort } from '@debatelab/core/library';
 import { Stack } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 
+import { SORT_LABELS, TYPE_FILTERS, type LibraryHeaderProps } from './library-options';
+
 import { useTheme } from '@/theme/use-theme';
 
-export type AddSourceKind = 'link' | 'note' | 'file';
-export type SourceTypeFilter = 'all' | 'file' | 'url' | 'text';
-
-/** The website's sort menu labels, in its order. */
-export const SORT_LABELS: Record<LibrarySort, string> = {
-  smart: 'libraryPage.sortSmart',
-  mostUsed: 'libraryPage.sortMostUsed',
-  importance: 'libraryPage.sortImportance',
-  strength: 'libraryPage.sortStrength',
-  newest: 'libraryPage.sortNewest',
-  oldest: 'libraryPage.sortOldest',
-  title: 'libraryPage.sortTitle',
-  folder: 'libraryPage.sortFolder',
-};
-
-/** The type filter, in the mock's order. */
-export const TYPE_FILTERS: { value: SourceTypeFilter; label: string }[] = [
-  { value: 'all', label: 'mobile.library.filters.all' },
-  { value: 'file', label: 'mobile.library.filters.files' },
-  { value: 'url', label: 'mobile.library.filters.links' },
-  { value: 'text', label: 'mobile.library.filters.notes' },
-];
-
-export interface LibraryHeaderProps {
-  title: string;
-  onAdd: (kind: AddSourceKind) => void;
-  /** No Current Debate: nothing can be added, sorted or cleared. */
-  disabled: boolean;
-  sort: LibrarySort;
-  onSort: (sort: LibrarySort) => void;
-  filter: SourceTypeFilter;
-  onFilter: (filter: SourceTypeFilter) => void;
-  onNewFolder: () => void;
-  onClearAll: () => void;
-  /** An empty Library has nothing to clear. */
-  canClear: boolean;
-}
+export type { AddSourceKind, LibraryHeaderProps, SourceTypeFilter } from './library-options';
 
 /**
  * The Library's large title, its round plus button (Paste a link, Write a

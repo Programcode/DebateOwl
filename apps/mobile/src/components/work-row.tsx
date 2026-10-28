@@ -79,17 +79,21 @@ export function WorkRow({
       accessibilityLabel={t('mobile.common.openItem', { title })}
       onPress={onPress}
       testID="work-row"
-      style={({ pressed }) => [styles.row, !first && { borderTopWidth: 1, borderTopColor: colors.line }, { backgroundColor: colors.card }, pressed && styles.pressed]}>
-      <IconTile name={KIND_ICONS[item.kind]} size={42} />
-      <View style={styles.rowText}>
-        <Text weight="semibold" style={styles.rowTitle} numberOfLines={2}>
-          {title}
-        </Text>
-        <Text tone="faint" style={styles.rowMeta} numberOfLines={1}>
-          {t('mobile.debate.itemMeta', { kind: t(`debate.kinds.${item.kind}`), when: formatWhen(item.createdAt) })}
-        </Text>
-      </View>
-      <Icon name="chevronRight" color={colors.tabInactive} size={20} />
+      style={[!first && { borderTopWidth: 1, borderTopColor: colors.line }, { backgroundColor: colors.card }]}>
+      {({ pressed }) => (
+        <View style={[styles.row, pressed && styles.pressed]}>
+          <IconTile name={KIND_ICONS[item.kind]} size={42} />
+          <View style={styles.rowText}>
+            <Text weight="semibold" style={styles.rowTitle} numberOfLines={2}>
+              {title}
+            </Text>
+            <Text tone="faint" style={styles.rowMeta} numberOfLines={1}>
+              {t('mobile.debate.itemMeta', { kind: t(`debate.kinds.${item.kind}`), when: formatWhen(item.createdAt) })}
+            </Text>
+          </View>
+          <Icon name="chevronRight" color={colors.tabInactive} size={20} />
+        </View>
+      )}
     </Pressable>
   );
   // Practice work opens the Practice tab, which has nothing to preview.

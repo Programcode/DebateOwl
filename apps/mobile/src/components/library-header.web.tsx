@@ -5,7 +5,7 @@ import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
 import { Icon } from './icon';
 import type { IconName } from './icon-paths';
-import { SORT_LABELS, TYPE_FILTERS, type AddSourceKind, type LibraryHeaderProps } from './library-header';
+import { SORT_LABELS, TYPE_FILTERS, type AddSourceKind, type LibraryHeaderProps } from './library-options';
 import { Text } from './text';
 
 import { useTheme } from '@/theme/use-theme';

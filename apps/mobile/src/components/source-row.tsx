@@ -24,7 +24,7 @@ export interface SourceRowActions {
 }
 
 /** The website's quality badges: used in a case, importance and strength. */
-function QualityBadges({ source }: { source: Source }) {
+function QualityBadges({ source, showFolder }: { source: Source; showFolder: boolean }) {
   const { t } = useTranslation();
   const { colors } = useTheme();
   const semantic = source.metadata?.semantic;
@@ -39,12 +39,14 @@ function QualityBadges({ source }: { source: Source }) {
   );
   return (
     <View style={styles.badges}>
-      <View style={[styles.badge, styles.folderBadge, { backgroundColor: colors.segmentTrack, borderColor: colors.segmentTrack }]}>
-        <Icon name="folder" color={colors.secondary} size={12} />
-        <Text weight="semibold" style={[styles.badgeText, { color: colors.secondary }]} numberOfLines={1}>
-          {folderLabel(t, source.folder)}
-        </Text>
-      </View>
+      {showFolder ? (
+        <View style={[styles.badge, styles.folderBadge, { backgroundColor: colors.segmentTrack, borderColor: colors.segmentTrack }]}>
+          <Icon name="folder" color={colors.secondary} size={12} />
+          <Text weight="semibold" style={[styles.badgeText, { color: colors.secondary }]} numberOfLines={1}>
+            {folderLabel(t, source.folder)}
+          </Text>
+        </View>
+      ) : null}
       {semantic?.lastUsedInCase ? badge('used', t('sourceQuality.usedInCase'), true) : null}
       {semantic ? badge('importance', t('sourceQuality.importance', { level: t(`sourceQuality.levels.${semantic.importance}`) })) : null}
       {semantic ? badge('strength', t('sourceQuality.strength', { level: t(`sourceQuality.levels.${semantic.strength}`) })) : null}
@@ -64,6 +66,7 @@ export function SourceRow({
   first,
   selected = false,
   selectInstead = false,
+  showFolder = true,
   actions,
 }: {
   source: Source;
@@ -71,6 +74,8 @@ export function SourceRow({
   first: boolean;
   selected?: boolean;
   selectInstead?: boolean;
+  /** Off while the list shows one folder. */
+  showFolder?: boolean;
   actions: SourceRowActions;
 }) {
   const { t } = useTranslation();
@@ -143,29 +148,33 @@ export function SourceRow({
               if (event.nativeEvent.actionName === 'delete') void remove();
             }}
             testID="source-row"
-            style={({ pressed }) => [styles.row, { backgroundColor: selected ? colors.tile : colors.card }, pressed && styles.pressed]}>
-            <View style={!source.isActive && styles.off}>
-              <IconTile name={SOURCE_ICONS[source.type]} size={42} />
-            </View>
-            <View style={[styles.rowText, !source.isActive && styles.off]}>
-              <Text weight="semibold" style={[styles.rowTitle, selected && { color: colors.chipSelectedForeground }]} numberOfLines={2}>
-                {title}
-              </Text>
-              <Text tone="faint" style={styles.rowMeta} numberOfLines={2}>
-                {source.isActive ? sourceMeta(t, source) : `${t('mobile.library.turnedOff')} · ${sourceMeta(t, source)}`}
-              </Text>
-              <QualityBadges source={source} />
-            </View>
-            <Switch
-              value={source.isActive}
-              onValueChange={(value) => actions.onToggle(value)}
-              accessibilityLabel={t('libraryPage.toggleSourceLabel', { title })}
-              trackColor={{ true: colors.primaryFill, false: colors.segmentTrack }}
-              ios_backgroundColor={colors.segmentTrack}
-              thumbColor="#FFFFFF"
-              testID="source-active"
-              {...WEB_SWITCH_THUMB}
-            />
+            style={{ backgroundColor: selected ? colors.tile : colors.card }}>
+            {({ pressed }) => (
+              <View style={[styles.row, pressed && styles.pressed]}>
+                <View style={!source.isActive && styles.off}>
+                  <IconTile name={SOURCE_ICONS[source.type]} size={42} />
+                </View>
+                <View style={[styles.rowText, !source.isActive && styles.off]}>
+                  <Text weight="semibold" style={[styles.rowTitle, selected && { color: colors.chipSelectedForeground }]} numberOfLines={2}>
+                    {title}
+                  </Text>
+                  <Text tone="faint" style={styles.rowMeta} numberOfLines={2}>
+                    {source.isActive ? sourceMeta(t, source) : `${t('mobile.library.turnedOff')} · ${sourceMeta(t, source)}`}
+                  </Text>
+                  <QualityBadges source={source} showFolder={showFolder} />
+                </View>
+                <Switch
+                  value={source.isActive}
+                  onValueChange={(value) => actions.onToggle(value)}
+                  accessibilityLabel={t('libraryPage.toggleSourceLabel', { title })}
+                  trackColor={{ true: colors.primaryFill, false: colors.segmentTrack }}
+                  ios_backgroundColor={colors.segmentTrack}
+                  thumbColor="#FFFFFF"
+                  testID="source-active"
+                  {...WEB_SWITCH_THUMB}
+                />
+              </View>
+            )}
           </Pressable>
         </Link.Trigger>
         <Link.Preview />

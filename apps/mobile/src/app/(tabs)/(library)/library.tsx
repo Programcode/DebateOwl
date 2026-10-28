@@ -8,7 +8,8 @@ import { TextButton } from '@/components/buttons';
 import { Card } from '@/components/card';
 import { Chip } from '@/components/chip';
 import { EmptyState } from '@/components/empty-state';
-import { LibraryHeader, type AddSourceKind, type SourceTypeFilter } from '@/components/library-header';
+import { LibraryHeader } from '@/components/library-header';
+import type { AddSourceKind, SourceTypeFilter } from '@/components/library-options';
 import { FolderBar, GroundingBanner } from '@/components/library-parts';
 import { OfflineNotice } from '@/components/offline-notice';
 import { OneOffNotice } from '@/components/one-off-notice';
@@ -358,6 +359,7 @@ function LibraryBody({ library, selectedId, onSelect }: { library: Library; sele
               first={index === 0}
               selected={selectedId === source.id}
               selectInstead={Boolean(onSelect)}
+              showFolder={folder === ALL}
               actions={{
                 onOpen: () => (onSelect ? onSelect(source) : router.push({ pathname: '/source/[id]', params: { id: source.id } })),
                 onToggle: (isActive) => void toggle([source], isActive),

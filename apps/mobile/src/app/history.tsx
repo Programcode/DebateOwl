@@ -355,17 +355,21 @@ function HistoryRow({ item, first, onPress, onDelete }: { item: HistoryItem; fir
       disabled={!onPress}
       onPress={onPress}
       testID="history-row"
-      style={({ pressed }) => [styles.row, { backgroundColor: colors.card }, pressed && styles.pressed]}>
-      <IconTile name={KIND_ICONS[item.kind]} size={42} />
-      <View style={styles.rowText}>
-        <Text weight="semibold" style={styles.rowTitle} numberOfLines={2}>
-          {title}
-        </Text>
-        <Text tone="faint" style={styles.meta} numberOfLines={2}>
-          {itemMeta(t, item)}
-        </Text>
-      </View>
-      {onPress ? <Icon name="chevronRight" color={colors.tabInactive} size={20} /> : null}
+      style={{ backgroundColor: colors.card }}>
+      {({ pressed }) => (
+        <View style={[styles.row, pressed && styles.pressed]}>
+          <IconTile name={KIND_ICONS[item.kind]} size={42} />
+          <View style={styles.rowText}>
+            <Text weight="semibold" style={styles.rowTitle} numberOfLines={2}>
+              {title}
+            </Text>
+            <Text tone="faint" style={styles.meta} numberOfLines={2}>
+              {itemMeta(t, item)}
+            </Text>
+          </View>
+          {onPress ? <Icon name="chevronRight" color={colors.tabInactive} size={20} /> : null}
+        </View>
+      )}
     </Pressable>
   );
   // Press and hold for a preview and the menu: Discuss and Share for a document, Delete where History deletes.

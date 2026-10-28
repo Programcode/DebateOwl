@@ -175,7 +175,7 @@ export default function AddFileSheet() {
             <Text accessibilityRole="alert" weight="bold" tone="heading" style={styles.failureTitle}>
               {failure.title}
             </Text>
-            <Text tone="secondary" style={styles.body}>
+            <Text tone="secondary" style={[styles.body, styles.centered]}>
               {failure.message}
             </Text>
           </View>
@@ -239,6 +239,7 @@ const styles = StyleSheet.create({
   failure: { alignItems: 'center', paddingVertical: 22 },
   failureText: { alignItems: 'center', gap: 4 },
   failureTitle: { fontSize: 17, lineHeight: 22, textAlign: 'center' },
+  centered: { textAlign: 'center' },
   meta: { flexDirection: 'row', alignItems: 'center', gap: 8, marginHorizontal: 4 },
   metaText: { flex: 1, fontSize: 14, lineHeight: 19 },
   notices: { borderWidth: 2, borderRadius: radius.field, padding: 12, gap: 8 },

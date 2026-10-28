@@ -11,7 +11,7 @@
  * ONLY=iphone-light-en limits a run to the combinations whose name starts with it;
  * separate several with commas (ONLY=iphone-light-en,ipad-dark-hu).
  * SCREENS=you,timer limits the signed-in screens to those groups: debate,
- * library, prepare, practice, you, empty, ask, results, brainstorm, factoids,
+ * debate-check, library, prepare, practice, you, empty, ask, results, brainstorm, factoids,
  * timer, crossfire, sparring, flowchart, one-off, history, announcements,
  * account, model. Sign-in screens are always shot.
  * ONLY=offline runs only the offline reading check (see shootOfflineScreens).
@@ -40,8 +40,18 @@
  * Ask screenshots never call a model and never save a chat: the page answers
  * ai-stream from a fake stream inside the page (expo/fetch uses the page's
  * fetch), answers the ai function with a fixed answer with citations, and
- * answers chat and message writes locally. The Library screens read the
- * account's real sources and write nothing.
+ * answers chat and message writes locally.
+ *
+ * The Library screens read made-up sources (librarySources: four folders, a
+ * source switched off, quality rankings) and answer every source and folder
+ * write locally. File import picks the made-up PDF, DOCX and PNG in
+ * scripts/fixtures through the page's file chooser, so the website's reader
+ * (pdf.js and mammoth, the code the iOS DOM component runs) reads them for
+ * real; the run checks the extracted text. Edit is shown, never saved.
+ *
+ * Every debates read is answered as active just now, so the five-day check
+ * stays out of the shots; its own shot answers it as nine days idle and
+ * never presses a button. Edit settings is shown, never saved.
  *
  * Generate and Attack screenshots never call a model and never save: the
  * page answers the ai function with a fixed case or attack, holds it open
@@ -162,7 +172,7 @@ function watchErrors(page: Page, problems: string[], label: string, offline = ()
   page.on('response', (response) => {
     if (response.status() === 404 && response.url().includes('/rest/v1/app_store_subscriptions')) appStoreMisses += 1;
   });
-  page.on('pageerror', (error) => problems.push(`${label}: ${error.message}`));
+  page.on('pageerror', (error) => { if (process.env.SHOT_DEBUG) console.error('PAGEERROR', label, error.stack); problems.push(`${label}: ${error.message}`); });
   page.on('console', (message) => {
     if (message.type() !== 'error') return;
     if (offline() && message.text().startsWith('Failed to load resource')) return;
@@ -207,6 +217,7 @@ async function shoot(page: Page, name: string) {
 
 /** Answers user_settings reads with the run's language and the System theme (see the header). */
 async function pinSettings(page: Page, language: string) {
+  await pinDebateActivity(page, 0);
   await page.route(`${REST}/user_settings*`, async (route) => {
     if (route.request().method() !== 'GET') return route.continue();
     const response = await route.fetch();
@@ -220,6 +231,20 @@ async function pinSettings(page: Page, language: string) {
     const json = Array.isArray(body)
       ? body.map((row) => pin(row as Record<string, unknown>))
       : body && typeof body === 'object' ? pin(body as Record<string, unknown>) : body;
+    await route.fulfill({ response, json });
+  });
+}
+
+/**
+ * Answers the debates list with every debate last active `ageMs` ago, so the
+ * five-day check opens only in its own shot. Nothing is written.
+ */
+async function pinDebateActivity(page: Page, ageMs: number) {
+  await page.route(`${REST}/debates?*`, async (route) => {
+    if (route.request().method() !== 'GET') return route.continue();
+    const response = await route.fetch();
+    const body: unknown = await response.json();
+    const json = Array.isArray(body) ? body.map((row) => ({ ...(row as Record<string, unknown>), last_activity_at: iso(-ageMs) })) : body;
     await route.fulfill({ response, json });
   });
 }
@@ -263,6 +288,46 @@ async function shootDebateScreens(page: Page, prefix: string) {
   await page.getByTestId('new-debate-sheet').waitFor();
   await page.waitForTimeout(700);
   await shoot(page, `${prefix}-new-debate`);
+  await scrollToEnd(page, 'new-debate-sheet');
+  await shoot(page, `${prefix}-new-debate-end`);
+
+  // Edit settings is shown, never saved: saving would write the account's debate.
+  await page.goto(`${ORIGIN}/`);
+  await page.getByTestId('edit-debate').click({ timeout: 30_000 });
+  await page.getByTestId('edit-debate-sheet').waitFor();
+  await page.waitForTimeout(700);
+  await shoot(page, `${prefix}-edit-debate`);
+  await scrollToEnd(page, 'edit-debate-sheet');
+  await shoot(page, `${prefix}-edit-debate-end`);
+}
+
+/** Scrolls a sheet's own scroll view to its end; the web preview draws sheets as pages. */
+async function scrollToEnd(page: Page, testId: string) {
+  await page.getByTestId(testId).evaluate((root) => {
+    for (const element of [root, ...Array.from(root.querySelectorAll<HTMLElement>('*'))]) {
+      if (element.scrollHeight > element.clientHeight + 1 && getComputedStyle(element).overflowY !== 'visible') element.scrollTo({ top: element.scrollHeight });
+    }
+  });
+  await page.waitForTimeout(300);
+}
+
+/**
+ * The five-day check, from a debates list answered as nine days idle. Its
+ * buttons are shown, never pressed: Continue would write the debate's activity.
+ */
+async function shootDebateCheck(context: BrowserContext, prefix: string, language: string, problems: string[]) {
+  const page = await context.newPage();
+  watchErrors(page, problems, `${prefix} debate check`);
+  await pinSettings(page, language);
+  // Registered last, so it answers before pinSettings' recent activity.
+  await pinDebateActivity(page, 9 * 86_400_000);
+  // Closing the sheet would count as Continue, so the page is closed without it ever being dismissed.
+  await page.route(`${REST}/debates?*`, (route) => (route.request().method() === 'PATCH' ? route.fulfill({ status: 204, headers: CORS }) : route.fallback()));
+  await page.goto(`${ORIGIN}/`);
+  await page.getByTestId('debate-check-sheet').waitFor({ timeout: 30_000 });
+  await page.waitForTimeout(700);
+  await shoot(page, `${prefix}-debate-check`);
+  await page.close();
 }
 
 async function turnOnOneOff(page: Page) {
@@ -746,11 +811,94 @@ async function shootFlowchart(context: BrowserContext, prefix: string, language:
   await oneOff.close();
 }
 
-async function shootLibraryScreens(page: Page, prefix: string) {
+const FIXTURES = join(__dirname, 'fixtures');
+
+/** Made-up Library rows: four folders, one source switched off, and the website's quality rankings on three. */
+function librarySources(debateId: string) {
+  const semantic = (importance: number, strength: number, useCount: number, caseUseCount: number, lastUsedInCase = false) => ({
+    relevance: 0.8, importance, strength, useCount, caseUseCount, lastUsedInCase, evaluatedAt: iso(-86_400_000),
+  });
+  const row = (id: number, fields: Record<string, unknown>) => ({
+    id: `00000000-0000-4000-8000-0000005${String(id).padStart(7, '0')}`,
+    debate_id: debateId,
+    is_active: true,
+    metadata: null,
+    created_at: iso(-id * 7 * 3600_000),
+    ...fields,
+  });
+  return [
+    row(1, { title: 'City air quality report 2025', type: 'url', origin: 'https://example.org/air-quality-2025', folder: 'Evidence', content: 'Nitrogen dioxide fell by a third on streets closed to through traffic, measured over twelve months at forty sites.', metadata: { url: 'https://example.org/air-quality-2025', qualityScore: 0.9, semantic: semantic(3, 3, 4, 2, true) } }),
+    row(2, { title: 'Congestion charge results', type: 'file', origin: 'congestion-charge-2024.pdf', folder: 'Evidence', content: 'Traffic in the charging zone fell by 18 percent in the first twelve months. Bus journey times improved by 9 percent.', metadata: { semantic: semantic(2, 2, 1, 1) } }),
+    row(3, { title: 'Nurse shift-work exemptions', type: 'text', origin: null, folder: 'Rebuttals', content: 'Every real ban exempts shift workers, carers and blue badge holders. Night buses follow demand.' }),
+    row(4, { title: 'Opposition talking points', type: 'text', origin: null, folder: 'General', is_active: false, content: 'Their likely lines: freedom of movement, trade in the centre, deliveries.' }),
+    row(5, { title: 'Retail footfall after car bans', type: 'url', origin: 'https://example.com/footfall-study', folder: 'Auto-saved', content: 'Footfall recovered to its earlier level within eight months in five of six cities.', metadata: { url: 'https://example.com/footfall-study', semantic: semantic(1, 2, 1, 0) } }),
+  ];
+}
+
+/**
+ * Answers the Library's reads with librarySources and its writes locally, so
+ * the shots show folders, a switched-off source and quality badges without
+ * touching the account's real Library (see the header).
+ */
+async function fakeLibrary(page: Page) {
+  let rows: Record<string, unknown>[] | null = null;
+  const folders = ['General', 'Evidence', 'Rebuttals', 'Auto-saved'];
+  await page.route((url) => url.href.startsWith(`${REST}/sources`) || url.href.startsWith(`${REST}/source_folders`), async (route) => {
+    const request = route.request();
+    const url = new URL(request.url());
+    const object = (request.headers()['accept'] ?? '').includes('vnd.pgrst.object');
+    const debate = url.searchParams.get('debate_id')?.replace(/^eq\./, '');
+    if (url.pathname.endsWith('/source_folders')) {
+      return route.fulfill({ status: request.method() === 'GET' ? 200 : 201, headers: CORS, json: request.method() === 'GET' ? folders.map((name) => ({ name })) : [] });
+    }
+    if (debate && !rows) rows = librarySources(debate);
+    if (request.method() === 'GET') {
+      const id = url.searchParams.get('id')?.replace(/^eq\./, '');
+      const list = (rows ?? []).filter((row) => !id || row.id === id);
+      return route.fulfill({ status: 200, headers: CORS, json: object ? list[0] ?? null : list });
+    }
+    if (request.method() === 'POST') {
+      const body = request.postDataJSON() as Record<string, unknown>;
+      const saved = { id: `00000000-0000-4000-8000-0000006${String(Date.now() % 1e7).padStart(7, '0')}`, created_at: iso(0), ...body };
+      rows = [saved, ...(rows ?? [])];
+      return route.fulfill({ status: 201, headers: CORS, json: object ? saved : [saved] });
+    }
+    if (request.method() === 'DELETE') {
+      const id = url.searchParams.get('id')?.replace(/^eq\./, '');
+      const removed = (rows ?? []).filter((row) => row.id === id);
+      rows = (rows ?? []).filter((row) => row.id !== id);
+      return route.fulfill({ status: 200, headers: CORS, json: removed.map((row) => ({ debate_id: row.debate_id })) });
+    }
+    return route.fulfill({ status: 204, headers: CORS });
+  });
+}
+
+/** Picks a fixture through the Library's Import a file, as the Files picker would hand it over. */
+async function importFixture(page: Page, file: string) {
+  await page.goto(`${ORIGIN}/library`);
+  await page.getByTestId('library-add').click({ timeout: 30_000 });
+  const chooser = page.waitForEvent('filechooser');
+  await page.getByRole('menuitem').nth(2).click();
+  await (await chooser).setFiles(join(FIXTURES, file));
+  await page.getByTestId('add-file-sheet').waitFor({ timeout: 30_000 });
+}
+
+async function shootLibraryScreens(page: Page, prefix: string, problems: string[]) {
+  await fakeLibrary(page);
   await page.goto(`${ORIGIN}/library`);
   await page.getByTestId('library-add').waitFor({ timeout: 30_000 });
+  await page.getByTestId('source-row').first().waitFor({ timeout: 30_000 });
   await settle(page);
   await shoot(page, `${prefix}-library`);
+
+  await page.getByTestId('library-more').click();
+  await page.getByTestId('library-more-menu').waitFor();
+  await shoot(page, `${prefix}-library-more`);
+  await page.getByTestId('library-more').click();
+
+  await page.getByTestId('folder-chip').filter({ hasText: 'Evidence' }).click();
+  await page.getByTestId('folder-bar').waitFor();
+  await shoot(page, `${prefix}-library-folder`);
 
   await page.getByTestId('library-add').click();
   await page.getByRole('menu').waitFor();
@@ -765,11 +913,45 @@ async function shootLibraryScreens(page: Page, prefix: string) {
   await page.waitForTimeout(700);
   await shoot(page, `${prefix}-new-note`);
 
+  // The real reader: pdf.js and mammoth read the fixtures in the page, as in the iOS DOM component.
+  await importFixture(page, 'congestion-charge-results.pdf');
+  await page.getByText('Bus journey times improved by 9 percent', { exact: false }).first().waitFor({ timeout: 60_000 });
+  await page.waitForTimeout(500);
+  await shoot(page, `${prefix}-add-file`);
+  await page.getByRole('button', { name: /^(Save imported source|Importált forrás mentése|Guardar fuente importada)$/ }).click();
+  await page.getByTestId('toast').waitFor({ timeout: 30_000 });
+  await page.waitForTimeout(400);
+  await shoot(page, `${prefix}-library-saved`);
+
+  await importFixture(page, 'rebuttal-notes.docx');
+  await page.getByText('Night buses follow demand', { exact: false }).first().waitFor({ timeout: 60_000 });
+  await page.waitForTimeout(500);
+  await shoot(page, `${prefix}-add-file-docx`);
+
+  await importFixture(page, 'whiteboard-photo.png');
+  await page.getByRole('alert').first().waitFor({ timeout: 30_000 });
+  await page.waitForTimeout(500);
+  await shoot(page, `${prefix}-add-file-error`);
+
   await page.goto(`${ORIGIN}/library`);
   await page.getByTestId('source-row').first().click({ timeout: 30_000 });
   await page.getByTestId('source-sheet').getByRole('heading').waitFor({ timeout: 30_000 });
   await page.waitForTimeout(700);
   await shoot(page, `${prefix}-source`);
+  await page.getByTestId('source-sheet').getByRole('button', { name: /^(Edit|Szerkesztés|Editar)$/ }).click();
+  await page.waitForTimeout(400);
+  await shoot(page, `${prefix}-source-edit`);
+
+  // Delete acts at once and offers Undo; the write is answered locally.
+  await page.goto(`${ORIGIN}/library`);
+  await page.getByTestId('source-row').nth(1).click({ timeout: 30_000 });
+  await page.getByTestId('source-delete').click({ timeout: 30_000 });
+  await page.getByTestId('toast-action').waitFor({ timeout: 30_000 });
+  await page.getByTestId('source-sheet').waitFor({ state: 'detached', timeout: 10_000 });
+  await page.waitForTimeout(400);
+  await shoot(page, `${prefix}-library-undo`);
+  const haptics = await page.evaluate(() => (window as unknown as { __debatelabHaptics?: string[] }).__debatelabHaptics ?? []);
+  if (!haptics.includes('success')) problems.push(`${prefix}: deleting a source did not tap success`);
 }
 
 async function shootAskScreens(context: BrowserContext, prefix: string, language: string, problems: string[]) {
@@ -1604,10 +1786,12 @@ async function main() {
   await mkdir(OUT, { recursive: true });
 
   const server = await serve();
-  const browser = await chromium.launch();
+  // Launched in the try, so a missing browser still closes the server.
+  let browser: Browser | null = null;
   const problems: string[] = [];
   let shots = 0;
   try {
+    browser = await chromium.launch();
     const session = DEMO_CODE ? await signIn(browser, problems) : null;
     if (!session) console.log('STAGING_DEMO_CODE is not set: signed-in screens skipped');
     else if (offlineOnly) {
@@ -1643,14 +1827,18 @@ async function main() {
               await shoot(tabPage, `${prefix}-failed`);
               throw error;
             });
-            shots += 6;
+            shots += 10;
+          }
+          if (want('debate-check')) {
+            await shootDebateCheck(signedIn, prefix, language, problems).catch(failedIn(signedIn, prefix, 'debate-check'));
+            shots += 1;
           }
           if (want('library')) {
-            await shootLibraryScreens(tabPage, prefix).catch(async (error: unknown) => {
+            await shootLibraryScreens(tabPage, prefix, problems).catch(async (error: unknown) => {
               await shoot(tabPage, `${prefix}-failed`);
               throw error;
             });
-            shots += 5;
+            shots += 14;
           }
           for (const [name, route] of Object.entries(SIGNED_IN_ROUTES)) {
             if (!want(name)) continue;
@@ -1735,7 +1923,7 @@ async function main() {
       }
     }
   } finally {
-    await browser.close();
+    await browser?.close();
     server.close();
   }
 
