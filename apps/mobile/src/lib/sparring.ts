@@ -9,6 +9,7 @@ import {
   type SparringTurnResponse,
 } from '@debatelab/core/ai/schemas/sparring';
 import { parseSavedSparringRows, SPARRING_SESSION_COLUMNS, type SparringSession } from '@debatelab/core/sparring/session';
+import { parseVoicePayload, type VoicePayload } from '@debatelab/core/voice/payload';
 import * as Crypto from 'expo-crypto';
 
 import { AIError, functionOutput, postFunction, PROVIDER } from './ai-request';
@@ -40,6 +41,8 @@ interface RequestOptions {
   /** The debate the round belongs to; null for a one-off round. */
   debateId: string | null;
   signal?: AbortSignal;
+  /** A voice round: the reply also carries segments the opponent's voice can perform. */
+  voice?: boolean;
 }
 
 /** The website's request body. A live round stays transcript-only, so its debate context carries no sources or results. */
@@ -55,16 +58,24 @@ function requestBody(input: SparringRespondInput | SparringScoreInput, options: 
     // Servers from before Current Debate context read only this field.
     sourceIds: [],
     ...(options.debateId ? { debateContext: { debateId: options.debateId, side: input.userSide, sourceIds: [], outputs: [] } } : {}),
+    // Beside `input`, as the website sends it, so a server from before voice rounds ignores it.
+    ...(options.voice ? { voice: true } : {}),
   };
 }
 
-/** The opponent's speech for the current turn, with the token the server signed it with. */
-export function sparringTurn(input: SparringRespondInput, options: RequestOptions): Promise<SparringTurnResponse['speech']> {
+/**
+ * The opponent's speech for the current turn, with the token the server
+ * signed it with, and in a voice round the signed segments the opponent's
+ * voice speaks.
+ */
+export function sparringTurn(input: SparringRespondInput, options: RequestOptions): Promise<{ speech: SparringTurnResponse['speech']; voice?: VoicePayload }> {
   return postFunction('ai', requestBody(input, options), options.signal, async (response) => {
-    const { output } = await functionOutput(response);
+    const { output, data } = await functionOutput(response);
     const parsed = SparringTurnResponseSchema.safeParse(output);
     if (!parsed.success) throw new SparringResponseError('AI response did not match the expected sparring turn schema.');
-    return parsed.data.speech;
+    // A missing or malformed voice payload only means the device voice reads the speech.
+    const voice = options.voice ? parseVoicePayload(data.voice) : undefined;
+    return voice ? { speech: parsed.data.speech, voice } : { speech: parsed.data.speech };
   });
 }
 
@@ -73,7 +84,7 @@ export function sparringTurn(input: SparringRespondInput, options: RequestOption
  * sparring_sessions before it answers, and answers a repeated request with
  * the scorecard it saved.
  */
-export function judgeSparring(input: SparringScoreInput, options: RequestOptions): Promise<SparringScorecard> {
+export function judgeSparring(input: SparringScoreInput, options: Omit<RequestOptions, 'voice'>): Promise<SparringScorecard> {
   return postFunction('ai', requestBody(input, options), options.signal, async (response) => {
     const { output } = await functionOutput(response);
     const parsed = SparringScoreResponseSchema.safeParse(output);

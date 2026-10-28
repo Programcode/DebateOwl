@@ -2978,6 +2978,15 @@
     "permissions": {
       "speechRecognition": "DebateOwl turns your voice into text when you dictate a question, a Crossfire answer or a Sparring speech. Apple processes the audio to recognize it.",
       "microphone": "DebateOwl uses the microphone while you dictate a question, a Crossfire answer or a Sparring speech."
+    },
+    "voice": {
+      "recognition": "Apple's speech recognition turns your speech into text. iOS may send the audio to Apple to recognize it.",
+      "denied": "Voice is off because DebateOwl may not use the microphone or speech recognition. Allow both in Settings. Typing works as usual.",
+      "openSettings": "Open Settings",
+      "notAllowed": "DebateOwl may not use the microphone or speech recognition. Allow both in Settings, or type instead.",
+      "limit": "Today's allowance for the opponent's ElevenLabs voice is used up, so your device's voice is reading the replies.",
+      "deliveryDescription": "These figures come from the clock and the transcript of what you said. Nobody listened for tone, confidence or volume, and the transcript can miss words.",
+      "spoken": "Spoken"
     }
   }
 }

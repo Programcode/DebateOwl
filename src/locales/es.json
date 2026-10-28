@@ -2978,6 +2978,15 @@
     "permissions": {
       "speechRecognition": "DebateOwl convierte tu voz en texto cuando dictas una pregunta, una respuesta de Interrogatorio o un discurso de Sparring. Apple procesa el audio para reconocerlo.",
       "microphone": "DebateOwl usa el micrófono mientras dictas una pregunta, una respuesta de Interrogatorio o un discurso de Sparring."
+    },
+    "voice": {
+      "recognition": "El reconocimiento de voz de Apple convierte tu voz en texto. iOS puede enviar el audio a Apple para reconocerlo.",
+      "denied": "La voz está desactivada porque DebateOwl no puede usar el micrófono ni el reconocimiento de voz. Permite ambos en Ajustes. Puedes escribir como siempre.",
+      "openSettings": "Abrir Ajustes",
+      "notAllowed": "DebateOwl no puede usar el micrófono ni el reconocimiento de voz. Permite ambos en Ajustes o escribe.",
+      "limit": "La cuota de hoy para la voz de ElevenLabs del oponente se agotó, así que la voz de tu dispositivo lee las respuestas.",
+      "deliveryDescription": "Estas cifras provienen del reloj y de la transcripción de lo que dijiste. Nadie escuchó tu tono, tu seguridad ni tu volumen, y la transcripción puede omitir palabras.",
+      "spoken": "Hablado"
     }
   }
 }

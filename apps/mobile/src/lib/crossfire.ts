@@ -15,6 +15,7 @@ import {
 } from '@debatelab/core/crossfire/schemas';
 import type { DebateContextRequest } from '@debatelab/core/contract/debate-context';
 
+import { parseVoicePayload, type VoicePayload } from '@debatelab/core/voice/payload';
 import { abortError, AIError, functionOutput, postFunction, PROVIDER, responseExtras, type ResponseExtras } from './ai-request';
 import { debateListScopes } from './debates';
 import type { FeatureConfig } from './feature-config';
@@ -53,6 +54,8 @@ interface RequestOptions {
    * (SESSION_QUOTA) instead of every turn. Signals are not charged per round.
    */
   quotaSession?: string;
+  /** A voice round: ask for a reply the opponent's voice can perform. */
+  voice?: boolean;
 }
 
 // Turn signals and measured delivery facts are client annotations. The Edge
@@ -72,6 +75,8 @@ function requestBody(input: Record<string, unknown> & { transcript: CrossfireTur
     // Servers from before Current Debate context read only this field.
     sourceIds: options.debateContext?.sourceIds ?? [],
     ...(options.debateContext ? { debateContext: options.debateContext } : {}),
+    // Beside `input`, as the website sends it, and only for turns: a server from before voice rounds ignores it.
+    ...(options.voice && input.operation === 'next-turn' ? { voice: true } : {}),
   };
 }
 
@@ -108,7 +113,7 @@ export async function withTurnDeadline<T>(signal: AbortSignal, work: (signal: Ab
   }
 }
 
-export type CrossfireNextTurn = CrossfireReply & { signalToken?: string };
+export type CrossfireNextTurn = CrossfireReply & { signalToken?: string; voice?: VoicePayload };
 
 /** The opponent's next question or answer, checked as the website checks it. */
 export function crossfireTurn(
@@ -125,7 +130,12 @@ export function crossfireTurn(
     if (token !== undefined && (typeof token !== 'string' || !token.trim() || token.length > 128)) {
       throw new CrossfireResponseError('Crossfire signal token was invalid.');
     }
-    return { reply: typeof token === 'string' ? { ...reply.data, signalToken: token } : reply.data, ...responseExtras(data) };
+    // A missing or malformed voice payload only means the device voice reads the reply.
+    const voice = options.voice ? parseVoicePayload(data.voice) : undefined;
+    return {
+      reply: { ...reply.data, ...(typeof token === 'string' ? { signalToken: token } : {}), ...(voice ? { voice } : {}) },
+      ...responseExtras(data),
+    };
   }, TURN_TIMEOUT_MS);
 }
 

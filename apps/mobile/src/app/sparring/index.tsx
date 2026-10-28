@@ -14,6 +14,7 @@ import {
   tickSparringTimer,
   type SparringSession,
 } from '@debatelab/core/sparring/session';
+import { measureDelivery } from '@debatelab/core/voice/delivery';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -25,7 +26,7 @@ import { MainActionButton, TextButton } from '@/components/buttons';
 import { DocumentScreen } from '@/components/document';
 import { DocumentHeader } from '@/components/document-header';
 import { Field } from '@/components/field';
-import { FormGroup, SelectRow, SwitchRow } from '@/components/form-rows';
+import { FormGroup, SelectRow } from '@/components/form-rows';
 import { Icon } from '@/components/icon';
 import { LiveTopBar, MainRoundControl, RoundIconButton, SideControl } from '@/components/round-controls';
 import { SegmentedControl } from '@/components/segmented-control';
@@ -35,6 +36,7 @@ import { SparringScorecardScreen } from '@/components/sparring-views';
 import { Text } from '@/components/text';
 import { TimerRing } from '@/components/timer-ring';
 import { ToolTitle, WorkingIn } from '@/components/tool-form';
+import { appendDictation, OpponentVoiceBar, VoiceMicControl, VoiceModeSwitch } from '@/components/voice';
 import { AIError, isAbortError, untilAborted } from '@/lib/ai-request';
 import { useAuth } from '@/lib/auth';
 import { backLabel } from '@/lib/back-label';
@@ -44,10 +46,13 @@ import { openRefusal } from '@/lib/refusal';
 import { sessionQuotaRefusal, useSessionQuota } from '@/lib/session-quota';
 import { decideMotionTarget, shouldPrefillMotion } from '@/lib/motion';
 import { chooseMotionTarget } from '@/lib/motion-gate';
+import { opponentVoice } from '@/lib/opponent-voice';
 import { useSettings } from '@/lib/settings';
 import { attachSparring, judgeSparring, newSparringId, noteJudgedRound, SparringResponseError, sparringDraft, sparringTurn } from '@/lib/sparring';
 import { formatClock } from '@/lib/timer';
 import { tapTurnStart, useKeepAwakeWhile } from '@/lib/timer-signals';
+import { useSpeechCapture, type SpeechCaptureApi } from '@/lib/use-speech-capture';
+import { useVoiceAvailability } from '@/lib/voice-availability';
 import { radius } from '@/theme/colors';
 import { fontFamily } from '@/theme/fonts';
 import { useTheme } from '@/theme/use-theme';
@@ -83,7 +88,10 @@ function classify(cause: unknown, judge: boolean): Failure {
  * against the AI opponent on each speech's clock, and read the judge's
  * scorecard. The live round is full screen like mock 05 and stays for the
  * session if the student leaves it; a request cut off by leaving is offered
- * again. Voice rounds need the development build.
+ * again. A voice round, as the website's, lets the student speak each speech
+ * (the words fill the draft, and the speech's delivery is measured) and
+ * plays the opponent's speeches aloud; it needs speech recognition, so it
+ * runs in the development build, not in Expo Go.
  */
 export default function SparringScreen() {
   const { t } = useTranslation();
@@ -105,6 +113,7 @@ export default function SparringScreen() {
   const [motion, setMotion] = useState('');
   const [format, setFormat] = useState<SparringFormat>('standard');
   const [difficulty, setDifficulty] = useState<SparringDifficulty>('medium');
+  const [voiceMode, setVoiceMode] = useState(false);
   const [formError, setFormError] = useState('');
   const [sideMenu, setSideMenu] = useState(false);
   const [notice, setNotice] = useState('');
@@ -117,6 +126,11 @@ export default function SparringScreen() {
   const roundQuota = useSessionQuota('sparring');
   // Start waits for the round's cost; a second tap meanwhile does nothing.
   const [checkingQuota, setCheckingQuota] = useState(false);
+  // A voice round falls back to typing when the microphone is lost.
+  const voiceAvailability = useVoiceAvailability();
+  const voiceActive = Boolean(session?.voice) && voiceAvailability.available;
+  const voiceActiveRef = useRef(voiceActive);
+  voiceActiveRef.current = voiceActive;
 
   // Another account starts with no round: the session slot was already cleared, and this screen's copy goes too.
   useEffect(() => {
@@ -141,6 +155,7 @@ export default function SparringScreen() {
     return () => {
       live.current = false;
       requestRef.current?.abort();
+      opponentVoice.stop();
     };
   }, []);
 
@@ -196,9 +211,10 @@ export default function SparringScreen() {
       // Read under the request's abort, so leaving while the settings load sends nothing.
       const config = await untilAborted(fetchFeatureConfig(forUser, 'sparring'), controller.signal);
       const { speaker: _speaker, ...currentTurn } = turn;
-      const generated = await sparringTurn(
+      const spoken = voiceActiveRef.current;
+      const { speech: generated, voice } = await sparringTurn(
         { action: 'respond', sessionId: snapshot.id, motion: snapshot.motion, userSide: snapshot.userSide, format: snapshot.format, difficulty: snapshot.difficulty, speeches: snapshot.speeches, language: outputLanguage, currentTurn },
-        { config, debateId: snapshot.debateId ?? null, signal: controller.signal },
+        { config, debateId: snapshot.debateId ?? null, signal: controller.signal, voice: spoken },
       );
       if (controller.signal.aborted || owner.current !== forUser) return;
       const speech: SparringSpeech = {
@@ -218,6 +234,8 @@ export default function SparringScreen() {
       setRequest({ status: 'idle' });
       if (!next) return;
       commit(next);
+      // In a voice round the opponent speaks its speech aloud.
+      if (spoken && live.current) opponentVoice.speak({ feature: 'sparring', text: generated.content, voice, language: outputLanguage });
       if (next.phase === 'judging') void runJudge(next, forUser);
       else if (currentSparringTurn(next)?.speaker === 'user') tapTurnStart();
     } catch (cause) {
@@ -250,7 +268,8 @@ export default function SparringScreen() {
   }, [commit, timerRunning]);
 
   const begin = (side: SparringSide, debateId: string | null, forUser: string) => {
-    const started = startSparringSession({ motion, userSide: side, format, difficulty, debateId }, newSparringId(), Date.now());
+    const started = startSparringSession({ motion, userSide: side, format, difficulty, debateId, ...(voiceMode ? { voice: true } : {}) }, newSparringId(), Date.now());
+    if (voiceMode) opponentVoice.beginRound();
     setNotice('');
     setSubmissionError('');
     commit(started);
@@ -313,16 +332,23 @@ export default function SparringScreen() {
     if (live.current && owner.current === forUser && startAttempt.current === attempt) begin(side, debateId, forUser);
   };
 
-  const submit = () => {
-    const latest = sessionRef.current;
+  const submit = async () => {
+    const before = sessionRef.current;
     // A second tap after the speech went in lands on the opponent's turn; it is not a rejected speech.
-    if (!latest || !userId || latest.phase !== 'round' || currentSparringTurn(latest)?.speaker !== 'user') return;
+    if (!before || !userId || before.phase !== 'round' || currentSparringTurn(before)?.speaker !== 'user') return;
     Keyboard.dismiss();
-    const next = submitSparringSpeech(latest, latest.draft, { now: Date.now(), createId: newSparringId });
+    // Stopping also withdraws a start still waiting for permission; the last words land in the draft first.
+    if (capture.listening) await capture.stop();
+    else void capture.stop();
+    const latest = sessionRef.current;
+    if (!latest || latest.id !== before.id || latest.currentTurnIndex !== before.currentTurnIndex) return;
+    const delivery = voiceActiveRef.current ? measureDelivery(capture.getTake(), outputLanguage) : null;
+    const next = submitSparringSpeech(latest, latest.draft, { now: Date.now(), createId: newSparringId, delivery });
     if (!next) {
       setSubmissionError(t('sparring.round.speechRejected'));
       return;
     }
+    capture.resetTake();
     setSubmissionError('');
     commit(next);
     if (next.phase === 'judging') void runJudge(next, userId);
@@ -338,6 +364,8 @@ export default function SparringScreen() {
 
   const restart = () => {
     requestRef.current?.abort();
+    opponentVoice.stop();
+    capture.cancel();
     setRequest({ status: 'idle' });
     setNotice('');
     setSubmissionError('');
@@ -350,6 +378,33 @@ export default function SparringScreen() {
     const next = change(latest, Date.now());
     if (next !== latest) commit(next);
   };
+
+  // The first keystroke or word of a turn starts its clock, and talks over the opponent's voice.
+  const updateDraft = (draft: string) => move((round, now) => {
+    const turn = currentSparringTurn(round);
+    const key = `${round.id}:${turn?.id ?? ''}`;
+    const awaitingStart = startedTurn.current !== key && !round.timerRunning
+      && round.timerRemainingSeconds === turn?.timeLimitSeconds;
+    if (awaitingStart) {
+      startedTurn.current = key;
+      opponentVoice.stop();
+    }
+    return { ...(awaitingStart ? resumeSparringTimer(round, now) : round), draft: draft.slice(0, MAX_SPARRING_SPEECH_CHARS), updatedAt: now };
+  });
+  const resume = () => {
+    opponentVoice.stop();
+    move((round, now) => {
+      startedTurn.current = `${round.id}:${currentSparringTurn(round)?.id ?? ''}`;
+      return resumeSparringTimer(round, now);
+    });
+  };
+
+  // Recognised words join the draft, so the student can see and fix them.
+  const capture = useSpeechCapture(outputLanguage, (text) => updateDraft(appendDictation(sessionRef.current?.draft ?? '', text, MAX_SPARRING_SPEECH_CHARS)));
+  // Each turn of each round is measured on its own, and a start still waiting for permission does not carry over.
+  const turnKey = session ? `${session.id}:${currentSparringTurn(session)?.id ?? ''}` : '';
+  const cancelCapture = capture.cancel;
+  useEffect(() => cancelCapture, [cancelCapture, turnKey]);
 
   if (!session) {
     const turns = buildSparringTurns(format, 'pro');
@@ -406,17 +461,7 @@ export default function SparringScreen() {
             </View>
           ))}
         </FormGroup>
-        <FormGroup>
-          {/* Voice rounds need speech recognition and the opponent's voice, which come with the development build. */}
-          <SwitchRow
-            first
-            label={t('voiceRound.mode.label')}
-            description={`${t('voiceRound.mode.sparringDescription')} ${t('mobile.crossfire.voiceLater')}`}
-            value={false}
-            onChange={() => {}}
-            disabled
-          />
-        </FormGroup>
+        <VoiceModeSwitch value={voiceMode} onChange={setVoiceMode} description={t('voiceRound.mode.sparringDescription')} />
         <ContextLine feature="sparring" side="both" />
         <SessionCostNote quota={roundQuota.quota} />
         {formError ? (
@@ -460,25 +505,26 @@ export default function SparringScreen() {
       request={request}
       notice={notice}
       submissionError={submissionError}
+      voice={voiceActive ? {
+        capture,
+        // Speaking starts the turn's clock and talks over the opponent.
+        onStart: () => {
+          resume();
+          void capture.start();
+        },
+        onStop: () => void capture.stop(),
+      } : null}
       onClose={() => router.back()}
-      onDraft={(draft) => move((round, now) => {
-        const turn = currentSparringTurn(round);
-        const key = `${round.id}:${turn?.id ?? ''}`;
-        const awaitingStart = startedTurn.current !== key && !round.timerRunning
-          && round.timerRemainingSeconds === turn?.timeLimitSeconds;
-        if (awaitingStart) startedTurn.current = key;
-        return { ...(awaitingStart ? resumeSparringTimer(round, now) : round), draft: draft.slice(0, MAX_SPARRING_SPEECH_CHARS), updatedAt: now };
-      })}
+      onDraft={updateDraft}
       onPause={() => move(pauseSparringTimer)}
-      onResume={() => move((round, now) => {
-        startedTurn.current = `${round.id}:${currentSparringTurn(round)?.id ?? ''}`;
-        return resumeSparringTimer(round, now);
-      })}
+      onResume={resume}
       onReset={() => {
+        // A microphone still listening would keep adding untimed words to the reset turn.
+        void capture.stop();
         startedTurn.current = null;
         move(resetSparringTurnTimer);
       }}
-      onSubmit={submit}
+      onSubmit={() => void submit()}
       onRetry={retry}
     />
   );
@@ -487,6 +533,7 @@ export default function SparringScreen() {
 /** The live round from mock 05: the speech's ring timer, the opponent's speech as it arrives, your typed speech, and the controls. */
 function LiveRound({
   session,
+  voice,
   request,
   notice,
   submissionError,
@@ -499,6 +546,8 @@ function LiveRound({
   onRetry,
 }: {
   session: SparringSession;
+  /** A voice round's microphone, while voice is available. */
+  voice: { capture: SpeechCaptureApi; onStart: () => void; onStop: () => void } | null;
   request: RequestState;
   notice: string;
   submissionError: string;
@@ -544,7 +593,14 @@ function LiveRound({
   const status = judging ? t('sparring.round.complete') : userTurn ? t('sparring.round.yourSpeech') : t('sparring.round.opponentThinking');
   const guidance = turn && ROLE_GUIDANCE.has(turn.kind) ? t(`sparring.roleGuidance.${turn.kind}`) : t('sparring.round.yourSpeechDescription');
   const words = session.draft.trim() ? session.draft.trim().split(/\s+/).length : 0;
-  const canSubmit = userTurn && Boolean(session.draft.trim()) && !timeExpired;
+  const listening = voice?.capture.listening ?? false;
+  const canSubmit = userTurn && (Boolean(session.draft.trim()) || listening) && !timeExpired;
+  // The microphone closes when the student's time or turn is over.
+  const micAllowed = userTurn && !timeExpired;
+  const stopMic = voice?.onStop;
+  useEffect(() => {
+    if (!micAllowed) stopMic?.();
+  }, [micAllowed, stopMic]);
   const pressure = t(`sparring.difficulty.${session.difficulty}`);
 
   const main = failure
@@ -599,6 +655,8 @@ function LiveRound({
           </View>
         )}
 
+        {voice ? <OpponentVoiceBar /> : null}
+
         {notice ? (
           <Text tone="secondary" accessibilityRole="alert" style={styles.notice}>
             {notice}
@@ -652,12 +710,13 @@ function LiveRound({
             <Text tone="faint" style={styles.guidance}>
               {guidance}
             </Text>
+            {voice ? <VoiceMicControl capture={voice.capture} onStart={voice.onStart} onStop={voice.onStop} disabled={timeExpired} /> : null}
             <TextInput
               value={session.draft}
               onChangeText={onDraft}
               maxLength={MAX_SPARRING_SPEECH_CHARS}
               multiline
-              placeholder={t('sparring.round.speechPlaceholder')}
+              placeholder={voice ? t('voiceRound.mic.draftPlaceholder') : t('sparring.round.speechPlaceholder')}
               placeholderTextColor={colors.tabInactive}
               accessibilityLabel={t('sparring.round.draftFor', { label: turnLabel })}
               style={[styles.input, { color: colors.foreground }]}

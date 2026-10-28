@@ -8,6 +8,7 @@ import {
   type CrossfireState,
   type CrossfireTurn,
 } from '@debatelab/core/crossfire/schemas';
+import { combineDelivery, measureDelivery } from '@debatelab/core/voice/delivery';
 import { Stack, useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useReducer, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -28,9 +29,13 @@ import { SegmentedControl } from '@/components/segmented-control';
 import { Text } from '@/components/text';
 import { TimerRing } from '@/components/timer-ring';
 import { ToolTitle, WorkingIn } from '@/components/tool-form';
+import { appendDictation, DeliverySummary, OpponentVoiceBar, VoiceMicControl, VoiceModeSwitch } from '@/components/voice';
 import { abortError, AIError, isAbortError, type ResponseExtras, untilAborted } from '@/lib/ai-request';
 import { useAuth } from '@/lib/auth';
 import { haptics } from '@/lib/haptics';
+import { opponentVoice } from '@/lib/opponent-voice';
+import { useSpeechCapture } from '@/lib/use-speech-capture';
+import { useVoiceAvailability } from '@/lib/voice-availability';
 import { backLabel } from '@/lib/back-label';
 import { resetContextChoices } from '@/lib/context-plan';
 import { buildDebateContext } from '@/lib/context-request';
@@ -100,8 +105,10 @@ function nextTurn(sequence: number, speaker: 'user' | 'ai', kind: 'question' | '
  * Crossfire in its typed mode, as the website's CrossfirePage: set up a
  * resolution and a case, question the AI or be questioned for a few timed
  * minutes, then read the debrief. The live round is full screen; the round
- * stays for the session if the student leaves it. Voice rounds need the
- * development build (speech recognition and the opponent's voice).
+ * stays for the session if the student leaves it. In a voice round the
+ * student speaks each question or answer (the words fill the box, and the
+ * delivery is measured) and the opponent replies aloud; it needs speech
+ * recognition, so it runs in the development build, not in Expo Go.
  */
 export default function CrossfireScreen() {
   const { t } = useTranslation();
@@ -125,7 +132,31 @@ export default function CrossfireScreen() {
   const [checkingQuota, setCheckingQuota] = useState(false);
   // The debate chosen when the round started; null for one-off rounds.
   const debateTarget = useRef<string | null>(crossfireDraft.get()?.debateId ?? null);
-  const [draftTurn, setDraftTurn] = useState('');
+  const [draftTurn, setDraftTurnState] = useState('');
+  // Read after the microphone's last words land, before React has drawn them.
+  const draftRef = useRef('');
+  const setDraftTurn = useCallback((value: string) => {
+    draftRef.current = value;
+    setDraftTurnState(value);
+  }, []);
+  const stateRef = useRef(state);
+  stateRef.current = state;
+  // A voice round falls back to typing when the microphone is lost.
+  const voiceAvailability = useVoiceAvailability();
+  const voiceActive = Boolean(state.voice) && voiceAvailability.available;
+  const voiceActiveRef = useRef(voiceActive);
+  voiceActiveRef.current = voiceActive;
+  const capture = useSpeechCapture(outputLanguage, (text) => setDraftTurn(appendDictation(draftRef.current, text, MAX_CROSSFIRE_TURN_CHARS)));
+  // Each round is measured on its own, and a start still waiting for permission does not carry over.
+  const captureScope = state.phase === 'setup' ? 'setup' : state.sessionId;
+  const cancelCapture = capture.cancel;
+  useEffect(() => cancelCapture, [cancelCapture, captureScope]);
+  // The microphone closes when it is not the student's turn.
+  const awaitingUserTurn = expectedUserTurnKind(state) !== null;
+  const stopCapture = capture.stop;
+  useEffect(() => {
+    if (!awaitingUserTurn) void stopCapture();
+  }, [awaitingUserTurn, stopCapture]);
   const [now, setNow] = useState(() => Date.now());
   const [formError, setFormError] = useState('');
   // A case or an attack opened in Crossfire while a round runs is not brought in, as on the website; say so.
@@ -155,6 +186,7 @@ export default function CrossfireScreen() {
       live.current = false;
       requestRef.current?.abort();
       abortSignals();
+      opponentVoice.stop();
     };
   }, [abortSignals]);
 
@@ -232,20 +264,22 @@ export default function CrossfireScreen() {
     const controller = new AbortController();
     requestRef.current = controller;
     const debateId = debateTarget.current;
+    const spoken = voiceActiveRef.current;
     try {
       const { config, reply, ...extras } = await withTurnDeadline(controller.signal, async (signal) => {
         const { config, context } = await requestContext(forUser, debateId, signal);
         if (signal.aborted) throw abortError();
         const turn = await crossfireTurn(
           { operation: 'next-turn', config: snapshot.config, transcript: snapshot.turns, expectedReply },
-          { config, language: outputLanguage, debateContext: crossfireContext(context, snapshot.config), signal, quotaSession: snapshot.sessionId },
+          { config, language: outputLanguage, debateContext: crossfireContext(context, snapshot.config), signal, quotaSession: snapshot.sessionId, voice: spoken },
         );
         return { config, ...turn };
       });
       if (controller.signal.aborted) return;
       dispatch({ type: 'ai-turn-received', turn: nextTurn(snapshot.turns.length + 1, 'ai', reply.type, reply.text) });
-      // The turn is back with the student.
+      // The turn is back with the student; in a voice round the opponent says it aloud.
       haptics.turn();
+      if (spoken && live.current) opponentVoice.speak({ feature: 'crossfire', text: reply.text, voice: reply.voice, language: outputLanguage });
       afterResponse(forUser, debateId, extras);
       if (reply.signalToken) {
         const signalController = new AbortController();
@@ -314,6 +348,8 @@ export default function CrossfireScreen() {
   const endSession = useCallback((reason: 'manual' | 'timer') => {
     if (state.phase !== 'active' || !userId) return;
     requestRef.current?.abort();
+    opponentVoice.stop();
+    capture.cancel();
     if (state.turns.length === 0) {
       dispatch({ type: 'session-reset', prefill: { resolution: state.config.resolution, argument: state.config.argument, seedQuestions: state.config.seedQuestions } });
       setFormError(t('crossfire.debriefEmptyDesc'));
@@ -323,7 +359,7 @@ export default function CrossfireScreen() {
     const next = crossfireReducer(state, action);
     dispatch(action);
     if (next.phase === 'debriefing') void runDebrief(next, userId);
-  }, [runDebrief, state, t, userId]);
+  }, [capture, runDebrief, state, t, userId]);
 
   useEffect(() => {
     if (state.phase === 'active' && now >= state.endsAt) endSession('timer');
@@ -333,6 +369,7 @@ export default function CrossfireScreen() {
     if (state.phase !== 'setup') return;
     debateTarget.current = debateId;
     setNotice('');
+    if (state.voice) opponentVoice.beginRound();
     const action = { type: 'session-started' as const, sessionId: `crossfire-${Date.now()}`, now: Date.now() };
     const next = crossfireReducer(state, action);
     dispatch(action);
@@ -390,18 +427,32 @@ export default function CrossfireScreen() {
     if (live.current) beginSession(debateId, forUser);
   };
 
-  const submitTurn = () => {
+  const submitTurn = async () => {
     if (state.phase !== 'active' || !userId) return;
-    const kind = expectedUserTurnKind(state);
-    const text = draftTurn.trim();
+    // Stopping also withdraws a start still waiting for permission; the last words land in the box first.
+    if (capture.listening) await capture.stop();
+    else void capture.stop();
+    const latest = stateRef.current;
+    if (!live.current || latest.phase !== 'active') return;
+    const kind = expectedUserTurnKind(latest);
+    const text = draftRef.current.trim();
     if (!kind || !text || text.length > MAX_CROSSFIRE_TURN_CHARS) return;
     const expectedReply = kind === 'question' ? 'answer' : 'question';
-    const action = { type: 'user-turn-submitted' as const, turn: nextTurn(state.turns.length + 1, 'user', kind, text), expectedReply } as const;
-    const next = crossfireReducer(state, action);
-    if (next === state) return;
+    const delivery = voiceActiveRef.current ? measureDelivery(capture.getTake(), outputLanguage) : null;
+    capture.resetTake();
+    const turn = { ...nextTurn(latest.turns.length + 1, 'user', kind, text), ...(delivery ? { delivery } : {}) };
+    const action = { type: 'user-turn-submitted' as const, turn, expectedReply } as const;
+    const next = crossfireReducer(latest, action);
+    if (next === latest) return;
     dispatch(action);
     setDraftTurn('');
     if (next.phase === 'active') void runNextTurn(next, expectedReply, userId);
+  };
+
+  const startSpeaking = () => {
+    // Speaking over the opponent ends its audio.
+    opponentVoice.stop();
+    void capture.start();
   };
 
   const retryTurn = () => {
@@ -422,6 +473,8 @@ export default function CrossfireScreen() {
   const restart = () => {
     requestRef.current?.abort();
     abortSignals();
+    opponentVoice.stop();
+    capture.cancel();
     debateTarget.current = null;
     dispatch({ type: 'session-reset' });
     setDraftTurn('');
@@ -525,15 +578,8 @@ export default function CrossfireScreen() {
             value={config.useSourceLibrary}
             onChange={(useSourceLibrary) => dispatch({ type: 'config-patched', patch: { useSourceLibrary } })}
           />
-          {/* Voice rounds need speech recognition and the opponent's voice, which come with the development build. */}
-          <SwitchRow
-            label={t('voiceRound.mode.label')}
-            description={`${t('voiceRound.mode.crossfireDescription')} ${t('mobile.crossfire.voiceLater')}`}
-            value={false}
-            onChange={() => {}}
-            disabled
-          />
         </FormGroup>
+        <VoiceModeSwitch value={Boolean(state.voice)} onChange={(voice) => dispatch({ type: 'voice-toggled', voice })} description={t('voiceRound.mode.crossfireDescription')} />
         <ContextLine feature="crossfire" side="both" includeSources={config.useSourceLibrary} />
         <SessionCostNote quota={roundQuota.quota} />
         {formError ? (
@@ -546,6 +592,8 @@ export default function CrossfireScreen() {
   }
 
   if (state.phase === 'complete') {
+    // The measured facts of every turn the student spoke, added up, as the website's debrief shows them.
+    const spokenDelivery = combineDelivery(state.turns.flatMap((turn) => (turn.delivery ? [turn.delivery] : [])));
     return (
       <DocumentScreen
         testID="crossfire-complete"
@@ -557,6 +605,7 @@ export default function CrossfireScreen() {
           {t('crossfire.debriefSubtitle')}
         </Text>
         <CrossfireDebriefDocument debrief={state.debrief} />
+        {spokenDelivery ? <DeliverySummary delivery={spokenDelivery} /> : null}
         <SectionHeading title={t('crossfire.transcript')} />
         <CrossfireTranscript turns={state.turns} />
       </DocumentScreen>
@@ -569,7 +618,7 @@ export default function CrossfireScreen() {
   const remaining = state.phase === 'active' ? Math.max(0, Math.ceil((state.endsAt - now) / 1000)) : 0;
   const modeLabel = state.config.mode === 'question-ai' ? t('crossfire.modeQuestionAi') : t('crossfire.modeAiQuestionsUser');
   const styleKey = `crossfire.style${state.config.style[0].toUpperCase()}${state.config.style.slice(1)}`;
-  const canSend = Boolean(draftTurn.trim()) && inputKind !== null;
+  const canSend = (Boolean(draftTurn.trim()) || capture.listening) && inputKind !== null;
 
   return (
     <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={[styles.root, { backgroundColor: colors.background }]} testID="crossfire-live">
@@ -617,6 +666,8 @@ export default function CrossfireScreen() {
         keyboardDismissMode="interactive"
         onContentSizeChange={() => scroll.current?.scrollToEnd({ animated: true })}>
         <CrossfireTranscript turns={state.turns} />
+
+        {voiceActive ? <OpponentVoiceBar /> : null}
 
         {notice ? (
           <Text tone="secondary" accessibilityRole="alert" style={styles.notice}>
@@ -688,12 +739,13 @@ export default function CrossfireScreen() {
                 {t('crossfire.charactersRemaining', { count: MAX_CROSSFIRE_TURN_CHARS - draftTurn.length })}
               </Text>
             </View>
+            {voiceActive ? <VoiceMicControl capture={capture} onStart={startSpeaking} onStop={() => void capture.stop()} /> : null}
             <View style={[styles.inputRow, { borderColor: colors.border, backgroundColor: colors.input }]}>
               <TextInput
                 value={draftTurn}
                 onChangeText={setDraftTurn}
                 maxLength={MAX_CROSSFIRE_TURN_CHARS}
-                placeholder={inputKind === 'question' ? t('crossfire.questionPlaceholder') : t('crossfire.answerPlaceholder')}
+                placeholder={voiceActive ? t('voiceRound.mic.draftPlaceholder') : inputKind === 'question' ? t('crossfire.questionPlaceholder') : t('crossfire.answerPlaceholder')}
                 placeholderTextColor={colors.tabInactive}
                 accessibilityLabel={inputKind === 'question' ? t('crossfire.questionLabel') : t('crossfire.answerLabel')}
                 multiline
@@ -705,7 +757,7 @@ export default function CrossfireScreen() {
                 accessibilityLabel={inputKind === 'question' ? t('crossfire.submitQuestion') : t('crossfire.submitAnswer')}
                 accessibilityState={{ disabled: !canSend }}
                 disabled={!canSend}
-                onPress={submitTurn}
+                onPress={() => void submitTurn()}
                 style={[styles.send, { backgroundColor: colors.primaryFill }, !canSend && styles.sendDisabled]}
                 testID="crossfire-send">
                 <Icon name="arrowUp" color={colors.onPrimary} size={19} />

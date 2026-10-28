@@ -2978,6 +2978,15 @@
     "permissions": {
       "speechRecognition": "A DebateOwl szöveggé alakítja a hangodat, amikor kérdést, keresztkérdezési választ vagy vitapárbaj-beszédet diktálsz. A hangot az Apple dolgozza fel a felismeréshez.",
       "microphone": "A DebateOwl a mikrofont használja, amíg kérdést, keresztkérdezési választ vagy vitapárbaj-beszédet diktálsz."
+    },
+    "voice": {
+      "recognition": "A beszédedet az Apple beszédfelismerése alakítja szöveggé. Ehhez az iOS elküldheti a hangot az Apple-nek.",
+      "denied": "A hang ki van kapcsolva, mert a DebateOwl nem használhatja a mikrofont vagy a beszédfelismerést. Engedélyezd mindkettőt a Beállításokban. Gépelni a szokott módon lehet.",
+      "openSettings": "Beállítások megnyitása",
+      "notAllowed": "A DebateOwl nem használhatja a mikrofont vagy a beszédfelismerést. Engedélyezd mindkettőt a Beállításokban, vagy gépelj.",
+      "limit": "Az ellenfél ElevenLabs-hangjának mai kerete elfogyott, ezért a válaszokat az eszközöd hangja olvassa fel.",
+      "deliveryDescription": "Ezek a számok az órából és az elhangzottak leiratából származnak. Senki nem figyelte a hangszínedet, a magabiztosságodat vagy a hangerődet, és a leiratból kimaradhatnak szavak.",
+      "spoken": "Szóban"
     }
   }
 }

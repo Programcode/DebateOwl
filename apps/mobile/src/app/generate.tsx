@@ -1,5 +1,6 @@
 import { generateDraftSections } from '@debatelab/core/ai/live-sections';
 import type { GenerateInput } from '@debatelab/core/ai/schemas/generate';
+import { MAX_MOTION_LENGTH } from '@debatelab/core/validation/motion';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -16,6 +17,7 @@ import { Text } from '@/components/text';
 import { ContextLine } from '@/components/context-line';
 import { LiveToolRun, useLiveRun } from '@/components/live-run';
 import { ToolError, ToolTitle, WorkingIn } from '@/components/tool-form';
+import { appendDictation, DictationButton, DictationStatus } from '@/components/voice';
 import { AIError, isAbortError, type AIErrorKind } from '@/lib/ai-request';
 import { useAuth } from '@/lib/auth';
 import { backLabel } from '@/lib/back-label';
@@ -29,6 +31,7 @@ import { openRefusal } from '@/lib/refusal';
 import { arrivalNotices, autosaveSources, generateCase, keepSourceAssessments, recordResult } from '@/lib/results';
 import { sessionSlot } from '@/lib/session-memory';
 import { useSettings } from '@/lib/settings';
+import { useSpeechCapture } from '@/lib/use-speech-capture';
 import { useTheme } from '@/theme/use-theme';
 
 // The website's defaults (GenerateForm). The website keeps the last form for the session; so does the app.
@@ -51,7 +54,7 @@ export default function GenerateScreen() {
   const { session } = useAuth();
   const userId = session?.user.id ?? null;
   const { debates, current, oneOff, create, switchTo, refresh } = useDebates();
-  const { outputLanguage, readFeatureConfig } = useSettings();
+  const { language, outputLanguage, readFeatureConfig } = useSettings();
   const { colors } = useTheme();
   const [form, setFormState] = useState<GenerateInput>(lastForm.get);
   const [motionError, setMotionError] = useState(false);
@@ -61,6 +64,11 @@ export default function GenerateScreen() {
   const abort = useRef<AbortController | null>(null);
   const live = useRef(true);
   const liveRun = useLiveRun();
+  // Dictation fills the motion, as the website's microphone beside it does.
+  const dictation = useSpeechCapture(language, (text) => {
+    setForm({ motion: appendDictation(lastForm.get().motion, text, MAX_MOTION_LENGTH) });
+    setMotionError(false);
+  });
 
   const setForm = useCallback((patch: Partial<GenerateInput>) =>
     setFormState((previous) => {
@@ -224,19 +232,26 @@ export default function GenerateScreen() {
         />
       ) : (
         <>
-          <Field
-            label={t('generateForm.motion')}
-            value={form.motion}
-            onChangeText={(motion) => {
-              setForm({ motion });
-              if (motion.trim()) setMotionError(false);
-            }}
-            placeholder={t('generateForm.motionPlaceholder')}
-            multiline
-            invalid={motionError}
-            style={styles.motion}
-            testID="generate-motion"
-          />
+          <View style={styles.motionRow}>
+            <View style={styles.motionField}>
+              <Field
+                label={t('generateForm.motion')}
+                value={form.motion}
+                onChangeText={(motion) => {
+                  setForm({ motion });
+                  if (motion.trim()) setMotionError(false);
+                }}
+                placeholder={t('generateForm.motionPlaceholder')}
+                multiline
+                maxLength={MAX_MOTION_LENGTH}
+                invalid={motionError}
+                style={styles.motion}
+                testID="generate-motion"
+              />
+            </View>
+            <DictationButton capture={dictation} startLabel={t('generateForm.dictate')} stopLabel={t('generateForm.stopListening')} />
+          </View>
+          <DictationStatus capture={dictation} listeningLabel={t('generateForm.listening')} />
           {motionError ? (
             <Text accessibilityRole="alert" style={[styles.invalid, { color: colors.destructive }]}>
               {t('debate.motionRequired')}
@@ -312,6 +327,8 @@ export default function GenerateScreen() {
 }
 
 const styles = StyleSheet.create({
+  motionRow: { flexDirection: 'row', alignItems: 'flex-end', gap: 10 },
+  motionField: { flex: 1 },
   motion: { minHeight: 92, paddingTop: 13, paddingBottom: 13, textAlignVertical: 'top' },
   invalid: { fontSize: 14, marginTop: -6, marginLeft: 4 },
   side: { gap: 7 },

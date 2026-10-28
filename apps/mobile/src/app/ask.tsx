@@ -19,6 +19,7 @@ import { OneOffNotice } from '@/components/one-off-notice';
 import { ContextLine } from '@/components/context-line';
 import { DailyUsageLine } from '@/components/tool-form';
 import { Text } from '@/components/text';
+import { appendDictation, DictationButton } from '@/components/voice';
 import { AIError, isAbortError, type AIErrorKind, type ResponseExtras } from '@/lib/ai-request';
 import { askOnce, canStream, isFinalAskError, isMessageWithinBudget, streamAsk, type AskMode, type AskOptions } from '@/lib/ask';
 import { pickAskFiles, readAskFiles, type AskAttachment } from '@/lib/ask-attachments';
@@ -34,6 +35,7 @@ import { keepSourceAssessments } from '@/lib/results';
 import { useSettings } from '@/lib/settings';
 import { addSource, fetchSources, type Source } from '@/lib/sources';
 import { useCopyHolder } from '@/lib/use-copy-holder';
+import { useSpeechCapture } from '@/lib/use-speech-capture';
 import { radius } from '@/theme/colors';
 import { fontFamily } from '@/theme/fonts';
 import { useTheme } from '@/theme/use-theme';
@@ -79,7 +81,7 @@ export default function AskScreen() {
   const { session } = useAuth();
   const userId = session?.user.id ?? null;
   const { current, oneOff, activeDebateId, refresh } = useDebates();
-  const { outputLanguage, readFeatureConfig } = useSettings();
+  const { language, outputLanguage, readFeatureConfig } = useSettings();
 
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [streaming, setStreaming] = useState<string | null>(null);
@@ -89,7 +91,15 @@ export default function AskScreen() {
   const [options, setOptions] = useState<AskOptions>(NO_OPTIONS);
   const [mode, setMode] = useState<AskMode>('general');
   const [attachments, setAttachments] = useState<AskAttachment[]>([]);
-  const [input, setInput] = useState('');
+  const [input, setInputState] = useState('');
+  // Read when dictated words land, before React has drawn the last ones.
+  const inputRef = useRef('');
+  const setInput = useCallback((value: string) => {
+    inputRef.current = value;
+    setInputState(value);
+  }, []);
+  // Dictation fills the question, as the website's microphone beside it does.
+  const dictation = useSpeechCapture(language, (text) => setInput(appendDictation(inputRef.current, text)));
   const [error, setError] = useState<{ kind: AIErrorKind; question: string; files?: AskAttachment[] } | null>(null);
   const [notice, setNotice] = useState('');
   const [historyOpen, setHistoryOpen] = useState(false);
@@ -598,10 +608,11 @@ export default function AskScreen() {
               testID="ask-attach">
               <Icon name="paperclip" color={colors.secondary} size={20} />
             </Pressable>
+            <DictationButton capture={dictation} startLabel={t('askChat.startVoice')} stopLabel={t('askChat.stopListening')} inline />
             <TextInput
               value={input}
               onChangeText={setInput}
-              placeholder={t('mobile.ask.placeholder')}
+              placeholder={dictation.listening ? t('askChat.placeholderListening') : t('mobile.ask.placeholder')}
               placeholderTextColor={colors.tabInactive}
               accessibilityLabel={t('mobile.ask.placeholder')}
               editable={!busy}
@@ -626,7 +637,11 @@ export default function AskScreen() {
                 accessibilityLabel={t('askChat.send')}
                 accessibilityState={{ disabled: busy || !input.trim() }}
                 disabled={busy || !input.trim()}
-                onPress={() => void send(input, messages, attachments)}
+                onPress={() => {
+                  // Words still on their way would land in the next question.
+                  dictation.cancel();
+                  void send(input, messages, attachments);
+                }}
                 style={[styles.send, { backgroundColor: colors.primaryFill }, (busy || !input.trim()) && styles.sendDisabled]}
                 testID="ask-send">
                 {busy ? <ActivityIndicator color={colors.onPrimary} size="small" /> : <Icon name="arrowUp" color={colors.onPrimary} size={19} />}

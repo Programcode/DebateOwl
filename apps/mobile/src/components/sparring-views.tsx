@@ -10,6 +10,7 @@ import { PrimaryButton, SecondaryButton } from './buttons';
 import { Bullets, DocSection, DocumentScreen, Paragraph } from './document';
 import { DocumentHeader } from './document-header';
 import { Text } from './text';
+import { DeliveryFacts } from './voice';
 
 import { useAuth } from '@/lib/auth';
 import { backLabel } from '@/lib/back-label';
@@ -127,6 +128,9 @@ export function SparringScorecardScreen({
 export function SparringScorecardView({ session, scorecard, transcriptOpen }: { session: SparringSession; scorecard: SparringScorecard; transcriptOpen: boolean }) {
   const { t } = useTranslation();
   const { colors } = useTheme();
+  // Speeches the student spoke aloud carry measured facts; typed rounds have none.
+  const spokenSpeeches = session.speeches.filter((speech) => speech.speaker === 'user' && speech.delivery);
+  const spokenRound = spokenSpeeches.length > 0;
   return (
     <View style={styles.scorecard} testID="sparring-scorecard">
       <View style={styles.heading}>
@@ -202,12 +206,16 @@ export function SparringScorecardView({ session, scorecard, transcriptOpen }: { 
         </Text>
       </View>
 
-      <DocSection title={t('sparring.scorecard.categoryNotes')} description={t('sparring.scorecard.categoryNotesDescription')}>
+      <DocSection
+        title={t('sparring.scorecard.categoryNotes')}
+        description={spokenRound ? t('voiceRound.scorecard.categoryNotesDescription') : t('sparring.scorecard.categoryNotesDescription')}>
         {scorecard.categories.map((category) => (
           <View key={category.name} style={styles.note}>
             <Text weight="semibold" style={styles.noteTitle}>
               {t(`sparring.category.${category.name}`)}
-              {category.name === 'Delivery' ? <Text tone="faint" style={styles.noteHint}>{`  ${t('sparring.scorecard.writtenOnly')}`}</Text> : null}
+              {category.name === 'Delivery' ? (
+                <Text tone="faint" style={styles.noteHint}>{`  ${spokenRound ? t('voiceRound.scorecard.measuredOnly') : t('sparring.scorecard.writtenOnly')}`}</Text>
+              ) : null}
             </Text>
             <Text tone="secondary" style={styles.noteText} selectable>
               {category.feedback}
@@ -215,6 +223,19 @@ export function SparringScorecardView({ session, scorecard, transcriptOpen }: { 
           </View>
         ))}
       </DocSection>
+
+      {spokenRound ? (
+        <DocSection title={t('voiceRound.delivery.title')} description={t('mobile.voice.deliveryDescription')} testID="spoken-delivery">
+          {spokenSpeeches.map((speech) => (
+            <View key={speech.id} style={styles.note}>
+              <Text weight="semibold" style={styles.noteTitle}>
+                {t(`sparring.turns.${speech.turnId}`)}
+              </Text>
+              <DeliveryFacts delivery={speech.delivery!} timeLimitSeconds={speech.timeLimitSeconds} />
+            </View>
+          ))}
+        </DocSection>
+      ) : null}
 
       <DocSection title={t('sparring.scorecard.keyMoments')}>
         {scorecard.keyMoments.length > 0 ? <Bullets items={scorecard.keyMoments} /> : <Text tone="faint">{t('sparring.scorecard.noKeyMoments')}</Text>}

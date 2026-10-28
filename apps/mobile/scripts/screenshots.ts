@@ -13,7 +13,7 @@
  * SCREENS=you,timer limits the signed-in screens to those groups: debate,
  * debate-check, library, prepare, practice, you, empty, ask, results, brainstorm,
  * factoids, case-edits, context, limits,
- * timer, crossfire, sparring, flowchart, one-off, history, announcements,
+ * timer, voice, crossfire, sparring, flowchart, one-off, history, announcements,
  * account, model. Sign-in screens are always shot.
  * ONLY=offline runs only the offline reading check (see shootOfflineScreens).
  *
@@ -1357,7 +1357,7 @@ async function fakeCrossfire(page: Page, language: keyof typeof CROSSFIRE_TEXT) 
     if (input.operation === 'next-turn') {
       const type = input.expectedReply ?? 'answer';
       output = { type, text: type === 'answer' ? text.answers[exchange] : text.questions[exchange] };
-      extra = { signalToken: 'screenshot-signal' };
+      extra = { signalToken: 'screenshot-signal', ...((body as { voice?: boolean }).voice ? { voice: { segments: [{ text: 'Screenshot voice segment.', token: 'screenshot-voice-token' }] } } : {}) };
     } else if (input.operation === 'signal') {
       output = { signal: { answerTurnId: `T${turns.length + 1}`, answerQuality: exchange === 0 ? 'direct' : 'partial', answerQualityConfidence: 0.82, concession: exchange === 0 ? 'none' : 'implicit', concessionConfidence: 0.74, followUpOpportunity: 0.81 } };
     } else {
@@ -1490,7 +1490,9 @@ async function fakeSparring(page: Page, language: keyof typeof SPARRING_TEXT) {
         },
       };
     }
-    return route.fulfill({ status: 200, headers: { 'access-control-allow-origin': '*' }, json: { output } });
+    // A voice round's turn carries a signed segment for the opponent's voice; the web preview only records it.
+    const voice = action === 'respond' && (body as { voice?: boolean }).voice ? { voice: { segments: [{ text: 'Screenshot voice segment.', token: 'screenshot-voice-token' }] } } : {};
+    return route.fulfill({ status: 200, headers: { 'access-control-allow-origin': '*' }, json: { output, ...voice } });
   });
   await page.route(`${REST}/rpc/attach_to_debate`, (route) => route.fulfill({ status: 204, body: '' }));
   return {
@@ -1565,6 +1567,137 @@ async function shootSparringScreens(context: BrowserContext, prefix: string, lan
   const taps = await page.evaluate(() => (window as unknown as { __debatelabTurnTaps?: number }).__debatelabTurnTaps ?? 0);
   if (taps !== text.speeches.length) problems.push(`${prefix} sparring: expected ${text.speeches.length} turn-start taps, got ${taps}`);
   await page.close();
+}
+
+// What the web preview's fake recognizer "hears" (speech-recognition.web.ts): a filler, then a pause long enough to count.
+const SPOKEN = {
+  en: [
+    { text: 'Um, a ban punishes the people with the fewest choices.', afterMs: 1_200 },
+    { text: 'The nurse who drives in at five has no bus at that hour,', afterMs: 3_600 },
+    { text: 'and permits only help those who know how to apply.', afterMs: 1_400 },
+  ],
+  hu: [
+    { text: 'Hát, a tilalom azokat bünteti, akiknek a legkevesebb választásuk van.', afterMs: 1_200 },
+    { text: 'A hajnali ötkor munkába autózó ápolónak abban az órában nincs busza,', afterMs: 3_600 },
+    { text: 'az engedély pedig csak annak segít, aki tudja, hogyan kérje.', afterMs: 1_400 },
+  ],
+} as const;
+
+/**
+ * Voice rounds and dictation, on the web preview's fake recognizer and
+ * opponent voice: the first-use notice, a spoken Sparring speech while it is
+ * heard, the measured delivery on the scorecard, a spoken Crossfire question
+ * and the round's delivery in the debrief, and Generate's dictation. The run
+ * checks that the turns asked the server for the opponent's voice and that
+ * the opponent's replies went to it.
+ */
+async function shootVoiceScreens(context: BrowserContext, prefix: string, language: string, problems: string[]) {
+  const lang = language === 'hu' ? 'hu' : 'en';
+  const text = SPARRING_TEXT[lang];
+  const page = await context.newPage();
+  watchErrors(page, problems, `${prefix} voice`);
+  await pinSettings(page, language);
+  await page.addInitScript((phrases) => {
+    (window as unknown as { __debatelabFakeSpeech: unknown }).__debatelabFakeSpeech = { phrases };
+    localStorage.removeItem('debatelab.voice-notice-v1');
+  }, [...SPOKEN[lang]]);
+  const voiceRequests: boolean[] = [];
+  page.on('request', (request) => {
+    if (!request.url().endsWith('/functions/v1/ai') || request.method() !== 'POST') return;
+    const body = request.postDataJSON() as { input?: { action?: string; operation?: string }; quotaCheck?: boolean } | null;
+    if (!body?.quotaCheck && (body?.input?.action === 'respond' || body?.input?.operation === 'next-turn')) voiceRequests.push((body as { voice?: boolean }).voice === true);
+  });
+  const fake = await fakeSparring(page, lang);
+  await page.goto(`${ORIGIN}/practice`);
+  await page.getByTestId('practice-tool-sparring').click({ timeout: 30_000 });
+  await page.getByTestId('sparring-setup').waitFor({ timeout: 15_000 });
+  await page.waitForFunction(() => (document.querySelector('[data-testid="sparring-motion"]') as HTMLTextAreaElement | null)?.value.trim());
+  await page.getByTestId('sparring-format').click();
+  await page.getByRole('menuitem', { name: 'Lincoln-Douglas' }).click();
+  await page.getByTestId('voice-mode').getByRole('switch').click();
+  await page.getByTestId('voice-notice').waitFor();
+  await page.getByTestId('voice-notice').scrollIntoViewIfNeeded();
+  await settle(page);
+  await shoot(page, `${prefix}-voice-notice`);
+  await page.getByTestId('voice-notice-accept').click();
+
+  await page.getByRole('button', { name: /^(Start round|Forduló indítása|Iniciar ronda)$/ }).click();
+  await page.getByRole('menuitem', { name: /^(Con|Ellene|En contra)$/ }).click();
+  await page.getByTestId('voice-mic').waitFor({ timeout: 15_000 });
+  await page.getByTestId('voice-mic').click();
+  // Listening: the words fill the draft as they are heard.
+  await page.waitForFunction((last) => (document.querySelector('[data-testid="sparring-input"]') as HTMLTextAreaElement | null)?.value.includes(last), SPOKEN[lang][1].text);
+  await page.waitForTimeout(300);
+  await shoot(page, `${prefix}-voice-speaking`);
+  await page.waitForFunction((last) => (document.querySelector('[data-testid="sparring-input"]') as HTMLTextAreaElement | null)?.value.includes(last), SPOKEN[lang][2].text);
+  await page.getByTestId('sparring-main').click();
+  await page.getByTestId('sparring-input').waitFor({ timeout: 15_000 });
+  await page.getByTestId('sparring-input').fill(text.speeches[1]);
+  await page.getByTestId('sparring-main').click();
+  await page.getByTestId('spoken-delivery').waitFor({ timeout: 15_000 });
+  await page.getByTestId('spoken-delivery').scrollIntoViewIfNeeded();
+  await page.waitForTimeout(400);
+  await shoot(page, `${prefix}-voice-scorecard`);
+  const facts = (await page.getByTestId('delivery-facts').first().textContent()) ?? '';
+  if (!/\d/.test(facts) || !facts.includes(lang === 'hu' ? 'hát' : 'um')) problems.push(`${prefix} voice: the delivery facts read "${facts}"`);
+  const spoken = await page.evaluate(() => (window as unknown as { __debatelabOpponentVoice?: { segments: number }[] }).__debatelabOpponentVoice ?? []);
+  if (spoken.length < 2 || spoken.some((item) => item.segments !== 1)) problems.push(`${prefix} voice: the opponent voice got ${JSON.stringify(spoken)}`);
+  await page.close();
+
+  // Crossfire: a spoken question, then the round's delivery in the debrief.
+  const crossfire = await context.newPage();
+  watchErrors(crossfire, problems, `${prefix} voice crossfire`);
+  await pinSettings(crossfire, language);
+  await crossfire.addInitScript((phrases) => {
+    (window as unknown as { __debatelabFakeSpeech: unknown }).__debatelabFakeSpeech = { phrases };
+  }, [{ text: CROSSFIRE_TEXT[lang].questions[0], afterMs: 1_000 }]);
+  crossfire.on('request', (request) => {
+    if (!request.url().endsWith('/functions/v1/ai') || request.method() !== 'POST') return;
+    const body = request.postDataJSON() as { input?: { operation?: string }; quotaCheck?: boolean } | null;
+    if (!body?.quotaCheck && body?.input?.operation === 'next-turn') voiceRequests.push((body as { voice?: boolean }).voice === true);
+  });
+  await fakeCrossfire(crossfire, lang);
+  await crossfire.goto(`${ORIGIN}/practice`);
+  await crossfire.getByTestId('practice-tool-crossfire').click({ timeout: 30_000 });
+  await crossfire.getByTestId('crossfire-setup').waitFor({ timeout: 15_000 });
+  await crossfire.waitForFunction(() => (document.querySelector('[data-testid="crossfire-resolution"]') as HTMLTextAreaElement | null)?.value.trim());
+  await crossfire.getByTestId('crossfire-argument').fill(CROSSFIRE_TEXT[lang].argument);
+  // The notice was accepted in the Sparring round, so the switch turns on at once.
+  await crossfire.getByTestId('voice-mode').getByRole('switch').click();
+  await crossfire.getByRole('button', { name: /^(Start crossfire|Keresztkérdezés indítása|Iniciar interrogatorio)$/ }).click();
+  await crossfire.getByTestId('voice-mic').click({ timeout: 15_000 });
+  await crossfire.waitForFunction((question) => (document.querySelector('[data-testid="crossfire-input"]') as HTMLTextAreaElement | null)?.value.includes(question), CROSSFIRE_TEXT[lang].questions[0]);
+  await crossfire.waitForTimeout(300);
+  await shoot(crossfire, `${prefix}-voice-crossfire`);
+  await crossfire.getByTestId('crossfire-send').click();
+  await crossfire.getByTestId('crossfire-turn').nth(1).waitFor({ timeout: 15_000 });
+  // A typed second question: the fixed debrief cites the second exchange.
+  await crossfire.getByTestId('crossfire-input').fill(CROSSFIRE_TEXT[lang].questions[1]);
+  await crossfire.getByTestId('crossfire-send').click();
+  await crossfire.getByTestId('crossfire-turn').nth(3).waitFor({ timeout: 15_000 });
+  await crossfire.getByTestId('crossfire-end').click();
+  await crossfire.getByTestId('spoken-delivery').waitFor({ timeout: 15_000 });
+  await crossfire.getByTestId('spoken-delivery').scrollIntoViewIfNeeded();
+  await crossfire.waitForTimeout(400);
+  await shoot(crossfire, `${prefix}-voice-crossfire-debrief`);
+  await crossfire.close();
+  if (voiceRequests.length < 4 || voiceRequests.some((asked) => !asked)) problems.push(`${prefix} voice: turns asked for the voice as ${JSON.stringify(voiceRequests)}`);
+
+  // Generate: dictating the motion.
+  const generate = await context.newPage();
+  watchErrors(generate, problems, `${prefix} dictation`);
+  await pinSettings(generate, language);
+  await generate.addInitScript((phrases) => {
+    (window as unknown as { __debatelabFakeSpeech: unknown }).__debatelabFakeSpeech = { phrases };
+  }, [{ text: lang === 'hu' ? 'Tiltsuk ki az autókat a belvárosból' : 'This House would ban private cars from city centres', afterMs: 800 }]);
+  await generate.goto(`${ORIGIN}/generate`);
+  await generate.getByTestId('generate-motion').waitFor({ timeout: 30_000 });
+  await generate.getByTestId('generate-motion').fill('');
+  await generate.getByTestId('dictate').click();
+  await generate.waitForFunction(() => ((document.querySelector('[data-testid="generate-motion"]') as HTMLTextAreaElement | null)?.value ?? '').length > 10);
+  await generate.waitForTimeout(300);
+  await shoot(generate, `${prefix}-voice-dictation`);
+  await generate.close();
 }
 
 /**
@@ -2263,6 +2396,10 @@ async function main() {
           if (want('limits')) {
             await shootLimitSheets(signedIn, prefix, language, problems).catch(failedIn(signedIn, prefix, 'limits'));
             shots += 2;
+          }
+          if (want('voice')) {
+            await shootVoiceScreens(signedIn, prefix, language, problems).catch(failedIn(signedIn, prefix, 'voice'));
+            shots += 6;
           }
           if (want('timer')) {
             await shootTimerScreens(signedIn, prefix, language, problems);
