@@ -11,7 +11,7 @@ import { AskHistory } from '@/components/ask-history';
 import { TextButton } from '@/components/buttons';
 import { Chip } from '@/components/chip';
 import { ModelChips } from '@/components/model-picker';
-import { EdgeFade } from '@/components/edge-fade';
+import { FadingScrollRow } from '@/components/edge-fade';
 import { Icon } from '@/components/icon';
 import type { IconName } from '@/components/icon-paths';
 import { OneOffNotice } from '@/components/one-off-notice';
@@ -468,8 +468,7 @@ export default function AskScreen() {
             </View>
           ) : (
             // iPhone: one sideways row, faded at the edge to show it scrolls.
-            <View style={styles.chipRowBox}>
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chips} style={styles.chipRow} keyboardShouldPersistTaps="handled">
+            <FadingScrollRow color={colors.background} id="ask-chips-fade" style={styles.chipRow} contentContainerStyle={styles.chips} keyboardShouldPersistTaps="handled">
             {OPTION_CHIPS.map((chip) => (
               <Chip
                 key={chip.key}
@@ -482,9 +481,7 @@ export default function AskScreen() {
             ))}
             {/* The next question reads the model again, after this change is saved. */}
             <ModelChips feature="ask" onChange={() => (config.current = null)} />
-              </ScrollView>
-              <EdgeFade color={colors.background} id="ask-chips-fade" />
-            </View>
+            </FadingScrollRow>
           )}
           <View style={[styles.inputRow, { borderColor: colors.border, backgroundColor: colors.input }]}>
             <TextInput
@@ -599,8 +596,7 @@ const styles = StyleSheet.create({
   composer: { borderTopWidth: StyleSheet.hairlineWidth, paddingTop: 10 },
   // The same centred column as the messages, so the composer lines up on iPad.
   composerColumn: { width: '100%', maxWidth: 720, alignSelf: 'center', paddingHorizontal: 16, gap: 10 },
-  chipRowBox: { marginHorizontal: -16 },
-  chipRow: { flexGrow: 0 },
+  chipRow: { marginHorizontal: -16 },
   chipsWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   chips: { gap: 8, paddingHorizontal: 16 },
   inputRow: {

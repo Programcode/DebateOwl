@@ -3,10 +3,10 @@ import { useRouter } from 'expo-router';
 import * as WebBrowser from 'expo-web-browser';
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ScrollView, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
 import { Chip, CiteBadge } from './chip';
-import { EdgeFade } from './edge-fade';
+import { FadingScrollRow } from './edge-fade';
 import { firstUrl, hostOf, openCitation, shorten, type CitationTarget } from './citation-target';
 import { MarkdownView } from './markdown-view';
 import { OwlAvatar } from './owl';
@@ -53,18 +53,16 @@ export function AskAnswer({ content, output, streaming, library }: { content: st
         <MarkdownView source={content} claims={claims} streaming={streaming} onCite={(n) => open(targets[n - 1])} />
       ) : null}
 
+      {/* Ask's answers sit on the card colour, so the row fades into it. */}
       {targets.length > 0 || webSources.length > 0 ? (
-        <View style={styles.chipRowBox}>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipRow} contentContainerStyle={styles.chips}>
+        <FadingScrollRow color={colors.card} id={`ask-cites-fade-${streaming ? 'live' : 'saved'}`} style={styles.chipRow} contentContainerStyle={styles.chips}>
           {targets.map((target) => (
             <Chip key={target.n} label={target.label} leading={<CiteBadge n={target.n} />} onPress={() => open(target)} />
           ))}
           {webSources.map((item) => (
             <Chip key={item.url} icon="globe" label={shorten(item.title || hostOf(item.url))} onPress={() => void WebBrowser.openBrowserAsync(item.url)} />
           ))}
-        </ScrollView>
-        <EdgeFade color={colors.background} id={`ask-cites-fade-${streaming ? 'live' : 'saved'}`} />
-        </View>
+        </FadingScrollRow>
       ) : null}
 
       {output?.prosConsAnalysis ? (
@@ -110,8 +108,7 @@ function Section({ title, items, marker = '•' }: { title: string; items: strin
 
 const styles = StyleSheet.create({
   answer: { gap: 12 },
-  chipRowBox: { marginHorizontal: -20 },
-  chipRow: { flexGrow: 0 },
+  chipRow: { marginHorizontal: -20 },
   chips: { gap: 8, paddingHorizontal: 20 },
   section: { gap: 10 },
   sectionBody: { gap: 3 },
