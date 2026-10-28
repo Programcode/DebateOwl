@@ -2597,7 +2597,7 @@
     "unexpected": "Se produjo un error inesperado",
     "offline": "Comprueba tu conexión e inténtalo de nuevo.",
     "notCharged": "No se te ha cobrado esta solicitud.",
-    "signInAgain": "Volver a iniciar sesión"
+    "signInAgain": "Vuelve a iniciar sesión"
   },
   "clock": {
     "timeUp": "Se acabó el tiempo.",
@@ -2690,7 +2690,7 @@
   },
   "serverErrors": {
     "signInRequired": "Inicia sesión para continuar.",
-    "sessionExpired": "No se pudo verificar tu sesión. Puede que haya caducado. Vuelve a iniciar sesión.",
+    "sessionExpired": "No pudimos comprobar que has iniciado sesión. Vuelve a iniciar sesión para continuar.",
     "accessDenied": "Acceso denegado. Puede que tu sesión haya caducado. Vuelve a iniciar sesión.",
     "banned": "Tu cuenta está suspendida. Ponte en contacto con soporte.",
     "requestTooLarge": "La solicitud es demasiado grande. Acorta el texto e inténtalo de nuevo.",

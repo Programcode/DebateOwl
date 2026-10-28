@@ -11,6 +11,7 @@ vi.mock('@/lib/supabase/client', () => ({ getActiveUserId: () => activeUser.id }
 import {
   captureFirstAISuccess,
   captureOncePerAccount,
+  rememberActivationAccount,
   captureSignupCompleted,
   captureTrialStarted,
   captureWelcomeCompleted,
@@ -28,19 +29,32 @@ describe('activation events', () => {
     localStorage.clear();
     captureProductEventMock.mockReset();
     activeUser.id = null;
+    rememberActivationAccount(null);
   });
 
   it('sends first_ai_success once per account, and again for another account', () => {
     activeUser.id = 'user-a';
-    captureFirstAISuccess('ask');
-    captureFirstAISuccess('generate');
+    rememberActivationAccount(newUser('user-a', { provider: 'email' }));
+    captureFirstAISuccess('ask', NOW);
+    captureFirstAISuccess('generate', NOW);
     activeUser.id = 'user-b';
-    captureFirstAISuccess('crossfire');
+    rememberActivationAccount(newUser('user-b', { provider: 'google' }));
+    captureFirstAISuccess('crossfire', NOW);
 
     expect(sent('first_ai_success')).toEqual([
       ['first_ai_success', { tool: 'ask' }],
       ['first_ai_success', { tool: 'crossfire' }],
     ]);
+  });
+
+  it('does not count an older account\'s next answer as its first', () => {
+    activeUser.id = 'old-user';
+    rememberActivationAccount({ id: 'old-user', created_at: '2026-09-01T00:00:00Z' });
+    captureFirstAISuccess('ask', NOW);
+    // An account the page has not read yet is not guessed at either.
+    activeUser.id = 'unknown-user';
+    captureFirstAISuccess('ask', NOW);
+    expect(sent('first_ai_success')).toHaveLength(0);
   });
 
   it('sends nothing without an account or when storage cannot remember', () => {

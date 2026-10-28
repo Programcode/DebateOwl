@@ -1,4 +1,8 @@
 const RELOAD_PREFIX = 'debatelab-stale-chunk:';
+// One automatic reload per path in this window. A file still missing after
+// the reload stays an error instead of refreshing the tab again, while a
+// later deploy in the same tab can still reload once.
+export const STALE_CHUNK_RELOAD_WINDOW_MS = 10 * 60 * 1000;
 
 type ReloadTarget = Pick<Window, 'addEventListener' | 'sessionStorage' | 'location'> & {
   navigator: Pick<Navigator, 'onLine'>;
@@ -19,17 +23,23 @@ export function resetStaleChunkReloadForTests(): void {
 /**
  * Reloads the page once per path for a chunk the deployed build no longer has.
  * Returns whether a reload was started. A second failure on the same path
- * stays put, so a missing file cannot refresh the tab forever. Offline the
+ * within STALE_CHUNK_RELOAD_WINDOW_MS stays put, so a missing file cannot
+ * refresh the tab forever. Offline the
  * chunk is not stale, only unreachable: a reload could replace the page with
  * the browser's offline error, so the error stands instead.
  */
-export function reloadOnceForStaleChunk(target: ReloadTarget = window): boolean {
+export function reloadOnceForStaleChunk(target: ReloadTarget = window, now: number = Date.now()): boolean {
   if (reloadRequested) return true;
   if (target.navigator.onLine === false) return false;
   const key = `${RELOAD_PREFIX}${target.location.pathname || '/'}`;
   try {
-    if (target.sessionStorage.getItem(key) === '1') return false;
-    target.sessionStorage.setItem(key, '1');
+    // The value is when this path last reloaded. A '1' from an older build has no time and counts as old.
+    const stored = target.sessionStorage.getItem(key);
+    if (stored !== null && stored !== '1') {
+      const last = Number(stored);
+      if (!Number.isFinite(last) || now - last < STALE_CHUNK_RELOAD_WINDOW_MS) return false;
+    }
+    target.sessionStorage.setItem(key, String(now));
   } catch {
     return false;
   }

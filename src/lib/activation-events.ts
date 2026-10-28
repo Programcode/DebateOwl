@@ -55,15 +55,29 @@ function signedInUserId(): string | null {
   }
 }
 
-/** The first answer an account gets from any tool. */
-export function captureFirstAISuccess(tool: string): void {
-  captureOncePerAccount('first_ai_success', signedInUserId(), { tool });
-}
-
 export interface ActivationUser {
   id: string;
   created_at?: string;
   app_metadata?: Record<string, unknown>;
+}
+
+// A first answer counts only for an account this young. Older accounts had
+// answers before this event existed, so their next one is not their first.
+const FIRST_SUCCESS_WINDOW_MS = 7 * 24 * 60 * 60 * 1000;
+
+let activationAccount: ActivationUser | null = null;
+
+/** The signed-in account, so captureFirstAISuccess can tell a new account from an old one. */
+export function rememberActivationAccount(user: ActivationUser | null): void {
+  activationAccount = user;
+}
+
+/** The first answer a new account gets from any tool. */
+export function captureFirstAISuccess(tool: string, now = Date.now()): void {
+  const accountId = signedInUserId();
+  if (!accountId || activationAccount?.id !== accountId) return;
+  if (!isNewAccount(activationAccount, now, FIRST_SUCCESS_WINDOW_MS)) return;
+  captureOncePerAccount('first_ai_success', accountId, { tool });
 }
 
 export type SignupMethod = 'demo' | 'email' | 'google';
@@ -76,9 +90,9 @@ export function signupMethod(user: ActivationUser): SignupMethod | null {
   return null;
 }
 
-export function isNewAccount(user: ActivationUser, now = Date.now()): boolean {
+export function isNewAccount(user: ActivationUser, now = Date.now(), windowMs = NEW_ACCOUNT_WINDOW_MS): boolean {
   const created = user.created_at ? Date.parse(user.created_at) : NaN;
-  return Number.isFinite(created) && now - created >= 0 && now - created <= NEW_ACCOUNT_WINDOW_MS;
+  return Number.isFinite(created) && now - created >= 0 && now - created <= windowMs;
 }
 
 /** A first sign-in to an account created in the last day. Returns whether it was sent. */

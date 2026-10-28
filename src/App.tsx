@@ -19,7 +19,7 @@ import { focusCurrentDebate, noteTourChunkFailure, tourChunkGaveUp } from "@/lib
 import { OfflineIndicator } from "@/components/OfflineIndicator";
 import { StagingBanner } from "@/components/StagingBanner";
 import { captureException, captureProductEvent, toTelemetrySafeError } from "@/lib/observability";
-import { captureSignupCompleted, captureTrialStarted, captureWelcomeCompleted } from "@/lib/activation-events";
+import { captureSignupCompleted, captureTrialStarted, captureWelcomeCompleted, rememberActivationAccount } from "@/lib/activation-events";
 import { useSubscription } from "@/hooks/use-subscription";
 import { lazyChunk, loadChunk, namedChunk } from "@/lib/lazy-chunk";
 import { appLayoutLoader, localizedRouteLoaders, preloadStartupRoute, routeLoaders, type RouteLoader } from "@/lib/route-modules";
@@ -273,12 +273,13 @@ export function ToolRouteAnalytics(): null {
   return null;
 }
 
-/** signup_completed and trial_started, once per new account. AppLayout's trial banner shares this subscription read. */
+/** signup_completed and trial_started, once per new account, and the account first_ai_success checks. AppLayout's trial banner shares this subscription read. */
 export function ActivationAnalytics(): null {
   const { user } = useAuth();
   const { tier, loading } = useSubscription();
 
   useEffect(() => {
+    rememberActivationAccount(user ?? null);
     if (user) captureSignupCompleted(user);
   }, [user]);
 

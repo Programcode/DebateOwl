@@ -2690,7 +2690,7 @@
   },
   "serverErrors": {
     "signInRequired": "Please sign in to continue.",
-    "sessionExpired": "Authentication failed. Your session may have expired. Please sign in again.",
+    "sessionExpired": "We couldn't confirm you're signed in. Sign in again to keep going.",
     "accessDenied": "Access denied. Your session may have expired. Please sign in again.",
     "banned": "Your account has been suspended. Please contact support.",
     "requestTooLarge": "Request is too large. Shorten the input and try again.",
