@@ -1,16 +1,18 @@
 import { useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { Card } from './card';
+import { Card, ListItemIn, SkeletonTextRows } from './card';
 import { Icon } from './icon';
+import { PressScale } from './press-scale';
 import { Text } from './text';
 
 import { useAuth } from '@/lib/auth';
 import { fetchChats, type ChatSummary } from '@/lib/chats';
 import { formatDate } from '@/lib/dates';
+import { haptics } from '@/lib/haptics';
 import { useCopyHolder } from '@/lib/use-copy-holder';
 import { useTheme } from '@/theme/use-theme';
 
@@ -38,7 +40,7 @@ export function ChatRows({
       </Text>
     );
   }
-  if (chats === null) return <ActivityIndicator style={styles.loading} accessibilityRole="progressbar" />;
+  if (chats === null) return <SkeletonTextRows rows={4} />;
   if (chats.length === 0) {
     return (
       <Card>
@@ -56,28 +58,27 @@ export function ChatRows({
       {chats.map((chat, index) => {
         const open = chat.id === openChatId;
         return (
-          <Pressable
-            key={chat.id}
-            accessibilityRole="button"
-            accessibilityState={{ selected: open }}
-            onPress={() => onPick(chat.id)}
-            testID="ask-chat-row"
-            style={({ pressed }) => [
-              styles.row,
-              index > 0 && { borderTopWidth: 1, borderTopColor: colors.line },
-              highlightOpen && open && { backgroundColor: colors.tile },
-              pressed && styles.pressed,
-            ]}>
-            <View style={styles.rowText}>
-              <Text weight="semibold" style={[styles.rowTitle, highlightOpen && open && { color: colors.chipSelectedForeground }]} numberOfLines={2}>
-                {chat.title}
-              </Text>
-              <Text tone="faint" style={styles.meta}>
-                {`${formatDate(new Date(chat.createdAt).toISOString())} · ${t('askChat.messageCount', { count: chat.messageCount })}`}
-              </Text>
-            </View>
-            {open && !highlightOpen ? <Icon name="check" color={colors.primary} size={21} /> : null}
-          </Pressable>
+          <ListItemIn key={chat.id} index={index} style={index > 0 && { borderTopWidth: 1, borderTopColor: colors.line }}>
+            <PressScale
+              accessibilityRole="button"
+              accessibilityState={{ selected: open }}
+              onPress={() => {
+                if (!open) haptics.select();
+                onPick(chat.id);
+              }}
+              testID="ask-chat-row"
+              style={[styles.row, highlightOpen && open && { backgroundColor: colors.tile }]}>
+              <View style={styles.rowText}>
+                <Text weight="semibold" style={[styles.rowTitle, highlightOpen && open && { color: colors.chipSelectedForeground }]} numberOfLines={2}>
+                  {chat.title}
+                </Text>
+                <Text tone="faint" style={styles.meta}>
+                  {`${formatDate(new Date(chat.createdAt).toISOString())} · ${t('askChat.messageCount', { count: chat.messageCount })}`}
+                </Text>
+              </View>
+              {open && !highlightOpen ? <Icon name="check" color={colors.primary} size={21} /> : null}
+            </PressScale>
+          </ListItemIn>
         );
       })}
     </Card>
@@ -163,13 +164,11 @@ export function AskChatPane({
 
 const styles = StyleSheet.create({
   body: { fontSize: 15, lineHeight: 21 },
-  loading: { marginTop: 24 },
   list: { padding: 0, gap: 0 },
   row: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 13, paddingHorizontal: 16 },
   rowText: { flex: 1, gap: 3 },
   rowTitle: { fontSize: 16, lineHeight: 21 },
   meta: { fontSize: 14 },
-  pressed: { opacity: 0.6 },
   pane: { borderRightWidth: StyleSheet.hairlineWidth },
   paneTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 12, paddingBottom: 4 },
   iconButton: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },

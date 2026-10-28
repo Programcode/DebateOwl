@@ -2,10 +2,10 @@ import { GENERAL_FOLDER, matchesLibrarySearch, normalizeFolder, sortLibrarySourc
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ActivityIndicator, ScrollView, StyleSheet, View } from 'react-native';
+import { ScrollView, StyleSheet, View } from 'react-native';
 
 import { TextButton } from '@/components/buttons';
-import { Card } from '@/components/card';
+import { Card, ListItemIn } from '@/components/card';
 import { Chip } from '@/components/chip';
 import { EmptyState } from '@/components/empty-state';
 import { LibraryHeader } from '@/components/library-header';
@@ -15,6 +15,7 @@ import { OfflineNotice } from '@/components/offline-notice';
 import { OneOffNotice } from '@/components/one-off-notice';
 import { Screen } from '@/components/screen';
 import { SearchField } from '@/components/search-field';
+import { SkeletonRows } from '@/components/skeleton';
 import { folderLabel } from '@/components/source-display';
 import { SourceRow } from '@/components/source-row';
 import { SourceView } from '@/components/source-view';
@@ -140,7 +141,7 @@ function LibraryView({ debateId, layout }: { debateId: string | null; layout: Re
     </Card>
   ) : null;
   const body = debateId ? (
-    <LibraryBody library={library} selectedId={shown} onSelect={layout === 'phone' || !userId ? undefined : (source) => setSelected({ userId, id: source.id })} onRemoved={() => setSelected(null)} />
+    <LibraryBody library={library} selectedId={shown} onSelect={layout === 'phone' || !userId ? undefined : (source) => setSelected({ userId, id: source.id })} onRemoved={(id) => setSelected((current) => (current && currentSourceId(library.queued, current.id) === id ? null : current))} />
   ) : null;
 
   if (layout === 'phone') {
@@ -149,7 +150,7 @@ function LibraryView({ debateId, layout }: { debateId: string | null; layout: Re
         {header}
         {/* New sources still go to the Current Debate in one-off mode, as on the website, so this only says the mode is on. */}
         <OneOffNotice message="debate.oneOffActive" />
-        {status === 'loading' ? <ActivityIndicator style={styles.loading} /> : null}
+        {status === 'loading' && !debateId ? <SkeletonRows rows={4} /> : null}
         {noDebate}
         {body}
       </Screen>
@@ -172,7 +173,7 @@ function LibraryView({ debateId, layout }: { debateId: string | null; layout: Re
         <OfflineNotice />
         {header}
         <OneOffNotice message="debate.oneOffActive" />
-        {status === 'loading' ? <ActivityIndicator style={styles.loading} /> : null}
+        {status === 'loading' && !debateId ? <SkeletonRows rows={4} /> : null}
         {noDebate}
         {body}
       </ScrollView>
@@ -180,7 +181,7 @@ function LibraryView({ debateId, layout }: { debateId: string | null; layout: Re
         <ScrollView style={styles.detailPane} contentInsetAdjustmentBehavior="automatic" automaticallyAdjustKeyboardInsets keyboardShouldPersistTaps="handled" keyboardDismissMode="interactive" contentContainerStyle={styles.detailContent} testID="source-sheet">
           {/* Keyed by the id that was opened: a note that syncs swaps its local id for the row's, and the
               view follows that itself, so an edit in progress survives the sync. */}
-          <SourceView key={`${userId}:${debateId}:${selected.id}`} id={selected.id} onRemoved={() => setSelected(null)} />
+          <SourceView key={`${userId}:${debateId}:${selected.id}`} id={selected.id} onRemoved={() => setSelected((current) => (current?.id === selected.id ? null : current))} />
         </ScrollView>
       ) : null}
     </View>
@@ -287,7 +288,7 @@ function LibraryBody({ library, selectedId, onSelect, onRemoved }: { library: Li
       </Card>
     );
   }
-  if (!sources) return <ActivityIndicator style={styles.loading} accessibilityRole="progressbar" />;
+  if (!sources) return <SkeletonRows rows={5} />;
 
   const active = sources.filter((source) => source.isActive).length;
   const chipFolders = Array.from(new Set([...folders, ...sources.map((source) => source.folder)])).sort();
@@ -319,8 +320,9 @@ function LibraryBody({ library, selectedId, onSelect, onRemoved }: { library: Li
   const remove = async (source: Source) => {
     const removed = await actions.remove(source);
     if (removed) library.setSources((previous) => previous?.filter((item) => item.id !== source.id) ?? previous);
-    // Deleting the source open beside the list closes it, as its own Delete does.
-    if (removed && source.id === selectedId) onRemoved?.(source.id);
+    // Deleting the source open beside the list closes it, as its own Delete does. The parent checks
+    // the selection when the delete lands, so a source opened meanwhile stays open.
+    if (removed) onRemoved?.(source.id);
     return removed;
   };
 
@@ -396,30 +398,31 @@ function LibraryBody({ library, selectedId, onSelect, onRemoved }: { library: Li
       ) : (
         <Card style={styles.list}>
           {visible.map((source, index) => (
-            <SourceRow
-              key={source.id}
-              source={source}
-              folders={chipFolders}
-              first={index === 0}
-              selected={selectedId === source.id}
-              selectInstead={Boolean(onSelect)}
-              showFolder={folder === ALL}
-              compact={Boolean(selectedId)}
-              pending={waiting.has(source.id)}
-              actions={{
-                onOpen: () => (onSelect ? onSelect(source) : router.push({ pathname: '/source/[id]', params: { id: source.id } })),
-                onToggle: (isActive) => void toggle([source], isActive),
-                onDelete: () => remove(source),
-                onCopy: () => void actions.copy(source),
-                onShare: () => actions.share(source),
-                onMove: (target) => {
-                  patch([source.id], { folder: target });
-                  void actions.move(source, target).then((moved) => {
-                    if (!moved) patch([source.id], { folder: source.folder });
-                  });
-                },
-              }}
-            />
+            <ListItemIn key={source.id} index={index} layout>
+              <SourceRow
+                source={source}
+                folders={chipFolders}
+                first={index === 0}
+                selected={selectedId === source.id}
+                selectInstead={Boolean(onSelect)}
+                showFolder={folder === ALL}
+                compact={Boolean(selectedId)}
+                pending={waiting.has(source.id)}
+                actions={{
+                  onOpen: () => (onSelect ? onSelect(source) : router.push({ pathname: '/source/[id]', params: { id: source.id } })),
+                  onToggle: (isActive) => void toggle([source], isActive),
+                  onDelete: () => remove(source),
+                  onCopy: () => void actions.copy(source),
+                  onShare: () => actions.share(source),
+                  onMove: (target) => {
+                    patch([source.id], { folder: target });
+                    void actions.move(source, target).then((moved) => {
+                      if (!moved) patch([source.id], { folder: source.folder });
+                    });
+                  },
+                }}
+              />
+            </ListItemIn>
           ))}
         </Card>
       )}
@@ -428,7 +431,6 @@ function LibraryBody({ library, selectedId, onSelect, onRemoved }: { library: Li
 }
 
 const styles = StyleSheet.create({
-  loading: { marginTop: 32 },
   body: { fontSize: 15, lineHeight: 21 },
   summary: { fontSize: 14.5, marginHorizontal: 2, marginTop: -6 },
   chipRow: { marginHorizontal: -20, flexGrow: 0 },

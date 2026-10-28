@@ -2,15 +2,18 @@ import { starterFlowchart } from '@debatelab/core/flowchart';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, StyleSheet, View } from 'react-native';
 
 import { PrimaryButton, TextButton } from '@/components/buttons';
+import { ListItemIn, SkeletonTextRows } from '@/components/card';
 import { Icon } from '@/components/icon';
+import { PressScale } from '@/components/press-scale';
 import { SheetScrollView } from '@/components/sheet';
 import { Text } from '@/components/text';
 import { useAuth } from '@/lib/auth';
 import { confirmDestructive } from '@/lib/confirm';
 import { formatRelativeDate } from '@/lib/dates';
+import { haptics } from '@/lib/haptics';
 import { getDraft, NEW_MAP, newDraft, openDraft, savedDraft, scopeDebateId, showDraft, useFlowchartDrafts } from '@/lib/flowchart-drafts';
 import { fetchFlowchart, fetchFlowchartList, flowchartScreenCopies, type FlowchartSummary } from '@/lib/flowcharts';
 import { useCopyHolder } from '@/lib/use-copy-holder';
@@ -119,25 +122,30 @@ export default function SavedMapsSheet() {
   };
 
   const row = (key: string, title: string, meta: string, selected: boolean, onPress: () => void, index: number, busy = false) => (
-    <Pressable
-      key={key}
-      accessibilityRole="button"
-      // While a map opens, the rows wait for it.
-      accessibilityState={{ selected, disabled: opening !== null }}
-      disabled={opening !== null}
-      onPress={onPress}
-      style={({ pressed }) => [styles.row, index > 0 && { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.line }, pressed && styles.pressed]}
-      testID="saved-map">
-      <View style={styles.rowText}>
-        <Text weight="semibold" style={styles.rowTitle} numberOfLines={1}>
-          {title}
-        </Text>
-        <Text tone="faint" style={styles.rowMeta} numberOfLines={1}>
-          {meta}
-        </Text>
-      </View>
-      {busy ? <ActivityIndicator color={colors.primary} /> : selected ? <Icon name="check" color={colors.primary} size={20} /> : null}
-    </Pressable>
+    <ListItemIn key={key} index={index} style={index > 0 && { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.line }}>
+      <PressScale
+        accessibilityRole="button"
+        // While a map opens, the rows wait for it.
+        accessibilityState={{ selected, disabled: opening !== null }}
+        disabled={opening !== null}
+        onPress={() => {
+          if (!selected) haptics.select();
+          onPress();
+        }}
+        style={styles.row}
+        testID="saved-map">
+        <View style={styles.rowText}>
+          <Text weight="semibold" style={styles.rowTitle} numberOfLines={1}>
+            {title}
+          </Text>
+          <Text tone="faint" style={styles.rowMeta} numberOfLines={1}>
+            {meta}
+          </Text>
+        </View>
+        {/* Opening one map is an inline busy state, so it keeps its spinner. */}
+        {busy ? <ActivityIndicator color={colors.primary} /> : selected ? <Icon name="check" color={colors.primary} size={20} /> : null}
+      </PressScale>
+    </ListItemIn>
   );
 
   const items = shown?.items ?? [];
@@ -169,7 +177,7 @@ export default function SavedMapsSheet() {
         </View>
       ) : null}
       {!shown ? (
-        <ActivityIndicator color={colors.primary} accessibilityLabel={t('common.loading')} />
+        <SkeletonTextRows rows={3} />
       ) : shown.failed ? (
         <View style={styles.failed}>
           <Text tone="secondary" style={styles.body}>
@@ -200,6 +208,5 @@ const styles = StyleSheet.create({
   rowText: { flex: 1, gap: 2 },
   rowTitle: { fontSize: 16 },
   rowMeta: { fontSize: 13.5 },
-  pressed: { opacity: 0.7 },
   failed: { gap: 6, alignItems: 'flex-start' },
 });

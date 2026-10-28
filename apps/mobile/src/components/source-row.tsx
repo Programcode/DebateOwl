@@ -2,9 +2,10 @@ import { Link } from 'expo-router';
 import { useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, StyleSheet, Switch, View } from 'react-native';
+import Animated from 'react-native-reanimated';
 import ReanimatedSwipeable, { type SwipeableMethods } from 'react-native-gesture-handler/ReanimatedSwipeable';
 
-import { IconTile } from './card';
+import { IconTile, usePressScale } from './card';
 import { WEB_SWITCH_THUMB } from './form-rows';
 import { Icon } from './icon';
 import { folderLabel, SOURCE_ICONS, sourceMeta } from './source-display';
@@ -103,6 +104,7 @@ export function SourceRow({
   const { t } = useTranslation();
   const { colors } = useTheme();
   const swipeable = useRef<SwipeableMethods>(null);
+  const press = usePressScale();
   const title = source.title || t('libraryPage.untitledSource');
   const toggleLabel = source.isActive ? t('mobile.library.turnOff') : t('mobile.library.turnOn');
 
@@ -157,6 +159,8 @@ export function SourceRow({
           onPress={(event) => {
             if (!selectInstead) return;
             event.preventDefault();
+            // On iPad the row is picked to open beside the list, not opened over it.
+            if (!selected) haptics.select();
             actions.onOpen();
           }}>
           <Link.Trigger>
@@ -172,11 +176,13 @@ export function SourceRow({
                 if (event.nativeEvent.actionName === 'toggle') toggle();
                 if (event.nativeEvent.actionName === 'delete') void remove();
               }}
+              onPressIn={press.onPressIn}
+              onPressOut={press.onPressOut}
               testID="source-row"
               // One flat style object: inside a Link's slot the web preview hands it to the DOM as is.
               style={{ flex: 1 }}>
               {({ pressed }) => (
-                <View style={[styles.content, pressed && styles.pressed]}>
+                <Animated.View style={[styles.content, pressed && styles.pressed, press.style]}>
                   <View style={!source.isActive && styles.off}>
                     <IconTile name={SOURCE_ICONS[source.type]} size={42} />
                   </View>
@@ -189,7 +195,7 @@ export function SourceRow({
                     </Text>
                     <QualityBadges source={source} showFolder={showFolder} compact={compact} pending={pending} />
                   </View>
-                </View>
+                </Animated.View>
               )}
             </Pressable>
           </Link.Trigger>

@@ -1,8 +1,9 @@
 import { Link, useRouter, type Href } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { Pressable, StyleSheet, View } from 'react-native';
+import Animated from 'react-native-reanimated';
 
-import { IconTile } from './card';
+import { IconTile, usePressScale } from './card';
 import { Icon } from './icon';
 import type { IconName } from './icon-paths';
 import { Text } from './text';
@@ -72,6 +73,7 @@ export function WorkRow({
   const { colors } = useTheme();
   const router = useRouter();
   const actions = useWorkActions();
+  const press = usePressScale();
   const title = item.title || t(`debate.kinds.${item.kind}`);
   const href = from ? workHref(item, from) : null;
   // Practice work opens the Practice tab, which has nothing to preview, so it is a plain row that navigates itself.
@@ -81,11 +83,13 @@ export function WorkRow({
       accessibilityRole="button"
       accessibilityLabel={t('mobile.common.openItem', { title })}
       onPress={linked ? onPress : onPress ?? (href ? () => router.navigate(href) : undefined)}
+      onPressIn={press.onPressIn}
+      onPressOut={press.onPressOut}
       testID="work-row"
       // One flat style object: inside a Link's slot the web preview hands it to the DOM as is.
       style={StyleSheet.flatten([!first && { borderTopWidth: 1, borderTopColor: colors.line }, { backgroundColor: colors.card }])}>
       {({ pressed }) => (
-        <View style={[styles.row, pressed && styles.pressed]}>
+        <Animated.View style={[styles.row, pressed && styles.pressed, press.style]}>
           <IconTile name={KIND_ICONS[item.kind]} size={42} />
           <View style={styles.rowText}>
             <Text weight="semibold" style={styles.rowTitle} numberOfLines={2}>
@@ -96,7 +100,7 @@ export function WorkRow({
             </Text>
           </View>
           <Icon name="chevronRight" color={colors.tabInactive} size={20} />
-        </View>
+        </Animated.View>
       )}
     </Pressable>
   );

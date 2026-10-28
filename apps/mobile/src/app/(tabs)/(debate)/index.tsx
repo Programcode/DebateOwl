@@ -1,18 +1,20 @@
 import { Link, useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
+import Animated from 'react-native-reanimated';
 
 import { AnnouncementBanner } from '@/components/announcement-banner';
 import { TrialBanner } from '@/components/trial-banner';
 import { MainActionButton, TextButton } from '@/components/buttons';
-import { Card, IconTile } from '@/components/card';
+import { Card, IconTile, ListItemIn, usePressScale } from '@/components/card';
 import { Icon } from '@/components/icon';
 import type { IconName } from '@/components/icon-paths';
 import { OneOffNotice } from '@/components/one-off-notice';
 import { PREPARE_TOOLS, prepareToolHref } from '@/components/prepare-tools';
 import { Screen } from '@/components/screen';
 import { SegmentedControl } from '@/components/segmented-control';
+import { Skeleton, SkeletonRows } from '@/components/skeleton';
 import { SOURCE_ICONS, sourceMeta } from '@/components/source-display';
 import { Text } from '@/components/text';
 import { WorkRow } from '@/components/work-row';
@@ -67,8 +69,8 @@ export default function DebateScreen() {
 
   if (status === 'loading') {
     return (
-      <Screen safeTop>
-        <ActivityIndicator style={styles.loading} accessibilityLabel={t('common.loading')} />
+      <Screen safeTop gap={0}>
+        <DebateSkeleton />
       </Screen>
     );
   }
@@ -269,6 +271,7 @@ function DebateDetails({ debateId, dashboard = false }: { debateId: string; dash
 
   const results = counts?.results[view];
   const items = recent?.[view] ?? null;
+  const countsLoading = counts === null && !failed;
 
   const sideAndStats = (
     <>
@@ -283,10 +286,16 @@ function DebateDetails({ debateId, dashboard = false }: { debateId: string; dash
         />
       </View>
 
-      <View style={styles.stats} testID="debate-counts">
-        <Stat value={counts?.sources} label={t('mobile.debate.statSources', { count: counts?.sources ?? 0 })} />
-        <Stat value={results} label={t('mobile.debate.statResults', { count: results ?? 0 })} />
-        <Stat value={counts?.rounds} label={t('mobile.debate.statRounds', { count: counts?.rounds ?? 0 })} />
+      {/* While the counts load (and have not failed) the row is the loading indicator, with shapes for the numbers. */}
+      <View
+        style={styles.stats}
+        testID="debate-counts"
+        accessible={countsLoading || undefined}
+        accessibilityRole={countsLoading ? 'progressbar' : undefined}
+        accessibilityLabel={countsLoading ? t('common.loading') : undefined}>
+        <Stat value={counts?.sources} loading={countsLoading} label={t('mobile.debate.statSources', { count: counts?.sources ?? 0 })} />
+        <Stat value={results} loading={countsLoading} label={t('mobile.debate.statResults', { count: results ?? 0 })} />
+        <Stat value={counts?.rounds} loading={countsLoading} label={t('mobile.debate.statRounds', { count: counts?.rounds ?? 0 })} />
       </View>
 
     </>
@@ -298,13 +307,10 @@ function DebateDetails({ debateId, dashboard = false }: { debateId: string; dash
         {t('mobile.tabs.prepare')}
       </Text>
       <View style={styles.grid}>
-        {PREPARE_TOOLS.map((tool) => (
-          <ToolTile
-            key={tool.key}
-            icon={tool.icon}
-            label={t(`nav.${tool.key}`)}
-            onPress={() => router.push(prepareToolHref(tool.key, 'debate'))}
-          />
+        {PREPARE_TOOLS.map((tool, index) => (
+          <ListItemIn key={tool.key} index={index} style={styles.tileSlot}>
+            <ToolTile icon={tool.icon} label={t(`nav.${tool.key}`)} onPress={() => router.push(prepareToolHref(tool.key, 'debate'))} />
+          </ListItemIn>
         ))}
       </View>
     </>
@@ -329,7 +335,7 @@ function DebateDetails({ debateId, dashboard = false }: { debateId: string; dash
           <TextButton label={t('common.retry')} onPress={() => void load(() => true)} />
         </Card>
       ) : items === null ? (
-        <ActivityIndicator style={styles.loading} />
+        <SkeletonRows rows={dashboard ? DASHBOARD_RECENT_LIMIT : RECENT_LIMIT} />
       ) : items.length === 0 ? (
         <Card>
           <Text tone="secondary" style={styles.body}>
@@ -339,7 +345,9 @@ function DebateDetails({ debateId, dashboard = false }: { debateId: string; dash
       ) : (
         <Card style={styles.list}>
           {items.map((item, index) => (
-            <WorkRow key={`${item.kind}-${item.id}`} item={item} first={index === 0} from="debate" onDeleted={() => void load(() => true)} />
+            <ListItemIn key={`${item.kind}-${item.id}`} index={index} layout>
+              <WorkRow item={item} first={index === 0} from="debate" onDeleted={() => void load(() => true)} />
+            </ListItemIn>
           ))}
         </Card>
       )}
@@ -358,7 +366,7 @@ function DebateDetails({ debateId, dashboard = false }: { debateId: string; dash
   }
 
   const recentSources = failed ? null : sources === null ? (
-    <ActivityIndicator style={styles.loading} />
+    <SkeletonRows rows={DASHBOARD_SOURCES} />
   ) : sources.length === 0 ? (
     <Card>
       <Text tone="secondary" style={styles.body}>
@@ -368,7 +376,9 @@ function DebateDetails({ debateId, dashboard = false }: { debateId: string; dash
   ) : (
     <Card style={styles.list}>
       {sources.map((source, index) => (
-        <RecentSource key={source.id} source={source} first={index === 0} />
+        <ListItemIn key={source.id} index={index}>
+          <RecentSource source={source} first={index === 0} />
+        </ListItemIn>
       ))}
     </Card>
   );
@@ -420,14 +430,17 @@ function RecentSource({ source, first }: { source: Source; first: boolean }) {
 function RecentSourceRow({ source, first, onPress }: { source: Source; first: boolean; onPress?: () => void }) {
   const { t } = useTranslation();
   const { colors } = useTheme();
+  const press = usePressScale();
   return (
     <Pressable
       accessibilityRole="button"
       onPress={onPress}
+      onPressIn={press.onPressIn}
+      onPressOut={press.onPressOut}
       testID="recent-source"
       style={!first ? { borderTopWidth: 1, borderTopColor: colors.line } : undefined}>
       {({ pressed }) => (
-        <View style={[styles.sourceRow, pressed && styles.pressed]}>
+        <Animated.View style={[styles.sourceRow, pressed && styles.pressed, press.style]}>
           <IconTile name={SOURCE_ICONS[source.type]} size={42} />
           <View style={styles.sourceText}>
             <Text weight="semibold" style={styles.sourceTitle} numberOfLines={2}>
@@ -438,18 +451,22 @@ function RecentSourceRow({ source, first, onPress }: { source: Source; first: bo
             </Text>
           </View>
           <Icon name="chevronRight" color={colors.tabInactive} size={20} />
-        </View>
+        </Animated.View>
       )}
     </Pressable>
   );
 }
 
-function Stat({ value, label }: { value: number | undefined; label: string }) {
+function Stat({ value, label, loading }: { value: number | undefined; label: string; loading: boolean }) {
   return (
     <View>
-      <Text weight="bold" style={styles.statValue}>
-        {value ?? '–'}
-      </Text>
+      {loading ? (
+        <Skeleton width={30} height={20} style={styles.statShape} />
+      ) : (
+        <Text weight="bold" style={styles.statValue}>
+          {value ?? '–'}
+        </Text>
+      )}
       <Text tone="faint" style={styles.statLabel}>
         {label}
       </Text>
@@ -470,7 +487,8 @@ function SparCard({ onPress }: { onPress: () => void }) {
         { backgroundColor: colors.primaryFill, borderBottomColor: colors.primaryLedge },
         pressed && styles.sparPressed,
       ]}>
-      <OwlAvatar pose="arguing" size={52} />
+      {/* Ollie is present here, so he blinks. */}
+      <OwlAvatar pose="arguing" size={52} blink />
       <View style={styles.sparText}>
         <Text accessibilityRole="header" weight="display" style={styles.sparTitle}>
           {t('mobile.debate.spar')}
@@ -489,25 +507,49 @@ function SparCard({ onPress }: { onPress: () => void }) {
 // Long one-word labels (Hungarian "Folyamatábra") shrink to fit on iOS; the web preview cannot shrink text, so it truncates them.
 function ToolTile({ icon, label, onPress }: { icon: IconName; label: string; onPress: () => void }) {
   const { colors } = useTheme();
+  const press = usePressScale();
   return (
-    <Pressable
-      accessibilityRole="button"
-      onPress={onPress}
-      style={({ pressed }) => [
-        styles.tile,
-        { backgroundColor: colors.card, borderColor: colors.border },
-        pressed && styles.pressed,
-      ]}>
-      <IconTile name={icon} size={38} />
-      <Text weight="semibold" style={styles.tileLabel} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.75}>
-        {label}
-      </Text>
+    <Pressable accessibilityRole="button" onPress={onPress} onPressIn={press.onPressIn} onPressOut={press.onPressOut}>
+      <Animated.View style={[styles.tile, { backgroundColor: colors.card, borderColor: colors.border }, press.style]}>
+        <IconTile name={icon} size={38} />
+        <Text weight="semibold" style={styles.tileLabel} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.75}>
+          {label}
+        </Text>
+      </Animated.View>
     </Pressable>
   );
 }
 
+/**
+ * The Debate tab before the debates arrive, in the shape of the page: the switcher pill, the
+ * motion, its settings, the side toggle, the counts and the recent work. The loading indicator.
+ */
+function DebateSkeleton() {
+  const { t } = useTranslation();
+  return (
+    <View accessible accessibilityRole="progressbar" accessibilityLabel={t('common.loading')}>
+      <Skeleton width={150} height={34} round={radius.pill} style={styles.skeletonPill} />
+      <View style={styles.skeletonMotion}>
+        <Skeleton width="92%" height={26} round={8} />
+        <Skeleton width="64%" height={26} round={8} />
+      </View>
+      <Skeleton width="70%" height={14} style={styles.skeletonSettings} />
+      <Skeleton height={38} round={radius.pill} />
+      <View style={styles.stats}>
+        {[0, 1, 2].map((stat) => (
+          <View key={stat} style={styles.skeletonStat}>
+            <Skeleton width={30} height={20} />
+            <Skeleton width={58} height={12} />
+          </View>
+        ))}
+      </View>
+      <Skeleton height={96} round={radius.card} style={styles.skeletonSpar} />
+      <SkeletonRows rows={RECENT_LIMIT} />
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
-  loading: { marginTop: 32 },
   body: { fontSize: 16, lineHeight: 22 },
   pressed: { opacity: 0.7 },
   pill: {
@@ -536,6 +578,12 @@ const styles = StyleSheet.create({
   stats: { flexDirection: 'row', gap: 24, marginTop: 13, marginBottom: 15, marginHorizontal: 2 },
   statValue: { fontSize: 21, lineHeight: 26, letterSpacing: -0.2 },
   statLabel: { fontSize: 15 },
+  statShape: { marginVertical: 3 },
+  skeletonPill: { marginTop: 4 },
+  skeletonMotion: { gap: 8, marginTop: 14, marginBottom: 14 },
+  skeletonSettings: { marginBottom: 18 },
+  skeletonStat: { gap: 7 },
+  skeletonSpar: { marginBottom: 20 },
   spar: {
     borderRadius: radius.card,
     borderBottomWidth: 5,
@@ -555,9 +603,9 @@ const styles = StyleSheet.create({
   sectionRow: { flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: 10, marginRight: 2 },
   sectionTitle: { flex: 1, marginTop: 0, marginBottom: 0 },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
+  // The grid cell is the arriving wrapper; the tile fills it and presses in inside it.
+  tileSlot: { flexGrow: 1, flexBasis: '45%' },
   tile: {
-    flexGrow: 1,
-    flexBasis: '45%',
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,

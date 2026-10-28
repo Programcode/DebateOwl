@@ -5,16 +5,18 @@ import * as WebBrowser from 'expo-web-browser';
 import type { TFunction } from 'i18next';
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ActivityIndicator, AppState, Linking, Pressable, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, AppState, Linking, Pressable, StyleSheet, View, type PressableProps } from 'react-native';
+import Animated from 'react-native-reanimated';
 
 import { TextButton } from '@/components/buttons';
-import { Card, IconTile } from '@/components/card';
+import { Card, IconTile, usePressScale } from '@/components/card';
 import { SwitchRow } from '@/components/form-rows';
 import { Icon } from '@/components/icon';
 import type { IconName } from '@/components/icon-paths';
 import { ScreenTitle } from '@/components/screen-title';
 import { Screen } from '@/components/screen';
 import { SegmentedControl } from '@/components/segmented-control';
+import { Skeleton } from '@/components/skeleton';
 import { Text } from '@/components/text';
 import { exportAccountData } from '@/lib/account';
 import { useAuth } from '@/lib/auth';
@@ -126,11 +128,10 @@ export default function YouScreen() {
       <SubscriptionCard userId={session?.user.id} />
 
       <Card style={styles.list}>
-        <Pressable
+        <PressRow
           accessibilityRole="button"
           onPress={() => router.push({ pathname: '/history', params: { from: 'you' } })}
-          testID="you-history"
-          style={({ pressed }) => [styles.row, pressed && styles.pressed]}>
+          testID="you-history">
           <IconTile name="history" />
           <View style={styles.rowText}>
             <Text weight="semibold" style={styles.rowTitle}>
@@ -141,7 +142,7 @@ export default function YouScreen() {
             </Text>
           </View>
           <Icon name="chevronRight" color={colors.tabInactive} size={20} />
-        </Pressable>
+        </PressRow>
       </Card>
 
       <Text accessibilityRole="header" weight="bold" tone="heading" style={styles.section}>
@@ -204,13 +205,13 @@ export default function YouScreen() {
             ) : null}
           </View>
         </View>
-        <Pressable
+        <PressRow
           accessibilityRole="button"
           accessibilityState={{ busy: exporting }}
           disabled={exporting}
           onPress={() => void download()}
           testID="you-download-data"
-          style={({ pressed }) => [styles.row, { borderTopWidth: 1, borderTopColor: colors.line }, pressed && styles.pressed]}>
+          divider>
           <IconTile name="download" />
           <View style={styles.rowText}>
             <Text weight="semibold" style={styles.rowTitle}>
@@ -220,19 +221,16 @@ export default function YouScreen() {
               {t('settings.yourDataDesc')}
             </Text>
           </View>
+          {/* Busy inside its own row, so it keeps the spinner. */}
           {exporting ? <ActivityIndicator /> : null}
-        </Pressable>
+        </PressRow>
       </Card>
 
       <Text accessibilityRole="header" weight="bold" tone="heading" style={styles.section}>
         {t('settings.dangerZone')}
       </Text>
       <Card style={styles.list}>
-        <Pressable
-          accessibilityRole="button"
-          onPress={() => router.push('/delete-data')}
-          testID="you-delete-data"
-          style={({ pressed }) => [styles.row, pressed && styles.pressed]}>
+        <PressRow accessibilityRole="button" onPress={() => router.push('/delete-data')} testID="you-delete-data">
           <View style={styles.rowText}>
             <Text weight="semibold" style={[styles.rowTitle, { color: colors.destructive }]}>
               {t('settings.deleteAllData')}
@@ -242,11 +240,8 @@ export default function YouScreen() {
             </Text>
           </View>
           <Icon name="chevronRight" color={colors.tabInactive} size={20} />
-        </Pressable>
-        <Pressable
-          accessibilityRole="button"
-          onPress={() => router.push('/delete-account')}
-          style={({ pressed }) => [styles.row, { borderTopWidth: 1, borderTopColor: colors.line }, pressed && styles.pressed]}>
+        </PressRow>
+        <PressRow accessibilityRole="button" onPress={() => router.push('/delete-account')} divider>
           <View style={styles.rowText}>
             <Text weight="semibold" style={[styles.rowTitle, { color: colors.destructive }]}>
               {t('settings.deleteAccount')}
@@ -256,7 +251,7 @@ export default function YouScreen() {
             </Text>
           </View>
           <Icon name="chevronRight" color={colors.tabInactive} size={20} />
-        </Pressable>
+        </PressRow>
       </Card>
 
       <Card style={styles.list}>
@@ -273,15 +268,23 @@ export default function YouScreen() {
 function LinkRow({ icon, label, url, first }: { icon: IconName; label: string; url: string; first?: boolean }) {
   const { colors } = useTheme();
   return (
-    <Pressable
-      accessibilityRole="link"
-      onPress={() => void WebBrowser.openBrowserAsync(url)}
-      style={({ pressed }) => [styles.row, !first && { borderTopWidth: 1, borderTopColor: colors.line }, pressed && styles.pressed]}>
+    <PressRow accessibilityRole="link" onPress={() => void WebBrowser.openBrowserAsync(url)} divider={!first}>
       <IconTile name={icon} />
       <Text weight="semibold" style={[styles.rowTitle, styles.rowText]}>
         {label}
       </Text>
       <Icon name="externalLink" color={colors.tabInactive} size={19} />
+    </PressRow>
+  );
+}
+
+/** A row in a card that presses in under the finger; its divider stays put. */
+function PressRow({ divider = false, children, ...props }: Omit<PressableProps, 'style' | 'children'> & { divider?: boolean; children: ReactNode }) {
+  const { colors } = useTheme();
+  const press = usePressScale();
+  return (
+    <Pressable {...props} onPressIn={press.onPressIn} onPressOut={press.onPressOut} style={divider ? { borderTopWidth: 1, borderTopColor: colors.line } : undefined}>
+      {({ pressed }) => <Animated.View style={[styles.row, pressed && styles.pressed, press.style]}>{children}</Animated.View>}
     </Pressable>
   );
 }
@@ -426,11 +429,10 @@ function SubscriptionCard({ userId }: { userId: string | undefined }) {
           <TextButton label={t('common.retry')} onPress={() => void load(() => true)} />
         </>
       ) : !subscription ? (
-        <View style={styles.loadingRow} accessibilityRole="progressbar">
-          <ActivityIndicator />
-          <Text tone="secondary" style={styles.small}>
-            {t('settings.loading')}
-          </Text>
+        // The plan's lines loading in their own shape; "Loading" is what VoiceOver reads.
+        <View accessible accessibilityRole="progressbar" accessibilityLabel={t('settings.loading')} style={styles.planBody}>
+          <Skeleton width="46%" height={16} style={styles.planShape} />
+          <Skeleton width="88%" height={12} style={styles.planShape} />
         </View>
       ) : (
         <View style={styles.planBody}>
@@ -460,7 +462,7 @@ const styles = StyleSheet.create({
   planTitle: { flex: 1, fontSize: 17 },
   planBody: { gap: 4 },
   usage: { fontSize: 16 },
-  loadingRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  planShape: { marginVertical: 3 },
   badge: { alignSelf: 'flex-start', flexDirection: 'row', alignItems: 'center', gap: 4, borderRadius: 999, borderWidth: 1, paddingHorizontal: 10, paddingVertical: 3 },
   badgeText: { fontSize: 13 },
   setting: { gap: 7 },

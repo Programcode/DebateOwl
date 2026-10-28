@@ -1,12 +1,13 @@
 import { useRouter } from 'expo-router';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ActivityIndicator, Pressable, StyleSheet, Switch, View } from 'react-native';
+import { ActivityIndicator, Pressable, StyleSheet, Switch, View, type PressableProps } from 'react-native';
 import ReanimatedSwipeable from 'react-native-gesture-handler/ReanimatedSwipeable';
+import Animated from 'react-native-reanimated';
 
 import { AppTextInput } from '@/components/app-text-input';
 import { PrimaryButton, TextButton } from '@/components/buttons';
-import { Card } from '@/components/card';
+import { Card, ListItemIn, SkeletonTextRows, usePressScale } from '@/components/card';
 import { WEB_SWITCH_THUMB } from '@/components/form-rows';
 import { Icon } from '@/components/icon';
 import { SheetScrollView } from '@/components/sheet';
@@ -70,6 +71,7 @@ export default function DebatesSheet() {
       router.back();
       return;
     }
+    haptics.select();
     setSwitching(debate.id);
     setError('');
     try {
@@ -129,7 +131,8 @@ export default function DebatesSheet() {
         />
       </View>
 
-      {status === 'loading' ? <ActivityIndicator style={styles.loading} /> : null}
+      {/* Only before any debate is known: a refresh keeps showing the list it has. */}
+      {status === 'loading' && debates.length === 0 ? <SkeletonTextRows rows={3} /> : null}
       {status === 'error' ? (
         <Card>
           <Text tone="secondary" style={styles.body}>
@@ -157,7 +160,7 @@ export default function DebatesSheet() {
               ? t('mobile.debates.activeToday')
               : formatRelativeDate(debate.lastActivityAt);
             const row = (
-              <Pressable
+              <DebateRowPress
                 accessibilityRole="button"
                 accessibilityLabel={t('debate.switchToAria', { motion: debate.motion })}
                 accessibilityState={{ selected: isCurrent, busy: switching === debate.id || deleting === debate.id }}
@@ -166,8 +169,7 @@ export default function DebatesSheet() {
                   if (event.nativeEvent.actionName === 'delete') void removeDebate(debate);
                 }}
                 disabled={switching !== null}
-                onPress={() => void pick(debate)}
-                style={({ pressed }) => [styles.row, { backgroundColor: colors.card }, pressed && styles.pressed]}>
+                onPress={() => void pick(debate)}>
                 <View style={styles.rowText}>
                   <Text weight="semibold" style={styles.motion}>
                     {debate.motion}
@@ -183,32 +185,39 @@ export default function DebatesSheet() {
                 ) : isCurrent ? (
                   <Icon name="check" color={colors.primary} size={22} />
                 ) : null}
-              </Pressable>
+              </DebateRowPress>
             );
             const divider = index > 0 && { borderTopWidth: 1, borderTopColor: colors.line };
             // The current debate cannot be deleted, as on the website.
-            if (isCurrent) return <View key={debate.id} style={divider}>{row}</View>;
+            if (isCurrent) {
+              return (
+                <ListItemIn key={debate.id} index={index} layout style={divider}>
+                  {row}
+                </ListItemIn>
+              );
+            }
             return (
-              <ReanimatedSwipeable
-                key={debate.id}
-                friction={2}
-                rightThreshold={40}
-                overshootRight={false}
-                containerStyle={divider}
-                renderRightActions={() => (
-                  <Pressable
-                    accessibilityRole="button"
-                    accessibilityLabel={t('debate.deleteAria', { motion: debate.motion })}
-                    onPress={() => void removeDebate(debate)}
-                    style={[styles.deleteAction, { backgroundColor: colors.destructive }]}>
-                    <Icon name="trash" color="#ffffff" size={20} />
-                    <Text weight="semibold" style={styles.deleteLabel}>
-                      {t('common.delete')}
-                    </Text>
-                  </Pressable>
-                )}>
-                {row}
-              </ReanimatedSwipeable>
+              <ListItemIn key={debate.id} index={index} layout>
+                <ReanimatedSwipeable
+                  friction={2}
+                  rightThreshold={40}
+                  overshootRight={false}
+                  containerStyle={divider}
+                  renderRightActions={() => (
+                    <Pressable
+                      accessibilityRole="button"
+                      accessibilityLabel={t('debate.deleteAria', { motion: debate.motion })}
+                      onPress={() => void removeDebate(debate)}
+                      style={[styles.deleteAction, { backgroundColor: colors.destructive }]}>
+                      <Icon name="trash" color="#ffffff" size={20} />
+                      <Text weight="semibold" style={styles.deleteLabel}>
+                        {t('common.delete')}
+                      </Text>
+                    </Pressable>
+                  )}>
+                  {row}
+                </ReanimatedSwipeable>
+              </ListItemIn>
             );
           })}
         </Card>
@@ -253,6 +262,19 @@ export default function DebatesSheet() {
   );
 }
 
+/**
+ * A debate's row: its face stays put (it covers the swipe's Delete), and its content presses in.
+ */
+function DebateRowPress({ children, ...props }: Omit<PressableProps, 'style' | 'children'> & { children: ReactNode }) {
+  const { colors } = useTheme();
+  const press = usePressScale();
+  return (
+    <Pressable {...props} onPressIn={press.onPressIn} onPressOut={press.onPressOut} style={{ backgroundColor: colors.card }}>
+      {({ pressed }) => <Animated.View style={[styles.row, pressed && styles.pressed, press.style]}>{children}</Animated.View>}
+    </Pressable>
+  );
+}
+
 const styles = StyleSheet.create({
   content: { gap: 14 },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
@@ -266,7 +288,6 @@ const styles = StyleSheet.create({
     minHeight: 46,
   },
   searchInput: { flex: 1, fontSize: 16.5, fontFamily: fontFamily.regular, paddingVertical: 10 },
-  loading: { marginVertical: 24 },
   body: { fontSize: 15, lineHeight: 21 },
   list: { padding: 0, gap: 0, overflow: 'hidden' },
   deleteAction: { width: 92, alignItems: 'center', justifyContent: 'center', gap: 3 },
