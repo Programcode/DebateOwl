@@ -5,13 +5,17 @@ import type { Source } from './sources';
 const storage = vi.hoisted(() => new Map<string, string>());
 const net = vi.hoisted(() => ({ offline: false, user: 'user-a' as string | null, uuids: 0 }));
 // supabase-js answers a request that never reached the server with status 0; readFailed marks it unreachable.
+// The saved copies, kept in memory so a test can see what an offline relaunch would show.
+const copies = vi.hoisted(() => new Map<string, unknown>());
 const cache = vi.hoisted(() => ({
   ReadError: class ReadError extends Error {
     constructor(message: string, readonly unreachable: boolean) {
       super(message);
     }
   },
-  updateCopy: () => undefined,
+  updateCopy: (_userId: string, group: string, key: string, update: (copy: unknown) => unknown) => {
+    copies.set(`${group}:${key}`, update(copies.get(`${group}:${key}`)));
+  },
 }));
 const sources = vi.hoisted(() => ({
   addSource: vi.fn(),
@@ -67,6 +71,7 @@ function sent(): string[] {
 
 beforeEach(() => {
   storage.clear();
+  copies.clear();
   net.offline = false;
   net.user = 'user-a';
   net.uuids = 0;
@@ -136,6 +141,35 @@ describe('offline queue', () => {
     sources.updateSource.mockRejectedValueOnce(refused());
     await expect(queue.queueUpdateSource('user-a', 'd1', 's1', { title: 'Refused' })).rejects.toThrow('row-level security');
     expect(queue.getQueueSnapshot().items).toEqual([]);
+  });
+
+  it('swaps the temporary row of a synced note for its row in the saved list', async () => {
+    const queue = await load();
+    copies.set('sources:d1', [row('s1', { title: 'Older', content: 'Text', debateId: 'd1' })]);
+    net.offline = true;
+    const { source } = await queue.queueAddSource('user-a', { title: 'Note', content: 'Text', type: 'text', debateId: 'd1' });
+    expect((copies.get('sources:d1') as Source[]).map((item) => item.id)).toEqual([source.id, 's1']);
+    net.offline = false;
+    await queue.replayOfflineQueue();
+    expect((copies.get('sources:d1') as Source[]).map((item) => item.id)).toEqual(['uuid-1', 's1']);
+  });
+
+  it('puts back what the copies showed before a refused change, even when the server cannot be read again', async () => {
+    const queue = await load();
+    copies.set('sources:d1', [row('s1', { title: 'Old', content: 'Text', debateId: 'd1' })]);
+    copies.set('source:s1', row('s1', { title: 'Old', content: 'Text', debateId: 'd1' }));
+    net.offline = true;
+    await queue.queueUpdateSource('user-a', 'd1', 's1', { title: 'New' });
+    expect((copies.get('sources:d1') as Source[])[0].title).toBe('New');
+
+    // Back online the server refuses it, and the connection goes again before it can be read back.
+    sources.updateSource.mockRejectedValueOnce(refused());
+    sources.fetchSources.mockRejectedValueOnce(noAnswer());
+    sources.fetchSource.mockRejectedValueOnce(noAnswer());
+    net.offline = false;
+    await queue.replayOfflineQueue();
+    expect((copies.get('sources:d1') as Source[])[0].title).toBe('Old');
+    expect((copies.get('source:s1') as Source).title).toBe('Old');
   });
 
   it('saves a waiting note with its later edits and switch, under the id after its temporary prefix', async () => {

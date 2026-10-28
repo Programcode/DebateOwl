@@ -110,6 +110,14 @@ let owner: string | null | undefined;
 let generation = 0;
 let ready: Promise<void> = Promise.resolve();
 let items: QueuedWrite[] = [];
+/**
+ * What the saved copies showed before the changes still queued for each source, field by
+ * field (the earliest value only). A refused change puts these back with no network needed;
+ * a saved one forgets them. Kept on the phone with the queue.
+ */
+type Restorable = Partial<Pick<Source, 'title' | 'content' | 'type' | 'origin' | 'folder' | 'isActive'>>;
+type RestorableField = keyof Restorable;
+let before: Record<string, Restorable> = {};
 let synced = new Map<string, Source>();
 let waiters = new Map<string, Waiter[]>();
 let inFlight: string | null = null;
@@ -152,22 +160,27 @@ function persist() {
   const userId = owner;
   const gen = generation;
   const saved = items.map((item) => ({ ...item }));
+  const savedBefore = { ...before };
   if (!userId) return;
   void storage(async () => {
     if (gen !== generation) return;
     if (saved.length === 0) await AsyncStorage.removeItem(storageKey(userId));
-    else await AsyncStorage.setItem(storageKey(userId), JSON.stringify({ userId, items: saved }));
+    else await AsyncStorage.setItem(storageKey(userId), JSON.stringify({ userId, items: saved, before: savedBefore }));
   }).catch(warn('Could not keep the offline changes'));
 }
 
-function parse(raw: string | null, userId: string): QueuedWrite[] {
-  if (!raw) return [];
+function parse(raw: string | null, userId: string): { items: QueuedWrite[]; before: Record<string, Restorable> } {
+  const none = { items: [], before: {} };
+  if (!raw) return none;
   try {
-    const parsed = JSON.parse(raw) as { userId?: unknown; items?: unknown };
-    if (parsed.userId !== userId || !Array.isArray(parsed.items)) return [];
-    return (parsed.items as QueuedWrite[]).filter((item) => item && (item.kind === 'add' || item.kind === 'edit' || item.kind === 'active'));
+    const parsed = JSON.parse(raw) as { userId?: unknown; items?: unknown; before?: unknown };
+    if (parsed.userId !== userId || !Array.isArray(parsed.items)) return none;
+    return {
+      items: (parsed.items as QueuedWrite[]).filter((item) => item && (item.kind === 'add' || item.kind === 'edit' || item.kind === 'active')),
+      before: parsed.before && typeof parsed.before === 'object' && !Array.isArray(parsed.before) ? (parsed.before as Record<string, Restorable>) : {},
+    };
   } catch {
-    return [];
+    return none;
   }
 }
 
@@ -185,6 +198,7 @@ export function setQueueOwner(userId: string | null) {
   waiters = new Map();
   orphaned.forEach((list) => list.forEach((waiter) => waiter.reject(new Error('The account changed before this change was saved.'))));
   items = [];
+  before = {};
   synced = new Map();
   inFlight = null;
   emit();
@@ -193,9 +207,10 @@ export function setQueueOwner(userId: string | null) {
     if (stale.length > 0) await AsyncStorage.multiRemove(stale);
     if (!userId) return;
     const loaded = parse(await AsyncStorage.getItem(storageKey(userId)), userId);
-    if (gen !== generation || loaded.length === 0) return;
+    if (gen !== generation || loaded.items.length === 0) return;
     // Nobody waits for writes from an earlier launch: they show as waiting until they sync.
-    items = loaded.map((item) => ({ ...item, waiting: true }));
+    items = loaded.items.map((item) => ({ ...item, waiting: true }));
+    before = loaded.before;
     emit();
   }).catch(warn('Could not read the offline changes'));
 }
@@ -279,13 +294,63 @@ function applyPatch<T extends Pick<Source, 'title' | 'content' | 'type' | 'origi
 }
 
 /** The offline copies show a queued change after a restart too. */
-function updateSourceCopies(userId: string, debateId: string, ids: string[], change: (source: Source) => Source) {
-  updateCopy<Source[]>(userId, 'sources', debateId, (list) => list?.map((source) => (ids.includes(source.id) ? change(source) : source)));
+function updateSourceCopies(userId: string, debateId: string, ids: string[], change: (source: Source) => Source, remember: RestorableField[] = []) {
+  const gen = generation;
+  // The copy as it was, for each field not yet remembered for that source (see `before`).
+  const keep = (source: Source) => {
+    if (remember.length === 0 || isLocalSourceId(source.id) || gen !== generation) return source;
+    const held: Restorable = { ...before[source.id] };
+    let added = false;
+    for (const field of remember) {
+      if (field in held) continue;
+      (held as Record<string, unknown>)[field] = source[field];
+      added = true;
+    }
+    if (added) {
+      before = { ...before, [source.id]: held };
+      persist();
+    }
+    return source;
+  };
+  updateCopy<Source[]>(userId, 'sources', debateId, (list) => list?.map((source) => (ids.includes(source.id) ? change(keep(source)) : source)));
   for (const id of ids) {
     if (isLocalSourceId(id)) continue;
     // A saved null (a row that was gone) stays as it is.
-    updateCopy<Source | null>(userId, 'source', id, (copy) => (copy ? change(copy) : copy === null ? null : undefined));
+    updateCopy<Source | null>(userId, 'source', id, (copy) => (copy ? change(keep(copy)) : copy === null ? null : undefined));
   }
+}
+
+/** The fields a write changes for each source it names. */
+function touched(item: QueuedWrite): { id: string; fields: RestorableField[] }[] {
+  if (item.kind === 'edit') return [{ id: item.sourceId, fields: Object.keys(item.patch) as RestorableField[] }];
+  if (item.kind === 'active') return item.ids.map((id) => ({ id, fields: ['isActive'] }));
+  return [];
+}
+
+/**
+ * Settles what `before` holds for a write that left the queue: a refused one puts those
+ * values back into the copies, unless a write still queued changes the same field (that
+ * newer value is what shows); either way the fields no queued write touches are forgotten.
+ */
+function settleBefore(userId: string, item: QueuedWrite, refused: boolean) {
+  const debateId = item.kind === 'add' ? item.input.debateId : item.debateId;
+  let next = before;
+  for (const { id, fields } of touched(item)) {
+    const held = next[id];
+    if (!held) continue;
+    const stillQueued = new Set(items.flatMap((other) => touched(other).filter((one) => one.id === id).flatMap((one) => one.fields)));
+    const free = fields.filter((field) => field in held && !stillQueued.has(field));
+    if (free.length === 0) continue;
+    if (refused) {
+      const restore = Object.fromEntries(free.map((field) => [field, held[field]])) as Restorable;
+      updateSourceCopies(userId, debateId, [id], (source) => ({ ...source, ...restore }));
+    }
+    const left = Object.fromEntries(Object.entries(held).filter(([field]) => !free.includes(field as RestorableField))) as Restorable;
+    next = { ...next };
+    if (Object.keys(left).length > 0) next[id] = left;
+    else delete next[id];
+  }
+  before = next;
 }
 
 /**
@@ -333,7 +398,7 @@ export async function queueUpdateSource(userId: string, debateId: string, source
   await adopt(userId);
   const id = realIdOf(sourceId);
   if (isGone(id)) throw goneError();
-  updateSourceCopies(userId, debateId, [id], (source) => applyPatch(source, fields));
+  updateSourceCopies(userId, debateId, [id], (source) => applyPatch(source, fields), Object.keys(fields) as RestorableField[]);
   return new Promise<WriteStatus>((resolve, reject) => {
     const waiter = { resolve, reject };
     const add = pendingAdd(id);
@@ -364,7 +429,7 @@ export async function queueSetSourcesActive(userId: string, debateId: string, so
   await adopt(userId);
   const ids = Array.from(new Set(sourceIds.map(realIdOf))).filter((id) => !isGone(id));
   if (ids.length === 0) throw goneError();
-  updateSourceCopies(userId, debateId, ids, (source) => ({ ...source, isActive }));
+  updateSourceCopies(userId, debateId, ids, (source) => ({ ...source, isActive }), ['isActive']);
   return new Promise<WriteStatus>((resolve, reject) => {
     const waiter = { resolve, reject };
     const inherited: Waiter[] = [];
@@ -541,6 +606,9 @@ async function drain() {
       if (item.kind === 'add' && row) {
         synced = new Map(synced).set(item.tempId, row);
         const realId = row.id;
+        // The saved list held the note under its temporary id; it now holds the row, once, so a list
+        // read that fails afterwards never shows the note twice.
+        updateCopy<Source[]>(userId, 'sources', item.input.debateId, (list) => list && [row, ...list.filter((source) => source.id !== item.tempId && source.id !== realId)]);
         // Changes queued while the note was on its way now name its row.
         items = items.map((other) => {
           if (other.kind === 'edit' && other.sourceId === item.tempId) return { ...other, sourceId: realId };
@@ -548,6 +616,7 @@ async function drain() {
           return other;
         });
       }
+      settleBefore(userId, item, false);
       done.forEach((waiter) => waiter.resolve('saved'));
       if (done.length === 0) report.synced += 1;
     } else {
@@ -556,9 +625,10 @@ async function drain() {
       const all = [...done, ...dependents.flatMap(takeWaiters)];
       all.forEach((waiter) => waiter.reject(failure.cause));
       if (done.length === 0) report.dropped.push(describe(item));
-      // The saved copies still hold the refused change. A refusal is the server's answer, so read
-      // its version back into them (a relaunch offline then shows that), keeping every other queued
-      // write visible; screens that showed the change read it again.
+      // The saved copies still hold the refused change: put back what they showed before it,
+      // which needs no network, then read the server's version over that when it answers.
+      // Every other queued write stays visible; screens that showed the change read it again.
+      settleBefore(userId, item, true);
       await restoreRefused(userId, item);
       notifySourcesChanged();
     }
