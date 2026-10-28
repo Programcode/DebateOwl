@@ -217,7 +217,7 @@ export default function CrossfireScreen() {
         if (signal.aborted) throw abortError();
         const turn = await crossfireTurn(
           { operation: 'next-turn', config: snapshot.config, transcript: snapshot.turns, expectedReply },
-          { config, language: outputLanguage, debateContext: crossfireContext(context, snapshot.config), signal },
+          { config, language: outputLanguage, debateContext: crossfireContext(context, snapshot.config), signal, quotaSession: snapshot.sessionId },
         );
         return { config, ...turn };
       });
@@ -256,7 +256,7 @@ export default function CrossfireScreen() {
         if (signal.aborted) throw abortError();
         return crossfireDebrief(
           { operation: 'debrief', config: snapshot.config, transcript: snapshot.turns },
-          { config, language: outputLanguage, debateContext: crossfireContext(context, snapshot.config), signal },
+          { config, language: outputLanguage, debateContext: crossfireContext(context, snapshot.config), signal, quotaSession: snapshot.sessionId },
         );
       });
       if (controller.signal.aborted) return;

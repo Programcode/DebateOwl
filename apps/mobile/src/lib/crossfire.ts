@@ -45,7 +45,16 @@ interface RequestOptions {
   /** Absent for one-off work. */
   debateContext?: DebateContextRequest;
   signal?: AbortSignal;
+  /**
+   * The round's id, sent beside `input` as the website's crossfire request
+   * does (src/lib/ai/request.ts), so the server charges the round once
+   * (SESSION_QUOTA) instead of every turn. Signals are not charged per round.
+   */
+  quotaSession?: string;
 }
+
+// The keys the server's quota ledger accepts (parseQuotaSessionKey in _shared/entitlements.ts).
+const QUOTA_SESSION_KEY = /^[A-Za-z0-9._:-]{1,128}$/;
 
 // Turn signals and measured delivery facts are client annotations. The Edge
 // Function accepts only the turn fields it signs and prompts with.
@@ -63,6 +72,7 @@ function requestBody(input: Record<string, unknown> & { transcript: CrossfireTur
     // Servers from before Current Debate context read only this field.
     sourceIds: options.debateContext?.sourceIds ?? [],
     ...(options.debateContext ? { debateContext: options.debateContext } : {}),
+    ...(options.quotaSession && QUOTA_SESSION_KEY.test(options.quotaSession) ? { quotaSession: options.quotaSession } : {}),
   };
 }
 
@@ -144,7 +154,7 @@ export function crossfireDebrief(
  */
 export function crossfireSignal(
   input: { config: CrossfireConfig; transcript: CrossfireTurn[]; reply: CrossfireReply; signalToken: string },
-  options: Omit<RequestOptions, 'debateContext'>,
+  options: Omit<RequestOptions, 'debateContext' | 'quotaSession'>,
 ): Promise<CrossfireTurnSignal | undefined> {
   return postFunction('ai', requestBody({ operation: 'signal', ...input }, options), options.signal, async (response) => {
     const { output } = await functionOutput(response);
