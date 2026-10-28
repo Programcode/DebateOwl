@@ -147,7 +147,7 @@ export function Celebration({
         onAccessibilityEscape={dismiss}
         onPress={dismiss}
         testID="celebration"
-        style={[StyleSheet.absoluteFill, styles.scrim, { backgroundColor: `${colors.background}F2` }]}>
+        style={[StyleSheet.absoluteFill, styles.scrim, { backgroundColor: colors.background }]}>
         <Animated.View style={[styles.column, card]}>
           <View style={styles.hero}>
             <Owl pose="celebrating" size={148} gesture={reduce ? false : 'cheer'} breathe={false} />

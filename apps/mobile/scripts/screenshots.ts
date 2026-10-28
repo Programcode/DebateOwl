@@ -795,7 +795,7 @@ async function shootResultScreens(context: BrowserContext, prefix: string, langu
 
   await page.getByTestId('attack-this-case').click();
   await page.getByTestId('attack-case-text').waitFor({ timeout: 15_000 });
-  await page.waitForFunction(() => (document.querySelector('[data-testid="attack-case-text"]') as HTMLTextAreaElement | null)?.value.startsWith('THESIS:'));
+  await page.waitForFunction(() => (document.querySelector('[data-testid="attack-case-text"]') as HTMLTextAreaElement | null)?.value.startsWith('OPENING:'));
   await shoot(page, `${prefix}-attack-form`);
   await page.getByRole('button', { name: /^(Find weaknesses|Gyengeségek keresése|Encontrar debilidades)$/i }).click();
   await page.getByTestId('attack-document').waitFor({ timeout: 30_000 });
@@ -923,6 +923,9 @@ async function shootCaseEdits(context: BrowserContext, prefix: string, language:
     await page.waitForFunction(() => (document.querySelector('[data-testid="generate-motion"]') as HTMLTextAreaElement | null)?.value.trim());
     await page.getByRole('button', { name: /^(Generate debate case|Vitaeset generálása|Generar caso de debate)$/i }).click();
     await page.getByTestId('case-document').waitFor({ timeout: 30_000 });
+    // A new case opens with its celebration (shot in the results group); tap it away first.
+    await page.getByTestId('celebration').click({ timeout: 5_000 }).catch(() => {});
+    await page.getByTestId('celebration').waitFor({ state: 'detached', timeout: 5_000 });
     await page.waitForTimeout(3800); // The arrival notice fades.
     return { page, seen };
   };
