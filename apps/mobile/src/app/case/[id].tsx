@@ -10,10 +10,12 @@ import { DocumentScreen, DocumentTitle } from '@/components/document';
 import { DocumentHeader, type HeaderAction } from '@/components/document-header';
 import { DocumentStatus } from '@/components/document-status';
 import { backLabel } from '@/lib/back-label';
+import { useDebates } from '@/lib/debate-context';
 import { formatWhen } from '@/lib/dates';
 import { copyText, sharePdf, shareText } from '@/lib/export';
 import { caseExportFileName, caseExportHtml } from '@/lib/export-html';
 import { caseToText, discussCaseMessage } from '@/lib/result-text';
+import { buildFlowchartFromCase, crossfireFromCase } from '@/lib/result-links';
 import { isCompleteCase } from '@/lib/results';
 import { arrivalNoticeText, useResultDocument } from '@/lib/use-result-document';
 
@@ -23,6 +25,7 @@ export default function CaseScreen() {
   const router = useRouter();
   const { id, from, notice: arrival, failed } = useLocalSearchParams<{ id: string; from?: string; notice?: string; failed?: string }>();
   const doc = useResultDocument('case', id);
+  const { activeDebateId } = useDebates();
   const [exportOpen, setExportOpen] = useState(false);
   const { setNotice } = doc;
 
@@ -59,7 +62,19 @@ export default function CaseScreen() {
     });
   };
 
+  const openCrossfire = () => {
+    crossfireFromCase(typeof result.input.motion === 'string' ? result.input.motion : output.metadata?.motion ?? '', output);
+    router.push({ pathname: '/crossfire', params: { from: 'case' } });
+  };
+  const buildFlowchart = () => {
+    const outcome = buildFlowchartFromCase(output, result.debateId, activeDebateId, t);
+    if (outcome === 'built') router.push({ pathname: '/flowchart', params: { from: 'case', built: '1' } });
+    else setNotice(`${t('generate.flowchartImportFailed')}. ${t(outcome === 'noData' ? 'generate.flowchartNoData' : 'generate.flowchartOtherDebate')}`);
+  };
+
   const actions: HeaderAction[] = [
+    { key: 'crossfire', label: t('crossfire.openFromResult'), symbol: 'person.2.wave.2', icon: 'swords', onPress: openCrossfire },
+    { key: 'flowchart', label: t('mobile.results.buildFlowchart'), symbol: 'point.3.connected.trianglepath.dotted', icon: 'branch', onPress: buildFlowchart },
     { key: 'discuss', label: t('common.discuss'), symbol: 'bubble.left.and.bubble.right', icon: 'chat', onPress: () => router.push({ pathname: '/ask', params: { prompt: discussCaseMessage(output) } }) },
     ...(result.savedId ? [] : [{ key: 'save', label: t('common.save'), symbol: 'square.and.arrow.down' as const, icon: 'download' as const, onPress: () => void doc.save() }]),
     ...(doc.autoSaved.length > 0

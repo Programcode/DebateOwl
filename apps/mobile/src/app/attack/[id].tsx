@@ -12,6 +12,7 @@ import { backLabel } from '@/lib/back-label';
 import { formatWhen } from '@/lib/dates';
 import { copyText, sharePdf, shareText } from '@/lib/export';
 import { attackExportFileName, attackExportHtml } from '@/lib/export-html';
+import { crossfireFromAttack } from '@/lib/result-links';
 import { attackToText, discussAttackMessage } from '@/lib/result-text';
 import { isCompleteAttack } from '@/lib/results';
 import { arrivalNoticeText, useResultDocument } from '@/lib/use-result-document';
@@ -59,7 +60,13 @@ export default function AttackResultScreen() {
   };
   const discuss = () => router.push({ pathname: '/ask', params: { prompt: discussAttackMessage(output) } });
 
+  const openCrossfire = () => {
+    crossfireFromAttack(typeof result.input.caseText === 'string' ? result.input.caseText : '', output);
+    router.push({ pathname: '/crossfire', params: { from: 'attack' } });
+  };
+
   const actions: HeaderAction[] = [
+    { key: 'crossfire', label: t('crossfire.openFromResult'), symbol: 'person.2.wave.2', icon: 'swords', onPress: openCrossfire },
     ...(doc.autoSaved.length > 0
       ? [{ key: 'undo-sources', label: t('autoSavedSources.undo'), symbol: 'arrow.uturn.backward' as const, icon: 'history' as const, onPress: () => void doc.undoAutoSaved() }]
       : []),
