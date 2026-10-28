@@ -7,12 +7,16 @@ import { StyleSheet, View } from 'react-native';
 import { MainActionButton, PrimaryButton, TextButton } from '@/components/buttons';
 import { Card } from '@/components/card';
 import { Field } from '@/components/field';
+import { FolderSelect } from '@/components/folder-select';
 import { SheetScrollView } from '@/components/sheet';
 import { Text } from '@/components/text';
+import { useToast } from '@/components/toast';
 import { useAuth } from '@/lib/auth';
 import { useDebates } from '@/lib/debate-context';
+import { haptics } from '@/lib/haptics';
 import { addSource, fetchSources, importSourceFromUrl, isDuplicateOrigin } from '@/lib/sources';
 import { useCopyHolder } from '@/lib/use-copy-holder';
+import { useLibraryFolders } from '@/lib/use-library-folders';
 import { useTheme } from '@/theme/use-theme';
 
 /**
@@ -32,6 +36,9 @@ export default function AddLinkSheet() {
   const [busy, setBusy] = useState<'import' | 'save' | null>(null);
   const [error, setError] = useState('');
   const copies = useCopyHolder();
+  const toast = useToast();
+  const { folders } = useLibraryFolders(current?.id ?? null);
+  const [folder, setFolder] = useState('General');
 
   const runImport = async () => {
     const trimmed = url.trim();
@@ -64,10 +71,12 @@ export default function AddLinkSheet() {
         setBusy(null);
         return;
       }
-      await addSource(userId, { title: title.trim(), content: draft.content.trim(), type: 'url', origin: draft.url, debateId: current.id });
+      await addSource(userId, { title: title.trim(), content: draft.content.trim(), type: 'url', origin: draft.url, folder, debateId: current.id });
+      toast({ tone: 'success', title: t('libraryPage.sourceSaved', { title: title.trim() }) });
       router.back();
     } catch (cause) {
       console.warn('Could not save the source:', cause instanceof Error ? cause.message : cause);
+      haptics.warning();
       setError(t('mobile.library.saveFailed'));
       setBusy(null);
     }
@@ -123,6 +132,7 @@ export default function AddLinkSheet() {
                   </Text>
                 ) : null}
               </Card>
+              <FolderSelect folders={folders} value={folder} onChange={setFolder} disabled={busy !== null} />
               <MainActionButton label={t('libraryPage.saveImported')} busy={busy === 'save'} disabled={!title.trim()} onPress={() => void save()} />
             </>
           )}

@@ -5,11 +5,15 @@ import { StyleSheet, View } from 'react-native';
 
 import { MainActionButton, TextButton } from '@/components/buttons';
 import { Field } from '@/components/field';
+import { FolderSelect } from '@/components/folder-select';
 import { SheetScrollView } from '@/components/sheet';
 import { Text } from '@/components/text';
+import { useToast } from '@/components/toast';
 import { useAuth } from '@/lib/auth';
 import { useDebates } from '@/lib/debate-context';
+import { haptics } from '@/lib/haptics';
 import { addSource } from '@/lib/sources';
+import { useLibraryFolders } from '@/lib/use-library-folders';
 import { useTheme } from '@/theme/use-theme';
 
 /** Write a note: a text source in the Current Debate, like the website's manual entry. */
@@ -23,6 +27,9 @@ export default function NewNoteSheet() {
   const [content, setContent] = useState('');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  const toast = useToast();
+  const { folders } = useLibraryFolders(current?.id ?? null);
+  const [folder, setFolder] = useState('General');
 
   const ready = Boolean(title.trim() && content.trim());
 
@@ -32,10 +39,12 @@ export default function NewNoteSheet() {
     setSaving(true);
     setError('');
     try {
-      await addSource(userId, { title: title.trim(), content: content.trim(), type: 'text', debateId: current.id });
+      await addSource(userId, { title: title.trim(), content: content.trim(), type: 'text', folder, debateId: current.id });
+      toast({ tone: 'success', title: t('libraryPage.sourceSaved', { title: title.trim() }) });
       router.back();
     } catch (cause) {
       console.warn('Could not save the note:', cause instanceof Error ? cause.message : cause);
+      haptics.warning();
       setError(t('mobile.library.saveFailed'));
       setSaving(false);
     }
@@ -73,6 +82,7 @@ export default function NewNoteSheet() {
             editable={!saving}
             style={styles.noteBody}
           />
+          <FolderSelect folders={folders} value={folder} onChange={setFolder} disabled={saving} />
           {error ? (
             <Text accessibilityRole="alert" weight="medium" style={[styles.body, { color: colors.destructive }]}>
               {error}

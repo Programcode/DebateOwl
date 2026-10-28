@@ -9,6 +9,7 @@ import { useEffect } from 'react';
 import { StyleSheet } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
+import { ToastProvider } from '@/components/toast';
 import { AuthProvider, useAuth } from '@/lib/auth';
 import { DebateProvider } from '@/lib/debate-context';
 import { watchNetwork } from '@/lib/network-status';
@@ -84,44 +85,49 @@ function Root() {
       <StatusBar style={scheme === 'dark' ? 'light' : 'dark'} />
       {/* The screenshot script waits for auth-settled before it checks an offline cold start. Swipeable rows need the gesture root. */}
       <GestureHandlerRootView style={styles.root} testID={settled ? 'auth-settled' : 'auth-pending'}>
-        <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.background } }}>
-          <Stack.Protected guard={session !== null}>
-            <Stack.Screen name="(tabs)" />
-            <Stack.Screen name="debates" options={sheet} />
-            <Stack.Screen name="new-debate" options={sheet} />
-            <Stack.Screen name="delete-account" options={sheet} />
-            <Stack.Screen name="delete-data" options={sheet} />
-            <Stack.Screen name="add-link" options={sheet} />
-            <Stack.Screen name="new-note" options={sheet} />
-            <Stack.Screen name="source/[id]" options={sheet} />
-            {/* Full screen above the tabs, as in mock 07. */}
-            <Stack.Screen name="ask" />
-            {/* History, full screen above the tabs like the documents it opens. */}
-            <Stack.Screen name="history" />
-            {/* Generate, Attack, Brainstorm, Factoids and their documents, full screen above the tabs, as in mock 03. */}
-            <Stack.Screen name="generate" />
-            <Stack.Screen name="case/[id]" />
-            <Stack.Screen name="attack/index" />
-            <Stack.Screen name="attack/[id]" />
-            <Stack.Screen name="brainstorm/index" />
-            <Stack.Screen name="brainstorm/[id]" />
-            <Stack.Screen name="factoids/index" />
-            <Stack.Screen name="factoids/[id]" />
-            {/* Flowchart full screen above the tabs, its card, claim and saved-map sheets as form sheets, as in mock A. */}
-            <Stack.Screen name="flowchart/index" />
-            <Stack.Screen name="flowchart/card" options={sheet} />
-            <Stack.Screen name="flowchart/claim" options={sheet} />
-            <Stack.Screen name="flowchart/maps" options={sheet} />
-            {/* Live practice screens, full screen with no tab bar, as the live round in mock 05. */}
-            <Stack.Screen name="timer" options={{ presentation: 'fullScreenModal' }} />
-            <Stack.Screen name="crossfire" />
-            <Stack.Screen name="sparring/index" />
-            <Stack.Screen name="sparring/[id]" />
-          </Stack.Protected>
-          <Stack.Protected guard={session === null}>
-            <Stack.Screen name="sign-in" />
-          </Stack.Protected>
-        </Stack>
+        <ToastProvider>
+          <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.background } }}>
+            <Stack.Protected guard={session !== null}>
+              <Stack.Screen name="(tabs)" />
+              <Stack.Screen name="debates" options={sheet} />
+              <Stack.Screen name="new-debate" options={sheet} />
+              <Stack.Screen name="edit-debate" options={sheet} />
+              <Stack.Screen name="debate-check" options={sheet} />
+              <Stack.Screen name="delete-account" options={sheet} />
+              <Stack.Screen name="delete-data" options={sheet} />
+              <Stack.Screen name="add-link" options={sheet} />
+              <Stack.Screen name="new-note" options={sheet} />
+              <Stack.Screen name="add-file" options={sheet} />
+              <Stack.Screen name="source/[id]" options={sheet} />
+              {/* Full screen above the tabs, as in mock 07. */}
+              <Stack.Screen name="ask" />
+              {/* History, full screen above the tabs like the documents it opens. */}
+              <Stack.Screen name="history" />
+              {/* Generate, Attack, Brainstorm, Factoids and their documents, full screen above the tabs, as in mock 03. */}
+              <Stack.Screen name="generate" />
+              <Stack.Screen name="case/[id]" />
+              <Stack.Screen name="attack/index" />
+              <Stack.Screen name="attack/[id]" />
+              <Stack.Screen name="brainstorm/index" />
+              <Stack.Screen name="brainstorm/[id]" />
+              <Stack.Screen name="factoids/index" />
+              <Stack.Screen name="factoids/[id]" />
+              {/* Flowchart full screen above the tabs, its card, claim and saved-map sheets as form sheets, as in mock A. */}
+              <Stack.Screen name="flowchart/index" />
+              <Stack.Screen name="flowchart/card" options={sheet} />
+              <Stack.Screen name="flowchart/claim" options={sheet} />
+              <Stack.Screen name="flowchart/maps" options={sheet} />
+              {/* Live practice screens, full screen with no tab bar, as the live round in mock 05. */}
+              <Stack.Screen name="timer" options={{ presentation: 'fullScreenModal' }} />
+              <Stack.Screen name="crossfire" />
+              <Stack.Screen name="sparring/index" />
+              <Stack.Screen name="sparring/[id]" />
+            </Stack.Protected>
+            <Stack.Protected guard={session === null}>
+              <Stack.Screen name="sign-in" />
+            </Stack.Protected>
+          </Stack>
+        </ToastProvider>
       </GestureHandlerRootView>
     </ThemeProvider>
   );
