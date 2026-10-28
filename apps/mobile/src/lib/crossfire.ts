@@ -7,6 +7,7 @@ import {
   type CrossfireAIInput,
   type CrossfireConfig,
   type CrossfireDebrief,
+  type CrossfirePrefill,
   type CrossfireReply,
   type CrossfireState,
   type CrossfireTurn,
@@ -212,3 +213,9 @@ export async function countActiveSources(userId: string, debateId: string): Prom
  * debate is the one chosen when the round started; null for one-off rounds.
  */
 export const crossfireDraft = sessionSlot<{ state: CrossfireState; debateId: string | null } | null>(() => null);
+
+/**
+ * What "Open in Crossfire" on a case or an attack hands the next Crossfire
+ * screen, as the website's route state: taken once, when the screen opens.
+ */
+export const crossfirePrefill = sessionSlot<CrossfirePrefill | null>(() => null);

@@ -2780,7 +2780,9 @@
         "tooLarge": "Tu pregunta es demasiado larga. Acórtala y envíala de nuevo.",
         "debateMissing": "Este debate ya no existe. Elige otro debate y vuelve a preguntar.",
         "failed": "El coach no pudo responder. Inténtalo de nuevo."
-      }
+      },
+      "fileTooLarge": "{{name}} supera los 10 MB.",
+      "fileType": "{{name}} no es un archivo de texto o código. Adjunta archivos de texto, Markdown, CSV, JSON o código."
     },
     "prepare": {
       "saved": "Guardado en este debate"
@@ -2816,7 +2818,9 @@
       "deleteBrainstormTitle": "¿Eliminar la lluvia de ideas?",
       "deleteBrainstormDesc": "Esto elimina la lluvia de ideas de tu historial.",
       "deleteFactoidsTitle": "¿Eliminar los datos?",
-      "deleteFactoidsDesc": "Esto elimina los datos de tu historial."
+      "deleteFactoidsDesc": "Esto elimina los datos de tu historial.",
+      "buildFlowchart": "Crear diagrama desde el caso",
+      "regenerateSection": "Regenerar una sección"
     },
     "attack": {
       "caseRequired": "Pega o escribe el caso que quieres atacar."
@@ -2828,7 +2832,8 @@
       "reset": "Reiniciar"
     },
     "crossfire": {
-      "voiceLater": "Llegará con la versión de la app."
+      "voiceLater": "Llegará con la versión de la app.",
+      "prefillHeld": "Todavía hay una ronda en curso, así que tu caso no se importó. Termina esta ronda y vuelve a abrir el Interrogatorio desde tu caso."
     },
     "sparring": {
       "chooseSide": "¿Qué postura defiendes?",

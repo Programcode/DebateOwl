@@ -417,7 +417,10 @@ export async function callSupabaseAI<T = unknown>(
       throw abortError;
     }
 
-    if (err instanceof DOMException && err.name === 'AbortError') {
+    // Our own deadline aborted the request. A DOMException is not always an Error (jsdom),
+    // and the shared live reader throws a plain Error where DOMException is missing, so the
+    // name decides, not the class.
+    if (err && typeof err === 'object' && (err as { name?: unknown }).name === 'AbortError') {
       const timeoutError = new TimeoutError();
       reportFailure(timeoutError);
       throw timeoutError;

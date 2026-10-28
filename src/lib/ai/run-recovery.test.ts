@@ -40,7 +40,7 @@ vi.mock('@/lib/supabase/client', () => ({
 }));
 
 const { callSupabaseAI } = await import('@/lib/ai/request');
-const { AINetworkError, AIProviderError, AIResponseError } = await import('@/lib/ai/errors');
+const { AINetworkError, AIProviderError, AIResponseError, TimeoutError } = await import('@/lib/ai/errors');
 
 const config = { provider: 'openrouter' as const, model: 'auto-fast' };
 const live = { onDraft: () => {} };
@@ -130,5 +130,23 @@ describe('a live request whose stream dropped', () => {
     dropStream();
     const error = await callSupabaseAI('generate', { motion: 'Homework' }, config, { live, debateId: null }).catch((caught: unknown) => caught);
     expect(error).toBeInstanceOf(AINetworkError);
+  });
+});
+
+describe('a live request that outlives its deadline', () => {
+  it('is a timeout, not an unexpected error', async () => {
+    vi.useFakeTimers();
+    // The stream starts and then goes quiet, short of the 45 s stall check.
+    invokeWith.mockImplementation(async (_name: string, _options: unknown, handle: (response: Response) => Promise<unknown>) => {
+      const body = new ReadableStream<Uint8Array>({
+        start(controller) {
+          controller.enqueue(new TextEncoder().encode('event: phase\ndata: {"phase":"writing"}\n\n'));
+        },
+      });
+      return { data: await handle(new Response(body, { headers: { 'Content-Type': 'text/event-stream' } })), error: null };
+    });
+    const pending = callSupabaseAI('generate', { motion: 'Homework' }, config, { live, debateId: null, timeoutMs: 1_000 }).catch((caught: unknown) => caught);
+    await vi.advanceTimersByTimeAsync(1_000);
+    expect(await pending).toBeInstanceOf(TimeoutError);
   });
 });

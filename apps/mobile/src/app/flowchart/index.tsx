@@ -56,7 +56,7 @@ export default function FlowchartScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { colors } = useTheme();
-  const params = useLocalSearchParams<{ from?: string; id?: string }>();
+  const params = useLocalSearchParams<{ from?: string; id?: string; built?: string }>();
   const { session } = useAuth();
   const userId = session?.user.id ?? null;
   const { activeDebateId, oneOff } = useDebates();
@@ -99,6 +99,12 @@ export default function FlowchartScreen() {
       if (live.current) setNoticeState('');
     }, NOTICE_MS);
   }, []);
+
+  // A case built into a map says so once, as the website's toast does.
+  const built = params.built === '1';
+  useEffect(() => {
+    if (built) setNotice(t('flowchart.builtFromCase'));
+  }, [built, setNotice, t]);
 
   // Open the requested map, or the debate's newest saved map, or the starter map. A map
   // already held this session opens as it was left. Only the latest load may land.

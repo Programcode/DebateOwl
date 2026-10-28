@@ -1,3 +1,4 @@
+import type { CaseSection } from '@debatelab/core/ai/generate-output';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -9,11 +10,15 @@ import { openCitation } from '@/components/citation-target';
 import { DocumentScreen, DocumentTitle } from '@/components/document';
 import { DocumentHeader, type HeaderAction } from '@/components/document-header';
 import { DocumentStatus } from '@/components/document-status';
+import { RegeneratingStrip } from '@/components/regenerating-strip';
 import { backLabel } from '@/lib/back-label';
+import { useCaseEdits } from '@/lib/case-edits';
+import { useDebates } from '@/lib/debate-context';
 import { formatWhen } from '@/lib/dates';
 import { copyText, sharePdf, shareText } from '@/lib/export';
 import { caseExportFileName, caseExportHtml } from '@/lib/export-html';
 import { caseToText, discussCaseMessage } from '@/lib/result-text';
+import { buildFlowchartFromCase, crossfireFromCase } from '@/lib/result-links';
 import { isCompleteCase } from '@/lib/results';
 import { arrivalNoticeText, useResultDocument } from '@/lib/use-result-document';
 
@@ -23,8 +28,11 @@ export default function CaseScreen() {
   const router = useRouter();
   const { id, from, notice: arrival, failed } = useLocalSearchParams<{ id: string; from?: string; notice?: string; failed?: string }>();
   const doc = useResultDocument('case', id);
+  const { activeDebateId } = useDebates();
   const [exportOpen, setExportOpen] = useState(false);
+  const [regenerateOpen, setRegenerateOpen] = useState(false);
   const { setNotice } = doc;
+  const edits = useCaseEdits(doc.state.status === 'ready' ? doc.state.key : null, setNotice);
 
   // Problems from saving a fresh result are told once, on arrival.
   useEffect(() => {
@@ -59,7 +67,35 @@ export default function CaseScreen() {
     });
   };
 
+  const openCrossfire = () => {
+    crossfireFromCase(typeof result.input.motion === 'string' ? result.input.motion : output.metadata?.motion ?? '', output);
+    router.push({ pathname: '/crossfire', params: { from: 'case' } });
+  };
+  const buildFlowchart = () => {
+    const outcome = buildFlowchartFromCase(output, result.debateId, activeDebateId, t);
+    if (outcome === 'built') router.push({ pathname: '/flowchart', params: { from: 'case', built: '1' } });
+    else setNotice(`${t('generate.flowchartImportFailed')}. ${t(outcome === 'noData' ? 'generate.flowchartNoData' : 'generate.flowchartOtherDebate')}`);
+  };
+
+  // The website's section cards, in their order; the opening shows only when the case has one.
+  const sections: { key: CaseSection; title: string }[] = [
+    ...(output.exordio && (output.exordio.hook || output.exordio.transition) ? [{ key: 'exordio' as const, title: t('generateResults.exordio') }] : []),
+    { key: 'contentions', title: t('generateResults.arguments') },
+    { key: 'structure', title: t('generateResults.caseStructure') },
+    { key: 'opponent', title: t('generateResults.predictedOpponent') },
+    { key: 'counters', title: t('generateResults.preparedCounters') },
+  ];
+  const regeneratingTitle = sections.find((section) => section.key === edits.regenerating)?.title;
+
   const actions: HeaderAction[] = [
+    ...(edits.regenerating
+      ? []
+      : [{ key: 'regenerate', label: t('mobile.results.regenerateSection'), symbol: 'arrow.clockwise' as const, icon: 'reset' as const, onPress: () => setRegenerateOpen(true) }]),
+    ...(edits.canUndo && !edits.regenerating
+      ? [{ key: 'undo', label: t('generateResults.undo'), symbol: 'arrow.uturn.backward' as const, icon: 'history' as const, onPress: () => void edits.undo() }]
+      : []),
+    { key: 'crossfire', label: t('crossfire.openFromResult'), symbol: 'person.2.wave.2', icon: 'swords', onPress: openCrossfire },
+    { key: 'flowchart', label: t('mobile.results.buildFlowchart'), symbol: 'point.3.connected.trianglepath.dotted', icon: 'branch', onPress: buildFlowchart },
     { key: 'discuss', label: t('common.discuss'), symbol: 'bubble.left.and.bubble.right', icon: 'chat', onPress: () => router.push({ pathname: '/ask', params: { prompt: discussCaseMessage(output) } }) },
     ...(result.savedId ? [] : [{ key: 'save', label: t('common.save'), symbol: 'square.and.arrow.down' as const, icon: 'download' as const, onPress: () => void doc.save() }]),
     ...(doc.autoSaved.length > 0
@@ -73,6 +109,7 @@ export default function CaseScreen() {
       testID="case-document"
       outline
       notice={doc.notice}
+      noticeTone={doc.noticeTone}
       header={<DocumentHeader backLabel={back} onShare={() => run(() => shareText(title, caseToText(output)))} actions={actions} />}
       // "Attack this case" is the longer label, so it gets the wider button.
       actionWidths={[1.3, 1]}
@@ -89,7 +126,17 @@ export default function CaseScreen() {
         </>
       }>
       <DocumentTitle title={title} meta={t('mobile.results.generatedMeta', { side, when: formatWhen(generatedAt) })} />
+      {regeneratingTitle ? <RegeneratingStrip title={regeneratingTitle} /> : null}
       <CaseDocument output={output} library={doc.library} sources={result.sources} onCite={(target) => openCitation(router, target)} />
+      <ActionMenu
+        visible={regenerateOpen}
+        title={t('mobile.results.regenerateSection')}
+        testID="regenerate-menu"
+        items={sections.map((section) => ({ key: section.key, label: t('common.regenerate', { title: section.title }), icon: 'reset' as const }))}
+        cancelLabel={t('common.cancel')}
+        onClose={() => setRegenerateOpen(false)}
+        onSelect={(choice) => void edits.regenerate(choice as CaseSection)}
+      />
       <ActionMenu
         visible={exportOpen}
         title={t('common.export')}

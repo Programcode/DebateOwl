@@ -3,11 +3,13 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import type { TFunction } from 'i18next';
 import { useTranslation } from 'react-i18next';
 
+import type { NoticeTone } from '@/components/document';
+
 import { useAuth } from './auth';
-import { confirmDestructive, promptText } from './confirm';
+import { confirmDestructive } from './confirm';
 import { useDebates } from './debate-context';
-import { forgetOpenResult, keepOpenResult, openResult, updateOpenResult, type OpenResult } from './open-results';
-import { deleteResult, fetchAutoSavedSourceIds, fetchResult, removeSources, saveCase, type ArrivalNotice, type ResultKind } from './results';
+import { forgetOpenResult, keepOpenResult, openResult, subscribeOpenResults, type OpenResult } from './open-results';
+import { deleteResult, fetchAutoSavedSourceIds, fetchResult, removeSources, type ArrivalNotice, type ResultKind } from './results';
 import { fetchSources, subscribeSourcesChanged, type Source } from './sources';
 import { useCopyHolder } from './use-copy-holder';
 
@@ -62,6 +64,7 @@ export function useResultDocument<K extends ResultKind>(kind: K, id: string) {
   // The ids belong to the debate they were read for; another debate never sees or deletes them.
   const [autoSavedFor, setAutoSavedFor] = useState<{ debateId: string; ids: string[] } | null>(null);
   const [notice, setNoticeState] = useState('');
+  const [noticeTone, setNoticeTone] = useState<NoticeTone>('info');
   const [busy, setBusy] = useState(false);
   const live = useRef(true);
   const owner = useRef(userId);
@@ -75,9 +78,10 @@ export function useResultDocument<K extends ResultKind>(kind: K, id: string) {
     if (noticeTimer.current) clearTimeout(noticeTimer.current);
   }, []);
 
-  const setNotice = useCallback((text: string) => {
+  const setNotice = useCallback((text: string, tone: NoticeTone = 'info') => {
     if (!live.current) return;
     setNoticeState(text);
+    setNoticeTone(tone);
     if (noticeTimer.current) clearTimeout(noticeTimer.current);
     noticeTimer.current = setTimeout(() => {
       if (live.current) setNoticeState('');
@@ -111,6 +115,22 @@ export function useResultDocument<K extends ResultKind>(kind: K, id: string) {
       active = false;
     };
   }, [userId, kind, id, resultCopies]);
+
+  // A held result changed elsewhere (a regenerated section, an undo, a save from its sheet) shows here.
+  const readyKey = state.status === 'ready' ? state.key : null;
+  const stateRef = useRef(state);
+  stateRef.current = state;
+  useEffect(() => {
+    if (!readyKey) return;
+    return subscribeOpenResults(() => {
+      const held = openResult(readyKey, kind);
+      const shown = stateRef.current;
+      if (!held || !live.current || shown.status !== 'ready' || shown.key !== readyKey || shown.result === held) return;
+      setState({ status: 'ready', key: readyKey, result: held });
+      // Saved from the Save case sheet: the website's "Case saved" confirmation.
+      if (!shown.result.savedId && held.savedId) setNotice(`${t('generate.saved')}. ${t('generate.savedDesc')}`, 'success');
+    });
+  }, [kind, readyKey, setNotice, t]);
 
   const result = state.status === 'ready' ? state.result : null;
   const resultDebateId = result?.debateId ?? null;
@@ -187,33 +207,11 @@ export function useResultDocument<K extends ResultKind>(kind: K, id: string) {
     }
   }, [kind, result, router, setNotice, state, t, userId]);
 
-  /** Saves an unsaved case outside any debate, as the website's Save button. */
-  const save = useCallback(async () => {
-    if (state.status !== 'ready' || state.result.savedId || state.result.kind !== 'case' || !userId) return;
-    const forUser = userId;
-    const { key, result: open } = state;
-    const title = await promptText({
-      title: t('generate.saveCase'),
-      message: t('generate.savePrompt'),
-      defaultValue: open.title,
-      confirm: t('common.save'),
-      cancel: t('common.cancel'),
-    });
-    if (!title?.trim() || !live.current || owner.current !== forUser) return;
-    setBusy(true);
-    try {
-      const savedId = await saveCase(forUser, title.trim(), open.output as OpenResult<'case'>['output']);
-      updateOpenResult(key, { savedId, title: title.trim() });
-      if (!live.current) return;
-      setState({ status: 'ready', key, result: { ...open, savedId, title: title.trim() } });
-      setNotice(t('generate.saved'));
-    } catch (cause) {
-      console.warn('Could not save the case:', cause instanceof Error ? cause.message : cause);
-      setNotice(t('generate.saveFailedDesc'));
-    } finally {
-      if (live.current) setBusy(false);
-    }
-  }, [setNotice, state, t, userId]);
+  /** Saves an unsaved case outside any debate with a title, as the website's Save button and dialog. */
+  const save = useCallback(() => {
+    if (state.status !== 'ready' || state.result.savedId || state.result.kind !== 'case') return;
+    router.push({ pathname: '/save-case', params: { key: state.key } });
+  }, [router, state]);
 
   const undoAutoSaved = useCallback(async () => {
     if (!userId || !autoSavedFor || autoSavedFor.ids.length === 0) return;
@@ -237,5 +235,5 @@ export function useResultDocument<K extends ResultKind>(kind: K, id: string) {
     }
   }, [autoSavedFor, loadAutoSaved, setNotice, t, userId]);
 
-  return { state, library, autoSaved, notice, setNotice, busy, remove, save, undoAutoSaved };
+  return { state, library, autoSaved, notice, noticeTone, setNotice, busy, remove, save, undoAutoSaved };
 }

@@ -4,6 +4,7 @@ import {
   MAX_CROSSFIRE_ARGUMENT_CHARS,
   MAX_CROSSFIRE_RESOLUTION_CHARS,
   MAX_CROSSFIRE_TURN_CHARS,
+  type CrossfirePrefill,
   type CrossfireState,
   type CrossfireTurn,
 } from '@debatelab/core/crossfire/schemas';
@@ -20,6 +21,8 @@ import { DocumentHeader } from '@/components/document-header';
 import { Field } from '@/components/field';
 import { FormGroup, SwitchRow } from '@/components/form-rows';
 import { Icon } from '@/components/icon';
+import { ContextLine } from '@/components/context-line';
+import { SessionCostNote } from '@/components/session-cost-note';
 import { LiveTopBar, RoundIconButton } from '@/components/round-controls';
 import { SegmentedControl } from '@/components/segmented-control';
 import { Text } from '@/components/text';
@@ -28,12 +31,14 @@ import { ToolTitle, WorkingIn } from '@/components/tool-form';
 import { abortError, AIError, isAbortError, type ResponseExtras, untilAborted } from '@/lib/ai-request';
 import { useAuth } from '@/lib/auth';
 import { backLabel } from '@/lib/back-label';
+import { resetContextChoices } from '@/lib/context-plan';
 import { buildDebateContext } from '@/lib/context-request';
 import {
   countActiveSources,
   crossfireContext,
   crossfireDebrief,
   crossfireDraft,
+  crossfirePrefill,
   CrossfireResponseError,
   crossfireSignal,
   crossfireTurn,
@@ -42,6 +47,8 @@ import {
 } from '@/lib/crossfire';
 import { useDebates } from '@/lib/debate-context';
 import { fetchFeatureConfig } from '@/lib/feature-config';
+import { openRefusal } from '@/lib/refusal';
+import { sessionQuotaRefusal, useSessionQuota } from '@/lib/session-quota';
 import { decideMotionTarget, shouldPrefillMotion } from '@/lib/motion';
 import { chooseMotionTarget } from '@/lib/motion-gate';
 import { keepSourceAssessments } from '@/lib/results';
@@ -57,8 +64,11 @@ type ErrorKind = 'timeout' | 'response' | 'request';
 
 const PLAN_MESSAGES = new Set(['mobile.results.errors.trialExpired', 'mobile.results.errors.limitReached', 'mobile.results.errors.modelRestricted']);
 
-/** The round left behind, as the website's restoreState: a request that was cut off becomes one to retry. */
-function restoredState(): CrossfireState {
+/**
+ * The round left behind, as the website's restoreState: a request that was cut off becomes one to
+ * retry. A prefill from a case or an attack starts the form unless a round is still under way.
+ */
+function restoredState(prefill: CrossfirePrefill | null): CrossfireState {
   const draft = crossfireDraft.get()?.state;
   if (draft?.phase === 'active' && draft.request.status === 'pending') {
     return { ...draft, request: { status: 'failed', expectedReply: draft.request.expectedReply, errorKind: 'request', message: 'crossfire.interruptedRequest' } };
@@ -68,9 +78,9 @@ function restoredState(): CrossfireState {
   }
   if (draft?.phase === 'active' || draft?.phase === 'debriefing') return draft;
   // A form keeps its texts and goes back to the website's defaults for the rest.
-  return createCrossfireSetupState(draft?.phase === 'setup'
+  return createCrossfireSetupState(prefill ?? (draft?.phase === 'setup'
     ? { resolution: draft.config.resolution, argument: draft.config.argument, seedQuestions: draft.config.seedQuestions }
-    : undefined);
+    : undefined));
 }
 
 /** Errors are stored as translation keys, so a restored round still reads in the current language. */
@@ -102,13 +112,23 @@ export default function CrossfireScreen() {
   const { debates, current, oneOff, create, switchTo, refresh } = useDebates();
   const { outputLanguage } = useSettings();
   const { colors } = useTheme();
-  const [state, dispatch] = useReducer(crossfireReducer, undefined, restoredState);
+  // Taken once, so coming back later does not import the same case again.
+  const [imported] = useState(() => {
+    const prefill = crossfirePrefill.get();
+    crossfirePrefill.set(null);
+    return prefill;
+  });
+  const [state, dispatch] = useReducer(crossfireReducer, imported, restoredState);
+  const roundQuota = useSessionQuota('crossfire');
+  // Start waits for the round's cost; a second tap meanwhile does nothing.
+  const [checkingQuota, setCheckingQuota] = useState(false);
   // The debate chosen when the round started; null for one-off rounds.
   const debateTarget = useRef<string | null>(crossfireDraft.get()?.debateId ?? null);
   const [draftTurn, setDraftTurn] = useState('');
   const [now, setNow] = useState(() => Date.now());
   const [formError, setFormError] = useState('');
-  const [notice, setNotice] = useState('');
+  // A case or an attack opened in Crossfire while a round runs is not brought in, as on the website; say so.
+  const [notice, setNotice] = useState(() => (imported && state.phase !== 'setup' ? t('mobile.crossfire.prefillHeld') : ''));
   const [activeSources, setActiveSources] = useState<number | null>(null);
   const requestRef = useRef<AbortController | null>(null);
   // The finished round still to be recorded in its debate.
@@ -242,8 +262,10 @@ export default function CrossfireScreen() {
       if (cause instanceof AIError && cause.kind === 'debateMissing') void refresh();
       const { kind, message } = classify(cause, false);
       dispatch({ type: 'request-failed', expectedReply, errorKind: kind, message });
+      // Crossfire runs on Ask's model settings, so a model refusal switches Ask's.
+      openRefusal(router, cause, 'ask');
     }
-  }, [afterResponse, outputLanguage, refresh, requestContext]);
+  }, [afterResponse, outputLanguage, refresh, requestContext, router]);
 
   const runDebrief = useCallback(async (snapshot: Debriefing, forUser: string) => {
     requestRef.current?.abort();
@@ -263,14 +285,17 @@ export default function CrossfireScreen() {
       // The effect below saves the finished round from the state it reaches, with any signal that came in meanwhile.
       if (debateId) pendingRecord.current = { sessionId: snapshot.sessionId, forUser, debateId };
       dispatch({ type: 'debrief-received', debrief });
+      // Review choices cover the round; its last request clears them, as on the website.
+      resetContextChoices('crossfire');
       afterResponse(forUser, debateId, extras);
     } catch (cause) {
       if (controller.signal.aborted || isAbortError(cause)) return;
       if (cause instanceof AIError && cause.kind === 'debateMissing') void refresh();
       const { kind, message } = classify(cause, true);
       dispatch({ type: 'debrief-failed', errorKind: kind, message });
+      openRefusal(router, cause, 'ask');
     }
-  }, [afterResponse, outputLanguage, refresh, requestContext]);
+  }, [afterResponse, outputLanguage, refresh, requestContext, router]);
 
   // A round that finishes here is recorded in its debate once, from its latest state, as CrossfirePage does; one-off rounds are not saved.
   useEffect(() => {
@@ -320,6 +345,16 @@ export default function CrossfireScreen() {
     }
     setFormError('');
     const forUser = userId;
+    // A round the day's uses cannot cover opens the limit sheet before its clock starts, as on the website.
+    if (checkingQuota) return;
+    setCheckingQuota(true);
+    const refusal = sessionQuotaRefusal(await roundQuota.check());
+    if (!live.current) return;
+    setCheckingQuota(false);
+    if (refusal) {
+      openRefusal(router, refusal, 'ask');
+      return;
+    }
     const motion = parsed.data.resolution;
     // Where the round belongs is settled before it starts, as the website's motion gate does.
     const decision = decideMotionTarget(motion, { debates, current, oneOff });
@@ -397,9 +432,22 @@ export default function CrossfireScreen() {
       <DocumentScreen
         testID="crossfire-setup"
         header={<DocumentHeader backLabel={backLabel(t, from, 'practice')} actions={[]} />}
-        actions={<MainActionButton label={t('crossfire.start')} onPress={() => void startSession()} />}>
+        actions={<MainActionButton label={t('crossfire.start')} busy={checkingQuota} onPress={() => void startSession()} />}>
         <ToolTitle title={t('crossfire.title')} subtitle={t('crossfire.setupDescription')} />
         <WorkingIn />
+        {imported?.source ? (
+          <View style={[styles.imported, { backgroundColor: colors.tile, borderColor: colors.tileBorder }]} testID="crossfire-imported">
+            <Icon name="book" color={colors.primary} size={20} />
+            <View style={styles.importedText}>
+              <Text weight="bold" style={styles.importedTitle}>
+                {imported.source === 'generate' ? t('crossfire.importFromGenerate') : t('crossfire.importFromAttack')}
+              </Text>
+              <Text tone="secondary" style={styles.importedBody}>
+                {imported.source === 'generate' ? t('crossfire.importGenerateDesc') : t('crossfire.importAttackDesc')}
+              </Text>
+            </View>
+          </View>
+        ) : null}
         <Field
           label={t('crossfire.resolutionLabel')}
           hint={t('crossfire.resolutionHint')}
@@ -483,6 +531,8 @@ export default function CrossfireScreen() {
             disabled
           />
         </FormGroup>
+        <ContextLine feature="crossfire" side="both" includeSources={config.useSourceLibrary} />
+        <SessionCostNote quota={roundQuota.quota} />
         {formError ? (
           <Text accessibilityRole="alert" style={[styles.formError, { color: colors.destructive }]} testID="crossfire-form-error">
             {formError}
@@ -672,6 +722,10 @@ const styles = StyleSheet.create({
   argument: { minHeight: 150, paddingTop: 13, paddingBottom: 13, textAlignVertical: 'top' },
   duration: { gap: 7 },
   groupLabel: { fontSize: 14, marginLeft: 4 },
+  imported: { flexDirection: 'row', gap: 10, borderWidth: 2, borderRadius: radius.field, paddingHorizontal: 14, paddingVertical: 11 },
+  importedText: { flex: 1, gap: 2 },
+  importedTitle: { fontSize: 15.5, lineHeight: 21 },
+  importedBody: { fontSize: 14.5, lineHeight: 20 },
   seed: { fontSize: 15.5, lineHeight: 22, paddingHorizontal: 15, paddingVertical: 10 },
   formError: { fontSize: 15, lineHeight: 21, marginLeft: 4 },
   subtitle: { fontSize: 15.5, lineHeight: 22, marginTop: -6 },

@@ -4,6 +4,7 @@ import type { TFunction } from 'i18next';
 import i18n from '@/i18n';
 import { APP_LANGUAGES, type AppLanguage } from '@/lib/languages';
 import type { GenerateOutput } from '@/lib/ai/schemas/generate';
+import { caseHasFlowchart as coreCaseHasFlowchart, flowchartFromCase as coreFlowchartFromCase, flowEdgeOfKind } from '@debatelab/core/flowchart';
 import type { FlowchartData } from '@/lib/stores/session-store';
 
 export type NodeType = 'thesis' | 'contention' | 'attack' | 'rebuttal' | 'dropped';
@@ -135,16 +136,7 @@ const EDGE_STYLES: Record<EdgeKind, { stroke: string; dash?: string }> = {
 };
 
 export function edgeOfKind(kind: EdgeKind, source: string, target: string, t: TFunction): Edge {
-    const style = EDGE_STYLES[kind];
-    return {
-        id: `e-${source}-${target}`,
-        source,
-        target,
-        label: String(t(EDGE_LABEL_KEYS[kind])),
-        data: { kind },
-        style: { stroke: style.stroke, strokeWidth: 2, ...(style.dash ? { strokeDasharray: style.dash } : {}) },
-        markerEnd: { type: MarkerType.ArrowClosed },
-    };
+    return flowEdgeOfKind(kind, source, target, t) as Edge;
 }
 
 function appNode(id: string, x: number, y: number, type: NodeType, t: TFunction, text: {
@@ -190,100 +182,13 @@ export function starterFlowchart(t: TFunction): FlowchartData {
 }
 
 /** A generated case has what a flowchart needs: a thesis and at least one contention. */
-export const caseHasFlowchart = (result: GenerateOutput | null | undefined): result is GenerateOutput =>
-    Boolean(result?.caseStructure?.thesis && result.contentions?.length);
-
-const NODE_GAP_X = 300;
-const ROW_GAP_Y = 150;
-const PER_ROW = 4;
-
-// Each tier wraps into rows of four, so a large case still fits a phone at a readable zoom.
-function placeTier(count: number, top: number) {
-    const centerX = 400;
-    const position = (i: number) => {
-        const row = Math.floor(i / PER_ROW);
-        const inRow = Math.min(PER_ROW, count - row * PER_ROW);
-        return { x: centerX + ((i % PER_ROW) - (inRow - 1) / 2) * NODE_GAP_X, y: top + row * ROW_GAP_Y };
-    };
-    return { position, bottom: top + Math.max(1, Math.ceil(count / PER_ROW)) * ROW_GAP_Y + 50 };
-}
-
-const words = (text: string) => new Set(text.toLowerCase().match(/\p{L}{4,}/gu) ?? []);
-
-/**
- * The predicted argument a counter answers: the one its target quotes, else the one
- * sharing the most words with it, else the argument at the same position.
- */
-function answeredAttack(target: string | undefined, attacks: string[], index: number): number {
-    const wanted = target?.trim().toLowerCase() ?? '';
-    const candidates = attacks.map((argument, i) => ({ i, text: argument.trim().toLowerCase() })).filter(({ text }) => text);
-    if (wanted) {
-        const exact = candidates.find(({ text }) => text === wanted)
-            ?? candidates.find(({ text }) => wanted.length >= 12 && (text.includes(wanted) || (text.length >= 12 && wanted.includes(text))));
-        if (exact) return exact.i;
-        const targetWords = words(wanted);
-        // Two shared words, so one filler word such as "their" decides nothing.
-        let best = { i: -1, shared: 1 };
-        for (const { i, text } of candidates) {
-            const shared = [...words(text)].filter((word) => targetWords.has(word)).length;
-            if (shared > best.shared) best = { i, shared };
-        }
-        if (best.i >= 0) return best.i;
-    }
-    return attacks[index]?.trim() ? index : -1;
-}
+export const caseHasFlowchart = (result: GenerateOutput | null | undefined): result is GenerateOutput => coreCaseHasFlowchart(result);
 
 /**
  * Maps a generated case onto the canvas: the thesis, one node per contention with
  * its claim and evidence, the predicted opposing arguments, and the counters.
+ * Shared with the iOS app (packages/core/src/flowchart.ts).
  */
 export function flowchartFromCase(result: GenerateOutput, t: TFunction): FlowchartData {
-    const nodes: Node<FlowNodeData>[] = [];
-    const edges: Edge[] = [];
-
-    nodes.push(appNode('thesis', 400, 50, 'thesis', t, { labelKey: 'flowchart.fromCase.thesis', description: result.caseStructure.thesis }));
-
-    const contentions = result.contentions;
-    const contentionTier = placeTier(contentions.length, 230);
-    contentions.forEach((contention, i) => {
-        const id = `c-${i}`;
-        const { x, y } = contentionTier.position(i);
-        nodes.push(appNode(id, x, y, 'contention', t, {
-            labelKey: 'flowchart.fromCase.argument',
-            labelNumber: i + 1,
-            description: [contention.claim, contention.evidence].filter((part) => part?.trim()).join('\n'),
-            strength: 'strong',
-        }));
-        edges.push({ id: `e-thesis-${id}`, source: 'thesis', target: id, markerEnd: { type: MarkerType.ArrowClosed } });
-    });
-
-    const attacks = result.predictedOpponentCase?.likelyArguments ?? [];
-    const attackTier = placeTier(attacks.length, contentionTier.bottom);
-    attacks.forEach((argument, i) => {
-        const id = `a-${i}`;
-        const { x, y } = attackTier.position(i);
-        nodes.push(appNode(id, x, y, 'attack', t, {
-            labelKey: 'flowchart.fromCase.attack',
-            labelNumber: i + 1,
-            description: argument,
-        }));
-        edges.push(edgeOfKind('attack', contentions.length ? `c-${i % contentions.length}` : 'thesis', id, t));
-    });
-
-    // A counter answers one of their arguments, so it hangs off that attack.
-    const counters = result.counters ?? [];
-    const counterTier = placeTier(counters.length, attackTier.bottom);
-    counters.forEach((counter, i) => {
-        const id = `r-${i}`;
-        const attackIndex = answeredAttack(counter.targetArgument, attacks, i);
-        const { x, y } = counterTier.position(i);
-        nodes.push(appNode(id, x, y, 'rebuttal', t, {
-            labelKey: 'flowchart.fromCase.rebuttal',
-            labelNumber: i + 1,
-            description: counter.rebuttal || counter.counterpoint,
-        }));
-        edges.push(edgeOfKind('rebuttal', attackIndex >= 0 ? `a-${attackIndex}` : 'thesis', id, t));
-    });
-
-    return { nodes, edges };
+    return coreFlowchartFromCase(result, t) as unknown as FlowchartData;
 }

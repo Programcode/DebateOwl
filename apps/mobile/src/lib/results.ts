@@ -6,6 +6,7 @@ import {
   type ResultWithSources,
 } from '@debatelab/core/ai/discovered-sources';
 import { transformBrainstormResponse } from '@debatelab/core/ai/brainstorm-output';
+import type { LiveGeneration } from '@debatelab/core/ai/live';
 import { factoidsRequestInput, selectVerifiedFactoids } from '@debatelab/core/ai/factoids-output';
 import { expectedContentionCount, transformGenerateResponse } from '@debatelab/core/ai/generate-output';
 import { AttackOutputSchema, type AttackInput, type AttackOutput } from '@debatelab/core/ai/schemas/attack';
@@ -15,10 +16,11 @@ import { GenerateOutputSchema, type GenerateInput, type GenerateOutput } from '@
 import type { SourceAssessmentUpdate } from '@debatelab/core/ai/source-assessments';
 import type { DebateContextRequest } from '@debatelab/core/contract/debate-context';
 
-import { AIError, functionOutput, postFunction, PROVIDER, responseExtras, type ResponseExtras } from './ai-request';
+import { AIError, postAI, PROVIDER, responseExtras, type ResponseExtras } from './ai-request';
 import type { FeatureConfig } from './feature-config';
 import { debateListScopes, deletedListScopes } from './debates';
-import { afterWrite, cachedRead, readFailed, type CopyMark } from './offline-cache';
+import { forgetText } from './context-texts';
+import { afterWrite, cachedRead, readFailed, updateCopy, type CopyMark } from './offline-cache';
 import { saveResearchedSource, applySourceAssessments, fetchSourceIdsInFolder, removeSource } from './sources';
 import { supabase } from './supabase';
 
@@ -61,6 +63,8 @@ interface RequestOptions {
   /** Absent for one-off work. */
   debateContext?: DebateContextRequest;
   signal?: AbortSignal;
+  /** Stream the answer, as the website's tools do, and show it as it is written. */
+  live?: LiveGeneration;
 }
 
 function requestBody(feature: Feature, input: Record<string, unknown>, options: RequestOptions) {
@@ -78,8 +82,7 @@ function requestBody(feature: Feature, input: Record<string, unknown>, options: 
 
 /** A generated case, checked like the website checks it and stamped with the local time and motion. */
 export function generateCase(input: GenerateInput, options: RequestOptions): Promise<ResultWithSources<GenerateOutput> & ResponseExtras> {
-  return postFunction('ai', requestBody('generate', input, options), options.signal, async (response) => {
-    const { output, data } = await functionOutput(response);
+  return postAI(requestBody('generate', input, options), options, ({ output, data }) => {
     const parsed = GenerateOutputSchema.safeParse(transformGenerateResponse(output as Record<string, unknown>));
     if (!parsed.success) throw new AIError('failed', 'AI response did not match the expected generate schema.');
     const result = parsed.data;
@@ -93,8 +96,7 @@ export function generateCase(input: GenerateInput, options: RequestOptions): Pro
 }
 
 export function attackCase(input: AttackInput, options: RequestOptions): Promise<ResultWithSources<AttackOutput> & ResponseExtras> {
-  return postFunction('ai', requestBody('attack', input, options), options.signal, async (response) => {
-    const { output, data } = await functionOutput(response);
+  return postAI(requestBody('attack', input, options), options, ({ output, data }) => {
     const parsed = AttackOutputSchema.safeParse(output);
     if (!parsed.success) throw new AIError('failed', 'AI response did not match the expected attack schema.');
     return { result: parsed.data, discoveredSources: parseDiscoveredSources(data.discoveredSources), ...responseExtras(data) };
@@ -102,8 +104,7 @@ export function attackCase(input: AttackInput, options: RequestOptions): Promise
 }
 
 export function brainstormIdeas(input: BrainstormInput, options: RequestOptions): Promise<ResultWithSources<BrainstormOutput> & ResponseExtras> {
-  return postFunction('ai', requestBody('brainstorm', input, options), options.signal, async (response) => {
-    const { output, data } = await functionOutput(response);
+  return postAI(requestBody('brainstorm', input, options), options, ({ output, data }) => {
     const result = readBrainstorm(output);
     if (!result) throw new AIError('failed', 'AI response did not match the expected brainstorm schema.');
     return {
@@ -116,8 +117,7 @@ export function brainstormIdeas(input: BrainstormInput, options: RequestOptions)
 
 /** Factoids, as the website asks for them: verified ones only, up to the number of sources chosen. */
 export function findFactoids(input: FactoidsInput, options: RequestOptions): Promise<ResultWithSources<FactoidsOutput> & ResponseExtras> {
-  return postFunction('ai', requestBody('factoids', factoidsRequestInput(input), options), options.signal, async (response) => {
-    const { output, data } = await functionOutput(response);
+  return postAI(requestBody('factoids', factoidsRequestInput(input), options), options, ({ output, data }) => {
     const parsed = FactoidsOutputSchema.safeParse(output);
     if (!parsed.success) throw new AIError('failed', 'AI response did not match the expected factoids schema.');
     return {
@@ -239,6 +239,16 @@ export async function recordResult<K extends ResultKind>(
   if (error || !data) throw new Error(error?.message ?? `Could not save the ${kind}`);
   afterWrite(userId, debateListScopes(record.debateId, kind));
   return (data as { id: string }).id;
+}
+
+/** Replaces a saved result's output, as the website's updateRecordedResult after a regenerated section. */
+export async function updateResult<K extends ResultKind>(userId: string, kind: K, id: string, output: OutputFor[K]): Promise<void> {
+  const { data, error } = await supabase.from(TABLES[kind]).update({ output }).eq('user_id', userId).eq('id', id).select('id');
+  if (error) throw new Error(error.message);
+  if (!data || data.length === 0) throw new Error(`The ${kind} is no longer saved`);
+  // The saved copy reads the new output offline too, and the debate context reads it again.
+  updateCopy<SavedResult<K> | null>(userId, `result:${kind}`, id, (copy) => (copy ? { ...copy, output } : copy));
+  forgetText(`${kind}:${id}`);
 }
 
 /** Saves a case outside any debate, as the website's Save button does for unrecorded work. */

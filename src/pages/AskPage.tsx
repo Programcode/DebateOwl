@@ -1,5 +1,6 @@
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import { askDisplayContent, askMessageWithFiles, isAskTextFile, type AskFileContent } from '@debatelab/core/ai/ask-files';
 import { useSessionStore } from '@/lib/stores/session-store';
 import { useAuth } from '@/lib/supabase/AuthProvider';
 import { useSettingsStore } from '@/lib/stores/settings-store';
@@ -171,48 +172,24 @@ export default function AskPage() {
     const requestId = requestIdRef.current;
     const isCurrentRequest = () => requestIdRef.current === requestId;
 
-    let displayContent = message;
-    if (files && files.length > 0) {
-      displayContent += `\n\n[Attachments: ${files.map(f => f.name).join(', ')}]`;
-    }
+    const displayContent = askDisplayContent(message, (files ?? []).map((file) => file.name));
 
     try {
-      let fileContext = "";
-      if (files && files.length > 0) {
-        const textExtensions = new Set([
-          'txt', 'md', 'markdown', 'csv', 'json', 'yaml', 'yml', 'xml',
-          'html', 'css', 'scss', 'js', 'jsx', 'ts', 'tsx', 'py', 'java',
-          'c', 'cpp', 'h', 'hpp'
-        ]);
-        const isTextFile = (file: File) => {
-          if (file.type?.startsWith('text/')) return true;
-          if (file.type === 'application/json') return true;
-          const ext = file.name.split('.').pop()?.toLowerCase();
-          return ext ? textExtensions.has(ext) : false;
-        };
-
-        const contents = await Promise.all(files.map(file => {
-          if (!isTextFile(file)) {
-            const typeLabel = file.type || 'unknown';
-            return Promise.resolve(`FILE: ${file.name} - binary skipped (type: ${typeLabel})\n`);
-          }
-          return new Promise<string>((resolve) => {
-            const reader = new FileReader();
-            reader.onload = (e) => {
-              const text = typeof e.target?.result === 'string' ? e.target.result : '';
-              resolve(`FILE: ${file.name}\nCONTENT:\n${text}\n\n`);
-            };
-            reader.onerror = () => resolve(`[Error reading ${file.name}]\n`);
-            reader.readAsText(file);
-          });
-        }));
-        fileContext = contents.join('\n');
-      }
+      // The message assembly is shared with the iOS app (packages/core/src/ai/ask-files.ts).
+      const contents = await Promise.all((files ?? []).map((file): Promise<AskFileContent> => {
+        if (!isAskTextFile(file)) return Promise.resolve({ name: file.name, skipped: file.type });
+        return new Promise((resolve) => {
+          const reader = new FileReader();
+          reader.onload = (e) => resolve({ name: file.name, text: typeof e.target?.result === 'string' ? e.target.result : '' });
+          reader.onerror = () => resolve({ name: file.name, unreadable: true });
+          reader.readAsText(file);
+        });
+      }));
 
       // A retry's question is already in the chat; it is the message, not part of the history.
       const priorMessages = retry && askMessages[askMessages.length - 1]?.role === 'user' ? askMessages.slice(0, -1) : askMessages;
       const history = workspace.context ? [] : priorMessages.map(m => ({ role: m.role, content: m.content }));
-      const fullMessage = fileContext ? `CONTEXT:\n${fileContext}\n\nQUESTION: ${message}` : message;
+      const fullMessage = askMessageWithFiles(message, contents);
       if (fullMessage.length > MAX_AI_INPUT_LENGTH || !isAskMessageWithinBudget(fullMessage)) {
         setChatError({
           title: t('ask.inputTooLargeTitle', 'Message is too large'),

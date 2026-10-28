@@ -1,3 +1,4 @@
+import { attackDraftSections } from '@debatelab/core/ai/live-sections';
 import type { AttackInput } from '@debatelab/core/ai/schemas/attack';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
@@ -11,14 +12,18 @@ import { Field } from '@/components/field';
 import { FormGroup, SelectRow, SwitchRow } from '@/components/form-rows';
 import { ModelPicker } from '@/components/model-picker';
 import { Text } from '@/components/text';
-import { ToolError, ToolProgress, ToolTitle, WorkingIn } from '@/components/tool-form';
+import { ContextLine } from '@/components/context-line';
+import { LiveToolRun, useLiveRun } from '@/components/live-run';
+import { ToolError, ToolTitle, WorkingIn } from '@/components/tool-form';
 import { AIError, isAbortError, type AIErrorKind } from '@/lib/ai-request';
 import { useAuth } from '@/lib/auth';
 import { backLabel } from '@/lib/back-label';
+import { resetContextChoices } from '@/lib/context-plan';
 import { buildDebateContext } from '@/lib/context-request';
 import { useDebates } from '@/lib/debate-context';
 import { keepOpenResult, openResult } from '@/lib/open-results';
 import { caseToText } from '@/lib/result-text';
+import { openRefusal } from '@/lib/refusal';
 import { arrivalNotices, attackCase, autosaveSources, fetchResult, isCompleteCase, keepSourceAssessments, recordResult } from '@/lib/results';
 import { sessionSlot } from '@/lib/session-memory';
 import { useSettings } from '@/lib/settings';
@@ -35,8 +40,6 @@ const DEFAULT_FORM: AttackInput = {
 };
 const lastForm = sessionSlot<AttackInput>(() => DEFAULT_FORM);
 
-// The website's one progress line while the tool runs.
-const PROGRESS = ['attack.working'];
 
 /**
  * Attack, as the website's AttackPage. Opened from a case, the case's text
@@ -67,11 +70,14 @@ export default function AttackScreen() {
       return next;
     }), []);
 
+  const liveRun = useLiveRun();
+  const endLiveRun = liveRun.end;
   const abortActive = useCallback(() => {
     requests.current += 1;
     abort.current?.abort();
     abort.current = null;
-  }, []);
+    endLiveRun();
+  }, [endLiveRun]);
 
   useEffect(() => () => {
     live.current = false;
@@ -121,7 +127,15 @@ export default function AttackScreen() {
         debateId ? buildDebateContext(forUser, debateId, 'attack', 'both') : Promise.resolve(undefined),
       ]);
       if (!isCurrent()) return;
-      const { result, discoveredSources, truncated, assessments } = await attackCase(input, { config, language: outputLanguage, debateContext, signal: controller.signal });
+      const { result, discoveredSources, truncated, assessments } = await attackCase(input, {
+        config,
+        language: outputLanguage,
+        debateContext,
+        signal: controller.signal,
+        live: liveRun.begin(),
+      });
+      // Review choices cover one request, as on the website.
+      resetContextChoices('attack');
       if (!isCurrent()) return;
       const assessed = await keepSourceAssessments(forUser, debateId, assessments, controller.signal);
       if (!isCurrent()) return;
@@ -155,8 +169,11 @@ export default function AttackScreen() {
       const kind = cause instanceof AIError ? cause.kind : 'failed';
       if (!(cause instanceof AIError)) console.warn('Attack failed:', cause instanceof Error ? cause.message : cause);
       if (kind === 'debateMissing') void refresh();
-      setError(kind);
+      liveRun.end();
       setPhase('form');
+      // A limit or model refusal opens the website's dialog as a sheet, not an inline error.
+      if (openRefusal(router, cause, 'attack')) return;
+      setError(kind);
     } finally {
       if (requests.current === request) abort.current = null;
     }
@@ -172,13 +189,15 @@ export default function AttackScreen() {
       <ToolTitle title={t('nav.attack')} subtitle={t('attack.emptyDesc')} />
       <WorkingIn />
       {attacking ? (
-        <ToolProgress
-          pose="skeptical"
-          messages={PROGRESS.map((key) => t(key))}
+        <LiveToolRun
+          label={t('attack.working')}
+          run={liveRun.state}
+          sections={liveRun.state.draft ? attackDraftSections(liveRun.state.draft, t) : []}
           onCancel={() => {
             abortActive();
             setPhase('form');
           }}
+          pose="skeptical"
         />
       ) : (
         <>
@@ -236,6 +255,7 @@ export default function AttackScreen() {
             />
           </FormGroup>
           <ModelPicker feature="attack" />
+          <ContextLine feature="attack" side={'both'} />
           {error ? <ToolError title={t('attack.failed')} error={error} onRetry={() => void submit()} /> : null}
         </>
       )}

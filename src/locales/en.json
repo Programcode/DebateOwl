@@ -2780,7 +2780,9 @@
         "tooLarge": "Your question is too long. Shorten it and send it again.",
         "debateMissing": "This debate no longer exists. Pick another debate and ask again.",
         "failed": "The coach could not answer. Try again."
-      }
+      },
+      "fileTooLarge": "{{name}} is larger than 10 MB.",
+      "fileType": "{{name}} is not a text or code file. Attach text, Markdown, CSV, JSON or code files."
     },
     "prepare": {
       "saved": "Saved in this debate"
@@ -2816,7 +2818,9 @@
       "deleteBrainstormTitle": "Delete brainstorm?",
       "deleteBrainstormDesc": "This removes the brainstorm from your history.",
       "deleteFactoidsTitle": "Delete factoids?",
-      "deleteFactoidsDesc": "This removes the factoids from your history."
+      "deleteFactoidsDesc": "This removes the factoids from your history.",
+      "buildFlowchart": "Build flowchart from case",
+      "regenerateSection": "Regenerate a section"
     },
     "attack": {
       "caseRequired": "Paste or write the case you want attacked."
@@ -2828,7 +2832,8 @@
       "reset": "Reset"
     },
     "crossfire": {
-      "voiceLater": "Coming with the app build."
+      "voiceLater": "Coming with the app build.",
+      "prefillHeld": "A round is still running, so your case was not brought in. End this round, then open Crossfire from your case again."
     },
     "sparring": {
       "chooseSide": "Which side are you on?",
