@@ -16,6 +16,7 @@ import { SegmentedControl } from '@/components/segmented-control';
 import { SOURCE_ICONS, sourceMeta } from '@/components/source-display';
 import { Text } from '@/components/text';
 import { WorkRow } from '@/components/work-row';
+import { publishCurrentDebate } from '@/lib/debate-widget';
 import { useAuth } from '@/lib/auth';
 import { useDebates } from '@/lib/debate-context';
 import {
@@ -210,6 +211,10 @@ function DebateDetails({ debateId, dashboard = false }: { debateId: string; dash
   const router = useRouter();
   const { session } = useAuth();
   const userId = session?.user.id ?? null;
+  // Read when counts land, for the Home Screen widget; not a reason to load again.
+  const { current } = useDebates();
+  const currentRef = useRef(current);
+  currentRef.current = current;
   const [view, setView] = useState<DebateSide>('pro');
   const [counts, setCounts] = useState<DebateCounts | null>(null);
   const [recent, setRecent] = useState<Record<DebateSide, DebateItem[]> | null>(null);
@@ -232,6 +237,8 @@ function DebateDetails({ debateId, dashboard = false }: { debateId: string; dash
       ]);
       if (!isCurrent()) return;
       setCounts(nextCounts);
+      const shown = currentRef.current;
+      if (shown?.id === debateId) publishCurrentDebate({ debateId, motion: shown.motion, counts: nextCounts });
       setRecent({ pro, con });
       setSources(nextSources?.slice(0, DASHBOARD_SOURCES) ?? null);
       setFailed(false);
