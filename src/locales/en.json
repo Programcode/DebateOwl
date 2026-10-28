@@ -913,15 +913,15 @@
       "sampleCase": {
         "title": "Ready-to-read case",
         "openingLabel": "Opening",
-        "opening": "Today we will show two arguments that prove phones belong outside the classroom.",
+        "opening": "Two arguments show phones belong outside class.",
         "argumentLabel": "Argument",
-        "argument": "Phones break concentration: every notification pulls attention away from the lesson.",
+        "argument": "Notifications break concentration.",
         "evidenceLabel": "Evidence",
-        "evidence": "A study on how long students take to refocus after a notification, with its source and year.",
+        "evidence": "A refocus-time study, with source and year.",
         "ifTheySayLabel": "If they say…",
-        "ifTheySay": "\"Students need phones for emergencies.\" We answer: the school office can always reach families.",
+        "ifTheySay": "\"Emergencies!\" We answer: the office can call home.",
         "closingLabel": "Closing",
-        "closing": "A lesson without phones is a lesson students actually hear."
+        "closing": "No phones, lessons students hear."
       },
       "sampleCrossfireTitle": "Crossfire exchange",
       "sampleQuestionLabel": "Question",

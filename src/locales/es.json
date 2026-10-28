@@ -913,15 +913,15 @@
       "sampleCase": {
         "title": "Caso listo para leer",
         "openingLabel": "Apertura",
-        "opening": "Hoy demostraremos con dos argumentos que los teléfonos deben quedarse fuera del aula.",
+        "opening": "Dos argumentos: el móvil, fuera del aula.",
         "argumentLabel": "Argumento",
-        "argument": "El teléfono rompe la concentración: cada notificación aparta la atención de la clase.",
+        "argument": "Las notificaciones rompen la concentración.",
         "evidenceLabel": "Evidencia",
-        "evidence": "Un estudio sobre cuánto tardan los alumnos en volver a concentrarse tras una notificación, con su fuente y año.",
+        "evidence": "Un estudio sobre reconcentrarse, con fuente y año.",
         "ifTheySayLabel": "Si dicen…",
-        "ifTheySay": "«Los alumnos necesitan el teléfono para emergencias». Respondemos: la secretaría del colegio siempre puede avisar a las familias.",
+        "ifTheySay": "«¡Emergencias!». Respondemos: el colegio llama a casa.",
         "closingLabel": "Cierre",
-        "closing": "Una clase sin teléfonos es una clase que los alumnos de verdad escuchan."
+        "closing": "Sin móviles, clases que se escuchan."
       },
       "sampleCrossfireTitle": "Intercambio de interrogatorio",
       "sampleQuestionLabel": "Pregunta",

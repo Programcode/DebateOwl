@@ -111,7 +111,7 @@ const HeroPreview = () => {
         <Reveal onLoad delay={0.1} className="relative hidden w-full lg:block">
             <div className="absolute -inset-8 bg-linear-to-r from-plume-400/25 via-plume-200/20 to-[rgb(255_196_20/0.22)] blur-3xl" />
             {/* The owl points the visitor at the product. */}
-            <Owl pose="point" size={140} priority breathe={false} className="absolute -bottom-10 -left-12 z-20 -scale-x-100" />
+            <Owl pose="point" size={140} priority breathe={false} className="absolute -bottom-10 -left-24 z-20 -scale-x-100" />
             <div className="relative overflow-hidden rounded-xl border-2 border-border bg-card shadow-2xl">
                 {/* Browser chrome */}
                 <div className="flex items-center border-b-2 border-border px-5 py-3">
@@ -122,7 +122,8 @@ const HeroPreview = () => {
                     </div>
                 </div>
 
-                <div className="grid grid-cols-1 gap-4 bg-background p-5 lg:grid-cols-[1.05fr_0.95fr]">
+                {/* Stacked: the case sample needs the full width for its five sections. */}
+                <div className="grid grid-cols-1 gap-4 bg-background p-5">
                     <div className="space-y-4 rounded-lg border-2 border-border bg-card p-4">
                         <div className="flex items-center justify-between gap-3">
                             <p className="font-display text-lg font-[600] text-heading">{t(`features.${mode}`)}</p>

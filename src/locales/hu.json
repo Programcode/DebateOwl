@@ -913,15 +913,15 @@
       "sampleCase": {
         "title": "Felolvasható eset",
         "openingLabel": "Nyitás",
-        "opening": "Ma két érvvel bizonyítjuk, hogy a telefonok helye az osztálytermen kívül van.",
+        "opening": "Két érv: a telefon helye az órán kívül van.",
         "argumentLabel": "Érv",
-        "argument": "A telefon megtöri a figyelmet: minden értesítés elviszi a figyelmet az óráról.",
+        "argument": "Az értesítések megtörik a figyelmet.",
         "evidenceLabel": "Bizonyíték",
-        "evidence": "Egy kutatás arról, mennyi idő alatt koncentrálnak újra a diákok egy értesítés után, forrással és évszámmal.",
+        "evidence": "Kutatás az újrafókuszálásról, forrással, évszámmal.",
         "ifTheySayLabel": "Ha azt mondják…",
-        "ifTheySay": "„A diákoknak vészhelyzetre kell a telefon.” Válaszunk: az iskola titkársága mindig eléri a családokat.",
+        "ifTheySay": "„Vészhelyzet!” Válaszunk: a titkárság hazatelefonál.",
         "closingLabel": "Zárás",
-        "closing": "A telefon nélküli óra az, amire a diákok tényleg odafigyelnek."
+        "closing": "Telefon nélkül figyelnek a diákok."
       },
       "sampleCrossfireTitle": "Keresztkérdezési párbeszéd",
       "sampleQuestionLabel": "Kérdés",
