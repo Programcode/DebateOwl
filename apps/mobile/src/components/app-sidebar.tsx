@@ -47,16 +47,31 @@ function tabUnder(stack: AnyState | undefined): string | undefined {
 }
 
 /** Which sections the student closed; kept on the device, as iPadOS keeps a sidebar's sections. */
+// The closed sections as last read or set, so a sidebar drawn again (a rotation) starts from them.
+let knownCollapsed: ReadonlySet<string> | null = null;
+
+/**
+ * Which sections the student closed; kept on the device, as iPadOS keeps a sidebar's sections.
+ * `loaded` stays false until the stored choice is read, so a closed section never flashes open.
+ */
 function useCollapsedSections() {
-  const [collapsed, setCollapsed] = useState<ReadonlySet<string>>(new Set());
+  const [collapsed, setCollapsed] = useState<ReadonlySet<string>>(() => knownCollapsed ?? new Set());
+  const [loaded, setLoaded] = useState(knownCollapsed !== null);
   useEffect(() => {
+    if (knownCollapsed !== null) return;
     let live = true;
     AsyncStorage.getItem(COLLAPSED_KEY)
       .then((value) => {
         const keys: unknown = value ? JSON.parse(value) : [];
-        if (live && Array.isArray(keys)) setCollapsed(new Set(keys.filter((key): key is string => typeof key === 'string')));
+        knownCollapsed = new Set(Array.isArray(keys) ? keys.filter((key): key is string => typeof key === 'string') : []);
+        if (live) setCollapsed(knownCollapsed);
       })
-      .catch(() => undefined);
+      .catch(() => {
+        knownCollapsed = new Set();
+      })
+      .finally(() => {
+        if (live) setLoaded(true);
+      });
     return () => {
       live = false;
     };
@@ -66,10 +81,11 @@ function useCollapsedSections() {
       const next = new Set(previous);
       if (next.has(key)) next.delete(key);
       else next.add(key);
+      knownCollapsed = next;
       AsyncStorage.setItem(COLLAPSED_KEY, JSON.stringify([...next])).catch(() => undefined);
       return next;
     });
-  return { collapsed, toggle };
+  return { collapsed, loaded, toggle };
 }
 
 /**
@@ -87,7 +103,7 @@ export function AppSidebar({ width }: { width: number }) {
   const navigation = useNavigationContainerRef();
   const pathname = usePathname();
   const { current, oneOff } = useDebates();
-  const { collapsed, toggle } = useCollapsedSections();
+  const { collapsed, loaded, toggle } = useCollapsedSections();
   const active = activeSidebarItem(pathname);
 
   const open = async (item: SidebarItem) => {
@@ -177,6 +193,7 @@ export function AppSidebar({ width }: { width: number }) {
             key={section.key}
             section={section}
             expanded={!collapsed.has(section.key)}
+            loaded={loaded}
             active={active}
             onToggle={() => toggleSection(section.key)}
             onOpen={(item) => void open(item)}
@@ -193,8 +210,11 @@ function SidebarGroup({
   active,
   onToggle,
   onOpen,
+  loaded,
 }: {
   section: SidebarSection;
+  /** False until the closed sections are read: rows wait, so a closed section never flashes open. */
+  loaded: boolean;
   expanded: boolean;
   active: string | null;
   onToggle: () => void;
@@ -213,6 +233,11 @@ function SidebarGroup({
     turn.set(reduce ? (expanded ? 1 : 0) : withSpring(expanded ? 1 : 0, SPRING.pop));
   }, [expanded, reduce, turn]);
   const chevron = useAnimatedStyle(() => ({ transform: [{ rotate: `${turn.value * 90}deg` }] }));
+  // Rows shown when the sidebar first appears are simply there; rows a tap opens slide in.
+  const [opened, setOpened] = useState(false);
+  useEffect(() => {
+    if (loaded) setOpened(true);
+  }, [loaded]);
   return (
     <Animated.View layout={LinearTransition.duration(DURATION.fast)} style={styles.group} testID={`sidebar-section-${section.key}`}>
       {/* A heading for VoiceOver's rotor that also opens and closes the section, as iPadOS sidebar headers do. */}
@@ -235,13 +260,13 @@ function SidebarGroup({
           <Icon name="chevronRight" color={colors.primary} size={18} />
         </Animated.View>
       </Pressable>
-      {expanded
+      {expanded && loaded
         ? section.items.map((item, index) => {
             const selected = item.key === active;
             return (
               <Animated.View
                 key={item.key}
-                entering={FadeInUp.delay(index * 25).duration(DURATION.fast)}
+                entering={opened ? FadeInUp.delay(index * 25).duration(DURATION.fast) : undefined}
                 exiting={FadeOutUp.duration(DURATION.quick)}
                 layout={LinearTransition.duration(DURATION.fast)}>
               <PressScale

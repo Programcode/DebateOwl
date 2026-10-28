@@ -87,28 +87,29 @@ export function LibraryHeader({ title, onAdd, disabled, sort, onSort, filter, on
           style={[styles.round, { backgroundColor: colors.primaryFill }, disabled && styles.disabled]}>
           <Icon name="plus" color={colors.onPrimary} size={24} />
         </Pressable>
+        {/* Under the buttons, wherever a large text size puts them. */}
+        {open === 'add' ? (
+          <View accessibilityRole="menu" style={[styles.menu, { backgroundColor: colors.card, borderColor: colors.line }]}>
+            {add.map((item, index) => row(item, index > 0))}
+          </View>
+        ) : null}
+        {open === 'more' ? (
+          <View accessibilityRole="menu" testID="library-more-menu" style={[styles.menu, styles.moreMenu, { backgroundColor: colors.card, borderColor: colors.line }]}>
+            <ScrollView>
+              {sections.map((section, index) => (
+                <View key={section.title ?? index} style={index > 0 && { borderTopWidth: 6, borderTopColor: colors.line }}>
+                  {section.title ? (
+                    <Text tone="faint" weight="semibold" style={styles.section} maxFontSizeMultiplier={MENU_MAX_FONT_SCALE}>
+                      {section.title}
+                    </Text>
+                  ) : null}
+                  {section.items.map((item, itemIndex) => row(item, itemIndex > 0 || Boolean(section.title)))}
+                </View>
+              ))}
+            </ScrollView>
+          </View>
+        ) : null}
       </View>
-      {open === 'add' ? (
-        <View accessibilityRole="menu" style={[styles.menu, { backgroundColor: colors.card, borderColor: colors.line }]}>
-          {add.map((item, index) => row(item, index > 0))}
-        </View>
-      ) : null}
-      {open === 'more' ? (
-        <View accessibilityRole="menu" testID="library-more-menu" style={[styles.menu, styles.moreMenu, { backgroundColor: colors.card, borderColor: colors.line }]}>
-          <ScrollView>
-            {sections.map((section, index) => (
-              <View key={section.title ?? index} style={index > 0 && { borderTopWidth: 6, borderTopColor: colors.line }}>
-                {section.title ? (
-                  <Text tone="faint" weight="semibold" style={styles.section} maxFontSizeMultiplier={MENU_MAX_FONT_SCALE}>
-                    {section.title}
-                  </Text>
-                ) : null}
-                {section.items.map((item, itemIndex) => row(item, itemIndex > 0 || Boolean(section.title)))}
-              </View>
-            ))}
-          </ScrollView>
-        </View>
-      ) : null}
     </View>
   );
 }
@@ -121,7 +122,8 @@ const styles = StyleSheet.create({
   disabled: { opacity: 0.5 },
   menu: {
     position: 'absolute',
-    top: 50,
+    top: '100%',
+    marginTop: 8,
     right: 0,
     width: 272,
     borderRadius: 16,
