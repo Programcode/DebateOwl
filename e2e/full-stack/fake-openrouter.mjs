@@ -78,7 +78,7 @@ const counter = (index) => ({
 // R2's answers are full spoken blocks the speaker underlines and builds on.
 const r2Answer = (index) => ({
   ...counter(index),
-  counterpoint: `${MARK} answer ${index + 1}: that is not what the numbers show. Fare collection itself costs a large share of what it brings in, so the real gap is far smaller than they say (UITP, 2024). For a family on a low income, that difference is the bus to work or the walk. This is exactly our first argument: fares shut out the people who need transit most. If the money were really the problem, why do cities that dropped fares keep them dropped?`,
+  counterpoint: `${MARK} answer ${index + 1}: that is not what the numbers show. Fare collection itself costs a large share of what it brings in, so the real gap is far smaller than they say (UITP, 2024). Low-income households already spend more of their budget on transport than anyone else (Eurostat, 2023). For a family on a low income, that difference is the bus to work or the walk. If the money were really the problem, why do cities that dropped fares keep them dropped? This is exactly our first argument: fares shut out the people who need transit most.`,
   source: "UITP, 2024",
 });
 
@@ -92,8 +92,8 @@ const generate = (user) => {
   const count = { brief: 2, standard: 3, comprehensive: 4 }[length] ?? 3;
   const conc = role === "conc";
   const r2 = role === "r2";
-  // R2: one full answer for each of their 2-3 likely arguments.
-  const answers = length === "brief" ? 2 : 3;
+  // R2: one full answer for each thing they are likely to say.
+  const answers = length === "brief" ? 5 : 6;
   return {
     opening: {
       hook: `${MARK} opening hook: picture a nurse who skips the night bus because the fare is a tenth of her shift's pay.`,

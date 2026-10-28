@@ -193,13 +193,13 @@ test("gen-roles: the speaker role shapes the case: Introductor, R2 and Conclusor
   for (const item of r2.reinforce ?? []) await expect(page.getByText(item.text).first()).toBeVisible();
   await expect(page.getByRole("button", { name: "Regenerate If they say…" })).toBeVisible();
   await expect(page.getByText("They say", { exact: true })).toHaveCount(r2.counters.length);
-  // One full answer for each of their 2-3 likely arguments: standard length
-  // asks for three, and the Edge Function keeps a live reply with at least two.
+  // One full answer for each thing they are likely to say: standard length
+  // asks for six, and the Edge Function keeps a live reply with at least four.
   if (LIVE) {
-    expect(r2.counters.length).toBeGreaterThanOrEqual(2);
-    expect(r2.counters.length).toBeLessThanOrEqual(3);
+    expect(r2.counters.length).toBeGreaterThanOrEqual(4);
+    expect(r2.counters.length).toBeLessThanOrEqual(6);
   } else {
-    expect(r2.counters).toHaveLength(3);
+    expect(r2.counters).toHaveLength(6);
   }
   await evidence.shot("02-r2");
   await evidence.aria("02-r2");

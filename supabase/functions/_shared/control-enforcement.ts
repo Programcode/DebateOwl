@@ -191,12 +191,13 @@ export function enforceGenerateControls(output: unknown, side: string, format: s
         item && typeof item === "object" && typeof (item as { text?: unknown }).text === "string" && (item as { text: string }).text.trim())
       : [];
     const answers = Array.isArray(generateOutput.counters) ? generateOutput.counters : [];
-    // One full answer for each of their 2-3 likely arguments.
-    const target = length === "brief" ? 2 : 3;
+    // One full answer for each thing they are likely to say: their main
+    // arguments, supporting points and answers to our case.
+    const target = length === "brief" ? 5 : 6;
     if (reinforce.length < 1) {
       throw new Error("Generate response returned no reinforce items, but R2 must back up the team's arguments.");
     }
-    if (answers.length < 2) {
+    if (answers.length < 4) {
       throw new Error(`Generate response returned ${answers.length} counters, but R2 needs ${target}.`);
     }
     generateOutput.reinforce = reinforce.slice(0, 3);
