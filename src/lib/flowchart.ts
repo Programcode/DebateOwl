@@ -4,6 +4,7 @@ import type { TFunction } from 'i18next';
 import i18n from '@/i18n';
 import { APP_LANGUAGES, type AppLanguage } from '@/lib/languages';
 import type { GenerateOutput } from '@/lib/ai/schemas/generate';
+import { readCase } from '@debatelab/core/ai/case-view';
 import type { FlowchartData } from '@/lib/stores/session-store';
 
 export type NodeType = 'thesis' | 'contention' | 'attack' | 'rebuttal' | 'dropped';
@@ -189,9 +190,9 @@ export function starterFlowchart(t: TFunction): FlowchartData {
     };
 }
 
-/** A generated case has what a flowchart needs: a thesis and at least one contention. */
+/** A generated case has what a flowchart needs: a thesis and an argument, R2's backed-up arguments, or a Conclusor's reasons why we win. */
 export const caseHasFlowchart = (result: GenerateOutput | null | undefined): result is GenerateOutput =>
-    Boolean(result?.caseStructure?.thesis && result.contentions?.length);
+    Boolean(result?.caseStructure?.thesis && (result.contentions?.length || result.reinforce?.length || result.whyWeWin?.length));
 
 const NODE_GAP_X = 300;
 const ROW_GAP_Y = 150;
@@ -234,30 +235,38 @@ function answeredAttack(target: string | undefined, attacks: string[], index: nu
 }
 
 /**
- * Maps a generated case onto the canvas: the thesis, one node per contention with
- * its claim and evidence, the predicted opposing arguments, and the counters.
+ * Maps a generated case onto the canvas: the thesis, one node per argument with
+ * its title, point and evidence (R2's backed-up arguments or a Conclusor's
+ * reasons why we win stand in for arguments), what the other side will say, and our answers.
  */
 export function flowchartFromCase(result: GenerateOutput, t: TFunction): FlowchartData {
     const nodes: Node<FlowNodeData>[] = [];
     const edges: Edge[] = [];
+    const view = readCase(result);
 
     nodes.push(appNode('thesis', 400, 50, 'thesis', t, { labelKey: 'flowchart.fromCase.thesis', description: result.caseStructure.thesis }));
 
-    const contentions = result.contentions;
-    const contentionTier = placeTier(contentions.length, 230);
-    contentions.forEach((contention, i) => {
+    const points = view.arguments.length
+        ? view.arguments.map((argument) => [argument.title, argument.point, argument.evidence].filter(Boolean).join('\n'))
+        : view.reinforce.length
+            ? view.reinforce.map((item) => [item.argument, item.text].filter(Boolean).join('\n'))
+            : view.whyWeWin;
+    const contentionTier = placeTier(points.length, 230);
+    points.forEach((description, i) => {
         const id = `c-${i}`;
         const { x, y } = contentionTier.position(i);
         nodes.push(appNode(id, x, y, 'contention', t, {
             labelKey: 'flowchart.fromCase.argument',
             labelNumber: i + 1,
-            description: [contention.claim, contention.evidence].filter((part) => part?.trim()).join('\n'),
+            description,
             strength: 'strong',
         }));
         edges.push({ id: `e-thesis-${id}`, source: 'thesis', target: id, markerEnd: { type: MarkerType.ArrowClosed } });
     });
 
-    const attacks = result.predictedOpponentCase?.likelyArguments ?? [];
+    // Older cases listed the opposing arguments; newer ones name each in "If they say…".
+    const listed = (result.predictedOpponentCase?.likelyArguments ?? []).filter((argument) => argument?.trim());
+    const attacks = listed.length ? listed : view.ifTheySay.map((answer) => answer.theySay).filter(Boolean);
     const attackTier = placeTier(attacks.length, contentionTier.bottom);
     attacks.forEach((argument, i) => {
         const id = `a-${i}`;
@@ -267,20 +276,20 @@ export function flowchartFromCase(result: GenerateOutput, t: TFunction): Flowcha
             labelNumber: i + 1,
             description: argument,
         }));
-        edges.push(edgeOfKind('attack', contentions.length ? `c-${i % contentions.length}` : 'thesis', id, t));
+        edges.push(edgeOfKind('attack', points.length ? `c-${i % points.length}` : 'thesis', id, t));
     });
 
-    // A counter answers one of their arguments, so it hangs off that attack.
-    const counters = result.counters ?? [];
-    const counterTier = placeTier(counters.length, attackTier.bottom);
-    counters.forEach((counter, i) => {
+    // An answer replies to one of their arguments, so it hangs off that attack.
+    const answers = view.ifTheySay;
+    const counterTier = placeTier(answers.length, attackTier.bottom);
+    answers.forEach((answer, i) => {
         const id = `r-${i}`;
-        const attackIndex = answeredAttack(counter.targetArgument, attacks, i);
+        const attackIndex = answeredAttack(answer.theySay, attacks, i);
         const { x, y } = counterTier.position(i);
         nodes.push(appNode(id, x, y, 'rebuttal', t, {
             labelKey: 'flowchart.fromCase.rebuttal',
             labelNumber: i + 1,
-            description: counter.rebuttal || counter.counterpoint,
+            description: answer.inRound ?? answer.weAnswer,
         }));
         edges.push(edgeOfKind('rebuttal', attackIndex >= 0 ? `a-${attackIndex}` : 'thesis', id, t));
     });

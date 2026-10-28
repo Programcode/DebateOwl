@@ -294,26 +294,43 @@ function createDocumentBuilder() {
 // GENERATE MODE
 // ============================================================
 interface GenerateData {
-    caseStructure?: { thesis?: string; framework?: string; burdenOfProof?: string };
-    contentions?: { claim?: string; reasoning?: string; evidence?: string; impact?: string }[];
-    predictedOpponentCase?: { likelyArguments?: string[] };
-    counters?: { targetArgument?: string; counterpoint?: string; rebuttal?: string }[];
-    metadata?: { side?: string; format?: string; generatedAt?: string };
+    opening?: { hook?: string; definition?: string };
     exordio?: { hook?: string; transition?: string };
+    caseStructure?: { thesis?: string; framework?: string; burdenOfProof?: string; keyDefinitions?: string[] };
+    contentions?: { title?: string; claim?: string; reasoning?: string; evidence?: string; impact?: string }[];
+    predictedOpponentCase?: { likelyArguments?: string[] };
+    counters?: { targetArgument?: string; counterpoint?: string; rebuttal?: string; source?: string }[];
+    reinforce?: { argument?: string; text?: string }[];
+    whyWeWin?: string[];
+    closingLine?: string;
+    sources?: { org?: string; year?: string; claim?: string; url?: string }[];
+    metadata?: { side?: string; format?: string; generatedAt?: string };
 }
 
-function buildGenerateContent(data: GenerateData) {
+function present(value: unknown): string | undefined {
+    return typeof value === 'string' && value.trim() ? value.trim() : undefined;
+}
+
+function presentList(value: unknown): string[] {
+    return Array.isArray(value) ? value.map(present).filter((item): item is string => Boolean(item)) : [];
+}
+
+// Mirrors readCase in packages/core/src/ai/case-view.ts: new cases have an
+// opening, arguments (or R2's backed-up arguments, or the Conclusor's reasons
+// why we win), "If they say…", a closing line and sources. Older saved cases
+// keep extra sections, which appear under plain names only when they have content.
+export function buildGenerateContent(data: GenerateData) {
     const {
         requests, insertText, applyTitle, applySubtitle,
         applySectionHeader, applySubHeader, applyLabel, applyBody, applyBullet, applyEmphasis
     } = createDocumentBuilder();
 
-    const thesis = data.caseStructure?.thesis?.trim() || 'Untitled Thesis';
+    const roadmap = present(data.caseStructure?.thesis) || 'Untitled case';
     const motion = (data.metadata as Record<string, unknown>)?.motion as string | undefined;
-    const thesisTitle = motion || (thesis.length > 200 ? thesis.substring(0, 197) + '...' : thesis);
+    const caseTitle = motion || (roadmap.length > 200 ? roadmap.substring(0, 197) + '...' : roadmap);
 
     // Title - Centered, large, bold
-    const titleRange = insertText(`${thesisTitle}\n`);
+    const titleRange = insertText(`${caseTitle}\n`);
     applyTitle(titleRange);
 
     // Metadata - Centered subtitle
@@ -323,109 +340,102 @@ function buildGenerateContent(data: GenerateData) {
     const metaRange = insertText(`${side} • ${format} • ${date}\n`);
     applySubtitle(metaRange);
 
-    // Exordio Section (if present)
-    if (data.exordio && (data.exordio.hook || data.exordio.transition)) {
-        const exordioSectionRange = insertText('Exordio\n');
-        applySectionHeader(exordioSectionRange);
-        if (data.exordio.hook) {
-            const hookLabel = insertText('Hook: ');
-            applyLabel(hookLabel);
-            applyBody(insertText(`${data.exordio.hook}\n`));
-        }
-        if (data.exordio.transition) {
-            const transitionLabel = insertText('Transition: ');
-            applyLabel(transitionLabel);
-            applyBody(insertText(`${data.exordio.transition}\n`));
-        }
-    }
+    const section = (title: string) => applySectionHeader(insertText(`${title}\n`));
+    const labelled = (label: string, text: string | undefined) => {
+        if (!text) return;
+        applyLabel(insertText(`${label}: `));
+        applyBody(insertText(`${text}\n`));
+    };
+    const bullets = (items: string[]) => items.forEach((item) => applyBullet(insertText(`• ${item}\n`)));
 
-    // Thesis Section
-    const thesisSectionRange = insertText('Thesis\n');
-    applySectionHeader(thesisSectionRange);
-    const thesisBodyRange = insertText(`${thesis}\n`);
-    applyEmphasis(thesisBodyRange);
+    // Opening
+    const hook = present(data.opening?.hook)
+        ?? ([present(data.exordio?.hook), present(data.exordio?.transition)].filter(Boolean).join(' ') || undefined);
+    section('Opening');
+    if (hook) applyBody(insertText(`${hook}\n`));
+    labelled('What we mean', present(data.opening?.definition));
+    applyEmphasis(insertText(`${roadmap}\n`));
+    labelled('How to judge this debate', present(data.caseStructure?.framework));
+    labelled('What we have to show', present(data.caseStructure?.burdenOfProof));
+    const definitions = presentList(data.caseStructure?.keyDefinitions);
+    if (definitions.length) labelled('What we mean by the motion', definitions.join('; '));
 
-    // Framework Section
-    const framework = data.caseStructure?.framework?.trim() || 'No framework provided.';
-    const frameworkSectionRange = insertText('Framework\n');
-    applySectionHeader(frameworkSectionRange);
-    applyBody(insertText(`${framework}\n`));
-
-    // Burden of Proof Section
-    const burden = data.caseStructure?.burdenOfProof?.trim() || 'No burden of proof provided.';
-    const burdenSectionRange = insertText('Burden of Proof\n');
-    applySectionHeader(burdenSectionRange);
-    applyBody(insertText(`${burden}\n`));
-
-    // Contentions Section
-    const contentionsSectionRange = insertText('Arguments\n');
-    applySectionHeader(contentionsSectionRange);
-    const contentions = data.contentions || [];
-    if (contentions.length === 0) {
-        applyBody(insertText('No arguments provided.\n'));
-    } else {
+    // Arguments
+    const contentions = Array.isArray(data.contentions) ? data.contentions : [];
+    if (contentions.length) {
+        section('Arguments');
         contentions.forEach((c, i) => {
-            // Contention header with number
-            const claimRange = insertText(`Argument ${i + 1}: ${c?.claim || 'Untitled'}\n`);
-            applySubHeader(claimRange);
-
-            // Labeled body content
-            if (c?.reasoning) {
-                const reasonLabel = insertText('Reasoning: ');
-                applyLabel(reasonLabel);
-                applyBody(insertText(`${c.reasoning}\n`));
-            }
-            if (c?.evidence) {
-                const evidenceLabel = insertText('Evidence: ');
-                applyLabel(evidenceLabel);
-                applyBody(insertText(`${c.evidence}\n`));
-            }
-            if (c?.impact) {
-                const impactLabel = insertText('Impact: ');
-                applyLabel(impactLabel);
-                applyBody(insertText(`${c.impact}\n`));
-            }
+            const title = present(c?.title);
+            const point = present(c?.claim);
+            applySubHeader(insertText(`Argument ${i + 1}: ${title ?? point ?? 'Untitled'}\n`));
+            if (title) labelled('Point', point);
+            labelled('Explanation', present(c?.reasoning));
+            labelled('Evidence', present(c?.evidence));
+            labelled('Why it matters', present(c?.impact));
         });
     }
 
-    // Predicted Opponent Case Section
-    const predictedSectionRange = insertText('Predicted Opponent Case\n');
-    applySectionHeader(predictedSectionRange);
-    const likelyArgs = data.predictedOpponentCase?.likelyArguments || [];
-    if (likelyArgs.length === 0) {
-        applyBody(insertText('No predicted arguments.\n'));
-    } else {
-        likelyArgs.forEach(arg => {
-            const bulletRange = insertText(`• ${arg}\n`);
-            applyBullet(bulletRange);
+    // R2: the team's earlier arguments, backed up, instead of new ones
+    const reinforce = (Array.isArray(data.reinforce) ? data.reinforce : []).filter((item) => present(item?.text));
+    if (reinforce.length) {
+        section('Backing up our case');
+        reinforce.forEach((item) => {
+            const argument = present(item?.argument);
+            if (argument) applySubHeader(insertText(`${argument}\n`));
+            applyBody(insertText(`${present(item?.text)}\n`));
         });
     }
 
-    // Prepared Counters Section
-    const countersSectionRange = insertText('Prepared Counters\n');
-    applySectionHeader(countersSectionRange);
-    const counters = data.counters || [];
-    if (counters.length === 0) {
-        applyBody(insertText('No counters provided.\n'));
-    } else {
-        counters.forEach((c, i) => {
-            const targetRange = insertText(`Counter ${i + 1}: ${c?.targetArgument || 'Unknown Target'}\n`);
-            applySubHeader(targetRange);
-
-            if (c?.counterpoint) {
-                const counterLabel = insertText('Counterpoint: ');
-                applyLabel(counterLabel);
-                applyBody(insertText(`${c.counterpoint}\n`));
-            }
-            if (c?.rebuttal) {
-                const rebuttalLabel = insertText('Rebuttal: ');
-                applyLabel(rebuttalLabel);
-                applyBody(insertText(`${c.rebuttal}\n`));
-            }
-        });
+    // Conclusor: why we win
+    const reasons = presentList(data.whyWeWin);
+    if (reasons.length) {
+        section('Why we win');
+        reasons.forEach((reason, i) => applyBody(insertText(`${i + 1}. ${reason}\n`)));
     }
 
-    return { requests, title: `Debate Case: ${thesisTitle}` };
+    // If they say…
+    const counters = (Array.isArray(data.counters) ? data.counters : [])
+        .filter((c) => present(c?.targetArgument) || present(c?.counterpoint) || present(c?.rebuttal));
+    const answered = new Set(counters.map((c) => present(c?.targetArgument)?.toLowerCase()));
+    const likelyArgs = presentList(data.predictedOpponentCase?.likelyArguments)
+        .filter((argument) => !answered.has(argument.toLowerCase()));
+    if (counters.length || likelyArgs.length) {
+        section('If they say…');
+        counters.forEach((c) => {
+            const counterpoint = present(c?.counterpoint);
+            const rebuttal = present(c?.rebuttal);
+            applySubHeader(insertText(`They say: ${present(c?.targetArgument) ?? ''}\n`));
+            labelled('We answer', counterpoint ?? rebuttal);
+            if (counterpoint && rebuttal && rebuttal !== counterpoint) labelled('Say it like this', rebuttal);
+            labelled('Source', present(c?.source));
+        });
+        if (likelyArgs.length) {
+            applySubHeader(insertText('They may also say\n'));
+            bullets(likelyArgs);
+        }
+    }
+
+    const closingLine = present(data.closingLine);
+    if (closingLine) {
+        section('Closing line');
+        applyEmphasis(insertText(`${closingLine}\n`));
+    }
+
+    const sources = (Array.isArray(data.sources) ? data.sources : []).flatMap((source) => {
+        const org = present(source?.org);
+        const year = present(source?.year);
+        const claim = present(source?.claim);
+        const url = present(source?.url);
+        const label = [org, year && `(${year})`].filter(Boolean).join(' ');
+        const line = [label, claim, url && /^https?:\/\//i.test(url) ? url : undefined].filter(Boolean).join(' – ');
+        return line ? [line] : [];
+    });
+    if (sources.length) {
+        section('Sources');
+        bullets(sources);
+    }
+
+    return { requests, title: `Debate Case: ${caseTitle}` };
 }
 
 // ============================================================

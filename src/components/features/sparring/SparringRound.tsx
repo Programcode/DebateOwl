@@ -51,10 +51,10 @@ function wordCount(value: string) {
 }
 
 const SCHOOL_ROLE_GUIDANCE: Partial<Record<SparringTurnKind, string>> = {
-  introductor: 'Open with an exordio, define the key terms, set the framework and thesis, then give the roadmap. Save the full arguments for R1.',
-  r1: 'Build the core arguments with claims, warrants, support, and impacts. Use the final part to anticipate or answer the strongest opposition.',
-  r2: 'Extend R1, answer the opponent directly, identify the central clashes, and compare the impacts. Do not simply repeat the case.',
-  conclusor: 'Add no new arguments. Crystallize the decisive clashes, weigh the round, and close with the reason your side wins.',
+  introductor: 'Open with a hook, say "we will show N arguments that prove…", and give each argument in short form. Explain a motion word in one line only if it is unclear. Save the full arguments for R1.',
+  r1: 'Build the arguments in full: the point, why it is true, evidence with its source and year, and why it matters. Use the last part to answer what they are most likely to say.',
+  r2: 'Bring no new arguments. Spend about 2 minutes backing up your team\'s arguments, then about 4 minutes answering theirs: "If they say…, we answer…".',
+  conclusor: 'Add no new arguments. Give two or three reasons your side won, then end with one clear closing line.',
 };
 
 export function SparringRound({

@@ -46,9 +46,7 @@ const SAME_AS_ENGLISH: Record<string, string[]> = {
     'hu tools:motions.wordingHouse',
     'hu tools:flow.letter',
   ],
-  'Exordio, the rhetoric term, and unit abbreviations': [
-    'es translation:generateResults.exordio', 'hu translation:generateResults.exordio',
-    'es translation:export.exordio', 'hu translation:export.exordio',
+  'Unit abbreviations': [
     'es translation:generateResults.durationMs', 'hu translation:generateResults.durationMs',
     'es translation:crossfire.duration3m', 'es translation:crossfire.duration5m', 'es translation:crossfire.duration8m',
   ],

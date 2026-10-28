@@ -2,27 +2,39 @@ import type { TFunction } from 'i18next';
 import type { BrainstormOutput, Idea } from '@/lib/ai/schemas/brainstorm';
 import type { FactoidsOutput } from '@/lib/ai/schemas/factoids';
 import type { GenerateOutput } from '@/lib/ai/schemas/generate';
+import { readCase, sourceLine } from '@debatelab/core/ai/case-view';
 
 // Plain-text versions of tool results for the Clipboard button, in what each result view shows.
 
 export function caseText(result: GenerateOutput): string {
+  const view = readCase(result);
   const lines: string[] = [];
-  lines.push(`THESIS: ${result.caseStructure?.thesis || ''}`);
-  lines.push(`FRAMEWORK: ${result.caseStructure?.framework || ''}`);
-  lines.push('');
-  result.contentions?.forEach((c, i) => {
-    lines.push(`CONTENTION #${i + 1}: ${c.claim}`);
-    lines.push(`  Reasoning: ${c.reasoning}`);
-    lines.push(`  Evidence: ${c.evidence}`);
-    lines.push(`  Impact: ${c.impact}`);
-    lines.push('');
+  const block = (title: string, body: string[]) => {
+    if (!body.length) return;
+    if (lines.length) lines.push('');
+    lines.push(title, ...body);
+  };
+  block('OPENING:', [
+    view.opening.hook,
+    view.opening.definition && `What we mean: ${view.opening.definition}`,
+    view.opening.roadmap,
+    view.legacy.framework && `How to judge this debate: ${view.legacy.framework}`,
+    view.legacy.burdenOfProof && `What we have to show: ${view.legacy.burdenOfProof}`,
+  ].filter((line): line is string => Boolean(line)).map((line) => `  ${line}`));
+  view.arguments.forEach((argument, i) => {
+    block(`ARGUMENT ${i + 1}: ${argument.title ?? argument.point}`, [
+      argument.title && argument.point && `  Point: ${argument.point}`,
+      argument.explanation && `  Explanation: ${argument.explanation}`,
+      argument.evidence && `  Evidence: ${argument.evidence}`,
+      argument.whyItMatters && `  Why it matters: ${argument.whyItMatters}`,
+    ].filter((line): line is string => Boolean(line)));
   });
-  if (result.counters?.length) {
-    lines.push('PREPARED COUNTERS:');
-    result.counters.forEach(c => {
-      lines.push(`  vs "${c.targetArgument}": ${c.counterpoint}`);
-    });
-  }
+  view.reinforce.forEach((item, i) => block(`BACKING UP ${item.argument || `ARGUMENT ${i + 1}`}:`, [`  ${item.text}`]));
+  block('WHY WE WIN:', view.whyWeWin.map((reason, i) => `  ${i + 1}. ${reason}`));
+  block('IF THEY SAY...', view.ifTheySay.map((answer) =>
+    `  "${answer.theySay}" -> ${answer.weAnswer}${answer.inRound ? ` ${answer.inRound}` : ''}${answer.source ? ` (${answer.source})` : ''}`));
+  if (view.closingLine) block('CLOSING LINE:', [`  ${view.closingLine}`]);
+  block('SOURCES:', view.sources.map((source) => `  - ${sourceLine(source)}`));
   return lines.join('\n');
 }
 
