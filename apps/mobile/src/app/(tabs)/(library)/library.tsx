@@ -250,6 +250,7 @@ function LibraryBody({ library, selectedId, onSelect }: { library: Library; sele
   const router = useRouter();
   const toast = useToast();
   const actions = useSourceActions();
+  const activeWrites = useRef({ seq: 0, latest: new Map<string, number>(), confirmed: new Map<string, boolean>() });
   const { sources, failed, folders, folder, inFolder, visible, patch, userId, debateId } = library;
 
   if (failed && !sources) {
@@ -267,15 +268,28 @@ function LibraryBody({ library, selectedId, onSelect }: { library: Library; sele
   const active = sources.filter((source) => source.isActive).length;
   const chipFolders = Array.from(new Set([...folders, ...sources.map((source) => source.folder)])).sort();
 
+  // The newest change to each source decides what shows, as the website's switch queue does: a
+  // failure that a newer tap already replaced changes nothing, and otherwise the row goes back to
+  // the last value the server accepted, not to what showed when it was tapped.
   const toggle = async (targets: Source[], isActive: boolean, inFolderName?: string) => {
+    const writes = activeWrites.current;
+    const seq = ++writes.seq;
     const ids = targets.map((source) => source.id);
-    const before = new Map(targets.map((source) => [source.id, source.isActive]));
+    for (const source of targets) {
+      if (!writes.confirmed.has(source.id)) writes.confirmed.set(source.id, source.isActive);
+      writes.latest.set(source.id, seq);
+    }
     patch(ids, { isActive });
     const saved = await actions.setActive(targets, isActive, inFolderName);
-    if (!saved) {
-      // Back to how it was, as on the website.
-      library.setSources((previous) => previous?.map((source) => (before.has(source.id) ? { ...source, isActive: before.get(source.id)! } : source)) ?? previous);
+    const back = new Map<string, boolean>();
+    for (const id of ids) {
+      if (saved) writes.confirmed.set(id, isActive);
+      if (writes.latest.get(id) !== seq) continue;
+      writes.latest.delete(id);
+      if (!saved) back.set(id, writes.confirmed.get(id) ?? !isActive);
+      writes.confirmed.delete(id);
     }
+    if (back.size > 0) library.setSources((previous) => previous?.map((source) => (back.has(source.id) ? { ...source, isActive: back.get(source.id)! } : source)) ?? previous);
   };
 
   const remove = async (source: Source) => {

@@ -131,92 +131,100 @@ export function SourceRow({
           </Text>
         </Pressable>
       )}>
-      <Link
-        href={{ pathname: '/source/[id]', params: { id: source.id } }}
-        asChild
-        onPress={(event) => {
-          if (!selectInstead) return;
-          event.preventDefault();
-          actions.onOpen();
-        }}>
-        <Link.Trigger>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel={t('mobile.common.openItem', { title })}
-            accessibilityState={selected ? { selected } : undefined}
-            accessibilityActions={[
-              { name: 'toggle', label: toggleLabel },
-              { name: 'delete', label: t('common.delete') },
-            ]}
-            onAccessibilityAction={(event) => {
-              if (event.nativeEvent.actionName === 'toggle') toggle();
-              if (event.nativeEvent.actionName === 'delete') void remove();
-            }}
-            testID="source-row"
-            style={{ backgroundColor: selected ? colors.tile : colors.card }}>
-            {({ pressed }) => (
-              <View style={[styles.row, pressed && styles.pressed]}>
-                <View style={!source.isActive && styles.off}>
-                  <IconTile name={SOURCE_ICONS[source.type]} size={42} />
+      {/* The switch sits beside the link, not in it, so turning a source on or off never opens it. */}
+      <View style={[styles.row, { backgroundColor: selected ? colors.tile : colors.card }]}>
+        <Link
+          href={{ pathname: '/source/[id]', params: { id: source.id } }}
+          asChild
+          onPress={(event) => {
+            if (!selectInstead) return;
+            event.preventDefault();
+            actions.onOpen();
+          }}>
+          <Link.Trigger>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={t('mobile.common.openItem', { title })}
+              accessibilityState={selected ? { selected } : undefined}
+              accessibilityActions={[
+                { name: 'toggle', label: toggleLabel },
+                { name: 'delete', label: t('common.delete') },
+              ]}
+              onAccessibilityAction={(event) => {
+                if (event.nativeEvent.actionName === 'toggle') toggle();
+                if (event.nativeEvent.actionName === 'delete') void remove();
+              }}
+              testID="source-row"
+              // One flat style object: inside a Link's slot the web preview hands it to the DOM as is.
+              style={{ flex: 1 }}>
+              {({ pressed }) => (
+                <View style={[styles.content, pressed && styles.pressed]}>
+                  <View style={!source.isActive && styles.off}>
+                    <IconTile name={SOURCE_ICONS[source.type]} size={42} />
+                  </View>
+                  <View style={[styles.rowText, !source.isActive && styles.off]}>
+                    <Text weight="semibold" style={[styles.rowTitle, selected && { color: colors.chipSelectedForeground }]} numberOfLines={2}>
+                      {title}
+                    </Text>
+                    <Text tone="faint" style={styles.rowMeta} numberOfLines={3}>
+                      {source.isActive ? sourceMeta(t, source) : `${t('mobile.library.turnedOff')} · ${sourceMeta(t, source)}`}
+                    </Text>
+                    <QualityBadges source={source} showFolder={showFolder} compact={compact} />
+                  </View>
                 </View>
-                <View style={[styles.rowText, !source.isActive && styles.off]}>
-                  <Text weight="semibold" style={[styles.rowTitle, selected && { color: colors.chipSelectedForeground }]} numberOfLines={2}>
-                    {title}
-                  </Text>
-                  <Text tone="faint" style={styles.rowMeta} numberOfLines={3}>
-                    {source.isActive ? sourceMeta(t, source) : `${t('mobile.library.turnedOff')} · ${sourceMeta(t, source)}`}
-                  </Text>
-                  <QualityBadges source={source} showFolder={showFolder} compact={compact} />
-                </View>
-                <Switch
-                  value={source.isActive}
-                  onValueChange={(value) => {
-                    haptics.tap();
-                    actions.onToggle(value);
-                  }}
-                  accessibilityLabel={t('libraryPage.toggleSourceLabel', { title })}
-                  trackColor={{ true: colors.primaryFill, false: colors.segmentTrack }}
-                  ios_backgroundColor={colors.segmentTrack}
-                  thumbColor="#FFFFFF"
-                  testID="source-active"
-                  {...WEB_SWITCH_THUMB}
-                />
-              </View>
-            )}
-          </Pressable>
-        </Link.Trigger>
-        <Link.Preview />
-        <Link.Menu>
-          <Link.MenuAction icon="doc.text" onPress={actions.onOpen}>
-            {t('mobile.library.open')}
-          </Link.MenuAction>
-          <Link.MenuAction icon={source.isActive ? 'xmark.shield' : 'checkmark.shield'} onPress={toggle}>
-            {toggleLabel}
-          </Link.MenuAction>
-          <Link.Menu title={t('mobile.library.moveTo')} icon="folder">
-            {folders.map((folder) => (
-              <Link.MenuAction key={folder} isOn={folder === source.folder} onPress={() => actions.onMove(folder)}>
-                {folderLabel(t, folder)}
-              </Link.MenuAction>
-            ))}
+              )}
+            </Pressable>
+          </Link.Trigger>
+          <Link.Preview />
+          <Link.Menu>
+            <Link.MenuAction icon="doc.text" onPress={actions.onOpen}>
+              {t('mobile.library.open')}
+            </Link.MenuAction>
+            <Link.MenuAction icon={source.isActive ? 'xmark.shield' : 'checkmark.shield'} onPress={toggle}>
+              {toggleLabel}
+            </Link.MenuAction>
+            <Link.Menu title={t('mobile.library.moveTo')} icon="folder">
+              {folders.map((folder) => (
+                <Link.MenuAction key={folder} isOn={folder === source.folder} onPress={() => actions.onMove(folder)}>
+                  {folderLabel(t, folder)}
+                </Link.MenuAction>
+              ))}
+            </Link.Menu>
+            <Link.MenuAction icon="doc.on.doc" onPress={actions.onCopy}>
+              {t('common.copy')}
+            </Link.MenuAction>
+            <Link.MenuAction icon="square.and.arrow.up" onPress={actions.onShare}>
+              {t('mobile.library.share')}
+            </Link.MenuAction>
+            <Link.MenuAction icon="trash" destructive onPress={() => void remove()}>
+              {t('common.delete')}
+            </Link.MenuAction>
           </Link.Menu>
-          <Link.MenuAction icon="doc.on.doc" onPress={actions.onCopy}>
-            {t('common.copy')}
-          </Link.MenuAction>
-          <Link.MenuAction icon="square.and.arrow.up" onPress={actions.onShare}>
-            {t('mobile.library.share')}
-          </Link.MenuAction>
-          <Link.MenuAction icon="trash" destructive onPress={() => void remove()}>
-            {t('common.delete')}
-          </Link.MenuAction>
-        </Link.Menu>
-      </Link>
+        </Link>
+        <View style={styles.switch}>
+          <Switch
+            value={source.isActive}
+            onValueChange={(value) => {
+              haptics.tap();
+              actions.onToggle(value);
+            }}
+            accessibilityLabel={t('libraryPage.toggleSourceLabel', { title })}
+            trackColor={{ true: colors.primaryFill, false: colors.segmentTrack }}
+            ios_backgroundColor={colors.segmentTrack}
+            thumbColor="#FFFFFF"
+            testID="source-active"
+            {...WEB_SWITCH_THUMB}
+          />
+        </View>
+      </View>
     </ReanimatedSwipeable>
   );
 }
 
 const styles = StyleSheet.create({
-  row: { flexDirection: 'row', alignItems: 'center', gap: 13, paddingVertical: 12, paddingHorizontal: 14 },
+  row: { flexDirection: 'row', alignItems: 'center' },
+  content: { flexDirection: 'row', alignItems: 'center', gap: 13, paddingVertical: 12, paddingLeft: 14, paddingRight: 8 },
+  switch: { paddingRight: 14, paddingVertical: 12, justifyContent: 'center' },
   rowText: { flex: 1, gap: 2 },
   rowTitle: { fontSize: 16 },
   rowMeta: { fontSize: 14 },

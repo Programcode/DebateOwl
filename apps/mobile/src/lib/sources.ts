@@ -340,6 +340,8 @@ export async function deleteFolder(userId: string, debateId: string, name: strin
 // Every change to whether sources are on reaches the server in the order the
 // student made it, as the website's source switch queue does.
 const activeWrites: SerialQueue = createSerialQueue();
+// Other screens hear about switch changes once the queue is idle, so a reload never lands between two taps.
+let activePending = 0;
 
 /**
  * Turns sources on or off for AI grounding: one source's switch, or every
@@ -347,10 +349,14 @@ const activeWrites: SerialQueue = createSerialQueue();
  */
 export function setSourcesActive(userId: string, debateId: string, ids: string[], isActive: boolean): Promise<void> {
   if (ids.length === 0) return Promise.resolve();
+  activePending += 1;
   return activeWrites(async () => {
     const { error } = await supabase.from('sources').update({ is_active: isActive }).eq('user_id', userId).eq('debate_id', debateId).in('id', ids);
     if (error) throw new Error(error.message);
     afterWrite(userId, [{ group: 'sources', key: debateId }, ...ids.map((id) => ({ group: 'source' as const, key: id }))]);
+  }).finally(() => {
+    activePending -= 1;
+    if (activePending === 0) notifySourcesChanged();
   });
 }
 

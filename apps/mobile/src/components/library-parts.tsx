@@ -40,9 +40,11 @@ export function GroundingBanner({ active }: { active: boolean }) {
 }
 
 /**
- * The website's Folder actions for the folder picked in the chips: one switch
- * turns every source in it on or off for the AI, and the menu renames
- * (or merges) and deletes it. General can only be switched.
+ * The website's Folder actions for the folder picked in the chips. The switch
+ * is on while any source in it is on, so one tap turns a mixed folder off and
+ * the next turns it all on; the menu has the website's Activate and
+ * Deactivate, and renames (or merges) and deletes it. General cannot be
+ * renamed or deleted.
  */
 export function FolderBar({
   folder,
@@ -61,7 +63,7 @@ export function FolderBar({
   const { colors } = useTheme();
   const [menu, setMenu] = useState(false);
   const active = sources.filter((source) => source.isActive).length;
-  const allOn = sources.length > 0 && active === sources.length;
+  const anyOn = active > 0;
   const editable = folder !== GENERAL_FOLDER;
   const name = folderLabel(t, folder);
   return (
@@ -78,7 +80,7 @@ export function FolderBar({
         </Text>
       </View>
       <Switch
-        value={allOn}
+        value={anyOn}
         disabled={sources.length === 0}
         onValueChange={(value) => {
           haptics.tap();
@@ -91,27 +93,37 @@ export function FolderBar({
         testID="folder-active"
         {...WEB_SWITCH_THUMB}
       />
-      {editable ? (
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel={t('libraryPage.folderActions')}
-          hitSlop={8}
-          onPress={() => setMenu(true)}
-          testID="folder-menu"
-          style={({ pressed }) => [styles.more, { backgroundColor: colors.segmentTrack }, pressed && styles.pressed]}>
-          <Icon name="more" color={colors.secondary} size={20} />
-        </Pressable>
-      ) : null}
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel={t('libraryPage.folderActions')}
+        hitSlop={8}
+        onPress={() => setMenu(true)}
+        testID="folder-menu"
+        style={({ pressed }) => [styles.more, { backgroundColor: colors.segmentTrack }, pressed && styles.pressed]}>
+        <Icon name="more" color={colors.secondary} size={20} />
+      </Pressable>
       <ActionMenu
         visible={menu}
         title={name}
         items={[
-          { key: 'rename', label: t('libraryPage.renameFolder'), icon: 'pencil' },
-          { key: 'delete', label: t('common.delete'), icon: 'trash', destructive: true },
+          { key: 'on', label: t('libraryPage.activateFolder'), icon: 'shield', disabled: sources.length === 0 || active === sources.length },
+          { key: 'off', label: t('libraryPage.deactivateFolder'), icon: 'shieldOff', disabled: active === 0 },
+          ...(editable
+            ? [
+              { key: 'rename', label: t('libraryPage.renameFolder'), icon: 'pencil' as const },
+              { key: 'delete', label: t('common.delete'), icon: 'trash' as const, destructive: true },
+            ]
+            : []),
         ]}
         cancelLabel={t('common.cancel')}
         onClose={() => setMenu(false)}
-        onSelect={(key) => (key === 'rename' ? onRename() : onDelete())}
+        onSelect={(key) => {
+          if (key === 'on' || key === 'off') {
+            haptics.tap();
+            onSetActive(key === 'on');
+          } else if (key === 'rename') onRename();
+          else onDelete();
+        }}
       />
     </View>
   );

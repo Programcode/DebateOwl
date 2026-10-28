@@ -911,6 +911,14 @@ async function shootLibraryScreens(page: Page, prefix: string, problems: string[
   await settle(page);
   await shoot(page, `${prefix}-library`);
 
+  // The switch sits beside the row's link: tapping it turns the source off and on and never opens it.
+  const toggle = page.getByTestId('source-active').first();
+  for (const expected of [false, true]) {
+    await toggle.click();
+    await page.waitForFunction((on) => (document.querySelector('[data-testid="source-active"] [role="switch"]') as HTMLInputElement | null)?.checked === on, expected);
+    if (!new URL(page.url()).pathname.endsWith('/library')) throw new Error('Tapping a source switch opened the source');
+  }
+
   await page.getByTestId('library-more').click();
   await page.getByTestId('library-more-menu').waitFor();
   await shoot(page, `${prefix}-library-more`);
