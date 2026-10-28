@@ -1,6 +1,8 @@
 import type { FeatureTab } from '@debatelab/core/ai/feature-configs';
 import type { TFunction } from 'i18next';
 
+import site from '../../../../src/config/site.json';
+
 import { AIError, type AIErrorDetails } from './ai-request';
 
 /**
@@ -9,8 +11,8 @@ import { AIError, type AIErrorDetails } from './ai-request';
  * refusal opens, and its words. The app shows them as a sheet (app/limit.tsx).
  */
 
-/** The website's TRIAL_DAYS (src/config/site.json pricing.trialDays). */
-const TRIAL_DAYS = 3;
+/** The website's TRIAL_DAYS, from the same site config. */
+const TRIAL_DAYS = site.pricing.trialDays;
 
 /** trial_expired is what functions older than the other access codes sent; it reads as trial_ended. */
 export type LimitVariant = 'limit_reached' | 'trial_ended' | 'payment_failed' | 'subscription_ended' | 'weekly_budget_reached';
