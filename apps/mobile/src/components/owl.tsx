@@ -104,7 +104,7 @@ export function OwlMark({ size }: { size: number }) {
 }
 
 /** Whether iOS's Reduce Motion is on, kept current while the screen shows. */
-function useReduceMotion(): boolean {
+export function useReduceMotion(): boolean {
   const [reduce, setReduce] = useState(false);
   useEffect(() => {
     let active = true;

@@ -39,10 +39,20 @@ export function openResult<K extends ResultKind>(key: string, kind: K): OpenResu
   return result?.kind === kind ? (result as OpenResult<K>) : undefined;
 }
 
-export function updateOpenResult(key: string, patch: Partial<Pick<OpenResult, 'savedId' | 'title'>>) {
+const listeners = new Set<() => void>();
+
+/** Called whenever a held result changes, so a document open on it shows the change. */
+export function subscribeOpenResults(listener: () => void): () => void {
+  listeners.add(listener);
+  return () => listeners.delete(listener);
+}
+
+export function updateOpenResult<K extends ResultKind>(key: string, patch: Partial<Pick<OpenResult<K>, 'savedId' | 'title' | 'output' | 'sources'>>) {
   const results = store.get();
   const result = results.get(key);
-  if (result) results.set(key, { ...result, ...patch });
+  if (!result) return;
+  results.set(key, { ...result, ...patch } as OpenResult);
+  listeners.forEach((listener) => listener());
 }
 
 export function forgetOpenResult(key: string) {

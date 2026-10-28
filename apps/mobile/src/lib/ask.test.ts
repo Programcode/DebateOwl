@@ -15,6 +15,7 @@ describe('askOnce', () => {
     const controller = new AbortController();
     const request = askOnce({
       message: 'Why ban homework?',
+      mode: 'general',
       history: [],
       options: { citationMode: false, webSearch: false, prosConsMode: false, argumentMapMode: false },
       config: { model: 'test-model', reasoningEffort: 'low' },

@@ -15,16 +15,21 @@ export function Chip({
   selected,
   icon,
   leading,
+  trailing,
   onPress,
   accessibilityRole = 'button',
+  accessibilityLabel,
   testID,
 }: {
   label: string;
   selected?: boolean;
   icon?: IconName;
   leading?: ReactNode;
+  /** After the label, such as a remove mark. */
+  trailing?: ReactNode;
   onPress: () => void;
-  accessibilityRole?: 'button' | 'switch' | 'tab';
+  accessibilityRole?: 'button' | 'switch' | 'tab' | 'radio';
+  accessibilityLabel?: string;
   testID?: string;
 }) {
   const { colors } = useTheme();
@@ -32,9 +37,10 @@ export function Chip({
   return (
     <Pressable
       accessibilityRole={accessibilityRole}
-      accessibilityState={accessibilityRole === 'switch' ? { checked: Boolean(selected) } : { selected: Boolean(selected) }}
+      accessibilityLabel={accessibilityLabel}
+      accessibilityState={accessibilityRole === 'switch' || accessibilityRole === 'radio' ? { checked: Boolean(selected) } : { selected: Boolean(selected) }}
       onPress={() => {
-        // A switch chip taps; a filter or tab chip ticks like a picker.
+        // A switch chip taps; a filter, tab or radio chip ticks like a picker.
         if (accessibilityRole === 'switch') haptics.tap();
         else if (!selected) haptics.select();
         onPress();
@@ -52,6 +58,7 @@ export function Chip({
       <Text weight="medium" style={[styles.label, { color: foreground }]} numberOfLines={1}>
         {label}
       </Text>
+      {trailing}
     </Pressable>
   );
 }

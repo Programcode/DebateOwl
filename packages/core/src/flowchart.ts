@@ -341,3 +341,151 @@ export function mapRows(doc: FlowchartDocument): MapRow[] {
   for (const root of roots) visit(root, 0, null);
   return rows;
 }
+
+/** i18next's `t` with the one option the case import uses. */
+type TranslateNumbered = (key: string, options?: { n?: number }) => string;
+
+const EDGE_LABEL_KEYS: Record<FlowEdgeKind, string> = {
+  support: 'flowchart.edgeSupport',
+  attack: 'flowchart.edgeAttack',
+  rebuttal: 'flowchart.edgeRebuttal',
+};
+
+/** An edge of one kind as the website writes it: its label, its kind, its stroke, and rebuttals dashed. */
+export function flowEdgeOfKind(kind: FlowEdgeKind, source: string, target: string, t: Translate): FlowEdge {
+  return {
+    id: `e-${source}-${target}`,
+    source,
+    target,
+    label: String(t(EDGE_LABEL_KEYS[kind])),
+    data: { kind },
+    style: { stroke: FLOW_EDGE_STYLES[kind].stroke, strokeWidth: 2, ...(kind === 'rebuttal' ? { strokeDasharray: '6 4' } : {}) },
+    markerEnd: { type: 'arrowclosed' },
+  };
+}
+
+/** A node the app wrote: its label is kept as a key, so the website shows it in the reader's language. */
+function caseNode(
+  id: string,
+  position: { x: number; y: number },
+  type: FlowNodeType,
+  t: TranslateNumbered,
+  text: { labelKey: string; labelNumber?: number; description: string; strength?: FlowStrength },
+): FlowNode {
+  return {
+    id,
+    type: 'custom',
+    position,
+    data: {
+      type,
+      label: String(t(text.labelKey, { n: text.labelNumber })),
+      labelKey: text.labelKey,
+      ...(text.labelNumber !== undefined ? { labelNumber: text.labelNumber } : {}),
+      description: text.description,
+      // The case's own text is the student's, not the app's.
+      descriptionKey: null,
+      ...(text.strength ? { strength: text.strength } : {}),
+    },
+  };
+}
+
+/** The parts of a generated case a flowchart is built from. */
+export interface CaseForFlowchart {
+  caseStructure: { thesis: string };
+  contentions: { claim: string; evidence?: string }[];
+  predictedOpponentCase?: { likelyArguments?: string[] };
+  counters?: { targetArgument?: string; counterpoint?: string; rebuttal?: string }[];
+}
+
+/** A generated case has what a flowchart needs: a thesis and at least one contention. */
+export const caseHasFlowchart = (result: CaseForFlowchart | null | undefined): boolean =>
+  Boolean(result?.caseStructure?.thesis && result.contentions?.length);
+
+const NODE_GAP_X = 300;
+const ROW_GAP_Y = 150;
+const PER_ROW = 4;
+
+// Each tier wraps into rows of four, so a large case still fits a phone at a readable zoom.
+function placeTier(count: number, top: number) {
+  const centerX = 400;
+  const position = (i: number) => {
+    const row = Math.floor(i / PER_ROW);
+    const inRow = Math.min(PER_ROW, count - row * PER_ROW);
+    return { x: centerX + ((i % PER_ROW) - (inRow - 1) / 2) * NODE_GAP_X, y: top + row * ROW_GAP_Y };
+  };
+  return { position, bottom: top + Math.max(1, Math.ceil(count / PER_ROW)) * ROW_GAP_Y + 50 };
+}
+
+const words = (text: string) => new Set(text.toLowerCase().match(/\p{L}{4,}/gu) ?? []);
+
+/**
+ * The predicted argument a counter answers: the one its target quotes, else the one
+ * sharing the most words with it, else the argument at the same position.
+ */
+function answeredAttack(target: string | undefined, attacks: string[], index: number): number {
+  const wanted = target?.trim().toLowerCase() ?? '';
+  const candidates = attacks.map((argument, i) => ({ i, text: argument.trim().toLowerCase() })).filter(({ text }) => text);
+  if (wanted) {
+    const exact = candidates.find(({ text }) => text === wanted)
+      ?? candidates.find(({ text }) => wanted.length >= 12 && (text.includes(wanted) || (text.length >= 12 && wanted.includes(text))));
+    if (exact) return exact.i;
+    const targetWords = words(wanted);
+    // Two shared words, so one filler word such as "their" decides nothing.
+    let best = { i: -1, shared: 1 };
+    for (const { i, text } of candidates) {
+      const shared = [...words(text)].filter((word) => targetWords.has(word)).length;
+      if (shared > best.shared) best = { i, shared };
+    }
+    if (best.i >= 0) return best.i;
+  }
+  return attacks[index]?.trim() ? index : -1;
+}
+
+/**
+ * Maps a generated case onto a map, as the website's Flowcharts button does:
+ * the thesis, one node per contention with its claim and evidence, the
+ * predicted opposing arguments, and the counters.
+ */
+export function flowchartFromCase(result: CaseForFlowchart, t: TranslateNumbered): { nodes: FlowNode[]; edges: FlowEdge[] } {
+  const nodes: FlowNode[] = [];
+  const edges: FlowEdge[] = [];
+
+  nodes.push(caseNode('thesis', { x: 400, y: 50 }, 'thesis', t, { labelKey: 'flowchart.fromCase.thesis', description: result.caseStructure.thesis }));
+
+  const contentions = result.contentions;
+  const contentionTier = placeTier(contentions.length, 230);
+  contentions.forEach((contention, i) => {
+    const id = `c-${i}`;
+    nodes.push(caseNode(id, contentionTier.position(i), 'contention', t, {
+      labelKey: 'flowchart.fromCase.argument',
+      labelNumber: i + 1,
+      description: [contention.claim, contention.evidence].filter((part) => part?.trim()).join('\n'),
+      strength: 'strong',
+    }));
+    edges.push({ id: `e-thesis-${id}`, source: 'thesis', target: id, markerEnd: { type: 'arrowclosed' } });
+  });
+
+  const attacks = result.predictedOpponentCase?.likelyArguments ?? [];
+  const attackTier = placeTier(attacks.length, contentionTier.bottom);
+  attacks.forEach((argument, i) => {
+    const id = `a-${i}`;
+    nodes.push(caseNode(id, attackTier.position(i), 'attack', t, { labelKey: 'flowchart.fromCase.attack', labelNumber: i + 1, description: argument }));
+    edges.push(flowEdgeOfKind('attack', contentions.length ? `c-${i % contentions.length}` : 'thesis', id, t));
+  });
+
+  // A counter answers one of their arguments, so it hangs off that attack.
+  const counters = result.counters ?? [];
+  const counterTier = placeTier(counters.length, attackTier.bottom);
+  counters.forEach((counter, i) => {
+    const id = `r-${i}`;
+    const attackIndex = answeredAttack(counter.targetArgument, attacks, i);
+    nodes.push(caseNode(id, counterTier.position(i), 'rebuttal', t, {
+      labelKey: 'flowchart.fromCase.rebuttal',
+      labelNumber: i + 1,
+      description: counter.rebuttal || counter.counterpoint || '',
+    }));
+    edges.push(flowEdgeOfKind('rebuttal', attackIndex >= 0 ? `a-${attackIndex}` : 'thesis', id, t));
+  });
+
+  return { nodes, edges };
+}

@@ -11,7 +11,8 @@
  * ONLY=iphone-light-en limits a run to the combinations whose name starts with it;
  * separate several with commas (ONLY=iphone-light-en,ipad-dark-hu).
  * SCREENS=you,timer limits the signed-in screens to those groups: debate,
- * debate-check, library, prepare, practice, you, empty, ask, results, brainstorm, factoids,
+ * debate-check, library, prepare, practice, you, empty, ask, results, brainstorm,
+ * factoids, case-edits, context, limits,
  * timer, crossfire, sparring, flowchart, one-off, history, announcements,
  * account, model. Sign-in screens are always shot.
  * ONLY=offline runs only the offline reading check (see shootOfflineScreens).
@@ -55,7 +56,8 @@
  *
  * Generate and Attack screenshots never call a model and never save: the
  * page answers the ai function with a fixed case or attack, holds it open
- * for the "generating" shot, and answers case, attack and source writes
+ * for the "generating" shot, streams part of it from inside the page and
+ * holds that open for the "-live" shot, and answers case, attack and source writes
  * locally. The PDF export's HTML (the web export cannot run expo-print) is
  * rendered in a page of its own, and the "Copy as text" output is written
  * next to the screenshots. Brainstorm and Factoids are shot the same way,
@@ -522,16 +524,62 @@ const FAKE_FACTOIDS = {
 
 type FakeFeature = 'generate' | 'brainstorm' | 'factoids';
 
-/** Fakes the tools' AI calls and saves for this page (see the header). `hold` keeps that tool waiting. */
-async function fakeResults(page: Page, hold: FakeFeature | null) {
-  const outputs: Record<string, { output: unknown; discoveredSources: unknown[] }> = {
-    generate: { output: FAKE_CASE, discoveredSources: FAKE_SOURCES },
-    attack: { output: FAKE_ATTACK, discoveredSources: [] },
-    brainstorm: { output: FAKE_BRAINSTORM, discoveredSources: FAKE_SOURCES },
-    factoids: { output: FAKE_FACTOIDS, discoveredSources: FAKE_SOURCES },
-  };
+const FAKE_OUTPUTS: Record<string, { output: unknown; discoveredSources: unknown[] }> = {
+  generate: { output: FAKE_CASE, discoveredSources: FAKE_SOURCES },
+  attack: { output: FAKE_ATTACK, discoveredSources: [] },
+  brainstorm: { output: FAKE_BRAINSTORM, discoveredSources: FAKE_SOURCES },
+  factoids: { output: FAKE_FACTOIDS, discoveredSources: FAKE_SOURCES },
+};
+// The live stream writes this share of the answer's JSON, then stays open.
+const LIVE_HOLD_SHARE = 0.55;
+
+/**
+ * Answers `feature`'s streamed request inside the page (expo/fetch uses the
+ * page's fetch) the way the ai function streams: research, then writing,
+ * then part of the answer's JSON a few characters at a time, and then it
+ * stays open, so a shot catches the live draft. Call before the first navigation.
+ */
+async function fakeLiveStream(page: Page, feature: FakeFeature) {
+  const text = JSON.stringify(FAKE_OUTPUTS[feature].output);
+  await page.addInitScript(({ name, partial }) => {
+    const realFetch = window.fetch.bind(window);
+    window.fetch = async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url;
+      if (!url.endsWith('/functions/v1/ai')) return realFetch(input, init);
+      // expo/fetch may hand over a Request rather than a body.
+      const text = typeof init?.body === 'string' ? init.body : input instanceof Request ? await input.clone().text() : '';
+      const body = text ? (JSON.parse(text) as { feature?: string; stream?: boolean }) : null;
+      if (body?.feature !== name || !body.stream) return realFetch(input, init);
+      // No named helper functions here: tsx wraps them in a __name call the page does not have.
+      const encoder = new TextEncoder();
+      const stream = new ReadableStream<Uint8Array>({
+        async start(controller) {
+          controller.enqueue(encoder.encode('event: phase\ndata: {"phase":"research"}\n\n'));
+          await new Promise((resolve) => setTimeout(resolve, 150));
+          controller.enqueue(encoder.encode('event: phase\ndata: {"phase":"writing"}\n\n'));
+          for (let index = 0; index < partial.length; index += 40) {
+            await new Promise((resolve) => setTimeout(resolve, 5));
+            controller.enqueue(encoder.encode(`event: delta\ndata: ${JSON.stringify({ text: partial.slice(index, index + 40) })}\n\n`));
+          }
+        },
+      });
+      return new Response(stream, { status: 200, headers: { 'content-type': 'text/event-stream' } });
+    };
+  }, { name: feature, partial: text.slice(0, Math.floor(text.length * LIVE_HOLD_SHARE)) });
+}
+
+/**
+ * Fakes the tools' AI calls and saves for this page (see the header). `hold` keeps that tool
+ * waiting; with `live`, it writes part of its answer first (fakeLiveStream).
+ */
+async function fakeResults(page: Page, hold: FakeFeature | null, live = false) {
+  const outputs = FAKE_OUTPUTS;
+  if (hold && live) await fakeLiveStream(page, hold);
   await page.route(`https://${STAGING_HOST}/functions/v1/ai`, async (route) => {
-    const feature = (route.request().postDataJSON() as { feature?: string } | null)?.feature;
+    const body = route.request().postDataJSON() as { feature?: string; quotaCheck?: boolean } | null;
+    const feature = body?.feature;
+    // Crossfire, opened from a case or an attack, asks what a round costs.
+    if (body?.quotaCheck) return route.fulfill({ status: 200, headers: { 'access-control-allow-origin': '*' }, json: FAKE_QUOTA });
     if (feature && feature === hold) return; // Never answered: the page shows its progress state.
     const json = feature ? outputs[feature] : undefined;
     if (json) return route.fulfill({ status: 200, headers: { 'access-control-allow-origin': '*' }, json });
@@ -568,6 +616,20 @@ async function shootResultScreens(context: BrowserContext, prefix: string, langu
   await waiting.getByTestId('tool-progress').waitFor({ timeout: 15_000 });
   await shoot(waiting, `${prefix}-generating`);
   await waiting.close();
+
+  const writing = await context.newPage();
+  watchErrors(writing, problems, `${prefix} results live`);
+  writing.on('dialog', (dialog) => void dialog.dismiss());
+  await pinSettings(writing, language);
+  await fakeResults(writing, 'generate', true);
+  await writing.goto(`${ORIGIN}/generate?from=prepare`);
+  await writing.getByTestId('generate-motion').waitFor({ timeout: 30_000 });
+  await writing.waitForFunction(() => (document.querySelector('[data-testid="generate-motion"]') as HTMLTextAreaElement | null)?.value.trim());
+  await writing.getByRole('button', { name: /^(Generate debate case|Vitaeset generálása|Generar caso de debate)$/i }).click();
+  await writing.getByTestId('live-draft').waitFor({ timeout: 15_000 });
+  await writing.waitForTimeout(1200);
+  await shoot(writing, `${prefix}-generating-live`);
+  await writing.close();
 
   const page = await open(false);
   await page.goto(`${ORIGIN}/generate?from=prepare`);
@@ -610,6 +672,27 @@ async function shootResultScreens(context: BrowserContext, prefix: string, langu
   await pdf.close();
   console.log(`${prefix}: PDF file name ${exported.fileName}, copied ${exported.copied.length} characters`);
 
+  // The case's menu leads on: Open in Crossfire with the case filled in, and the case built into a map.
+  // Nothing is saved: the Crossfire form is not started and the map is not saved.
+  // A wide iPad's outline rail is a menu too; the action menu is the one with the actions.
+  const caseMenu = page.getByRole('menu').filter({ has: page.getByRole('menuitem', { name: MENU.crossfire }) });
+  await page.getByTestId('document-more').click();
+  await caseMenu.waitFor();
+  await shoot(page, `${prefix}-case-menu`);
+  await caseMenu.getByRole('menuitem', { name: MENU.crossfire }).click();
+  await page.getByTestId('crossfire-imported').waitFor({ timeout: 15_000 });
+  await settle(page);
+  await shoot(page, `${prefix}-crossfire-from-case`);
+  await page.goBack();
+  await page.getByTestId('case-document').waitFor({ timeout: 15_000 });
+  await page.getByTestId('document-more').click();
+  await caseMenu.getByRole('menuitem', { name: MENU.flowchart }).click();
+  await page.getByTestId('flowchart-screen').waitFor({ timeout: 15_000 });
+  await page.waitForTimeout(500);
+  await shoot(page, `${prefix}-flowchart-from-case`);
+  await page.goBack();
+  await page.getByTestId('case-document').waitFor({ timeout: 15_000 });
+
   await page.getByTestId('attack-this-case').click();
   await page.getByTestId('attack-case-text').waitFor({ timeout: 15_000 });
   await page.waitForFunction(() => (document.querySelector('[data-testid="attack-case-text"]') as HTMLTextAreaElement | null)?.value.startsWith('THESIS:'));
@@ -618,24 +701,32 @@ async function shootResultScreens(context: BrowserContext, prefix: string, langu
   await page.getByTestId('attack-document').waitFor({ timeout: 30_000 });
   await page.waitForTimeout(400);
   await shoot(page, `${prefix}-attack-result`);
+  // The case stays mounted under the attack, so its menu is looked up inside the attack.
+  await page.getByTestId('attack-document').getByTestId('document-more').click();
+  await page.getByRole('menuitem', { name: MENU.crossfire }).last().click();
+  await page.getByTestId('crossfire-imported').waitFor({ timeout: 15_000 });
+  // Not settle(): the attack's score meter (a progressbar) stays mounted under Crossfire.
+  await page.waitForLoadState('networkidle');
+  await page.waitForTimeout(400);
+  await shoot(page, `${prefix}-crossfire-from-attack`);
   await page.close();
 }
 
 const TOOLS = {
-  brainstorm: { field: 'brainstorm-motion', submit: /^(Start Brainstorming|Ötletelés Indítása|Comenzar Lluvia de Ideas)$/, document: 'brainstorm-document', working: 'brainstorming' },
-  factoids: { field: 'factoids-claim', submit: /^(Find Factoids|Tények Keresése|Buscar Datos)$/, document: 'factoids-document', working: 'finding-factoids' },
+  brainstorm: { field: 'brainstorm-motion', submit: /^(Start brainstorming|Ötletelés indítása|Comenzar lluvia de ideas)$/i, document: 'brainstorm-document', working: 'brainstorming' },
+  factoids: { field: 'factoids-claim', submit: /^(Find factoids|Tények keresése|Buscar datos)$/i, document: 'factoids-document', working: 'finding-factoids' },
 } as const;
 const FACTOIDS_CLAIM = 'Car-free city centres cut asthma admissions';
 
 /** Brainstorm or Factoids: the form, its progress, the document open and collapsed, and Export, from fixed outputs. */
 async function shootTool(context: BrowserContext, prefix: string, language: string, problems: string[], tool: keyof typeof TOOLS) {
   const spec = TOOLS[tool];
-  const open = async (hold: boolean) => {
+  const open = async (hold: boolean, live = false) => {
     const page = await context.newPage();
     watchErrors(page, problems, `${prefix} ${tool}`);
     page.on('dialog', (dialog) => void dialog.dismiss());
     await pinSettings(page, language);
-    await fakeResults(page, hold ? tool : null);
+    await fakeResults(page, hold ? tool : null, live);
     await page.goto(`${ORIGIN}/prepare`);
     await page.getByTestId(`prepare-tool-${tool}`).waitFor({ timeout: 30_000 });
     await settle(page);
@@ -653,6 +744,13 @@ async function shootTool(context: BrowserContext, prefix: string, language: stri
   await waiting.getByTestId('tool-progress').waitFor({ timeout: 15_000 });
   await shoot(waiting, `${prefix}-${spec.working}`);
   await waiting.close();
+
+  const writing = await open(true, true);
+  await writing.getByRole('button', { name: spec.submit }).click();
+  await writing.getByTestId('live-draft').waitFor({ timeout: 15_000 });
+  await writing.waitForTimeout(1200);
+  await shoot(writing, `${prefix}-${spec.working}-live`);
+  await writing.close();
 
   const page = await open(false);
   await page.getByRole('button', { name: spec.submit }).click();
@@ -680,6 +778,155 @@ async function shootTool(context: BrowserContext, prefix: string, language: stri
   await pdf.close();
   console.log(`${prefix} ${tool}: PDF file name ${exported.fileName}, copied ${exported.copied.length} characters`);
   await page.close();
+}
+
+const MENU = {
+  crossfire: /^(Open in Crossfire|Megnyitás a Keresztkérdezésben|Abrir en Interrogatorio)$/,
+  flowchart: /^(Build flowchart from case|Folyamatábra az esetből|Crear diagrama desde el caso)$/,
+  regenerate: /^(Regenerate a section|Szakasz újragenerálása|Regenerar una sección)$/,
+  arguments: /^(Regenerate Arguments|Érvek újragenerálása|Regenerar Argumentos)$/,
+  save: /^(Save|Mentés|Guardar)$/,
+};
+
+/**
+ * Regenerate, Undo and Save on a case, from the fixed case: the regenerate
+ * menu, a regeneration held open, the case after it, the Save case sheet and
+ * the saved confirmation. The case's first save to its debate is answered
+ * with an error, so the case stays unsaved and offers Save; the Save sheet's
+ * write is answered locally. Nothing reaches a model or the database.
+ */
+async function shootCaseEdits(context: BrowserContext, prefix: string, language: string, problems: string[]) {
+  const open = async (holdRegeneration: boolean) => {
+    const page = await context.newPage();
+    const seen: string[] = [];
+    watchErrors(page, seen, `${prefix} case edits`);
+    page.on('dialog', (dialog) => void dialog.dismiss());
+    await pinSettings(page, language);
+    await fakeResults(page, null);
+    let generations = 0;
+    await page.route(`https://${STAGING_HOST}/functions/v1/ai`, async (route) => {
+      generations += 1;
+      if (holdRegeneration && generations > 1) return; // Never answered: the strip shows.
+      return route.fulfill({ status: 200, headers: { 'access-control-allow-origin': '*' }, json: FAKE_OUTPUTS.generate });
+    });
+    let caseWrites = 0;
+    await page.route(`${REST}/cases*`, (route) => {
+      if (route.request().method() !== 'POST') return route.continue();
+      caseWrites += 1;
+      return caseWrites === 1
+        ? route.fulfill({ status: 500, headers: { 'access-control-allow-origin': '*' }, json: { message: 'screenshot: not recorded' } })
+        : route.fulfill({ status: 201, json: FAKE_ROW('cases') });
+    });
+    await page.goto(`${ORIGIN}/generate?from=prepare`);
+    await page.getByTestId('generate-motion').waitFor({ timeout: 30_000 });
+    await page.waitForFunction(() => (document.querySelector('[data-testid="generate-motion"]') as HTMLTextAreaElement | null)?.value.trim());
+    await page.getByRole('button', { name: /^(Generate debate case|Vitaeset generálása|Generar caso de debate)$/i }).click();
+    await page.getByTestId('case-document').waitFor({ timeout: 30_000 });
+    await page.waitForTimeout(3800); // The arrival notice fades.
+    return { page, seen };
+  };
+  const regenerateArguments = async (page: Page, shotMenu: boolean) => {
+    await page.getByTestId('document-more').click();
+    await page.getByRole('menuitem', { name: MENU.regenerate }).click();
+    await page.getByTestId('regenerate-menu').waitFor();
+    if (shotMenu) await shoot(page, `${prefix}-regenerate-menu`);
+    await page.getByTestId('regenerate-menu').getByRole('menuitem', { name: MENU.arguments }).click();
+  };
+  const finish = (seen: string[]) => problems.push(...seen.filter((problem) => !problem.includes('status of 500')));
+
+  const held = await open(true);
+  await regenerateArguments(held.page, true);
+  await held.page.getByTestId('regenerating').waitFor({ timeout: 15_000 });
+  await shoot(held.page, `${prefix}-case-regenerating`);
+  await held.page.close();
+  finish(held.seen);
+
+  const { page, seen } = await open(false);
+  await regenerateArguments(page, false);
+  await page.getByTestId('document-notice').waitFor({ timeout: 15_000 });
+  await shoot(page, `${prefix}-case-regenerated`);
+  await page.waitForTimeout(3800);
+  await page.getByTestId('document-more').click();
+  await page.getByRole('menuitem', { name: MENU.save }).click();
+  await page.getByTestId('save-case-sheet').waitFor({ timeout: 15_000 });
+  await page.waitForTimeout(500);
+  await shoot(page, `${prefix}-save-case`);
+  await page.getByTestId('save-case-confirm').click();
+  await page.getByTestId('save-case-sheet').waitFor({ state: 'detached', timeout: 15_000 });
+  await page.getByTestId('document-notice').waitFor({ timeout: 15_000 });
+  await shoot(page, `${prefix}-case-saved`);
+  await page.close();
+  finish(seen);
+}
+
+/**
+ * The debate context line on Generate and its Review sheet, from the
+ * account's real Current Debate. Turning an item off lives in memory only;
+ * pin writes are answered locally, so nothing is saved.
+ */
+async function shootContextReview(context: BrowserContext, prefix: string, language: string, problems: string[]) {
+  const page = await context.newPage();
+  watchErrors(page, problems, `${prefix} context`);
+  await pinSettings(page, language);
+  await page.route(`${REST}/debate_context_pins*`, (route) =>
+    route.request().method() === 'GET' ? route.continue() : route.fulfill({ status: 201, headers: { 'access-control-allow-origin': '*' }, body: '' }),
+  );
+  await page.goto(`${ORIGIN}/generate?from=prepare`);
+  await page.getByTestId('generate-motion').waitFor({ timeout: 30_000 });
+  const line = page.getByTestId('debate-context-line');
+  await line.waitFor({ timeout: 30_000 });
+  await line.scrollIntoViewIfNeeded();
+  await settle(page);
+  await shoot(page, `${prefix}-context-line`);
+  await line.getByRole('button').click();
+  const sheet = page.getByTestId('context-review-sheet');
+  await sheet.waitFor({ timeout: 15_000 });
+  await page.waitForFunction(() => document.querySelectorAll('[role="checkbox"]').length > 0, undefined, { timeout: 15_000 });
+  await page.waitForTimeout(500);
+  await shoot(page, `${prefix}-context-review`);
+  // Leave the first source out of the next request, and pin the first saved result.
+  await sheet.getByRole('checkbox').first().click();
+  const pin = sheet.getByTestId('debate-context-pin').first();
+  if (await pin.count()) {
+    await pin.click();
+    await page.waitForTimeout(400);
+  }
+  await page.getByTestId('debate-context-reset').waitFor({ timeout: 15_000 });
+  await shoot(page, `${prefix}-context-review-changed`);
+  await page.close();
+}
+
+/**
+ * The limit and model sheets: Generate answered with the ai function's
+ * refusals (402 limit_reached with its counts, then 403 upgrade_required).
+ * Nothing is sent to a model; "Use low reasoning instead" is never pressed.
+ */
+async function shootLimitSheets(context: BrowserContext, prefix: string, language: string, problems: string[]) {
+  const refusals = [
+    { name: 'limit-sheet', status: 402, json: { error: 'Daily limit reached', code: 'limit_reached', limit: 20, current: 20, units: 1 } },
+    { name: 'model-sheet', status: 403, json: { error: 'This model requires a Pro subscription.', code: 'upgrade_required' } },
+  ];
+  for (const refusal of refusals) {
+    const page = await context.newPage();
+    // The browser logs the refused request itself; only that error is expected.
+    const seen: string[] = [];
+    watchErrors(page, seen, `${prefix} ${refusal.name}`);
+    page.on('dialog', (dialog) => void dialog.dismiss());
+    await pinSettings(page, language);
+    await page.route(`https://${STAGING_HOST}/functions/v1/ai`, (route) =>
+      route.fulfill({ status: refusal.status, headers: { 'access-control-allow-origin': '*' }, json: refusal.json }),
+    );
+    await page.goto(`${ORIGIN}/generate?from=prepare`);
+    await page.getByTestId('generate-motion').waitFor({ timeout: 30_000 });
+    await page.waitForFunction(() => (document.querySelector('[data-testid="generate-motion"]') as HTMLTextAreaElement | null)?.value.trim());
+    await page.getByRole('button', { name: /^(Generate debate case|Vitaeset generálása|Generar caso de debate)$/i }).click();
+    await page.getByTestId('limit-sheet').waitFor({ timeout: 15_000 });
+    await settle(page);
+    await page.waitForTimeout(500);
+    await shoot(page, `${prefix}-${refusal.name}`);
+    await page.close();
+    problems.push(...seen.filter((problem) => !problem.includes(`status of ${refusal.status}`)));
+  }
 }
 
 // Made-up saved maps in the website's React Flow shape, after mock A.
@@ -1023,7 +1270,35 @@ async function shootAskScreens(context: BrowserContext, prefix: string, language
   await streaming.getByTestId('ask-streaming').waitFor({ timeout: 15_000 });
   await streaming.waitForTimeout(STREAM_HOLD_WORDS * 15 + 600);
   await shoot(streaming, `${prefix}-ask-streaming`);
+  // Stop keeps the answer so far, marked as stopped; the chat write is answered locally.
+  await streaming.getByTestId('ask-stop').click();
+  await streaming.getByTestId('ask-answer').waitFor({ timeout: 15_000 });
+  await streaming.waitForTimeout(300);
+  await shoot(streaming, `${prefix}-ask-stopped`);
   await streaming.close();
+
+  // Clarify mode with a text file attached, then the answer saved to the Library's Ask folder.
+  // The file is read in the page; the source write is answered locally.
+  const clarify = await ask(false);
+  for (const table of ['sources', 'source_folders']) {
+    await clarify.route(`${REST}/${table}*`, (route) =>
+      route.request().method() === 'GET' ? route.continue() : route.fulfill({ status: 201, json: FAKE_ROW(table) }),
+    );
+  }
+  await clarify.getByTestId('ask-mode-clarify').click();
+  const chooser = clarify.waitForEvent('filechooser');
+  await clarify.getByTestId('ask-attach').click();
+  await (await chooser).setFiles({ name: 'rebuttal-notes.md', mimeType: 'text/markdown', buffer: Buffer.from('# Notes\n\nNight buses: routes added in year one.\n') });
+  await clarify.getByTestId('ask-attachments').waitFor({ timeout: 15_000 });
+  await clarify.getByTestId('ask-input').fill(ASK_QUESTION);
+  await shoot(clarify, `${prefix}-ask-attached`);
+  await clarify.getByTestId('ask-send').click();
+  await clarify.getByTestId('ask-answer').waitFor({ timeout: 15_000 });
+  await clarify.getByTestId('ask-save').click();
+  await clarify.getByTestId('ask-saved').waitFor({ timeout: 15_000 });
+  await clarify.waitForTimeout(300);
+  await shoot(clarify, `${prefix}-ask-saved`);
+  await clarify.close();
 }
 
 // A made-up Crossfire exchange and debrief, in English and Hungarian, so the Hungarian shots carry no English model text.
@@ -1063,11 +1338,15 @@ const CROSSFIRE_TEXT = {
 } as const;
 
 /** Fakes Crossfire's AI calls and its save for this page (see the header). Replies follow the request, as the client checks them. */
+// The round's cost, as the ai function answers a quotaCheck: one use, 16 of 20 left today.
+const FAKE_QUOTA = { quota: { allowed: true, units: 1, limit: 20, current: 4 } };
+
 async function fakeCrossfire(page: Page, language: keyof typeof CROSSFIRE_TEXT) {
   const text = CROSSFIRE_TEXT[language];
   await page.route(`https://${STAGING_HOST}/functions/v1/ai`, async (route) => {
     const body = route.request().postDataJSON() as { feature?: string; input?: { operation?: string; expectedReply?: 'question' | 'answer'; transcript?: { id: string }[] } } | null;
     if (body?.feature !== 'crossfire') return route.abort();
+    if ((body as { quotaCheck?: boolean }).quotaCheck) return route.fulfill({ status: 200, headers: { 'access-control-allow-origin': '*' }, json: FAKE_QUOTA });
     const input = body.input ?? {};
     const turns = input.transcript ?? [];
     const exchange = Math.floor(turns.length / 2) % text.answers.length;
@@ -1082,8 +1361,9 @@ async function fakeCrossfire(page: Page, language: keyof typeof CROSSFIRE_TEXT) 
     } else {
       const d = text.debrief;
       output = {
-        concessionsSecured: [{ turnIds: ['T3', 'T4'], claim: d.concession }],
-        controlledQuestions: [{ turnIds: ['T1', 'T2'], claim: d.controlled }],
+        // Concessions and controlled questions name one turn each (SingleTurnReferenceSchema).
+        concessionsSecured: [{ turnIds: ['T4'], claim: d.concession }],
+        controlledQuestions: [{ turnIds: ['T1'], claim: d.controlled }],
         weakOrRepetitiveQuestions: [],
         evasiveOrIncompleteAnswers: [],
         missedFollowUps: [{ turnIds: ['T2'], claim: d.missed }],
@@ -1113,6 +1393,10 @@ async function shootCrossfireScreens(context: BrowserContext, prefix: string, la
   await page.getByTestId('crossfire-argument').fill(text.argument);
   await settle(page);
   await shoot(page, `${prefix}-crossfire-setup`);
+  // The round's cost sits above the start button, below the fold on a phone.
+  await page.getByTestId('session-cost').scrollIntoViewIfNeeded();
+  await page.waitForTimeout(300);
+  await shoot(page, `${prefix}-crossfire-cost`);
 
   await page.getByRole('button', { name: /^(Start crossfire|Keresztkérdezés indítása|Iniciar interrogatorio)$/ }).click();
   await page.getByTestId('crossfire-live').waitFor({ timeout: 15_000 });
@@ -1181,6 +1465,7 @@ async function fakeSparring(page: Page, language: keyof typeof SPARRING_TEXT) {
   await page.route(`https://${STAGING_HOST}/functions/v1/ai`, async (route) => {
     const body = route.request().postDataJSON() as { feature?: string; input?: { action?: 'respond' | 'score'; speeches?: { speaker: string }[] } } | null;
     if (body?.feature !== 'sparring') return route.abort();
+    if ((body as { quotaCheck?: boolean }).quotaCheck) return route.fulfill({ status: 200, headers: { 'access-control-allow-origin': '*' }, json: FAKE_QUOTA });
     const action = body.input?.action ?? 'respond';
     if (holding[action]) await new Promise<void>((resolve) => { held[action] = resolve; });
     let output: unknown;
@@ -1233,6 +1518,10 @@ async function shootSparringScreens(context: BrowserContext, prefix: string, lan
   await page.getByRole('menuitem', { name: 'Lincoln-Douglas' }).click();
   await settle(page);
   await shoot(page, `${prefix}-sparring-setup`);
+  // The round's cost sits above the start button, below the fold on a phone.
+  await page.getByTestId('session-cost').scrollIntoViewIfNeeded();
+  await page.waitForTimeout(300);
+  await shoot(page, `${prefix}-sparring-cost`);
 
   fake.hold('respond');
   await page.getByRole('button', { name: /^(Start round|Forduló indítása|Iniciar ronda)$/ }).click();
@@ -1904,29 +2193,41 @@ async function main() {
             shots += 2;
           }
           if (want('ask')) {
-            await shootAskScreens(signedIn, prefix, language, problems);
-            shots += 3;
+            await shootAskScreens(signedIn, prefix, language, problems).catch(failedIn(signedIn, prefix, 'ask'));
+            shots += 6;
           }
           if (want('results')) {
-            await shootResultScreens(signedIn, prefix, language, problems);
-            shots += 9;
+            await shootResultScreens(signedIn, prefix, language, problems).catch(failedIn(signedIn, prefix, 'results'));
+            shots += 14;
           }
           for (const tool of ['brainstorm', 'factoids'] as const) {
             if (!want(tool)) continue;
             await shootTool(signedIn, prefix, language, problems, tool);
-            shots += 6;
+            shots += 7;
+          }
+          if (want('case-edits')) {
+            await shootCaseEdits(signedIn, prefix, language, problems).catch(failedIn(signedIn, prefix, 'case-edits'));
+            shots += 5;
+          }
+          if (want('context')) {
+            await shootContextReview(signedIn, prefix, language, problems).catch(failedIn(signedIn, prefix, 'context'));
+            shots += 3;
+          }
+          if (want('limits')) {
+            await shootLimitSheets(signedIn, prefix, language, problems).catch(failedIn(signedIn, prefix, 'limits'));
+            shots += 2;
           }
           if (want('timer')) {
             await shootTimerScreens(signedIn, prefix, language, problems);
             shots += 3;
           }
           if (want('crossfire')) {
-            await shootCrossfireScreens(signedIn, prefix, language, problems);
-            shots += 3;
+            await shootCrossfireScreens(signedIn, prefix, language, problems).catch(failedIn(signedIn, prefix, 'crossfire'));
+            shots += 4;
           }
           if (want('sparring')) {
             await shootSparringScreens(signedIn, prefix, language, problems);
-            shots += 6;
+            shots += 7;
           }
           if (want('flowchart')) {
             await shootFlowchart(signedIn, prefix, language, problems);

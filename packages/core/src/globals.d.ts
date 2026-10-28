@@ -1,5 +1,12 @@
 // Globals that both browsers and React Native's Hermes provide but the ES lib
 // does not declare. Declare only what package code uses; never add DOM types.
+declare function setTimeout(callback: () => void, ms?: number): number;
+declare function clearTimeout(id: number | undefined): void;
+
+declare class TextDecoder {
+  decode(input?: Uint8Array, options?: { stream?: boolean }): string;
+}
+
 declare const console: {
   warn(...data: unknown[]): void;
 };

@@ -2811,7 +2811,9 @@
         "tooLarge": "Túl hosszú a kérdésed. Rövidítsd le, és küldd el újra.",
         "debateMissing": "Ez a vita már nem létezik. Válassz másik vitát, és kérdezz újra.",
         "failed": "Az edző nem tudott válaszolni. Próbáld újra."
-      }
+      },
+      "fileTooLarge": "{{name}} nagyobb 10 MB-nál.",
+      "fileType": "{{name}} nem szöveges vagy kódfájl. Csatolj szöveget, Markdownt, CSV-t, JSON-t vagy kódfájlt."
     },
     "prepare": {
       "saved": "Ebben a vitában mentve"
@@ -2847,7 +2849,9 @@
       "deleteBrainstormTitle": "Törlöd az ötletelést?",
       "deleteBrainstormDesc": "Ez eltávolítja az ötletelést az előzményeid közül.",
       "deleteFactoidsTitle": "Törlöd a tényeket?",
-      "deleteFactoidsDesc": "Ez eltávolítja a tényeket az előzményeid közül."
+      "deleteFactoidsDesc": "Ez eltávolítja a tényeket az előzményeid közül.",
+      "buildFlowchart": "Folyamatábra az esetből",
+      "regenerateSection": "Szakasz újragenerálása"
     },
     "attack": {
       "caseRequired": "Illeszd be vagy írd le a megtámadandó esetet."
@@ -2859,7 +2863,8 @@
       "reset": "Visszaállítás"
     },
     "crossfire": {
-      "voiceLater": "Az alkalmazás következő verziójával érkezik."
+      "voiceLater": "Az alkalmazás következő verziójával érkezik.",
+      "prefillHeld": "Még tart egy kör, ezért az eseted nem került be. Fejezd be ezt a kört, majd nyisd meg újra a Keresztkérdezést az esetedből."
     },
     "sparring": {
       "chooseSide": "Melyik oldalon állsz?",

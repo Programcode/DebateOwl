@@ -1,59 +1,20 @@
-// Recovers a live run's answer after its stream dropped. The ai function
-// keeps each streamed run's final result in ai_run_results under the id the
-// browser sent (supabase/functions/ai/run-results.ts), writing it before it
-// sends the `result` event, so an answer the browser did not receive can
-// still be read.
+// Recovers a live run's answer after its stream dropped. The waiting rules are
+// shared with the iOS app (packages/core/src/ai/run-recovery.ts); this reads
+// the browser's ai_run_results row.
 
+import {
+  recoverRunResult as recoverStoredRunResult,
+  RUN_RESULT_RUNNING_MS,
+  type RecoveredRunResult,
+} from '@debatelab/core/ai/run-recovery';
 import { supabase } from '@/lib/supabase/client';
 
-export interface RecoveredRunResult {
-  status: number;
-  body: unknown;
-}
+export { RUN_RESULT_MISSING_MS, RUN_RESULT_POLL_MS, RUN_RESULT_RUNNING_MS, RUN_RESULT_WAIT_MS, type RecoveredRunResult } from '@debatelab/core/ai/run-recovery';
 
-/** No run answers past Supabase's 150 s wall clock, counted from the request. */
-export const RUN_RESULT_WAIT_MS = 155_000;
-export const RUN_RESULT_POLL_MS = 2_500;
-/**
- * A run the server started has a row within moments. With none after this
- * long, the request never reached a server that keeps results.
- */
-export const RUN_RESULT_MISSING_MS = 8_000;
-/**
- * A run that loses its browser is cancelled and stores its outcome within
- * seconds, and one still running stores it when it ends. A row still without
- * a result this long after the drop is a run whose worker is gone. A stalled
- * stream is left open (live.ts), so its run is still writing and stores its
- * result when it ends; it waits the whole window instead.
- */
-export const RUN_RESULT_RUNNING_MS = 30_000;
+const readRunResult = (feature: string) =>
+  supabase.from('ai_run_results').select('result_key,status,body').eq('feature', feature).maybeSingle();
 
-function wait(ms: number, signal?: AbortSignal): Promise<void> {
-  return new Promise((resolve, reject) => {
-    if (signal?.aborted) {
-      reject(new DOMException('The request was canceled.', 'AbortError'));
-      return;
-    }
-    const timer = setTimeout(() => {
-      signal?.removeEventListener('abort', onAbort);
-      resolve();
-    }, ms);
-    const onAbort = () => {
-      clearTimeout(timer);
-      reject(new DOMException('The request was canceled.', 'AbortError'));
-    };
-    signal?.addEventListener('abort', onAbort, { once: true });
-  });
-}
-
-/**
- * Waits for the stored result of the run named `resultKey`, which started at
- * `startedAt` (epoch ms). Resolves with it, or null when there is none to
- * wait for: no row (an older server, or a request that never arrived), a
- * newer run of the same feature took the row, the table cannot be read, or
- * the run outlived any server. Rejects only when `signal` aborts.
- */
-export async function recoverRunResult(
+export function recoverRunResult(
   feature: string,
   resultKey: string,
   startedAt: number,
@@ -61,23 +22,5 @@ export async function recoverRunResult(
   runningGraceMs = RUN_RESULT_RUNNING_MS,
   now: () => number = Date.now,
 ): Promise<RecoveredRunResult | null> {
-  const recoveryStartedAt = now();
-  while (true) {
-    if (signal?.aborted) throw new DOMException('The request was canceled.', 'AbortError');
-    const { data, error } = await supabase
-      .from('ai_run_results')
-      .select('result_key,status,body')
-      .eq('feature', feature)
-      .maybeSingle();
-    if (signal?.aborted) throw new DOMException('The request was canceled.', 'AbortError');
-    if (error) return null;
-    const row = data as { result_key?: unknown; status?: unknown; body?: unknown } | null;
-    if (row && row.result_key !== resultKey) return null;
-    if (row && typeof row.status === 'number') return { status: row.status, body: row.body };
-    // No row yet, or a run still writing (status null).
-    if (!row && now() - recoveryStartedAt >= RUN_RESULT_MISSING_MS) return null;
-    if (row && now() - recoveryStartedAt >= runningGraceMs) return null;
-    if (now() - startedAt >= RUN_RESULT_WAIT_MS) return null;
-    await wait(RUN_RESULT_POLL_MS, signal);
-  }
+  return recoverStoredRunResult(readRunResult, feature, resultKey, startedAt, signal, runningGraceMs, now);
 }

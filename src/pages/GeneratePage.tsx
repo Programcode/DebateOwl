@@ -29,6 +29,7 @@ import { generateDraftSections } from '@/components/features/tools/live-sections
 import { generateDiscussPrompt, openDiscussion } from '@/components/features/tools/discuss';
 import { markResultSaved, useResultSaved } from '@/components/features/tools/result-actions';
 import { prefillFromGenerate } from '@/lib/crossfire/prefill';
+import { mergeRegeneratedSection, type CaseSection } from '@debatelab/core/ai/generate-output';
 import { WorkspaceToolScope, useWorkspaceToolScope } from '@/components/features/workspace/WorkspaceToolScope';
 import { workspaceRouteState } from '@/lib/workspace/tool-context';
 import { activeDebateId, sameMotion, selectCurrentDebate, useDebateStore } from '@/lib/stores/debate-store';
@@ -183,15 +184,7 @@ export default function GeneratePage() {
       .then(async ({ result: next, discoveredSources: sources }) => {
         // Undo or a new generation replaced the case meanwhile; merging now would revert it.
         if (useSessionStore.getState().generateResult !== base) return;
-        const regenerated = {
-          ...base,
-          ...(section === 'structure' ? { caseStructure: next.caseStructure } : {}),
-          ...(section === 'contentions' ? { contentions: next.contentions } : {}),
-          ...(section === 'opponent' ? { predictedOpponentCase: next.predictedOpponentCase } : {}),
-          ...(section === 'counters' ? { counters: next.counters } : {}),
-          ...(section === 'exordio' ? { exordio: next.exordio } : {}),
-          metadata: next.metadata,
-        };
+        const regenerated = mergeRegeneratedSection(base, next, section as CaseSection);
         setGenerateResult(regenerated);
         setDiscoveredSources(sources);
         await workspace.attach({ ...data, regeneratedSection: section }, regenerated);

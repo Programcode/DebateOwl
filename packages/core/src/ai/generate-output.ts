@@ -126,3 +126,22 @@ export function expectedContentionCount(length: GenerateInput['length']): number
       return 2;
   }
 }
+
+/** The parts of a case Regenerate can replace one at a time, as the website's section cards name them. */
+export type CaseSection = 'exordio' | 'structure' | 'contentions' | 'opponent' | 'counters';
+
+/**
+ * A case with one part taken from a newly generated one, as the website's
+ * Regenerate merges it. The metadata comes from the new run.
+ */
+export function mergeRegeneratedSection(base: GenerateOutput, next: GenerateOutput, section: CaseSection): GenerateOutput {
+  return {
+    ...base,
+    ...(section === 'structure' ? { caseStructure: next.caseStructure } : {}),
+    ...(section === 'contentions' ? { contentions: next.contentions } : {}),
+    ...(section === 'opponent' ? { predictedOpponentCase: next.predictedOpponentCase } : {}),
+    ...(section === 'counters' ? { counters: next.counters } : {}),
+    ...(section === 'exordio' ? { exordio: next.exordio } : {}),
+    metadata: next.metadata,
+  };
+}

@@ -1,3 +1,4 @@
+import { askDisplayContent, askMessageWithFiles } from '@debatelab/core/ai/ask-files';
 import type { AskOutput } from '@debatelab/core/ai/schemas/ask';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
@@ -15,18 +16,23 @@ import { FadingScrollRow } from '@/components/edge-fade';
 import { Icon } from '@/components/icon';
 import type { IconName } from '@/components/icon-paths';
 import { OneOffNotice } from '@/components/one-off-notice';
+import { ContextLine } from '@/components/context-line';
+import { DailyUsageLine } from '@/components/tool-form';
 import { Text } from '@/components/text';
 import { AIError, isAbortError, type AIErrorKind, type ResponseExtras } from '@/lib/ai-request';
-import { askOnce, canStream, isFinalAskError, isMessageWithinBudget, streamAsk, type AskOptions } from '@/lib/ask';
+import { askOnce, canStream, isFinalAskError, isMessageWithinBudget, streamAsk, type AskMode, type AskOptions } from '@/lib/ask';
+import { pickAskFiles, readAskFiles, type AskAttachment } from '@/lib/ask-attachments';
+import { resetContextChoices } from '@/lib/context-plan';
 import { buildDebateContext } from '@/lib/context-request';
 import type { FeatureConfig } from '@/lib/feature-config';
 import { useAuth } from '@/lib/auth';
 import { ChatSaveError, fetchChat, saveChat, type ChatMessage, type ChatRecord } from '@/lib/chats';
 import { useDebates } from '@/lib/debate-context';
 import { LIST_WIDTH, useLayoutClass } from '@/lib/layout';
+import { openRefusal } from '@/lib/refusal';
 import { keepSourceAssessments } from '@/lib/results';
 import { useSettings } from '@/lib/settings';
-import { fetchSources, type Source } from '@/lib/sources';
+import { addSource, fetchSources, type Source } from '@/lib/sources';
 import { useCopyHolder } from '@/lib/use-copy-holder';
 import { radius } from '@/theme/colors';
 import { fontFamily } from '@/theme/fonts';
@@ -42,6 +48,12 @@ const OPTION_CHIPS: { key: keyof AskOptions; label: string; icon: IconName }[] =
   { key: 'webSearch', label: 'askChat.webSearch', icon: 'globe' },
   { key: 'prosConsMode', label: 'askChat.modeProsCons', icon: 'list' },
   { key: 'argumentMapMode', label: 'askChat.modeArgMap', icon: 'map' },
+];
+
+// The website's mode switch (askChat.modeOptions), shown first in the chip row.
+const MODES: { key: AskMode; label: string }[] = [
+  { key: 'general', label: 'askChat.modeGeneral' },
+  { key: 'clarify', label: 'askChat.modeClarify' },
 ];
 
 // The website's one progress line while the coach answers.
@@ -75,13 +87,17 @@ export default function AskScreen() {
   const [opening, setOpening] = useState(false);
   const [record, setRecordState] = useState<ChatRecord>(NEW_CHAT);
   const [options, setOptions] = useState<AskOptions>(NO_OPTIONS);
+  const [mode, setMode] = useState<AskMode>('general');
+  const [attachments, setAttachments] = useState<AskAttachment[]>([]);
   const [input, setInput] = useState('');
-  const [error, setError] = useState<{ kind: AIErrorKind; question: string } | null>(null);
+  const [error, setError] = useState<{ kind: AIErrorKind; question: string; files?: AskAttachment[] } | null>(null);
   const [notice, setNotice] = useState('');
   const [historyOpen, setHistoryOpen] = useState(false);
   const [library, setLibrary] = useState<Source[]>([]);
 
   const scroll = useRef<ScrollView>(null);
+  // The answer's text so far, kept by Stop as the website keeps it.
+  const partial = useRef('');
   const requests = useRef(0);
   const abort = useRef<AbortController | null>(null);
   const config = useRef<Promise<FeatureConfig> | null>(null);
@@ -180,21 +196,27 @@ export default function AskScreen() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loading, lastRole, messages, userId]);
 
-  const send = async (text: string, history: ChatMessage[]) => {
-    const message = text.trim();
-    if (!message || !userId) return;
+  const send = async (text: string, history: ChatMessage[], files: AskAttachment[] = []) => {
+    const question = text.trim();
+    if (!question || !userId) return;
     abortActive();
     const request = requests.current;
     const isCurrent = () => requests.current === request;
+    // Attached files are read here and sent with the question; the chat keeps only their names.
+    const message = files.length > 0 ? askMessageWithFiles(question, await readAskFiles(files)) : question;
+    if (!isCurrent()) return;
     if (!isMessageWithinBudget(message)) {
-      setError({ kind: 'tooLarge', question: message });
+      setError({ kind: 'tooLarge', question, files });
       return;
     }
     const requestOptions = options;
+    const requestMode = mode;
     const controller = new AbortController();
     abort.current = controller;
-    setMessages([...history, { id: nextId(), role: 'user', content: message, timestamp: Date.now() }]);
+    partial.current = '';
+    setMessages([...history, { id: nextId(), role: 'user', content: askDisplayContent(question, files.map((file) => file.name)), timestamp: Date.now() }]);
     setInput('');
+    setAttachments([]);
     setError(null);
     setNotice('');
     setLoading(true);
@@ -211,6 +233,7 @@ export default function AskScreen() {
       if (!isCurrent()) return;
       const askRequest = {
         message,
+        mode: requestMode,
         history: history.map((item) => ({ role: item.role, content: item.content })),
         options: requestOptions,
         config: askSettings,
@@ -223,7 +246,13 @@ export default function AskScreen() {
       const keepExtras = (extras: ResponseExtras) => {
         whole.extras = extras;
       };
-      if (canStream(requestOptions)) {
+      // Whole answers stream live from the ai function, as on the website; Stop keeps what arrived.
+      const showText = (text: string) => {
+        if (!isCurrent()) return;
+        partial.current = text;
+        setStreaming(text);
+      };
+      if (canStream(requestOptions, requestMode)) {
         let received = '';
         let pending = '';
         let flush: ReturnType<typeof setTimeout> | null = null;
@@ -234,6 +263,7 @@ export default function AskScreen() {
             onDelta: (delta) => {
               if (!isCurrent()) return;
               received += delta;
+              partial.current = received;
               pending += delta;
               // Tokens arrive faster than the screen needs; paint every 30 ms like the website.
               flush ??= setTimeout(() => {
@@ -256,16 +286,19 @@ export default function AskScreen() {
           } else {
             // Nothing usable arrived: ask once more without streaming, as the website does.
             setStreaming(null);
-            result = await askOnce(askRequest, controller.signal, keepExtras);
+            result = await askOnce(askRequest, controller.signal, keepExtras, showText);
           }
         } finally {
           if (flush) clearTimeout(flush);
         }
       } else {
-        result = await askOnce(askRequest, controller.signal, keepExtras);
+        setStreaming('');
+        result = await askOnce(askRequest, controller.signal, keepExtras, showText);
       }
 
       if (!isCurrent()) return;
+      // Review choices cover one question, as on the website.
+      resetContextChoices('ask');
       // A whole answer ranks the Library sources it used and says when the question was shortened, as on the website.
       if (whole.extras) {
         const { truncated, assessments } = whole.extras;
@@ -285,6 +318,7 @@ export default function AskScreen() {
         generatedAt: result.generatedAt || new Date().toISOString(),
       };
       setStreaming(null);
+      partial.current = '';
       setMessages((previous) => [...previous, { id: nextId(), role: 'assistant', content: result.response, timestamp: Date.now(), output }]);
     } catch (cause) {
       if (!isCurrent() || isAbortError(cause)) return;
@@ -293,7 +327,9 @@ export default function AskScreen() {
       if (!(cause instanceof AIError)) console.warn('Ask failed:', cause instanceof Error ? cause.message : cause);
       // A missing debate was deleted elsewhere; reload the list so the app stops using it.
       if (kind === 'debateMissing') void refresh();
-      setError({ kind, question: message });
+      setError({ kind, question, files });
+      // The question stays as not sent, and the website's dialog opens too.
+      openRefusal(router, cause, 'ask');
     } finally {
       if (isCurrent()) {
         setLoading(false);
@@ -314,9 +350,53 @@ export default function AskScreen() {
   }, [prompt, userId]);
 
   // Retrying replaces the unanswered question instead of asking it twice.
-  const retry = (question: string) => {
+  const retry = (question: string, files?: AskAttachment[]) => {
     const last = messages[messages.length - 1];
-    void send(question, last?.role === 'user' ? messages.slice(0, -1) : messages);
+    void send(question, last?.role === 'user' ? messages.slice(0, -1) : messages, files);
+  };
+
+  /** The website's Stop: the answer so far stays, marked as stopped, and is saved like any answer. */
+  const stop = () => {
+    const kept = partial.current.trim();
+    abortActive();
+    setLoading(false);
+    setStreaming(null);
+    if (!kept) return;
+    setMessages((previous) => [
+      ...previous,
+      { id: nextId(), role: 'assistant', content: kept, timestamp: Date.now(), output: { response: kept, followUpQuestions: [], uncertainties: [t('ask.stopped')] } },
+    ]);
+  };
+
+  /** The website's Save to Library: the answer becomes a text source in the Current Debate's Ask folder. */
+  const saveAnswer = async (content: string): Promise<boolean> => {
+    const debateId = activeDebateRef.current;
+    if (!userId) return false;
+    if (!debateId) {
+      setNotice(`${t('ask.saveFailed')}. ${t('debate.sourceNeedsDebate')}`);
+      return false;
+    }
+    try {
+      await addSource(userId, { title: content.length > 30 ? `${content.slice(0, 30)}...` : content, content, type: 'text', folder: 'Ask', debateId });
+      setNotice(`${t('ask.saved')}. ${t('ask.savedDesc')}`);
+      return true;
+    } catch (cause) {
+      console.warn('Could not save the answer to the Library:', cause instanceof Error ? cause.message : cause);
+      setNotice(`${t('ask.saveFailed')}. ${t('ask.sourceSaveFailedDesc')}`);
+      return false;
+    }
+  };
+
+  const attach = async () => {
+    try {
+      const picked = await pickAskFiles(attachments);
+      if (!picked) return;
+      setAttachments(picked.files);
+      if (picked.problem?.kind === 'tooMany') setNotice(`${t('askChat.tooManyFiles')}. ${t('askChat.tooManyFilesDesc', { max: 5 })}`);
+      else if (picked.problem) setNotice(`${t('askChat.fileValidationFailed')}. ${t(picked.problem.kind === 'tooLarge' ? 'mobile.ask.fileTooLarge' : 'mobile.ask.fileType', { name: picked.problem.name })}`);
+    } catch (cause) {
+      console.warn('Could not pick files:', cause instanceof Error ? cause.message : cause);
+    }
   };
 
   const openChat = async (chatId: string) => {
@@ -353,6 +433,34 @@ export default function AskScreen() {
   // Beside the list, the chat is titled by its first question, as its saved row is.
   const question = messages.find((message) => message.role === 'user')?.content;
   const title = split ? question ?? t('askChat.newChat') : t('nav.ask');
+
+  const chips = (
+    <>
+      {MODES.map((item) => (
+        <Chip
+          key={item.key}
+          label={t(item.label)}
+          selected={mode === item.key}
+          accessibilityRole="radio"
+          onPress={() => setMode(item.key)}
+          testID={`ask-mode-${item.key}`}
+        />
+      ))}
+      <View style={[styles.chipDivider, { backgroundColor: colors.line }]} />
+      {OPTION_CHIPS.map((chip) => (
+        <Chip
+          key={chip.key}
+          label={t(chip.label)}
+          icon={chip.icon}
+          selected={options[chip.key]}
+          accessibilityRole="switch"
+          onPress={() => setOptions((previous) => ({ ...previous, [chip.key]: !previous[chip.key] }))}
+        />
+      ))}
+      {/* The next question reads the model again, after this change is saved. */}
+      <ModelChips feature="ask" onChange={() => (config.current = null)} />
+    </>
+  );
 
   const chat = (
     <>
@@ -407,6 +515,7 @@ export default function AskScreen() {
             <Text tone="secondary" style={styles.emptyBody}>
               {t('askChat.startDesc')}
             </Text>
+            <DailyUsageLine />
           </View>
         ) : null}
 
@@ -418,13 +527,16 @@ export default function AskScreen() {
               </Text>
             </View>
           ) : (
-            <AskAnswer key={message.id} content={message.content} output={message.output} library={library} />
+            <AskAnswer key={message.id} content={message.content} output={message.output} library={library} onSave={() => saveAnswer(message.content)} />
           ),
         )}
 
         {streaming !== null && streaming !== '' ? <AskAnswer content={streaming} streaming library={library} /> : null}
         {loading && !streaming ? <Thinking /> : null}
         {opening ? <ActivityIndicator style={styles.opening} accessibilityRole="progressbar" /> : null}
+
+        {/* What the next question sends, below the conversation as the website shows it above its input. */}
+        {!busy ? <ContextLine feature="ask" side="both" debateId={chatDebateId} excludeChatId={record.chatId} /> : null}
 
         {notice ? (
           <Text tone="secondary" accessibilityRole="alert" style={styles.notice}>
@@ -441,7 +553,7 @@ export default function AskScreen() {
               {t(`mobile.ask.errors.${error.kind}`)}
             </Text>
             <View style={styles.errorActions}>
-              {RETRYABLE_ERRORS.has(error.kind) ? <TextButton label={t('common.retry')} onPress={() => retry(error.question)} /> : null}
+              {RETRYABLE_ERRORS.has(error.kind) ? <TextButton label={t('common.retry')} onPress={() => retry(error.question, error.files)} /> : null}
               {PLAN_ERRORS.has(error.kind) ? <TextButton label={t('mobile.ask.openYou')} onPress={() => router.navigate('/you')} /> : null}
             </View>
           </View>
@@ -453,37 +565,39 @@ export default function AskScreen() {
           {split ? (
             // iPad: every option shows, wrapping onto a second line when the column is narrow.
             <View style={styles.chipsWrap}>
-            {OPTION_CHIPS.map((chip) => (
-              <Chip
-                key={chip.key}
-                label={t(chip.label)}
-                icon={chip.icon}
-                selected={options[chip.key]}
-                accessibilityRole="switch"
-                onPress={() => setOptions((previous) => ({ ...previous, [chip.key]: !previous[chip.key] }))}
-              />
-            ))}
-            {/* The next question reads the model again, after this change is saved. */}
-            <ModelChips feature="ask" onChange={() => (config.current = null)} />
+            {chips}
             </View>
           ) : (
             // iPhone: one sideways row, faded at the edge to show it scrolls.
             <FadingScrollRow color={colors.background} id="ask-chips-fade" style={styles.chipRow} contentContainerStyle={styles.chips} keyboardShouldPersistTaps="handled">
-            {OPTION_CHIPS.map((chip) => (
-              <Chip
-                key={chip.key}
-                label={t(chip.label)}
-                icon={chip.icon}
-                selected={options[chip.key]}
-                accessibilityRole="switch"
-                onPress={() => setOptions((previous) => ({ ...previous, [chip.key]: !previous[chip.key] }))}
-              />
-            ))}
-            {/* The next question reads the model again, after this change is saved. */}
-            <ModelChips feature="ask" onChange={() => (config.current = null)} />
+            {chips}
             </FadingScrollRow>
           )}
+          {attachments.length > 0 ? (
+            <View style={styles.attachments} testID="ask-attachments">
+              {attachments.map((file, index) => (
+                <Chip
+                  key={`${file.name}-${index}`}
+                  label={file.name}
+                  icon="file"
+                  accessibilityLabel={t('askChat.removeFile', { name: file.name })}
+                  trailing={<Icon name="x" color={colors.secondary} size={14} />}
+                  onPress={() => setAttachments((previous) => previous.filter((_, at) => at !== index))}
+                />
+              ))}
+            </View>
+          ) : null}
           <View style={[styles.inputRow, { borderColor: colors.border, backgroundColor: colors.input }]}>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={t('askChat.attachFiles')}
+              disabled={busy}
+              hitSlop={6}
+              onPress={() => void attach()}
+              style={[styles.attach, busy && styles.sendDisabled]}
+              testID="ask-attach">
+              <Icon name="paperclip" color={colors.secondary} size={20} />
+            </Pressable>
             <TextInput
               value={input}
               onChangeText={setInput}
@@ -496,16 +610,28 @@ export default function AskScreen() {
               style={[styles.input, { color: colors.foreground }]}
               testID="ask-input"
             />
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel={t('askChat.send')}
-              accessibilityState={{ disabled: busy || !input.trim() }}
-              disabled={busy || !input.trim()}
-              onPress={() => void send(input, messages)}
-              style={[styles.send, { backgroundColor: colors.primaryFill }, (busy || !input.trim()) && styles.sendDisabled]}
-              testID="ask-send">
-              {busy ? <ActivityIndicator color={colors.onPrimary} size="small" /> : <Icon name="arrowUp" color={colors.onPrimary} size={19} />}
-            </Pressable>
+            {loading ? (
+              // The website's Stop: the answer so far stays in the chat.
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel={t('askChat.stop')}
+                onPress={stop}
+                style={[styles.send, styles.stop, { borderColor: colors.primaryFill }]}
+                testID="ask-stop">
+                <Icon name="stop" color={colors.primaryFill} size={16} />
+              </Pressable>
+            ) : (
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel={t('askChat.send')}
+                accessibilityState={{ disabled: busy || !input.trim() }}
+                disabled={busy || !input.trim()}
+                onPress={() => void send(input, messages, attachments)}
+                style={[styles.send, { backgroundColor: colors.primaryFill }, (busy || !input.trim()) && styles.sendDisabled]}
+                testID="ask-send">
+                {busy ? <ActivityIndicator color={colors.onPrimary} size="small" /> : <Icon name="arrowUp" color={colors.onPrimary} size={19} />}
+              </Pressable>
+            )}
           </View>
         </View>
       </View>
@@ -611,5 +737,9 @@ const styles = StyleSheet.create({
   },
   input: { flex: 1, fontSize: 17, fontFamily: fontFamily.regular, paddingTop: 7, paddingBottom: 7, maxHeight: 120 },
   send: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' },
+  stop: { borderWidth: 2 },
+  attach: { width: 32, height: 36, alignItems: 'center', justifyContent: 'center', marginLeft: -8, marginRight: 2 },
+  attachments: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  chipDivider: { width: 1.5, height: 24, alignSelf: 'center', marginHorizontal: 2 },
   sendDisabled: { opacity: 0.45 },
 });

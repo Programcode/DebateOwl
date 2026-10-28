@@ -5,6 +5,11 @@ import '@formatjs/intl-pluralrules/polyfill.js';
 import '@formatjs/intl-pluralrules/locale-data/en.js';
 import '@formatjs/intl-pluralrules/locale-data/es.js';
 import '@formatjs/intl-pluralrules/locale-data/hu.js';
+// Nor Intl.ListFormat, which the debate context line joins its parts with ("3 sources and 2 results").
+import '@formatjs/intl-listformat/polyfill.js';
+import '@formatjs/intl-listformat/locale-data/en.js';
+import '@formatjs/intl-listformat/locale-data/es.js';
+import '@formatjs/intl-listformat/locale-data/hu.js';
 
 import { isAppLanguage, type AppLanguage } from '@debatelab/core/languages';
 import { getLocales } from 'expo-localization';

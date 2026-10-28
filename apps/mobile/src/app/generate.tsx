@@ -1,3 +1,4 @@
+import { generateDraftSections } from '@debatelab/core/ai/live-sections';
 import type { GenerateInput } from '@debatelab/core/ai/schemas/generate';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
@@ -12,15 +13,19 @@ import { FormGroup, SelectRow } from '@/components/form-rows';
 import { ModelPicker } from '@/components/model-picker';
 import { SegmentedControl } from '@/components/segmented-control';
 import { Text } from '@/components/text';
-import { ToolError, ToolProgress, ToolTitle, WorkingIn } from '@/components/tool-form';
+import { ContextLine } from '@/components/context-line';
+import { LiveToolRun, useLiveRun } from '@/components/live-run';
+import { ToolError, ToolTitle, WorkingIn } from '@/components/tool-form';
 import { AIError, isAbortError, type AIErrorKind } from '@/lib/ai-request';
 import { useAuth } from '@/lib/auth';
 import { backLabel } from '@/lib/back-label';
+import { resetContextChoices } from '@/lib/context-plan';
 import { buildDebateContext } from '@/lib/context-request';
 import { useDebates } from '@/lib/debate-context';
 import { decideMotionTarget, shouldPrefillMotion } from '@/lib/motion';
 import { chooseMotionTarget } from '@/lib/motion-gate';
 import { keepOpenResult } from '@/lib/open-results';
+import { openRefusal } from '@/lib/refusal';
 import { arrivalNotices, autosaveSources, generateCase, keepSourceAssessments, recordResult } from '@/lib/results';
 import { sessionSlot } from '@/lib/session-memory';
 import { useSettings } from '@/lib/settings';
@@ -37,9 +42,6 @@ const DEFAULT_FORM: GenerateInput = {
   tone: 'formal',
 };
 const lastForm = sessionSlot<GenerateInput>(() => DEFAULT_FORM);
-
-// The website's one progress line while the case is written.
-const PROGRESS = ['generate.working'];
 
 /** Generate, as the website's GeneratePage: a native form, a calm wait, then the case as a document. */
 export default function GenerateScreen() {
@@ -58,6 +60,7 @@ export default function GenerateScreen() {
   const requests = useRef(0);
   const abort = useRef<AbortController | null>(null);
   const live = useRef(true);
+  const liveRun = useLiveRun();
 
   const setForm = useCallback((patch: Partial<GenerateInput>) =>
     setFormState((previous) => {
@@ -66,11 +69,13 @@ export default function GenerateScreen() {
       return next;
     }), []);
 
+  const endLiveRun = liveRun.end;
   const abortActive = useCallback(() => {
     requests.current += 1;
     abort.current?.abort();
     abort.current = null;
-  }, []);
+    endLiveRun();
+  }, [endLiveRun]);
 
   // Leaving cancels a case still on its way, and nothing is saved.
   useEffect(() => () => {
@@ -98,7 +103,15 @@ export default function GenerateScreen() {
         debateId ? buildDebateContext(forUser, debateId, 'generate', input.side) : Promise.resolve(undefined),
       ]);
       if (!isCurrent()) return;
-      const { result, discoveredSources, truncated, assessments } = await generateCase(input, { config, language: outputLanguage, debateContext, signal: controller.signal });
+      const { result, discoveredSources, truncated, assessments } = await generateCase(input, {
+        config,
+        language: outputLanguage,
+        debateContext,
+        signal: controller.signal,
+        live: liveRun.begin(),
+      });
+      // Review choices cover one request, as on the website.
+      resetContextChoices('generate');
       if (!isCurrent()) return;
       const assessed = await keepSourceAssessments(forUser, debateId, assessments, controller.signal);
       if (!isCurrent()) return;
@@ -137,8 +150,11 @@ export default function GenerateScreen() {
       if (!(cause instanceof AIError)) console.warn('Generate failed:', cause instanceof Error ? cause.message : cause);
       // A missing debate was deleted elsewhere; reload the list so the app stops using it.
       if (kind === 'debateMissing') void refresh();
-      setError(kind);
+      liveRun.end();
       setPhase('form');
+      // A limit or model refusal opens the website's dialog as a sheet, not an inline error.
+      if (openRefusal(router, cause, 'generate')) return;
+      setError(kind);
     } finally {
       if (requests.current === request) abort.current = null;
     }
@@ -198,7 +214,14 @@ export default function GenerateScreen() {
       <ToolTitle title={t('nav.generate')} subtitle={t('generate.emptyDesc')} />
       <WorkingIn />
       {generating ? (
-        <ToolProgress messages={PROGRESS.map((key) => t(key))} detail={form.motion} onCancel={cancel} />
+        <LiveToolRun
+          label={t('generate.working')}
+          run={liveRun.state}
+          sections={liveRun.state.draft ? generateDraftSections(liveRun.state.draft, t) : []}
+          detail={form.motion}
+          onCancel={cancel}
+          pose="thinking"
+        />
       ) : (
         <>
           <Field
@@ -280,6 +303,7 @@ export default function GenerateScreen() {
               ]}
             />
           </FormGroup>
+          <ContextLine feature="generate" side={form.side} />
           {error ? <ToolError title={error === 'timeout' ? t('generate.timeout') : t('generate.failed')} error={error} onRetry={() => void submit()} /> : null}
         </>
       )}
