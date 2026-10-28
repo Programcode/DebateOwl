@@ -1,8 +1,9 @@
+import type { LiveGeneration } from '@debatelab/core/ai/live';
 import { AskOutputSchema, type AskOutput } from '@debatelab/core/ai/schemas/ask';
 import { consumeSSEChunk, type ParsedSSEEvent } from '@debatelab/core/ai/sse';
 import type { DebateContextRequest } from '@debatelab/core/contract/debate-context';
 
-import { abortError, AIError, errorFrom, functionOutput, postFunction, PROVIDER, responseExtras, utf8Length, type ResponseExtras } from './ai-request';
+import { abortError, AIError, errorFrom, postAI, postFunction, PROVIDER, responseExtras, utf8Length, type ResponseExtras } from './ai-request';
 import type { FeatureConfig } from './feature-config';
 
 /**
@@ -30,8 +31,12 @@ export interface HistoryMessage {
   content: string;
 }
 
+/** The website's two Ask modes: a general answer, or one that defines terms and asks back. */
+export type AskMode = 'general' | 'clarify';
+
 export interface AskRequest {
   message: string;
+  mode: AskMode;
   history: HistoryMessage[];
   options: AskOptions;
   config: FeatureConfig;
@@ -45,9 +50,9 @@ export function isFinalAskError(error: unknown): boolean {
   return error instanceof AIError && error.kind !== 'failed' && error.kind !== 'network';
 }
 
-/** Streaming serves plain questions only, as on the website (isAskStreamingSupported). */
-export function canStream(options: AskOptions): boolean {
-  return !(options.citationMode || options.webSearch || options.prosConsMode || options.argumentMapMode);
+/** Streaming serves plain questions in General mode only, as on the website (isAskStreamingSupported). */
+export function canStream(options: AskOptions, mode: AskMode): boolean {
+  return mode === 'general' && !(options.citationMode || options.webSearch || options.prosConsMode || options.argumentMapMode);
 }
 
 /** Cuts at a whole character, like the website's truncateUtf8. */
@@ -83,7 +88,7 @@ function requestInput(request: AskRequest) {
   return {
     message: request.message,
     history: boundHistory(request.history),
-    mode: 'general',
+    mode: request.mode,
     citationMode: request.options.citationMode,
     webSearch: request.options.webSearch,
     prosConsMode: request.options.prosConsMode,
@@ -160,11 +165,18 @@ export function streamAsk(request: AskRequest, handlers: { onDelta: (text: strin
 }
 
 /**
- * Asks the ai Edge Function for a whole answer, with the options the stream
- * cannot serve. onExtras receives what the answer says besides its output,
- * which the website acts on for whole answers only.
+ * Asks the ai Edge Function for a whole answer, with the options and modes
+ * the stream cannot serve. With `onText`, the ai function streams it live, as
+ * the website's Ask does, and onText receives the answer's text so far.
+ * onExtras receives what the answer says besides its output, which the
+ * website acts on for whole answers only.
  */
-export function askOnce(request: AskRequest, signal?: AbortSignal, onExtras?: (extras: ResponseExtras) => void): Promise<AskOutput> {
+export function askOnce(
+  request: AskRequest,
+  signal?: AbortSignal,
+  onExtras?: (extras: ResponseExtras) => void,
+  onText?: (text: string) => void,
+): Promise<AskOutput> {
   const body = {
     feature: 'ask',
     input: requestInput(request),
@@ -175,8 +187,10 @@ export function askOnce(request: AskRequest, signal?: AbortSignal, onExtras?: (e
     sourceIds: request.debateContext?.sourceIds ?? [],
     ...(request.debateContext ? { debateContext: request.debateContext } : {}),
   };
-  return postFunction('ai', body, signal, async (response) => {
-    const { output, data } = await functionOutput(response);
+  const live: LiveGeneration | undefined = onText
+    ? { onDraft: (draft) => onText(typeof draft.response === 'string' ? draft.response : '') }
+    : undefined;
+  return postAI(body, { signal, live }, ({ output, data }) => {
     const result = parseOutput(output);
     onExtras?.(responseExtras(data));
     return result;

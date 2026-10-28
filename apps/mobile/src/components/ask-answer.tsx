@@ -1,13 +1,14 @@
 import type { AskOutput } from '@debatelab/core/ai/schemas/ask';
 import { useRouter } from 'expo-router';
 import * as WebBrowser from 'expo-web-browser';
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { StyleSheet, View } from 'react-native';
+import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
 
 import { Chip, CiteBadge } from './chip';
 import { FadingScrollRow } from './edge-fade';
 import { firstUrl, hostOf, openCitation, shorten, type CitationTarget } from './citation-target';
+import { Icon } from './icon';
 import { MarkdownView } from './markdown-view';
 import { OwlAvatar } from './owl';
 import { Text } from './text';
@@ -35,7 +36,20 @@ function citationTargets(output: AskOutput | undefined, library: Source[]): Cita
 }
 
 /** One coach answer, as in mock 07, with the website's extra sections when the answer has them. */
-export function AskAnswer({ content, output, streaming, library }: { content: string; output?: AskOutput; streaming?: boolean; library: Source[] }) {
+export function AskAnswer({
+  content,
+  output,
+  streaming,
+  library,
+  onSave,
+}: {
+  content: string;
+  output?: AskOutput;
+  streaming?: boolean;
+  library: Source[];
+  /** Saves the answer to the Library's Ask folder; resolves whether it was saved. */
+  onSave?: () => Promise<boolean>;
+}) {
   const { t } = useTranslation();
   const { colors } = useTheme();
   const router = useRouter();
@@ -86,7 +100,45 @@ export function AskAnswer({ content, output, streaming, library }: { content: st
 
       {output?.followUpQuestions.length ? <Section title={t('askChat.followUp')} items={output.followUpQuestions} /> : null}
       {output?.uncertainties.length ? <Section title={t('askChat.uncertainties')} items={output.uncertainties} /> : null}
+      {onSave && !streaming ? <SaveToLibrary onSave={onSave} /> : null}
     </View>
+  );
+}
+
+/** The website's bookmark on an answer: saved, it turns into the mint check. */
+function SaveToLibrary({ onSave }: { onSave: () => Promise<boolean> }) {
+  const { t } = useTranslation();
+  const { colors } = useTheme();
+  const [state, setState] = useState<'idle' | 'saving' | 'saved'>('idle');
+  if (state === 'saved') {
+    return (
+      <View style={styles.saved} accessibilityRole="text" testID="ask-saved">
+        <View style={[styles.savedCheck, { backgroundColor: colors.successFill }]}>
+          <Icon name="check" color={colors.successTint} size={13} />
+        </View>
+        <Text weight="semibold" style={[styles.saveText, { color: colors.success }]}>
+          {t('ask.saved')}
+        </Text>
+      </View>
+    );
+  }
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={t('askChat.saveMessage')}
+      disabled={state === 'saving'}
+      hitSlop={6}
+      onPress={() => {
+        setState('saving');
+        void onSave().then((saved) => setState(saved ? 'saved' : 'idle'));
+      }}
+      style={({ pressed }) => [styles.save, pressed && styles.pressed]}
+      testID="ask-save">
+      {state === 'saving' ? <ActivityIndicator size="small" color={colors.primary} /> : <Icon name="bookmark" color={colors.primary} size={17} />}
+      <Text weight="semibold" style={[styles.saveText, { color: colors.primary }]}>
+        {t('askChat.saveToLibrary')}
+      </Text>
+    </Pressable>
   );
 }
 
@@ -114,4 +166,9 @@ const styles = StyleSheet.create({
   sectionBody: { gap: 3 },
   sectionTitle: { fontSize: 14 },
   sectionItem: { fontSize: 15, lineHeight: 21 },
+  save: { flexDirection: 'row', alignItems: 'center', gap: 6, alignSelf: 'flex-start', minHeight: 32 },
+  saved: { flexDirection: 'row', alignItems: 'center', gap: 7, alignSelf: 'flex-start', minHeight: 32 },
+  savedCheck: { width: 20, height: 20, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
+  saveText: { fontSize: 14.5 },
+  pressed: { opacity: 0.6 },
 });
