@@ -910,11 +910,19 @@
       "modeGenerate": "Generálás",
       "modeCrossfire": "Keresztkérdezés",
       "modeSparring": "Vitapárbaj",
-      "sampleCaseTitle": "Esetvázlat",
-      "sampleClaimLabel": "Állítás",
-      "sampleClaim": "A telefonok tanórán való betiltása védi a megszakítás nélküli tanulást.",
-      "sampleEvidenceLabel": "Bizonyítéki támpont",
-      "sampleEvidence": "Hasonlítsd össze a feladatra fordított időt a szabály betartatásának költségével.",
+      "sampleCase": {
+        "title": "Felolvasható eset",
+        "openingLabel": "Nyitás",
+        "opening": "Két érv: a telefon helye az órán kívül van.",
+        "argumentLabel": "Érv",
+        "argument": "Az értesítések megtörik a figyelmet.",
+        "evidenceLabel": "Bizonyíték",
+        "evidence": "Kutatás az újrafókuszálásról, forrással, évszámmal.",
+        "ifTheySayLabel": "Ha azt mondják…",
+        "ifTheySay": "„Vészhelyzet!” Válaszunk: a titkárság hazatelefonál.",
+        "closingLabel": "Zárás",
+        "closing": "Telefon nélkül figyelnek a diákok."
+      },
       "sampleCrossfireTitle": "Keresztkérdezési párbeszéd",
       "sampleQuestionLabel": "Kérdés",
       "sampleQuestion": "Mi változik a tiltás után?",
@@ -930,7 +938,7 @@
   "features": {
     "title": "Minden, ami a győzelemhez kell",
     "generate": "Esetgenerátor",
-    "generateDesc": "Teljes esetek bizonyítékokkal.",
+    "generateDesc": "Nyitás, érvek bizonyítékkal, „Ha azt mondják…” válaszok, zárás.",
     "attack": "Esettámadó",
     "attackDesc": "Találd meg előbb a gyenge pontokat.",
     "brainstorm": "Ötletelés",
@@ -957,7 +965,7 @@
     "step1Title": "Kutatás",
     "step1Desc": "Az MI hivatkozott forrásokat gyűjt az indítványodhoz.",
     "step2Title": "Generálás",
-    "step2Desc": "Érvek, bizonyítékok és ellenérvek.",
+    "step2Desc": "Nyitás, érvek bizonyítékkal, „Ha azt mondják…” válaszok és zárómondat.",
     "step3Title": "Gyakorlás",
     "step3Desc": "Gyakorolj edzővel, időmérővel és vitapárbajjal."
   },
@@ -998,7 +1006,11 @@
     "q6": "Mi az a DebateOwl?",
     "a6": "A DebateOwl egy MI-alapú vitafelkészítő és gyakorló alkalmazás diákoknak és versenyvitázóknak. {{modes}} felkészülési módja van, köztük esetgenerátor, esettámadó, hivatkozásokkal támogatott bizonyítékkutatás, MI-edző, Keresztkérdezés és időzített Vitapárbaj-fordulók MI-ellenféllel, és angolul, spanyolul és magyarul is elérhető.",
     "q7": "Ugyanaz a {{product}}, mint a debatelab.ai?",
-    "a7": "Nem. A {{brand}} egy különálló termék, a {{host}} címen."
+    "a7": "Nem. A {{brand}} egy különálló termék, a {{host}} címen.",
+    "q8": "Mit tartalmaz egy {{product}} által írt eset?",
+    "a8": "A {{product}} úgy írja meg az esetet, ahogy az iskolai vitázók készülnek: nyitás, két–négy érv, mindegyik magyarázattal, bizonyítékkal és azzal, hogy miért fontos, „Ha azt mondják… erre azt feleljük…” válaszok, egy zárómondat és a felhasznált források.",
+    "q9": "Ingyenes a {{product}}?",
+    "a9": "A {{product}} alkalmazásnak nincs ingyenes csomagja ({{trialDays}} napos ingyenes próba, utána havi ${{proMonthly}}); a /hu/tools oldalon lévő külön eszközök ingyenesek, és fiók nélkül is használhatók."
   },
   "guideHub": {
     "title": "Vitaútmutatók és ingyenes eszközök",

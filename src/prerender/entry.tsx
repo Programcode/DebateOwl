@@ -7,7 +7,8 @@ import i18n, { applyAppLanguage } from '@/i18n';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { AuthContext, type AuthContextValue } from '@/lib/supabase/auth-context';
 import site from '@/config/site.json';
-import { DEFINITION, ORGANIZATION_ID, PAGE_HEAD_IDS, PAGE_HEADS, PRICING, PRODUCT, SITE_ORIGIN, factsAsOf, organizationNode, type PageHead, type PrerenderedRoute } from '@/lib/seo/pages';
+import { FREE_PLAN } from '@/lib/seo/site-text';
+import { SOFTWARE_DESCRIPTION, ORGANIZATION_ID, PAGE_HEAD_IDS, PAGE_HEADS, PRICING, PRODUCT, SITE_ORIGIN, factsAsOf, organizationNode, type PageHead, type PrerenderedRoute } from '@/lib/seo/pages';
 import { HEAD_NAMES } from '@/lib/seo/head-text';
 import { hreflangAlternates, isLocalizedRoute, LOCALIZED_PATHS, RouteLanguageProvider, type PageLanguage } from '@/lib/seo/localized-routes';
 import { TOOL_PAGES as HU_TOOL_PAGES } from '@/pages/tools/localized/hu';
@@ -82,13 +83,17 @@ function landingQuestions(language: PageLanguage = 'en'): Array<[string, string]
   return [
     [i18n.t('shortAnswer.question'), i18n.t('shortAnswer.answer', { asOf })],
     [i18n.t('faq.q6'), i18n.t('faq.a6', { modes: PREP_MODE_COUNT })],
+    [i18n.t('faq.q8'), i18n.t('faq.a8')],
     [i18n.t('faq.q7'), i18n.t('faq.a7')],
     [i18n.t('faq.q1'), i18n.t('faq.a1', { asOf })],
+    [i18n.t('faq.q9'), i18n.t('faq.a9')],
     ...[2, 3, 4, 5].map((n): [string, string] => [i18n.t(`faq.q${n}`), i18n.t(`faq.a${n}`)]),
   ];
 }
 
 const APP_TOOLS = [...PREPARE_TOOLS, ...PRACTICE_TOOLS, ...UTILITY_TOOLS];
+// Word, PDF and Google Docs exports lay a case out in the same sections the app shows.
+const EXPORT_FEATURE = 'Google Docs and PDF export in the case format';
 
 function landingStructuredData(dateModified: string | undefined) {
   return {
@@ -114,16 +119,16 @@ function landingStructuredData(dateModified: string | undefined) {
         operatingSystem: 'Web',
         url: `${SITE_ORIGIN}/`,
         image: `${SITE_ORIGIN}/hero-visual.jpg?v=2`,
-        description: DEFINITION,
+        description: SOFTWARE_DESCRIPTION,
         inLanguage: ['en', 'es', 'hu'],
-        featureList: APP_TOOLS.map((tool) => i18n.t(`features.${tool.key}`)),
+        featureList: [...APP_TOOLS.map((tool) => i18n.t(`features.${tool.key}`)), EXPORT_FEATURE],
         offers: [
           {
             '@type': 'Offer',
             name: 'Free trial',
             price: '0',
             priceCurrency: PRICING.currency,
-            description: `${PRICING.trialDays}-day free trial, no credit card required.`,
+            description: `${PRICING.trialDays}-day free trial, no credit card required. ${FREE_PLAN}`,
           },
           {
             '@type': 'Offer',

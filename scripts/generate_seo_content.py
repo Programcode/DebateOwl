@@ -25,6 +25,20 @@ PRICING = SITE["pricing"]
 FACTS_AS_OF = date.fromisoformat(SITE["factsCheckedOn"]).strftime("%B %Y")
 DEFINITION = f'{PRODUCT} is {SITE["definition"]}.'
 PRO_PRICE = f"${PRICING['proMonthly']}/month + tax"
+
+def site_sentence(key):
+    """A site.json sentence with {{product}}, {{trialDays}} and {{proMonthly}} filled in, as src/lib/seo/site-text.ts does."""
+    values = {"product": PRODUCT, "trialDays": str(PRICING["trialDays"]), "proMonthly": PRICING["proMonthly"]}
+    return re.sub(r"\{\{(\w+)\}\}", lambda match: values[match.group(1)], SITE[key])
+
+# What a generated case contains, and the app-versus-free-tools pricing fact, as the home page states them.
+CASE_FORMAT = site_sentence("caseFormat")
+FREE_PLAN = site_sentence("freePlan")
+# The SoftwareApplication description, the same as SOFTWARE_DESCRIPTION in src/lib/seo/pages.ts.
+SOFTWARE_DESCRIPTION = f'{SITE["tagline"]} {CASE_FORMAT}'
+if len(SOFTWARE_DESCRIPTION) > 300:
+    raise SystemExit(f"The SoftwareApplication description has {len(SOFTWARE_DESCRIPTION)} characters; keep it to 300")
+EXPORT_FEATURE = "Google Docs and PDF export in the case format"
 # One line every guide, llms.txt and the pricing page share.
 PLAN_FACTS = (
     f"As of {FACTS_AS_OF}, {PRODUCT} has a {PRICING['trialDays']}-day free trial with no credit card required, "
@@ -311,14 +325,14 @@ SOFTWARE = {
     "@id": SOFTWARE_ID,
     "name": PRODUCT,
     "alternateName": SITE["alternateName"],
-    "description": DEFINITION,
+    "description": SOFTWARE_DESCRIPTION,
     "applicationCategory": "EducationalApplication",
     "operatingSystem": "Web",
     "url": BASE + "/",
     "inLanguage": ["en", "es", "hu"],
-    "featureList": [EN["features"][key] for key in PREP_MODES + UTILITIES],
+    "featureList": [EN["features"][key] for key in PREP_MODES + UTILITIES] + [EXPORT_FEATURE],
     "offers": [
-        {"@type": "Offer", "name": "Free trial", "price": "0", "priceCurrency": PRICING["currency"], "description": f"{PRICING['trialDays']}-day free trial, no credit card required."},
+        {"@type": "Offer", "name": "Free trial", "price": "0", "priceCurrency": PRICING["currency"], "description": f"{PRICING['trialDays']}-day free trial, no credit card required. {FREE_PLAN}"},
         {"@type": "Offer", "name": "Pro", "price": PRICING["proMonthly"], "priceCurrency": PRICING["currency"], "description": "Monthly subscription, billed plus tax.", "priceSpecification": {"@type": "UnitPriceSpecification", "price": PRICING["proMonthly"], "priceCurrency": PRICING["currency"], "billingDuration": "P1M", "valueAddedTaxIncluded": False}},
     ],
     "publisher": {"@id": BASE + "/#organization"},
@@ -611,9 +625,12 @@ def llms_txt():
 
 - Who it is for: students, competitive debaters and their coaches.
 - {len(PREP_MODES)} prep modes: {names(PREP_MODES)}. Plus {len(UTILITIES)} utilities: {names(UTILITIES)}.
+- Case format: {CASE_FORMAT}
+- {SITE["secondSpeech"]}
 - Practice: Sparring runs timed rounds against an AI opponent in School 4-6-6-3, Lincoln-Douglas and Public Forum and ends with a judged verdict. Crossfire drills cross-examination.
 - Languages: English, Spanish and Hungarian.
 - Pricing: {PLAN_FACTS}
+- Free plan: {FREE_PLAN}
 - Pro adds expanded AI prep access, all 10 models (including Claude Opus and Sonnet, GPT-6.1 Sol and Gemini), Active Grounding research and priority support.
 - Privacy: cases, sources, practice rounds and history stay behind sign-in and are not indexed.
 

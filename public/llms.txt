@@ -8,9 +8,12 @@ DebateOwl runs at https://debateowl.com/. It is a separate product from debatela
 
 - Who it is for: students, competitive debaters and their coaches.
 - 8 prep modes: Case generator, Brainstorm, Factoids, Flowchart, Case attacker, Ask coach, Crossfire and Sparring. Plus 3 utilities: Library, Debate timer and History.
+- Case format: A DebateOwl case is written the way school debaters prepare: an opening, two to four arguments each with an explanation, evidence and why it matters, "If they say… we answer…" replies, a closing line and the sources it used.
+- Second speech (R2): no new arguments; about two minutes reinforcing our arguments, then about four minutes of "If they say X, we answer Y" replies.
 - Practice: Sparring runs timed rounds against an AI opponent in School 4-6-6-3, Lincoln-Douglas and Public Forum and ends with a judged verdict. Crossfire drills cross-examination.
 - Languages: English, Spanish and Hungarian.
 - Pricing: As of October 2026, DebateOwl has a 3-day free trial with no credit card required, then Pro costs $5/month + tax. There is no permanent free plan.
+- Free plan: The DebateOwl app has no free plan (3-day free trial, then $5/month); the separate tools at /tools are free with no account.
 - Pro adds expanded AI prep access, all 10 models (including Claude Opus and Sonnet, GPT-6.1 Sol and Gemini), Active Grounding research and priority support.
 - Privacy: cases, sources, practice rounds and history stay behind sign-in and are not indexed.
 

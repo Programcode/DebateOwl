@@ -910,11 +910,19 @@
       "modeGenerate": "Generar",
       "modeCrossfire": "Interrogatorio",
       "modeSparring": "Sparring",
-      "sampleCaseTitle": "Esquema del caso",
-      "sampleClaimLabel": "Afirmación",
-      "sampleClaim": "Prohibir los teléfonos durante la clase protege el tiempo de aprendizaje sin interrupciones.",
-      "sampleEvidenceLabel": "Pista de evidencia",
-      "sampleEvidence": "Compara el tiempo de atención con el coste de hacer cumplir la regla.",
+      "sampleCase": {
+        "title": "Caso listo para leer",
+        "openingLabel": "Apertura",
+        "opening": "Dos argumentos: el móvil, fuera del aula.",
+        "argumentLabel": "Argumento",
+        "argument": "Las notificaciones rompen la concentración.",
+        "evidenceLabel": "Evidencia",
+        "evidence": "Un estudio sobre reconcentrarse, con fuente y año.",
+        "ifTheySayLabel": "Si dicen…",
+        "ifTheySay": "«¡Emergencias!». Respondemos: el colegio llama a casa.",
+        "closingLabel": "Cierre",
+        "closing": "Sin móviles, clases que se escuchan."
+      },
       "sampleCrossfireTitle": "Intercambio de interrogatorio",
       "sampleQuestionLabel": "Pregunta",
       "sampleQuestion": "¿Qué cambia después de la prohibición?",
@@ -930,7 +938,7 @@
   "features": {
     "title": "Todo lo que necesitas para ganar",
     "generate": "Generador de casos",
-    "generateDesc": "Casos completos con evidencia.",
+    "generateDesc": "Apertura, argumentos con evidencia, respuestas «Si dicen…», cierre.",
     "attack": "Atacante de casos",
     "attackDesc": "Encuentra antes los puntos débiles.",
     "brainstorm": "Lluvia de ideas",
@@ -957,7 +965,7 @@
     "step1Title": "Investigar",
     "step1Desc": "La IA reúne fuentes citadas para tu moción.",
     "step2Title": "Generar",
-    "step2Desc": "Obtén argumentos, evidencia y réplicas.",
+    "step2Desc": "Obtén una apertura, argumentos con evidencia, respuestas «Si dicen…» y una frase de cierre.",
     "step3Title": "Practicar",
     "step3Desc": "Practica con coach, cronómetro y sparring."
   },
@@ -998,7 +1006,11 @@
     "q6": "¿Qué es DebateOwl?",
     "a6": "DebateOwl es una app de preparación y práctica de debate con IA para estudiantes y debatientes de competición. Tiene {{modes}} modos de preparación, entre ellos un generador de casos, un atacante de casos, investigación de evidencia con citas, un coach de IA, Interrogatorio y rondas de Sparring cronometradas contra un oponente de IA, y está disponible en inglés, español y húngaro.",
     "q7": "¿{{product}} es lo mismo que debatelab.ai?",
-    "a7": "No. {{brand}} es un producto distinto, en {{host}}."
+    "a7": "No. {{brand}} es un producto distinto, en {{host}}.",
+    "q8": "¿Qué incluye un caso de {{product}}?",
+    "a8": "Un caso de {{product}} se escribe como lo preparan los debatientes escolares: una apertura, de dos a cuatro argumentos, cada uno con explicación, evidencia y por qué importa, respuestas «Si dicen… respondemos…», una frase de cierre y las fuentes que usó.",
+    "q9": "¿{{product}} es gratis?",
+    "a9": "La app {{product}} no tiene plan gratuito (prueba gratis de {{trialDays}} días y después ${{proMonthly}}/mes); las herramientas aparte de /es/tools son gratis y no piden cuenta."
   },
   "guideHub": {
     "title": "Guías de debate y herramientas gratis",

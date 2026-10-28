@@ -78,27 +78,26 @@ const HeroPreview = () => {
     const [mode, setMode] = React.useState<DemoMode>("generate");
     const motionText = t('hero.preview.topicValue');
 
-    const samples: Record<DemoMode, { title: string; firstLabel: string; first: string; secondLabel: string; second: string }> = {
+    // The generate sample shows a case in the sections Generate writes.
+    const caseRow = (key: string) => ({ label: t(`hero.preview.sampleCase.${key}Label`), text: t(`hero.preview.sampleCase.${key}`) });
+    const samples: Record<DemoMode, { title: string; rows: Array<{ label: string; text: string }> }> = {
         generate: {
-            title: t('hero.preview.sampleCaseTitle'),
-            firstLabel: t('hero.preview.sampleClaimLabel'),
-            first: t('hero.preview.sampleClaim'),
-            secondLabel: t('hero.preview.sampleEvidenceLabel'),
-            second: t('hero.preview.sampleEvidence'),
+            title: t('hero.preview.sampleCase.title'),
+            rows: ['opening', 'argument', 'evidence', 'ifTheySay', 'closing'].map(caseRow),
         },
         crossfire: {
             title: t('hero.preview.sampleCrossfireTitle'),
-            firstLabel: t('hero.preview.sampleQuestionLabel'),
-            first: t('hero.preview.sampleQuestion'),
-            secondLabel: t('hero.preview.sampleAnswerLabel'),
-            second: t('hero.preview.sampleAnswer'),
+            rows: [
+                { label: t('hero.preview.sampleQuestionLabel'), text: t('hero.preview.sampleQuestion') },
+                { label: t('hero.preview.sampleAnswerLabel'), text: t('hero.preview.sampleAnswer') },
+            ],
         },
         sparring: {
             title: t('hero.preview.sampleSparringTitle'),
-            firstLabel: t('hero.preview.sampleOpeningLabel'),
-            first: t('hero.preview.sampleOpening'),
-            secondLabel: t('hero.preview.sampleResponseLabel'),
-            second: t('hero.preview.sampleResponse'),
+            rows: [
+                { label: t('hero.preview.sampleOpeningLabel'), text: t('hero.preview.sampleOpening') },
+                { label: t('hero.preview.sampleResponseLabel'), text: t('hero.preview.sampleResponse') },
+            ],
         },
     };
     const sample = samples[mode];
@@ -112,7 +111,7 @@ const HeroPreview = () => {
         <Reveal onLoad delay={0.1} className="relative hidden w-full lg:block">
             <div className="absolute -inset-8 bg-linear-to-r from-plume-400/25 via-plume-200/20 to-[rgb(255_196_20/0.22)] blur-3xl" />
             {/* The owl points the visitor at the product. */}
-            <Owl pose="point" size={140} priority breathe={false} className="absolute -bottom-10 -left-12 z-20 -scale-x-100" />
+            <Owl pose="point" size={140} priority breathe={false} className="absolute -bottom-10 -left-24 z-20 -scale-x-100" />
             <div className="relative overflow-hidden rounded-xl border-2 border-border bg-card shadow-2xl">
                 {/* Browser chrome */}
                 <div className="flex items-center border-b-2 border-border px-5 py-3">
@@ -123,7 +122,8 @@ const HeroPreview = () => {
                     </div>
                 </div>
 
-                <div className="grid grid-cols-1 gap-4 bg-background p-5 lg:grid-cols-[1.05fr_0.95fr]">
+                {/* Stacked: the case sample needs the full width for its five sections. */}
+                <div className="grid grid-cols-1 gap-4 bg-background p-5">
                     <div className="space-y-4 rounded-lg border-2 border-border bg-card p-4">
                         <div className="flex items-center justify-between gap-3">
                             <p className="font-display text-lg font-[600] text-heading">{t(`features.${mode}`)}</p>
@@ -177,14 +177,12 @@ const HeroPreview = () => {
                         </div>
 
                         <div className="space-y-3 rounded-md border border-primary/20 bg-primary/5 p-3">
-                            <div>
-                                <p className="text-xs font-semibold uppercase tracking-wide text-primary">{sample.firstLabel}</p>
-                                <p className="mt-1 text-sm leading-relaxed text-foreground">{sample.first}</p>
-                            </div>
-                            <div className="border-t border-primary/15 pt-3">
-                                <p className="text-xs font-semibold uppercase tracking-wide text-primary">{sample.secondLabel}</p>
-                                <p className="mt-1 text-sm leading-relaxed text-foreground">{sample.second}</p>
-                            </div>
+                            {sample.rows.map((row, index) => (
+                                <div key={row.label} className={index > 0 ? "border-t border-primary/15 pt-3" : undefined}>
+                                    <p className="text-xs font-semibold uppercase tracking-wide text-primary">{row.label}</p>
+                                    <p className="mt-1 text-sm leading-relaxed text-foreground">{row.text}</p>
+                                </div>
+                            ))}
                         </div>
                     </div>
                 </div>
