@@ -1,3 +1,4 @@
+import { QUOTA_SESSION_KEY } from '@debatelab/core/ai/session-quota';
 import {
   collectDebriefTurnIds,
   CrossfireDebriefSchema,
@@ -53,9 +54,6 @@ interface RequestOptions {
   quotaSession?: string;
 }
 
-// The keys the server's quota ledger accepts (parseQuotaSessionKey in _shared/entitlements.ts).
-const QUOTA_SESSION_KEY = /^[A-Za-z0-9._:-]{1,128}$/;
-
 // Turn signals and measured delivery facts are client annotations. The Edge
 // Function accepts only the turn fields it signs and prompts with.
 function serverTranscript(turns: CrossfireTurn[]) {
@@ -65,6 +63,7 @@ function serverTranscript(turns: CrossfireTurn[]) {
 function requestBody(input: Record<string, unknown> & { transcript: CrossfireTurn[] }, options: RequestOptions) {
   return {
     feature: 'crossfire',
+    ...(input.operation !== 'signal' && options.quotaSession && QUOTA_SESSION_KEY.test(options.quotaSession) ? { quotaSession: options.quotaSession } : {}),
     input: { ...input, transcript: serverTranscript(input.transcript), language: options.language },
     provider: PROVIDER,
     model: options.config.model,
@@ -72,7 +71,6 @@ function requestBody(input: Record<string, unknown> & { transcript: CrossfireTur
     // Servers from before Current Debate context read only this field.
     sourceIds: options.debateContext?.sourceIds ?? [],
     ...(options.debateContext ? { debateContext: options.debateContext } : {}),
-    ...(options.quotaSession && QUOTA_SESSION_KEY.test(options.quotaSession) ? { quotaSession: options.quotaSession } : {}),
   };
 }
 

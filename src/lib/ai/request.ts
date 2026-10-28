@@ -1,3 +1,4 @@
+import { QUOTA_SESSION_KEY } from '@debatelab/core/ai/session-quota';
 import type { ProviderConfig } from './providers/types';
 import { useSettingsStore } from '../stores/settings-store';
 import { useSessionStore } from '../stores/session-store';
@@ -45,8 +46,6 @@ import { refreshAIUsage } from '@/lib/query-client';
 export const REQUEST_TIMEOUT_MS = 200 * 1000;
 const MAX_CLIENT_ERROR_BODY_BYTES = 16_000;
 const MAX_CLIENT_REQUEST_BODY_BYTES = 190_000;
-// The session ids the ai function accepts (parseQuotaSessionKey).
-const QUOTA_SESSION_KEY = /^[A-Za-z0-9._:-]{1,128}$/;
 
 export interface AIRequestOptions<T = unknown> {
   includeActiveSources?: boolean;

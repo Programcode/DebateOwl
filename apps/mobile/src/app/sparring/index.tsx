@@ -94,6 +94,8 @@ export default function SparringScreen() {
   const [session, setSession] = useState<SparringSession | null>(() => sparringDraft.get());
   // Moves read the latest round from here, so a reply that lands after a keystroke keeps the keystroke.
   const sessionRef = useRef(session);
+  // A pause after starting must stay paused when the student edits the draft.
+  const startedTurn = useRef<string | null>(null);
   const [request, setRequest] = useState<RequestState>(() =>
     needsRequest(sparringDraft.get()) ? { status: 'failed', failure: { message: 'mobile.sparring.interrupted', plan: false } } : { status: 'idle' });
   const [motion, setMotion] = useState('');
@@ -438,10 +440,23 @@ export default function SparringScreen() {
       notice={notice}
       submissionError={submissionError}
       onClose={() => router.back()}
-      onDraft={(draft) => move((round, now) => ({ ...round, draft: draft.slice(0, MAX_SPARRING_SPEECH_CHARS), updatedAt: now }))}
+      onDraft={(draft) => move((round, now) => {
+        const turn = currentSparringTurn(round);
+        const key = `${round.id}:${turn?.id ?? ''}`;
+        const awaitingStart = startedTurn.current !== key && !round.timerRunning
+          && round.timerRemainingSeconds === turn?.timeLimitSeconds;
+        if (awaitingStart) startedTurn.current = key;
+        return { ...(awaitingStart ? resumeSparringTimer(round, now) : round), draft: draft.slice(0, MAX_SPARRING_SPEECH_CHARS), updatedAt: now };
+      })}
       onPause={() => move(pauseSparringTimer)}
-      onResume={() => move(resumeSparringTimer)}
-      onReset={() => move(resetSparringTurnTimer)}
+      onResume={() => move((round, now) => {
+        startedTurn.current = `${round.id}:${currentSparringTurn(round)?.id ?? ''}`;
+        return resumeSparringTimer(round, now);
+      })}
+      onReset={() => {
+        startedTurn.current = null;
+        move(resetSparringTurnTimer);
+      }}
       onSubmit={submit}
       onRetry={retry}
     />

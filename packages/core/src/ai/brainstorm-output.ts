@@ -6,13 +6,12 @@ import type { BrainstormOutput } from './schemas/brainstorm';
  * This handles cases where the AI returns incomplete structures.
  */
 export function transformBrainstormResponse(response: Record<string, unknown>): BrainstormOutput {
-  // Ensure required base fields exist. Only text entries are kept: an object in a list reached React as a child.
-  const strings = (value: unknown): string[] => (Array.isArray(value) ? value.filter((entry): entry is string => typeof entry === 'string') : []);
+  // Ensure required base fields exist
   const result: BrainstormOutput = {
     needsMoreInfo: Boolean(response.needsMoreInfo),
-    clarifyingQuestions: strings(response.clarifyingQuestions),
-    nextSteps: strings(response.nextSteps),
-    warningsAndTradeoffs: strings(response.warningsAndTradeoffs),
+    clarifyingQuestions: Array.isArray(response.clarifyingQuestions) ? response.clarifyingQuestions : [],
+    nextSteps: Array.isArray(response.nextSteps) ? response.nextSteps : [],
+    warningsAndTradeoffs: Array.isArray(response.warningsAndTradeoffs) ? response.warningsAndTradeoffs : [],
   };
 
   // Helper to normalize an Idea object

@@ -1,6 +1,5 @@
 import {
   AUTO_SAVED_FOLDER,
-  autoSavedSourceRow,
   parseDiscoveredSources,
   retainedDiscoveredSources,
   type DiscoveredSource,
@@ -20,7 +19,7 @@ import { AIError, functionOutput, postFunction, PROVIDER, responseExtras, type R
 import type { FeatureConfig } from './feature-config';
 import { debateListScopes, deletedListScopes } from './debates';
 import { afterWrite, cachedRead, readFailed, type CopyMark } from './offline-cache';
-import { addSource, applySourceAssessments, fetchSourceIdsInFolder, removeSource } from './sources';
+import { saveResearchedSource, applySourceAssessments, fetchSourceIdsInFolder, removeSource } from './sources';
 import { supabase } from './supabase';
 
 /**
@@ -129,13 +128,28 @@ export function findFactoids(input: FactoidsInput, options: RequestOptions): Pro
   });
 }
 
+// Batches see the rows written by earlier tools before matching existing pages.
+let autosaveQueue: Promise<unknown> = Promise.resolve();
+
 /**
  * Keeps the researched sources worth keeping in the debate's Auto-saved
  * folder, one at a time, as the website does. One-off research is not kept.
  * A source that fails to save is skipped; the count of failures is returned.
  * Once the request is cancelled or replaced, no further source is written.
  */
-export async function autosaveSources(
+export function autosaveSources(
+  userId: string,
+  sources: DiscoveredSource[],
+  capturedVia: Feature,
+  debateId: string | null,
+  signal?: AbortSignal,
+): Promise<{ saved: number; failed: number }> {
+  const run = autosaveQueue.then(() => autosaveSourcesBatch(userId, sources, capturedVia, debateId, signal));
+  autosaveQueue = run.catch(() => undefined);
+  return run;
+}
+
+async function autosaveSourcesBatch(
   userId: string,
   sources: DiscoveredSource[],
   capturedVia: Feature,
@@ -148,8 +162,7 @@ export async function autosaveSources(
   for (const source of retainedDiscoveredSources(sources)) {
     if (signal?.aborted) break;
     try {
-      await addSource(userId, { ...autoSavedSourceRow(source, capturedVia), debateId });
-      saved += 1;
+      if (await saveResearchedSource(userId, debateId, source, capturedVia, signal)) saved += 1;
     } catch (cause) {
       console.warn('Could not save a researched source:', cause instanceof Error ? cause.message : cause);
       failed += 1;

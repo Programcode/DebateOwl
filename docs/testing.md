@@ -51,6 +51,8 @@ Run one test file while iterating:
 npx vitest run src/test/security/url-validation.test.ts
 ```
 
+The root Vitest run includes website tests, mobile library tests, and shared tests beside their modules in `packages/core/src/`. Core parser, URL-matching and Sparring move tests exercise the same code both clients import.
+
 For a bug, watch the reproduction fail for the expected reason before implementing the fix.
 
 Which behavior deserves a test, and which tests not to write, is in [AGENTS.md](../AGENTS.md#what-to-test). The short version: test specs where a regression is costly or invisible (auth, RLS, billing, quotas, migrations, concurrency, parsers, regressions of fixed bugs), and prove everything else by using the app.

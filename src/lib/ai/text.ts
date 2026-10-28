@@ -16,21 +16,4 @@ export function truncateUtf8(value: string, maxBytes: number): string {
   return '';
 }
 
-function cleanGeneratedString(value: string) {
-  return value
-    .replace(/[—–]/g, ', ')
-    .replace(/\b(Magnitude|Probability|Timeframe):\s*/gi, '')
-    .replace(/\s{2,}/g, ' ')
-    .trim();
-}
-
-export function cleanGeneratedOutput<T>(value: T): T {
-  if (typeof value === 'string') return cleanGeneratedString(value) as T;
-  if (Array.isArray(value)) return value.map(cleanGeneratedOutput) as T;
-  if (value && typeof value === 'object') {
-    return Object.fromEntries(
-      Object.entries(value).map(([key, child]) => [key, cleanGeneratedOutput(child)])
-    ) as T;
-  }
-  return value;
-}
+export { cleanGeneratedOutput } from '@debatelab/core/ai/generate-output';

@@ -58,14 +58,12 @@ export function currentSparringTurn(session: SparringSession): SparringTurn | un
   return session.turns[session.currentTurnIndex];
 }
 
-/** The clock for a turn: the student's turns start running at once; the opponent's have none. */
-export function timerForTurn(turn: SparringTurn | undefined, now: number) {
-  const duration = turn?.timeLimitSeconds ?? 0;
-  const shouldRun = turn?.speaker === 'user';
+/** A user turn opens with a full, stopped clock; it runs once the student starts speaking or typing. */
+export function timerForTurn(turn: SparringTurn | undefined): Pick<SparringSession, 'timerRemainingSeconds' | 'timerRunning' | 'timerDeadline'> {
   return {
-    timerRemainingSeconds: duration,
-    timerRunning: shouldRun,
-    timerDeadline: shouldRun ? now + duration * 1000 : null,
+    timerRemainingSeconds: turn?.timeLimitSeconds ?? 0,
+    timerRunning: false,
+    timerDeadline: null,
   };
 }
 
@@ -89,7 +87,7 @@ function advanceSession(session: SparringSession, now: number): SparringSession 
     ...session,
     currentTurnIndex: nextIndex,
     draft: '',
-    ...timerForTurn(nextTurn, now),
+    ...timerForTurn(nextTurn),
     updatedAt: now,
   };
 }
@@ -107,7 +105,7 @@ export function startSparringSession(input: StartSparringInput, id: string, now:
     currentTurnIndex: 0,
     phase: 'round',
     draft: '',
-    ...timerForTurn(turns[0], now),
+    ...timerForTurn(turns[0]),
     debateId: input.debateId ?? null,
     ...(input.voice ? { voice: true } : {}),
     createdAt: now,
@@ -141,10 +139,10 @@ export function resumeSparringTimer(session: SparringSession, now: number): Spar
 }
 
 /** Starts the student's turn again with its full time. */
-export function resetSparringTurnTimer(session: SparringSession, now: number): SparringSession {
+export function resetSparringTurnTimer(session: SparringSession): SparringSession {
   const turn = currentSparringTurn(session);
   if (turn?.speaker !== 'user') return session;
-  return { ...session, ...timerForTurn(turn, now) };
+  return { ...session, ...timerForTurn(turn) };
 }
 
 /**

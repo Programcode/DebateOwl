@@ -1,3 +1,4 @@
+import { factoidsRequestInput, selectVerifiedFactoids } from '@debatelab/core/ai/factoids-output';
 import type { ProviderConfig } from '../providers/types';
 import { FactoidsOutputSchema, type FactoidsOutput, type FactoidsInput } from '../schemas/factoids';
 import type { WorkspaceToolContext } from '@/lib/workspace/tool-context';
@@ -7,11 +8,7 @@ import type { LiveGeneration } from '../live';
 import { autosaveDiscoveredSources, parseDiscoveredSources, type ResultWithSources } from '../sources';
 
 export async function factoids(input: FactoidsInput, config: ProviderConfig, workspaceContext?: WorkspaceToolContext, debateId?: string | null, signal?: AbortSignal, live?: LiveGeneration): Promise<ResultWithSources<FactoidsOutput>> {
-  const inputWithLanguage = withOutputLanguage({
-    ...input,
-    region: input.region?.trim() || 'Global',
-    sourceCount: input.sourceCount || 5,
-  });
+  const inputWithLanguage = withOutputLanguage({ ...factoidsRequestInput(input) });
   const response = await callSupabaseAI<ResultWithSources<FactoidsOutput>>('factoids', inputWithLanguage, config, {
     workspaceContext,
     debateId,
@@ -26,15 +23,8 @@ export async function factoids(input: FactoidsInput, config: ProviderConfig, wor
         });
       }
 
-      const allFactoids = parsed.data.factoids;
-      const verifiedFactoids = allFactoids.filter((factoid) => factoid.citation.verified === 'verified');
-      const returnedFactoids = verifiedFactoids.slice(0, input.sourceCount || 5);
       return {
-        result: {
-          ...parsed.data,
-          factoids: returnedFactoids,
-          filteredOutCount: Math.max(0, allFactoids.length - returnedFactoids.length),
-        },
+        result: selectVerifiedFactoids(parsed.data, input.sourceCount),
         discoveredSources: parseDiscoveredSources(data.discoveredSources),
       };
     },
