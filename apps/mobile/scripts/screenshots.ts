@@ -589,17 +589,19 @@ async function shootResultScreens(context: BrowserContext, prefix: string, langu
 
   // The case's menu leads on: Open in Crossfire with the case filled in, and the case built into a map.
   // Nothing is saved: the Crossfire form is not started and the map is not saved.
+  // A wide iPad's outline rail is a menu too; the action menu is the one with the actions.
+  const caseMenu = page.getByRole('menu').filter({ has: page.getByRole('menuitem', { name: MENU.crossfire }) });
   await page.getByTestId('document-more').click();
-  await page.getByRole('menu').waitFor();
+  await caseMenu.waitFor();
   await shoot(page, `${prefix}-case-menu`);
-  await page.getByRole('menu').getByRole('menuitem').first().click();
+  await caseMenu.getByRole('menuitem', { name: MENU.crossfire }).click();
   await page.getByTestId('crossfire-imported').waitFor({ timeout: 15_000 });
   await settle(page);
   await shoot(page, `${prefix}-crossfire-from-case`);
   await page.goBack();
   await page.getByTestId('case-document').waitFor({ timeout: 15_000 });
   await page.getByTestId('document-more').click();
-  await page.getByRole('menu').getByRole('menuitem').nth(1).click();
+  await caseMenu.getByRole('menuitem', { name: MENU.flowchart }).click();
   await page.getByTestId('flowchart-screen').waitFor({ timeout: 15_000 });
   await page.waitForTimeout(500);
   await shoot(page, `${prefix}-flowchart-from-case`);
@@ -616,7 +618,7 @@ async function shootResultScreens(context: BrowserContext, prefix: string, langu
   await shoot(page, `${prefix}-attack-result`);
   // The case stays mounted under the attack, so its menu is looked up inside the attack.
   await page.getByTestId('attack-document').getByTestId('document-more').click();
-  await page.getByRole('menu').last().getByRole('menuitem').first().click();
+  await page.getByRole('menuitem', { name: MENU.crossfire }).last().click();
   await page.getByTestId('crossfire-imported').waitFor({ timeout: 15_000 });
   // Not settle(): the attack's score meter (a progressbar) stays mounted under Crossfire.
   await page.waitForLoadState('networkidle');
@@ -694,6 +696,8 @@ async function shootTool(context: BrowserContext, prefix: string, language: stri
 }
 
 const MENU = {
+  crossfire: /^(Open in Crossfire|Megnyitás a Keresztkérdezésben|Abrir en Interrogatorio)$/,
+  flowchart: /^(Build flowchart from case|Folyamatábra az esetből|Crear diagrama desde el caso)$/,
   regenerate: /^(Regenerate a section|Szakasz újragenerálása|Regenerar una sección)$/,
   arguments: /^(Regenerate Arguments|Érvek újragenerálása|Regenerar Argumentos)$/,
   save: /^(Save|Mentés|Guardar)$/,
