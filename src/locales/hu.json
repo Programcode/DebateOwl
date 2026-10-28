@@ -3026,7 +3026,9 @@
       "refusedTitle_other": "{{count}} módosítást nem sikerült menteni",
       "refusedDesc_one": "A szerver elutasította, ezért törlődött erről a telefonról.",
       "refusedDesc_other": "A szerver elutasította őket, ezért törlődtek erről a telefonról.",
-      "noteRefused": "A szerver elutasította a(z) „{{title}}” jegyzetet, ezért törlődött erről a telefonról."
+      "noteRefused": "A szerver elutasította a(z) „{{title}}” jegyzetet, ezért törlődött erről a telefonról.",
+      "notKeptTitle": "Még nincs mentve ezen a telefonon",
+      "notKeptDesc": "A módosításaid szinkronizálódnak, amikor újra online leszel. Addig tartsd nyitva az alkalmazást."
     }
   }
 }

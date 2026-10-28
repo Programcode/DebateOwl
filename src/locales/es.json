@@ -3026,7 +3026,9 @@
       "refusedTitle_other": "No se pudieron guardar {{count}} cambios",
       "refusedDesc_one": "El servidor lo rechazó, así que se quitó de este teléfono.",
       "refusedDesc_other": "El servidor los rechazó, así que se quitaron de este teléfono.",
-      "noteRefused": "El servidor rechazó la nota \"{{title}}\", así que se quitó de este teléfono."
+      "noteRefused": "El servidor rechazó la nota \"{{title}}\", así que se quitó de este teléfono.",
+      "notKeptTitle": "Aún no se guardó en este teléfono",
+      "notKeptDesc": "Tus cambios se sincronizan cuando vuelvas a estar en línea. Mantén la app abierta hasta entonces."
     }
   }
 }

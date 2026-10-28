@@ -11,6 +11,7 @@ import {
   setQueueOwner,
   subscribeQueue,
   subscribeQueueReports,
+  subscribeStorageTrouble,
   waitingCount,
   type QueueSnapshot,
 } from './offline-queue';
@@ -79,6 +80,15 @@ export function useOfflineQueue(): void {
         }
         if (synced > 0) toast({ tone: 'success', title: t('mobile.offlineQueue.synced', { count: synced }) });
       }),
+    [t, toast],
+  );
+
+  // The phone could not store the queue: changes still sync while the app stays open.
+  useEffect(
+    () =>
+      subscribeStorageTrouble(() =>
+        toast({ tone: 'error', title: t('mobile.offlineQueue.notKeptTitle'), message: t('mobile.offlineQueue.notKeptDesc') }),
+      ),
     [t, toast],
   );
 }

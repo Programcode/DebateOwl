@@ -127,8 +127,20 @@ let running: Promise<void> | null = null;
 let paused = 0;
 // Whether this account's stored queue has been read. Until it has, nothing is written over it.
 let hydrated = false;
-// Writes that wait for the connection, told "queued" only once the queue holding them is saved.
+// Writes that wait for the connection, told "queued" once the save holding them has been tried.
 let awaitingSave: { key: string; waiter: Waiter }[] = [];
+// Saving the queue failed and has not worked since: the student has been told once.
+let storageTroubled = false;
+let retrySave: ReturnType<typeof setTimeout> | undefined;
+const storageListeners = new Set<() => void>();
+
+/** Called once when the queue could not be saved on the phone: changes then last only while the app is open. */
+export function subscribeStorageTrouble(listener: () => void): () => void {
+  storageListeners.add(listener);
+  return () => {
+    storageListeners.delete(listener);
+  };
+}
 let again = false;
 let keys = 0;
 
@@ -184,35 +196,26 @@ function persist() {
       await write();
     });
   }).then(
-    () => confirming.forEach(({ waiter }) => waiter.resolve('queued')),
+    () => {
+      storageTroubled = false;
+      confirming.forEach(({ waiter }) => waiter.resolve('queued'));
+    },
     (cause: unknown) => {
       warn('Could not keep the offline changes')(cause);
-      if (gen === generation && confirming.length > 0) void unkeep(userId, confirming, cause);
+      // The changes stay queued and still sync while the app is open; the student hears once that
+      // they are not on the phone yet, and the save is tried again shortly.
+      confirming.forEach(({ waiter }) => waiter.resolve('queued'));
+      if (gen !== generation || !hydrated) return;
+      if (!storageTroubled) {
+        storageTroubled = true;
+        storageListeners.forEach((listener) => listener());
+      }
+      clearTimeout(retrySave);
+      retrySave = setTimeout(() => {
+        if (gen === generation) persist();
+      }, 5000);
     },
   );
-}
-
-/**
- * Writes that were to wait for the connection but could not be kept on the phone: they leave the
- * queue, the copies go back to what they showed, and whoever made them hears it, so a draft
- * stays open instead of being lost on the next launch.
- */
-async function unkeep(userId: string, failed: { key: string; waiter: Waiter }[], cause: unknown) {
-  const keys = new Set(failed.map((one) => one.key));
-  const gone = items.filter((item) => keys.has(item.key) && item.key !== inFlight);
-  for (const item of gone) {
-    if (item.kind === 'add') {
-      dropWrites(item.tempId, item.key);
-      updateCopy<Source[]>(userId, 'sources', item.input.debateId, (list) => list?.filter((source) => source.id !== item.tempId));
-    } else {
-      items = items.filter((other) => other.key !== item.key);
-    }
-  }
-  await copiesWritten();
-  for (const item of gone) if (item.kind !== 'add') settleBefore(userId, item, true);
-  const error = new Error('This change could not be kept on this phone. Try again.', { cause });
-  failed.forEach(({ waiter }) => waiter.reject(error));
-  emit();
 }
 
 function parse(raw: string | null, userId: string): { items: QueuedWrite[]; before: Record<string, Restorable> } {
@@ -276,6 +279,8 @@ export function setQueueOwner(userId: string | null) {
   emit();
   hydrated = false;
   awaitingSave = [];
+  storageTroubled = false;
+  clearTimeout(retrySave);
   ready = storage(async () => {
     const stale = (await AsyncStorage.getAllKeys()).filter((key) => key.startsWith(`${PREFIX}:`) && (userId === null || key !== storageKey(userId)));
     if (stale.length > 0) await AsyncStorage.multiRemove(stale);
@@ -290,11 +295,14 @@ async function adopt(userId: string) {
   else if (owner !== userId) throw new Error('This change belongs to another account.');
   await ready;
   if (owner !== userId) throw new Error('This change belongs to another account.');
-  // The stored queue could not be read at launch: try again before adding to it.
+  // The stored queue could not be read at launch: read it again before any write, online ones too,
+  // so nothing goes ahead of older unsynced work and nothing is written over it.
   if (!hydrated) {
     const gen = generation;
     ready = storage(() => hydrate(userId, gen)).catch(warn('Could not read the offline changes'));
     await ready;
+    if (owner !== userId) throw new Error('This change belongs to another account.');
+    if (!hydrated) throw new Error('The changes saved on this phone could not be read. Try again.');
   }
 }
 

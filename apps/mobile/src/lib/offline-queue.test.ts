@@ -188,16 +188,23 @@ describe('offline queue', () => {
     expect(sent()).toEqual(['edit s9 {"title":"Other debate"}']);
   });
 
-  it('tells the caller when a change cannot be kept on the phone, and keeps nothing half-saved', async () => {
+  it('keeps a change it could not store, says so once, and stores it with the next save that works', async () => {
     const queue = await load();
-    copies.set('sources:d1', []);
+    const troubles: number[] = [];
+    queue.subscribeStorageTrouble(() => troubles.push(1));
     net.offline = true;
-    // The save fails, and so does its retry.
+    // The save fails, and so does its retry: the note stays queued and still syncs while the app is open.
     net.failSet = 2;
-    await expect(queue.queueAddSource('user-a', { title: 'Lost?', content: 'Text', type: 'text', debateId: 'd1' })).rejects.toThrow('could not be kept');
-    await cache.copiesWritten();
-    expect(queue.getQueueSnapshot().items).toEqual([]);
-    expect(copies.get('sources:d1')).toEqual([]);
+    await expect(queue.queueAddSource('user-a', { title: 'Kept in memory', content: 'Text', type: 'text', debateId: 'd1' })).resolves.toMatchObject({ status: 'queued' });
+    await new Promise((resolve) => setTimeout(resolve, 300));
+    expect(troubles).toHaveLength(1);
+    expect(queue.getQueueSnapshot().items).toHaveLength(1);
+
+    await queue.queueAddSource('user-a', { title: 'Next', content: 'Text', type: 'text', debateId: 'd1' });
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    const stored = [...storage.values()].join('');
+    expect(stored).toContain('Kept in memory');
+    expect(stored).toContain('Next');
   });
 
   it('never writes over a stored queue it could not read, and keeps it once a read works', async () => {
@@ -213,6 +220,12 @@ describe('offline queue', () => {
     queue = await load();
     await expect(queue.queueAddSource('user-a', { title: 'Today', content: 'Text', type: 'text', debateId: 'd1' })).rejects.toThrow();
     expect([...storage.values()].join('')).toContain('From last week');
+    // Online writes wait too, so none goes ahead of last week's unread change.
+    net.failGet = 2;
+    net.offline = false;
+    await expect(queue.queueUpdateSource('user-a', 'd1', 's1', { title: 'Newer' })).rejects.toThrow('could not be read');
+    expect(sources.updateSource).not.toHaveBeenCalled();
+    net.offline = true;
 
     // The next write reads the store again, keeps last week's note first and adds today's.
     await queue.queueAddSource('user-a', { title: 'Today again', content: 'Text', type: 'text', debateId: 'd1' });

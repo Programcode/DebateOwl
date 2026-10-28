@@ -3026,7 +3026,9 @@
       "refusedTitle_other": "{{count}} changes could not be saved",
       "refusedDesc_one": "The server refused it, so it was removed from this phone.",
       "refusedDesc_other": "The server refused them, so they were removed from this phone.",
-      "noteRefused": "The server refused the note \"{{title}}\", so it was removed from this phone."
+      "noteRefused": "The server refused the note \"{{title}}\", so it was removed from this phone.",
+      "notKeptTitle": "Not saved on this phone yet",
+      "notKeptDesc": "Your changes sync when you are back online. Keep the app open until then."
     }
   }
 }
