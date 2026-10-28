@@ -5,6 +5,8 @@
 // still be read. Shared by the website and the iOS app; each passes its own
 // read of the table.
 
+import { abortError } from './abort';
+
 export interface RecoveredRunResult {
   status: number;
   body: unknown;
@@ -37,12 +39,6 @@ interface WaitSignal {
   readonly aborted: boolean;
   addEventListener(type: 'abort', listener: () => void, options?: { once?: boolean }): void;
   removeEventListener(type: 'abort', listener: () => void): void;
-}
-
-function abortError(): Error {
-  const error = new Error('The request was canceled.');
-  error.name = 'AbortError';
-  return error;
 }
 
 function wait(ms: number, signal?: WaitSignal): Promise<void> {

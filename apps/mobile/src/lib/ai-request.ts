@@ -44,8 +44,9 @@ export class AIError extends Error {
   }
 }
 
+/** A cancellation, whether it is a DOMException (not always an Error) or a plain Error named AbortError. */
 export function isAbortError(error: unknown): boolean {
-  return error instanceof Error && error.name === 'AbortError';
+  return typeof error === 'object' && error !== null && (error as { name?: unknown }).name === 'AbortError';
 }
 
 export function abortError(): Error {
@@ -157,7 +158,8 @@ export async function postFunction<T>(
   } finally {
     clearTimeout(timeout);
     signal?.removeEventListener('abort', abortForCaller);
-    settledListeners.forEach((listener) => listener());
+    // A quota check spends nothing, so the usage line has nothing new to read.
+    if (body.quotaCheck !== true) settledListeners.forEach((listener) => listener());
   }
 }
 

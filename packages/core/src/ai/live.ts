@@ -3,6 +3,7 @@
 // written. Shared by the website (src/lib/ai/live.ts) and the iOS app, which
 // map the outcome to their own errors.
 
+import { abortError } from './abort';
 import { parsePartialJson } from './partial-json';
 import { consumeSSEChunk, type ParsedSSEEvent } from './sse';
 
@@ -83,11 +84,6 @@ export type LiveOutcome =
   | { kind: 'result'; status: number; body: unknown }
   | { kind: 'failed'; error: LiveStreamError };
 
-function abortError(): Error {
-  const error = new Error('The request was canceled.');
-  error.name = 'AbortError';
-  return error;
-}
 
 /** Reads one chunk, or 'stalled' when nothing arrives in time. */
 async function readWithin(reader: LiveStreamReader, ms: number): Promise<{ done: boolean; value?: Uint8Array } | 'stalled'> {
