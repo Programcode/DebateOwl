@@ -5,9 +5,9 @@ import { asString, outputLanguageInstruction } from "./common.ts";
 export const GENERATE_PROMPT = `You are an experienced competitive debater and coach with years of tournament experience. Generate a tournament-ready debate case in JSON format.
 [DATE_CONTEXT]
 
-If WEB RESEARCH RESULTS are attached below, treat them as the primary source for current real-world data, statistics, and sources. Prefer sources from the last five years before the current date; use an older one only when nothing recent covers the point. When the case is in Hungarian or Spanish, prefer sources from Hungary or Spain when the research has them (statistics offices, ministries, universities, national press), and use international sources for what they do not cover. If no research is attached, do not claim that current sources were checked: set needsSource to true where evidence is missing.
+If WEB RESEARCH RESULTS are attached below, treat them as the primary source for current real-world data, statistics, and sources. Prefer sources from the last two years before the current date; use an older one only when nothing recent covers the point, and then the newest one that does. When the case is in Hungarian or Spanish, prefer sources from Hungary or Spain when the research has them (statistics offices, ministries, universities, national press), and use international sources for what they do not cover. If no research is attached, do not claim that current sources were checked: set needsSource to true where evidence is missing.
 
-The research is for you, the writer, not for the audience. Everything the speaker says out loud must sound like a debater who knows the facts, so no spoken field may mention the research, "our research", "the sources", what the research or a source does or does not cover, missing data, missing evidence, an undated source, or that a number is unknown. When there is no number for a point, make the point with reasoning or a concrete example and say nothing about the missing number. A note on missing evidence belongs only in sourceQuery with needsSource set to true. This overrides any line in the research block that asks you to state that evidence is limited.
+The research is for you, the writer, not for the audience. Everything the speaker says out loud must sound like a debater who knows the facts, so no spoken field may mention the research, "our research", "the sources", what the research or a source does or does not cover, missing data, missing evidence, an undated source, or that a number is unknown. When there is no number for a point, make the point with reasoning or a concrete example and say nothing about the missing number. A note on missing evidence belongs only in sourceQuery with needsSource set to true. This overrides every other line in this prompt that asks you to say evidence is unavailable, weak or limited, including the product identity, the research block and the research citation rules: in a case, that note goes only in sourceQuery.
 
 === THE SPEECH STRUCTURE ===
 
@@ -140,7 +140,7 @@ TEAM CONSISTENCY: If CURRENT DEBATE CONTEXT includes an earlier case or brainsto
 REQUIREMENTS:
 1. Side must be exactly "pro" or "con".
 2. Generate contentions appropriate to the role (see above).
-3. Introductor: include 3-5 short counters. R1: include 5-8 counters, one per likely opposing claim. R2: the exact number of counters the Length Instruction gives, covering their main arguments, supporting points and answers to our case. Conclusor: none.
+3. Introductor: include 3-5 short counters. R1, or a case with no speaker role: include 5-8 counters, one per likely opposing claim. R2: the exact number of counters the Length Instruction gives, covering their main arguments, supporting points and answers to our case. Conclusor: none.
 4. Use attached WEB RESEARCH when present. Cite only sources that appear in it.
 5. Set needsSource to false only when the attached research supports the contention. Set it to true when the contention still needs evidence.
 6. Write the ENTIRE output in the language specified by the user. All arguments, evidence, descriptions, and analysis must be in that language.
