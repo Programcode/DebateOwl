@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { StyleSheet, View } from 'react-native';
 
 import { Card, IconTile, ListItemIn } from '@/components/card';
+import { EmptyState } from '@/components/empty-state';
 import { Icon } from '@/components/icon';
 import { PressScale } from '@/components/press-scale';
 import { PRACTICE_TOOLS, type PracticeTool } from '@/components/practice-tools';
@@ -112,11 +113,7 @@ export default function PracticeScreen() {
               </Text>
             </Card>
           ) : items.length === 0 ? (
-            <Card>
-              <Text tone="secondary" style={styles.body}>
-                {t('historyPage.emptySparringDesc')}
-              </Text>
-            </Card>
+            <EmptyState pose="arguing" title={t('historyPage.emptySparring')} description={t('historyPage.emptySparringDesc')} />
           ) : (
             <Card style={styles.list}>
               {items.map((round, index) => (

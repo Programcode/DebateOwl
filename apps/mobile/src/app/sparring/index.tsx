@@ -34,6 +34,7 @@ import { SegmentedControl } from '@/components/segmented-control';
 import { ContextLine } from '@/components/context-line';
 import { SessionCostNote } from '@/components/session-cost-note';
 import { SparringScorecardScreen, winnerText } from '@/components/sparring-views';
+import { SuccessCheck } from '@/components/success-check';
 import { Text } from '@/components/text';
 import { TimerRing } from '@/components/timer-ring';
 import { ToolTitle, WorkingIn } from '@/components/tool-form';
@@ -617,7 +618,7 @@ function LiveRound({
                 {status}
               </Text>
               {judging ? (
-                <Icon name="check" color={colors.primary} size={Math.round(ringSize * 0.22)} />
+                <SuccessCheck size={Math.round(ringSize * 0.26)} haptic={false} />
               ) : (
                 <Text
                   weight="bold"
