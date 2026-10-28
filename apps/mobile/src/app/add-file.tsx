@@ -37,6 +37,7 @@ function failureText(t: TFunction, failure: Failure): { title: string; message: 
       return { title, message: t('mobile.library.file.unsupported') };
     case 'empty':
       return { title, message: t('mobile.library.file.empty') };
+    // A failed read, or a reader that never answered (`timeout`): the website's "Could not read this file."
     default:
       return {
         title,
@@ -95,6 +96,8 @@ export default function AddFileSheet() {
     setFailure(null);
     setDraft(null);
     const outcome = await read(asset);
+    // A newer file replaced this read, or the sheet closed: that one reports instead.
+    if (!outcome.ok && outcome.code === 'cancelled') return;
     setReading(false);
     if (!outcome.ok) {
       haptics.warning();
