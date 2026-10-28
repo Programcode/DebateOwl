@@ -696,7 +696,7 @@ function Thinking() {
   }, []);
   return (
     <View style={styles.thinking} accessibilityRole="progressbar" accessibilityLiveRegion="polite">
-      <OwlAvatar pose="coach" size={32} />
+      <OwlAvatar pose="coach" size={32} blink />
       <Text tone="secondary" style={styles.thinkingText}>
         {t(THINKING[index])}
       </Text>

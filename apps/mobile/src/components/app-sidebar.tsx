@@ -2,17 +2,20 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useNavigationContainerRef, usePathname, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { LayoutAnimation, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import Animated, { FadeInUp, FadeOutUp, LinearTransition, useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Icon } from './icon';
 import { OwlMark, useReduceMotion } from './owl';
+import { PressScale } from './press-scale';
 import { SIDEBAR_SECTIONS, activeSidebarItem, type SidebarItem, type SidebarSection } from './sidebar-items';
 import { Text } from './text';
 
 import { useDebates } from '@/lib/debate-context';
 import { haptics } from '@/lib/haptics';
 import { SIDEBAR_MAX_FONT_SCALE } from '@/lib/layout';
+import { DURATION, SPRING } from '@/theme/motion';
 import { pickSourceFile } from '@/lib/pick-source-file';
 import { holdPickedFile } from '@/lib/source-file';
 import { useTheme } from '@/theme/use-theme';
@@ -83,7 +86,6 @@ export function AppSidebar({ width }: { width: number }) {
   const router = useRouter();
   const navigation = useNavigationContainerRef();
   const pathname = usePathname();
-  const reduceMotion = useReduceMotion();
   const { current, oneOff } = useDebates();
   const { collapsed, toggle } = useCollapsedSections();
   const active = activeSidebarItem(pathname);
@@ -115,7 +117,6 @@ export function AppSidebar({ width }: { width: number }) {
 
   const toggleSection = (key: string) => {
     haptics.select();
-    if (!reduceMotion) LayoutAnimation.configureNext(LayoutAnimation.create(180, 'easeInEaseOut', 'opacity'));
     toggle(key);
   };
 
@@ -201,11 +202,19 @@ function SidebarGroup({
 }) {
   const { t } = useTranslation();
   const { colors } = useTheme();
+  const reduce = useReduceMotion();
   const title = t(section.label);
   // A closed section still shows which of its rows is open, as the dot after its title.
   const holdsActive = section.items.some((item) => item.key === active);
+  // The chevron turns with a spring as the section opens or closes; the rows slide in and out
+  // and the sections below glide into place (Reanimated layout animations, still under Reduce Motion).
+  const turn = useSharedValue(expanded ? 1 : 0);
+  useEffect(() => {
+    turn.set(reduce ? (expanded ? 1 : 0) : withSpring(expanded ? 1 : 0, SPRING.pop));
+  }, [expanded, reduce, turn]);
+  const chevron = useAnimatedStyle(() => ({ transform: [{ rotate: `${turn.value * 90}deg` }] }));
   return (
-    <View style={styles.group} testID={`sidebar-section-${section.key}`}>
+    <Animated.View layout={LinearTransition.duration(DURATION.fast)} style={styles.group} testID={`sidebar-section-${section.key}`}>
       {/* A heading for VoiceOver's rotor that also opens and closes the section, as iPadOS sidebar headers do. */}
       <Pressable
         accessibilityRole="header"
@@ -222,18 +231,25 @@ function SidebarGroup({
         </Text>
         {!expanded && holdsActive ? <View style={[styles.activeDot, { backgroundColor: colors.primary }]} /> : null}
         <View style={styles.flex} />
-        <Icon name={expanded ? 'chevronDown' : 'chevronRight'} color={colors.primary} size={18} />
+        <Animated.View style={chevron}>
+          <Icon name="chevronRight" color={colors.primary} size={18} />
+        </Animated.View>
       </Pressable>
       {expanded
-        ? section.items.map((item) => {
+        ? section.items.map((item, index) => {
             const selected = item.key === active;
             return (
-              <Pressable
+              <Animated.View
                 key={item.key}
+                entering={FadeInUp.delay(index * 25).duration(DURATION.fast)}
+                exiting={FadeOutUp.duration(DURATION.quick)}
+                layout={LinearTransition.duration(DURATION.fast)}>
+              <PressScale
                 accessibilityRole="button"
                 aria-selected={selected}
                 onPress={() => onOpen(item)}
-                style={({ pressed }) => [styles.row, selected && { backgroundColor: colors.primaryFill }, pressed && !selected && { backgroundColor: colors.segmentTrack }]}
+                scaleTo={0.98}
+                style={[styles.row, selected && { backgroundColor: colors.primaryFill }]}
                 testID={`sidebar-item-${item.key}`}>
                 <Icon name={item.icon} color={selected ? colors.onPrimary : colors.primary} size={21} />
                 <Text
@@ -243,11 +259,12 @@ function SidebarGroup({
                   maxFontSizeMultiplier={SIDEBAR_MAX_FONT_SCALE}>
                   {t(item.label)}
                 </Text>
-              </Pressable>
+              </PressScale>
+              </Animated.View>
             );
           })
         : null}
-    </View>
+    </Animated.View>
   );
 }
 
