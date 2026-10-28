@@ -10,7 +10,8 @@ export default function SourceSheet() {
   const { id } = useLocalSearchParams<{ id: string }>();
   return (
     <SheetScrollView contentContainerStyle={styles.content} testID="source-sheet">
-      <SourceView key={id} id={id} onDone={() => router.back()} />
+      {/* Opened from a link with nothing under it, closing goes to the Library. */}
+      <SourceView key={id} id={id} onDone={() => (router.canGoBack() ? router.back() : router.replace('/library'))} />
     </SheetScrollView>
   );
 }

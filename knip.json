@@ -53,7 +53,8 @@
       "ignoreDependencies": [
         "expo-updates",
         "expo-speech-recognition",
-        "expo-widgets"
+        "expo-widgets",
+        "@expo/dom-webview"
       ]
     }
   },

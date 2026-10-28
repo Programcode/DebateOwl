@@ -79,7 +79,8 @@ export function WorkRow({
       accessibilityLabel={t('mobile.common.openItem', { title })}
       onPress={onPress}
       testID="work-row"
-      style={[!first && { borderTopWidth: 1, borderTopColor: colors.line }, { backgroundColor: colors.card }]}>
+      // One flat style object: inside a Link's slot the web preview hands it to the DOM as is.
+      style={StyleSheet.flatten([!first && { borderTopWidth: 1, borderTopColor: colors.line }, { backgroundColor: colors.card }])}>
       {({ pressed }) => (
         <View style={[styles.row, pressed && styles.pressed]}>
           <IconTile name={KIND_ICONS[item.kind]} size={42} />

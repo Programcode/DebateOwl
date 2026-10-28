@@ -59,4 +59,4 @@ ONLY=offline PORT=18080 STAGING_DEMO_CODE=... npx tsx apps/mobile/scripts/screen
 
 Screenshots go to `.verify/mobile-shots/`. For signed-in screens, see the header of `scripts/screenshots.ts`. To load the app on a phone, see [docs/development.md](../../docs/development.md#mobile-app).
 
-knip ignores `expo-updates`: its Expo plugin expects the package whenever the app config does not disable updates, and EAS Update is not set up yet. It also ignores `expo-speech-recognition` and `expo-widgets`, which the app reaches by native module name, not by import.
+knip ignores `expo-updates`: its Expo plugin expects the package whenever the app config does not disable updates, and EAS Update is not set up yet. It also ignores `expo-speech-recognition` and `expo-widgets`, which the app reaches by native module name, not by import, and `@expo/dom-webview`, which Expo's DOM components load by name.
