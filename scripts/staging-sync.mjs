@@ -26,7 +26,6 @@ import { join, relative } from "node:path";
 import { backendStatus } from "./backend-status.mjs";
 
 export const STAGING_REF = "brifeyypjauyusmkptkx";
-export const STAGING_NAME = "debate-trainer-staging";
 export const PRODUCTION_REF = "uziwdtkzofptihahfooo";
 export const GITHUB_REPO = "Programcode/DebateLab";
 const STATUS_CONTEXT = "staging-sync";
@@ -78,7 +77,13 @@ function supabase(root, args) {
   return output;
 }
 
-/** Refuses to run unless the CLI sees the staging ref under the staging name. */
+/**
+ * Refuses to run unless the CLI can see the staging project by its ref. The
+ * check is keyed on the ref, which never changes, not on the display name,
+ * which anyone can rename in the dashboard (staging went from
+ * "debate-trainer-staging" to "DebateOwl Staging"). Every CLI call passes
+ * STAGING_REF explicitly, so production is never the target.
+ */
 export function assertStagingTarget(projects, env = process.env) {
   const override = env.SUPABASE_PROJECT_ID?.trim();
   if (override && override !== STAGING_REF) {
@@ -87,9 +92,7 @@ export function assertStagingTarget(projects, env = process.env) {
   if (STAGING_REF === PRODUCTION_REF) throw new RefusedError("Staging and production refs are the same.");
   const staging = projects.find((project) => (project.ref ?? project.id) === STAGING_REF);
   if (!staging) throw new RefusedError(`The Supabase account cannot see ${STAGING_REF}.`);
-  if (staging.name !== STAGING_NAME) {
-    throw new RefusedError(`${STAGING_REF} is named "${staging.name}", expected "${STAGING_NAME}".`);
-  }
+  return staging;
 }
 
 /** What the sync has to do, from a backend-status result. */
