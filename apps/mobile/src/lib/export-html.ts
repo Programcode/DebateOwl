@@ -11,7 +11,7 @@ type Translate = (key: string, options?: Record<string, unknown>) => string;
 /**
  * The PDF pages for expo-print, as HTML. They carry the same sections and
  * labels as the website's PDF export (src/lib/pdf-export-utils.ts) and keep
- * its file names, in DebateLab's colours.
+ * its file names, in DebateOwl's colours.
  */
 
 function escape(value: string | undefined | null): string {
@@ -20,26 +20,26 @@ function escape(value: string | undefined | null): string {
 
 const STYLE = `
   @page { margin: 18mm 16mm; }
-  body { font-family: -apple-system, 'Inter', 'Helvetica Neue', Arial, sans-serif; color: #0f172a; font-size: 11pt; line-height: 1.5; margin: 0; }
-  header { border-bottom: 3px solid #0284c7; padding-bottom: 10px; margin-bottom: 18px; }
+  body { font-family: 'Nunito', -apple-system, 'Helvetica Neue', Arial, sans-serif; color: #1F2B40; font-size: 11pt; line-height: 1.5; margin: 0; }
+  header { border-bottom: 3px solid #0556D6; padding-bottom: 10px; margin-bottom: 18px; }
   h1 { font-size: 20pt; line-height: 1.2; margin: 0 0 4px; letter-spacing: -0.02em; }
-  .meta { color: #64748b; font-size: 10pt; }
-  h2 { font-size: 13pt; margin: 22px 0 8px; padding-bottom: 4px; border-bottom: 1px solid #e2e8f0; color: #0f172a; }
+  .meta { color: #5F708A; font-size: 10pt; }
+  h2 { font-size: 13pt; margin: 22px 0 8px; padding-bottom: 4px; border-bottom: 1px solid #E2E9F2; color: #1F2B40; }
   h3 { font-size: 11pt; margin: 12px 0 4px; }
   p { margin: 0 0 8px; }
-  .label { font-weight: 700; color: #475569; }
-  .framing { background: #e0f2fe; border: 1px solid #bae6fd; border-radius: 10px; padding: 10px 14px; margin-bottom: 14px; color: #0c4a6e; }
-  .framing .label { color: #075985; }
-  .block { border-left: 3px solid #0284c7; padding: 2px 0 2px 12px; margin: 0 0 14px; break-inside: avoid; }
+  .label { font-weight: 700; color: #46566F; }
+  .framing { background: #EEF7FF; border: 1px solid #B3D8FC; border-radius: 10px; padding: 10px 14px; margin-bottom: 14px; color: #0B2A6E; }
+  .framing .label { color: #0342A8; }
+  .block { border-left: 3px solid #0556D6; padding: 2px 0 2px 12px; margin: 0 0 14px; break-inside: avoid; }
   .block h3 { margin-top: 0; }
-  .number { color: #0284c7; margin-right: 6px; }
+  .number { color: #0556D6; margin-right: 6px; }
   ul { margin: 0 0 8px 18px; padding: 0; }
   li { margin-bottom: 3px; }
-  .tag { display: inline-block; border: 1px solid #cbd5e1; border-radius: 6px; padding: 0 6px; font-size: 9pt; font-weight: 700; margin-right: 4px; }
-  .critical { color: #dc2626; border-color: #dc2626; }
-  .major { color: #d97706; border-color: #d97706; }
-  .minor { color: #0284c7; border-color: #0284c7; }
-  footer { margin-top: 26px; color: #94a3b8; font-size: 9pt; text-align: center; }
+  .tag { display: inline-block; border: 1px solid #CDD7E4; border-radius: 6px; padding: 0 6px; font-size: 9pt; font-weight: 700; margin-right: 4px; }
+  .critical { color: #D23239; border-color: #D23239; }
+  .major { color: #A15C06; border-color: #A15C06; }
+  .minor { color: #0556D6; border-color: #0556D6; }
+  footer { margin-top: 26px; color: #8494AB; font-size: 9pt; text-align: center; }
 `;
 
 function page(title: string, meta: string, body: string, t: Translate): string {
@@ -133,8 +133,8 @@ export function attackExportHtml(result: AttackOutput, t: Translate): string {
 // The website's Brainstorm and Factoids PDFs open with a table; these pages draw it the same way.
 const TABLE_STYLE = `<style>
   table { width: 100%; border-collapse: collapse; margin: 0 0 14px; font-size: 9.5pt; break-inside: auto; }
-  th { background: #0284c7; color: #fff; text-align: left; padding: 6px 8px; font-weight: 700; }
-  td { border-bottom: 1px solid #e2e8f0; padding: 6px 8px; vertical-align: top; }
+  th { background: #0556D6; color: #fff; text-align: left; padding: 6px 8px; font-weight: 700; }
+  td { border-bottom: 1px solid #E2E9F2; padding: 6px 8px; vertical-align: top; }
   tr { break-inside: avoid; }
 </style>`;
 
@@ -200,15 +200,15 @@ export function factoidsExportHtml(result: FactoidsOutput, t: Translate): string
 export const FLOWCHART_EXPORT_FILE_NAME = 'debate-flowchart.pdf';
 
 /** The website's node colours (nodeColors). */
-const FLOW_COLORS: Record<FlowNodeType, string> = { thesis: '#0284c7', contention: '#10b981', attack: '#ef4444', rebuttal: '#3b82f6', dropped: '#f59e0b' };
+const FLOW_COLORS: Record<FlowNodeType, string> = { thesis: '#0556D6', contention: '#14B37D', attack: '#F0454B', rebuttal: '#1E8DFB', dropped: '#F39A00' };
 
 const FLOW_STYLE = `<style>
-  .card { border: 1px solid #cbd5e1; border-left-width: 4px; border-radius: 10px; padding: 7px 11px; margin: 0 0 10px; break-inside: avoid; }
+  .card { border: 1px solid #CDD7E4; border-left-width: 4px; border-radius: 10px; padding: 7px 11px; margin: 0 0 10px; break-inside: avoid; }
   .card .kind { font-size: 9pt; font-weight: 700; text-transform: uppercase; letter-spacing: 0.03em; }
   .card .text { font-weight: 600; }
-  .card .description { color: #475569; font-size: 10pt; margin: 2px 0 0; }
-  .card .meta { color: #64748b; font-size: 9pt; margin-top: 2px; }
-  .via { color: #64748b; font-size: 9pt; font-weight: 600; margin: 0 0 3px; }
+  .card .description { color: #46566F; font-size: 10pt; margin: 2px 0 0; }
+  .card .meta { color: #5F708A; font-size: 9pt; margin-top: 2px; }
+  .via { color: #5F708A; font-size: 9pt; font-weight: 600; margin: 0 0 3px; }
 </style>`;
 
 /** The Map tab's tree as a PDF page: every card under the one it answers, with its link. */

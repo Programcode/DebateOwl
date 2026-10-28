@@ -30,7 +30,7 @@ export default function AppTabs() {
         <TabList
           accessibilityRole="tablist"
           style={[styles.sidebar, { backgroundColor: colors.card, borderRightColor: colors.line, paddingTop: insets.top + 18 }]}>
-          <Text accessibilityRole="header" weight="bold" tone="heading" style={styles.sidebarTitle}>
+          <Text accessibilityRole="header" weight="display" style={styles.sidebarTitle}>
             DebateOwl
           </Text>
           {TABS.map((tab) => (

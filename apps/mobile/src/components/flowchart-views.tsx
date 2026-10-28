@@ -20,21 +20,21 @@ export function useFlowColors() {
   return {
     type: {
       thesis: colors.primary,
-      contention: dark ? '#34d399' : '#10b981',
-      attack: dark ? '#f87171' : '#ef4444',
-      rebuttal: dark ? '#60a5fa' : '#3b82f6',
-      dropped: dark ? '#fbbf24' : '#f59e0b',
+      contention: dark ? '#2FD39A' : '#14B37D',
+      attack: dark ? '#FF6B70' : '#F0454B',
+      rebuttal: dark ? '#4CA6FD' : '#1E8DFB',
+      dropped: dark ? '#FFC414' : '#F39A00',
     } satisfies Record<FlowNodeType, string>,
     /** Column headings and link labels, a shade darker than the rules for contrast. */
     heading: {
       yourCase: colors.primary,
-      attacks: dark ? '#f87171' : '#dc2626',
-      rebuttals: dark ? '#60a5fa' : '#2563eb',
+      attacks: dark ? '#FF6B70' : '#D23239',
+      rebuttals: dark ? '#4CA6FD' : '#0A6FF0',
     },
     via: {
       support: colors.faint,
-      attack: dark ? '#f87171' : '#dc2626',
-      rebuttal: dark ? '#60a5fa' : '#2563eb',
+      attack: dark ? '#FF6B70' : '#D23239',
+      rebuttal: dark ? '#4CA6FD' : '#0A6FF0',
     } satisfies Record<FlowEdgeKind, string>,
     cardFill: dark ? colors.card : colors.input,
   };

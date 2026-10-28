@@ -15,7 +15,8 @@ export function TimerRing({ size, fraction, warning, children }: { size: number;
   const radius = (size - STROKE) / 2;
   const circumference = 2 * Math.PI * radius;
   const left = Math.min(1, Math.max(0, fraction));
-  const [from, to] = scheme === 'dark' ? ['#38bdf8', '#2dd4bf'] : ['#0284c7', '#14b8a6'];
+  // Plume, from the button face to its lighter tint: the website has no gradient, so the ring stays in one hue.
+  const [from, to] = scheme === 'dark' ? ['#4CA6FD', '#7CC0FE'] : ['#0A6FF0', '#4CA6FD'];
   return (
     <View style={{ width: size, height: size }}>
       <Svg width={size} height={size} style={styles.rotated}>

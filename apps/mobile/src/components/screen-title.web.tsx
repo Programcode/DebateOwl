@@ -12,5 +12,5 @@ export function ScreenTitle({ title }: { title: string }) {
 }
 
 const styles = StyleSheet.create({
-  title: { fontSize: 34, letterSpacing: -1, lineHeight: 41, marginTop: 8, marginBottom: 8 },
+  title: { fontSize: 34, letterSpacing: -0.5, lineHeight: 41, marginTop: 8, marginBottom: 8 },
 });

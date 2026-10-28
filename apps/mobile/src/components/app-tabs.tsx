@@ -16,8 +16,8 @@ export default function AppTabs() {
       tintColor={colors.primary}
       iconColor={{ default: colors.tabInactive, selected: colors.primary }}
       labelStyle={{
-        default: { color: colors.tabInactive, fontFamily: fontFamily.medium, fontSize: 10 },
-        selected: { color: colors.primary, fontFamily: fontFamily.medium, fontSize: 10 },
+        default: { color: colors.tabInactive, fontFamily: fontFamily.semibold, fontSize: 10 },
+        selected: { color: colors.primary, fontFamily: fontFamily.semibold, fontSize: 10 },
       }}>
       {TABS.map((tab) => (
         <NativeTabs.Trigger key={tab.name} name={tab.name}>

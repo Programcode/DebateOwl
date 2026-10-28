@@ -71,7 +71,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     borderWidth: StyleSheet.hairlineWidth,
     overflow: 'hidden',
-    boxShadow: '0 14px 40px -10px rgba(15,23,42,0.4)',
+    boxShadow: '0 14px 40px -10px rgba(11,42,110,0.4)',
   },
   item: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 17, minHeight: 52 },
   itemLabel: { fontSize: 17 },

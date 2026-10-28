@@ -49,6 +49,6 @@ const styles = StyleSheet.create({
   track: { flexDirection: 'row', borderRadius: 11, padding: 2 },
   segment: { flex: 1, alignItems: 'center', justifyContent: 'center', minHeight: 36, borderRadius: 9 },
   selected: {},
-  selectedShadow: { boxShadow: '0 1px 3px rgba(15,23,42,0.12)' },
+  selectedShadow: { boxShadow: '0 1px 3px rgba(11,42,110,0.12)' },
   label: { fontSize: 14 },
 });

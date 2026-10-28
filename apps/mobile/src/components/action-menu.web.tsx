@@ -41,10 +41,10 @@ export function ActionMenu({ visible, title, items, cancelLabel, onSelect, onClo
 }
 
 const styles = StyleSheet.create({
-  backdrop: { flex: 1, backgroundColor: 'rgba(15,23,42,0.18)', paddingHorizontal: 14 },
+  backdrop: { flex: 1, backgroundColor: 'rgba(11,42,110,0.18)', paddingHorizontal: 14 },
   top: { alignItems: 'flex-end', paddingTop: 58 },
   bottom: { justifyContent: 'flex-end', paddingBottom: 28 },
-  menu: { borderRadius: 16, borderWidth: StyleSheet.hairlineWidth, overflow: 'hidden', boxShadow: '0 14px 40px -10px rgba(15,23,42,0.4)' },
+  menu: { borderRadius: 16, borderWidth: StyleSheet.hairlineWidth, overflow: 'hidden', boxShadow: '0 14px 40px -10px rgba(11,42,110,0.4)' },
   menuTop: { width: 268 },
   menuBottom: { width: '100%', maxWidth: 520, alignSelf: 'center' },
   title: { fontSize: 13.5, textAlign: 'center', paddingVertical: 12, paddingHorizontal: 16 },
