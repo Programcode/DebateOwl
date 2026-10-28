@@ -103,7 +103,7 @@ export function OwlMark({ size }: { size: number }) {
   );
 }
 
-/** The owl bobbing gently while a request runs, in place of a spinner where the website shows OwlLoader. */
+/** The owl bobbing gently while a request runs, where the website shows OwlLoader. */
 export function OwlLoader({ pose, size, label }: { pose: OwlPose; size: number; label?: string }) {
   const bob = useRef(new Animated.Value(0)).current;
   useEffect(() => {
@@ -117,9 +117,12 @@ export function OwlLoader({ pose, size, label }: { pose: OwlPose; size: number; 
     return () => loop.stop();
   }, [bob]);
   return (
+    // Labelled, it is the progress indicator; unlabelled, a progress line beside it speaks and the owl is decoration.
     <Animated.View
-      accessibilityRole="progressbar"
+      accessibilityRole={label ? 'progressbar' : undefined}
       accessibilityLabel={label}
+      accessibilityElementsHidden={!label}
+      importantForAccessibility={label ? 'yes' : 'no-hide-descendants'}
       style={{ transform: [{ translateY: bob.interpolate({ inputRange: [0, 1], outputRange: [0, -size * 0.05] }) }] }}>
       <Owl pose={pose} size={size} />
     </Animated.View>

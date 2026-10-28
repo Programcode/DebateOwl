@@ -10,7 +10,7 @@ import { supabase } from './supabase';
  * AI functions use (billing-state.ts), which also counts App Store
  * subscriptions, and usage from the server's own counter.
  */
-export type SubscriptionTier = 'trial' | 'basic' | 'pro' | 'legacy_free' | 'expired';
+type SubscriptionTier = 'trial' | 'basic' | 'pro' | 'legacy_free' | 'expired';
 
 export interface Subscription {
   tier: SubscriptionTier;
