@@ -6,10 +6,13 @@ import { useTranslation } from 'react-i18next';
 import { ScrollView, StyleSheet, View } from 'react-native';
 
 import { Chip, CiteBadge } from './chip';
+import { EdgeFade } from './edge-fade';
 import { firstUrl, hostOf, openCitation, shorten, type CitationTarget } from './citation-target';
 import { MarkdownView } from './markdown-view';
 import { OwlAvatar } from './owl';
 import { Text } from './text';
+
+import { useTheme } from '@/theme/use-theme';
 
 import type { Source } from '@/lib/sources';
 
@@ -34,6 +37,7 @@ function citationTargets(output: AskOutput | undefined, library: Source[]): Cita
 /** One coach answer, as in mock 07, with the website's extra sections when the answer has them. */
 export function AskAnswer({ content, output, streaming, library }: { content: string; output?: AskOutput; streaming?: boolean; library: Source[] }) {
   const { t } = useTranslation();
+  const { colors } = useTheme();
   const router = useRouter();
   const targets = useMemo(() => citationTargets(output, library), [output, library]);
   const claims = useMemo(() => (output?.citations ?? []).map((citation) => citation.claim), [output]);
@@ -50,6 +54,7 @@ export function AskAnswer({ content, output, streaming, library }: { content: st
       ) : null}
 
       {targets.length > 0 || webSources.length > 0 ? (
+        <View style={styles.chipRowBox}>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipRow} contentContainerStyle={styles.chips}>
           {targets.map((target) => (
             <Chip key={target.n} label={target.label} leading={<CiteBadge n={target.n} />} onPress={() => open(target)} />
@@ -58,6 +63,8 @@ export function AskAnswer({ content, output, streaming, library }: { content: st
             <Chip key={item.url} icon="globe" label={shorten(item.title || hostOf(item.url))} onPress={() => void WebBrowser.openBrowserAsync(item.url)} />
           ))}
         </ScrollView>
+        <EdgeFade color={colors.background} id={`ask-cites-fade-${streaming ? 'live' : 'saved'}`} />
+        </View>
       ) : null}
 
       {output?.prosConsAnalysis ? (
@@ -103,7 +110,8 @@ function Section({ title, items, marker = '•' }: { title: string; items: strin
 
 const styles = StyleSheet.create({
   answer: { gap: 12 },
-  chipRow: { marginHorizontal: -20, flexGrow: 0 },
+  chipRowBox: { marginHorizontal: -20 },
+  chipRow: { flexGrow: 0 },
   chips: { gap: 8, paddingHorizontal: 20 },
   section: { gap: 10 },
   sectionBody: { gap: 3 },

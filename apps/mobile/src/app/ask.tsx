@@ -11,6 +11,7 @@ import { AskHistory } from '@/components/ask-history';
 import { TextButton } from '@/components/buttons';
 import { Chip } from '@/components/chip';
 import { ModelChips } from '@/components/model-picker';
+import { EdgeFade } from '@/components/edge-fade';
 import { Icon } from '@/components/icon';
 import type { IconName } from '@/components/icon-paths';
 import { OneOffNotice } from '@/components/one-off-notice';
@@ -449,7 +450,9 @@ export default function AskScreen() {
 
       <View style={[styles.composer, { paddingBottom: Math.max(insets.bottom, 12), borderTopColor: colors.line, backgroundColor: colors.tabBar }]}>
         <View style={styles.composerColumn}>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chips} style={styles.chipRow} keyboardShouldPersistTaps="handled">
+          {split ? (
+            // iPad: every option shows, wrapping onto a second line when the column is narrow.
+            <View style={styles.chipsWrap}>
             {OPTION_CHIPS.map((chip) => (
               <Chip
                 key={chip.key}
@@ -462,7 +465,27 @@ export default function AskScreen() {
             ))}
             {/* The next question reads the model again, after this change is saved. */}
             <ModelChips feature="ask" onChange={() => (config.current = null)} />
-          </ScrollView>
+            </View>
+          ) : (
+            // iPhone: one sideways row, faded at the edge to show it scrolls.
+            <View style={styles.chipRowBox}>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chips} style={styles.chipRow} keyboardShouldPersistTaps="handled">
+            {OPTION_CHIPS.map((chip) => (
+              <Chip
+                key={chip.key}
+                label={t(chip.label)}
+                icon={chip.icon}
+                selected={options[chip.key]}
+                accessibilityRole="switch"
+                onPress={() => setOptions((previous) => ({ ...previous, [chip.key]: !previous[chip.key] }))}
+              />
+            ))}
+            {/* The next question reads the model again, after this change is saved. */}
+            <ModelChips feature="ask" onChange={() => (config.current = null)} />
+              </ScrollView>
+              <EdgeFade color={colors.background} id="ask-chips-fade" />
+            </View>
+          )}
           <View style={[styles.inputRow, { borderColor: colors.border, backgroundColor: colors.input }]}>
             <TextInput
               value={input}
@@ -576,7 +599,9 @@ const styles = StyleSheet.create({
   composer: { borderTopWidth: StyleSheet.hairlineWidth, paddingTop: 10 },
   // The same centred column as the messages, so the composer lines up on iPad.
   composerColumn: { width: '100%', maxWidth: 720, alignSelf: 'center', paddingHorizontal: 16, gap: 10 },
-  chipRow: { flexGrow: 0, marginHorizontal: -16 },
+  chipRowBox: { marginHorizontal: -16 },
+  chipRow: { flexGrow: 0 },
+  chipsWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   chips: { gap: 8, paddingHorizontal: 16 },
   inputRow: {
     flexDirection: 'row',
