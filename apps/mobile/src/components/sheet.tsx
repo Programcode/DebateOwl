@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import { ScrollView, StyleSheet, type StyleProp, type ViewStyle } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { ReservedWidth } from '@/lib/layout';
 import { useTheme } from '@/theme/use-theme';
 
 /**
@@ -30,7 +31,8 @@ export function SheetScrollView({
       keyboardShouldPersistTaps="handled"
       keyboardDismissMode="interactive"
       testID={testID}>
-      {children}
+      {/* A sheet covers the iPad sidebar, so what it holds lays out for the whole window. */}
+      <ReservedWidth.Provider value={0}>{children}</ReservedWidth.Provider>
     </ScrollView>
   );
 }

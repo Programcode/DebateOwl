@@ -40,6 +40,7 @@ import { useAuth } from '@/lib/auth';
 import { backLabel } from '@/lib/back-label';
 import { useDebates } from '@/lib/debate-context';
 import { fetchFeatureConfig } from '@/lib/feature-config';
+import { useContentWidth } from '@/lib/layout';
 import { openRefusal } from '@/lib/refusal';
 import { sessionQuotaRefusal, useSessionQuota } from '@/lib/session-quota';
 import { decideMotionTarget, shouldPrefillMotion } from '@/lib/motion';
@@ -513,7 +514,8 @@ function LiveRound({
   const { t } = useTranslation();
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { width, height } = useWindowDimensions();
+  const { height } = useWindowDimensions();
+  const width = useContentWidth();
   const { colors } = useTheme();
   const [keyboard, setKeyboard] = useState(false);
   const [expanded, setExpanded] = useState(false);

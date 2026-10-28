@@ -1,5 +1,5 @@
 import { Children, Fragment, isValidElement, useRef, useState, type ReactNode } from 'react';
-import { Pressable, ScrollView, StyleSheet, View, useWindowDimensions } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import Svg, { Defs, LinearGradient, Rect, Stop } from 'react-native-svg';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -11,7 +11,7 @@ import { OfflineNotice } from './offline-notice';
 import { OutlineProvider, OutlineRail, useOutlineAnchor, useOutlineItems, useOutlineRail } from './outline';
 import { Text } from './text';
 
-import { RAIL_MIN_WIDTH, RAIL_WIDTH, useHeaderCover, useLayoutClass } from '@/lib/layout';
+import { RAIL_MIN_WIDTH, RAIL_WIDTH, useContentWidth, useHeaderCover, useLayoutClass } from '@/lib/layout';
 import { radius } from '@/theme/colors';
 import { useTheme } from '@/theme/use-theme';
 
@@ -114,7 +114,7 @@ export function DocumentScreen({
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
   const layout = useLayoutClass();
-  const { width } = useWindowDimensions();
+  const width = useContentWidth();
   const bottom = Math.max(insets.bottom - 6, 14);
   // The bar grows when a label wraps, so the page and the notice clear its measured height.
   const [barHeight, setBarHeight] = useState(PINNED_FADE + PINNED_HEIGHT + bottom);

@@ -2,7 +2,7 @@ import { GENERAL_FOLDER, matchesLibrarySearch, normalizeFolder, sortLibrarySourc
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ActivityIndicator, ScrollView, StyleSheet, View, useWindowDimensions } from 'react-native';
+import { ActivityIndicator, ScrollView, StyleSheet, View } from 'react-native';
 
 import { TextButton } from '@/components/buttons';
 import { Card } from '@/components/card';
@@ -24,7 +24,7 @@ import { useAuth } from '@/lib/auth';
 import { confirmDestructive, promptText } from '@/lib/confirm';
 import { useDebates } from '@/lib/debate-context';
 import { haptics } from '@/lib/haptics';
-import { LIBRARY_ROOMY_WIDTH, LIST_WIDTH, SIDEBAR_WIDTH, useLayoutClass } from '@/lib/layout';
+import { LIBRARY_ROOMY_WIDTH, LIST_WIDTH, useContentWidth, useLayoutClass } from '@/lib/layout';
 import { openRowId } from '@/lib/open-pane';
 import { pickSourceFile } from '@/lib/pick-source-file';
 import { useSourceActions } from '@/lib/source-actions';
@@ -55,7 +55,7 @@ function LibraryView({ debateId, layout }: { debateId: string | null; layout: Re
   const router = useRouter();
   const { colors } = useTheme();
   const toast = useToast();
-  const { width } = useWindowDimensions();
+  const width = useContentWidth();
   const { session } = useAuth();
   const { status } = useDebates();
   const userId = session?.user.id ?? null;
@@ -152,7 +152,7 @@ function LibraryView({ debateId, layout }: { debateId: string | null; layout: Re
     );
   }
 
-  const available = width - (layout === 'wide' ? SIDEBAR_WIDTH : 0);
+  const available = width;
   // With nothing open the list takes the whole width, as the website's Library does; an open
   // source splits it, and the list keeps 40% (at least its usual width) so titles stay readable.
   const listWidth = Math.max(available >= LIBRARY_ROOMY_WIDTH ? LIST_WIDTH.libraryRoomy : LIST_WIDTH.library, Math.round(available * 0.4));

@@ -2973,6 +2973,14 @@
     "permissions": {
       "speechRecognition": "DebateOwl convierte tu voz en texto cuando dictas una pregunta, una respuesta de Interrogatorio o un discurso de Sparring. Apple procesa el audio para reconocerlo.",
       "microphone": "DebateOwl usa el micrófono mientras dictas una pregunta, una respuesta de Interrogatorio o un discurso de Sparring."
+    },
+    "sidebar": {
+      "dashboard": "Panel",
+      "sources": "Fuentes",
+      "account": "Cuenta y ajustes",
+      "noDebate": "Ningún debate actual",
+      "collapseHint": "Oculta las herramientas de esta sección",
+      "expandHint": "Muestra las herramientas de esta sección"
     }
   }
 }

@@ -1,10 +1,11 @@
 import { flowColumns, mapRows, type FlowchartDocument, type FlowEdgeKind, type FlowNode, type FlowNodeType } from '@debatelab/core/flowchart';
 import { useTranslation } from 'react-i18next';
-import { Pressable, ScrollView, StyleSheet, View, useWindowDimensions } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
 import { Text } from './text';
 
 import { flowMeta, mapMeta, typeLabel, viaLabel } from '@/lib/flowchart-text';
+import { useContentWidth } from '@/lib/layout';
 import { radius } from '@/theme/colors';
 import { useTheme } from '@/theme/use-theme';
 
@@ -104,7 +105,7 @@ export function FlowLegend() {
 export function FlowColumnsView({ doc, onOpen, selectedId }: { doc: FlowchartDocument; onOpen: (node: FlowNode) => void; selectedId?: string }) {
   const { t } = useTranslation();
   const flow = useFlowColors();
-  const { width } = useWindowDimensions();
+  const width = useContentWidth();
   const wide = width >= WIDE;
   const groups = flowColumns(doc);
   const columns = [

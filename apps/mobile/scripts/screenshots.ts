@@ -12,7 +12,7 @@
  * separate several with commas (ONLY=iphone-light-en,ipad-dark-hu).
  * SCREENS=you,timer limits the signed-in screens to those groups: debate,
  * debate-check, library, prepare, practice, you, empty, ask, results, brainstorm,
- * factoids, case-edits, context, limits,
+ * factoids, case-edits, context, limits, sidebar,
  * timer, crossfire, sparring, flowchart, one-off, history, announcements,
  * account, model. Sign-in screens are always shot.
  * ONLY=offline runs only the offline reading check (see shootOfflineScreens).
@@ -25,8 +25,9 @@
  * script signs in once through the real sign-in screen and also checks that a
  * cold start without a network keeps the user signed in. The deployed Edge
  * Functions only accept browser calls from a few origins, so for that run use
- * PORT=18080 (http://127.0.0.1:18080). Never print the code or put it in a
- * screenshot.
+ * PORT=18080 (http://127.0.0.1:18080), or another port with
+ * FUNCTIONS_ORIGIN=http://127.0.0.1:18080 (see newContext). Never print the
+ * code or put it in a screenshot.
  *
  * Signed in, the app applies the account's saved language and theme, which
  * would override the locale and colour scheme under test. Screenshot runs
@@ -131,6 +132,35 @@ const LOCALES = { en: 'en-GB', hu: 'hu-HU', es: 'es-ES' } as const;
 const SIGNED_IN_ROUTES = { prepare: '/prepare', practice: '/practice', you: '/you' };
 const NOTIFICATIONS = { en: 'Notifications', hu: 'Értesítések', es: 'Notificaciones' } as const;
 const REST = `https://${STAGING_HOST}/rest/v1`;
+
+/**
+ * The deployed Edge Functions answer browser calls only from a few origins
+ * (supabase/functions/_shared/cors.ts), 127.0.0.1:18080 among them. When
+ * several worktrees take screenshots at once, set FUNCTIONS_ORIGIN to that
+ * origin and use any PORT: each function call the page makes is sent again
+ * from Node with that Origin and its answer handed back to the page. Staging only.
+ */
+const FUNCTIONS_ORIGIN = process.env.FUNCTIONS_ORIGIN;
+
+async function newContext(browser: Browser, options: BrowserContextOptions): Promise<BrowserContext> {
+  const context = await browser.newContext(options);
+  if (FUNCTIONS_ORIGIN && FUNCTIONS_ORIGIN !== ORIGIN) {
+    // Context routes run after page routes, so a page that fakes a function keeps its fake.
+    await context.route(`https://${STAGING_HOST}/functions/v1/**`, async (route) => {
+      const request = route.request();
+      const cors = { 'access-control-allow-origin': ORIGIN, 'access-control-allow-headers': '*', 'access-control-allow-methods': 'GET, POST, PUT, DELETE, OPTIONS', vary: 'Origin' };
+      if (request.method() === 'OPTIONS') return route.fulfill({ status: 204, headers: cors });
+      // A page that closes mid-call ends the relay quietly: Playwright's error would print the request's headers, session included.
+      try {
+        const response = await route.fetch({ headers: { ...request.headers(), origin: FUNCTIONS_ORIGIN } });
+        await route.fulfill({ response, headers: { ...response.headers(), ...cors } });
+      } catch {
+        await route.abort().catch(() => undefined);
+      }
+    });
+  }
+  return context;
+}
 
 const TYPES: Record<string, string> = {
   '.html': 'text/html; charset=utf-8',
@@ -252,6 +282,22 @@ async function pinDebateActivity(page: Page, ageMs: number) {
 }
 
 /** Waits until the screen's data has arrived, so no spinner is caught mid-load. */
+/** The app's navigation: the tab bar on iPhone and in Split View, the sidebar in a full-screen iPad window. */
+const appShell = (page: Page) => page.locator(':is([data-testid="app-tab-bar"], [data-testid="app-sidebar"]):visible').first();
+
+/** Opens a Prepare tool the way the layout offers it: from the iPad sidebar, or from the Prepare tab's tile. */
+async function openPrepareTool(page: Page, tool: string) {
+  const sidebar = page.getByTestId('app-sidebar');
+  if (await sidebar.isVisible()) {
+    await sidebar.getByTestId(`sidebar-item-${tool}`).click();
+    return;
+  }
+  if (!(await page.getByTestId(`prepare-tool-${tool}`).filter({ visible: true }).isVisible())) {
+    await page.getByRole('tab', { name: /^(Prepare|Felkészülés|Preparar)$/ }).click();
+  }
+  await page.getByTestId(`prepare-tool-${tool}`).filter({ visible: true }).click();
+}
+
 async function settle(page: Page) {
   await page.waitForLoadState('networkidle');
   await page.waitForFunction(() => document.querySelectorAll('[role="progressbar"]').length === 0, undefined, { timeout: 15_000 });
@@ -1064,9 +1110,7 @@ async function shootFlowchart(context: BrowserContext, prefix: string, language:
   if (!(await toggle.isChecked())) throw new Error('The one-off switch did not turn on');
   await oneOff.getByTestId('debates-sheet').getByRole('button', { name: /^(Done|Kész|Listo)$/ }).click();
   await oneOff.getByTestId('debates-sheet').waitFor({ state: 'detached' });
-  await oneOff.getByRole('tab', { name: /^(Prepare|Felkészülés|Preparar)$/ }).click();
-  await oneOff.getByTestId('prepare-tool-flowchart').waitFor({ timeout: 30_000 });
-  await oneOff.getByTestId('prepare-tool-flowchart').click();
+  await openPrepareTool(oneOff, 'flowchart');
   await oneOff.getByTestId('flowchart-screen').getByTestId('one-off-notice').waitFor({ timeout: 30_000 });
   await oneOff.getByTestId('flow-card').first().waitFor({ timeout: 30_000 });
   await settle(oneOff);
@@ -1612,20 +1656,27 @@ async function shootOneOffTools(page: Page, prefix: string) {
   await settle(page);
   await turnOnOneOff(page);
   await closeSwitcher(page);
-  await page.getByRole('tab', { name: /^(Prepare|Felkészülés|Preparar)$/ }).click();
-  await page.getByTestId('prepare-tool-generate').waitFor({ timeout: 30_000 });
-  // The Debate tab stays mounted behind Prepare with its own notice; only the visible one is Prepare's.
-  await page.getByTestId('one-off-notice').filter({ visible: true }).waitFor();
-  await settle(page);
-  await shoot(page, `${prefix}-prepare-oneoff`);
+  // The iPad sidebar lists the tools themselves, so there is no Prepare tab to shoot there.
+  const sidebar = await page.getByTestId('app-sidebar').isVisible();
+  if (!sidebar) {
+    await page.getByRole('tab', { name: /^(Prepare|Felkészülés|Preparar)$/ }).click();
+    await page.getByTestId('prepare-tool-generate').waitFor({ timeout: 30_000 });
+    // The Debate tab stays mounted behind Prepare with its own notice; only the visible one is Prepare's.
+    await page.getByTestId('one-off-notice').filter({ visible: true }).waitFor();
+    await settle(page);
+    await shoot(page, `${prefix}-prepare-oneoff`);
+  }
   // Brainstorm and Factoids say it through the same strip; a reload would end one-off mode, so go back in the app.
   for (const tool of ['brainstorm', 'factoids'] as const) {
-    await page.getByTestId(`prepare-tool-${tool}`).click();
+    await openPrepareTool(page, tool);
     await page.getByTestId(`${tool}-screen`).getByTestId('one-off-notice').waitFor({ timeout: 30_000 });
-    await page.goBack();
-    await page.getByTestId('prepare-tool-generate').filter({ visible: true }).waitFor();
+    // The sidebar goes from tool to tool; on a phone the tool goes back to Prepare's tiles.
+    if (!sidebar) {
+      await page.goBack();
+      await page.getByTestId('prepare-tool-generate').filter({ visible: true }).waitFor();
+    }
   }
-  await page.getByTestId('prepare-tool-generate').click();
+  await openPrepareTool(page, 'generate');
   await page.getByTestId('generate-motion').waitFor({ timeout: 30_000 });
   const notice = page.getByTestId('generate-screen').getByTestId('one-off-notice');
   await notice.waitFor();
@@ -1633,6 +1684,82 @@ async function shootOneOffTools(page: Page, prefix: string) {
   // Return to debate turns the mode off in place, and the strip says where work goes again.
   await notice.getByRole('button').click();
   await page.getByTestId('generate-screen').getByTestId('working-in').waitFor();
+}
+
+/**
+ * The iPad sidebar (ipad devices only): every tool under Debate, Prepare,
+ * Practice, Library and You. It shoots the sidebar fully expanded, then with
+ * Practice and Library closed while Generate is open, and checks that the
+ * closed sections stay closed after a reload, that a row highlights the screen
+ * it opens, that picking another row from an open tool replaces that tool
+ * instead of stacking a second screen, and that a 600-point window (Split View)
+ * has the tab bar instead.
+ */
+async function shootSidebar(context: BrowserContext, prefix: string, language: string, problems: string[]): Promise<number> {
+  const page = await context.newPage();
+  watchErrors(page, problems, `${prefix} sidebar`);
+  await pinSettings(page, language);
+  const viewport = page.viewportSize();
+  await page.goto(`${ORIGIN}/`);
+  await page.evaluate(() => localStorage.removeItem('debateowl.sidebar.collapsed'));
+  await page.goto(`${ORIGIN}/`);
+  const sidebar = page.getByTestId('app-sidebar');
+  if (viewport && viewport.width < 700) {
+    await page.getByTestId('app-tab-bar').waitFor();
+    if (await sidebar.isVisible()) throw new Error(`${prefix}: a ${viewport.width}-point window shows the sidebar`);
+    await page.close();
+    return 0;
+  }
+  await sidebar.waitFor({ timeout: 30_000 });
+  if (await page.getByTestId('app-tab-bar').isVisible()) throw new Error(`${prefix}: the tab bar shows beside the sidebar`);
+  await page.getByTestId('current-debate-motion').waitFor({ timeout: 30_000 });
+  await settle(page);
+  const selected = async () => sidebar.locator('[aria-selected="true"]').getAttribute('data-testid');
+  if ((await selected()) !== 'sidebar-item-dashboard') throw new Error(`${prefix}: the Debate tab does not highlight Dashboard`);
+  await shoot(page, `${prefix}-sidebar-expanded`);
+
+  // Generate from the sidebar, then Attack from Generate: the sidebar replaces the open tool.
+  await sidebar.getByTestId('sidebar-item-generate').click();
+  await page.getByTestId('generate-motion').waitFor({ timeout: 30_000 });
+  await sidebar.getByTestId('sidebar-item-attack').click();
+  await page.waitForURL('**/attack**');
+  await sidebar.getByTestId('sidebar-item-generate').click();
+  await page.getByTestId('generate-motion').waitFor({ timeout: 30_000 });
+  if ((await selected()) !== 'sidebar-item-generate') throw new Error(`${prefix}: Generate is not highlighted on Generate`);
+  await page.goBack();
+  await page.waitForURL((url) => url.pathname === '/');
+  await page.getByTestId('current-debate-motion').waitFor({ timeout: 30_000 });
+  await sidebar.getByTestId('sidebar-item-generate').click();
+  await page.getByTestId('generate-motion').waitFor({ timeout: 30_000 });
+
+  for (const section of ['practice', 'library']) {
+    const toggle = sidebar.getByTestId(`sidebar-toggle-${section}`);
+    await toggle.click();
+    if ((await toggle.getAttribute('aria-expanded')) !== 'false') throw new Error(`${prefix}: ${section} did not collapse`);
+  }
+  await settle(page);
+  await shoot(page, `${prefix}-sidebar-collapsed`);
+
+  await page.goto(`${ORIGIN}/library`);
+  await sidebar.waitFor({ timeout: 30_000 });
+  for (const section of ['practice', 'library']) {
+    if (await sidebar.getByTestId(`sidebar-section-${section}`).locator('[data-testid^="sidebar-item-"]').count()) {
+      throw new Error(`${prefix}: ${section} opened again after a reload`);
+    }
+  }
+  // A closed section still marks the screen it holds.
+  await sidebar.getByTestId('sidebar-toggle-library').click();
+  if ((await selected()) !== 'sidebar-item-sources') throw new Error(`${prefix}: Sources is not highlighted on the Library`);
+
+  // Split View: the same iPad at 600 points keeps the tab bar.
+  if (viewport) {
+    await page.setViewportSize({ width: 600, height: viewport.height });
+    await page.getByTestId('app-tab-bar').waitFor();
+    if (await sidebar.isVisible()) throw new Error(`${prefix}: the sidebar stays in a 600-point window`);
+    await page.setViewportSize(viewport);
+  }
+  await page.close();
+  return 2;
 }
 
 async function shootEmptyDebate(page: Page, prefix: string) {
@@ -1835,7 +1962,7 @@ function failedIn(context: BrowserContext, prefix: string, group: string) {
 }
 
 async function signIn(browser: Browser, problems: string[]): Promise<StorageState> {
-  const context = await browser.newContext({ ...DEVICES.iphone, locale: LOCALES.en });
+  const context = await newContext(browser, { ...DEVICES.iphone, locale: LOCALES.en });
   const page = await context.newPage();
   watchErrors(page, problems, 'sign-in');
   const authHosts: string[] = [];
@@ -1872,7 +1999,7 @@ async function checkOfflineColdStart(browser: Browser, state: StorageState, prob
   session.expires_at = Math.floor(Date.now() / 1000) - 60;
   entry.value = JSON.stringify(session);
 
-  const context = await browser.newContext({ ...DEVICES.iphone, locale: LOCALES.en, storageState: expired });
+  const context = await newContext(browser, { ...DEVICES.iphone, locale: LOCALES.en, storageState: expired });
   const page = await context.newPage();
   // Offline for the backend only; the page itself still loads from the local server.
   const toBackend = (url: URL) => url.host === STAGING_HOST;
@@ -1961,7 +2088,7 @@ async function openFlowchart(page: Page) {
  */
 async function shootOfflineScreens(browser: Browser, state: StorageState, problems: string[], run: (typeof OFFLINE_RUNS)[number], isolation: boolean) {
   const { prefix, scheme, language } = run;
-  const context = await browser.newContext({ ...DEVICES.iphone, colorScheme: scheme, locale: LOCALES[language], storageState: state });
+  const context = await newContext(browser, { ...DEVICES.iphone, colorScheme: scheme, locale: LOCALES[language], storageState: state });
   const page = await context.newPage();
   try {
     return await readOffline(context, page, problems, run, isolation);
@@ -2130,7 +2257,7 @@ async function main() {
         for (const [language, locale] of Object.entries(LOCALES)) {
           const prefix = `${device}-${scheme}-${language}`;
           if (ONLY.length > 0 && !ONLY.some((only) => prefix.startsWith(only))) continue;
-          const signedOut = await browser.newContext({ ...options, colorScheme: scheme, locale });
+          const signedOut = await newContext(browser, { ...options, colorScheme: scheme, locale });
           const page = await signedOut.newPage();
           watchErrors(page, problems, prefix);
           await page.goto(`${ORIGIN}/sign-in`);
@@ -2145,7 +2272,7 @@ async function main() {
           await signedOut.close();
 
           if (!session) continue;
-          const signedIn = await browser.newContext({ ...options, colorScheme: scheme, locale, storageState: session });
+          const signedIn = await newContext(browser, { ...options, colorScheme: scheme, locale, storageState: session });
           const tabPage = await signedIn.newPage();
           watchErrors(tabPage, problems, `${prefix} signed in`);
           await pinSettings(tabPage, language);
@@ -2170,7 +2297,7 @@ async function main() {
           for (const [name, route] of Object.entries(SIGNED_IN_ROUTES)) {
             if (!want(name)) continue;
             await tabPage.goto(`${ORIGIN}${route}`);
-            await tabPage.getByRole('tablist').first().waitFor();
+            await appShell(tabPage).waitFor();
             if (name === 'you') await tabPage.getByTestId('subscription-tier').waitFor({ timeout: 30_000 });
             await settle(tabPage);
             await shoot(tabPage, `${prefix}-${name}`);
@@ -2191,6 +2318,9 @@ async function main() {
             await pinSettings(emptyPage, language);
             await shootEmptyDebate(emptyPage, prefix);
             shots += 2;
+          }
+          if (want('sidebar') && device.startsWith('ipad')) {
+            shots += await shootSidebar(signedIn, prefix, language, problems).catch(failedIn(signedIn, prefix, 'sidebar'));
           }
           if (want('ask')) {
             await shootAskScreens(signedIn, prefix, language, problems).catch(failedIn(signedIn, prefix, 'ask'));

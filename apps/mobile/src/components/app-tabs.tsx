@@ -3,16 +3,20 @@ import { useTranslation } from 'react-i18next';
 
 import { TABS } from './tabs';
 
+import { useSidebarWidth } from '@/lib/layout';
+
 import { fontFamily } from '@/theme/fonts';
 import { useTheme } from '@/theme/use-theme';
 
 export default function AppTabs() {
   const { t } = useTranslation();
   const { colors } = useTheme();
+  // A full-screen iPad window shows the app's own sidebar (app-sidebar.tsx), which lists every
+  // tool, so the tab bar hides. Split View and narrower windows keep the tab bar.
+  const sidebar = useSidebarWidth() > 0;
   return (
-    // On iPad (iPadOS 18+) the tabs become the system sidebar; iPhone keeps the tab bar.
     <NativeTabs
-      sidebarAdaptable
+      hidden={sidebar}
       tintColor={colors.primary}
       iconColor={{ default: colors.tabInactive, selected: colors.primary }}
       labelStyle={{

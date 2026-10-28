@@ -6,12 +6,14 @@ import type { NativeStackNavigationOptions } from 'expo-router/native-stack';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
-import { StyleSheet } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
+import { AppSidebar } from '@/components/app-sidebar';
 import { ToastHost, ToastProvider } from '@/components/toast';
 import { AuthProvider, useAuth } from '@/lib/auth';
 import { DebateProvider } from '@/lib/debate-context';
+import { ReservedWidth, useSidebarWidth } from '@/lib/layout';
 import { watchNetwork } from '@/lib/network-status';
 import { refreshPush } from '@/lib/push';
 import { SettingsProvider, useSettings } from '@/lib/settings';
@@ -39,6 +41,8 @@ function Root() {
   const { session, loading, settled } = useAuth();
   const { ready: settingsReady, language } = useSettings();
   const { scheme, colors } = useTheme();
+  // A full-screen iPad window lists every tool in a sidebar beside the stack, so it stays while a tool is open.
+  const sidebarWidth = useSidebarWidth();
   // Settings come from the device here, so the app opens in the account's language and theme.
   const ready = (fontsLoaded || fontError !== null) && !loading && settingsReady;
 
@@ -87,6 +91,9 @@ function Root() {
       <StatusBar style={scheme === 'dark' ? 'light' : 'dark'} />
       {/* The screenshot script waits for auth-settled before it checks an offline cold start. Swipeable rows need the gesture root. */}
       <GestureHandlerRootView style={styles.root} testID={settled ? 'auth-settled' : 'auth-pending'}>
+        <View style={styles.row}>
+        {session !== null && sidebarWidth > 0 ? <AppSidebar width={sidebarWidth} /> : null}
+        <ReservedWidth.Provider value={session !== null ? sidebarWidth : 0}>
         <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.background } }}>
           <Stack.Protected guard={session !== null}>
             <Stack.Screen name="(tabs)" />
@@ -132,6 +139,8 @@ function Root() {
             <Stack.Screen name="sign-in" />
           </Stack.Protected>
         </Stack>
+        </ReservedWidth.Provider>
+        </View>
         <ToastHost />
       </GestureHandlerRootView>
     </ThemeProvider>
@@ -140,4 +149,5 @@ function Root() {
 
 const styles = StyleSheet.create({
   root: { flex: 1 },
+  row: { flex: 1, flexDirection: 'row' },
 });
