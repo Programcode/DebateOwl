@@ -11,7 +11,7 @@ import { PREPARE_TOOLS, prepareToolHref, type PrepareTool } from '@/components/p
 import { Screen } from '@/components/screen';
 import { ScreenTitle } from '@/components/screen-title';
 import { Text } from '@/components/text';
-import { WorkRow, workHref } from '@/components/work-row';
+import { WorkRow } from '@/components/work-row';
 import { useAuth } from '@/lib/auth';
 import { useDebates } from '@/lib/debate-context';
 import { fetchPrepareWork, type DebateItem } from '@/lib/debates';
@@ -120,7 +120,7 @@ export default function PrepareScreen() {
       ) : (
         <Card style={styles.list}>
           {items.map((item, index) => (
-            <WorkRow key={`${item.kind}-${item.id}`} item={item} first={index === 0} onPress={() => router.push(workHref(item, 'prepare'))} />
+            <WorkRow key={`${item.kind}-${item.id}`} item={item} first={index === 0} from="prepare" onDeleted={() => void load()} />
           ))}
         </Card>
       )}

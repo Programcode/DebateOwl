@@ -1,4 +1,4 @@
-import { useFocusEffect, useLocalSearchParams, useRouter, type Href } from 'expo-router';
+import { Link, useFocusEffect, useLocalSearchParams, useRouter, type Href } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from 'react-native';
@@ -33,6 +33,7 @@ import { keepIfSame } from '@/lib/keep-if-same';
 import { suggestDebate } from '@/lib/motion';
 import { deleteResult } from '@/lib/results';
 import { deleteSparringRound, sparringDraft } from '@/lib/sparring';
+import { hasDocumentText, useWorkActions } from '@/lib/work-actions';
 import { useCopyHolder } from '@/lib/use-copy-holder';
 import { useTheme } from '@/theme/use-theme';
 import { EmptyState } from '@/components/empty-state';
@@ -334,6 +335,8 @@ function HistoryRow({ item, first, onPress, onDelete }: { item: HistoryItem; fir
   const { t } = useTranslation();
   const { colors } = useTheme();
   const swipeable = useRef<SwipeableMethods>(null);
+  const work = useWorkActions();
+  const href = historyHref(item);
   const title = item.title || t(`debate.kinds.${item.kind}`);
 
   const remove = async () => {
@@ -341,7 +344,7 @@ function HistoryRow({ item, first, onPress, onDelete }: { item: HistoryItem; fir
     if (!removed) swipeable.current?.close();
   };
 
-  const body = (
+  const row = (
     <Pressable
       accessibilityRole={onPress ? 'button' : undefined}
       accessibilityLabel={onPress ? t('mobile.common.openItem', { title }) : undefined}
@@ -365,6 +368,36 @@ function HistoryRow({ item, first, onPress, onDelete }: { item: HistoryItem; fir
       {onPress ? <Icon name="chevronRight" color={colors.tabInactive} size={20} /> : null}
     </Pressable>
   );
+  // Press and hold for a preview and the menu: Discuss and Share for a document, Delete where History deletes.
+  const body = href ? (
+    <Link
+      href={href}
+      asChild
+      onPress={(event) => {
+        event.preventDefault();
+        onPress?.();
+      }}>
+      <Link.Trigger>{row}</Link.Trigger>
+      <Link.Preview />
+      <Link.Menu>
+        {hasDocumentText(item) ? (
+          <Link.MenuAction icon="bubble.left.and.bubble.right" onPress={() => void work.discuss(item)}>
+            {t('common.discuss')}
+          </Link.MenuAction>
+        ) : null}
+        {hasDocumentText(item) ? (
+          <Link.MenuAction icon="square.and.arrow.up" onPress={() => void work.share(item)}>
+            {t('mobile.library.share')}
+          </Link.MenuAction>
+        ) : null}
+        {onDelete ? (
+          <Link.MenuAction icon="trash" destructive onPress={() => void remove()}>
+            {t('common.delete')}
+          </Link.MenuAction>
+        ) : null}
+      </Link.Menu>
+    </Link>
+  ) : row;
 
   const divider = !first && { borderTopWidth: 1, borderTopColor: colors.line };
   if (!onDelete) return <View style={divider}>{body}</View>;
