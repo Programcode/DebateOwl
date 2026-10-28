@@ -120,7 +120,7 @@ export function PrimaryButton({
       {(foreground) => (
         <>
           {busy ? <ActivityIndicator color={foreground} /> : icon ? <Icon name={icon} color={foreground} size={20} /> : null}
-          <Text weight="display" style={[styles.label, { color: foreground }]}>
+          <Text weight="display" style={[styles.label, { color: foreground }]} numberOfLines={2}>
             {label}
           </Text>
         </>
@@ -158,7 +158,7 @@ export function SecondaryButton({
       {(foreground) => (
         <>
           {icon ? <Icon name={icon} color={foreground} size={20} /> : null}
-          <Text weight="display" style={[styles.label, { color: foreground }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8}>
+          <Text weight="display" style={[styles.label, { color: foreground }]} numberOfLines={2}>
             {label}
           </Text>
         </>
@@ -209,11 +209,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
-    paddingHorizontal: 18,
+    paddingHorizontal: 14,
+    paddingVertical: 6,
   },
   floating: { boxShadow: '0 8px 20px -10px rgba(11,42,110,0.45)' },
-  mainLabel: { fontSize: 18, letterSpacing: 0.2 },
-  label: { fontSize: 17, letterSpacing: 0.2, flexShrink: 1 },
+  mainLabel: { fontSize: 18, lineHeight: 22, letterSpacing: 0.2, flexShrink: 1, textAlign: 'center' },
+  // A long label wraps to a second centred line; a primary action is never cut off.
+  label: { fontSize: 17, lineHeight: 21, letterSpacing: 0.2, flexShrink: 1, textAlign: 'center' },
   dimmed: { opacity: 0.6 },
   text: { minHeight: 44, alignItems: 'center', justifyContent: 'center' },
   textLabel: { fontSize: 16 },

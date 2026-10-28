@@ -1,5 +1,6 @@
 import { Children, Fragment, isValidElement, useRef, useState, type ReactNode } from 'react';
 import { Pressable, ScrollView, StyleSheet, View, useWindowDimensions } from 'react-native';
+import Svg, { Defs, LinearGradient, Rect, Stop } from 'react-native-svg';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Chip, CiteBadge } from './chip';
@@ -23,6 +24,44 @@ import { useTheme } from '@/theme/use-theme';
 
 const BODY = 15.5;
 const PINNED_HEIGHT = 54;
+// The page fades out over this height above the pinned bar, so text never shows between or behind the buttons.
+const PINNED_FADE = 28;
+
+/** The pinned buttons on a solid strip of the page colour, with the page fading out above it. */
+function PinnedBar({
+  actions,
+  actionWidths,
+  bottom,
+  rail,
+  onHeight,
+}: {
+  actions: ReactNode;
+  actionWidths?: number[];
+  bottom: number;
+  rail?: boolean;
+  onHeight: (height: number) => void;
+}) {
+  const { colors } = useTheme();
+  return (
+    <View pointerEvents="box-none" style={styles.pinned} onLayout={(event) => onHeight(event.nativeEvent.layout.height)}>
+      <Svg pointerEvents="none" width="100%" height={PINNED_FADE}>
+        <Defs>
+          <LinearGradient id="pinned-fade" x1="0" y1="0" x2="0" y2="1">
+            <Stop offset="0" stopColor={colors.card} stopOpacity={0} />
+            <Stop offset="1" stopColor={colors.card} stopOpacity={1} />
+          </LinearGradient>
+        </Defs>
+        <Rect width="100%" height={PINNED_FADE} fill="url(#pinned-fade)" />
+      </Svg>
+      <View style={[styles.pinnedBody, rail && styles.pinnedRail, { backgroundColor: colors.card, paddingBottom: bottom }]}>
+        {/* The pinned buttons share the width equally unless told otherwise, as in the mocks, within the document's column on iPad. */}
+        <View style={[styles.pinnedRow, rail && styles.pinnedRowRail]}>
+          {Children.map(unwrapFragment(actions), (action, index) => (action ? <View style={[styles.pinnedItem, actionWidths?.[index] ? { flex: actionWidths[index] } : null]}>{action}</View> : null))}
+        </View>
+      </View>
+    </View>
+  );
+}
 
 /** The scrolling page under the header, leaving room for the pinned actions. */
 export function DocumentScreen({
@@ -49,6 +88,8 @@ export function DocumentScreen({
   const layout = useLayoutClass();
   const { width } = useWindowDimensions();
   const bottom = Math.max(insets.bottom - 6, 14);
+  // The bar grows when a label wraps, so the page and the notice clear its measured height.
+  const [barHeight, setBarHeight] = useState(PINNED_FADE + PINNED_HEIGHT + bottom);
   if (outline && layout !== 'phone' && width >= RAIL_MIN_WIDTH) {
     return (
       <RailDocument header={header} actions={actions} actionWidths={actionWidths} notice={notice} testID={testID}>
@@ -61,7 +102,7 @@ export function DocumentScreen({
       {header}
       <ScrollView
         contentInsetAdjustmentBehavior="automatic"
-        contentContainerStyle={[styles.content, { paddingBottom: (actions ? PINNED_HEIGHT + 24 : 16) + bottom }]}>
+        contentContainerStyle={[styles.content, { paddingBottom: actions ? barHeight + 8 : 16 + bottom }]}>
         <OfflineNotice />
         {children}
       </ScrollView>
@@ -69,19 +110,12 @@ export function DocumentScreen({
         <View
           accessibilityRole="alert"
           accessibilityLiveRegion="polite"
-          style={[styles.notice, { bottom: bottom + (actions ? PINNED_HEIGHT + 12 : 0), backgroundColor: colors.foreground }]}
+          style={[styles.notice, { bottom: actions ? barHeight - PINNED_FADE + 8 : bottom, backgroundColor: colors.foreground }]}
           testID="document-notice">
           <Text style={[styles.noticeText, { color: colors.background }]}>{notice}</Text>
         </View>
       ) : null}
-      {actions ? (
-        <View style={[styles.pinned, { bottom }]}>
-          {/* The pinned buttons share the width equally unless told otherwise, as in the mocks, within the document's column on iPad. */}
-          <View style={styles.pinnedRow}>
-            {Children.map(unwrapFragment(actions), (action, index) => (action ? <View style={[styles.pinnedItem, actionWidths?.[index] ? { flex: actionWidths[index] } : null]}>{action}</View> : null))}
-          </View>
-        </View>
-      ) : null}
+      {actions ? <PinnedBar actions={actions} actionWidths={actionWidths} bottom={bottom} onHeight={setBarHeight} /> : null}
     </View>
   );
 }
@@ -105,6 +139,7 @@ function RailDocument({
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
   const bottom = Math.max(insets.bottom - 6, 14);
+  const [barHeight, setBarHeight] = useState(PINNED_FADE + PINNED_HEIGHT + bottom);
   const scroll = useRef<ScrollView>(null);
   const content = useRef<View>(null);
   const rail = useOutlineRail(content, scroll, useHeaderCover());
@@ -122,7 +157,7 @@ function RailDocument({
             scrollEventThrottle={32}
             onScroll={(event) => rail.onScroll(event.nativeEvent.contentOffset.y)}
             onContentSizeChange={rail.measure}>
-            <View ref={content} style={[styles.content, styles.contentRail, { paddingBottom: (actions ? PINNED_HEIGHT + 24 : 16) + bottom }]}>
+            <View ref={content} style={[styles.content, styles.contentRail, { paddingBottom: actions ? barHeight + 8 : 16 + bottom }]}>
               <OfflineNotice />
               <OutlineProvider outline={rail.outline}>{children}</OutlineProvider>
             </View>
@@ -131,18 +166,12 @@ function RailDocument({
             <View
               accessibilityRole="alert"
               accessibilityLiveRegion="polite"
-              style={[styles.notice, { bottom: bottom + (actions ? PINNED_HEIGHT + 12 : 0), backgroundColor: colors.foreground }]}
+              style={[styles.notice, { bottom: actions ? barHeight - PINNED_FADE + 8 : bottom, backgroundColor: colors.foreground }]}
               testID="document-notice">
               <Text style={[styles.noticeText, { color: colors.background }]}>{notice}</Text>
             </View>
           ) : null}
-          {actions ? (
-            <View style={[styles.pinned, styles.pinnedRail, { bottom }]}>
-              <View style={[styles.pinnedRow, styles.pinnedRowRail]}>
-                {Children.map(unwrapFragment(actions), (action, index) => (action ? <View style={[styles.pinnedItem, actionWidths?.[index] ? { flex: actionWidths[index] } : null]}>{action}</View> : null))}
-              </View>
-            </View>
-          ) : null}
+          {actions ? <PinnedBar actions={actions} actionWidths={actionWidths} bottom={bottom} rail onHeight={setBarHeight} /> : null}
         </View>
       </View>
     </View>
@@ -240,11 +269,11 @@ export function NumberedItems({ items, testID, outline = false }: { items: Numbe
                   {n}
                 </Text>
                 <View style={styles.itemHeaderText}>
-                  <Text weight={group.open ? 'bold' : 'semibold'} style={group.open ? styles.itemTitleOpen : styles.itemTitle} numberOfLines={group.open ? undefined : 1}>
+                  <Text weight={group.open ? 'bold' : 'semibold'} style={group.open ? styles.itemTitleOpen : styles.itemTitle} numberOfLines={group.open ? undefined : 2}>
                     {item.title}
                   </Text>
                   {group.open ? null : (
-                    <Text tone="faint" style={styles.itemSummary} numberOfLines={1}>
+                    <Text tone="faint" style={styles.itemSummary} numberOfLines={2}>
                       {item.summary}
                     </Text>
                   )}
@@ -409,7 +438,8 @@ export function Callout({ title, children }: { title: string; children: ReactNod
 const styles = StyleSheet.create({
   root: { flex: 1 },
   content: { paddingHorizontal: 18, paddingTop: 4, gap: 12, width: '100%', maxWidth: 680, alignSelf: 'center' },
-  pinned: { position: 'absolute', left: 0, right: 0, alignItems: 'center' },
+  pinned: { position: 'absolute', left: 0, right: 0, bottom: 0 },
+  pinnedBody: { width: '100%', alignItems: 'center', paddingTop: 2 },
   pinnedRow: { flexDirection: 'row', gap: 10, width: '100%', maxWidth: 680, paddingHorizontal: 14 },
   pinnedItem: { flex: 1 },
   railRow: { flex: 1, flexDirection: 'row' },
