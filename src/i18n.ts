@@ -3,6 +3,7 @@ import { initReactI18next } from 'react-i18next';
 import en from './locales/en.json';
 import toolsEn from './locales/tools/en.json';
 import site from './config/site.json';
+import { CASE_FORMAT, FREE_PLAN } from './lib/seo/site-text';
 import { type AppLanguage } from './lib/languages';
 
 type Catalogs = [{ default: object }, { default: object }];
@@ -25,7 +26,8 @@ void i18n.use(initReactI18next).init({
   lng: 'en',
   fallbackLng: 'en',
   // Every string can name the product with {{product}}, {{brand}} and {{host}},
-  // and state the trial length and price with {{trialDays}} and {{proMonthly}},
+  // state the trial length and price with {{trialDays}} and {{proMonthly}}, and
+  // quote the English case format and plan sentences as {{caseFormat}} and {{freePlan}},
   // all from site.json, so every language states the same facts as the English pages.
   interpolation: {
     escapeValue: false,
@@ -35,6 +37,8 @@ void i18n.use(initReactI18next).init({
       host: new URL(site.origin).host,
       trialDays: site.pricing.trialDays,
       proMonthly: site.pricing.proMonthly,
+      caseFormat: CASE_FORMAT,
+      freePlan: FREE_PLAN,
     },
   },
 });

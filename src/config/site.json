@@ -27,6 +27,10 @@
   },
   "factsCheckedOn": "2026-10-20",
   "definition": "an AI debate prep and practice app for students and competitive debaters that builds structured cases, finds the weak points in arguments, researches evidence with citations and runs timed practice rounds against an AI opponent",
+  "tagline": "An AI debate prep and practice app for students and competitive debaters.",
+  "caseFormat": "A {{product}} case is written the way school debaters prepare: an opening, two to four arguments each with an explanation, evidence and why it matters, \"If they say… we answer…\" replies, a closing line and the sources it used.",
+  "secondSpeech": "Second speech (R2): no new arguments; about two minutes reinforcing our arguments, then about four minutes of \"If they say X, we answer Y\" replies.",
+  "freePlan": "The {{product}} app has no free plan ({{trialDays}}-day free trial, then ${{proMonthly}}/month); the separate tools at /tools are free with no account.",
   "pricing": {
     "currency": "USD",
     "trialDays": 3,
