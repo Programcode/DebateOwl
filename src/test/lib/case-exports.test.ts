@@ -3,7 +3,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { exportCaseToDocx } from '@/lib/export-utils';
 import { exportCaseToPdf } from '@/lib/pdf-export-utils';
 import { caseText } from '@/components/features/tools/result-text';
-import { NEW_CASE, OLD_CASE } from '../helpers/cases';
+import { NEW_CASE, OLD_CASE, R2_CASE } from '../helpers/cases';
+
+// The labels and placeholders the restructure removed from every export.
+const OLD_LABELS = /Thesis|Framework|Burden of Proof|Predicted Opponent Case|Counterpoint|No framework provided|No burden of proof provided/i;
 
 // Every line the PDF draws, recorded by a stand-in for jsPDF. Drawing calls the
 // test does not need (colours, fonts, shapes, save) do nothing.
@@ -52,7 +55,8 @@ async function docxText(result: typeof NEW_CASE): Promise<string> {
     reader.readAsArrayBuffer(blob!);
   });
   const xml = zipEntry(Buffer.from(bytes), 'word/document.xml');
-  return xml.replace(/<\/w:p>/g, '\n').replace(/<[^>]+>/g, '');
+  const entities: Record<string, string> = { amp: '&', lt: '<', gt: '>', quot: '"', apos: "'" };
+  return xml.replace(/<\/w:p>/g, '\n').replace(/<[^>]+>/g, '').replace(/&(amp|lt|gt|quot|apos);/g, (_, name: string) => entities[name]);
 }
 
 async function pdfText(result: typeof NEW_CASE): Promise<string> {
@@ -84,7 +88,7 @@ describe.each([
       NEW_CASE.closingLine!,
       'UNICEF (2025) – Age limits alone do not keep children safe – https://www.unicef.org/report',
     ]) expect(text).toContain(expected);
-    expect(text).not.toMatch(/framework|burden of proof/i);
+    expect(text).not.toMatch(OLD_LABELS);
     expect(text).not.toContain('javascript:');
   });
 
@@ -99,6 +103,22 @@ describe.each([
       'Fare collection has heavy overhead.',
       'Net cost is far below headline farebox revenue.',
     ]) expect(text).toContain(expected);
+    // The old sections keep their content, under plain names.
+    expect(text).not.toMatch(OLD_LABELS);
+  });
+
+  it('writes an R2 case as backed-up arguments and answers, with no new arguments', async () => {
+    const text = await exportText(R2_CASE);
+    for (const expected of [
+      R2_CASE.caseStructure.thesis,
+      'Our second argument: bullying',
+      R2_CASE.reinforce![0].text,
+      'Schools have emergency plans to protect pupils.',
+      'UNESCO, 2021',
+      R2_CASE.closingLine!,
+    ]) expect(text).toContain(expected);
+    expect(text).not.toMatch(/Argument 1|ARGUMENT 1/);
+    expect(text).not.toMatch(OLD_LABELS);
   });
 
   it('writes a Conclusor case\'s reasons why we win when there are no arguments', async () => {

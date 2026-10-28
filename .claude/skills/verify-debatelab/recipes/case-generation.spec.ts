@@ -161,7 +161,13 @@ test("gen-roles: the speaker role shapes the case: Introductor, R2 and Conclusor
     const body = await response;
     const call = (await providerCalls()).filter((item) => item.feature === "generate").at(-1);
     expect(call?.user).toContain(`Role: ${role}`);
-    return body.output as unknown as CaseOutput & { opening?: { definition?: string }; counters: unknown[]; whyWeWin?: string[]; closingLine?: string };
+    return body.output as unknown as CaseOutput & {
+      opening?: { definition?: string };
+      counters: unknown[];
+      reinforce?: Array<{ argument: string; text: string }>;
+      whyWeWin?: string[];
+      closingLine?: string;
+    };
   };
 
   await pickRole("Introductor (4 min)");
@@ -179,9 +185,22 @@ test("gen-roles: the speaker role shapes the case: Introductor, R2 and Conclusor
   // Only the Introductor defines a term.
   expect(r2.opening?.definition).toBeFalsy();
   await expect(page.getByText("What we mean:")).toHaveCount(0);
+  // R2 brings no new arguments: it backs up the team's, then answers theirs.
+  expect(r2.contentions).toEqual([]);
+  expect(r2.reinforce?.length ?? 0).toBeGreaterThanOrEqual(1);
+  await expect(page.getByRole("button", { name: "Regenerate Arguments" })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Regenerate Backing up our case" })).toBeVisible();
+  for (const item of r2.reinforce ?? []) await expect(page.getByText(item.text).first()).toBeVisible();
   await expect(page.getByRole("button", { name: "Regenerate If they say…" })).toBeVisible();
   await expect(page.getByText("They say", { exact: true })).toHaveCount(r2.counters.length);
-  if (!LIVE) expect(r2.counters).toHaveLength(6);
+  // Standard length asks for six answers, the bulk of the speech. The Edge
+  // Function keeps a live reply with at least three and cuts it at six.
+  if (LIVE) {
+    expect(r2.counters.length).toBeGreaterThanOrEqual(3);
+    expect(r2.counters.length).toBeLessThanOrEqual(6);
+  } else {
+    expect(r2.counters).toHaveLength(6);
+  }
   await evidence.shot("02-r2");
   await evidence.aria("02-r2");
 

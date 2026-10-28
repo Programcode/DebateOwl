@@ -300,6 +300,7 @@ interface GenerateData {
     contentions?: { title?: string; claim?: string; reasoning?: string; evidence?: string; impact?: string }[];
     predictedOpponentCase?: { likelyArguments?: string[] };
     counters?: { targetArgument?: string; counterpoint?: string; rebuttal?: string; source?: string }[];
+    reinforce?: { argument?: string; text?: string }[];
     whyWeWin?: string[];
     closingLine?: string;
     sources?: { org?: string; year?: string; claim?: string; url?: string }[];
@@ -315,21 +316,21 @@ function presentList(value: unknown): string[] {
 }
 
 // Mirrors readCase in packages/core/src/ai/case-view.ts: new cases have an
-// opening, arguments, "If they say…", a closing line and sources; older saved
-// cases keep exordio, framework, burden of proof, definitions and predicted
-// arguments, which appear only when they have content.
+// opening, arguments (or R2's backed-up arguments, or the Conclusor's reasons
+// why we win), "If they say…", a closing line and sources. Older saved cases
+// keep extra sections, which appear under plain names only when they have content.
 export function buildGenerateContent(data: GenerateData) {
     const {
         requests, insertText, applyTitle, applySubtitle,
         applySectionHeader, applySubHeader, applyLabel, applyBody, applyBullet, applyEmphasis
     } = createDocumentBuilder();
 
-    const thesis = present(data.caseStructure?.thesis) || 'Untitled Thesis';
+    const roadmap = present(data.caseStructure?.thesis) || 'Untitled case';
     const motion = (data.metadata as Record<string, unknown>)?.motion as string | undefined;
-    const thesisTitle = motion || (thesis.length > 200 ? thesis.substring(0, 197) + '...' : thesis);
+    const caseTitle = motion || (roadmap.length > 200 ? roadmap.substring(0, 197) + '...' : roadmap);
 
     // Title - Centered, large, bold
-    const titleRange = insertText(`${thesisTitle}\n`);
+    const titleRange = insertText(`${caseTitle}\n`);
     applyTitle(titleRange);
 
     // Metadata - Centered subtitle
@@ -353,11 +354,11 @@ export function buildGenerateContent(data: GenerateData) {
     section('Opening');
     if (hook) applyBody(insertText(`${hook}\n`));
     labelled('What we mean', present(data.opening?.definition));
-    applyEmphasis(insertText(`${thesis}\n`));
-    labelled('Framework', present(data.caseStructure?.framework));
-    labelled('Burden of Proof', present(data.caseStructure?.burdenOfProof));
+    applyEmphasis(insertText(`${roadmap}\n`));
+    labelled('How to judge this debate', present(data.caseStructure?.framework));
+    labelled('What we have to show', present(data.caseStructure?.burdenOfProof));
     const definitions = presentList(data.caseStructure?.keyDefinitions);
-    if (definitions.length) labelled('Key Definitions', definitions.join('; '));
+    if (definitions.length) labelled('What we mean by the motion', definitions.join('; '));
 
     // Arguments
     const contentions = Array.isArray(data.contentions) ? data.contentions : [];
@@ -371,6 +372,17 @@ export function buildGenerateContent(data: GenerateData) {
             labelled('Explanation', present(c?.reasoning));
             labelled('Evidence', present(c?.evidence));
             labelled('Why it matters', present(c?.impact));
+        });
+    }
+
+    // R2: the team's earlier arguments, backed up, instead of new ones
+    const reinforce = (Array.isArray(data.reinforce) ? data.reinforce : []).filter((item) => present(item?.text));
+    if (reinforce.length) {
+        section('Backing up our case');
+        reinforce.forEach((item) => {
+            const argument = present(item?.argument);
+            if (argument) applySubHeader(insertText(`${argument}\n`));
+            applyBody(insertText(`${present(item?.text)}\n`));
         });
     }
 
@@ -394,11 +406,11 @@ export function buildGenerateContent(data: GenerateData) {
             const rebuttal = present(c?.rebuttal);
             applySubHeader(insertText(`They say: ${present(c?.targetArgument) ?? ''}\n`));
             labelled('We answer', counterpoint ?? rebuttal);
-            if (counterpoint && rebuttal && rebuttal !== counterpoint) labelled('Rebuttal', rebuttal);
+            if (counterpoint && rebuttal && rebuttal !== counterpoint) labelled('Say it like this', rebuttal);
             labelled('Source', present(c?.source));
         });
         if (likelyArgs.length) {
-            applySubHeader(insertText('Predicted Opponent Case\n'));
+            applySubHeader(insertText('They may also say\n'));
             bullets(likelyArgs);
         }
     }
@@ -423,7 +435,7 @@ export function buildGenerateContent(data: GenerateData) {
         bullets(sources);
     }
 
-    return { requests, title: `Debate Case: ${thesisTitle}` };
+    return { requests, title: `Debate Case: ${caseTitle}` };
 }
 
 // ============================================================

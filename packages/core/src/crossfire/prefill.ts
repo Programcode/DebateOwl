@@ -31,10 +31,11 @@ export function prefillFromGenerate(resolution: string, result: GenerateOutput):
     source: 'generate',
     resolution: resolution.trim().slice(0, 500),
     argument: boundedArgument([
-      line('Thesis', view.opening.roadmap),
-      line('Framework', view.legacy.framework),
-      line('Burden of proof', view.legacy.burdenOfProof),
+      line('What we will show', view.opening.roadmap),
+      line('How to judge this debate', view.legacy.framework),
+      line('What we have to show', view.legacy.burdenOfProof),
       ...argumentText,
+      ...view.reinforce.map((item, index) => `Backing up ${item.argument || `argument ${index + 1}`}: ${item.text}`),
       ...view.whyWeWin.map((reason, index) => `Why we win ${index + 1}: ${reason}`),
     ]),
   });

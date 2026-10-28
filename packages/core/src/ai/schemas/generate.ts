@@ -50,6 +50,16 @@ export const CounterSchema = z.object({
   source: z.string().nullish(),
 });
 
+/**
+ * R2 only: one block backing up an argument the team already made, in the
+ * style "Our second argument was about bullying…", instead of new arguments.
+ */
+export const ReinforceSchema = z.object({
+  /** Which earlier argument this backs up, e.g. "Our second argument: bullying". */
+  argument: z.string(),
+  text: z.string(),
+});
+
 export const CaseSourceSchema = z.object({
   org: z.string(),
   year: z.string().nullish(),
@@ -76,6 +86,8 @@ export const GenerateOutputSchema = z.object({
     keyClashes: z.array(z.string()).optional(),
   }).optional(),
   counters: z.array(CounterSchema),
+  /** R2 only: about two minutes backing up the team's arguments. */
+  reinforce: z.array(ReinforceSchema).nullish(),
   /** Conclusor only: two or three summaries of why our side wins. */
   whyWeWin: z.array(z.string()).nullish(),
   closingLine: z.string().nullish(),
@@ -105,3 +117,4 @@ export type GenerateOutput = z.infer<typeof GenerateOutputSchema>;
 export type Contention = z.infer<typeof ContentionSchema>;
 export type Counter = z.infer<typeof CounterSchema>;
 export type CaseSource = z.infer<typeof CaseSourceSchema>;
+export type Reinforcement = z.infer<typeof ReinforceSchema>;

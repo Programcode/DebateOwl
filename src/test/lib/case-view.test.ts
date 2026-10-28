@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { GenerateOutputSchema } from '@/lib/ai/schemas/generate';
 import { mergeCaseSources, readCase } from '@debatelab/core/ai/case-view';
 import { prefillFromGenerate } from '@/lib/crossfire/prefill';
-import { NEW_CASE, OLD_CASE } from '../helpers/cases';
+import { NEW_CASE, OLD_CASE, R2_CASE } from '../helpers/cases';
 
 describe('generated case schema', () => {
   it('accepts a new case without any of the old sections', () => {
@@ -70,6 +70,13 @@ describe('readCase', () => {
     });
   });
 
+  it('reads an R2 case as backed-up arguments with no new ones, dropping empty blocks', () => {
+    const view = readCase({ ...R2_CASE, reinforce: [...R2_CASE.reinforce!, { argument: 'Empty', text: '  ' }] });
+    expect(view.arguments).toEqual([]);
+    expect(view.reinforce).toEqual([{ argument: 'Our second argument: bullying', text: R2_CASE.reinforce![0].text }]);
+    expect(view.ifTheySay).toHaveLength(1);
+  });
+
   it('survives a stored case with missing or malformed sections', () => {
     const broken = { caseStructure: { thesis: '' }, contentions: [null], counters: [{}], sources: [{}], metadata: {} } as unknown as typeof NEW_CASE;
     const view = readCase(broken);
@@ -94,11 +101,11 @@ describe('mergeCaseSources', () => {
 describe('Crossfire prefill from a case', () => {
   it('leaves out empty old sections and includes a Conclusor\'s reasons', () => {
     const fresh = prefillFromGenerate('Motion', { ...NEW_CASE, contentions: [], whyWeWin: ['They never answered our point.'] });
-    expect(fresh.argument).not.toContain('Framework');
-    expect(fresh.argument).not.toContain('Burden of proof');
+    expect(fresh.argument).not.toContain('How to judge this debate');
+    expect(fresh.argument).not.toContain('What we have to show');
     expect(fresh.argument).toContain('Why we win 1: They never answered our point.');
 
     const old = prefillFromGenerate('Motion', OLD_CASE);
-    expect(old.argument).toContain('Burden of proof: We must show a net gain in practice.');
+    expect(old.argument).toContain('What we have to show: We must show a net gain in practice.');
   });
 });

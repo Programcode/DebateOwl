@@ -123,6 +123,13 @@ describe('flowchartFromCase', () => {
         ]);
         expect(built.edges.map((edge) => `${edge.source}>${edge.target}`)).toEqual(['thesis>c-0', 'c-0>a-0', 'a-0>r-0']);
 
+        // R2 brings no new arguments: its backed-up arguments become the argument nodes.
+        const r2 = { ...fresh, contentions: [], reinforce: [{ argument: 'Our first argument: cleaner air', text: 'NO2 fell 30% in Oslo.' }] } as GenerateOutput;
+        expect(caseHasFlowchart(r2)).toBe(true);
+        expect(flowchartFromCase(r2, en).nodes.map((node) => node.data.description).slice(0, 3)).toEqual([
+            'Cities should ban cars downtown', 'Our first argument: cleaner air\nNO2 fell 30% in Oslo.', 'Deliveries get harder',
+        ]);
+
         const conc = { ...fresh, contentions: [], counters: [], whyWeWin: ['They never answered air quality', 'Shops did fine'] } as GenerateOutput;
         expect(caseHasFlowchart(conc)).toBe(true);
         expect(flowchartFromCase(conc, en).nodes.map((node) => node.data.description)).toEqual([

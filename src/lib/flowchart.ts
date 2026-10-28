@@ -190,9 +190,9 @@ export function starterFlowchart(t: TFunction): FlowchartData {
     };
 }
 
-/** A generated case has what a flowchart needs: a thesis and an argument, or a Conclusor's reasons why we win. */
+/** A generated case has what a flowchart needs: a thesis and an argument, R2's backed-up arguments, or a Conclusor's reasons why we win. */
 export const caseHasFlowchart = (result: GenerateOutput | null | undefined): result is GenerateOutput =>
-    Boolean(result?.caseStructure?.thesis && (result.contentions?.length || result.whyWeWin?.length));
+    Boolean(result?.caseStructure?.thesis && (result.contentions?.length || result.reinforce?.length || result.whyWeWin?.length));
 
 const NODE_GAP_X = 300;
 const ROW_GAP_Y = 150;
@@ -236,8 +236,8 @@ function answeredAttack(target: string | undefined, attacks: string[], index: nu
 
 /**
  * Maps a generated case onto the canvas: the thesis, one node per argument with
- * its title, point and evidence (a Conclusor's reasons why we win stand in for
- * arguments), what the other side will say, and our answers.
+ * its title, point and evidence (R2's backed-up arguments or a Conclusor's
+ * reasons why we win stand in for arguments), what the other side will say, and our answers.
  */
 export function flowchartFromCase(result: GenerateOutput, t: TFunction): FlowchartData {
     const nodes: Node<FlowNodeData>[] = [];
@@ -248,7 +248,9 @@ export function flowchartFromCase(result: GenerateOutput, t: TFunction): Flowcha
 
     const points = view.arguments.length
         ? view.arguments.map((argument) => [argument.title, argument.point, argument.evidence].filter(Boolean).join('\n'))
-        : view.whyWeWin;
+        : view.reinforce.length
+            ? view.reinforce.map((item) => [item.argument, item.text].filter(Boolean).join('\n'))
+            : view.whyWeWin;
     const contentionTier = placeTier(points.length, 230);
     points.forEach((description, i) => {
         const id = `c-${i}`;

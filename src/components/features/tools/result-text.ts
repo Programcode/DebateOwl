@@ -18,8 +18,8 @@ export function caseText(result: GenerateOutput): string {
     view.opening.hook,
     view.opening.definition && `What we mean: ${view.opening.definition}`,
     view.opening.roadmap,
-    view.legacy.framework && `Framework: ${view.legacy.framework}`,
-    view.legacy.burdenOfProof && `Burden of proof: ${view.legacy.burdenOfProof}`,
+    view.legacy.framework && `How to judge this debate: ${view.legacy.framework}`,
+    view.legacy.burdenOfProof && `What we have to show: ${view.legacy.burdenOfProof}`,
   ].filter((line): line is string => Boolean(line)).map((line) => `  ${line}`));
   view.arguments.forEach((argument, i) => {
     block(`ARGUMENT ${i + 1}: ${argument.title ?? argument.point}`, [
@@ -29,6 +29,7 @@ export function caseText(result: GenerateOutput): string {
       argument.whyItMatters && `  Why it matters: ${argument.whyItMatters}`,
     ].filter((line): line is string => Boolean(line)));
   });
+  view.reinforce.forEach((item, i) => block(`BACKING UP ${item.argument || `ARGUMENT ${i + 1}`}:`, [`  ${item.text}`]));
   block('WHY WE WIN:', view.whyWeWin.map((reason, i) => `  ${i + 1}. ${reason}`));
   block('IF THEY SAY...', view.ifTheySay.map((answer) =>
     `  "${answer.theySay}" -> ${answer.weAnswer}${answer.inRound ? ` ${answer.inRound}` : ''}${answer.source ? ` (${answer.source})` : ''}`));

@@ -179,12 +179,14 @@ function digestCase(data: Record<string, unknown>): string {
   const counters = list(data.counters).map(record).filter(Boolean) as Record<string, unknown>[];
   return lines([
     text(structure.thesis, 300) && `Thesis: ${text(structure.thesis, 300)}`,
-    text(structure.framework, 240) && `Framework: ${text(structure.framework, 240)}`,
+    text(structure.framework, 240) && `How to judge this debate: ${text(structure.framework, 240)}`,
     ...contentions.slice(0, 4).map((item, index) => lines([
       `Argument ${index + 1}: ${text(item.title, 80) ? `${text(item.title, 80)}. ` : ""}${text(item.claim, 200)}`,
       text(item.reasoning, 320) && `  Explanation: ${text(item.reasoning, 320)}`,
       text(item.impact, 240) && `  Why it matters: ${text(item.impact, 240)}`,
     ])),
+    ...list(data.reinforce).map(record).filter(Boolean).slice(0, 3).map((item) =>
+      text(item!.text, 240) && `Backing up ${text(item!.argument, 80) || "an argument"}: ${text(item!.text, 240)}`),
     ...list(data.whyWeWin).slice(0, 3).map((item) => text(item, 240) && `Why we win: ${text(item, 240)}`),
     ...counters.slice(0, 3).map((item) => `If they say "${text(item.targetArgument, 120)}", we answer: ${text(item.counterpoint, 200)}`),
   ]);

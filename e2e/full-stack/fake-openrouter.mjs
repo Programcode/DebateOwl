@@ -56,7 +56,8 @@ const contention = (index) => ({
   reasoning: "Fares are a regressive barrier concentrated on low-income riders.",
   evidence: "UITP reported in 2024 that comparable cities gained riders after removing fares.",
   needsSource: false,
-  impact: "More people reach work, school, and healthcare.",
+  // The prompt asks for whyItMatters; the Edge Function files it under impact.
+  whyItMatters: "More people reach work, school, and healthcare.",
 });
 
 const counter = (index) => ({
@@ -67,19 +68,24 @@ const counter = (index) => ({
     "Drivers will not leave their cars anyway.",
     "Only tourists and the well-off benefit.",
     "Cities cannot afford the extra buses.",
+    "Fares already have discounts for people who need them.",
+    "Free transport has been tried and dropped elsewhere.",
   ][index],
   counterpoint: `${MARK} answer ${index + 1}: fare collection itself costs a large share of what it brings in, so the real gap is far smaller.`,
   ...(index % 2 === 0 ? { source: "UITP, 2024" } : {}),
 });
 
 // The role decides the shape, as the real prompt asks: the Introductor may
-// define an unclear term, R2 leans on "If they say…", and the Conclusor
-// brings reasons why we win instead of new arguments.
+// define an unclear term, R2 backs up the team's arguments and then answers
+// theirs, and the Conclusor brings reasons why we win. Neither R2 nor the
+// Conclusor brings new arguments.
 const generate = (user) => {
   const length = /^Length: (\w+)/m.exec(user)?.[1] ?? "standard";
   const role = /^Role: (\w+)/m.exec(user)?.[1] ?? "r1";
   const count = { brief: 2, standard: 3, comprehensive: 4 }[length] ?? 3;
   const conc = role === "conc";
+  const r2 = role === "r2";
+  const answers = { brief: 5, standard: 6, comprehensive: 8 }[length] ?? 6;
   return {
     opening: {
       hook: `${MARK} opening hook: picture a nurse who skips the night bus because the fare is a tenth of her shift's pay.`,
@@ -88,10 +94,18 @@ const generate = (user) => {
     caseStructure: {
       thesis: conc
         ? `${MARK} case thesis: here is why free transit won this debate`
-        : `${MARK} case thesis: today we will show ${count} arguments that prove free transit is a net public good`,
+        : r2
+          ? `${MARK} case thesis: I'm the R2 of my team, and I'm here to show that free transit is a net public good`
+          : `${MARK} case thesis: today we will show ${count} arguments that prove free transit is a net public good`,
     },
-    contentions: conc ? [] : Array.from({ length: count }, (_, index) => contention(index)),
-    counters: conc ? [] : Array.from({ length: role === "r2" ? 6 : 3 }, (_, index) => counter(index)),
+    contentions: conc || r2 ? [] : Array.from({ length: count }, (_, index) => contention(index)),
+    counters: conc ? [] : Array.from({ length: r2 ? answers : 3 }, (_, index) => counter(index)),
+    ...(r2 ? {
+      reinforce: [
+        { argument: "Our first argument: fares shut people out", text: `${MARK} backing up: our first argument was that fares shut out the riders who need transit most. Eurostat found in 2023 that low-income households spend more of their budget on transport. If fares were fair, those numbers would not look like this.` },
+        { argument: "Our second argument: more people ride", text: `${MARK} backing up: our second argument was that free fares bring more passengers. UITP reported in 2024 that cities gained riders after removing fares. That is the policy working.` },
+      ],
+    } : {}),
     ...(conc ? {
       whyWeWin: [
         "Their funding worry never answered our point that fare collection eats most of the fare.",
@@ -99,7 +113,9 @@ const generate = (user) => {
         "Even if some buses get busier, a full bus is the policy working.",
       ].slice(0, length === "brief" ? 2 : 3),
     } : {}),
-    closingLine: "That is why it is clear that free public transport pays for itself in the lives it opens up.",
+    closingLine: r2
+      ? "That is why it is clear that free public transport pays for itself in the lives it opens up. Thank you."
+      : "That is why it is clear that free public transport pays for itself in the lives it opens up.",
     sources: [
       { org: "UITP", year: "2024", claim: "Ridership rose after fares were removed", url: "https://www.uitp.org/free-fares-2024" },
       { org: "Eurostat", year: "2023", claim: "Low-income households spend more of their budget on transport" },

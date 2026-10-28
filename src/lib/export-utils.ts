@@ -43,9 +43,9 @@ export async function exportCaseToDocx(result: GenerateOutput): Promise<boolean>
     const { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType } = await import('docx');
 
     const view = readCase(result);
-    const thesis = view.opening.roadmap || 'Untitled Thesis';
+    const roadmap = view.opening.roadmap || i18n.t('export.untitledCase');
     const motion = (result.metadata as Record<string, unknown>)?.motion as string | undefined;
-    const thesisTitle = motion || thesis.split('.')[0] || thesis;
+    const caseTitle = motion || roadmap.split('.')[0] || roadmap;
     const sideLabel = result.metadata.side === 'pro'
       ? i18n.t('export.proposition')
       : result.metadata.side === 'con'
@@ -70,9 +70,9 @@ export async function exportCaseToDocx(result: GenerateOutput): Promise<boolean>
       ...(view.opening.hook ? [new Paragraph({ children: [new TextRun({ text: view.opening.hook, italics: true })], spacing: { after: 200 } })] : []),
       ...(view.opening.definition ? [labelled(i18n.t('export.definition'), view.opening.definition, 200, true)] : []),
       ...(view.opening.roadmap ? [new Paragraph({ text: view.opening.roadmap, spacing: { after: 200 } })] : []),
-      ...legacyBlock(i18n.t('export.framework'), view.legacy.framework),
-      ...legacyBlock(i18n.t('export.burdenOfProof'), view.legacy.burdenOfProof),
-      ...(view.legacy.definitions.length ? [labelled(i18n.t('export.keyDefinitions'), view.legacy.definitions.join('; '), 200, true)] : []),
+      ...legacyBlock(i18n.t('export.legacyJudgeBy'), view.legacy.framework),
+      ...legacyBlock(i18n.t('export.legacyMustShow'), view.legacy.burdenOfProof),
+      ...(view.legacy.definitions.length ? [labelled(i18n.t('export.legacyDefinitions'), view.legacy.definitions.join('; '), 200, true)] : []),
     ];
 
     const argumentsSection = view.arguments.flatMap((argument, i) => [
@@ -86,12 +86,18 @@ export async function exportCaseToDocx(result: GenerateOutput): Promise<boolean>
       ...(argument.whyItMatters ? [labelled(i18n.t('export.whyItMatters'), argument.whyItMatters, 300)] : []),
     ]);
 
+    // R2: each earlier argument it backs up, then the spoken paragraph.
+    const reinforceSection = view.reinforce.flatMap((item) => [
+      ...(item.argument ? [new Paragraph({ children: [new TextRun({ text: item.argument, bold: true })], spacing: { before: 200, after: 100 } })] : []),
+      new Paragraph({ text: item.text, spacing: { after: 200 } }),
+    ]);
+
     const answersSection = view.ifTheySay.flatMap((answer) => [
       new Paragraph({
         children: [new TextRun({ text: `${i18n.t('export.theySay')}: `, bold: true }), new TextRun(answer.theySay)],
       }),
       labelled(i18n.t('export.weAnswer'), answer.weAnswer, answer.inRound || answer.source ? 100 : 200),
-      ...(answer.inRound ? [labelled(i18n.t('export.rebuttal'), answer.inRound, answer.source ? 100 : 200)] : []),
+      ...(answer.inRound ? [labelled(i18n.t('export.legacySayItLike'), answer.inRound, answer.source ? 100 : 200)] : []),
       ...(answer.source ? [labelled(i18n.t('export.source'), answer.source, 200)] : []),
     ]);
 
@@ -102,7 +108,7 @@ export async function exportCaseToDocx(result: GenerateOutput): Promise<boolean>
           children: [
             // Title
             new Paragraph({
-              text: i18n.t('export.debateCase') + ": " + thesisTitle,
+              text: i18n.t('export.debateCase') + ": " + caseTitle,
               heading: HeadingLevel.HEADING_1,
               alignment: AlignmentType.CENTER,
               spacing: { after: 400 },
@@ -123,11 +129,12 @@ export async function exportCaseToDocx(result: GenerateOutput): Promise<boolean>
 
             ...(openingSection.length ? [heading(i18n.t('export.opening')), ...openingSection] : []),
             ...(argumentsSection.length ? [heading(i18n.t('export.arguments'), 200), ...argumentsSection] : []),
+            ...(reinforceSection.length ? [heading(i18n.t('export.reinforce'), 200), ...reinforceSection] : []),
             ...(view.whyWeWin.length ? [heading(i18n.t('export.whyWeWin'), 200), ...bullets(view.whyWeWin)] : []),
             ...(answersSection.length || view.legacy.likelyArguments.length ? [
               heading(i18n.t('export.ifTheySay'), 400),
               ...answersSection,
-              ...(view.legacy.likelyArguments.length ? [new Paragraph({ children: [new TextRun({ text: i18n.t('export.predictedOpponent'), bold: true })], spacing: { before: 200, after: 100 } }), ...bullets(view.legacy.likelyArguments)] : []),
+              ...(view.legacy.likelyArguments.length ? [new Paragraph({ children: [new TextRun({ text: i18n.t('export.legacyAlsoSay'), bold: true })], spacing: { before: 200, after: 100 } }), ...bullets(view.legacy.likelyArguments)] : []),
             ] : []),
             ...(view.closingLine ? [heading(i18n.t('export.closingLine'), 400), new Paragraph({ children: [new TextRun({ text: view.closingLine, bold: true })], spacing: { after: 200 } })] : []),
             ...(view.sources.length ? [heading(i18n.t('export.sources'), 400), ...bullets(view.sources.map(sourceLine))] : []),

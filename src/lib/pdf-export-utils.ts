@@ -387,17 +387,17 @@ export async function exportCaseToPdf(result: GenerateOutput): Promise<boolean> 
             addParagraph(view.opening.definition, 2);
         }
         addSubsectionLabel(i18n.t('export.roadmap'));
-        addParagraph(view.opening.roadmap || i18n.t('export.noThesis'), 2);
+        addParagraph(view.opening.roadmap || i18n.t('export.untitledCase'), 2);
         if (view.legacy.framework) {
-            addSubsectionLabel(i18n.t('export.framework'));
+            addSubsectionLabel(i18n.t('export.legacyJudgeBy'));
             addParagraph(view.legacy.framework, 2);
         }
         if (view.legacy.burdenOfProof) {
-            addSubsectionLabel(i18n.t('export.burdenOfProof'));
+            addSubsectionLabel(i18n.t('export.legacyMustShow'));
             addParagraph(view.legacy.burdenOfProof, 2);
         }
         if (view.legacy.definitions.length) {
-            addSubsectionLabel(i18n.t('export.keyDefinitions'));
+            addSubsectionLabel(i18n.t('export.legacyDefinitions'));
             addBulletList(view.legacy.definitions);
         }
         addSeparator(COLORS.success);
@@ -426,6 +426,16 @@ export async function exportCaseToPdf(result: GenerateOutput): Promise<boolean> 
             addSeparator(COLORS.warning);
         }
 
+        // R2: the team's earlier arguments, backed up, instead of new ones.
+        if (view.reinforce.length) {
+            addSectionTitle(i18n.t('export.reinforce'), COLORS.success);
+            view.reinforce.forEach((item) => {
+                if (item.argument) addSubsectionLabel(item.argument);
+                addParagraph(item.text, 2);
+            });
+            addSeparator(COLORS.warning);
+        }
+
         // Conclusor: the reasons we win replace new arguments.
         if (view.whyWeWin.length) {
             addSectionTitle(i18n.t('export.whyWeWin'), COLORS.success);
@@ -439,12 +449,12 @@ export async function exportCaseToPdf(result: GenerateOutput): Promise<boolean> 
             view.ifTheySay.forEach((answer) => {
                 addSubsectionLabel(`${i18n.t('export.theySay')}: ${answer.theySay}`);
                 if (answer.weAnswer) addParagraph(`${i18n.t('export.weAnswer')}: ${answer.weAnswer}`, 4);
-                if (answer.inRound) addParagraph(`${i18n.t('export.rebuttal')}: ${answer.inRound}`, 4);
+                if (answer.inRound) addParagraph(`${i18n.t('export.legacySayItLike')}: ${answer.inRound}`, 4);
                 if (answer.source) addParagraph(`${i18n.t('export.source')}: ${answer.source}`, 4);
                 pdf.y += 3;
             });
             if (view.legacy.likelyArguments.length) {
-                addSubsectionLabel(i18n.t('export.predictedOpponent'));
+                addSubsectionLabel(i18n.t('export.legacyAlsoSay'));
                 addBulletList(view.legacy.likelyArguments);
             }
         }

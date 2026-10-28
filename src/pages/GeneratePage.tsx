@@ -190,6 +190,7 @@ export default function GeneratePage() {
           ...(section === 'opening' ? { opening: next.opening, exordio: next.exordio, caseStructure: next.caseStructure } : {}),
           ...(section === 'contentions' ? { contentions: next.contentions } : {}),
           ...(section === 'counters' ? { counters: next.counters, predictedOpponentCase: next.predictedOpponentCase } : {}),
+          ...(section === 'reinforce' ? { reinforce: next.reinforce } : {}),
           ...(section === 'whyWeWin' ? { whyWeWin: next.whyWeWin } : {}),
           ...(section === 'closing' ? { closingLine: next.closingLine } : {}),
           sources: mergeCaseSources(base.sources, next.sources),

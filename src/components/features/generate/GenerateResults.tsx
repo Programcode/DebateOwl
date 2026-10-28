@@ -271,20 +271,20 @@ export function GenerateResults({ result, discoveredSources, onRegenerateSection
                 <Markdown>{opening.roadmap}</Markdown>
               </div>
             )}
-            {/* Older cases kept these as their own sections. */}
+            {/* Older cases kept these as their own sections; they show under plain names. */}
             {legacy.framework && (
               <div>
-                <h3 className="text-sm font-medium text-muted-foreground mb-1">{t('generateResults.framework')}</h3>
+                <h3 className="text-sm font-medium text-muted-foreground mb-1">{t('generateResults.legacyJudgeBy')}</h3>
                 <Markdown>{legacy.framework}</Markdown>
               </div>
             )}
             {legacy.burdenOfProof && (
               <div>
-                <h3 className="text-sm font-medium text-muted-foreground mb-1">{t('generateResults.burdenOfProof')}</h3>
+                <h3 className="text-sm font-medium text-muted-foreground mb-1">{t('generateResults.legacyMustShow')}</h3>
                 <Markdown>{legacy.burdenOfProof}</Markdown>
               </div>
             )}
-            <LegacyList title={t('generateResults.keyDefinitions')} items={legacy.definitions} />
+            <LegacyList title={t('generateResults.legacyDefinitions')} items={legacy.definitions} />
           </div>
         </SectionCard>
       )}
@@ -300,6 +300,26 @@ export function GenerateResults({ result, discoveredSources, onRegenerateSection
           <div className="space-y-4">
             {view.arguments.map((argument, index) => (
               <ArgumentCard key={argument.id} argument={argument} index={index} unverified={!researched} />
+            ))}
+          </div>
+        </SectionCard>
+      )}
+
+      {/* R2: the team's earlier arguments, backed up, instead of new ones. */}
+      {view.reinforce.length > 0 && (
+        <SectionCard
+          title={t('generateResults.reinforce')}
+          description={t('generateResults.reinforceDesc')}
+          icon={<Shield className="h-5 w-5" />}
+          onRegenerate={regenerate('reinforce')}
+          {...regenerateState('reinforce')}
+        >
+          <div className="space-y-4">
+            {view.reinforce.map((item, i) => (
+              <div key={i} className="rounded-lg border border-border bg-card p-4 space-y-2 motion-list-item">
+                {item.argument && <h3 className="font-semibold text-foreground">{item.argument}</h3>}
+                <Markdown className="text-sm">{item.text}</Markdown>
+              </div>
             ))}
           </div>
         </SectionCard>
@@ -350,7 +370,7 @@ export function GenerateResults({ result, discoveredSources, onRegenerateSection
                 )}
                 {answer.inRound && (
                   <div className="bg-muted/50 rounded-md p-2">
-                    <span className="text-xs font-medium text-muted-foreground">{t('generateResults.rebuttal')} </span>
+                    <span className="text-xs font-medium text-muted-foreground">{t('generateResults.legacySayItLike')} </span>
                     <span className="text-sm text-foreground">{answer.inRound}</span>
                   </div>
                 )}
@@ -361,9 +381,9 @@ export function GenerateResults({ result, discoveredSources, onRegenerateSection
                 )}
               </div>
             ))}
-            <LegacyList title={t('generateResults.likelyArguments')} items={legacy.likelyArguments} />
-            <LegacyList title={t('generateResults.strategicWeaknesses')} items={legacy.weaknesses} />
-            <LegacyList title={t('generateResults.keyClashes')} items={legacy.clashes} />
+            <LegacyList title={t('generateResults.legacyAlsoSay')} items={legacy.likelyArguments} />
+            <LegacyList title={t('generateResults.legacyWeakSpots')} items={legacy.weaknesses} />
+            <LegacyList title={t('generateResults.legacyDecidingPoints')} items={legacy.clashes} />
           </div>
         </SectionCard>
       )}

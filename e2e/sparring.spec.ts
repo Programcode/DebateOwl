@@ -123,7 +123,7 @@ test('uses the school 4-6-6-3 roles and coaching in the default round', async ({
 
   const introductor = page.getByRole('textbox', { name: 'Draft for Pro Introductor' });
   await expect(introductor).toBeVisible();
-  await expect(page.getByText(/Open with an exordio, define the key terms/)).toBeVisible();
+  await expect(page.getByText(/Open with a hook, say "we will show N arguments that prove…"/)).toBeVisible();
   await introductor.fill('Our framework is civic responsibility. We define service as supervised work that directly benefits the local community.');
   await page.getByRole('button', { name: 'Submit speech' }).click();
 

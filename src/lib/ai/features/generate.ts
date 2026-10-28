@@ -119,10 +119,12 @@ export async function generateCase(input: GenerateInput, config: ProviderConfig,
       const data = rawData as { output: unknown; discoveredSources?: unknown };
       const result = validateGenerateOutput(transformGenerateResponse(data.output as Record<string, unknown>));
       const expectedCount = expectedContentionCount(input.length);
-      // A Conclusor's case brings reasons why we win instead of new arguments.
-      // An older backend still sends it the usual argument count.
-      const concluded = input.role === 'conc' && Boolean(result.whyWeWin?.length);
-      if (!concluded && result.contentions.length !== expectedCount) {
+      // R2 backs up the team's arguments and a Conclusor sums up why we win,
+      // so neither brings new arguments. An older backend still sends both
+      // the usual argument count.
+      const noNewArguments = (input.role === 'r2' && Boolean(result.reinforce?.length))
+        || (input.role === 'conc' && Boolean(result.whyWeWin?.length));
+      if (!noNewArguments && result.contentions.length !== expectedCount) {
         throw new AIResponseError('AI response did not contain the expected number of contentions.', {
           details: { expectedCount, actualCount: result.contentions.length },
         });

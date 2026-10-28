@@ -1,10 +1,11 @@
 // One reading of a generated case for every place that shows or exports it.
 // New cases have an opening, arguments, an "If they say…" list, a closing line
-// and a sources list. Saved cases from before keep their old keys (exordio,
+// and a sources list. R2 brings no new arguments: it backs up the team's
+// earlier ones (`reinforce`), and the Conclusor sums up why we win. Saved cases from before keep their old keys (exordio,
 // framework, burden of proof, definitions, the predicted opponent case and a
 // separate rebuttal), so those come through as `legacy` and show only when
 // they have content.
-import type { CaseSource, GenerateOutput } from './schemas/generate';
+import type { CaseSource, GenerateOutput, Reinforcement } from './schemas/generate';
 
 export interface CaseArgument {
   id: string;
@@ -33,6 +34,8 @@ export interface CaseView {
     roadmap?: string;
   };
   arguments: CaseArgument[];
+  /** R2: the team's earlier arguments, backed up again. */
+  reinforce: Reinforcement[];
   ifTheySay: CaseAnswer[];
   whyWeWin: string[];
   closingLine?: string;
@@ -93,6 +96,10 @@ export function readCase(result: GenerateOutput): CaseView {
       needsSource: Boolean(contention?.needsSource),
       sourceQuery: text(contention?.sourceQuery),
     })),
+    reinforce: (Array.isArray(result.reinforce) ? result.reinforce : []).flatMap((item) => {
+      const body = text(item?.text);
+      return body ? [{ argument: text(item?.argument) ?? '', text: body }] : [];
+    }),
     ifTheySay: counters.flatMap((counter) => {
       const theySay = text(counter?.targetArgument);
       const counterpoint = text(counter?.counterpoint);

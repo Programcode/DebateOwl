@@ -17,6 +17,9 @@ function assertIncludes(text: string, expected: string) {
   if (!text.includes(expected)) throw new Error(`document is missing "${expected}"\n---\n${text}`);
 }
 
+// The labels and placeholders the restructure removed from every export.
+const OLD_LABELS = /Thesis|Framework|Burden of Proof|Predicted Opponent Case|Counterpoint|No framework provided|No burden of proof provided/i;
+
 function assertExcludes(text: string, unexpected: RegExp) {
   if (unexpected.test(text)) throw new Error(`document must not contain ${unexpected}\n---\n${text}`);
 }
@@ -41,7 +44,8 @@ Deno.test("Google Docs export writes a new case's opening, arguments, answers, c
     "Closing line\n", "That is why a ban is the wrong answer.",
     "Sources\n", "• UNICEF (2025) – Age limits alone fail – https://www.unicef.org/report\n", "• Old Wiki – Never linked\n",
   ]) assertIncludes(text, expected);
-  assertExcludes(text, /Framework|Burden of Proof|Predicted Opponent Case|javascript:/);
+  assertExcludes(text, OLD_LABELS);
+  assertExcludes(text, /javascript:/);
 });
 
 Deno.test("Google Docs export still writes a case saved before the restructure", () => {
@@ -55,12 +59,14 @@ Deno.test("Google Docs export still writes a case saved before the restructure",
   });
   for (const expected of [
     "Imagine a city where the bus is free. That city is closer than you think.",
-    "Free transit is a net public good.", "Framework: Net societal benefit.", "Burden of Proof: We must show a net gain.",
-    "Key Definitions: Transit: scheduled buses.", "Argument 1: Fares block riders.\n",
-    "We answer: Collection has overhead.", "Rebuttal: Net cost is small.", "Predicted Opponent Case\n", "• Overcrowding\n",
+    "Free transit is a net public good.", "How to judge this debate: Net societal benefit.", "What we have to show: We must show a net gain.",
+    "What we mean by the motion: Transit: scheduled buses.", "Argument 1: Fares block riders.\n",
+    "We answer: Collection has overhead.", "Say it like this: Net cost is small.", "They may also say\n", "• Overcrowding\n",
   ]) assertIncludes(text, expected);
   // An argument the answers already cover is not listed again.
   assertExcludes(text, /• Funding gap/);
+  // The old sections keep their content but none of the old labels.
+  assertExcludes(text, OLD_LABELS);
 });
 
 Deno.test("Google Docs export gives a Conclusor case its reasons why we win", () => {
@@ -73,4 +79,23 @@ Deno.test("Google Docs export gives a Conclusor case its reasons why we win", ()
   });
   assertIncludes(text, "Why we win\n1. They never answered our point.\n2. Only we showed who gets to school.\n");
   assertExcludes(text, /Arguments\n|If they say/);
+});
+
+Deno.test("Google Docs export gives R2 its backed-up arguments and answers, with no new arguments", () => {
+  const text = documentText({
+    opening: { hook: "Schools look safe, but if that were true, thousands of children would not suffer in silence." },
+    caseStructure: { thesis: "I'm the R2 of my team, and I'm here to show that schools are not safe." },
+    contentions: [],
+    reinforce: [
+      { argument: "Our second argument: bullying", text: "In Spain, 1 in 5 pupils has been bullied (Educo, 2022)." },
+      { argument: "", text: "  " },
+    ],
+    counters: [{ targetArgument: "Schools have emergency plans.", counterpoint: "Emergency plans do not stop everyday bullying.", source: "UNESCO, 2021" }],
+    closingLine: "That is why it is clear that schools are NOT truly safe. Thank you.",
+    metadata: { side: "con" },
+  });
+  assertIncludes(text, "Backing up our case\nOur second argument: bullying\nIn Spain, 1 in 5 pupils has been bullied (Educo, 2022).\n");
+  assertIncludes(text, "They say: Schools have emergency plans.\n");
+  assertExcludes(text, /Arguments\n|Argument 1/);
+  assertExcludes(text, OLD_LABELS);
 });

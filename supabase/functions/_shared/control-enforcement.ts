@@ -155,6 +155,7 @@ export function enforceGenerateControls(output: unknown, side: string, format: s
     contentions?: unknown[];
     counters?: unknown[];
     whyWeWin?: unknown;
+    reinforce?: unknown;
     metadata?: { side?: string; format?: string; generatedAt?: string };
   };
   if (!generateOutput.metadata || typeof generateOutput.metadata !== "object" || Array.isArray(generateOutput.metadata)) {
@@ -171,6 +172,39 @@ export function enforceGenerateControls(output: unknown, side: string, format: s
   if (role !== "intro" && opening && typeof opening === "object" && !Array.isArray(opening)) {
     delete (opening as { definition?: unknown }).definition;
   }
+
+  // The prompt asks for whyItMatters; saved cases keep it under impact.
+  if (Array.isArray(generateOutput.contentions)) {
+    for (const contention of generateOutput.contentions) {
+      if (!contention || typeof contention !== "object") continue;
+      const item = contention as { impact?: unknown; whyItMatters?: unknown };
+      if (item.impact === undefined && typeof item.whyItMatters === "string") item.impact = item.whyItMatters;
+      delete item.whyItMatters;
+    }
+  }
+
+  // R2 brings no new arguments: it backs up the team's earlier ones, then
+  // spends most of the speech on "If they say…" answers.
+  if (role === "r2") {
+    const reinforce = Array.isArray(generateOutput.reinforce)
+      ? generateOutput.reinforce.filter((item) =>
+        item && typeof item === "object" && typeof (item as { text?: unknown }).text === "string" && (item as { text: string }).text.trim())
+      : [];
+    const answers = Array.isArray(generateOutput.counters) ? generateOutput.counters : [];
+    const target = length === "brief" ? 5 : length === "comprehensive" ? 8 : 6;
+    if (reinforce.length < 1) {
+      throw new Error("Generate response returned no reinforce items, but R2 must back up the team's arguments.");
+    }
+    if (answers.length < 3) {
+      throw new Error(`Generate response returned ${answers.length} counters, but R2 needs ${target}.`);
+    }
+    generateOutput.reinforce = reinforce.slice(0, 3);
+    generateOutput.counters = answers.slice(0, target);
+    generateOutput.contentions = [];
+    delete generateOutput.whyWeWin;
+    return;
+  }
+  delete generateOutput.reinforce;
 
   // The Conclusor brings no new arguments: 2-3 reasons we win replace them.
   if (role === "conc") {

@@ -238,6 +238,44 @@ Deno.test("a Conclusor case without at least two reasons we win is rejected, not
   }
 });
 
+Deno.test("an R2 case must back up the team's arguments and answer theirs, or it is rejected", () => {
+  const cases: Array<[string, Record<string, unknown>]> = [
+    ["no reinforce", { reinforce: [], counters: [{}, {}, {}, {}, {}], contentions: [], metadata: {} }],
+    ["only blank reinforce", { reinforce: [{ argument: "Our first", text: "  " }], counters: [{}, {}, {}, {}, {}], contentions: [], metadata: {} }],
+    ["too few answers", { reinforce: [{ argument: "Our first", text: "Backed up." }], counters: [{}, {}], contentions: [], metadata: {} }],
+  ];
+  for (const [label, output] of cases) {
+    let rejected = false;
+    try {
+      enforceGenerateControls(output, "con", "custom", "standard", "r2");
+    } catch {
+      rejected = true;
+    }
+    if (!rejected) throw new Error(`R2 output with ${label} must be rejected`);
+  }
+
+  // New arguments from the model are dropped: R2 brings none.
+  const output: Record<string, unknown> = {
+    reinforce: [{ argument: "Our first", text: "Backed up." }],
+    counters: [{}, {}, {}, {}, {}],
+    contentions: [{ claim: "A new point", whyItMatters: "x" }],
+    metadata: {},
+  };
+  enforceGenerateControls(output, "con", "custom", "standard", "r2");
+  if ((output.contentions as unknown[]).length !== 0) throw new Error("R2 must not keep new arguments");
+});
+
+Deno.test("why it matters is filed under the key saved cases already use", () => {
+  const output: Record<string, unknown> = {
+    contentions: [{ claim: "a", whyItMatters: "People reach work." }, { claim: "b", impact: "Kept.", whyItMatters: "Ignored." }],
+    metadata: {},
+  };
+  enforceGenerateControls(output, "pro", "custom", "brief", "r1");
+  const [first, second] = output.contentions as Array<Record<string, unknown>>;
+  if (first.impact !== "People reach work." || "whyItMatters" in first) throw new Error("whyItMatters must move to impact");
+  if (second.impact !== "Kept." || "whyItMatters" in second) throw new Error("an existing impact must win");
+});
+
 Deno.test("case sources keep only links the research or Library supplied", () => {
   const output: Record<string, unknown> = {
     sources: [

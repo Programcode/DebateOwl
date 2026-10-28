@@ -57,3 +57,22 @@ export const OLD_CASE: GenerateOutput = {
   }],
   metadata: { side: 'pro', format: 'custom', generatedAt: '2026-01-06T10:00:00.000Z' },
 };
+
+// An R2 case in the shape of Adam's own R2 speech: who is speaking, the team's
+// earlier argument backed up, then "If they say…" answers. No new arguments.
+export const R2_CASE: GenerateOutput = {
+  opening: { hook: 'Schools present themselves as safe, but if that were true, thousands of children would not be suffering in silence every day.' },
+  caseStructure: { thesis: "I'm the R2 of my team, and I'm here to show that school safety is an illusion." },
+  contentions: [],
+  reinforce: [{
+    argument: 'Our second argument: bullying',
+    text: 'Our second argument was about bullying. In Spain, 1 in 5 pupils has been bullied (Educo, 2022), and 1 in 3 victims tells nobody (UNESCO, 2021).',
+  }],
+  counters: [{
+    targetArgument: 'Schools have emergency plans to protect pupils.',
+    counterpoint: 'Emergency plans do not stop everyday problems like bullying.',
+    source: 'UNESCO, 2021',
+  }],
+  closingLine: 'That is why it is clear that schools are NOT truly safe. Thank you.',
+  metadata: { side: 'con', format: 'custom', generatedAt: '2026-10-28T10:00:00.000Z' },
+};

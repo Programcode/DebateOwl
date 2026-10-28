@@ -88,7 +88,10 @@ Deno.test("generate prompt matrix preserves every school role and length rule", 
       assertIncludes(prompt, `Length: ${length}`);
       assertIncludes(prompt, role === "conc"
         ? `Length Instruction: Return no contentions and no counters. Return exactly ${length === "brief" ? 2 : 3} whyWeWin items`
-        : `Length Instruction: Return exactly ${contentionCount} contentions`);
+        : role === "r2"
+          // R2 brings no new arguments, so length sets how many answers it gives.
+          ? `Length Instruction: Return no contentions. Return exactly 2 reinforce items and exactly ${{ brief: 5, standard: 6, comprehensive: 8 }[length]} counters.`
+          : `Length Instruction: Return exactly ${contentionCount} contentions`);
       assertIncludes(prompt, "Language: Hungarian (hu)");
       assertIncludes(prompt, "RESEARCH CONTEXT");
     }

@@ -71,8 +71,13 @@ export function generateDraftSections(draft: Draft, t: TFunction): DraftSection[
         ...(text(contention.title) ? block(t('generateResults.point'), contention.claim) : []),
         ...block(t('generateResults.explanation'), contention.reasoning),
         ...block(t('generateResults.evidence'), contention.evidence),
-        ...block(t('generateResults.whyItMatters'), contention.impact),
+        // The model writes whyItMatters; the server files it under impact.
+        ...block(t('generateResults.whyItMatters'), contention.whyItMatters ?? contention.impact),
       ];
+    })),
+    ...section('reinforce', t('generateResults.reinforce'), list(draft.reinforce).flatMap((value) => {
+      const item = record(value);
+      return [...heading(item.argument), ...block(undefined, item.text)];
     })),
     ...section('whyWeWin', t('generateResults.whyWeWin'), itemsBlock(undefined, draft.whyWeWin)),
     ...section('counters', t('generateResults.ifTheySay'), list(draft.counters).flatMap((value) => {

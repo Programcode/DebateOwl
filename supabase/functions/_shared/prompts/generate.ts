@@ -16,20 +16,25 @@ Write the case the way school debaters actually prepare it, in plain words:
 4. CLOSING LINE: one sentence that ties back to the opening, like "That is why it is clear that...".
 5. SOURCES: every source the case cites, as organisation, year, the claim it supports, and the link.
 
-Do not use debate theory jargon anywhere in the output. No "framework", "burden of proof", "weighing", "warrant", "impact calculus", "links", "brightlines", "uniqueness", "magnitude", "probability", "timeframe", "turns", "mitigations" or "clash". Say the same thing in everyday words.
+Do not use debate theory terms anywhere in the output: no technical labels for parts of a case, no talk of "links", "brightlines", "uniqueness" or "turns", and no scoring of size, likelihood or speed. Write everything in the everyday words a 14-year-old uses in class.
 
 === THE FOUR SPEAKERS (4-6-6-3) ===
 
 This is a 4-speaker team format. The role decides what the speech contains:
 
 --- INTRODUCTOR (4 minutes) ---
-Opens the team's case. A hook (a vivid scenario, a question, or a fact from the research), then "we will show N arguments that prove..." and the arguments at headline weight: title, point, and one piece of evidence each, kept short. If, and only if, a word in the motion is genuinely unclear (for example "AI tools" or "minors"), add ONE plain line saying how the team understands it in opening.definition. Otherwise leave opening.definition out. Never write a list of definitions.
+Opens the team's case. A hook (a vivid scenario, a question, or a fact from the research), then "we will show N arguments that prove..." and the arguments in short form: title, point, and one piece of evidence each. If, and only if, a word in the motion is genuinely unclear (for example "AI tools" or "minors"), add ONE plain line saying how the team understands it in opening.definition. Otherwise leave opening.definition out. Never write a list of definitions.
 
 --- R1 - First Speaker (6 minutes) ---
 Builds the team's case in full. A short opening line, then the arguments in depth: each explanation walks through why it is true, step by step, and each piece of evidence names its source and year. Then the "If they say..." answers to the strongest opposing claims.
 
 --- R2 - Second Speaker (6 minutes) ---
-About 2 minutes reinforcing the team's arguments, then about 4 minutes of refutation. Keep each argument short: it restates and strengthens a point the team already made, with new evidence where possible. Then the "If they say..." list is the heart of the speech: 5-8 items, each a direct answer the speaker can say out loud, with a source when one supports it. A short opening line can say who is speaking, such as "I'm the R2 of my team, and I'm here to show that...".
+R2 brings NO new arguments: leave contentions as an empty array. The speech has four parts, in this order:
+1. Opening (a few sentences). A hook that turns the motion around ("Schools present themselves as safe, but if that were true, thousands of children would not be suffering in silence every day."), then who is speaking and what they will prove: "I'm the R2 of my team, and I'm here to show that...". Put the hook in opening.hook and the "I'm the R2..." line in caseStructure.thesis.
+2. Backing up our case (about 2 minutes, write it in reinforce). Go back to the arguments the Introductor and R1 already made and make them stronger. Each item names the earlier argument it returns to ("Our second argument was about bullying.") and then, in one spoken paragraph of about 120-150 words: the strongest fact for it with its source and year ("In Spain, 1 in 5 pupils has been bullied (Educo, 2022)"), what that means in plain words, one more fact or study if the research has it, and a sentence that ties it back to the motion ("If schools were really safe, these numbers would not look like this."). Never introduce a point the team has not made. If CURRENT DEBATE CONTEXT includes the team's earlier case, back up those arguments by name; otherwise back up the strongest arguments for our side as "our first argument" and "our second argument".
+3. If they say... (about 4 minutes, the bulk of the speech, written in counters). Each item quotes what the other side has said or will say, in their words ("Schools have emergency plans to protect pupils."), then our answer in 2-4 short spoken sentences (about 40-70 words): say why their point does not hold, back it with a fact and its source when the research has one, and end on a plain line or a pointed question ("If that were true, why are there still so many cases?", "Every case matters. Safety is for everyone, not just most pupils."). Answer the point, not the person.
+4. Closing line: one sentence that sums up and ends the speech, like "That is why it is clear that schools are NOT truly safe. Thank you."
+Keep the sentences short and direct, the way a student speaks in class.
 
 --- CONCLUSOR (3 minutes) ---
 Closes the debate. NO new arguments: leave contentions and counters as empty arrays. Instead write whyWeWin: 2-3 short paragraphs, each summarising one reason our side won the debate, drawing on what the team already argued. Then the closing line. The opening is one sentence that sets up the summary.
@@ -72,7 +77,7 @@ DO NOT:
       "evidence": "A statistic, study, or quote FROM THE PROVIDED RESEARCH, naming the source and year in the sentence, e.g. 'UNICEF said in 2025 that...'.",
       "needsSource": false,
       "sourceQuery": "",
-      "impact": "Why it matters: 1-2 plain sentences on what this means for real people."
+      "whyItMatters": "1-2 plain sentences on what this means for real people."
     }
   ],
   "counters": [
@@ -81,6 +86,9 @@ DO NOT:
       "counterpoint": "Our answer: one speakable paragraph.",
       "source": "The source behind the answer as 'Organisation, year', when one supports it. Otherwise omit."
     }
+  ],
+  "reinforce": [
+    { "argument": "R2 only: the team's earlier argument this returns to, e.g. 'Our second argument: bullying'", "text": "R2 only: one spoken paragraph of about 120-150 words backing it up. Omit for other roles." }
   ],
   "whyWeWin": ["Conclusor only: 2-3 short summaries of why our side won. Omit for other roles."],
   "closingLine": "One sentence that ties back to the opening.",
@@ -94,13 +102,13 @@ DO NOT:
   }
 }
 
-CONTROL PRECEDENCE: The Length Instruction sets the EXACT number of contentions (or, for the Conclusor, of whyWeWin items). Role guidance shapes their depth and order only.
+CONTROL PRECEDENCE: The Length Instruction sets the EXACT number of items it names: contentions, reinforce and counters items for R2, or whyWeWin items for the Conclusor. Role guidance shapes their depth and order only.
 
 SPEECH-READY ARGUMENTS: Each contention must be something the requested speaker can deliver in round:
 - claim: one sentence a judge can write down.
 - reasoning: spell out every step from how things are now to the point, so a listener can see why it is true. Never state a conclusion as its own reason.
 - evidence: say how a specific research or Library source proves the point, naming the source and year in the sentence. When no attached source supports it, describe the evidence still needed and set needsSource to true.
-- impact: why it matters to real people, compared with what the other side is likely to say, in plain spoken sentences.
+- whyItMatters: why it matters to real people, compared with what the other side is likely to say, in plain spoken sentences.
 
 SOURCES LIST: List each source the case actually cites once. Copy the link exactly as it appears in the attached research or Library; never invent or guess a link, and leave "url" out when you have none. When no research is attached, the list may be empty.
 
@@ -109,7 +117,7 @@ TEAM CONSISTENCY: If CURRENT DEBATE CONTEXT includes an earlier case or brainsto
 REQUIREMENTS:
 1. Side must be exactly "pro" or "con".
 2. Generate contentions appropriate to the role (see above).
-3. Except for the Conclusor, include 5-8 counters, one per likely opposing claim.
+3. Except for the Conclusor, include 5-8 counters, one per likely opposing claim (R2: the exact number the Length Instruction gives).
 4. Use attached WEB RESEARCH when present. Cite only sources that appear in it.
 5. Set needsSource to false only when the attached research supports the contention. Set it to true when the contention still needs evidence.
 6. Write the ENTIRE output in the language specified by the user. All arguments, evidence, descriptions, and analysis must be in that language.
@@ -121,7 +129,13 @@ export function buildGenerateUserPrompt(input: Record<string, unknown>, searchCo
   const audience = asString(input.audience, "intermediate");
   const tone = asString(input.tone, "formal");
   const role = asString(input.role, "intro");
-  const lengthInstruction = role === "conc"
+  const lengthInstruction = role === "r2"
+    ? ({
+      brief: "Return no contentions. Return exactly 2 reinforce items and exactly 5 counters.",
+      standard: "Return no contentions. Return exactly 2 reinforce items and exactly 6 counters.",
+      comprehensive: "Return no contentions. Return exactly 2 reinforce items and exactly 8 counters.",
+    }[length] || "Return no contentions. Return exactly 2 reinforce items and exactly 6 counters.")
+    : role === "conc"
     ? ({
       brief: "Return no contentions and no counters. Return exactly 2 whyWeWin items, each two or three sentences.",
       standard: "Return no contentions and no counters. Return exactly 3 whyWeWin items, each two or three sentences.",
