@@ -1,6 +1,6 @@
 {
   "schemaVersion": "trace-1",
-  "createdAt": "2026-10-06T09:22:24.040Z",
+  "createdAt": "2026-10-09T12:11:44.831Z",
   "payload": {
     "actions": [
       {
@@ -45,10 +45,10 @@
       },
       {
         "name": "tap",
-        "summary": "tap button \"Generate Debate Case\"",
+        "summary": "tap button \"Generate debate case\"",
         "target": {
           "role": "button",
-          "name": "Generate Debate Case"
+          "name": "Generate debate case"
         }
       }
     ],
@@ -64,25 +64,20 @@
       "callIndex": 0,
       "agent": "default"
     },
-    "summary": "The new debate is active for “This House would replace school exams with continuous assessment.” Generate is open, and the visible “Generate complete — Your debate case is ready” confirmation and generated case verify the step succeeded.",
+    "summary": "Debate on",
     "startPath": "/app",
     "endPath": "/app/generate",
     "endAnchors": [
-      {
-        "role": "button",
-        "name": "Close"
-      },
-      {
-        "text": "Generate complete"
-      },
-      {
-        "text": "Your debate case is ready."
-      },
       {
         "text": "Current debate"
       },
       {
         "text": "This House would replace school exams with continuous assessment"
+      },
+      {
+        "role": "button",
+        "name": "Current debate: This House would replace school exams with continuous assessment",
+        "testId": "current-debate-mobile"
       },
       {
         "role": "heading",
@@ -93,6 +88,14 @@
       },
       {
         "text": "In favor"
+      },
+      {
+        "role": "button",
+        "name": "Change"
+      },
+      {
+        "role": "button",
+        "name": "Use once"
       }
     ],
     "goneAnchors": [
@@ -100,6 +103,10 @@
         "role": "button",
         "name": "Start debate",
         "testId": "current-debate-mobile"
+      },
+      {
+        "role": "heading",
+        "name": "What are you working on?"
       },
       {
         "text": "No current debate"
@@ -119,11 +126,8 @@
       },
       {
         "text": "Brainstorm"
-      },
-      {
-        "text": "Explore angles for a motion."
       }
     ],
-    "endWaitMs": 14124
+    "endWaitMs": 33894
   }
 }

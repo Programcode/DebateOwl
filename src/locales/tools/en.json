@@ -1,0 +1,203 @@
+{
+  "footer": {
+    "freeTools": "Free debate tools"
+  },
+  "home": {
+    "freeTools": "Only need a round timer, a practice motion or a flow sheet? Those tools are free and need no account."
+  },
+  "layout": {
+    "allTools": "Free debate tools",
+    "breadcrumb": "Breadcrumb",
+    "faq": "Frequently asked questions",
+    "otherTools": "More free tools",
+    "ctaPricing": "Start with a {{trialDays}}-day free trial, no card needed. After that {{product}} costs ${{proMonthly}} a month plus tax.",
+    "ctaButton": "Start the free trial"
+  },
+  "shortAnswer": {
+    "hub": {
+      "question": "What free debate tools can I use without an account?",
+      "answer": "Four, all free and all usable without signing up: a round timer that knows the speech order and times of seven formats, a motion generator that draws from {{total}} original practice motions, a printable flow sheet with a column for every speech, and a speech time calculator. They run in your browser, and the timer saves your round there, not on a server."
+    },
+    "timer": {
+      "question": "Is there a free debate timer that knows each format's speech times?",
+      "answer": "Yes: the free {{product}} debate timer on this page. Pick Public Forum, Lincoln-Douglas, Policy, British Parliamentary, World Schools, Asian Parliamentary or the school 4-6-6-3 format, and it loads the speech order and lengths, shows the protected time when points of information are not allowed, and gives each side a prep bank in Public Forum, Lincoln-Douglas and Policy. It is free, needs no account, and keeps a running round through a page reload."
+    },
+    "motions": {
+      "question": "Where can I get random debate motions for practice?",
+      "answer": "Draw them here. The generator picks one motion, or three for a veto drill, from {{total}} original practice motions written for this site, filtered by topic, difficulty and motion type, in This House or Resolved wording. It is free, needs no account, and lists every motion by topic further down the page."
+    },
+    "flow": {
+      "question": "How do I make a debate flow sheet?",
+      "answer": "Choose your format and paper size here, then print. The sheet has a column for every speech in speaking order, labelled by speaker and coloured by side, and a strip along the bottom for cross-examination or point-of-information notes. For a PDF, choose Save as PDF in the print dialog. It is free and needs no account."
+    },
+    "calc": {
+      "question": "How long will my speech take to deliver?",
+      "answer": "Divide its word count by your speaking rate. At an average 130 words per minute, a 520-word speech takes about 4 minutes; at a fast 160, about 3 minutes 15 seconds. Paste the speech into the calculator below to get the time at slow, average, fast and your own pace, and to see which debate speech slots it fits. The text never leaves your browser."
+    }
+  },
+  "timer": {
+    "region": "{{format}} round timer",
+    "format": "Format",
+    "copyLink": "Copy link to this format",
+    "linkCopied": "Link copied",
+    "copyLinkPrompt": "Copy this link:",
+    "speeches": "Speeches",
+    "bothSides": "Both sides",
+    "clockLabel": "Speech time remaining",
+    "ready": "Ready",
+    "running": "Speaking",
+    "paused": "Paused",
+    "overtime": "Over time",
+    "grace": "Grace period",
+    "poiOpen": "POIs open",
+    "protected": "Protected time",
+    "noPoiInReply": "Reply: no POIs",
+    "poiWindow": "POIs {{from}} to {{to}}",
+    "poiAnnounceOpen": "Points of information are open.",
+    "poiAnnounceProtected": "Protected time. No points of information.",
+    "start": "Start",
+    "pause": "Pause",
+    "reset": "Reset speech",
+    "previous": "Previous speech",
+    "next": "Next speech",
+    "soundOn": "Sound on",
+    "soundOff": "Sound off",
+    "fullscreen": "Fullscreen",
+    "exitFullscreen": "Exit fullscreen",
+    "prepGroup": "Prep time",
+    "prepFor": "{{side}} prep",
+    "startPrep": "Start prep",
+    "pausePrep": "Stop prep",
+    "prepUsed": "Prep used up",
+    "resetPrep": "Reset both prep banks",
+    "keyboardHint": "Click the timer, then use Space to start or pause, R to reset a paused speech, and the arrow keys to change speech."
+  },
+  "custom": {
+    "open": "Build a custom format",
+    "title": "Custom format",
+    "name": "Format name",
+    "defaultName": "Custom format",
+    "prepMinutes": "Prep per side (minutes)",
+    "label": "Speech name",
+    "minutes": "Minutes",
+    "kind": "Type",
+    "kindSpeech": "Speech",
+    "kindQuestions": "Questioning",
+    "side": "Side",
+    "sideA": "Side A",
+    "sideB": "Side B",
+    "sideBoth": "Both",
+    "poi": "POIs",
+    "poiHint": "POIs open after the first minute and close a minute before the end, in speeches of at least three minutes.",
+    "newSpeech": "Speech {{n}}",
+    "moveUp": "Move {{label}} up",
+    "moveDown": "Move {{label}} down",
+    "remove": "Remove {{label}}",
+    "add": "Add a speech",
+    "apply": "Use this format",
+    "cancel": "Cancel",
+    "tooLong": "This format is too long to save or share. Shorten some speech names or remove a speech."
+  },
+  "embed": {
+    "format": "Format",
+    "copy": "Copy embed code",
+    "copied": "Embed code copied",
+    "attribution": "Timer by DebateOwl"
+  },
+  "motions": {
+    "region": "Motion generator",
+    "topic": "Topics",
+    "difficulty": "Difficulty",
+    "type": "Motion type",
+    "wording": "Wording",
+    "wordingHouse": "This House",
+    "wordingResolved": "Resolved",
+    "drawOne": "Draw one motion",
+    "drawThree": "Draw three",
+    "poolSize_one": "{{count}} motion matches",
+    "poolSize_other": "{{count}} motions match",
+    "clearFilters": "Clear filters",
+    "empty": "Press Draw one motion to get a motion, or Draw three for a veto drill.",
+    "optionN": "Option {{n}}",
+    "infoSlide": "Info:",
+    "copy": "Copy motion",
+    "copyLink": "Copy link",
+    "copied": "Copied",
+    "copyPrompt": "Copy this text:",
+    "prepCta": "Prep both sides of this motion in DebateOwl",
+    "topics": {
+      "education": "Education",
+      "technology": "Technology and AI",
+      "environment": "Environment",
+      "economics": "Economics",
+      "politics": "Politics",
+      "health": "Health",
+      "sport": "Sport",
+      "culture": "Culture and media",
+      "ethics": "Ethics",
+      "international": "International",
+      "justice": "Justice and law",
+      "society": "Society"
+    },
+    "difficulties": {
+      "novice": "Novice",
+      "intermediate": "Intermediate",
+      "advanced": "Advanced"
+    },
+    "types": {
+      "policy": "Policy (THW)",
+      "value": "Value (THBT)",
+      "actor": "Actor",
+      "regret": "Regret (THR)",
+      "prefer": "Prefer (THP)"
+    }
+  },
+  "flow": {
+    "region": "Flow sheet generator",
+    "format": "Format",
+    "paper": "Paper",
+    "letter": "US Letter",
+    "a4": "A4",
+    "orientation": "Orientation",
+    "landscape": "Landscape",
+    "portrait": "Portrait",
+    "questionStrip": "Cross-examination strip",
+    "notesStrip": "Notes strip",
+    "motion": "Motion (optional)",
+    "round": "Round (optional)",
+    "judge": "Judge (optional)",
+    "motionShort": "Motion:",
+    "roundShort": "Round:",
+    "judgeShort": "Judge:",
+    "notesBox": "Points of information and decision notes",
+    "print": "Print / save as PDF",
+    "printHint": "Choose Save as PDF in the print dialog for a file."
+  },
+  "calc": {
+    "region": "Speech time calculator",
+    "paste": "Your speech",
+    "placeholder": "Paste or type your speech here.",
+    "privacy": "Counted in your browser. The text is never uploaded or stored.",
+    "words_one": "word",
+    "words_other": "words",
+    "durations": "Delivery time at each pace",
+    "pace": {
+      "slow": "Slow",
+      "average": "Average",
+      "fast": "Fast",
+      "custom": "Your pace"
+    },
+    "wpm": "wpm",
+    "customWpm": "Your words per minute",
+    "approximate": "Approximate: real delivery depends on pauses, emphasis and ad-libbing.",
+    "fitsTitle": "Which speech slots it fits",
+    "fitsAt": "At",
+    "fitsEmpty": "Paste a speech to see which slots it fits.",
+    "spare": "{{time}} spare",
+    "over": "{{time}} over"
+  },
+  "embedClock": {
+    "timeUp": "Time is up.",
+    "remaining": "{{time}} left."
+  }
+}

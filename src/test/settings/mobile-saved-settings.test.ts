@@ -7,11 +7,17 @@ vi.mock('@/lib/supabase/client', async () => ({ supabase: (await import('@/test/
 
 const { useSettingsStore } = await import('@/lib/stores/settings-store');
 
-/** effective_entitlement's answer for a plan with or without Pro models. */
-const plan = (pro: boolean) => ({
-  data: [{ tier: pro ? 'pro' : 'trial', daily_limit: pro ? 50 : 5, can_access_pro_models: pro }],
-  error: null as null,
-});
+const FUTURE = new Date(Date.now() + 86_400_000).toISOString();
+
+/** The billing rows of a plan with or without Pro models (promo Pro, or a running trial). */
+const plan = (pro: boolean): Record<string, string | null> => pro
+  ? { subscription_tier: 'pro', daily_limit_override: null, trial_ends_at: null, grace_period_ends_at: FUTURE }
+  : { subscription_tier: 'trial', daily_limit_override: null, trial_ends_at: FUTURE, grace_period_ends_at: null };
+
+/** The settings row both the billing read and hydration see. */
+const settingsRow = (pro: boolean, row: Record<string, unknown>) => {
+  setMockTableResponse('user_settings', { select: [plan(pro)], single: { ...plan(pro), ...row } });
+};
 
 /** Every update the store sent to Supabase. */
 const updates = () => supabaseMock.from.mock.results.flatMap((result) => result.value.update.mock.calls);
@@ -22,18 +28,15 @@ const updates = () => supabaseMock.from.mock.results.flatMap((result) => result.
 describe('settings saved by the iOS app', () => {
   beforeEach(() => {
     resetMockState();
-    supabaseMock.rpc.mockResolvedValue(plan(false));
     useSettingsStore.setState({ language: 'en', outputLanguage: 'en', theme: 'light' });
   });
 
   it('keeps the language and theme the app saved, without rewriting the row', async () => {
-    setMockTableResponse('user_settings', {
-      single: {
-        language: 'hu',
-        output_language: 'es',
-        theme: 'dark',
-        feature_configs: getDefaultFeatureConfigs(),
-      },
+    settingsRow(false, {
+      language: 'hu',
+      output_language: 'es',
+      theme: 'dark',
+      feature_configs: getDefaultFeatureConfigs(),
     });
 
     await useSettingsStore.getState().hydrateFromServer();
@@ -45,22 +48,17 @@ describe('settings saved by the iOS app', () => {
 
   it('keeps the Pro model the app saved for a Pro student, without rewriting the row', async () => {
     // The app picks its defaults from the same plan the website hydrates with.
-    supabaseMock.rpc.mockResolvedValue(plan(true));
-    setMockTableResponse('user_settings', {
-      single: { language: 'hu', output_language: 'es', theme: 'dark', feature_configs: getDefaultFeatureConfigs(DEFAULT_PRO_MODEL) },
-    });
+    settingsRow(true, { language: 'hu', output_language: 'es', theme: 'dark', feature_configs: getDefaultFeatureConfigs(DEFAULT_PRO_MODEL) });
 
     await useSettingsStore.getState().hydrateFromServer();
 
-    expect(supabaseMock.rpc).toHaveBeenCalledWith('effective_entitlement', { p_user_id: 'user_1' });
+    expect(supabaseMock.from).toHaveBeenCalledWith('app_store_subscriptions');
     expect(useSettingsStore.getState().featureConfigs.generate.model).toBe(DEFAULT_PRO_MODEL);
     expect(updates()).toEqual([]);
   });
 
   it('replaces them when feature_configs was left empty', async () => {
-    setMockTableResponse('user_settings', {
-      single: { language: 'hu', output_language: 'es', theme: 'dark', feature_configs: {} },
-    });
+    settingsRow(false, { language: 'hu', output_language: 'es', theme: 'dark', feature_configs: {} });
 
     await useSettingsStore.getState().hydrateFromServer();
 

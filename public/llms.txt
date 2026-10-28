@@ -1,13 +1,84 @@
-# DebateLab by Programcode
+# DebateOwl
 
-DebateLab is the official AI debate preparation platform by Programcode at https://debate.pi-stack.org/.
+> DebateOwl is an AI debate prep and practice app for students and competitive debaters that builds structured cases, finds the weak points in arguments, researches evidence with citations and runs timed practice rounds against an AI opponent.
 
-Important public pages:
-- https://debate.pi-stack.org/ — homepage
-- https://debate.pi-stack.org/debatelab — official DebateLab page
-- https://debate.pi-stack.org/debatelab-by-programcode — brand and app overview
-- https://debate.pi-stack.org/what-is-debatelab — plain-English product definition
-- https://debate.pi-stack.org/debatelab-ai — AI debate practice overview
-- https://debate.pi-stack.org/about-debatelab — about page
+DebateOwl runs at https://debateowl.com/. It is a separate product from debatelab.ai. DebateOwl was called DebateLab (debate.pi-stack.org) until 27 October 2026.
 
-Product summary: DebateLab helps students, coaches, and competitive debaters generate cases, practice rebuttals, find evidence leads, map argument flowcharts, ask for coaching, and time speeches.
+## Key facts (as of October 2026)
+
+- Who it is for: students, competitive debaters and their coaches.
+- 8 prep modes: Case generator, Brainstorm, Factoids, Flowchart, Case attacker, Ask coach, Crossfire and Sparring. Plus 3 utilities: Library, Debate timer and History.
+- Practice: Sparring runs timed rounds against an AI opponent in School 4-6-6-3, Lincoln-Douglas and Public Forum and ends with a judged verdict. Crossfire drills cross-examination.
+- Languages: English, Spanish and Hungarian.
+- Pricing: As of October 2026, DebateOwl has a 3-day free trial with no credit card required, then Pro costs $5/month + tax. There is no permanent free plan.
+- Pro adds expanded AI prep access, all 10 models (including Claude Opus and Sonnet, GPT-6.1 Sol and Gemini), Active Grounding research and priority support.
+- Privacy: cases, sources, practice rounds and history stay behind sign-in and are not indexed.
+
+## Main pages
+
+- [Home](https://debateowl.com/): what DebateOwl is, the 8 prep modes, pricing and FAQ
+- [Pricing](https://debateowl.com/debateowl-pricing): trial, Pro and what each includes
+- [Best AI debate tools](https://debateowl.com/best-ai-debate-tools): how to choose an AI debate tool
+- [Sitemap](https://debateowl.com/sitemap.xml): every public page
+
+## Free tools
+
+Free to use, no account needed, and they run in the browser.
+
+- [All free debate tools](https://debateowl.com/tools): every tool below on one page
+- [Debate timer](https://debateowl.com/tools/debate-timer): Round timer for PF, LD, Policy, BP, World Schools and Asian Parliamentary, with protected time, POI knocks and prep banks.
+- [Debate motion generator](https://debateowl.com/tools/debate-motion-generator): Draw one practice motion or three for a veto drill, from 300 original motions sorted by topic and difficulty.
+- [Debate flow sheet](https://debateowl.com/tools/debate-flow-sheet): A printable one-page flow with a column for every speech in your format, on A4 or Letter.
+- [Speech time calculator](https://debateowl.com/tools/speech-time-calculator): Paste a speech to see how long it takes to deliver and which speech slots it fits.
+
+## Magyar
+
+- [DebateOwl: MI-alapú vitafelkészülés és gyakorlás](https://debateowl.com/hu): A DebateOwl MI segítségével készít fel diákokat és vitázókat: esetek, cáfolatok és bizonyítékok, majd időzített gyakorlókörök egy MI-ellenféllel.
+- [Ingyenes vitaeszközök | DebateOwl](https://debateowl.com/hu/tools): Ingyenes, fiók nélkül használható vitaeszközök: formátumhoz igazodó időmérő, vitatétel-generátor, nyomtatható jegyzetlapok és beszédidő-kalkulátor.
+- [Ingyenes vitaidőmérő | DebateOwl](https://debateowl.com/hu/tools/vitaidomero): Ingyenes vitaidőmérő PF, LD, Policy, BP, World Schools és Asian Parliamentary beállításokkal, védett idővel, POI-jelzéssel és felkészülési idővel.
+- [Vitatétel-generátor | DebateOwl](https://debateowl.com/hu/tools/vitatetel-generator): Ingyenes vitatétel-generátor, amely egy véletlen tételt, vagy vétógyakorláshoz hármat húz 300 eredeti, téma és típus szerint rendezett tételből.
+- [Nyomtatható vitajegyzetlapok | DebateOwl](https://debateowl.com/hu/tools/jegyzetlap): Ingyenes, nyomtatható vitajegyzetlap minden beszédhez külön oszloppal PF, LD, Policy, BP, World Schools vagy Asian Parliamentary formátumhoz.
+- [Beszédidő-kalkulátor | DebateOwl](https://debateowl.com/hu/tools/beszedido-kalkulator): Ingyenes beszédidő-kalkulátor, amely megszámolja egy vitabeszéd szavait, és megmutatja, mennyi ideig tart lassú, átlagos és gyors tempóban.
+
+## Español
+
+- [DebateOwl: preparación y práctica de debate con IA](https://debateowl.com/es): DebateOwl ayuda a estudiantes y debatientes a preparar casos, refutaciones y evidencia con IA, y a practicar rondas cronometradas contra un oponente de IA.
+- [Herramientas de debate gratis | DebateOwl](https://debateowl.com/es/tools): Gratis y sin cuenta: un cronómetro para cada formato, un generador de mociones, hojas de flujo imprimibles y una calculadora de tiempo de discurso.
+- [Cronómetro de debate gratis | DebateOwl](https://debateowl.com/es/tools/cronometro-debate): Cronómetro de debate gratis con ajustes para PF, LD, Policy, BP, World Schools y Asian Parliamentary, con tiempo protegido y avisos de POI.
+- [Generador de mociones de debate | DebateOwl](https://debateowl.com/es/tools/generador-mociones): Generador gratis de mociones de debate que saca una moción al azar, o tres para practicar el veto, de 300 mociones originales por tema y tipo.
+- [Hojas de flujo de debate imprimibles | DebateOwl](https://debateowl.com/es/tools/hoja-de-flujo): Hojas de flujo de debate gratis e imprimibles, con una columna por discurso en PF, LD, Policy, BP, World Schools o Asian Parliamentary, en A4 o Carta.
+- [Calculadora de tiempo de discurso | DebateOwl](https://debateowl.com/es/tools/calculadora-tiempo-discurso): Calculadora gratis que cuenta las palabras de un discurso de debate y muestra cuánto dura a ritmo lento, medio o rápido y en qué turnos cabe.
+
+## Guides
+
+- [AI Debate Practice for Stronger Cases, Rebuttals, and Speeches](https://debateowl.com/ai-debate-practice): Practice debate with DebateOwl by running timed rounds against an AI opponent and getting feedback on your cases, rebuttals and weighing.
+- [AI Debate Case Generator with Citations](https://debateowl.com/ai-debate-case-generator): DebateOwl drafts a structured debate case with claims, warrants, impacts and cited evidence leads that you check before taking it into a round.
+- [Practice Rebuttals Before Your Opponent Finds the Weakness](https://debateowl.com/debate-rebuttal-practice): Paste an opposing argument into DebateOwl to find its weak warrants, missing weighing and logic gaps, then practice the rebuttal you would give.
+- [Ask an AI Debate Coach for Round-Ready Prep](https://debateowl.com/ai-debate-coach): Ask DebateOwl's AI debate coach about strategy, case structure, weighing, rebuttals and speeches, with answers tied to your own motion and side.
+- [Find Better Debate Evidence Without Losing the Argument](https://debateowl.com/debate-evidence-finder): DebateOwl finds cited evidence leads for your debate case so you can open the original source and check the warrant before you read it in a round.
+- [Map the Clash With an Argument Flowchart](https://debateowl.com/argument-flowchart): DebateOwl turns a debate case and its rebuttals into a flowchart of claims, warrants, impacts and weighing, so you can see where the clash is.
+- [How Debate Speech Times Work in Each Format](https://debateowl.com/online-debate-timer): Speech, cross-examination and prep times for Public Forum, Lincoln-Douglas, Policy, British Parliamentary and World Schools debate in one table.
+- [How to Write a Debate Case](https://debateowl.com/how-to-write-a-debate-case): A step-by-step guide to writing a debate case, from motion analysis and burdens to contentions with warrants, evidence, impacts and weighing.
+- [How to Practice Debate Rebuttals](https://debateowl.com/how-to-practice-rebuttals): Drills for practicing debate rebuttals one skill at a time, from attacking warrants and evidence to weighing impacts and collapsing your last speech.
+- [Public Forum Debate Prep with AI](https://debateowl.com/public-forum-debate): How to prepare for Public Forum debate, with case writing, rebuttal drills, crossfire practice, summary and final focus, and evidence research.
+- [Lincoln-Douglas Debate Prep with AI](https://debateowl.com/lincoln-douglas-debate): How a Lincoln-Douglas round runs at NSDA speech times, how a value and criterion work, and a worked example case with the negative's turn against it.
+- [Policy Debate Prep with AI](https://debateowl.com/policy-debate): How a Policy (CX) round runs at NSDA times and what a plan, disadvantage, counterplan, topicality and kritik must prove, with a worked 1NC example.
+- [British Parliamentary Debate Prep with AI](https://debateowl.com/british-parliamentary-debate): How a British Parliamentary round runs under the WUDC rules, what each of the eight speakers does, and how to find an extension and use POIs.
+- [Congressional Debate Prep with AI](https://debateowl.com/congress-debate): How a Congressional Debate session runs under NSDA rules, from authorship and sponsorship speeches to direct questioning, precedence and recency.
+- [World Schools Debate Prep with AI](https://debateowl.com/world-schools-debate): How to prepare for World Schools debate, covering motion analysis, burdens, points of information, reply speeches and team coordination.
+- [How to Weigh in Debate](https://debateowl.com/how-to-weigh-in-debate): How to weigh impacts in debate using magnitude, probability, timeframe and reversibility, so the judge knows why your argument matters more.
+- [How to Cross-Examine in Debate](https://debateowl.com/how-to-cross-examine-in-debate): How to cross-examine in debate with short, targeted questions that expose weak warrants, missing evidence and unstated assumptions in a case.
+- [How to Prepare for a Debate Tournament](https://debateowl.com/how-to-prepare-for-a-debate-tournament): A two-week debate tournament prep plan, how much prep time each format gives and how to use it in round, plus a checklist for tournament day.
+- [How to Flow in Debate](https://debateowl.com/how-to-flow-in-debate): How to flow a debate round by tracking every argument across speeches, marking what was dropped and using the flow to plan your rebuttals.
+- [AI Rebuttal Generator for Debate](https://debateowl.com/ai-rebuttal-generator): DebateOwl's rebuttal generator finds the weak link in an opposing argument and drafts a response block you can practice before the round.
+- [Debate Topics for Students](https://debateowl.com/debate-topics-for-students): Debate topics for students sorted by format, difficulty and subject, with a way to brainstorm both sides of a case and start preparing with AI.
+- [Clash and Collapse: Find the Key Argument and Go All In](https://debateowl.com/debate-clash-points): How to map the clashes in a debate round, pick the one that decides the ballot and collapse your last speeches onto it, with a worked example.
+- [Common Debate Fallacies and How to Attack Them](https://debateowl.com/debate-fallacies): Eight logical fallacies as they show up in real debate arguments, each with a one-sentence answer and a note on when the charge does not stick.
+- [Debate Judge Adaptation Guide](https://debateowl.com/debate-judge-adaptation): How to adapt your debating to lay, flow and technical judges, what each one rewards, and which questions to ask before the round begins.
+- [Debate Speech Structure and Delivery](https://debateowl.com/debate-speech-structure): How to structure constructive, rebuttal and final debate speeches by format, with a timed outline and the delivery habits that judges notice.
+- [Debate Motion Analysis Guide](https://debateowl.com/debate-motion-analysis): How to analyze a debate motion by its type, what each side must prove, fair definitions, stakeholders and clashes, with a worked example.
+- [Best AI Debate Tools Compared](https://debateowl.com/best-ai-debate-tools): A comparison of AI debate tools on case generation, rebuttal practice, evidence research, practice rounds and pricing, to help you choose one.
+- [DebateOwl Pricing and Plans](https://debateowl.com/debateowl-pricing): DebateOwl has a 3-day free trial with no credit card required, then one Pro plan at $5/month + tax, and this page lists what each includes.
+- [DebateOwl vs ChatGPT for Debate Prep](https://debateowl.com/debateowl-vs-chatgpt): How DebateOwl and ChatGPT compare for debate prep, from structured case and rebuttal workflows to evidence research and timed practice rounds.
+- [DebateOwl vs WinDebate](https://debateowl.com/debateowl-vs-windebate): How DebateOwl and WinDebate compare on case generation, rebuttal drills, evidence research, supported formats, pricing and day-to-day workflow.
+- [DebateOwl vs DebateClub](https://debateowl.com/debateowl-vs-debateclub): How DebateOwl and DebateClub compare for debate practice, from voice sparring to structured case prep, rebuttal drills and evidence research.

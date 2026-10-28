@@ -1,111 +1,110 @@
 import { useTranslation } from "react-i18next";
-import { useState } from "react";
-import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
+import site from '@/config/site.json';
+import { OwlMark } from '@/components/brand/Owl';
+import { useEffect, useState } from "react";
 import { Menu, X, ArrowRight } from "lucide-react";
 import { Link } from "react-router-dom";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { useRoutePrefetch } from "@/hooks/use-route-prefetch";
+import { localizedPath, useRouteLanguage } from "@/lib/seo/localized-routes";
+import { cn } from "@/lib/utils";
 
 const Navbar = () => {
     const { t } = useTranslation();
     const [isOpen, setIsOpen] = useState(false);
-    const shouldReduceMotion = useReducedMotion();
+    const [scrolled, setScrolled] = useState(false);
     const appPrefetch = useRoutePrefetch("/app");
+    const home = localizedPath("/", useRouteLanguage());
+
+    // The nav is static on load; its edge appears once content scrolls under it.
+    useEffect(() => {
+        const update = () => setScrolled(window.scrollY > 0);
+        update();
+        window.addEventListener("scroll", update, { passive: true });
+        return () => window.removeEventListener("scroll", update);
+    }, []);
 
     const navLinks = [
         { href: "#features", label: t('nav.features') },
-        { href: "#whats-new", label: t('nav.whatsNew') },
-        { href: "#pricing", label: t('nav.pricing') },
         { href: "#how-it-works", label: t('nav.howItWorks') },
+        { href: "#pricing", label: t('nav.pricing') },
     ];
 
     return (
-        <motion.nav
-            initial={{ y: -100 }}
-            animate={{ y: 0 }}
-            transition={{ duration: 0.6, ease: "easeOut" }}
-            className="fixed left-0 right-0 top-[var(--staging-banner-height,0px)] z-50 nav-blur"
+        <nav
+            className={cn(
+                "fixed left-0 right-0 top-(--staging-banner-height,0px) z-50 nav-blur",
+                scrolled || isOpen ? "border-border shadow-sm" : "border-transparent",
+            )}
             aria-label={t('nav.mainNavigation')}
         >
             <div className="section-container">
                 <div className="flex h-16 items-center justify-between md:h-20">
-                    <Link to="/" className="group flex items-center gap-2">
-                        <img
-                            src="/favicon-72.png"
-                            alt={t('common.logoAlt')}
-                            width={36}
-                            height={36}
-                            className="h-9 w-9 rounded-lg border border-primary/20 object-cover transition-colors group-hover:border-primary/40"
-                        />
-                        <span className="text-xl font-bold text-foreground">DebateLab</span>
+                    <Link to={home} aria-label={t('common.homeLink')} className="group flex shrink-0 items-center gap-2 rounded-lg pr-1 pointer-coarse:min-h-11">
+                        <OwlMark size={38} alt={t('common.logoAlt')} className="transition-transform duration-200 ease-overshoot group-hover:-rotate-6 group-hover:scale-105" />
+                        <span className="font-display text-[1.375rem] font-[600] leading-none tracking-[-0.01em] text-heading">{site.product}</span>
                     </Link>
 
-                    <div className="hidden items-center gap-7 md:flex">
+                    <div className="hidden items-center gap-7 lg:flex">
                         {navLinks.map((link) => (
                             <a
                                 key={link.href}
                                 href={link.href}
-                                className="text-sm font-medium text-muted-foreground transition-colors duration-200 hover:text-foreground focus-visible:text-foreground rounded-sm"
+                                className="inline-flex min-h-6 items-center rounded-sm text-sm font-medium text-muted-foreground transition-colors duration-200 hover:text-foreground focus-visible:text-foreground"
                             >
                                 {link.label}
                             </a>
                         ))}
                     </div>
 
-                    <div className="hidden items-center gap-3 md:flex">
+                    <div className="hidden items-center gap-3 lg:flex">
                         <LanguageSwitcher />
-                        <Link to="/app" {...appPrefetch} className="btn-primary-gradient shimmer inline-flex items-center gap-2 text-sm">
+                        <Link to="/app" {...appPrefetch} className="btn-primary-gradient inline-flex items-center gap-2 text-sm">
                             <span className="relative z-10">{t('nav.startTrial')}</span>
-                            <ArrowRight className="relative z-10 h-4 w-4" />
+                            <ArrowRight aria-hidden="true" className="relative z-10 h-4 w-4" />
                         </Link>
                     </div>
 
                     <button
+                        type="button"
                         onClick={() => setIsOpen(!isOpen)}
-                        className="p-2 text-foreground md:hidden"
+                        className="flex h-11 w-11 items-center justify-center rounded-md text-foreground lg:hidden"
                         aria-label={isOpen ? t('nav.closeMenu') : t('nav.openMenu')}
                         aria-expanded={isOpen}
                     >
-                        {isOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+                        {isOpen ? <X aria-hidden="true" className="h-6 w-6" /> : <Menu aria-hidden="true" className="h-6 w-6" />}
                     </button>
                 </div>
             </div>
 
-            <AnimatePresence>
-                {isOpen && (
-                    <motion.div
-                        initial={{ opacity: 0, height: 0 }}
-                        animate={{ opacity: 1, height: "auto" }}
-                        exit={{ opacity: 0, height: 0 }}
-                        transition={{ duration: shouldReduceMotion ? 0 : 0.3 }}
-                        className="border-b border-border bg-background/95 backdrop-blur-xl md:hidden"
-                    >
-                        <div className="section-container flex flex-col gap-4 py-4">
-                            {navLinks.map((link) => (
-                                <a
-                                    key={link.href}
-                                    href={link.href}
-                                    onClick={() => setIsOpen(false)}
-                                    className="py-2 text-base font-medium text-muted-foreground transition-colors hover:text-foreground"
-                                >
-                                    {link.label}
-                                </a>
-                            ))}
-                            <Link
-                                to="/app"
-                                {...appPrefetch}
+            {isOpen && (
+                // Opacity and a 4px drop in 180ms; reduced motion keeps the fade only.
+                <div className="border-b border-border bg-background lg:hidden animate-in fade-in-0 slide-in-from-top-1 duration-180 ease-out-strong">
+                    <div className="section-container flex flex-col gap-1 py-4">
+                        {navLinks.map((link) => (
+                            <a
+                                key={link.href}
+                                href={link.href}
                                 onClick={() => setIsOpen(false)}
-                                className="btn-primary-gradient shimmer mt-2 inline-flex items-center justify-center gap-2"
+                                className="flex min-h-11 items-center text-base font-medium text-muted-foreground transition-colors hover:text-foreground"
                             >
-                                <span className="relative z-10">{t('nav.startTrial')}</span>
-                                <ArrowRight className="relative z-10 h-4 w-4" />
-                            </Link>
-                            <LanguageSwitcher />
-                        </div>
-                    </motion.div>
-                )}
-            </AnimatePresence>
-        </motion.nav>
+                                {link.label}
+                            </a>
+                        ))}
+                        <Link
+                            to="/app"
+                            {...appPrefetch}
+                            onClick={() => setIsOpen(false)}
+                            className="btn-primary-gradient mt-2 inline-flex items-center justify-center gap-2"
+                        >
+                            <span className="relative z-10">{t('nav.startTrial')}</span>
+                            <ArrowRight aria-hidden="true" className="relative z-10 h-4 w-4" />
+                        </Link>
+                        <LanguageSwitcher />
+                    </div>
+                </div>
+            )}
+        </nav>
     );
 };
 

@@ -51,7 +51,6 @@ function requestBody(input: SparringRespondInput | SparringScoreInput, options: 
     input: parsed.data,
     provider: PROVIDER,
     model: options.config.model,
-    temperature: options.config.temperature,
     reasoningEffort: options.config.reasoningEffort,
     // Servers from before Current Debate context read only this field.
     sourceIds: [],

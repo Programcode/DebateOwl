@@ -6,78 +6,46 @@
     <meta name="jam:team" content="b79917fc-80c6-4de1-9047-c98fa5db0aff" />
     <link rel="stylesheet" href="/src/index.css" />
     <script src="/src/bootstrap.ts" type="module"></script>
-    <title>DebateLab by Pi-Stack | AI Debate Prep, Cases & Rebuttals</title>
-    <meta name="title" content="DebateLab by Pi-Stack | AI Debate Prep, Cases & Rebuttals" />
-    <meta name="description" content="DebateLab by Pi-Stack helps students and competitive debaters practice with AI opponents, case generation, rebuttal drills, evidence leads, coaching, timers, and argument flowcharts." />
-    <meta name="keywords" content="DebateLab, debate lab, AI debate practice, debate practice platform, debate drills, rebuttal practice, argumentation training, debate coach, debate preparation" />
-    <meta name="author" content="DebateLab" />
-    <meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1" />
-    <meta name="language" content="English" />
-    <meta name="theme-color" content="#0f172a" />
-    <link rel="icon" type="image/png" href="/favicon.png" />
-    <link rel="canonical" href="https://debate.pi-stack.org/" />
+    <!-- The shell for app routes. scripts/prerender.mjs writes the public pages
+         from it with their own title, description, canonical URL and JSON-LD. -->
+    <title>DebateOwl</title>
+    <meta name="description" content="DebateOwl helps students and debaters prepare cases, rebuttals and evidence with AI, then practice timed rounds against an AI opponent." />
+    <meta name="author" content="DebateOwl" />
+    <meta name="msvalidate.01" content="8FC8FD530126287EF8AD3977BFB24C17" />
+    <!-- The shell for /app, /login and /share. Prerender replaces this with the
+         public index directive on pages that have a canonical URL. -->
+    <meta name="robots" content="noindex, nofollow" />
+    <meta name="theme-color" content="#F7FAFE" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#0B1426" media="(prefers-color-scheme: dark)" />
+    <link rel="icon" href="/favicon.ico" sizes="48x48" />
+    <link rel="icon" type="image/png" href="/favicon.png" sizes="48x48" />
+    <link rel="icon" type="image/png" href="/icon-192.png" sizes="192x192" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" sizes="180x180" />
     <link rel="manifest" href="/manifest.webmanifest" />
     <meta property="og:type" content="website" />
-    <meta property="og:url" content="https://debate.pi-stack.org/" />
-    <meta property="og:site_name" content="DebateLab" />
-    <meta property="og:title" content="DebateLab by Pi-Stack | AI Debate Prep, Cases & Rebuttals" />
-    <meta property="og:description" content="Practice debate with AI opponents, case generation, rebuttal drills, evidence leads, coaching, timers, and argument flowcharts built for competitive debaters." />
-    <meta property="og:image" content="https://debate.pi-stack.org/hero-visual.png" />
+    <meta property="og:site_name" content="DebateOwl" />
+    <meta property="og:title" content="DebateOwl: AI debate prep and practice" />
+    <meta property="og:description" content="DebateOwl helps students and debaters prepare cases, rebuttals and evidence with AI, then practice timed rounds against an AI opponent." />
+    <meta property="og:image" content="https://debateowl.com/hero-visual.jpg?v=2" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="DebateOwl wordmark with the owl, for AI debate prep and practice" />
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:title" content="DebateLab by Pi-Stack | AI Debate Prep" />
-    <meta name="twitter:description" content="Practice debate with AI opponents, case generation, rebuttal drills, evidence leads, coaching, timers, and argument flowcharts." />
-    <meta name="twitter:image" content="https://debate.pi-stack.org/hero-visual.png" />
-    <script type="application/ld+json">
-      {
-        "@context": "https://schema.org",
-        "@graph": [
-          {
-            "@type": "Organization",
-            "@id": "https://debate.pi-stack.org/#organization",
-            "name": "DebateLab",
-            "alternateName": ["DebateLab AI", "Debate Lab"],
-            "url": "https://debate.pi-stack.org/",
-            "sameAs": ["https://github.com/Programcode", "https://github.com/Programcode/debatelab-ai-profile"],
-            "description": "DebateLab builds AI-powered debate practice and preparation tools for students and competitive debaters."
-          },
-          {
-            "@type": "WebSite",
-            "@id": "https://debate.pi-stack.org/#website",
-            "url": "https://debate.pi-stack.org/",
-            "name": "DebateLab",
-            "alternateName": "DebateLab AI",
-            "publisher": { "@id": "https://debate.pi-stack.org/#organization" },
-            "potentialAction": {
-              "@type": "SearchAction",
-              "target": "https://debate.pi-stack.org/ai-debate-practice?q={search_term_string}",
-              "query-input": "required name=search_term_string"
-            }
-          },
-          {
-            "@type": "SoftwareApplication",
-            "@id": "https://debate.pi-stack.org/#software",
-            "name": "DebateLab",
-            "applicationCategory": "EducationalApplication",
-            "operatingSystem": "Web, iOS",
-            "url": "https://debate.pi-stack.org/",
-            "description": "AI-powered debate practice platform with targeted drills, source-backed case prep, rebuttal training, instant feedback, and argument flowcharts.",
-            "offers": { "@type": "Offer", "price": "5", "priceCurrency": "USD" },
-            "publisher": { "@id": "https://debate.pi-stack.org/#organization" }
-          }
-        ]
-      }
-    </script>
+    <meta name="twitter:title" content="DebateOwl: AI debate prep and practice" />
+    <meta name="twitter:description" content="DebateOwl helps students and debaters prepare cases, rebuttals and evidence with AI, then practice timed rounds against an AI opponent." />
+    <meta name="twitter:image" content="https://debateowl.com/hero-visual.jpg?v=2" />
+    <meta name="twitter:image:alt" content="DebateOwl wordmark with the owl, for AI debate prep and practice" />
     <script src="/theme-init.js"></script>
     <style>
       body {
         margin: 0;
-        background: #f1f5f9;
-        color: #0f172a;
+        background: #F7FAFE;
+        color: #1F2B40;
       }
 
       html.dark body {
-        background: #0f172a;
-        color: #f8fafc;
+        background: #0B1426;
+        color: #EEF4FF;
       }
 
       #root > .app-startup-shell,
@@ -88,36 +56,66 @@
         min-height: 100dvh;
         padding: 24px;
         box-sizing: border-box;
-        font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        font-family: ui-rounded, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
       }
 
       .app-startup-shell__card {
-        width: min(100%, 28rem);
+        width: min(100%, 24rem);
         padding: 28px;
-        border: 1px solid #cbd5e1;
-        border-radius: 12px;
-        background: #f8fafc;
-        box-shadow: 0 1px 3px rgb(15 23 42 / 0.08);
+        border: 2px solid #E2E9F2;
+        border-radius: 24px;
+        background: #FFFFFF;
+        box-shadow: 0 1px 2px rgb(11 42 110 / 0.06), 0 2px 6px rgb(11 42 110 / 0.06);
         text-align: center;
       }
 
       html.dark .app-startup-shell__card {
-        border-color: #334155;
-        background: #1e293b;
-        box-shadow: 0 1px 3px rgb(0 0 0 / 0.24);
+        border-color: #24324D;
+        background: #131E33;
+        box-shadow: 0 2px 6px rgb(0 0 0 / 0.35);
+      }
+
+      .app-startup-shell__mark {
+        display: block;
+        width: 56px;
+        height: 56px;
+        margin: 0 auto 12px;
+        border-radius: 16px;
+        animation: startup-bob 2.4s cubic-bezier(0.2, 0, 0, 1) infinite;
       }
 
       .app-startup-shell__brand {
-        color: #0284c7;
-        font-size: 0.75rem;
-        font-weight: 700;
-        letter-spacing: 0.16em;
-        text-transform: uppercase;
+        color: #0B2A6E;
+        font-size: 1.125rem;
+        font-weight: 800;
+        letter-spacing: -0.01em;
+      }
+
+      html.dark .app-startup-shell__brand {
+        color: #FFFFFF;
       }
 
       .app-startup-shell__status {
-        margin: 12px 0 0;
-        font-size: 1rem;
+        margin: 6px 0 0;
+        color: #526380;
+        font-size: 0.9375rem;
+        font-weight: 600;
+      }
+
+      html.dark .app-startup-shell__status {
+        color: #A9B7C9;
+      }
+
+      @keyframes startup-bob {
+        50% {
+          transform: translateY(-4px);
+        }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        .app-startup-shell__mark {
+          animation: none;
+        }
       }
 
       #root > .app-bootstrap-error {
@@ -135,51 +133,37 @@
 
       .app-bootstrap-error button {
         border: 0;
-        border-radius: 8px;
-        padding: 10px 16px;
-        background: #0284c7;
-        color: #f8fafc;
+        border-radius: 18px;
+        padding: 12px 20px;
+        background: #0A6FF0;
+        box-shadow: 0 4px 0 #0342A8;
+        color: #FFFFFF;
         cursor: pointer;
         font: inherit;
-        font-weight: 600;
+        font-weight: 700;
+      }
+
+      .app-bootstrap-error button:active {
+        transform: translateY(4px);
+        box-shadow: 0 0 0 #0342A8;
       }
     </style>
   </head>
 
   <body>
     <div id="root">
-      <main class="app-startup-shell" data-startup-shell aria-busy="true" aria-label="DebateLab is loading">
+      <main class="app-startup-shell" data-startup-shell aria-busy="true" aria-label="DebateOwl is loading">
         <div class="app-startup-shell__card">
-          <span class="app-startup-shell__brand">DebateLab</span>
-          <p class="app-startup-shell__status" data-startup-status role="status">Loading DebateLab</p>
+          <img class="app-startup-shell__mark" src="/owl-mark.svg" alt="" width="56" height="56" />
+          <span class="app-startup-shell__brand">DebateOwl</span>
+          <p class="app-startup-shell__status" data-startup-status role="status">Loading DebateOwl</p>
         </div>
       </main>
     </div>
     <noscript>
-      <main style="max-width: 1080px; margin: 0 auto; padding: 48px 20px; font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; line-height: 1.6; color: #0f172a; background: #ffffff;">
-        <h1 style="font-size: clamp(2.25rem, 6vw, 4.5rem); line-height: 1; letter-spacing: -0.06em; margin: 0 0 18px;">DebateLab by Pi-Stack</h1>
-        <p style="font-size: 1.18rem; max-width: 760px; color: #334155;">DebateLab by Pi-Stack is the official DebateLab AI debate prep platform at debate.pi-stack.org. It helps students and competitive debaters practice with AI opponents, generate debate cases, train rebuttals, find evidence leads, build argument flowcharts, and time practice speeches.</p>
-        <nav aria-label="DebateLab public guides" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; margin-top: 28px;">
-          <a href="/debatelab">DebateLab by Programcode</a>
-          <a href="/debatelab-by-programcode">DebateLab official brand page</a>
-          <a href="/what-is-debatelab">What is DebateLab?</a>
-          <a href="/debatelab-app">DebateLab app</a>
-          <a href="/debatelab-ai">DebateLab AI</a>
-          <a href="/debate-lab">Debate Lab</a>
-          <a href="/ai-debate-practice">AI debate practice</a>
-          <a href="/debate-case-generator">Debate case generator</a>
-          <a href="/debate-rebuttal-practice">Debate rebuttal practice</a>
-          <a href="/ai-debate-coach">AI debate coach</a>
-          <a href="/debate-evidence-finder">Debate evidence finder</a>
-          <a href="/argument-flowchart">Argument flowchart</a>
-          <a href="/online-debate-timer">Online debate timer</a>
-          <a href="/how-to-write-a-debate-case">How to write a debate case</a>
-          <a href="/how-to-practice-rebuttals">How to practice rebuttals</a>
-          <a href="/debate-weighing-guide">Debate weighing guide</a>
-          <a href="/ai-tools-for-debate-students">AI tools for debate students</a>
-          <a href="/wsdc-debate-practice">WSDC debate practice</a>
-          <a href="/about-debatelab">About DebateLab</a>
-        </nav>
+      <main style="max-width: 40rem; margin: 0 auto; padding: 48px 20px; font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; line-height: 1.6;">
+        <h1>DebateOwl</h1>
+        <p>DebateOwl needs JavaScript to run. Read about it on the <a href="/">home page</a> or in the <a href="/ai-debate-practice">AI debate practice guide</a>.</p>
       </main>
     </noscript>
   </body>

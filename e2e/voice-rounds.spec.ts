@@ -1,5 +1,6 @@
 import { expect, test, type Page, type Route } from '@playwright/test';
 import { setLocale, stubSupabaseSession } from './helpers/auth';
+import { fulfillQuotaCheck } from './helpers/quota';
 import { say, spokenByBrowser, stubSpeech } from './helpers/voice';
 
 // Voice rounds without a microphone, a speech service, or an ElevenLabs key.
@@ -81,6 +82,7 @@ async function routeSparring(page: Page, bodies: SparringBody[]) {
       await route.fulfill({ status: 200, headers: corsHeaders, body: 'ok' });
       return;
     }
+    if (await fulfillQuotaCheck(route, corsHeaders)) return;
     const body = route.request().postDataJSON() as SparringBody;
     bodies.push(body);
     if (body.input.action === 'score') {
@@ -108,7 +110,7 @@ async function startVoiceSparring(page: Page) {
 
   await page.getByTestId('voice-mode').click();
   const notice = page.getByTestId('voice-notice');
-  await expect(notice).toContainText('DebateLab never records or stores your audio.');
+  await expect(notice).toContainText('DebateOwl never records or stores your audio.');
   await expect(notice).toContainText('In Chrome, that sends your audio to Google');
   await expect(notice).toContainText('sent as text to ElevenLabs');
   await page.getByRole('button', { name: 'Turn on voice' }).click();
@@ -144,14 +146,14 @@ test('a spoken sparring round works on the browser voice when the server has no 
   await startVoiceSparring(page);
 
   await speakSpeech(page, 'Affirmative constructive', 'Um, universal access removes the price barrier for every rider.');
-  await expect(page.getByText('Opponent reply 1:')).toBeVisible();
+  await expect(page.getByRole('region', { name: 'Transcript' }).getByText('Opponent reply 1:')).toBeVisible();
   // The browser voice reads the reply, without the audio tag.
   await expect.poll(() => spokenByBrowser(page)).toBe('Opponent reply 1: a narrower pass reaches the same riders for less.');
   expect(voiceRequests).toHaveLength(1);
   expect(voiceRequests[0]).toEqual({ feature: 'sparring', text: '[sighs] Opponent reply 1: a narrower pass reaches the same riders for less.', token: 'token-1' });
 
   await speakSpeech(page, 'First affirmative rebuttal', 'A pass still leaves an eligibility gap, you know.');
-  await expect(page.getByText('Opponent reply 2:')).toBeVisible();
+  await expect(page.getByRole('region', { name: 'Transcript' }).getByText('Opponent reply 2:')).toBeVisible();
   await expect.poll(() => spokenByBrowser(page)).toContain('Opponent reply 2:');
   // After the missing-key answer the page does not ask the voice function again.
   expect(voiceRequests).toHaveLength(1);
@@ -193,6 +195,7 @@ test('a spoken Crossfire exchange plays ElevenLabs audio through the voice funct
       await route.fulfill({ status: 200, headers: corsHeaders, body: 'ok' });
       return;
     }
+    if (await fulfillQuotaCheck(route, corsHeaders)) return;
     const body = route.request().postDataJSON() as { voice?: boolean; input: { transcript: Array<Record<string, unknown>> } };
     aiVoiceFlags.push(body.voice);
     // The server accepts only the turn fields it knows; measurements stay in the browser.
@@ -252,8 +255,8 @@ test('voice mode is hidden with a reason where the browser cannot recognise spee
 });
 
 for (const [locale, label, noticeLine, privacyLine] of [
-  ['es', 'Ronda con voz', 'DebateLab nunca graba ni guarda tu audio.', 'ElevenLabs para la voz del oponente'],
-  ['hu', 'Hangos kör', 'A DebateLab soha nem rögzíti és nem tárolja a hangodat.', 'az ElevenLabsszel az ellenfél hangjához'],
+  ['es', 'Ronda con voz', 'DebateOwl nunca graba ni guarda tu audio.', 'ElevenLabs para la voz del oponente'],
+  ['hu', 'Hangos kör', 'A DebateOwl soha nem rögzíti és nem tárolja a hangodat.', 'az ElevenLabsszel az ellenfél hangjához'],
 ] as const) {
   test(`the voice notice and the privacy page are translated (${locale})`, async ({ page }) => {
     await setLocale(page, locale);

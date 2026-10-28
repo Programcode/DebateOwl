@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32">
+  <!-- Source of public/favicon.ico (16, 32 and 48 px frames) and public/favicon.png (48 px).
+       The app mark (public/owl-mark.svg) goes muddy below 48 px, so this is the same owl with
+       flat colours, bigger eyes and no tile. Rasterize it at each size; do not scale a PNG down. -->
+  <path d="M4 32V12C4 9 4.6 6.6 5.6 4.6L5 0.6L10.4 4C12.2 3.2 14 3 16 3S19.8 3.2 21.6 4L27 0.6L26.4 4.6C27.4 6.6 28 9 28 12V32Z" fill="#0A6FF0"/>
+  <ellipse cx="16" cy="32" rx="9" ry="6" fill="#BFE0FF"/>
+  <circle cx="10.5" cy="13.5" r="5.5" fill="#fff"/>
+  <circle cx="21.5" cy="13.5" r="5.5" fill="#fff"/>
+  <circle cx="11" cy="14" r="3" fill="#0B1F4D"/>
+  <circle cx="21" cy="14" r="3" fill="#0B1F4D"/>
+  <path d="M13.5 19.5H18.5L16 24Z" fill="#FFB31A"/>
+</svg>

@@ -1,6 +1,7 @@
 // src/lib/pdf-export-utils.ts
 // Professional PDF export for all debate features using jsPDF
 import i18n from '@/i18n';
+import site from '@/config/site.json';
 import type { GenerateOutput } from './ai/schemas/generate';
 import type { AttackOutput } from './ai/schemas/attack';
 import type { BrainstormOutput } from './ai/schemas/brainstorm';
@@ -120,11 +121,11 @@ async function createPDFDocument(): Promise<PDFHelpers> {
             doc.text(subtitle, margin, titleLines.length > 1 ? 28 : 26);
         }
 
-        // DebateLab branding - right aligned
+        // Product name, right aligned.
         doc.setFontSize(9);
         doc.setFont(PDF_FONT, 'bold');
         doc.setTextColor(255, 255, 255);
-        doc.text('DebateLab', pageWidth - margin, 10, { align: 'right' });
+        doc.text(site.product, pageWidth - margin, 10, { align: 'right' });
 
         state.y = 50;
         doc.setTextColor(...COLORS.dark);
@@ -227,7 +228,7 @@ async function createPDFDocument(): Promise<PDFHelpers> {
             doc.setFont(PDF_FONT, 'normal');
             doc.setTextColor(...COLORS.secondary);
             doc.text(
-                `${i18n.t('export.generatedBy')} • ${formatEuropeanDate(new Date(), 'N/A', language)} • ${i18n.t('export.page')} ${i} ${i18n.t('export.of')} ${pageCount}`,
+                `${i18n.t('export.generatedBy')} • ${formatEuropeanDate(new Date(), undefined, language)} • ${i18n.t('export.page')} ${i} ${i18n.t('export.of')} ${pageCount}`,
                 pageWidth / 2,
                 pageHeight - 10,
                 { align: 'center' }
@@ -388,9 +389,10 @@ export async function exportCaseToPdf(result: GenerateOutput): Promise<boolean> 
             addSeparator(COLORS.primary);
         }
 
-        // Case Structure
-        addSectionTitle(`${i18n.t('export.thesis')} & ${i18n.t('export.framework')}`);
-        addParagraph(result.caseStructure?.thesis || i18n.t('export.noThesis'));
+        // Case Structure: one section heading, then a label for each part, so no heading repeats.
+        addSectionTitle(i18n.t('export.caseStructure'));
+        addSubsectionLabel(i18n.t('export.thesis'));
+        addParagraph(result.caseStructure?.thesis || i18n.t('export.noThesis'), 2);
         if (result.caseStructure?.framework) {
             addSubsectionLabel(i18n.t('export.framework'));
             addParagraph(result.caseStructure.framework, 2);
@@ -628,9 +630,9 @@ export async function exportFactoidsToPdf(result: FactoidsOutput): Promise<boole
             result.factoids.forEach((f, i) => {
                 const pdf2 = pdf; // Access outer scope
                 pdf2.addParagraph(`${i + 1}. ${f.shortClaim}`);
-                pdf2.addParagraph(`   ${i18n.t('export.context')}: ${f.context || 'N/A'}`, 5);
-                pdf2.addParagraph(`   ${i18n.t('export.limitations')}: ${f.limitations || 'N/A'}`, 5);
-                pdf2.addParagraph(`   ${i18n.t('export.howToUse')}: ${f.howToUse || 'N/A'}`, 5);
+                pdf2.addParagraph(`   ${i18n.t('export.context')}: ${f.context || i18n.t('common.notAvailable')}`, 5);
+                pdf2.addParagraph(`   ${i18n.t('export.limitations')}: ${f.limitations || i18n.t('common.notAvailable')}`, 5);
+                pdf2.addParagraph(`   ${i18n.t('export.howToUse')}: ${f.howToUse || i18n.t('common.notAvailable')}`, 5);
                 if (f.citation?.url) {
                     pdf2.addParagraph(`   ${i18n.t('export.source')}: ${f.citation.url}`, 5);
                 }

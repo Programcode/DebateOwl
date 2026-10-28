@@ -1,7 +1,7 @@
 // Supabase Edge Function: Admin API for DebateLab
 // Provides usage statistics, rate limit management, and user management
 
-import { createClient, type User } from "https://esm.sh/@supabase/supabase-js@2";
+import { createClient, type User } from "https://esm.sh/@supabase/supabase-js@2.114.0";
 import {
     validateAnnouncementId,
     validateCreateAnnouncement,
@@ -77,7 +77,7 @@ async function isAdmin(userId: string): Promise<boolean> {
         .from("user_roles")
         .select("role")
         .eq("user_id", userId)
-        .single();
+        .maybeSingle();
     return data?.role === "admin";
 }
 
@@ -378,13 +378,23 @@ export async function handleRequest(req: Request): Promise<Response> {
             });
         }
 
-        // GET /admin?action=users - List users with usage
+        // GET /admin?action=users - One page of users with usage.
+        // GoTrue's default page is 50; the client asks for the next page.
         if (action === "users") {
-            const { data: users } = await supabase.auth.admin.listUsers();
+            const pageRaw = Number.parseInt(url.searchParams.get("page") ?? "1", 10);
+            const perPageRaw = Number.parseInt(url.searchParams.get("perPage") ?? "50", 10);
+            const page = Number.isFinite(pageRaw) && pageRaw >= 1 ? Math.min(pageRaw, 10_000) : 1;
+            const perPage = Number.isFinite(perPageRaw) && perPageRaw >= 1 ? Math.min(perPageRaw, 100) : 50;
+            const { data: listed, error: listError } = await supabase.auth.admin.listUsers({ page, perPage });
+            if (listError) throw listError;
+            const pageUsers = listed?.users ?? [];
+            const hasMore = listed && "nextPage" in listed
+                ? listed.nextPage != null
+                : pageUsers.length === perPage;
 
             // Get usage counts for each user
             const enrichedUsers = await Promise.all(
-                (users?.users || []).slice(0, 100).map(async (u) => {
+                pageUsers.map(async (u) => {
                     const { count } = await supabase
                         .from("ai_requests")
                         .select("*", { count: "exact", head: true })
@@ -399,7 +409,7 @@ export async function handleRequest(req: Request): Promise<Response> {
                         .from("user_roles")
                         .select("role")
                         .eq("user_id", u.id)
-                        .single();
+                        .maybeSingle();
 
                     const { data: settings } = await supabase
                         .from("user_settings")
@@ -423,7 +433,7 @@ export async function handleRequest(req: Request): Promise<Response> {
                 })
             );
 
-            return new Response(JSON.stringify({ users: enrichedUsers }), {
+            return new Response(JSON.stringify({ users: enrichedUsers, page, perPage, hasMore }), {
                 headers: { ...corsHeaders, "Content-Type": "application/json" },
             });
         }
@@ -653,7 +663,8 @@ export async function handleRequest(req: Request): Promise<Response> {
             }
 
             if (error) {
-                return new Response(JSON.stringify({ error: error.message }), {
+                console.error("[ADMIN] Database operation failed:", error.message.slice(0, 2000));
+                return new Response(JSON.stringify({ error: "Internal server error" }), {
                     status: 500,
                     headers: { ...corsHeaders, "Content-Type": "application/json" },
                 });
@@ -693,7 +704,8 @@ export async function handleRequest(req: Request): Promise<Response> {
                 }, { onConflict: "user_id" });
 
             if (error) {
-                return new Response(JSON.stringify({ error: error.message }), {
+                console.error("[ADMIN] Database operation failed:", error.message.slice(0, 2000));
+                return new Response(JSON.stringify({ error: "Internal server error" }), {
                     status: 500,
                     headers: { ...corsHeaders, "Content-Type": "application/json" },
                 });
@@ -748,7 +760,8 @@ export async function handleRequest(req: Request): Promise<Response> {
                 .upsert(updatePayload, { onConflict: "user_id" });
 
             if (updateError) {
-                return new Response(JSON.stringify({ error: updateError.message }), {
+                console.error("[ADMIN] Database operation failed:", updateError.message.slice(0, 2000));
+                return new Response(JSON.stringify({ error: "Internal server error" }), {
                     status: 500,
                     headers: { ...corsHeaders, "Content-Type": "application/json" },
                 });
@@ -785,11 +798,13 @@ export async function handleRequest(req: Request): Promise<Response> {
             const { data, error } = await supabase.rpc("get_active_rate_limits");
 
             if (error) {
-                // Fallback to direct query if RPC doesn't exist yet
-                const { data: fallbackData } = await supabase
+                console.warn("[ADMIN] get_active_rate_limits failed:", error.message);
+                // Same column set the RPC returns. updated_at is not on this table.
+                const { data: fallbackData, error: fallbackError } = await supabase
                     .from("rate_limits")
-                    .select("*")
-                    .order("updated_at", { ascending: false });
+                    .select("id, user_id, limit_type, limit_value, created_at")
+                    .order("created_at", { ascending: false });
+                if (fallbackError) console.warn("[ADMIN] rate_limits lookup failed:", fallbackError.message);
 
                 return new Response(JSON.stringify({ limits: fallbackData || [] }), {
                     headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -845,7 +860,8 @@ export async function handleRequest(req: Request): Promise<Response> {
                 }, { onConflict: "feature" });
 
             if (error) {
-                return new Response(JSON.stringify({ error: error.message }), {
+                console.error("[ADMIN] Database operation failed:", error.message.slice(0, 2000));
+                return new Response(JSON.stringify({ error: "Internal server error" }), {
                     status: 500,
                     headers: { ...corsHeaders, "Content-Type": "application/json" },
                 });
@@ -875,7 +891,8 @@ export async function handleRequest(req: Request): Promise<Response> {
                 .eq("feature", feature);
 
             if (error) {
-                return new Response(JSON.stringify({ error: error.message }), {
+                console.error("[ADMIN] Database operation failed:", error.message.slice(0, 2000));
+                return new Response(JSON.stringify({ error: "Internal server error" }), {
                     status: 500,
                     headers: { ...corsHeaders, "Content-Type": "application/json" },
                 });
@@ -918,6 +935,16 @@ export async function handleRequest(req: Request): Promise<Response> {
                 });
             }
 
+            // A discount is useless without the Stripe promotion code Checkout
+            // applies for it; redeem_promo_code_atomic refuses one without it.
+            const stripePromotionCode = config?.stripe_promotion_code;
+            if (type === "discount" && (typeof stripePromotionCode !== "string" || !/^promo_[A-Za-z0-9]+$/.test(stripePromotionCode))) {
+                return new Response(JSON.stringify({ error: "A discount code needs a Stripe promotion code ID (promo_...)" }), {
+                    status: 400,
+                    headers: { ...corsHeaders, "Content-Type": "application/json" },
+                });
+            }
+
             await assertCurrentAdmin(user.id);
             const { error } = await supabase.from("promo_codes").insert({
                 code: code.toUpperCase(),
@@ -928,7 +955,8 @@ export async function handleRequest(req: Request): Promise<Response> {
             });
 
             if (error) {
-                return new Response(JSON.stringify({ error: error.message }), {
+                console.error("[ADMIN] Database operation failed:", error.message.slice(0, 2000));
+                return new Response(JSON.stringify({ error: "Internal server error" }), {
                     status: 500,
                     headers: { ...corsHeaders, "Content-Type": "application/json" },
                 });
@@ -957,7 +985,8 @@ export async function handleRequest(req: Request): Promise<Response> {
             }).eq("id", id);
 
             if (error) {
-                return new Response(JSON.stringify({ error: error.message }), {
+                console.error("[ADMIN] Database operation failed:", error.message.slice(0, 2000));
+                return new Response(JSON.stringify({ error: "Internal server error" }), {
                     status: 500,
                     headers: { ...corsHeaders, "Content-Type": "application/json" },
                 });
@@ -1008,14 +1037,14 @@ export async function handleRequest(req: Request): Promise<Response> {
         });
     } catch (err) {
         const message = err instanceof Error ? err.message : "Unknown error";
-        console.error("[ADMIN API ERROR]", message);
+        console.error("[ADMIN API ERROR]", message.slice(0, 2000));
         if (message === "Admin role no longer active") {
             return new Response(JSON.stringify({ error: message }), {
                 status: 403,
                 headers: { ...corsHeaders, "Content-Type": "application/json" },
             });
         }
-        return new Response(JSON.stringify({ error: message }), {
+        return new Response(JSON.stringify({ error: "Internal server error" }), {
             status: 500,
             headers: { ...corsHeaders, "Content-Type": "application/json" },
         });

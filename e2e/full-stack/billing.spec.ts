@@ -1,6 +1,6 @@
 import { createHmac, randomUUID } from "node:crypto";
 import type { Page } from "@playwright/test";
-import { admin, chooseForMotion, expect, fake, MARK, providerCall, stackReady, test } from "./stack";
+import { admin, chooseForMotion, expect, expectResult, fake, MARK, providerCall, stackReady, test } from "./stack";
 
 test.skip(!stackReady, "Local full stack is required (run ./.superset/db-gate.sh)");
 
@@ -22,8 +22,8 @@ async function tier(userId: string) {
 
 async function brainstorm(page: Page) {
   await page.goto("/app/brainstorm");
-  await page.getByLabel("Motion / Topic *").fill("Public transport should be free");
-  await page.getByRole("button", { name: "Start Brainstorming" }).click();
+  await page.getByLabel("Motion / topic *").fill("Public transport should be free");
+  await page.getByRole("button", { name: "Start brainstorming" }).click();
   await chooseForMotion(page, "once");
 }
 
@@ -38,25 +38,27 @@ function sendWebhook(event: object, signature = true) {
   });
 }
 
-function subscriptionEvent(type: string, subscriptionId: string, status: string) {
+function subscriptionObject(subscriptionId: string, status: string) {
   const now = Math.floor(Date.now() / 1000);
+  return {
+    id: subscriptionId,
+    object: "subscription",
+    status,
+    cancel_at_period_end: false,
+    current_period_start: now,
+    current_period_end: now + 30 * 86_400,
+    cancel_at: null,
+    canceled_at: null,
+    ended_at: null,
+  };
+}
+
+function subscriptionEvent(type: string, subscriptionId: string, status: string) {
   return {
     id: `evt_${randomUUID()}`,
     object: "event",
     type,
-    data: {
-      object: {
-        id: subscriptionId,
-        object: "subscription",
-        status,
-        cancel_at_period_end: false,
-        current_period_start: now,
-        current_period_end: now + 30 * 86_400,
-        cancel_at: null,
-        canceled_at: null,
-        ended_at: null,
-      },
-    },
+    data: { object: subscriptionObject(subscriptionId, status) },
   };
 }
 
@@ -72,7 +74,7 @@ test("a promo code redeemed in Settings restores AI access", async ({ signedIn: 
 
   try {
     await brainstorm(page);
-    await expect(page.getByRole("dialog").getByText("Free Trial Ended")).toBeVisible({ timeout: 30_000 });
+    await expect(page.getByRole("dialog").getByText("Your free trial has ended")).toBeVisible({ timeout: 30_000 });
     expect((await fake.requests()).filter((request) => request.feature === "brainstorm")).toEqual([]);
 
     await page.goto("/app/settings");
@@ -81,13 +83,13 @@ test("a promo code redeemed in Settings restores AI access", async ({ signedIn: 
     await page.getByRole("button", { name: "Have a promo code?" }).click();
     await page.getByPlaceholder("Enter promo code").fill(code.toLowerCase());
     await page.getByRole("button", { name: "Apply", exact: true }).click();
-    await expect(page.getByText("Promo code applied!").first()).toBeVisible();
+    await expect(page.getByText("Promo code applied").first()).toBeVisible();
     await expect(page.getByRole("dialog")).toBeHidden();
     await expect(page.getByText("Pro", { exact: true })).toBeVisible();
     expect(await tier(userId)).toBe("pro");
 
     await brainstorm(page);
-    await expect(page.getByText(`${MARK} idea 1`)).toBeVisible({ timeout: 30_000 });
+    await expectResult(page, `${MARK} idea 1`);
     await providerCall("brainstorm");
   } finally {
     await admin.from("promo_codes").delete().eq("id", promo.id);
@@ -114,6 +116,8 @@ test("signed Stripe webhooks grant and revoke Pro, and forged ones change nothin
   expect(forged.status).toBe(400);
   expect(await tier(userId)).toBe("expired");
 
+  // The webhook applies Stripe's current state, which the fake Stripe holds.
+  await fake.stripeSubscription(subscriptionObject(subscriptionId, "active"));
   const accepted = await sendWebhook(activated);
   expect(accepted.status).toBe(200);
   expect(await tier(userId)).toBe("pro");
@@ -122,14 +126,40 @@ test("signed Stripe webhooks grant and revoke Pro, and forged ones change nothin
 
   await page.goto("/app/settings");
   await expect(page.getByText("Pro", { exact: true })).toBeVisible();
-  await expect(page.getByRole("button", { name: "Manage Subscription" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Manage subscription" })).toBeVisible();
+  await expect(page.getByTestId("billing-date")).toContainText("Renews on");
 
+  // A failed renewal keeps Pro while Stripe retries, and Settings asks for a
+  // new payment method instead of selling a second subscription (QB-13).
+  await fake.stripeSubscription(subscriptionObject(subscriptionId, "past_due"));
+  const failed = await sendWebhook({
+    id: `evt_${randomUUID()}`,
+    object: "event",
+    type: "invoice.payment_failed",
+    data: { object: { id: `in_e2e_${randomUUID()}`, object: "invoice", subscription: subscriptionId } },
+  });
+  expect(failed.status).toBe(200);
+  expect(await tier(userId)).toBe("pro");
+  await page.reload();
+  await expect(page.getByText("Payment failed", { exact: true })).toBeVisible();
+  await expect(page.getByText(/Pro access continues until/)).toBeVisible();
+  await expect(page.getByRole("button", { name: "Manage subscription" })).toBeVisible();
+  await expect(page.getByRole("button", { name: /Upgrade to Pro/ })).toHaveCount(0);
+
+  await fake.stripeSubscription(subscriptionObject(subscriptionId, "canceled"));
   const canceled = await sendWebhook(subscriptionEvent("customer.subscription.deleted", subscriptionId, "canceled"));
   expect(canceled.status).toBe(200);
+  expect(await tier(userId)).toBe("expired");
+  // An older "active" update that Stripe delivers late must not revive the plan.
+  const stale = await sendWebhook(subscriptionEvent("customer.subscription.updated", subscriptionId, "active"));
+  expect(stale.status).toBe(200);
   expect(await tier(userId)).toBe("expired");
   const { data: row } = await admin.from("subscriptions").select("status").eq("stripe_subscription_id", subscriptionId).single();
   expect(row?.status).toBe("canceled");
 
   await page.reload();
   await expect(page.getByText("Expired", { exact: true })).toBeVisible();
+  // A former subscriber is told the subscription ended, not that a free trial did (QB-14).
+  await expect(page.getByText(/Your Pro subscription ended on/)).toBeVisible();
+  await expect(page.getByRole("button", { name: "Resubscribe" })).toBeVisible();
 });

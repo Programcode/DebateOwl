@@ -1,16 +1,16 @@
 # Account data: export and deletion
 
-From Settings, a signed-in user can download everything saved to the account as one JSON file, or delete the account permanently. Both go through the `account` Edge Function, which acts only on the caller's own session and ignores any user id in the request. Deletion first checks Stripe for the user's customers and cancels any subscription, then removes every row that references the user. `Delete All My Data` is the older, narrower erase: it keeps the account and removes its saved work.
+From Settings, a signed-in user can download everything saved to the account as one JSON file, or delete the account permanently. Both go through the `account` Edge Function, which acts only on the caller's own session and ignores any user id in the request. Deletion first checks Stripe for the user's customers and cancels any subscription, then removes every row that references the user. `Delete all my data` is the older, narrower erase: it keeps the account and removes its saved work.
 
 ## Sub-features
 
 - `acct-export`: `Download my data` saves `debatelab-data-YYYY-MM-DD.json` with `format: "debatelab-account-export"`, the caller's `account` (`id`, `email`), and `data` (debates, sources, and saved results). Another account's rows never appear, even when the request names that account's id.
 - `acct-delete`: `Delete account` opens `Delete your account?`. Its confirm button stays disabled until the field labelled `Type your email to confirm` holds the account email. After deletion, the toast reads `Account deleted` and the app returns to `/`. The auth user and every row mentioning its id, in the `public` and `private` schemas, are gone. Nobody else's rows change, and the old session gets `401`.
-- `acct-erase`: `Delete All My Data` with the same email confirmation shows `Data Deleted` and empties the account's sources and debates. A bystander's rows stay. This is covered by `e2e/full-stack/account-data.spec.ts`, not by a recipe.
+- `acct-erase`: `Delete all my data` with the same email confirmation shows `Data deleted` and empties the account's sources and debates. A bystander's rows stay. This is covered by `e2e/full-stack/account-data.spec.ts`, not by a recipe.
 
 ## How to get to it (user POV)
 
-- Settings: the gear link named `Settings` in the header, or `/app/settings`. `Download my data` is under `Your data` in the Account card. `Delete All My Data` and `Delete account` are in the Danger Zone card.
+- Settings: the gear link named `Settings` in the header, or `/app/settings`. `Download my data` is under `Your data` in the Account card. `Delete all my data` and `Delete account` are in the Delete data card.
 
 ## Driving it with verify.sh + Playwright
 

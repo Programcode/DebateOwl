@@ -59,7 +59,6 @@ function requestBody(input: Record<string, unknown> & { transcript: CrossfireTur
     input: { ...input, transcript: serverTranscript(input.transcript), language: options.language },
     provider: PROVIDER,
     model: options.config.model,
-    temperature: options.config.temperature,
     reasoningEffort: options.config.reasoningEffort,
     // Servers from before Current Debate context read only this field.
     sourceIds: options.debateContext?.sourceIds ?? [],

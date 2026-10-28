@@ -1,17 +1,17 @@
 import { useTranslation } from "react-i18next";
-import {
-    Accordion,
-    AccordionContent,
-    AccordionItem,
-    AccordionTrigger,
-} from "@/components/ui/accordion";
-import { motion } from "framer-motion";
+import { ChevronDown } from "lucide-react";
+import { PREP_MODE_COUNT } from "@/components/features/tools/tool-links";
+import { factsAsOf } from "@/lib/seo/pages";
+import { Reveal } from "./Reveal";
 
 const FAQ = () => {
-    const { t } = useTranslation();
+    const { t, i18n } = useTranslation();
+    const asOf = factsAsOf(i18n.language);
 
     const faqs = [
-        { question: t('faq.q1'), answer: t('faq.a1') },
+        { question: t('faq.q6'), answer: t('faq.a6', { modes: PREP_MODE_COUNT }) },
+        { question: t('faq.q7'), answer: t('faq.a7') },
+        { question: t('faq.q1'), answer: t('faq.a1', { asOf }) },
         { question: t('faq.q2'), answer: t('faq.a2') },
         { question: t('faq.q3'), answer: t('faq.a3') },
         { question: t('faq.q4'), answer: t('faq.a4') },
@@ -19,36 +19,24 @@ const FAQ = () => {
     ];
 
     return (
-        <section id="faq" className="bg-secondary/5 py-24">
+        <section id="faq" aria-labelledby="faq-title" className="bg-secondary/5 py-12 md:py-20">
             <div className="section-container max-w-3xl">
-                <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    whileInView={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.5 }}
-                    viewport={{ once: true }}
-                    className="mb-12 text-center"
-                >
-                    <h2 className="mb-4 text-3xl font-bold tracking-tight">{t('faq.title')}</h2>
-                    <p className="text-muted-foreground">{t('faq.subtitle')}</p>
-                </motion.div>
+                <Reveal className="mb-6 text-center md:mb-10">
+                    <h2 id="faq-title" className="section-heading">{t('faq.title')}</h2>
+                </Reveal>
 
-                <motion.div
-                    initial={{ opacity: 0, y: 10 }}
-                    whileInView={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.5, delay: 0.2 }}
-                    viewport={{ once: true }}
-                >
-                    <Accordion type="single" collapsible className="w-full">
-                        {faqs.map((faq, index) => (
-                            <AccordionItem key={index} value={`item-${index}`}>
-                                <AccordionTrigger className="text-left text-lg">{faq.question}</AccordionTrigger>
-                                <AccordionContent className="text-base leading-relaxed text-muted-foreground">
-                                    {faq.answer}
-                                </AccordionContent>
-                            </AccordionItem>
-                        ))}
-                    </Accordion>
-                </motion.div>
+                {/* Native disclosure: closed answers stay in the HTML, so crawlers and find-in-page see them. */}
+                <Reveal delay={0.05}>
+                    {faqs.map((faq) => (
+                        <details key={faq.question} className="group border-b">
+                            <summary className="flex cursor-pointer list-none items-center justify-between gap-4 rounded-sm py-4 text-left font-bold md:text-lg transition-colors duration-150 hover:text-primary focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring [&::-webkit-details-marker]:hidden">
+                                {faq.question}
+                                <ChevronDown aria-hidden="true" className="h-4 w-4 shrink-0 transition-transform duration-150 ease-out-strong group-open:rotate-180" />
+                            </summary>
+                            <p className="pb-4 text-base leading-relaxed text-muted-foreground">{faq.answer}</p>
+                        </details>
+                    ))}
+                </Reveal>
             </div>
         </section>
     );

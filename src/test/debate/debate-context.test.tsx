@@ -73,7 +73,7 @@ describe('Current Debate context plan', () => {
     expect(plan.request.sourceIds).toEqual([uuid(1)]);
   });
 
-  it('keeps live sparring transcript-only and respects Crossfire Source Library', () => {
+  it('keeps live sparring transcript-only and respects Library grounding turned off', () => {
     const sparring = planDebateContext('sparring', 'pro', TEST_DEBATE_ID, inputs());
     expect(sparring.request).toMatchObject({ sourceIds: [], outputs: [] });
     const crossfire = planDebateContext('crossfire', 'both', TEST_DEBATE_ID, inputs(), { includeSources: false });
@@ -128,7 +128,7 @@ describe('Current Debate context in requests and the Review control', () => {
   });
 
   const brainstormInput = { motion: 'This House would make public transport free', side: 'pro' as const, outputMode: 'topfive' as const, language: 'en' };
-  const config = { provider: 'openrouter' as const, model: 'openai/gpt-5.6-luna', temperature: 0.7 };
+  const config = { provider: 'openrouter' as const, model: 'openai/gpt-6-luna' };
   const lastBody = () => (supabaseMock.functions.invoke.mock.calls.at(-1) as unknown as [string, { body: Record<string, unknown> }])[1].body;
 
   it('sends IDs only, and a Review choice lasts for exactly one successful request', async () => {
@@ -195,6 +195,14 @@ describe('Current Debate context in requests and the Review control', () => {
     fireEvent.click(within(sheet).getByRole('checkbox', { name: /Source 2/ }));
     await waitFor(() => expect(control).toHaveTextContent('Using 2 sources and 1 saved result'));
     expect(within(sheet).getByRole('button', { name: /Pin Result 10/ })).toHaveAttribute('aria-pressed', 'false');
+  });
+
+  it('counts only what reaches the model and says how much did not fit', () => {
+    seedCurrentDebate();
+    useSessionStore.setState({ sourceLibrary: Array.from({ length: 12 }, (_, i) => source(i + 1)), savedCases: [] });
+    render(<DebateContextControl feature="generate" side="pro" />);
+    const control = screen.getByTestId('debate-context-control');
+    expect(control).toHaveTextContent('Using 10 of 12 sources (2 didn’t fit)');
   });
 
   it('keeps pin buttons disabled until saved results have loaded', async () => {

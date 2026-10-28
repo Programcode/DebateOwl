@@ -53,12 +53,12 @@ export function SourceQualityList({ sources, className }: SourceQualityListProps
               <span className="font-medium">{source.title || source.url}</span>
             )}
             {source.sourceType && (
-              <Badge variant="outline" className="text-[11px] px-1.5 py-0">
+              <Badge variant="outline" className="text-xs px-1.5 py-0">
                 {t(`sourceQuality.types.${source.sourceType}`, source.sourceType)}
               </Badge>
             )}
             {source.qualityLabel && (
-              <Badge variant="outline" className={`text-[11px] px-1.5 py-0 ${QUALITY_STYLES[source.qualityLabel] ?? ''}`}>
+              <Badge variant="outline" className={`text-xs px-1.5 py-0 ${QUALITY_STYLES[source.qualityLabel] ?? ''}`}>
                 {t(`sourceQuality.labels.${source.qualityLabel}`, source.qualityLabel)}
               </Badge>
             )}
@@ -66,17 +66,17 @@ export function SourceQualityList({ sources, className }: SourceQualityListProps
               <span className="text-xs text-muted-foreground">{t('sourceQuality.fallbackOnly')}</span>
             )}
             {semantic?.lastUsedInCase && (
-              <Badge variant="outline" className="border-primary/30 bg-primary/10 px-1.5 py-0 text-[11px] text-primary">
+              <Badge variant="outline" className="border-primary/30 bg-primary/10 px-1.5 py-0 text-xs text-primary">
                 {t('sourceQuality.usedInCase')}
               </Badge>
             )}
             {semantic && (
-              <Badge variant="outline" className="px-1.5 py-0 text-[11px]">
+              <Badge variant="outline" className="px-1.5 py-0 text-xs">
                 {t('sourceQuality.importance', { level: t(`sourceQuality.levels.${semantic.importance}`) })}
               </Badge>
             )}
             {semantic && (
-              <Badge variant="outline" className="px-1.5 py-0 text-[11px]">
+              <Badge variant="outline" className="px-1.5 py-0 text-xs">
                 {t('sourceQuality.strength', { level: t(`sourceQuality.levels.${semantic.strength}`) })}
               </Badge>
             )}

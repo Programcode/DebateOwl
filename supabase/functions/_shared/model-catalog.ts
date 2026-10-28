@@ -4,28 +4,26 @@
  */
 
 export type ReasoningEffort = "low" | "medium" | "high";
-export const MAX_REQUEST_OUTPUT_TOKENS = 32_768;
 
 export interface ModelCatalogEntry {
   readonly id: string;
   readonly name: string;
   readonly maxTokens: number;
   readonly isProOnly: boolean;
-  readonly supportsTemperature: boolean;
   readonly supportedEfforts: readonly ReasoningEffort[];
 }
 
 export const MODEL_CATALOG = [
-  { id: "openai/gpt-5.6-luna", name: "GPT-5.6 Luna", maxTokens: 128_000, isProOnly: false, supportsTemperature: false, supportedEfforts: ["low", "medium", "high"] },
-  { id: "google/gemini-3.8-flash", name: "Gemini 3.8 Flash", maxTokens: 65_536, isProOnly: false, supportsTemperature: true, supportedEfforts: ["low", "medium", "high"] },
-  { id: "deepseek/deepseek-v4-flash-0731", name: "DeepSeek V4 Flash", maxTokens: 131_072, isProOnly: false, supportsTemperature: true, supportedEfforts: ["low", "high"] },
-  { id: "anthropic/claude-sonnet-5", name: "Claude Sonnet 5", maxTokens: 128_000, isProOnly: true, supportsTemperature: false, supportedEfforts: ["low", "medium", "high"] },
-  { id: "anthropic/claude-opus-5", name: "Claude Opus 5", maxTokens: 128_000, isProOnly: true, supportsTemperature: true, supportedEfforts: ["low", "medium", "high"] },
-  { id: "openai/gpt-5.6-sol", name: "GPT-5.6 Sol", maxTokens: 128_000, isProOnly: true, supportsTemperature: false, supportedEfforts: ["low", "medium", "high"] },
-  { id: "openai/gpt-5.6-terra", name: "GPT-5.6 Terra", maxTokens: 128_000, isProOnly: true, supportsTemperature: false, supportedEfforts: ["low", "medium", "high"] },
-  { id: "deepseek/deepseek-v4-pro-0813", name: "DeepSeek V4 Pro", maxTokens: 384_000, isProOnly: true, supportsTemperature: true, supportedEfforts: ["low", "high"] },
-  { id: "z-ai/glm-5.3-flash", name: "GLM-5.3 Flash", maxTokens: 131_072, isProOnly: true, supportsTemperature: true, supportedEfforts: ["low", "high"] },
-  { id: "meta/muse-spark-1.3", name: "Muse Spark 1.3", maxTokens: 943_718, isProOnly: true, supportsTemperature: true, supportedEfforts: ["low", "medium", "high"] },
+  { id: "anthropic/claude-haiku-5.5", name: "Claude Haiku 5.5", maxTokens: 128_000, isProOnly: false, supportedEfforts: ["low", "medium", "high"] },
+  { id: "openai/gpt-6-luna", name: "GPT-6 Luna", maxTokens: 128_000, isProOnly: false, supportedEfforts: ["low", "medium", "high"] },
+  { id: "meta/muse-spark-1.3-contributor", name: "Muse Spark 1.3", maxTokens: 943_718, isProOnly: false, supportedEfforts: ["low", "medium", "high"] },
+  { id: "anthropic/claude-opus-5.5", name: "Claude Opus 5.5", maxTokens: 128_000, isProOnly: true, supportedEfforts: ["low", "medium", "high"] },
+  { id: "anthropic/claude-sonnet-5.5", name: "Claude Sonnet 5.5", maxTokens: 128_000, isProOnly: true, supportedEfforts: ["low", "medium", "high"] },
+  { id: "openai/gpt-6.1-sol", name: "GPT-6.1 Sol", maxTokens: 128_000, isProOnly: true, supportedEfforts: ["low", "medium", "high"] },
+  { id: "google/gemini-3.8-flash", name: "Gemini 3.8 Flash", maxTokens: 65_536, isProOnly: true, supportedEfforts: ["low", "medium", "high"] },
+  { id: "deepseek/deepseek-v4.1-flash", name: "DeepSeek V4.1 Flash", maxTokens: 943_718, isProOnly: true, supportedEfforts: ["low", "high"] },
+  { id: "deepseek/deepseek-v4-pro-0813", name: "DeepSeek V4 Pro", maxTokens: 384_000, isProOnly: true, supportedEfforts: ["low", "high"] },
+  { id: "z-ai/glm-5.3-flash", name: "GLM-5.3 Flash", maxTokens: 131_072, isProOnly: true, supportedEfforts: ["low", "high"] },
 ] as const satisfies readonly ModelCatalogEntry[];
 
 export type ModelId = (typeof MODEL_CATALOG)[number]["id"];
@@ -38,8 +36,31 @@ export const AUTO_MODEL_SELECTIONS = [
 export type AutoModelSelection = (typeof AUTO_MODEL_SELECTIONS)[number]["id"];
 export type ModelSelection = ModelId | AutoModelSelection;
 
-export const DEFAULT_MODEL = "openai/gpt-5.6-luna" as const;
-export const DEFAULT_PRO_MODEL = "anthropic/claude-sonnet-5" as const;
+export const DEFAULT_MODEL = "anthropic/claude-haiku-5.5" as const;
+// Opus costs several times Sonnet, so Pro starts on Sonnet and Opus is only
+// used when someone picks it.
+export const DEFAULT_PRO_MODEL = "anthropic/claude-sonnet-5.5" as const;
+
+// Small background steps inside research (the Ask search decision and the
+// follow-up search queries) run on this fixed cheap model at low effort,
+// whatever model the user picked. Only the answer itself uses their model.
+export const BACKGROUND_MODEL: ModelId = "anthropic/claude-haiku-5.5";
+export const BACKGROUND_REASONING_EFFORT: ReasoningEffort = "low";
+
+// Retired catalog IDs that older clients (an installed PWA, a saved setting)
+// may still send. Both the server and the settings store resolve them here.
+// The old defaults (GPT-5.6 Luna, Claude Sonnet 5) move to the new defaults;
+// the rest move to their family's successor, so a saved Opus pick stays Opus. A Basic ID never maps to Pro,
+// so DeepSeek V4 Flash, which was Basic, moves to the Basic default.
+const RETIRED_MODEL_SUCCESSORS = new Map<string, ModelId>([
+  ["openai/gpt-5.6-luna", DEFAULT_MODEL],
+  ["deepseek/deepseek-v4-flash-0731", DEFAULT_MODEL],
+  ["anthropic/claude-sonnet-5", DEFAULT_PRO_MODEL],
+  ["anthropic/claude-opus-5", "anthropic/claude-opus-5.5"],
+  ["openai/gpt-5.6-sol", "openai/gpt-6.1-sol"],
+  ["openai/gpt-5.6-terra", "openai/gpt-6.1-sol"],
+  ["meta/muse-spark-1.3", "meta/muse-spark-1.3-contributor"],
+]);
 
 const MODEL_BY_ID = new Map<string, ModelCatalogEntry>(MODEL_CATALOG.map((entry) => [entry.id, entry]));
 
@@ -49,6 +70,10 @@ export function getModelCatalogEntry(model: string): ModelCatalogEntry | undefin
 
 export function isAutoModelSelection(value: unknown): value is AutoModelSelection {
   return value === AUTO_FAST || value === AUTO_PRO;
+}
+
+export function retiredModelSuccessor(model: string): ModelId | undefined {
+  return RETIRED_MODEL_SUCCESSORS.get(model);
 }
 
 export function isModelSelection(value: unknown): value is ModelSelection {

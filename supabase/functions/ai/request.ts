@@ -8,7 +8,6 @@ export const PROMPT_INJECTION_PATTERNS = [
   /ignore\s+(all\s+)?(previous|prior|above)\s+(instructions|prompts|text)/i,
   /disregard\s+(all\s+)?(previous|prior|above)/i,
   /forget\s+(all\s+)?(previous|prior|above)/i,
-  /you\s+are\s+now\s+(a|an)\s+/i,
   /new\s+instruction[s]?\s*:/i,
   /system\s*:\s*\[/i,
   /<!--\s*system\s*:/i,
@@ -20,7 +19,6 @@ export const PROMPT_INJECTION_PATTERNS = [
   /<system>/i,
   /###\s*instruction/i,
   /\bDAN\s+mode\b/i,
-  /jailbreak/i,
 ];
 
 export function sanitizePromptInput(input: string, fieldName: string): { sanitized: string; truncated: boolean } | { rejected: string } {
@@ -31,12 +29,12 @@ export function sanitizePromptInput(input: string, fieldName: string): { sanitiz
     .replace(/[\u200B-\u200D\uFEFF]/g, "");
   for (const pattern of PROMPT_INJECTION_PATTERNS) {
     if (pattern.test(sanitized)) {
-      console.warn(`[SECURITY] Prompt injection attempt detected in ${fieldName}: ${sanitized.slice(0, 200)}`);
+      console.warn(`[SECURITY] Prompt injection pattern=${pattern.source} length=${sanitized.length}`);
       return { rejected: `Suspicious content detected in ${fieldName}` };
     }
   }
   if (sanitized.length > MAX_INPUT_LENGTH) {
-    console.warn(`[SECURITY] Input truncated in ${fieldName}: ${sanitized.length} chars -> ${MAX_INPUT_LENGTH}`);
+    console.warn(`[SECURITY] Input truncated: ${sanitized.length} chars -> ${MAX_INPUT_LENGTH}`);
     return { sanitized: sanitized.slice(0, MAX_INPUT_LENGTH), truncated: true };
   }
   return { sanitized, truncated: false };

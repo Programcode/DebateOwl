@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { LoadingSpinner } from '@/components/ui/loading-spinner';
 import { useTranslation } from 'react-i18next';
 import { Check, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -44,6 +45,8 @@ export function DebatePicker({ onPicked, excludeCurrent = false }: { onPicked: (
   const deleteDebate = useDebateStore((state) => state.deleteDebate);
   const { switchTo } = useDebateNavigationActions();
   const [confirmingId, setConfirmingId] = useState<string | null>(null);
+  // One action at a time, shown on the row that is busy.
+  const [busy, setBusy] = useState<{ id: string; action: 'switch' | 'delete' } | null>(null);
   const visible = excludeCurrent ? debates.filter((debate) => debate.id !== currentDebateId) : debates;
 
   if (visible.length === 0) {
@@ -51,21 +54,29 @@ export function DebatePicker({ onPicked, excludeCurrent = false }: { onPicked: (
   }
 
   const pick = async (debate: Debate) => {
+    if (busy) return;
+    setBusy({ id: debate.id, action: 'switch' });
     try {
       await switchTo(debate.id);
       onPicked();
     } catch {
       toast({ title: t('debate.switchFailed', 'Could not switch debates'), variant: 'destructive' });
+    } finally {
+      setBusy(null);
     }
   };
 
   const remove = async (debate: Debate) => {
+    if (busy) return;
+    setBusy({ id: debate.id, action: 'delete' });
     try {
       await deleteDebate(debate.id);
       setConfirmingId(null);
       toast({ title: t('debate.deleted', 'Debate deleted') });
     } catch {
       toast({ title: t('debate.deleteFailed', 'Could not delete the debate'), variant: 'destructive' });
+    } finally {
+      setBusy(null);
     }
   };
 
@@ -78,13 +89,18 @@ export function DebatePicker({ onPicked, excludeCurrent = false }: { onPicked: (
             <div className="flex items-start gap-3">
               <button
                 type="button"
-                className="min-w-0 flex-1 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-sm"
+                className="min-w-0 flex-1 text-left focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring rounded-sm disabled:opacity-60"
+                disabled={busy !== null}
+                aria-busy={busy?.id === debate.id && busy.action === 'switch'}
                 onClick={() => void pick(debate)}
                 aria-label={t('debate.switchToAria', { motion: debate.motion, defaultValue: 'Switch to {{motion}}' })}
               >
-                <span className="block break-words font-medium">{debate.motion}</span>
-                <span className="block text-xs text-muted-foreground">
-                  {t('debate.lastActivity', { when: formatRelativeDate(debate.lastActivityAt), defaultValue: 'Last activity {{when}}' })}
+                <span className="block wrap-break-word font-medium">{debate.motion}</span>
+                <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                  {busy?.id === debate.id && busy.action === 'switch' && <LoadingSpinner size="sm" />}
+                  {busy?.id === debate.id && busy.action === 'switch'
+                    ? t('debate.switching', 'Switching…')
+                    : t('debate.lastActivity', { when: formatRelativeDate(debate.lastActivityAt), defaultValue: 'Last activity {{when}}' })}
                 </span>
               </button>
               {isCurrent ? (
@@ -93,7 +109,8 @@ export function DebatePicker({ onPicked, excludeCurrent = false }: { onPicked: (
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="h-8 w-8 shrink-0 text-destructive"
+                  className="h-9 w-9 shrink-0 text-destructive"
+                  disabled={busy !== null}
                   onClick={() => setConfirmingId(debate.id)}
                   aria-label={t('debate.deleteAria', { motion: debate.motion, defaultValue: 'Delete {{motion}}' })}
                 >
@@ -104,8 +121,10 @@ export function DebatePicker({ onPicked, excludeCurrent = false }: { onPicked: (
             {confirmingId === debate.id && (
               <div className="mt-3 flex flex-wrap items-center justify-end gap-2 border-t pt-3">
                 <span className="mr-auto text-xs text-muted-foreground">{t('debate.deleteWarning', 'Deletes its sources and saved work.')}</span>
-                <Button size="sm" variant="outline" onClick={() => setConfirmingId(null)}>{t('common.cancel', 'Cancel')}</Button>
-                <Button size="sm" variant="destructive" onClick={() => void remove(debate)}>{t('common.delete', 'Delete')}</Button>
+                <Button size="sm" variant="outline" onClick={() => setConfirmingId(null)} disabled={busy !== null}>{t('common.cancel', 'Cancel')}</Button>
+                <Button size="sm" variant="destructive" onClick={() => void remove(debate)} disabled={busy !== null}>
+                  {busy?.id === debate.id && busy.action === 'delete' ? t('debate.deleting', 'Deleting…') : t('common.delete', 'Delete')}
+                </Button>
               </div>
             )}
           </li>
@@ -138,6 +157,7 @@ export function DebateDialogs() {
               idPrefix="new-debate"
               initial={{ motion: dialogMotion }}
               submitLabel={t('debate.startDebate', 'Start debate')}
+              pendingLabel={t('debate.creating', 'Creating…')}
               onCancel={close}
               onSubmit={async (values) => {
                 await create(values);
@@ -172,26 +192,39 @@ export function InactiveDebateGate() {
   const continueDebate = useDebateStore((state) => state.continueDebate);
   const { create } = useDebateNavigationActions();
   const [mode, setMode] = useState<'ask' | 'create' | 'switch'>('ask');
+  const [continuing, setContinuing] = useState(false);
 
   const open = Boolean(hydrated && debate && isDebateInactive(debate));
   if (!open || !debate) return null;
 
   const handleContinue = async () => {
+    if (continuing) return;
+    setContinuing(true);
     try {
       await continueDebate();
     } catch {
       toast({ title: t('debate.continueFailed', 'Could not update the debate'), variant: 'destructive' });
+    } finally {
+      setContinuing(false);
     }
   };
 
   return (
     <AlertDialog open>
-      <AlertDialogContent className="max-w-lg" onEscapeKeyDown={(event) => event.preventDefault()}>
+      {/* Escape is "Continue": the gate never traps, on any route. */}
+      <AlertDialogContent
+        className="max-w-lg"
+        onEscapeKeyDown={(event) => {
+          event.preventDefault();
+          if (mode === 'ask') void handleContinue();
+          else setMode('ask');
+        }}
+      >
         <AlertDialogHeader>
           <AlertDialogTitle>{t('debate.gateTitle', 'Still preparing this debate?')}</AlertDialogTitle>
           <AlertDialogDescription asChild>
             <div className="space-y-2">
-              <p className="break-words font-medium text-foreground">{debate.motion}</p>
+              <p className="wrap-break-word font-medium text-foreground">{debate.motion}</p>
               <p>{t('debate.gateDesc', { when: formatRelativeDate(debate.lastActivityAt), defaultValue: 'Last activity {{when}}. Choose how to continue.' })}</p>
             </div>
           </AlertDialogDescription>
@@ -200,13 +233,14 @@ export function InactiveDebateGate() {
           <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
             <Button variant="outline" onClick={() => setMode('switch')}>{t('debate.switch', 'Switch debate')}</Button>
             <Button variant="outline" onClick={() => setMode('create')}>{t('debate.startNew', 'Start new debate')}</Button>
-            <Button onClick={() => void handleContinue()}>{t('debate.continue', 'Continue')}</Button>
+            <Button onClick={() => void handleContinue()} disabled={continuing}>{t('debate.continue', 'Continue')}</Button>
           </div>
         )}
         {mode === 'create' && (
           <DebateForm
             idPrefix="gate-debate"
             submitLabel={t('debate.startDebate', 'Start debate')}
+            pendingLabel={t('debate.creating', 'Creating…')}
             onCancel={() => setMode('ask')}
             onSubmit={async (values) => {
               await create(values);

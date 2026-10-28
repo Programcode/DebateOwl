@@ -1,6 +1,7 @@
-import { readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
+import { SUPABASE_PROJECTS } from "@/lib/supabase/projects";
 
 type HeaderRule = {
   source: string;
@@ -8,8 +9,23 @@ type HeaderRule = {
 };
 
 type VercelConfig = {
+  git?: {
+    deploymentEnabled?: boolean | Record<string, boolean>;
+  };
+  trailingSlash?: boolean;
+  redirects?: Array<{
+    source: string;
+    destination: string;
+    statusCode?: number;
+    has?: Array<{ type: string; key: string; value?: string }>;
+  }>;
   rewrites?: Array<{ source: string; destination: string }>;
   headers?: HeaderRule[];
+  routes?: Array<{
+    src?: string;
+    continue?: boolean;
+    transforms?: Array<{ op?: string; target?: { key?: string } }>;
+  }>;
 };
 
 function loadConfig(): VercelConfig {
@@ -31,22 +47,194 @@ function headersFor(config: VercelConfig, source: string) {
   );
 }
 
+/**
+ * The headers Vercel sends for a path: every rule whose source matches it.
+ * Vercel compiles a source with path-to-regexp, strict and case-sensitive
+ * (sourceToRegex in @vercel/routing-utils); for sources made of literals and
+ * unnamed groups, as all of these are, that is the source as an anchored
+ * regular expression. Vercel documents no order between two rules that set the
+ * same header, so that is a test failure rather than something this resolves.
+ */
+function headersAt(config: VercelConfig, path: string): Record<string, string> {
+  const headers: Record<string, string> = {};
+  for (const rule of config.headers ?? []) {
+    expect(rule.source, "a source this resolver can read").toMatch(/^\/[\w\-./()|*?!$\\]*$/);
+    if (!new RegExp(`^${rule.source}$`).test(path)) continue;
+    for (const { key, value } of rule.headers) {
+      expect(headers, `${path}: two rules set ${key}`).not.toHaveProperty(key);
+      headers[key] = value;
+    }
+  }
+  return headers;
+}
+
+const cspDirective = (csp: string, name: string) =>
+  csp.split(";").map((part) => part.trim()).find((part) => part.startsWith(`${name} `)) ?? "";
+
 describe("Vercel frontend deployment configuration", () => {
-  it("falls back to the SPA shell after Vercel checks the filesystem", () => {
+  it("deploys main automatically and does not deploy any other branch", () => {
+    // Unspecified branches default to true, and a branch deploys when any
+    // matching rule is true. `*` does not match a slash, so `cursor/…` needs `**`.
+    // https://vercel.com/docs/project-configuration/git-configuration
+    expect(loadConfig().git).toEqual({
+      deploymentEnabled: {
+        main: true,
+        "**": false,
+      },
+    });
+  });
+
+  it("serves the SPA shell for app routes only, so unknown paths get the real 404", () => {
     const config = loadConfig();
 
-    expect(config.rewrites).toEqual([{ source: "/(.*)", destination: "/index.html" }]);
+    expect(config.rewrites).toEqual(
+      ["/app", "/app/:path*", "/login", "/auth/callback", "/share/:path*", "/expocit/sources"]
+        .map((source) => ({ source, destination: "/app-shell.html" })),
+    );
+    // Rewrite sources match exactly, so /app/settings/ must first lose its slash.
+    expect(config.trailingSlash).toBe(false);
+  });
+
+  it("301s every path on the previous domain to debateowl.com except the service worker", () => {
+    const [first] = loadConfig().redirects ?? [];
+    // First, so the old host never reaches a same-host rule. Vercel appends the query.
+    expect(first).toEqual({
+      source: "/:path((?!sw\\.js$).*)",
+      has: [{ type: "host", value: "debate.pi-stack.org" }],
+      destination: "https://debateowl.com/:path",
+      statusCode: 301,
+    });
+    const pattern = new RegExp(`^/(?:${first.source.slice("/:path(".length, -1)})$`);
+    for (const path of ["/", "/hu", "/tools/debate-timer", "/app/history", "/share/abc123", "/sw.json", "/assets/sw.js.map"]) {
+      expect(pattern.test(path), path).toBe(true);
+    }
+    // The old worker must fetch the retiring worker from its own host, unredirected.
+    expect(pattern.test("/sw.js")).toBe(false);
+  });
+
+  it("permanently redirects the retired brand pages to the landing page", () => {
+    const config = loadConfig();
+
+    const pages = "debatelab|debate-lab|debatelab-ai|debatelab-app|what-is-debatelab|debatelab-by-programcode|about-debatelab";
+    // Vercel matches a trailing slash only when the source spells it out.
+    expect(config.redirects?.filter((rule) => rule.source.startsWith("/:page("))).toEqual(["", "/", "/:rest+"].map((suffix) => ({
+      source: `/:page(${pages})${suffix}`,
+      destination: "/",
+      statusCode: 301,
+    })));
+  });
+
+  it("301s the renamed /debatelab-* pages to /debateowl-*, with or without a locale prefix or trailing slash", () => {
+    const rule = (loadConfig().redirects ?? []).find((entry) => entry.source.startsWith("/:locale("));
+    expect(rule).toEqual({
+      source: "/:locale(hu|es)?/debatelab-:slug(pricing|vs-chatgpt|vs-debateclub|vs-windebate){/}?",
+      destination: "/debateowl-:slug",
+      statusCode: 301,
+    });
+    // What path-to-regexp (via @vercel/routing-utils sourceToRegex) compiles that source to.
+    const pattern = /^(?:\/(hu|es))?\/debatelab-(pricing|vs-chatgpt|vs-debateclub|vs-windebate)(?:\/)?$/;
+    const target = (path: string) => {
+      const match = pattern.exec(path);
+      return match ? rule!.destination.replace(":slug", match[2]) : undefined;
+    };
+    for (const slug of ["pricing", "vs-chatgpt", "vs-debateclub", "vs-windebate"]) {
+      for (const prefix of ["", "/hu", "/es"]) {
+        for (const suffix of ["", "/"]) expect(target(`${prefix}/debatelab-${slug}${suffix}`)).toBe(`/debateowl-${slug}`);
+      }
+      // One hop to a generated page; nothing is left at the old address.
+      expect(existsSync(resolve(process.cwd(), "public", `debateowl-${slug}`, "index.html"))).toBe(true);
+      expect(existsSync(resolve(process.cwd(), "public", `debatelab-${slug}`))).toBe(false);
+    }
+    for (const path of ["/debatelab", "/debatelab-alternatives", "/fr/debatelab-pricing", "/debatelab-pricingx", "/debateowl-pricing"]) {
+      expect(target(path), path).toBeUndefined();
+    }
+  });
+
+  it("sends only the homepage's ?lang=hu|es links to /hu and /es, so they stop competing with them", () => {
+    // Where Vercel sends a path and query: the first redirect whose source is the
+    // exact path and whose query conditions match whole values, with each named
+    // group put into the destination. Vercel then appends the original query, so
+    // /?lang=hu lands on /hu?lang=hu: /hu is its own canonical and the client
+    // drops ?lang= from the address on load.
+    const redirectTarget = (url: string) => {
+      const { pathname, searchParams } = new URL(url, "https://example.test");
+      for (const rule of loadConfig().redirects ?? []) {
+        if (rule.source !== pathname) continue;
+        const groups: Record<string, string> = {};
+        const matches = (rule.has ?? []).every((condition) => {
+          const value = condition.type === "query" ? searchParams.get(condition.key) : null;
+          if (value === null) return false;
+          const match = new RegExp(`^(?:${condition.value ?? ".*"})$`).exec(value);
+          Object.assign(groups, match?.groups);
+          return Boolean(match);
+        });
+        if (matches) return { status: rule.statusCode, path: rule.destination.replace(/:(\w+)/g, (_, name: string) => groups[name]) };
+      }
+      return undefined;
+    };
+
+    expect(redirectTarget("/?lang=hu")).toEqual({ status: 301, path: "/hu" });
+    expect(redirectTarget("/?lang=es&utm_source=x")).toEqual({ status: 301, path: "/es" });
+    // English, unknown values, and every other page keep the client's ?lang= handling.
+    for (const url of ["/?lang=en", "/?lang=hungarian", "/", "/app?lang=hu", "/tools?lang=es", "/login?lang=hu"]) {
+      expect(redirectTarget(url), url).toBeUndefined();
+    }
+  });
+
+  it("redirects each retired guide to a live guide that no page links past", () => {
+    // Google already knows these URLs; dropping a rule turns one into a 404.
+    const retiredGuides: Record<string, string> = {
+      "/online-debate-timer-tool": "/online-debate-timer",
+      "/debate-argument-flowchart-tool": "/argument-flowchart",
+      "/debate-weighing-guide": "/how-to-weigh-in-debate",
+      "/debate-impact-calculus": "/how-to-weigh-in-debate",
+      "/debate-cross-examination-tips": "/how-to-cross-examine-in-debate",
+      "/debate-note-taking-flowing": "/how-to-flow-in-debate",
+      "/debate-case-generator": "/ai-debate-case-generator",
+      "/how-to-write-a-rebuttal-speech": "/how-to-practice-rebuttals",
+      "/wsdc-debate-practice": "/world-schools-debate",
+      "/ai-debate-evidence-research": "/debate-evidence-finder",
+      "/debate-evidence-verification": "/debate-evidence-finder",
+      "/debatelab-alternatives": "/best-ai-debate-tools",
+      "/ai-tools-for-debate-students": "/best-ai-debate-tools",
+      "/debate-collapsing-strategy": "/debate-clash-points",
+      "/debate-prep-time-management": "/how-to-prepare-for-a-debate-tournament",
+      "/debate-block-file-guide": "/how-to-practice-rebuttals",
+      "/debate-pronunciation-and-delivery": "/debate-speech-structure",
+      "/ai-vs-traditional-debate-prep": "/ai-debate-practice",
+    };
+    const guideRedirects = (loadConfig().redirects ?? [])
+      .filter((rule) => !rule.source.startsWith("/:page(") && !rule.source.startsWith("/:locale(") && !rule.has);
+    const retired = new Set(Object.keys(retiredGuides));
+    const pages = readdirSync(resolve(process.cwd(), "public"), { withFileTypes: true })
+      .filter((entry) => entry.isDirectory() && existsSync(resolve(process.cwd(), "public", entry.name, "index.html")))
+      .map((entry) => `/${entry.name}`);
+
+    expect(guideRedirects).toEqual(Object.entries(retiredGuides)
+      .map(([source, destination]) => ({ source, destination, statusCode: 301 })));
+    // One hop to a page that exists, never to another retired slug.
+    for (const destination of Object.values(retiredGuides)) {
+      expect(pages).toContain(destination);
+      expect(retired.has(destination)).toBe(false);
+    }
+    for (const page of pages) {
+      // A generated page left behind would be shadowed by its redirect.
+      expect(retired.has(page)).toBe(false);
+      const html = readProjectFile(`public${page}/index.html`);
+      for (const source of retired) expect(html).not.toContain(`href="${source}"`);
+    }
   });
 
   it("preserves the production security headers", () => {
     const config = loadConfig();
-    const headers = headersFor(config, "/(.*)");
+    const headers = headersAt(config, "/");
 
     expect(headers["Content-Security-Policy"]).toContain("default-src 'self'");
     expect(headers["Content-Security-Policy"]).toContain("frame-ancestors 'none'");
     expect(headers["Content-Security-Policy"]).toContain("worker-src 'self' blob:");
     expect(headers["Content-Security-Policy"]).not.toMatch(/script-src[^;]*blob:/);
-    expect(headers["X-Frame-Options"]).toBe("SAMEORIGIN");
+    expect(headers["Content-Security-Policy"]).toContain("form-action 'self'");
+    expect(headers["X-Frame-Options"]).toBe("DENY");
     expect(headers["X-Content-Type-Options"]).toBe("nosniff");
     expect(headers["Referrer-Policy"]).toBe("strict-origin-when-cross-origin");
     // Dictation and voice rounds need the microphone on this origin only.
@@ -54,9 +242,20 @@ describe("Vercel frontend deployment configuration", () => {
     expect(headers["Strict-Transport-Security"]).toBe("max-age=31536000; includeSubDomains; preload");
   });
 
+  it("lets the page load images and call Supabase only where the app needs to", () => {
+    const csp = headersAt(loadConfig(), "/")["Content-Security-Policy"];
+    const directive = (name: string) => cspDirective(csp, name);
+
+    // Any-host images let prompt-injected Markdown send student work to a third party.
+    expect(directive("img-src").split(" ")).not.toContain("https:");
+    // A wildcard would let injected script post data to an attacker's own project.
+    const supabaseHosts = directive("connect-src").split(" ").filter((source) => source.includes("supabase.co"));
+    expect(supabaseHosts.sort()).toEqual(Object.values(SUPABASE_PROJECTS).map((project) => project.url).sort());
+  });
+
   it("loads the theme bootstrap from a CSP-compatible external script", () => {
     const config = loadConfig();
-    const csp = headersFor(config, "/(.*)")["Content-Security-Policy"];
+    const csp = headersAt(config, "/")["Content-Security-Policy"];
     const indexHtml = readProjectFile("index.html");
     const themeBootstrap = readProjectFile("public/theme-init.js");
 
@@ -66,21 +265,35 @@ describe("Vercel frontend deployment configuration", () => {
     expect(indexHtml).not.toContain('// Prevent flash of wrong theme');
     expect(themeBootstrap).toContain("document.documentElement.classList.add('app-shell')");
     expect(themeBootstrap).toContain("pathname === '/login'");
+    expect(themeBootstrap).toContain("pathname === '/expocit/sources'");
+    expect(themeBootstrap).toContain("noindex, nofollow");
     expect(themeBootstrap).toContain('window.__showDebateBootstrapError = showBootstrapError');
     expect(themeBootstrap).toContain("debate-trainer-settings");
   });
 
   it("allows the installed Jam scripts and recorder frames in production", () => {
     const config = loadConfig();
-    const csp = headersFor(config, "/(.*)")["Content-Security-Policy"];
+    const csp = headersAt(config, "/")["Content-Security-Policy"];
     const indexHtml = readProjectFile("index.html");
     const bootstrap = readProjectFile("src/bootstrap.ts");
     const jamLoader = readProjectFile("src/jam-loader.ts");
+    const directive = (name: string) => cspDirective(csp, name);
 
-    expect(csp).toContain("script-src 'self' https://*.jam.dev");
-    expect(csp).toContain("frame-src 'self' https://accounts.google.com https://*.jam.dev");
-    // Loading the recorder is useless if it cannot upload the capture.
-    expect(csp).toContain("connect-src 'self' https://*.jam.dev");
+    // The parent page loads js.jam.dev and frames recorder.jam.dev. A wildcard
+    // would allow every other host on that domain. Jam's rspack runtime contains
+    // Function("return this"); do not allow unsafe-eval for that fallback.
+    expect(directive("script-src")).toBe("script-src 'self' https://js.jam.dev");
+    expect(directive("frame-src")).toBe("frame-src 'self' https://accounts.google.com https://recorder.jam.dev");
+    expect(directive("connect-src")).toContain("https://js.jam.dev");
+    expect(directive("connect-src")).toContain("https://recorder.jam.dev");
+    expect(directive("img-src")).toContain("https://js.jam.dev");
+    expect(directive("img-src")).toContain("https://recorder.jam.dev");
+    expect(csp).not.toContain("*.jam.dev");
+    expect(csp).not.toContain("unsafe-eval");
+    // Web Analytics and Speed Insights are same-origin (/_vercel/insights and
+    // /_vercel/speed-insights), so script-src and connect-src 'self' allow them.
+    expect(directive("script-src")).toContain("'self'");
+    expect(directive("connect-src")).toContain("'self'");
     expect(indexHtml).toContain('<script src="/src/bootstrap.ts" type="module"></script>');
     expect(indexHtml).toContain('<link rel="stylesheet" href="/src/index.css" />');
     expect(indexHtml).toContain('data-startup-shell');
@@ -103,20 +316,58 @@ describe("Vercel frontend deployment configuration", () => {
     const packageJson = loadPackageJson();
 
     expect(indexHtml).not.toMatch(/rel="(?:modulepreload|preload|prefetch)"[^>]*(?:pages|LandingPage|LoginPage|HomePage|GeneratePage|AttackPage)/i);
-    expect(packageJson.scripts?.build).toBe("vite build && node scripts/check-build-boundaries.mjs");
+    expect(packageJson.scripts?.build).toBe("vite build && node scripts/prerender.mjs && node scripts/sitemap.mjs && node scripts/check-site.mjs && node scripts/check-links.mjs && node scripts/check-build-boundaries.mjs");
   });
 
-  it("caches the offline shell and only caches feature assets after they are visited", () => {
+  it("answers app routes with the cached shell and never stores a navigation as another page", () => {
     const serviceWorker = readProjectFile("public/sw.js");
-    expect(serviceWorker).toContain("cache.put('/index.html', response.clone())");
+    expect(serviceWorker).toContain("caches.match('/app-shell.html', { cacheName: APP_SHELL_CACHE })");
+    expect(serviceWorker).not.toContain("cache.put('/index.html'");
     expect(serviceWorker).not.toContain("'/app/crossfire'");
     expect(serviceWorker).not.toContain("'/app/sparring'");
     expect(serviceWorker).toContain("'/favicon-72.png'");
+    expect(serviceWorker).toContain("'/icon-192.png'");
+    expect(serviceWorker).toContain("'/icon-512.png'");
+    expect(serviceWorker).toContain("'/icon-maskable-512.png'");
     expect(serviceWorker).toContain('cache.put(request, response.clone())');
-    expect(serviceWorker).not.toContain('self.skipWaiting()');
+    expect(serviceWorker).toContain('htmlMislabeledAsAsset');
+    // A new build waits for the old one's tabs to close. The only exception is the
+    // previous domain, where every page redirects away and the worker removes itself.
+    const [beforeRetired, ...rest] = serviceWorker.split("  if (RETIRED) {\n    event.waitUntil(self.skipWaiting());\n    return;\n  }");
+    expect(rest).toHaveLength(1);
+    expect(beforeRetired + rest.join("")).not.toContain('self.skipWaiting()');
   });
 
-  it.each(["/app", "/app/(.*)", "/login", "/share/(.*)"])(
+  it.each([
+    "/", "/index.html", "/app", "/app/settings", "/login", "/share/abc", "/tools", "/tools/debate-timer",
+    "/online-debate-timer", "/404.html", "/app-shell.html", "/embed", "/embed/", "/embed/nope", "/embed/debate-timer/",
+    "/embed/debate-timer/index.html", "/embedded/x", "/EMBED/debate-timer", "/assets/index.js",
+  ])("refuses to be framed at %s", (path) => {
+    const headers = headersAt(loadConfig(), path);
+    expect(headers["X-Frame-Options"]).toBe("DENY");
+    expect(cspDirective(headers["Content-Security-Policy"] ?? "", "frame-ancestors")).toBe("frame-ancestors 'none'");
+  });
+
+  it("lets other sites frame the embed at /embed/debate-timer, and nothing else", () => {
+    const path = "/embed/debate-timer";
+    const config = loadConfig();
+    const headers = headersAt(config, path);
+    const site = headersAt(config, "/");
+    const csp = headers["Content-Security-Policy"];
+
+    expect(headers).not.toHaveProperty("X-Frame-Options");
+    expect(cspDirective(csp, "frame-ancestors")).toBe("frame-ancestors *");
+    expect(headers["X-Robots-Tag"]).toBe("noindex, nofollow");
+    // The embed runs only its own static assets: no third-party script, no API.
+    for (const name of ["default-src", "script-src", "connect-src"]) expect(cspDirective(csp, name)).toBe(`${name} 'self'`);
+    for (const name of ["frame-src", "worker-src"]) expect(cspDirective(csp, name)).toBe(`${name} 'none'`);
+    expect(cspDirective(csp, "object-src")).toBe("object-src 'none'");
+    for (const key of ["X-Content-Type-Options", "Referrer-Policy", "Permissions-Policy", "Strict-Transport-Security"]) {
+      expect(headers[key]).toBe(site[key]);
+    }
+  });
+
+  it.each(["/app", "/app/(.*)", "/login", "/auth/callback", "/share/(.*)", "/embed/debate-timer"])(
     "keeps private route %s out of search indexes",
     (source) => {
       const config = loadConfig();
@@ -124,19 +375,79 @@ describe("Vercel frontend deployment configuration", () => {
     },
   );
 
-  it.each(["/", "/index.html", "/theme-init.js", "/sw.js"])(
-    "prevents stale caching for %s",
+  it("indexes the public sources page and noindexes the app shell document", () => {
+    const config = loadConfig();
+    const indexHtml = readProjectFile("index.html");
+    const prerender = readProjectFile("scripts/prerender.mjs");
+    const publicRobots = "index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1";
+
+    expect(headersAt(config, "/expocit/sources")).not.toHaveProperty("X-Robots-Tag");
+    expect(headersAt(config, "/")).not.toHaveProperty("X-Robots-Tag");
+    expect(headersAt(config, "/app")).toMatchObject({ "X-Robots-Tag": "noindex, nofollow" });
+    expect(indexHtml).toContain('<meta name="robots" content="noindex, nofollow" />');
+    expect(indexHtml).toContain('<meta property="og:image" content="https://debateowl.com/hero-visual.jpg?v=2" />');
+    expect(indexHtml).toContain('<meta name="twitter:image" content="https://debateowl.com/hero-visual.jpg?v=2" />');
+    expect(indexHtml).toContain('<meta property="og:image:width" content="1200" />');
+    expect(indexHtml).toContain('<meta property="og:image:height" content="630" />');
+    expect(indexHtml).toContain('<meta property="og:image:alt" content="DebateOwl wordmark with the owl, for AI debate prep and practice" />');
+    expect(indexHtml).toContain('<meta name="twitter:image:alt" content="DebateOwl wordmark with the owl, for AI debate prep and practice" />');
+    expect(indexHtml).toContain('<link rel="icon" href="/favicon.ico" sizes="48x48" />');
+    expect(indexHtml).toContain('<link rel="apple-touch-icon" href="/apple-touch-icon.png" sizes="180x180" />');
+    expect(prerender).toContain(publicRobots);
+    expect(prerender).toContain("noindex, nofollow");
+    expect(readProjectFile("src/lib/seo/pages.ts")).toContain(`robots: '${publicRobots}'`);
+  });
+
+  it.each(["/", "/index.html", "/app-shell.html", "/theme-init.js"])(
+    "revalidates %s without no-store, so the back/forward cache can keep the document",
     (source) => {
-      const config = loadConfig();
-      expect(headersFor(config, source)["Cache-Control"]).toContain("no-cache");
-      expect(headersFor(config, source)["Cache-Control"]).toContain("max-age=0");
+      const cache = headersFor(loadConfig(), source)["Cache-Control"];
+      expect(cache).toContain("max-age=0");
+      expect(cache).toContain("must-revalidate");
+      expect(cache).not.toContain("no-store");
     },
   );
+
+  it("does not cache the service worker, so an update is not stuck", () => {
+    const cache = headersFor(loadConfig(), "/sw.js")["Cache-Control"];
+    expect(cache).toContain("no-store");
+    expect(cache).toContain("max-age=0");
+  });
 
   it("caches hashed Vite assets immutably", () => {
     const config = loadConfig();
     expect(headersFor(config, "/assets/(.*)")["Cache-Control"]).toBe(
       "public, max-age=31536000, immutable",
     );
+  });
+
+  it("caches the unhashed public images for 30 days", () => {
+    const config = loadConfig();
+    // Every icon in public/, so a new size or a renamed file can't fall back to Vercel's default revalidate-every-time.
+    const icons = readdirSync(resolve(process.cwd(), "public"))
+      .filter((name) => /^(?:favicon|apple-touch-icon|icon)[\w-]*\.(?:ico|png)$/.test(name))
+      .map((name) => `/${name}`);
+    expect(icons).toEqual(expect.arrayContaining(["/icon-1024.png", "/icon-maskable-512.png", "/apple-touch-icon.png"]));
+    for (const path of [...icons, "/hero-visual.jpg", "/placeholder.svg"]) {
+      expect(headersAt(config, path)["Cache-Control"]).toBe("public, max-age=2592000");
+    }
+    expect(headersAt(config, "/assets/index-abc123.js")["Cache-Control"]).toBe(
+      "public, max-age=31536000, immutable",
+    );
+  });
+
+  it("strips the platform Access-Control-Allow-Origin header from HTML and not from assets", () => {
+    const routes = loadConfig().routes ?? [];
+    const html = routes.find((route) => route.transforms?.some((transform) => transform.op === "delete"));
+    expect(html?.continue).toBe(true);
+    const deleted = html?.transforms?.filter((transform) => transform.op === "delete").map((transform) => transform.target?.key);
+    expect(deleted).toEqual(["access-control-allow-origin", "Access-Control-Allow-Origin"]);
+    const pattern = new RegExp(html?.src ?? "$^");
+    for (const path of ["/", "/app", "/login", "/share/abc", "/expocit/sources", "/terms", "/index.html", "/online-debate-timer"]) {
+      expect(pattern.test(path), path).toBe(true);
+    }
+    for (const path of ["/favicon.png", "/hero-visual.jpg", "/assets/main.js", "/theme-init.js", "/sw.js", "/robots.txt", "/_vercel/insights/script.js"]) {
+      expect(pattern.test(path), path).toBe(false);
+    }
   });
 });

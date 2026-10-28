@@ -15,7 +15,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { AttackInputSchema, type AttackInput } from '@/lib/ai/schemas/attack';
 import { LoadingSpinner } from '@/components/ui/loading-spinner';
 
@@ -72,17 +72,6 @@ export function AttackForm({ onSubmit, isLoading, importedCase, debateContext = 
 
   return (
     <Card className="border-destructive/20">
-      <CardHeader className="bg-gradient-to-br from-destructive/5 to-transparent">
-        <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-destructive/10">
-            <Swords className="h-5 w-5 text-destructive" />
-          </div>
-          <div>
-            <CardTitle>{t('attackForm.title')}</CardTitle>
-            <CardDescription>{t('attackForm.subtitle')}</CardDescription>
-          </div>
-        </div>
-      </CardHeader>
       <CardContent className="pt-6">
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
           {/* Case Text Input */}
@@ -97,7 +86,7 @@ export function AttackForm({ onSubmit, isLoading, importedCase, debateContext = 
               className="min-h-[200px] resize-y"
             />
             {errors.caseText && (
-              <p className="text-sm text-destructive">{errors.caseText.message}</p>
+              <p className="text-sm text-destructive">{t(errors.caseText.message ?? '')}</p>
             )}
           </div>
 
@@ -105,20 +94,22 @@ export function AttackForm({ onSubmit, isLoading, importedCase, debateContext = 
           <ModelSelector feature="attack" showLabel />
 
           <div className="space-y-2">
-            <Label className="text-sm font-medium">{t('attackForm.options')}</Label>
+            <Label id="attack-options-label" htmlFor="attack-options-toggle" className="text-sm font-medium">{t('attackForm.options')}</Label>
             <Button
+              id="attack-options-toggle"
               type="button"
               variant="outline"
               className="h-10 w-full justify-between"
+              aria-labelledby="attack-options-label attack-options-toggle-text"
               aria-expanded={optionsOpen}
               aria-controls="attack-options"
               onClick={() => setOptionsOpen((open) => !open)}
             >
-              <span className="flex items-center gap-2">
-                <SlidersHorizontal className="h-4 w-4" />
+              <span id="attack-options-toggle-text" className="flex items-center gap-2">
+                <SlidersHorizontal className="h-4 w-4" aria-hidden="true" />
                 {t('attackForm.moreOptions')}
               </span>
-              <ChevronDown className={`h-4 w-4 transition-transform duration-300 ${optionsOpen ? 'rotate-180' : ''}`} />
+              <ChevronDown className={`h-4 w-4 transition-transform duration-150 ease-out-strong ${optionsOpen ? 'rotate-180' : ''}`} />
             </Button>
           </div>
 
@@ -134,12 +125,12 @@ export function AttackForm({ onSubmit, isLoading, importedCase, debateContext = 
               <div className="grid gap-4 sm:grid-cols-2">
                 {/* Aggressiveness */}
                 <div className="space-y-2">
-                  <Label className="text-sm font-medium">{t('attackForm.intensity')}</Label>
+                  <Label id="attack-intensity-label" htmlFor="attack-intensity" className="text-sm font-medium">{t('attackForm.intensity')}</Label>
                   <Select
                     value={currentValues.aggressiveness}
                     onValueChange={(value) => setValue('aggressiveness', value as AttackInput['aggressiveness'])}
                   >
-                    <SelectTrigger>
+                    <SelectTrigger id="attack-intensity" aria-labelledby="attack-intensity-label">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -152,12 +143,12 @@ export function AttackForm({ onSubmit, isLoading, importedCase, debateContext = 
 
                 {/* Judge Paradigm */}
                 <div className="space-y-2">
-                  <Label className="text-sm font-medium">{t('attackForm.paradigm')}</Label>
+                  <Label id="attack-paradigm-label" htmlFor="attack-paradigm" className="text-sm font-medium">{t('attackForm.paradigm')}</Label>
                   <Select
                     value={currentValues.judgeParadigm}
                     onValueChange={(value) => setValue('judgeParadigm', value as AttackInput['judgeParadigm'])}
                   >
-                    <SelectTrigger>
+                    <SelectTrigger id="attack-paradigm" aria-labelledby="attack-paradigm-label">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -173,20 +164,24 @@ export function AttackForm({ onSubmit, isLoading, importedCase, debateContext = 
               <div className="space-y-4 rounded-lg border border-border p-4">
                 <div className="flex items-center justify-between gap-4">
                   <div className="space-y-0.5">
-                    <Label className="text-sm font-medium">{t('attackForm.detectFallacies')}</Label>
-                    <p className="text-xs text-muted-foreground">{t('attackForm.detectFallaciesDesc')}</p>
+                    <Label htmlFor="attack-detectFallacies" className="text-sm font-medium">{t('attackForm.detectFallacies')}</Label>
+                    <p id="attack-detectFallacies-desc" className="text-xs text-muted-foreground">{t('attackForm.detectFallaciesDesc')}</p>
                   </div>
                   <Switch
+                    id="attack-detectFallacies"
+                    aria-describedby="attack-detectFallacies-desc"
                     checked={currentValues.detectFallacies}
                     onCheckedChange={(checked) => setValue('detectFallacies', checked)}
                   />
                 </div>
                 <div className="flex items-center justify-between gap-4">
                   <div className="space-y-0.5">
-                    <Label className="text-sm font-medium">{t('attackForm.analyzeWeighing')}</Label>
-                    <p className="text-xs text-muted-foreground">{t('attackForm.analyzeWeighingDesc')}</p>
+                    <Label htmlFor="attack-analyzeWeighing" className="text-sm font-medium">{t('attackForm.analyzeWeighing')}</Label>
+                    <p id="attack-analyzeWeighing-desc" className="text-xs text-muted-foreground">{t('attackForm.analyzeWeighingDesc')}</p>
                   </div>
                   <Switch
+                    id="attack-analyzeWeighing"
+                    aria-describedby="attack-analyzeWeighing-desc"
                     checked={currentValues.analyzeWeighing}
                     onCheckedChange={(checked) => setValue('analyzeWeighing', checked)}
                   />
@@ -199,9 +194,9 @@ export function AttackForm({ onSubmit, isLoading, importedCase, debateContext = 
           <DebateContextControl feature="attack" side={requestSide('attack', currentValues)} hidden={!debateContext} />
 
           {/* Submit Button */}
-          <Button type="submit" className="w-full h-12" disabled={isLoading}>
+          <Button type="submit" size="lg" className="w-full" disabled={isLoading} aria-busy={isLoading}>
             {isLoading ? (
-              <span className="motion-reveal inline-flex items-center">
+              <span className="inline-flex items-center">
                 <LoadingSpinner size="sm" className="mr-2" />
                 {t('attackForm.analyzing')}
               </span>

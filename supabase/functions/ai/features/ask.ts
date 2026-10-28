@@ -15,15 +15,14 @@ import {
   type ResearchSource,
 } from "../../_shared/research.ts";
 import { enforceAskControls } from "../../_shared/control-enforcement.ts";
+import { boundAskHistory, MAX_ASK_CONTEXT_CHARS } from "../../_shared/prompt-budget.ts";
 import { hasResearch, type FeatureContext } from "./types.ts";
-
-const MAX_ASK_CONTEXT_LENGTH = 32000;
 
 // ASK: Optionally run web search and include URL context from chat
 export async function handleAsk(ctx: FeatureContext): Promise<Response> {
   const feature = "ask" as const;
-  const { userId, provider, model, temperature, reasoningEffort, workSignal, researchDeps, startTime, researchUsageForLog, recordMainResult, buildSystemPromptFor, input: sanitizedInput } = ctx;
-  const history = (sanitizedInput.history as Array<{ role: string; content: string }>) || [];
+  const { userId, provider, model, reasoningEffort, workSignal, researchDeps, startTime, researchUsageForLog, recordMainResult, buildSystemPromptFor, input: sanitizedInput } = ctx;
+  const history = boundAskHistory(sanitizedInput.history);
   const message = String(sanitizedInput.message || "");
   const mode = String(sanitizedInput.mode || "general");
   const citationMode = Boolean(sanitizedInput.citationMode);
@@ -42,9 +41,9 @@ export async function handleAsk(ctx: FeatureContext): Promise<Response> {
   let urlContext = "";
   if (urls.size > 0) {
     const contents = await Promise.all(Array.from(urls).slice(0, 3).map(async (u) => {
-      const content = await exaGetContents(u, workSignal);
+      const content = await exaGetContents(u, workSignal, researchDeps.onExaUsage);
       return content.trim()
-        ? `--- Content from ${u} ---\n${content.slice(0, 8000)}\n--- End of ${u} ---`
+        ? `--- Content from ${u} ---\n${content}\n--- End of ${u} ---`
         : "";
     }));
     const usableContents = contents.filter(Boolean);
@@ -57,6 +56,7 @@ export async function handleAsk(ctx: FeatureContext): Promise<Response> {
   // web search or citations, perform research instead of leaving it to the model.
   let webSearchContext = "";
   if (shouldUseResearch) {
+    ctx.stream?.phase("research");
     const searchDecision = await decideAskSearch(message, history, researchDeps);
     askSearchQuery = searchDecision.query || message.slice(0, 240);
     if (askSearchQuery) {
@@ -78,7 +78,7 @@ export async function handleAsk(ctx: FeatureContext): Promise<Response> {
     researchAvailable: Boolean(webSearchContext || urlContext),
   };
   const initialBasePrompt = buildAskBasePrompt(askPromptInput);
-  const contextBudget = Math.max(0, MAX_ASK_CONTEXT_LENGTH - initialBasePrompt.length);
+  const contextBudget = Math.max(0, MAX_ASK_CONTEXT_CHARS - initialBasePrompt.length);
   const webSearchBudget = Math.max(0, contextBudget - urlContext.length);
   const trimmedWebSearch = truncateTextToBudget(webSearchContext, webSearchBudget);
   webSearchContext = trimmedWebSearch.text;
@@ -97,7 +97,7 @@ export async function handleAsk(ctx: FeatureContext): Promise<Response> {
   const systemPrompt = await buildSystemPromptFor(feature, effectiveResearch);
   const prompt = `${basePrompt}${urlContext}${webSearchContext}`;
   const messages = [...history, { role: "user", content: prompt }];
-  const aiResult = recordMainResult(await callAI(provider, model, systemPrompt, messages, temperature, reasoningEffort, workSignal));
+  const aiResult = recordMainResult(await callAI(provider, model, systemPrompt, messages, reasoningEffort, "ask", workSignal, ctx.stream));
   const output = cleanGeneratedText(aiResult.output);
 
   if (output && typeof output === "object") {

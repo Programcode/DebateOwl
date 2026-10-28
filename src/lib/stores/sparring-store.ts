@@ -2,38 +2,58 @@ import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 import { z } from 'zod';
 import { supabase } from '@/lib/supabase/client';
+import { restoredSessionsBlocked } from '@/lib/supabase/session-expiry';
+import { currentUserId } from '@/lib/supabase/current-user';
 import {
   SparringScorecardSchema,
   SparringSpeakerSchema,
   SparringSpeechSchema,
   SparringTurnSchema,
+  type SparringDifficulty,
+  type SparringFormat,
   type SparringScorecard,
+  type SparringSide,
   type SparringSpeech,
 } from '@/lib/ai/schemas/sparring';
-import { buildSparringTurns } from '@/lib/sparring/formats';
-import {
-  appendSparringAiSpeech,
-  completeSparringSession,
-  MAX_SAVED_SPARRING_SESSIONS,
-  mergeSparringSessions as mergeSessions,
-  parseSavedSparringRows as parseSavedRows,
-  pauseSparringTimer,
-  resetSparringTurnTimer,
-  resumeSparringTimer,
-  SPARRING_SESSION_COLUMNS,
-  startSparringSession,
-  submitSparringSpeech,
-  tickSparringTimer,
-  type SparringSession,
-  type StartSparringInput,
-} from '@/lib/sparring/session';
+import { buildSparringTurns, type SparringTurn } from '@/lib/sparring/formats';
 import { captureProductEvent } from '@/lib/observability';
 import type { SpeechDelivery } from '@/lib/voice/delivery';
 import { useDebateStore } from './debate-store';
 import { useDebateContextStore } from './debate-context-store';
 
-// The round and its moves live in @debatelab/core so the app keeps rounds the same way.
-export type { SparringPhase, SparringSession } from '@/lib/sparring/session';
+export type SparringPhase = 'round' | 'judging' | 'complete';
+
+export interface SparringSession {
+  id: string;
+  motion: string;
+  userSide: SparringSide;
+  format: SparringFormat;
+  difficulty: SparringDifficulty;
+  turns: SparringTurn[];
+  speeches: SparringSpeech[];
+  currentTurnIndex: number;
+  phase: SparringPhase;
+  draft: string;
+  timerRemainingSeconds: number;
+  timerRunning: boolean;
+  timerDeadline: number | null;
+  scorecard?: SparringScorecard;
+  /** Debate the round attaches to once judged; null for one-off rounds. */
+  debateId?: string | null;
+  /** A voice round: the student speaks and the opponent answers aloud. */
+  voice?: boolean;
+  createdAt: number;
+  updatedAt: number;
+}
+
+interface StartSessionInput {
+  motion: string;
+  userSide: SparringSide;
+  format: SparringFormat;
+  difficulty: SparringDifficulty;
+  debateId?: string | null;
+  voice?: boolean;
+}
 
 interface SparringStoreState {
   ownerUserId: string | null;
@@ -45,13 +65,13 @@ interface SparringStoreState {
   historyComplete: boolean;
   beginWorkspaceSession: () => void;
   endWorkspaceSession: () => void;
-  startSession: (input: StartSparringInput) => SparringSession;
+  startSession: (input: StartSessionInput) => SparringSession;
   restoreWorkspaceSession: (input: unknown) => boolean;
   setDraft: (draft: string) => void;
   tickTimer: (now?: number) => void;
   pauseTimer: (now?: number) => void;
   resumeTimer: (now?: number) => void;
-  resetTurnTimer: (now?: number) => void;
+  resetTurnTimer: () => void;
   submitUserSpeech: (content: string, now?: number, delivery?: SpeechDelivery | null) => SparringSession | null;
   appendAiSpeech: (speech: SparringSpeech, now?: number) => SparringSession | null;
   completeSession: (scorecard: SparringScorecard, now?: number) => SparringSession | null;
@@ -67,6 +87,20 @@ interface SparringStoreState {
 // Invalidates any remote hydration that was started for a previous auth state.
 // AuthProvider calls resetLocalData before hydrating a different user.
 let hydrationEpoch = 0;
+
+const SavedRowsSchema = z.array(z.object({
+  id: z.string(),
+  motion: z.string(),
+  user_side: z.enum(['pro', 'con']),
+  format: z.enum(['standard', 'ld', 'pf']).catch('standard'),
+  difficulty: z.enum(['easy', 'medium', 'hard']).catch('medium'),
+  turns: z.unknown(),
+  final_evaluation: z.unknown(),
+  status: z.string(),
+  debate_id: z.string().nullable().optional(),
+  created_at: z.string(),
+  updated_at: z.string(),
+}));
 
 const PersistedSparringSessionSchema = z.object({
   id: z.string(),
@@ -97,7 +131,7 @@ const PersistedSparringStateSchema = z.object({
 });
 
 type PersistedSparringState = Pick<SparringStoreState, 'ownerUserId' | 'currentSession' | 'privateSessionBackup' | 'savedSessions'>;
-const MAX_SAVED_SESSIONS = MAX_SAVED_SPARRING_SESSIONS;
+const MAX_SAVED_SESSIONS = 50;
 const PERSIST_DELAY_MS = 250;
 let pendingStorageWrite: { name: string; value: string } | null = null;
 let storageWriteTimer: ReturnType<typeof setTimeout> | null = null;
@@ -177,6 +211,44 @@ function createId(): string {
   return `${segment()}${segment()}-${segment()}-4${segment().slice(1)}-a${segment().slice(1)}-${segment()}${segment()}${segment()}`;
 }
 
+function currentTurn(session: SparringSession): SparringTurn | undefined {
+  return session.turns[session.currentTurnIndex];
+}
+
+/** A user turn opens with a full, stopped clock; it runs once the student starts speaking or typing. */
+function timerForTurn(turn: SparringTurn | undefined): Pick<SparringSession, 'timerRemainingSeconds' | 'timerRunning' | 'timerDeadline'> {
+  return {
+    timerRemainingSeconds: turn?.timeLimitSeconds ?? 0,
+    timerRunning: false,
+    timerDeadline: null,
+  };
+}
+
+function advanceSession(session: SparringSession, now: number): SparringSession {
+  const nextIndex = session.currentTurnIndex + 1;
+  const nextTurn = session.turns[nextIndex];
+  if (!nextTurn) {
+    return {
+      ...session,
+      currentTurnIndex: session.turns.length,
+      phase: 'judging',
+      draft: '',
+      timerRemainingSeconds: 0,
+      timerRunning: false,
+      timerDeadline: null,
+      updatedAt: now,
+    };
+  }
+
+  return {
+    ...session,
+    currentTurnIndex: nextIndex,
+    draft: '',
+    ...timerForTurn(nextTurn),
+    updatedAt: now,
+  };
+}
+
 function captureRoundCompletion(previous: SparringSession, next: SparringSession): void {
   if (previous.phase !== 'round' || next.phase !== 'judging') return;
   captureProductEvent('sparring_round_completed', {
@@ -185,12 +257,47 @@ function captureRoundCompletion(previous: SparringSession, next: SparringSession
   });
 }
 
-/** Applies a move to the current round; an unchanged round keeps the state, so nothing re-renders. */
-function updateCurrent(state: SparringStoreState, move: (session: SparringSession) => SparringSession): SparringStoreState | Pick<SparringStoreState, 'currentSession'> {
-  const session = state.currentSession;
-  if (!session) return state;
-  const next = move(session);
-  return next === session ? state : { currentSession: next };
+function mergeSessions(local: SparringSession[], remote: SparringSession[]): SparringSession[] {
+  const byId = new Map<string, SparringSession>();
+  for (const session of [...local, ...remote]) {
+    const current = byId.get(session.id);
+    if (!current || current.updatedAt < session.updatedAt) byId.set(session.id, session);
+  }
+  return [...byId.values()].sort((a, b) => b.updatedAt - a.updatedAt).slice(0, MAX_SAVED_SESSIONS);
+}
+
+function parseSavedRows(value: unknown): SparringSession[] {
+  const parsedRows = SavedRowsSchema.safeParse(value);
+  if (!parsedRows.success) return [];
+
+  return parsedRows.data.flatMap((row): SparringSession[] => {
+    const speeches = z.array(SparringSpeechSchema).max(12).safeParse(row.turns);
+    const scorecard = SparringScorecardSchema.safeParse(row.final_evaluation);
+    if (!speeches.success || !scorecard.success || row.status !== 'complete') return [];
+
+    const turns = buildSparringTurns(row.format, row.user_side);
+    const createdAt = new Date(row.created_at).getTime();
+    const updatedAt = new Date(row.updated_at).getTime();
+    return [{
+      id: row.id,
+      motion: row.motion,
+      userSide: row.user_side,
+      format: row.format,
+      difficulty: row.difficulty,
+      turns,
+      speeches: speeches.data,
+      currentTurnIndex: turns.length,
+      phase: 'complete',
+      draft: '',
+      timerRemainingSeconds: 0,
+      timerRunning: false,
+      timerDeadline: null,
+      scorecard: scorecard.data,
+      debateId: row.debate_id ?? null,
+      createdAt: Number.isFinite(createdAt) ? createdAt : Date.now(),
+      updatedAt: Number.isFinite(updatedAt) ? updatedAt : Date.now(),
+    }];
+  });
 }
 
 export const useSparringStore = create<SparringStoreState>()(
@@ -213,7 +320,25 @@ export const useSparringStore = create<SparringStoreState>()(
       })),
 
       startSession: (input) => {
-        const session = startSparringSession(input, createId(), Date.now());
+        const now = Date.now();
+        const turns = buildSparringTurns(input.format, input.userSide);
+        const session: SparringSession = {
+          id: createId(),
+          motion: input.motion.trim(),
+          userSide: input.userSide,
+          format: input.format,
+          difficulty: input.difficulty,
+          turns,
+          speeches: [],
+          currentTurnIndex: 0,
+          phase: 'round',
+          draft: '',
+          ...timerForTurn(turns[0]),
+          debateId: input.debateId ?? null,
+          ...(input.voice ? { voice: true } : {}),
+          createdAt: now,
+          updatedAt: now,
+        };
         set({ currentSession: session });
         return session;
       },
@@ -229,15 +354,66 @@ export const useSparringStore = create<SparringStoreState>()(
         ? { currentSession: { ...state.currentSession, draft, updatedAt: Date.now() } }
         : state),
 
-      tickTimer: (now = Date.now()) => set((state) => updateCurrent(state, (session) => tickSparringTimer(session, now))),
-      pauseTimer: (now = Date.now()) => set((state) => updateCurrent(state, (session) => pauseSparringTimer(session, now))),
-      resumeTimer: (now = Date.now()) => set((state) => updateCurrent(state, (session) => resumeSparringTimer(session, now))),
-      resetTurnTimer: (now = Date.now()) => set((state) => updateCurrent(state, (session) => resetSparringTurnTimer(session, now))),
+      tickTimer: (now = Date.now()) => set((state) => {
+        const session = state.currentSession;
+        if (!session?.timerRunning || session.timerDeadline === null) return state;
+        const remaining = Math.max(0, Math.ceil((session.timerDeadline - now) / 1000));
+        if (remaining === session.timerRemainingSeconds) return state;
+        return {
+          currentSession: {
+            ...session,
+            timerRemainingSeconds: remaining,
+            timerRunning: remaining > 0,
+            timerDeadline: remaining > 0 ? session.timerDeadline : null,
+          },
+        };
+      }),
+
+      pauseTimer: (now = Date.now()) => set((state) => {
+        const session = state.currentSession;
+        if (!session?.timerRunning || session.timerDeadline === null) return state;
+        const remaining = Math.max(0, Math.ceil((session.timerDeadline - now) / 1000));
+        return { currentSession: { ...session, timerRemainingSeconds: remaining, timerRunning: false, timerDeadline: null } };
+      }),
+
+      resumeTimer: (now = Date.now()) => set((state) => {
+        const session = state.currentSession;
+        const turn = session ? currentTurn(session) : undefined;
+        if (!session || session.phase !== 'round' || turn?.speaker !== 'user' || session.timerRunning || session.timerRemainingSeconds <= 0) return state;
+        return { currentSession: { ...session, timerRunning: true, timerDeadline: now + session.timerRemainingSeconds * 1000 } };
+      }),
+
+      resetTurnTimer: () => set((state) => {
+        const session = state.currentSession;
+        const turn = session ? currentTurn(session) : undefined;
+        if (!session || turn?.speaker !== 'user') return state;
+        return { currentSession: { ...session, ...timerForTurn(turn) } };
+      }),
 
       submitUserSpeech: (content, now = Date.now(), delivery = null) => {
         const session = get().currentSession;
-        const next = session ? submitSparringSpeech(session, content, { now, createId, delivery }) : null;
-        if (!session || !next) return null;
+        const turn = session ? currentTurn(session) : undefined;
+        const cleanContent = content.trim();
+        const deadlinePassed = session?.timerDeadline !== null
+          && session?.timerDeadline !== undefined
+          && session.timerDeadline <= now;
+        if (!session || session.phase !== 'round' || turn?.speaker !== 'user' || !cleanContent || cleanContent.length > 6_000 || session.timerRemainingSeconds <= 0 || deadlinePassed) return null;
+        const remaining = session.timerRunning && session.timerDeadline !== null
+          ? Math.max(0, Math.ceil((session.timerDeadline - now) / 1000))
+          : session.timerRemainingSeconds;
+        const speech: SparringSpeech = {
+          id: createId(),
+          turnId: turn.id,
+          speaker: 'user',
+          side: turn.side,
+          role: turn.label,
+          content: cleanContent,
+          createdAt: now,
+          timeLimitSeconds: turn.timeLimitSeconds,
+          timeUsedSeconds: Math.max(0, turn.timeLimitSeconds - remaining),
+          ...(delivery ? { delivery } : {}),
+        };
+        const next = advanceSession({ ...session, speeches: [...session.speeches, speech] }, now);
         set({ currentSession: next });
         captureRoundCompletion(session, next);
         return next;
@@ -245,8 +421,10 @@ export const useSparringStore = create<SparringStoreState>()(
 
       appendAiSpeech: (speech, now = Date.now()) => {
         const session = get().currentSession;
-        const next = session ? appendSparringAiSpeech(session, speech, now) : null;
-        if (!session || !next) return null;
+        const turn = session ? currentTurn(session) : undefined;
+        const alreadyRecorded = session?.speeches.some((item) => item.id === speech.id || item.turnId === speech.turnId);
+        if (!session || session.phase !== 'round' || turn?.speaker !== 'ai' || speech.turnId !== turn.id || alreadyRecorded) return null;
+        const next = advanceSession({ ...session, speeches: [...session.speeches, speech] }, now);
         set({ currentSession: next });
         captureRoundCompletion(session, next);
         return next;
@@ -254,8 +432,16 @@ export const useSparringStore = create<SparringStoreState>()(
 
       completeSession: (scorecard, now = Date.now()) => {
         const session = get().currentSession;
-        const completed = session ? completeSparringSession(session, scorecard, now) : null;
-        if (!completed) return null;
+        if (!session || session.phase !== 'judging') return null;
+        const completed: SparringSession = {
+          ...session,
+          phase: 'complete',
+          scorecard,
+          timerRemainingSeconds: 0,
+          timerRunning: false,
+          timerDeadline: null,
+          updatedAt: now,
+        };
         set((state) => ({
           currentSession: completed,
           savedSessions: mergeSessions(state.savedSessions, [completed]),
@@ -291,17 +477,18 @@ export const useSparringStore = create<SparringStoreState>()(
       },
 
       hydrateSavedSessions: async () => {
+        if (restoredSessionsBlocked()) return;
         if (get().hydrated) return;
         const epoch = hydrationEpoch;
-        const { data: { user } } = await supabase.auth.getUser();
+        const userId = await currentUserId();
         if (epoch !== hydrationEpoch) return;
-        if (!user) {
+        if (!userId) {
           set({ hydrated: true });
           return;
         }
         const { data, error } = await supabase
           .from('sparring_sessions')
-          .select(SPARRING_SESSION_COLUMNS)
+          .select('id,motion,user_side,format,difficulty,turns,final_evaluation,status,debate_id,created_at,updated_at')
           .order('updated_at', { ascending: false });
         if (epoch !== hydrationEpoch) return;
         if (error) {
@@ -320,8 +507,8 @@ export const useSparringStore = create<SparringStoreState>()(
       deleteSavedSession: async (id) => {
         const previous = get().savedSessions;
         set({ savedSessions: previous.filter((session) => session.id !== id) });
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) return;
+        const userId = await currentUserId();
+        if (!userId) return;
         const { error } = await supabase.from('sparring_sessions').delete().eq('id', id);
         if (error) {
           set({ savedSessions: previous });

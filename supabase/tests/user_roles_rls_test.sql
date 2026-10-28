@@ -68,8 +68,8 @@ SELECT is(
 );
 SELECT throws_ok(
   $$SELECT * FROM public.get_active_rate_limits()$$,
-  'P0001',
-  'administrator access required',
+  '42501',
+  NULL,
   'admin-only RPCs still reject the user after the escalation attempts'
 );
 
@@ -110,8 +110,10 @@ RESET ROLE;
 SET LOCAL ROLE anon;
 SELECT set_config('request.jwt.claim.sub', '', true);
 SELECT set_config('request.jwt.claim.role', 'anon', true);
-SELECT is_empty(
+SELECT throws_ok(
   $$SELECT 1 FROM public.user_roles$$,
+  '42501',
+  NULL,
   'anonymous callers see no roles'
 );
 SELECT throws_ok(

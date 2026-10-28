@@ -36,18 +36,18 @@ describe('EnvironmentSwitcher', () => {
     render(<EnvironmentSwitcher reload={reload} />);
 
     expect(screen.getByText('production')).toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: 'Switch to Staging' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Switch to staging' }));
     expect(mocks.signOut).not.toHaveBeenCalled();
     expect(screen.getByRole('dialog')).toHaveTextContent('pointing at staging');
 
-    await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Switch & Sign Out' })); });
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Switch & sign out' })); });
     expect(order).toEqual(['signOut', 'set:staging', 'reload']);
   });
 
   it('leaves the environment alone when the dialog is cancelled', () => {
     const reload = vi.fn();
     render(<EnvironmentSwitcher reload={reload} />);
-    fireEvent.click(screen.getByRole('button', { name: 'Switch to Staging' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Switch to staging' }));
     fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     expect(mocks.signOut).not.toHaveBeenCalled();
@@ -61,8 +61,8 @@ describe('EnvironmentSwitcher', () => {
     vi.spyOn(console, 'warn').mockImplementation(() => {});
     const reload = vi.fn();
     render(<EnvironmentSwitcher reload={reload} />);
-    fireEvent.click(screen.getByRole('button', { name: 'Switch to Production' }));
-    await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Switch & Sign Out' })); });
+    fireEvent.click(screen.getByRole('button', { name: 'Switch to production' }));
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Switch & sign out' })); });
     expect(mocks.setActiveEnv).toHaveBeenCalledWith('production');
     expect(reload).toHaveBeenCalledOnce();
   });
@@ -95,7 +95,7 @@ describe('StagingBanner', () => {
     const reload = vi.fn();
     render(<StagingBanner reload={reload} />);
     expect(screen.getByRole('status')).toHaveTextContent('Staging backend');
-    await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Switch to Production' })); });
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Switch to production' })); });
     expect(mocks.signOut).toHaveBeenCalledOnce();
     expect(mocks.setActiveEnv).toHaveBeenCalledWith('production');
     expect(reload).toHaveBeenCalledOnce();

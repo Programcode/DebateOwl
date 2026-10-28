@@ -390,9 +390,11 @@ function SubscriptionCard({ userId }: { userId: string | undefined }) {
               {t('settings.ends')} {formatDate(subscription.trialEndsAt)}
             </Text>
           ) : null}
-          <Text weight="medium" style={styles.usage}>
-            {t('mobile.you.usage', { used: subscription.dailyUsed, limit: subscription.dailyLimit })}
-          </Text>
+          {subscription.dailyUsed !== null ? (
+            <Text weight="medium" style={styles.usage}>
+              {t('mobile.you.usage', { used: subscription.dailyUsed, limit: subscription.dailyLimit })}
+            </Text>
+          ) : null}
           <Text tone="secondary" style={styles.small}>
             {t(subscription.tier === 'expired' ? 'settings.accessExpired' : 'settings.accessActive')}
           </Text>

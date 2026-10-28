@@ -21,6 +21,8 @@ esac
 
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$DIR/lib/lock.sh"
+source "$DIR/lib/supabase-cli.sh"
+use_pinned_supabase_cli "$(cd "$DIR/.." && pwd)"
 
 DB_LOCK="$HOME/.superset/debatelab-db.lock"
 FAKE_PROVIDER=debatelab-fake-openrouter
@@ -28,9 +30,11 @@ FAKE_PROVIDER=debatelab-fake-openrouter
 # the fake provider. It needs LIVE_OPENROUTER_API_KEY and LIVE_EXA_API_KEY.
 # LIVE_MODEL=as-requested runs e2e/model-matrix instead: one case per catalog model.
 LIVE_PROVIDERS="${LIVE_PROVIDERS:-0}"
-# Muse Spark 1.3 Contributor is the cheapest model that supports every request
-# parameter the app sends. It is a test-only model: it is not in the app catalog.
-LIVE_MODEL="${LIVE_MODEL:-meta/muse-spark-1.3-contributor}"  # empty also means default
+# Claude Haiku runs on DebateLab's Anthropic key (BYOK in OpenRouter), so the
+# live gate spends no OpenRouter credits. Other families would, so they are
+# refused; as-requested (the model matrix) is the one deliberate exception.
+LIVE_MODEL="${LIVE_MODEL:-anthropic/claude-haiku-5.5}"  # empty also means default
+case "$LIVE_MODEL" in anthropic/*|as-requested) ;; *) echo "LIVE_MODEL must be an anthropic/ model (Anthropic BYOK) or as-requested, not $LIVE_MODEL" >&2; exit 1 ;; esac
 if [ "$LIVE_PROVIDERS" = 1 ] && { [ -z "${LIVE_OPENROUTER_API_KEY:-}" ] || [ -z "${LIVE_EXA_API_KEY:-}" ]; }; then
   echo "LIVE_PROVIDERS=1 requires LIVE_OPENROUTER_API_KEY and LIVE_EXA_API_KEY" >&2
   exit 1

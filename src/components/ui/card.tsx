@@ -3,7 +3,7 @@ import * as React from "react";
 import { cn } from "@/lib/utils";
 
 const Card = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(({ className, ...props }, ref) => (
-  <div ref={ref} className={cn("motion-surface rounded-lg border bg-card text-card-foreground shadow-sm", className)} {...props} />
+  <div ref={ref} className={cn("motion-surface rounded-lg border-2 border-border bg-card text-card-foreground", className)} {...props} />
 ));
 Card.displayName = "Card";
 
@@ -14,9 +14,16 @@ const CardHeader = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDiv
 );
 CardHeader.displayName = "CardHeader";
 
-const CardTitle = React.forwardRef<HTMLParagraphElement, React.HTMLAttributes<HTMLHeadingElement>>(
-  ({ className, ...props }, ref) => (
-    <h3 ref={ref} className={cn("text-2xl font-semibold leading-none tracking-tight", className)} {...props} />
+type HeadingLevel = "h1" | "h2" | "h3" | "h4" | "h5" | "h6";
+
+type CardTitleProps = React.HTMLAttributes<HTMLHeadingElement> & {
+  /** Heading level. h2 sits directly under a page h1 without skipping a level. */
+  as?: HeadingLevel;
+};
+
+const CardTitle = React.forwardRef<HTMLHeadingElement, CardTitleProps>(
+  ({ className, as: Heading = "h2", ...props }, ref) => (
+    <Heading ref={ref} className={cn("text-lg font-bold leading-snug text-heading", className)} {...props} />
   ),
 );
 CardTitle.displayName = "CardTitle";

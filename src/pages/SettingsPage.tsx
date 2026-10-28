@@ -1,9 +1,10 @@
 // src/pages/SettingsPage.tsx
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Settings, Lock, Trash2, Crown, CreditCard, Zap, Shield, Download, UserX } from 'lucide-react';
+import { Settings, Lock, Trash2, Crown, Shield, Download, UserX } from 'lucide-react';
+import type { User } from '@supabase/supabase-js';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
@@ -14,7 +15,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Badge } from '@/components/ui/badge';
 import { useSettingsStore } from '@/lib/stores/settings-store';
 import { useSessionStore } from '@/lib/stores/session-store';
 import { useDebateStore } from '@/lib/stores/debate-store';
@@ -24,23 +24,37 @@ import { supabase } from '@/lib/supabase/client';
 import { getActiveEnv } from '@/lib/supabase/env';
 import { useToast } from '@/hooks/use-toast';
 import { useSubscription } from '@/hooks/use-subscription';
-import { redirectToPortal } from '@/lib/stripe';
+import { useExternalRedirectPending } from '@/hooks/use-external-redirect-pending';
+import { isNoActiveSubscription, redirectToPortal } from '@/lib/stripe';
 import { deleteAccount, downloadAccountData } from '@/lib/account';
 import { PricingModal } from '@/components/features/subscription/PricingModal';
+import { SubscriptionStatus } from '@/components/features/subscription/SubscriptionStatus';
+import { DailyUsage } from '@/components/features/subscription/DailyUsage';
 import { EnvironmentSwitcher } from '@/components/features/settings/EnvironmentSwitcher';
-import { formatEuropeanDate } from '@/lib/date-format';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
+import { PageHeader } from '@/components/layout/PageHeader';
 import { APP_LANGUAGES, isAppLanguage } from '@/lib/languages';
+import {
+  CHECKOUT_CONFIRM_INTERVAL_MS,
+  nextCheckoutConfirmation,
+  stripCheckoutParams,
+} from '@/lib/billing/checkout-return';
 
 
-const tierLabels: Record<string, { labelKey: string; color: string }> = {
-  trial: { labelKey: 'settings.tierTrial', color: 'bg-blue-500' },
-  basic: { labelKey: 'settings.tierBasic', color: 'bg-teal-500' },
-  pro: { labelKey: 'settings.tierPro', color: 'bg-amber-500' },
-  legacy_free: { labelKey: 'settings.tierLegacyFree', color: 'bg-green-500' },
-  expired: { labelKey: 'settings.tierExpired', color: 'bg-red-500' },
-};
+/** How this account signs in, from what Auth recorded for it (not only this session). */
+function signInMethodKey(user: User | null): string | null {
+  const meta = user?.app_metadata;
+  if (!meta) return null;
+  if (typeof meta.demo_access_code_id === 'string') return 'settings.signInDemo';
+  const providers: unknown[] = Array.isArray(meta.providers) ? meta.providers : [meta.provider];
+  const google = providers.includes('google');
+  const email = providers.includes('email');
+  if (google && email) return 'settings.signInGoogleOrEmail';
+  if (google) return 'settings.signInGoogle';
+  if (email) return 'settings.signInEmail';
+  return null;
+}
 
 export default function SettingsPage() {
   const { language, setLanguage, outputLanguage, setOutputLanguage, theme, setTheme } = useSettingsStore();
@@ -49,16 +63,65 @@ export default function SettingsPage() {
   const { user, signOut } = useAuth();
   const { toast } = useToast();
   const { t } = useTranslation();
+  const signInMethod = signInMethodKey(user);
   const subscription = useSubscription();
   const [pricingOpen, setPricingOpen] = useState(false);
-  const [portalLoading, setPortalLoading] = useState(false);
+  const { pending: portalLoading, run: runPortalRedirect } = useExternalRedirectPending();
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deleteEmail, setDeleteEmail] = useState('');
   const [exporting, setExporting] = useState(false);
   const [deleteAccountOpen, setDeleteAccountOpen] = useState(false);
   const [accountConfirmation, setAccountConfirmation] = useState('');
   const [deletingAccount, setDeletingAccount] = useState(false);
+  const [deletingData, setDeletingData] = useState(false);
+  const [signingOut, setSigningOut] = useState(false);
   const navigate = useNavigate();
+  const { hash } = useLocation();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const checkout = searchParams.get('checkout');
+  const refreshSubscription = useRef(subscription.refresh);
+  refreshSubscription.current = subscription.refresh;
+  const checkoutStarted = useRef<number | null>(null);
+  const checkoutSettled = useRef(false);
+  const [checkoutPoll, setCheckoutPoll] = useState(0);
+  const confirmingCheckout = checkout === 'success'
+    && subscription.tier !== 'pro'
+    && subscription.tier !== 'legacy_free';
+
+  useEffect(() => {
+    const elapsed = checkoutStarted.current === null ? 0 : Date.now() - checkoutStarted.current;
+    const action = nextCheckoutConfirmation({
+      checkout,
+      tier: subscription.tier,
+      elapsedMs: elapsed,
+      loading: subscription.loading,
+    });
+    if (action === 'ignore' || action === 'wait' || checkoutSettled.current) return;
+
+    if (action === 'canceled' || action === 'confirmed' || action === 'slow') {
+      checkoutSettled.current = true;
+      const notice = action === 'canceled'
+        ? { title: t('settings.checkoutCanceled'), description: t('settings.checkoutCanceledDesc') }
+        : action === 'confirmed'
+          ? { title: t('settings.checkoutConfirmed'), description: t('settings.checkoutConfirmedDesc') }
+          : { title: t('settings.checkoutConfirmSlowTitle'), description: t('settings.checkoutConfirmSlow') };
+      toast(notice);
+      setSearchParams(stripCheckoutParams(searchParams), { replace: true });
+      return;
+    }
+
+    if (checkoutStarted.current === null) checkoutStarted.current = Date.now();
+    const timer = window.setTimeout(() => {
+      void refreshSubscription.current().finally(() => setCheckoutPoll((count) => count + 1));
+    }, CHECKOUT_CONFIRM_INTERVAL_MS);
+    return () => window.clearTimeout(timer);
+  }, [checkout, checkoutPoll, searchParams, setSearchParams, subscription.loading, subscription.tier, t, toast]);
+  // /app/billing lands here (QB-12). A router navigation does not scroll to
+  // the hash by itself.
+  useEffect(() => {
+    if (hash === '#subscription') document.getElementById('subscription')?.scrollIntoView({ block: 'start' });
+  }, [hash]);
+
   // Must match deletionConfirmation in supabase/functions/account/index.ts.
   const expectedAccountConfirmation = user?.email || 'DELETE';
 
@@ -93,6 +156,8 @@ export default function SettingsPage() {
       return;
     }
 
+    if (deletingData) return;
+    setDeletingData(true);
     void clearAllData().then(() => {
       clearLocalData();
       setDeleteDialogOpen(false);
@@ -101,7 +166,7 @@ export default function SettingsPage() {
     }).catch((error) => {
       console.error('Failed to delete data:', error);
       toast({ title: t('settings.deleteFailed'), description: t('settings.deleteFailedDesc'), variant: "destructive" });
-    });
+    }).finally(() => setDeletingData(false));
   };
 
   const handleDownloadData = async () => {
@@ -142,21 +207,22 @@ export default function SettingsPage() {
   };
 
   const handleSignOut = () => {
+    if (signingOut) return;
+    setSigningOut(true);
     void signOut()
       .then(() => resetSparringLocalData())
       .catch((error) => {
         console.error('Failed to sign out:', error);
+        setSigningOut(false);
         toast({ title: t('common.error', 'Error'), description: t('settings.signOutFailed', 'Could not sign out. Please try again.'), variant: 'destructive' });
       });
   };
 
   const handleManageSubscription = async () => {
-    setPortalLoading(true);
     try {
-      await redirectToPortal();
+      await runPortalRedirect(redirectToPortal);
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to open billing portal';
-      if (message.toLowerCase().includes('no active subscription')) {
+      if (isNoActiveSubscription(err)) {
         toast({
           title: t('settings.noSubscription'),
           description: t('settings.noSubscriptionDesc'),
@@ -165,73 +231,54 @@ export default function SettingsPage() {
       } else {
         toast({
           title: t('settings.portalError'),
-          description: message,
+          // redirectToPortal's errors are translated when the server's code is known.
+          description: err instanceof Error ? err.message : t('serverErrors.portalFailed'),
           variant: 'destructive',
         });
       }
-      setPortalLoading(false);
     }
   };
-
-  const tierInfo = tierLabels[subscription.tier] || tierLabels.expired;
-  const canManageStripeBilling = subscription.tier === 'pro' && subscription.hasStripeBilling;
-  const upgradeLabel = subscription.tier === 'pro' ? t('settings.setUpBilling') : t('settings.upgradeToPro');
 
   return (
     <div className="container py-8 px-4">
       <div className="max-w-4xl mx-auto">
-        <div className="mb-8">
-          <div className="flex items-center gap-3 mb-2">
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
-              <Settings className="h-5 w-5 text-primary" />
-            </div>
-            <h1 className="text-3xl font-bold tracking-tight text-foreground">{t('settings.title')}</h1>
-          </div>
-        </div>
+        <PageHeader className="mb-8" icon={<Settings />} title={t('settings.title')} />
 
         {/* Subscription Status */}
-        <Card className="mb-8 border-primary/20">
+        <Card id="subscription" data-testid="subscription-card" className="mb-8 scroll-mt-20 border-primary/20">
           <CardHeader>
             <div className="flex items-center gap-2">
-              <Crown className="h-5 w-5 text-amber-500" />
+              <Crown className="h-5 w-5 text-amber-600 dark:text-amber-400" />
               <CardTitle>{t('settings.subscription')}</CardTitle>
             </div>
           </CardHeader>
           <CardContent className="space-y-4">
-            {subscription.loading ? (
-              <p role="status" className="text-sm text-muted-foreground">{t('settings.loading')}</p>
+            {confirmingCheckout ? (
+              <p role="status" className="text-sm text-muted-foreground">{t('settings.confirmingSubscription')}</p>
+            ) : subscription.loading ? (
+              // The card's shape while the plan loads, not a long "Loading…" (ST-03).
+              <div data-testid="subscription-loading" className="space-y-3">
+                <div className="flex items-center justify-between gap-4" aria-hidden="true">
+                  <div className="h-6 w-28 animate-pulse rounded-full bg-muted" />
+                  <div className="h-9 w-36 animate-pulse rounded-md bg-muted" />
+                </div>
+                <div className="h-4 w-3/4 animate-pulse rounded bg-muted" aria-hidden="true" />
+                <span className="sr-only" role="status">{t('settings.loading')}</span>
+              </div>
             ) : (
               <>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <Badge className={`${tierInfo.color} text-white`}>{t(tierInfo.labelKey)}</Badge>
-                    {subscription.tier === 'trial' && subscription.trialEndsAt && (
-                      <span className="text-sm text-muted-foreground">
-                        {t('settings.ends')} {formatEuropeanDate(subscription.trialEndsAt)}
-                      </span>
-                    )}
-                  </div>
-                  {canManageStripeBilling ? (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => void handleManageSubscription()}
-                      disabled={portalLoading}
-                    >
-                      <CreditCard className="h-4 w-4 mr-2" />
-                      {portalLoading ? t('settings.loading') : t('settings.manageSubscription')}
-                    </Button>
-                  ) : (
-                    <Button size="sm" onClick={() => setPricingOpen(true)}>
-                      <Zap className="h-4 w-4 mr-2" />
-                      {upgradeLabel}
-                    </Button>
-                  )}
-                </div>
-
-                <p className="text-sm text-muted-foreground">
-                  {t(subscription.tier === 'expired' ? 'settings.accessExpired' : 'settings.accessActive')}
-                </p>
+                <SubscriptionStatus
+                  billingState={subscription.billingState}
+                  billingDate={subscription.billingDate}
+                  billingDateKind={subscription.billingDateKind}
+                  hasOpenSubscription={subscription.hasOpenSubscription}
+                  hasStripeBilling={subscription.hasStripeBilling}
+                  dailyLimit={subscription.dailyLimit}
+                  portalLoading={portalLoading}
+                  onManage={() => void handleManageSubscription()}
+                  onUpgrade={() => setPricingOpen(true)}
+                />
+                <DailyUsage showReset />
               </>
             )}
           </CardContent>
@@ -300,13 +347,15 @@ export default function SettingsPage() {
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="flex items-center justify-between gap-3">
-              {/* A long email wraps instead of pushing Sign out off a phone screen. */}
+              {/* A long email is cut short, whole in its tooltip, instead of
+                  breaking mid-word or pushing Sign out off a phone screen (ST-03). */}
               <div className="min-w-0">
                 <p className="text-sm text-muted-foreground">{t('settings.signedInAs')}</p>
-                <p className="font-medium break-all">{user?.email || t('settings.unknownUser')}</p>
+                <p className="truncate font-medium" title={user?.email || undefined}>{user?.email || t('settings.unknownUser')}</p>
+                {signInMethod && <p data-testid="sign-in-method" className="text-xs text-muted-foreground">{t(signInMethod)}</p>}
               </div>
-              <Button variant="outline" className="shrink-0" onClick={handleSignOut}>
-                {t('settings.signOut')}
+              <Button variant="outline" className="shrink-0" onClick={handleSignOut} disabled={signingOut}>
+                {signingOut ? t('settings.signingOut', 'Signing out…') : t('settings.signOut')}
               </Button>
             </div>
             <div className="flex flex-col gap-3 border-t border-primary/10 pt-4 sm:flex-row sm:items-center sm:justify-between">
@@ -322,9 +371,7 @@ export default function SettingsPage() {
           </CardContent>
         </Card>
 
-        {user && adminRole.isPending && (
-          <div role="status" aria-label={t('settings.loading')} className="my-8 h-40 animate-pulse rounded-lg bg-muted motion-reduce:animate-none" />
-        )}
+        {/* Nothing renders while the admin check runs: almost nobody is an admin. */}
         {user && adminRole.isError && (
           <div role="alert" className="my-8 flex items-center gap-3 text-sm">
             <p>{t('settings.adminAccessFailed', 'Could not check admin access.')}</p>
@@ -357,7 +404,7 @@ export default function SettingsPage() {
         <Card className="border-destructive/20 bg-destructive/5 mt-8">
           <CardHeader>
             <CardTitle className="text-destructive">{t('settings.dangerZone')}</CardTitle>
-            <CardDescription>
+            <CardDescription className="wrap-break-word">
               {t('settings.dangerDesc', { email: user?.email })}
             </CardDescription>
           </CardHeader>
@@ -384,7 +431,7 @@ export default function SettingsPage() {
         onOpenChange={setPricingOpen}
         onPromoRedeemed={() => void subscription.refresh()}
       />
-      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+      <Dialog open={deleteDialogOpen} onOpenChange={(open) => { if (!deletingData) setDeleteDialogOpen(open); }}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>{t('settings.deleteDialogTitle')}</DialogTitle>
@@ -400,12 +447,13 @@ export default function SettingsPage() {
               onChange={(event) => setDeleteEmail(event.target.value)}
               onKeyDown={(e) => { if (e.key === 'Enter' && deleteEmail === user?.email) handleDeleteAllData(); }}
               placeholder={user?.email || ''}
+              disabled={deletingData}
             />
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>{t('common.cancel', 'Cancel')}</Button>
-            <Button variant="destructive" onClick={handleDeleteAllData} disabled={deleteEmail !== user?.email}>
-              {t('settings.deleteAllData')}
+            <Button variant="outline" onClick={() => setDeleteDialogOpen(false)} disabled={deletingData}>{t('common.cancel', 'Cancel')}</Button>
+            <Button variant="destructive" onClick={handleDeleteAllData} disabled={deleteEmail !== user?.email || deletingData}>
+              {deletingData ? t('settings.deletingData', 'Deleting…') : t('settings.deleteAllData')}
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -1,5 +1,6 @@
 import { create } from 'zustand';
-import { persist, createJSONStorage } from 'zustand/middleware';
+import { persist } from 'zustand/middleware';
+import { resilientLocalStorage } from '@/lib/stores/resilient-local-storage';
 import type { Node, Edge } from 'reactflow';
 import type { GenerateOutput, GenerateInput } from '../ai/schemas/generate';
 import type { AttackOutput, AttackInput } from '../ai/schemas/attack';
@@ -7,9 +8,14 @@ import type { BrainstormOutput, BrainstormInput } from '../ai/schemas/brainstorm
 import type { FactoidsOutput, FactoidsInput } from '../ai/schemas/factoids';
 import type { AskOutput } from '../ai/schemas/ask';
 import { supabase } from '@/lib/supabase/client';
+import { restoredSessionsBlocked } from '@/lib/supabase/session-expiry';
+import { currentUserId } from '@/lib/supabase/current-user';
 import i18n from '@/i18n';
+import { findSavedPage, normalizeSourceUrl, savedSourceUrl } from '@/lib/source-url';
 import { activeDebateId, useDebateStore, type DebateSide } from './debate-store';
 import { assessedSemantic, isAssessedSource, type SourceAssessmentUpdate } from '@debatelab/core/ai/source-assessments';
+
+export type { SourceAssessmentUpdate };
 
 interface Message {
   id: string;
@@ -111,6 +117,8 @@ export interface FlowchartData {
 }
 
 export interface SessionState {
+  /** Account these persisted drafts belong to. Null until sign-in binds them. */
+  ownerUserId: string | null;
   generateResult: GenerateOutput | null;
   generateLoading: boolean;
   /** The Generate section being regenerated; kept here so it survives leaving the page. */
@@ -160,6 +168,12 @@ export interface SessionState {
   setFactoidsForm: (data: Partial<FactoidsInput>) => void;
 
   setGenerateResult: (result: GenerateOutput | null) => void;
+  /**
+   * Debate the current Generate result belongs to. Null is one-off work.
+   * Undefined means a result restored before this was recorded.
+   */
+  generateResultDebateId: string | null | undefined;
+  setGenerateResultDebateId: (debateId: string | null) => void;
   setGenerateLoading: (loading: boolean) => void;
   setGenerateRegeneratingSection: (section: string | null) => void;
   saveCurrentCase: (title: string) => Promise<void>;
@@ -181,7 +195,8 @@ export interface SessionState {
   saveCurrentFactoids: (title: string) => Promise<void>;
   loadSavedFactoids: (id: string) => void;
 
-  addAskMessage: (message: Omit<Message, 'id' | 'timestamp'>) => void;
+  /** Pass the streaming bubble's id so the stored reply keeps its identity and doesn't remount. */
+  addAskMessage: (message: Omit<Message, 'id' | 'timestamp'> & { id?: string }) => void;
   setAskLoading: (loading: boolean) => void;
   setAskStreamingAssistant: (message: StreamingAskMessage | null) => void;
   appendAskStreamingDelta: (text: string) => void;
@@ -193,12 +208,18 @@ export interface SessionState {
 
   recordResult: (kind: ResultKind, input: RecordResultInput) => Promise<string>;
   updateRecordedResult: (kind: ResultKind, id: string, output: unknown) => Promise<void>;
+  deleteRecordedResult: (kind: ResultKind, id: string) => Promise<void>;
   attachItem: (kind: AttachKind, id: string, debateId: string, side?: DebateSide) => Promise<void>;
   /** Records new Ask messages: into the loaded chat, or a new chat in `debateId`. */
   syncAskChat: (debateId: string | null) => Promise<void>;
   deleteSavedFlowchart: (id: string) => Promise<void>;
 
-  addSource: (source: Omit<Source, 'id' | 'createdAt' | 'isActive'> & { isActive?: boolean }) => Promise<void>;
+  /**
+   * Shows the source at once and saves it. `id` and `createdAt` are only for
+   * Undo, which puts a deleted source back exactly. Throws DuplicateSourceError
+   * when the debate already holds the same web page.
+   */
+  addSource: (source: Omit<Source, 'id' | 'createdAt' | 'isActive'> & { isActive?: boolean; id?: string; createdAt?: number }) => Promise<void>;
   createSourceFolder: (folder: string) => Promise<void>;
   updateSource: (id: string, patch: Partial<Omit<Source, 'id' | 'createdAt'>>) => Promise<void>;
   applySourceAssessments: (assessments: SourceAssessmentUpdate[]) => Promise<void>;
@@ -217,6 +238,12 @@ export interface SessionState {
   serverHydration: 'pending' | 'partial' | 'complete';
   clearAllData: () => Promise<void>;
   resetLocalData: () => void;
+  /**
+   * Binds persisted drafts to the signed-in account. A different account, or
+   * drafts saved before accounts were recorded, is cleared first so one
+   * browser cannot show the previous person's work.
+   */
+  prepareForUser: (userId: string) => void;
   clearSession: () => void;
 
   pendingFlowchartData: FlowchartData | null;
@@ -267,6 +294,54 @@ function normalizeFolder(folder?: string | null) {
   return trimmed || 'General';
 }
 
+/** Device-only work that must not cross accounts. Server lists reload after this. */
+function sessionWorkForAccount(ownerUserId: string | null): Partial<SessionState> {
+  return {
+    ownerUserId,
+    serverHydration: 'pending',
+    savedCases: [],
+    savedAttacks: [],
+    savedBrainstorms: [],
+    savedFactoids: [],
+    savedChats: [],
+    savedFlowcharts: [],
+    savedCrossfires: [],
+    autosavedCases: [],
+    autosavedAttacks: [],
+    autosavedBrainstorms: [],
+    autosavedFactoids: [],
+    askChatId: null,
+    askChatDebateId: null,
+    askPersistedCount: 0,
+    sourceFolders: ['General'],
+    sourceLibrary: [],
+    generateResult: null,
+    attackResult: null,
+    brainstormResult: null,
+    factoidsResult: null,
+    askMessages: [],
+    askStreamingAssistant: null,
+    pendingFlowchartData: null,
+    generateForm: {},
+    generateResultDebateId: undefined,
+    attackForm: {},
+    brainstormForm: {},
+    factoidsForm: {},
+  };
+}
+
+/**
+ * Keeps a rehydrate that finishes after sign-in from putting another account's
+ * snapshot back. Drafts with no owner are kept only while nobody is bound yet;
+ * binding then clears them.
+ */
+export function mergePersistedSessionState(persistedState: unknown, currentState: SessionState): SessionState {
+  const saved = persistedState && typeof persistedState === 'object' ? persistedState as Partial<SessionState> : {};
+  const savedOwner = typeof saved.ownerUserId === 'string' ? saved.ownerUserId : null;
+  if (currentState.ownerUserId && savedOwner !== currentState.ownerUserId) return currentState;
+  return { ...currentState, ...saved, ownerUserId: savedOwner ?? currentState.ownerUserId };
+}
+
 function mergeSourceFolders(currentFolders: string[], sources: Source[] = []) {
   return Array.from(new Set([
     'General',
@@ -276,8 +351,11 @@ function mergeSourceFolders(currentFolders: string[], sources: Source[] = []) {
 }
 
 async function getUserId() {
-  const { data } = await supabase.auth.getUser();
-  return data.user?.id || null;
+  return await currentUserId();
+}
+
+function signInRequired(action: string): Error {
+  return new Error(`Sign in to ${action}`);
 }
 
 type EqQuery = {
@@ -372,6 +450,97 @@ export class DebateRequiredError extends Error {
   }
 }
 
+/** Thrown when the debate already has a source for the same web page. */
+export class DuplicateSourceError extends Error {
+  constructor(readonly existingId: string) {
+    super('This page is already in the debate\'s Library');
+    this.name = 'DuplicateSourceError';
+  }
+}
+
+const PENDING_SOURCE_PREFIX = 'pending-';
+
+/** Counts source switch writes, so a server reload can tell which ones it predates. */
+let sourceWriteSeq = 0;
+/** Writes to a source's switch still running, and the last value the server accepted. */
+const sourceToggles = new Map<string, { latest: number; confirmed: boolean; chain: Promise<void> }>();
+/** The newest switch value per source, kept so a reload that started earlier does not undo it. */
+const lastSourceToggle = new Map<string, { value: boolean; seq: number }>();
+
+interface SourceActiveWrite {
+  seq: number;
+  value: boolean;
+  entries: Array<[string, { latest: number; confirmed: boolean; chain: Promise<void> }]>;
+  done: Promise<void>;
+}
+
+/**
+ * Every write that changes whether sources are on (the switch, a folder's
+ * Activate or Deactivate, the editor's Save) joins each source's queue, so the
+ * server applies them in the order the student made them. Call it before
+ * showing the new value; finishSourceActiveWrite then decides what shows.
+ */
+function beginSourceActiveWrite(ids: string[], value: boolean, write: () => Promise<void>): SourceActiveWrite {
+  const seq = ++sourceWriteSeq;
+  const shown = useSessionStore.getState().sourceLibrary;
+  const entries = ids.map((id): SourceActiveWrite['entries'][number] => {
+    const entry = sourceToggles.get(id) ?? {
+      latest: 0,
+      confirmed: shown.find((source) => source.id === id)?.isActive ?? value,
+      chain: Promise.resolve(),
+    };
+    entry.latest = seq;
+    sourceToggles.set(id, entry);
+    lastSourceToggle.set(id, { value, seq });
+    return [id, entry];
+  });
+  const done = Promise.all(entries.map(([, entry]) => entry.chain)).then(write);
+  for (const [, entry] of entries) entry.chain = done.catch((): void => undefined);
+  return { seq, value, entries, done };
+}
+
+/**
+ * Shows the newest write's value once it lands, or the last value the server
+ * took if it fails. With `quietWhenReplaced`, a failure is not reported when a
+ * newer write already owns every source: that write's outcome is what shows.
+ */
+async function finishSourceActiveWrite({ seq, value, entries, done }: SourceActiveWrite, quietWhenReplaced = false): Promise<void> {
+  const show = (values: Map<string, boolean>) => {
+    if (values.size === 0) return;
+    useSessionStore.setState((state) => ({
+      sourceLibrary: state.sourceLibrary.map((source) => values.has(source.id) ? { ...source, isActive: values.get(source.id)! } : source),
+    }));
+  };
+  try {
+    await done;
+  } catch (error) {
+    const fallback = new Map<string, boolean>();
+    for (const [id, entry] of entries) {
+      if (entry.latest !== seq) continue;
+      sourceToggles.delete(id);
+      lastSourceToggle.set(id, { value: entry.confirmed, seq });
+      fallback.set(id, entry.confirmed);
+    }
+    show(fallback);
+    if (quietWhenReplaced && fallback.size === 0) return;
+    throw error;
+  }
+  const settled = new Map<string, boolean>();
+  for (const [id, entry] of entries) {
+    entry.confirmed = value;
+    // A server reload while this ran may have put back the old value.
+    if (entry.latest !== seq) continue;
+    sourceToggles.delete(id);
+    settled.set(id, value);
+  }
+  show(settled);
+}
+
+/** A source shown before its row is saved; it has no server id to change yet. */
+export function isPendingSource(source: Pick<Source, 'id'>): boolean {
+  return source.id.startsWith(PENDING_SOURCE_PREFIX);
+}
+
 function savedFromRow<T>(row: SupabaseSavedRow<T>): SavedItem<T> {
   return {
     id: row.id,
@@ -442,6 +611,7 @@ export function parseSourceProvenance(value: unknown): SourceProvenance | undefi
 export const useSessionStore = create<SessionState>()(
   persist(
     (set, get) => ({
+      ownerUserId: null as string | null,
       generateResult: null as GenerateOutput | null,
       generateLoading: false,
       generateRegeneratingSection: null as string | null,
@@ -473,11 +643,13 @@ export const useSessionStore = create<SessionState>()(
       sourceLibrary: [] as Source[],
 
       generateForm: {},
+      generateResultDebateId: undefined as string | null | undefined,
       attackForm: {},
       brainstormForm: {},
       factoidsForm: {},
 
       setGenerateForm: (data) => set((state) => ({ generateForm: mergeFormState(state.generateForm, data) })),
+      setGenerateResultDebateId: (debateId) => set({ generateResultDebateId: debateId }),
       setAttackForm: (data) => set((state) => ({ attackForm: mergeFormState(state.attackForm, data) })),
       setBrainstormForm: (data) => set((state) => ({ brainstormForm: mergeFormState(state.brainstormForm, data) })),
       setFactoidsForm: (data) => set((state) => ({ factoidsForm: mergeFormState(state.factoidsForm, data) })),
@@ -486,76 +658,124 @@ export const useSessionStore = create<SessionState>()(
       serverHydration: 'pending',
       setPendingFlowchartData: (data) => set({ pendingFlowchartData: data }),
 
-      addSource: async (source) => {
+      addSource: async ({ id: restoredId, createdAt: restoredAt, ...source }) => {
         const folder = normalizeFolder(source.folder);
         const isActive = source.isActive ?? true;
         // An omitted debate means the tool's scope, which is none in one-off mode.
         const debateId = source.debateId !== undefined ? source.debateId : activeDebateId();
         if (!debateId) throw new DebateRequiredError();
-        const localItem: Source = { ...source, folder, debateId, id: generateId(), createdAt: Date.now(), isActive };
-        const userId = await getUserId();
-        if (!userId) {
-          set((state) => ({
-            sourceFolders: mergeSourceFolders(state.sourceFolders, [localItem]),
-            sourceLibrary: [localItem, ...state.sourceLibrary],
-          }));
-          return;
+        // One row per web page per debate. Undo puts back a row that was just deleted.
+        const url = source.metadata?.url ?? source.origin;
+        if (!restoredId) {
+          const known = findSavedPage(get().sourceLibrary, debateId, url);
+          if (known) throw new DuplicateSourceError(known.id);
         }
+        // Other actions copy rows as they change them, so the shown row is found
+        // again by its id. A restored row is pending too until its insert lands.
+        const localId = `${PENDING_SOURCE_PREFIX}${restoredId ?? generateId()}`;
+        const localItem: Source = { ...source, folder, debateId, isActive, id: localId, createdAt: restoredAt ?? Date.now() };
+        // The library is newest first; a restored source goes back to its old place.
+        const place = (list: Source[], item: Source) =>
+          restoredId ? [...list, item].sort((x, y) => y.createdAt - x.createdAt) : [item, ...list];
+        // The row shows while it saves, and leaves again if the save fails.
+        set((state) => ({ sourceLibrary: place(state.sourceLibrary, localItem) }));
+        const withoutLocal = () => set((state) => ({ sourceLibrary: state.sourceLibrary.filter((item) => item.id !== localId) }));
 
-        const folderResult = await supabase
-          .from('source_folders')
-          .upsert({ user_id: userId, name: folder }, { onConflict: 'user_id,name' });
-        throwOnWriteError(folderResult, 'save source folder');
-        const { data, error } = await supabase
-          .from('sources')
-          .insert({
-            user_id: userId,
-            debate_id: debateId,
-            title: source.title,
-            content: source.content,
-            type: source.type,
-            origin: source.origin || null,
-            folder,
-            is_active: isActive,
-            metadata: source.metadata ?? null,
-          })
-          .select('*')
-          .single();
-        throwOnWriteError({ error }, 'save source');
-        if (!data) throw new Error('[SessionStore] Failed to save source: No record returned');
+        let savedSource: Source;
+        try {
+          const userId = await getUserId();
+          if (!userId) throw signInRequired('save this source');
 
-        const savedSource: Source = {
-          id: data.id,
-          title: data.title,
-          content: data.content,
-          type: data.type,
-          origin: data.origin || undefined,
-          folder: normalizeFolder(data.folder || localItem.folder),
-          metadata: parseSourceProvenance(data.metadata),
-          debateId: data.debate_id ?? debateId,
-          isActive: data.is_active,
-          createdAt: toTimestamp(data.created_at),
-        };
-        set((state) => ({
-          sourceFolders: mergeSourceFolders(state.sourceFolders, [savedSource]),
-          sourceLibrary: [savedSource, ...state.sourceLibrary],
-        }));
+          const key = !restoredId && url ? normalizeSourceUrl(url) : null;
+          if (key) {
+            // Another tab, or a list that failed to load, may hold the page already.
+            const { data: rows, error: lookupError } = await supabase
+              .from('sources')
+              .select('id,origin,metadata')
+              .eq('user_id', userId)
+              .eq('debate_id', debateId);
+            throwOnWriteError({ error: lookupError }, 'check for a saved copy of this page');
+            const match = (rows ?? []).find((row) => savedSourceUrl({
+              origin: row.origin ?? undefined,
+              metadata: parseSourceProvenance(row.metadata),
+            }) === key);
+            if (match) throw new DuplicateSourceError(match.id);
+          }
+
+          const folderResult = await supabase
+            .from('source_folders')
+            .upsert({ user_id: userId, name: folder }, { onConflict: 'user_id,name' });
+          throwOnWriteError(folderResult, 'save source folder');
+          const { data, error } = await supabase
+            .from('sources')
+            .insert({
+              ...(restoredId ? { id: restoredId, created_at: new Date(localItem.createdAt).toISOString() } : {}),
+              user_id: userId,
+              debate_id: debateId,
+              title: source.title,
+              content: source.content,
+              type: source.type,
+              origin: source.origin || null,
+              folder,
+              is_active: isActive,
+              metadata: source.metadata ?? null,
+            })
+            .select('*')
+            .single();
+          throwOnWriteError({ error }, 'save source');
+          if (!data) throw new Error('[SessionStore] Failed to save source: No record returned');
+
+          savedSource = {
+            id: data.id,
+            title: data.title,
+            content: data.content,
+            type: data.type,
+            origin: data.origin || undefined,
+            folder: normalizeFolder(data.folder || localItem.folder),
+            metadata: parseSourceProvenance(data.metadata),
+            debateId: data.debate_id ?? debateId,
+            isActive: data.is_active,
+            createdAt: toTimestamp(data.created_at),
+          };
+        } catch (error) {
+          withoutLocal();
+          throw error;
+        }
+        set((state) => {
+          const shown = state.sourceLibrary.some((item) => item.id === localId);
+          // A reload from the server while this saved may already list the row.
+          const listed = state.sourceLibrary.some((item) => item.id === savedSource.id);
+          // A debate deleted meanwhile took its sources with it.
+          const debateGone = !useDebateStore.getState().debates.some((debate) => debate.id === debateId);
+          const sourceLibrary = shown
+            ? listed
+              ? state.sourceLibrary.filter((item) => item.id !== localId)
+              : state.sourceLibrary.map((item) => item.id === localId ? savedSource : item)
+            : listed || debateGone
+              ? state.sourceLibrary
+              : place(state.sourceLibrary, savedSource);
+          return { sourceFolders: mergeSourceFolders(state.sourceFolders, [savedSource]), sourceLibrary };
+        });
         markDebateActivity(debateId);
       },
       createSourceFolder: async (folder) => {
         const normalized = normalizeFolder(folder);
+        const userId = await getUserId();
+        if (!userId) throw signInRequired('save this folder');
+        throwOnWriteError(
+          await supabase
+            .from('source_folders')
+            .upsert({ user_id: userId, name: normalized }, { onConflict: 'user_id,name' }),
+          'save source folder',
+        );
         set((state) => ({
           sourceFolders: mergeSourceFolders([...state.sourceFolders, normalized], state.sourceLibrary),
         }));
-        const userId = await getUserId();
-        if (!userId) return;
-        await supabase
-          .from('source_folders')
-          .upsert({ user_id: userId, name: normalized }, { onConflict: 'user_id,name' });
       },
       updateSource: async (id, patch) => {
         const current = get().sourceLibrary.find((s) => s.id === id);
-        if (!current) return;
+        // A row still saving has nothing on the server to update yet.
+        if (!current || isPendingSource(current)) return;
 
         const normalizedPatch: Partial<Omit<Source, 'id' | 'createdAt'>> = { ...patch };
         if (patch.folder !== undefined) {
@@ -564,46 +784,55 @@ export const useSessionStore = create<SessionState>()(
         if (patch.origin !== undefined) {
           normalizedPatch.origin = patch.origin.trim() || undefined;
         }
-        const nextSource: Source = {
-          ...current,
-          ...normalizedPatch,
-          title: normalizedPatch.title?.trim() || current.title,
-          content: normalizedPatch.content?.trim() || current.content,
-        };
+        if (patch.title !== undefined) normalizedPatch.title = patch.title.trim() || current.title;
+        if (patch.content !== undefined) normalizedPatch.content = patch.content.trim() || current.content;
+        // Only what this edit changes is written. The switch is left alone unless
+        // the edit changes it, so a refresh of research metadata cannot save a
+        // switch value whose own write is still running or about to fail.
+        const changesActive = patch.isActive !== undefined && patch.isActive !== current.isActive;
+        delete normalizedPatch.isActive;
+        const row: Record<string, unknown> = {};
+        if (normalizedPatch.title !== undefined) row.title = normalizedPatch.title;
+        if (normalizedPatch.content !== undefined) row.content = normalizedPatch.content;
+        if (normalizedPatch.type !== undefined) row.type = normalizedPatch.type;
+        if ('origin' in normalizedPatch) row.origin = normalizedPatch.origin || null;
+        if (normalizedPatch.folder !== undefined) row.folder = normalizedPatch.folder;
+        if ('metadata' in normalizedPatch) row.metadata = normalizedPatch.metadata ?? null;
+        if (changesActive) row.is_active = patch.isActive;
+        if (Object.keys(row).length === 0) return;
 
+        const write = async () => {
+          const userId = await getUserId();
+          if (!userId) throw signInRequired('save this source');
+          if (normalizedPatch.folder) {
+            const folderResult = await supabase
+              .from('source_folders')
+              .upsert({ user_id: userId, name: normalizedPatch.folder }, { onConflict: 'user_id,name' });
+            throwOnWriteError(folderResult, 'save source folder');
+          }
+          throwOnWriteError(await applyUserScopedIdFilter(supabase.from('sources').update(row), userId, id), 'update source');
+        };
+        const activeWrite = changesActive ? beginSourceActiveWrite([id], patch.isActive!, write) : null;
         const previousFolders = get().sourceFolders;
+        // A failed save undoes only the fields it changed.
+        const undo: Partial<Source> = {};
+        for (const key of Object.keys(normalizedPatch) as Array<keyof typeof normalizedPatch>) {
+          (undo as Record<string, unknown>)[key] = current[key];
+        }
         set((state) => ({
-          sourceFolders: mergeSourceFolders(state.sourceFolders, [nextSource]),
-          sourceLibrary: state.sourceLibrary.map((source) => source.id === id ? nextSource : source),
+          sourceFolders: normalizedPatch.folder ? mergeSourceFolders(state.sourceFolders, [{ ...current, folder: normalizedPatch.folder }]) : state.sourceFolders,
+          sourceLibrary: state.sourceLibrary.map((source) => source.id === id
+            ? { ...source, ...normalizedPatch, ...(changesActive ? { isActive: patch.isActive! } : {}) }
+            : source),
         }));
 
         try {
-          const userId = await getUserId();
-          if (!userId) return;
-          if (nextSource.folder) {
-            const folderResult = await supabase
-              .from('source_folders')
-              .upsert({ user_id: userId, name: nextSource.folder }, { onConflict: 'user_id,name' });
-            throwOnWriteError(folderResult, 'save source folder');
-          }
-          const result = await applyUserScopedIdFilter(
-            supabase.from('sources').update({
-              title: nextSource.title,
-              content: nextSource.content,
-              type: nextSource.type,
-              origin: nextSource.origin || null,
-              folder: nextSource.folder || 'General',
-              is_active: nextSource.isActive,
-              metadata: nextSource.metadata ?? null,
-            }),
-            userId,
-            id,
-          );
-          throwOnWriteError(result, 'update source');
+          if (activeWrite) await finishSourceActiveWrite(activeWrite);
+          else await write();
         } catch (error) {
           set((state) => ({
-            sourceFolders: previousFolders,
-            sourceLibrary: state.sourceLibrary.map((source) => source.id === id ? current : source),
+            sourceFolders: normalizedPatch.folder ? previousFolders : state.sourceFolders,
+            sourceLibrary: state.sourceLibrary.map((source) => source.id === id ? { ...source, ...undo } : source),
           }));
           throw error;
         }
@@ -628,7 +857,7 @@ export const useSessionStore = create<SessionState>()(
         set((state) => ({ sourceLibrary: state.sourceLibrary.map((source) => updates.get(source.id) ?? source) }));
         try {
           const userId = await getUserId();
-          if (!userId) return;
+          if (!userId) throw signInRequired('save this source');
           await Promise.all(Array.from(updates.values()).map(async (source) => {
             const result = await applyUserScopedIdFilter(
               supabase.from('sources').update({ metadata: source.metadata ?? null }),
@@ -664,7 +893,7 @@ export const useSessionStore = create<SessionState>()(
         };
 
         const userId = await getUserId();
-        if (!userId) return applyRename();
+        if (!userId) throw signInRequired('rename this folder');
         const folderResult = await supabase
           .from('source_folders')
           .upsert({ user_id: userId, name: to }, { onConflict: 'user_id,name' });
@@ -705,7 +934,7 @@ export const useSessionStore = create<SessionState>()(
         };
 
         const userId = await getUserId();
-        if (!userId) return applyDelete();
+        if (!userId) throw signInRequired('delete this folder');
         if (affected.length > 0) {
           throwOnWriteError(
             await supabase.from('sources').update({ folder: 'General' }).eq('user_id', userId).eq('debate_id', debateId).eq('folder', folder),
@@ -724,42 +953,53 @@ export const useSessionStore = create<SessionState>()(
         const normalized = normalizeFolder(folder);
         const debateId = useDebateStore.getState().currentDebateId;
         if (!debateId) throw new DebateRequiredError();
-        const userId = await getUserId();
-        if (userId) {
+        // Rows still saving are not on the server yet; they keep the value they are saved with.
+        const ids = get().sourceLibrary
+          .filter((source) => source.debateId === debateId && normalizeFolder(source.folder) === normalized && !isPendingSource(source))
+          .map((source) => source.id);
+        if (ids.length === 0) return;
+        // Only the rows on screen: a row still saving could otherwise commit first
+        // and take the folder's value on the server but not in the Library.
+        const activeWrite = beginSourceActiveWrite(ids, isActive, async () => {
+          const userId = await getUserId();
+          if (!userId) throw signInRequired('update this folder');
           throwOnWriteError(
             await supabase.from('sources').update({ is_active: isActive })
-              .eq('user_id', userId).eq('debate_id', debateId).eq('folder', normalized),
+              .eq('user_id', userId).eq('debate_id', debateId).in('id', ids),
             'update source folder activity',
           );
-        }
-        set((state) => ({
-          sourceLibrary: state.sourceLibrary.map((source) =>
-            source.debateId === debateId && normalizeFolder(source.folder) === normalized ? { ...source, isActive } : source
-          ),
-        }));
+        });
+        await finishSourceActiveWrite(activeWrite);
       },
       removeSource: async (id) => {
+        if (isPendingSource({ id })) throw new Error('[SessionStore] This source is still saving');
         const userId = await getUserId();
-        if (userId) {
-          const result = await applyUserScopedIdFilter(supabase.from('sources').delete(), userId, id);
-          throwOnWriteError(result, 'delete source');
-        }
+        if (!userId) throw signInRequired('delete this source');
+        const result = await applyUserScopedIdFilter(supabase.from('sources').delete(), userId, id);
+        throwOnWriteError(result, 'delete source');
         set((state) => ({ sourceLibrary: state.sourceLibrary.filter((source) => source.id !== id) }));
       },
       toggleSource: async (id) => {
         const current = get().sourceLibrary.find((source) => source.id === id);
         if (!current) return;
+        if (isPendingSource(current)) throw new Error('[SessionStore] This source is still saving');
         const nextValue = !current.isActive;
-        const userId = await getUserId();
-        if (userId) {
+        // The switch moves at once. Writes for one source run in click order, and
+        // only the newest decides what shows once they settle; a failure falls
+        // back to the last value the server accepted, not to what was on screen.
+        const activeWrite = beginSourceActiveWrite([id], nextValue, async () => {
+          const userId = await getUserId();
+          if (!userId) throw signInRequired('update this source');
           throwOnWriteError(
             await applyUserScopedIdFilter(supabase.from('sources').update({ is_active: nextValue }), userId, id),
             'toggle source activity',
           );
-        }
+        });
         set((state) => ({
           sourceLibrary: state.sourceLibrary.map((source) => source.id === id ? { ...source, isActive: nextValue } : source),
         }));
+        // A failure that a newer click already replaced changes nothing on screen, so it is not reported.
+        await finishSourceActiveWrite(activeWrite, true);
       },
       clearLibrary: async () => {
         // The Library belongs to the Current Debate; other debates keep their sources.
@@ -790,12 +1030,8 @@ export const useSessionStore = create<SessionState>()(
       saveCurrentCase: async (title) => {
         const current = get().generateResult;
         if (!current) return;
-        const localItem = { id: generateId(), data: current, createdAt: Date.now(), title };
         const userId = await getUserId();
-        if (!userId) {
-          set((state) => ({ savedCases: [localItem, ...state.savedCases] }));
-          return;
-        }
+        if (!userId) throw signInRequired('save this case');
         const { data, error } = await supabase
           .from('cases')
           .insert({ user_id: userId, title, input: {}, output: current })
@@ -807,13 +1043,37 @@ export const useSessionStore = create<SessionState>()(
         set((state) => ({ savedCases: [savedItem, ...state.savedCases] }));
       },
       deleteSavedCase: async (id) => {
-        set((state) => ({ savedCases: state.savedCases.filter((c) => c.id !== id) }));
-        const userId = await getUserId();
-        await applyUserScopedIdFilter(supabase.from('cases').delete(), userId, id);
+        const previous = get().savedCases;
+        set({ savedCases: previous.filter((item) => item.id !== id) });
+        try {
+          const userId = await getUserId();
+          // A missing session must not report success for a row the server still has.
+          if (!userId) throw new Error('[SessionStore] Could not confirm the signed-in user to delete a case');
+          throwOnWriteError(
+            await applyUserScopedIdFilter(supabase.from('cases').delete(), userId, id),
+            'delete case',
+          );
+        } catch (error) {
+          set({ savedCases: previous });
+          throw error;
+        }
       },
       loadSavedCase: (id) => {
         const item = get().savedCases.find((c) => c.id === id);
-        if (item) set({ generateResult: item.data });
+        if (!item) return;
+        const motion = item.data.metadata?.motion?.trim();
+        const side = item.data.metadata?.side;
+        set({
+          generateResult: item.data,
+          // Null means this case is one-off, so a later regenerate does not
+          // borrow whichever debate happens to be open.
+          generateResultDebateId: item.debateId ?? null,
+          generateForm: {
+            ...get().generateForm,
+            ...(motion ? { motion } : {}),
+            ...(side ? { side } : {}),
+          },
+        });
       },
 
       setAttackResult: (result) => {
@@ -827,12 +1087,8 @@ export const useSessionStore = create<SessionState>()(
       saveCurrentAttack: async (title) => {
         const current = get().attackResult;
         if (!current) return;
-        const localItem = { id: generateId(), data: current, createdAt: Date.now(), title };
         const userId = await getUserId();
-        if (!userId) {
-          set((state) => ({ savedAttacks: [localItem, ...state.savedAttacks] }));
-          return;
-        }
+        if (!userId) throw signInRequired('save this attack');
         const { data, error } = await supabase
           .from('attacks')
           .insert({ user_id: userId, title, input: {}, output: current })
@@ -859,12 +1115,8 @@ export const useSessionStore = create<SessionState>()(
       saveCurrentBrainstorm: async (title) => {
         const current = get().brainstormResult;
         if (!current) return;
-        const localItem = { id: generateId(), data: current, createdAt: Date.now(), title };
         const userId = await getUserId();
-        if (!userId) {
-          set((state) => ({ savedBrainstorms: [localItem, ...state.savedBrainstorms] }));
-          return;
-        }
+        if (!userId) throw signInRequired('save this brainstorm');
         const { data, error } = await supabase
           .from('brainstorms')
           .insert({ user_id: userId, title, input: {}, output: current })
@@ -891,12 +1143,8 @@ export const useSessionStore = create<SessionState>()(
       saveCurrentFactoids: async (title) => {
         const current = get().factoidsResult;
         if (!current) return;
-        const localItem = { id: generateId(), data: current, createdAt: Date.now(), title };
         const userId = await getUserId();
-        if (!userId) {
-          set((state) => ({ savedFactoids: [localItem, ...state.savedFactoids] }));
-          return;
-        }
+        if (!userId) throw signInRequired('save these factoids');
         const { data, error } = await supabase
           .from('factoids')
           .insert({ user_id: userId, title, input: {}, output: current })
@@ -915,7 +1163,7 @@ export const useSessionStore = create<SessionState>()(
       addAskMessage: (message) => set((state) => ({
         askMessages: [
           ...state.askMessages,
-          { ...message, id: generateId(), timestamp: Date.now() },
+          { ...message, id: message.id ?? generateId(), timestamp: Date.now() },
         ],
       })),
       setAskLoading: (loading) => set({ askLoading: loading }),
@@ -929,12 +1177,8 @@ export const useSessionStore = create<SessionState>()(
       saveCurrentChat: async (title) => {
         const current = get().askMessages;
         if (current.length === 0) return;
-        const localItem = { id: generateId(), data: current, createdAt: Date.now(), title };
         const userId = await getUserId();
-        if (!userId) {
-          set((state) => ({ savedChats: [localItem, ...state.savedChats] }));
-          return;
-        }
+        if (!userId) throw signInRequired('save this chat');
         const { data: chat, error } = await supabase
           .from('chats')
           .insert({ user_id: userId, title })
@@ -963,12 +1207,8 @@ export const useSessionStore = create<SessionState>()(
       },
 
       saveFlowchart: async (title, data, debateId = activeDebateId()) => {
-        const localItem = { id: generateId(), data, createdAt: Date.now(), title, debateId, side: 'neutral' as const };
         const userId = await getUserId();
-        if (!userId) {
-          set((state) => ({ savedFlowcharts: [localItem, ...state.savedFlowcharts] }));
-          return;
-        }
+        if (!userId) throw signInRequired('save this flowchart');
         const { data: saved, error } = await supabase
           .from('flowcharts')
           .insert({
@@ -997,7 +1237,7 @@ export const useSessionStore = create<SessionState>()(
 
       recordResult: async (kind, { title, input, output, debateId, side }) => {
         const userId = await getUserId();
-        if (!userId) throw new Error('[SessionStore] Sign in to save results to a debate');
+        if (!userId) throw signInRequired('save results to a debate');
         const { data, error } = await supabase
           .from(RESULT_TABLES[kind])
           .insert({ user_id: userId, debate_id: debateId, side, title: title.slice(0, 300) || 'Untitled', input: input ?? {}, output })
@@ -1014,7 +1254,7 @@ export const useSessionStore = create<SessionState>()(
 
       updateRecordedResult: async (kind, id, output) => {
         const userId = await getUserId();
-        if (!userId) return;
+        if (!userId) throw signInRequired('update this result');
         throwOnWriteError(
           await applyUserScopedIdFilter(supabase.from(RESULT_TABLES[kind]).update({ output }), userId, id),
           `update ${kind}`,
@@ -1022,6 +1262,19 @@ export const useSessionStore = create<SessionState>()(
         const list = RESULT_LISTS[kind];
         set((state) => ({
           [list]: (state[list] as SavedItem<unknown>[]).map((item) => item.id === id ? { ...item, data: output } : item),
+        }) as Partial<SessionState>);
+      },
+
+      deleteRecordedResult: async (kind, id) => {
+        const userId = await getUserId();
+        if (!userId) throw signInRequired('delete this result');
+        throwOnWriteError(
+          await applyUserScopedIdFilter(supabase.from(RESULT_TABLES[kind]).delete(), userId, id),
+          `delete ${kind}`,
+        );
+        const list = RESULT_LISTS[kind];
+        set((state) => ({
+          [list]: (state[list] as SavedItem<unknown>[]).filter((item) => item.id !== id),
         }) as Partial<SessionState>);
       },
 
@@ -1048,12 +1301,25 @@ export const useSessionStore = create<SessionState>()(
       },
 
       deleteSavedFlowchart: async (id) => {
+        // Write first: the page offers Undo (a fresh save) only once the row is really gone.
+        // Signed out, charts are local only; signed in, a failed user lookup fails the delete
+        // instead of quietly skipping the server row.
+        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+        if (sessionError) throw sessionError;
+        if (session) {
+          const userId = await getUserId();
+          if (!userId) throw new Error('[SessionStore] Could not confirm the signed-in user to delete a flowchart');
+          const result = await applyUserScopedIdFilter(supabase.from('flowcharts').delete(), userId, id);
+          throwOnWriteError(result, 'delete flowchart');
+        }
         set((state) => ({ savedFlowcharts: state.savedFlowcharts.filter((c) => c.id !== id) }));
-        const userId = await getUserId();
-        await applyUserScopedIdFilter(supabase.from('flowcharts').delete(), userId, id);
       },
 
       hydrateFromServer: async () => {
+        if (restoredSessionsBlocked()) return;
+        const hydrateSeq = sourceWriteSeq;
+        // A switch write already running may land after this read; keep its value too.
+        const writesInFlight = new Set(sourceToggles.keys());
         const results = await Promise.allSettled([
           supabase.from('cases').select('*').order('created_at', { ascending: false }),
           supabase.from('attacks').select('*').order('created_at', { ascending: false }),
@@ -1131,7 +1397,7 @@ export const useSessionStore = create<SessionState>()(
 
         const sourceRows = sourcesData || [];
         const sourceFolderRows = sourceFoldersData || [];
-        const serverSources = sourceRows.map((row) => ({
+        const serverSources = sourceRows.map((row): Source => ({
           id: row.id,
           title: row.title,
           content: row.content,
@@ -1157,7 +1423,16 @@ export const useSessionStore = create<SessionState>()(
           savedChats: chatsData ? serverChats : state.savedChats,
           savedFlowcharts: flowchartsData ? serverFlowcharts : state.savedFlowcharts,
           sourceFolders: mergeSourceFolders([...(sourceFoldersData ? [] : state.sourceFolders), ...serverSourceFolders], sourcesData ? serverSources : state.sourceLibrary),
-          sourceLibrary: sourcesData ? serverSources : state.sourceLibrary,
+          // Rows still saving stay, and a switch flipped after this read began keeps its value.
+          sourceLibrary: sourcesData
+            ? [
+              ...state.sourceLibrary.filter(isPendingSource),
+              ...serverSources.map((source) => {
+                const toggle = lastSourceToggle.get(source.id);
+                return toggle && (toggle.seq > hydrateSeq || writesInFlight.has(source.id)) ? { ...source, isActive: toggle.value } : source;
+              }),
+            ]
+            : state.sourceLibrary,
           serverHydration: casesData && attacksData && brainstormsData && factoidsData && chatsData && crossfiresData ? 'complete' : 'partial',
         }));
       },
@@ -1192,31 +1467,11 @@ export const useSessionStore = create<SessionState>()(
           askPersistedCount: 0,
         });
       },
-      resetLocalData: () => set({
-        serverHydration: 'pending',
-        savedCases: [],
-        savedAttacks: [],
-        savedBrainstorms: [],
-        savedFactoids: [],
-        savedChats: [],
-        savedFlowcharts: [],
-        savedCrossfires: [],
-        autosavedCases: [],
-        autosavedAttacks: [],
-        autosavedBrainstorms: [],
-        autosavedFactoids: [],
-        askChatId: null,
-        askChatDebateId: null,
-        askPersistedCount: 0,
-        sourceFolders: ['General'],
-        sourceLibrary: [],
-        generateResult: null,
-        attackResult: null,
-        brainstormResult: null,
-        factoidsResult: null,
-        askMessages: [],
-        askStreamingAssistant: null,
-      }),
+      resetLocalData: () => set(sessionWorkForAccount(null)),
+      prepareForUser: (userId) => {
+        if (get().ownerUserId === userId) return;
+        set(sessionWorkForAccount(userId));
+      },
 
       clearSession: () => set({
         generateResult: null,
@@ -1230,6 +1485,7 @@ export const useSessionStore = create<SessionState>()(
         askPersistedCount: 0,
         pendingFlowchartData: null,
         generateForm: {},
+        generateResultDebateId: undefined,
         attackForm: {},
         brainstormForm: {},
         factoidsForm: {},
@@ -1237,11 +1493,12 @@ export const useSessionStore = create<SessionState>()(
     }),
     {
       name: 'debate-trainer-storage',
-      storage: createJSONStorage(() => localStorage),
+      storage: resilientLocalStorage(),
       // v1 scopes saved work and sources to debates. Drop lists persisted by
       // older clients: the server replaces them on hydrate, and keeping them
       // would resurrect purged legacy rows and debate-less sources.
       version: 1,
+      merge: mergePersistedSessionState,
       migrate: (persistedState) => {
         const state = { ...(persistedState as Record<string, unknown>) };
         for (const key of [
@@ -1263,7 +1520,11 @@ export const useSessionStore = create<SessionState>()(
         pendingFlowchartData,
         serverHydration,
         ...persisted
-      }) => persisted,
+      }) => ({
+        ...persisted,
+        // A row still saving is not a source yet; the server list has it once it is.
+        sourceLibrary: persisted.sourceLibrary.filter((source) => !isPendingSource(source)),
+      }),
     }
   )
 );
@@ -1277,7 +1538,7 @@ async function syncAskChatNow(debateId: string | null): Promise<void> {
   if (askMessages.length === 0 || askPersistedCount >= askMessages.length) return;
   if (!askChatId && !debateId) return;
   const userId = await getUserId();
-  if (!userId) return;
+  if (!userId) throw signInRequired('save this chat');
   // Clearing or replacing the conversation while a write is in flight must not
   // hand this chat or its count to the next conversation.
   const sameConversation = () => {

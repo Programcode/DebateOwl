@@ -1,234 +1,847 @@
-@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap");
-@import url("https://fonts.googleapis.com/css2?family=Lora:wght@400;500;600;700&display=swap");
-@import url("https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&display=swap");
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+/* Nunito (body) and Fredoka (headings, buttons) are self-hosted (imported in main.tsx), and each
+   fallback is Arial scaled to the web font's metrics (measured in Chromium at the weights the app
+   uses), so the swap doesn't shift the layout. */
 
-/* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
-All colors MUST be HSL.
+@font-face {
+  font-family: "Nunito Fallback";
+  src: local("Arial");
+  size-adjust: 96.8%;
+  ascent-override: 104.4%;
+  descent-override: 36.2%;
+  line-gap-override: 0%;
+}
+
+@font-face {
+  font-family: "Fredoka Fallback";
+  src: local("Arial");
+  size-adjust: 94.4%;
+  ascent-override: 102.8%;
+  descent-override: 25.4%;
+  line-gap-override: 0%;
+}
+
+/* Tailwind scans only the app source, as the v3 config's `content` did. */
+@import "tailwindcss" source(none);
+@source "./**/*.{ts,tsx}";
+@import "tw-animate-css";
+@import "./styles/tokens.css";
+@plugin "@tailwindcss/typography";
+
+@custom-variant dark (&:is(.dark *));
+
+/* v3's hoverOnlyWhenSupported: hover styles only where the primary pointer can really hover. */
+@custom-variant hover {
+  @media (hover: hover) and (pointer: fine) {
+    &:hover {
+      @slot;
+    }
+  }
+}
+
+/* Tokens resolve at runtime, so .dark and prefers-contrast overrides below keep working. */
+@theme inline {
+  --color-border: hsl(var(--border));
+  --color-input: hsl(var(--input));
+  --color-ring: hsl(var(--ring));
+  --color-background: hsl(var(--background));
+  --color-foreground: hsl(var(--foreground));
+  --color-primary: hsl(var(--primary));
+  --color-primary-foreground: hsl(var(--primary-foreground));
+  --color-secondary: hsl(var(--secondary));
+  --color-secondary-foreground: hsl(var(--secondary-foreground));
+  --color-destructive: hsl(var(--destructive));
+  --color-destructive-foreground: hsl(var(--destructive-foreground));
+  --color-muted: hsl(var(--muted));
+  --color-muted-foreground: hsl(var(--muted-foreground));
+  --color-accent: hsl(var(--accent));
+  --color-accent-foreground: hsl(var(--accent-foreground));
+  --color-popover: hsl(var(--popover));
+  --color-popover-foreground: hsl(var(--popover-foreground));
+  --color-card: hsl(var(--card));
+  --color-card-foreground: hsl(var(--card-foreground));
+  --color-success: hsl(var(--success));
+  --color-success-foreground: hsl(var(--success-foreground));
+
+  /* DebateOwl roles (src/styles/tokens.css). */
+  --color-heading: var(--do-heading);
+  --color-brand: var(--do-primary);
+  --color-brand-tint: var(--do-primary-tint);
+  --color-brand-tint-border: var(--do-primary-tint-border);
+  --color-surface-sunken: var(--do-surface-sunken);
+  --color-surface-raised: var(--do-surface-raised);
+  --color-border-strong: var(--do-border-strong);
+  --color-gold: var(--do-accent);
+  --color-on-gold: var(--do-on-accent);
+  --color-gold-tint: var(--do-accent-tint);
+  --color-success-text: var(--do-success-text);
+  --color-success-tint: var(--do-success-tint);
+  --color-danger-text: var(--do-danger-text);
+  --color-danger-tint: var(--do-danger-tint);
+  --color-warning: var(--do-warning);
+  --color-warning-text: var(--do-warning-text);
+  --color-warning-tint: var(--do-warning-tint);
+  --color-pro: var(--do-pro);
+  --color-pro-tint: var(--do-pro-tint);
+
+  /* One radius scale from the design system: chips 10, inputs and tiles 14, buttons and cards 18,
+     sheets and dialogs 24, hero panels 32. */
+  --radius-xs: 6px;
+  --radius-sm: 10px;
+  --radius-md: 14px;
+  --radius-lg: 18px;
+  --radius-xl: 24px;
+  --radius-2xl: 32px;
+
+  --shadow-2xs: var(--app-shadow-2xs);
+  --shadow-xs: var(--app-shadow-xs);
+  --shadow-sm: var(--app-shadow-sm);
+  --shadow-md: var(--app-shadow-md);
+  --shadow-lg: var(--app-shadow-lg);
+  --shadow-xl: var(--app-shadow-xl);
+  --shadow-2xl: var(--app-shadow-2xl);
+}
+
+@theme {
+  --font-sans: 'Nunito Variable', 'Nunito Fallback', ui-rounded, ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-display: 'Fredoka Variable', 'Fredoka Fallback', 'Nunito Variable', ui-rounded, system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono Variable', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', monospace;
+
+  /* Nunito reads thin on navy below 600, so body text starts there and every step moves up one notch. */
+  --font-weight-normal: 600;
+  --font-weight-medium: 650;
+  --font-weight-semibold: 700;
+  --font-weight-bold: 800;
+  --font-weight-extrabold: 900;
+
+  --ease-out-strong: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
+  --ease-overshoot: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --ease-standard: cubic-bezier(0.2, 0, 0, 1);
+
+  /* v3's breakpoints in px, so a larger browser font size doesn't move them. */
+  --breakpoint-sm: 640px;
+  --breakpoint-md: 768px;
+  --breakpoint-lg: 1024px;
+  --breakpoint-xl: 1280px;
+  --breakpoint-2xl: 1536px;
+
+  /* The brand scales, for the few places that need a fixed step. */
+  --color-plume-50: #EEF7FF; --color-plume-100: #D6EAFE; --color-plume-200: #B3D8FC; --color-plume-300: #7CC0FE; --color-plume-400: #4CA6FD; --color-plume-500: #1E8DFB; --color-plume-600: #0A6FF0; --color-plume-700: #0556D6; --color-plume-800: #0342A8; --color-plume-900: #0B2A6E; --color-plume-950: #061442;
+  --color-ink-50: #EFF4FA; --color-ink-100: #E2E9F2; --color-ink-200: #CDD7E4; --color-ink-300: #A9B7C9; --color-ink-400: #8494AB; --color-ink-500: #5F708A; --color-ink-600: #46566F; --color-ink-700: #33425A; --color-ink-800: #1F2B40; --color-ink-900: #131E33; --color-ink-950: #0B1426;
+}
+
+/* The palette families the app still names directly are redrawn in the owl's colours at matching
+   lightness, so every existing class lands on brand: slate is ink, blue/sky/cyan are plume, emerald
+   and green are mint, red and rose are coral (from the tongue), amber is the beak gold. Amber's
+   600-950 steps are darker than Tailwind's so amber text passes AA on white. */
+@theme {
+  --color-slate-50: #EFF4FA; --color-slate-100: #E2E9F2; --color-slate-200: #CDD7E4; --color-slate-300: #A9B7C9; --color-slate-400: #8494AB; --color-slate-500: #5F708A; --color-slate-600: #46566F; --color-slate-700: #33425A; --color-slate-800: #1F2B40; --color-slate-900: #131E33; --color-slate-950: #0B1426;
+  --color-blue-50: #EEF7FF; --color-blue-100: #D6EAFE; --color-blue-200: #B3D8FC; --color-blue-300: #7CC0FE; --color-blue-400: #4CA6FD; --color-blue-500: #1E8DFB; --color-blue-600: #0A6FF0; --color-blue-700: #0556D6; --color-blue-800: #0342A8; --color-blue-900: #0B2A6E; --color-blue-950: #061442;
+  --color-sky-50: #EEF7FF; --color-sky-100: #D6EAFE; --color-sky-200: #B3D8FC; --color-sky-300: #7CC0FE; --color-sky-400: #4CA6FD; --color-sky-500: #1E8DFB; --color-sky-600: #0A6FF0; --color-sky-700: #0556D6; --color-sky-800: #0342A8; --color-sky-900: #0B2A6E; --color-sky-950: #061442;
+  --color-cyan-50: #EEF7FF; --color-cyan-100: #D6EAFE; --color-cyan-200: #B3D8FC; --color-cyan-300: #7CC0FE; --color-cyan-400: #4CA6FD; --color-cyan-500: #1E8DFB; --color-cyan-600: #0A6FF0; --color-cyan-700: #0556D6; --color-cyan-800: #0342A8; --color-cyan-900: #0B2A6E; --color-cyan-950: #061442;
+  --color-emerald-50: #E6FBF3; --color-emerald-100: #C2F3E0; --color-emerald-200: #8FE8C6; --color-emerald-300: #55DBAB; --color-emerald-400: #2FD39A; --color-emerald-500: #14B37D; --color-emerald-600: #0A8058; --color-emerald-700: #0A6849; --color-emerald-800: #075A40; --color-emerald-900: #06402E; --color-emerald-950: #06291D;
+  --color-green-50: #E6FBF3; --color-green-100: #C2F3E0; --color-green-200: #8FE8C6; --color-green-300: #55DBAB; --color-green-400: #2FD39A; --color-green-500: #14B37D; --color-green-600: #0A8058; --color-green-700: #0A6849; --color-green-800: #075A40; --color-green-900: #06402E; --color-green-950: #06291D;
+  --color-red-50: #FFEDEE; --color-red-100: #FFD3D5; --color-red-200: #FFADB0; --color-red-300: #FF8A8E; --color-red-400: #FF6B70; --color-red-500: #F0454B; --color-red-600: #D23239; --color-red-700: #B32A30; --color-red-800: #7E1B20; --color-red-900: #6B171B; --color-red-950: #3F0C0F;
+  --color-rose-50: #FFEDEE; --color-rose-100: #FFD3D5; --color-rose-200: #FFADB0; --color-rose-300: #FF8A8E; --color-rose-400: #FF6B70; --color-rose-500: #F0454B; --color-rose-600: #D23239; --color-rose-700: #B32A30; --color-rose-800: #7E1B20; --color-rose-900: #6B171B; --color-rose-950: #3F0C0F;
+  --color-amber-50: #FFF8DB; --color-amber-100: #FFEFB0; --color-amber-200: #FCE48A; --color-amber-300: #FFD95A; --color-amber-400: #FFC414; --color-amber-500: #F39A00; --color-amber-600: #A15C06; --color-amber-700: #9A5806; --color-amber-800: #7A4405; --color-amber-900: #6B3D05; --color-amber-950: #3D2203;
+  --color-orange-50: #fff7ed; --color-orange-100: #ffedd5; --color-orange-200: #fed7aa; --color-orange-300: #fdba74; --color-orange-400: #fb923c; --color-orange-500: #f97316; --color-orange-600: #ea580c; --color-orange-700: #c2410c; --color-orange-800: #9a3412; --color-orange-900: #7c2d12; --color-orange-950: #431407;
+  --color-yellow-50: #fefce8; --color-yellow-100: #fef9c3; --color-yellow-200: #fef08a; --color-yellow-300: #fde047; --color-yellow-400: #facc15; --color-yellow-500: #eab308; --color-yellow-600: #ca8a04; --color-yellow-700: #a16207; --color-yellow-800: #854d0e; --color-yellow-900: #713f12; --color-yellow-950: #422006;
+}
+
+/* v3's container: centred, 2rem padding, capped at 1400px. */
+@utility container {
+  margin-inline: auto;
+  padding-inline: 2rem;
+  @media (width >= 640px) {
+    max-width: none;
+  }
+  @media (width >= 1400px) {
+    max-width: 1400px;
+  }
+}
+
+/* v3's space-x/space-y: a margin on each following sibling (and none after it). v4 puts the margin on
+   every child but the last instead, which an inline element ignores, so a Label above its field lost
+   its gap. v4 still emits its own rule at zero specificity; the :not(html) rule (one type selector's
+   weight) cancels it on the first child without overriding that child's own mb-* or me-* utility. */
+@utility space-y-* {
+  & > :not([hidden]) ~ :not([hidden]) {
+    margin-top: calc(var(--spacing) * --value(number));
+    margin-bottom: 0;
+  }
+
+  :where(& > :not(:last-child)):not(html) {
+    margin-block-end: 0;
+  }
+}
+
+@utility space-x-* {
+  & > :not([hidden]) ~ :not([hidden]) {
+    margin-left: calc(var(--spacing) * --value(number));
+    margin-right: 0;
+  }
+
+  :where(& > :not(:last-child)):not(html) {
+    margin-inline-end: 0;
+  }
+}
+
+/* The hover lift and the press state outrank a button's own shadow-* and duration-* classes, as they
+   did when v3 emitted components unlayered; in v4's components layer every utility would beat them. */
+@utility motion-lift {
+  @media (hover: hover) and (pointer: fine) {
+    &:not(:disabled):not([aria-disabled='true']):hover {
+      transform: translateY(-1px);
+      box-shadow: 0 8px 20px hsl(var(--foreground) / 0.08);
+    }
+  }
+}
+
+@utility motion-press {
+  &:not(:disabled):not([aria-disabled='true']):active {
+    transform: scale(var(--motion-press-scale));
+    transition-duration: var(--motion-duration-press);
+  }
+}
+
+/* Definition of the design system. The shadcn roles below are HSL triplets (consumed as
+hsl(var(--x) / a)); their values come from the DebateOwl tokens in src/styles/tokens.css.
+--primary is the brand blue at text strength (plume-700 light, plume-400 dark) so text-primary
+passes AA on every surface; buttons fill with --do-primary (#0A6FF0) and white text.
 */
 
 @layer base {
   :root {
-    --background: 209 40% 96%;
-    --foreground: 222 47% 11%;
+    --background: 214 77.8% 98.2%; /* ink-25 #F7FAFE */
+    --foreground: 218 34.7% 18.6%; /* ink-800 #1F2B40 */
 
-    --card: 210 40% 98%;
-    --card-foreground: 222 47% 11%;
+    --card: 0 0% 100%;
+    --card-foreground: 218 34.7% 18.6%;
 
-    --popover: 214 31% 91%;
-    --popover-foreground: 222 47% 11%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 218 34.7% 18.6%;
 
-    --primary: 200 98% 39%;
-    --primary-foreground: 204 100% 97%;
+    --primary: 217 95.4% 42.9%; /* plume-700 #0556D6 */
+    --primary-foreground: 0 0% 100%;
 
-    --secondary: 215 24% 26%;
-    --secondary-foreground: 210 40% 98%;
+    --secondary: 214 38.1% 91.8%; /* ink-100 #E2E9F2 */
+    --secondary-foreground: 221 81.8% 23.7%; /* plume-900 #0B2A6E */
 
-    --muted: 215 20% 65%;
-    --muted-foreground: 222 47% 11%;
+    --muted: 213 52.4% 95.9%; /* ink-50 #EFF4FA */
+    --muted-foreground: 217 21.9% 41.2%; /* #526380, 5:1 even on ink-100 */
 
-    --accent: 210 40% 98%;
-    --accent-foreground: 215 19% 34%;
+    --accent: 208 100% 96.7%; /* plume-50 #EEF7FF */
+    --accent-foreground: 221 81.8% 23.7%;
 
-    --destructive: 0 72% 50%;
-    --destructive-foreground: 0 85% 97%;
+    --destructive: 357 64% 51%; /* coral-600 #D23239 */
+    --destructive-foreground: 0 0% 100%;
 
-    --border: 212 26% 83%;
-    --input: 212 26% 83%;
-    --ring: 200 98% 39%;
+    --success: 160 79.9% 39%; /* mint-500 #14B37D, always with a check mark */
+    --success-foreground: 159 74.5% 9.2%; /* mint-800 #06291D */
 
-    --radius: 0.5rem;
+    --border: 214 38.1% 91.8%; /* ink-100 #E2E9F2 */
+    --input: 215 18.8% 59.4%; /* ink-400 #8494AB, 3:1 on white */
+    --ring: 217 95.4% 42.9%;
 
-    --chart-1: 198 93% 59%;
+    --radius: 1.125rem;
 
-    --chart-2: 213 93% 67%;
+    --chart-1: 214 92% 49%; /* plume-600 */
+    --chart-2: 41 94.4% 50.6%; /* gold-500 */
+    --chart-3: 160 79.9% 39%; /* mint-500 */
+    --chart-4: 358 85.1% 60.6%; /* coral-500 */
+    --chart-5: 215 18.8% 59.4%; /* ink-400 */
 
-    --chart-3: 215 20% 65%;
-
-    --chart-4: 215 16% 46%;
-
-    --chart-5: 215 19% 34%;
-
-
-    --font-sans: 'Inter', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans', sans-serif;
-
-    --font-serif: 'Lora', ui-serif, Georgia, Cambria, 'Times New Roman', Times, serif;
-
-    --font-mono: 'Space Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
-
-    --shadow-2xs: 0 1px 3px 0px hsl(0 0% 0% / 0.05);
-
-    --shadow-xs: 0 1px 3px 0px hsl(0 0% 0% / 0.05);
-
-    --shadow-sm: 0 1px 3px 0px hsl(0 0% 0% / 0.1), 0 1px 2px -1px hsl(0 0% 0% / 0.1);
-
-    --shadow: 0 1px 3px 0px hsl(0 0% 0% / 0.1), 0 1px 2px -1px hsl(0 0% 0% / 0.1);
-
-    --shadow-md: 0 1px 3px 0px hsl(0 0% 0% / 0.1), 0 2px 4px -1px hsl(0 0% 0% / 0.1);
-
-    --shadow-lg: 0 1px 3px 0px hsl(0 0% 0% / 0.1), 0 4px 6px -1px hsl(0 0% 0% / 0.1);
-
-    --shadow-xl: 0 1px 3px 0px hsl(0 0% 0% / 0.1), 0 8px 10px -1px hsl(0 0% 0% / 0.1);
-
-    --shadow-2xl: 0 1px 3px 0px hsl(0 0% 0% / 0.25);
-
-    --tracking-normal: 0em;
-
-    --spacing: 0.25rem;
+    /* Navy-tinted elevation: e1 cards, e2 popovers and toasts, e3 dialogs. */
+    --app-shadow-2xs: 0 1px 2px rgb(11 42 110 / 0.05);
+    --app-shadow-xs: 0 1px 2px rgb(11 42 110 / 0.06);
+    --app-shadow-sm: 0 1px 2px rgb(11 42 110 / 0.06), 0 2px 6px rgb(11 42 110 / 0.06);
+    --app-shadow-md: 0 2px 6px rgb(11 42 110 / 0.07), 0 6px 16px rgb(11 42 110 / 0.07);
+    --app-shadow-lg: 0 4px 10px rgb(11 42 110 / 0.08), 0 8px 24px rgb(11 42 110 / 0.08);
+    --app-shadow-xl: 0 12px 32px rgb(11 42 110 / 0.16), 0 2px 6px rgb(11 42 110 / 0.08);
+    --app-shadow-2xl: 0 24px 56px rgb(11 42 110 / 0.22);
   }
 
   .dark {
-    --background: 222 47% 11%;
-    --foreground: 210 40% 98%;
+    --background: 220 55.1% 9.6%; /* ink-950 #0B1426 */
+    --foreground: 219 100% 96.7%; /* #EEF4FF */
 
-    --card: 217 32% 17%;
-    --card-foreground: 210 40% 98%;
+    --card: 219 45.7% 13.7%; /* #131E33 */
+    --card-foreground: 219 100% 96.7%;
 
-    --popover: 215 24% 26%;
-    --popover-foreground: 210 40% 98%;
+    --popover: 219 41.7% 18.8%; /* #1C2A44 */
+    --popover-foreground: 219 100% 96.7%;
 
-    --primary: 198 93% 59%;
-    --primary-foreground: 204 80% 15%;
+    --primary: 209 97.8% 64.5%; /* plume-400 #4CA6FD */
+    --primary-foreground: 226 83.3% 14.1%; /* plume-950 */
 
-    --secondary: 212 26% 83%;
-    --secondary-foreground: 228 84% 4%;
+    --secondary: 220 36.3% 22.2%; /* #24324D */
+    --secondary-foreground: 219 100% 96.7%;
 
-    --muted: 215 16% 46%;
-    --muted-foreground: 210 40% 98%;
+    --muted: 219 41.7% 18.8%;
+    --muted-foreground: 214 22.9% 72.5%; /* ink-300 #A9B7C9 */
 
-    --accent: 228 84% 4%;
-    --accent-foreground: 215 20% 65%;
+    --accent: 221 70.2% 18.4%; /* plume tint #0E2350 */
+    --accent-foreground: 219 100% 96.7%;
 
-    --destructive: 0 84% 60%;
-    --destructive-foreground: 0 85% 97%;
+    --destructive: 358 100% 71%; /* coral-400 #FF6B70 */
+    --destructive-foreground: 220 55.1% 9.6%;
 
-    --border: 215 19% 34%;
-    --input: 215 19% 34%;
-    --ring: 198 93% 59%;
-    --chart-1: 199 95% 73%;
-    --chart-2: 211 96% 78%;
-    --chart-3: 215 20% 65%;
-    --chart-4: 215 16% 46%;
-    --chart-5: 215 19% 34%;
-    --shadow-2xs: 0 1px 3px 0px hsl(0 0% 0% / 0.05);
-    --shadow-xs: 0 1px 3px 0px hsl(0 0% 0% / 0.05);
-    --shadow-sm: 0 1px 3px 0px hsl(0 0% 0% / 0.1), 0 1px 2px -1px hsl(0 0% 0% / 0.1);
-    --shadow: 0 1px 3px 0px hsl(0 0% 0% / 0.1), 0 1px 2px -1px hsl(0 0% 0% / 0.1);
-    --shadow-md: 0 1px 3px 0px hsl(0 0% 0% / 0.1), 0 2px 4px -1px hsl(0 0% 0% / 0.1);
-    --shadow-lg: 0 1px 3px 0px hsl(0 0% 0% / 0.1), 0 4px 6px -1px hsl(0 0% 0% / 0.1);
-    --shadow-xl: 0 1px 3px 0px hsl(0 0% 0% / 0.1), 0 8px 10px -1px hsl(0 0% 0% / 0.1);
-    --shadow-2xl: 0 1px 3px 0px hsl(0 0% 0% / 0.25);
+    --success: 159 65.1% 50.6%; /* mint-400 #2FD39A */
+    --success-foreground: 159 74.5% 9.2%;
+
+    --border: 220 36.3% 22.2%; /* #24324D */
+    --input: 216 18.5% 45.7%; /* ink-500 #5F708A, 3.3:1 on cards */
+    --ring: 46 100% 67.6%; /* gold-300 #FFD95A */
+    --chart-1: 209 97.8% 64.5%;
+    --chart-2: 45 100% 53.9%;
+    --chart-3: 159 65.1% 50.6%;
+    --chart-4: 358 100% 71%;
+    --chart-5: 214 22.9% 72.5%;
+    /* Shadows vanish on navy, so dark elevation is black at higher alpha plus a 1px top highlight. */
+    --app-shadow-2xs: 0 1px 2px rgb(0 0 0 / 0.3);
+    --app-shadow-xs: 0 1px 2px rgb(0 0 0 / 0.3);
+    --app-shadow-sm: inset 0 1px 0 rgb(255 255 255 / 0.04), 0 2px 6px rgb(0 0 0 / 0.35);
+    --app-shadow-md: inset 0 1px 0 rgb(255 255 255 / 0.04), 0 4px 12px rgb(0 0 0 / 0.4);
+    --app-shadow-lg: inset 0 1px 0 rgb(255 255 255 / 0.05), 0 8px 24px rgb(0 0 0 / 0.45);
+    --app-shadow-xl: inset 0 1px 0 rgb(255 255 255 / 0.06), 0 16px 40px rgb(0 0 0 / 0.55);
+    --app-shadow-2xl: 0 24px 56px rgb(0 0 0 / 0.6);
   }
 }
 
 @layer base {
-  * {
+  /* v4's preflight defaults borders to currentColor; v3's was a fixed grey, so set ours everywhere. */
+  *,
+  ::after,
+  ::before,
+  ::backdrop,
+  ::file-selector-button {
     @apply border-border;
+  }
+
+  /* v3 defaults that v4's preflight dropped: placeholders and pointer buttons. Placeholders use
+     ink-500 (light) and ink-400 (dark), both above 4.5:1 on their field. */
+  input::placeholder,
+  textarea::placeholder {
+    color: var(--do-ink-500);
+    opacity: 1;
+  }
+
+  .dark input::placeholder,
+  .dark textarea::placeholder {
+    color: var(--do-ink-400);
+  }
+
+  button:not(:disabled),
+  [role="button"]:not(:disabled) {
+    cursor: pointer;
+  }
+
+  /* v4 zeroes every element's padding; v3 kept the browser's 1px in table cells. */
+  th,
+  td {
+    padding: 1px;
   }
 
   body {
     @apply bg-background text-foreground;
+    font-weight: 600;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
+
+  /* Page titles are Fredoka in navy, the colour of the owl's outline. */
+  h1 {
+    font-family: var(--font-display);
+    letter-spacing: -0.015em;
+  }
+
+  /* Numbers that change in place (timers, counters) never jitter. */
+  time,
+  [role="timer"] {
+    font-variant-numeric: tabular-nums;
   }
 
   html, body, #root {
     min-height: 100%;
   }
 
+  html {
+    -webkit-tap-highlight-color: transparent;
+  }
+
   ::selection {
-    background: hsl(var(--primary) / 0.2);
-    color: hsl(var(--foreground));
+    background: var(--do-gold-200);
+    color: var(--do-plume-950);
   }
 
   :root {
+    --motion-duration-press: 100ms;
     --motion-duration-fast: 160ms;
-    --motion-duration-normal: 260ms;
+    --motion-duration-normal: 200ms;
     --motion-duration-slow: 420ms;
     --motion-ease-fluid: cubic-bezier(0.22, 1, 0.36, 1);
-    --motion-press-scale: 0.985;
+    --motion-ease-out-strong: cubic-bezier(0.23, 1, 0.32, 1);
+    --motion-press-scale: 0.97;
+
+    --native-safe-top: env(safe-area-inset-top, 0px);
+    --native-safe-right: env(safe-area-inset-right, 0px);
+    --native-safe-bottom: env(safe-area-inset-bottom, 0px);
+    --native-safe-left: env(safe-area-inset-left, 0px);
   }
 
   html {
     scroll-behavior: smooth;
   }
 
-  html, body {
-    transition: background-color var(--motion-duration-slow) var(--motion-ease-fluid),
-                color var(--motion-duration-slow) var(--motion-ease-fluid);
+  /* One focus system: a 3px ring (plume-700 light, gold-300 dark). Primitives that draw their own
+     ring use focus-visible:outline-hidden and the same --ring colour. */
+  :focus-visible {
+    outline: 3px solid hsl(var(--ring));
+    outline-offset: 2px;
+  }
+
+  button, a, input, select, textarea, [role="button"] {
+    transition-property: color, background-color, border-color, opacity;
+    transition-duration: var(--motion-duration-fast);
+    transition-timing-function: var(--motion-ease-fluid);
+  }
+}
+
+/* The theme switch crossfades once (ThemeProvider) instead of rippling at three speeds. */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: 200ms;
+  animation-timing-function: var(--motion-ease-out-strong);
+}
+
+.theme-switching,
+.theme-switching *,
+.theme-switching *::before,
+.theme-switching *::after {
+  transition: none !important;
+}
+
+/* Tactile buttons (style guide .do-btn). A solid ledge sits under the face, drawn as a box-shadow so
+   nothing shifts in layout. Hover lifts the face 1px; press sinks it onto its ledge in 70ms and it
+   springs back on release. Variants only swap the custom properties. These live in the components
+   layer, so a call site's own bg-*, text-* or h-* utilities still win. */
+@layer components {
+  .btn {
+    --btn-face: var(--do-primary);
+    --btn-hover: #0763E2;
+    --btn-fg: var(--do-on-primary);
+    --btn-edge: transparent;
+    --btn-ledge-color: var(--do-primary-ledge);
+    --btn-ledge: 4px;
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    white-space: nowrap;
+    border: 2px solid var(--btn-edge);
+    border-radius: var(--radius-lg);
+    background-color: var(--btn-face);
+    color: var(--btn-fg);
+    font-family: var(--font-display);
+    font-weight: 600;
+    letter-spacing: 0.01em;
+    line-height: 1.25;
+    box-shadow: 0 var(--btn-ledge) 0 var(--btn-ledge-color);
+    transform: translateY(0);
+    transition:
+      transform 180ms var(--do-ease-overshoot),
+      box-shadow 180ms var(--do-ease-overshoot),
+      background-color 120ms var(--do-ease-standard),
+      border-color 120ms var(--do-ease-standard),
+      color 120ms var(--do-ease-standard),
+      opacity 120ms var(--do-ease-standard);
+    user-select: none;
+    -webkit-user-select: none;
+    touch-action: manipulation;
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    .btn:not(:disabled):not([aria-disabled='true']):hover {
+      background-color: var(--btn-hover);
+      transform: translateY(-1px);
+      box-shadow: 0 calc(var(--btn-ledge) + 1px) 0 var(--btn-ledge-color);
+    }
+  }
+
+  .btn:not(:disabled):not([aria-disabled='true']):active,
+  .btn[data-pressed] {
+    transform: translateY(var(--btn-ledge));
+    box-shadow: 0 0 0 var(--btn-ledge-color);
+    transition-duration: 70ms;
+    transition-timing-function: var(--do-ease-press);
+  }
+
+  .btn:focus-visible {
+    outline: 3px solid var(--do-focus-ring);
+    outline-offset: 2px;
+    box-shadow: 0 var(--btn-ledge) 0 var(--btn-ledge-color), 0 0 0 7px var(--do-focus-glow);
+  }
+
+  /* A busy button (loading, or aria-busy while its request runs) keeps its face; only idle disabled
+     buttons go grey. */
+  .btn:disabled:not([data-loading]):not([aria-busy='true']),
+  .btn[aria-disabled='true']:not([data-loading]):not([aria-busy='true']) {
+    --btn-face: var(--do-disabled-face);
+    --btn-hover: var(--do-disabled-face);
+    --btn-fg: var(--do-disabled-text);
+    --btn-edge: transparent;
+    --btn-ledge: 0px;
+    cursor: not-allowed;
+  }
+
+  .btn[data-loading],
+  .btn[aria-busy='true'] {
+    cursor: progress;
+  }
+
+  .btn[data-loading] {
+    pointer-events: none;
+  }
+
+  .btn-primary {
+    /* The defaults above. */
+  }
+
+  .btn-accent {
+    --btn-face: var(--do-accent);
+    --btn-hover: var(--do-accent-hover);
+    --btn-fg: var(--do-on-accent);
+    --btn-ledge-color: var(--do-accent-ledge);
+  }
+
+  .btn-success {
+    --btn-face: var(--do-success);
+    --btn-hover: var(--do-mint-400);
+    --btn-fg: var(--do-on-success);
+    --btn-ledge-color: var(--do-success-ledge);
+  }
+
+  .btn-destructive {
+    --btn-face: var(--do-danger);
+    --btn-hover: var(--do-coral-700);
+    --btn-fg: var(--do-on-danger);
+    --btn-ledge-color: var(--do-danger-ledge);
+  }
+
+  .dark .btn-destructive {
+    --btn-hover: var(--do-coral-300);
+  }
+
+  /* The style guide's secondary: a white face with a strong edge and blue text. */
+  .btn-outline {
+    --btn-face: var(--do-surface);
+    --btn-hover: var(--do-primary-tint);
+    --btn-fg: var(--do-plume-700);
+    --btn-edge: var(--do-border-strong);
+    --btn-ledge-color: var(--do-border-strong);
+    --btn-ledge: 3px;
+  }
+
+  .dark .btn-outline {
+    --btn-face: var(--do-surface-raised);
+    --btn-hover: var(--do-primary-tint);
+    --btn-fg: var(--do-plume-300);
+    --btn-edge: var(--do-border-strong);
+    --btn-ledge-color: var(--do-ledge-neutral);
+  }
+
+  /* Tonal: a blue tint with a blue ledge, quieter than primary. */
+  .btn-secondary {
+    --btn-face: var(--do-plume-100);
+    --btn-hover: var(--do-plume-50);
+    --btn-fg: var(--do-plume-800);
+    --btn-ledge-color: var(--do-plume-200);
+    --btn-ledge: 3px;
+  }
+
+  .dark .btn-secondary {
+    --btn-face: var(--do-primary-tint);
+    --btn-hover: #132C62;
+    --btn-fg: var(--do-plume-200);
+    --btn-ledge-color: var(--do-plume-950);
+  }
+
+  /* Ghost and link have no ledge: they sit flat and answer with a tint or an underline. */
+  .btn-ghost,
+  .btn-link {
+    --btn-face: transparent;
+    --btn-ledge: 0px;
+    --btn-ledge-color: transparent;
+    box-shadow: none;
+  }
+
+  .btn-ghost {
+    --btn-hover: hsl(var(--accent));
+    color: inherit;
+    font-family: var(--font-sans);
+    font-weight: 700;
+    letter-spacing: 0;
+  }
+
+  .btn-ghost:not(:disabled):active {
+    transform: scale(0.96);
+  }
+
+  .btn-link {
+    --btn-hover: transparent;
+    --btn-fg: hsl(var(--primary));
+    text-underline-offset: 4px;
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    .btn-ghost:not(:disabled):hover,
+    .btn-link:not(:disabled):hover {
+      transform: none;
+      box-shadow: none;
+    }
+
+    .btn-ghost:not(:disabled):hover {
+      color: hsl(var(--accent-foreground));
+    }
+
+    .btn-link:not(:disabled):hover {
+      text-decoration: underline;
+    }
+  }
+
+  .btn-ghost:disabled,
+  .btn-link:disabled {
+    --btn-face: transparent;
+    opacity: 0.5;
+  }
+
+  .btn-ghost:focus-visible,
+  .btn-link:focus-visible {
+    box-shadow: 0 0 0 7px var(--do-focus-glow);
+  }
+
+  /* The "thinking" dots that replace a spinner: three dots bouncing on a 120ms stagger. */
+  .thinking-dots {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.22em;
+  }
+
+  .thinking-dots > i {
+    width: 0.4em;
+    height: 0.4em;
+    border-radius: 9999px;
+    background: currentColor;
+    animation: thinking-dot 900ms var(--do-ease-standard) infinite;
+  }
+
+  .thinking-dots > i:nth-child(2) {
+    animation-delay: 120ms;
+  }
+
+  .thinking-dots > i:nth-child(3) {
+    animation-delay: 240ms;
+  }
+
+  /* A tappable card: the action card of the design system, pressing down like a button. */
+  .tile {
+    border: 2px solid var(--do-border);
+    background-color: var(--do-surface);
+    box-shadow: 0 3px 0 var(--do-border-strong);
+    transition:
+      transform 180ms var(--do-ease-overshoot),
+      box-shadow 180ms var(--do-ease-overshoot),
+      border-color 120ms var(--do-ease-standard),
+      background-color 120ms var(--do-ease-standard);
+  }
+
+  .dark .tile {
+    box-shadow: 0 3px 0 var(--do-ledge-neutral);
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    .tile:hover {
+      border-color: var(--do-primary-tint-border);
+      transform: translateY(-1px);
+      box-shadow: 0 4px 0 var(--do-primary-tint-border);
+    }
+  }
+
+  .tile:active {
+    transform: translateY(3px);
+    box-shadow: 0 0 0 var(--do-border-strong);
+    transition-duration: 70ms;
+    transition-timing-function: var(--do-ease-press);
+  }
+
+  .tile[aria-pressed='true'],
+  .tile[aria-checked='true'],
+  .tile[data-selected='true'] {
+    border-color: var(--do-primary);
+    background-color: var(--do-primary-tint);
+    box-shadow: 0 3px 0 var(--do-primary);
+  }
+
+  /* Progress fills carry a glassy highlight along their top edge. */
+  .progress-fill {
+    position: relative;
+  }
+
+  .progress-fill::after {
+    content: '';
+    position: absolute;
+    top: 3px;
+    right: 8px;
+    left: 8px;
+    height: 3px;
+    border-radius: 9999px;
+    background: rgb(255 255 255 / 0.35);
+  }
+
+  /* Skeleton shapes shimmer left to right once loading takes more than a moment. */
+  .skeleton-shimmer {
+    position: relative;
+    overflow: hidden;
+    background-color: var(--do-skeleton);
+  }
+
+  .skeleton-shimmer::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    transform: translateX(-100%);
+    background: linear-gradient(90deg, transparent, rgb(255 255 255 / 0.55), transparent);
+    animation: skeleton-shimmer 1.2s linear infinite;
+  }
+
+  .dark .skeleton-shimmer::after {
+    background: linear-gradient(90deg, transparent, rgb(255 255 255 / 0.06), transparent);
+  }
+}
+
+@keyframes thinking-dot {
+  0%, 60%, 100% {
+    transform: translateY(0);
+  }
+  30% {
+    transform: translateY(-0.35em);
+  }
+}
+
+@keyframes skeleton-shimmer {
+  to {
+    transform: translateX(100%);
   }
 }
 
 /* Landing Page Utilities */
 @layer components {
   .glass-card {
-    @apply bg-card backdrop-blur-xl border border-border rounded-2xl shadow-sm;
-    background: linear-gradient(135deg, hsl(var(--card)) 0%, hsl(198 35% 90%) 100%);
+    @apply bg-card border-2 border-border rounded-xl;
   }
 
-  .dark .glass-card {
-    background: linear-gradient(135deg, hsl(var(--card)) 0%, hsl(217 32% 20%) 100%);
+  /* The landing CTAs are links, so they share the tactile button: a ledge that presses down. */
+  .btn-primary-gradient,
+  .btn-secondary-outline {
+    --btn-ledge: 5px;
+    position: relative;
+    padding: 0.75rem 1.5rem;
+    border-radius: var(--radius-lg);
+    font-family: var(--font-display);
+    font-weight: 600;
+    letter-spacing: 0.01em;
+    transform: translateY(0);
+    transition:
+      transform 180ms var(--do-ease-overshoot),
+      box-shadow 180ms var(--do-ease-overshoot),
+      background-color 120ms var(--do-ease-standard),
+      border-color 120ms var(--do-ease-standard),
+      color 120ms var(--do-ease-standard);
+    touch-action: manipulation;
   }
-
 
   .btn-primary-gradient {
-    @apply relative px-6 py-3 font-semibold text-primary-foreground rounded-xl overflow-hidden transition-all duration-300 shadow-lg;
-    background: linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(169 72% 40%) 100%);
-  }
-
-  .btn-primary-gradient::before {
-    content: '';
-    @apply absolute inset-0 opacity-0 transition-opacity duration-300;
-    background: linear-gradient(135deg, hsl(200 92% 32%) 0%, hsl(169 72% 34%) 100%);
-  }
-
-  .btn-primary-gradient:hover::before {
-    @apply opacity-100;
-  }
-
-  .btn-primary-gradient:hover {
-    @apply shadow-xl;
-    box-shadow: 0 10px 40px hsl(var(--primary) / 0.3);
+    --btn-ledge-color: var(--do-primary-ledge);
+    border: 2px solid transparent;
+    background-color: var(--do-primary);
+    color: var(--do-on-primary);
+    box-shadow: 0 var(--btn-ledge) 0 var(--btn-ledge-color);
   }
 
   .btn-secondary-outline {
-    @apply px-6 py-3 font-semibold text-foreground rounded-xl border border-border bg-card transition-all duration-300 shadow-sm;
+    --btn-ledge-color: var(--do-border-strong);
+    border: 2px solid var(--do-border-strong);
+    background-color: var(--do-surface);
+    color: var(--do-plume-700);
+    box-shadow: 0 var(--btn-ledge) 0 var(--btn-ledge-color);
   }
 
-  .btn-secondary-outline:hover {
-    @apply bg-secondary border-primary/30 shadow-md;
-    color: hsl(var(--secondary-foreground));
+  .dark .btn-secondary-outline {
+    --btn-ledge-color: var(--do-ledge-neutral);
+    background-color: var(--do-surface-raised);
+    color: var(--do-plume-300);
   }
 
-  .shimmer {
-    @apply relative overflow-hidden;
+  @media (hover: hover) and (pointer: fine) {
+    .btn-primary-gradient:hover,
+    .btn-secondary-outline:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 calc(var(--btn-ledge) + 1px) 0 var(--btn-ledge-color);
+    }
+
+    .btn-primary-gradient:hover {
+      background-color: #0763E2;
+    }
+
+    .btn-secondary-outline:hover {
+      background-color: var(--do-primary-tint);
+    }
   }
 
-  .shimmer::after {
-    content: '';
-    @apply absolute inset-0;
-    background: linear-gradient(90deg, transparent, hsl(0 0% 100% / 0.3), transparent);
-    transform: translateX(-100%);
-    animation: shimmer 3s infinite;
+  .btn-primary-gradient:active,
+  .btn-secondary-outline:active {
+    transform: translateY(var(--btn-ledge));
+    box-shadow: 0 0 0 var(--btn-ledge-color);
+    transition-duration: 70ms;
+    transition-timing-function: var(--do-ease-press);
   }
 
+  .btn-primary-gradient:focus-visible,
+  .btn-secondary-outline:focus-visible {
+    outline: 3px solid var(--do-focus-ring);
+    outline-offset: 2px;
+  }
+
+  /* Landing section headings: Fredoka in navy, one size scale and one tracking per size. Each size
+     brings its own line height (v4's leading-* would otherwise win at every breakpoint). */
+  .section-heading {
+    @apply text-balance font-display text-3xl font-[600] leading-tight tracking-[-0.015em] text-heading md:text-4xl md:leading-10 lg:text-5xl lg:leading-none lg:tracking-[-0.02em];
+  }
+
+  /* Backgrounds are static: nothing on the landing page moves on its own. The hero owl waves once
+     as it arrives and blinks now and then; it does not breathe there. */
   .animated-grid {
-    background-image: 
+    background-image:
       linear-gradient(hsl(var(--border) / 0.8) 1px, transparent 1px),
       linear-gradient(90deg, hsl(var(--border) / 0.8) 1px, transparent 1px);
     background-size: 60px 60px;
-    animation: gridMove 20s linear infinite;
   }
 
+  /* Cards answer hover with an edge and a shadow; they don't lift or tilt (they aren't clickable). */
   .feature-card {
-    @apply glass-card p-6 transition-all duration-500 hover:shadow-lg;
-    transform-style: preserve-3d;
+    @apply bg-card border-2 border-border rounded-xl p-6;
+    transition:
+      border-color var(--motion-duration-normal) var(--motion-ease-fluid),
+      box-shadow var(--motion-duration-normal) var(--motion-ease-fluid);
   }
 
-  .feature-card:hover {
-    @apply border-primary/40;
-    box-shadow: 0 20px 40px hsl(var(--foreground) / 0.08);
-    transform: translateY(-4px) rotateX(2deg) rotateY(2deg);
+  @media (hover: hover) and (pointer: fine) {
+    .feature-card:hover {
+      border-color: var(--do-primary-tint-border);
+      box-shadow: var(--app-shadow-lg);
+    }
   }
 
   .orb {
@@ -237,20 +850,18 @@ All colors MUST be HSL.
 
   .orb-primary {
     background: hsl(var(--primary) / 0.3);
-    animation: float 8s ease-in-out infinite;
   }
 
+  /* The owl's two colours: a plume glow and a beak-gold glow. */
   .orb-accent {
-    background: hsl(169 72% 45% / 0.22);
-    animation: float 10s ease-in-out infinite reverse;
+    background: rgb(255 196 20 / 0.2);
   }
 
   .aurora-bg {
     background:
-      radial-gradient(circle at 12% 18%, hsl(var(--primary) / 0.28), transparent 45%),
-      radial-gradient(circle at 82% 14%, hsl(169 72% 40% / 0.22), transparent 48%),
-      radial-gradient(circle at 55% 85%, hsl(186 78% 45% / 0.18), transparent 44%);
-    animation: auroraShift 14s ease-in-out infinite;
+      radial-gradient(circle at 12% 18%, rgb(30 141 251 / 0.22), transparent 45%),
+      radial-gradient(circle at 82% 14%, rgb(255 196 20 / 0.18), transparent 48%),
+      radial-gradient(circle at 55% 85%, rgb(76 166 253 / 0.14), transparent 44%);
   }
 
   .section-container {
@@ -260,42 +871,45 @@ All colors MUST be HSL.
   .route-skeleton-surface {
     background-color: hsl(var(--card) / 0.72);
     border-color: hsl(var(--border));
+    border-width: 2px;
+  }
+
+  /* Route skeletons shimmer, and only appear once loading has taken 300ms, so fast loads never flash. */
+  [data-route-skeleton] {
+    animation: motion-fade-in 200ms var(--do-ease-decelerate) 300ms both;
   }
 
   .route-skeleton-shape {
-    background-color: hsl(var(--muted) / 0.58);
-    border-radius: calc(var(--radius) - 2px);
+    position: relative;
+    overflow: hidden;
+    background-color: var(--do-skeleton);
+    border-radius: var(--radius-sm);
   }
 
+  .route-skeleton-shape::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    transform: translateX(-100%);
+    background: linear-gradient(90deg, transparent, rgb(255 255 255 / 0.55), transparent);
+    animation: skeleton-shimmer 1.2s linear infinite;
+  }
+
+  .dark .route-skeleton-shape::after {
+    background: linear-gradient(90deg, transparent, rgb(255 255 255 / 0.06), transparent);
+  }
+
+  /* The landing nav is the one blurred surface; its edge appears once content scrolls under it. */
   .nav-blur {
-    @apply backdrop-blur-xl bg-background/90 border-b border-border shadow-sm;
+    @apply backdrop-blur-xl bg-background/90 border-b transition-[border-color,box-shadow] duration-200;
   }
 
+  /* Press feedback: 100ms in, 160ms release. The hover lift is opt-in (.motion-lift)
+     and only on devices that really hover, so a tap never leaves a button raised. */
   .motion-press {
     transition-property: transform, box-shadow, background-color, border-color, color, opacity;
     transition-duration: var(--motion-duration-fast);
     transition-timing-function: var(--motion-ease-fluid);
-    will-change: transform;
-  }
-
-  .motion-press:not(:disabled):not([aria-disabled='true']):hover {
-    transform: translateY(-1px);
-    box-shadow: 0 8px 20px hsl(var(--foreground) / 0.08);
-  }
-
-  .motion-press:not(:disabled):not([aria-disabled='true']):active {
-    transform: translateY(0) scale(var(--motion-press-scale));
-    box-shadow: 0 4px 12px hsl(var(--foreground) / 0.06);
-  }
-
-  .motion-press > svg,
-  .motion-press [data-motion-icon='true'] {
-    transition: transform var(--motion-duration-fast) var(--motion-ease-fluid), opacity var(--motion-duration-fast) var(--motion-ease-fluid);
-  }
-
-  .motion-press:not(:disabled):not([aria-disabled='true']):hover > svg,
-  .motion-press:not(:disabled):not([aria-disabled='true']):hover [data-motion-icon='true'] {
-    transform: translateY(-0.5px) scale(1.04);
   }
 
   .motion-surface {
@@ -310,47 +924,33 @@ All colors MUST be HSL.
     transition-timing-function: var(--motion-ease-fluid);
   }
 
+  /* Rows change colour on hover; they never lift, because lifting implies a card you can pick up. */
   .motion-list-item {
-    transition-property: transform, box-shadow, border-color, background-color, opacity;
+    transition-property: box-shadow, border-color, background-color, opacity;
     transition-duration: var(--motion-duration-normal);
     transition-timing-function: var(--motion-ease-fluid);
   }
 
-  .motion-list-item:hover {
-    transform: translateY(-1px);
-  }
-
-  .motion-reveal {
-    animation: motion-reveal var(--motion-duration-slow) var(--motion-ease-fluid) both;
-  }
 
   .motion-swap {
     animation: motion-swap var(--motion-duration-normal) var(--motion-ease-fluid) both;
   }
 
-
-  .motion-loading-bar {
-    animation: motion-loading-bar 1.35s var(--motion-ease-fluid) infinite;
-    transform-origin: left center;
+  /* Landing sections fade up once as they scroll in (components/landing/Reveal.tsx).
+     Full transform strings run on the compositor. */
+  .landing-reveal {
+    opacity: 0;
+    transform: translateY(12px);
+    transition-property: opacity, transform;
+    transition-duration: 350ms;
+    transition-timing-function: var(--motion-ease-out-strong);
   }
 
-  .motion-ping-ring {
-    animation: motion-ping-ring 1.6s var(--motion-ease-fluid) infinite;
+  .landing-reveal[data-shown] {
+    opacity: 1;
+    transform: translateY(0px);
   }
 
-  .motion-shimmer {
-    position: relative;
-    overflow: hidden;
-  }
-
-  .motion-shimmer::after {
-    content: '';
-    position: absolute;
-    inset: 0;
-    background: linear-gradient(90deg, transparent, hsl(var(--primary) / 0.14), transparent);
-    transform: translateX(-120%);
-    animation: motion-shimmer 1.8s var(--motion-ease-fluid) infinite;
-  }
 
   .motion-expand {
     display: grid;
@@ -358,9 +958,9 @@ All colors MUST be HSL.
     opacity: 0;
     transform: translateY(-4px);
     transition:
-      grid-template-rows var(--motion-duration-normal) var(--motion-ease-fluid),
-      opacity var(--motion-duration-normal) var(--motion-ease-fluid),
-      transform var(--motion-duration-normal) var(--motion-ease-fluid);
+      grid-template-rows var(--motion-duration-normal) var(--motion-ease-out-strong),
+      opacity var(--motion-duration-normal) var(--motion-ease-out-strong),
+      transform var(--motion-duration-normal) var(--motion-ease-out-strong);
   }
 
   .motion-expand[data-open='true'] {
@@ -389,6 +989,28 @@ All colors MUST be HSL.
     padding-bottom: max(calc(var(--native-safe-bottom, 0px) + 1rem), 1rem);
   }
 
+  .native-safe-fixed-bottom {
+    bottom: calc(1rem + max(var(--native-safe-bottom, 0px), var(--phone-tab-reserve, 0px)));
+  }
+
+  /* Phone tab bar. The reserve is the bar's measured height (home indicator included);
+     until that measurement, a fallback keeps the first paint from sitting underneath it.
+     The footer inset moves into the bar, so the two don't stack. */
+  @media (width < 48rem) {
+    :root {
+      --phone-tab-reserve: calc(4.5rem + var(--native-safe-bottom, 0px));
+    }
+
+    .native-safe-screen {
+      padding-bottom: var(--phone-tab-reserve);
+    }
+
+    .native-safe-screen > footer.native-safe-bottom {
+      padding-bottom: 1rem;
+    }
+  }
+
+  /* Set from the phone tab bar only, and only while a text field's keyboard is open. */
   .native-main-content {
     padding-bottom: calc(var(--native-keyboard-height, 0px) * 0.12);
   }
@@ -399,211 +1021,157 @@ All colors MUST be HSL.
   }
 
   .native-mobile-menu {
-    max-height: calc(100dvh - 4rem - var(--native-safe-top, 0px));
+    max-height: calc(100dvh - var(--app-header-bottom, 8rem));
   }
 }
 
-@layer utilities {
-  .text-balance {
-    text-wrap: balance;
-  }
+@utility scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
 
-  .scrollbar-hide {
-    -ms-overflow-style: none;
-    scrollbar-width: none;
-  }
-
-  .scrollbar-hide::-webkit-scrollbar {
+  &::-webkit-scrollbar {
     display: none;
   }
 }
 
-/* Themed scrollbars */
-* {
-  scrollbar-width: thin;
-  scrollbar-color: hsl(var(--muted-foreground) / 0.3) transparent;
+/* Themed scrollbars sit in the base layer so .scrollbar-hide still overrides them. */
+@layer base {
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: hsl(var(--muted-foreground) / 0.3) transparent;
+  }
+
+  *::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  *::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  *::-webkit-scrollbar-thumb {
+    background-color: hsl(var(--muted-foreground) / 0.3);
+    border-radius: 3px;
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    *::-webkit-scrollbar-thumb:hover {
+      background-color: hsl(var(--muted-foreground) / 0.5);
+    }
+  }
 }
 
-*::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+/* Body text is Nunito 600, so emphasis and minor headings in rendered answers step up to 800;
+   the typography plugin's 600 would read as plain text. Unlayered, so it beats the plugin. */
+.prose :where(strong, b, h3, h4):not(:where([class~="not-prose"], [class~="not-prose"] *)) {
+  font-weight: 800;
 }
 
-*::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-*::-webkit-scrollbar-thumb {
-  background-color: hsl(var(--muted-foreground) / 0.3);
-  border-radius: 3px;
-}
-
-*::-webkit-scrollbar-thumb:hover {
-  background-color: hsl(var(--muted-foreground) / 0.5);
-}
-
-/* Scroll margin for anchor links under sticky header */
+/* Scroll margin for anchors under the sticky header. Unlayered, so it wins over scroll-mt-* as in v3. */
 [id] {
   scroll-margin-top: 5rem;
 }
 
-/* Animated marching ants border on hover */
-.border-dashed:hover {
-  border-color: transparent;
-  background-image: repeating-linear-gradient(
-    0deg,
-    hsl(var(--primary) / 0.5),
-    hsl(var(--primary) / 0.5) 5px,
-    transparent 5px,
-    transparent 10px
-  ),
-  repeating-linear-gradient(
-    90deg,
-    hsl(var(--primary) / 0.5),
-    hsl(var(--primary) / 0.5) 5px,
-    transparent 5px,
-    transparent 10px
-  ),
-  repeating-linear-gradient(
-    180deg,
-    hsl(var(--primary) / 0.5),
-    hsl(var(--primary) / 0.5) 5px,
-    transparent 5px,
-    transparent 10px
-  ),
-  repeating-linear-gradient(
-    270deg,
-    hsl(var(--primary) / 0.5),
-    hsl(var(--primary) / 0.5) 5px,
-    transparent 5px,
-    transparent 10px
-  );
-  background-size: 1px 100%, 100% 1px, 1px 100%, 100% 1px;
-  background-repeat: no-repeat;
-  animation: marching-ants 0.4s linear infinite;
-}
-
-@keyframes marching-ants {
-  0% { background-position: 0 0, -10px 0, 100% -10px, 0 100%; }
-  100% { background-position: 0 -10px, 0 0, 100% 0, -10px 100%; }
-}
-
-/* ===== APPLE-LEVEL MICRO-INTERACTIONS ===== */
-
-/* Global smooth transitions on all interactive elements */
-@layer base {
-  button, a, input, select, textarea, [role="button"] {
-    transition-property: transform, box-shadow, border-color, background-color, color, opacity;
-    transition-duration: var(--motion-duration-fast);
-    transition-timing-function: var(--motion-ease-fluid);
-  }
-
-  /* Smooth focus ring with glow */
-  :focus-visible {
-    outline: 2px solid transparent;
-    box-shadow: 0 0 0 2px hsl(var(--background)), 0 0 0 4px hsl(var(--primary) / 0.5), 0 0 12px hsl(var(--primary) / 0.2);
-    border-radius: var(--radius);
-    transition: box-shadow var(--motion-duration-fast) var(--motion-ease-fluid);
-  }
-
-  /* Card hover glow border */
-  .card-hover-glow {
-    transition: border-color var(--motion-duration-normal) var(--motion-ease-fluid),
-                box-shadow var(--motion-duration-normal) var(--motion-ease-fluid),
-                transform var(--motion-duration-normal) var(--motion-ease-fluid);
-  }
-
-  .card-hover-glow:hover {
-    border-color: hsl(var(--primary) / 0.3);
-    box-shadow: 0 0 0 1px hsl(var(--primary) / 0.1), 0 8px 24px hsl(var(--primary) / 0.08);
-    transform: translateY(-2px);
+@media (width < 48rem) {
+  main [id] {
+    scroll-margin-bottom: var(--phone-tab-reserve, calc(4.5rem + env(safe-area-inset-bottom, 0px)));
   }
 }
 
-/* Staggered list entrance */
-.stagger-enter > * {
-  animation: stagger-item var(--motion-duration-normal) var(--motion-ease-fluid) both;
+/* Vaul's bottom sheet: 300ms open, 200ms close on the drawer curve (its default is 500ms both ways). */
+[data-vaul-drawer][data-vaul-drawer-direction='bottom'][data-state='open'] {
+  animation-duration: 300ms;
+  animation-timing-function: cubic-bezier(0.32, 0.72, 0, 1);
 }
 
-.stagger-enter > *:nth-child(1) { animation-delay: 0ms; }
-.stagger-enter > *:nth-child(2) { animation-delay: 50ms; }
-.stagger-enter > *:nth-child(3) { animation-delay: 100ms; }
-.stagger-enter > *:nth-child(4) { animation-delay: 150ms; }
-.stagger-enter > *:nth-child(5) { animation-delay: 200ms; }
-.stagger-enter > *:nth-child(6) { animation-delay: 250ms; }
-.stagger-enter > *:nth-child(7) { animation-delay: 300ms; }
-.stagger-enter > *:nth-child(8) { animation-delay: 350ms; }
+[data-vaul-drawer][data-vaul-drawer-direction='bottom'][data-state='closed'] {
+  animation-duration: 200ms;
+  animation-timing-function: cubic-bezier(0.32, 0.72, 0, 1);
+}
 
-@keyframes stagger-item {
-  from {
-    opacity: 0;
-    transform: translateY(8px) scale(0.98);
+[data-vaul-overlay][data-state='open'] {
+  animation-duration: 300ms;
+}
+
+[data-vaul-overlay][data-state='closed'] {
+  animation-duration: 200ms;
+}
+
+/* Flowchart auto layout: nodes glide to their new lanes; outside a layout they follow the pointer directly. */
+.flow-layout-animating .react-flow__node {
+  transition: transform 250ms var(--motion-ease-out-strong);
+}
+
+/* React Flow's controls, minimap, attribution, and edge labels are white in its own
+   stylesheet; here they follow the theme. Its stylesheet loads after this one, so
+   each rule carries the extra .react-flow class. */
+.react-flow .react-flow__controls {
+  box-shadow: 0 0 0 1px hsl(var(--border));
+}
+
+.react-flow .react-flow__controls-button {
+  background: hsl(var(--card));
+  color: hsl(var(--card-foreground));
+  border-bottom-color: hsl(var(--border));
+}
+
+.react-flow .react-flow__controls-button:hover {
+  background: hsl(var(--accent));
+}
+
+.react-flow .react-flow__minimap {
+  background-color: hsl(var(--card));
+  box-shadow: 0 0 0 1px hsl(var(--border));
+}
+
+.react-flow .react-flow__minimap-mask {
+  fill: hsl(var(--muted) / 0.6);
+}
+
+.react-flow .react-flow__attribution {
+  background: hsl(var(--card) / 0.8);
+}
+
+.react-flow .react-flow__attribution a {
+  color: hsl(var(--muted-foreground));
+  /* The credit stays; its link is a 24px target (44px on touch) instead of 12px of text. */
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+  padding: 0 4px;
+}
+
+/* An edge is a 2px line; its invisible stroke is the tap target. React Flow sizes that
+   stroke in canvas units, so it is divided by the zoom to stay 24px on screen (44px on touch). */
+.react-flow .react-flow__edge-interaction {
+  stroke-width: calc(24px / var(--flow-zoom, 1));
+}
+
+.react-flow .react-flow__edge-textbg {
+  fill: hsl(var(--card));
+}
+
+.react-flow .react-flow__edge-text {
+  fill: hsl(var(--card-foreground));
+}
+
+/* React Flow's 26px canvas controls grow to touch size on phones. Its stylesheet loads
+   after this one with a content-box 16px + padding, so this needs the extra class. */
+@media (pointer: coarse) {
+  .react-flow .react-flow__controls-button {
+    box-sizing: border-box;
+    width: 44px;
+    height: 44px;
   }
-  to {
-    opacity: 1;
-    transform: translateY(0) scale(1);
+
+  .react-flow .react-flow__attribution a {
+    min-height: 44px;
   }
-}
 
-/* Nav item hover glow */
-.nav-glow {
-  position: relative;
-}
-
-.nav-glow::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  opacity: 0;
-  background: radial-gradient(ellipse at center, hsl(var(--primary) / 0.12), transparent 70%);
-  transition: opacity var(--motion-duration-fast) var(--motion-ease-fluid);
-  pointer-events: none;
-}
-
-.nav-glow:hover::after {
-  opacity: 1;
-}
-
-/* Active nav indicator pill */
-.nav-active-pill {
-  position: relative;
-}
-
-.nav-active-pill::before {
-  content: '';
-  position: absolute;
-  bottom: -2px;
-  left: 25%;
-  right: 25%;
-  height: 2px;
-  border-radius: 1px;
-  background: hsl(var(--primary));
-  box-shadow: 0 0 6px hsl(var(--primary) / 0.4);
-  animation: nav-pill-in var(--motion-duration-normal) var(--motion-ease-fluid) both;
-}
-
-@keyframes nav-pill-in {
-  from {
-    transform: scaleX(0);
-    opacity: 0;
+  .react-flow .react-flow__edge-interaction {
+    stroke-width: calc(44px / var(--flow-zoom, 1));
   }
-  to {
-    transform: scaleX(1);
-    opacity: 1;
-  }
-}
-
-/* Input focus glow */
-input:focus, textarea:focus, select:focus {
-  border-color: hsl(var(--primary) / 0.5) !important;
-  box-shadow: 0 0 0 3px hsl(var(--primary) / 0.1), 0 0 8px hsl(var(--primary) / 0.08) !important;
-}
-
-/* Progress bar glow pulse */
-[role="progressbar"] > div {
-  box-shadow: 0 0 8px hsl(var(--primary) / 0.4);
-  transition: width 0.5s var(--motion-ease-fluid);
 }
 
 /* Sonner's mobile toaster sets width: 100% plus a left offset, which pushes
@@ -618,292 +1186,15 @@ input:focus, textarea:focus, select:focus {
   }
 }
 
-/* Toast slide-in */
-[data-sonner-toaster] [data-sonner-toast] {
-  animation: toast-slide-in 0.3s var(--motion-ease-fluid) both !important;
-}
-
-@keyframes toast-slide-in {
-  from {
-    opacity: 0;
-    transform: translateY(8px) scale(0.96);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
-}
-
-/* Modal/dialog backdrop blur + entrance */
-[data-state="open"][role="dialog"] {
-  animation: dialog-enter 0.25s var(--motion-ease-fluid) both;
-}
-
-@keyframes dialog-enter {
-  from {
-    opacity: 0;
-    transform: scale(0.96) translateY(4px);
-  }
-  to {
-    opacity: 1;
-    transform: scale(1) translateY(0);
-  }
-}
-
-/* Message bubble entrance */
-.message-enter {
-  animation: message-enter 0.3s var(--motion-ease-fluid) both;
-}
-
-@keyframes message-enter {
-  from {
-    opacity: 0;
-    transform: translateY(12px) scale(0.97);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
-}
-
-
-@keyframes shimmer {
-  0% {
-    transform: translateX(-100%);
-  }
-  100% {
-    transform: translateX(100%);
-  }
-}
-
-/* ===== ADDITIONAL MICRO-INTERACTIONS ===== */
-
-/* Switch toggle bounce */
-[role="switch"][data-state="checked"] > span {
-  animation: switch-bounce 0.3s var(--motion-ease-fluid);
-}
-
-@keyframes switch-bounce {
-  0% { transform: translateX(0) scale(1); }
-  40% { transform: translateX(100%) scale(0.85, 1.15); }
-  70% { transform: translateX(100%) scale(1.05, 0.95); }
-  100% { transform: translateX(100%) scale(1); }
-}
-
-/* Checkbox tick draw */
-[role="checkbox"][data-state="checked"] svg {
-  animation: check-draw 0.2s ease-out both;
-}
-
-@keyframes check-draw {
-  from { stroke-dashoffset: 20; opacity: 0; }
-  to { stroke-dashoffset: 0; opacity: 1; }
-}
-
-
-/* Tooltip entrance */
-[data-state="delayed-open"][data-side] {
-  animation: tooltip-in 0.15s var(--motion-ease-fluid) both;
-}
-
-[data-state="closed"][data-side] {
-  animation: tooltip-out 0.1s ease-in both;
-}
-
-@keyframes tooltip-in {
-  from { opacity: 0; transform: scale(0.96); }
-  to { opacity: 1; transform: scale(1); }
-}
-
-@keyframes tooltip-out {
-  from { opacity: 1; transform: scale(1); }
-  to { opacity: 0; transform: scale(0.96); }
-}
-
-/* Dropdown menu items stagger */
-[role="menu"] [role="menuitem"],
-[data-radix-collection-item] {
-  animation: menu-item-in 0.15s var(--motion-ease-fluid) both;
-}
-
-[role="menu"] [role="menuitem"]:nth-child(1) { animation-delay: 0ms; }
-[role="menu"] [role="menuitem"]:nth-child(2) { animation-delay: 30ms; }
-[role="menu"] [role="menuitem"]:nth-child(3) { animation-delay: 60ms; }
-[role="menu"] [role="menuitem"]:nth-child(4) { animation-delay: 90ms; }
-[role="menu"] [role="menuitem"]:nth-child(5) { animation-delay: 120ms; }
-
-@keyframes menu-item-in {
-  from { opacity: 0; transform: translateX(-4px); }
-  to { opacity: 1; transform: translateX(0); }
-}
-
-/* Select dropdown items */
-[role="option"] {
-  transition: background-color 0.1s, transform 0.1s;
-}
-
-[role="option"]:active {
-  transform: scale(0.98);
-}
-
-/* Accordion expand/collapse */
-[data-state="open"] > [data-accordion-content] {
-  animation: accordion-open 0.25s var(--motion-ease-fluid);
-}
-
-@keyframes accordion-open {
-  from { opacity: 0; transform: translateY(-4px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
-/* Tab indicator slide */
-[role="tablist"] [data-state="active"] {
-  position: relative;
-}
-
-[role="tablist"] [data-state="active"]::after {
-  content: '';
-  position: absolute;
-  bottom: 0;
-  left: 10%;
-  right: 10%;
-  height: 2px;
-  background: hsl(var(--primary));
-  border-radius: 1px;
-  animation: tab-slide 0.2s var(--motion-ease-fluid) both;
-}
-
-@keyframes tab-slide {
-  from { transform: scaleX(0); }
-  to { transform: scaleX(1); }
-}
-
-/* Icon spin on hover (for refresh/reload buttons) */
-button:hover > svg.lucide-rotate-ccw,
-button:hover > svg.lucide-refresh-cw {
-  animation: icon-spin 0.5s var(--motion-ease-fluid);
-}
-
-@keyframes icon-spin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(-360deg); }
-}
-
-/* Copy button feedback */
-button:active > svg.lucide-copy,
-button:active > svg.lucide-clipboard {
-  animation: copy-bounce 0.2s ease-out;
-}
-
-@keyframes copy-bounce {
-  0% { transform: scale(1); }
-  50% { transform: scale(0.8); }
-  100% { transform: scale(1); }
-}
-
-/* Trash icon shake on hover */
-button:hover > svg.lucide-trash-2,
-button:hover > svg.lucide-trash {
-  animation: trash-shake 0.3s ease-in-out;
-}
-
-@keyframes trash-shake {
-  0%, 100% { transform: rotate(0deg); }
-  25% { transform: rotate(-8deg); }
-  75% { transform: rotate(8deg); }
-}
-
-/* Heart/bookmark fill animation */
-button:active > svg.lucide-bookmark,
-button:active > svg.lucide-heart {
-  animation: heart-pop 0.3s var(--motion-ease-fluid);
-}
-
-@keyframes heart-pop {
-  0% { transform: scale(1); }
-  30% { transform: scale(1.3); }
-  60% { transform: scale(0.9); }
-  100% { transform: scale(1); }
-}
-
-/* Slider thumb pulse when dragging */
-[role="slider"]:active::after {
-  content: '';
-  position: absolute;
-  inset: -4px;
-  border-radius: 50%;
-  background: hsl(var(--primary) / 0.2);
-  animation: slider-pulse 0.6s ease-out infinite;
-}
-
-@keyframes slider-pulse {
-  0% { transform: scale(1); opacity: 0.4; }
-  100% { transform: scale(1.8); opacity: 0; }
-}
-
-
-/* Smooth counter/number transitions */
-.tabular-nums {
-  font-variant-numeric: tabular-nums;
-  transition: transform 0.2s var(--motion-ease-fluid);
-}
-
-
-/* Subtle parallax tilt on card hover */
-.tilt-card {
-  transition: transform 0.3s var(--motion-ease-fluid);
-  transform-style: preserve-3d;
-  perspective: 1000px;
-}
-
-.tilt-card:hover {
-  transform: rotateX(-1deg) rotateY(1deg) translateY(-2px);
-}
-
-@keyframes gridMove {
-  0% {
-    background-position: 0 0;
-  }
-  100% {
-    background-position: 60px 60px;
-  }
-}
-
-@keyframes auroraShift {
-  0%, 100% {
-    transform: translate3d(0, 0, 0) scale(1);
-  }
-  33% {
-    transform: translate3d(1.5%, -1.5%, 0) scale(1.04);
-  }
-  66% {
-    transform: translate3d(-1.5%, 1%, 0) scale(0.98);
-  }
-}
-
-@keyframes float {
-  0%, 100% {
-    transform: translateY(0) translateX(0);
-  }
-  25% {
-    transform: translateY(-20px) translateX(10px);
-  }
-  50% {
-    transform: translateY(-10px) translateX(-10px);
-  }
-  75% {
-    transform: translateY(-25px) translateX(5px);
-  }
-}
-
-@keyframes motion-reveal {
-  from {
-    opacity: 0;
-    transform: translateY(8px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
+/* A toast whose icon is the owl beside its check: the slot grows to fit both instead of the
+   32 px tinted circle, and the check keeps its own circle. In the utilities layer, because the
+   Toaster's `size-8!` is a layered important rule, which an unlayered one cannot override. */
+@layer utilities {
+  [data-sonner-toast].toast-owl [data-icon] {
+    width: auto !important;
+    height: auto !important;
+    border-radius: 0 !important;
+    background: none !important;
   }
 }
 
@@ -929,58 +1220,6 @@ button:active > svg.lucide-heart {
   }
 }
 
-@keyframes motion-loading-bar {
-  0% {
-    transform: translateX(-45%) scaleX(0.2);
-  }
-  45% {
-    transform: translateX(25%) scaleX(0.65);
-  }
-  100% {
-    transform: translateX(115%) scaleX(0.25);
-  }
-}
-
-@keyframes motion-ping-ring {
-  0% {
-    opacity: 0.7;
-    transform: scale(0.75);
-  }
-  100% {
-    opacity: 0;
-    transform: scale(1.35);
-  }
-}
-
-@keyframes motion-shimmer {
-  100% {
-    transform: translateX(120%);
-  }
-}
-
-/* Typing indicator */
-.typing-indicator {
-  display: inline-flex;
-  align-items: center;
-  gap: 3px;
-}
-
-.typing-dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background-color: hsl(var(--muted-foreground));
-  animation: typing-bounce 1.4s ease-in-out infinite;
-}
-
-.typing-dot:nth-child(2) {
-  animation-delay: 0.2s;
-}
-
-.typing-dot:nth-child(3) {
-  animation-delay: 0.4s;
-}
-
 .streaming-caret {
   display: inline-block;
   width: 2px;
@@ -989,85 +1228,21 @@ button:active > svg.lucide-heart {
   border-radius: 1px;
   background: hsl(var(--primary));
   vertical-align: -0.15em;
-  animation: streaming-caret-blink 1s ease-in-out infinite;
-  box-shadow: 0 0 6px 2px hsl(var(--primary) / 0.4);
-}
-
-/* Smooth height transition for streaming message bubbles */
-[data-streaming="true"] {
-  transition: max-height 0.2s ease-out, padding 0.2s ease-out;
-  overflow: hidden;
-  word-break: break-word;
-}
-
-/* Glow on the bottom edge of the bubble while streaming */
-[data-streaming="true"]::after {
-  content: '';
-  position: absolute;
-  bottom: 0;
-  left: 10%;
-  right: 10%;
-  height: 2px;
-  border-radius: 1px;
-  background: linear-gradient(90deg, transparent, hsl(var(--primary) / 0.6), transparent);
-  animation: streaming-glow-pulse 1.5s ease-in-out infinite;
-}
-
-/* New tokens fade in */
-[data-streaming="true"] .text-sm p:last-child,
-[data-streaming="true"] .text-sm li:last-child,
-[data-streaming="true"] .text-sm > :last-child {
-  animation: token-fade-in 0.3s ease-out;
-}
-
-@keyframes token-fade-in {
-  from {
-    opacity: 0.4;
-  }
-  to {
-    opacity: 1;
-  }
-}
-
-@keyframes streaming-glow-pulse {
-  0%, 100% {
-    opacity: 0.3;
-    transform: scaleX(0.8);
-  }
-  50% {
-    opacity: 1;
-    transform: scaleX(1);
-  }
-}
-
-@keyframes typing-bounce {
-  0%, 60%, 100% {
-    transform: translateY(0);
-  }
-  30% {
-    transform: translateY(-4px);
-  }
+  /* Opacity only, in two steps: a blink that never repaints a glow. */
+  animation: streaming-caret-blink 1s steps(2, jump-none) infinite;
 }
 
 @keyframes streaming-caret-blink {
-  0%, 100% {
+  from {
     opacity: 1;
-    box-shadow: 0 0 6px 2px hsl(var(--primary) / 0.4);
   }
-  50% {
-    opacity: 0.2;
-    box-shadow: 0 0 2px 1px hsl(var(--primary) / 0.1);
+  to {
+    opacity: 0;
   }
 }
 
-
-/* Icon spin on hover for interactive elements */
-.hover-icon-spin:hover > svg {
-  transform: rotate(90deg);
-  transition: transform 0.3s var(--motion-ease-fluid);
-}
-
-
+/* Reduced motion is gentler, not zero: opacity and colour still ease, nothing travels
+   or scales, overlays fade, and loading indicators pulse instead of freezing. */
 @media (prefers-reduced-motion: reduce) {
   html {
     scroll-behavior: auto;
@@ -1076,24 +1251,311 @@ button:active > svg.lucide-heart {
   *,
   *::before,
   *::after {
-    animation: none !important;
     scroll-behavior: auto !important;
-    transition: none !important;
+    transition-property: opacity, color, background-color, border-color, box-shadow, fill, stroke !important;
+    animation-name: none !important;
+  }
+
+  /* Overlay enter and exit (tw-animate-css) keep their timing as plain fades. */
+  .animate-in,
+  [data-state='open'][class*='animate-in'],
+  [data-state='delayed-open'][class*='animate-in'],
+  [data-state='instant-open'][class*='animate-in'],
+  [data-state='active'][class*='animate-in'],
+  .motion-swap {
+    animation-name: motion-fade-in !important;
+  }
+
+  [data-state='closed'][class*='animate-out'] {
+    animation-name: motion-fade-out !important;
+  }
+
+  .landing-reveal {
+    transform: none;
+  }
+
+  /* Spinners and live indicators become a slow opacity pulse so they never look hung. */
+  .animate-spin,
+  .streaming-caret,
+  .thinking-dots > i,
+  .skeleton-shimmer {
+    animation-name: motion-pulse !important;
+    animation-duration: 1.2s !important;
+    animation-timing-function: ease-in-out !important;
+    animation-iteration-count: infinite !important;
+  }
+
+  .animate-pulse {
+    animation-name: pulse !important;
+  }
+
+  .skeleton-shimmer::after {
+    display: none;
   }
 
   .motion-press,
   .motion-press:hover,
   .motion-press:active,
-  .motion-list-item,
-  .motion-list-item:hover,
-  .motion-reveal,
-  .motion-swap,
+  .motion-lift:hover,
+  .btn,
+  .btn:hover,
+  .btn:active,
+  .tile,
+  .tile:hover,
+  .tile:active,
   .motion-expand,
-  .motion-loading-bar,
-  .motion-ping-ring,
-  .motion-shimmer::after,
-  .card-hover-glow:hover,
-  .feature-card:hover {
+  .btn-primary-gradient:active,
+  .btn-secondary-outline:active {
     transform: none !important;
+  }
+}
+
+/* With reduced motion a press still shows: the face stays put and its ledge goes flat. */
+@media (prefers-reduced-motion: reduce) {
+  .btn:not(:disabled):active,
+  .tile:active {
+    box-shadow: 0 0 0 transparent !important;
+    filter: brightness(0.94);
+  }
+}
+
+/* The owl in a loader floats gently, two seconds up and down. */
+.owl-bob {
+  display: inline-block;
+  animation: owl-bob 2.4s var(--do-ease-standard) infinite;
+}
+
+@keyframes owl-bob {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-5px);
+  }
+}
+
+/* The owl's motion (components/brand/Owl.tsx). Every move is a transform on its own layer, so
+   nothing reflows, and every move is a keyframe animation, so reduced motion (above) stops it. */
+
+/* Lids: flat until a blink pulls them down over the eye for about a tenth of a second. */
+.owl-lid {
+  position: absolute;
+  border-radius: 50%;
+  background: #1E8DFB;
+  box-shadow: inset 0 calc(var(--owl-lash) * -1.6) 0 #0B2A6E;
+  transform: scaleY(0);
+  transform-origin: 50% 0;
+  animation: owl-blink var(--owl-blink-period, 5.6s) linear var(--owl-blink-delay, 0s) infinite;
+  pointer-events: none;
+}
+
+@keyframes owl-blink {
+  0%, 93%, 100% {
+    transform: scaleY(0);
+  }
+  95% {
+    transform: scaleY(1);
+  }
+  97% {
+    transform: scaleY(0.15);
+  }
+}
+
+/* A slow breath, anchored at the feet. */
+.owl-breathe {
+  transform-origin: 50% 92%;
+  animation: owl-breathe 3.8s var(--do-ease-standard) infinite;
+}
+
+@keyframes owl-breathe {
+  0%, 100% {
+    transform: scale(1, 1);
+  }
+  50% {
+    transform: scale(1.012, 1.028);
+  }
+}
+
+/* Hovering the owl makes it hop once. */
+@media (hover: hover) and (pointer: fine) {
+  .owl:hover > .owl-body {
+    animation: owl-hop 560ms var(--do-ease-standard) both;
+  }
+}
+
+/* One-shot gestures, played when the owl arrives or changes pose. */
+.owl-gesture-wave {
+  transform-origin: 50% 90%;
+  animation: owl-wave 900ms var(--do-ease-standard) 120ms backwards;
+}
+
+.owl-gesture-cheer {
+  transform-origin: 50% 100%;
+  animation: owl-cheer 1100ms var(--do-ease-standard) 80ms backwards;
+}
+
+.owl-gesture-hop {
+  transform-origin: 50% 100%;
+  animation: owl-hop 600ms var(--do-ease-standard) 80ms backwards;
+}
+
+@keyframes owl-wave {
+  0% { transform: rotate(0deg); }
+  18% { transform: rotate(-7deg); }
+  38% { transform: rotate(6deg); }
+  58% { transform: rotate(-4deg); }
+  78% { transform: rotate(2deg); }
+  100% { transform: none; }
+}
+
+/* Two jumps with squash and stretch. */
+@keyframes owl-cheer {
+  0% { transform: translateY(0) scale(1, 1); }
+  10% { transform: translateY(0) scale(1.07, 0.9); }
+  28% { transform: translateY(-14%) scale(0.95, 1.07); }
+  44% { transform: translateY(0) scale(1.06, 0.93); }
+  58% { transform: translateY(-7%) scale(0.98, 1.03) rotate(-3deg); }
+  74% { transform: translateY(0) scale(1.03, 0.97); }
+  88% { transform: translateY(0) scale(0.995, 1.005); }
+  100% { transform: none; }
+}
+
+@keyframes owl-hop {
+  0% { transform: translateY(0) scale(1, 1); }
+  18% { transform: translateY(0) scale(1.05, 0.93); }
+  45% { transform: translateY(-8%) scale(0.97, 1.04); }
+  72% { transform: translateY(0) scale(1.03, 0.97); }
+  100% { transform: none; }
+}
+
+/* An app page rises into place once when it opens (App.tsx RouteContent). It ends on
+   `transform: none`, so fixed and sticky children behave as before once it has played. */
+.page-enter {
+  animation: page-enter 280ms var(--motion-ease-out-strong) backwards;
+}
+
+@keyframes page-enter {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* Sections of a page follow each other in, 60ms apart. */
+.enter-stagger > * {
+  animation: page-enter 360ms var(--motion-ease-out-strong) backwards;
+}
+
+.enter-stagger > :nth-child(2) { animation-delay: 60ms; }
+.enter-stagger > :nth-child(3) { animation-delay: 120ms; }
+.enter-stagger > :nth-child(4) { animation-delay: 180ms; }
+.enter-stagger > :nth-child(5) { animation-delay: 240ms; }
+.enter-stagger > :nth-child(n + 6) { animation-delay: 300ms; }
+
+/* Success: the check's badge pops on the overshoot curve and the tick draws itself in.
+   Apply to a lucide Check (its path is about 23 units long) or to its badge. */
+.success-pop {
+  animation: success-pop 420ms var(--do-ease-overshoot) var(--success-delay, 0ms) backwards;
+}
+
+.success-pop svg.lucide-check path,
+svg.lucide-check.success-pop path,
+[data-sonner-toast][data-type='success'] [data-icon] svg.lucide-check path {
+  stroke-dasharray: 24;
+  animation: check-draw 360ms var(--do-ease-decelerate) calc(var(--success-delay, 0ms) + 140ms) backwards;
+}
+
+@keyframes success-pop {
+  0% {
+    transform: scale(0.4);
+    opacity: 0;
+  }
+  60% {
+    transform: scale(1.14);
+    opacity: 1;
+  }
+  100% {
+    transform: none;
+  }
+}
+
+@keyframes check-draw {
+  from {
+    stroke-dashoffset: 24;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+/* A success toast's icon pops the same way as it arrives. */
+[data-sonner-toast][data-type='success'] [data-icon] {
+  animation: success-pop 420ms var(--do-ease-overshoot) 120ms backwards;
+}
+
+/* A result's progress bar fills from empty once, after the result appears (Progress `reveal`).
+   With no `to` frame it ends on the bar's own value. */
+.progress-reveal {
+  animation: progress-reveal 900ms var(--motion-ease-out-strong) 150ms backwards;
+}
+
+@keyframes progress-reveal {
+  from {
+    transform: translateX(-100%);
+  }
+}
+
+@keyframes motion-fade-out {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes motion-pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.35;
+  }
+}
+
+/* Translucent, blurred surfaces turn solid when the user asks for less transparency
+   or more contrast, and keep a visible edge in forced-colours mode. */
+@media (prefers-reduced-transparency: reduce), (prefers-contrast: more) {
+  [class*='backdrop-blur'],
+  .nav-blur,
+  .glass-card {
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
+    background: hsl(var(--card)) !important;
+    border-color: hsl(var(--foreground) / 0.35) !important;
+  }
+}
+
+@media (prefers-contrast: more) {
+  :root {
+    --muted-foreground: 215 25% 27%;
+    --border: 215 16% 47%;
+  }
+
+  .dark {
+    --muted-foreground: 213 27% 84%;
+    --border: 215 16% 57%;
+  }
+}
+
+@media (forced-colors: active) {
+  [class*='backdrop-blur'],
+  .nav-blur,
+  .glass-card {
+    border: 1px solid CanvasText;
   }
 }

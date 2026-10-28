@@ -1,4 +1,3 @@
-import { entitlementRows } from "../_shared/testing/entitlement.ts";
 const environment = {
   SUPABASE_URL: "https://supabase.test",
   SUPABASE_ANON_KEY: "test-anon-key",
@@ -70,13 +69,21 @@ Deno.test("generate marks every contention when research has no citable sources"
         if (url.pathname.includes("/rest/v1/user_roles")) {
           return jsonResponse({ role: "user" });
         }
-        if (url.pathname.includes("/rest/v1/rpc/effective_entitlement")) {
-          return jsonResponse(entitlementRows("trial", { daily_limit: 50 }));
+        if (url.pathname.includes("/rest/v1/user_settings")) {
+          return jsonResponse({
+            subscription_tier: "trial",
+            daily_limit_override: 50,
+            trial_ends_at: "2099-01-01T00:00:00.000Z",
+            grace_period_ends_at: null,
+          });
         }
+        if (url.pathname.endsWith("/rest/v1/app_store_subscriptions")) return Response.json([]);
+        if (url.pathname.includes("/rest/v1/subscriptions")) return jsonResponse([]);
         if (url.pathname.includes("/rest/v1/rate_limits")) {
+          if ((url.searchParams.get("order") ?? "").includes("updated_at")) throw new Error(`rate_limits must not order by updated_at: ${url.search}`);
           return jsonResponse({ limit_value: 50 });
         }
-        if (url.pathname.includes("/rest/v1/rpc/consume_daily_quota")) {
+        if (/\/rest\/v1\/rpc\/consume_(daily|ai)_quota$/.test(url.pathname)) {
           return jsonResponse([{ allowed: true, current_count: 1 }]);
         }
         if (url.pathname.includes("/rest/v1/global_prompts")) {
@@ -124,7 +131,7 @@ Deno.test("generate marks every contention when research has no citable sources"
         },
         body: JSON.stringify({
           feature: "generate",
-          model: "openai/gpt-5.6-luna",
+          model: "openai/gpt-6-luna",
           input: {
             motion: "Should schools teach media literacy?",
             side: "pro",
@@ -173,7 +180,7 @@ Deno.test("generate marks every contention when research has no citable sources"
         },
         body: JSON.stringify({
           feature: "generate",
-          model: "openai/gpt-5.6-luna",
+          model: "openai/gpt-6-luna",
           input: {
             motion: "Should schools teach media literacy?",
             side: "pro",

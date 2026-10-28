@@ -6,12 +6,16 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { SectionCard } from '@/components/ui/section-card';
 import { Progress } from '@/components/ui/progress';
+import { CountUp } from '@/components/ui/count-up';
 import type { FactoidsOutput, Factoid } from '@/lib/ai/schemas/factoids';
-import { StaggeredContainer } from '@/components/ui/animated-section';
 import { cn } from '@/lib/utils';
 import { validateUrl } from '@/lib/validation/url';
 import { toast } from 'sonner';
 import { ExportToolbar } from '@/components/features/ExportToolbar';
+import { CopyResultButton, SaveResultAction } from '@/components/features/tools/result-actions';
+import { factoidsText } from '@/components/features/tools/result-text';
+import { ResultHeader } from '@/components/features/tools/ResultHeader';
+import { ResearchedSources } from '@/components/features/tools/ResearchedSources';
 import { GoogleDriveAuthModal } from '@/components/features/export/GoogleDriveAuthModal';
 import { openExternalUrl } from '@/lib/native';
 import { SourceQualityList } from '@/components/features/shared/SourceQualityList';
@@ -22,13 +26,17 @@ interface FactoidsResultsProps {
   result: FactoidsOutput;
   discoveredSources?: DiscoveredSource[];
   onDiscuss?: () => void;
+  onSave?: () => void;
+  /** The result is already in History; shows “Saved” instead of Save. */
+  saved?: boolean;
+  saving?: boolean;
   onSaveSource?: (title: string, content: string, url?: string) => void;
   onUseSuggestion?: (query: string) => void;
 }
 
 const verificationConfig = {
   verified: { icon: CheckCircle, color: 'text-primary', bg: 'bg-primary/10', labelKey: 'factoidsResults.verified' },
-  unverified: { icon: AlertTriangle, color: 'text-amber-500', bg: 'bg-amber-500/10', labelKey: 'factoidsResults.unverified' },
+  unverified: { icon: AlertTriangle, color: 'text-amber-600 dark:text-amber-400', bg: 'bg-amber-500/10', labelKey: 'factoidsResults.unverified' },
   pending: { icon: Clock, color: 'text-muted-foreground', bg: 'bg-muted', labelKey: 'factoidsResults.pending' },
 };
 
@@ -42,7 +50,7 @@ function FactoidCard({ factoid, onSave }: { factoid: Factoid, onSave?: FactoidsR
   const safeUrl = validateUrl(factoid.citation?.url);
 
   return (
-    <div className="rounded-lg border border-border bg-card p-4 space-y-4 motion-list-item card-hover-glow">
+    <div className="rounded-lg border border-border bg-card p-4 space-y-4 motion-list-item">
       {/* Header */}
       <div className="flex items-start justify-between gap-2">
         <div className="flex-1">
@@ -53,13 +61,13 @@ function FactoidCard({ factoid, onSave }: { factoid: Factoid, onSave?: FactoidsR
               rel="noopener noreferrer"
               className="group flex items-center gap-2"
             >
-              <h4 className="font-semibold text-foreground group-hover:text-primary transition-colors underline-offset-4 group-hover:underline text-left">
+              <h3 className="font-semibold text-foreground group-hover:text-primary transition-colors underline-offset-4 group-hover:underline text-left">
                 {factoid.shortClaim}
-              </h4>
-              <ExternalLink className="h-3 w-3 opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
+              </h3>
+              <ExternalLink className="h-3 w-3 shrink-0 opacity-60 transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100" aria-hidden="true" />
             </a>
           ) : (
-            <h4 className="font-semibold text-foreground">{factoid.shortClaim}</h4>
+            <h3 className="font-semibold text-foreground">{factoid.shortClaim}</h3>
           )}
           <div className="flex items-center gap-2 mt-1">
             <Badge className={cn('text-xs', config.bg, config.color)}>
@@ -72,7 +80,7 @@ function FactoidCard({ factoid, onSave }: { factoid: Factoid, onSave?: FactoidsR
           </div>
         </div>
         <div className="flex flex-col items-end gap-2">
-          <Progress value={factoid.relevanceScore} className="w-16 h-2" />
+          <Progress value={factoid.relevanceScore} className="w-16 h-2" reveal />
           {onSave && (
             <Button
               variant="ghost"
@@ -123,13 +131,13 @@ function FactoidCard({ factoid, onSave }: { factoid: Factoid, onSave?: FactoidsR
             {t('factoidsResults.viewSource')} <ExternalLink className="h-3 w-3" />
           </a>
         ) : (
-          <span className="text-amber-500 text-xs">{t('factoidsResults.urlNeedsVerification')}</span>
+          <span className="text-amber-600 dark:text-amber-400 text-xs">{t('factoidsResults.urlNeedsVerification')}</span>
         )}
       </div>
 
       {/* How to Use */}
       <div className="flex items-start gap-2 text-sm">
-        <Lightbulb className="h-4 w-4 text-amber-500 mt-0.5 shrink-0" />
+        <Lightbulb className="h-4 w-4 text-amber-600 dark:text-amber-400 mt-0.5 shrink-0" />
         <div>
           <span className="font-medium text-muted-foreground">{t('factoidsResults.howToUse')} </span>
           <span className="text-foreground">{factoid.howToUse}</span>
@@ -139,7 +147,7 @@ function FactoidCard({ factoid, onSave }: { factoid: Factoid, onSave?: FactoidsR
   );
 }
 
-export function FactoidsResults({ result, discoveredSources, onDiscuss, onSaveSource, onUseSuggestion }: FactoidsResultsProps) {
+export function FactoidsResults({ result, discoveredSources, onDiscuss, onSave, saved = false, saving = false, onSaveSource, onUseSuggestion }: FactoidsResultsProps) {
   const { t } = useTranslation();
   const [isExportingGDocs, setIsExportingGDocs] = useState(false);
   const [showDriveAuth, setShowDriveAuth] = useState(false);
@@ -201,44 +209,37 @@ export function FactoidsResults({ result, discoveredSources, onDiscuss, onSaveSo
   };
 
   return (
-    <StaggeredContainer className="space-y-6">
+    <div className="space-y-6">
       <GoogleDriveAuthModal open={showDriveAuth} onOpenChange={setShowDriveAuth} />
-      <ExportToolbar
-        onPdf={handlePdfExport}
-        onDocx={handleDocxExport}
-        onGoogleDocs={handleGoogleDocsExport}
-        isExportingGDocs={isExportingGDocs}
-        onDiscuss={onDiscuss}
-        discussLabel={t('factoidsResults.discuss')}
+      <ResultHeader
+        title={t('factoidsResults.resultTitle', 'Evidence')}
+        actions={(
+          <ExportToolbar
+            onPdf={handlePdfExport}
+            onDocx={handleDocxExport}
+            onGoogleDocs={handleGoogleDocsExport}
+            isExportingGDocs={isExportingGDocs}
+            onDiscuss={onDiscuss}
+            discussLabel={t('factoidsResults.discuss')}
+            extraExports={<CopyResultButton getText={() => factoidsText(result, t)} />}
+            secondaryActions={onSave || saved ? <SaveResultAction saved={saved} onSave={onSave} disabled={saving} /> : undefined}
+          />
+        )}
       />
-
-      {discoveredSources && discoveredSources.length > 0 && (
-        <section
-          aria-labelledby="factoids-consulted-sources"
-          className="rounded-lg border bg-card/50 p-4 sm:p-5"
-        >
-          <h3 id="factoids-consulted-sources" className="mb-2 text-sm font-medium">
-            {t('sourceQuality.researchedSources')}
-          </h3>
-          <SourceQualityList sources={discoveredSources} className="[&_a]:break-words" />
-          <p className="mt-3 text-xs text-muted-foreground">
-            {t('sourceQuality.fallbackNote')}
-          </p>
-        </section>
-      )}
+      <ResearchedSources sources={discoveredSources} />
 
       {/* Verification Status */}
       <SectionCard
         title={t('factoidsResults.verificationStatus')}
-        description={`${verifiedCount} ${t('factoidsResults.verified')}`}
+        description={t('factoidsResults.verifiedCount', { count: verifiedCount })}
       >
         <div className="space-y-4">
           <div className="flex items-center gap-4">
             <div className="flex-1">
-              <Progress value={(verifiedCount / totalCount) * 100} className="h-3" />
+              <Progress value={(verifiedCount / totalCount) * 100} className="h-3" reveal />
             </div>
-            <span className="text-sm font-medium text-foreground">
-              {Math.round((verifiedCount / totalCount) * 100)}%
+            <span className="text-sm font-medium tabular-nums text-foreground">
+              <CountUp value={Math.round((verifiedCount / totalCount) * 100)} />%
             </span>
           </div>
         </div>
@@ -248,13 +249,13 @@ export function FactoidsResults({ result, discoveredSources, onDiscuss, onSaveSo
       {warnings.length > 0 && (
         <div className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-4">
           <div className="flex items-center gap-2 mb-2">
-            <AlertTriangle className="h-5 w-5 text-amber-500" />
+            <AlertTriangle className="h-5 w-5 text-amber-600 dark:text-amber-400" />
             <span className="font-medium text-amber-600">{t('factoidsResults.importantNotes')}</span>
           </div>
           <ul className="space-y-1 text-sm">
             {warnings.map((warning, i) => (
               <li key={i} className="flex items-start gap-2">
-                <span className="text-amber-500">•</span>
+                <span className="text-amber-600 dark:text-amber-400">•</span>
                 <span className="text-foreground">{warning}</span>
               </li>
             ))}
@@ -264,7 +265,7 @@ export function FactoidsResults({ result, discoveredSources, onDiscuss, onSaveSo
 
       {/* Factoids */}
       <SectionCard
-        title={`${t('factoidsResults.found')} ${displayFactoids.length} ${t('factoidsResults.factoids')}`}
+        title={t('factoidsResults.foundCount', { count: displayFactoids.length })}
         description={t('factoidsResults.factoidsDesc')}
       >
         <div className="space-y-4">
@@ -304,6 +305,6 @@ export function FactoidsResults({ result, discoveredSources, onDiscuss, onSaveSo
           ))}
         </div>
       </SectionCard>
-    </StaggeredContainer>
+    </div>
   );
 }

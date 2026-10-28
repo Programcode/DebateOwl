@@ -14,14 +14,39 @@ const port = Number(process.env.PORT ?? 8787);
 const upstream = process.env.UPSTREAM;
 const liveModel = process.env.LIVE_MODEL;
 const chatModel = (requested) => (liveModel === "as-requested" ? requested : liveModel);
+// Claude runs only on DebateOwl's Anthropic key (BYOK in OpenRouter): every
+// Claude call leaves pinned to the Anthropic provider with fallbacks off, and
+// any `models` fallback list is dropped. A rewrite to another family (only
+// as-requested reaches one) keeps just the options that still apply to it.
+const ANTHROPIC_ONLY = { only: ["anthropic"], allow_fallbacks: false };
+const liveChatBody = (body) => {
+  const model = chatModel(body.model);
+  const { models: _models, ...rest } = body;
+  const provider = body.provider && typeof body.provider === "object" ? body.provider : {};
+  if (model.startsWith("anthropic/")) return { ...rest, model, provider: { ...provider, ...ANTHROPIC_ONLY } };
+  if (model === body.model || !body.provider || typeof body.provider !== "object") return { ...rest, model };
+  const { only: _only, allow_fallbacks: _allowFallbacks, ...others } = provider;
+  return { ...rest, model, provider: others };
+};
 const maxUpstreamCalls = Number(process.env.MAX_UPSTREAM_CALLS ?? 200);
 if (upstream && !liveModel) throw new Error("LIVE_MODEL is required with UPSTREAM");
+if (upstream && liveModel !== "as-requested" && !liveModel.startsWith("anthropic/")) {
+  throw new Error(`LIVE_MODEL must be an anthropic/ model (Anthropic BYOK) or as-requested, not ${liveModel}`);
+}
 const requests = [];
+// Subscription state the fake Stripe returns, set by tests through /__subscription.
+const subscriptions = new Map();
 let failures = [];
+// Replies cut off at max_tokens (finish_reason "length"), set through /__truncate.
+let truncations = [];
 let upstreamCalls = 0;
+// Delay between streamed chunks; a test can slow it to keep a draft on screen.
+let streamDelayMs;
 
 const MARK = "FAKE-PROVIDER";
 
+const STREAM_CHUNK_CHARS = 24;
+const STREAM_CHUNK_DELAY_MS = 10;
 const usage = { prompt_tokens: 120, completion_tokens: 80, total_tokens: 200, cost: 0.0001 };
 
 const contention = (index) => ({
@@ -166,20 +191,32 @@ const routes = [
   ["brainstorm", "Brainstorm arguments like experienced competitive debaters", brainstorm],
   ["factoids", "You are a debate research specialist", factoids],
   ["sparring", "live debate sparring opponent", (user, system) => sparring(user, system)],
-  ["crossfire", "You are DebateLab's crossfire coach", (user) => crossfire(user)],
+  ["crossfire", "You are DebateOwl's crossfire coach", (user) => crossfire(user)],
   ["ask", "You are a debate coach chat bot", ask],
 ];
 
+// A cacheable system prompt arrives as text parts instead of a plain string.
+function messageText(message) {
+  const content = message?.content;
+  if (Array.isArray(content)) return content.map((part) => part?.text ?? "").join("");
+  return String(content ?? "");
+}
+
 function classify(body) {
   const messages = Array.isArray(body.messages) ? body.messages : [];
-  const system = String(messages.find((message) => message.role === "system")?.content ?? "");
+  const systemMessage = messages.find((message) => message.role === "system");
+  const system = messageText(systemMessage);
   const user = String(messages.at(-1)?.content ?? "");
+  const shape = {
+    messageCount: messages.length,
+    cacheBreakpoint: Array.isArray(systemMessage?.content) && systemMessage.content.some((part) => part?.cache_control),
+  };
   if (body.stream === true && system.includes("Answer in clear Markdown that can stream smoothly")) {
-    return { feature: "ask-stream", system, user };
+    return { feature: "ask-stream", system, user, ...shape };
   }
   const route = routes.find(([, marker]) => system.includes(marker));
-  if (!route) return { feature: null, system, user };
-  return { feature: route[0], system, user, output: route[2](user, system) };
+  if (!route) return { feature: null, system, user, ...shape };
+  return { feature: route[0], system, user, ...shape, output: route[2](user, system) };
 }
 
 function jevAnswers(questions) {
@@ -198,13 +235,26 @@ function json(res, status, value) {
   res.end(JSON.stringify(value));
 }
 
-function stream(res) {
+function stream(res, finishReason = "stop") {
   res.writeHead(200, { "content-type": "text/event-stream", "cache-control": "no-cache" });
   const chunks = [`${MARK} streamed answer: `, "weigh access ", "against cost."];
   for (const content of chunks) {
     res.write(`data: ${JSON.stringify({ choices: [{ delta: { content } }] })}\n\n`);
   }
-  res.write(`data: ${JSON.stringify({ choices: [{ delta: {}, finish_reason: "stop" }] })}\n\n`);
+  res.write(`data: ${JSON.stringify({ choices: [{ delta: {}, finish_reason: finishReason }] })}\n\n`);
+  res.write(`data: ${JSON.stringify({ choices: [], usage })}\n\n`);
+  res.end("data: [DONE]\n\n");
+}
+
+// Live generation: a structured answer streamed in small chunks, the way a
+// model writes tokens, so the client's partial rendering runs for real.
+async function streamJson(res, content, finishReason = "stop") {
+  res.writeHead(200, { "content-type": "text/event-stream", "cache-control": "no-cache" });
+  for (let index = 0; index < content.length; index += STREAM_CHUNK_CHARS) {
+    res.write(`data: ${JSON.stringify({ choices: [{ delta: { content: content.slice(index, index + STREAM_CHUNK_CHARS) } }] })}\n\n`);
+    await new Promise((resolve) => setTimeout(resolve, streamDelayMs ?? STREAM_CHUNK_DELAY_MS));
+  }
+  res.write(`data: ${JSON.stringify({ choices: [{ delta: {}, finish_reason: finishReason }] })}\n\n`);
   res.write(`data: ${JSON.stringify({ choices: [], usage })}\n\n`);
   res.end("data: [DONE]\n\n");
 }
@@ -219,7 +269,7 @@ async function proxy(req, res, path) {
   const body = JSON.parse(await readBody(req));
   const chat = path === "/api/v1/chat/completions";
   const record = chat
-    ? { ...classify(body), requestedModel: body.model, model: chatModel(body.model), stream: body.stream === true }
+    ? { ...classify(body), requestedModel: body.model, model: chatModel(body.model), stream: body.stream === true, maxTokens: body.max_tokens }
     : { feature: "jev", model: body.model };
   delete record.output;
   requests.push(record);
@@ -235,25 +285,44 @@ async function proxy(req, res, path) {
     return json(res, 429, { error: { message: `Live gate stopped after ${maxUpstreamCalls} provider calls` } });
   }
   const started = Date.now();
+  // A caller that hangs up (a cancelled live run) stops the upstream call too.
+  // A streamed reply is complete at its finish reason; the caller may close
+  // right after it without reading the trailing bytes.
+  const hangUp = new AbortController();
+  let finished = false;
+  res.on("close", () => {
+    if (!res.writableEnded) hangUp.abort();
+  });
   try {
     const response = await fetch(`${upstream}${path.replace(/^\/api/, "")}`, {
       method: "POST",
       headers: { authorization: req.headers.authorization ?? "", "content-type": "application/json" },
-      body: JSON.stringify(chat ? { ...body, model: chatModel(body.model) } : body),
+      body: JSON.stringify(chat ? liveChatBody(body) : body),
+      signal: hangUp.signal,
     });
     record.status = response.status;
     res.writeHead(response.status, { "content-type": response.headers.get("content-type") ?? "application/json" });
     // Keep the head of the reply: OpenRouter's own `model` and `provider`
     // fields prove which model answered, independent of the rewrite above.
+    // A streamed reply names them in its first chunk, so read them as it arrives.
     let head = "";
+    let tail = "";
     for await (const chunk of response.body ?? []) {
-      if (head.length < 8192) head += Buffer.from(chunk).toString("utf8");
+      tail = (tail + Buffer.from(chunk).toString("utf8")).slice(-4096);
+      if (/"finish_reason"\s*:\s*"|data: \[DONE\]/.test(tail)) finished = true;
+      if (head.length < 8192) {
+        head += Buffer.from(chunk).toString("utf8");
+        record.upstreamModel ??= /"model"\s*:\s*"([^"]+)"/.exec(head)?.[1];
+        record.upstreamProvider ??= /"provider"\s*:\s*"([^"]+)"/.exec(head)?.[1];
+      }
       res.write(chunk);
     }
     res.end();
-    record.upstreamModel = /"model"\s*:\s*"([^"]+)"/.exec(head)?.[1];
-    record.upstreamProvider = /"provider"\s*:\s*"([^"]+)"/.exec(head)?.[1];
   } catch (error) {
+    if (hangUp.signal.aborted) {
+      if (!finished) record.status = 499;
+      return;
+    }
     record.status = 502;
     const message = error instanceof Error ? error.message : "upstream connection failed";
     console.error(`live provider request failed: ${message}`);
@@ -273,6 +342,23 @@ createServer(async (req, res) => {
   if (url.pathname === "/__reset" && req.method === "POST") {
     requests.length = 0;
     failures = [];
+    truncations = [];
+    streamDelayMs = undefined;
+    return json(res, 200, { ok: true });
+  }
+  if (url.pathname === "/__stream-delay" && req.method === "POST") {
+    const { ms } = JSON.parse(await readBody(req) || "{}");
+    streamDelayMs = typeof ms === "number" && ms >= 0 ? ms : undefined;
+    return json(res, 200, { ok: true });
+  }
+  if (url.pathname === "/__subscription" && req.method === "POST") {
+    const subscription = JSON.parse(await readBody(req) || "{}");
+    subscriptions.set(subscription.id, subscription);
+    return json(res, 200, { ok: true });
+  }
+  if (url.pathname === "/__truncate" && req.method === "POST") {
+    const { feature, count = 1 } = JSON.parse(await readBody(req) || "{}");
+    truncations.push({ feature, count });
     return json(res, 200, { ok: true });
   }
   if (url.pathname === "/__fail" && req.method === "POST") {
@@ -290,6 +376,14 @@ createServer(async (req, res) => {
     requests.push({ feature: "jev", model: body.model, status: 200 });
     return json(res, 200, { model: body.model, answers: jevAnswers(body.questions ?? {}), usage: { input_tokens: 40, output_tokens: 8, cost: 0.00001 } });
   }
+  const subscriptionPath = url.pathname.match(/^\/v1\/subscriptions\/([^/]+)$/);
+  if (subscriptionPath && req.method === "GET") {
+    // The webhook applies Stripe's current subscription state, not the event's.
+    const subscription = subscriptions.get(decodeURIComponent(subscriptionPath[1]));
+    if (!subscription) return json(res, 404, { error: { type: "invalid_request_error", message: "No such subscription" } });
+    requests.push({ feature: "stripe-subscription", user: subscription.id });
+    return json(res, 200, subscription);
+  }
   if (url.pathname === "/v1/customers/search" && req.method === "GET") {
     // Account deletion searches Stripe (through STRIPE_API_URL) for the user's
     // customers. Test accounts have none.
@@ -301,8 +395,9 @@ createServer(async (req, res) => {
   }
 
   const body = JSON.parse(await readBody(req));
-  const { feature, system, user, output } = classify(body);
-  requests.push({ feature, model: body.model, stream: body.stream === true, system, user });
+  const { output, ...record } = classify(body);
+  const { feature } = record;
+  requests.push({ ...record, model: body.model, stream: body.stream === true, maxTokens: body.max_tokens });
   if (!feature) return json(res, 500, { error: { message: "Fake OpenRouter does not recognize this prompt" } });
 
   const failure = failures.find((item) => item.count > 0 && (!item.feature || item.feature === feature));
@@ -310,12 +405,18 @@ createServer(async (req, res) => {
     failure.count -= 1;
     return json(res, failure.status, { error: { message: `Fake ${feature} failure` } });
   }
-  if (feature === "ask-stream") return stream(res);
+  // A cut-off reply stops halfway with finish_reason "length", as a model does at max_tokens.
+  const truncation = truncations.find((item) => item.count > 0 && (!item.feature || item.feature === feature));
+  if (truncation) truncation.count -= 1;
+  const finishReason = truncation ? "length" : "stop";
+  if (feature === "ask-stream") return stream(res, finishReason);
   if (output === null) return json(res, 500, { error: { message: `Fake ${feature} could not parse the request` } });
+  const content = truncation ? JSON.stringify(output).slice(0, Math.floor(JSON.stringify(output).length / 2)) : JSON.stringify(output);
+  if (body.stream === true) return streamJson(res, content, finishReason);
   return json(res, 200, {
     id: `fake-${requests.length}`,
     model: body.model,
-    choices: [{ index: 0, finish_reason: "stop", message: { role: "assistant", content: JSON.stringify(output) } }],
+    choices: [{ index: 0, finish_reason: finishReason, message: { role: "assistant", content } }],
     usage,
   });
 }).listen(port, "0.0.0.0", () => console.log(`${upstream ? "live proxy" : "fake OpenRouter"} listening on ${port}`));

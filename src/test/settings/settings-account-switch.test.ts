@@ -29,11 +29,16 @@ describe('settings hydration across an account switch', () => {
         feature_configs: { generate: { model: 'gpt-4o' } },
       },
     });
+    // The plan's Stripe rows are held back until B has signed in.
     let resolvePlan!: (value: unknown) => void;
-    supabaseMock.rpc.mockImplementationOnce(() => new Promise((resolve) => { resolvePlan = resolve; }));
+    const planPending = new Promise((resolve) => { resolvePlan = resolve; });
+    const from = supabaseMock.from.getMockImplementation()!;
+    supabaseMock.from.mockImplementation((table: string) => table === 'subscriptions'
+      ? { ...from(table), select: vi.fn(() => ({ eq: vi.fn(() => planPending) })) } as unknown as ReturnType<typeof from>
+      : from(table));
 
     const hydratingA = useSettingsStore.getState().hydrateFromServer();
-    await vi.waitFor(() => expect(supabaseMock.rpc).toHaveBeenCalled());
+    await vi.waitFor(() => expect(supabaseMock.from).toHaveBeenCalledWith('subscriptions'));
 
     // B signs in: the store resets and B writes a prompt of their own.
     useSettingsStore.getState().resetLocalData();
@@ -41,12 +46,13 @@ describe('settings hydration across an account switch', () => {
     supabaseMock.from.mockClear();
     useSettingsStore.setState({ customSystemPrompt: 'Prompt of B' });
 
-    resolvePlan({ data: [{ tier: 'trial', daily_limit: 5, can_access_pro_models: false }], error: null });
+    resolvePlan({ data: [], error: null });
     await hydratingA;
+    supabaseMock.from.mockImplementation(from);
 
     expect(updates()).toEqual([]);
     const state = useSettingsStore.getState();
     expect(state.customSystemPrompt).toBe('Prompt of B');
-    expect([state.language, state.theme]).toEqual(['en', 'system']);
+    expect([state.language, state.theme]).toEqual(['en', 'light']);
   });
 });

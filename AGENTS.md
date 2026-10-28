@@ -16,18 +16,27 @@ The local Supabase stack still uses shared default ports and container names. In
 ## System map
 
 - `src/` is the React 18 and TypeScript client. Routes and lazy page entry points live in `src/App.tsx`.
-- `src/lib/stores/` owns browser state and Supabase hydration. `src/lib/ai/client.ts` is the client AI boundary.
+- `src/lib/stores/` owns browser state and Supabase hydration. `src/lib/ai/client.ts` is the client AI boundary: app code imports only from it. The request transport is `request.ts` (streaming Ask uses `streaming.ts`), and each feature has a file in `features/`, mirroring `supabase/functions/ai/features/`.
 - `packages/core/` (`@debatelab/core`, npm workspace) holds platform-neutral shared code: Zod schemas, validation, languages, Crossfire and Sparring logic. No DOM globals, React, or `import.meta` there; old `src/lib/` paths re-export it. Stores and i18n catalogs stay in `src/`.
 - `apps/mobile/` (`@debatelab/mobile`, npm workspace) is the Expo iOS app (React 19, Expo Router). It imports `@debatelab/core`, the `src/locales` catalogs and `src/lib/supabase/projects.ts`; it runs in Expo Go, and native modules Expo Go lacks go only into the development build (`DEBATELAB_BUILD=dev` in `app.config.ts`). Read [apps/mobile/AGENTS.md](apps/mobile/AGENTS.md) before changing it.
 - `supabase/functions/` contains Deno Edge Functions. Shared auth, CORS, research, prompts, cost, and validation code lives in `supabase/functions/_shared/`.
 - `supabase/migrations/` is the database history and schema source of truth.
 - `src/lib/stores/debate-store.ts` owns the Current Debate: every source and saved result belongs to one debate or to one-off work, and nothing crosses debates.
 - Collaborative Workspace is hidden. Its routes render only when `VITE_COLLABORATION_URL` is set, and production does not set it. Do not extend it unless Adam asks.
-- `.github/workflows/` owns CI behavior. `vercel.json` owns production hosting: build output, SPA fallback, cache policy, and security headers.
+- `.github/workflows/` owns CI behavior. `vercel.json` owns production hosting: build output, SPA fallback, cache policy, security headers, and which Git branches deploy.
 
 ## Deployment
 
-The frontend is hosted on Vercel at `https://debate.pi-stack.org`. Merging to `main` starts a Vercel production deployment, so a merge ships the frontend. Supabase migrations and Edge Functions are not deployed to production by that merge; production deploys are separate authorized operations. Staging syncs itself from `main` within about 5 minutes through a VPS timer; [docs/staging.md](docs/staging.md) is the one place for staging access, seed data, and the sync. `npm run backend:status` (read-only) lists what the linked project is missing; run it before any backend deploy.
+The frontend is hosted on Vercel at `https://debateowl.com`. Merging to `main` starts a Vercel production deployment, so a merge ships the frontend. Supabase migrations and Edge Functions are not deployed to production by that merge; production deploys are separate authorized operations. Staging syncs itself from `main` within about 5 minutes through a VPS timer; [docs/staging.md](docs/staging.md) is the one place for staging access, seed data, and the sync. `npm run backend:status` (read-only) lists what the linked project is missing; run it before any backend deploy.
+
+Vercel previews are opt-in. A push to `main` deploys both Vercel projects (production, and the staging project's site, which also tracks `main`). A push to any other branch does not create a deployment and does not count toward the daily cap. Request a hosted preview only when there is a real UI change to check. From the repo root, with the Vercel CLI logged in (`vercel login`, or `VERCEL_TOKEN` in the environment; never in the repo):
+
+```bash
+npx vercel link --yes --non-interactive --scope adam-gaborjanis-projects --project debatelab-staging
+npx vercel deploy --yes --non-interactive --scope adam-gaborjanis-projects
+```
+
+That preview is pinned to staging. Do not pass `--prod`, and do not run `vercel --yes` before the link: the first deploy of a new project is production. For a preview that uses production data, link `debate-navigator` instead. One preview is enough. Adam can create the same preview from the Vercel dashboard (Create Deployment, pick the branch, leave the target as Preview) without changing project settings. [docs/operations.md](docs/operations.md#opt-in-previews) has the detail.
 
 ## Normal ports
 
@@ -67,12 +76,12 @@ Database migrations and pgTAP policies use a separate Docker-backed gate. In Sup
 Outside Superset, run the underlying commands directly:
 
 ```bash
-supabase db start
+npx supabase db start
 npm run test:db
-supabase stop --no-backup
+npx supabase stop --no-backup
 ```
 
-Supabase CLI 2.115 or newer is required. Do not run this gate concurrently from multiple worktrees. If this task starts the stack, stop it before finishing, including after failures when safe.
+Use only the repo-pinned Supabase CLI (the exact `supabase` devDependency, 2.121.0). `npm run` scripts, `./.superset/db-gate.sh`, `scripts/agent-stack.sh`, and the verify harness already put it first on PATH; anywhere else, call `npx supabase`. Never use a global CLI or `npx supabase@latest`, and never bump the version in one worktree only: each CLI version pulls its own ~7 GB set of Docker images onto the shared VPS. Change it in `package.json`, `package-lock.json`, and the `setup-cli` steps in `.github/workflows/` together. Do not run this gate concurrently from multiple worktrees. If this task starts the stack, stop it before finishing, including after failures when safe.
 
 WebKit is a separate release smoke test:
 
@@ -88,14 +97,14 @@ To prove that a user-facing change works, drive the real app with the `verify-de
 ```bash
 H=.claude/skills/verify-debatelab/bin/verify.sh
 $H up                  # fake model provider, free
-$H up --live           # real AI: OpenRouter pinned to meta/muse-spark-1.3-contributor, real Exa
+$H up --live           # real AI: OpenRouter pinned to anthropic/claude-haiku-5.5 (Anthropic BYOK), real Exa
 $H doctor              # proves the stack is local, ours, and (live) pinned
 $H drive all           # every recipe; or recipes/<name>, e2e/<path>; add --project desktop-chromium
 $H e2e run             # agentic tests in agentic/ (TesterArmy e2e); `e2e explore "<goal>" --session student --agent <persona>` hunts for bugs
 $H down                # always, including after failures
 ```
 
-- Use `--live` when the change touches prompts, model output handling, web research, or citations. The fake mode cannot prove those. URL import fetches pages directly and works the same in both modes. Every chat call is rewritten to the Muse Spark contributor model, so a full run costs cents plus Exa searches, and the proxy stops after 400 upstream calls (`--max-calls N`). Only use made-up debate content: the contributor model may keep prompts.
+- Use `--live` when the change touches prompts, model output handling, web research, or citations. The fake mode cannot prove those. URL import fetches pages directly and works the same in both modes. Every chat call is rewritten to Claude Haiku 5.5 pinned to the Anthropic provider, so model calls bill the Anthropic BYOK key, not OpenRouter credits; Exa searches still cost, and the proxy stops after 400 upstream calls (`--max-calls N`). Only use made-up debate content. Never point a default, an Auto pool, or the testing agent at a non-`anthropic/` model or enable `allow_fallbacks`: `src/test/ai/anthropic-only-guard.test.ts` fails on it.
 - Live keys come from `~/.config/debatelab/live-verify.env` (mode 600, `LIVE_OPENROUTER_API_KEY` and `LIVE_EXA_API_KEY`). On Adam's VPS it holds copies of the Hermes keys in `~/.hermes/.env`. Never print them.
 - The stack holds the same lock as `./.superset/db-gate.sh`, so only one worktree can run it at a time.
 - Most tools work inside a Current Debate. Recipes start one with `startDebate` or answer the motion dialog with `chooseForMotion`; see the skill's Drive section.

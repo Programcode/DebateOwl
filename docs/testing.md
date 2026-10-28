@@ -86,7 +86,7 @@ OPENROUTER_API_KEY=... deno run --allow-read --allow-write --allow-env=OPENROUTE
   --allow-net=openrouter.ai scripts/prompt-examples.ts supabase/functions /tmp/after.json
 ```
 
-This sends the fourteen prompt examples to one real model (GPT-5.6 Luna by default) and writes the raw outputs for manual review. Point the first argument at a directory holding an older `_shared/prompts.ts` and `ai/prompt-builder.ts` to compare revisions. It runs no web research and is a bounded manual check, not a model matrix or an automated quality gate.
+This sends the fourteen prompt examples to one real model (GPT-6 Luna by default) and writes the raw outputs for manual review. Point the first argument at a directory holding an older `_shared/prompts.ts` and `ai/prompt-builder.ts` to compare revisions. It runs no web research and is a bounded manual check, not a model matrix or an automated quality gate.
 
 ### Live Jev contract smoke
 
@@ -102,7 +102,7 @@ This sends one tiny typed choice to OpenRouter's Decisions endpoint using the pi
 npm run build
 ```
 
-This proves the Vite production bundle compiles and then walks the emitted Vite manifest to reject feature-only PDF, DOCX, chart, ReactFlow, export, and Admin modules from the static `index.html` dependency graph. It does not prove authentication, database behavior, provider access, or production deployment.
+This proves the Vite production bundle compiles, prerenders the public pages, checks the built site's links, fragments, JSON-LD and basic accessibility (including heading order) with `scripts/check-site.mjs`, checks that every sitemap page has at least 3 inbound links and the home page links to at least 15 with `scripts/check-links.mjs`, and then walks the emitted Vite manifest to reject feature-only PDF, DOCX, chart, ReactFlow, export, and Admin modules, the Spanish and Hungarian catalogs, and the signed-in layout from the static `index.html` dependency graph. It does not prove authentication, database behavior, provider access, or production deployment.
 
 ## Production service-worker smoke
 
@@ -110,7 +110,7 @@ This proves the Vite production bundle compiles and then walks the emitted Vite 
 npm run test:sw
 ```
 
-Run this after `npm run build`. It serves `dist/` through Vite preview and proves that a v2 worker cache upgrades to v3 and claims the page, a first-visited route and its display logo reload offline, an unvisited route shows recovery UI, an intent-prefetched route opens offline, and private API paths do not enter Cache Storage. It uses a stub session and blocks external requests, so it is not authenticated backend or deployed-host proof.
+Run this after `npm run build`. It serves `dist/` through Vite preview (which applies the `vercel.json` rewrites, so app routes get `app-shell.html` as in production) and proves that a v2 worker cache upgrades to this build's caches and claims the page; that after one visit to `/app`, Home, Library, History, Settings and Timer open offline as fresh navigations, the timer runs, the offline indicator shows, and switching to Spanish works; that a visited public page answers offline only with itself and an unvisited one gets the offline page; that an unvisited route shows recovery UI and an intent-prefetched one opens; and that private API paths and `/auth/callback` do not enter Cache Storage. It uses a stub session and blocks external requests, so it is not authenticated backend or deployed-host proof.
 
 ## Credential-free browser gate
 
@@ -127,9 +127,15 @@ Pull requests run only tests tagged `@smoke` on desktop Chromium (`npm run test:
 
 The server is never reused. CI uses retries and two workers. On failure, traces, screenshots, videos, and the HTML report stay in ignored `test-results/` and `playwright-report/` directories. CI may upload those credential-free artifacts for diagnosis.
 
+Playwright starts that server with `VITE_E2E=1`. The client then keeps the environment switcher, but the production fallback is `http://e2e.invalid` instead of the production Supabase project, and a request that still names that project is refused in the browser. `playwright.config.ts` also refuses to start when `VITE_SUPABASE_ENV` or `SUPABASE_URL` already points at production. `E2E_ALLOW_PROD=1` is the explicit override. The production canary uses `playwright.production.config.ts` and does not set `VITE_E2E`. Plain `npm run dev` is unchanged and still defaults to production.
+
+The one-time DebateOwl welcome stays closed whenever `VITE_E2E` or `VITE_LOCAL_PREVIEW` is set, so Playwright, the verify stack and agentic tests never meet it; `?intro=show` opens it anyway and `?intro=skip` keeps it closed in any build. Closing it continues into the tour's Start debate step when that account has not finished the tour. If that chunk fails twice, the app logs once, remembers the welcome, and continues without the tour. The production canary and the service worker offline test (`npm run test:sw`), which drive production builds, seed `debateowl_intro_seen_v1` instead.
+
 `e2e/hungarian-parity.spec.ts` is the focused Hungarian browser contract. On desktop and mobile Chromium it checks persisted `<html lang="hu">`, public and authenticated page chrome, route titles, onboarding, saved-chat empty state, Library controls, Timer semantics, localized close labels, and runtime errors. It deliberately does not reject arbitrary English text because source titles, user content, model names, and citations may legitimately remain in their source language.
 
 `e2e/first-run.spec.ts` drives the same first run against stubbed Supabase routes in English and Hungarian, so it proves the client flow only.
+
+`e2e/free-tools.spec.ts` (tag `@smoke`) opens every `/tools` page signed out and checks its heading, canonical URL and JSON-LD, and that it makes no Supabase request. On a paused Playwright clock it runs the timer past the BP protected minute, through a reload, and runs the two Public Forum prep banks; it also draws a motion set and reloads its permalink, times a pasted speech, lays out a BP flow sheet under print media, and checks that `/embed/debate-timer` is `noindex` and requests nothing from another origin. The format data, timer transitions, custom-format links, motion filters and speech-time arithmetic have unit tests in `src/test/free-tools/`. The dev server cannot prove the response headers: `src/test/vercel-deployment-config.test.ts` checks which paths may be framed.
 
 `src/test/i18n-keys.test.ts` fails when a literal `t()` key in `src/` is missing from `en.json`, or when a call that passes `count` lacks its `_one` and `_other` forms. Dynamic keys such as ``t(`nav.${key}`)`` are out of its reach. `src/test/i18n.test.ts` requires the same keys in all three catalogs. Together they prove every literal key has a Spanish and Hungarian entry, not that the translation is natural.
 
@@ -164,7 +170,7 @@ It does not start local Supabase, run pgTAP, run WebKit, or use protected stagin
 Requirements:
 
 - Docker
-- Supabase CLI 2.115 or newer
+- Supabase CLI 2.121.0, pinned in `package.json` (`npm ci` installs it)
 - exclusive ownership of the local Supabase ports and containers
 
 In Superset, run:
@@ -176,9 +182,9 @@ In Superset, run:
 The wrapper acquires `~/.superset/debatelab-db.lock`, starts full local Supabase, runs `npm run test:db`, then holds the same lock while a controlled Mailpit relay, collaboration process, fake model provider, and Vite client run the real-Auth desktop/mobile workspace and full-stack feature journeys. The `Database` workflow runs this same gate on pull requests that touch its paths, and retains its logs and browser traces on failure. It stops every owned process and the stack on exit, including after failure. To run only the database portion under the same lock, use `./.superset/db-gate.sh --db-only`. Outside Superset, run it with:
 
 ```bash
-supabase db start
+npx supabase db start
 npm run test:db
-supabase stop --no-backup
+npx supabase stop --no-backup
 ```
 
 The stack replays migrations and runs pgTAP tests. The browser portion creates isolated local users and deletes them, captures mail only in local Mailpit, restarts the collaboration process, and proves recovery and revocation. `CREATE INDEX CONCURRENTLY` requires the stated CLI floor so it runs outside the migration batch.
@@ -196,7 +202,7 @@ Each test signs in through the Login page with a fresh demo code and deletes tha
 - Current Debate context: every request carries the debate's motion, instructions, and sources; Review drops a source and pins a saved case for exactly one request; the pin is stored; Crossfire leaves instructions out; and one-off work sends nothing;
 - a judged Lincoln-Douglas sparring round and a Crossfire debrief after a Jev signal attaches to an answer;
 - spoken Sparring and Crossfire rounds against the real `ai` and `voice` functions with no ElevenLabs key: the opponent prompt carries the voice rules, the reply comes back clean with signed segments, `voice` answers `voice_unavailable`, the browser voice reads the clean text, the judge gets the measured facts, and the saved round holds no audio tag (the recogniser and the browser voice are scripted);
-- Library activation and deletion, output-language sync across devices, flowchart saves, and Delete All My Data (it must leave another account's rows intact);
+- Library activation and deletion, output-language sync across devices, flowchart saves, and Delete all my data (it must leave another account's rows intact);
 - Download my data (only the caller's rows, even when the request names another user) and Delete account (no row in any `public` or `private` table mentions the user afterwards, another account is untouched, and a call without a session or with another user's confirmation deletes nothing);
 - a promo code redeemed in Settings that restores AI access, and signed Stripe webhooks that grant and revoke Pro while a forged or replayed one changes nothing;
 - admin announcements seen by another user, denied admin access, and a public share link.
@@ -215,7 +221,7 @@ To check one feature by hand, or keep evidence for a change, use the same stack 
 LIVE_PROVIDERS=1 LIVE_OPENROUTER_API_KEY=... LIVE_EXA_API_KEY=... ./.superset/db-gate.sh
 ```
 
-Live mode uses the same locked stack but skips pgTAP and the fake-provider specs. It runs `e2e/live/` on desktop Chromium against real OpenRouter, Jev, and Exa. Imported web pages are fetched live too. The fake provider becomes a recording proxy. It forwards every chat call to OpenRouter with the model pinned to `LIVE_MODEL` (default `meta/muse-spark-1.3-contributor`; CI reads the `LIVE_MODEL` repository variable, which is unset), passes Jev decisions through unchanged, and refuses calls past `MAX_UPSTREAM_CALLS` (200). The default is the cheapest model that supports every request parameter the app sends, including `response_format` and reasoning effort. It is test-only and not in the app catalog, so users cannot pick it. Meta is its only provider, so an outage there fails the gate instead of failing over.
+Live mode uses the same locked stack but skips pgTAP and the fake-provider specs. It runs `e2e/live/` on desktop Chromium against real OpenRouter, Jev, and Exa. Imported web pages are fetched live too. The fake provider becomes a recording proxy. It forwards every chat call to OpenRouter with the model pinned to `LIVE_MODEL` (default `anthropic/claude-haiku-5.5`; CI reads the `LIVE_MODEL` repository variable, which is unset), passes Jev decisions through unchanged, and refuses calls past `MAX_UPSTREAM_CALLS` (200). Every rewritten call leaves pinned to the Anthropic provider with `allow_fallbacks: false`, so it bills DebateLab's Anthropic key (BYOK in OpenRouter) and never OpenRouter credits. The gate, `verify.sh`, and the proxy refuse a `LIVE_MODEL` outside `anthropic/`, except `as-requested` for the model matrix. The default is also the Basic catalog default, so a live run that selects it cannot be told apart from the pin by the upstream model alone; recipes check the requested model instead. Anthropic is its only provider, so an outage or an exhausted key fails the gate instead of failing over.
 
 The specs cover web-researched case generation, verified Factoids citations, Ask with web search, URL import, streamed Ask, Attack, Brainstorm, a judged sparring round, and Crossfire with live Jev signals. Outputs vary, so tests assert structure rather than text:
 
@@ -263,7 +269,7 @@ How it runs:
 - Always through `verify.sh e2e <run|explore|list|cache>`. The wrapper runs `doctor`, loads the stack environment, turns e2e telemetry off, and takes the testing agent's key from `OPENROUTER_API_KEY`, `LIVE_OPENROUTER_API_KEY`, or `~/.config/debatelab/live-verify.env`. It writes the report (`summary.md`, `report.json`), screenshots, traces, and failure videos to `.verify/artifacts/<run>-e2e-<command>-<pid>/`. The config refuses a non-loopback URL and never starts a dev server, because a plain `npm run dev` reaches production.
 - Each signed-in test signs in a fresh demo-code user through the Login page and deletes it afterwards. Public-page tests use the `visitorTest` fixture with the same checks.
 - There are two targets, `desktop` (1280 by 800) and `mobile` (393 by 851). e2e does not emulate touch. The app lays out by viewport width and never reads the user agent, so the viewport is what matters; the Playwright Pixel 5 project still owns touch behavior.
-- The testing agent has two models on OpenRouter, separate from the app's provider mode, and a fake-mode stack still needs both. The actor (`agent.act` and explorations) is `inclusionai/ling-3.0-flash-vl` ($0.021 and $0.062 per million input and output tokens on Novita, with DeepInfra as fallback). Recorded flows replay without it, so it runs only on a cache miss and in explorations. A small model is enough to click through these flows: with the cache off it passed the actor-heavy specs for about a fifth of GPT-6 Luna's price, while Gemma 3 12B, cheaper still, failed most of them. It sometimes calls `check` on a switch without `checked: false` and then reports the step done, so an unrecorded step that turns something off can fail; record such steps and commit the entry. OpenRouter withdrew the free Qwen tier the suite used before, which now fails with `This model is unavailable for free`. The judge (`agent.assert`, `waitFor`, `extract`) is `meta/muse-spark-1.3-contributor` ($0.10 and $0.20 per million input and output tokens), the same tier as the app's live pin. It answers every judgment on every run. A full run of both viewports makes about 250 judgments and costs about ten cents. It takes about 45 minutes on one machine with three workers, which is why CI splits it into four jobs. The judge cannot act, because Meta's endpoint accepts only `tool_choice: "auto"`. `E2E_AGENT_MODEL` and `E2E_JUDGE_MODEL` override the two. The judge's tier may keep prompts, so use made-up debate content only. A transient OpenRouter error such as `[Meta] The requested model was not found` is infrastructure: rerun with `--last-failed`. The agent's context explains that fake AI answers are canned free-transport text.
+- The testing agent has two models on OpenRouter, separate from the app's provider mode, and a fake-mode stack still needs both. The actor (`agent.act` and explorations) and the judge (`agent.assert`, `waitFor`, `extract`) are `anthropic/claude-haiku-5.5` and `anthropic/claude-sonnet-5.5`, both pinned to the Anthropic provider with `allow_fallbacks: false`, so they bill DebateLab's Anthropic key (BYOK in OpenRouter) rather than OpenRouter credits. Recorded flows replay without the actor, so it runs only on a cache miss and in explorations; the model is not part of the replay key. The judge answers every judgment on every run: a full run of both viewports makes about 250 judgments. It is Sonnet because a Haiku judge failed about one in eight page checks on screens Sonnet passes, mostly by reading content below the fold as cut off. It takes about 45 minutes on one machine with three workers, which is why CI splits it into four jobs. `E2E_AGENT_MODEL` and `E2E_JUDGE_MODEL` override the two, but `e2e.config.ts` refuses anything outside `anthropic/` (`src/test/ai/anthropic-only-guard.test.ts` checks it). Use made-up debate content only. An OpenRouter error naming Anthropic (an outage, or the key out of credit) is infrastructure: rerun with `--last-failed`. The agent's context explains that fake AI answers are canned free-transport text.
 - Replay. When a later check passes, an `agent.act` flow is recorded in [`agentic/replay/`](../agentic/replay/). Later runs replay it with no model call and verify that its effect happened, until the app changes and the agent takes over and records again. The model is not part of the cache key, so a flow recorded with one actor replays under another. A step that ends on a passing toast or other transient state can hand off to the agent on replay (`end-mismatch` in the report); that costs a model call, not a failure. Commit new and changed entries with the test that made them. Local runs read and write the cache; CI only reads it. Changing an instruction, its params, the test or target name, the agent's `context`, or e2e's minor version re-records.
 - Without a model key or the stack environment, agent tests skip, so a bare `npx e2e run` proves nothing. `failOnSkippedFailure` fails a run in which a test skipped after a failure.
 
@@ -282,18 +288,18 @@ PROD_SUPABASE_ANON_KEY=... PROD_CANARY_EMAIL=... PROD_CANARY_PASSWORD=... \
 npx playwright test --config=playwright.production.config.ts
 ```
 
-`e2e/production/canary.spec.ts` checks `https://debate.pi-stack.org` directly:
+`e2e/production/canary.spec.ts` checks `https://debateowl.com` directly:
 
 - the site loads and signed-out app routes redirect to Login;
 - every browser-facing Edge Function answers a preflight that allows the site origin (`workspace-invites` is excluded until production enables Workspaces);
 - `ai` returns 401, not a 5xx, to an unauthenticated call;
 - the canary account signs in, opens Generate, and Settings shows its Pro plan (a row-level-security read), without spending an AI request;
-- the dedicated canary account gets a streamed GPT-5.6 Luna answer from `ai-stream`;
-- the canary account generates a three-contention case with GPT-5.6 Luna through `ai`.
+- the dedicated canary account gets a streamed Claude Haiku 5.5 answer from `ai-stream`;
+- the canary account generates a three-contention case with Claude Haiku 5.5 through `ai`.
 
 The last two checks are the only production writes, and they touch only the canary account: its `ai_requests` usage rows and whatever the Generate page saves for it. The dedicated canary account has Pro promo access capped at 10 requests a day. Captures are disabled because they could retain its session.
 
-`.github/workflows/prod-canary.yml` runs after every successful Vercel `Production` deployment, daily at 06:41 UTC, and on demand. Main can deploy more than 10 times a day, so deployment runs set `CANARY_AI_REQUESTS=false` and skip the two AI checks. The signed-in session check still runs on every deployment. Only the daily and manual runs make real AI requests: two per run, plus at most two retries. It reads the password and email from secrets and the public anon key from the `PROD_SUPABASE_ANON_KEY` repository variable.
+`.github/workflows/prod-canary.yml` runs after every successful Vercel production deployment of the `debate-navigator` project (GitHub environment `Production – debate-navigator`; the `debatelab-staging` project's production deployments do not start it), daily at 06:41 UTC, and on demand. Main can deploy more than 10 times a day, so deployment runs set `CANARY_AI_REQUESTS=false` and skip the two AI checks. The signed-in session check still runs on every deployment. Only the daily and manual runs make real AI requests: two per run, plus at most two retries. It reads the password and email from secrets and the public anon key from the `PROD_SUPABASE_ANON_KEY` repository variable.
 
 The local stack begins at port `54321` and is not parallel-safe across worktrees. The task that starts it must stop it before finishing or abandoning the run. Use `supabase stop --no-backup` unless another active task explicitly owns the same stack.
 

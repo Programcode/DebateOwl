@@ -1,6 +1,6 @@
 {
   "schemaVersion": "trace-1",
-  "createdAt": "2026-10-06T08:52:18.268Z",
+  "createdAt": "2026-10-10T15:58:12.314Z",
   "payload": {
     "actions": [
       {
@@ -32,16 +32,13 @@
       "callIndex": 0,
       "agent": "default"
     },
-    "summary": "Changed the Interface Language setting to Español. The settings page now displays Spanish labels, including “Idioma de Interfaz” with “Español” selected.",
+    "summary": "Switched the interface language to Español. The settings page now displays all labels in Spanish (e.g., 'Idioma de interfaz', 'Ajustes', 'Iniciar debate', 'Cerrar sesión'), and the Interface Language combobox shows 'Español'.",
     "startPath": "/app/settings",
     "endPath": "/app/settings",
     "endAnchors": [
       {
         "role": "image",
-        "name": "Logotipo de DebateLab"
-      },
-      {
-        "text": "Cambiar tema"
+        "name": "Logotipo de DebateOwl"
       },
       {
         "role": "button",
@@ -57,27 +54,23 @@
         "name": "Suscripción"
       },
       {
-        "text": "Pro"
-      },
-      {
         "text": "El acceso a la IA está activo. Pueden aplicarse límites de uso."
       },
       {
         "role": "heading",
         "name": "Ajustes globales"
+      },
+      {
+        "text": "Idioma de interfaz"
+      },
+      {
+        "text": "Español"
       }
     ],
     "goneAnchors": [
       {
-        "role": "status",
-        "name": "Opening Settings"
-      },
-      {
         "role": "image",
-        "name": "DebateLab logo"
-      },
-      {
-        "text": "Toggle theme"
+        "name": "DebateOwl logo"
       },
       {
         "role": "button",
@@ -85,22 +78,27 @@
         "testId": "current-debate-mobile"
       },
       {
-        "role": "link",
-        "name": "Terms"
+        "role": "heading",
+        "name": "Settings"
       },
       {
-        "role": "link",
-        "name": "Privacy"
+        "role": "heading",
+        "name": "Subscription"
       },
       {
-        "role": "link",
-        "name": "DebateLab logo DebateLab"
+        "text": "AI access is active. Usage limits may apply."
       },
       {
-        "role": "button",
-        "name": "Language"
+        "role": "heading",
+        "name": "Global Settings"
+      },
+      {
+        "text": "Interface Language"
+      },
+      {
+        "text": "AI Output Language"
       }
     ],
-    "endWaitMs": 12650
+    "endWaitMs": 12842
   }
 }

@@ -1,4 +1,3 @@
-import { entitlementRows } from "../_shared/testing/entitlement.ts";
 const testEnvironment = {
   SUPABASE_URL: "https://supabase.test",
   SUPABASE_ANON_KEY: "test-anon-key",
@@ -64,15 +63,23 @@ Deno.test("streaming Ask forwards the shared prompt and returns provider SSE", a
           headers: { "Content-Type": "application/json" },
         });
       }
-      if (url.pathname.includes("/rest/v1/rpc/effective_entitlement")) {
-        return new Response(JSON.stringify(entitlementRows("trial", { daily_limit: 50 })), { headers: { "Content-Type": "application/json" } });
+      if (url.pathname.includes("/rest/v1/user_settings")) {
+        return new Response(JSON.stringify({
+          subscription_tier: "trial",
+          daily_limit_override: 50,
+          trial_ends_at: "2099-01-01T00:00:00.000Z",
+          grace_period_ends_at: null,
+        }), { headers: { "Content-Type": "application/json" } });
       }
+      if (url.pathname.endsWith("/rest/v1/app_store_subscriptions")) return Response.json([]);
+      if (url.pathname.includes("/rest/v1/subscriptions")) return new Response("[]", { headers: { "Content-Type": "application/json" } });
       if (url.pathname.includes("/rest/v1/rate_limits")) {
+        if ((url.searchParams.get("order") ?? "").includes("updated_at")) throw new Error(`rate_limits must not order by updated_at: ${url.search}`);
         return new Response(JSON.stringify({ limit_value: 50 }), {
           headers: { "Content-Type": "application/json" },
         });
       }
-      if (url.pathname.includes("/rest/v1/rpc/consume_daily_quota")) {
+      if (/\/rest\/v1\/rpc\/consume_(daily|ai)_quota$/.test(url.pathname)) {
         return new Response(JSON.stringify([{ allowed: true, current_count: 1 }]), {
           headers: { "Content-Type": "application/json" },
         });
@@ -99,13 +106,12 @@ Deno.test("streaming Ask forwards the shared prompt and returns provider SSE", a
         answers: {
           model: {
             type: "choice",
-            choice: "z-ai/glm-5.3-flash",
+            choice: "anthropic/claude-haiku-5.5",
             confidence: 0.96,
             probabilities: {
-              "z-ai/glm-5.3-flash": 0.96,
-              "openai/gpt-5.6-luna": 0.02,
-              "google/gemini-3.8-flash": 0.01,
-              "deepseek/deepseek-v4-flash-0731": 0.01,
+              "anthropic/claude-haiku-5.5": 0.96,
+              "openai/gpt-6-luna": 0.02,
+              "meta/muse-spark-1.3-contributor": 0.02,
             },
           },
         },
@@ -115,6 +121,9 @@ Deno.test("streaming Ask forwards the shared prompt and returns provider SSE", a
 
     throw new Error(`Unexpected request: ${url}`);
   }) as typeof fetch;
+  const registered: Promise<unknown>[] = [];
+  const runtime = globalThis as { EdgeRuntime?: { waitUntil: (promise: Promise<unknown>) => void } };
+  runtime.EdgeRuntime = { waitUntil: (promise) => registered.push(promise) };
 
   try {
     const response = await handleRequest(
@@ -144,16 +153,27 @@ Deno.test("streaming Ask forwards the shared prompt and returns provider SSE", a
       throw new Error("streaming handler did not return SSE");
     }
 
+    // The answer is finished and closed within milliseconds, but the worker
+    // stays registered until the browser has read the final event, well past
+    // the old fixed 1 s settle.
+    if (registered.length !== 1) throw new Error(`expected one waitUntil registration, got ${registered.length}`);
+    const held = registered[0];
+    const early = await Promise.race([held.then(() => "released"), new Promise((resolve) => setTimeout(() => resolve("held"), 1_500))]);
+    if (early !== "held") throw new Error("the worker was released before the browser read the final event");
     const body = await response.text();
+    await held;
     assertIncludes(body, 'event: delta\ndata: {"text":"Szia"}');
     assertIncludes(body, 'event: delta\ndata: {"text":" Adam"}');
     assertIncludes(body, "event: final");
     assertIncludes(body, '"response":"Szia Adam"');
     assertIncludes(body, '"requestedModel":"auto-fast"');
-    assertIncludes(body, '"resolvedModel":"z-ai/glm-5.3-flash"');
+    assertIncludes(body, '"resolvedModel":"anthropic/claude-haiku-5.5"');
 
-    const messages = providerRequest?.messages as Array<{ role: string; content: string }> | undefined;
-    if (providerRequest?.model !== "z-ai/glm-5.3-flash") {
+    const messages = providerRequest?.messages as Array<{
+      role: string;
+      content: string | Array<{ text: string; cache_control?: unknown }>;
+    }> | undefined;
+    if (providerRequest?.model !== "anthropic/claude-haiku-5.5") {
       throw new Error(`unexpected OpenRouter model: ${String(providerRequest?.model)}`);
     }
     const streamOptions = providerRequest?.stream_options as { include_usage?: unknown } | undefined;
@@ -164,10 +184,17 @@ Deno.test("streaming Ask forwards the shared prompt and returns provider SSE", a
     if (!routing || typeof routing !== "object" || Array.isArray(routing)) throw new Error("provider preferences were missing");
     const preferences = routing as Record<string, unknown>;
     if (preferences.require_parameters !== true) throw new Error("parameter support was not required");
+    if (JSON.stringify(preferences.only) !== '["anthropic"]' || preferences.allow_fallbacks !== false) {
+      throw new Error(`streamed Claude was not pinned to Anthropic without fallbacks: ${JSON.stringify(preferences)}`);
+    }
     if ("sort" in preferences || "order" in preferences) {
       throw new Error(`sort/order disables OpenRouter balanced routing: ${JSON.stringify(preferences)}`);
     }
-    const system = messages?.find((message) => message.role === "system")?.content ?? "";
+    const systemContent = messages?.find((message) => message.role === "system")?.content;
+    if (!Array.isArray(systemContent) || !systemContent.some((part) => part.cache_control)) {
+      throw new Error("Anthropic system prompt was sent without a cache breakpoint");
+    }
+    const system = systemContent.map((part) => part.text).join("");
     assertIncludes(system, "Answer in clear Markdown that can stream smoothly token by token.");
     assertIncludes(system, "Follow any explicit output-language instruction.");
     assertIncludes(system, "Otherwise match the language used by the user.");
@@ -177,6 +204,7 @@ Deno.test("streaming Ask forwards the shared prompt and returns provider SSE", a
       throw new Error("provider did not receive the current Ask message");
     }
   } finally {
+    delete runtime.EdgeRuntime;
     globalThis.fetch = originalFetch;
   }
 });
@@ -260,7 +288,7 @@ Deno.test("streaming Ask rejects advanced modes and toggles before quota or prov
           },
           body: JSON.stringify({
             feature: "ask",
-            model: "openai/gpt-5.6-luna",
+            model: "openai/gpt-6-luna",
             input: { message: "Question", ...testCase.input },
           }),
         }),

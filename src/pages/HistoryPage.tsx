@@ -1,13 +1,13 @@
 import { useEffect, useState } from 'react';
+import { LoadingSpinner } from '@/components/ui/loading-spinner';
 import { useTranslation } from 'react-i18next';
 import { useSessionStore } from '@/lib/stores/session-store';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Button } from '@/components/ui/button';
-import { Trash2, Eye, MessageCircle, FileText, Zap, Brain, BookOpen, Dumbbell } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { Button, buttonVariants } from '@/components/ui/button';
+import { Trash2, Eye, MessageCircle, FileText, Zap, Brain, BookOpen, Dumbbell, Flame } from 'lucide-react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Badge } from '@/components/ui/badge';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { formatEuropeanDateTime } from '@/lib/date-format';
 import { useToast } from '@/hooks/use-toast';
 import {
@@ -25,9 +25,29 @@ import { useSparringStore } from '@/lib/stores/sparring-store';
 import { useDebateStore } from '@/lib/stores/debate-store';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { UnsortedWork } from '@/components/features/debate/UnsortedWork';
+import { PageHeader } from '@/components/layout/PageHeader';
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+import { parseSavedCrossfire, SavedCrossfireView } from '@/components/features/crossfire/SavedCrossfireView';
+import { cn } from '@/lib/utils';
 
 /** History scope value for work that belongs to no debate. */
 const OUTSIDE_DEBATES = 'outside';
+
+const HISTORY_TABS = ['cases', 'chats', 'attacks', 'brainstorms', 'factoids', 'sparring', 'crossfire'] as const;
+type HistoryTab = (typeof HISTORY_TABS)[number];
+const isHistoryTab = (value: string | null): value is HistoryTab => HISTORY_TABS.includes(value as HistoryTab);
+
+// Lists scroll with the page on phones; wide screens get a bounded inner list.
+const LIST_CLASS = 'space-y-4 lg:max-h-[500px] lg:overflow-y-auto lg:pr-4';
+// Seven tabs never wrap unevenly. Below lg they are one row that scrolls sideways, the last tab
+// fading out to show there is more; Hungarian labels don't fit seven across an iPad. From lg they
+// share the width equally, icon above label. Every touch screen, iPads included, gets 44px targets.
+const TAB_LIST_CLASS = cn(
+  'h-auto w-full justify-start overflow-x-auto snap-x scroll-px-4 pr-8 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden',
+  '[mask-image:linear-gradient(to_right,#000_calc(100%-2.5rem),transparent)]',
+  'lg:grid lg:grid-cols-7 lg:overflow-visible lg:pr-1 lg:[mask-image:none]',
+);
+const TAB_CLASS = 'min-h-11 shrink-0 snap-start gap-2 pointer-fine:min-h-0 lg:min-w-0 lg:flex-col lg:gap-1 lg:whitespace-normal lg:px-2 lg:py-2 lg:text-balance';
 
 export default function HistoryPage() {
   const { t } = useTranslation();
@@ -46,13 +66,30 @@ export default function HistoryPage() {
   const savedAttacks = inScope(store.savedAttacks);
   const savedBrainstorms = inScope(store.savedBrainstorms);
   const savedFactoids = inScope(store.savedFactoids);
+  const savedCrossfires = inScope(store.savedCrossfires);
   const sparringSessions = inScope(useSparringStore((state) => state.savedSessions));
   const hydrateSparringSessions = useSparringStore((state) => state.hydrateSavedSessions);
   const loadSparringSession = useSparringStore((state) => state.loadSavedSession);
   const deleteSparringSession = useSparringStore((state) => state.deleteSavedSession);
   const { toast } = useToast();
+  // The open tab lives in the URL, so Back from a loaded item returns to it.
+  const [searchParams, setSearchParams] = useSearchParams();
+  const tabParam = searchParams.get('tab');
+  const tab: HistoryTab = isHistoryTab(tabParam) ? tabParam : 'cases';
+  const setTab = (value: string) => {
+    if (!isHistoryTab(value)) return;
+    setSearchParams((params) => {
+      params.set('tab', value);
+      return params;
+    }, { replace: true });
+  };
   const [caseToDelete, setCaseToDelete] = useState<{ id: string; title: string } | null>(null);
   const [sparringSessionToDelete, setSparringSessionToDelete] = useState<{ id: string; motion: string } | null>(null);
+  const [openCrossfireId, setOpenCrossfireId] = useState<string | null>(null);
+  const [crossfireToDelete, setCrossfireToDelete] = useState<{ id: string; title: string } | null>(null);
+  const [deletingCrossfire, setDeletingCrossfire] = useState(false);
+  const [crossfireDeleteError, setCrossfireDeleteError] = useState(false);
+  const openCrossfire = openCrossfireId ? store.savedCrossfires.find((item) => item.id === openCrossfireId) ?? null : null;
 
   useEffect(() => {
     void hydrateSparringSessions();
@@ -112,11 +149,27 @@ export default function HistoryPage() {
     setSparringSessionToDelete(null);
   };
 
+  // The dialog stays open while the delete runs and closes only once it lands.
+  const confirmDeleteCrossfire = () => {
+    if (!crossfireToDelete || deletingCrossfire) return;
+    const { id } = crossfireToDelete;
+    setDeletingCrossfire(true);
+    setCrossfireDeleteError(false);
+    store.deleteRecordedResult('crossfire', id)
+      .then(() => {
+        setCrossfireToDelete(null);
+        setOpenCrossfireId((open) => open === id ? null : open);
+        toast({ title: t('common.deleted', 'Deleted'), description: t('historyPage.crossfireDeleted', 'Crossfire round deleted.') });
+      })
+      .catch(() => setCrossfireDeleteError(true))
+      .finally(() => setDeletingCrossfire(false));
+  };
+
   return (
     <div className="container py-8 px-4">
       <div className="max-w-5xl mx-auto">
         <div className="mb-8 space-y-4">
-          <h1 className="text-3xl font-bold tracking-tight text-foreground">{t('historyPage.title')}</h1>
+          <PageHeader className="mb-0" title={t('historyPage.title')} />
           <Select value={scope} onValueChange={setScopeChoice}>
             <SelectTrigger className="w-full sm:max-w-xl" aria-label={t('debate.historyScope', 'Show work from')}>
               <SelectValue />
@@ -133,14 +186,15 @@ export default function HistoryPage() {
         </div>
 
         {scope === OUTSIDE_DEBATES ? <UnsortedWork /> : (
-        <Tabs defaultValue="cases" className="space-y-6">
-          <TabsList className="w-full justify-start overflow-x-auto">
-            <TabsTrigger value="cases" className="gap-2"><FileText className="h-4 w-4" /> {t('historyPage.tabCases')}</TabsTrigger>
-            <TabsTrigger value="chats" className="gap-2"><MessageCircle className="h-4 w-4" /> {t('historyPage.tabChats')}</TabsTrigger>
-            <TabsTrigger value="attacks" className="gap-2"><Zap className="h-4 w-4" /> {t('historyPage.tabAttacks')}</TabsTrigger>
-            <TabsTrigger value="brainstorms" className="gap-2"><Brain className="h-4 w-4" /> {t('historyPage.tabBrainstorms')}</TabsTrigger>
-            <TabsTrigger value="factoids" className="gap-2"><BookOpen className="h-4 w-4" /> {t('historyPage.tabFactoids')}</TabsTrigger>
-            <TabsTrigger value="sparring" className="gap-2"><Dumbbell className="h-4 w-4" /> {t('historyPage.tabSparring')}</TabsTrigger>
+        <Tabs value={tab} onValueChange={setTab} className="space-y-6">
+          <TabsList className={TAB_LIST_CLASS}>
+            <TabsTrigger value="cases" className={TAB_CLASS}><FileText className="h-4 w-4" /> {t('historyPage.tabCases')}</TabsTrigger>
+            <TabsTrigger value="chats" className={TAB_CLASS}><MessageCircle className="h-4 w-4" /> {t('historyPage.tabChats')}</TabsTrigger>
+            <TabsTrigger value="attacks" className={TAB_CLASS}><Zap className="h-4 w-4" /> {t('historyPage.tabAttacks')}</TabsTrigger>
+            <TabsTrigger value="brainstorms" className={TAB_CLASS}><Brain className="h-4 w-4" /> {t('historyPage.tabBrainstorms')}</TabsTrigger>
+            <TabsTrigger value="factoids" className={TAB_CLASS}><BookOpen className="h-4 w-4" /> {t('historyPage.tabFactoids')}</TabsTrigger>
+            <TabsTrigger value="sparring" className={TAB_CLASS}><Dumbbell className="h-4 w-4" /> {t('historyPage.tabSparring')}</TabsTrigger>
+            <TabsTrigger value="crossfire" className={TAB_CLASS}><Flame className="h-4 w-4" /> {t('historyPage.tabCrossfire', 'Crossfire')}</TabsTrigger>
           </TabsList>
 
           <TabsContent value="cases">
@@ -150,16 +204,16 @@ export default function HistoryPage() {
               </CardHeader>
               <CardContent>
                 {savedCases.length === 0 ? (
-                  <EmptyState icon={FileText} title={t('historyPage.emptyCases')} description={t('historyPage.emptyCasesDesc', 'Generated cases you save will appear here.')} actionLabel={t('historyPage.createCase', 'Create a case')} onAction={() => navigate('/app/generate')} />
+                  <EmptyState pose="sleepy" icon={FileText} title={t('historyPage.emptyCases')} description={t('historyPage.emptyCasesDesc', 'Generated cases you save will appear here.')} actionLabel={t('historyPage.createCase', 'Create a case')} onAction={() => navigate('/app/generate')} />
                 ) : (
-                  <ScrollArea className="h-[500px] pr-4">
-                    <div className="space-y-4 stagger-enter">
+                  <div>
+                    <div className={LIST_CLASS}>
                       {savedCases.map((item) => (
-                        <div key={item.id} className="flex items-center justify-between p-4 border rounded-lg bg-card hover:bg-accent/5 transition-colors motion-list-item">
+                        <div key={item.id} className="flex items-center justify-between p-4 border rounded-lg bg-card hover:bg-accent/5 transition-colors">
                           <div className="space-y-1">
                             <h4 className="font-semibold">{item.title}</h4>
                             <div className="flex gap-2 text-xs text-muted-foreground">
-                              <Badge variant="outline">{item.data.metadata?.side?.toUpperCase() || 'N/A'}</Badge>
+                              <Badge variant="outline">{item.data.metadata?.side ? t(`debate.side.${item.data.metadata.side}`, item.data.metadata.side.toUpperCase()) : t('common.notAvailable')}</Badge>
                               <span>{formatEuropeanDateTime(item.createdAt)}</span>
                             </div>
                           </div>
@@ -174,7 +228,7 @@ export default function HistoryPage() {
                         </div>
                       ))}
                     </div>
-                  </ScrollArea>
+                  </div>
                 )}
               </CardContent>
             </Card>
@@ -187,14 +241,14 @@ export default function HistoryPage() {
               </CardHeader>
               <CardContent>
                 {savedChats.length === 0 ? (
-                  <EmptyState icon={MessageCircle} title={t('historyPage.emptyChats')} description={t('historyPage.emptyChatsDesc', 'Saved coaching chats will appear here.')} actionLabel={t('historyPage.startChat', 'Start a chat')} onAction={() => navigate('/app/ask')} />
+                  <EmptyState pose="sleepy" icon={MessageCircle} title={t('historyPage.emptyChats')} description={t('historyPage.emptyChatsDesc', 'Saved coaching chats will appear here.')} actionLabel={t('historyPage.startChat', 'Start a chat')} onAction={() => navigate('/app/ask')} />
                 ) : (
                   <div className="space-y-4">
                     {savedChats.map((item) => (
                       <div key={item.id} className="flex items-center justify-between p-4 border rounded-lg bg-card hover:bg-accent/5">
                         <div className="space-y-1">
                           <h4 className="font-semibold">{item.title}</h4>
-                          <p className="text-xs text-muted-foreground">{item.data.length} {t('historyPage.messages')} • {formatEuropeanDateTime(item.createdAt)}</p>
+                          <p className="text-xs text-muted-foreground">{t('askChat.messageCount', { count: item.data.length })} • {formatEuropeanDateTime(item.createdAt)}</p>
                         </div>
                         <Button variant="outline" size="sm" onClick={() => handleLoadChat(item.id)}>
                           <Eye className="h-4 w-4 mr-2" /> {t('historyPage.resume')}
@@ -214,10 +268,10 @@ export default function HistoryPage() {
               </CardHeader>
               <CardContent>
                 {savedAttacks.length === 0 ? (
-                  <EmptyState icon={Zap} title={t('historyPage.emptyAttacks')} description={t('historyPage.emptyAttacksDesc', 'Saved attack analyses will appear here.')} actionLabel={t('historyPage.attackCase', 'Attack a case')} onAction={() => navigate('/app/attack')} />
+                  <EmptyState pose="sleepy" icon={Zap} title={t('historyPage.emptyAttacks')} description={t('historyPage.emptyAttacksDesc', 'Saved attack analyses will appear here.')} actionLabel={t('historyPage.attackCase', 'Attack a case')} onAction={() => navigate('/app/attack')} />
                 ) : (
-                  <ScrollArea className="h-[500px] pr-4">
-                    <div className="space-y-4">
+                  <div>
+                    <div className={LIST_CLASS}>
                       {savedAttacks.map((item) => (
                         <div key={item.id} className="flex items-center justify-between p-4 border rounded-lg bg-card hover:bg-accent/5 transition-colors">
                           <div className="space-y-1">
@@ -232,7 +286,7 @@ export default function HistoryPage() {
                         </div>
                       ))}
                     </div>
-                  </ScrollArea>
+                  </div>
                 )}
               </CardContent>
             </Card>
@@ -244,10 +298,10 @@ export default function HistoryPage() {
               </CardHeader>
               <CardContent>
                 {savedBrainstorms.length === 0 ? (
-                  <EmptyState icon={Brain} title={t('historyPage.emptyBrainstorms')} description={t('historyPage.emptyBrainstormsDesc', 'Saved ideation sessions will appear here.')} actionLabel={t('historyPage.brainstormIdeas', 'Brainstorm ideas')} onAction={() => navigate('/app/brainstorm')} />
+                  <EmptyState pose="sleepy" icon={Brain} title={t('historyPage.emptyBrainstorms')} description={t('historyPage.emptyBrainstormsDesc', 'Saved ideation sessions will appear here.')} actionLabel={t('historyPage.brainstormIdeas', 'Brainstorm ideas')} onAction={() => navigate('/app/brainstorm')} />
                 ) : (
-                  <ScrollArea className="h-[500px] pr-4">
-                    <div className="space-y-4">
+                  <div>
+                    <div className={LIST_CLASS}>
                       {savedBrainstorms.map((item) => (
                         <div key={item.id} className="flex items-center justify-between p-4 border rounded-lg bg-card hover:bg-accent/5 transition-colors">
                           <div className="space-y-1">
@@ -262,7 +316,7 @@ export default function HistoryPage() {
                         </div>
                       ))}
                     </div>
-                  </ScrollArea>
+                  </div>
                 )}
               </CardContent>
             </Card>
@@ -274,10 +328,10 @@ export default function HistoryPage() {
               </CardHeader>
               <CardContent>
                 {savedFactoids.length === 0 ? (
-                  <EmptyState icon={BookOpen} title={t('historyPage.emptyFactoids')} description={t('historyPage.emptyFactoidsDesc', 'Saved evidence research will appear here.')} actionLabel={t('historyPage.findEvidence', 'Find evidence')} onAction={() => navigate('/app/factoids')} />
+                  <EmptyState pose="sleepy" icon={BookOpen} title={t('historyPage.emptyFactoids')} description={t('historyPage.emptyFactoidsDesc', 'Saved evidence research will appear here.')} actionLabel={t('historyPage.findEvidence', 'Find evidence')} onAction={() => navigate('/app/factoids')} />
                 ) : (
-                  <ScrollArea className="h-[500px] pr-4">
-                    <div className="space-y-4">
+                  <div>
+                    <div className={LIST_CLASS}>
                       {savedFactoids.map((item) => (
                         <div key={item.id} className="flex items-center justify-between p-4 border rounded-lg bg-card hover:bg-accent/5 transition-colors">
                           <div className="space-y-1">
@@ -292,7 +346,7 @@ export default function HistoryPage() {
                         </div>
                       ))}
                     </div>
-                  </ScrollArea>
+                  </div>
                 )}
               </CardContent>
             </Card>
@@ -305,6 +359,7 @@ export default function HistoryPage() {
               <CardContent>
                 {sparringSessions.length === 0 ? (
                   <EmptyState
+                    pose="sleepy"
                     icon={Dumbbell}
                     title={t('historyPage.emptySparring')}
                     description={t('historyPage.emptySparringDesc')}
@@ -312,8 +367,8 @@ export default function HistoryPage() {
                     onAction={() => navigate('/app/sparring')}
                   />
                 ) : (
-                  <ScrollArea className="h-[500px] pr-4">
-                    <div className="space-y-4">
+                  <div>
+                    <div className={LIST_CLASS}>
                       {sparringSessions.map((session) => (
                         <div key={session.id} className="flex items-center justify-between gap-4 rounded-lg border bg-card p-4 transition-colors hover:bg-accent/5">
                           <div className="min-w-0 space-y-1">
@@ -342,13 +397,118 @@ export default function HistoryPage() {
                         </div>
                       ))}
                     </div>
-                  </ScrollArea>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+          <TabsContent value="crossfire">
+            <Card>
+              <CardHeader>
+                <CardTitle>{t('historyPage.crossfireTitle', 'Crossfire rounds')}</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {savedCrossfires.length === 0 ? (
+                  <EmptyState
+                    pose="sleepy"
+                    icon={Flame}
+                    title={t('historyPage.emptyCrossfire', 'No Crossfire rounds yet')}
+                    description={t('historyPage.emptyCrossfireDesc', 'Finish a Crossfire round to review its transcript and debrief here.')}
+                    actionLabel={t('historyPage.startCrossfire', 'Start crossfire')}
+                    onAction={() => navigate('/app/crossfire')}
+                  />
+                ) : (
+                  <div className={LIST_CLASS}>
+                    {savedCrossfires.map((item) => {
+                      const turns = parseSavedCrossfire(item.data)?.turns.length;
+                      return (
+                        <div key={item.id} data-testid="history-crossfire-row" className="flex items-center justify-between gap-4 rounded-lg border bg-card p-4 transition-colors hover:bg-accent/5">
+                          <div className="min-w-0 space-y-1">
+                            <h4 className="line-clamp-2 wrap-break-word font-semibold">{item.title}</h4>
+                            <p className="text-xs text-muted-foreground">
+                              {turns !== undefined && <>{t('historyPage.crossfireTurns', { count: turns })} • </>}
+                              {formatEuropeanDateTime(item.createdAt)}
+                            </p>
+                          </div>
+                          <div className="flex shrink-0 gap-2">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="pointer-coarse:h-11"
+                              onClick={() => setOpenCrossfireId(item.id)}
+                              aria-label={t('historyPage.openCrossfireAria', { title: item.title, defaultValue: 'Open Crossfire round: {{title}}' })}
+                            >
+                              <Eye className="mr-2 h-4 w-4" /> {t('historyPage.open', 'Open')}
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="text-destructive pointer-coarse:h-11 pointer-coarse:w-11"
+                              onClick={() => setCrossfireToDelete({ id: item.id, title: item.title })}
+                              aria-label={t('historyPage.deleteCrossfireAria', { title: item.title, defaultValue: 'Delete Crossfire round: {{title}}' })}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
                 )}
               </CardContent>
             </Card>
           </TabsContent>
         </Tabs>
         )}
+        <Sheet open={Boolean(openCrossfire)} onOpenChange={(open) => !open && setOpenCrossfireId(null)}>
+          <SheetContent side="right" className="flex w-full flex-col overflow-hidden p-0 sm:max-w-2xl">
+            {openCrossfire && (
+              <>
+                <SheetHeader className="border-b px-5 py-4 text-left">
+                  <SheetTitle className="pr-8 wrap-break-word">{openCrossfire.title}</SheetTitle>
+                  <SheetDescription>{t('historyPage.crossfireRound', 'Crossfire round')} • {formatEuropeanDateTime(openCrossfire.createdAt)}</SheetDescription>
+                </SheetHeader>
+                <div className="flex-1 overflow-y-auto px-5 py-5" data-testid="saved-crossfire">
+                  <SavedCrossfireView output={openCrossfire.data} />
+                </div>
+              </>
+            )}
+          </SheetContent>
+        </Sheet>
+        <AlertDialog
+          open={Boolean(crossfireToDelete)}
+          onOpenChange={(open) => {
+            if (open || deletingCrossfire) return;
+            setCrossfireToDelete(null);
+            setCrossfireDeleteError(false);
+          }}
+        >
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>{t('historyPage.deleteCrossfireTitle', 'Delete Crossfire round?')}</AlertDialogTitle>
+              <AlertDialogDescription>
+                {t('historyPage.deleteCrossfireDesc', 'This removes the transcript and debrief from your history.')}
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            {crossfireDeleteError && (
+              <p role="alert" className="text-sm text-destructive">{t('historyPage.crossfireDeleteFailed', 'Could not delete the Crossfire round.')}</p>
+            )}
+            <AlertDialogFooter>
+              <AlertDialogCancel disabled={deletingCrossfire}>{t('common.cancel', 'Cancel')}</AlertDialogCancel>
+              <AlertDialogAction
+                className={buttonVariants({ variant: 'destructive' })}
+                disabled={deletingCrossfire}
+                onClick={(event) => {
+                  event.preventDefault();
+                  confirmDeleteCrossfire();
+                }}
+              >
+                {deletingCrossfire && <LoadingSpinner size="sm" className="mr-2" />}
+                {t('common.delete', 'Delete')}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
         <AlertDialog open={Boolean(caseToDelete)} onOpenChange={(open) => !open && setCaseToDelete(null)}>
           <AlertDialogContent>
             <AlertDialogHeader>
@@ -359,7 +519,7 @@ export default function HistoryPage() {
             </AlertDialogHeader>
             <AlertDialogFooter>
               <AlertDialogCancel>{t('common.cancel', 'Cancel')}</AlertDialogCancel>
-              <AlertDialogAction onClick={confirmDeleteCase}>{t('common.delete', 'Delete')}</AlertDialogAction>
+              <AlertDialogAction className={buttonVariants({ variant: 'destructive' })} onClick={confirmDeleteCase}>{t('common.delete', 'Delete')}</AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
@@ -373,7 +533,7 @@ export default function HistoryPage() {
             </AlertDialogHeader>
             <AlertDialogFooter>
               <AlertDialogCancel>{t('common.cancel', 'Cancel')}</AlertDialogCancel>
-              <AlertDialogAction onClick={confirmDeleteSparringSession}>{t('common.delete', 'Delete')}</AlertDialogAction>
+              <AlertDialogAction className={buttonVariants({ variant: 'destructive' })} onClick={confirmDeleteSparringSession}>{t('common.delete', 'Delete')}</AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>

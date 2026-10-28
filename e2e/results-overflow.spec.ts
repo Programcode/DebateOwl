@@ -47,7 +47,7 @@ test('a long URL in generated evidence does not widen the page', async ({ page }
   });
 
   await page.goto('/app/generate');
-  await page.getByRole('button', { name: 'Generate Debate Case' }).click();
+  await page.getByRole('button', { name: 'Generate debate case' }).click();
   await expect(page.getByText('Contention 3: fares block the riders who need transit most')).toBeVisible();
 
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);

@@ -1,10 +1,14 @@
+import i18n from '@/i18n';
 import { getActiveAccessToken, supabase, SUPABASE_URL } from '@/lib/supabase/client';
 import { captureProductEvent } from '@/lib/observability';
-import { AIAuthError, AIResponseError, REQUEST_TIMEOUT_MS, TimeoutError, boundAskHistory, boundAskMessage, debateContextForRequest, mapAIError, refreshDebatesIfMissing, reportAIFailure, withOutputLanguage } from './client';
+import { AIAuthError, AIError, AINetworkError, AIResponseError, AIUnknownError, REQUEST_TIMEOUT_MS, TimeoutError, boundAskHistory, boundAskMessage, browserIsOffline, debateContextForRequest, isBrowserNetworkFailure, mapAIError, offlineAIMessage, privacySafeCauseType, refreshDebatesIfMissing, reportAIFailure, withOutputLanguage } from './client';
 import { parseDebateContextUsage, useDebateContextStore } from '@/lib/stores/debate-context-store';
 import type { ProviderConfig } from './providers/types';
 import { AskOutputSchema, type AskOutput } from './schemas/ask';
-import { consumeSSEChunk, type ParsedSSEEvent } from '@debatelab/core/ai/sse';
+import { consumeSSEChunk, type ParsedSSEEvent } from './sse';
+import { refreshAIUsage } from '@/lib/query-client';
+
+export { consumeSSEChunk };
 
 export interface AskStreamOptions {
   mode?: string;
@@ -15,8 +19,6 @@ export interface AskStreamOptions {
   /** Debate whose material grounds the answer; null for one-off work. */
   debateId?: string | null;
 }
-
-export { consumeSSEChunk, type ParsedSSEEvent };
 
 export interface AskStreamHandlers {
   onDelta: (text: string) => void;
@@ -108,7 +110,7 @@ export async function streamAskChat(
     throw error;
   }
   if (!accessToken) {
-    const error = new AIAuthError('Please sign in to use AI features', { requestId });
+    const error = new AIAuthError(i18n.t('serverErrors.signInRequired'), { requestId });
     captureStreamFailure(error, provider, config.model, startTime, requestId, Boolean(handlers.signal?.aborted));
     throw error;
   }
@@ -174,7 +176,6 @@ export async function streamAskChat(
         ...(debateContext ? { debateContext } : {}),
         provider,
         model: config.model,
-        temperature: config.temperature,
         reasoningEffort: config.reasoningEffort ?? 'low',
       }),
       signal: controller.signal,
@@ -265,15 +266,18 @@ export async function streamAskChat(
       ? abortError()
       : controller.signal.aborted
         ? new TimeoutError()
-        : error;
+        : error instanceof AIError
+          ? error
+          : isBrowserNetworkFailure(error) || browserIsOffline()
+            ? new AINetworkError(offlineAIMessage(), { requestId })
+            : new AIUnknownError(i18n.t('aiErrors.unexpected'), { requestId, causeType: privacySafeCauseType(error) });
     captureStreamFailure(reportedError, provider, config.model, startTime, requestId, callerAborted);
-    if (callerAborted) throw reportedError;
-    if (controller.signal.aborted) throw reportedError;
-    throw error;
+    throw reportedError;
   } finally {
     clearTimeout(timeoutId);
     handlers.signal?.removeEventListener('abort', abortForCaller);
     controller.signal.removeEventListener('abort', cancelReader);
     cancelReader();
+    refreshAIUsage();
   }
 }

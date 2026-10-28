@@ -1,4 +1,6 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react';
+import { OwlLoader } from '@/components/ui/loading-spinner';
+import { LoadingSpinner } from '@/components/ui/loading-spinner';
 import { useTranslation } from 'react-i18next';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -10,7 +12,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { useToast } from '@/hooks/use-toast';
 import { supabase, SUPABASE_URL } from '@/lib/supabase/client';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
-import { Activity, Users, DollarSign, AlertCircle, Shield, Settings2, Loader2, Ban, UserCheck, Ticket, CreditCard, Gift, Megaphone, KeyRound, Copy, RotateCcw } from 'lucide-react';
+import { Activity, Users, DollarSign, AlertCircle, Shield, Settings2, Ban, UserCheck, Ticket, CreditCard, Gift, Megaphone, KeyRound, Copy, RotateCcw } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import {
     Dialog,
@@ -20,7 +22,7 @@ import {
     DialogHeader,
     DialogTitle,
 } from '@/components/ui/dialog';
-import { formatEuropeanDate, formatEuropeanDateTime, formatNumber } from '@/lib/date-format';
+import { formatDecimal, formatEuropeanDate, formatEuropeanDateTime, formatNumber } from '@/lib/date-format';
 import { captureProductEvent } from '@/lib/observability';
 import { AdminAnnouncements } from '@/components/admin/AdminAnnouncements';
 
@@ -50,7 +52,7 @@ interface PromoCode {
     id: string;
     code: string;
     type: string;
-    config: Record<string, number>;
+    config: Record<string, number | string>;
     max_redemptions: number | null;
     redemptions_count: number;
     expires_at: string | null;
@@ -88,6 +90,9 @@ interface DemoAccessForm {
 }
 
 type DemoAction = 'disable' | 'reset';
+
+// A discount promo stands for one Stripe promotion code (redeem_promo_code_atomic).
+const STRIPE_PROMOTION_CODE = /^promo_[A-Za-z0-9]+$/;
 
 const EMPTY_DEMO_FORM: DemoAccessForm = { label: '', email: '', expiresAt: '', maxUses: '' };
 
@@ -291,7 +296,7 @@ function DemoAccessPanel({ codes, loading, error, onCreate, onDisable, onReset }
                         </div>
                         {formError && <p className="text-sm text-destructive" role="alert">{formError}</p>}
                         <Button type="submit" className="w-full" disabled={submitting}>
-                            {submitting ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : <KeyRound className="mr-1 h-4 w-4" />}
+                            {submitting ? <LoadingSpinner size="sm" className="mr-1" /> : <KeyRound className="mr-1 h-4 w-4" />}
                             {submitting ? t('admin.creating') : t('admin.createDemoCode')}
                         </Button>
                     </form>
@@ -354,7 +359,7 @@ function DemoAccessPanel({ codes, loading, error, onCreate, onDisable, onReset }
                                         return (
                                             <tr key={code.id}>
                                                 <td className="whitespace-nowrap px-3 py-4 font-medium">{code.email || t('admin.unknownEmail')}</td>
-                                                <td className="max-w-[14rem] px-3 py-4">
+                                                <td className="max-w-56 px-3 py-4">
                                                     <span className="block truncate" title={displayLabel}>{displayLabel}</span>
                                                 </td>
                                                 <td className="px-3 py-4 capitalize">{t(`admin.users.roles.${code.role}`, code.role)}</td>
@@ -410,7 +415,7 @@ function DemoAccessPanel({ codes, loading, error, onCreate, onDisable, onReset }
                     <DialogFooter>
                         <Button type="button" variant="outline" onClick={() => setPendingAction(null)} disabled={actionLoading}>{t('admin.cancel')}</Button>
                         <Button type="button" variant={pendingAction?.type === 'disable' ? 'destructive' : 'default'} onClick={confirmAction} disabled={actionLoading}>
-                            {actionLoading && <Loader2 className="mr-1 h-4 w-4 animate-spin" />}
+                            {actionLoading && <LoadingSpinner size="sm" className="mr-1" />}
                             {pendingAction?.type === 'disable' ? t('admin.disableCode') : t('admin.resetUseCount')}
                         </Button>
                     </DialogFooter>
@@ -442,14 +447,20 @@ export default function AdminPage() {
     const [loading, setLoading] = useState(true);
     const [stats, setStats] = useState<UsageStats | null>(null);
     const [users, setUsers] = useState<User[]>([]);
+    const [usersPage, setUsersPage] = useState(1);
+    const [usersHasMore, setUsersHasMore] = useState(false);
+    const [loadingMoreUsers, setLoadingMoreUsers] = useState(false);
     const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
     const [promoCodes, setPromoCodes] = useState<PromoCode[]>([]);
     const [subscribers, setSubscribers] = useState<Subscriber[]>([]);
     const [demoCodes, setDemoCodes] = useState<DemoAccessCode[]>([]);
     const [demoCodesLoading, setDemoCodesLoading] = useState(true);
     const [demoCodesError, setDemoCodesError] = useState<string | null>(null);
-    const [newPromo, setNewPromo] = useState({ code: '', type: 'extended_trial', configDays: 30, configLimit: 15, maxRedemptions: '' });
+    const [newPromo, setNewPromo] = useState({ code: '', type: 'extended_trial', configDays: 30, configLimit: 15, maxRedemptions: '', stripePromotionCode: '' });
     const [giftTarget, setGiftTarget] = useState<User | null>(null);
+    // Role changes are consequential and silent to the affected user, so each one asks first.
+    const [roleChange, setRoleChange] = useState<{ user: User; role: 'admin' | 'banned' | 'user' } | null>(null);
+    const [roleSaving, setRoleSaving] = useState(false);
     const [giftDays, setGiftDays] = useState(30);
     const [giftNotes, setGiftNotes] = useState('');
     const [giftSubmitting, setGiftSubmitting] = useState(false);
@@ -457,19 +468,20 @@ export default function AdminPage() {
     const { t } = useTranslation();
     const formatKnownCost = (cost: number, unknownCostRequests = 0) => {
         if (cost > 0 && unknownCostRequests > 0) {
-            return t('admin.dashboard.knownPlusUnknownCost', { cost: cost.toFixed(4), count: unknownCostRequests });
+            return t('admin.dashboard.knownPlusUnknownCost', { cost: formatDecimal(cost, 4), count: unknownCostRequests });
         }
-        if (cost > 0) return `$${cost.toFixed(4)}`;
+        if (cost > 0) return `$${formatDecimal(cost, 4)}`;
         if (unknownCostRequests > 0) return t('admin.dashboard.unknownCost');
-        return '$0.0000';
+        return `$${formatDecimal(0, 4)}`;
     };
 
-    const fetchAdminData = useCallback(async (action: string) => {
+    const fetchAdminData = useCallback(async (action: string, params?: Record<string, string>) => {
         const { data: { session } } = await supabase.auth.getSession();
         if (!session) throw new Error(t('admin.errors.notAuthenticated'));
 
+        const query = new URLSearchParams({ action, ...params });
         const response = await fetch(
-            `${SUPABASE_URL}/functions/v1/admin?action=${action}`,
+            `${SUPABASE_URL}/functions/v1/admin?${query}`,
             {
                 headers: {
                     'Authorization': `Bearer ${session.access_token}`,
@@ -569,6 +581,8 @@ export default function AdminPage() {
 
                 setStats(enrichedStats);
                 setUsers(loadedUsers);
+                setUsersPage(typeof usersData.page === 'number' ? usersData.page : 1);
+                setUsersHasMore(Boolean(usersData.hasMore));
                 setPromoCodes(promoData.codes || []);
                 setSubscribers(subData.subscribers || []);
                 setDemoCodes(getDemoCodes(demoData.data));
@@ -598,14 +612,49 @@ export default function AdminPage() {
         if (isAdmin === true) captureProductEvent('tool_opened', { tool: 'admin' });
     }, [isAdmin]);
 
+    const loadMoreUsers = async () => {
+        if (loadingMoreUsers) return;
+        setLoadingMoreUsers(true);
+        try {
+            const nextPage = usersPage + 1;
+            const data = await fetchAdminData('users', { page: String(nextPage), perPage: '50' });
+            const incoming = (data.users || []) as User[];
+            setUsers((current) => {
+                const seen = new Set(current.map((listed) => listed.id));
+                return [...current, ...incoming.filter((listed) => !seen.has(listed.id))];
+            });
+            setUsersPage(typeof data.page === 'number' ? data.page : nextPage);
+            setUsersHasMore(Boolean(data.hasMore));
+        } catch (err) {
+            toast({
+                title: t('admin.error'),
+                description: err instanceof Error ? err.message : t('admin.users.loadMoreFailed'),
+                variant: 'destructive',
+            });
+        } finally {
+            setLoadingMoreUsers(false);
+        }
+    };
+
+    /** Resolves true once the role is saved; failures are reported here and leave the caller's dialog open. */
     const handleSetUserRole = async (userId: string, role: string) => {
         try {
             await postAdminData('set-role', { userId, role });
             toast({ title: t('admin.success'), description: t('admin.users.roleUpdated', { role: t(`admin.users.roles.${role}`, role) }) });
-            setUsers(users.map(u => u.id === userId ? { ...u, role } : u));
+            setUsers((current) => current.map(u => u.id === userId ? { ...u, role } : u));
+            return true;
         } catch (err) {
             toast({ title: t('admin.error'), description: err instanceof Error ? err.message : t('admin.users.roleUpdateFailed'), variant: 'destructive' });
+            return false;
         }
+    };
+
+    const confirmRoleChange = async () => {
+        if (!roleChange || roleSaving) return;
+        setRoleSaving(true);
+        const saved = await handleSetUserRole(roleChange.user.id, roleChange.role);
+        setRoleSaving(false);
+        if (saved) setRoleChange(null);
     };
 
     const openGiftDialog = (user: User) => {
@@ -677,7 +726,7 @@ export default function AdminPage() {
     if (loading) {
         return (
             <div className="container py-8 flex items-center justify-center min-h-[60vh]">
-                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                <OwlLoader message={t('common.loading')} />
             </div>
         );
     }
@@ -687,8 +736,8 @@ export default function AdminPage() {
             <div className="container py-8 px-4">
                 <Card className="max-w-md mx-auto">
                     <CardHeader>
-                        <CardTitle className="flex items-center gap-2">
-                            <Shield className="h-5 w-5 text-destructive" />
+                        <CardTitle as="h1" className="flex items-center gap-2">
+                            <Shield className="h-5 w-5 text-destructive" aria-hidden="true" />
                             {t('admin.dashboard.accessDenied')}
                         </CardTitle>
                         <CardDescription>
@@ -754,7 +803,7 @@ export default function AdminPage() {
                             <AlertCircle className="h-4 w-4 text-muted-foreground" />
                         </CardHeader>
                         <CardContent>
-                            <div className="text-2xl font-bold">{stats?.totals.successRate.toFixed(1) || 100}%</div>
+                            <div className="text-2xl font-bold">{stats ? formatDecimal(stats.totals.successRate, 1) : 100}%</div>
                             <p className="text-xs text-muted-foreground">{t('admin.dashboard.successRateDescription')}</p>
                         </CardContent>
                     </Card>
@@ -994,22 +1043,22 @@ export default function AdminPage() {
                                                         </Button>
                                                     )}
                                                     {user.role === 'banned' ? (
-                                                        <Button size="sm" variant="outline" onClick={() => handleSetUserRole(user.id, 'user')}>
+                                                        <Button size="sm" variant="outline" onClick={() => setRoleChange({ user, role: 'user' })}>
                                                             <UserCheck className="h-4 w-4 mr-1" />
                                                             {t('admin.users.unban')}
                                                         </Button>
                                                     ) : user.role !== 'admin' ? (
                                                         <>
-                                                            <Button size="sm" variant="outline" onClick={() => handleSetUserRole(user.id, 'admin')}>
+                                                            <Button size="sm" variant="outline" onClick={() => setRoleChange({ user, role: 'admin' })}>
                                                                 {t('admin.users.makeAdmin')}
                                                             </Button>
-                                                            <Button size="sm" variant="destructive" onClick={() => handleSetUserRole(user.id, 'banned')}>
+                                                            <Button size="sm" variant="destructive" onClick={() => setRoleChange({ user, role: 'banned' })}>
                                                                 <Ban className="h-4 w-4 mr-1" />
                                                                 {t('admin.users.ban')}
                                                             </Button>
                                                         </>
                                                     ) : (
-                                                        <Button size="sm" variant="outline" onClick={() => handleSetUserRole(user.id, 'user')}>
+                                                        <Button size="sm" variant="outline" onClick={() => setRoleChange({ user, role: 'user' })}>
                                                             {t('admin.users.removeAdmin')}
                                                         </Button>
                                                     )}
@@ -1018,6 +1067,14 @@ export default function AdminPage() {
                                         ))}
                                     </div>
                                 </ScrollArea>
+                                {usersHasMore && (
+                                    <div className="mt-4 flex justify-center">
+                                        <Button variant="outline" onClick={() => void loadMoreUsers()} disabled={loadingMoreUsers}>
+                                            {loadingMoreUsers && <LoadingSpinner size="sm" className="mr-2" />}
+                                            {loadingMoreUsers ? t('admin.users.loadingMore') : t('admin.users.loadMore')}
+                                        </Button>
+                                    </div>
+                                )}
                             </CardContent>
                         </Card>
                     </TabsContent>
@@ -1093,6 +1150,19 @@ export default function AdminPage() {
                                             />
                                         </div>
                                     )}
+                                    {newPromo.type === 'discount' && (
+                                        <div className="space-y-2">
+                                            <Label htmlFor="promo-stripe-code">{t('admin.promos.stripePromotionCode')}</Label>
+                                            <Input
+                                                id="promo-stripe-code"
+                                                placeholder="promo_..."
+                                                value={newPromo.stripePromotionCode}
+                                                onChange={(e) => setNewPromo({ ...newPromo, stripePromotionCode: e.target.value.trim() })}
+                                                className="font-mono"
+                                            />
+                                            <p className="text-xs text-muted-foreground">{t('admin.promos.stripePromotionCodeHint')}</p>
+                                        </div>
+                                    )}
                                     <div className="space-y-2">
                                         <Label>{t('admin.promos.maxRedemptions')}</Label>
                                         <Input
@@ -1105,13 +1175,15 @@ export default function AdminPage() {
                                     <Button
                                         onClick={async () => {
                                             try {
-                                                const config: Record<string, number> = {};
+                                                const config: Record<string, number | string> = {};
                                                 if (newPromo.type === 'extended_trial' || newPromo.type === 'free_month') {
                                                     config.days = newPromo.configDays;
                                                 } else if (newPromo.type === 'lifetime_pro') {
                                                     config.limit = 50;
                                                 } else if (newPromo.type === 'extra_limit') {
                                                     config.limit = newPromo.configLimit;
+                                                } else if (newPromo.type === 'discount') {
+                                                    config.stripe_promotion_code = newPromo.stripePromotionCode;
                                                 }
                                                 await postAdminData('create-promo', {
                                                     code: newPromo.code,
@@ -1122,12 +1194,12 @@ export default function AdminPage() {
                                                 toast({ title: t('admin.success'), description: t('admin.promos.created', { code: newPromo.code }) });
                                                 const data = await fetchAdminData('promo-codes');
                                                 setPromoCodes(data.codes || []);
-                                                setNewPromo({ code: '', type: 'extended_trial', configDays: 30, configLimit: 15, maxRedemptions: '' });
+                                                setNewPromo({ code: '', type: 'extended_trial', configDays: 30, configLimit: 15, maxRedemptions: '', stripePromotionCode: '' });
                                             } catch (err) {
                                                 toast({ title: t('admin.error'), description: err instanceof Error ? err.message : t('admin.promos.createFailed'), variant: 'destructive' });
                                             }
                                         }}
-                                        disabled={!newPromo.code.trim()}
+                                        disabled={!newPromo.code.trim() || (newPromo.type === 'discount' && !STRIPE_PROMOTION_CODE.test(newPromo.stripePromotionCode))}
                                         className="w-full"
                                     >
                                         {t('admin.promos.createAction')}
@@ -1242,6 +1314,39 @@ export default function AdminPage() {
                 </Tabs>
             </div>
 
+            <Dialog open={roleChange !== null} onOpenChange={(open) => { if (!open && !roleSaving) setRoleChange(null); }}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>
+                            {roleChange?.role === 'admin'
+                                ? t('admin.users.confirmMakeAdmin', { email: roleChange.user.email })
+                                : roleChange?.role === 'banned'
+                                    ? t('admin.users.confirmBan', { email: roleChange.user.email })
+                                    : roleChange?.user.role === 'banned'
+                                        ? t('admin.users.confirmUnban', { email: roleChange?.user.email })
+                                        : t('admin.users.confirmRemoveAdmin', { email: roleChange?.user.email })}
+                        </DialogTitle>
+                        <DialogDescription>
+                            {roleChange?.role === 'admin'
+                                ? t('admin.users.confirmMakeAdminDesc')
+                                : roleChange?.role === 'banned'
+                                    ? t('admin.users.confirmBanDesc')
+                                    : t('admin.users.confirmRoleDesc')}
+                        </DialogDescription>
+                    </DialogHeader>
+                    <DialogFooter>
+                        <Button type="button" variant="outline" onClick={() => setRoleChange(null)} disabled={roleSaving}>{t('admin.cancel')}</Button>
+                        <Button type="button" variant={roleChange?.role === 'banned' ? 'destructive' : 'default'} onClick={() => void confirmRoleChange()} disabled={roleSaving}>
+                            {roleSaving && <LoadingSpinner size="sm" className="mr-2" />}
+                            {roleChange?.role === 'admin'
+                                ? t('admin.users.makeAdmin')
+                                : roleChange?.role === 'banned'
+                                    ? t('admin.users.ban')
+                                    : roleChange?.user.role === 'banned' ? t('admin.users.unban') : t('admin.users.removeAdmin')}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
             <Dialog open={giftTarget !== null} onOpenChange={(open) => { if (!open) closeGiftDialog(); }}>
                 <DialogContent>
                     <DialogHeader>
@@ -1284,7 +1389,7 @@ export default function AdminPage() {
                             {t('admin.giftTrial.cancel')}
                         </Button>
                         <Button onClick={handleGiftTrial} disabled={giftSubmitting || giftDays < 1 || giftDays > 365}>
-                            {giftSubmitting ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Gift className="h-4 w-4 mr-1" />}
+                            {giftSubmitting ? <LoadingSpinner size="sm" className="mr-1" /> : <Gift className="h-4 w-4 mr-1" />}
                             {t('admin.giftTrial.action', { count: giftDays })}
                         </Button>
                     </DialogFooter>

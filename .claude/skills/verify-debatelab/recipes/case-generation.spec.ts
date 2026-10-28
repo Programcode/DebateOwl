@@ -13,14 +13,14 @@ type CaseOutput = { caseStructure: { thesis: string }; contentions: Array<{ clai
 async function openGenerate(page: import("@playwright/test").Page) {
   await startDebate(page, motion);
   await page.goto("/app/generate");
-  await expect(page.getByRole("heading", { name: "Ready to Generate" })).toBeVisible();
-  await expect(page.getByRole("textbox", { name: "Motion / Topic *" })).toHaveValue(motion);
+  await expect(page.getByRole("heading", { name: "Your case will appear here" })).toBeVisible();
+  await expect(page.getByRole("textbox", { name: "Motion / topic *" })).toHaveValue(motion);
 }
 
 async function generate(page: import("@playwright/test").Page) {
   await openGenerate(page);
   const response = aiResponse(page, "generate");
-  await page.getByRole("button", { name: "Generate Debate Case" }).click();
+  await page.getByRole("button", { name: "Generate debate case" }).click();
   const body = await response;
   const output = body.output as unknown as CaseOutput;
   // Standard length asks for exactly three contentions.
@@ -92,10 +92,10 @@ test("gen-create: a case generated in the Current Debate is filed there and reop
 
 test("gen-save: a one-off case is saved under a title and reopens from History on a fresh device", async ({ signedIn: page, user, evidence, browser }) => {
   await page.goto("/app/generate");
-  await expect(page.getByRole("heading", { name: "Ready to Generate" })).toBeVisible();
-  await page.getByRole("textbox", { name: "Motion / Topic *" }).fill(motion);
+  await expect(page.getByRole("heading", { name: "Your case will appear here" })).toBeVisible();
+  await page.getByRole("textbox", { name: "Motion / topic *" }).fill(motion);
   const response = aiResponse(page, "generate");
-  await page.getByRole("button", { name: "Generate Debate Case" }).click();
+  await page.getByRole("button", { name: "Generate debate case" }).click();
   // No Current Debate: decline the offer, so the case belongs to no debate until saved.
   await chooseForMotion(page, "once");
   await evidence.step(`Generate: motion "${motion}", chose Not now, use it once`);
@@ -117,6 +117,36 @@ test("gen-save: a one-off case is saved under a title and reopens from History o
   expect(debates).toEqual([]);
 
   await reopenFromHistory(browser, user, title, output.caseStructure.thesis, evidence, "02", "one-off");
+});
+
+test("gen-flowchart: the Flowchart builds from the Current Debate's case, and its app text follows the language", async ({ signedIn: page, evidence }) => {
+  const { output } = await generate(page);
+  await page.goto("/app/flowchart");
+  // The template stays the blank start; the case is one click away.
+  await expect(page.getByText("Your Thesis", { exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "Build from current case" }).click();
+  await expect(page.getByText(output.caseStructure.thesis).first()).toBeVisible();
+  for (const contention of output.contentions) await expect(page.getByText(contention.claim).first()).toBeVisible();
+  await expect(page.getByText("Your Thesis", { exact: true })).toHaveCount(0);
+  // Every node fits the canvas once it is built.
+  await expect.poll(() => page.evaluate(() => {
+    const canvas = document.querySelector(".react-flow")!.getBoundingClientRect();
+    return [...document.querySelectorAll(".react-flow__node")].filter((node) => {
+      const box = node.getBoundingClientRect();
+      return box.left < canvas.left - 1 || box.right > canvas.right + 1 || box.top < canvas.top - 1 || box.bottom > canvas.bottom + 1;
+    }).length;
+  })).toBe(0);
+  await expect(page.getByRole("button", { name: "From Thesis to Argument 1" })).toHaveCount(1);
+  await evidence.shot("01-built-from-case");
+
+  // Node titles the app wrote follow the language on the same canvas; the case's own text does not change.
+  await page.getByRole("button", { name: "Language", exact: true }).click();
+  await page.getByRole("radiogroup", { name: "Interface language" }).getByRole("radio", { name: "Magyar" }).click();
+  await page.keyboard.press("Escape");
+  await expect(page.getByText("1. érv", { exact: true })).toBeVisible();
+  await expect(page.getByText("Argument 1", { exact: true })).toHaveCount(0);
+  await expect(page.getByText(output.caseStructure.thesis).first()).toBeVisible();
+  await evidence.shot("02-built-from-case-hu");
 });
 
 test("gen-research: generation researches the web and cites what it found", async ({ signedIn: page, evidence }) => {
@@ -172,7 +202,7 @@ test("gen-regenerate: regenerating one section keeps the rest of the case and it
   await expect(overlay).toBeVisible();
   await expect(page.getByText(thesis).first()).toBeVisible();
   await expect(page.getByRole("button", { name: "PDF", exact: true })).toBeVisible();
-  await expect(page.getByRole("button", { name: "Regenerate Case Structure" })).toBeDisabled();
+  await expect(page.getByRole("button", { name: "Regenerate Case structure" })).toBeDisabled();
   // The form button reads "Generating..." while busy, so find it by its tour anchor.
   await expect(page.locator('[data-tour="generate-button"]')).toBeDisabled();
   await evidence.shot("02-regenerating-one-section");
@@ -184,30 +214,49 @@ test("gen-regenerate: regenerating one section keeps the rest of the case and it
   await expect(page.getByText("Section regenerated").first()).toBeVisible({ timeout: AI_TIMEOUT });
   await expect(overlay).toHaveCount(0);
   await expect(page.getByText(thesis).first()).toBeVisible();
-  await expect(page.getByRole("button", { name: "Regenerate Case Structure" })).toBeEnabled();
+  await expect(page.getByRole("button", { name: "Regenerate Case structure" })).toBeEnabled();
   await evidence.shot("03-regenerated");
 });
 
 test("gen-error: a provider failure shows an error and the retry succeeds", async ({ signedIn: page, evidence }) => {
   await fake.fail("generate", 500);
   await openGenerate(page);
-  await page.getByRole("button", { name: "Generate Debate Case" }).click();
-  await expect(page.getByText("Generation Failed", { exact: true })).toBeVisible({ timeout: AI_TIMEOUT });
+  await page.getByRole("button", { name: "Generate debate case" }).click();
+  // The failure stays on the page, with Retry, until the next run.
+  const failure = page.getByRole("alert").filter({ hasText: "Generation failed" });
+  await expect(failure).toBeVisible({ timeout: AI_TIMEOUT });
   await evidence.shot("01-failed");
-  await expect(page.getByRole("button", { name: "Generate Debate Case" })).toBeEnabled();
+  await expect(page.getByRole("button", { name: "Generate debate case" })).toBeEnabled();
 
   const response = aiResponse(page, "generate");
-  await page.getByRole("button", { name: "Generate Debate Case" }).click();
+  await failure.getByRole("button", { name: "Retry" }).click();
   const body = await response;
+  await expect(failure).toHaveCount(0);
   await expect(page.getByText((body.output as unknown as CaseOutput).caseStructure.thesis).first()).toBeVisible();
   await evidence.shot("02-retried");
+});
+
+test("gen-cutoff: a case cut off at its length cap is retried once with a larger cap and still appears", async ({ signedIn: page, evidence }) => {
+  test.skip(LIVE, "only the fake provider can force a cut-off reply");
+  await fake.truncate("generate");
+  await openGenerate(page);
+  const response = aiResponse(page, "generate");
+  await page.getByRole("button", { name: "Generate debate case" }).click();
+  const body = await response;
+  await expect(page.getByText((body.output as unknown as CaseOutput).caseStructure.thesis).first()).toBeVisible();
+  await expect(page.getByRole("alert").filter({ hasText: "Generation failed" })).toHaveCount(0);
+  const caps = (await fake.requests()).filter((request) => request.feature === "generate").map((request) => request.maxTokens ?? 0);
+  await evidence.json("01-generate-max-tokens", caps);
+  expect(caps).toHaveLength(2);
+  expect(caps[1]).toBeGreaterThan(caps[0]);
+  await evidence.shot("02-case-after-retry");
 });
 
 test("gen-quota: an account without quota is told why and the provider is never called", async ({ signedIn: page, user, evidence }) => {
   await admin.from("user_settings").update({ daily_limit_override: 0 }).eq("user_id", await user.userId());
   await openGenerate(page);
-  await page.getByRole("button", { name: "Generate Debate Case" }).click();
-  await expect(page.getByRole("dialog").getByText("Daily Access Paused")).toBeVisible({ timeout: AI_TIMEOUT });
+  await page.getByRole("button", { name: "Generate debate case" }).click();
+  await expect(page.getByRole("dialog").getByText("Daily AI uses used up")).toBeVisible({ timeout: AI_TIMEOUT });
   await evidence.shot("01-quota-dialog");
   expect((await fake.requests()).filter((request) => request.feature === "generate")).toEqual([]);
 });

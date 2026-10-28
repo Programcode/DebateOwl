@@ -13,6 +13,18 @@ export const TEST_USER = {
   email: "user@example.test",
 };
 
+/**
+ * Stripe's fetch client keeps the fetch it saw when the function module was
+ * imported. Call this before that import so Stripe's calls reach whatever fetch
+ * a test installs later (runBearerCases's `otherFetch`, for one).
+ */
+export function forwardFetchToCurrentStub(): void {
+  const realFetch = globalThis.fetch;
+  const forwardingFetch: typeof fetch = (input, init) =>
+    globalThis.fetch === forwardingFetch ? realFetch(input, init) : globalThis.fetch(input, init);
+  globalThis.fetch = forwardingFetch;
+}
+
 export type BearerCase = {
   label: string;
   authorization?: string;

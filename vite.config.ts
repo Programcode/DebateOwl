@@ -1,8 +1,10 @@
-import { defineConfig, loadEnv, type Plugin, type PluginOption } from "vite";
+import { defineConfig, loadEnv, type Connect, type Plugin, type PluginOption } from "vite";
 import react from "@vitejs/plugin-react-swc";
+import tailwindcss from "@tailwindcss/vite";
 import { sentryVitePlugin } from "@sentry/vite-plugin";
 import { execSync } from "node:child_process";
-import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { createHash } from "node:crypto";
+import { existsSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "path";
 import { STAGING_PREVIEW_PROXY_PATH, SUPABASE_PROJECTS } from "./src/lib/supabase/projects";
 
@@ -56,34 +58,123 @@ function bundleGraph(): Plugin {
 }
 
 /**
- * The built index.html names the landing page as its canonical URL, and Vercel
- * serves it for every route. Public routes listed in sitemap.xml get their own
- * copy of the shell at `<route>/index.html` naming themselves instead; Vercel
- * serves a real file before the SPA rewrite. Google advises against changing a
- * canonical from JavaScript, so this happens at build time.
+ * Vercel serves dist/embed/debate-timer/index.html at /embed/debate-timer. The
+ * dev and preview servers would answer that path with the SPA shell instead,
+ * so they get the same mapping.
  */
-const SELF_CANONICAL_ROUTES = ["/terms", "/privacy"];
-const SITE_ORIGIN = "https://debate.pi-stack.org";
-
-function selfCanonicalShells(): Plugin {
+function embedPages(): Plugin {
+  const toIndex: Connect.NextHandleFunction = (req, _res, next) => {
+    const match = req.url?.match(/^(\/embed\/[\w-]+)\/?(\?.*)?$/);
+    if (match) req.url = `${match[1]}/index.html${match[2] ?? ''}`;
+    next();
+  };
   return {
-    name: "self-canonical-shells",
-    apply: (_config, env) => env.command === "build",
-    writeBundle(options) {
-      const outDir = options.dir ?? "dist";
+    name: 'embed-pages',
+    configureServer: (server) => { server.middlewares.use(toIndex); },
+    configurePreviewServer: (server) => { server.middlewares.use(toIndex); },
+  };
+}
+
+/**
+ * Vercel answers app routes with app-shell.html (the `rewrites` in vercel.json),
+ * while vite preview would answer them with the prerendered landing page. The
+ * preview server gets the same rewrites, so the offline test and local
+ * measurements load what production serves.
+ */
+function appShellRewrites(): Plugin {
+  const outDir = path.resolve(__dirname, "dist");
+  const { rewrites = [] } = JSON.parse(readFileSync(path.resolve(__dirname, "vercel.json"), "utf8")) as {
+    rewrites?: Array<{ source: string; destination: string }>;
+  };
+  const routes = rewrites.map(({ source, destination }) => {
+    // vercel.json uses only exact paths and a trailing `/:path*` (any rest of the path).
+    const exact = source.replace(/\/:path\*$/, "");
+    if (exact.includes(":")) throw new Error(`appShellRewrites cannot read the vercel.json source ${source}`);
+    const rest = exact === source ? "" : "(?:/.*)?";
+    return { pattern: new RegExp(`^${exact.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}${rest}$`), destination };
+  });
+  return {
+    name: "app-shell-rewrites",
+    configurePreviewServer: (server) => {
+      server.middlewares.use((req, _res, next) => {
+        const [pathname, query] = (req.url ?? "").split("?", 2);
+        // Vercel serves files before rewrites, so a prerendered page (/expocit/sources) wins.
+        if (existsSync(path.join(outDir, pathname, "index.html"))) return next();
+        const route = routes.find(({ pattern }) => pattern.test(pathname));
+        if (route) req.url = `${route.destination}${query === undefined ? "" : `?${query}`}`;
+        next();
+      });
+    },
+  };
+}
+
+/**
+ * What the service worker downloads when it installs, beyond the app shell's
+ * own scripts and styles: the signed-in layout, the pages a student should be
+ * able to open offline after one visit, and the other languages' strings. Each
+ * key must exist in the Vite manifest, so a renamed page fails the build
+ * instead of quietly dropping out of offline use.
+ */
+const OFFLINE_MODULES = [
+  // The landing page's HTML is precached too; without its code it would turn into the error page.
+  "src/pages/LandingPage.tsx",
+  "src/components/layout/AppLayout.tsx",
+  "src/pages/HomePage.tsx",
+  "src/pages/LibraryPage.tsx",
+  "src/pages/HistoryPage.tsx",
+  "src/pages/TimerPage.tsx",
+  "src/pages/SettingsPage.tsx",
+  "src/locales/es.json",
+  "src/locales/tools/es.json",
+  "src/locales/hu.json",
+  "src/locales/tools/hu.json",
+];
+// The Latin subsets of Nunito (body) and Fredoka (headings, buttons) cover English, Spanish and
+// Hungarian. JetBrains Mono only draws timers, so it loads on first use.
+const OFFLINE_FONTS = /^assets\/(?:nunito|fredoka)-latin(?:-ext)?-wght-normal-[\w-]+\.woff2$/;
+// The owl poses the offline pages show: Home points, Library reads, History sleeps, the Timer
+// holds a stopwatch, loaders have an idea, errors look surprised.
+const OFFLINE_OWLS = /^assets\/owl-(?:point|reading|sleepy|timekeeper|idea|surprised)-[\w-]+\.svg$/;
+const SERVICE_WORKER_BUILD = "const BUILD = { id: 'dev', assets: [] };";
+
+/** Writes this build's precache list and cache id into dist/sw.js. */
+function serviceWorkerPrecache(): Plugin {
+  return {
+    name: "service-worker-precache",
+    apply: "build",
+    writeBundle(options, bundle) {
+      const outDir = options.dir ?? path.resolve(__dirname, "dist");
+      const manifest = JSON.parse(readFileSync(path.join(outDir, ".vite/manifest.json"), "utf8")) as Record<string, { file: string; css?: string[]; imports?: string[] }>;
+      const files = new Set<string>();
+      const visit = (key: string) => {
+        const entry = manifest[key];
+        if (!entry) throw new Error(`serviceWorkerPrecache: the Vite manifest has no entry for ${key}`);
+        if (files.has(entry.file)) return;
+        files.add(entry.file);
+        for (const css of entry.css ?? []) files.add(css);
+        for (const imported of entry.imports ?? []) visit(imported);
+      };
+      visit("index.html");
+      OFFLINE_MODULES.forEach(visit);
+      // The shell's stylesheet and preloads, exactly as index.html links them.
       const shell = readFileSync(path.join(outDir, "index.html"), "utf8");
-      const canonical = `<link rel="canonical" href="${SITE_ORIGIN}/" />`;
-      const ogUrl = `<meta property="og:url" content="${SITE_ORIGIN}/" />`;
-      if (!shell.includes(canonical) || !shell.includes(ogUrl)) {
-        throw new Error("index.html no longer carries the landing canonical and og:url tags this plugin rewrites");
+      for (const [, file] of shell.matchAll(/(?:href|src)="\/(assets\/[^"]+)"/g)) files.add(file);
+      for (const file of Object.keys(bundle)) if (OFFLINE_FONTS.test(file) || OFFLINE_OWLS.test(file)) files.add(file);
+
+      const assets = [...files].sort().map((file) => `/${file}`);
+      const workerPath = path.join(outDir, "sw.js");
+      const worker = readFileSync(workerPath, "utf8");
+      if (!worker.includes(SERVICE_WORKER_BUILD)) throw new Error(`serviceWorkerPrecache: public/sw.js no longer contains ${SERVICE_WORKER_BUILD}`);
+      // The unhashed files the worker serves cache-first (theme-init.js, the
+      // icons and images) change the id too, so a deploy that changes only
+      // them still ships a new worker.
+      const hash = createHash("sha256").update(worker).update(assets.join("\n"));
+      const publicDir = path.resolve(__dirname, "public");
+      for (const file of readdirSync(publicDir).filter((name) => /\.(?:js|png|ico|jpg|svg|webmanifest)$/.test(name) && name !== "sw.js").sort()) {
+        hash.update(file).update(readFileSync(path.join(publicDir, file)));
       }
-      for (const route of SELF_CANONICAL_ROUTES) {
-        const html = shell
-          .replace(canonical, `<link rel="canonical" href="${SITE_ORIGIN}${route}" />`)
-          .replace(ogUrl, `<meta property="og:url" content="${SITE_ORIGIN}${route}" />`);
-        mkdirSync(path.join(outDir, route), { recursive: true });
-        writeFileSync(path.join(outDir, route, "index.html"), html);
-      }
+      const id = hash.digest("hex").slice(0, 12);
+      writeFileSync(workerPath, worker.replace(SERVICE_WORKER_BUILD, `const BUILD = ${JSON.stringify({ id, assets })};`));
     },
   };
 }
@@ -131,6 +222,11 @@ export default defineConfig(({ mode }) => {
     hmr: {
       overlay: false,
     },
+    // Playwright writes trace pages (.html) under .verify/ while a recipe runs;
+    // watching them reloaded the app in the middle of tests.
+    watch: {
+      ignored: ['**/.verify/**', '**/.ci-failures/**'],
+    },
     proxy,
     allowedHosts,
   },
@@ -138,15 +234,15 @@ export default defineConfig(({ mode }) => {
     proxy,
     allowedHosts,
   },
-  plugins: [react(), bundleGraph(), selfCanonicalShells(), ...uploadSourceMaps],
+  plugins: [react(), tailwindcss(), bundleGraph(), embedPages(), appShellRewrites(), serviceWorkerPrecache(), ...uploadSourceMaps],
   define: {
     "import.meta.env.VITE_SENTRY_RELEASE": JSON.stringify(release ?? ""),
     "import.meta.env.VITE_SENTRY_ENVIRONMENT": JSON.stringify(process.env.VERCEL_ENV ?? ""),
   },
   optimizeDeps: {
-    // Narrows dev prebundling to the SPA entry. Without this, Vite crawls all
-    // 84 HTML files under the root, including the prerendered pages in public/.
-    entries: ['index.html'],
+    // Narrows dev prebundling to the SPA entry. Without this, Vite crawls every
+    // HTML file under the root, including the static guide pages in public/.
+    entries: ['index.html', 'embed/debate-timer/index.html'],
   },
   resolve: {
     alias: {
@@ -155,6 +251,10 @@ export default defineConfig(({ mode }) => {
   },
   build: {
     manifest: true,
+    rollupOptions: {
+      // The embeddable timer is its own page, so it never loads the app's entry.
+      input: { main: path.resolve(__dirname, 'index.html'), embedTimer: path.resolve(__dirname, 'embed/debate-timer/index.html') },
+    },
     chunkSizeWarningLimit: 700,
     sourcemap: uploadSourceMaps.length > 0 ? "hidden" : false,
   },

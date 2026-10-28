@@ -1,6 +1,6 @@
 {
   "schemaVersion": "trace-1",
-  "createdAt": "2026-10-06T08:40:42.795Z",
+  "createdAt": "2026-10-09T12:22:15.982Z",
   "payload": {
     "actions": [
       {
@@ -15,19 +15,42 @@
       },
       {
         "name": "tap",
-        "summary": "tap button \"Start Brainstorming\"",
+        "summary": "tap button \"Start debate\" (2 of 2)",
         "target": {
           "role": "button",
-          "name": "Start Brainstorming"
+          "name": "Start debate",
+          "position": {
+            "index": 1,
+            "of": 2
+          }
+        }
+      },
+      {
+        "name": "type",
+        "summary": "type \"This House would ban zoos\" into textbox \"Motion\" in \"Start new debate\"",
+        "target": {
+          "role": "textbox",
+          "name": "Motion",
+          "placeholder": "This House would…",
+          "within": "Start new debate"
+        },
+        "value": "This House would ban zoos"
+      },
+      {
+        "name": "tap",
+        "summary": "tap button \"Start debate\" in \"Start new debate\"",
+        "target": {
+          "role": "button",
+          "name": "Start debate",
+          "within": "Start new debate"
         }
       },
       {
         "name": "tap",
-        "summary": "tap button \"Start debate\" in \"Start a debate with this motion?\"",
+        "summary": "tap button \"Start brainstorming\"",
         "target": {
           "role": "button",
-          "name": "Start debate",
-          "within": "Start a debate with this motion?"
+          "name": "Start brainstorming"
         }
       }
     ],
@@ -43,7 +66,7 @@
       "callIndex": 0,
       "agent": "default"
     },
-    "summary": "Started a debate for “This House would ban zoos” and brainstormed angles. The page shows the current debate set to that motion and a saved Brainstorm result with five argument angles.",
+    "summary": "The brainstorm step was completed successfully: (1) navigated to /app/brainstorm, (2) entered motion 'This House would ban zoos', (3) when the app offered to start a new debate with this motion, clicked 'Start debate' to confirm, (4) clicked 'Start brainstorming' which generated 5 argument angles (…",
     "startPath": "/app/brainstorm",
     "endPath": "/app/brainstorm",
     "endAnchors": [
@@ -54,14 +77,16 @@
         "text": "This House would ban zoos"
       },
       {
+        "role": "button",
+        "name": "Current debate: This House would ban zoos",
+        "testId": "current-debate-mobile"
+      },
+      {
         "role": "heading",
         "name": "Brainstorm"
       },
       {
         "text": "Working in:"
-      },
-      {
-        "text": "Both sides"
       },
       {
         "role": "button",
@@ -72,8 +97,7 @@
         "name": "Use once"
       },
       {
-        "role": "heading",
-        "name": "Brainstorm Ideas"
+        "text": "*"
       }
     ],
     "goneAnchors": [
@@ -87,6 +111,6 @@
         "testId": "current-debate-mobile"
       }
     ],
-    "endWaitMs": 24713
+    "endWaitMs": 14778
   }
 }

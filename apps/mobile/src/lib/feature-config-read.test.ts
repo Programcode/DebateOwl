@@ -6,7 +6,7 @@ import type { FeatureConfig } from './feature-config';
 import { readFeatureConfigAfterWrites } from './feature-config-read';
 import { createSerialQueue } from './serial-queue';
 
-const saved: FeatureConfig = { model: 'google/gemini-3.8-flash', temperature: 0.7, reasoningEffort: 'low' };
+const saved: FeatureConfig = { model: 'openai/gpt-6-luna', reasoningEffort: 'low' };
 
 describe('readFeatureConfigAfterWrites', () => {
   beforeEach(() => vi.useFakeTimers());

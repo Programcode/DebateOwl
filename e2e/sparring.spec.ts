@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test';
 import { setLocale, stubSupabaseSession } from './helpers/auth';
+import { fulfillQuotaCheck } from './helpers/quota';
 
 const corsHeaders = {
   'access-control-allow-origin': '*',
@@ -50,6 +51,7 @@ test('completes an LD sparring round through mocked opponent turns and judging',
       await route.fulfill({ status: 200, headers: corsHeaders, body: 'ok' });
       return;
     }
+    if (await fulfillQuotaCheck(route, corsHeaders)) return;
 
     const body = route.request().postDataJSON() as { input?: { action?: string } };
     const action = body.input?.action ?? 'unknown';
@@ -83,7 +85,9 @@ test('completes an LD sparring round through mocked opponent turns and judging',
     await draft.fill(content);
     await page.getByRole('button', { name: 'Submit speech' }).click();
     if (turnLabel !== 'Second affirmative rebuttal') {
-      await expect(page.getByText(`Opponent response ${index + 1}:`)).toBeVisible();
+      // The reply lands in the transcript and is pinned above the composer for the next speech.
+      await expect(page.getByRole('region', { name: 'Transcript' }).getByText(`Opponent response ${index + 1}:`)).toBeVisible();
+      await expect(page.getByRole('article', { name: 'Opponent’s last speech' })).toContainText(`Opponent response ${index + 1}:`);
     }
   }
 
@@ -104,6 +108,7 @@ test('uses the school 4-6-6-3 roles and coaching in the default round', async ({
       await route.fulfill({ status: 200, headers: corsHeaders, body: 'ok' });
       return;
     }
+    if (await fulfillQuotaCheck(route, corsHeaders)) return;
     const body = route.request().postDataJSON() as { input?: { action?: string } };
     actions.push(body.input?.action ?? 'unknown');
     await route.fulfill({ status: 200, headers: corsHeaders, body: JSON.stringify({ output: opponentSpeech(1) }) });
@@ -122,7 +127,7 @@ test('uses the school 4-6-6-3 roles and coaching in the default round', async ({
   await introductor.fill('Our framework is civic responsibility. We define service as supervised work that directly benefits the local community.');
   await page.getByRole('button', { name: 'Submit speech' }).click();
 
-  await expect(page.getByText('Opponent response 1:')).toBeVisible();
+  await expect(page.getByRole('region', { name: 'Transcript' }).getByText('Opponent response 1:')).toBeVisible();
   await expect(page.getByRole('textbox', { name: 'Draft for Pro R1' })).toBeVisible();
   await expect(page.getByText(/Build the core arguments with claims, warrants, support, and impacts/)).toBeVisible();
   expect(actions).toEqual(['respond']);

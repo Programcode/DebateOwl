@@ -17,7 +17,7 @@ describe('askOnce', () => {
       message: 'Why ban homework?',
       history: [],
       options: { citationMode: false, webSearch: false, prosConsMode: false, argumentMapMode: false },
-      config: { model: 'test-model', temperature: 0.3, reasoningEffort: 'low' },
+      config: { model: 'test-model', reasoningEffort: 'low' },
       language: 'en',
     }, controller.signal);
     controller.abort();

@@ -15,13 +15,14 @@ import type { FeatureContext } from "./types.ts";
 // BRAINSTORM: Use research to inform argument angles
 export async function handleBrainstorm(ctx: FeatureContext): Promise<Response> {
   const feature = "brainstorm" as const;
-  const { userId, provider, model, temperature, reasoningEffort, workSignal, researchDeps, startTime, researchUsageForLog, recordMainResult, buildSystemPromptFor, input: sanitizedInput } = ctx;
+  const { userId, provider, model, reasoningEffort, workSignal, researchDeps, startTime, researchUsageForLog, recordMainResult, buildSystemPromptFor, input: sanitizedInput } = ctx;
   const motion = String(sanitizedInput.motion || sanitizedInput.topic || "");
   const side = String(sanitizedInput.side || "both");
   const outputMode = String(sanitizedInput.outputMode || "topfive");
 
   // Perform deep research to find relevant context
   console.log("[BRAINSTORM] Starting deep research for motion:", motion);
+  ctx.stream?.phase("research");
   const research = await deepResearch(motion, "", researchDeps, DEEP_RESEARCH);
   const searchContext = buildResearchContext(research);
 
@@ -29,7 +30,7 @@ export async function handleBrainstorm(ctx: FeatureContext): Promise<Response> {
   const systemPrompt = await buildSystemPromptFor(feature, research);
   const userPrompt = buildUserPrompt(feature, sanitizedInput, searchContext);
   const messages = [{ role: "user", content: userPrompt }];
-  const aiResult = recordMainResult(await callAI(provider, model, systemPrompt, messages, temperature, reasoningEffort, workSignal));
+  const aiResult = recordMainResult(await callAI(provider, model, systemPrompt, messages, reasoningEffort, "brainstorm", workSignal, ctx.stream));
   const output = cleanGeneratedText(aiResult.output);
   enforceBrainstormControls(output, side, outputMode);
 

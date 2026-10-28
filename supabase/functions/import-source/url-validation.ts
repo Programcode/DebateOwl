@@ -41,11 +41,10 @@ export function validatePublicHttpUrl(rawUrl: string): URL {
 
 // Re-checks the hostname's *resolved* addresses, not just its literal text, so a
 // public-looking domain that resolves to a private, reserved or link-local IP is
-// still rejected. Call this immediately before every fetch, including redirect
-// hops. The runtime cannot pin the checked address for the connection, so a
-// resolver that answers differently a moment later is not covered; see
-// docs/standards/security.md "Recorded exceptions".
-export async function validateResolvedPublicHost(url: URL, signal?: AbortSignal): Promise<void> {
+// still rejected. Returns the checked addresses: connect only to one of those
+// (pinned-fetch.ts), never to the hostname, or a resolver that answers
+// differently a moment later reaches whatever it names (DNS rebinding).
+export async function validateResolvedPublicHost(url: URL, signal?: AbortSignal): Promise<string[]> {
   const hostname = url.hostname.toLowerCase();
   if (isPrivateIpv4(hostname) || isPrivateIpv6(hostname)) {
     throw new Error("Private and local network URLs cannot be imported.");
@@ -63,4 +62,5 @@ export async function validateResolvedPublicHost(url: URL, signal?: AbortSignal)
   if (addresses.some((address) => isPrivateIpv4(address) || isPrivateIpv6(address))) {
     throw new Error("Private and local network URLs cannot be imported.");
   }
+  return addresses;
 }

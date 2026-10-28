@@ -216,7 +216,7 @@ export default function WorkspacePage() {
                     setSelectedDocumentId(document.id);
                     setMobilePane("document");
                   }}
-                  className="motion-press rounded-md px-3 py-2 text-left hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  className="motion-press rounded-md px-3 py-2 text-left hover:bg-accent focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring"
                 >
                   <span className="block font-medium">{document.title}</span>
                   {document.assignee_id && (

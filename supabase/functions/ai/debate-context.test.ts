@@ -3,7 +3,6 @@
 
 import { createFakeRest } from "../_shared/testing/fake-rest.ts";
 import { UNTRUSTED_CONTENT_RULES } from "../_shared/prompts.ts";
-import { entitlementRows } from "../_shared/testing/entitlement.ts";
 
 const environment = {
   SUPABASE_URL: "https://supabase.test",
@@ -71,9 +70,14 @@ function install(options: { stream?: boolean; tables?: typeof tables; reply?: un
       const tableResponse = rest.handle(url, { ...init, headers: input instanceof Request ? input.headers : init?.headers });
       if (tableResponse) return tableResponse;
       if (url.pathname.includes("/rest/v1/user_roles")) return jsonResponse({ role: "user" });
-      if (url.pathname.includes("/rest/v1/rpc/effective_entitlement")) return jsonResponse(entitlementRows("trial", { daily_limit: 50 }));
-      if (url.pathname.includes("/rest/v1/rate_limits")) return jsonResponse({ limit_value: 50 });
-      if (url.pathname.includes("/rest/v1/rpc/consume_daily_quota")) return jsonResponse([{ allowed: true, current_count: 1 }]);
+      if (url.pathname.includes("/rest/v1/user_settings")) return jsonResponse({ subscription_tier: "trial", daily_limit_override: 50, trial_ends_at: "2099-01-01T00:00:00.000Z", grace_period_ends_at: null });
+      if (url.pathname.endsWith("/rest/v1/app_store_subscriptions")) return Response.json([]);
+      if (url.pathname.includes("/rest/v1/subscriptions")) return jsonResponse([]);
+      if (url.pathname.includes("/rest/v1/rate_limits")) {
+        if ((url.searchParams.get("order") ?? "").includes("updated_at")) throw new Error(`rate_limits must not order by updated_at: ${url.search}`);
+        return jsonResponse({ limit_value: 50 });
+      }
+      if (/\/rest\/v1\/rpc\/consume_(daily|ai)_quota$/.test(url.pathname)) return jsonResponse([{ allowed: true, current_count: 1 }]);
       if (url.pathname.includes("/rest/v1/global_prompts")) return jsonResponse({ prompt_text: null });
       if (url.pathname.includes("/rest/v1/ai_requests")) return new Response(null, { status: 201 });
       throw new Error(`Unhandled Supabase request: ${url}`);
@@ -126,7 +130,7 @@ function aiRequest(body: Record<string, unknown>, path = "ai"): Request {
   return new Request(`http://127.0.0.1/functions/v1/${path}`, {
     method: "POST",
     headers: { Authorization: "Bearer test-user-token", "Content-Type": "application/json" },
-    body: JSON.stringify({ model: "openai/gpt-5.6-luna", ...body }),
+    body: JSON.stringify({ model: "openai/gpt-6-luna", ...body }),
   });
 }
 
@@ -197,14 +201,14 @@ Deno.test("a forged debate is rejected before quota, routing, or provider work",
         debateContext: { debateId, side: "pro", sourceIds: [SOURCE], outputs: [{ kind: "case", id: CASE }] },
       }));
       assert(response.status === 404, `forged debate returned ${response.status}`);
-      assert(!harness.calls.some((path) => path.includes("consume_daily_quota") || path.includes("/chat/completions") || path.includes("/decisions")), `forged debate reached paid work: ${harness.calls.join(", ")}`);
+      assert(!harness.calls.some((path) => /consume_(daily|ai)_quota/.test(path) || path.includes("/chat/completions") || path.includes("/decisions")), `forged debate reached paid work: ${harness.calls.join(", ")}`);
     } finally {
       harness.restore();
     }
   }
 });
 
-Deno.test("debate context rejects text, workspace mixing, and malformed IDs before authentication", async () => {
+Deno.test("debate context rejects text, workspace mixing, and malformed IDs after authentication but before quota", async () => {
   for (const [label, extra] of [
     ["workspace mixing", { workspaceContext: { workspaceId: DEBATE } }],
     ["source text", { sources: [{ title: "Forged", content: "Forged text", type: "text" }] }],
@@ -218,7 +222,7 @@ Deno.test("debate context rejects text, workspace mixing, and malformed IDs befo
         ...extra,
       }));
       assert(response.status === 400, `${label} returned ${response.status}`);
-      assert(harness.calls.length === 0, `${label} performed remote work: ${harness.calls.join(", ")}`);
+      assert(JSON.stringify(harness.calls) === JSON.stringify(["/auth/v1/user"]), `${label} performed work beyond authentication: ${harness.calls.join(", ")}`);
     } finally {
       harness.restore();
     }
@@ -230,7 +234,7 @@ Deno.test("debate context rejects text, workspace mixing, and malformed IDs befo
       input: askInput,
       debateContext: { debateId: DEBATE, side: "pro", outputs: [{ kind: "case", id: CASE, digest: "Forged digest" }] },
     }));
-    assert(response.status === 400 && harness.calls.length === 0, "a forged output digest was accepted");
+    assert(response.status === 400 && JSON.stringify(harness.calls) === JSON.stringify(["/auth/v1/user"]), "a forged output digest was accepted or performed work beyond authentication");
   } finally {
     harness.restore();
   }
@@ -262,7 +266,7 @@ Deno.test("streamed Ask receives the same debate context and rejects a foreign d
       debateContext: { debateId: FOREIGN_DEBATE, side: "pro", sourceIds: [], outputs: [] },
     }, "ai-stream"));
     assert(response.status === 404, `foreign stream returned ${response.status}`);
-    assert(!foreign.calls.some((path) => path.includes("consume_daily_quota") || path.includes("/chat/completions")), "foreign stream reached paid work");
+    assert(!foreign.calls.some((path) => /consume_(daily|ai)_quota/.test(path) || path.includes("/chat/completions")), "foreign stream reached paid work");
   } finally {
     foreign.restore();
   }

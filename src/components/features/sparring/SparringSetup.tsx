@@ -1,4 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { Owl } from '@/components/brand/Owl';
+import { LoadingSpinner } from '@/components/ui/loading-spinner';
 import { useTranslation } from 'react-i18next';
 import { useOnlineStatus } from '@/hooks/use-online-status';
 import { ArrowRight, Check, ChevronDown, Cpu, Gauge, Swords } from 'lucide-react';
@@ -12,6 +14,9 @@ import { useDebateMotionPrefill } from '@/components/features/debate/CurrentDeba
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ModelSelector } from '@/components/ModelSelector';
 import { cn } from '@/lib/utils';
+import { formatNumber } from '@/lib/date-format';
+import { MAX_MOTION_LENGTH } from '@/lib/stores/debate-store';
+import { PageHeader } from '@/components/layout/PageHeader';
 import {
   SPARRING_FORMATS,
   buildSparringTurns,
@@ -20,6 +25,9 @@ import {
 import type { SparringDifficulty, SparringFormat, SparringSide } from '@/lib/ai/schemas/sparring';
 import { VoiceModeToggle } from '@/components/features/voice/VoiceModeToggle';
 import { useVoiceAvailability } from '@/lib/voice/availability';
+import { SessionCostNote } from '@/components/features/subscription/SessionCostNote';
+import { DailyUsage } from '@/components/features/subscription/DailyUsage';
+import { shortfallMessage } from '@/lib/ai/limit-message';
 
 export interface SparringSetupValues {
   motion: string;
@@ -38,7 +46,18 @@ interface SparringSetupProps {
   /** Fill the motion from the Current Debate. */
   debatePrefill?: boolean;
   onStart: (values: SparringSetupValues) => void;
+  /**
+   * AI requests the whole round costs (every reply and the judge), from the
+   * server. Null when unknown: an older server charges each reply and the judge.
+   */
+  roundCost?: number | null;
+  /** AI requests left today, or null when unknown. A round that does not fit gets a warning. */
+  remainingRequests?: number | null;
+  /** Why the server would refuse a new round (weekly allowance, trial ended), translated. */
+  blockedReason?: string | null;
   isStarting?: boolean;
+  /** Why the last Start did not open a round, translated. */
+  startError?: string | null;
   initialValues?: Partial<SparringSetupValues>;
 }
 
@@ -48,7 +67,7 @@ const DIFFICULTIES: Array<{ id: SparringDifficulty; name: string }> = [
   { id: 'hard', name: 'Ruthless' },
 ];
 
-export function SparringSetup({ onStart, isStarting = false, initialValues, banner, debatePrefill = false, voiceAllowed = true }: SparringSetupProps) {
+export function SparringSetup({ onStart, roundCost = null, remainingRequests = null, blockedReason = null, isStarting = false, startError = null, initialValues, banner, debatePrefill = false, voiceAllowed = true }: SparringSetupProps) {
   const { t } = useTranslation();
   const [motion, setMotion] = useState(initialValues?.motion ?? '');
   const motionRef = useRef(motion);
@@ -64,7 +83,10 @@ export function SparringSetup({ onStart, isStarting = false, initialValues, bann
   const selectedFormat = useMemo(() => SPARRING_FORMATS.find((item) => item.id === format) ?? SPARRING_FORMATS[0], [format]);
   const plannedTurns = useMemo(() => buildSparringTurns(format, userSide), [format, userSide]);
   const aiRequests = plannedTurns.filter((turn) => turn.speaker === 'ai').length;
-  const totalRequests = aiRequests + 1;
+  // The whole round (every reply and the judge) is charged once, by model weight.
+  // Unknown means an older server may be charging per call, so count that way.
+  const cost = roundCost ?? aiRequests + 1;
+  const requestShortfall = remainingRequests !== null && remainingRequests < cost;
   const canStart = motion.trim().length >= 8 && !isStarting && isOnline;
 
   const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
@@ -75,19 +97,19 @@ export function SparringSetup({ onStart, isStarting = false, initialValues, bann
 
   return (
     <div className="mx-auto w-full max-w-6xl space-y-6">
-      <h1 className="text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">{t('nav.sparring', 'Sparring')}</h1>
+      <PageHeader className="mb-0" title={t('nav.sparring', 'Sparring')} meta={<DailyUsage />} />
       {banner}
 
       <form onSubmit={handleSubmit} className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_300px]">
         <div className="space-y-6">
-          <Card className="overflow-hidden border-primary/20 shadow-sm">
-            <CardHeader className="border-b border-border/60 bg-primary/[0.035] pb-5">
-              <div className="flex items-start gap-3">
-                <div className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+          <Card className="overflow-hidden">
+            <CardHeader className="border-b-2 border-border bg-brand-tint/50 pb-5">
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-card text-primary shadow-[0_2px_0_var(--do-primary-tint-border)]">
                   <Swords className="h-5 w-5" aria-hidden="true" />
                 </div>
                 <div>
-                  <CardTitle className="text-xl">{t('sparring.setup.setMotion', 'Set the motion')}</CardTitle>
+                  <CardTitle>{t('sparring.setup.setMotion', 'Set the motion')}</CardTitle>
                 </div>
               </div>
             </CardHeader>
@@ -98,13 +120,13 @@ export function SparringSetup({ onStart, isStarting = false, initialValues, bann
                 value={motion}
                 onChange={(event) => setMotion(event.target.value)}
                 placeholder={t('sparring.setup.motionPlaceholder', 'This house would require social media companies to verify the age of every user.')}
-                className="min-h-[132px] resize-y text-base leading-7"
-                maxLength={1200}
+                className="min-h-[132px] resize-y text-base leading-7 md:leading-5"
+                maxLength={MAX_MOTION_LENGTH}
                 autoFocus
                 aria-describedby="sparring-motion-count"
               />
               <div className="flex items-center justify-between gap-4 text-xs text-muted-foreground">
-                <span id="sparring-motion-count" className="shrink-0 tabular-nums">{motion.length}/1,200</span>
+                <span id="sparring-motion-count" className="shrink-0 tabular-nums">{formatNumber(motion.length)}/{formatNumber(MAX_MOTION_LENGTH)}</span>
               </div>
               {motion.length > 0 && motion.trim().length < 8 && (
                 <p className="text-sm text-destructive" role="alert">{t('sparring.setup.motionTooShort', 'Add a little more detail so the motion is judgeable.')}</p>
@@ -114,7 +136,7 @@ export function SparringSetup({ onStart, isStarting = false, initialValues, bann
 
           <Card>
             <CardHeader className="pb-3">
-              <CardTitle className="text-lg">{t('sparring.setup.pickSide', 'Pick your side')}</CardTitle>
+              <CardTitle>{t('sparring.setup.pickSide', 'Pick your side')}</CardTitle>
             </CardHeader>
             <CardContent className="grid gap-2.5 sm:grid-cols-2">
               {(['pro', 'con'] as const).map((side) => {
@@ -126,16 +148,15 @@ export function SparringSetup({ onStart, isStarting = false, initialValues, bann
                     aria-pressed={selected}
                     onClick={() => setUserSide(side)}
                     className={cn(
-                      'motion-press rounded-xl border p-3 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
-                      selected ? 'border-primary bg-primary/10 text-foreground shadow-sm' : 'border-border bg-background hover:border-primary/40 hover:bg-accent/50',
+                      'tile min-h-14 rounded-md px-4 py-3 text-left focus-visible:outline-hidden focus-visible:ring-[3px] focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-card',
                     )}
                   >
                     <span className="flex items-center justify-between gap-3">
-                      <span className="flex items-center gap-2 font-semibold">
-                        <span className={cn('h-2.5 w-2.5 rounded-full', side === 'pro' ? 'bg-emerald-500' : 'bg-rose-500')} aria-hidden="true" />
+                      <span className="flex items-center gap-2 font-extrabold text-heading">
+                        <span className={cn('h-3 w-3 rounded-full', side === 'pro' ? 'bg-brand' : 'bg-destructive')} aria-hidden="true" />
                         {side === 'pro' ? t('sparring.pro', 'Pro') : t('sparring.con', 'Con')}
                       </span>
-                      {selected && <Check className="h-4 w-4 text-primary" aria-hidden="true" />}
+                      {selected ? <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-brand text-white motion-safe:animate-in zoom-in-50 duration-300 ease-overshoot"><Check className="h-3.5 w-3.5" strokeWidth={3.5} aria-hidden="true" /></span> : <span className="h-6 w-6 shrink-0 rounded-full border-2 border-border-strong" aria-hidden="true" />}
                     </span>
                   </button>
                 );
@@ -145,7 +166,7 @@ export function SparringSetup({ onStart, isStarting = false, initialValues, bann
 
           <Card>
             <CardHeader className="pb-3">
-              <CardTitle className="text-lg">{t('sparring.setup.choosePressure', 'Choose the pressure')}</CardTitle>
+              <CardTitle>{t('sparring.setup.choosePressure', 'Choose the pressure')}</CardTitle>
             </CardHeader>
             <CardContent className="grid gap-2.5 md:grid-cols-3">
               {DIFFICULTIES.map((level) => {
@@ -157,13 +178,15 @@ export function SparringSetup({ onStart, isStarting = false, initialValues, bann
                     aria-pressed={selected}
                     onClick={() => setDifficulty(level.id)}
                     className={cn(
-                      'motion-press rounded-xl border p-3 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
-                      selected ? 'border-primary bg-primary/10 shadow-sm' : 'border-border hover:border-primary/40 hover:bg-accent/50',
+                      'tile min-h-14 rounded-md px-4 py-3 text-left focus-visible:outline-hidden focus-visible:ring-[3px] focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-card',
                     )}
                   >
-                    <span className="flex items-center gap-2 font-semibold">
-                      <Gauge className="h-4 w-4 text-primary" aria-hidden="true" />
-                      {t(`sparring.difficulty.${level.id}`, level.name)}
+                    <span className="flex items-center justify-between gap-2">
+                      <span className="flex items-center gap-2 font-extrabold text-heading">
+                        <Gauge className="h-4 w-4 text-primary" aria-hidden="true" />
+                        {t(`sparring.difficulty.${level.id}`, level.name)}
+                      </span>
+                      {selected && <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-brand text-white motion-safe:animate-in zoom-in-50 duration-300 ease-overshoot"><Check className="h-3.5 w-3.5" strokeWidth={3.5} aria-hidden="true" /></span>}
                     </span>
                   </button>
                 );
@@ -209,10 +232,12 @@ export function SparringSetup({ onStart, isStarting = false, initialValues, bann
             </CardContent>
           </Card>
 
-          <Card className="border-primary/20 bg-primary/[0.025]">
+          <Card className="relative mt-16 overflow-visible border-brand-tint-border">
+            {/* The opponent, perched on the round card, sizes you up. */}
+            <Owl pose="arguing" size={80} className="absolute -top-[68px] right-4" />
             <CardContent className="space-y-4 pt-6">
-              <details className="group rounded-xl border border-border/70 bg-background/70 p-3">
-                <summary className="flex cursor-pointer list-none items-center justify-between gap-3 text-sm font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
+              <details className="group rounded-md border-2 border-border bg-surface-sunken/60 p-3">
+                <summary className="flex cursor-pointer list-none items-center justify-between gap-3 text-sm font-semibold focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
                   <span className="flex flex-1 items-center justify-between gap-3">
                     <span>{t('sparring.setup.speakingOrder', 'Speaking order')}</span>
                     <Badge variant="outline" className="rounded-md">{t('sparring.setup.turns', '{{count}} turns', { count: selectedFormat.turnCount })}</Badge>
@@ -232,14 +257,17 @@ export function SparringSetup({ onStart, isStarting = false, initialValues, bann
               </details>
 
               <div className="grid grid-cols-2 gap-3 text-sm">
-                <div className="rounded-lg border border-border/70 bg-background/70 p-3">
+                <div className="rounded-md border-2 border-border bg-surface-sunken/60 p-3">
                   <p className="text-xs text-muted-foreground">{t('sparring.setup.opponentTurns', 'Opponent turns')}</p>
-                  <p className="mt-1 text-xl font-semibold tabular-nums">{aiRequests}</p>
+                  <p className="mt-1 font-display text-2xl font-[600] tabular-nums text-heading">{aiRequests}</p>
                 </div>
-                <div className="rounded-lg border border-border/70 bg-background/70 p-3">
-                  <p className="text-xs text-muted-foreground">{t('sparring.setup.aiRequests', 'AI requests')}</p>
-                  <p className="mt-1 text-xl font-semibold tabular-nums">{totalRequests}</p>
-                  <p className="mt-0.5 text-xs text-muted-foreground">{t('sparring.setup.aiRequestBreakdown', '{{count}} replies + 1 judge', { count: aiRequests })}</p>
+                <div className="rounded-md border-2 border-border bg-surface-sunken/60 p-3">
+                  <p className="text-xs text-muted-foreground">{t('sparring.setup.aiRequests', 'Round cost')}</p>
+                  {/* The whole round is one charge (QA bug 7): the number is uses, not one per reply. */}
+                  <p data-testid="sparring-round-cost" className="mt-1 font-display text-2xl font-[600] tabular-nums text-heading">
+                    {formatNumber(cost)} <span className="text-sm font-medium text-muted-foreground">{t('sparring.setup.roundCostUnit', { count: cost })}</span>
+                  </p>
+                  <p className="mt-0.5 text-xs text-muted-foreground">{t('sparring.setup.aiRequestBreakdown', { count: aiRequests })}</p>
                 </div>
               </div>
 
@@ -250,10 +278,30 @@ export function SparringSetup({ onStart, isStarting = false, initialValues, bann
 
               <DebateContextControl feature="sparring" side={userSide} hidden={!debatePrefill} />
 
-              <Button type="submit" className="h-12 w-full" disabled={!canStart}>
+              <Button type="submit" variant="accent" size="lg" className="w-full" disabled={!canStart} aria-busy={isStarting}>
+                {isStarting && <LoadingSpinner size="sm" />}
                 {isStarting ? t('sparring.setup.openingRoom', 'Opening room…') : t('sparring.setup.startRound', 'Start round')}
                 {!isStarting && <ArrowRight className="h-4 w-4" aria-hidden="true" />}
               </Button>
+              {/* The quota check can take a few seconds; say what the wait is for. */}
+              {isStarting && (
+                <p data-testid="sparring-starting" role="status" className="text-center text-xs leading-5 text-muted-foreground">
+                  {t('sparring.setup.checkingQuota', 'Checking your AI uses for today…')}
+                </p>
+              )}
+              {startError && !isStarting && (
+                <p data-testid="sparring-start-error" role="alert" className="rounded-md border-2 border-destructive/40 bg-danger-tint px-3 py-2 text-xs leading-5 text-danger-text">
+                  {startError}
+                </p>
+              )}
+              {requestShortfall && (
+                <p data-testid="sparring-request-shortfall" role="status" className="rounded-md border-2 border-warning/40 bg-warning-tint px-3 py-2 text-xs leading-5 text-warning-text">
+                  {/* The server's refusal when it answered, else the same words from the browser's count (QB-06). */}
+                  {blockedReason ?? shortfallMessage(cost, remainingRequests)}
+                </p>
+              )}
+              {/* The shortfall note above already explains a day that is used up. */}
+              <SessionCostNote units={roundCost} remaining={remainingRequests} blocked={requestShortfall ? null : blockedReason} className="text-center" />
               {!isOnline && <p className="text-center text-xs leading-5 text-amber-700 dark:text-amber-300">{t('sparring.setup.offlineCannotStart', 'Reconnect to start a round. Your setup is kept while you are offline.')}</p>}
               <p className="text-center text-xs leading-5 text-muted-foreground">{t('sparring.setup.draftNotice', 'Your draft is saved locally as you type. You can pause without losing your place.')}</p>
             </CardContent>

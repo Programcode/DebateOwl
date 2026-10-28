@@ -1,4 +1,3 @@
-import { entitlementRows } from "../_shared/testing/entitlement.ts";
 function jsonResponse(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), {
     status,
@@ -15,7 +14,7 @@ for (const [key, value] of Object.entries({
 
 const { handleRequest } = await import("./index.ts");
 
-type Scenario = "complete" | "audit-error" | "truncated" | "provider-error" | "provider-error-after-finish" | "aborted" | "aborted-after-finish";
+type Scenario = "complete" | "audit-error" | "truncated" | "cut-off" | "cut-off-empty" | "provider-error" | "provider-error-after-finish" | "aborted" | "aborted-after-finish";
 
 const usage = {
   prompt_tokens: 12,
@@ -31,7 +30,7 @@ function request(signal?: AbortSignal): Request {
     headers: { Authorization: "Bearer test-user-token", "Content-Type": "application/json" },
     body: JSON.stringify({
       feature: "ask",
-      model: "openai/gpt-5.6-luna",
+      model: "openai/gpt-6-luna",
       input: { message: "Hello", mode: "general" },
     }),
   });
@@ -50,6 +49,15 @@ function framesFor(scenario: Exclude<Scenario, "aborted">): string {
     return [
       `data: ${JSON.stringify({ choices: [{ delta: { content: "Partial" } }] })}\n\n`,
       usageFrame,
+    ].join("");
+  }
+  // Stopped at max_tokens: after some text, or after reasoning only.
+  if (scenario === "cut-off" || scenario === "cut-off-empty") {
+    return [
+      ...(scenario === "cut-off" ? [`data: ${JSON.stringify({ choices: [{ delta: { content: "Partial" } }] })}\n\n`] : []),
+      `data: ${JSON.stringify({ choices: [{ delta: {}, finish_reason: "length" }] })}\n\n`,
+      usageFrame,
+      "data: [DONE]\n\n",
     ].join("");
   }
   if (scenario === "provider-error-after-finish") {
@@ -79,9 +87,21 @@ async function runScenario(scenario: Scenario) {
     if (url.origin === "https://supabase.test") {
       if (url.pathname === "/auth/v1/user") return jsonResponse({ id: "user-1", aud: "authenticated" });
       if (url.pathname.includes("/rest/v1/user_roles")) return jsonResponse({ role: "user" });
-      if (url.pathname.includes("/rest/v1/rpc/effective_entitlement")) return jsonResponse(entitlementRows("trial", { daily_limit: 50 }));
-      if (url.pathname.includes("/rest/v1/rate_limits")) return jsonResponse({ limit_value: 50 });
-      if (url.pathname.includes("/rest/v1/rpc/consume_daily_quota")) {
+      if (url.pathname.includes("/rest/v1/user_settings")) {
+        return jsonResponse({
+          subscription_tier: "trial",
+          daily_limit_override: 50,
+          trial_ends_at: "2099-01-01T00:00:00.000Z",
+          grace_period_ends_at: null,
+        });
+      }
+      if (url.pathname.endsWith("/rest/v1/app_store_subscriptions")) return Response.json([]);
+      if (url.pathname.includes("/rest/v1/subscriptions")) return Response.json([]);
+      if (url.pathname.includes("/rest/v1/rate_limits")) {
+        if ((url.searchParams.get("order") ?? "").includes("updated_at")) throw new Error(`rate_limits must not order by updated_at: ${url.search}`);
+        return jsonResponse({ limit_value: 50 });
+      }
+      if (/\/rest\/v1\/rpc\/consume_(daily|ai)_quota$/.test(url.pathname)) {
         return jsonResponse([{ allowed: true, current_count: 1 }]);
       }
       if (url.pathname.includes("/rest/v1/ai_requests")) {
@@ -139,7 +159,7 @@ async function runScenario(scenario: Scenario) {
 }
 
 Deno.test("OpenRouter stream accounting bills only completed work", async () => {
-  for (const scenario of ["complete", "audit-error", "truncated", "provider-error", "provider-error-after-finish", "aborted", "aborted-after-finish"] as const) {
+  for (const scenario of ["complete", "audit-error", "cut-off", "truncated", "cut-off-empty", "provider-error", "provider-error-after-finish", "aborted", "aborted-after-finish"] as const) {
     const result = await runScenario(scenario);
     if (result.providerCalls !== 1) throw new Error(`${scenario}: expected one provider call, got ${result.providerCalls}`);
     if (result.rows.length !== 1) throw new Error(`${scenario}: expected one audit insert, got ${result.rows.length}`);
@@ -154,9 +174,13 @@ Deno.test("OpenRouter stream accounting bills only completed work", async () => 
       throw new Error(`${scenario}: raw provider usage was lost: ${JSON.stringify(row)}`);
     }
 
-    if (scenario === "complete" || scenario === "audit-error") {
+    if (scenario === "complete" || scenario === "audit-error" || scenario === "cut-off") {
       if (row.status !== "success" || row.cost_usd !== usage.cost || !result.body.includes("event: final")) {
         throw new Error(`complete stream was not billed: ${JSON.stringify(row)}\n${result.body}`);
+      }
+      // A partial answer is kept and flagged; a full one is not.
+      if (result.body.includes('"replyTruncated":true') !== (scenario === "cut-off")) {
+        throw new Error(`${scenario}: wrong cut-off flag\n${result.body}`);
       }
       continue;
     }

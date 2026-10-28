@@ -402,6 +402,8 @@ Deno.test("crossfire debrief prompt requires cited IDs and omits typed-session s
   assertIncludes(prompt, '"missedFollowUps"');
   assertIncludes(prompt, '"strongestExchange"');
   assertIncludes(prompt, "Every claim and suggestion must cite one or more real turn IDs");
+  assertIncludes(prompt, "cite exactly one turn ID");
+  assertIncludes(prompt, "Never use a later turn as evidence about an earlier one");
   assertIncludes(prompt, "Return null for strongestExchange");
   assertIncludes(prompt, "Do not return a percentage, numeric performance score");
   assertIncludes(prompt, "speaking-speed, vocal-quality");

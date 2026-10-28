@@ -5,11 +5,14 @@ import { TrendingUp, ArrowRight, AlertTriangle, Lightbulb } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { SectionCard } from '@/components/ui/section-card';
 import type { BrainstormOutput, Idea } from '@/lib/ai/schemas/brainstorm';
-import { StaggeredContainer } from '@/components/ui/animated-section';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { EmptyState } from '@/components/ui/empty-state';
 import { ExportToolbar } from '@/components/features/ExportToolbar';
+import { ResultHeader } from '@/components/features/tools/ResultHeader';
+import { CopyResultButton, SaveResultAction } from '@/components/features/tools/result-actions';
+import { brainstormText } from '@/components/features/tools/result-text';
+import { ResearchedSources } from '@/components/features/tools/ResearchedSources';
 import { GoogleDriveAuthModal } from '@/components/features/export/GoogleDriveAuthModal';
 import { SourceQualityList } from '@/components/features/shared/SourceQualityList';
 import type { DiscoveredSource } from '@/lib/ai/client';
@@ -19,6 +22,10 @@ interface BrainstormResultsProps {
   result: BrainstormOutput;
   discoveredSources?: DiscoveredSource[];
   onDiscuss?: () => void;
+  onSave?: () => void;
+  /** The result is already in History; shows “Saved” instead of Save. */
+  saved?: boolean;
+  saving?: boolean;
 }
 
 const strengthColors = {
@@ -43,7 +50,7 @@ function IdeaCard({ idea }: { idea: Idea }) {
   return (
     <div className={cn('rounded-lg border p-4 space-y-3 motion-list-item', strengthColors[strength] || strengthColors.moderate)}>
       <div className="flex items-start justify-between gap-2">
-        <h4 className="font-semibold text-foreground">{idea.title || t('brainstormResults.untitled')}</h4>
+        <h3 className="font-semibold text-foreground">{idea.title || t('brainstormResults.untitled')}</h3>
         <div className="flex gap-1 shrink-0">
           <Badge className={cn('text-xs', sideColors[side] || sideColors.neutral)}>
             {side === 'pro' ? t('brainstormResults.pro') : side === 'con' ? t('brainstormResults.con') : t('brainstormResults.neutral')}
@@ -64,7 +71,7 @@ function IdeaCard({ idea }: { idea: Idea }) {
   );
 }
 
-export function BrainstormResults({ result, discoveredSources, onDiscuss }: BrainstormResultsProps) {
+export function BrainstormResults({ result, discoveredSources, onDiscuss, onSave, saved = false, saving = false }: BrainstormResultsProps) {
   const { t } = useTranslation();
   const [isExportingGDocs, setIsExportingGDocs] = useState(false);
   const [showDriveAuth, setShowDriveAuth] = useState(false);
@@ -125,7 +132,7 @@ export function BrainstormResults({ result, discoveredSources, onDiscuss }: Brai
       <SectionCard
         title={t('brainstormResults.clarification')}
         description={t('brainstormResults.clarificationDesc')}
-        icon={<AlertTriangle className="h-5 w-5 text-amber-500" />}
+        icon={<AlertTriangle className="h-5 w-5 text-amber-600 dark:text-amber-400" />}
       >
         <ul className="space-y-3">
           {result.clarifyingQuestions.map((question, i) => (
@@ -142,26 +149,24 @@ export function BrainstormResults({ result, discoveredSources, onDiscuss }: Brai
   }
 
   return (
-    <StaggeredContainer className="space-y-6">
+    <div className="space-y-6">
       <GoogleDriveAuthModal open={showDriveAuth} onOpenChange={setShowDriveAuth} />
-      {/* Researched sources with quality provenance */}
-      {discoveredSources && discoveredSources.length > 0 && (
-        <div className="rounded-lg border bg-card/50 p-4">
-          <h4 className="mb-2 text-sm font-medium">{t('sourceQuality.researchedSources')}</h4>
-          <SourceQualityList sources={discoveredSources} />
-          <p className="mt-2 text-xs text-muted-foreground">
-            {t('sourceQuality.fallbackNote')}
-          </p>
-        </div>
-      )}
-      <ExportToolbar
-        onPdf={handlePdfExport}
-        onDocx={handleDocxExport}
-        onGoogleDocs={handleGoogleDocsExport}
-        isExportingGDocs={isExportingGDocs}
-        onDiscuss={onDiscuss}
-        discussLabel={t('brainstormResults.discuss')}
+      <ResultHeader
+        title={t('brainstormResults.resultTitle', 'Angles')}
+        actions={(
+          <ExportToolbar
+            onPdf={handlePdfExport}
+            onDocx={handleDocxExport}
+            onGoogleDocs={handleGoogleDocsExport}
+            isExportingGDocs={isExportingGDocs}
+            onDiscuss={onDiscuss}
+            discussLabel={t('brainstormResults.discuss')}
+            extraExports={<CopyResultButton getText={() => brainstormText(result, t)} />}
+            secondaryActions={onSave || saved ? <SaveResultAction saved={saved} onSave={onSave} disabled={saving} /> : undefined}
+          />
+        )}
       />
+      <ResearchedSources sources={discoveredSources} />
 
       {!result.topFive?.length && !result.mindmap?.length && !result.buckets?.length && (
         <EmptyState
@@ -187,7 +192,7 @@ export function BrainstormResults({ result, discoveredSources, onDiscuss }: Brai
                 <div className="flex-1">
                   {item.idea && <IdeaCard idea={item.idea} />}
                   <div className="mt-2 flex items-center gap-2 text-sm">
-                    <Lightbulb className="h-4 w-4 text-amber-500" />
+                    <Lightbulb className="h-4 w-4 text-amber-600 dark:text-amber-400" />
                     <span className="text-muted-foreground">{item.whyTop}</span>
                   </div>
                 </div>
@@ -206,10 +211,10 @@ export function BrainstormResults({ result, discoveredSources, onDiscuss }: Brai
           <div className="space-y-6">
             {result.mindmap.map((category, i) => (
               <div key={i}>
-                <h4 className="text-lg font-semibold text-foreground mb-3 flex items-center gap-2">
+                <h3 className="text-lg font-semibold text-foreground mb-3 flex items-center gap-2">
                   <div className="h-2 w-2 rounded-full bg-primary" />
                   {category.category}
-                </h4>
+                </h3>
                 <div className="grid gap-3 sm:grid-cols-2">
                   {category.items && Array.isArray(category.items) && category.items.map((idea) => (
                     <IdeaCard key={idea.id} idea={idea} />
@@ -263,18 +268,18 @@ export function BrainstormResults({ result, discoveredSources, onDiscuss }: Brai
       {result.warningsAndTradeoffs && result.warningsAndTradeoffs.length > 0 && (
         <SectionCard
           title={t('brainstormResults.warnings')}
-          icon={<AlertTriangle className="h-5 w-5 text-amber-500" />}
+          icon={<AlertTriangle className="h-5 w-5 text-amber-600 dark:text-amber-400" />}
         >
           <ul className="space-y-2">
             {result.warningsAndTradeoffs.map((warning, i) => (
               <li key={i} className="flex items-start gap-2 text-sm">
-                <span className="text-amber-500 mt-1">⚠</span>
+                <span className="text-amber-600 dark:text-amber-400 mt-1">⚠</span>
                 <span className="text-foreground">{warning}</span>
               </li>
             ))}
           </ul>
         </SectionCard>
       )}
-    </StaggeredContainer>
+    </div>
   );
 }

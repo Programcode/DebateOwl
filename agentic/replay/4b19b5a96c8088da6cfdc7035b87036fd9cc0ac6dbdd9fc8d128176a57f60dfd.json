@@ -1,14 +1,14 @@
 {
   "schemaVersion": "trace-1",
-  "createdAt": "2026-10-06T08:39:34.786Z",
+  "createdAt": "2026-10-09T12:10:07.885Z",
   "payload": {
     "actions": [
       {
         "name": "type",
-        "summary": "type \"How do I weigh access against cost in a…\" into textbox \"Ask your debate coach...\"",
+        "summary": "type \"How do I weigh access against cost in a…\" into textbox \"Message to your debate coach\"",
         "target": {
           "role": "textbox",
-          "name": "Ask your debate coach...",
+          "name": "Message to your debate coach",
           "placeholder": "Ask your debate coach..."
         },
         "value": "How do I weigh access against cost in a rebuttal?"
@@ -34,7 +34,7 @@
       "callIndex": 0,
       "agent": "default"
     },
-    "summary": "Asked the debate coach “How do I weigh access against cost in a rebuttal?” and verified a visible answer: “FAKE-PROVIDER streamed answer: weigh access against cost.”",
+    "summary": "The question 'How do I weigh access against cost in a rebuttal?' was successfully asked and the coach answered with 'FAKE-PROVIDER streamed answer: weigh access against cost.' The screen confirms both the user message and the AI response are present.",
     "startPath": "/app/ask",
     "endPath": "/app/ask",
     "endAnchors": [
@@ -59,10 +59,13 @@
         "text": "FAKE-PROVIDER streamed answer: weigh access against cost."
       },
       {
-        "text": "Citations"
+        "role": "button",
+        "name": "Options"
       },
       {
-        "text": "Web search"
+        "role": "textbox",
+        "name": "Message to your debate coach",
+        "placeholder": "Ask your debate coach..."
       }
     ],
     "goneAnchors": [
@@ -71,6 +74,6 @@
         "name": "Opening Ask"
       }
     ],
-    "endWaitMs": 15156
+    "endWaitMs": 27799
   }
 }

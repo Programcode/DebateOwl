@@ -24,6 +24,7 @@ type FilterChain = PromiseLike<FilterResult> & {
   eq: (...args: unknown[]) => FilterChain;
   in: (...args: unknown[]) => FilterChain;
   neq: (...args: unknown[]) => FilterChain;
+  is: (...args: unknown[]) => FilterChain;
 };
 
 /** A filter chain that can be awaited after any number of .eq/.in/.neq calls. */
@@ -32,6 +33,7 @@ const filterChain = (result: () => FilterResult): FilterChain => {
     eq: vi.fn(() => chain),
     in: vi.fn(() => chain),
     neq: vi.fn(() => chain),
+    is: vi.fn(() => chain),
     then: (resolve, reject) => Promise.resolve(result()).then(resolve, reject),
   };
   return chain;

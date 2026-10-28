@@ -1,4 +1,4 @@
-import { admin, chooseForMotion, expect, MARK, stackReady, test } from "./stack";
+import { admin, chooseForMotion, expect, expectResult, MARK, stackReady, test } from "./stack";
 
 test.skip(!stackReady, "Local full stack is required (run ./.superset/db-gate.sh)");
 
@@ -38,8 +38,8 @@ test("an expired access token refreshes before an AI request", async ({ signedIn
     localStorage.setItem(key, JSON.stringify(session));
   });
   await page.goto("/app/generate");
-  await page.getByRole("textbox", { name: "Motion / Topic *" }).fill("This House would make public transport free");
-  await page.getByRole("button", { name: "Generate Debate Case" }).click();
+  await page.getByRole("textbox", { name: "Motion / topic *" }).fill("This House would make public transport free");
+  await page.getByRole("button", { name: "Generate debate case" }).click();
   await chooseForMotion(page, "once");
-  await expect(page.getByText(`${MARK} case thesis`)).toBeVisible({ timeout: 30_000 });
+  await expectResult(page, `${MARK} case thesis`);
 });

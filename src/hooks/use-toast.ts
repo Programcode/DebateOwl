@@ -8,6 +8,8 @@ export interface ToastOptions {
   description?: ReactNode;
   variant?: "default" | "destructive" | "success";
   action?: SonnerOptions["action"];
+  /** Replaces the kind's icon, such as the owl beside a success check. */
+  icon?: ReactNode;
 }
 
 /**
@@ -15,13 +17,13 @@ export interface ToastOptions {
  * shape used across the app. Replaces the previous hand-rolled toast reducer
  * and its Radix primitives.
  */
-export function toast({ title, description, variant, action }: ToastOptions) {
+export function toast({ title, description, variant, action, icon }: ToastOptions) {
   const render = variant === "destructive"
     ? sonner.error
     : variant === "success"
       ? sonner.success
       : sonner;
-  return render(title ?? "", { description, action });
+  return render(title ?? "", { description, action, ...(icon ? { icon, className: "toast-owl" } : {}) });
 }
 
 export function useToast() {

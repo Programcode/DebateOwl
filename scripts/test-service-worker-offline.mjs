@@ -87,11 +87,49 @@ async function cachePaths(page) {
   )).flat());
 }
 
+/**
+ * Polls an async check in the page until it is true. page.waitForFunction
+ * treats the Promise an async function returns as truthy and passes at once.
+ */
+async function waitFor(page, check, arg, label) {
+  const started = Date.now();
+  while (Date.now() - started < CONTENT_TIMEOUT_MS) {
+    try {
+      if (await page.evaluate(check, arg)) return;
+    } catch {
+      // A navigation replaced the page mid-check; try again.
+    }
+    await new Promise((resolve) => setTimeout(resolve, 100));
+  }
+  throw new Error(`Timed out waiting for ${label}`);
+}
+
+const CACHE_KEY = /^debate-lab-v6-[0-9a-f]{12}-(?:shell|runtime|pages)$/;
+
+async function cacheKeys(page) {
+  return page.evaluate(async () => caches.keys());
+}
+
 async function main() {
   const manifest = JSON.parse(await readFile('dist/.vite/manifest.json', 'utf8'));
-  const entryPath = `/${Object.values(manifest).find((entry) => entry.isEntry).file}`;
-  const homePath = `/${manifest['src/pages/HomePage.tsx'].file}`;
-  const attackPath = `/${manifest['src/pages/AttackPage.tsx'].file}`;
+  const en = JSON.parse(await readFile('src/locales/en.json', 'utf8'));
+  const es = JSON.parse(await readFile('src/locales/es.json', 'utf8'));
+  const { product } = JSON.parse(await readFile('src/config/site.json', 'utf8'));
+  const chunk = (key) => `/${manifest[key].file}`;
+  const entryPath = chunk('index.html');
+  const attackPath = chunk('src/pages/AttackPage.tsx');
+  // Precached at install: opened offline after one visit to /app, without visiting them first.
+  const precachedPaths = [
+    'src/pages/LandingPage.tsx',
+    'src/components/layout/AppLayout.tsx',
+    'src/pages/HomePage.tsx',
+    'src/pages/LibraryPage.tsx',
+    'src/pages/HistoryPage.tsx',
+    'src/pages/TimerPage.tsx',
+    'src/pages/SettingsPage.tsx',
+    'src/locales/es.json',
+    'src/locales/hu.json',
+  ].map(chunk);
   const port = await freePort();
   const origin = `http://127.0.0.1:${port}`;
   const server = spawn('npm', ['run', 'preview', '--', '--host', '127.0.0.1', '--port', String(port), '--strictPort'], {
@@ -112,6 +150,8 @@ async function main() {
           state: { hasCompletedOnboarding: true, isTourRunning: false },
           version: 0,
         }));
+        // A production build opens the one-time DebateOwl welcome; this test is not about it.
+        localStorage.setItem('debateowl_intro_seen_v1', 'test-sw');
       }, stubSession());
       return nextContext;
     };
@@ -123,6 +163,7 @@ async function main() {
         return url.origin === origin || url.protocol === 'data:' ? route.continue() : route.abort();
       });
     };
+    const homeHeading = (page) => page.locator('main h1', { hasText: en.home.heading });
 
     const upgradePage = await context.newPage();
     await prepare(upgradePage);
@@ -132,82 +173,150 @@ async function main() {
       headers: { 'Cache-Control': 'no-store' },
       body: V2_WORKER,
     }));
-    await upgradePage.goto(origin, { waitUntil: 'networkidle' });
+    await upgradePage.goto(origin, { waitUntil: 'load' });
     await upgradePage.evaluate(async () => navigator.serviceWorker.ready);
-    await upgradePage.waitForFunction(async () => {
+    await waitFor(upgradePage, async () => {
       const registration = await navigator.serviceWorker.getRegistration();
       return registration?.active?.state === 'activated' &&
         navigator.serviceWorker.controller !== null &&
         (await caches.keys()).includes('debate-lab-v2-shell');
-    });
+    }, undefined, 'the v2 worker to activate');
     await context.unroute(`${origin}/sw.js`);
     await upgradePage.evaluate(async () => {
       const registration = await navigator.serviceWorker.getRegistration();
       await registration?.update();
     });
-    await upgradePage.waitForFunction(async () =>
+    await waitFor(upgradePage, async () =>
       Boolean((await navigator.serviceWorker.getRegistration())?.waiting),
-    undefined, { timeout: CONTENT_TIMEOUT_MS });
+    undefined, 'the new worker to install');
     await upgradePage.close();
     await new Promise((resolve) => setTimeout(resolve, 1_000));
 
     const activatedPage = await context.newPage();
     await prepare(activatedPage);
-    await activatedPage.goto(origin, { waitUntil: 'networkidle' });
+    await activatedPage.goto(origin, { waitUntil: 'load' });
     await activatedPage.evaluate(async () => navigator.serviceWorker.ready);
-    await activatedPage.waitForFunction(async () => {
+    await waitFor(activatedPage, async () => {
       const keys = await caches.keys();
       return navigator.serviceWorker.controller !== null &&
-        keys.includes('debate-lab-v3-shell') &&
+        keys.some((key) => /^debate-lab-v6-[0-9a-f]{12}-shell$/.test(key)) &&
         !keys.some((key) => key.startsWith('debate-lab-v2'));
-    }, undefined, { timeout: CONTENT_TIMEOUT_MS });
+    }, undefined, 'the new worker to replace the v2 caches');
+    const upgradedKeys = await cacheKeys(activatedPage);
+    assert.ok(upgradedKeys.every((key) => CACHE_KEY.test(key)), `unexpected caches after upgrade: ${upgradedKeys}`);
     await activatedPage.close();
     await context.close();
     context = await createContext();
 
+    // One online visit to /app installs the worker; a public page visited after it is kept too.
     const page = await context.newPage();
     await prepare(page);
-    await page.goto(`${origin}/app`, { waitUntil: 'networkidle' });
-    await page.locator('main h1', { hasText: 'DebateLab' }).waitFor({ timeout: CONTENT_TIMEOUT_MS });
+    await page.goto(`${origin}/app`, { waitUntil: 'load' });
+    await homeHeading(page).waitFor({ timeout: CONTENT_TIMEOUT_MS });
     await page.evaluate(async () => navigator.serviceWorker.ready);
-    await page.waitForFunction(async (paths) => {
+    await page.waitForFunction(() => navigator.serviceWorker.controller !== null, undefined, { timeout: CONTENT_TIMEOUT_MS });
+    await page.goto(`${origin}/terms`, { waitUntil: 'load' });
+    await page.locator('main h1', { hasText: en.termsPage.title }).waitFor({ timeout: CONTENT_TIMEOUT_MS });
+    await page.goto(`${origin}/app`, { waitUntil: 'load' });
+    await homeHeading(page).waitFor({ timeout: CONTENT_TIMEOUT_MS });
+    await waitFor(page, async (paths) => {
       const urls = (await Promise.all((await caches.keys()).map(async (key) =>
         (await (await caches.open(key)).keys()).map((request) => new URL(request.url).pathname)
       ))).flat();
       return paths.every((path) => urls.includes(path));
-    }, [entryPath, homePath, '/favicon-72.png'], { timeout: CONTENT_TIMEOUT_MS });
+    }, [entryPath, ...precachedPaths, '/app-shell.html', '/terms', '/owl-mark.svg'], 'the precache and the visited Terms page');
+    // Installed up front, not picked up by browsing: they sit in this build's shell cache.
+    const shellCache = await page.evaluate(async () => {
+      const key = (await caches.keys()).find((name) => name.endsWith('-shell'));
+      return key ? (await (await caches.open(key)).keys()).map((request) => new URL(request.url).pathname) : [];
+    });
+    const notPrecached = [entryPath, ...precachedPaths, '/', '/app-shell.html'].filter((path) => !shellCache.includes(path));
+    assert.deepEqual(notPrecached, [], 'expected in the install-time precache');
 
     const firstVisitCache = await cachePaths(page);
     assert.equal(firstVisitCache.includes(attackPath), false, 'unvisited Attack chunk was cached');
+    assert.equal(firstVisitCache.some((path) => path.startsWith('/auth/')), false, 'the sign-in callback entered Cache Storage');
+    assert.equal(firstVisitCache.includes('/app'), false, 'an app route was stored under its own URL instead of the shell');
+
     await context.setOffline(true);
     await page.reload({ waitUntil: 'domcontentloaded' });
-    await page.locator('main h1', { hasText: 'DebateLab' }).waitFor({ timeout: CONTENT_TIMEOUT_MS });
+    await homeHeading(page).waitFor({ timeout: CONTENT_TIMEOUT_MS });
+    await page.getByRole('status').filter({ hasText: en.offlineIndicator.label }).waitFor({ timeout: CONTENT_TIMEOUT_MS });
     const logo = page.locator('header a[href="/app"] img');
-    assert.equal(await logo.getAttribute('src'), '/favicon-72.png');
+    assert.equal(await logo.getAttribute('src'), '/owl-mark.svg');
     assert.ok(await logo.evaluate((image) => image.naturalWidth > 0), 'offline logo did not load');
 
     await page.locator('main [data-tour="mode-attack"]').click();
-    await page.getByRole('heading', { name: 'Unable to load this page' }).waitFor({ timeout: CONTENT_TIMEOUT_MS });
+    await page.getByRole('heading', { name: en.routeError.heading }).waitFor({ timeout: CONTENT_TIMEOUT_MS });
+
+    // Each precached page opens offline as a fresh navigation, never visited before.
+    for (const [path, title] of [
+      ['/app/library', en.libraryPage.title],
+      ['/app/history', en.historyPage.title],
+      ['/app/settings', en.settings.title],
+      ['/app/timer', en.timer.title],
+    ]) {
+      await page.goto(`${origin}${path}`, { waitUntil: 'domcontentloaded' });
+      await page.locator('main h1', { hasText: title }).waitFor({ timeout: CONTENT_TIMEOUT_MS });
+    }
+
+    // The timer runs offline.
+    const clock = page.getByRole('timer', { name: en.timer.displayLabel });
+    const before = await clock.textContent();
+    await page.getByRole('button', { name: en.timer.start, exact: true }).click();
+    await page.waitForFunction(([name, start]) =>
+      document.querySelector(`[role="timer"][aria-label="${name}"]`)?.textContent !== start,
+    [en.timer.displayLabel, before], { timeout: CONTENT_TIMEOUT_MS });
+
+    // Switching language offline uses the precached Spanish strings.
+    await page.getByRole('button', { name: en.langSwitcher.label }).click();
+    await page.getByRole('radiogroup', { name: en.langSwitcher.uiLanguage }).getByRole('radio', { name: 'Español' }).click();
+    await page.locator('main h1', { hasText: es.timer.title }).waitFor({ timeout: CONTENT_TIMEOUT_MS });
+    assert.equal(await page.evaluate(() => document.documentElement.lang), 'es');
+
+    // Public pages answer only with themselves: Terms was visited, Privacy was not.
+    await page.goto(`${origin}/terms`, { waitUntil: 'domcontentloaded' });
+    assert.equal(await page.locator('#root').getAttribute('data-prerendered'), null);
+    await page.locator('main h1', { hasText: es.termsPage.title }).waitFor({ timeout: CONTENT_TIMEOUT_MS });
+    await page.goto(`${origin}/privacy`, { waitUntil: 'domcontentloaded' });
+    await page.getByRole('heading', { name: 'Offline', exact: true }).waitFor({ timeout: CONTENT_TIMEOUT_MS });
+    // The landing page was never visited, but its HTML and code were precached:
+    // React takes it over offline instead of replacing it with the error page.
+    await page.goto(`${origin}/`, { waitUntil: 'domcontentloaded' });
+    await waitFor(page, () => document.getElementById('root')?.dataset.prerendered === undefined, undefined, 'React to take over the landing page');
+    await page.locator('h1', { hasText: es.hero.headline.replace('{{product}}', product) }).waitFor({ timeout: CONTENT_TIMEOUT_MS });
+    assert.equal(await page.getByRole('heading', { name: es.routeError.heading }).count(), 0, 'the landing page turned into the error page offline');
+    await page.goto(`${origin}/app`, { waitUntil: 'domcontentloaded' });
+    await page.locator('main h1', { hasText: es.home.heading }).waitFor({ timeout: CONTENT_TIMEOUT_MS });
+    await page.close();
 
     await context.setOffline(false);
     const prefetchedPage = await context.newPage();
     await prepare(prefetchedPage);
-    await prefetchedPage.goto(`${origin}/app`, { waitUntil: 'networkidle' });
-    await prefetchedPage.locator('main h1', { hasText: 'DebateLab' }).waitFor({ timeout: CONTENT_TIMEOUT_MS });
+    await prefetchedPage.addInitScript(() => {
+      localStorage.setItem('debate-trainer-settings', JSON.stringify({ state: { language: 'en', outputLanguage: 'en', theme: 'system' }, version: 2 }));
+    });
+    await prefetchedPage.goto(`${origin}/app`, { waitUntil: 'load' });
+    await homeHeading(prefetchedPage).waitFor({ timeout: CONTENT_TIMEOUT_MS });
     const attackLink = prefetchedPage.locator('main [data-tour="mode-attack"]');
     await attackLink.hover();
-    await prefetchedPage.waitForFunction(async (path) => {
+    await waitFor(prefetchedPage, async (path) => {
       const urls = (await Promise.all((await caches.keys()).map(async (key) =>
         (await (await caches.open(key)).keys()).map((request) => new URL(request.url).pathname)
       ))).flat();
       return urls.includes(path);
-    }, attackPath, { timeout: CONTENT_TIMEOUT_MS });
+    }, attackPath, 'the hovered Attack chunk to be cached');
     await prefetchedPage.waitForTimeout(500);
     await context.setOffline(true);
     await attackLink.click();
     await prefetchedPage.getByRole('heading', { name: 'Attack', exact: true }).waitFor({ timeout: CONTENT_TIMEOUT_MS });
 
+    // The sign-in callback always goes to the network and is never stored.
+    await context.setOffline(false);
+    await prefetchedPage.goto(`${origin}/auth/callback?code=t11-offline-test`, { waitUntil: 'load' });
+    await prefetchedPage.waitForTimeout(1_000);
     const finalCache = await cachePaths(prefetchedPage);
+    assert.equal(finalCache.some((path) => path.startsWith('/auth/')), false, 'the sign-in callback entered Cache Storage');
     assert.deepEqual(
       finalCache.filter((path) => /^\/(?:auth|rest|functions|storage)\/v1/.test(path)),
       [],
@@ -215,7 +324,12 @@ async function main() {
     );
     console.log(JSON.stringify({
       upgradeActivated: true,
-      firstVisitedRouteOffline: true,
+      precachedRoutesOffline: ['/', '/app', '/app/library', '/app/history', '/app/settings', '/app/timer'],
+      authCallbackNeverCached: true,
+      timerRunsOffline: true,
+      languageSwitchOffline: true,
+      publicPagesKeepTheirOwnHtml: true,
+      offlineIndicator: true,
       unvisitedRouteShowsRecovery: true,
       intentPrefetchedRouteOffline: true,
       offlineLogo: true,

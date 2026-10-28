@@ -1,6 +1,6 @@
 {
   "schemaVersion": "trace-1",
-  "createdAt": "2026-10-06T08:38:38.089Z",
+  "createdAt": "2026-10-09T12:20:12.998Z",
   "payload": {
     "actions": [
       {
@@ -37,7 +37,7 @@
       "callIndex": 0,
       "agent": "default"
     },
-    "summary": "Opened History, found the saved PRO case for “This House would replace school exams with continuous assessment,” and selected Load. The app returned to Generate with the saved case displayed, including its thesis, arguments, predicted opponent case, and prepared counters.",
+    "summary": "Opened History and loaded the debate case. The case is now displayed on the Generate page with the 'Working in:' strip showing the motion 'This House would replace school exams with continuous assessment', and the full case content is visible including thesis, framework, 3 arguments, predicted oppo…",
     "startPath": "/app",
     "endPath": "/app/generate",
     "endAnchors": [
@@ -60,17 +60,23 @@
         "name": "Use once"
       },
       {
-        "role": "heading",
-        "name": "Generate Debate Case"
-      },
-      {
-        "text": "Create structured arguments for any motion"
-      },
-      {
         "text": "*"
+      },
+      {
+        "role": "textbox",
+        "name": "Motion / Topic *",
+        "placeholder": "e.g., This house believes that artificial intelligence will create more jobs than it destroys",
+        "value": "This House would replace school exams with continuous assessment"
+      },
+      {
+        "text": "Side"
       }
     ],
     "goneAnchors": [
+      {
+        "role": "heading",
+        "name": "What are you working on?"
+      },
       {
         "text": "Last activity less than a minute ago · 0 sources · 1 outputs"
       },
@@ -93,11 +99,8 @@
       },
       {
         "text": "Explore angles for a motion."
-      },
-      {
-        "text": "Factoids"
       }
     ],
-    "endWaitMs": 15541
+    "endWaitMs": 15310
   }
 }

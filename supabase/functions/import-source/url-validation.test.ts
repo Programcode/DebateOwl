@@ -136,9 +136,14 @@ Deno.test("validateResolvedPublicHost rejects a public name that resolves into a
   }
 });
 
-Deno.test("validateResolvedPublicHost accepts a name that resolves only to public addresses", async () => {
-  await withResolvedAddresses({ A: ["93.184.216.34"], AAAA: ["2606:2800:21f:cb07:6820:80da:af6b:8b2c"] }, () =>
-    validateResolvedPublicHost(new URL("https://example.com/")));
+Deno.test("validateResolvedPublicHost accepts a name that resolves only to public addresses and returns them", async () => {
+  await withResolvedAddresses({ A: ["93.184.216.34"], AAAA: ["2606:2800:21f:cb07:6820:80da:af6b:8b2c"] }, async () => {
+    const addresses = await validateResolvedPublicHost(new URL("https://example.com/"));
+    assert(
+      JSON.stringify(addresses) === JSON.stringify(["93.184.216.34", "2606:2800:21f:cb07:6820:80da:af6b:8b2c"]),
+      `returned ${JSON.stringify(addresses)}`,
+    );
+  });
 });
 
 Deno.test("validatePublicHttpUrl accepts plain public https URLs", () => {

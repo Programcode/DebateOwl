@@ -1,6 +1,8 @@
-import { createClient, type User } from "https://esm.sh/@supabase/supabase-js@2";
+import { createClient, type User } from "https://esm.sh/@supabase/supabase-js@2.114.0";
 import { isPrivateIpv4, isPrivateIpv6, validatePublicHttpUrl, validateResolvedPublicHost } from "./url-validation.ts";
 import { readBoundedText } from "./resource-limits.ts";
+import { pinnedGet } from "./pinned-fetch.ts";
+import { getMeta, getTitle, stripHtml } from "./html-text.ts";
 import { BodyTooLargeError, discardRequestBody, readBoundedBody, untilAborted } from "../_shared/bounded-body.ts";
 import { HttpError, jsonError, requireUser } from "../_shared/auth.ts";
 import { getCorsHeaders } from "../_shared/cors.ts";
@@ -45,6 +47,15 @@ async function consumeDailyImportQuota(userId: string): Promise<{ allowed: boole
   return { allowed: Boolean(row?.allowed), currentCount: row?.current_count ?? 0 };
 }
 
+async function refundDailyImportQuota(userId: string): Promise<void> {
+  const { error } = await supabase.rpc("refund_daily_quota", {
+    p_user_id: userId,
+    p_units: 1,
+    p_quota_key: "import_source",
+  });
+  if (error) console.warn("[IMPORT_SOURCE] quota refund failed", error.message);
+}
+
 async function logImport(userId: string, status: "success" | "error", errorCode?: string, latencyMs?: number) {
   try {
     await supabase.from("ai_requests").insert({
@@ -67,20 +78,22 @@ class SourceTimeoutError extends Error {
   }
 }
 
+// How a source is fetched. Tests replace `get`; the function always uses pinnedGet.
+export const sourceTransport = { get: pinnedGet };
+
 // The caller's signal is the import's one deadline: it covers DNS, every
-// redirect hop and the body read that follows.
-async function fetchWithRedirects(initialUrl: URL, signal: AbortSignal) {
+// redirect hop and the body read that follows. Each hop connects only to the
+// addresses its own check just passed, so DNS cannot change between the check
+// and the connection.
+async function fetchWithRedirects(initialUrl: URL, signal: AbortSignal, onOutboundRequest?: () => void) {
   let currentUrl = initialUrl;
   for (let hop = 0; hop <= MAX_REDIRECTS; hop += 1) {
-    await validateResolvedPublicHost(currentUrl, signal);
-    const response = await untilAborted(fetch(currentUrl.toString(), {
-      headers: {
-        "Accept": "text/html, text/plain;q=0.9, application/xhtml+xml;q=0.8",
-        "User-Agent": "DebateLabSourceImporter/1.0",
-      },
-      signal,
-      redirect: "manual",
-    }), signal);
+    const addresses = await validateResolvedPublicHost(currentUrl, signal);
+    onOutboundRequest?.();
+    const response = await untilAborted(sourceTransport.get(currentUrl, addresses, {
+      "Accept": "text/html, text/plain;q=0.9, application/xhtml+xml;q=0.8",
+      "User-Agent": "DebateLabSourceImporter/1.0",
+    }, signal), signal);
 
     // Manual redirect handling so we can re-validate against SSRF on every hop.
     if (response.status >= 300 && response.status < 400) {
@@ -100,85 +113,6 @@ async function fetchWithRedirects(initialUrl: URL, signal: AbortSignal) {
     return { response, finalUrl: currentUrl };
   }
   throw new Error("Too many redirects.");
-}
-
-function decodeEntities(text: string) {
-  return text
-    .replace(/&nbsp;/gi, " ")
-    .replace(/&amp;/gi, "&")
-    .replace(/&quot;/gi, "\"")
-    .replace(/&apos;/gi, "'")
-    .replace(/&lt;/gi, "<")
-    .replace(/&gt;/gi, ">")
-    .replace(/&#x([0-9a-f]+);/gi, (_, hex) => {
-      const code = parseInt(hex, 16);
-      return Number.isFinite(code) ? String.fromCodePoint(code) : "";
-    })
-    .replace(/&#(\d+);/g, (_, dec) => {
-      const code = parseInt(dec, 10);
-      return Number.isFinite(code) ? String.fromCodePoint(code) : "";
-    });
-}
-
-function getMeta(html: string, names: string[]) {
-  for (const name of names) {
-    const pattern = new RegExp(`<meta\\s+[^>]*(?:name|property)=["']${name}["'][^>]*content=["']([^"']+)["'][^>]*>`, "i");
-    const reversePattern = new RegExp(`<meta\\s+[^>]*content=["']([^"']+)["'][^>]*(?:name|property)=["']${name}["'][^>]*>`, "i");
-    const match = html.match(pattern) || html.match(reversePattern);
-    if (match?.[1]) return decodeEntities(match[1].trim());
-  }
-  return undefined;
-}
-
-function getTitle(html: string, fallback: string) {
-  return getMeta(html, ["og:title", "twitter:title"]) ||
-    decodeEntities(html.match(/<title[^>]*>([\s\S]*?)<\/title>/i)?.[1]?.replace(/\s+/g, " ").trim() || "") ||
-    fallback;
-}
-
-function stripHtml(html: string) {
-  const cleaned = html
-    .replace(/<script[\s\S]*?<\/script>/gi, " ")
-    .replace(/<style[\s\S]*?<\/style>/gi, " ")
-    .replace(/<template[\s\S]*?<\/template>/gi, " ")
-    .replace(/<noscript[\s\S]*?<\/noscript>/gi, " ")
-    .replace(/<!--[\s\S]*?-->/g, " ")
-    .replace(/<(nav|footer|header|aside|form|svg|iframe|button)[\s\S]*?<\/\1>/gi, " ")
-    .replace(/<(div|section)[^>]*role=["'](banner|navigation|complementary|search|contentinfo)["'][\s\S]*?<\/\1>/gi, " ")
-    .replace(/<(div|section)[^>]*(?:id|class)=["'][^"']*(?:cookie|consent|banner|nav(?:bar|igation)?|menu|sidebar|header|footer|subscribe|newsletter|social|share|paywall)[^"']*["'][\s\S]*?<\/\1>/gi, " ");
-
-  const candidates: string[] = [];
-  const blockPattern = /<(article|main|section|div)[^>]*(?:id|class)=["'][^"']*(?:article|content|story|post|entry|main|body|reader)[^"']*["'][^>]*>([\s\S]*?)<\/\1>/gi;
-  for (const match of cleaned.matchAll(blockPattern)) {
-    if (match[2]) candidates.push(match[2]);
-  }
-  const semanticMatch = cleaned.match(/<(article|main)[^>]*>([\s\S]*?)<\/\1>/i);
-  if (semanticMatch?.[2]) candidates.push(semanticMatch[2]);
-  candidates.push(cleaned);
-
-  const textCandidates = candidates
-    .map((candidate) => htmlToText(candidate))
-    .filter((text) => text.split(/\s+/).filter(Boolean).length >= 20);
-
-  return textCandidates.sort((a, b) => scoreReadableText(b) - scoreReadableText(a))[0] || htmlToText(cleaned);
-}
-
-function htmlToText(html: string) {
-  return decodeEntities(html
-    .replace(/<\/(p|div|section|article|main|h[1-6]|li|blockquote|tr)>/gi, "\n")
-    .replace(/<br\s*\/?>/gi, "\n")
-    .replace(/<[^>]+>/g, " ")
-    .replace(/[ \t]+/g, " ")
-    .replace(/\n{3,}/g, "\n\n")
-    .trim());
-}
-
-function scoreReadableText(text: string) {
-  const words = text.split(/\s+/).filter(Boolean).length;
-  const paragraphs = text.split(/\n{2,}/).filter((part) => part.trim().split(/\s+/).length >= 12).length;
-  const punctuation = (text.match(/[.!?]/g) || []).length;
-  const navPenalty = (text.match(/\b(cookie|subscribe|sign in|advertisement|privacy policy|all rights reserved)\b/gi) || []).length * 30;
-  return words + paragraphs * 80 + punctuation * 4 - navPenalty;
 }
 
 const UI_PHRASE_PATTERNS = [
@@ -221,14 +155,22 @@ function stripLeadingUiPhrases(text: string) {
   return result;
 }
 
+const TRUNCATION_NOTE = "\n\n[Truncated: this import kept the first part of the page.]";
+
+/** Hard-cap imported text and say so when the page was longer than the cap. */
+export function limitImportedText(text: string, max = MAX_CONTENT_CHARS): { content: string; truncated: boolean } {
+  if (text.length <= max) return { content: text, truncated: false };
+  const room = Math.max(0, max - TRUNCATION_NOTE.length);
+  return { content: `${text.slice(0, room).trimEnd()}${TRUNCATION_NOTE}`, truncated: true };
+}
+
 function normalizeText(text: string) {
-  return stripLeadingUiPhrases(text)
+  return limitImportedText(stripLeadingUiPhrases(text)
     .replace(/\r/g, "\n")
     .replace(/[ \t]+/g, " ")
     .replace(/\n[ \t]+/g, "\n")
     .replace(/\n{3,}/g, "\n\n")
-    .trim()
-    .slice(0, MAX_CONTENT_CHARS);
+    .trim());
 }
 
 export async function handleRequest(req: Request): Promise<Response> {
@@ -256,25 +198,21 @@ export async function handleRequest(req: Request): Promise<Response> {
     return jsonResponse({ error: "Your account has been suspended. Please contact support.", code: "banned" }, 403, corsHeaders);
   }
 
-  let quota: { allowed: boolean; currentCount: number };
-  try {
-    quota = await consumeDailyImportQuota(user.id);
-  } catch (err) {
-    console.error("[IMPORT_SOURCE] quota reservation failed", err instanceof Error ? err.message : String(err));
-    return jsonResponse({ error: "Unable to verify your quota. Please try again." }, 500, corsHeaders);
-  }
-  if (!quota.allowed) {
-    return jsonResponse({
-      error: `You've reached the daily import limit (${DAILY_IMPORT_LIMIT}). Try again tomorrow.`,
-      code: "limit_reached",
-      limit: DAILY_IMPORT_LIMIT,
-      current: quota.currentCount,
-    }, 429, corsHeaders);
-  }
-
   const startedAt = Date.now();
   const deadline = new AbortController();
   const deadlineTimer = setTimeout(() => deadline.abort(new SourceTimeoutError()), FETCH_TIMEOUT_MS);
+  // A reserved slot is given back only when the import fails before any request
+  // leaves for the source URL (for example the host fails the SSRF re-check, or
+  // our own code throws). Once a request has been sent the slot stays spent,
+  // whatever the outcome: refunding upstream errors, unsupported or too-short
+  // pages would let a user make unlimited fetches of any URL.
+  let quotaReserved = false;
+  let outboundRequestSent = false;
+  const releaseQuotaIfNotFetched = async () => {
+    if (!quotaReserved || outboundRequestSent) return;
+    quotaReserved = false;
+    await refundDailyImportQuota(user.id);
+  };
   try {
     let body: { url?: unknown } | null = null;
     try {
@@ -293,8 +231,30 @@ export async function handleRequest(req: Request): Promise<Response> {
       await logImport(user.id, "error", "bad_request", Date.now() - startedAt);
       return jsonResponse({ error: "Invalid JSON body." }, 400, corsHeaders);
     }
-    const parsedUrl = validatePublicHttpUrl(String(body.url || "").trim());
-    const { response, finalUrl } = await fetchWithRedirects(parsedUrl, deadline.signal);
+    if (typeof body.url !== "string") throw new Error("Enter a valid URL.");
+    const parsedUrl = validatePublicHttpUrl(body.url.trim());
+    await validateResolvedPublicHost(parsedUrl, deadline.signal);
+
+    let quota: { allowed: boolean; currentCount: number };
+    try {
+      quota = await consumeDailyImportQuota(user.id);
+    } catch (err) {
+      console.error("[IMPORT_SOURCE] quota reservation failed", err instanceof Error ? err.message : String(err));
+      return jsonResponse({ error: "Unable to verify your quota. Please try again." }, 500, corsHeaders);
+    }
+    if (!quota.allowed) {
+      return jsonResponse({
+        error: `You've reached the daily import limit (${DAILY_IMPORT_LIMIT}). Try again tomorrow.`,
+        code: "limit_reached",
+        limit: DAILY_IMPORT_LIMIT,
+        current: quota.currentCount,
+      }, 429, corsHeaders);
+    }
+    quotaReserved = true;
+
+    const { response, finalUrl } = await fetchWithRedirects(parsedUrl, deadline.signal, () => {
+      outboundRequestSent = true;
+    });
 
     if (!response.ok) {
       await response.body?.cancel().catch(() => undefined);
@@ -310,9 +270,8 @@ export async function handleRequest(req: Request): Promise<Response> {
     }
 
     const raw = await readBoundedText(response, deadline.signal);
-    clearTimeout(deadlineTimer);
     const isHtml = contentType.includes("html") || /<html|<article|<main|<p[\s>]/i.test(raw);
-    const content = normalizeText(isHtml ? stripHtml(raw) : raw);
+    const { content, truncated } = normalizeText(isHtml ? stripHtml(raw) : raw);
 
     if (content.split(/\s+/).filter(Boolean).length < 20) {
       await logImport(user.id, "error", "too_short", Date.now() - startedAt);
@@ -328,6 +287,7 @@ export async function handleRequest(req: Request): Promise<Response> {
     return jsonResponse({
       title,
       content,
+      truncated,
       wordCount: content.split(/\s+/).filter(Boolean).length,
       author,
       publishedDate,
@@ -336,6 +296,7 @@ export async function handleRequest(req: Request): Promise<Response> {
       url: finalUrl.toString(),
     }, 200, corsHeaders);
   } catch (error) {
+    await releaseQuotaIfNotFetched();
     if (deadline.signal.aborted) {
       await logImport(user.id, "error", "timeout", Date.now() - startedAt);
       return jsonResponse({ error: new SourceTimeoutError().message }, 504, corsHeaders);

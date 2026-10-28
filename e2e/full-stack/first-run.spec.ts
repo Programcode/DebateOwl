@@ -1,5 +1,5 @@
 import type { Page } from "@playwright/test";
-import { admin, type DemoUser, expect, MARK, providerCall, stackReady, test } from "./stack";
+import { admin, expect, expectResult, MARK, providerCall, stackReady, test, type DemoUser } from "./stack";
 
 test.skip(!stackReady, "Local full stack is required (run ./.superset/db-gate.sh)");
 
@@ -10,16 +10,16 @@ const copy = {
     demoTab: "Demo code",
     demoCode: "Demo code",
     signIn: "Sign in with demo code",
-    welcome: "Welcome to DebateLab!",
+    welcome: "Welcome to DebateOwl",
     firstDebate: "Start your first debate here.",
     startDebate: "Start debate",
     motionField: "Motion",
     library: "Library",
     generate: "Generate",
-    finish: "Get Started!",
-    skip: "Skip Tour",
-    generateMotion: "Motion / Topic *",
-    generateSubmit: "Generate Debate Case",
+    finish: "Get started",
+    skip: "Skip tour",
+    generateMotion: "Motion / topic *",
+    generateSubmit: "Generate debate case",
     offerTitle: "Start a debate with this motion?",
     workingIn: "Working in:",
     tourMotion: "This House would ban homework",
@@ -29,16 +29,16 @@ const copy = {
     demoTab: "Demókód",
     demoCode: "Demókód",
     signIn: "Bejelentkezés demókóddal",
-    welcome: "Üdvözlünk a DebateLab-ban!",
+    welcome: "Üdvözlünk a DebateOwl-ban",
     firstDebate: "Itt indíthatod el az első vitádat.",
     startDebate: "Vita indítása",
     motionField: "Tétel",
-    library: "Forráskönyvtár",
+    library: "Könyvtár",
     generate: "Generálás",
-    finish: "Kezdjük!",
-    skip: "Túra Kihagyása",
-    generateMotion: "Indítvány / Téma *",
-    generateSubmit: "Vitaeset Generálása",
+    finish: "Kezdjük",
+    skip: "Túra kihagyása",
+    generateMotion: "Indítvány / téma *",
+    generateSubmit: "Vitaeset generálása",
     offerTitle: "Indítasz egy vitát ezzel a tétellel?",
     workingIn: "Munka ebben:",
     tourMotion: "Ez a Ház betiltaná a házi feladatot",
@@ -124,7 +124,7 @@ for (const locale of ["en", "hu"] as const) {
     await expect(page.getByTestId("current-debate-strip")).toContainText(`${text.workingIn} ${text.tourMotion}`);
     await expect(page.getByRole("textbox", { name: text.generateMotion })).toHaveValue(text.tourMotion);
     await page.getByRole("button", { name: text.generateSubmit }).click();
-    await expect(page.getByText(`${MARK} case thesis`)).toBeVisible({ timeout: 30_000 });
+    await expectResult(page, `${MARK} case thesis`);
     await expect(page.getByRole("dialog")).toHaveCount(0);
     expect((await providerCall("generate")).user).toContain(`Motion: ${text.tourMotion}`);
     await expect.poll(async () => {
@@ -149,7 +149,7 @@ for (const locale of ["en", "hu"] as const) {
     await offer.getByRole("button", { name: text.startDebate }).click();
     await expect(offer).toBeHidden();
 
-    await expect(page.getByText(`${MARK} case thesis`)).toBeVisible({ timeout: 30_000 });
+    await expectResult(page, `${MARK} case thesis`);
     await expect(page.getByTestId("current-debate-strip")).toContainText(`${text.workingIn} ${text.gateMotion}`);
     const { debates, currentId } = await serverDebates(user);
     expect(debates.map((debate) => debate.motion)).toEqual([text.gateMotion]);

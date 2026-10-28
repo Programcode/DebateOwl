@@ -16,7 +16,7 @@ import type { FeatureContext } from "./types.ts";
 // FACTOIDS: Use deep research with multiple searches
 export async function handleFactoids(ctx: FeatureContext): Promise<Response> {
   const feature = "factoids" as const;
-  const { userId, provider, model, temperature, reasoningEffort, workSignal, researchDeps, startTime, researchUsageForLog, recordMainResult, buildSystemPromptFor, input: sanitizedInput } = ctx;
+  const { userId, provider, model, reasoningEffort, workSignal, researchDeps, startTime, researchUsageForLog, recordMainResult, buildSystemPromptFor, input: sanitizedInput } = ctx;
   const claim = String(sanitizedInput.claim || "");
   const region = String(sanitizedInput.region || "Global");
   const preferredSourceType = String(sanitizedInput.sourceType || "any");
@@ -24,6 +24,7 @@ export async function handleFactoids(ctx: FeatureContext): Promise<Response> {
   const sourceCount = Math.min(15, Math.max(3, Number(sanitizedInput.sourceCount || 5)));
 
   // Perform deep research with multiple search rounds
+  ctx.stream?.phase("research");
   const research = await deepResearch(claim, region, researchDeps, withResearchPreferences(DEEP_RESEARCH, {
     preferredSourceType,
     timeframe,
@@ -34,7 +35,7 @@ export async function handleFactoids(ctx: FeatureContext): Promise<Response> {
   const userPrompt = buildUserPrompt(feature, sanitizedInput, searchContext);
   const messages = [{ role: "user", content: userPrompt }];
 
-  const aiResult = recordMainResult(await callAI(provider, model, systemPrompt, messages, temperature, reasoningEffort, workSignal));
+  const aiResult = recordMainResult(await callAI(provider, model, systemPrompt, messages, reasoningEffort, "factoids", workSignal, ctx.stream));
   const output = cleanGeneratedText(aiResult.output);
 
   // Post-process: quality floor. Only citations whose URL matches fetched,

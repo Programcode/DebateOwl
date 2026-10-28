@@ -21,6 +21,8 @@ supabase/config.toml       local and function gateway configuration
 supabase/functions/        Deno Edge Functions
 supabase/functions/_shared shared auth, validation, prompts, research, and cost logic
 supabase/migrations/       ordered database history
+supabase/rollbacks/        down scripts for data migrations; never applied by db push
+supabase/proposed/         destructive SQL awaiting authorization; never applied by db push
 supabase/tests/            pgTAP database and policy tests
 ```
 
@@ -28,21 +30,23 @@ supabase/tests/            pgTAP database and policy tests
 
 ### AI and practice
 
-- `ai`: authenticated non-streaming endpoint for generate, attack, brainstorm, factoids, Ask, Crossfire, and sparring. It enforces supported providers and controls, access limits, research bounds, output validation, usage accounting, and sparring integrity. Once a sparring scorecard is saved it sends a `sparring_scored` push to the scorer's phones (see [Push notifications](#push-notifications)).
-- `ai-stream`: authenticated server-sent events endpoint for Ask. It emits deltas, a final event, or an error and records usage.
+- `ai`: authenticated endpoint for generate, attack, brainstorm, factoids, Ask, Crossfire, and sparring. It enforces supported providers and controls, access limits, research bounds, output validation, usage accounting, and sparring integrity. With `stream: true` it streams the model's output as server-sent events and ends with the same body as a JSON request (see `ai/stream.ts`). A streamed run holds its worker with `EdgeRuntime.waitUntil` until the last event is read. When the request sends a `resultKey`, the run's result is also written to `ai_run_results` before it is sent, so the browser can recover it after a dropped stream (`ai/run-results.ts`). Once a sparring scorecard is saved it sends a `sparring_scored` push to the scorer's phones (see [Push notifications](#push-notifications)).
+- `ai-stream`: authenticated server-sent events endpoint for Ask. It emits deltas, a final event, or an error and records usage, holding its worker with `EdgeRuntime.waitUntil` until the stream closes.
 - `voice`: authenticated text-to-speech for the opponent in voice rounds. It accepts one segment of at most 1,000 characters with the token `ai` signed for it, so it speaks only server-written text. It answers `voice_unavailable` without `ELEVENLABS_API_KEY`, enforces the per-user daily voice cap through `consume_daily_quota` under the `voice` key, calls ElevenLabs (`eleven_v4` for sparring, `eleven_v4_turbo` for Crossfire), and records each request in `ai_requests` as `voice_sparring` or `voice_crossfire`. Every failure is a JSON error with a code, and the browser then reads the reply with its own voice.
 
-`ai/index.ts` is the entrypoint and dispatcher; `ai/features/` holds one handler per feature, `ai/provider.ts` the OpenRouter call and JSON repair, `ai/request.ts` input hygiene, and `ai/runtime.ts` the environment and service clients. Each feature's prompt lives in `_shared/prompts/<feature>.ts`, with shared rules in `_shared/prompts/common.ts` and composition in `_shared/prompts/system.ts`.
+`ai/index.ts` is the entrypoint and dispatcher; `ai/features/` holds one handler per feature, `ai/provider.ts` the OpenRouter call, JSON repair, and the retry for a reply cut off at its cap (`_shared/output-caps.ts` holds the caps), `ai/request.ts` input hygiene, and `ai/runtime.ts` the environment and service clients. Each feature's prompt lives in `_shared/prompts/<feature>.ts`, with shared rules in `_shared/prompts/common.ts` and composition in `_shared/prompts/system.ts`.
 
 Both endpoints accept an optional `debateContext` of IDs (`debateId`, `side`, `sourceIds`, `outputs`). `_shared/debate-context-loader.ts` loads the matching material with the service role, filtering every query by the caller's user ID and the one debate, and returns 404 for a debate the caller does not own before any quota is reserved. Requests without it still accept the legacy `sourceIds` field.
 
-Both endpoints route every model inference through OpenRouter and enforce the shared ten-model Basic/Pro catalog. GPT-5.6 Luna is the Basic default; Pro-only models require active Pro access.
+Both endpoints route every model inference through OpenRouter and enforce the shared ten-model Basic/Pro catalog. Basic accounts get Claude Haiku 5.5 (the default), GPT-6 Luna, and Muse Spark 1.3 Contributor; Claude Sonnet 5.5 is the Pro default and Claude Opus 5.5 runs only when picked; Pro-only models require active Pro access. Retired catalog IDs from older clients resolve to their successor before validation.
+
+Claude runs only on DebateLab's own Anthropic key, added to OpenRouter as BYOK. [`_shared/provider-routing.ts`](functions/_shared/provider-routing.ts) sends `anthropic/*` requests with `provider: { only: ["anthropic"], allow_fallbacks: false }`, so Bedrock, Vertex, Azure and every other provider are never tried; other models keep OpenRouter's balanced routing. The request body cannot stop OpenRouter from serving Anthropic on its own credits when the key fails, so the key's **Shared capacity fallback** in OpenRouter must be set to "Never use shared capacity for any model on this provider". When a Claude call is refused, the endpoints answer 503 `provider_unavailable` and log `claude_unavailable`. Like any failed run that delivered nothing usable, the request gets back exactly the units it reserved (`refundQuotaReservation`; see the quota section of [docs/architecture.md](../docs/architecture.md)). Its row is logged with `cap_cost_usd` 0 only when nothing was paid for: no text written, no finished model call (a research step Claude refused in the same outage does not count), and no OpenRouter charge against the weekly cap. Jev routing and source-ranking rows are logged separately and keep their own cap cost. The Ask page does not resend a `provider_unavailable` stream failure through the plain endpoint. A Claude response whose usage shows `is_byok: false` or a `cost` above zero logs a `claude_not_byok` warning; past the monthly BYOK allowance, OpenRouter's BYOK fee also shows as cost.
 
 The browser boundary is [`../src/lib/ai/client.ts`](../src/lib/ai/client.ts). Shared prompt, research, source-quality, cost, entitlement, CORS, and control logic lives in `_shared`.
 
 ### Content and sharing
 
-- `import-source`: authenticated public-URL import with SSRF protection (resolved addresses checked against the IANA special-purpose ranges on every redirect), one 10-second deadline covering DNS, redirects and the body, content-type and 1 MB size limits, readable-text extraction, a daily quota, and logging.
+- `import-source`: authenticated public-URL import with SSRF protection (resolved addresses checked against the IANA special-purpose ranges on every redirect, and the connection made to a checked address, not the hostname, so DNS cannot change in between), one 10-second deadline covering DNS, redirects and the body, content-type and 1 MB size limits, readable-text extraction, a daily quota, and logging.
 - `share`: authenticated creation of share codes for supported saved content, with a 512 KB payload cap, expiry from 1 to 90 days (30 when omitted), and a daily quota of 50 per user.
 - `workspace-invites`: part of the hidden Workspace. Authenticated workspace code and email invitation creation, rotation, revocation, and redemption. The handler keeps raw invite values and email addresses out of database calls and uses service-role-only transactional RPCs for limits and membership changes.
 - `export-gdoc`: authenticated Google Docs export using a short-lived Google access token. It rejects refresh tokens.
@@ -52,20 +56,20 @@ The browser boundary is [`../src/lib/ai/client.ts`](../src/lib/ai/client.ts). Sh
 - `demo-code-login`: bounded pre-session access-code flow with normalized hashing, fail-closed attempt limits, atomic use consumption, server-owned demo-user bindings in Auth `app_metadata`, and a prohibition on granting administrator status.
 - `admin`: authenticated administrator operations with server-side role checks, including redacted demo-code list/create/disable/reset actions.
 - `announcements`: authenticated announcement listing and dismissal.
-- `redeem-promo`: authenticated atomic promo redemption.
+- `redeem-promo`: authenticated atomic promo redemption through `redeem_promo_code_atomic`. A `discount` code is claimed there too (it counts against `max_redemptions` and is single use per user) and must carry the Stripe promotion-code ID it stands for in `config.stripe_promotion_code`.
 - `account`: authenticated data export and account deletion for the caller only. It never reads a user ID from the request. Deletion cancels Stripe subscriptions first and stops if that fails, then removes Storage objects, clears the user's workspaces, and deletes the auth user. It cannot cancel an App Store subscription; its response's `appStoreSubscriptionActive` tells the app to send the user to Apple's subscription settings. Export and the deletion plan use service-role-only RPCs. See [Account export and deletion](../docs/architecture.md#account-export-and-deletion).
 
 ### Billing
 
-- `create-checkout`: authenticated Stripe Checkout creation. Price selection is server-controlled and redirects are validated. It records the customer in `stripe_customers` before opening a session so that account deletion can stop its billing.
-- `create-portal`: authenticated Stripe Billing Portal creation with customer ownership checks.
-- `stripe-webhook`: Stripe-signature-validated subscription and invoice event handling with idempotency state.
+- `create-checkout`: authenticated Stripe Checkout creation. Price selection is server-controlled and redirects are validated. A promo code is claimed as the user through `redeem_promo_code_atomic` with `p_discount_only`, and the session applies only that code's `promo_` ID through `discounts`; Stripe's own promotion-code field is never enabled. Apply `20261024120100_discount_promo_claims.sql` before deploying it. It records the customer in `stripe_customers` before opening a session so that account deletion can stop its billing.
+- `create-portal`: authenticated Stripe Billing Portal creation with customer ownership checks. Stripe failures answer with a fixed `portal_failed` error; Stripe's message stays in the log.
+- `stripe-webhook`: Stripe-signature-validated subscription and invoice event handling. It claims each event in `webhook_events` before running handlers, reads subscription state from Stripe rather than the event payload, marks the claim complete, and lets a retry take over a claim left incomplete for 10 minutes. It needs the `webhook_events.completed_at` column, so apply `20261016120000_security_preship_hardening.sql` before deploying it.
 - `app-store-notifications`: App Store Server Notifications V2 from Apple, with no Supabase session. It verifies the signed payload, and the transaction and renewal info inside it, against the pinned Apple Root CA - G3 (`_shared/apple-root-ca.ts`), checks bundle id, environment and, in Production, the app's Apple id, then applies them through `apply_app_store_transaction`, which records each notificationUUID once. It answers 200 for duplicates and data it does not use, 400 for data that fails verification, and 503 or 500 when it is unconfigured or the database fails, so Apple retries.
 - `app-store-purchase`: authenticated. The app posts the signed transaction StoreKit returned, and optionally its renewal info. It is verified the same way and applied only when its `appAccountToken` equals the caller's user id. The answer is the caller's plan. It requires no browser Origin and uses the shared CORS headers.
 
 Both App Store functions answer 503 `not_configured` until `APP_STORE_BUNDLE_ID` is set (and `APP_STORE_APP_APPLE_ID` when Production is allowed). Deploying them, setting those values, and pointing App Store Connect's notification URL at the function all need Adam's authorization. Tests inject a root they generate; production code has no setting that changes the trusted root.
 
-Every quota and plan check reads `effective_entitlement()`; see [Billing and usage](../docs/architecture.md#billing-and-usage).
+Every quota and plan check resolves the plan with `resolveBillingState` (`_shared/billing-state.ts`) from `user_settings`, Stripe `subscriptions` and `app_store_subscriptions`; see [Billing and usage](../docs/architecture.md#billing-and-usage).
 
 ## Shared backend modules
 
@@ -128,20 +132,21 @@ Do not use wildcard origins to hide a failed browser test. Before protected stag
 ## Migrations and database tests
 
 Migration filenames define execution order. Never edit an applied migration to change production history; add a new forward migration.
-When creating a table in `public`, grant only the Data API roles and operations it needs in the same migration, alongside RLS and its policies. Fresh projects and database resets cannot rely on automatic table or sequence grants.
+When creating a table, sequence or function in `public`, grant only the Data API roles and operations it needs in the same migration, alongside RLS and its policies. Since `20261016120000_security_preship_hardening.sql`, tables and sequences that `postgres` creates in `public` grant `anon` and `authenticated` nothing by default, so a missing grant shows up as `permission denied`, not as an open table. Functions still get Postgres's global `PUBLIC EXECUTE`, so every new function needs its own `REVOKE ... FROM PUBLIC`. `supabase/tests/client_grants_test.sql` checks both.
+Anything destructive (dropping a policy, function, index or column, deleting rows, or a constraint existing rows might break) goes in `supabase/proposed/` instead, with a header saying what it removes and what covers it; see [proposed/README.md](proposed/README.md).
 
 Local gate:
 
 ```bash
-supabase db start
+npx supabase db start
 npm run test:db
-supabase stop --no-backup
+npx supabase stop --no-backup
 ```
 
 Requirements:
 
 - Docker
-- Supabase CLI 2.115 or newer
+- Supabase CLI 2.121.0, pinned in `package.json` (`npm ci` installs it)
 - exclusive ownership of the default local ports and containers
 
 The stack begins at port `54321` and is not parallel-safe across worktrees. Coordinate before starting it. Stop the stack before finishing, including after failures when safe.
@@ -150,11 +155,15 @@ The database gate proves migration replay and pgTAP assertions locally. It does 
 
 `20261014130000_push_tokens.sql` is additive: it creates `push_tokens`, `push_tickets`, `register_push_token` and `release_push_token`. `20261014200000_push_registration_withdrawal.sql` adds `push_tokens.registration_id` and the server-only `push_withdrawn_registrations`, and replaces both functions with versions that take the registration ID. `20261014220000_push_release_by_registration.sql` replaces `release_push_token(text, uuid, uuid)` with `release_push_token(uuid, uuid)`, which no longer deletes by token. See [Push notifications](#push-notifications).
 
-`20261014123154_app_store_entitlements.sql` is additive: it creates `app_store_products` (with placeholder product ids), `app_store_subscriptions` (users read their own, only the service role writes) and `app_store_notifications` (service role only), `effective_entitlement()`, and `apply_app_store_transaction()` (service role only), and adds the App Store flag to `account_deletion_plan`. `supabase/tests/app_store_entitlements_test.sql` covers the tier rules, update ordering, idempotency and isolation. Apply it before anything that calls `effective_entitlement` ships to a project: the AI and voice checks fail closed and the website's plan read fails without it, so every signed-in user would lose AI access. Order: the migration, then `ai`, `ai-stream`, `voice` and `account`, then the frontend (merging to `main` ships it and starts the staging sync). The two App Store functions can follow later.
+`20261014123154_app_store_entitlements.sql` is additive: it creates `app_store_products` (with placeholder product ids), `app_store_subscriptions` (users read their own, only the service role writes) and `app_store_notifications` (service role only), `effective_entitlement()`, and `apply_app_store_transaction()` (service role only), and adds the App Store flag to `account_deletion_plan`. `supabase/tests/app_store_entitlements_test.sql` covers update ordering, idempotency and isolation, and the tier rules of `effective_entitlement()`, which nothing calls any more: the plan is resolved by `resolveBillingState`, whose App Store rules are pinned in `_shared/billing-state.test.ts`. A follow-up migration can drop the function. The plan readers treat a missing `app_store_subscriptions` table as no App Store rows, so the frontend and the AI functions keep working on a project without this migration. `account` needs it for the deletion plan's App Store flag; deploy it after the migration. The two App Store functions can follow later. Its timestamp is earlier than main's 2026-10-16 to 2026-10-24 migrations, so a project that already has those needs `supabase db push --include-all`.
 
 `20260927170000_debate_context_pins.sql` is additive: it creates `debate_context_pins`, the saved results a student pins per debate, with RLS and a composite key to the owner's debate.
 
 `20260926090100_legacy_debate_cleanup.sql` defines `private.purge_legacy_debate_material`, which deletes legacy results, chats, flowcharts, sparring rounds, and sources that belong to no debate and had no activity in the 30 days before `20260926090000_current_debates.sql` recorded its rollout time in `private.current_debate_rollout`. The migration does not call it, so applying it deletes nothing; legacy rows stay in the Unsorted view. Running the purge on a remote project is a separate, destructive step that needs explicit authorization for that environment. Work created after the rollout is never touched, however late it runs.
+
+`20261022120000_opus_default_to_sonnet.sql` moves every saved Claude Opus 5.5 tool setting in `user_settings.feature_configs` to Claude Sonnet 5.5, because Opus was the Pro default and a saved row cannot tell a default from a pick. It first copies each changed row into `private.opus_default_backup` and skips users already there, so a second run changes nothing. Apply it only after the frontend that makes Sonnet the Pro default is live; otherwise an account that never saved settings still gets Opus on its first load. `supabase/rollbacks/20261022120000_opus_default_to_sonnet.down.sql` restores Opus wherever a tool still holds the Sonnet the migration wrote, and empties the backup. To roll back, copy it into `supabase/migrations` under a new timestamp. `scripts/test-opus-default-migration.sh`, part of `npm run test:db`, runs both twice against seeded rows.
+
+`20261023120000_reconcile_admin_table_drift.sql` adds what the `admin` function writes to production's legacy `rate_limits` and `global_prompts` tables, which predate `20260204000000_admin_improvements.sql`: `updated_at` (backfilled from `created_at` only when the column is missing), `is_active` and `created_by` on `global_prompts`, and the unique keys the Set limit and Set prompt upserts infer. A key is skipped with a warning when duplicate rows would block it; the migration deletes nothing and a rerun changes nothing. `scripts/test-admin-table-drift-migration.sh`, part of `npm run test:db`, rebuilds the legacy shape in a rolled-back transaction and runs both admin writes against it.
 
 ## Adding an Edge Function
 
@@ -202,7 +211,7 @@ Supabase injects `SUPABASE_URL`, `SUPABASE_ANON_KEY` and `SUPABASE_SERVICE_ROLE_
 - `STRIPE_SECRET_KEY` and `STRIPE_WEBHOOK_SECRET`, or checkout, the billing portal, the webhook and account deletion fail (`stripe-webhook` fails at startup without them);
 - `ELEVENLABS_API_KEY` for the opponent's voice, which otherwise falls back to the browser voice.
 
-`DEMO_CODE_PEPPER` and `SPARRING_INTEGRITY_SECRET` fall back to a value derived from the service-role key. The `WORKSPACE_INVITE_*` values serve only the hidden Workspace. `npm run backend:status -- --project-ref <ref>` lists which expected names a project lacks, without printing values.
+`DEMO_CODE_PEPPER` and `SPARRING_INTEGRITY_SECRET` fall back to a value derived from the service-role key. Demo-code login logs a warning when `DEMO_CODE_PEPPER` is missing and still accepts codes hashed with that fallback. The `WORKSPACE_INVITE_*` values serve only the hidden Workspace. `npm run backend:status -- --project-ref <ref>` lists which expected names a project lacks, without printing values.
 
 Use `supabase secrets` or protected deployment configuration for server values. Never place server secrets in `VITE_*`, source files, docs, screenshots, traces, logs, or comments.
 

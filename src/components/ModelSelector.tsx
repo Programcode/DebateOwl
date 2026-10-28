@@ -43,6 +43,10 @@ export function ModelSelector({ feature, className, showLabel = false }: ModelSe
   const selectedModel = allModels.find((model) => model.id === config?.model);
   const currentModel = selectedModel?.id ?? DEFAULT_MODEL;
   const automatic = isAutoModelSelection(currentModel);
+  const shownModel = allModels.find((model) => model.id === currentModel) ?? allModels[0];
+  const autoDescription = (id: string) => id === 'auto-fast'
+    ? t('modelSelector.autoFastDescription', 'Fast routing, usually GLM')
+    : t('modelSelector.autoProDescription', 'Routes among the strongest models');
   const currentReasoning = !automatic && (isPro || subscriptionLoading) && config?.reasoningEffort && isReasoningEffort(config.reasoningEffort)
     ? config.reasoningEffort
     : 'low';
@@ -66,28 +70,25 @@ export function ModelSelector({ feature, className, showLabel = false }: ModelSe
         }}
       >
         <SelectTrigger className="h-10 w-full text-sm" aria-label={t('modelSelector.selectFor', 'Select AI model for {{feature}}', { feature: t(`nav.${feature}`, feature).toLowerCase() })}>
-          <SelectValue />
+          {/* Only the name fits the field on a phone; an Auto choice's description goes below it. */}
+          <SelectValue>{shownModel.name}</SelectValue>
         </SelectTrigger>
         <SelectContent>
           {allModels.map((m) => (
             <SelectItem
               key={m.id}
               value={m.id}
-              className="text-xs"
+              className="text-xs whitespace-normal"
               disabled={m.isProOnly && !isPro}
             >
-              <span className="flex items-center gap-2">
-                <span>
+              <span className="flex min-w-0 items-center gap-2">
+                <span className="min-w-0">
                   <span className="flex items-center gap-2">
                     {m.name}
-                    {m.isProOnly && <Badge variant="outline" className="text-[10px] px-1 py-0">Pro</Badge>}
+                    {m.isProOnly && <Badge variant="outline" className="text-xs px-1 py-0">Pro</Badge>}
                   </span>
                   {m.isAuto && (
-                    <span className="mt-0.5 block text-[11px] text-muted-foreground">
-                      {m.id === 'auto-fast'
-                        ? t('modelSelector.autoFastDescription', 'Fast routing, usually GLM')
-                        : t('modelSelector.autoProDescription', 'Routes among the strongest models')}
-                    </span>
+                    <span className="mt-0.5 block text-xs text-muted-foreground">{autoDescription(m.id)}</span>
                   )}
                 </span>
               </span>
@@ -95,6 +96,9 @@ export function ModelSelector({ feature, className, showLabel = false }: ModelSe
           ))}
         </SelectContent>
       </Select>
+      {shownModel.isAuto && (
+        <p data-testid="model-auto-description" className="text-xs leading-5 text-muted-foreground">{autoDescription(shownModel.id)}</p>
+      )}
       <div className="space-y-2">
         <Label className="text-sm font-medium">
           {t('modelSelector.reasoning', 'Reasoning')}
@@ -107,8 +111,9 @@ export function ModelSelector({ feature, className, showLabel = false }: ModelSe
             setFeatureConfig(feature, { reasoningEffort: value });
           }}
         >
+          {/* Locked, not broken: the dimmed field keeps its value readable (4.5:1) instead of fading to 50%. */}
           <SelectTrigger
-            className="h-10 w-full text-sm"
+            className="h-10 w-full text-sm disabled:bg-muted/50 disabled:text-muted-foreground disabled:opacity-100"
             aria-label={t('modelSelector.reasoning', 'Reasoning')}
           >
             <SelectValue />

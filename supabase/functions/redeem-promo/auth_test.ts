@@ -38,7 +38,7 @@ Deno.test("redeem-promo redeems through a client scoped to the caller's token", 
     label: "valid token",
     authorization: `Bearer ${VALID_TOKEN}`,
     status: 200,
-    body: { success: true, message: "Promo code applied!" },
+    body: { success: true, code: "promo_applied", message: "Promo code applied!" },
     authCalls: 1,
   }], (url, headers, init) => {
     if (url.pathname !== "/rest/v1/rpc/redeem_promo_code_atomic") throw new Error(`Unexpected request: ${url}`);
@@ -51,4 +51,12 @@ Deno.test("redeem-promo redeems through a client scoped to the caller's token", 
   });
   const expected = JSON.stringify([{ authorization: `Bearer ${VALID_TOKEN}`, apikey: TEST_ANON_KEY, body: { p_code: "SPRING" } }]);
   if (JSON.stringify(rpcCalls) !== expected) throw new Error(`RPC calls: ${JSON.stringify(rpcCalls)}`);
+});
+
+Deno.test("redeem-promo rejects malformed JSON, non-string and oversized codes before RPC", async () => {
+  for (const body of ["{", "null", "[]", '{}', '{"code":{}}', '{"code":123}', JSON.stringify({ code: "x".repeat(65) }), '{"code":"   "}']) {
+    await runBearerCases(handleRequest, (authorization) => new Request("http://127.0.0.1/functions/v1/redeem-promo", {
+      method: "POST", headers: { Authorization: authorization! }, body,
+    }), [{ label: `invalid promo input length ${body.length}`, authorization: `Bearer ${VALID_TOKEN}`, status: 400, body: { success: false, code: "promo_missing", message: "Please enter a promo code" }, authCalls: 1 }]);
+  }
 });

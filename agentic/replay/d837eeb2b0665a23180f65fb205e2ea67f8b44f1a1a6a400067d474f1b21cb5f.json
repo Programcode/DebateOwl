@@ -1,6 +1,6 @@
 {
   "schemaVersion": "trace-1",
-  "createdAt": "2026-10-06T08:38:37.416Z",
+  "createdAt": "2026-10-09T12:08:46.651Z",
   "payload": {
     "actions": [
       {
@@ -15,10 +15,10 @@
       },
       {
         "name": "tap",
-        "summary": "tap button \"Start Brainstorming\"",
+        "summary": "tap button \"Start brainstorming\"",
         "target": {
           "role": "button",
-          "name": "Start Brainstorming"
+          "name": "Start brainstorming"
         }
       },
       {
@@ -43,12 +43,17 @@
       "callIndex": 0,
       "agent": "default"
     },
-    "summary": "Started a Current Debate for “This House would ban zoos” and brainstormed angles. The screen confirms “Brainstorm complete” and shows the saved Top 5 Argument Angles result.",
+    "summary": "Brainstorming on 'This House would ban zoos' completed — motion entered, Start brainstorming tapped, and the app offered to start a debate which was confirmed. The current screen shows generated brainstorm results (Top 5 Argument Angles), a 'Working in: This House would ban zoos' strip, and 'Curren…",
     "startPath": "/app/brainstorm",
     "endPath": "/app/brainstorm",
     "endAnchors": [
       {
         "text": "Current debate"
+      },
+      {
+        "role": "button",
+        "name": "Current debate: This House would ban zoos",
+        "testId": "current-debate-desktop"
       },
       {
         "role": "heading",
@@ -70,10 +75,6 @@
       {
         "role": "button",
         "name": "Use once"
-      },
-      {
-        "role": "heading",
-        "name": "Brainstorm Ideas"
       }
     ],
     "goneAnchors": [
@@ -87,6 +88,6 @@
         "testId": "current-debate-desktop"
       }
     ],
-    "endWaitMs": 17658
+    "endWaitMs": 35418
   }
 }

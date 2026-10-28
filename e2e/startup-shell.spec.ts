@@ -16,7 +16,7 @@ test('shows a dark private startup shell while the entry module is delayed', { t
 
   await page.goto('/app', { waitUntil: 'commit' });
   await expect(page.locator('[data-startup-shell]')).toBeVisible();
-  await expect(page.locator('[data-startup-status]')).toHaveText('Loading DebateLab');
+  await expect(page.locator('[data-startup-status]')).toHaveText('Loading DebateOwl');
   await expect.poll(() => page.evaluate(() => ({
     appShell: document.documentElement.classList.contains('app-shell'),
     dark: document.documentElement.classList.contains('dark'),
@@ -37,7 +37,7 @@ test('mounts the app before Jam recorder modules resolve', { tag: '@smoke' }, as
   });
 
   await page.goto('/app', { waitUntil: 'domcontentloaded' });
-  await expect(page.getByRole('main').getByRole('heading', { name: 'DebateLab', exact: true, level: 1 })).toBeVisible({ timeout: 5_000 });
+  await expect(page.getByRole('main').getByRole('heading', { name: 'What are you working on?', exact: true, level: 1 })).toBeVisible({ timeout: 5_000 });
   expect(await page.evaluate(() => {
     const jam = (window as Window & { __jam__?: { exports?: { metadata?: unknown } } }).__jam__;
     return typeof jam?.exports?.metadata === 'function';
@@ -49,6 +49,6 @@ test('shows a recoverable message when the static main entry fails', { tag: '@sm
 
   await page.goto('/app', { waitUntil: 'domcontentloaded' });
   await expect(page.locator('[data-bootstrap-error]')).toBeVisible();
-  await expect(page.getByRole('heading', { name: 'Unable to load DebateLab' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Unable to load DebateOwl' })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Reload' })).toBeEnabled();
 });
