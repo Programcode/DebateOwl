@@ -1238,6 +1238,13 @@ async function fakeLibrary(page: Page) {
       rows = (rows ?? []).filter((row) => row.id !== id);
       return route.fulfill({ status: 200, headers: CORS, json: removed.map((row) => ({ debate_id: row.debate_id })) });
     }
+    if (request.method() === 'PATCH') {
+      // An edit or an Active switch, kept as the server keeps it, so the list read after a write shows it.
+      const filter = url.searchParams.get('id') ?? '';
+      const ids = filter.startsWith('eq.') ? [filter.slice(3)] : filter.startsWith('in.(') ? filter.slice(4, -1).split(',').map((id) => id.replace(/"/g, '')) : [];
+      const body = request.postDataJSON() as Record<string, unknown>;
+      rows = (rows ?? []).map((row) => (ids.includes(String(row.id)) ? { ...row, ...body } : row));
+    }
     return route.fulfill({ status: 204, headers: CORS });
   });
 }
