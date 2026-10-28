@@ -288,8 +288,7 @@ async function shootDebateScreens(page: Page, prefix: string) {
   await page.getByTestId('new-debate-sheet').waitFor();
   await page.waitForTimeout(700);
   await shoot(page, `${prefix}-new-debate`);
-  await scrollToEnd(page, 'new-debate-sheet');
-  await shoot(page, `${prefix}-new-debate-end`);
+  await shootSheetEnd(page, 'new-debate-sheet', `${prefix}-new-debate-end`);
 
   // Edit settings is shown, never saved: saving would write the account's debate.
   await page.goto(`${ORIGIN}/`);
@@ -297,8 +296,22 @@ async function shootDebateScreens(page: Page, prefix: string) {
   await page.getByTestId('edit-debate-sheet').waitFor();
   await page.waitForTimeout(700);
   await shoot(page, `${prefix}-edit-debate`);
-  await scrollToEnd(page, 'edit-debate-sheet');
-  await shoot(page, `${prefix}-edit-debate-end`);
+  await shootSheetEnd(page, 'edit-debate-sheet', `${prefix}-edit-debate-end`);
+}
+
+/**
+ * Shows the end of a long sheet. The web preview draws sheets as pages that
+ * grow with their content, so it scrolls what scrolls and, where nothing
+ * does, makes the window tall enough for the whole sheet for one shot.
+ */
+async function shootSheetEnd(page: Page, testId: string, name: string) {
+  await scrollToEnd(page, testId);
+  const viewport = page.viewportSize();
+  const height = await page.getByTestId(testId).evaluate((element) => element.scrollHeight);
+  if (viewport && height > viewport.height) await page.setViewportSize({ width: viewport.width, height: Math.ceil(height) + 40 });
+  await page.waitForTimeout(300);
+  await shoot(page, name);
+  if (viewport) await page.setViewportSize(viewport);
 }
 
 /** Scrolls a sheet's own scroll view to its end; the web preview draws sheets as pages. */
