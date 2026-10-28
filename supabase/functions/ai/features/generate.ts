@@ -12,6 +12,7 @@ import {
   getResearchSources,
   withResearchPreferences,
 } from "../../_shared/research.ts";
+import { researchCountryForLanguage } from "../../_shared/source-quality.ts";
 import { enforceGenerateControls, enforceGenerateSources } from "../../_shared/control-enforcement.ts";
 import { boundPromptSources } from "../../_shared/prompts.ts";
 import { JEV_MODEL } from "../../_shared/jev.ts";
@@ -32,12 +33,16 @@ export async function handleGenerate(ctx: FeatureContext): Promise<Response> {
   const format = String(sanitizedInput.format || "custom");
   const length = String(sanitizedInput.length || "standard");
   const role = String(sanitizedInput.role || "intro");
+  const language = String(sanitizedInput.language || "en");
 
   // Perform deep research to find supporting evidence
   console.log("[GENERATE] Starting deep research for motion:", motion);
   ctx.stream?.phase("research");
+  // A Hungarian or Spanish case looks for that country's sources first.
   const research = await deepResearch(motion, "", researchDeps, withResearchPreferences(DEEP_RESEARCH, {
     preferredSourceType: "any",
+    language,
+    country: researchCountryForLanguage(language),
   }));
   const discoveredSources = buildDiscoveredSources(research);
   const discoveredCandidates: SourceDecisionCandidate[] = discoveredSources.map((source) => ({

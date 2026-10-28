@@ -70,6 +70,10 @@ const counter = (index) => ({
     "Cities cannot afford the extra buses.",
     "Fares already have discounts for people who need them.",
     "Free transport has been tried and dropped elsewhere.",
+    "Better buses would help more than free buses.",
+    "Fare-free cities still have empty buses at night.",
+    "Taxpayers who never ride would pay for everyone else.",
+    "Free fares crowd out walking and cycling.",
   ][index],
   counterpoint: `${MARK} answer ${index + 1}: fare collection itself costs a large share of what it brings in, so the real gap is far smaller.`,
   ...(index % 2 === 0 ? { source: "UITP, 2024" } : {}),
@@ -93,7 +97,7 @@ const generate = (user) => {
   const conc = role === "conc";
   const r2 = role === "r2";
   // R2: one full answer for each thing they are likely to say.
-  const answers = length === "brief" ? 5 : 6;
+  const answers = length === "brief" ? 10 : 12;
   return {
     opening: {
       hook: `${MARK} opening hook: picture a nurse who skips the night bus because the fare is a tenth of her shift's pay.`,

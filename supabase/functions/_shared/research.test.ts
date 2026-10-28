@@ -11,6 +11,7 @@ import {
   MAX_PROVIDER_ERROR_BODY_CHARS,
   MAX_PROVIDER_RESPONSE_BYTES,
   type ResearchContext,
+  type ResearchOptions,
 } from "./research.ts";
 import type { NormalizedUsage } from "./cost.ts";
 import { MAX_FETCHED_PAGE_CHARS } from "./prompt-budget.ts";
@@ -626,6 +627,55 @@ Deno.test("research preserves queries for search while keeping them out of logs"
     if (!logs.join(" ").includes("queryLength=")) throw new Error("search diagnostics missing");
   } finally {
     globalThis.fetch = originalFetch; console.log = originalLog; console.warn = originalWarn;
+    if (originalKey === undefined) Deno.env.delete("EXA_API_KEY"); else Deno.env.set("EXA_API_KEY", originalKey);
+  }
+});
+
+Deno.test("research in Hungarian searches Hungarian sources first, asks for them in follow-ups and reads them first", async () => {
+  const originalFetch = globalThis.fetch;
+  const originalKey = Deno.env.get("EXA_API_KEY");
+  Deno.env.set("EXA_API_KEY", "test-key");
+  const content = "Official statistics report on homework time in primary schools, with survey data from 2025 and detailed methodology for each school year.";
+  const run = async (options: Partial<ResearchOptions>) => {
+    const searches: Array<Record<string, unknown>> = [];
+    const reads: string[] = [];
+    const prompts: string[] = [];
+    globalThis.fetch = (async (input: Request | URL | string, init?: RequestInit) => {
+      const body = JSON.parse(String(init?.body)) as Record<string, unknown>;
+      if (String(input).endsWith("/contents")) {
+        reads.push((body.urls as string[])[0]);
+        return Response.json({ results: [{ text: "page" }] });
+      }
+      searches.push(body);
+      return Response.json({
+        results: [
+          { title: "Homework report", url: "https://example.org/homework-report", text: content, publishedDate: "2025-03-01" },
+          { title: "Homework report", url: "https://www.ksh.hu/homework-report", text: content, publishedDate: "2025-03-01" },
+        ],
+      });
+    }) as typeof fetch;
+    await deepResearch("homework primary schools", "", {
+      provider: "openrouter", model: "test-model", reasoningEffort: "low",
+      callModel: ({ messages }) => {
+        prompts.push(messages[0].content);
+        return Promise.resolve({ output: { queries: [] } });
+      },
+    }, { maxSeedQueries: 4, maxFollowUpQueries: 1, maxUrlsToRead: 1, overallTimeoutMs: 1000, ...options });
+    return { searches, reads, prompts };
+  };
+  try {
+    const hungarian = await run({ language: "hu", country: "HU" });
+    if (!(hungarian.searches[0].includeDomains as string[] | undefined)?.includes("ksh.hu")) throw new Error("the first search must target Hungarian sources");
+    if (!hungarian.prompts[0]?.includes("KSH")) throw new Error("follow-up queries must be asked to find Hungarian sources");
+    if (hungarian.reads[0] !== "https://www.ksh.hu/homework-report") throw new Error(`the Hungarian page must be read first, got ${hungarian.reads[0]}`);
+
+    // The old call shape and an English request search and read exactly as before.
+    const before = await run({});
+    const english = await run({ language: "en" });
+    if (JSON.stringify(english) !== JSON.stringify(before)) throw new Error("an English request must not change research");
+    if (before.prompts[0]?.includes("KSH")) throw new Error("no national hint without a locale");
+  } finally {
+    globalThis.fetch = originalFetch;
     if (originalKey === undefined) Deno.env.delete("EXA_API_KEY"); else Deno.env.set("EXA_API_KEY", originalKey);
   }
 });

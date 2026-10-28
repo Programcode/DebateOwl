@@ -239,10 +239,11 @@ Deno.test("a Conclusor case without at least two reasons we win is rejected, not
 });
 
 Deno.test("an R2 case must back up the team's arguments and answer theirs, or it is rejected", () => {
+  const answers = (count: number) => Array.from({ length: count }, () => ({}));
   const cases: Array<[string, Record<string, unknown>]> = [
-    ["no reinforce", { reinforce: [], counters: [{}, {}, {}, {}, {}], contentions: [], metadata: {} }],
-    ["only blank reinforce", { reinforce: [{ argument: "Our first", text: "  " }], counters: [{}, {}, {}, {}, {}], contentions: [], metadata: {} }],
-    ["too few answers", { reinforce: [{ argument: "Our first", text: "Backed up." }], counters: [{}, {}, {}], contentions: [], metadata: {} }],
+    ["no reinforce", { reinforce: [], counters: answers(12), contentions: [], metadata: {} }],
+    ["only blank reinforce", { reinforce: [{ argument: "Our first", text: "  " }], counters: answers(12), contentions: [], metadata: {} }],
+    ["too few answers", { reinforce: [{ argument: "Our first", text: "Backed up." }], counters: answers(8), contentions: [], metadata: {} }],
   ];
   for (const [label, output] of cases) {
     let rejected = false;
@@ -257,12 +258,39 @@ Deno.test("an R2 case must back up the team's arguments and answer theirs, or it
   // New arguments from the model are dropped: R2 brings none.
   const output: Record<string, unknown> = {
     reinforce: [{ argument: "Our first", text: "Backed up." }],
-    counters: [{}, {}, {}, {}, {}],
+    counters: answers(12),
     contentions: [{ claim: "A new point", whyItMatters: "x" }],
     metadata: {},
   };
   enforceGenerateControls(output, "con", "custom", "standard", "r2");
   if ((output.contentions as unknown[]).length !== 0) throw new Error("R2 must not keep new arguments");
+});
+
+Deno.test("an R2 case a few answers short of its target is kept, one well short is rejected", () => {
+  const run = (length: string, count: number) => {
+    const output: Record<string, unknown> = {
+      reinforce: [{ argument: "Our first", text: "Backed up." }],
+      counters: Array.from({ length: count }, (_, index) => ({ targetArgument: `claim ${index}` })),
+      contentions: [],
+      metadata: {},
+    };
+    enforceGenerateControls(output, "con", "custom", length, "r2");
+    return (output.counters as unknown[]).length;
+  };
+  const rejects = (length: string, count: number) => {
+    try {
+      run(length, count);
+      return false;
+    } catch (error) {
+      return error instanceof Error && error.message.includes(`R2 needs ${length === "brief" ? 10 : 12}`);
+    }
+  };
+  // Standard asks for 12 and keeps a reply of 9; brief asks for 10 and keeps 7.
+  if (run("standard", 9) !== 9 || run("brief", 7) !== 7) throw new Error("a slightly short R2 reply must be kept as it is");
+  if (run("standard", 15) !== 12 || run("brief", 15) !== 10) throw new Error("extra R2 answers must be trimmed to the target");
+  if (!rejects("standard", 8) || !rejects("brief", 6) || !rejects("comprehensive", 8)) {
+    throw new Error("an R2 reply well short of its target must be rejected");
+  }
 });
 
 Deno.test("why it matters is filed under the key saved cases already use", () => {
