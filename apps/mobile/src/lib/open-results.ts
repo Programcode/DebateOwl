@@ -1,5 +1,6 @@
 import type { DiscoveredSource } from '@debatelab/core/ai/discovered-sources';
 
+import { haptics } from './haptics';
 import type { OutputFor, ResultKind } from './results';
 import { sessionSlot } from './session-memory';
 
@@ -25,8 +26,9 @@ export interface OpenResult<K extends ResultKind = ResultKind> {
 const store = sessionSlot(() => new Map<string, OpenResult>());
 let localId = 0;
 
-/** Keeps a result under its saved id, or a local key when it is not saved. Returns the key to open it with. */
+/** Keeps a result under its saved id, or a local key when it is not saved. Returns the key to open it with. A finished result taps success. */
 export function keepOpenResult<K extends ResultKind>(result: OpenResult<K>): string {
+  haptics.success();
   const key = result.savedId ?? `local-${Date.now()}-${(localId += 1)}`;
   store.get().set(key, result as OpenResult);
   return key;

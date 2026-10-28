@@ -6,6 +6,7 @@ import { ActionMenu } from './action-menu';
 import { Icon } from './icon';
 import { Text } from './text';
 
+import { haptics } from '@/lib/haptics';
 import { radius } from '@/theme/colors';
 import { useTheme } from '@/theme/use-theme';
 
@@ -83,7 +84,10 @@ export function SelectRow<T extends string>({
         items={options.map((option) => ({ key: option.value, label: option.label, icon: option.value === value ? 'check' : undefined, disabled: option.disabled }))}
         cancelLabel={t('common.cancel')}
         onClose={() => setOpen(false)}
-        onSelect={(key) => onChange(key as T)}
+        onSelect={(key) => {
+          if (key !== value) haptics.select();
+          onChange(key as T);
+        }}
       />
     </>
   );
@@ -105,7 +109,10 @@ export function SwitchRow({ label, description, value, onChange, first, disabled
       <Switch
         accessibilityLabel={label}
         value={value}
-        onValueChange={onChange}
+        onValueChange={(next) => {
+          haptics.tap();
+          onChange(next);
+        }}
         disabled={disabled}
         trackColor={{ true: colors.primaryFill, false: colors.segmentTrack }}
         thumbColor="#FFFFFF"

@@ -27,6 +27,7 @@ import { TimerRing } from '@/components/timer-ring';
 import { ToolTitle, WorkingIn } from '@/components/tool-form';
 import { abortError, AIError, isAbortError, type ResponseExtras, untilAborted } from '@/lib/ai-request';
 import { useAuth } from '@/lib/auth';
+import { haptics } from '@/lib/haptics';
 import { backLabel } from '@/lib/back-label';
 import { buildDebateContext } from '@/lib/context-request';
 import {
@@ -223,6 +224,8 @@ export default function CrossfireScreen() {
       });
       if (controller.signal.aborted) return;
       dispatch({ type: 'ai-turn-received', turn: nextTurn(snapshot.turns.length + 1, 'ai', reply.type, reply.text) });
+      // The turn is back with the student.
+      haptics.turn();
       afterResponse(forUser, debateId, extras);
       if (reply.signalToken) {
         const signalController = new AbortController();
