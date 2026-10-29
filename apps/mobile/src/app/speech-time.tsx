@@ -3,8 +3,9 @@ import { countWords, MAX_WPM, MIN_WPM, PACES, slotFits, spokenSeconds } from '@d
 import { useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { StyleSheet, TextInput, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
+import { AppTextInput } from '@/components/app-text-input';
 import { DocumentScreen, DocumentTitle, SectionHeading } from '@/components/document';
 import { DocumentHeader } from '@/components/document-header';
 import { Field } from '@/components/field';
@@ -75,7 +76,7 @@ export default function SpeechTimeScreen() {
             </Text>
             {pace.id === 'custom' ? (
               <View style={styles.customRow}>
-                <TextInput
+                <AppTextInput
                   value={customText}
                   onChangeText={(value) => setCustomText(value.replace(/[^0-9]/g, '').slice(0, 3))}
                   keyboardType="number-pad"
