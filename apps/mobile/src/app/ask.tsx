@@ -21,7 +21,7 @@ import { ContextLine } from '@/components/context-line';
 import { DailyUsageLine } from '@/components/tool-form';
 import { Text } from '@/components/text';
 import { appendDictation, DictationButton } from '@/components/voice';
-import { useKeyCommand } from '@/lib/key-commands';
+import { useFocusedKeyCommand } from '@/lib/key-commands';
 import { announceAnswer } from '@/lib/a11y';
 import { AIError, isAbortError, type AIErrorKind, type ResponseExtras } from '@/lib/ai-request';
 import { askOnce, canStream, isFinalAskError, isMessageWithinBudget, streamAsk, type AskMode, type AskOptions } from '@/lib/ask';
@@ -210,7 +210,7 @@ export default function AskScreen() {
   }, [loading, lastRole, messages, userId]);
 
   // ⌘↩ sends, as the send button does.
-  useKeyCommand('cmd+enter', () => {
+  useFocusedKeyCommand('cmd+enter', () => {
     if (!busy && input.trim()) void send(input, messages, attachments);
   });
 

@@ -33,7 +33,7 @@ import { Text } from '@/components/text';
 import { TimerRing } from '@/components/timer-ring';
 import { ToolTitle, WorkingIn } from '@/components/tool-form';
 import { appendDictation, DeliverySummary, OpponentVoiceBar, VoiceMicControl, VoiceModeSwitch } from '@/components/voice';
-import { useKeyCommand } from '@/lib/key-commands';
+import { useFocusedKeyCommand } from '@/lib/key-commands';
 import { announceAnswer } from '@/lib/a11y';
 import { abortError, AIError, isAbortError, type ResponseExtras, untilAborted } from '@/lib/ai-request';
 import { useAuth } from '@/lib/auth';
@@ -438,7 +438,7 @@ export default function CrossfireScreen() {
   };
 
   // ⌘↩ submits the turn on an iPad keyboard.
-  useKeyCommand('cmd+enter', () => void submitTurn());
+  useFocusedKeyCommand('cmd+enter', () => void submitTurn());
 
   const submitTurn = async () => {
     if (state.phase !== 'active' || !userId) return;

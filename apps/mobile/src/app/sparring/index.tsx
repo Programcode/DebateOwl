@@ -40,7 +40,7 @@ import { Text } from '@/components/text';
 import { TimerRing } from '@/components/timer-ring';
 import { ToolTitle, WorkingIn } from '@/components/tool-form';
 import { appendDictation, OpponentVoiceBar, VoiceMicControl, VoiceModeSwitch } from '@/components/voice';
-import { useKeyCommand } from '@/lib/key-commands';
+import { useFocusedKeyCommand } from '@/lib/key-commands';
 import { AIError, isAbortError, untilAborted } from '@/lib/ai-request';
 import { useAuth } from '@/lib/auth';
 import { backLabel } from '@/lib/back-label';
@@ -343,7 +343,7 @@ export default function SparringScreen() {
   };
 
   // ⌘↩ submits the speech on an iPad keyboard.
-  useKeyCommand('cmd+enter', () => void submit());
+  useFocusedKeyCommand('cmd+enter', () => void submit());
 
   const submit = async () => {
     const before = sessionRef.current;

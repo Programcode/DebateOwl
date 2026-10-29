@@ -4,10 +4,8 @@ import Constants, { ExecutionEnvironment } from 'expo-constants';
 // What the running binary can do beyond Expo Go. Autolinking puts these
 // modules into every native build; DEBATELAB_BUILD=dev in app.config.ts adds
 // what they need to work (the speech prompts, and with an App Group the
-// widget extension). Quick actions and Spotlight need packages that are not
-// installed yet; until they are, their modules are simply missing. Expo Go
-// never has them, so it is not even asked: no import of a module that is
-// missing, no crash.
+// widget extension, and the share extension). Expo Go never has them, so it
+// is not even asked: no import of a module that is missing, no crash.
 
 export type NativeCapabilities = {
   /** expo-speech-recognition is linked. */
@@ -20,13 +18,17 @@ export type NativeCapabilities = {
   quickActions: boolean;
   /** expo-core-spotlight is linked, so debates and saved cases can be indexed (src/lib/spotlight.ts). */
   spotlight: boolean;
+  /** The app's own modules/key-commands is linked, so iPad ⌘ shortcuts reach the app (src/lib/key-commands.ts). */
+  keyCommands: boolean;
+  /** expo-share-intent is linked, so text and links shared from other apps reach the app (src/lib/share-intent.ts). */
+  shareIntent: boolean;
 };
 
 type WidgetsModule = { widgetsDirectory?: string | null };
 
 export function nativeCapabilities(): NativeCapabilities {
   if (Constants.executionEnvironment === ExecutionEnvironment.StoreClient) {
-    return { speechRecognition: false, liveActivity: false, widgets: false, quickActions: false, spotlight: false };
+    return { speechRecognition: false, liveActivity: false, widgets: false, quickActions: false, spotlight: false, keyCommands: false, shareIntent: false };
   }
   // expo-widgets links into every development build, but without the App
   // Group (DEBATELAB_APP_GROUP) it has no extension and no container.
@@ -38,5 +40,7 @@ export function nativeCapabilities(): NativeCapabilities {
     widgets: widgetContainer,
     quickActions: requireOptionalNativeModule('ExpoQuickActions') != null,
     spotlight: requireOptionalNativeModule('ExpoCoreSpotlight') != null,
+    keyCommands: requireOptionalNativeModule('DebateOwlKeyCommands') != null,
+    shareIntent: requireOptionalNativeModule('ExpoShareIntentModule') != null,
   };
 }
