@@ -1,7 +1,7 @@
 // src/App.tsx
 import { Owl } from "@/components/brand/Owl";
 import { buttonVariants } from "@/components/ui/button";
-import { Component, Suspense, lazy, useEffect, useRef, useState, type ComponentType, type ErrorInfo, type ReactNode } from "react";
+import { Component, Suspense, useEffect, useRef, useState, type ComponentType, type ErrorInfo, type ReactNode } from "react";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClientProvider } from "@tanstack/react-query";
@@ -19,6 +19,9 @@ import { focusCurrentDebate, noteTourChunkFailure, tourChunkGaveUp } from "@/lib
 import { OfflineIndicator } from "@/components/OfflineIndicator";
 import { StagingBanner } from "@/components/StagingBanner";
 import { captureException, captureProductEvent, toTelemetrySafeError } from "@/lib/observability";
+import { captureSignupCompleted, captureTrialStarted, captureWelcomeCompleted, rememberActivationAccount } from "@/lib/activation-events";
+import { useSubscription } from "@/hooks/use-subscription";
+import { lazyChunk, loadChunk, namedChunk } from "@/lib/lazy-chunk";
 import { appLayoutLoader, localizedRouteLoaders, preloadStartupRoute, routeLoaders, type RouteLoader } from "@/lib/route-modules";
 import site from "@/config/site.json";
 import type { PrerenderedRoute } from "@/lib/seo/pages";
@@ -41,7 +44,7 @@ function prerenderedPage(route: PrerenderedRoute) {
 }
 
 function prerenderedModule(loader: RouteLoader<{ default: ComponentType }>) {
-  const LazyPage = lazy(loader);
+  const LazyPage = lazyChunk(loader);
   return function PrerenderedPage() {
     const [Page] = useState(() => loader.loaded()?.default ?? LazyPage);
     return <Page />;
@@ -56,28 +59,28 @@ const AboutPage = prerenderedPage("/about");
 const ContactPage = prerenderedPage("/contact");
 // The Hungarian and Spanish addresses in src/config/localized-routes.json.
 const LOCALIZED_PAGES = LOCALIZED_PATHS.map((entry) => ({ ...entry, Page: prerenderedModule(localizedRouteLoaders[entry.path]) }));
-const HomePage = lazy(routeLoaders["/app"]);
-const CurrentDebatePage = lazy(routeLoaders["/app/debate"]);
-const WorkspacesPage = lazy(routeLoaders["/app/workspaces"]);
-const WorkspaceInvitePage = lazy(routeLoaders["/app/workspaces/invite"]);
-const WorkspacePage = lazy(routeLoaders["/app/workspaces/:workspaceId"]);
-const GeneratePage = lazy(routeLoaders["/app/generate"]);
-const AttackPage = lazy(routeLoaders["/app/attack"]);
-const BrainstormPage = lazy(routeLoaders["/app/brainstorm"]);
-const FactoidsPage = lazy(routeLoaders["/app/factoids"]);
-const AskPage = lazy(routeLoaders["/app/ask"]);
-const CrossfirePage = lazy(routeLoaders["/app/crossfire"]);
-const SettingsPage = lazy(routeLoaders["/app/settings"]);
-const HistoryPage = lazy(routeLoaders["/app/history"]);
-const LibraryPage = lazy(routeLoaders["/app/library"]);
-const TimerPage = lazy(routeLoaders["/app/timer"]);
-const SparringPage = lazy(routeLoaders["/app/sparring"]);
-const AdminPage = lazy(routeLoaders["/app/admin"]);
-const SharedPage = lazy(routeLoaders["/share/:code"]);
-const FlowchartPage = lazy(routeLoaders["/app/flowchart"]);
-const LoginPage = lazy(routeLoaders["/login"]);
-const AuthCallbackPage = lazy(routeLoaders["/auth/callback"]);
-const SourcesPage = lazy(routeLoaders["/expocit/sources"]);
+const HomePage = lazyChunk(routeLoaders["/app"]);
+const CurrentDebatePage = lazyChunk(routeLoaders["/app/debate"]);
+const WorkspacesPage = lazyChunk(routeLoaders["/app/workspaces"]);
+const WorkspaceInvitePage = lazyChunk(routeLoaders["/app/workspaces/invite"]);
+const WorkspacePage = lazyChunk(routeLoaders["/app/workspaces/:workspaceId"]);
+const GeneratePage = lazyChunk(routeLoaders["/app/generate"]);
+const AttackPage = lazyChunk(routeLoaders["/app/attack"]);
+const BrainstormPage = lazyChunk(routeLoaders["/app/brainstorm"]);
+const FactoidsPage = lazyChunk(routeLoaders["/app/factoids"]);
+const AskPage = lazyChunk(routeLoaders["/app/ask"]);
+const CrossfirePage = lazyChunk(routeLoaders["/app/crossfire"]);
+const SettingsPage = lazyChunk(routeLoaders["/app/settings"]);
+const HistoryPage = lazyChunk(routeLoaders["/app/history"]);
+const LibraryPage = lazyChunk(routeLoaders["/app/library"]);
+const TimerPage = lazyChunk(routeLoaders["/app/timer"]);
+const SparringPage = lazyChunk(routeLoaders["/app/sparring"]);
+const AdminPage = lazyChunk(routeLoaders["/app/admin"]);
+const SharedPage = lazyChunk(routeLoaders["/share/:code"]);
+const FlowchartPage = lazyChunk(routeLoaders["/app/flowchart"]);
+const LoginPage = lazyChunk(routeLoaders["/login"]);
+const AuthCallbackPage = lazyChunk(routeLoaders["/auth/callback"]);
+const SourcesPage = lazyChunk(routeLoaders["/expocit/sources"]);
 const NotFound = prerenderedPage("*");
 const ToolsHubPage = prerenderedPage("/tools");
 const DebateTimerToolPage = prerenderedPage("/tools/debate-timer");
@@ -87,7 +90,7 @@ const SpeechTimeCalculatorToolPage = prerenderedPage("/tools/speech-time-calcula
 // Public pages never load the signed-in header, navigation and debate dialogs.
 // Arriving from sign-in, the page being opened loads alongside the layout
 // instead of after it.
-const AppLayout = lazy(() => {
+const AppLayout = lazyChunk(() => {
   void preloadStartupRoute(window.location.pathname);
   return appLayoutLoader();
 });
@@ -104,7 +107,7 @@ function loadOnboardingTour(): Promise<OnboardingTourComponent> {
   // leave the Start debate step closed for the rest of the page. The second
   // failure is the last: `noteTourChunkFailure` logs once and the tour owner
   // continues without it.
-  onboardingTourPromise ??= import("@/components/features/onboarding/OnboardingTour").then((mod) => {
+  onboardingTourPromise ??= loadChunk(() => import("@/components/features/onboarding/OnboardingTour")).then((mod) => {
     onboardingTourComponent = mod.OnboardingTour;
     return mod.OnboardingTour;
   }).catch((error: unknown) => {
@@ -115,8 +118,7 @@ function loadOnboardingTour(): Promise<OnboardingTourComponent> {
   return onboardingTourPromise;
 }
 
-const FirstRun = lazy(() => import("@/components/features/onboarding/FirstRun")
-  .then(({ FirstRun: Run }) => ({ default: Run })));
+const FirstRun = lazyChunk(() => namedChunk(() => import("@/components/features/onboarding/FirstRun"), "FirstRun"));
 
 // TanStack Query refetches after an `offline` then `online` pair, but a page
 // opened offline never sees `offline`. Retry whatever failed once the
@@ -271,6 +273,23 @@ export function ToolRouteAnalytics(): null {
   return null;
 }
 
+/** signup_completed and trial_started, once per new account, and the account first_ai_success checks. AppLayout's trial banner shares this subscription read. */
+export function ActivationAnalytics(): null {
+  const { user } = useAuth();
+  const { tier, loading } = useSubscription();
+
+  useEffect(() => {
+    rememberActivationAccount(user ?? null);
+    if (user) captureSignupCompleted(user);
+  }, [user]);
+
+  useEffect(() => {
+    if (user && !loading) captureTrialStarted(user, tier);
+  }, [user, tier, loading]);
+
+  return null;
+}
+
 function useRouteLabel(pathname: string): { fallback: RouteFallback; label: string } {
   const { t } = useTranslation();
   const fallback = getRouteFallback(pathname);
@@ -344,7 +363,10 @@ export function AppWelcome() {
       <FirstRun
         showIntro
         tourCompleted={tourCompleted}
-        onIntroSeen={() => markIntroSeen(browserStorage())}
+        onIntroSeen={() => {
+          markIntroSeen(browserStorage());
+          captureWelcomeCompleted(userId);
+        }}
         tour={(continueFromIntro) => <OptionalOnboardingTour continueFromIntro={continueFromIntro} />}
       />
     </Suspense>
@@ -470,6 +492,7 @@ function AppRoutes() {
             element={
               <RequireAuth fallback={<PendingAppRoute />}>
                 <ToolRouteAnalytics />
+                <ActivationAnalytics />
                 <AppWelcome />
                 <Suspense fallback={<PendingAppRoute />}>
                   <AppLayout />

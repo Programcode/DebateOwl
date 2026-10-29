@@ -24,7 +24,7 @@ import { Check, Save, Target } from 'lucide-react';
 import { Owl } from '@/components/brand/Owl';
 import { EmptyState } from '@/components/ui/empty-state';
 import { PageHeader } from '@/components/layout/PageHeader';
-import { ToolRunErrorPanel, isCanceled, useRevealResults, useToolRun } from '@/components/features/tools/tool-run';
+import { ToolRunErrorPanel, isCanceled, toolRunError, useRevealResults, useToolRun } from '@/components/features/tools/tool-run';
 import { LiveToolRun } from '@/components/features/tools/live-draft';
 import { generateDraftSections } from '@/components/features/tools/live-sections';
 import { generateDiscussPrompt, openDiscussion } from '@/components/features/tools/discuss';
@@ -66,7 +66,7 @@ export default function GeneratePage() {
   const config = getFeatureConfig('generate');
   const { toast } = useToast();
   const navigate = useNavigate();
-  const subError = useSubscriptionError();
+  const subError = useSubscriptionError('generate');
   const { t } = useTranslation();
   const [saveDialogOpen, setSaveDialogOpen] = useState(false);
   const run = useToolRun('generate');
@@ -137,13 +137,13 @@ export default function GeneratePage() {
       if (subError.handleSubscriptionError(error)) return;
 
       if (isAIAuthError(error)) {
-        run.setError({ title: t('generate.authRequired'), description: getUserFacingAIError(error) });
+        run.setError(toolRunError(t('generate.authRequired'), error));
       } else if (isAIRateLimitError(error)) {
-        run.setError({ title: t('rateLimit.title'), description: getUserFacingAIError(error) });
+        run.setError(toolRunError(t('rateLimit.title'), error));
       } else if (isTimeoutError(error)) {
-        run.setError({ title: t('generate.timeout'), description: t('generate.timeoutDesc') });
+        run.setError(toolRunError(t('generate.timeout'), error, t('generate.timeoutDesc')));
       } else {
-        run.setError({ title: t('generate.failed'), description: getUserFacingAIError(error) });
+        run.setError(toolRunError(t('generate.failed'), error));
       }
     } finally {
       setGenerateLoading(false);

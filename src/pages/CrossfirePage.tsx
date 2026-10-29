@@ -26,6 +26,8 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { crossfire, crossfireSignal, AIResponseError, isTimeoutError } from '@/lib/ai/client';
 import { getUserFacingAIError } from '@/lib/ai/error-display';
+import { aiFailureRecovery } from '@/lib/ai/failure-reason';
+import { SignInAgainButton } from '@/components/auth/SignInAgainButton';
 import {
   canEndCrossfireSession,
   createCrossfireSetupState,
@@ -318,8 +320,10 @@ export default function CrossfirePage() {
   const workspace = useWorkspaceToolScope('crossfire');
   const { t } = useTranslation();
   const { user } = useAuth();
-  const subError = useSubscriptionError();
+  const subError = useSubscriptionError('crossfire');
   const { handleSubscriptionError } = subError;
+  // The failed turn or debrief was a refused session: Sign in again replaces Retry.
+  const [signInRequired, setSignInRequired] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
   const workspaceLaunch = (location.state as { workspaceLaunch?: unknown } | null)?.workspaceLaunch === true;
@@ -497,6 +501,7 @@ export default function CrossfirePage() {
       });
       if (controller.signal.aborted) return;
       if (!('type' in result)) {
+        setSignInRequired(false);
         dispatch({
           type: 'request-failed',
           expectedReply,
@@ -544,6 +549,7 @@ export default function CrossfirePage() {
         return;
       }
       const classified = classifyError(error);
+      setSignInRequired(aiFailureRecovery(error) === 'sign_in');
       dispatch({ type: 'request-failed', expectedReply, errorKind: classified.kind, message: classified.message });
     } finally {
       if (requestRef.current === controller) setLiveReply('');
@@ -574,6 +580,7 @@ export default function CrossfirePage() {
       });
       if (controller.signal.aborted) return;
       if ('type' in result) {
+        setSignInRequired(false);
         dispatch({
           type: 'debrief-failed',
           errorKind: 'response',
@@ -587,6 +594,7 @@ export default function CrossfirePage() {
       // The same limit dialog as a turn; the inline error stays so the debrief can be retried.
       handleSubscriptionError(error);
       const classified = classifyError(error);
+      setSignInRequired(aiFailureRecovery(error) === 'sign_in');
       dispatch({ type: 'debrief-failed', errorKind: classified.kind, message: classified.message });
     } finally {
       if (requestRef.current === controller) setLiveDebrief({});
@@ -1006,10 +1014,12 @@ export default function CrossfirePage() {
                       {t(state.errorMessage ?? 'crossfire.errorDesc', { defaultValue: state.errorMessage ?? t('crossfire.errorDesc') })}
                     </p>
                   </div>
-                  <Button data-testid="retry-debrief" onClick={retryDebrief}>
-                    <RefreshCw className="mr-2 h-4 w-4" />
-                    {t('crossfire.debriefRetry')}
-                  </Button>
+                  {signInRequired ? <SignInAgainButton size="default" variant="default" /> : (
+                    <Button data-testid="retry-debrief" onClick={retryDebrief}>
+                      <RefreshCw className="mr-2 h-4 w-4" />
+                      {t('crossfire.debriefRetry')}
+                    </Button>
+                  )}
                 </>
               )}
             </CardContent>
@@ -1064,10 +1074,12 @@ export default function CrossfirePage() {
                   ? t('crossfire.timeoutDesc')
                   : t(state.request.message, { defaultValue: state.request.message })}
               </p>
-              <Button data-testid="retry-ai" size="sm" variant="outline" onClick={retryTurn}>
-                <RefreshCw className="mr-2 h-4 w-4" />
-                {t('crossfire.retryResponse')}
-              </Button>
+              {signInRequired ? <SignInAgainButton /> : (
+                <Button data-testid="retry-ai" size="sm" variant="outline" onClick={retryTurn}>
+                  <RefreshCw className="mr-2 h-4 w-4" />
+                  {t('crossfire.retryResponse')}
+                </Button>
+              )}
             </AlertDescription>
           </Alert>
         )}

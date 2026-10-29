@@ -7,6 +7,8 @@ import type { ProviderConfig } from './providers/types';
 import { AskOutputSchema, type AskOutput } from './schemas/ask';
 import { consumeSSEChunk, type ParsedSSEEvent } from './sse';
 import { refreshAIUsage } from '@/lib/query-client';
+import type { AIFailureStage } from './failure-reason';
+import { captureFirstAISuccess } from '@/lib/activation-events';
 
 export { consumeSSEChunk };
 
@@ -62,6 +64,7 @@ function captureStreamFailure(
   startTime: number,
   requestId: string,
   callerAborted: boolean,
+  stage: AIFailureStage = 'request',
 ): void {
   reportAIFailure({
     error,
@@ -72,6 +75,7 @@ function captureStreamFailure(
     startTime,
     requestId,
     userInitiatedAbort: callerAborted,
+    stage,
   });
 }
 
@@ -153,6 +157,7 @@ export async function streamAskChat(
     mapAIError({ message, context: { status } }, requestId, provider, config.model, payload);
 
   let debateContext: ReturnType<typeof debateContextForRequest>;
+  let stage: AIFailureStage = 'request';
   try {
     const input = withOutputLanguage({
       message: boundAskMessage(message),
@@ -191,6 +196,7 @@ export async function streamAskChat(
     }
 
     reader = response.body.getReader();
+    stage = 'stream';
     const decoder = new TextDecoder();
     let buffer = '';
     let finalOutput: AskOutput | null = null;
@@ -257,6 +263,7 @@ export async function streamAskChat(
       ...(resolvedModel !== config.model ? { requestedModel: config.model } : {}),
       durationMs: Math.round(performance.now() - startTime),
     });
+    captureFirstAISuccess('ask');
 
     return finalOutput;
   } catch (error) {
@@ -271,7 +278,7 @@ export async function streamAskChat(
           : isBrowserNetworkFailure(error) || browserIsOffline()
             ? new AINetworkError(offlineAIMessage(), { requestId })
             : new AIUnknownError(i18n.t('aiErrors.unexpected'), { requestId, causeType: privacySafeCauseType(error) });
-    captureStreamFailure(reportedError, provider, config.model, startTime, requestId, callerAborted);
+    captureStreamFailure(reportedError, provider, config.model, startTime, requestId, callerAborted, stage);
     throw reportedError;
   } finally {
     clearTimeout(timeoutId);

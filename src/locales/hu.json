@@ -2596,7 +2596,8 @@
     "invalidOutput": "Az MI válasza hibás formátumban érkezett. Próbáld újra.",
     "unexpected": "Váratlan hiba történt",
     "offline": "Ellenőrizd a kapcsolatot, és próbáld újra.",
-    "notCharged": "Ezt a kérést nem számoltuk el."
+    "notCharged": "Ezt a kérést nem számoltuk el.",
+    "signInAgain": "Jelentkezz be újra"
   },
   "clock": {
     "timeUp": "Lejárt az idő.",
@@ -2689,7 +2690,7 @@
   },
   "serverErrors": {
     "signInRequired": "A folytatáshoz jelentkezz be.",
-    "sessionExpired": "A hitelesítés nem sikerült. Lehet, hogy lejárt a munkameneted. Jelentkezz be újra.",
+    "sessionExpired": "Nem sikerült ellenőrizni, hogy be vagy-e jelentkezve. Jelentkezz be újra a folytatáshoz.",
     "accessDenied": "Hozzáférés megtagadva. Lehet, hogy lejárt a munkameneted. Jelentkezz be újra.",
     "banned": "A fiókodat felfüggesztettük. Fordulj az ügyfélszolgálathoz.",
     "requestTooLarge": "A kérés túl nagy. Rövidítsd le a szöveget, és próbáld újra.",

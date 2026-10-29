@@ -1,6 +1,7 @@
 import { useState, useCallback } from 'react';
 import { isAISubscriptionError, isAIModelRestrictionError, type AISubscriptionError } from '@/lib/ai/client';
 import type { LimitModalVariant } from '@/components/features/subscription/LimitReachedModal';
+import { capturePaywallShown } from '@/lib/activation-events';
 
 interface SubscriptionErrorState {
   limitModalOpen: boolean;
@@ -27,8 +28,9 @@ function variantForCode(code: string | undefined): LimitModalVariant {
 /**
  * Hook that detects subscription/model errors and opens the appropriate modal.
  * Returns true if the error was a subscription error (handled), false otherwise.
+ * `tool` names the page in the paywall_shown event.
  */
-export function useSubscriptionError(): SubscriptionErrorState {
+export function useSubscriptionError(tool: string): SubscriptionErrorState {
   const [limitModalOpen, setLimitModalOpen] = useState(false);
   const [limitModalVariant, setLimitModalVariant] = useState<LimitModalVariant>('limit_reached');
   const [limitModalLimit, setLimitModalLimit] = useState<number>();
@@ -40,7 +42,9 @@ export function useSubscriptionError(): SubscriptionErrorState {
   const handleSubscriptionError = useCallback((error: unknown): boolean => {
     if (isAISubscriptionError(error)) {
       const subError = error as AISubscriptionError;
-      setLimitModalVariant(variantForCode(subError.code));
+      const variant = variantForCode(subError.code);
+      capturePaywallShown(variant === 'trial_expired' ? 'trial_ended' : variant, tool);
+      setLimitModalVariant(variant);
       setLimitModalLimit(subError.limit);
       setLimitModalCurrent(subError.current);
       setLimitModalUnits(subError.units);
@@ -49,12 +53,13 @@ export function useSubscriptionError(): SubscriptionErrorState {
     }
 
     if (isAIModelRestrictionError(error)) {
+      capturePaywallShown('model_restricted', tool);
       setModelModalOpen(true);
       return true;
     }
 
     return false;
-  }, []);
+  }, [tool]);
 
   return {
     limitModalOpen,

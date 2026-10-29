@@ -8,6 +8,7 @@ import { askChat, isAIModelRestrictionError, isAIProviderError, isAISubscription
 import { isAskStreamingSupported, streamAskChat } from '@/lib/ai/streaming';
 import { useSubscriptionError } from '@/hooks/use-subscription-error';
 import { getUserFacingAIError } from '@/lib/ai/error-display';
+import { aiFailureRecovery } from '@/lib/ai/failure-reason';
 import { DailyUsage, SubscriptionErrorModals } from '@/components/features/subscription';
 import { useToast } from '@/hooks/use-toast';
 import { useCallback, useEffect, useRef, useState } from 'react';
@@ -67,7 +68,7 @@ export default function AskPage() {
   const config = getFeatureConfig('ask');
   const { toast } = useToast();
   const navigate = useNavigate();
-  const subError = useSubscriptionError();
+  const subError = useSubscriptionError('ask');
   const { t } = useTranslation();
   const streamAbortRef = useRef<AbortController | null>(null);
   const requestIdRef = useRef(0);
@@ -387,10 +388,12 @@ export default function AskPage() {
       } else if (isTimeoutError(error)) {
         setChatError({ title: t('ask.timeout'), description: t('ask.timeoutDesc'), onRetry: retryAsk });
       } else {
+        const recovery = aiFailureRecovery(error);
         setChatError({
           title: t('ask.failed'),
           description: getUserFacingAIError(error) || t('ask.retryableFailedDesc', "Couldn't reach the AI. Check your connection and retry."),
-          onRetry: retryAsk,
+          onRetry: recovery === 'retry' ? retryAsk : undefined,
+          signIn: recovery === 'sign_in',
         });
       }
       return true;
