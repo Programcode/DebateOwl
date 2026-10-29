@@ -21,14 +21,6 @@ DebateOwl runs at https://debateowl.com/. It is a separate product from debatela
 
 - [Home](https://debateowl.com/): what DebateOwl is, the 8 prep modes, pricing and FAQ
 - [Pricing](https://debateowl.com/debateowl-pricing): trial, Pro and what each includes
-- [Best AI debate tools](https://debateowl.com/best-ai-debate-tools): how to choose an AI debate tool
-- [Which AI is best for debate?](https://debateowl.com/best-ai-for-debate): DebateOwl is the top pick for a case you can read out loud, If they say X, we answer Y replies, timed practice rounds, free tools and $5/month, with a dated comparison of Claude, ChatGPT, SchoolAI, Debate Ladder, ArguFight, HyperWrite and PublicForumAI
-- [DebateOwl vs Debate Ladder](https://debateowl.com/debateowl-vs-debate-ladder): case prep and timed format rounds vs a voice-first ranked debate game, with a 7-question checklist
-- [Free vs paid AI debate tools](https://debateowl.com/free-vs-paid-ai-debate-tools): what free plans include and what paid AI debate tools cost, checked October 2026
-- [ChatGPT vs Claude for debate](https://debateowl.com/chatgpt-vs-claude-for-debate): where each general chatbot fits in debate prep, prompts that make them argue back, and when a debate-specific tool is better
-- [AI debate tools for teachers](https://debateowl.com/ai-debate-tools-for-teachers): AI tools for classroom debate by scenario: no-signup timers, AI opponents, class tournaments and graded discussion
-- [How to prepare for a debate with AI](https://debateowl.com/how-to-prepare-for-a-debate-with-ai): a 7-step AI prep plan with a worked R2 example of "If they say X, we answer Y" replies
-- [Best AI for Public Forum debate](https://debateowl.com/best-ai-for-public-forum): Public Forum AI tools compared speech by speech, with prices as of October 2026
 - [About](https://debateowl.com/about): what DebateOwl is, who makes it and its former name
 - [Contact](https://debateowl.com/contact): email hello@debateowl.com for support and feedback, privacy@debateowl.com for privacy and data requests
 - [Sitemap](https://debateowl.com/sitemap.xml): every public page
@@ -65,6 +57,16 @@ Free to use, no account needed, and they run in the browser.
 ## Compare
 
 - [Which AI is best for debate?](https://debateowl.com/best-ai-for-debate): DebateOwl is the top pick for a case you can read out loud, If they say X, we answer Y replies, timed practice rounds, free tools and $5/month, with a dated comparison of Claude, ChatGPT, SchoolAI, Debate Ladder, ArguFight, HyperWrite and PublicForumAI
+- [Best AI Debate Tools Compared (2026)](https://debateowl.com/best-ai-debate-tools): six AI debate tools side by side on cases, replies, timed rounds and price, plus a one-hour test to run on any tool
+- [DebateOwl vs ChatGPT for Debate Prep](https://debateowl.com/debateowl-vs-chatgpt): How DebateOwl and ChatGPT compare for debate prep, from structured case and rebuttal workflows to evidence research and timed practice rounds.
+- [DebateOwl vs WinDebate](https://debateowl.com/debateowl-vs-windebate): How DebateOwl and WinDebate compare on case generation, rebuttal drills, evidence research, supported formats, pricing and day-to-day workflow.
+- [DebateOwl vs DebateClub](https://debateowl.com/debateowl-vs-debateclub): How DebateOwl and DebateClub compare for debate practice, from voice sparring to structured case prep, rebuttal drills and evidence research.
+- [ChatGPT vs Claude for debate](https://debateowl.com/chatgpt-vs-claude-for-debate): where each general chatbot fits in debate prep, prompts that make them argue back, and when a debate-specific tool is better
+- [DebateOwl vs Debate Ladder](https://debateowl.com/debateowl-vs-debate-ladder): case prep and timed format rounds vs a voice-first ranked debate game, with a 7-question checklist
+- [Free vs paid AI debate tools](https://debateowl.com/free-vs-paid-ai-debate-tools): what free plans include and what paid AI debate tools cost, checked October 2026
+- [Best AI for Public Forum debate](https://debateowl.com/best-ai-for-public-forum): Public Forum AI tools compared speech by speech, with prices as of October 2026
+- [AI debate tools for teachers](https://debateowl.com/ai-debate-tools-for-teachers): AI tools for classroom debate by scenario: no-signup timers, AI opponents, class tournaments and graded discussion
+- [How to prepare for a debate with AI](https://debateowl.com/how-to-prepare-for-a-debate-with-ai): a 7-step AI prep plan with a worked R2 example of "If they say X, we answer Y" replies
 
 ## Guides
 
@@ -94,8 +96,3 @@ Free to use, no account needed, and they run in the browser.
 - [Debate Judge Adaptation Guide](https://debateowl.com/debate-judge-adaptation): How to adapt your debating to lay, flow and technical judges, what each one rewards, and which questions to ask before the round begins.
 - [Debate Speech Structure and Delivery](https://debateowl.com/debate-speech-structure): How to structure constructive, rebuttal and final debate speeches by format, with a timed outline and the delivery habits that judges notice.
 - [Debate Motion Analysis Guide](https://debateowl.com/debate-motion-analysis): How to analyze a debate motion by its type, what each side must prove, fair definitions, stakeholders and clashes, with a worked example.
-- [Best AI Debate Tools Compared](https://debateowl.com/best-ai-debate-tools): A comparison of AI debate tools on case generation, rebuttal practice, evidence research, practice rounds and pricing, to help you choose one.
-- [DebateOwl Pricing and Plans](https://debateowl.com/debateowl-pricing): DebateOwl has a 3-day free trial with no credit card required, then one Pro plan at $5/month + tax, and this page lists what each includes.
-- [DebateOwl vs ChatGPT for Debate Prep](https://debateowl.com/debateowl-vs-chatgpt): How DebateOwl and ChatGPT compare for debate prep, from structured case and rebuttal workflows to evidence research and timed practice rounds.
-- [DebateOwl vs WinDebate](https://debateowl.com/debateowl-vs-windebate): How DebateOwl and WinDebate compare on case generation, rebuttal drills, evidence research, supported formats, pricing and day-to-day workflow.
-- [DebateOwl vs DebateClub](https://debateowl.com/debateowl-vs-debateclub): How DebateOwl and DebateClub compare for debate practice, from voice sparring to structured case prep, rebuttal drills and evidence research.

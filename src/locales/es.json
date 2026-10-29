@@ -1008,7 +1008,7 @@
     "q6": "¿Qué es DebateOwl?",
     "a6": "DebateOwl es una app de preparación y práctica de debate con IA para estudiantes y debatientes de competición. Tiene {{modes}} modos de preparación, entre ellos un generador de casos, un atacante de casos, investigación de evidencia con citas, un coach de IA, Interrogatorio y rondas de Sparring cronometradas contra un oponente de IA, y está disponible en inglés, español y húngaro.",
     "q7": "¿{{product}} es lo mismo que debatelab.ai?",
-    "a7": "No. {{brand}} es un producto distinto, en {{host}}.",
+    "a7": "No. {{brand}} es un producto distinto, en {{host}}. En {{asOf}}, debatelab.ai dice ser gratuito y ofrece práctica de estilo World Schools y Asian Parliamentary contra un oponente de IA.",
     "q8": "¿Qué incluye un caso de {{product}}?",
     "a8": "Un caso de {{product}} se escribe como lo preparan los debatientes escolares: una apertura, de dos a cuatro argumentos, cada uno con explicación, evidencia y por qué importa, respuestas «Si dicen… respondemos…», una frase de cierre y las fuentes que usó.",
     "q9": "¿{{product}} es gratis?",
@@ -2611,7 +2611,7 @@
   },
   "shortAnswer": {
     "question": "¿Cuál es la mejor herramienta de IA para practicar debate?",
-    "answer": "Depende de lo que necesites. En {{asOf}}, {{product}} encaja con estudiantes y debatientes de competición que quieren un solo lugar para construir casos, encontrar puntos débiles, comprobar evidencia y hacer rondas de práctica cronometradas, en inglés, español o húngaro: prueba gratis de {{trialDays}} días sin tarjeta y después ${{proMonthly}}/mes + impuestos. Si quieres practicar gratis contra un oponente de IA en estilo World Schools o Asian Parliamentary, debatelab.ai, un producto distinto, dice ser gratuito. Si sobre todo necesitas ideas o ayuda para escribir sobre cualquier tema, un asistente general como ChatGPT es más flexible.",
+    "answer": "Para preparar una moción concreta, {{product}} te da un caso que puedes leer en voz alta, respuestas «Si dicen X, respondemos Y» y rondas de práctica cronometradas, en inglés, español o húngaro. En {{asOf}}, tiene una prueba gratis de {{trialDays}} días sin tarjeta y después cuesta ${{proMonthly}}/mes + impuestos. Si sobre todo necesitas ideas o ayuda para escribir sobre cualquier tema, un asistente general como ChatGPT es más flexible, y las herramientas de investigación encuentran fuentes más rápido.",
     "compare": "Comparar herramientas de IA para debate",
     "bestAi": "¿Qué IA es mejor para el debate?",
     "more": "Leer más",
