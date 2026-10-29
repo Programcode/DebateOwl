@@ -369,9 +369,9 @@ SOFTWARE = {
     "url": BASE + "/",
     "inLanguage": ["en", "es", "hu"],
     "featureList": [EN["features"][key] for key in PREP_MODES + UTILITIES] + [EXPORT_FEATURE],
+    # One paid offer, as src/prerender/entry.tsx has it: Google reads an Offer priced 0 as a free app.
     "offers": [
-        {"@type": "Offer", "name": "Free trial", "price": "0", "priceCurrency": PRICING["currency"], "description": f"{PRICING['trialDays']}-day free trial, no credit card required. {FREE_PLAN}"},
-        {"@type": "Offer", "name": "Pro", "price": PRICING["proMonthly"], "priceCurrency": PRICING["currency"], "description": "Monthly subscription, billed plus tax.", "priceSpecification": {"@type": "UnitPriceSpecification", "price": PRICING["proMonthly"], "priceCurrency": PRICING["currency"], "billingDuration": "P1M", "valueAddedTaxIncluded": False}},
+        {"@type": "Offer", "name": "Pro", "price": PRICING["proMonthly"], "priceCurrency": PRICING["currency"], "description": f"Monthly subscription, billed plus tax. New accounts get a {PRICING['trialDays']}-day free trial first, no credit card required. {FREE_PLAN}", "priceSpecification": {"@type": "UnitPriceSpecification", "price": PRICING["proMonthly"], "priceCurrency": PRICING["currency"], "billingDuration": "P1M", "valueAddedTaxIncluded": False}},
     ],
     "publisher": {"@id": BASE + "/#organization"},
 }
@@ -818,7 +818,7 @@ def llms_txt():
 - Practice: Sparring runs timed rounds against an AI opponent in School 4-6-6-3, Lincoln-Douglas and Public Forum and ends with a judged verdict. Crossfire drills cross-examination.
 - Languages: English, Spanish and Hungarian.
 - Pricing: {PLAN_FACTS}
-- Free plan: {FREE_PLAN}
+- Trial and free tools: {FREE_PLAN}
 - Pro adds expanded AI prep access, all 10 models (including Claude Opus and Sonnet, GPT-6.1 Sol and Gemini), Active Grounding research and priority support.
 - Privacy: cases, sources, practice rounds and history stay behind sign-in and are not indexed.
 

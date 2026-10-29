@@ -124,20 +124,15 @@ function landingStructuredData(dateModified: string | undefined) {
         description: SOFTWARE_DESCRIPTION,
         inLanguage: ['en', 'es', 'hu'],
         featureList: [...APP_TOOLS.map((tool) => i18n.t(`features.${tool.key}`)), EXPORT_FEATURE],
+        // One paid offer. Google reads an Offer priced 0 as an app available without
+        // payment, so the trial is stated in the Pro offer's text, not as an offer of its own.
         offers: [
-          {
-            '@type': 'Offer',
-            name: 'Free trial',
-            price: '0',
-            priceCurrency: PRICING.currency,
-            description: `${PRICING.trialDays}-day free trial, no credit card required. ${FREE_PLAN}`,
-          },
           {
             '@type': 'Offer',
             name: 'Pro',
             price: PRICING.proMonthly,
             priceCurrency: PRICING.currency,
-            description: 'Monthly subscription, billed plus tax.',
+            description: `Monthly subscription, billed plus tax. New accounts get a ${PRICING.trialDays}-day free trial first, no credit card required. ${FREE_PLAN}`,
             priceSpecification: {
               '@type': 'UnitPriceSpecification',
               price: PRICING.proMonthly,
