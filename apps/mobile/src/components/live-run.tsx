@@ -3,12 +3,14 @@ import type { DraftBlock, DraftSection } from '@debatelab/core/ai/live-sections'
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Animated, StyleSheet, View } from 'react-native';
+import Reanimated, { FadeInDown } from 'react-native-reanimated';
 
 import { TextButton } from './buttons';
 import { OwlAvatar, useReduceMotion, type OwlPose } from './owl';
 import { Text } from './text';
 import { ToolProgress } from './tool-form';
 
+import { motionSetting, SPRING } from '@/theme/motion';
 import { radius } from '@/theme/colors';
 import { useTheme } from '@/theme/use-theme';
 
@@ -103,7 +105,7 @@ function Block({ block, writing }: { block: DraftBlock; writing: boolean }) {
   if (block.heading) {
     return (
       <View style={styles.inline}>
-        <Text weight="bold" style={styles.heading}>
+        <Text accessibilityRole="header" weight="bold" style={styles.heading}>
           {block.heading}
         </Text>
         {writing ? <Caret /> : null}
@@ -161,6 +163,7 @@ export function LiveToolRun({
   /** The tool's own owl before the answer starts; the phase picks it otherwise. */
   pose?: OwlPose;
 }) {
+  const reduceMotion = useReduceMotion();
   const { t } = useTranslation();
   const { colors } = useTheme();
   const status = usePhaseLabel(run.phase, label);
@@ -177,7 +180,7 @@ export function LiveToolRun({
   return (
     <View style={styles.root} testID="live-draft">
       <View style={[styles.strip, { backgroundColor: colors.tile, borderColor: colors.tileBorder }]}>
-        <OwlAvatar pose={writing ? 'point' : 'idea'} size={36} />
+        <OwlAvatar pose={writing ? 'point' : 'idea'} size={36} blink />
         <View style={styles.stripText}>
           <Text weight="bold" style={styles.stripStatus} accessibilityRole="progressbar" accessibilityLiveRegion="polite">
             {writing ? t('tools.live.writingLive') : status}
@@ -190,9 +193,11 @@ export function LiveToolRun({
         </View>
         <TextButton label={t('common.cancel')} onPress={onCancel} />
       </View>
+      {/* Each section pops in as the draft starts writing it (Reanimated; still under Reduce Motion). */}
       {sections.map((section, sectionIndex) => (
-        <View
+        <Reanimated.View
           key={section.id}
+          entering={FadeInDown.springify().damping(SPRING.pop.damping).stiffness(SPRING.pop.stiffness).reduceMotion(motionSetting(reduceMotion))}
           accessibilityLabel={section.title}
           style={[styles.section, { backgroundColor: colors.card, borderColor: colors.border }]}>
           <Text accessibilityRole="header" weight="display" tone="heading" style={styles.sectionTitle}>
@@ -201,7 +206,7 @@ export function LiveToolRun({
           {section.blocks.map((block, blockIndex) => (
             <Block key={blockIndex} block={block} writing={writing && sectionIndex === lastSection && blockIndex === lastBlock} />
           ))}
-        </View>
+        </Reanimated.View>
       ))}
     </View>
   );

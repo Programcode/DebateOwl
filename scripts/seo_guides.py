@@ -10,7 +10,7 @@ A format guide's speech times must match src/lib/free-tools/formats.ts, which th
 
 GUIDES = {
     "ai-debate-practice": {
-        "modified": "2026-10-26",
+        "modified": "2026-10-28",
         "features": [
             ("Practice against AI opponents", "Run a full Sparring round in School 4-6-6-3, Lincoln-Douglas or Public Forum, type or speak each speech, and finish with a judged verdict."),
             ("Turn feedback into drills", "Take the weakest point from a verdict or a Crossfire debrief, rebuild it with Attack or Ask, and run that speech again."),
@@ -27,7 +27,7 @@ GUIDES = {
                 {"steps": [
                     "Start a Current Debate with the motion written exactly as it will be announced (2 minutes). Add any articles or notes you already trust to the Library so later answers are grounded in them.",
                     "Run Brainstorm on the motion and pick the two or three angles you can explain in one sentence each (5 minutes). Discard angles that need evidence you do not have.",
-                    "Generate a case for your side (10 minutes). Read the predicted opponent case before your own contentions: it tells you what you will have to answer.",
+                    "Generate a case for your side (10 minutes). Read its \"If they say…\" answers before your own arguments: they tell you what you will have to answer.",
                     "Run a Sparring round in your format (15 minutes). Give every speech in full, at time, without pausing to edit. Voice mode lets you speak instead of type.",
                     "Read the verdict and write down the single reason it gives for the decision (3 minutes).",
                     "Rebuild only that part (5 minutes): ask Attack to stress-test the rewritten argument, or regenerate the one case section that failed.",
@@ -38,10 +38,10 @@ GUIDES = {
             ("Worked example: one practice round", [
                 {"example": {"title": "Motion: This house would ban smartphones in secondary schools", "rows": [
                     ("Side and format:", "Proposition, run as a School 4-6-6-3 Sparring round."),
-                    ("First contention:", "Phones fragment attention in class, and attention is the input every other kind of learning depends on."),
+                    ("First argument:", "Phones fragment attention in class, and attention is the input every other kind of learning depends on."),
                     ("AI opponent's response:", "Schools already confiscate phones during lessons, so a ban changes only break times, where the harm you described does not happen."),
                     ("What the verdict flagged:", "Proposition never explained what a ban adds over existing classroom rules, so the opposition's mitigation stood unanswered."),
-                    ("The drill:", "Ask Attack to find the gap in the contention, then rewrite it around breaks: social exclusion, cyberbullying during the school day, and the cost of teachers enforcing rules lesson by lesson."),
+                    ("The drill:", "Ask Attack to find the gap in the argument, then rewrite it around breaks: social exclusion, cyberbullying during the school day, and the cost of teachers enforcing rules lesson by lesson."),
                     ("Second attempt:", "The R1 speech now opens with the comparison: classroom rules depend on every teacher enforcing them every hour, while a ban sets one rule at the school gate. The opponent's mitigation becomes a point in your favour."),
                 ]}},
                 "The example shows the pattern to look for. The first version was not wrong; it was incomplete in a way only a responsive opponent exposes. That is the gap AI practice fills between team practices.",
@@ -69,7 +69,7 @@ GUIDES = {
             ("AI vs traditional prep", [
                 "AI and traditional preparation are good at different parts of the work. AI is fast at structure; reading, coaching and real rounds are where judgement comes from. Most strong debaters use both and give each the tasks it does well.",
                 {"table": {"head": ["Task", "AI does it well", "Traditional prep does it better"], "rows": [
-                    ["First case outline", "Drafts claims, warrants and a predicted opponent case in minutes", "Choosing which outline fits your team and your circuit"],
+                    ["First case outline", "Drafts an opening, arguments with evidence and \"If they say…\" answers in minutes", "Choosing which outline fits your team and your circuit"],
                     ["Rebuttal blocks", "Lists likely arguments and first-draft answers", "Testing answers against opponents you have actually met"],
                     ["Research", "Suggests evidence leads and search directions", "Reading the original source, checking dates and context"],
                     ["Practice rounds", "A responsive opponent at any hour, at real speech times", "Unpredictable opponents, panels and live crossfire"],
@@ -91,10 +91,10 @@ GUIDES = {
         ],
     },
     "ai-debate-coach": {
-        "modified": "2026-10-27",
-        "definition": ("What is an AI debate coach?", "AI debate coach", "A chat tool that answers a debater's prep questions about burdens, clash, weighing and speech structure and gives feedback on practice speeches, for the debater to test and adapt."),
+        "modified": "2026-10-28",
+        "definition": ("What is an AI debate coach?", "AI debate coach", "A chat tool that answers a debater's prep questions about strategy, arguments, answers to the other side and speech structure, and gives feedback on practice speeches, for the debater to test and adapt."),
         "features": [
-            ("Strategy help", "Ask which clash decides the round, what your burden is and where to spend your speaking time, with answers that use your debate's motion and sources."),
+            ("Strategy help", "Ask which argument decides the round, what your side has to prove and where to spend your speaking time, with answers that use your debate's motion and sources."),
             ("Speech structure", "Get an outline for a constructive, rebuttal, summary or reply speech: the order of points and how long to give each one."),
             ("Practice feedback", "Paste a speech or a flow and ask what was unclear, under-warranted or dropped, then pick one fix to drill."),
         ],
@@ -148,7 +148,7 @@ GUIDES = {
             ]),
         ],
         "faqs": [
-            ("What can I ask the AI debate coach?", "Anything you would ask a coach between rounds: burdens, clash, weighing, speech structure, how to answer a specific argument, or why a practice speech did not land. Specific questions with format, side and speaker role get the best answers."),
+            ("What can I ask the AI debate coach?", "Anything you would ask a coach between rounds: what your side has to prove, which argument decides the round, speech structure, how to answer a specific argument, or why a practice speech did not land. Specific questions with format, side and speaker role get the best answers."),
             ("Does the coach know my case?", "It knows your Current Debate: the motion, and the Library sources you have marked active. Paste a speech or a case section into the question when you want feedback on that exact text."),
             ("Can the AI coach cite sources?", "Yes. Turn on Citations in Ask and the answer includes sources you can open. Check each one against the original before using it in a round."),
             ("Will the coach write my speeches for me?", "It can draft an outline or a passage, but you will speak better from structure you understand. Use it to find what is missing, then write the speech in your own words."),
@@ -158,58 +158,58 @@ GUIDES = {
         ],
     },
     "ai-debate-case-generator": {
-        "modified": "2026-10-27",
-        "definition": ("What is an AI debate case generator?", "AI debate case generator", "A tool that drafts a debate case for a given motion and side, with claims, warrants, impacts and evidence leads, for a debater to verify and adapt."),
+        "modified": "2026-10-28",
+        "definition": ("What is an AI debate case generator?", "AI debate case generator", "A tool that turns a motion into a draft debate case for one side and speaker role, with an opening, arguments backed by evidence, answers to what the other side will say and a source list, for a debater to verify and adapt."),
         "features": [
-            ("Structured case drafts", "Each draft has a thesis, a framework, contentions with warrants and impacts, the case the other side is likely to run, and counters to it."),
-            ("Evidence leads", "Every draft is researched on the web and lists the sources it found. Check each one against the original before it goes on a card."),
+            ("A case you can read out", "Each draft has an opening, arguments with an explanation, evidence and why it matters, \"If they say… we answer…\" replies, a closing line and the sources it cites."),
+            ("Evidence leads", "Every draft is researched on the web, names the source and year in each piece of evidence and lists its sources at the end. Check each one against the original before it goes on a card."),
             ("Roles and length", "Pick your side and speaker role, then set the case length, the audience level and the tone of the draft."),
         ],
         "sections": [
             ("What the case generator produces", [
-                "Generate takes the motion from your Current Debate and returns a structured case, not a block of prose. Every draft has the same parts, so you always know where to look:",
+                "Generate takes the motion from your Current Debate and returns a case you can read out, not a block of prose. Every draft has the same parts, in the order you would say them:",
                 {"list": [
-                    "Thesis: the one-sentence reason your side should win.",
-                    "Framework: how the judge should decide the round, such as the definition, the burden or the weighing standard you will argue for.",
-                    "Contentions: each with a claim, the warrant that makes it true, and the impact that makes it matter.",
-                    "Predicted opponent case: the arguments a strong team on the other side is likely to run.",
-                    "Counters: first responses to that predicted case.",
+                    "Opening: a hook that makes the judge listen, then the line \"Today we will show N arguments that prove…\".",
+                    "Arguments: each with a short title, the point in one sentence, an explanation of why it is true, evidence that names its source and year, and why it matters.",
+                    "If they say…: the claims the other side is likely to make, each with our answer and, when there is one, the source behind it.",
+                    "Closing line: one sentence that ties back to the opening.",
+                    "Sources: every source the case cites, with the organisation, the year, the claim it supports and the link.",
                 ]},
-                "Because the opponent case is part of the draft, you start preparing rebuttals at the same time as your own case. When one section is weak, regenerate just that section; the rest of the case stays where it is. Finished cases export to PDF or DOCX.",
+                "Your speaker role shapes the speech. The introductor gets the opening and short headline arguments, plus one line on what a motion term means when it is genuinely unclear. R1 gets the full arguments. R2 brings no new arguments: it spends about two minutes backing up the team's arguments, then answers the other side with five or six \"If they say…\" blocks. The conclusor brings no new arguments: it gets two or three reasons why your side won and the closing line.",
+                "Because the answers to the other side are part of the draft, you start preparing rebuttals at the same time as your own case. When one section is weak, regenerate just that section; the rest of the case stays where it is. Finished cases export to PDF or DOCX.",
             ]),
             ("Generated draft vs. finished case: what you still do", [
                 {"table": {"caption": "What the case generator gives you, and what you check before the round", "head": ["Section", "The generator gives", "You check"], "rows": [
-                    ["Thesis", "One sentence on why your side should win", "That it answers the motion exactly as worded and you can say it without notes"],
-                    ["Framework", "The definition, burden or weighing standard to argue for", "That it fits your format, for example a value and criterion in Lincoln-Douglas"],
-                    ["Contentions", "A claim, the warrant that makes it true and the impact that makes it matter", "Which ones clash with the other side; cut the rest to fit your speech time"],
-                    ["Predicted opponent case", "The arguments a strong team on the other side is likely to run", "Which of your contentions answers each one"],
-                    ["Counters", "First responses to the predicted case", "That each response is short enough to deliver as a rebuttal block"],
-                    ["Sources", "The web sources it found, with contentions that still need evidence marked Needs Source", "Open every original, confirm the exact claim and record the full citation"],
+                    ["Opening", "A hook and the line \"Today we will show N arguments that prove…\"", "That the hook is true, the line answers the motion exactly as worded and you can say it without notes"],
+                    ["Arguments", "A title, the point, an explanation, evidence and why it matters", "Which ones meet what the other side will say; cut the rest to fit your speech time"],
+                    ["If they say…", "The other side's likely claims, each with our answer", "That each answer meets the claim as they would make it and is short enough to say in a rebuttal"],
+                    ["Closing line", "One sentence that ties back to the opening", "That it sums up the case in words you would actually say"],
+                    ["Sources", "Every source the case cites, with arguments that still need evidence marked Needs Source", "Open every original, confirm the exact claim and record the full citation"],
                 ]}},
             ]),
             ("From motion to verified case in seven steps", [
                 {"steps": [
                     "Start a Current Debate with the exact motion wording. Small wording changes, such as should against would, change the burden.",
                     "Add the sources you already trust to the Library. Active sources are used when the case is generated, so the draft builds on your research instead of ignoring it.",
-                    "Choose your side and speaker role: introductor, R1, R2 or conclusor. Under More options, set the length (two, three or four contentions), the audience level and the tone. If you need a particular angle, for example a principled argument or an economic one, put it in the Current Debate's Instructions.",
+                    "Choose your side and speaker role: introductor, R1, R2 or conclusor. Under More options, set the length, the audience level and the tone. Length sets two, three or four arguments for the introductor and R1, and for R2 how many \"If they say…\" answers you get. If you need a particular angle, for example a principled argument or an economic one, put it in the Current Debate's Instructions.",
                     "Generate the case. Generate researches the motion on the web every time, lists the sources it found under the draft, and saves the relevant ones to the debate's Library.",
-                    "Read the predicted opponent case first and decide which of your contentions actually answers it. Cut contentions that do not clash with anything.",
+                    "Read the \"If they say…\" answers first and decide which of your arguments actually meets each claim. Cut arguments that do not clash with anything.",
                     "Regenerate any section that is vague, then verify every evidence lead against its original source.",
                     "Rewrite the final case in your own words and time a full reading of it before you call it ready.",
                 ]},
             ]),
             ("Worked example: a generated case, and what the debater changed", [
                 {"example": {"title": "Motion: This house would introduce a four-day school week", "rows": [
-                    ("Side:", "Proposition."),
-                    ("Thesis:", "A shorter week concentrates instruction where it works and gives schools a recruitment advantage they cannot buy with pay."),
-                    ("Framework:", "The round should be decided by learning outcomes for students across the school, not by the convenience of any single group."),
-                    ("Contention 1:", "Teacher retention. Claim: a four-day week keeps experienced teachers. Warrant: schools competing for staff cannot always raise salaries, but they can offer time. Impact: experienced teachers are among the strongest in-school drivers of student learning."),
-                    ("Predicted opposition:", "Childcare costs for working parents on the fifth day, and lost instruction time for students who are already behind."),
-                    ("Counter:", "Schools can run an optional fifth-day programme for families who need it, and longer remaining days protect total instruction hours."),
+                    ("Side and role:", "Proposition, R1."),
+                    ("Opening:", "A school that cannot pay more can still offer its teachers time. Today we will show two arguments that prove a four-day week helps students learn."),
+                    ("Argument 1, keeping teachers:", "Point: a four-day week keeps experienced teachers. Explanation: schools competing for staff cannot always raise salaries, but they can offer time. Why it matters: experienced teachers are among the strongest in-school drivers of student learning."),
+                    ("If they say:", "Working parents will pay for childcare on the fifth day, and students who are already behind lose teaching time."),
+                    ("We answer:", "Schools can run an optional fifth-day programme for families who need it, and longer remaining days protect total teaching hours."),
+                    ("Closing line:", "That is why a four-day week is the cheapest way to keep the teachers students learn most from."),
                     ("Evidence lead to verify:", "Research on districts that moved to four-day weeks, looking at attendance, teacher turnover and test results. Read the methodology: results differ between rural and urban districts."),
-                    ("What the debater changed:", "Cut a weaker cost-saving contention the opposition would easily mitigate, and moved the instruction-hours counter into the first speech so it was on the table before the opposition raised it."),
+                    ("What the debater changed:", "Cut a weaker cost-saving argument the opposition would easily answer, and moved the teaching-hours answer into the first speech so it was on the table before the opposition raised it."),
                 ]}},
-                "The draft gave the debater a full structure in minutes. The judgement calls, which contention to cut and where to pre-empt the opposition, were still theirs, and that is where the round was won.",
+                "The draft gave the debater a full structure in minutes. The judgement calls, which argument to cut and where to answer the opposition early, were still theirs, and that is where the round was won.",
             ]),
             ("Checking citations before they reach a card", [
                 "Generated evidence is a starting point. Before any source goes into a speech:",
@@ -217,44 +217,44 @@ GUIDES = {
                     "Open the original. If you cannot find it, do not use it.",
                     "Find the exact sentence that supports your claim, and check that the surrounding paragraph does not qualify it.",
                     "Check the date, the author and who published it. A think-tank brief and a peer-reviewed study carry different weight.",
-                    "Make sure the evidence supports your link, not just your topic. A study showing four-day weeks save money does not prove they improve learning.",
+                    "Make sure the evidence supports your point, not just your topic. A study showing four-day weeks save money does not prove they improve learning.",
                     "Record the full citation so you can produce it if an opponent or judge asks.",
                 ]},
                 "Factoids is useful here: give it a single statement from your case and it researches that statement and suggests searches you can use to confirm it.",
             ]),
             ("Adapting a generated case to your format", [
                 {"h3": "World Schools (WSDC)"},
-                "A WSDC case is split between the first and second speakers, with a team line both can repeat. Use the thesis as the team line, give the first speaker the framework and the first contention, and keep the strongest contention for the second speaker so the case builds rather than front-loads. Leave the Current Debate's format on Custom and describe this split in its Instructions.",
+                "A WSDC case is split between the first and second speakers, with a team line both can repeat. Use the opening's \"we will show\" line as the team line, give the first speaker the opening and the first argument, and keep the strongest argument for the second speaker so the case builds rather than front-loads. Leave the Current Debate's format on Custom and describe this split in its Instructions.",
                 {"h3": "British Parliamentary (BP)"},
-                "Set the Current Debate's format to British Parliamentary and name your team position in its Instructions; Generate's own role options follow the School 4-6-6-3 speakers. Opening government needs a clear definition and mechanism in the draft. Closing teams should treat the generated case as material the opening half will probably use, and look in the predicted opponent case for an extension nobody else in the room is likely to run.",
+                "Set the Current Debate's format to British Parliamentary and name your team position in its Instructions; Generate's own role options follow the School 4-6-6-3 speakers. Opening government needs a clear definition and mechanism, so describe them in the Instructions if the draft does not give them. Closing teams should treat the generated case as material the opening half will probably use, and look in the \"If they say…\" answers for an extension nobody else in the room is likely to run.",
                 {"h3": "Public Forum (PF)"},
-                "A PF constructive is four minutes, which usually means two contentions with evidence, not four. Since PF teams often find out their side shortly before the round, generate both sides of the resolution in the same debate and prepare the counters for each.",
+                "A PF constructive is four minutes, which usually means two arguments with evidence, not four. Since PF teams often find out their side shortly before the round, generate both sides of the resolution in the same debate and prepare the answers for each.",
                 {"h3": "Lincoln-Douglas (LD)"},
-                "In LD, the framework section becomes your value and criterion. Check that every contention explicitly links back to the criterion; if one does not, add your criterion to the Current Debate's Instructions and regenerate the contentions. Prepare a short defence of the criterion itself, because the negative will often attack it first.",
+                "Generate does not write a value and criterion for you, so put yours in the Current Debate's Instructions before you generate. Then check that each argument's why it matters links back to the criterion; if one does not, regenerate the arguments. Prepare a short defence of the criterion itself, because the negative will often attack it first.",
             ]),
             ("Mistakes to avoid with generated cases", [
                 {"list": [
                     "Reading the draft in round. Judges hear the difference between a case you wrote and one you are reading for the first time.",
-                    "Keeping every contention. Three well-defended points beat five thin ones.",
-                    "Skipping the predicted opponent case. It is the fastest route to your rebuttals.",
+                    "Keeping every argument. Three well-defended points beat five thin ones.",
+                    "Skipping the \"If they say…\" answers. They are the fastest route to your rebuttals.",
                     "Citing an evidence lead you never opened.",
                 ]},
             ]),
         ],
         "faqs": [
-            ("Does the case generator write a complete case?", "It writes a complete draft: thesis, framework, contentions with warrants and impacts, the likely opposing case and counters. Treat it as a structure to cut, verify and rewrite in your own words."),
-            ("Are the generated citations reliable?", "They are research leads. Every draft is researched on the web and lists the sources it found, and a contention that still needs evidence is marked Needs Source. Open every source, confirm the exact claim and record the full citation before using it."),
+            ("Does the case generator write a complete case?", "It writes a complete draft: an opening, arguments with explanation, evidence and why each matters, \"If they say… we answer…\" replies, a closing line and the sources it cites. Treat it as a structure to cut, verify and rewrite in your own words."),
+            ("Are the generated citations reliable?", "They are research leads. Every draft is researched on the web and lists the sources it cites, and an argument that still needs evidence is marked Needs Source. Open every source, confirm the exact claim and record the full citation before using it."),
             ("Which debate formats does the generator support?", "Set the Current Debate's format to British Parliamentary, Policy, Classroom or Custom, and Generate reads it along with the debate's Instructions. Generate's own speaker roles (introductor, R1, R2 and conclusor) follow the School 4-6-6-3 format. For WSDC, Public Forum and Lincoln-Douglas, use Custom and describe the structure in the Instructions."),
             ("Can I change one part of a case without starting over?", "Yes. Regenerate a single section and the rest of the case stays on screen unchanged."),
             ("Can I export a generated case?", "Yes. Cases export to PDF and DOCX, and cases created in a Current Debate are saved to it automatically."),
             ("Is there a free AI debate case generator?", "{product}'s case generator is included in the 3-day free trial, with no credit card, and then in Pro at {pro_price}; there is no permanent free plan. Without an account you can use the free debate timer, motion generator, flow sheet and speech time calculator, but not the case generator."),
-            ("Can AI write a Public Forum case?", "It can draft one. Set the Current Debate's format to Custom and describe the Public Forum structure in its Instructions, since Generate's own speaker roles follow School 4-6-6-3. A PF constructive is four minutes, which usually fits two contentions with evidence, so cut the draft to that and verify every source."),
-            ("Is using an AI case generator cheating?", "Using it to draft and research before a round is preparation, but check your league's and your school's rules first: most leagues forbid electronic help during a round. Verify every source, rewrite the case in your own words and make sure you can defend each contention, because a case you cannot explain is easy to beat."),
+            ("Can AI write a Public Forum case?", "It can draft one. Set the Current Debate's format to Custom and describe the Public Forum structure in its Instructions, since Generate's own speaker roles follow School 4-6-6-3. A PF constructive is four minutes, which usually fits two arguments with evidence, so cut the draft to that and verify every source."),
+            ("Is using an AI case generator cheating?", "Using it to draft and research before a round is preparation, but check your league's and your school's rules first: most leagues forbid electronic help during a round. Verify every source, rewrite the case in your own words and make sure you can defend each argument, because a case you cannot explain is easy to beat."),
         ],
     },
     "best-ai-debate-tools": {
         "software": True,
-        "modified": "2026-10-21",
+        "modified": "2026-10-28",
         "features": [
             ("Feature comparison", "What each kind of tool does well: general chatbots, research assistants, dedicated debate platforms, and timers or flowing tools."),
             ("Format coverage", "Which formats a tool actually models, from Public Forum and Lincoln-Douglas to WSDC and British Parliamentary, and where you still prep by hand."),
@@ -317,7 +317,7 @@ GUIDES = {
                 "LD needs tools that handle value and criterion, not just policy arguments. Test whether a tool can defend a framework and link contentions to it, and whether it can practise the time-pressured 1AR.",
             ]),
             ("Where {product} fits", [
-                "{product} is a dedicated debate platform that keeps every case, source, round and debrief inside one Current Debate. It covers case generation with a predicted opponent case, Library sources that ground its answers, Attack for finding weak links, Brainstorm, Factoids for checking claims, an Ask coaching chat with optional citations, Crossfire and full Sparring rounds with a verdict, a speech timer and an argument flowchart.",
+                "{product} is a dedicated debate platform that keeps every case, source, round and debrief inside one Current Debate. It covers case generation with \"If they say…\" answers to the other side, Library sources that ground its answers, Attack for finding weak links, Brainstorm, Factoids for checking claims, an Ask coaching chat with optional citations, Crossfire and full Sparring rounds with a verdict, a speech timer and an argument flowchart.",
                 "Its limits are worth stating plainly. Sparring currently runs School 4-6-6-3, Lincoln-Douglas and Public Forum rounds, so WSDC and BP practice uses the prep and coaching tools rather than a full simulated round. Like every AI tool, its evidence leads need checking against the original source. Run the one-hour test above and decide on your own results.",
             ]),
         ],
@@ -331,7 +331,7 @@ GUIDES = {
         ],
     },
     "debate-rebuttal-practice": {
-        "modified": "2026-10-21",
+        "modified": "2026-10-28",
         "features": [
             ("Find weak warrants", "Paste an argument into Attack and get the links that fail: missing warrants, overclaimed impacts and assumptions the other side never proved."),
             ("Build targeted blocks", "Each weakness comes with why it is weak, how the other side will attack it and a stronger version. Turn that into a short block; the analysis stays in your Current Debate."),
@@ -351,7 +351,7 @@ GUIDES = {
             ]),
             ("A 20-minute rebuttal drill", [
                 {"steps": [
-                    "Choose one opposing argument you expect to face. If you have generated a case, take it from the predicted opponent case.",
+                    "Choose one opposing argument you expect to face. If you have generated a case, take it from its \"If they say…\" answers.",
                     "Paste it into Attack and read the weaknesses it finds. Pick the one that breaks the argument, not the one that is easiest to say.",
                     "Write a block: a five-word tag line, the response in two or three sentences, and one sentence on why it matters for the round.",
                     "Time yourself delivering the block in under forty-five seconds.",
@@ -398,12 +398,12 @@ GUIDES = {
             ("How can I practise rebuttals on my own?", "Take the arguments you expect to face, find each one's weakest link with Attack, write a short block, and deliver it against a timer. Then ask the AI for the best reply to your block and prepare an answer."),
             ("How long should a rebuttal response be?", "Most single responses should take under a minute. Total rebuttal time depends on the format, from four minutes in Public Forum to most of an eight-minute WSDC speech."),
             ("What is the difference between a rebuttal and a block?", "A block is a rebuttal prepared before the round for an argument you expect. In the round you adapt the block to what the opponent actually said."),
-            ("Can the AI predict my opponent's arguments?", "Yes. Each generated case includes a predicted opponent case, which is a practical list of arguments to prepare blocks against."),
+            ("Can the AI predict my opponent's arguments?", "Yes. Each generated case includes \"If they say…\" answers: the claims the other side is likely to make, each with a reply, which is a practical list of arguments to prepare blocks against."),
             ("How do I stop dropping arguments?", "Flow every speech, mark each opposing argument as answered or not, and group similar arguments so one response covers several. Practise against a timer until it becomes routine."),
         ],
     },
     "how-to-practice-rebuttals": {
-        "modified": "2026-10-26",
+        "modified": "2026-10-28",
         "features": [
             ("A weekly drill plan", "Four short sessions a week, each training one rebuttal skill: selection, warrant attacks, grouping, and weighing under time."),
             ("Drills that work alone or with a partner", "Shadow rebuttals, flip-the-flow, one-sentence answers and rapid-fire rounds, with a version for solo practice and one for teams."),
@@ -446,8 +446,8 @@ GUIDES = {
                 "For one argument, write five different responses: deny the claim, attack the warrant, mitigate the impact, turn it and outweigh it. Then rank them. Practising all five shows you which kind of response you lean on too much.",
                 {"h3": "Drop audit"},
                 "After a practice round, go through your flow and circle every opposing argument you did not answer. For each one, decide whether dropping it was a choice or an accident. Accidents are what you drill next.",
-                {"h3": "Spar the predicted case"},
-                "In {product}, generate a case on your side and read the predicted opponent case. Paste the strongest opposing argument into Attack to see where it breaks, then run a Sparring round and answer it live. The verdict tells you whether your answer changed the outcome.",
+                {"h3": "Spar the \"If they say…\" claims"},
+                "In {product}, generate a case on your side and read its \"If they say…\" answers. Paste the strongest opposing claim into Attack to see where it breaks, then run a Sparring round and answer it live. The verdict tells you whether your answer changed the outcome.",
             ]),
             ("Worked example: from first attempt to clean rebuttal", [
                 {"example": {"title": "Motion: This house would lower the voting age to 16", "rows": [
@@ -510,6 +510,7 @@ GUIDES = {
         ],
     },
     "ai-rebuttal-generator": {
+        "modified": "2026-10-28",
         "features": [
             ("Weaknesses ranked by damage", "Attack quotes the exact words it is targeting, names the broken link and orders the weaknesses from critical to minor."),
             ("Responses you can say", "Each weakness comes with one to three sentences written to be spoken in round, not a description of what you could argue."),
@@ -552,7 +553,7 @@ GUIDES = {
             ]),
             ("From generated output to a rebuttal you own", [
                 {"steps": [
-                    "Start from the right input. Use the opponent case predicted when you generated your own case, an argument you heard in a previous round, or your own case when you want to find its weak points first.",
+                    "Start from the right input. Use a claim from the \"If they say…\" answers in a case you generated, an argument you heard in a previous round, or your own case when you want to find its weak points first.",
                     "Read the critical weaknesses and pick one. In a short speech, one well-explained weakness beats four rushed ones.",
                     "Rewrite the suggested response in your own words. Keep the structure (quote, flaw, response, why it matters) and cut anything you would not naturally say.",
                     "Check any evidence it relies on against the original source.",
@@ -582,44 +583,47 @@ GUIDES = {
         ],
     },
     "how-to-write-a-debate-case": {
+        "modified": "2026-10-28",
         "features": [
-            ("Motion analysis first", "Define the terms, name the burden and find the clashes before writing a single contention."),
-            ("Contentions that hold up", "Build each point as claim, warrant, evidence, impact and weighing, so a judge can follow it and an opponent cannot break it with one question."),
-            ("A case you can defend", "Pre-empt the obvious responses, cut what does not clash, and test the draft by attacking it yourself."),
+            ("Motion analysis first", "Define the terms, write down what your side has to prove and find where the two sides disagree before writing a single argument."),
+            ("Arguments that hold up", "Build each argument as a point, an explanation, evidence and why it matters, so a judge can follow it and an opponent cannot break it with one question."),
+            ("A case you can defend", "Write \"If they say… we answer…\" replies to the obvious responses, cut what does not clash, and test the draft by attacking it yourself."),
         ],
         "sections": [
             ("What a debate case is", [
-                "A debate case is the argument your side will defend for the whole round, organised so a judge can follow it on first hearing. It is not an essay. An essay can explore; a case has to survive an opponent whose job is to find the weakest sentence in it. That is why good cases are built from small, testable parts: a clear position, a reason the judge should decide the round your way, and two to four contentions that each prove something specific.",
-                "The process below works for every format. The format changes the length, the number of contentions and who gives which part, which the format section covers further down.",
+                "A debate case is the argument your side will defend for the whole round, organised so a judge can follow it on first hearing. It is not an essay. An essay can explore; a case has to survive an opponent whose job is to find the weakest sentence in it. That is why good cases are built from small, testable parts: an opening that tells the judge what you will prove, two to four arguments that each prove something specific, answers to what the other side will say, and a closing line the judge remembers.",
+                "The process below works for every format. The format changes the length, the number of arguments and who gives which part, which the format section covers further down.",
             ]),
             ("Eight steps from motion to finished case", [
                 {"steps": [
                     "Read the motion word by word. Note the actor (who does it), the action (what changes) and any word that sets the strength of the claim, such as should, would, ban, regulate or prioritise. A motion about regulating something is a different debate from one about banning it.",
                     "Define the key terms in plain language. Pick definitions that are fair and that a judge would accept without argument. A squirrelled definition wins the definition debate and loses the round.",
-                    "Write your burden in one sentence: what does your side have to prove for the judge to vote for you? If you are proposing a policy, you usually need to show a problem, a mechanism and a net benefit. If you are opposing, you choose whether to defend the status quo, a counter-proposal or simply that the proposal does more harm than good.",
+                    "Write down in one sentence what your side has to prove for the judge to vote for you. If you are proposing a policy, you usually need to show a problem, a mechanism and a net benefit. If you are opposing, you choose whether to defend the status quo, a counter-proposal or simply that the proposal does more harm than good.",
                     "Brainstorm widely, then cut hard. List every argument for your side, group the ones that share a reason, and keep the two to four groups that are strongest and most different from each other.",
-                    "Build each contention as a chain: claim (what is true), warrant (why it is true), evidence (what supports the warrant), impact (why it matters) and weighing (why it matters more than what the other side will say).",
-                    "Write the framework: the standard the judge should use to decide. In Lincoln-Douglas it is a value and criterion; in most other formats it is a sentence on what the round should be about, such as who bears the cost or which outcome is more likely.",
-                    "Pre-empt the most obvious response to each contention inside the contention itself. One sentence is enough. It stops the opponent's best attack from looking new.",
-                    "Write it out, read it aloud against a timer, and cut until it fits with fifteen seconds to spare.",
+                    "Build each argument in four parts: the point (what is true, in one sentence), the explanation (why it is true, step by step), the evidence (a source that backs it, named with its year) and why it matters (what it means for real people, and why that matters more than what the other side will say).",
+                    "Write the opening: a hook that makes the judge listen, then one line that says what you will show, such as \"Today we will show two arguments that prove…\". In Lincoln-Douglas, your value and criterion go here too.",
+                    "For each argument, write down what the other side is most likely to say and a short answer: \"If they say…, we answer…\". Put the answer to the most obvious response inside the argument itself, so the opponent's best attack does not sound new.",
+                    "Finish with a closing line that ties back to the opening and a list of your sources. Then read the case aloud against a timer and cut until it fits with fifteen seconds to spare.",
                 ]},
             ]),
             ("Worked example: a full case outline", [
                 {"example": {"title": "Motion: This house would make public transport free", "rows": [
                     ("Side:", "Proposition."),
                     ("Definitions:", "Public transport means buses, trams and local trains run or funded by government. Free means no fare at the point of use, paid for from general taxation."),
-                    ("Burden:", "Show that removing fares produces benefits greater than the cost of replacing fare revenue."),
-                    ("Framework:", "The round should be decided by who gains and who pays: a policy that shifts costs from those least able to pay towards those most able is preferable when the total benefit is comparable."),
-                    ("Contention 1, access:", "Claim: fares stop low-income people from reaching jobs and services. Warrant: transport is a fixed cost that takes a larger share of a small income. Impact: removing it widens the area in which people can work and study. Pre-emption: discounted passes exist, but they require applications and proof of eligibility that many eligible people never complete."),
-                    ("Contention 2, congestion and emissions:", "Claim: free fares move some journeys from cars to public transport. Warrant: price is one of the factors people weigh when choosing how to travel. Impact: fewer car journeys reduce congestion and emissions for everyone in the city."),
-                    ("Weighing:", "Contention 1 is the more certain benefit and reaches the people most affected, so it leads; contention 2 is larger in scale but less certain, so it is framed as an additional reason, not the case's foundation."),
-                    ("Likely opposition and prepared answer:", "Opposition will say the money is better spent on more frequent services. The answer: frequency helps people who already ride; free fares reach people currently priced out, and the two are not mutually exclusive."),
+                    ("What we have to prove:", "That removing fares produces benefits greater than the cost of replacing fare revenue."),
+                    ("Opening:", "For a family on a low income, the bus fare to work can be the difference between taking a job and turning it down. Today we will show two arguments that prove free public transport is worth what it costs."),
+                    ("Argument 1, access:", "Point: fares stop low-income people from reaching jobs and services. Explanation: transport is a fixed cost that takes a larger share of a small income. Why it matters: removing it widens the area in which people can work and study. Answer built in: discounted passes exist, but they require applications and proof of eligibility that many eligible people never complete."),
+                    ("Argument 2, congestion and emissions:", "Point: free fares move some journeys from cars to public transport. Explanation: price is one of the things people consider when choosing how to travel. Why it matters: fewer car journeys reduce congestion and emissions for everyone in the city."),
+                    ("Order:", "Argument 1 is the more certain benefit and reaches the people most affected, so it goes first; argument 2 is larger in scale but less certain, so it is an additional reason, not the case's foundation."),
+                    ("If they say:", "The money is better spent on more frequent services."),
+                    ("We answer:", "Frequency helps people who already ride; free fares reach people currently priced out, and the two are not mutually exclusive."),
+                    ("Closing line:", "That is why free fares are the fairest way to pay for the buses a whole city depends on."),
                 ]}},
-                "Notice what the outline does not contain: a long introduction, rhetorical questions or a list of statistics without warrants. Every line either defines the debate, proves something or tells the judge how to compare.",
+                "Notice what the outline does not contain: a long introduction, rhetorical questions or a list of statistics without explanations. Every line either defines the debate, proves something, answers the other side or tells the judge what to remember.",
             ]),
             ("How case structure changes by format", [
                 {"h3": "Public Forum (PF)"},
-                "A four-minute constructive usually fits two contentions, each with evidence, and sometimes a short framework. Because you often do not know your side until shortly before the round, write a case for each side and keep them consistent in style. Put pre-emption into the second constructive if you speak second.",
+                "A four-minute constructive usually fits two arguments, each with evidence, and sometimes a short framework. Because you often do not know your side until shortly before the round, write a case for each side and keep them consistent in style. Put answers to the other side into the second constructive if you speak second.",
                 {"h3": "Lincoln-Douglas (LD)"},
                 "The case is built around a value and a criterion, followed by contentions that each show how your side meets the criterion. A weak link between contention and criterion is the first thing a good negative will attack, so state it explicitly at the end of every contention.",
                 {"h3": "British Parliamentary (BP)"},
@@ -630,28 +634,28 @@ GUIDES = {
             ("Checklist before you call the case finished", [
                 {"list": [
                     "Can you state the whole case in two sentences?",
-                    "Does every contention have a warrant you could explain without your notes?",
+                    "Does every argument have an explanation you could give without your notes?",
                     "Is every piece of evidence one you have read in the original, with a full citation?",
-                    "Does each contention say why it matters more than what the other side will argue?",
-                    "Have you written down the strongest response to each contention, and your answer to it?",
+                    "Does each argument say why it matters, and why that matters more than what the other side will argue?",
+                    "Have you written an \"If they say…\" answer to the strongest response to each argument?",
                     "Does it fit in the time with room to slow down?",
                 ]},
-                "If any answer is no, fix that before you practise delivery. Polishing the speech of a case with a missing warrant only makes the gap harder to see.",
+                "If any answer is no, fix that before you practise delivery. Polishing the speech of a case with a missing explanation only makes the gap harder to see.",
             ]),
             ("Where {product} helps", [
-                "Once you have a draft, attack it before an opponent does. Paste a contention into Attack to see which link breaks first, use Brainstorm when you need more angles at step four, and use Factoids to research a single statement you want to rely on. If you would rather start from a structure, the case generator produces a draft with a thesis, framework, contentions and a predicted opposing case, which you can then cut and rewrite with the steps above.",
+                "Once you have a draft, attack it before an opponent does. Paste an argument into Attack to see which link breaks first, use Brainstorm when you need more angles at step four, and use Factoids to research a single statement you want to rely on. If you would rather start from a draft, the case generator writes a ready-to-read case in the same shape: an opening, arguments with explanation, evidence and why it matters, \"If they say… we answer…\" replies, a closing line and sources. Cut and rewrite it with the steps above.",
             ]),
         ],
         "faqs": [
-            ("How many contentions should a debate case have?", "Usually two to four. Public Forum constructives often fit two; formats with longer speeches can take three or four. Fewer well-defended contentions beat many thin ones."),
-            ("What is the difference between a claim and a warrant?", "The claim is what you say is true; the warrant is the reason it is true. Judges vote on warrants, so a claim without one is an assertion that the other side can dismiss."),
+            ("How many contentions should a debate case have?", "Usually two to four arguments, which some formats call contentions. Public Forum constructives often fit two; formats with longer speeches can take three or four. Fewer well-defended arguments beat many thin ones."),
+            ("What is the difference between a claim and a warrant?", "The claim is what you say is true; the warrant is the reason it is true. In a case, they are the point and its explanation. Judges vote on the reasons, so a claim without one is an assertion that the other side can dismiss."),
             ("How long does it take to write a debate case?", "A first draft can take an hour once you have researched the topic. Expect to revise it several times after practice rounds expose its weak points."),
             ("Should I write my case word for word?", "In formats with prepared constructives, such as Public Forum and Lincoln-Douglas, most debaters do. In impromptu formats like BP and WSDC, prepare an outline and key lines instead."),
-            ("How do I make a case harder to attack?", "Explain every warrant, use evidence you have checked, pre-empt the most obvious response inside each contention, and attack the draft yourself before the round."),
+            ("How do I make a case harder to attack?", "Explain why every point is true, use evidence you have checked, answer the most obvious response inside each argument, and attack the draft yourself before the round."),
         ],
     },
     "debate-topics-for-students": {
-        "modified": "2026-10-23",
+        "modified": "2026-10-28",
         "features": [
             ("Topics by level", "Starter motions for new debaters, intermediate motions with more technical clash, and advanced motions for experienced teams."),
             ("Topics by format", "Motion wording for BP and WSDC, resolutions for Public Forum and value resolutions for Lincoln-Douglas."),
@@ -732,7 +736,7 @@ GUIDES = {
                     "Rerun the same topic with sides swapped. The second round is usually much better, because each team now knows the other side's best arguments.",
                 ]},
                 "For a quick random pick, the [free debate motion generator](/tools/debate-motion-generator) draws a practice motion by topic and difficulty, with no account.",
-                "In {product}, start a Current Debate with the motion and run Brainstorm to see angles for both sides, generate a case with its predicted opposing case, or run a Sparring round against the AI when there is no second team available.",
+                "In {product}, start a Current Debate with the motion and run Brainstorm to see angles for both sides, generate a case with \"If they say…\" answers to the other side, or run a Sparring round against the AI when there is no second team available.",
             ]),
         ],
         "faqs": [
@@ -827,7 +831,7 @@ GUIDES = {
     },
     "debateowl-vs-chatgpt": {
         "software": True,
-        "modified": "2026-10-27",
+        "modified": "2026-10-28",
         "features": [
             ("A general assistant", "ChatGPT can brainstorm, explain, draft and revise on any subject, including debate."),
             ("A debate workspace", "{product} organises prep around one motion at a time, with structured cases, an AI opponent, a timer and judged practice rounds."),
@@ -838,7 +842,7 @@ GUIDES = {
                 "ChatGPT is a general-purpose AI assistant. {product} is a debate practice workspace. Both use large language models, but they are designed for different jobs. If you want to explore an idea, learn background on a topic or tighten a paragraph, a general assistant is flexible and fast. If you want to prepare a specific motion, practise against an opponent at real speech times and get a verdict on your round, a tool built around debate structure saves the setup you would otherwise do by hand in every conversation.",
                 "Many debaters use both. This page explains where each is stronger so you can decide what fits your preparation.",
                 {"table": {"caption": "{product} vs ChatGPT for debate prep (as of October 2026)", "head": ["Feature", "{product}", "ChatGPT"], "rows": [
-                    ["Structured case output", "Every case has a thesis, a framework, contentions with warrants and impacts, the likely opposing case and counters", "Whatever structure you ask for, in each conversation"],
+                    ["Structured case output", "Every case has an opening, arguments with explanation, evidence and why it matters, \"If they say… we answer…\" replies, a closing line and sources", "Whatever structure you ask for, in each conversation"],
                     ["Saved sources (Library)", "Sources you add to a debate's Library are given to its prep tools", "You paste the motion and your sources into each new conversation"],
                     ["Web research with a source list", "Generate researches the motion on the web and lists the sources it found; Ask can answer with citations", "Not tied to one debate; nothing is saved to a Library"],
                     ["Timed practice round with a verdict", "Sparring runs School 4-6-6-3, Lincoln-Douglas and Public Forum rounds, times each speech and ends with a verdict", "No built-in round, timing or verdict; you role-play and keep time yourself"],
@@ -862,7 +866,7 @@ GUIDES = {
                 {"h3": "One motion, one place"},
                 "In {product}, everything belongs to a Current Debate: the motion, the Library sources you have added, generated cases, Attack analyses, practice rounds and debriefs. The prep tools read that context, so you never paste the motion and your research into a new conversation.",
                 {"h3": "Structured output"},
-                "Generated cases always have the same parts: thesis, framework, contentions with warrants and impacts, the case the other side is likely to run, and counters to it. Attack always returns ranked weaknesses that quote the attacked words, with a response to say in round, cross-examination questions and a weighing analysis. Fixed structure makes the output easier to check and to turn into speeches.",
+                "Generated cases always have the same parts: an opening, arguments with explanation, evidence and why each matters, \"If they say… we answer…\" replies to the other side, a closing line and a source list. Attack always returns ranked weaknesses that quote the attacked words, with a response to say in round, cross-examination questions and a weighing analysis. Fixed structure makes the output easier to check and to turn into speeches.",
                 {"h3": "Timed practice rounds"},
                 "Sparring runs full rounds against an AI opponent in School 4-6-6-3, Lincoln-Douglas and Public Forum, with each speech timed, and ends with a verdict that names the reason for the decision. Crossfire drills cross-examination in either direction. A speech timer covers Standard, Lincoln-Douglas, Public Forum and Policy speech orders.",
                 {"h3": "Sources you control"},
@@ -871,14 +875,14 @@ GUIDES = {
             ("Worked example: the same task in both tools", [
                 {"example": {"title": "Task: prepare to answer the opposition on This house would make voting compulsory", "rows": [
                     ("In a general chat:", "You describe the motion, your side and your format, then ask for the opposition's arguments. You get a useful list. To get responses, you ask again; to check one argument in depth, you paste it back; to practise, you would need to role-play a round and keep track of time yourself."),
-                    ("In {product}:", "You start a Current Debate with the motion, generate your proposition case and read the predicted opposition case it includes. You paste the strongest opposition argument into Attack, which returns its weakest link, a response to say and a cross-ex question. You import the questions into Crossfire to practise them, then run a timed Sparring round and read the verdict."),
+                    ("In {product}:", "You start a Current Debate with the motion, generate your proposition case and read its \"If they say…\" answers to the opposition. You paste the strongest opposition argument into Attack, which returns its weakest link, a response to say and a cross-ex question. You import the questions into Crossfire to practise them, then run a timed Sparring round and read the verdict."),
                     ("The difference:", "Individual sentences can be similar in quality. What changes is how much setup you repeat, and whether you end up practising a round or only reading text."),
                 ]}},
             ]),
             ("Which should you use?", [
                 {"list": [
                     "Learning about a topic from scratch: a general assistant is a good start.",
-                    "Writing a case for a specific motion: a debate workspace gives a consistent structure and a predicted opposing case.",
+                    "Writing a case for a specific motion: a debate workspace gives a consistent structure and answers to what the other side will say.",
                     "Finding the weak point in an opposing argument: a tool that returns structured weaknesses and responses is faster to use in prep.",
                     "Practising speeches and rounds: you need timing, an opponent and a verdict, which a general chat does not provide.",
                     "Polishing wording: either works; use the one you are already in.",
@@ -956,55 +960,56 @@ GUIDES = {
         ],
     },
     "argument-flowchart": {
-        "modified": "2026-10-21",
+        "modified": "2026-10-28",
         "features": [
-            ("Visual clash maps", "Put the thesis, each argument, the attacks on it and your rebuttals on one canvas, so you can see where the round will be decided."),
+            ("Visual clash maps", "Put your case's main line, each argument, the attacks on it and your answers on one canvas, so you can see where the round will be decided."),
             ("Link and strength tracking", "Mark each argument strong, moderate or weak, and connect nodes with support, attack and rebuttal links."),
             ("Saved with your debate", "Flowcharts save to the Current Debate next to its case and rebuttals, and export as a PNG for teammates."),
         ],
         "sections": [
             ("Why map arguments at all", [
-                "Arguments are chains: a claim depends on a warrant, the warrant on an assumption, and the impact on all of them. When one link breaks, the whole contention falls. A flowchart makes the chain visible, so you can see which link the other side will attack and which link of theirs you should attack.",
-                "A map also shows what a written case hides. Two contentions that rely on the same assumption look independent on paper; on a map they share a node, and one good response takes out both.",
+                "Arguments are chains: a point depends on its explanation, the explanation on an assumption, and why it matters on all of them. When one link breaks, the whole argument falls. A flowchart makes the chain visible, so you can see which link the other side will attack and which link of theirs you should attack.",
+                "A map also shows what a written case hides. Two arguments that rely on the same assumption look independent on paper; on a map they share a node, and one good response takes out both.",
             ]),
             ("How the {product} flowchart works", [
-                "A new flowchart starts with a thesis, three example arguments, an opponent attack and a rebuttal, all of which you can edit or delete. Each node has a label, a description and a type:",
+                "A new flowchart starts with a top node for your case's main line, three example arguments, an opponent attack and a rebuttal, all of which you can edit or delete. Each node has a label, a description and a type:",
                 {"list": [
-                    "Thesis: the position your side has to prove.",
-                    "Argument: a contention, rated strong, moderate or weak.",
+                    "Thesis: your case's main line, the one sentence your side has to prove.",
+                    "Argument: one of your arguments, rated strong, moderate or weak.",
                     "Attack: an opposing response to one of your arguments.",
                     "Rebuttal: your answer to an attack.",
                     "Dropped: an argument nobody answered.",
                 ]},
                 "Links between nodes are support, attack or rebuttal, each drawn in its own style. Save the chart to the Current Debate, load it again later, or export it as an image.",
+                "A generated case can build the map for you. Choose Flowcharts under the case: the opening's \"we will show\" line goes at the top, each argument becomes a node with its point and evidence, each \"If they say…\" claim becomes an attack, and our answer becomes the rebuttal to it.",
             ]),
             ("Build from the motion outward", [
                 {"steps": [
-                    "Write the thesis as one sentence: what your side must prove for the motion.",
-                    "Add each contention as an argument node and link it to the thesis. Rate it honestly; a weak node is one to fix or cut.",
-                    "For each contention, add the strongest attack you expect. If you have generated a case, the predicted opponent case is the place to find them.",
+                    "Write the main line as one sentence: what your side must prove for the motion.",
+                    "Add each argument as a node and link it to the main line. Rate it honestly; a weak node is one to fix or cut.",
+                    "For each argument, add the strongest attack you expect. If you have generated a case, its \"If they say…\" claims are the place to find them.",
                     "Add your rebuttal to each attack. Where you cannot write one, the map has found your gap.",
-                    "Mark weighing at each clash in a node's description: why your side of that clash matters more.",
+                    "At each clash, note in a node's description why your side of it matters more.",
                 ]},
                 "Build the opposing case the same way on a second chart. Most rounds turn on two or three clashes, and the two maps side by side show which ones.",
             ]),
             ("Worked example: mapping one clash", [
                 {"example": {"title": "Motion: This house would ban single-use plastics", "rows": [
-                    ("Thesis:", "A ban cuts plastic pollution at its largest source."),
+                    ("Main line:", "A ban cuts plastic pollution at its largest source."),
                     ("Argument (strong):", "Single-use items are a large share of plastic waste and are rarely recycled."),
                     ("Attack:", "Substitutes such as paper and glass have a higher carbon footprint per use."),
                     ("Rebuttal:", "The comparison only holds if reusable items are used a few times; reuse, not substitution, is the goal of the ban."),
-                    ("Weighing note:", "Plastic pollution lasts for centuries and cannot be reversed, while the footprint of substitutes falls with every reuse."),
+                    ("Why ours matters more:", "Plastic pollution lasts for centuries and cannot be reversed, while the footprint of substitutes falls with every reuse."),
                 ]}},
-                "The map makes it obvious that the round turns on the substitution clash. That is where the rebuttal speech and the weighing should go.",
+                "The map makes it obvious that the round turns on the substitution clash. That is where the rebuttal speech and the comparison should go.",
             ]),
             ("Use the map in your speeches", [
-                "Before you speak, look for the path that wins: the strongest argument still standing after the attacks, and the weighing that makes it outweigh. Speak to that path and drop the rest. A good map helps you collapse instead of spreading yourself thin.",
+                "Before you speak, look for the path that wins: the strongest argument still standing after the attacks, and the reason it matters more than theirs. Speak to that path and drop the rest. A good map helps you collapse instead of spreading yourself thin.",
                 "During a round, a written flow is faster than any canvas. Use the flowchart to prepare before the round and to review the clashes after it, and keep your in-round flow on paper or a laptop.",
             ]),
         ],
         "faqs": [
-            ("What is an argument flowchart in debate?", "A diagram of a case: the thesis, the arguments that support it, the attacks on them and the responses, joined by links that show what depends on what."),
+            ("What is an argument flowchart in debate?", "A diagram of a case: its main line, the arguments that support it, the attacks on them and the answers, joined by links that show what depends on what."),
             ("Is a flowchart the same as flowing?", "No. Flowing is note-taking during a round, speech by speech. A flowchart is a map you build before or after a round to plan and review the clash."),
             ("Can I save and share a flowchart?", "Yes. Save it to the Current Debate to load it later, or export it as a PNG image to share with a partner or coach."),
             ("How many arguments should a flowchart have?", "As many as the case has, but the useful part is the two or three clashes that decide the round. If the map is too crowded to read, collapse it to those."),
@@ -1228,7 +1233,7 @@ GUIDES = {
         ],
     },
     "debate-evidence-finder": {
-        "modified": "2026-10-21",
+        "modified": "2026-10-28",
         "features": [
             ("Evidence leads", "Research directions for a claim: the kinds of sources that could support it and searches you can run to confirm it."),
             ("Citation checks", "A checklist for each source before it goes on a card: author, date, method and whether the quote says what you claim."),
@@ -1246,7 +1251,7 @@ GUIDES = {
             ("Finding evidence with {product}", [
                 {"steps": [
                     "Give Factoids a single statement from your case. It researches that statement and returns supporting factoids with citations, context and suggestions for how to use them.",
-                    "Generate a case. {product} researches the motion before it writes, so the draft comes with sources for its claims.",
+                    "Generate a case. {product} researches the motion before it writes, so each piece of evidence names its source and year, and the case ends with a source list: the organisation, the year, the claim it supports and the link.",
                     "Save the sources you trust to the Library. Active Library sources that fit a request are used by the other prep tools for that debate, so later answers draw on material you have checked.",
                     "Ask for counter-evidence too. Attack runs research on an argument and can point to sources that cut against it, which tells you what the other side may read.",
                 ]},
@@ -1327,7 +1332,7 @@ GUIDES = {
         ],
     },
     "debateowl-vs-windebate": {
-        "modified": "2026-10-27",
+        "modified": "2026-10-28",
         "software": True,
         "features": [
             ("Formats", "As of October 2026, WinDebate names six formats: Public Forum, Lincoln-Douglas, Congressional, Policy, World Schools and British Parliamentary. {product}'s Sparring rounds cover School 4-6-6-3, Lincoln-Douglas and Public Forum."),
@@ -1340,7 +1345,7 @@ GUIDES = {
                 "As of October 2026, its plans are Free ($0, with 1 research session, 10 drills and 1 Live Assistant round a month), Plus ($19.99/month, which adds voice input and playback and weekly progress) and Pro ($39.99/month). These details come from WinDebate's own site; check it for current terms.",
             ]),
             ("What {product} offers", [
-                "{product} is an AI debate prep and practice app with {mode_count} prep modes. You start a Current Debate for one motion, add sources to its Library, generate a structured case with a predicted opponent case, find weak links with Attack, research claims with Factoids, ask the Ask coach, drill cross-examination in Crossfire, and run timed Sparring rounds against an AI opponent that end in a verdict. A speech timer and an argument flowchart round it out.",
+                "{product} is an AI debate prep and practice app with {mode_count} prep modes. You start a Current Debate for one motion, add sources to its Library, generate a ready-to-read case with \"If they say…\" answers to the other side, find weak links with Attack, research claims with Factoids, ask the Ask coach, drill cross-examination in Crossfire, and run timed Sparring rounds against an AI opponent that end in a verdict. A speech timer and an argument flowchart round it out.",
                 "As of October 2026, {product} has a 3-day free trial with no credit card, then Pro at {pro_price}. The app is available in English, Spanish and Hungarian.",
             ]),
             ("Side by side", [
@@ -1370,7 +1375,7 @@ GUIDES = {
         ],
     },
     "debateowl-vs-debateclub": {
-        "modified": "2026-10-27",
+        "modified": "2026-10-28",
         "software": True,
         "features": [
             ("Audience", "As of October 2026, DebateClub describes itself as training for high-stakes conversations such as negotiations, pitches and meetings. {product} is built for school and competitive debate."),
@@ -1383,7 +1388,7 @@ GUIDES = {
                 "As of October 2026, its plans are Free ($0, one debate credit) and Pro ($19/month or $149/year). These details come from DebateClub's own site; check it for current terms.",
             ]),
             ("What {product} offers", [
-                "{product} is an AI debate prep and practice app for students and competitive debaters, with {mode_count} prep modes. It builds structured cases with a predicted opponent case, finds weak links with Attack, researches claims with Factoids, drills cross-examination in Crossfire and runs timed Sparring rounds in School 4-6-6-3, Lincoln-Douglas and Public Forum that end in a verdict. Voice mode lets you speak your speeches instead of typing them.",
+                "{product} is an AI debate prep and practice app for students and competitive debaters, with {mode_count} prep modes. It builds ready-to-read cases with \"If they say…\" answers to the other side, finds weak links with Attack, researches claims with Factoids, drills cross-examination in Crossfire and runs timed Sparring rounds in School 4-6-6-3, Lincoln-Douglas and Public Forum that end in a verdict. Voice mode lets you speak your speeches instead of typing them.",
                 "As of October 2026, {product} has a 3-day free trial with no credit card, then Pro at {pro_price}. The app is available in English, Spanish and Hungarian.",
             ]),
             ("Side by side", [
@@ -1391,7 +1396,7 @@ GUIDES = {
                     ["Built for", "School and competitive debate", "High-stakes conversations such as negotiations, pitches and meetings"],
                     ["Formats named", "Sparring rounds in School 4-6-6-3, Lincoln-Douglas and Public Forum", "None"],
                     ["Practice style", "Timed Sparring rounds you can type or speak, ending in a verdict", "Voice-only sparring with opponent personas and rhetorical technique scoring"],
-                    ["Prep tools", "Cases with a predicted opponent case, Attack, Factoids, Crossfire and a timer", "A prep screen for openings and counters"],
+                    ["Prep tools", "Cases with \"If they say…\" answers, Attack, Factoids, Crossfire and a timer", "A prep screen for openings and counters"],
                     ["Price", "3-day free trial, then {pro_price}", "Free tier with one debate credit; Pro $19/month or $149/year"],
                 ]}},
             ]),

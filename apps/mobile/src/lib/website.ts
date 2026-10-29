@@ -10,3 +10,8 @@ const websiteUrl = (Constants.expoConfig?.extra as { websiteUrl?: string } | und
 export function websitePage(path: '/terms' | '/privacy'): string {
   return `${websiteUrl}${path}`;
 }
+
+/** A shared item on the website, for when the app cannot show it. */
+export function websiteShareUrl(code: string): string {
+  return `${websiteUrl}/share/${encodeURIComponent(code)}`;
+}

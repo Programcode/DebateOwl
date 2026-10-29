@@ -7,6 +7,7 @@ import { useTranslation } from 'react-i18next';
 import { StyleSheet, View } from 'react-native';
 
 import { MainActionButton } from '@/components/buttons';
+import { markCelebration } from '@/components/celebration';
 import { DocumentScreen } from '@/components/document';
 import { DocumentHeader } from '@/components/document-header';
 import { Field } from '@/components/field';
@@ -153,6 +154,8 @@ export default function GenerateScreen() {
         sources: discoveredSources,
       });
       const notice = arrivalNotices({ recordFailed, sourcesFailed: sources.failed, assessed, truncated });
+      // The case just made celebrates when its document opens; reopening it later does not.
+      markCelebration(key);
       router.replace({
         pathname: '/case/[id]',
         params: { id: key, from: from ?? 'prepare', ...(notice ? { notice } : {}), ...(sources.failed > 0 ? { failed: String(sources.failed) } : {}) },

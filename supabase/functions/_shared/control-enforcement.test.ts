@@ -3,6 +3,7 @@ import {
   enforceAttackControls,
   enforceBrainstormControls,
   enforceGenerateControls,
+  enforceGenerateSources,
   isAskStreamingModeAllowed,
   validateControlInput,
 } from "./control-enforcement.ts";
@@ -220,6 +221,89 @@ Deno.test("generate controls fail closed when the model returns fewer contention
   if ((output.contentions as unknown[]).length !== 1) {
     throw new Error("underlength output must not be padded or fabricated");
   }
+});
+
+Deno.test("a Conclusor case without at least two reasons we win is rejected, not padded", () => {
+  for (const whyWeWin of [undefined, [], ["only one"], ["", "  ", "one"], "not a list"]) {
+    const output: Record<string, unknown> = { contentions: [{}, {}, {}], whyWeWin, metadata: {} };
+    let error: unknown;
+    try {
+      enforceGenerateControls(output, "pro", "custom", "standard", "conc");
+    } catch (caught) {
+      error = caught;
+    }
+    if (!(error instanceof Error) || !error.message.includes("Conclusor")) {
+      throw new Error(`conc output with whyWeWin=${JSON.stringify(whyWeWin)} must be rejected`);
+    }
+  }
+});
+
+Deno.test("an R2 case must back up the team's arguments and answer theirs, or it is rejected", () => {
+  const cases: Array<[string, Record<string, unknown>]> = [
+    ["no reinforce", { reinforce: [], counters: [{}, {}, {}, {}, {}], contentions: [], metadata: {} }],
+    ["only blank reinforce", { reinforce: [{ argument: "Our first", text: "  " }], counters: [{}, {}, {}, {}, {}], contentions: [], metadata: {} }],
+    ["too few answers", { reinforce: [{ argument: "Our first", text: "Backed up." }], counters: [{}, {}, {}], contentions: [], metadata: {} }],
+  ];
+  for (const [label, output] of cases) {
+    let rejected = false;
+    try {
+      enforceGenerateControls(output, "con", "custom", "standard", "r2");
+    } catch {
+      rejected = true;
+    }
+    if (!rejected) throw new Error(`R2 output with ${label} must be rejected`);
+  }
+
+  // New arguments from the model are dropped: R2 brings none.
+  const output: Record<string, unknown> = {
+    reinforce: [{ argument: "Our first", text: "Backed up." }],
+    counters: [{}, {}, {}, {}, {}],
+    contentions: [{ claim: "A new point", whyItMatters: "x" }],
+    metadata: {},
+  };
+  enforceGenerateControls(output, "con", "custom", "standard", "r2");
+  if ((output.contentions as unknown[]).length !== 0) throw new Error("R2 must not keep new arguments");
+});
+
+Deno.test("why it matters is filed under the key saved cases already use", () => {
+  const output: Record<string, unknown> = {
+    contentions: [{ claim: "a", whyItMatters: "People reach work." }, { claim: "b", impact: "Kept.", whyItMatters: "Ignored." }],
+    metadata: {},
+  };
+  enforceGenerateControls(output, "pro", "custom", "brief", "r1");
+  const [first, second] = output.contentions as Array<Record<string, unknown>>;
+  if (first.impact !== "People reach work." || "whyItMatters" in first) throw new Error("whyItMatters must move to impact");
+  if (second.impact !== "Kept." || "whyItMatters" in second) throw new Error("an existing impact must win");
+});
+
+Deno.test("case sources keep only links the research or Library supplied", () => {
+  const output: Record<string, unknown> = {
+    sources: [
+      { org: "UNICEF", year: 2025, claim: "Age limits alone do not keep children safe", url: "https://www.unicef.org/report#section" },
+      { org: "Made Up Institute", year: "2024", claim: "Invented figure", url: "https://made-up.example/study" },
+      { org: "Library page", claim: "From the student's sources", url: "https://library.example/page/" },
+      { org: "Script", claim: "Not a web link", url: "javascript:alert(1)" },
+      { org: "", claim: "" },
+      "not a source",
+      { org: "Educo", claim: "1 in 5 pupils are bullied" },
+    ],
+  };
+  enforceGenerateSources(output, ["https://www.unicef.org/report", "https://library.example/page"]);
+  const sources = output.sources as Array<Record<string, unknown>>;
+  const expected = [
+    { org: "UNICEF", claim: "Age limits alone do not keep children safe", year: "2025", url: "https://www.unicef.org/report#section" },
+    { org: "Made Up Institute", claim: "Invented figure", year: "2024" },
+    { org: "Library page", claim: "From the student's sources", url: "https://library.example/page/" },
+    { org: "Script", claim: "Not a web link" },
+    { org: "Educo", claim: "1 in 5 pupils are bullied" },
+  ];
+  if (JSON.stringify(sources) !== JSON.stringify(expected)) {
+    throw new Error(`unexpected sources: ${JSON.stringify(sources)}`);
+  }
+
+  const malformed: Record<string, unknown> = { sources: "UNICEF 2025" };
+  enforceGenerateSources(malformed, []);
+  if ("sources" in malformed) throw new Error("a non-list sources field must be removed");
 });
 
 Deno.test("generate controls fail closed for missing or invalid exact-length fields", () => {

@@ -15,7 +15,7 @@ export function ActionMenu({ visible, title, items, cancelLabel, onSelect, onClo
       <Pressable accessibilityLabel={cancelLabel} onPress={onClose} style={[styles.backdrop, placement === 'top' ? styles.top : styles.bottom]}>
         <View accessibilityRole="menu" testID={testID} style={[styles.menu, placement === 'top' ? styles.menuTop : styles.menuBottom, { backgroundColor: colors.card, borderColor: colors.line }]}>
           {title ? (
-            <Text tone="faint" style={styles.title}>
+            <Text tone="faint" style={styles.title} maxFontSizeMultiplier={1.6}>
               {title}
             </Text>
           ) : null}
@@ -30,7 +30,7 @@ export function ActionMenu({ visible, title, items, cancelLabel, onSelect, onClo
                 onSelect(item.key);
               }}
               style={({ pressed }) => [styles.item, (index > 0 || title) && { borderTopWidth: 1, borderTopColor: colors.line }, pressed && { backgroundColor: colors.line }]}>
-              <Text style={[styles.label, item.destructive && { color: colors.destructive }, item.disabled && { color: colors.tabInactive }]}>{item.label}</Text>
+              <Text style={[styles.label, item.destructive && { color: colors.destructive }, item.disabled && { color: colors.tabInactive }]} maxFontSizeMultiplier={1.6}>{item.label}</Text>
               {item.icon ? <Icon name={item.icon} color={item.destructive ? colors.destructive : colors.foreground} size={21} /> : null}
             </Pressable>
           ))}

@@ -5,12 +5,17 @@ import { describe, expect, it } from "vitest";
 // @ts-expect-error -- plain ESM script without type declarations
 import { assertNoUndeclared, assertStagingTarget, contentDrift, planSync, PRODUCTION_REF, STAGING_REF } from "../../../scripts/staging-sync.mjs";
 
-const staging = { ref: STAGING_REF, name: "debate-trainer-staging" };
-const production = { ref: PRODUCTION_REF, name: "debate-trainer" };
+const staging = { ref: STAGING_REF, name: "DebateOwl Staging" };
+const production = { ref: PRODUCTION_REF, name: "DebateOwl" };
 
 describe("staging sync target guard", () => {
-  it("accepts the staging project under its own name", () => {
-    expect(() => assertStagingTarget([production, staging], {})).not.toThrow();
+  it("accepts the staging project by its ref, whatever it is named", () => {
+    expect(assertStagingTarget([production, staging], {})).toBe(staging);
+    for (const name of ["debate-trainer-staging", "DebateOwl Staging", "Renamed again"]) {
+      expect(() => assertStagingTarget([production, { ref: STAGING_REF, name }], {})).not.toThrow();
+    }
+    // Older CLI output has only `id`.
+    expect(() => assertStagingTarget([{ id: STAGING_REF, name: "DebateOwl Staging" }], {})).not.toThrow();
   });
 
   it("refuses when SUPABASE_PROJECT_ID points anywhere else", () => {
@@ -18,9 +23,14 @@ describe("staging sync target guard", () => {
       .toThrow(/only targets staging/);
   });
 
-  it("refuses when the staging ref is missing or renamed", () => {
+  it("refuses when SUPABASE_PROJECT_ID is set to production even if staging is visible", () => {
+    expect(() => assertStagingTarget([staging], { SUPABASE_PROJECT_ID: ` ${PRODUCTION_REF} ` })).toThrow(/only targets staging/);
+    expect(() => assertStagingTarget([staging], { SUPABASE_PROJECT_ID: STAGING_REF })).not.toThrow();
+  });
+
+  it("refuses when the account cannot see the staging ref, even if a project is named like staging", () => {
     expect(() => assertStagingTarget([production], {})).toThrow(/cannot see/);
-    expect(() => assertStagingTarget([{ ref: STAGING_REF, name: "debate-trainer" }], {})).toThrow(/expected "debate-trainer-staging"/);
+    expect(() => assertStagingTarget([{ ref: PRODUCTION_REF, name: "DebateOwl Staging" }], {})).toThrow(/cannot see/);
   });
 });
 

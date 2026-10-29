@@ -18,7 +18,7 @@ test("a student starts a debate and generates a case for it", { ...agentic, tags
     return data;
   }, { timeout: 15_000 }).toEqual([{ debates: { motion: MOTION } }]);
 
-  await agent.assert("The page shows a generated debate case: a thesis and several contentions, each with a claim and supporting reasoning.");
+  await agent.assert("The page shows a generated debate case: an opening and several arguments, each with a point and an explanation of why it is true.");
   if (LIVE) {
     // Recipes never assert on model wording; a judge can check that the case is on topic.
     await agent.assert(`The generated case argues about the motion "${MOTION}", not about an unrelated topic.`);
@@ -29,5 +29,5 @@ test("a student starts a debate and generates a case for it", { ...agentic, tags
   await agent.act("Open History and load the debate case you generated.");
   await expect(screen.getByRole("button", "Regenerate Arguments")).toBeVisible();
   if (!LIVE) await expect(fakeAnswer(screen)).toBeVisible();
-  await agent.assert("A debate case with a thesis and contentions is open again on screen.");
+  await agent.assert("A debate case with an opening and arguments is open again on screen.");
 });

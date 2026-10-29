@@ -1,7 +1,7 @@
 import { beforeAll, describe, expect, it } from 'vitest';
 import i18n from '@/i18n';
 import { routeLoaders } from '@/lib/route-modules';
-import { edgeLabel, editNodeData, flowchartFromCase, nodeDescription, nodeLabel, starterFlowchart, studentNodeData, type FlowNodeData } from '@/lib/flowchart';
+import { caseHasFlowchart, edgeLabel, editNodeData, flowchartFromCase, nodeDescription, nodeLabel, starterFlowchart, studentNodeData, type FlowNodeData } from '@/lib/flowchart';
 import type { GenerateOutput } from '@/lib/ai/schemas/generate';
 
 const en = i18n.getFixedT('en');
@@ -105,5 +105,35 @@ describe('flowchartFromCase', () => {
         const xs = nodes.map((node) => node.position.x);
         expect(Math.max(...xs) - Math.min(...xs)).toBeLessThanOrEqual(900);
         expect(new Set(nodes.map((node) => `${node.position.x},${node.position.y}`)).size).toBe(nodes.length);
+    });
+
+    it('builds a new case\'s attacks from "If they say…", and a Conclusor case from its reasons why we win', () => {
+        const fresh = {
+            ...result,
+            predictedOpponentCase: undefined,
+            contentions: [{ ...result.contentions[0], title: 'Cleaner air' }],
+            counters: [{ targetArgument: 'Deliveries get harder', counterpoint: 'Night delivery windows' }],
+        } as GenerateOutput;
+        const built = flowchartFromCase(fresh, en);
+        expect(built.nodes.map((node) => [node.id, node.data.description])).toEqual([
+            ['thesis', 'Cities should ban cars downtown'],
+            ['c-0', 'Cleaner air\nAir quality improves\nNO2 fell 30% in Oslo'],
+            ['a-0', 'Deliveries get harder'],
+            ['r-0', 'Night delivery windows'],
+        ]);
+        expect(built.edges.map((edge) => `${edge.source}>${edge.target}`)).toEqual(['thesis>c-0', 'c-0>a-0', 'a-0>r-0']);
+
+        // R2 brings no new arguments: its backed-up arguments become the argument nodes.
+        const r2 = { ...fresh, contentions: [], reinforce: [{ argument: 'Our first argument: cleaner air', text: 'NO2 fell 30% in Oslo.' }] } as GenerateOutput;
+        expect(caseHasFlowchart(r2)).toBe(true);
+        expect(flowchartFromCase(r2, en).nodes.map((node) => node.data.description).slice(0, 3)).toEqual([
+            'Cities should ban cars downtown', 'Our first argument: cleaner air\nNO2 fell 30% in Oslo.', 'Deliveries get harder',
+        ]);
+
+        const conc = { ...fresh, contentions: [], counters: [], whyWeWin: ['They never answered air quality', 'Shops did fine'] } as GenerateOutput;
+        expect(caseHasFlowchart(conc)).toBe(true);
+        expect(flowchartFromCase(conc, en).nodes.map((node) => node.data.description)).toEqual([
+            'Cities should ban cars downtown', 'They never answered air quality', 'Shops did fine',
+        ]);
     });
 });

@@ -297,7 +297,7 @@ export default function FlowchartScreen() {
     />
   );
   const page = (
-    <ScrollView contentInsetAdjustmentBehavior="automatic" contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 32 }]}>
+    <ScrollView contentInsetAdjustmentBehavior="automatic" automaticallyAdjustKeyboardInsets keyboardShouldPersistTaps="handled" keyboardDismissMode="interactive" contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 32 }]}>
       <View style={styles.head}>
         <Text accessibilityRole="header" weight="display" style={styles.title}>
           {t('nav.flowchart')}

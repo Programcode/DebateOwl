@@ -3,9 +3,10 @@ import type { AskOutput } from '@debatelab/core/ai/schemas/ask';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ActivityIndicator, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
+import { ActivityIndicator, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { AppTextInput } from '@/components/app-text-input';
 import { AskAnswer } from '@/components/ask-answer';
 import { AskChatPane } from '@/components/ask-chat-list';
 import { AskHistory } from '@/components/ask-history';
@@ -20,6 +21,8 @@ import { ContextLine } from '@/components/context-line';
 import { DailyUsageLine } from '@/components/tool-form';
 import { Text } from '@/components/text';
 import { appendDictation, DictationButton } from '@/components/voice';
+import { useKeyCommand } from '@/lib/key-commands';
+import { announceAnswer } from '@/lib/a11y';
 import { AIError, isAbortError, type AIErrorKind, type ResponseExtras } from '@/lib/ai-request';
 import { askOnce, canStream, isFinalAskError, isMessageWithinBudget, streamAsk, type AskMode, type AskOptions } from '@/lib/ask';
 import { pickAskFiles, readAskFiles, type AskAttachment } from '@/lib/ask-attachments';
@@ -206,6 +209,11 @@ export default function AskScreen() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loading, lastRole, messages, userId]);
 
+  // ⌘↩ sends, as the send button does.
+  useKeyCommand('cmd+enter', () => {
+    if (!busy && input.trim()) void send(input, messages, attachments);
+  });
+
   const send = async (text: string, history: ChatMessage[], files: AskAttachment[] = []) => {
     const question = text.trim();
     if (!question || !userId) return;
@@ -330,6 +338,7 @@ export default function AskScreen() {
       setStreaming(null);
       partial.current = '';
       setMessages((previous) => [...previous, { id: nextId(), role: 'assistant', content: result.response, timestamp: Date.now(), output }]);
+      announceAnswer(result.response);
     } catch (cause) {
       if (!isCurrent() || isAbortError(cause)) return;
       setStreaming(null);
@@ -519,7 +528,7 @@ export default function AskScreen() {
         {messages.length === 0 && streaming === null && !busy ? (
           <View style={styles.empty}>
             <Owl pose="point" size={112} />
-            <Text weight="display" style={styles.emptyTitle}>
+            <Text accessibilityRole="header" weight="display" style={styles.emptyTitle}>
               {t('askChat.startConversation')}
             </Text>
             <Text tone="secondary" style={styles.emptyBody}>
@@ -609,7 +618,7 @@ export default function AskScreen() {
               <Icon name="paperclip" color={colors.secondary} size={20} />
             </Pressable>
             <DictationButton capture={dictation} startLabel={t('askChat.startVoice')} stopLabel={t('askChat.stopListening')} inline />
-            <TextInput
+            <AppTextInput
               value={input}
               onChangeText={setInput}
               placeholder={dictation.listening ? t('askChat.placeholderListening') : t('mobile.ask.placeholder')}
@@ -702,7 +711,7 @@ function Thinking() {
   }, []);
   return (
     <View style={styles.thinking} accessibilityRole="progressbar" accessibilityLiveRegion="polite">
-      <OwlAvatar pose="coach" size={32} />
+      <OwlAvatar pose="coach" size={32} blink />
       <Text tone="secondary" style={styles.thinkingText}>
         {t(THINKING[index])}
       </Text>

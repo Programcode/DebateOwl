@@ -312,6 +312,15 @@ describe('after a write', () => {
     await expect(cache.cachedRead('user-a', 'sources', 'debate-2', offlineFailure)).resolves.toEqual([{ id: 'source-2' }]);
   });
 
+  it('tells the offline queue a source write that got no answer from one the server refused', async () => {
+    const cache = await load();
+    cache.setCacheOwner('user-a');
+    supabase.results.push({ data: null, error: { message: 'TypeError: Network request failed' }, status: 0 });
+    await expect(cache.updateSource('user-a', 'debate-1', 'source-1', { title: 'Offline' })).rejects.toMatchObject({ unreachable: true });
+    supabase.results.push({ data: null, error: { message: 'new row violates row-level security policy' }, status: 403 });
+    await expect(cache.setSourcesActive('user-a', 'debate-1', ['source-1'], false)).rejects.toMatchObject({ unreachable: false });
+  });
+
   it('a delete whose row was already gone still drops every list and count that may hold it', async () => {
     const cache = await load();
     cache.setCacheOwner('user-a');

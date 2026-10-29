@@ -8,14 +8,17 @@ import {
   type CrossfireState,
   type CrossfireTurn,
 } from '@debatelab/core/crossfire/schemas';
+import { formatRoundTime } from '@debatelab/core/sparring/formats';
 import { combineDelivery, measureDelivery } from '@debatelab/core/voice/delivery';
 import { Stack, useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useReducer, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ActivityIndicator, AppState, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
+import { ActivityIndicator, AppState, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { AppTextInput } from '@/components/app-text-input';
 import { MainActionButton, TextButton } from '@/components/buttons';
+import { Celebration } from '@/components/celebration';
 import { ChoiceCards, CrossfireDebriefDocument, CrossfireTranscript } from '@/components/crossfire-views';
 import { DocumentScreen, DocumentTitle, SectionHeading } from '@/components/document';
 import { DocumentHeader } from '@/components/document-header';
@@ -30,6 +33,8 @@ import { Text } from '@/components/text';
 import { TimerRing } from '@/components/timer-ring';
 import { ToolTitle, WorkingIn } from '@/components/tool-form';
 import { appendDictation, DeliverySummary, OpponentVoiceBar, VoiceMicControl, VoiceModeSwitch } from '@/components/voice';
+import { useKeyCommand } from '@/lib/key-commands';
+import { announceAnswer } from '@/lib/a11y';
 import { abortError, AIError, isAbortError, type ResponseExtras, untilAborted } from '@/lib/ai-request';
 import { useAuth } from '@/lib/auth';
 import { haptics } from '@/lib/haptics';
@@ -130,6 +135,8 @@ export default function CrossfireScreen() {
   const roundQuota = useSessionQuota('crossfire');
   // Start waits for the round's cost; a second tap meanwhile does nothing.
   const [checkingQuota, setCheckingQuota] = useState(false);
+  // The round whose debrief arrived while this screen watched celebrates once; a kept or restarted one does not.
+  const [celebrating, setCelebrating] = useState<string | null>(null);
   // The debate chosen when the round started; null for one-off rounds.
   const debateTarget = useRef<string | null>(crossfireDraft.get()?.debateId ?? null);
   const [draftTurn, setDraftTurnState] = useState('');
@@ -277,9 +284,10 @@ export default function CrossfireScreen() {
       });
       if (controller.signal.aborted) return;
       dispatch({ type: 'ai-turn-received', turn: nextTurn(snapshot.turns.length + 1, 'ai', reply.type, reply.text) });
-      // The turn is back with the student; in a voice round the opponent says it aloud.
+      // The turn is back with the student; in a voice round the opponent says it aloud, otherwise VoiceOver reads the finished reply.
       haptics.turn();
-      if (spoken && live.current) opponentVoice.speak({ feature: 'crossfire', text: reply.text, voice: reply.voice, language: outputLanguage });
+      if (!spoken) announceAnswer(reply.text);
+      else if (live.current) opponentVoice.speak({ feature: 'crossfire', text: reply.text, voice: reply.voice, language: outputLanguage });
       afterResponse(forUser, debateId, extras);
       if (reply.signalToken) {
         const signalController = new AbortController();
@@ -322,6 +330,8 @@ export default function CrossfireScreen() {
       // The effect below saves the finished round from the state it reaches, with any signal that came in meanwhile.
       if (debateId) pendingRecord.current = { sessionId: snapshot.sessionId, forUser, debateId };
       dispatch({ type: 'debrief-received', debrief });
+      // Shown only if the reducer took the debrief: the screen checks the round reached complete.
+      setCelebrating(snapshot.sessionId);
       // Review choices cover the round; its last request clears them, as on the website.
       resetContextChoices('crossfire');
       afterResponse(forUser, debateId, extras);
@@ -427,6 +437,9 @@ export default function CrossfireScreen() {
     if (live.current) beginSession(debateId, forUser);
   };
 
+  // ⌘↩ submits the turn on an iPad keyboard.
+  useKeyCommand('cmd+enter', () => void submitTurn());
+
   const submitTurn = async () => {
     if (state.phase !== 'active' || !userId) return;
     // Stopping also withdraws a start still waiting for permission; the last words land in the box first.
@@ -477,6 +490,7 @@ export default function CrossfireScreen() {
     capture.cancel();
     debateTarget.current = null;
     dispatch({ type: 'session-reset' });
+    setCelebrating(null);
     setDraftTurn('');
     setFormError('');
     setNotice('');
@@ -594,21 +608,35 @@ export default function CrossfireScreen() {
   if (state.phase === 'complete') {
     // The measured facts of every turn the student spoke, added up, as the website's debrief shows them.
     const spokenDelivery = combineDelivery(state.turns.flatMap((turn) => (turn.delivery ? [turn.delivery] : [])));
+    const celebrate = celebrating === state.sessionId;
     return (
-      <DocumentScreen
-        testID="crossfire-complete"
-        header={<DocumentHeader backLabel={backLabel(t, from, 'practice')} actions={[]} />}
-        notice={notice}
-        actions={<MainActionButton label={t('crossfire.restart')} onPress={restart} />}>
-        <DocumentTitle title={t('crossfire.debriefTitle')} meta={state.config.resolution} />
-        <Text tone="secondary" style={styles.subtitle}>
-          {t('crossfire.debriefSubtitle')}
-        </Text>
-        <CrossfireDebriefDocument debrief={state.debrief} />
-        {spokenDelivery ? <DeliverySummary delivery={spokenDelivery} /> : null}
-        <SectionHeading title={t('crossfire.transcript')} />
-        <CrossfireTranscript turns={state.turns} />
-      </DocumentScreen>
+      <View style={styles.flex}>
+        <DocumentScreen
+          testID="crossfire-complete"
+          header={<DocumentHeader backLabel={backLabel(t, from, 'practice')} actions={[]} />}
+          notice={notice}
+          actions={<MainActionButton label={t('crossfire.restart')} onPress={restart} />}>
+          <DocumentTitle title={t('crossfire.debriefTitle')} meta={state.config.resolution} />
+          <Text tone="secondary" style={styles.subtitle}>
+            {t('crossfire.debriefSubtitle')}
+          </Text>
+          <CrossfireDebriefDocument debrief={state.debrief} holdEntrance={celebrate} />
+          {spokenDelivery ? <DeliverySummary delivery={spokenDelivery} /> : null}
+          <SectionHeading title={t('crossfire.transcript')} />
+          <CrossfireTranscript turns={state.turns} />
+        </DocumentScreen>
+        {celebrate ? (
+          <Celebration
+            eyebrow={t('crossfire.title')}
+            title={t('sparring.round.complete')}
+            stats={[
+              { key: 'concessions', label: t('crossfire.concessionsSecured'), value: state.debrief.concessionsSecured.length },
+              { key: 'time', label: t('export.sparringTimeUsed'), value: Math.max(0, Math.round((state.endedAt - state.startedAt) / 1000)), format: formatRoundTime },
+            ]}
+            onDone={() => setCelebrating(null)}
+          />
+        ) : null}
+      </View>
     );
   }
 
@@ -741,7 +769,7 @@ export default function CrossfireScreen() {
             </View>
             {voiceActive ? <VoiceMicControl capture={capture} onStart={startSpeaking} onStop={() => void capture.stop()} /> : null}
             <View style={[styles.inputRow, { borderColor: colors.border, backgroundColor: colors.input }]}>
-              <TextInput
+              <AppTextInput
                 value={draftTurn}
                 onChangeText={setDraftTurn}
                 maxLength={MAX_CROSSFIRE_TURN_CHARS}

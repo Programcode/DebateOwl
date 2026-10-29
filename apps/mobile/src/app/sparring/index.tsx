@@ -18,11 +18,13 @@ import { measureDelivery } from '@debatelab/core/voice/delivery';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { AppState, Keyboard, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, TextInput, useWindowDimensions, View } from 'react-native';
+import { AppState, Keyboard, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { AppTextInput } from '@/components/app-text-input';
 import { ActionMenu } from '@/components/action-menu';
 import { MainActionButton, TextButton } from '@/components/buttons';
+import { Celebration } from '@/components/celebration';
 import { DocumentScreen } from '@/components/document';
 import { DocumentHeader } from '@/components/document-header';
 import { Field } from '@/components/field';
@@ -32,22 +34,26 @@ import { LiveTopBar, MainRoundControl, RoundIconButton, SideControl } from '@/co
 import { SegmentedControl } from '@/components/segmented-control';
 import { ContextLine } from '@/components/context-line';
 import { SessionCostNote } from '@/components/session-cost-note';
-import { SparringScorecardScreen } from '@/components/sparring-views';
+import { SparringScorecardScreen, winnerText } from '@/components/sparring-views';
+import { SuccessCheck } from '@/components/success-check';
 import { Text } from '@/components/text';
 import { TimerRing } from '@/components/timer-ring';
 import { ToolTitle, WorkingIn } from '@/components/tool-form';
 import { appendDictation, OpponentVoiceBar, VoiceMicControl, VoiceModeSwitch } from '@/components/voice';
+import { useKeyCommand } from '@/lib/key-commands';
 import { AIError, isAbortError, untilAborted } from '@/lib/ai-request';
 import { useAuth } from '@/lib/auth';
 import { backLabel } from '@/lib/back-label';
 import { useDebates } from '@/lib/debate-context';
 import { fetchFeatureConfig } from '@/lib/feature-config';
+import { useContentWidth } from '@/lib/layout';
 import { openRefusal } from '@/lib/refusal';
 import { sessionQuotaRefusal, useSessionQuota } from '@/lib/session-quota';
 import { decideMotionTarget, shouldPrefillMotion } from '@/lib/motion';
 import { chooseMotionTarget } from '@/lib/motion-gate';
 import { opponentVoice } from '@/lib/opponent-voice';
 import { useSettings } from '@/lib/settings';
+import { announceAnswer } from '@/lib/a11y';
 import { attachSparring, judgeSparring, newSparringId, noteJudgedRound, SparringResponseError, sparringDraft, sparringTurn } from '@/lib/sparring';
 import { formatClock } from '@/lib/timer';
 import { tapTurnStart, useKeepAwakeWhile } from '@/lib/timer-signals';
@@ -131,6 +137,8 @@ export default function SparringScreen() {
   const voiceActive = Boolean(session?.voice) && voiceAvailability.available;
   const voiceActiveRef = useRef(voiceActive);
   voiceActiveRef.current = voiceActive;
+  // The round judged while this screen watched celebrates once; a round reopened or kept from earlier does not.
+  const [celebrating, setCelebrating] = useState<string | null>(null);
 
   // Another account starts with no round: the session slot was already cleared, and this screen's copy goes too.
   useEffect(() => {
@@ -185,6 +193,7 @@ export default function SparringScreen() {
       setRequest({ status: 'idle' });
       if (!completed) return;
       commit(completed);
+      setCelebrating(completed.id);
       // The server saved the judged round before it answered; file it in its debate.
       if (completed.debateId) {
         attachSparring(forUser, completed.id, completed.debateId, completed.userSide).catch((cause: unknown) => {
@@ -234,8 +243,9 @@ export default function SparringScreen() {
       setRequest({ status: 'idle' });
       if (!next) return;
       commit(next);
-      // In a voice round the opponent speaks its speech aloud.
-      if (spoken && live.current) opponentVoice.speak({ feature: 'sparring', text: generated.content, voice, language: outputLanguage });
+      // In a voice round the opponent speaks its speech aloud; otherwise VoiceOver reads the finished speech, never as it streams in.
+      if (!spoken) announceAnswer(generated.content);
+      else if (live.current) opponentVoice.speak({ feature: 'sparring', text: generated.content, voice, language: outputLanguage });
       if (next.phase === 'judging') void runJudge(next, forUser);
       else if (currentSparringTurn(next)?.speaker === 'user') tapTurnStart();
     } catch (cause) {
@@ -332,6 +342,9 @@ export default function SparringScreen() {
     if (live.current && owner.current === forUser && startAttempt.current === attempt) begin(side, debateId, forUser);
   };
 
+  // ⌘↩ submits the speech on an iPad keyboard.
+  useKeyCommand('cmd+enter', () => void submit());
+
   const submit = async () => {
     const before = sessionRef.current;
     // A second tap after the speech went in lands on the opponent's turn; it is not a rejected speech.
@@ -371,6 +384,7 @@ export default function SparringScreen() {
     setRequest({ status: 'idle' });
     setNotice('');
     setSubmissionError('');
+    setCelebrating(null);
     commit(null);
   };
 
@@ -494,16 +508,37 @@ export default function SparringScreen() {
   }
 
   if (session.phase === 'complete' && session.scorecard) {
+    const celebrate = celebrating === session.id;
     return (
-      <SparringScorecardScreen
-        session={{ ...session, scorecard: session.scorecard }}
-        from={from}
-        notice={notice}
-        onRestart={restart}
-        onDeleted={() => {
-          if (sessionRef.current?.id === session.id) restart();
-        }}
-      />
+      <View style={styles.flex}>
+        <SparringScorecardScreen
+          session={{ ...session, scorecard: session.scorecard }}
+          from={from}
+          notice={notice}
+          onRestart={restart}
+          onDeleted={() => {
+            if (sessionRef.current?.id === session.id) restart();
+          }}
+          holdEntrance={celebrate}
+        />
+        {celebrate ? (
+          <Celebration
+            eyebrow={t('sparring.round.complete')}
+            title={winnerText(t, session.scorecard.winner)}
+            stats={[
+              { key: 'score', label: t('sparring.scorecard.yourScore'), value: session.scorecard.userScore },
+              { key: 'speeches', label: t('export.sparringSpeeches'), value: session.speeches.length },
+              {
+                key: 'time',
+                label: t('export.sparringTimeUsed'),
+                value: Math.round(session.speeches.reduce((total, speech) => total + speech.timeUsedSeconds, 0)),
+                format: formatRoundTime,
+              },
+            ]}
+            onDone={() => setCelebrating(null)}
+          />
+        ) : null}
+      </View>
     );
   }
 
@@ -570,7 +605,8 @@ function LiveRound({
   const { t, i18n } = useTranslation();
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { width, height } = useWindowDimensions();
+  const { height } = useWindowDimensions();
+  const width = useContentWidth();
   const { colors } = useTheme();
   const [keyboard, setKeyboard] = useState(false);
   const [expanded, setExpanded] = useState(false);
@@ -645,7 +681,7 @@ function LiveRound({
                 {status}
               </Text>
               {judging ? (
-                <Icon name="check" color={colors.primary} size={Math.round(ringSize * 0.22)} />
+                <SuccessCheck size={Math.round(ringSize * 0.26)} haptic={false} />
               ) : (
                 <Text
                   weight="bold"
@@ -719,7 +755,7 @@ function LiveRound({
               {guidance}
             </Text>
             {voice ? <VoiceMicControl capture={voice.capture} onStart={voice.onStart} onStop={voice.onStop} disabled={timeExpired} /> : null}
-            <TextInput
+            <AppTextInput
               value={session.draft}
               onChangeText={onDraft}
               maxLength={MAX_SPARRING_SPEECH_CHARS}

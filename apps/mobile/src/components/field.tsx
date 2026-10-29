@@ -1,6 +1,7 @@
 import { forwardRef, useState } from 'react';
 import { StyleSheet, TextInput, View, type TextInputProps } from 'react-native';
 
+import { AppTextInput } from './app-text-input';
 import { Text } from './text';
 
 import { radius } from '@/theme/colors';
@@ -19,7 +20,7 @@ export const Field = forwardRef<TextInput, Props>(function Field({ label, hint, 
       <Text weight="medium" tone="secondary" style={styles.label}>
         {label}
       </Text>
-      <TextInput
+      <AppTextInput
         ref={ref}
         accessibilityLabel={label}
         accessibilityHint={hint}

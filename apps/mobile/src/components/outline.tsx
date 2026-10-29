@@ -121,7 +121,7 @@ export function OutlineRail({ entries, current, onJump }: { entries: Anchor[]; c
   if (entries.length === 0) return null;
   return (
     <View style={styles.rail} accessibilityRole="menu" testID="document-outline">
-      <Text weight="semibold" tone="faint" style={styles.heading}>
+      <Text accessibilityRole="header" weight="semibold" tone="faint" style={styles.heading}>
         {t('mobile.document.onThisPage')}
       </Text>
       {entries.map((anchor) => {

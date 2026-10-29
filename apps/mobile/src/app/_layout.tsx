@@ -1,18 +1,25 @@
 import '@/lib/i18n';
 
 import { useFonts } from 'expo-font';
-import { DarkTheme, DefaultTheme, Stack, ThemeProvider } from 'expo-router';
+import { DarkTheme, DefaultTheme, Stack, ThemeProvider, useRouter } from 'expo-router';
 import type { NativeStackNavigationOptions } from 'expo-router/native-stack';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
-import { StyleSheet } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
+import { AppSidebar } from '@/components/app-sidebar';
+import { KeyboardDoneBar } from '@/components/app-text-input';
 import { TimerRunner } from '@/components/timer-runner';
 import { ToastHost, ToastProvider } from '@/components/toast';
 import { AuthProvider, useAuth } from '@/lib/auth';
 import { DebateProvider } from '@/lib/debate-context';
+import { useFirstRun } from '@/lib/use-first-run';
+import { useKeyCommand } from '@/lib/key-commands';
+import { useQuickActions } from '@/lib/quick-actions';
+import { useOfflineQueue } from '@/lib/use-offline-queue';
+import { ReservedWidth, useSidebarWidth } from '@/lib/layout';
 import { watchNetwork } from '@/lib/network-status';
 import { refreshPush } from '@/lib/push';
 import { SettingsProvider, useSettings } from '@/lib/settings';
@@ -20,6 +27,10 @@ import { appFonts } from '@/theme/fonts';
 import { useTheme } from '@/theme/use-theme';
 
 void SplashScreen.preventAutoHideAsync();
+
+// A screen opened straight from a link (a share link, the widget, a quick action) has the tabs
+// beneath it, so Back and the iPad sidebar always have the tabs to return to.
+export const unstable_settings = { anchor: '(tabs)' };
 
 export default function RootLayout() {
   return (
@@ -40,6 +51,8 @@ function Root() {
   const { session, loading, settled } = useAuth();
   const { ready: settingsReady, language } = useSettings();
   const { scheme, colors } = useTheme();
+  // A full-screen iPad window lists every tool in a sidebar beside the stack, so it stays while a tool is open.
+  const sidebarWidth = useSidebarWidth();
   // Settings come from the device here, so the app opens in the account's language and theme.
   const ready = (fontsLoaded || fontError !== null) && !loading && settingsReady;
 
@@ -49,9 +62,18 @@ function Root() {
 
   // Offline, reads answer from saved copies and the screens say so.
   useEffect(() => watchNetwork(), []);
+  // Notes, source edits and Active switches made offline sync when the connection returns.
+  useOfflineQueue();
 
   // A phone that opted in registers again on launch and when the language changes (see refreshPush).
   const userId = session?.user.id;
+  useFirstRun(ready ? userId ?? null : null);
+  // Home Screen quick actions (development build with expo-quick-actions; nothing in Expo Go).
+  useQuickActions(ready);
+  // iPad hardware keyboard: ⌘N starts a debate, ⌘K opens the switcher (key-commands.ts).
+  const router = useRouter();
+  useKeyCommand('cmd+n', () => router.push('/new-debate'), ready && Boolean(userId));
+  useKeyCommand('cmd+k', () => router.push('/debates'), ready && Boolean(userId));
   useEffect(() => {
     if (!userId || !settingsReady) return;
     refreshPush(userId, language).catch((cause: unknown) => {
@@ -88,6 +110,9 @@ function Root() {
       <StatusBar style={scheme === 'dark' ? 'light' : 'dark'} />
       {/* The screenshot script waits for auth-settled before it checks an offline cold start. Swipeable rows need the gesture root. */}
       <GestureHandlerRootView style={styles.root} testID={settled ? 'auth-settled' : 'auth-pending'}>
+        <View style={styles.row}>
+        {session !== null && sidebarWidth > 0 ? <AppSidebar width={sidebarWidth} /> : null}
+        <ReservedWidth.Provider value={session !== null ? sidebarWidth : 0}>
         <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.background } }}>
           <Stack.Protected guard={session !== null}>
             <Stack.Screen name="(tabs)" />
@@ -105,6 +130,8 @@ function Root() {
             <Stack.Screen name="limit" options={{ ...sheet, sheetAllowedDetents: [0.56, 0.86] }} />
             <Stack.Screen name="save-case" options={{ ...sheet, sheetAllowedDetents: [0.56, 0.86] }} />
             <Stack.Screen name="context-review" options={sheet} />
+            {/* Ollie's welcome and the first-run tour, at full height so the owl and the buttons both fit. */}
+            <Stack.Screen name="welcome" options={{ ...sheet, sheetAllowedDetents: [1] }} />
             {/* Full screen above the tabs, as in mock 07. */}
             <Stack.Screen name="ask" />
             {/* History, full screen above the tabs like the documents it opens. */}
@@ -136,10 +163,15 @@ function Root() {
           <Stack.Protected guard={session === null}>
             <Stack.Screen name="sign-in" />
           </Stack.Protected>
+          {/* A shared link opens signed in or out; after the sign-in group, so a signed-out launch still starts on sign-in. */}
+          <Stack.Screen name="share/[code]" />
         </Stack>
+        </ReservedWidth.Provider>
+        </View>
         <ToastHost />
         {/* The timer's signals and Live Activity keep going while the timer screen is closed. */}
         <TimerRunner />
+        <KeyboardDoneBar />
       </GestureHandlerRootView>
     </ThemeProvider>
   );
@@ -147,4 +179,5 @@ function Root() {
 
 const styles = StyleSheet.create({
   root: { flex: 1 },
+  row: { flex: 1, flexDirection: 'row' },
 });

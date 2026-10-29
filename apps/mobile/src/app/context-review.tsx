@@ -7,12 +7,14 @@ import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
 
 import { SecondaryButton, TextButton } from '@/components/buttons';
+import { ListItemIn, SkeletonTextRows } from '@/components/card';
 import { Icon } from '@/components/icon';
 import { SheetScrollView } from '@/components/sheet';
 import { Text } from '@/components/text';
 import { useAuth } from '@/lib/auth';
 import { hasContextChoices, PinLimitError, resetContextChoices, setOutputChoice, setSourceChoice, togglePin, useContextPlan } from '@/lib/context-plan';
 import { useDebates } from '@/lib/debate-context';
+import { haptics } from '@/lib/haptics';
 import { radius } from '@/theme/colors';
 import { useTheme } from '@/theme/use-theme';
 
@@ -76,7 +78,7 @@ export default function ContextReviewSheet() {
       </Text>
 
       {!plan ? (
-        <ActivityIndicator accessibilityRole="progressbar" style={styles.loading} />
+        <SkeletonTextRows rows={4} />
       ) : (
         <>
           <View style={styles.section}>
@@ -104,7 +106,9 @@ export default function ContextReviewSheet() {
             ) : (
               <View style={[styles.group, { borderColor: colors.border, backgroundColor: colors.card }]}>
                 {plan.sources.map((source, index) => (
-                  <SourceRow key={source.id} source={source} first={index === 0} onChange={(include) => setSourceChoice(plan.feature, plan.debateId, source.id, include)} />
+                  <ListItemIn key={source.id} index={index}>
+                    <SourceRow source={source} first={index === 0} onChange={(include) => setSourceChoice(plan.feature, plan.debateId, source.id, include)} />
+                  </ListItemIn>
                 ))}
               </View>
             )}
@@ -125,14 +129,15 @@ export default function ContextReviewSheet() {
             ) : (
               <View style={[styles.group, { borderColor: colors.border, backgroundColor: colors.card }]}>
                 {plan.outputs.map((output, index) => (
-                  <OutputRow
-                    key={`${output.ref.kind}:${output.ref.id}`}
-                    output={output}
-                    first={index === 0}
-                    pinning={pinning === `${output.ref.kind}:${output.ref.id}`}
-                    onChange={(include) => setOutputChoice(plan.feature, plan.debateId, output.ref, include)}
-                    onPin={() => void pin(output)}
-                  />
+                  <ListItemIn key={`${output.ref.kind}:${output.ref.id}`} index={index}>
+                    <OutputRow
+                      output={output}
+                      first={index === 0}
+                      pinning={pinning === `${output.ref.kind}:${output.ref.id}`}
+                      onChange={(include) => setOutputChoice(plan.feature, plan.debateId, output.ref, include)}
+                      onPin={() => void pin(output)}
+                    />
+                  </ListItemIn>
                 ))}
               </View>
             )}
@@ -169,7 +174,10 @@ function CheckRow({ checked, label, meta, note, first, onChange, trailing }: {
         accessibilityRole="checkbox"
         accessibilityState={{ checked }}
         accessibilityLabel={label}
-        onPress={() => onChange(!checked)}
+        onPress={() => {
+          haptics.tap();
+          onChange(!checked);
+        }}
         style={({ pressed }) => [styles.rowMain, pressed && styles.pressed]}>
         <View style={[styles.box, checked ? { backgroundColor: colors.primaryFill, borderColor: colors.primaryFill } : { borderColor: colors.inputBorder }]}>
           {checked ? <Icon name="check" color={colors.onPrimary} size={14} /> : null}
@@ -226,7 +234,10 @@ function OutputRow({ output, first, pinning, onChange, onPin }: {
           accessibilityLabel={output.pinned ? t('debateContext.unpinAria', { title }) : t('debateContext.pinAria', { title })}
           disabled={pinning}
           hitSlop={6}
-          onPress={onPin}
+          onPress={() => {
+            haptics.tap();
+            onPin();
+          }}
           style={({ pressed }) => [styles.pin, output.pinned && { backgroundColor: colors.tile }, pressed && styles.pressed]}
           testID="debate-context-pin">
           {pinning ? <ActivityIndicator size="small" color={colors.primary} /> : <Icon name="pin" color={output.pinned ? colors.primary : colors.secondary} size={18} />}
@@ -240,7 +251,6 @@ const styles = StyleSheet.create({
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
   title: { fontSize: 21, lineHeight: 26, letterSpacing: -0.3, flexShrink: 1 },
   body: { fontSize: 15, lineHeight: 21 },
-  loading: { marginTop: 24 },
   section: { gap: 8 },
   heading: { fontSize: 16 },
   note: { fontSize: 14.5, lineHeight: 20 },

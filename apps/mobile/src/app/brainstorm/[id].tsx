@@ -12,10 +12,12 @@ import { DocumentStatus } from '@/components/document-status';
 import { backLabel } from '@/lib/back-label';
 import { formatWhen } from '@/lib/dates';
 import { copyText, sharePdf, shareText } from '@/lib/export';
+import { shareBrainstormDocx } from '@/lib/export-docx';
 import { BRAINSTORM_EXPORT_FILE_NAME, brainstormExportHtml } from '@/lib/export-html';
 import { brainstormToText, discussBrainstormMessage } from '@/lib/result-text';
 import { readBrainstorm } from '@/lib/results';
 import { arrivalNoticeText, useResultDocument } from '@/lib/use-result-document';
+import { useShareLink } from '@/lib/use-share-link';
 
 /**
  * A brainstorm read as a document. Its pinned next steps are the website's:
@@ -28,6 +30,7 @@ export default function BrainstormResultScreen() {
   const doc = useResultDocument('brainstorm', params.id);
   const [exportOpen, setExportOpen] = useState(false);
   const { setNotice } = doc;
+  const shareLink = useShareLink(setNotice);
   const { notice: arrival, failed } = params;
 
   // Problems from saving a fresh result are told once, on arrival.
@@ -62,10 +65,13 @@ export default function BrainstormResultScreen() {
     });
   };
 
+  const savedId = result.savedId;
   const actions: HeaderAction[] = [
     ...(doc.autoSaved.length > 0
       ? [{ key: 'undo-sources', label: t('autoSavedSources.undo'), symbol: 'arrow.uturn.backward' as const, icon: 'history' as const, onPress: () => void doc.undoAutoSaved() }]
       : []),
+    // As Export, not for a brainstorm that only asks questions.
+    ...(savedId && !questionsOnly ? [{ key: 'share-link', label: t('mobile.share.shareLink'), symbol: 'link' as const, icon: 'link' as const, onPress: () => void shareLink('brainstorm', savedId, title, output) }] : []),
     ...(result.savedId ? [{ key: 'delete', label: t('common.delete'), symbol: 'trash' as const, icon: 'trash' as const, destructive: true, onPress: () => void doc.remove() }] : []),
   ];
 
@@ -74,6 +80,7 @@ export default function BrainstormResultScreen() {
       testID="brainstorm-document"
       outline
       notice={doc.notice}
+      noticeTone={doc.noticeTone}
       header={<DocumentHeader backLabel={back} onShare={questionsOnly ? undefined : () => run(() => shareText(title, brainstormToText(output, t)))} actions={actions} />}
       // The website shows only the questions when the model needs more, with no export or discussion.
       actions={questionsOnly ? undefined : (
@@ -97,11 +104,14 @@ export default function BrainstormResultScreen() {
         items={[
           { key: 'pdf', label: t('common.pdf'), icon: 'file' },
           { key: 'copy', label: t('mobile.results.copyText'), icon: 'copy' },
+          // The website's Word export, built by the same code (packages/core/src/export/docx.ts).
+          { key: 'docx', label: t('common.docx'), icon: 'file' },
         ]}
         cancelLabel={t('common.cancel')}
         onClose={() => setExportOpen(false)}
         onSelect={(choice) => {
           if (choice === 'pdf') run(() => sharePdf(brainstormExportHtml(output, t), BRAINSTORM_EXPORT_FILE_NAME, title));
+          if (choice === 'docx') run(() => shareBrainstormDocx(output, t, title));
           if (choice === 'copy') run(async () => {
             await copyText(brainstormToText(output, t));
             setNotice(t('generateResults.copiedToClipboard'));
