@@ -113,6 +113,7 @@ export default function HistoryScreen() {
   const shownScope = useLatest(scope);
   const [tab, setTab] = useState<HistoryTab>('cases');
   const [loaded, setLoaded] = useState<Loaded | null>(null);
+  const shownLoaded = useLatest(loaded);
   const [failed, setFailed] = useState<string | null>(null);
   const [scopeOpen, setScopeOpen] = useState(false);
 
@@ -200,14 +201,19 @@ export default function HistoryScreen() {
   };
 
   const attached = (entry: UnsortedEntry) => {
-    // Only while the unsorted list is on screen: a load running now read it before the attach. After a
-    // switch to a debate's History the load running is that debate's, and the unsorted list is read
-    // again when it is opened.
+    // The unsorted list on screen loses the item at once, and a load running now (which read it before
+    // the attach) is dropped. Back on the unsorted scope before its list has loaded, it is read again
+    // instead, so the item cannot come back. On a debate's History, that debate's load is left alone and
+    // the unsorted list is read when it is opened.
     if (shownScope.current === OUTSIDE) {
-      loads.current += 1;
-      setLoaded((previous) => previous?.kind === 'unsorted'
-        ? { ...previous, entries: previous.entries.filter((candidate) => !(candidate.kind === entry.kind && candidate.id === entry.id)) }
-        : previous);
+      if (shownLoaded.current?.kind === 'unsorted') {
+        loads.current += 1;
+        setLoaded((previous) => previous?.kind === 'unsorted'
+          ? { ...previous, entries: previous.entries.filter((candidate) => !(candidate.kind === entry.kind && candidate.id === entry.id)) }
+          : previous);
+      } else {
+        void load(OUTSIDE);
+      }
     }
     // The debate's last activity moved; the switcher and the Debate tab show the new order.
     void refreshDebates();

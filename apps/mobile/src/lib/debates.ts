@@ -355,6 +355,18 @@ async function loadRecentWork(userId: string, debateId: string, side: DebateSide
   return newestFirst(lists, limit);
 }
 
+/** The tables of work that opens as a document, whatever its side: what Spotlight indexes. */
+const DOCUMENT_TABLES = ['cases', 'attacks', 'brainstorms', 'factoids'] as const satisfies readonly ResultTable[];
+
+/**
+ * A debate's newest documents of every side, neutral included (attacks and factoids save as
+ * neutral), for Spotlight (spotlight-items.ts). Not kept offline: Spotlight is updated online only.
+ */
+export async function fetchDocumentsForSpotlight(userId: string, debateId: string, limit: number): Promise<DebateItem[]> {
+  const lists = await readAll(DOCUMENT_TABLES.map((table) => fetchResultRows(userId, debateId, table, null, limit)));
+  return newestFirst(lists, limit);
+}
+
 /** The Prepare tools' tables. */
 const PREPARE_TABLES = ['cases', 'brainstorms', 'factoids', 'flowcharts'] as const satisfies readonly ResultTable[];
 const PREPARE_KINDS = new Set<DebateItemKind>(PREPARE_TABLES.map((table) => KIND_BY_TABLE[table]));

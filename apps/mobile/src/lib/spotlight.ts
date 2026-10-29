@@ -29,6 +29,11 @@ function spotlight(): CoreSpotlightModule | null {
   return requireOptionalNativeModule<CoreSpotlightModule>('ExpoCoreSpotlight');
 }
 
+/** Whether this build has Spotlight, so callers can skip reading what they would index. */
+export function spotlightAvailable(): boolean {
+  return spotlight() !== null;
+}
+
 // Every call runs in one queue, in the order it was made. A clear also counts a new generation at
 // once, so indexing asked for before it (still queued, or waiting on iOS) never writes afterwards:
 // a signed-out account's or an earlier debate's documents cannot come back.

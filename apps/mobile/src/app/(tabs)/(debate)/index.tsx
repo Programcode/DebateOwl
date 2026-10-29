@@ -19,12 +19,13 @@ import { SOURCE_ICONS, sourceMeta } from '@/components/source-display';
 import { Text } from '@/components/text';
 import { WorkRow } from '@/components/work-row';
 import { publishCurrentDebate } from '@/lib/debate-widget';
-import { indexForSpotlight } from '@/lib/spotlight';
-import { spotlightWorkItems } from '@/lib/spotlight-items';
+import { indexForSpotlight, spotlightAvailable } from '@/lib/spotlight';
+import { SPOTLIGHT_LIMIT, spotlightWorkItems } from '@/lib/spotlight-items';
 import { useAuth } from '@/lib/auth';
 import { useDebates } from '@/lib/debate-context';
 import {
   fetchDebateCounts,
+  fetchDocumentsForSpotlight,
   fetchRecentWork,
   ROLE_LABEL_KEYS,
   type Debate,
@@ -244,8 +245,16 @@ function DebateDetails({ debateId, dashboard = false }: { debateId: string; dash
       const shown = currentRef.current;
       if (shown?.id === debateId) {
         publishCurrentDebate({ debateId, motion: shown.motion, counts: nextCounts });
-        // Spotlight finds this debate's documents (development build with expo-core-spotlight; a no-op otherwise).
-        void indexForSpotlight('work', spotlightWorkItems([...pro, ...con], shown.motion, (kind) => t(`debate.kinds.${kind}`)));
+        // Spotlight finds this debate's documents of every side (development build with expo-core-spotlight only).
+        if (spotlightAvailable()) {
+          const motion = shown.motion;
+          fetchDocumentsForSpotlight(userId, debateId, SPOTLIGHT_LIMIT)
+            .then((documents) => {
+              if (!isCurrent() || currentRef.current?.id !== debateId) return;
+              void indexForSpotlight('work', spotlightWorkItems(documents, motion, (kind) => t(`debate.kinds.${kind}`)));
+            })
+            .catch((cause: unknown) => console.warn('Could not read documents for Spotlight:', cause instanceof Error ? cause.message : cause));
+        }
       }
       setRecent({ pro, con });
       setSources(nextSources?.slice(0, DASHBOARD_SOURCES) ?? null);
