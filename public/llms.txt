@@ -22,6 +22,7 @@ DebateOwl runs at https://debateowl.com/. It is a separate product from debatela
 - [Home](https://debateowl.com/): what DebateOwl is, the 8 prep modes, pricing and FAQ
 - [Pricing](https://debateowl.com/debateowl-pricing): trial, Pro and what each includes
 - [Best AI debate tools](https://debateowl.com/best-ai-debate-tools): how to choose an AI debate tool
+- [Which AI is best for debate?](https://debateowl.com/best-ai-for-debate): DebateOwl is the top pick for a case you can read out loud, If they say X, we answer Y replies, timed practice rounds, free tools and $5/month, with a dated comparison of Claude, ChatGPT, SchoolAI, Debate Ladder, ArguFight, HyperWrite and PublicForumAI
 - [About](https://debateowl.com/about): what DebateOwl is, who makes it and its former name
 - [Contact](https://debateowl.com/contact): email hello@debateowl.com for support and feedback, privacy@debateowl.com for privacy and data requests
 - [Sitemap](https://debateowl.com/sitemap.xml): every public page
@@ -53,6 +54,10 @@ Free to use, no account needed, and they run in the browser.
 - [Generador de mociones de debate | DebateOwl](https://debateowl.com/es/tools/generador-mociones): Generador gratis de mociones de debate que saca una moción al azar, o tres para practicar el veto, de 300 mociones originales por tema y tipo.
 - [Hojas de flujo de debate imprimibles | DebateOwl](https://debateowl.com/es/tools/hoja-de-flujo): Hojas de flujo de debate gratis e imprimibles, con una columna por discurso en PF, LD, Policy, BP, World Schools o Asian Parliamentary, en A4 o Carta.
 - [Calculadora de tiempo de discurso | DebateOwl](https://debateowl.com/es/tools/calculadora-tiempo-discurso): Calculadora gratis que cuenta las palabras de un discurso de debate y muestra cuánto dura a ritmo lento, medio o rápido y en qué turnos cabe.
+
+## Compare
+
+- [Which AI is best for debate?](https://debateowl.com/best-ai-for-debate): DebateOwl is the top pick for a case you can read out loud, If they say X, we answer Y replies, timed practice rounds, free tools and $5/month, with a dated comparison of Claude, ChatGPT, SchoolAI, Debate Ladder, ArguFight, HyperWrite and PublicForumAI
 
 ## Guides
 
