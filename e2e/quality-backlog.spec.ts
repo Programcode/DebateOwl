@@ -107,7 +107,7 @@ test('Flowchart deletes a selected node at once and Undo puts it back', async ({
 
 // VS-05: a long motion and long item titles once widened the dashboard past a phone screen.
 for (const locale of locales) {
-  test(`Current Debate fits a 360px phone with sources attached in ${locale}`, { tag: '@smoke' }, async ({ page }) => {
+  test(`Current Debate fits a 360px phone with sources attached in ${locale}`, async ({ page }) => {
     const motion = 'This House believes that national governments should nationalise all critical digital infrastructure including undersea cables';
     await page.setViewportSize({ width: 360, height: 780 });
     await setLocale(page, locale);
@@ -142,7 +142,7 @@ for (const locale of locales) {
 }
 
 // VS-09: picking a language closes the menu; the choice already persists.
-test('language menu closes once a language is chosen', { tag: '@smoke' }, async ({ page }) => {
+test('language menu closes once a language is chosen', async ({ page }) => {
   await setLocale(page, 'en');
   await page.goto('/');
   // Below lg the section links and the language control sit in the menu.

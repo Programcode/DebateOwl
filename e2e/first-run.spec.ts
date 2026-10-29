@@ -162,7 +162,7 @@ for (const locale of ['en', 'hu'] as const) {
     await expect(tooltip).toHaveCount(0);
   });
 
-  test(`[${locale}] a tool offers a first debate from the typed motion instead of the switch dialog`, locale === 'en' ? { tag: '@smoke' } : {}, async ({ page }) => {
+  test(`[${locale}] a tool offers a first debate from the typed motion instead of the switch dialog`, async ({ page }) => {
     const backend = await freshStart(page, locale, true);
     await page.goto('/app/generate', { waitUntil: 'domcontentloaded' });
 

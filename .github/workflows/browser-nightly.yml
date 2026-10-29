@@ -1,8 +1,10 @@
 name: Browser nightly
 
-# The full credential-free browser suite on desktop and mobile Chromium. Pull
-# requests run only the @smoke subset (deploy.yml), so this catches what the
-# subset skips, at most a day late.
+# The full credential-free browser suite on desktop and mobile Chromium, and
+# the service worker's offline test against a production build. Pull requests
+# run only the @smoke subset (deploy.yml), so this catches what the subset
+# skips, at most a day late. Run it on a branch with
+# `gh workflow run browser-nightly.yml --ref <branch>`.
 on:
   schedule:
     - cron: "47 2 * * *"
@@ -25,14 +27,7 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Set up Node
-        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
-        with:
-          node-version: 22
-          cache: npm
-
-      - name: Install dependencies
-        run: npm ci
+      - uses: ./.github/actions/node-deps
 
       - name: Cache Playwright browsers
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
@@ -49,6 +44,10 @@ jobs:
           PORT: 18080
           PLAYWRIGHT_BASE_URL: http://127.0.0.1:18080
         run: npm run test:e2e
+
+      - name: Service worker offline test
+        if: ${{ !cancelled() }}
+        run: npm run build && npm run test:sw
 
       - name: Upload browser failure artifacts
         if: failure()

@@ -1,16 +1,21 @@
 name: Production canary
 
-# Checks the live site after every Vercel production deployment and daily.
-# Read-only on deployments. The daily and manual runs also make two real AI
-# requests (a streamed Ask and a case) as the dedicated canary account.
+# Checks the live site after every push to main, once Vercel has deployed it,
+# and daily. Read-only after a push. The daily and manual runs also make two
+# real AI requests (a streamed Ask and a case) as the dedicated canary account.
+# It used to start on deployment_status, which fires for every status of every
+# Vercel deployment, both projects included; most of those runs only skipped.
 on:
-  deployment_status:
+  push:
+    branches: [ "main" ]
   schedule:
     - cron: "41 6 * * *"
   workflow_dispatch:
 
 permissions:
   contents: read
+  # Reads the Vercel production deployment of the pushed commit.
+  deployments: read
 
 concurrency:
   group: production-canary
@@ -18,37 +23,63 @@ concurrency:
 
 jobs:
   canary:
-    # Vercel names the deployment environment after the project. The live site
-    # is debate-navigator; debatelab-staging's "production" is staging, so it
-    # must not start the canary. Plain 'Production' is the pre-2026-10 name.
-    if: >-
-      github.event_name != 'deployment_status' ||
-      (github.event.deployment_status.state == 'success' &&
-       (github.event.deployment.environment == 'Production – debate-navigator' ||
-        github.event.deployment.environment == 'Production'))
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
     steps:
+      # Vercel names the deployment environment after the project. The live
+      # site is debate-navigator; debatelab-staging's "production" is staging.
+      # Plain 'Production' is the pre-2026-10 name.
+      - name: Wait for the production deployment
+        id: deployment
+        if: github.event_name == 'push'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SHA: ${{ github.sha }}
+        shell: bash
+        run: |
+          for _ in $(seq 1 60); do
+            main="$(gh api "repos/${GITHUB_REPOSITORY}/commits/main" --jq .sha)"
+            if [ "$main" != "$SHA" ]; then
+              echo "::notice::main moved on to ${main}; its own run checks the newer deployment. Skipping ${SHA}."
+              echo "current=false" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+            statuses="$(gh api "repos/${GITHUB_REPOSITORY}/deployments?sha=${SHA}&per_page=20" \
+              --jq '[.[] | select(.environment == "Production – debate-navigator" or .environment == "Production")][0].statuses_url // ""')"
+            state=missing
+            if [ -n "$statuses" ]; then state="$(gh api "$statuses" --jq '.[0].state // "pending"')"; fi
+            case "$state" in
+              success)
+                echo "Vercel deployed ${SHA} to production."
+                echo "current=true" >> "$GITHUB_OUTPUT"
+                exit 0 ;;
+              failure|error)
+                echo "::error::Vercel's production deployment of ${SHA} ended in ${state}."
+                exit 1 ;;
+            esac
+            sleep 15
+          done
+          echo "::error::No successful production deployment of ${SHA} after 15 minutes."
+          exit 1
+
       - name: Checkout code
+        if: steps.deployment.outputs.current != 'false'
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
 
-      - name: Set up Node
-        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
-        with:
-          node-version: 22
-
-      - name: Install dependencies
-        run: npm ci
+      - uses: ./.github/actions/node-deps
+        if: steps.deployment.outputs.current != 'false'
 
       - name: Install Chromium
+        if: steps.deployment.outputs.current != 'false'
         run: npx playwright install --with-deps chromium
 
       - name: Production canary
+        if: steps.deployment.outputs.current != 'false'
         env:
           PROD_SUPABASE_ANON_KEY: ${{ vars.PROD_SUPABASE_ANON_KEY }}
           PROD_CANARY_EMAIL: ${{ secrets.PROD_CANARY_EMAIL }}
           PROD_CANARY_PASSWORD: ${{ secrets.PROD_CANARY_PASSWORD }}
-          CANARY_AI_REQUESTS: ${{ github.event_name != 'deployment_status' }}
+          CANARY_AI_REQUESTS: ${{ github.event_name != 'push' }}
         run: npx playwright test --config=playwright.production.config.ts

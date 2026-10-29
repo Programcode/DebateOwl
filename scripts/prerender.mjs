@@ -141,6 +141,11 @@ const server = await createServer({
   mode: 'production',
   appType: 'custom',
   logLevel: 'warn',
+  // Its own dependency cache: in the shared node_modules/.vite this server
+  // re-optimizes the deps a running dev server is serving, and that server's
+  // pages then fail to load their lazy routes (npm run verify builds while the
+  // smoke tests run).
+  cacheDir: 'node_modules/.vite-prerender',
   plugins: [builtAssetUrls()],
   server: { middlewareMode: true, hmr: false, ws: false },
 });

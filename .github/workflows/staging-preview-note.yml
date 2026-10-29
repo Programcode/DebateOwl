@@ -1,12 +1,13 @@
 name: Staging preview note
 
-# Staging runs main's backend (docs/staging.md). A PR that changes supabase/
-# gets a comment saying its staging preview still uses main's migrations and
-# Edge Functions until it merges.
+# Staging runs main's backend (docs/staging.md). A PR that opens with
+# changes to supabase/ gets a comment saying its staging preview still uses
+# main's migrations and Edge Functions until it merges.
 
 on:
   pull_request:
-    types: [opened, reopened, synchronize]
+    # The note posts once, so later pushes have nothing to add.
+    types: [opened, reopened]
     paths:
       - "supabase/migrations/**"
       - "supabase/functions/**"

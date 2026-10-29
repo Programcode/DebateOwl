@@ -4,6 +4,9 @@ on:
   workflow_run:
     workflows: ["Quality"]
     types: [completed]
+    # Without this, every pull-request Quality run starts a run here that
+    # only skips (about 600 a month).
+    branches: [main]
   workflow_dispatch:
 
 permissions:

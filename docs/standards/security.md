@@ -22,7 +22,7 @@ Part of the [coding standards](../../CODING_STANDARDS.md). AGENTS.md "Hard bound
 
 These were raised in review, judged valid, and accepted on purpose. Changing them needs Adam's decision, not a reviewer's.
 
-- Live provider keys reach same-repository PR jobs in `live-e2e.yml`. Adam accepted this on PR #68; the mitigation is dedicated low-limit keys ([#68](https://github.com/Programcode/DebateLab/pull/68#discussion_r4090563258)).
+- Live provider keys reach branch code in `live-e2e.yml`, `model-matrix.yml` and `agentic-e2e.yml` when someone with push access dispatches them on a branch. Since 2026-10-29 these no longer run on pull requests. Adam accepted the original pull-request exposure on PR #68; the mitigation is dedicated low-limit keys ([#68](https://github.com/Programcode/DebateLab/pull/68#discussion_r4090563258)).
 - The production canary account's credentials reach `prod-canary.yml` through Actions secrets, approved 2026-09-24 and recorded in AGENTS.md ([#68](https://github.com/Programcode/DebateLab/pull/68#discussion_r4090664336)).
 - Manual canary runs can exhaust the account's daily quota; that shows as a quota error, not a false pass ([#68](https://github.com/Programcode/DebateLab/pull/68#discussion_r4093482054)).
 - CodeRabbit rated the shared preview-origin allowlist from PR #95 as a high retained concern: an approved production preview runs unmerged code that can receive demo-session handoffs ([#95 security review](https://github.com/Programcode/DebateLab/pull/95)). [docs/operations.md](../operations.md#opt-in-previews) describes the current setup. This one has no recorded decision yet.

@@ -46,7 +46,7 @@ That preview is pinned to staging. Do not pass `--prod`, and do not run `vercel 
 
 ## Focused verification
 
-Run the smallest relevant check first:
+While working, run only the check that covers what you touched: the test file for the module (`npx vitest run <file>`), `npm run lint` or `npm run typecheck` when types moved, one spec (`npx playwright test <spec>`). Each of these takes seconds.
 
 ```bash
 npm run docs:check
@@ -59,9 +59,11 @@ npm run build
 P=$(bash .superset/e2e-port.sh) && CI=1 PORT=$P PLAYWRIGHT_BASE_URL=http://127.0.0.1:$P npm run test:e2e
 ```
 
-`npm run verify` runs the credential-free ladder with the desktop Chromium `@smoke` browser set (about a minute). `npm run verify:full` adds the full desktop and mobile suite.
+Run `npm run verify` once, at the final head, before you push. It is the pull-request check run locally (about 100 seconds) and prints each failed step's log. `npm run verify:full` adds the full desktop and mobile browser suite; run it only when a change spans many pages or Adam asks.
 
-If GitHub Actions jobs fail within 2 to 5 seconds with no logs, they did not run: the account is out of Actions minutes (billing), not failing on the code. In that case run the same checks locally at the final head (`npm run verify` and the database gate) and record the exact results in the PR. A local pass is not a CI pass; say which one you have.
+Push once, when the work is done and `verify` passes. Every push reruns the whole pull-request check, so batch review fixes into one push. CI on a pull request is the `Quality` workflow (about 3 minutes), plus pgTAP when the schema changes. The full-stack journeys, the full browser suite, live providers, the agentic suite, and the model matrix run on a schedule, never on pull requests. When your change is squarely in one of those areas (AI or research code, a full-stack flow, many pages), dispatch that suite on your branch once, for example `gh workflow run live-e2e.yml --ref <branch>`, and report its result. [docs/operations.md](docs/operations.md#ci-workflows) lists them.
+
+If GitHub Actions jobs fail within 2 to 5 seconds with no logs, they did not run: the account is out of Actions minutes (billing), not failing on the code. In that case run the same checks locally at the final head (`npm run verify`, and `./.superset/db-gate.sh --db-only` when the schema changed) and record the exact results in the PR. A local pass is not a CI pass; say which one you have.
 
 When a CI job fails, start with `npm run ci:failures -- <pr>`. It prints the failing jobs and specs, downloads the failure artifact into `.ci-failures/`, and shows each failed test's error and the dialogs and headings on the page from its `error-context.md`. Read that before guessing at timeouts or infrastructure.
 
@@ -69,7 +71,7 @@ Database migrations and pgTAP policies use a separate Docker-backed gate. In Sup
 
 ```bash
 ./.superset/db-gate.sh
-./.superset/db-gate.sh --db-only   # pgTAP and database scripts only
+./.superset/db-gate.sh --db-only   # pgTAP and database scripts on Postgres alone, about 35 s
 ```
 
 Outside Superset, run the underlying commands directly:

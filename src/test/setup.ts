@@ -1,6 +1,17 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
+import { webcrypto } from "node:crypto";
+import { ReadableStream, TransformStream, WritableStream } from "node:stream/web";
 import "@testing-library/jest-dom";
 import "../i18n";
+
+// The vmThreads pool (vitest.config.ts) runs each file in a bare jsdom
+// context, which lacks these Node globals that the browsers we ship to have.
+if (typeof globalThis.crypto?.randomUUID !== "function") {
+  Object.defineProperty(globalThis, "crypto", { configurable: true, value: webcrypto });
+}
+for (const [name, value] of Object.entries({ ReadableStream, TransformStream, WritableStream })) {
+  if (!(name in globalThis)) Object.defineProperty(globalThis, name, { configurable: true, writable: true, value });
+}
 
 const createStorage = () => {
   let store: Record<string, string> = {};
