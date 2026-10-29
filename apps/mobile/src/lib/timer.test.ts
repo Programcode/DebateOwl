@@ -1,4 +1,4 @@
-import { togglePrep, toggleSpeech } from '@debatelab/core/free-tools/round-timer';
+import { settlePrep, togglePrep, toggleSpeech } from '@debatelab/core/free-tools/round-timer';
 import { describe, expect, it } from 'vitest';
 
 import {
@@ -7,6 +7,7 @@ import {
   parseSavedFormats,
   parseSession,
   serializeSession,
+  settleHeld,
   timerActivityState,
   timerAlertAt,
   type TimerSession,
@@ -71,9 +72,37 @@ describe('Live Activity buttons and the time-up alert', () => {
     const paused = applyTimerActivityAction(session, 'toggle', T0 + 20_000);
     expect(paused.round.prep.b.deadline).toBeNull();
     expect(paused.round.speech.startedAt).toBeNull();
-    // With no prep running, the same button resumes the speech where it stopped.
+    // The paused bank stays on the Lock Screen, so the same button restarts it, not the speech.
     const resumed = applyTimerActivityAction(paused, 'toggle', T0 + 30_000);
-    expect(resumed.round.speech).toEqual({ elapsedMs: 10_000, startedAt: T0 + 30_000 });
+    expect(resumed.round.prep.b.deadline).not.toBeNull();
+    expect(resumed.round.speech).toEqual({ elapsedMs: 10_000, startedAt: null });
+    // With no bank held, it resumes the speech where it stopped.
+    const speech = applyTimerActivityAction({ ...paused, held: null }, 'toggle', T0 + 30_000);
+    expect(speech.round.speech).toEqual({ elapsedMs: 10_000, startedAt: T0 + 30_000 });
+  });
+
+  it('keeps a prep bank paused from the Lock Screen on it, so Resume restarts that prep', () => {
+    let session = initialSession({ id: 'custom', custom });
+    session = { ...session, round: togglePrep(session.round, 'b', T0) };
+    const paused = applyTimerActivityAction(session, 'toggle', T0 + 30_000);
+    const shown = timerActivityState(paused, T0 + 40_000, { ...text, controls: true });
+    expect(shown).toMatchObject({ kind: 'prep', side: 'b', pausedAt: T0 + 40_000, endsAt: T0 + 40_000 + 90_000 });
+    const resumed = applyTimerActivityAction(paused, 'toggle', T0 + 50_000);
+    expect(resumed.round.prep.b.deadline).toBe(T0 + 50_000 + 90_000);
+    expect(resumed.round.speech.startedAt).toBeNull();
+  });
+
+  it('lets go of a paused bank once another clock starts, it runs out, or the format changes', () => {
+    let session = initialSession({ id: 'custom', custom });
+    session = { ...session, round: togglePrep(session.round, 'a', T0) };
+    const paused = applyTimerActivityAction(session, 'toggle', T0 + 10_000);
+    expect(paused.held).toBe('a');
+    expect(settleHeld(paused, { ...paused, round: toggleSpeech(paused.round, T0 + 20_000) }).held).toBeUndefined();
+    expect(settleHeld(paused, { ...paused, choice: { id: 'bp' }, round: initialSession({ id: 'bp' }).round }).held).toBeUndefined();
+    const emptied = { ...session, round: settlePrep(session.round, T0 + 121_000) };
+    expect(settleHeld(session, emptied).held).toBeUndefined();
+    // Stored and read back with the round.
+    expect(parseSession(JSON.parse(JSON.stringify(serializeSession(paused))))?.held).toBe('a');
   });
 
   it('moves on to a fresh, paused next speech, and not past the last one', () => {

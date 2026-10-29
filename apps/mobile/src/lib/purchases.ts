@@ -83,11 +83,11 @@ const REQUEST_BUDGET_MS = 20_000;
 // deliverPending and an update event never send the same transaction at once.
 const serial = createSerialQueue();
 
-// What the server answered for each transaction finished in this run of the
-// app, so a purchase that a queued deliverPending already sent is not sent again.
+// What the server answered for each signed transaction it took in this run of
+// the app, so a version a queued deliverPending already sent is not sent again.
+// Keyed by the signed version, not the id: StoreKit signs the same transaction
+// again when it changes (a refund, a new expiry), and that version must be sent.
 const delivered = new Map<string, PurchasedPlan | null>();
-/** The signed versions the server has taken this run, so an update that repeats one is not sent again. */
-const deliveredVersions = new Set<string>();
 
 function planOf(payload: Record<string, unknown> | null): PurchasedPlan | null {
   const plan = payload?.entitlement;
@@ -139,11 +139,11 @@ async function post(transaction: StoreTransaction, userId: string): Promise<Deli
  * and sending it again is harmless.
  */
 async function deliver(transaction: StoreTransaction, userId: string): Promise<Delivery> {
-  if (delivered.has(transaction.transactionId)) return { ok: true, plan: delivered.get(transaction.transactionId) ?? null };
+  const version = transaction.signedTransaction;
+  if (delivered.has(version)) return { ok: true, plan: delivered.get(version) ?? null };
   const result = await post(transaction, userId);
   if (!result.ok) return result;
-  delivered.set(transaction.transactionId, result.plan);
-  deliveredVersions.add(transaction.signedTransaction);
+  delivered.set(version, result.plan);
   await storeKit()
     ?.finish(transaction.transactionId)
     .catch((cause: unknown) => console.warn('Could not finish an App Store transaction:', storeKitErrorCode(cause) ?? cause));
@@ -264,7 +264,6 @@ export async function manageSubscriptions(): Promise<boolean> {
   );
 }
 
-
 /**
  * A transaction StoreKit reports as updated: sent even when this run already
  * delivered its id, because an update can be a new signed version of the same
@@ -274,14 +273,7 @@ export async function manageSubscriptions(): Promise<boolean> {
 function deliverUpdate(transaction: StoreTransaction, userId: string): Promise<void> {
   if (!belongsTo(transaction, userId)) return Promise.resolve();
   return serial(async () => {
-    if (deliveredVersions.has(transaction.signedTransaction)) return;
-    const result = await post(transaction, userId);
-    if (!result.ok) return;
-    delivered.set(transaction.transactionId, result.plan);
-    deliveredVersions.add(transaction.signedTransaction);
-    await storeKit()
-      ?.finish(transaction.transactionId)
-      .catch((cause: unknown) => console.warn('Could not finish an App Store transaction:', storeKitErrorCode(cause) ?? cause));
+    await deliver(transaction, userId);
   });
 }
 

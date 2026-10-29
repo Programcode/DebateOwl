@@ -167,6 +167,19 @@ describe('delivering unfinished transactions', () => {
     expect(env.posts).toHaveLength(2);
   });
 
+  it('sends and finishes a new unfinished version of a transaction it already delivered', async () => {
+    const bought = transaction(USER_A);
+    store.unfinishedList.push(bought);
+    env.respond = () => Promise.resolve(APPLIED);
+    await expect(deliverPending(USER_A)).resolves.toBe(1);
+
+    // The same id, signed again (a refund or a new expiry), waiting unfinished.
+    store.unfinishedList.push({ ...bought, signedTransaction: `${bought.signedTransaction}-v2` });
+    await expect(deliverPending(USER_A)).resolves.toBe(1);
+    expect(env.posts).toHaveLength(2);
+    expect(store.unfinishedList).toHaveLength(0);
+  });
+
   it('does not send a purchase under the account that signed in while the sheet was open', async () => {
     const sheet = deferred<StorePurchaseResult>();
     let opened = false;
