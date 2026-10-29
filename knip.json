@@ -54,6 +54,9 @@
         "expo-updates",
         "expo-speech-recognition",
         "expo-widgets",
+        "expo-quick-actions",
+        "expo-core-spotlight",
+        "expo-share-intent",
         "@expo/dom-webview"
       ]
     }

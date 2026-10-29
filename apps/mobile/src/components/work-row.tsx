@@ -80,10 +80,30 @@ export function WorkRow({
   const href = from ? workHref(item, from) : null;
   // Practice work opens the Practice tab, which has nothing to preview, so it is a plain row that navigates itself.
   const linked = href !== null && href !== '/practice';
+  const document = hasDocumentText(item);
+  const remove = () => {
+    void actions.remove(item).then((removed) => {
+      if (removed) onDeleted?.();
+    });
+  };
+  // VoiceOver offers the long-press menu's actions on the row itself (swipe up or down).
+  const a11yActions = linked
+    ? [
+      ...(document ? [{ name: 'discuss', label: t('common.discuss') }, { name: 'share', label: t('mobile.library.share') }] : []),
+      ...(canDeleteWork(item) ? [{ name: 'delete', label: t('common.delete') }] : []),
+    ]
+    : [];
   const row = (
     <Pressable
       accessibilityRole="button"
       accessibilityLabel={t('mobile.common.openItem', { title })}
+      accessibilityActions={a11yActions.length > 0 ? a11yActions : undefined}
+      onAccessibilityAction={(event) => {
+        const name = event.nativeEvent.actionName;
+        if (name === 'discuss') void actions.discuss(item);
+        else if (name === 'share') void actions.share(item);
+        else if (name === 'delete') remove();
+      }}
       onPress={linked ? onPress : onPress ?? (href ? () => router.navigate(href) : undefined)}
       onPressIn={press.onPressIn}
       onPressOut={press.onPressOut}
@@ -107,7 +127,6 @@ export function WorkRow({
     </Pressable>
   );
   if (!linked) return row;
-  const document = hasDocumentText(item);
   return (
     <Link href={href} asChild>
       <Link.Trigger>{row}</Link.Trigger>
@@ -124,14 +143,7 @@ export function WorkRow({
           </Link.MenuAction>
         ) : null}
         {canDeleteWork(item) ? (
-          <Link.MenuAction
-            icon="trash"
-            destructive
-            onPress={() => {
-              void actions.remove(item).then((removed) => {
-                if (removed) onDeleted?.();
-              });
-            }}>
+          <Link.MenuAction icon="trash" destructive onPress={remove}>
             {t('common.delete')}
           </Link.MenuAction>
         ) : null}

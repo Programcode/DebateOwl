@@ -31,8 +31,10 @@ describe('nativeCapabilities', () => {
       ExpoWidgets: { widgetsDirectory: 'file:///group/ExpoWidgets/' },
       ExpoQuickActions: {},
       ExpoCoreSpotlight: {},
+      DebateOwlKeyCommands: {},
+      ExpoShareIntentModule: {},
     };
-    expect(nativeCapabilities()).toEqual({ speechRecognition: false, liveActivity: false, widgets: false, quickActions: false, spotlight: false });
+    expect(nativeCapabilities()).toEqual({ speechRecognition: false, liveActivity: false, widgets: false, quickActions: false, spotlight: false, keyCommands: false, shareIntent: false });
     expect(requireOptionalNativeModule).not.toHaveBeenCalled();
   });
 
@@ -45,6 +47,8 @@ describe('nativeCapabilities', () => {
       widgets: false,
       quickActions: false,
       spotlight: false,
+      keyCommands: false,
+      shareIntent: false,
     });
   });
 
@@ -57,24 +61,28 @@ describe('nativeCapabilities', () => {
       widgets: true,
       quickActions: false,
       spotlight: false,
+      keyCommands: false,
+      shareIntent: false,
     });
   });
 
-  it('reports quick actions and Spotlight once their modules are linked', () => {
+  it('reports quick actions, Spotlight, shortcuts and sharing once their modules are linked', () => {
     env.executionEnvironment = 'bare';
-    env.modules = { ExpoQuickActions: {}, ExpoCoreSpotlight: {} };
+    env.modules = { ExpoQuickActions: {}, ExpoCoreSpotlight: {}, DebateOwlKeyCommands: {}, ExpoShareIntentModule: {} };
     expect(nativeCapabilities()).toEqual({
       speechRecognition: false,
       liveActivity: false,
       widgets: false,
       quickActions: true,
       spotlight: true,
+      keyCommands: true,
+      shareIntent: true,
     });
   });
 
   it('reports nothing where the modules are missing, as in the web preview', () => {
     env.executionEnvironment = 'bare';
     env.modules = {};
-    expect(nativeCapabilities()).toEqual({ speechRecognition: false, liveActivity: false, widgets: false, quickActions: false, spotlight: false });
+    expect(nativeCapabilities()).toEqual({ speechRecognition: false, liveActivity: false, widgets: false, quickActions: false, spotlight: false, keyCommands: false, shareIntent: false });
   });
 });

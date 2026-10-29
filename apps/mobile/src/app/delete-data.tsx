@@ -12,6 +12,7 @@ import { useAuth } from '@/lib/auth';
 import { showNotice } from '@/lib/confirm';
 import { useDebates } from '@/lib/debate-context';
 import { forgetSessionMemory } from '@/lib/session-memory';
+import { clearSpotlight } from '@/lib/spotlight';
 import { useTheme } from '@/theme/use-theme';
 
 /**
@@ -63,6 +64,7 @@ export default function DeleteDataSheet() {
     // gone. They are cleared here first, so a reload that fails leaves nothing deleted on screen or targeted.
     forgetSessionMemory();
     forgetDebates(forUser);
+    void clearSpotlight();
     void refresh();
     showNotice(t('settings.deleteSuccess'), t('settings.deleteSuccessDesc'));
     if (live.current) router.back();

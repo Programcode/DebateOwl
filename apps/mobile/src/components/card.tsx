@@ -31,12 +31,14 @@ export function IconTile({ name, size = 40 }: { name: IconName; size?: number })
  * mounts. With `layout`, rows slide into a gap a removed row leaves. Both are Reanimated layout
  * animations on the UI thread and follow the system's Reduce Motion (ReduceMotion.System), so
  * under it the row is simply there. Keep press feedback on a view inside it, never on this one.
+ * In a virtualized list, `enter` says whether the row is arriving (row-arrivals.ts) or only
+ * scrolled back into view, and the list animates layout itself (`itemLayoutAnimation`).
  */
-export function ListItemIn({ index, layout = false, style, children }: { index: number; layout?: boolean; style?: StyleProp<ViewStyle>; children: ReactNode }) {
+export function ListItemIn({ index, layout = false, enter = true, style, children }: { index: number; layout?: boolean; enter?: boolean; style?: StyleProp<ViewStyle>; children: ReactNode }) {
   const reduce = useReduceMotion();
   return (
     <Animated.View
-      entering={FadeInDown.delay(staggerDelay(index)).duration(220).reduceMotion(motionSetting(reduce))}
+      entering={enter ? FadeInDown.delay(staggerDelay(index)).duration(220).reduceMotion(motionSetting(reduce)) : undefined}
       layout={layout ? LinearTransition.duration(200).reduceMotion(motionSetting(reduce)) : undefined}
       style={style}>
       {children}

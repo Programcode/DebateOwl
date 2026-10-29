@@ -168,13 +168,19 @@ export function SourceRow({
               accessibilityRole="button"
               accessibilityLabel={t('mobile.common.openItem', { title })}
               accessibilityState={selected ? { selected } : undefined}
+              // VoiceOver offers the long-press menu's actions on the row itself (swipe up or down).
               accessibilityActions={[
                 { name: 'toggle', label: toggleLabel },
+                { name: 'copy', label: t('common.copy') },
+                { name: 'share', label: t('mobile.library.share') },
                 { name: 'delete', label: t('common.delete') },
               ]}
               onAccessibilityAction={(event) => {
-                if (event.nativeEvent.actionName === 'toggle') toggle();
-                if (event.nativeEvent.actionName === 'delete') void remove();
+                const name = event.nativeEvent.actionName;
+                if (name === 'toggle') toggle();
+                else if (name === 'copy') actions.onCopy();
+                else if (name === 'share') actions.onShare();
+                else if (name === 'delete') void remove();
               }}
               onPressIn={press.onPressIn}
               onPressOut={press.onPressOut}

@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Modal, ScrollView, StyleSheet, View } from 'react-native';
+import { Modal, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { ChatRows } from './ask-chat-list';
+import { ChatList } from './ask-chat-list';
 import { PrimaryButton, TextButton } from './buttons';
 import { Text } from './text';
 
@@ -60,25 +60,32 @@ export function AskHistory({
 
   return (
     <Modal visible={visible} animationType="slide" presentationStyle="pageSheet" onRequestClose={onClose}>
-      <ScrollView
+      <ChatList
+        chats={chats}
+        failed={failed}
+        openChatId={openChatId}
+        onPick={onPick}
         style={{ backgroundColor: colors.background }}
         contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 24 }]}
-        testID="ask-history">
-        <View style={styles.header}>
-          <Text accessibilityRole="header" weight="display" style={styles.title}>
-            {t('askChat.savedChats')}
-          </Text>
-          <TextButton label={t('mobile.common.done')} onPress={onClose} />
-        </View>
-        <PrimaryButton icon="plus" label={t('askChat.newChat')} onPress={onNewChat} />
-        <ChatRows chats={chats} failed={failed} openChatId={openChatId} onPick={onPick} />
-      </ScrollView>
+        testID="ask-history"
+        header={
+          <>
+            <View style={styles.header}>
+              <Text accessibilityRole="header" weight="display" style={styles.title}>
+                {t('askChat.savedChats')}
+              </Text>
+              <TextButton label={t('mobile.common.done')} onPress={onClose} />
+            </View>
+            <PrimaryButton icon="plus" label={t('askChat.newChat')} onPress={onNewChat} />
+          </>
+        }
+      />
     </Modal>
   );
 }
 
 const styles = StyleSheet.create({
-  content: { paddingHorizontal: 20, paddingTop: 22, gap: 14, width: '100%', maxWidth: 640, alignSelf: 'center' },
+  content: { paddingHorizontal: 20, paddingTop: 22, width: '100%', maxWidth: 640, alignSelf: 'center' },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
   title: { fontSize: 21, lineHeight: 26, letterSpacing: -0.3, flexShrink: 1 },
 });

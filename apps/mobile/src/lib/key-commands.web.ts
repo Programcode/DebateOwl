@@ -1,25 +1,45 @@
-import { useEffect, useRef } from 'react';
+import { useFocusEffect } from 'expo-router';
+import { useCallback, useEffect, useRef } from 'react';
 
-export type KeyCombo = 'cmd+n' | 'cmd+k' | 'cmd+enter';
+import { comboForKey, createKeyCommandRegistry, type KeyCombo } from './key-command-registry';
 
-function matches(event: KeyboardEvent, combo: KeyCombo): boolean {
-  if (!(event.metaKey || event.ctrlKey) || event.altKey || event.shiftKey) return false;
-  if (combo === 'cmd+enter') return event.key === 'Enter';
-  return event.key.toLowerCase() === combo.slice(-1);
+export type { KeyCombo } from './key-command-registry';
+
+const registry = createKeyCommandRegistry();
+let listening = false;
+
+function listen() {
+  if (listening) return;
+  listening = true;
+  window.addEventListener('keydown', (event) => {
+    const combo = comboForKey(event);
+    if (combo && registry.dispatch(combo)) event.preventDefault();
+  });
 }
 
-/** The iPad's ⌘ shortcuts in the web preview, from the same hook the native app calls (key-commands.ts). */
+/** The iPad's ⌘ shortcuts in the web preview, from the same hook and registry the native app uses (key-commands.ts). */
 export function useKeyCommand(combo: KeyCombo, handler: () => void, enabled = true): void {
   const latest = useRef(handler);
-  latest.current = handler;
+  useEffect(() => {
+    latest.current = handler;
+  });
   useEffect(() => {
     if (!enabled) return;
-    const onKey = (event: KeyboardEvent) => {
-      if (!matches(event, combo)) return;
-      event.preventDefault();
-      latest.current();
-    };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
+    listen();
+    return registry.register(combo, () => latest.current());
   }, [combo, enabled]);
+}
+
+/** useKeyCommand for a screen: it listens only while the screen is in view, never from under the one above it. */
+export function useFocusedKeyCommand(combo: KeyCombo, handler: () => void): void {
+  const latest = useRef(handler);
+  useEffect(() => {
+    latest.current = handler;
+  });
+  useFocusEffect(
+    useCallback(() => {
+      listen();
+      return registry.register(combo, () => latest.current());
+    }, [combo]),
+  );
 }
