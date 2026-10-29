@@ -18,10 +18,7 @@
       "height": 512
     },
     "description": "DebateOwl (formerly DebateLab at debate.pi-stack.org) is an AI debate prep and practice app for students and competitive debaters.",
-    "sameAs": [
-      "https://www.saashub.com/debatelab",
-      "https://www.uneed.best/tool/debatelab"
-    ],
+    "sameAs": [],
     "parent": {
       "name": "Pi-Stack",
       "url": "https://pi-stack.org/"

@@ -896,7 +896,7 @@
   },
   "hero": {
     "headline": "{{product}}: AI debate prep and practice",
-    "subheadline": "Prepare cases and practice rounds with AI.",
+    "subheadline": "{{product}} helps you prepare cases and practice rounds with AI.",
     "trialBadge": "{{trialDays}}-day free trial",
     "cta": "Start free trial",
     "trustBullet1": "No credit card required",

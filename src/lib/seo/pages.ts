@@ -12,7 +12,8 @@ export const ORGANIZATION_ID = `${SITE_ORIGIN}/#organization`;
 /**
  * The Organization behind the site, named for the product so search engines
  * see one name for one entity. Pi-Stack, which builds it, is its parent, not a
- * sameAs: a sameAs profile is the same entity elsewhere.
+ * sameAs: a sameAs profile is the same entity elsewhere. site.json lists only
+ * profiles that spell the name "DebateOwl"; with none, the node has no sameAs.
  */
 export function organizationNode() {
   const { name, logo, description, sameAs, parent } = site.organization;
@@ -27,7 +28,7 @@ export function organizationNode() {
     email: site.contactEmail,
     contactPoint: { '@type': 'ContactPoint', contactType: 'customer support', email: site.contactEmail, availableLanguage: ['en', 'hu', 'es'] },
     parentOrganization: { '@type': 'Organization', '@id': `${parent.url}#organization`, name: parent.name, url: parent.url },
-    sameAs,
+    ...(sameAs.length ? { sameAs } : {}),
   };
 }
 export const PRICING = site.pricing;

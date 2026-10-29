@@ -896,7 +896,7 @@
   },
   "hero": {
     "headline": "{{product}}: MI-alapú vitafelkészítés és gyakorlás",
-    "subheadline": "Készíts eseteket és gyakorolj fordulókat MI-vel.",
+    "subheadline": "A {{product}} segít eseteket készíteni és fordulókat gyakorolni MI-vel.",
     "trialBadge": "{{trialDays}} napos ingyenes próba",
     "cta": "Ingyenes próba indítása",
     "trustBullet1": "Bankkártya nem szükséges",
