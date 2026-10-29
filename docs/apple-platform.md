@@ -6,6 +6,7 @@ Current. What the iOS and iPadOS app (`apps/mobile`, bundle id `com.pistack.deba
 
 - **Expo Go:** none of the native extras below, by design. The config Expo Go loads never changes. Time-up alerts, the review prompt and notification taps work there, because they need only modules Expo Go has.
 - **Development build** (`DEBATELAB_BUILD=dev`) signed with the borrowed profile: Live Activities and widgets when the profile carries the App Group (`DEBATELAB_APP_GROUP`), Siri and Shortcuts, Handoff, Google sign-in (once Supabase allows the redirect), StoreKit (once App Store Connect has the products).
+- **Sideloaded release build** (`sideload` profile, re-signed with a free Apple ID): only the App Group entitlement is in the IPA, and only if the re-signer provisions it under the same name do Live Activities, widgets and the share extension turn on. Push, Sign in with Apple, Time Sensitive alerts, universal links, Handoff from Safari and in-app purchase stay off. [development.md](development.md#sideloaded-ipa) has the list.
 - **Development or release build signed by DebateOwl's own account** (`DEBATELAB_BUILD=dev DEBATELAB_APP_GROUP=group.com.pistack.debateowl DEBATELAB_APPLE_ACCOUNT=1`): everything, including Sign in with Apple, push, the Time Sensitive alert and Handoff from Safari to the app. `DEBATELAB_APPLE_ACCOUNT=1` keeps the push and Sign in with Apple entitlements that `withoutAccountEntitlements` in `app.config.ts` otherwise removes, and adds Time Sensitive Notifications and `activitycontinuation:debateowl.com`.
 
 ## The features

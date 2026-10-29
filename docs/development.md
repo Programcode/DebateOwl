@@ -139,13 +139,14 @@ Stop it with `$PREVIEW down "debatelab mobile expo-go"` when you are done.
 
 A development build is the app's own binary with `expo-dev-client`, so it loads JavaScript from Metro like Expo Go but carries native modules Expo Go lacks: speech recognition for voice rounds and dictation, iPad keyboard shortcuts (the app's own `apps/mobile/modules/key-commands`), Home Screen quick actions and Spotlight, the timer's and the generating Live Activities, the widgets and the share extension (with an App Group), Siri and Shortcuts, Handoff, StoreKit, and Google sign-in (Expo Go cannot receive OAuth redirects). [apple-platform.md](apple-platform.md) lists what each needs from the Apple account. Its Info.plist also gets the 120 Hz key, which Expo Go ignores. JavaScript-only changes never need a new build.
 
-[`apps/mobile/app.config.ts`](../apps/mobile/app.config.ts) builds one config with two switches:
+[`apps/mobile/app.config.ts`](../apps/mobile/app.config.ts) builds one config with these switches:
 
 - No `DEBATELAB_BUILD`: the Expo Go and web export config, unchanged.
 - `DEBATELAB_BUILD=dev`: adds `expo-dev-client`, `expo-speech-recognition` with the microphone and speech prompts (English in Info.plist, Spanish and Hungarian as `InfoPlist.strings` from `mobile.permissions` in the catalogs) and `CFBundleAllowMixedLocalizations`. The `development` profile in [`apps/mobile/eas.json`](../apps/mobile/eas.json) sets it.
-- `DEBATELAB_APP_GROUP=group.<id>`, only with `dev`: adds the `expo-widgets` extension (`ExpoWidgetsTarget`, bundle `com.pistack.debateowl.ExpoWidgetsTarget`) with the timer's lock-screen widget (`DebateTimerWidget`), the Current Debate widget and Live Activity, `NSSupportsLiveActivities`; the share extension from `expo-share-intent` (`DebateOwlShare`, bundle `com.pistack.debateowl.share-extension`, shown as "DebateOwl Share" in the share sheet); and the App Group `group.com.pistack.debateowl` (the only value the config accepts) on all three targets. Register that group for all three bundle ids in the Apple Developer account. For a device build, set it only when the provisioning profile carries that group; a borrowed wildcard profile does not. A simulator build is not signed, so the `development-simulator` profile always sets it. EAS does not see your shell, so it goes in the profile's `env` in `eas.json`, committed with the build.
+- `DEBATELAB_BUILD=release`: the same native app without `expo-dev-client`, so it runs the JavaScript built into it (the `release-simulator` and `sideload` profiles). Without `DEBATELAB_APPLE_ACCOUNT` it also drops Associated Domains, so its only entitlement is the App Group, which a free Apple ID can sign (see [Sideloaded IPA](#sideloaded-ipa)).
+- `DEBATELAB_APP_GROUP=group.<id>`, only with `dev` or `release`: adds the `expo-widgets` extension (`ExpoWidgetsTarget`, bundle `com.pistack.debateowl.ExpoWidgetsTarget`) with the timer's lock-screen widget (`DebateTimerWidget`), the Current Debate widget and Live Activity, `NSSupportsLiveActivities`; the share extension from `expo-share-intent` (`DebateOwlShare`, bundle `com.pistack.debateowl.share-extension`, shown as "DebateOwl Share" in the share sheet); and the App Group `group.com.pistack.debateowl` (the only value the config accepts) on all three targets. Register that group for all three bundle ids in the Apple Developer account. For a device build, set it only when the provisioning profile carries that group; a borrowed wildcard profile does not. A simulator build is not signed, so the `development-simulator` profile always sets it. EAS does not see your shell, so it goes in the profile's `env` in `eas.json`, committed with the build.
 
-- `DEBATELAB_APPLE_ACCOUNT=1`, only with `dev`: the build is signed by DebateOwl's own Apple account. It keeps the push and Sign in with Apple entitlements that every other development build drops (the borrowed profile has neither) and adds Time Sensitive Notifications and Handoff from Safari. See [apple-platform.md](apple-platform.md#checklist-for-debateowls-apple-account).
+- `DEBATELAB_APPLE_ACCOUNT=1`, only with `dev` or `release`: the build is signed by DebateOwl's own Apple account. It keeps the push and Sign in with Apple entitlements that every other native build drops (the borrowed profile has neither) and adds Time Sensitive Notifications and Handoff from Safari. Without it, `extra.remotePush` is false and the You tab's Notifications switch shows as unavailable. See [apple-platform.md](apple-platform.md#checklist-for-debateowls-apple-account).
 
 `nativeCapabilities()` in `apps/mobile/src/lib/native-capabilities.ts` tells the app at runtime what the binary has. Feature code checks it and never imports a dev-build module at the top level, so Expo Go keeps working.
 
@@ -258,6 +259,23 @@ eas build --platform ios --profile development-simulator --non-interactive --no-
 ```
 
 The artifact is a `.tar.gz` of the `.app`; drag the unpacked app onto a Simulator, then start Metro with `--dev-client`.
+
+#### Sideloaded IPA
+
+The `sideload` profile builds the release app for iPhone and iPad against **production** (`EXPO_PUBLIC_SUPABASE_ENV=production`), signed by no Apple team, for someone to re-sign with a free Apple ID in Sideloadly or AltStore. `release-simulator` builds the same app for the Simulator against staging. A normal EAS device build refuses to run without credentials, so `sideload` is a custom build, [`apps/mobile/.eas/build/sideload-ios.yml`](../apps/mobile/.eas/build/sideload-ios.yml): prebuild, the expo-widgets patch (custom builds skip npm's `eas-build-*` hooks), `pod install`, `xcodebuild archive` with signing off, then each bundle is signed ad hoc with the entitlements prebuild wrote and packed as `DebateOwl-sideload.ipa`. It needs no credentials, only a logged-in `eas`, and counts as one iOS build:
+
+```bash
+cd apps/mobile
+eas build --platform ios --profile sideload --non-interactive --no-wait
+```
+
+EAS keeps the artifact for a limited time (the build's `expirationDate`), so attach the IPA to a GitHub release when it has to stay downloadable. A free Apple ID signs only some of the app. These stay off, without errors:
+
+- push (the switch says this version cannot receive notifications), Sign in with Apple (the button is hidden), the Time Sensitive alert (it arrives as a normal notification), universal links and Handoff from Safari;
+- in-app purchase (`plans.tsx` shows the App Store as unavailable);
+- Live Activities, the widgets and the share extension whenever the re-signer does not provision the App Group `group.com.pistack.debateowl` under that exact name: `nativeCapabilities()` finds no container and the app runs without them. AltStore renames groups to `<group>.<TEAMID>`, so they are off there too.
+
+Everything else works as in any build: email code, demo code and Google sign-in (once production allows the `debatelab://auth/callback` redirect), every tool, the timer with its local time-up alert, voice and dictation, quick actions, Spotlight, Siri and Shortcuts, iPad shortcuts and offline reading. A free signature lasts seven days.
 
 #### Installing it
 
