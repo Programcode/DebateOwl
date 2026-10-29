@@ -1,9 +1,10 @@
 import { useFocusEffect } from 'expo-router';
 import { useCallback, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
-import { FlatList, Pressable, StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
+import { FlatList, StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { PressScale as BouncePressable } from '@/components/press-scale';
 import { Card, ListItemIn, SkeletonTextRows } from './card';
 import { Icon } from './icon';
 import { CardRowFrame, useRowArrivals } from './list-screen';
@@ -166,12 +167,12 @@ export function AskChatPane({
   return (
     <View style={[styles.pane, { width, borderRightColor: colors.line, backgroundColor: colors.background }]} testID="ask-chat-pane">
       <View style={[styles.paneTop, { paddingTop: insets.top + 6 }]}>
-        <Pressable accessibilityRole="button" accessibilityLabel={t('common.back')} hitSlop={8} onPress={onBack} style={styles.iconButton}>
+        <BouncePressable accessibilityRole="button" accessibilityLabel={t('common.back')} hitSlop={8} onPress={onBack} style={styles.iconButton}>
           <Icon name="chevronLeft" color={colors.primary} size={28} />
-        </Pressable>
-        <Pressable accessibilityRole="button" accessibilityLabel={t('askChat.newChat')} hitSlop={8} onPress={onNewChat} style={styles.iconButton} testID="ask-new-chat">
+        </BouncePressable>
+        <BouncePressable accessibilityRole="button" accessibilityLabel={t('askChat.newChat')} hitSlop={8} onPress={onNewChat} style={styles.iconButton} testID="ask-new-chat">
           <Icon name="plus" color={colors.primary} size={26} />
-        </Pressable>
+        </BouncePressable>
       </View>
       <ChatList
         chats={mine ? state.chats : null}

@@ -7,12 +7,12 @@ import { supabase } from './supabase';
 /**
  * The website's History page (src/pages/HistoryPage.tsx) and its unsorted
  * view (src/components/features/debate/UnsortedWork.tsx), read from the same
- * tables. A debate shows six lists; work outside every debate is one list of
+ * tables. A debate shows seven lists; work outside every debate is one list of
  * every kind, plus Library sources, that can be added to a debate. Offline,
  * both answer from their saved copies.
  */
 
-export type HistoryTab = 'cases' | 'chats' | 'attacks' | 'brainstorms' | 'factoids' | 'sparring';
+export type HistoryTab = 'cases' | 'chats' | 'attacks' | 'brainstorms' | 'factoids' | 'sparring' | 'crossfire';
 
 /** The website's tabs, in its order. */
 export const HISTORY_TABS: readonly { key: HistoryTab; kind: DebateItemKind }[] = [
@@ -22,6 +22,7 @@ export const HISTORY_TABS: readonly { key: HistoryTab; kind: DebateItemKind }[] 
   { key: 'brainstorms', kind: 'brainstorm' },
   { key: 'factoids', kind: 'factoids' },
   { key: 'sparring', kind: 'sparring' },
+  { key: 'crossfire', kind: 'crossfire' },
 ];
 
 export interface HistoryItem extends DebateItem {
@@ -143,27 +144,28 @@ async function fetchRounds(userId: string, scope: Scope): Promise<HistoryItem[]>
   });
 }
 
-/** The six lists of one debate. Offline, the saved copy. */
-export function fetchDebateHistory(userId: string, debateId: string, mark?: CopyMark): Promise<HistoryLists> {
-  return cachedRead(userId, 'history', debateId, () => loadDebateHistory(userId, debateId), mark);
+/** The seven lists of one debate. Offline, the saved copy. */
+export function fetchDebateHistory(userId: string, debateId: string, mark?: CopyMark, onCopy?: (value: HistoryLists) => void): Promise<HistoryLists> {
+  return cachedRead(userId, 'history', debateId, () => loadDebateHistory(userId, debateId), mark, onCopy);
 }
 
 async function loadDebateHistory(userId: string, debateId: string): Promise<HistoryLists> {
   const scope = { debateId };
-  const [cases, chats, attacks, brainstorms, factoids, sparring] = await readAll([
+  const [cases, chats, attacks, brainstorms, factoids, sparring, crossfire] = await readAll([
     fetchRows(userId, 'case', scope),
     fetchChatRows(userId, scope),
     fetchRows(userId, 'attack', scope),
     fetchRows(userId, 'brainstorm', scope),
     fetchRows(userId, 'factoids', scope),
     fetchRounds(userId, scope),
+    fetchRows(userId, 'crossfire', scope),
   ]);
-  return { cases, chats, attacks, brainstorms, factoids, sparring };
+  return { cases, chats, attacks, brainstorms, factoids, sparring, crossfire };
 }
 
 /** Work of every kind and Library sources that belong to no debate, newest first. Offline, the saved copy. */
-export function fetchUnsortedWork(userId: string, mark?: CopyMark): Promise<UnsortedEntry[]> {
-  return cachedRead(userId, 'history', 'one-off', () => loadUnsortedWork(userId), mark);
+export function fetchUnsortedWork(userId: string, mark?: CopyMark, onCopy?: (value: UnsortedEntry[]) => void): Promise<UnsortedEntry[]> {
+  return cachedRead(userId, 'history', 'one-off', () => loadUnsortedWork(userId), mark, onCopy);
 }
 
 async function loadUnsortedWork(userId: string): Promise<UnsortedEntry[]> {

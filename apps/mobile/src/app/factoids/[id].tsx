@@ -3,7 +3,11 @@ import { SafeWebUrlSchema } from '@debatelab/core/ai/schemas/url';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { View } from 'react-native';
 
+import { Celebration, clearCelebration, hasCelebration } from '@/components/celebration';
+
+import { runRequest } from '@/lib/run-request';
 import { ActionMenu } from '@/components/action-menu';
 import { PrimaryButton, SecondaryButton } from '@/components/buttons';
 import { openCitation } from '@/components/citation-target';
@@ -39,6 +43,8 @@ export default function FactoidsResultScreen() {
   const userId = session?.user.id ?? null;
   const { activeDebateId } = useDebates();
   const [exportOpen, setExportOpen] = useState(false);
+  const [celebrate, setCelebrate] = useState(() => hasCelebration(params.id));
+  useEffect(() => clearCelebration(params.id), [params.id]);
   const [saving, setSaving] = useState(false);
   const live = useRef(true);
   const owner = useRef(userId);
@@ -94,7 +100,7 @@ export default function FactoidsResultScreen() {
     }
     const url = SafeWebUrlSchema.safeParse(factoid.citation?.url);
     setSaving(true);
-    try {
+    return await runRequest(async () => {
       await addSource(forUser, {
         title: factoid.shortClaim,
         content: `${factoid.context}\n\nKey Figure: ${factoid.keyFigure}\nLimitations: ${factoid.limitations}`,
@@ -104,12 +110,12 @@ export default function FactoidsResultScreen() {
         debateId,
       });
       if (live.current && owner.current === forUser) setNotice(`${t('factoids.savedToLibrary')}. ${t('factoids.savedToLibraryDesc')}`);
-    } catch (cause) {
+    }, async (cause) => {
       console.warn('Could not save the factoid to the Library:', cause instanceof Error ? cause.message : cause);
       if (live.current && owner.current === forUser) setNotice(t('factoids.saveFailed'));
-    } finally {
+    }, () => {
       if (live.current) setSaving(false);
-    }
+    });
   };
 
   const savedId = result.savedId;
@@ -122,56 +128,66 @@ export default function FactoidsResultScreen() {
   ];
 
   return (
-    <DocumentScreen
-      testID="factoids-document"
-      outline
-      notice={doc.notice}
-      noticeTone={doc.noticeTone}
-      header={<DocumentHeader backLabel={back} onShare={() => run(() => shareText(title, factoidsToText(output, t)))} actions={actions} />}
-      actions={
-        <>
-          <SecondaryButton
-            floating
-            icon="chat"
-            label={t('common.discuss')}
-            onPress={() => router.push({ pathname: '/ask', params: { prompt: discussFactoidsMessage(output) } })}
-            testID="discuss-button"
-          />
-          <PrimaryButton floating icon="download" label={t('common.export')} onPress={() => setExportOpen(true)} disabled={doc.busy} testID="export-button" />
-        </>
-      }>
-      <DocumentTitle title={title} meta={t('mobile.debate.itemMeta', { kind: t('debate.kinds.factoids'), when: formatWhen(result.createdAt) })} />
-      <FactoidsDocument
-        output={output}
-        input={result.input as Partial<FactoidsInput>}
-        library={doc.library}
-        sources={result.sources}
-        saving={saving}
-        onCite={(target) => openCitation(router, target)}
-        onSave={(factoid) => void saveToLibrary(factoid)}
-        onSearch={(query) => router.push({ pathname: '/factoids', params: { claim: query, from: params.from ?? 'prepare' } })}
-      />
-      <ActionMenu
-        visible={exportOpen}
-        title={t('common.export')}
-        testID="export-menu"
-        items={[
-          { key: 'pdf', label: t('common.pdf'), icon: 'file' },
-          { key: 'copy', label: t('mobile.results.copyText'), icon: 'copy' },
-          // The website's Word export, built by the same code (packages/core/src/export/docx.ts).
-          { key: 'docx', label: t('common.docx'), icon: 'file' },
-        ]}
-        cancelLabel={t('common.cancel')}
-        onClose={() => setExportOpen(false)}
-        onSelect={(choice) => {
-          if (choice === 'pdf') run(() => sharePdf(factoidsExportHtml(output, t), FACTOIDS_EXPORT_FILE_NAME, title));
-          if (choice === 'docx') run(() => shareFactoidsDocx(output, t, title));
-          if (choice === 'copy') run(async () => {
-            await copyText(factoidsToText(output, t));
-            setNotice(t('generateResults.copiedToClipboard'));
-          });
-        }}
-      />
-    </DocumentScreen>
+    <View style={{ flex: 1 }}>
+      <DocumentScreen
+        testID="factoids-document"
+        outline
+        notice={doc.notice}
+        noticeTone={doc.noticeTone}
+        header={<DocumentHeader backLabel={back} onShare={() => run(() => shareText(title, factoidsToText(output, t)))} actions={actions} />}
+        actions={
+          <>
+            <SecondaryButton
+              floating
+              icon="chat"
+              label={t('common.discuss')}
+              onPress={() => router.push({ pathname: '/ask', params: { prompt: discussFactoidsMessage(output) } })}
+              testID="discuss-button"
+            />
+            <PrimaryButton floating icon="download" label={t('common.export')} onPress={() => setExportOpen(true)} disabled={doc.busy} testID="export-button" />
+          </>
+        }>
+        <DocumentTitle title={title} meta={t('mobile.debate.itemMeta', { kind: t('debate.kinds.factoids'), when: formatWhen(result.createdAt) })} />
+        <FactoidsDocument
+          output={output}
+          input={result.input as Partial<FactoidsInput>}
+          library={doc.library}
+          sources={result.sources}
+          saving={saving}
+          onCite={(target) => openCitation(router, target)}
+          onSave={(factoid) => void saveToLibrary(factoid)}
+          onSearch={(query) => router.push({ pathname: '/factoids', params: { claim: query, from: params.from ?? 'prepare' } })}
+        />
+        <ActionMenu
+          visible={exportOpen}
+          title={t('common.export')}
+          testID="export-menu"
+          items={[
+            { key: 'pdf', label: t('common.pdf'), icon: 'file' },
+            { key: 'copy', label: t('mobile.results.copyText'), icon: 'copy' },
+            // The website's Word export, built by the same code (packages/core/src/export/docx.ts).
+            { key: 'docx', label: t('common.docx'), icon: 'file' },
+          ]}
+          cancelLabel={t('common.cancel')}
+          onClose={() => setExportOpen(false)}
+          onSelect={(choice) => {
+            if (choice === 'pdf') run(() => sharePdf(factoidsExportHtml(output, t), FACTOIDS_EXPORT_FILE_NAME, title));
+            if (choice === 'docx') run(() => shareFactoidsDocx(output, t, title));
+            if (choice === 'copy') run(async () => {
+              await copyText(factoidsToText(output, t));
+              setNotice(t('generateResults.copiedToClipboard'));
+            });
+          }}
+        />
+      </DocumentScreen>
+      {celebrate ? (
+        <Celebration
+          title={t('mobile.animation.factoidsReady')}
+          stats={[{ key: 'factoids', label: t('mobile.animation.factoids'), value: output.factoids.length }]}
+          haptic={false}
+          onDone={() => setCelebrate(false)}
+        />
+      ) : null}
+    </View>
   );
 }

@@ -1,11 +1,12 @@
 import type { LibrarySort } from '@debatelab/core/library';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { ScrollView, StyleSheet, View } from 'react-native';
 
 /** Menus are fixed chrome: iOS's own menus stop growing at large accessibility sizes. */
 const MENU_MAX_FONT_SCALE = 1.6;
 
+import { PressScale as BouncePressable } from '@/components/press-scale';
 import { Icon } from './icon';
 import type { IconName } from './icon-paths';
 import { SORT_LABELS, TYPE_FILTERS, type AddSourceKind, type LibraryHeaderProps } from './library-options';
@@ -43,7 +44,7 @@ export function LibraryHeader({ title, onAdd, disabled, sort, onSort, filter, on
   ];
 
   const row = (item: Item, divider: boolean) => (
-    <Pressable
+    <BouncePressable
       key={item.key}
       accessibilityRole="menuitem"
       accessibilityState={{ checked: item.on, disabled: item.disabled }}
@@ -58,7 +59,7 @@ export function LibraryHeader({ title, onAdd, disabled, sort, onSort, filter, on
         {item.label}
       </Text>
       {item.icon ? <Icon name={item.icon} color={item.destructive ? colors.destructive : colors.foreground} size={21} /> : null}
-    </Pressable>
+    </BouncePressable>
   );
 
   return (
@@ -67,7 +68,7 @@ export function LibraryHeader({ title, onAdd, disabled, sort, onSort, filter, on
         {title}
       </Text>
       <View style={styles.buttons}>
-        <Pressable
+        <BouncePressable
           accessibilityRole="button"
           accessibilityLabel={t('mobile.library.more')}
           accessibilityState={{ disabled, expanded: open === 'more' }}
@@ -76,8 +77,8 @@ export function LibraryHeader({ title, onAdd, disabled, sort, onSort, filter, on
           testID="library-more"
           style={[styles.round, { backgroundColor: colors.tile }, disabled && styles.disabled]}>
           <Icon name="more" color={colors.tileForeground} size={22} />
-        </Pressable>
-        <Pressable
+        </BouncePressable>
+        <BouncePressable
           accessibilityRole="button"
           accessibilityLabel={t('mobile.library.add')}
           accessibilityState={{ disabled, expanded: open === 'add' }}
@@ -86,7 +87,7 @@ export function LibraryHeader({ title, onAdd, disabled, sort, onSort, filter, on
           testID="library-add"
           style={[styles.round, { backgroundColor: colors.primaryFill }, disabled && styles.disabled]}>
           <Icon name="plus" color={colors.onPrimary} size={24} />
-        </Pressable>
+        </BouncePressable>
         {/* Under the buttons, wherever a large text size puts them. */}
         {open === 'add' ? (
           <View accessibilityRole="menu" style={[styles.menu, { backgroundColor: colors.card, borderColor: colors.line }]}>

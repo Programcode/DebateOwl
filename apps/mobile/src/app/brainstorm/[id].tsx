@@ -2,6 +2,9 @@ import type { BrainstormInput } from '@debatelab/core/ai/schemas/brainstorm';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { View } from 'react-native';
+
+import { Celebration, clearCelebration, hasCelebration } from '@/components/celebration';
 
 import { ActionMenu } from '@/components/action-menu';
 import { BrainstormDocument } from '@/components/brainstorm-document';
@@ -29,6 +32,8 @@ export default function BrainstormResultScreen() {
   const params = useLocalSearchParams<{ id: string; from?: string; notice?: string; failed?: string }>();
   const doc = useResultDocument('brainstorm', params.id);
   const [exportOpen, setExportOpen] = useState(false);
+  const [celebrate, setCelebrate] = useState(() => hasCelebration(params.id));
+  useEffect(() => clearCelebration(params.id), [params.id]);
   const { setNotice } = doc;
   const shareLink = useShareLink(setNotice);
   const { notice: arrival, failed } = params;
@@ -56,6 +61,11 @@ export default function BrainstormResultScreen() {
     );
   }
 
+  const ideaCount = new Set([
+    ...(output.topFive ?? []).map((item) => item.idea.id),
+    ...(output.buckets ?? []).flatMap((bucket) => bucket.ideas.map((idea) => idea.id)),
+    ...(output.mindmap ?? []).flatMap((group) => group.items.map((idea) => idea.id)),
+  ]).size;
   const title = result.title || t('export.brainstormResults');
   const questionsOnly = Boolean(output.needsMoreInfo && output.clarifyingQuestions?.length);
   const run = (work: () => Promise<void>) => {
@@ -76,48 +86,58 @@ export default function BrainstormResultScreen() {
   ];
 
   return (
-    <DocumentScreen
-      testID="brainstorm-document"
-      outline
-      notice={doc.notice}
-      noticeTone={doc.noticeTone}
-      header={<DocumentHeader backLabel={back} onShare={questionsOnly ? undefined : () => run(() => shareText(title, brainstormToText(output, t)))} actions={actions} />}
-      // The website shows only the questions when the model needs more, with no export or discussion.
-      actions={questionsOnly ? undefined : (
-        <>
-          <SecondaryButton
-            floating
-            icon="chat"
-            label={t('common.discuss')}
-            onPress={() => router.push({ pathname: '/ask', params: { prompt: discussBrainstormMessage(output, t) } })}
-            testID="discuss-button"
-          />
-          <PrimaryButton floating icon="download" label={t('common.export')} onPress={() => setExportOpen(true)} disabled={doc.busy} testID="export-button" />
-        </>
-      )}>
-      <DocumentTitle title={title} meta={t('mobile.debate.itemMeta', { kind: t('debate.kinds.brainstorm'), when: formatWhen(result.createdAt) })} />
-      <BrainstormDocument output={output} input={result.input as Partial<BrainstormInput>} sources={result.sources} />
-      <ActionMenu
-        visible={exportOpen}
-        title={t('common.export')}
-        testID="export-menu"
-        items={[
-          { key: 'pdf', label: t('common.pdf'), icon: 'file' },
-          { key: 'copy', label: t('mobile.results.copyText'), icon: 'copy' },
-          // The website's Word export, built by the same code (packages/core/src/export/docx.ts).
-          { key: 'docx', label: t('common.docx'), icon: 'file' },
-        ]}
-        cancelLabel={t('common.cancel')}
-        onClose={() => setExportOpen(false)}
-        onSelect={(choice) => {
-          if (choice === 'pdf') run(() => sharePdf(brainstormExportHtml(output, t), BRAINSTORM_EXPORT_FILE_NAME, title));
-          if (choice === 'docx') run(() => shareBrainstormDocx(output, t, title));
-          if (choice === 'copy') run(async () => {
-            await copyText(brainstormToText(output, t));
-            setNotice(t('generateResults.copiedToClipboard'));
-          });
-        }}
-      />
-    </DocumentScreen>
+    <View style={{ flex: 1 }}>
+      <DocumentScreen
+        testID="brainstorm-document"
+        outline
+        notice={doc.notice}
+        noticeTone={doc.noticeTone}
+        header={<DocumentHeader backLabel={back} onShare={questionsOnly ? undefined : () => run(() => shareText(title, brainstormToText(output, t)))} actions={actions} />}
+        // The website shows only the questions when the model needs more, with no export or discussion.
+        actions={questionsOnly ? undefined : (
+          <>
+            <SecondaryButton
+              floating
+              icon="chat"
+              label={t('common.discuss')}
+              onPress={() => router.push({ pathname: '/ask', params: { prompt: discussBrainstormMessage(output, t) } })}
+              testID="discuss-button"
+            />
+            <PrimaryButton floating icon="download" label={t('common.export')} onPress={() => setExportOpen(true)} disabled={doc.busy} testID="export-button" />
+          </>
+        )}>
+        <DocumentTitle title={title} meta={t('mobile.debate.itemMeta', { kind: t('debate.kinds.brainstorm'), when: formatWhen(result.createdAt) })} />
+        <BrainstormDocument output={output} input={result.input as Partial<BrainstormInput>} sources={result.sources} />
+        <ActionMenu
+          visible={exportOpen}
+          title={t('common.export')}
+          testID="export-menu"
+          items={[
+            { key: 'pdf', label: t('common.pdf'), icon: 'file' },
+            { key: 'copy', label: t('mobile.results.copyText'), icon: 'copy' },
+            // The website's Word export, built by the same code (packages/core/src/export/docx.ts).
+            { key: 'docx', label: t('common.docx'), icon: 'file' },
+          ]}
+          cancelLabel={t('common.cancel')}
+          onClose={() => setExportOpen(false)}
+          onSelect={(choice) => {
+            if (choice === 'pdf') run(() => sharePdf(brainstormExportHtml(output, t), BRAINSTORM_EXPORT_FILE_NAME, title));
+            if (choice === 'docx') run(() => shareBrainstormDocx(output, t, title));
+            if (choice === 'copy') run(async () => {
+              await copyText(brainstormToText(output, t));
+              setNotice(t('generateResults.copiedToClipboard'));
+            });
+          }}
+        />
+      </DocumentScreen>
+      {celebrate ? (
+        <Celebration
+          title={t('mobile.animation.brainstormReady')}
+          stats={[{ key: 'ideas', label: t('mobile.animation.ideas'), value: ideaCount }]}
+          haptic={false}
+          onDone={() => setCelebrate(false)}
+        />
+      ) : null}
+    </View>
   );
 }

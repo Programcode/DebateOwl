@@ -29,8 +29,10 @@ import { supabase } from './supabase';
  * releases it again before doing anything else with push.
  *
  * - unavailable: this build cannot get an Expo push token. Expo Go on Android
- *   has no remote push since SDK 53, and every build needs the app's EAS
- *   project ID (`extra.eas.projectId` in app.config.ts), which is not set yet.
+ *   has no remote push since SDK 53, every build needs the app's EAS project
+ *   ID (`extra.eas.projectId` in app.config.ts), and a native build not signed
+ *   by DebateOwl's own Apple account has no push entitlement
+ *   (`extra.remotePush` false), so iOS would refuse it a token.
  * - blocked: iOS Settings turned notifications off for the app.
  * - off / on: this account on this phone.
  */
@@ -70,6 +72,7 @@ function projectId(): string | undefined {
 }
 
 function available(): boolean {
+  if (Constants.expoConfig?.extra?.remotePush === false) return false;
   return projectId() !== undefined && !(Platform.OS === 'android' && isRunningInExpoGo());
 }
 

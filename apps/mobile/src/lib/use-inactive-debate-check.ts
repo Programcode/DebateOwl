@@ -13,9 +13,10 @@ const asked = new Set<string>();
  */
 export function useInactiveDebateCheck() {
   const router = useRouter();
-  const { status, current } = useDebates();
+  const { status, fresh, current } = useDebates();
   useEffect(() => {
-    if (status !== 'ready' || !current || asked.has(current.id) || !isDebateInactive(current)) return;
+    // Only on the server's list: a saved copy can be days older than the student's last work on the website.
+    if (status !== 'ready' || !fresh || !current || asked.has(current.id) || !isDebateInactive(current)) return;
     const id = current.id;
     // Once the tabs have settled, so the sheet opens over them.
     const timer = setTimeout(() => {
@@ -23,5 +24,5 @@ export function useInactiveDebateCheck() {
       router.push('/debate-check');
     }, 700);
     return () => clearTimeout(timer);
-  }, [status, current, router]);
+  }, [status, fresh, current, router]);
 }

@@ -15,6 +15,7 @@ import { useTheme } from '@/theme/use-theme';
 type ListScreenProps<T> = Omit<FlatListProps<T>, 'ListHeaderComponent' | 'contentContainerStyle' | 'CellRendererComponent' | 'onRefresh' | 'refreshing'> & {
   /** What `Screen` would show above the list: titles, pickers, search. */
   header?: ReactNode;
+  gap?: number;
   safeTop?: boolean;
   wide?: boolean;
   /** The column's style when the list sits in an iPad pane instead of a tab. */
@@ -31,7 +32,7 @@ type ListScreenProps<T> = Omit<FlatListProps<T>, 'ListHeaderComponent' | 'conten
  * the rows are a FlatList, so only those near the screen are drawn. Rows that
  * should look like one card use `CardRowFrame`.
  */
-export function ListScreen<T>({ header, safeTop, wide, contentStyle, animateLayout = false, onRefresh, ...list }: ListScreenProps<T>): ReactElement {
+export function ListScreen<T>({ header, gap = 16, safeTop, wide, contentStyle, animateLayout = false, onRefresh, ...list }: ListScreenProps<T>): ReactElement {
   const insets = useSafeAreaInsets();
   const reduce = useReduceMotion();
   const { colors } = useTheme();
@@ -51,8 +52,10 @@ export function ListScreen<T>({ header, safeTop, wide, contentStyle, animateLayo
       itemLayoutAnimation={animateLayout ? LinearTransition.duration(200).reduceMotion(motionSetting(reduce)) : undefined}
       refreshControl={refresh ? <RefreshControl refreshing={refreshing} onRefresh={refresh} tintColor={colors.primary} /> : undefined}
       {...list}
+      // Above the rows, so a menu the header opens (the web preview draws its own) is not drawn under a row's entrance animation.
+      ListHeaderComponentStyle={styles.headerLayer}
       ListHeaderComponent={
-        <View style={styles.header}>
+        <View style={[styles.header, { gap, paddingBottom: gap }]}>
           <OfflineNotice />
           {header}
         </View>
@@ -96,6 +99,7 @@ const styles = StyleSheet.create({
   content: { paddingHorizontal: 20, paddingBottom: 32, width: '100%', maxWidth: 640, alignSelf: 'center' },
   wide: { paddingHorizontal: 36, paddingBottom: 48, maxWidth: HOME_MAX_WIDTH },
   header: { gap: 16, paddingBottom: 16 },
+  headerLayer: { zIndex: 1 },
   frame: { borderLeftWidth: 2, borderRightWidth: 2, overflow: 'hidden' },
   frameFirst: { borderTopWidth: 2, borderTopLeftRadius: radius.card, borderTopRightRadius: radius.card },
   frameLast: { borderBottomWidth: 2, borderBottomLeftRadius: radius.card, borderBottomRightRadius: radius.card },

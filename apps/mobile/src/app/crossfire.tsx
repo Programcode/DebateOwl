@@ -1,3 +1,5 @@
+import { Owl } from '@/components/owl';
+import { PressScale as BouncePressable } from '@/components/press-scale';
 import { createCrossfireSetupState, crossfireReducer, expectedUserTurnKind } from '@debatelab/core/crossfire/reducer';
 import {
   CrossfireConfigSchema,
@@ -13,7 +15,7 @@ import { combineDelivery, measureDelivery } from '@debatelab/core/voice/delivery
 import { Stack, useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { memo, useCallback, useEffect, useReducer, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ActivityIndicator, AppState, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, AppState, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AppTextInput } from '@/components/app-text-input';
@@ -649,15 +651,15 @@ export default function CrossfireScreen() {
           </Text>
         </View>
         {state.phase === 'active' ? (
-          <Pressable
+          <BouncePressable
             accessibilityRole="button"
             onPress={() => endSession('manual')}
             testID="crossfire-end"
-            style={({ pressed }) => [styles.end, { borderColor: colors.border, backgroundColor: colors.input }, pressed && styles.pressed]}>
+            style={[styles.end, { borderColor: colors.border, backgroundColor: colors.input }]}>
             <Text weight="semibold" style={styles.endLabel} numberOfLines={2}>
               {t('crossfire.endSession')}
             </Text>
-          </Pressable>
+          </BouncePressable>
         ) : null}
       </View>
 
@@ -689,6 +691,7 @@ export default function CrossfireScreen() {
 
         {state.phase === 'active' && state.request.status === 'failed' ? (
           <View accessibilityRole="alert" style={[styles.error, { borderColor: colors.border, backgroundColor: colors.card }]} testID="crossfire-error">
+            <Owl pose="skeptical" size={48} gesture="shake" breathe={false} />
             <Text weight="semibold" style={styles.errorTitle}>
               {state.request.errorKind === 'timeout' ? t('crossfire.timeout') : state.request.errorKind === 'response' ? t('crossfire.invalidResponse') : t('crossfire.error')}
             </Text>
@@ -716,7 +719,7 @@ export default function CrossfireScreen() {
               </>
             ) : (
               <>
-                <Icon name="alert" color={colors.destructive} size={26} />
+                <Owl pose="skeptical" size={48} gesture="shake" breathe={false} />
                 <Text weight="semibold" style={styles.errorTitle} accessibilityRole="alert">
                   {state.errorKind === 'timeout' ? t('crossfire.debriefTimeout') : t('crossfire.debriefError')}
                 </Text>
@@ -755,7 +758,7 @@ export default function CrossfireScreen() {
                 style={[styles.input, { color: colors.foreground }]}
                 testID="crossfire-input"
               />
-              <Pressable
+              <BouncePressable
                 accessibilityRole="button"
                 accessibilityLabel={inputKind === 'question' ? t('crossfire.submitQuestion') : t('crossfire.submitAnswer')}
                 accessibilityState={{ disabled: !canSend }}
@@ -764,7 +767,7 @@ export default function CrossfireScreen() {
                 style={[styles.send, { backgroundColor: colors.primaryFill }, !canSend && styles.sendDisabled]}
                 testID="crossfire-send">
                 <Icon name="arrowUp" color={colors.onPrimary} size={19} />
-              </Pressable>
+              </BouncePressable>
             </View>
           </View>
         </View>
@@ -834,7 +837,6 @@ const styles = StyleSheet.create({
   // Long labels ("Munkamenet befejezése") wrap instead of squeezing the resolution.
   end: { borderWidth: 1, borderRadius: 19, paddingHorizontal: 14, paddingVertical: 6, minHeight: 38, justifyContent: 'center', maxWidth: '38%' },
   endLabel: { fontSize: 14.5, textAlign: 'center' },
-  pressed: { opacity: 0.7 },
   liveContent: { paddingHorizontal: 18, paddingTop: 16, paddingBottom: 24, gap: 14, width: '100%', maxWidth: 720, alignSelf: 'center' },
   notice: { fontSize: 14, lineHeight: 19 },
   thinking: { flexDirection: 'row', alignItems: 'center', gap: 10 },

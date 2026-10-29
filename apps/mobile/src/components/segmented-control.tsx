@@ -1,5 +1,6 @@
-import { Pressable, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
+import { PressScale as BouncePressable } from '@/components/press-scale';
 import { Text } from './text';
 
 import { haptics } from '@/lib/haptics';
@@ -25,7 +26,7 @@ export function SegmentedControl<T extends string>({
       {options.map((option) => {
         const selected = option.value === value;
         return (
-          <Pressable
+          <BouncePressable
             key={option.value}
             accessibilityRole="tab"
             accessibilityState={{ selected, disabled }}
@@ -42,7 +43,7 @@ export function SegmentedControl<T extends string>({
             <Text weight="semibold" tone={selected ? 'foreground' : 'secondary'} style={styles.label} maxFontSizeMultiplier={1.6}>
               {option.label}
             </Text>
-          </Pressable>
+          </BouncePressable>
         );
       })}
     </View>

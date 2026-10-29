@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { PressScale as BouncePressable } from '@/components/press-scale';
 import { Icon } from './icon';
 import type { IconName } from './icon-paths';
 import { Text } from './text';
@@ -12,15 +13,15 @@ import { useTheme } from '@/theme/use-theme';
 export function RoundIconButton({ icon, label, onPress, testID }: { icon: IconName; label: string; onPress: () => void; testID?: string }) {
   const { colors, scheme } = useTheme();
   return (
-    <Pressable
+    <BouncePressable
       accessibilityRole="button"
       accessibilityLabel={label}
       onPress={onPress}
       hitSlop={6}
       testID={testID}
-      style={({ pressed }) => [styles.round, { backgroundColor: scheme === 'dark' ? 'rgba(255,255,255,0.1)' : colors.segmentTrack }, pressed && styles.pressed]}>
+      style={[styles.round, { backgroundColor: scheme === 'dark' ? 'rgba(255,255,255,0.1)' : colors.segmentTrack }]}>
       <Icon name={icon} color={colors.foreground} size={20} />
-    </Pressable>
+    </BouncePressable>
   );
 }
 
@@ -49,7 +50,7 @@ export function LiveTopBar({ left, right, title, subtitle }: { left: ReactNode; 
 export function SideControl({ icon, label, onPress, disabled, testID }: { icon: IconName; label: string; onPress: () => void; disabled?: boolean; testID?: string }) {
   const { colors, scheme } = useTheme();
   return (
-    <Pressable
+    <BouncePressable
       accessibilityRole="button"
       accessibilityLabel={label}
       accessibilityState={{ disabled }}
@@ -63,7 +64,7 @@ export function SideControl({ icon, label, onPress, disabled, testID }: { icon: 
       <Text tone="faint" style={styles.controlLabel} numberOfLines={1}>
         {label}
       </Text>
-    </Pressable>
+    </BouncePressable>
   );
 }
 

@@ -4,6 +4,8 @@ const storage = vi.hoisted(() => new Map<string, string>());
 // A Supabase client whose queries answer with the next queued result, for the modules that write.
 const supabase = vi.hoisted(() => ({ results: [] as unknown[], from: () => undefined as unknown }));
 vi.mock('./supabase', () => ({ supabase }));
+// Deletion does not send AI requests; keep Expo's transport out of this Node test.
+vi.mock('./ai-request', () => ({}));
 const network = vi.hoisted(() => ({ listener: null as ((state: { isConnected: boolean; isInternetReachable: boolean }) => void) | null }));
 
 vi.mock('@react-native-async-storage/async-storage', () => ({
@@ -29,7 +31,7 @@ vi.mock('expo-network', () => ({
 let offlineFailure: () => Promise<never>;
 
 function deferred<T>() {
-  let resolve!: (value: T) => void;
+  let resolve!: (value: T | PromiseLike<T>) => void;
   const promise = new Promise<T>((done) => {
     resolve = done;
   });
@@ -49,7 +51,7 @@ async function load() {
   vi.resetModules();
   const cache = await import('./offline-cache');
   const status = await import('./network-status');
-  const writers = { ...(await import('./debates')), ...(await import('./sources')), ...(await import('./flowcharts')) };
+  const writers = { ...(await import('./debates')), ...(await import('./sources')), ...(await import('./flowcharts')), ...(await import('./crossfire')) };
   offlineFailure = () => Promise.reject(cache.readFailed({ message: 'TypeError: Network request failed' }, 0));
   return { ...cache, ...status, ...writers };
 }
@@ -182,6 +184,14 @@ describe('which failures fall back', () => {
     await expect(cachedRead('user-a', 'sources', 'debate-1', offlineFailure)).resolves.toEqual(['source']);
   });
 
+  // The five-day question waits for a list the server gave (debate-context.tsx), never a copy.
+  it('says when the answer is the saved copy rather than the server', async () => {
+    const { cachedReadFrom, setCacheOwner } = await load();
+    setCacheOwner('user-a');
+    await expect(cachedReadFrom('user-a', 'debates', 'all', async () => ['debate'])).resolves.toEqual({ value: ['debate'], fromCopy: false });
+    await expect(cachedReadFrom('user-a', 'debates', 'all', offlineFailure)).resolves.toEqual({ value: ['debate'], fromCopy: true });
+  });
+
   it('throws a refused session, a policy error or any other server answer instead of serving the copy', async () => {
     const { cachedRead, readFailed, setCacheOwner } = await load();
     setCacheOwner('user-a');
@@ -295,6 +305,37 @@ describe('after a write', () => {
     await expect(cachedRead('user-a', 'debate-lists', 'recent:debate-2:pro:5', offlineFailure)).resolves.toEqual(['other']);
   });
 
+  it.each([['debate-1'], [null], []] as (string | null)[][])('deleting Crossfire drops its document and affected lists (%j)', async (...deletedFrom) => {
+    const cache = await load();
+    cache.setCacheOwner('user-a');
+    await cache.cachedRead('user-a', 'crossfire', 'round-1', async () => ({ transcript: 'private words' }));
+    for (const key of ['debate-1', 'debate-2', 'one-off']) {
+      await cache.cachedRead('user-a', 'history', key, async () => ['round-1']);
+      await cache.cachedRead('user-a', 'debate-lists', `counts:${key}`, async () => ({ crossfire: 1 }));
+      await cache.cachedRead('user-a', 'debate-lists', `recent:${key}:pro:5`, async () => ['round-1']);
+    }
+    const slow = deferred<string[]>();
+    const running = cache.cachedRead('user-a', 'history', deletedFrom[0] ?? 'one-off', () => slow.promise);
+    supabase.results.push({ data: deletedFrom.map((debate_id) => ({ debate_id })), error: null, status: 200 });
+    await cache.deleteCrossfireRound('user-a', 'round-1');
+    slow.resolve(['round-1']);
+    await running;
+    await expect(cache.cachedRead('user-a', 'crossfire', 'round-1', offlineFailure)).rejects.toThrow();
+    for (const key of ['debate-1', 'debate-2', 'one-off']) {
+      const affected = deletedFrom.length === 0 || key === (deletedFrom[0] ?? 'one-off');
+      const read = cache.cachedRead('user-a', 'history', key, offlineFailure);
+      if (affected) await expect(read).rejects.toThrow();
+      else await expect(read).resolves.toEqual(['round-1']);
+      if (key !== 'one-off') {
+        for (const list of [`counts:${key}`, `recent:${key}:pro:5`]) {
+          const count = cache.cachedRead('user-a', 'debate-lists', list, offlineFailure);
+          if (affected) await expect(count).rejects.toThrow();
+          else await expect(count).resolves.toBeDefined();
+        }
+      }
+    }
+  });
+
   it('deleting a source drops it from the Library and the counts that held it', async () => {
     const cache = await load();
     cache.setCacheOwner('user-a');
@@ -357,4 +398,110 @@ describe('after a write', () => {
     expect(offline.currentId).toBe('debate-2');
     expect(offline.debates[0].id).toBe('debate-2');
   });
+});
+
+describe('copy-first refreshes', () => {
+  it('shows the copy while refreshing without marking it offline, then returns the fresh answer', async () => {
+    const cache = await load();
+    cache.setCacheOwner('user-a');
+    await cache.cachedRead('user-a', 'sources', 'debate-1', async () => ['saved']);
+    await cache.copiesWritten();
+    const response = deferred<string[]>();
+    const onCopy = vi.fn();
+    const refresh = cache.cachedRead('user-a', 'sources', 'debate-1', () => response.promise, undefined, onCopy);
+    await cache.copiesWritten();
+    expect(onCopy).toHaveBeenCalledWith(['saved']);
+    expect(cache.getOfflineStatus().savedCopies).toBe(false);
+    response.resolve(['fresh']);
+    await expect(refresh).resolves.toEqual(['fresh']);
+    await expect(cache.cachedRead('user-a', 'sources', 'debate-1', offlineFailure)).resolves.toEqual(['fresh']);
+  });
+
+  it('keeps the copy and marks it offline only when the refresh gets no answer', async () => {
+    const cache = await load();
+    cache.setCacheOwner('user-a');
+    await cache.cachedRead('user-a', 'sources', 'debate-1', async () => ['saved']);
+    const onCopy = vi.fn();
+    const response = deferred<string[]>();
+    const refresh = cache.cachedRead('user-a', 'sources', 'debate-1', () => response.promise, undefined, onCopy);
+    await cache.copiesWritten();
+    expect(onCopy).toHaveBeenCalledWith(['saved']);
+    response.resolve(offlineFailure());
+    await expect(refresh).resolves.toEqual(['saved']);
+    expect(cache.getOfflineStatus().savedCopies).toBe(true);
+  });
+
+  it.each([401, 403, 500])('still throws a server error (%s) after showing a copy', async (status) => {
+    const cache = await load();
+    cache.setCacheOwner('user-a');
+    await cache.cachedRead('user-a', 'sources', 'debate-1', async () => ['saved']);
+    const response = deferred<string[]>();
+    const onCopy = vi.fn();
+    const refresh = cache.cachedRead('user-a', 'sources', 'debate-1', () => response.promise, undefined, onCopy);
+    await cache.copiesWritten();
+    expect(onCopy).toHaveBeenCalledWith(['saved']);
+    response.resolve(Promise.reject(cache.readFailed({ message: 'Refused' }, status)));
+    await expect(refresh).rejects.toThrow('Refused');
+    expect(cache.getOfflineStatus().savedCopies).toBe(false);
+  });
+});
+
+it('does not deliver an early copy after its screen releases the load or its owner changes', async () => {
+  const cache = await load();
+  cache.setCacheOwner('user-a');
+  await cache.cachedRead('user-a', 'sources', 'debate-1', async () => ['A secret']);
+  const holder = new cache.CopyHolder();
+  const onCopy = vi.fn();
+  const response = deferred<string[]>();
+  const refresh = cache.cachedRead('user-a', 'sources', 'debate-1', () => response.promise, holder.mark(), onCopy);
+  holder.release();
+  cache.setCacheOwner('user-b');
+  await cache.copiesWritten();
+  expect(onCopy).not.toHaveBeenCalled();
+  response.resolve(['A refreshed']);
+  await refresh;
+  await cache.copiesWritten();
+  expect([...storage.values()].some((raw) => raw.includes('A secret') || raw.includes('A refreshed'))).toBe(false);
+});
+
+it('does not write an unchanged Library payload again, but keeps same-id edits', async () => {
+  const cache = await load();
+  const asyncStorage = (await import('@react-native-async-storage/async-storage')).default;
+  const writes = vi.spyOn(asyncStorage, 'multiSet');
+  cache.setCacheOwner('user-a');
+  const rows = [{ id: 'source-1', content: 'Full text', isActive: true }];
+  await cache.cachedRead('user-a', 'sources', 'debate-1', async () => rows);
+  await cache.copiesWritten();
+  writes.mockClear();
+  await cache.cachedRead('user-a', 'sources', 'debate-1', async () => rows.map((row) => ({ ...row })));
+  await cache.copiesWritten();
+  const entry = 'debatelab.cache.v1:user-a:sources:debate-1';
+  expect(writes.mock.calls.flatMap(([pairs]) => pairs).some(([key]) => key === entry)).toBe(false);
+  await cache.cachedRead('user-a', 'sources', 'debate-1', async () => [{ ...rows[0], content: 'Edited elsewhere' }]);
+  await cache.copiesWritten();
+  expect(writes.mock.calls.flatMap(([pairs]) => pairs).some(([key]) => key === entry)).toBe(true);
+  await expect(cache.cachedRead('user-a', 'sources', 'debate-1', offlineFailure)).resolves.toEqual([{ ...rows[0], content: 'Edited elsewhere' }]);
+});
+
+it('surfaces a fast server refusal even while disk is still reading', async () => {
+  const cache = await load();
+  cache.setCacheOwner('user-a');
+  await cache.cachedRead('user-a', 'sources', 'debate-1', async () => ['saved']);
+  await cache.copiesWritten();
+  const asyncStorage = (await import('@react-native-async-storage/async-storage')).default;
+  const disk = deferred<string | null>();
+  const spy = vi.spyOn(asyncStorage, 'getItem').mockImplementationOnce(() => disk.promise);
+  const refusal = cache.readFailed({ message: 'Expired session' }, 401);
+  const onCopy = vi.fn();
+  let failure: unknown;
+  const refresh = cache.cachedRead('user-a', 'sources', 'debate-1', () => Promise.reject(refusal), undefined, onCopy).catch((cause: unknown) => { failure = cause; });
+  try {
+    await new Promise((done) => setTimeout(done, 0));
+    expect(failure).toBe(refusal);
+    expect(onCopy).not.toHaveBeenCalled();
+  } finally {
+    disk.resolve(null);
+    await refresh;
+    spy.mockRestore();
+  }
 });

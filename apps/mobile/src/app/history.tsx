@@ -5,6 +5,8 @@ import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import Animated from 'react-native-reanimated';
 import ReanimatedSwipeable, { type SwipeableMethods } from 'react-native-gesture-handler/ReanimatedSwipeable';
 
+import { PressScale as BouncePressable } from '@/components/press-scale';
+import { runRequest } from '@/lib/run-request';
 import { ActionMenu } from '@/components/action-menu';
 import { PrimaryButton, TextButton } from '@/components/buttons';
 import { Card, IconTile, ListItemIn, usePressScale } from '@/components/card';
@@ -35,6 +37,7 @@ import {
 import { keepIfSame } from '@/lib/keep-if-same';
 import { useLatest } from '@/lib/live-value';
 import { suggestDebate } from '@/lib/motion';
+import { deleteCrossfireRound } from '@/lib/crossfire';
 import { deleteResult } from '@/lib/results';
 import { deleteSparringRound, sparringDraft } from '@/lib/sparring';
 import { hasDocumentText, useWorkActions } from '@/lib/work-actions';
@@ -43,7 +46,7 @@ import { useTheme } from '@/theme/use-theme';
 import { EmptyState } from '@/components/empty-state';
 
 /** What the History lists delete, with the website's confirmation and failure copy. */
-const DELETIONS: Record<'case' | 'sparring', { tab: HistoryTab; title: string; desc: string; failed: string; label: string; run: (userId: string, id: string) => Promise<void> }> = {
+const DELETIONS: Record<'case' | 'sparring' | 'crossfire', { tab: HistoryTab; title: string; desc: string; failed: string; label: string; run: (userId: string, id: string) => Promise<void> }> = {
   case: {
     tab: 'cases',
     title: 'historyPage.deleteCaseTitle',
@@ -51,6 +54,14 @@ const DELETIONS: Record<'case' | 'sparring', { tab: HistoryTab; title: string; d
     failed: 'historyPage.deleteFailed',
     label: 'historyPage.deleteCaseLabel',
     run: (userId, id) => deleteResult(userId, 'case', id),
+  },
+  crossfire: {
+    tab: 'crossfire',
+    title: 'historyPage.deleteCrossfireTitle',
+    desc: 'historyPage.deleteCrossfireDesc',
+    failed: 'historyPage.crossfireDeleteFailed',
+    label: 'historyPage.deleteCrossfireAria',
+    run: deleteCrossfireRound,
   },
   sparring: {
     tab: 'sparring',
@@ -74,6 +85,7 @@ type Loaded =
   | { scope: typeof OUTSIDE; kind: 'unsorted'; entries: UnsortedEntry[] };
 
 const EMPTY: Record<HistoryTab, { title: string; desc: string; action: string; href: Href | null }> = {
+  crossfire: { title: 'historyPage.emptyCrossfire', desc: 'historyPage.emptyCrossfireDesc', action: 'historyPage.startCrossfire', href: { pathname: '/crossfire', params: { from: 'history' } } },
   cases: { title: 'historyPage.emptyCases', desc: 'historyPage.emptyCasesDesc', action: 'historyPage.createCase', href: { pathname: '/generate', params: { from: 'history' } } },
   chats: { title: 'historyPage.emptyChats', desc: 'historyPage.emptyChatsDesc', action: 'historyPage.startChat', href: '/ask' },
   attacks: { title: 'historyPage.emptyAttacks', desc: 'historyPage.emptyAttacksDesc', action: 'historyPage.attackCase', href: { pathname: '/attack', params: { from: 'history' } } },
@@ -141,19 +153,24 @@ export default function HistoryScreen() {
     const request = ++loads.current;
     const isCurrent = () => live.current && loads.current === request && owner.current === forUser;
     const mark = copies.mark();
-    try {
+    return await runRequest(async () => {
       const next: Loaded = target === OUTSIDE
-        ? { scope: OUTSIDE, kind: 'unsorted', entries: await fetchUnsortedWork(forUser, mark) }
-        : { scope: target, kind: 'debate', lists: await fetchDebateHistory(forUser, target, mark) };
+        ? { scope: OUTSIDE, kind: 'unsorted', entries: await fetchUnsortedWork(forUser, mark, (entries) => {
+          if (isCurrent()) { setLoaded({ scope: OUTSIDE, kind: 'unsorted', entries }); setFailed(null); }
+        }) }
+        : { scope: target, kind: 'debate', lists: await fetchDebateHistory(forUser, target, mark, (lists) => {
+          if (isCurrent()) { setLoaded({ scope: target, kind: 'debate', lists }); setFailed(null); }
+        }) };
       if (!isCurrent()) return;
       // Focus refreshes usually reread the same rows; keep the shown lists when they did not change.
       setLoaded((previous) => keepIfSame(previous, next));
       setFailed(null);
-    } catch (cause) {
+    }, async (cause) => {
       if (!isCurrent()) return;
       console.warn('Could not load history:', cause instanceof Error ? cause.message : cause);
+      setLoaded(null);
       setFailed(target);
-    }
+    });
   }, [userId, copies]);
 
   // Reload on focus, so a case deleted in its document or work saved on the website shows up.
@@ -171,10 +188,10 @@ export default function HistoryScreen() {
     ? t('debate.outsideDebates')
     : `${scope === current?.id ? `${t('nav.currentDebate')}: ` : ''}${scopeDebate?.motion ?? ''}`;
 
-  // The website's History deletes cases and Sparring rounds, each after its own confirmation.
+  // The website's History deletes cases, Sparring and Crossfire rounds, each after its own confirmation.
   const remove = async (item: HistoryItem): Promise<boolean> => {
     const forUser = owner.current;
-    const deletion = item.kind === 'case' || item.kind === 'sparring' ? DELETIONS[item.kind] : null;
+    const deletion = item.kind === 'case' || item.kind === 'sparring' || item.kind === 'crossfire' ? DELETIONS[item.kind] : null;
     if (!forUser || !deletion) return false;
     const confirmed = await confirmDestructive({
       title: t(deletion.title),
@@ -183,20 +200,22 @@ export default function HistoryScreen() {
       cancel: t('common.cancel'),
     });
     if (!confirmed || owner.current !== forUser) return false;
-    try {
+    const removed = await runRequest(async () => {
       await deletion.run(forUser, item.id);
-    } catch (cause) {
+      return true;
+    }, async (cause) => {
       console.warn(`Could not delete the ${item.kind}:`, cause instanceof Error ? cause.message : cause);
       if (live.current && owner.current === forUser) showNotice(t(deletion.failed));
       return false;
-    }
+    });
+    if (!removed) return false;
     if (!live.current || owner.current !== forUser) return true;
     // Any load still running read the list before this delete.
     loads.current += 1;
     const list = deletion.tab;
     setLoaded((previous) => previous?.kind === 'debate'
-      ? { ...previous, lists: { ...previous.lists, [list]: previous.lists[list].filter((entry) => entry.id !== item.id) } }
-      : previous);
+      ? { ...previous, lists: { ...previous.lists, [list]: (previous.lists[list] ?? []).filter((entry) => entry.id !== item.id) } }
+      : previous?.kind === 'unsorted' ? { ...previous, entries: previous.entries.filter((entry) => entry.id !== item.id || entry.kind !== item.kind) } : previous);
     return true;
   };
 
@@ -227,15 +246,15 @@ export default function HistoryScreen() {
     const forUser = owner.current;
     if (!forUser || attaching.has(key)) return;
     setAttaching((previous) => new Set(previous).add(key));
-    try {
+    return await runRequest(async () => {
       await attachToDebate(forUser, entry, debateId);
       if (!live.current || owner.current !== forUser) return;
       if (shownScope.current === OUTSIDE) setAttachNotice({ scope: OUTSIDE, text: t('debate.attached') });
       attached(entry);
-    } catch (cause) {
+    }, async (cause) => {
       console.warn('Could not add to the debate:', cause instanceof Error ? cause.message : cause);
       if (live.current && owner.current === forUser) showNotice(t('debate.attachFailed'));
-    } finally {
+    }, () => {
       if (live.current) {
         setAttaching((previous) => {
           const next = new Set(previous);
@@ -243,7 +262,7 @@ export default function HistoryScreen() {
           return next;
         });
       }
-    }
+    });
   };
 
   // The attach notice belongs to the list it was shown for.
@@ -254,7 +273,7 @@ export default function HistoryScreen() {
     ? []
     : shown.kind === 'unsorted'
       ? shown.entries.map((entry) => ({ type: 'unsorted', key: `${entry.kind}-${entry.id}`, entry }))
-      : shown.lists[tab].map((item) => ({ type: 'item', key: `${item.kind}-${item.id}`, item }));
+      : (shown.lists[tab] ?? []).map((item) => ({ type: 'item', key: `${item.kind}-${item.id}`, item }));
   const arrivals = useRowArrivals(rows.map((row) => row.key));
 
   const header = (
@@ -350,6 +369,7 @@ export default function HistoryScreen() {
                   debates={debates}
                   choice={attachChoices[row.key]}
                   busy={attaching.has(row.key)}
+                  onDelete={row.entry.kind === 'crossfire' ? () => remove(row.entry as HistoryItem) : undefined}
                   onChoose={(debateId) => setAttachChoices((previous) => ({ ...previous, [row.key]: debateId }))}
                   onAttach={(debateId) => void attachEntry(row.key, row.entry, debateId)}
                 />
@@ -364,7 +384,7 @@ export default function HistoryScreen() {
                   item={row.item}
                   first={index === 0}
                   onPress={href ? () => router.push(href) : undefined}
-                  onDelete={row.item.kind === 'case' || row.item.kind === 'sparring' ? () => remove(row.item) : undefined}
+                  onDelete={row.item.kind === 'case' || row.item.kind === 'sparring' || row.item.kind === 'crossfire' ? () => remove(row.item) : undefined}
                 />
               </ListItemIn>
             </CardRowFrame>
@@ -385,12 +405,12 @@ function ScopePicker({ label, onPress }: { label: string; onPress: () => void })
   const { t } = useTranslation();
   const { colors } = useTheme();
   return (
-    <Pressable
+    <BouncePressable
       accessibilityRole="button"
       accessibilityLabel={`${t('debate.historyScope')}: ${label}`}
       onPress={onPress}
       testID="history-scope"
-      style={({ pressed }) => [styles.scope, { backgroundColor: colors.card, borderColor: colors.border }, pressed && styles.pressed]}>
+      style={[styles.scope, { backgroundColor: colors.card, borderColor: colors.border }]}>
       <View style={styles.rowText}>
         <Text tone="faint" style={styles.meta}>
           {t('debate.historyScope')}
@@ -400,7 +420,7 @@ function ScopePicker({ label, onPress }: { label: string; onPress: () => void })
         </Text>
       </View>
       <Icon name="chevronDown" color={colors.tabInactive} size={20} />
-    </Pressable>
+    </BouncePressable>
   );
 }
 
@@ -468,8 +488,8 @@ function HistoryRow({ item, first, onPress, onDelete }: { item: HistoryItem; fir
       onPressOut={press.onPressOut}
       testID="history-row"
       style={{ backgroundColor: colors.card }}>
-      {({ pressed }) => (
-        <Animated.View style={[styles.row, pressed && styles.pressed, press.style]}>
+      {() => (
+        <Animated.View style={[styles.row, press.style]}>
           <IconTile name={KIND_ICONS[item.kind]} size={42} />
           <View style={styles.rowText}>
             <Text weight="semibold" style={styles.rowTitle} numberOfLines={2}>
@@ -525,16 +545,16 @@ function HistoryRow({ item, first, onPress, onDelete }: { item: HistoryItem; fir
       overshootRight={false}
       containerStyle={divider}
       renderRightActions={() => (
-        <Pressable
+        <BouncePressable
           accessibilityRole="button"
-          accessibilityLabel={item.kind === 'sparring' ? t(DELETIONS.sparring.label, { motion: title }) : t(DELETIONS.case.label, { title })}
+          accessibilityLabel={item.kind === 'sparring' ? t(DELETIONS.sparring.label, { motion: title }) : t(item.kind === 'crossfire' ? DELETIONS.crossfire.label : DELETIONS.case.label, { title })}
           onPress={() => void remove()}
           style={[styles.deleteAction, { backgroundColor: colors.destructive }]}>
           <Icon name="trash" color="#ffffff" size={20} />
           <Text weight="semibold" style={styles.deleteLabel}>
             {t('common.delete')}
           </Text>
-        </Pressable>
+        </BouncePressable>
       )}>
       {body}
     </ReanimatedSwipeable>
@@ -573,6 +593,7 @@ function UnsortedRow({
   busy,
   onChoose,
   onAttach,
+  onDelete,
 }: {
   entry: UnsortedEntry;
   debates: Debate[];
@@ -581,6 +602,7 @@ function UnsortedRow({
   busy: boolean;
   onChoose: (debateId: string) => void;
   onAttach: (debateId: string) => void;
+  onDelete?: () => Promise<boolean>;
 }) {
   const { t } = useTranslation();
   const router = useRouter();
@@ -611,6 +633,7 @@ function UnsortedRow({
           </Text>
         </View>
       </View>
+      {onDelete ? <TextButton label={t('common.delete')} onPress={() => void onDelete()} /> : null}
       {href ? <TextButton label={t('historyPage.load')} onPress={() => router.push(href)} /> : null}
       {suggestion ? (
         <View style={styles.suggested}>
@@ -624,18 +647,18 @@ function UnsortedRow({
       ) : null}
       {debates.length > 0 ? (
         <>
-          <Pressable
+          <BouncePressable
             accessibilityRole="button"
             accessibilityLabel={`${t('debate.attachTo')}: ${chosen?.motion ?? t('debate.chooseDebate')}`}
             onPress={() => setPicking(true)}
             disabled={busy}
             testID="unsorted-target"
-            style={({ pressed }) => [styles.target, { borderColor: colors.border, backgroundColor: colors.input }, pressed && styles.pressed]}>
+            style={[styles.target, { borderColor: colors.border, backgroundColor: colors.input }]}>
             <Text tone={chosen ? 'foreground' : 'faint'} style={[styles.body, styles.targetText]} numberOfLines={2}>
               {chosen?.motion ?? t('debate.chooseDebate')}
             </Text>
             <Icon name="chevronDown" color={colors.tabInactive} size={18} />
-          </Pressable>
+          </BouncePressable>
           <ActionMenu
             visible={picking}
             title={t('debate.attachTo')}
@@ -658,7 +681,6 @@ const styles = StyleSheet.create({
   root: { flex: 1 },
   title: { fontSize: 32, lineHeight: 38, letterSpacing: -0.8 },
   body: { fontSize: 15, lineHeight: 21 },
-  pressed: { opacity: 0.7 },
   scope: { flexDirection: 'row', alignItems: 'center', gap: 12, borderWidth: 2, borderRadius: 14, paddingVertical: 11, paddingHorizontal: 14 },
   tabRow: { marginHorizontal: -20, flexGrow: 0 },
   tabs: { gap: 8, paddingHorizontal: 20 },

@@ -5,9 +5,9 @@ import { createSerialQueue } from './serial-queue';
 
 /**
  * Saved copies of what the app reads, so debates, sources, saved results and
- * past rounds stay readable without a connection. A read goes to the network
- * first and keeps a copy of the answer; when no answer comes back from the
- * server, or the device is known to be offline, the copy answers instead. A
+ * past rounds stay readable without a connection. A read can show its saved
+ * copy immediately through `onCopy` while refreshing through the network.
+ * Only a failed refresh or known offline device marks that copy offline. A
  * server that answers with an error (a refused session, a policy, a bad
  * request) is not a connection problem, so that error is thrown as it is.
  * Nothing is written offline: saving waits for the network, and every write
@@ -234,7 +234,12 @@ async function storeEntry(userId: string, group: CacheGroup, storageKey: string,
     .slice(LIMITS[group])
     .map(([droppedKey]) => droppedKey);
   for (const droppedKey of dropped) delete entries[droppedKey];
-  await AsyncStorage.multiSet([[storageKey, raw], [indexKey(userId), JSON.stringify(entries)]]);
+  // Sources have no updated_at column. Compare the exact stored value rather
+  // than an ids-only signature that would miss edits from another client.
+  const unchanged = group === 'sources' && await AsyncStorage.getItem(storageKey) === raw;
+  await AsyncStorage.multiSet(unchanged
+    ? [[indexKey(userId), JSON.stringify(entries)]]
+    : [[storageKey, raw], [indexKey(userId), JSON.stringify(entries)]]);
   if (dropped.length > 0) await AsyncStorage.multiRemove(dropped);
 }
 
@@ -312,35 +317,64 @@ function noteShown(storageKey: string, group: CacheGroup, fromCopy: boolean, mar
  * Reads through the network and keeps a copy for this account. Offline, or
  * when no answer came back from the server, answers from the copy; with no
  * copy, or when the server answered with an error, fails as the read did.
+ * `onCopy` paints an existing copy while the refresh runs, without an offline
+ * notice. It does not replace awaiting this promise or handling its errors.
  * A screen passes its load's `mark` so a copy it shows stops counting once it moves on.
  */
-export async function cachedRead<T>(userId: string, group: CacheGroup, key: string, load: () => Promise<T>, mark?: CopyMark): Promise<T> {
+export async function cachedRead<T>(userId: string, group: CacheGroup, key: string, load: () => Promise<T>, mark?: CopyMark, onCopy?: (value: T) => void): Promise<T> {
+  return (await cachedReadFrom(userId, group, key, load, mark, onCopy)).value;
+}
+
+/** cachedRead, also saying whether the answer is the saved copy (offline or unreachable) rather than the server's. */
+export async function cachedReadFrom<T>(userId: string, group: CacheGroup, key: string, load: () => Promise<T>, mark?: CopyMark, onCopy?: (value: T) => void): Promise<{ value: T; fromCopy: boolean }> {
   const ticket = ++tickets;
   const gen = generation;
   const storageKey = entryKey(userId, group, key);
   running.add(ticket);
   if (isKnownOffline()) {
     const copy = await readCopy<T>(userId, group, key).catch(() => undefined);
-    if (copy) {
+    if (copy && gen === generation && userId === owner) {
       settle(ticket);
       if (gen === generation) noteShown(storageKey, group, true, mark);
-      return copy.value;
+      return { value: copy.value, fromCopy: true };
     }
   }
   let value: T;
   try {
-    value = await load();
+    if (onCopy) {
+      // Start both reads together and handle refusals immediately, even while
+      // storage is pending. The returned promise still reports every server error.
+      const copyRead = readCopy<T>(userId, group, key).catch(() => undefined);
+      let answered = false;
+      const response = load().then(
+        (fresh) => { answered = true; return { ok: true as const, value: fresh }; },
+        (cause: unknown) => { answered = true; return { ok: false as const, cause }; },
+      );
+      const painted = copyRead.then((copy) => {
+        if (copy && !answered && gen === generation && userId === owner
+          && ticket >= (newest.get(storageKey) ?? 0)
+          && !floors.some((floor) => floor.ticket > ticket && inScope(userId, floor.scope, group, storageKey))
+          && (!mark || mark.load === mark.holder.loads)) onCopy(copy.value);
+      });
+      await Promise.race([painted, response]);
+      const fresh = await response;
+      if (!fresh.ok) throw fresh.cause;
+      value = fresh.value;
+    } else value = await load();
   } catch (cause) {
     settle(ticket);
-    if (!isUnreachable(cause)) throw cause;
+    if (!isUnreachable(cause)) {
+      if (gen === generation) noteShown(storageKey, group, false, mark);
+      throw cause;
+    }
     const copy = await readCopy<T>(userId, group, key).catch(() => undefined);
-    if (!copy) throw cause;
+    if (!copy || gen !== generation || userId !== owner) throw cause;
     if (gen === generation) noteShown(storageKey, group, true, mark);
-    return copy.value;
+    return { value: copy.value, fromCopy: true };
   }
   if (gen === generation) noteShown(storageKey, group, false, mark);
   writeCopy(userId, group, key, value, ticket, gen).catch(warn('Could not keep a saved copy'));
-  return value;
+  return { value, fromCopy: false };
 }
 
 /**

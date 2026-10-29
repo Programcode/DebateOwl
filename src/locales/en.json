@@ -2663,6 +2663,18 @@
     "promoFailed": "Unable to redeem promo code. Please try again."
   },
   "mobile": {
+    "animation": {
+      "attackReady": "Rebuttals ready",
+      "brainstormReady": "Ideas ready",
+      "factoidsReady": "Factoids ready",
+      "rebuttals": "Rebuttals",
+      "ideas": "Ideas",
+      "factoids": "Factoids",
+      "roundReady": "Round complete",
+      "speechesTimed": "Speeches timed",
+      "totalTime": "Total time",
+      "keepPractising": "Keep practising — you’re getting there"
+    },
     "tabs": {
       "debate": "Debate",
       "prepare": "Prepare",
@@ -2738,7 +2750,12 @@
         "openSettings": "Open Settings",
         "unavailable": "This version of the app cannot receive notifications yet.",
         "failed": "Could not change notifications. Try again."
-      }
+      },
+      "signInApple": "Signed in with Apple",
+      "signInAppleOrEmail": "Signed in with Apple or email",
+      "signInAppleOrGoogle": "Signed in with Apple or Google",
+      "signInAppleGoogleOrEmail": "Signed in with Apple, Google or email",
+      "manageWebsiteSubscription": "Manage your subscription on debateowl.com"
     },
     "deleteAccount": {
       "failedHint": "Your account is still here. Check your connection and try again."
@@ -2997,7 +3014,8 @@
       "speechTimeIntro": "Paste or type a speech to see how long it takes to deliver.",
       "calcPrivacy": "Counted on this device. The text is never uploaded or stored.",
       "motionsDesc": "Draw a practice motion to argue",
-      "motionsIntro": "Original practice motions, by topic, level and type."
+      "motionsIntro": "Original practice motions, by topic, level and type.",
+      "flowSheetDesc": "A column for each speech, ready to print or share as a PDF."
     },
     "sidebar": {
       "dashboard": "Dashboard",
@@ -3116,6 +3134,9 @@
         "year_one": "{{count}} year",
         "year_other": "{{count}} years"
       }
+    },
+    "flowSheet": {
+      "exportFailed": "Could not export the flow sheet."
     }
   }
 }

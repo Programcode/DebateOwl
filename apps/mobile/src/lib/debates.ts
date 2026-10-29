@@ -1,4 +1,4 @@
-import { afterWrite, cachedRead, pickFailure, readAll, readFailed, updateCopy, type CopyMark, type CopyScope } from './offline-cache';
+import { afterWrite, cachedRead, cachedReadFrom, pickFailure, readAll, readFailed, updateCopy, type CopyMark, type CopyScope } from './offline-cache';
 import { supabase } from './supabase';
 
 /**
@@ -108,8 +108,13 @@ async function setCurrentPointer(userId: string, debateId: string) {
  */
 
 /** Every debate, newest activity first, and the current one when it is still in the list. Offline, the saved copy. */
-export function fetchDebates(userId: string): Promise<DebateList> {
-  return cachedRead(userId, 'debates', 'all', () => loadDebates(userId));
+export function fetchDebates(userId: string, onCopy?: (value: DebateList) => void): Promise<DebateList> {
+  return cachedRead(userId, 'debates', 'all', () => loadDebates(userId), undefined, onCopy);
+}
+
+/** fetchDebates, saying whether the list is the saved copy rather than the server's answer. */
+export function fetchDebatesFrom(userId: string, onCopy?: (value: DebateList) => void): Promise<{ value: DebateList; fromCopy: boolean }> {
+  return cachedReadFrom(userId, 'debates', 'all', () => loadDebates(userId), undefined, onCopy);
 }
 
 async function loadDebates(userId: string): Promise<DebateList> {
@@ -274,8 +279,8 @@ async function countRows(userId: string, table: string, debateId: string, sides?
 const sum = (counts: number[]) => counts.reduce((total, count) => total + count, 0);
 
 /** Sources, saved results per side and Sparring rounds in one debate. One-off work has no debate and never counts. */
-export function fetchDebateCounts(userId: string, debateId: string, mark?: CopyMark): Promise<DebateCounts> {
-  return cachedRead(userId, 'debate-lists', `counts:${debateId}`, () => loadDebateCounts(userId, debateId), mark);
+export function fetchDebateCounts(userId: string, debateId: string, mark?: CopyMark, onCopy?: (value: DebateCounts) => void): Promise<DebateCounts> {
+  return cachedRead(userId, 'debate-lists', `counts:${debateId}`, () => loadDebateCounts(userId, debateId), mark, onCopy);
 }
 
 async function loadDebateCounts(userId: string, debateId: string): Promise<DebateCounts> {
@@ -325,8 +330,8 @@ async function fetchResultRows(userId: string, debateId: string, table: ResultTa
 const newestFirst = (lists: DebateItem[][], limit: number) => lists.flat().sort((a, b) => b.createdAt - a.createdAt).slice(0, limit);
 
 /** The newest saved results and rounds for one side of a debate, like the website's side lists. */
-export function fetchRecentWork(userId: string, debateId: string, side: DebateSide, limit: number, mark?: CopyMark): Promise<DebateItem[]> {
-  return cachedRead(userId, 'debate-lists', `recent:${debateId}:${side}:${limit}`, () => loadRecentWork(userId, debateId, side, limit), mark);
+export function fetchRecentWork(userId: string, debateId: string, side: DebateSide, limit: number, mark?: CopyMark, onCopy?: (value: DebateItem[]) => void): Promise<DebateItem[]> {
+  return cachedRead(userId, 'debate-lists', `recent:${debateId}:${side}:${limit}`, () => loadRecentWork(userId, debateId, side, limit), mark, onCopy);
 }
 
 async function loadRecentWork(userId: string, debateId: string, side: DebateSide, limit: number): Promise<DebateItem[]> {
@@ -404,8 +409,8 @@ function listScopes(debateId: string | undefined, change: 'source' | DebateItemK
 }
 
 /** A debate's saved Prepare results for both sides, newest first, for the Prepare tab. */
-export function fetchPrepareWork(userId: string, debateId: string, limit: number, mark?: CopyMark): Promise<DebateItem[]> {
-  return cachedRead(userId, 'debate-lists', `prepare:${debateId}:${limit}`, () => loadPrepareWork(userId, debateId, limit), mark);
+export function fetchPrepareWork(userId: string, debateId: string, limit: number, mark?: CopyMark, onCopy?: (value: DebateItem[]) => void): Promise<DebateItem[]> {
+  return cachedRead(userId, 'debate-lists', `prepare:${debateId}:${limit}`, () => loadPrepareWork(userId, debateId, limit), mark, onCopy);
 }
 
 async function loadPrepareWork(userId: string, debateId: string, limit: number): Promise<DebateItem[]> {

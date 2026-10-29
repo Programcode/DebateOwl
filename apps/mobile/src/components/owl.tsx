@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Image, type ImageSourcePropType, type ImageStyle, StyleSheet, View } from 'react-native';
 import Animated, {
   cancelAnimation,
@@ -58,7 +58,7 @@ const POSES: Record<OwlPose, ImageSourcePropType> = {
 const MARK: ImageSourcePropType = require('@/assets/owl/mark.png');
 
 /** A one-shot move the owl plays when it arrives or changes pose. */
-export type OwlGesture = 'wave' | 'cheer' | 'hop';
+export type OwlGesture = 'wave' | 'cheer' | 'hop' | 'shake';
 
 const GESTURES: Partial<Record<OwlPose, OwlGesture>> = {
   point: 'wave',
@@ -152,6 +152,9 @@ function OwlLids({ eyes, size, lid, offset = { left: 0, top: 0 } }: { eyes: read
 /** The gesture's transform at progress 0..1: the website's owl-wave, owl-cheer and owl-hop keyframes. */
 function gestureTransform(move: OwlGesture | undefined, t: number, size: number) {
   'worklet';
+  if (move === 'shake') {
+    return [{ translateX: interpolate(t, [0, 0.2, 0.4, 0.6, 0.8, 1], [0, -3, 3, -2, 1, 0]) }];
+  }
   if (move === 'wave') {
     return [{ rotate: `${interpolate(t, [0, 0.18, 0.38, 0.58, 0.78, 1], [0, -7, 6, -4, 2, 0])}deg` }];
   }
@@ -177,6 +180,7 @@ function gestureTransform(move: OwlGesture | undefined, t: number, size: number)
 }
 
 const GESTURE_TIMING: Record<OwlGesture, { duration: number; delay: number; origin: string }> = {
+  shake: { duration: 420, delay: 80, origin: '50% 50%' },
   wave: { duration: 900, delay: 120, origin: '50% 90%' },
   cheer: { duration: 1100, delay: 80, origin: '50% 100%' },
   hop: { duration: 600, delay: 80, origin: '50% 100%' },
@@ -276,6 +280,14 @@ export function Owl({ pose, size, mirrored, label, style, gesture, breathe = tru
 export function OwlAvatar({ pose, size, label, blink = false }: { pose: OwlPose; size: number; label?: string; blink?: boolean }) {
   const { scheme } = useTheme();
   const reduce = useReduceMotion();
+  const previousPose = useRef(pose);
+  const change = useSharedValue(1);
+  useEffect(() => {
+    if (reduce) change.set(1);
+    else if (previousPose.current !== pose) change.set(withSequence(withTiming(0.94, { duration: 0 }), withSpring(1, SPRING.settle)));
+    previousPose.current = pose;
+  }, [change, pose, reduce]);
+  const poseChange = useAnimatedStyle(() => ({ transform: [{ scale: reduce ? 1 : change.value }] }));
   // The website zooms the full pose 1.6x about 52% across and 32% down, onto the head and shoulders.
   const zoomed = size * 1.6;
   const offset = { left: -0.52 * (zoomed - size), top: -0.32 * (zoomed - size) };
@@ -293,8 +305,10 @@ export function OwlAvatar({ pose, size, label, blink = false }: { pose: OwlPose;
         { width: size, height: size, borderRadius: size / 2 },
         scheme === 'dark' ? styles.avatarDark : styles.avatarLight,
       ]}>
-      <Image source={POSES[pose]} resizeMode="contain" style={{ position: 'absolute', width: zoomed, height: zoomed, ...offset }} />
-      {eyes ? <OwlLids eyes={eyes} size={zoomed} lid={lid} offset={offset} /> : null}
+      <Animated.View style={[StyleSheet.absoluteFill, poseChange]}>
+        <Image source={POSES[pose]} resizeMode="contain" style={{ position: 'absolute', width: zoomed, height: zoomed, ...offset }} />
+        {eyes ? <OwlLids eyes={eyes} size={zoomed} lid={lid} offset={offset} /> : null}
+      </Animated.View>
     </View>
   );
 }
@@ -320,7 +334,7 @@ export function OwlMark({ size }: { size: number }) {
  * The owl floating gently while a request runs, where the website shows OwlLoader (owl-bob:
  * 5 points up and down over 2.4 s), blinking as it waits; still under Reduce Motion.
  */
-export function OwlLoader({ pose, size, label }: { pose: OwlPose; size: number; label?: string }) {
+export function OwlLoader({ pose, size, label, step }: { pose: OwlPose; size: number; label?: string; step?: string }) {
   const reduce = useReduceMotion();
   const bob = useSharedValue(0);
   useEffect(() => {
@@ -341,7 +355,7 @@ export function OwlLoader({ pose, size, label }: { pose: OwlPose; size: number; 
       accessibilityElementsHidden={!label}
       importantForAccessibility={label ? 'yes' : 'no-hide-descendants'}
       style={style}>
-      <Owl pose={pose} size={size} breathe={false} gesture={false} />
+      <Owl pose={step === 'research' ? 'reading' : step === 'writing' ? 'idea' : step === 'checking' ? 'skeptical' : pose} size={size} breathe={false} gesture={false} />
     </Animated.View>
   );
 }

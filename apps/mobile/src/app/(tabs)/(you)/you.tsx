@@ -8,6 +8,7 @@ import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, AppState, Linking, Pressable, StyleSheet, View, type PressableProps } from 'react-native';
 import Animated from 'react-native-reanimated';
 
+import { runRequest } from '@/lib/run-request';
 import { TextButton } from '@/components/buttons';
 import { Card, IconTile, usePressScale } from '@/components/card';
 import { SwitchRow } from '@/components/form-rows';
@@ -31,6 +32,8 @@ import { fetchSubscription, type Subscription } from '@/lib/subscription';
 import { supabaseEnv } from '@/lib/supabase-config';
 import { websitePage } from '@/lib/website';
 import { useTheme } from '@/theme/use-theme';
+import { dailyResetTime } from '@/lib/usage';
+import { signInMethodKey } from '@/lib/sign-in-method';
 
 type BadgeTone = 'plan' | 'pro' | 'good' | 'bad';
 
@@ -84,6 +87,7 @@ export default function YouScreen() {
   const { colors } = useTheme();
   const { session, signOut } = useAuth();
   const settings = useSettings();
+  const signInMethod = signInMethodKey(session?.user ?? null);
   const [saveFailed, setSaveFailed] = useState(false);
 
   const [exporting, setExporting] = useState(false);
@@ -102,16 +106,16 @@ export default function YouScreen() {
     const forUser = owner.current;
     if (!forUser || exporting) return;
     setExporting(true);
-    try {
+    return await runRequest(async () => {
       const { fileName, json } = await exportAccountData();
       if (!live.current || owner.current !== forUser) return;
       await shareJson(json, fileName, t('settings.downloadData'));
-    } catch (cause) {
+    }, async (cause) => {
       console.warn('Could not download the data:', cause instanceof Error ? cause.message : cause);
       if (live.current && owner.current === forUser) showNotice(t('settings.downloadDataFailed'));
-    } finally {
+    }, () => {
       if (live.current) setExporting(false);
-    }
+    });
   };
 
   const save = (change: () => Promise<void>) => {
@@ -126,7 +130,7 @@ export default function YouScreen() {
     <Screen>
       <ScreenTitle title={t('mobile.tabs.you')} />
 
-      <SubscriptionCard userId={session?.user.id} />
+      <SubscriptionCard key={session?.user.id} userId={session?.user.id} />
 
       <Card style={styles.list}>
         <PressRow
@@ -197,6 +201,7 @@ export default function YouScreen() {
             <Text testID="account-email" weight="semibold" style={styles.email} numberOfLines={1}>
               {session?.user.email ?? ''}
             </Text>
+            {signInMethod ? <Text tone="faint" style={styles.small}>{t(signInMethod)}</Text> : null}
             {supabaseEnv === 'staging' ? (
               <View style={[styles.badge, { backgroundColor: colors.tile }]}>
                 <Text weight="semibold" style={[styles.badgeText, { color: colors.tileForeground }]}>
@@ -285,7 +290,7 @@ function PressRow({ divider = false, children, ...props }: Omit<PressableProps, 
   const press = usePressScale();
   return (
     <Pressable {...props} onPressIn={press.onPressIn} onPressOut={press.onPressOut} style={divider ? { borderTopWidth: 1, borderTopColor: colors.line } : undefined}>
-      {({ pressed }) => <Animated.View style={[styles.row, pressed && styles.pressed, press.style]}>{children}</Animated.View>}
+      {() => <Animated.View style={[styles.row, press.style]}>{children}</Animated.View>}
     </Pressable>
   );
 }
@@ -383,7 +388,7 @@ function PlanBadge({ state }: { state: BillingStateName }) {
 }
 
 function SubscriptionCard({ userId }: { userId: string | undefined }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { colors } = useTheme();
   const router = useRouter();
   const canBuy = storeKit() !== null;
@@ -392,16 +397,16 @@ function SubscriptionCard({ userId }: { userId: string | undefined }) {
 
   const load = useCallback(async (isCurrent: () => boolean) => {
     if (!userId) return;
-    try {
+    return await runRequest(async () => {
       const next = await fetchSubscription(userId);
       if (!isCurrent()) return;
       setSubscription(next);
       setFailed(false);
-    } catch (cause) {
+    }, async (cause) => {
       if (!isCurrent()) return;
       console.warn('Could not load the subscription:', cause instanceof Error ? cause.message : cause);
       setFailed(true);
-    }
+    });
   }, [userId]);
 
   // Usage changes as the student works, so read it again whenever You comes into view.
@@ -444,14 +449,17 @@ function SubscriptionCard({ userId }: { userId: string | undefined }) {
               {t(DATE_LABELS[subscription.billingDateKind]!, { date: formatDate(subscription.billingDate) })}
             </Text>
           ) : null}
-          {subscription.dailyUsed !== null ? (
+          {subscription.dailyUsed !== null && subscription.dailyLimit > 0 ? (
             <Text weight="medium" style={styles.usage}>
-              {t('mobile.you.usage', { used: subscription.dailyUsed, limit: subscription.dailyLimit })}
+              {t('dailyLimit.remainingWithReset', { count: Math.max(0, subscription.dailyLimit - subscription.dailyUsed), limit: subscription.dailyLimit, time: dailyResetTime(i18n.language) })}
             </Text>
           ) : null}
           <Text tone="secondary" style={styles.small}>
             {planDescription(t, subscription)}
           </Text>
+          {subscription.hasOpenStripeSubscription ? (
+            <TextButton label={t('mobile.you.manageWebsiteSubscription')} onPress={() => void WebBrowser.openBrowserAsync(websitePage('/app/settings')).catch(() => showNotice(t('common.error')))} />
+          ) : null}
           {/* Basic and Pro through the App Store, where the build has StoreKit (plans.tsx). */}
           {canBuy ? <TextButton label={t('mobile.plans.see')} onPress={() => router.push('/plans')} /> : null}
         </View>
@@ -478,6 +486,5 @@ const styles = StyleSheet.create({
   rowText: { flex: 1, gap: 3 },
   rowTitle: { fontSize: 16 },
   email: { fontSize: 17 },
-  pressed: { opacity: 0.6 },
   inset: { paddingHorizontal: 16, paddingBottom: 12 },
 });

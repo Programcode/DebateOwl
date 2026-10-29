@@ -3,8 +3,9 @@ import { trialDaysLeft } from '@debatelab/core/trial';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Pressable, StyleSheet, View, type ViewStyle } from 'react-native';
+import { StyleSheet, View, type ViewStyle } from 'react-native';
 
+import { PressScale as BouncePressable } from '@/components/press-scale';
 import { Icon } from './icon';
 import { Text } from './text';
 
@@ -78,24 +79,24 @@ export function TrialBanner({ style }: { style?: ViewStyle }) {
       <Text weight="medium" style={[styles.message, { color: colors.tileText }]}>
         {message}
       </Text>
-      <Pressable
+      <BouncePressable
         accessibilityRole="button"
         onPress={() => router.navigate('/you')}
         hitSlop={6}
-        style={({ pressed }) => [styles.action, pressed && styles.pressed]}>
+        style={[styles.action]}>
         <Text weight="semibold" style={[styles.actionText, { color: colors.primary }]}>
           {t('mobile.trialBanner.seePlan')}
         </Text>
-      </Pressable>
-      <Pressable
+      </BouncePressable>
+      <BouncePressable
         accessibilityRole="button"
         accessibilityLabel={t('trialBanner.dismiss')}
         onPress={dismiss}
         hitSlop={8}
         testID="trial-banner-dismiss"
-        style={({ pressed }) => [styles.dismiss, pressed && styles.pressed]}>
+        style={[styles.dismiss]}>
         <Icon name="x" color={colors.tabInactive} size={18} />
-      </Pressable>
+      </BouncePressable>
     </View>
   );
 }
@@ -106,5 +107,4 @@ const styles = StyleSheet.create({
   action: { minHeight: 44, justifyContent: 'center', paddingHorizontal: 6 },
   actionText: { fontSize: 15 },
   dismiss: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
-  pressed: { opacity: 0.6 },
 });

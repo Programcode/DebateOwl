@@ -2,9 +2,11 @@ import { starterFlowchart, type FlowNode } from '@debatelab/core/flowchart';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { PressScale as BouncePressable } from '@/components/press-scale';
+import { runRequest } from '@/lib/run-request';
 import { ActionMenu } from '@/components/action-menu';
 import { TextButton } from '@/components/buttons';
 import { ClaimInspector } from '@/components/claim-panel';
@@ -15,6 +17,7 @@ import { OfflineNotice } from '@/components/offline-notice';
 import { OneOffNotice } from '@/components/one-off-notice';
 import { SegmentedControl } from '@/components/segmented-control';
 import { Text } from '@/components/text';
+import { useLatest } from '@/lib/live-value';
 import { useAuth } from '@/lib/auth';
 import { backLabel } from '@/lib/back-label';
 import { confirmDestructive, promptText } from '@/lib/confirm';
@@ -78,13 +81,11 @@ export default function FlowchartScreen() {
   const [claim, setClaim] = useState<{ userId: string; scope: string; map: string; node: string } | null>(null);
 
   const live = useRef(true);
-  const owner = useRef(userId);
+  const owner = useLatest(userId);
   const copies = useCopyHolder(flowchartScreenCopies);
-  owner.current = userId;
   const loads = useRef(0);
   const noticeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const tRef = useRef(t);
-  tRef.current = t;
+  const tRef = useLatest(t);
 
   useEffect(() => () => {
     live.current = false;
@@ -147,7 +148,7 @@ export default function FlowchartScreen() {
       console.warn('Could not load flowcharts:', cause instanceof Error ? cause.message : cause);
       setFailure({ scope: requestedId ? null : scopeKey(activeDebateId), kind: 'failed' });
     });
-  }, [userId, activeDebateId, requestedId, attempt, copies]);
+  }, [userId, activeDebateId, requestedId, attempt, copies, owner, tRef]);
 
   const open = scope ? openDraft(scope) : null;
   const draft = open?.draft ?? null;
@@ -174,11 +175,11 @@ export default function FlowchartScreen() {
   const act = async (work: (forUser: string, at: { scope: string; key: string; draft: FlowchartDraft }) => Promise<void>) => {
     if (!userId || !scope || !open || busy) return;
     setBusy(true);
-    try {
+    return await runRequest(async () => {
       await work(userId, { scope, key: open.key, draft: open.draft });
-    } finally {
+    }, undefined, () => {
       if (live.current) setBusy(false);
-    }
+    });
   };
 
   const askTitle = (defaultValue: string) =>
@@ -210,7 +211,7 @@ export default function FlowchartScreen() {
 
   const save = () =>
     void act(async (forUser, at) => {
-      try {
+      return await runRequest(async () => {
         if (!at.draft.savedId) {
           const title = (await askTitle(''))?.trim();
           if (!title || owner.current !== forUser) return;
@@ -225,22 +226,22 @@ export default function FlowchartScreen() {
         }
         updateDraft(at.scope, at.key, (current) => ({ ...current, edited: current.doc !== at.draft.doc }));
         setNotice(t('flowchart.savedToast'));
-      } catch (cause) {
+      }, async (cause) => {
         console.warn('Could not save the flowchart:', cause instanceof Error ? cause.message : cause);
         setNotice(t('flowchart.saveFailedToast'));
-      }
+      });
     });
 
   const saveAs = () =>
     void act(async (forUser, at) => {
       const title = (await askTitle(at.draft.title))?.trim();
       if (!title || owner.current !== forUser) return;
-      try {
+      return await runRequest(async () => {
         await saveNew(forUser, at, title);
-      } catch (cause) {
+      }, async (cause) => {
         console.warn('Could not save the flowchart:', cause instanceof Error ? cause.message : cause);
         setNotice(t('flowchart.saveFailedToast'));
-      }
+      });
     });
 
   const remove = () =>
@@ -254,7 +255,7 @@ export default function FlowchartScreen() {
         cancel: t('common.cancel'),
       });
       if (!confirmed || owner.current !== forUser) return;
-      try {
+      return await runRequest(async () => {
         await deleteFlowchart(forUser, savedId);
         if (owner.current !== forUser) return;
         forgetDraft(at.scope, at.key);
@@ -262,10 +263,10 @@ export default function FlowchartScreen() {
         // The screen then opens the debate's next newest map, or the starter map.
         if (requestedId) setRequestedId(null);
         else setAttempt((n) => n + 1);
-      } catch (cause) {
+      }, async (cause) => {
         console.warn('Could not delete the flowchart:', cause instanceof Error ? cause.message : cause);
         setNotice(t('flowchart.deleteFailedToast'));
-      }
+      });
     });
 
   const runExport = (work: () => Promise<void>) => {
@@ -303,11 +304,11 @@ export default function FlowchartScreen() {
           {t('nav.flowchart')}
         </Text>
         {draft && scope ? (
-          <Pressable
+          <BouncePressable
             accessibilityRole="button"
             accessibilityLabel={`${t('flowchart.savedFlowcharts')}: ${mapTitle}`}
             onPress={() => router.push({ pathname: '/flowchart/maps', params: { scope } })}
-            style={({ pressed }) => [styles.mapRow, pressed && styles.pressed]}
+            style={[styles.mapRow]}
             testID="flowchart-maps">
             <View style={styles.mapText}>
               <Text weight="semibold" style={styles.mapTitle} numberOfLines={1}>
@@ -322,7 +323,7 @@ export default function FlowchartScreen() {
               </Text>
             </View>
             {busy ? <ActivityIndicator color={colors.primary} /> : <Icon name="chevronDown" color={colors.primary} size={20} />}
-          </Pressable>
+          </BouncePressable>
         ) : null}
         {oneOff ? <OneOffNotice /> : null}
         <OfflineNotice />
@@ -432,7 +433,6 @@ const styles = StyleSheet.create({
   mapText: { flex: 1, gap: 1 },
   mapTitle: { fontSize: 16.5, lineHeight: 22 },
   mapMeta: { fontSize: 13.5, lineHeight: 18 },
-  pressed: { opacity: 0.7 },
   state: { alignItems: 'center', gap: 10, paddingVertical: 40, paddingHorizontal: 24 },
   stateText: { fontSize: 15, lineHeight: 21, textAlign: 'center' },
   notice: { position: 'absolute', left: 24, right: 24, borderRadius: 14, paddingHorizontal: 16, paddingVertical: 11, alignSelf: 'center', maxWidth: 560 },

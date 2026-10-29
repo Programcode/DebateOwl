@@ -1,5 +1,6 @@
 import { Modal, Pressable, StyleSheet, View } from 'react-native';
 
+import { PressScale as BouncePressable } from '@/components/press-scale';
 import type { ActionMenuProps } from './action-menu';
 import { Icon } from './icon';
 import { Text } from './text';
@@ -20,7 +21,7 @@ export function ActionMenu({ visible, title, items, cancelLabel, onSelect, onClo
             </Text>
           ) : null}
           {items.map((item, index) => (
-            <Pressable
+            <BouncePressable
               key={item.key}
               accessibilityRole="menuitem"
               accessibilityState={{ disabled: Boolean(item.disabled) }}
@@ -32,7 +33,7 @@ export function ActionMenu({ visible, title, items, cancelLabel, onSelect, onClo
               style={({ pressed }) => [styles.item, (index > 0 || title) && { borderTopWidth: 1, borderTopColor: colors.line }, pressed && { backgroundColor: colors.line }]}>
               <Text style={[styles.label, item.destructive && { color: colors.destructive }, item.disabled && { color: colors.tabInactive }]} maxFontSizeMultiplier={1.6}>{item.label}</Text>
               {item.icon ? <Icon name={item.icon} color={item.destructive ? colors.destructive : colors.foreground} size={21} /> : null}
-            </Pressable>
+            </BouncePressable>
           ))}
         </View>
       </Pressable>

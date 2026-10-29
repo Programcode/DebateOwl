@@ -1,3 +1,4 @@
+import { customToRoundFormat, decodeCustomFormat } from '@debatelab/core/free-tools/custom-format';
 import { BUILT_IN_FORMAT_IDS, FORMATS, formatDuration, type RoundSegment } from '@debatelab/core/free-tools/formats';
 import {
   clockFace,
@@ -12,12 +13,16 @@ import {
   toggleSpeech,
   type PrepSide,
 } from '@debatelab/core/free-tools/round-timer';
-import { useRouter } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { AppState, Pressable, ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native';
+import { AppState, ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { PressScale as BouncePressable } from '@/components/press-scale';
+import { Celebration } from '@/components/celebration';
+import { Owl } from '@/components/owl';
+import { roundFeedback, type RoundSummary } from '@/lib/round-feedback';
 import { ActionMenu, type MenuItem } from '@/components/action-menu';
 import { TextButton } from '@/components/buttons';
 import { Icon } from '@/components/icon';
@@ -53,17 +58,47 @@ export default function TimerScreen() {
   const { t } = useTranslation();
   const tools: Translate = (key, options) => t(key, { ns: 'tools', ...options });
   const router = useRouter();
+  const { custom: customParam } = useLocalSearchParams<{ custom?: string | string[] }>();
+  const appliedCustom = useRef<string | null>(null);
+  useEffect(() => {
+    const encoded = Array.isArray(customParam) ? customParam[0] : customParam;
+    if (!encoded || appliedCustom.current === encoded) return;
+    appliedCustom.current = encoded;
+    const custom = decodeCustomFormat(encoded);
+    if (custom) updateSession((current) => ({ ...current, choice: { id: 'custom', custom }, round: initialRoundState(customToRoundFormat(custom)) }));
+  }, [customParam]);
   const insets = useSafeAreaInsets();
   const { width, height } = useWindowDimensions();
   const layout = useLayoutClass();
   const { colors, scheme } = useTheme();
-  const { session, saved } = useTimerStore();
+  const { session, saved, loaded } = useTimerStore();
   const [now, setNow] = useState(() => Date.now());
   const [menu, setMenu] = useState(false);
+  const [celebration, setCelebration] = useState<RoundSummary | null>(null);
 
   const { round, muted, choice } = session;
   const { format, segment, elapsed, remainingMs, overtime, inGrace, poi } = speechStatus(session, now);
   const speechRunning = isSpeechRunning(round);
+  const [reaction, setReaction] = useState<{ kind: 'start' | 'minute' | 'up'; at: number } | null>(null);
+  const previous = useRef({ index: round.segmentIndex, remaining: remainingMs, running: speechRunning, choice });
+  useEffect(() => {
+    const before = previous.current;
+    const sameSpeech = before.choice === choice && before.index === round.segmentIndex;
+    const started = speechRunning && (!before.running || !sameSpeech) && elapsed < TICK_MS * 2;
+    const timeUp = sameSpeech && before.remaining > 0 && remainingMs <= 0;
+    const lastMinute = sameSpeech && before.remaining > 60_000 && remainingMs <= 60_000 && remainingMs > 0;
+    previous.current = { index: round.segmentIndex, remaining: remainingMs, running: speechRunning, choice };
+    if (started || timeUp || lastMinute) setReaction({ kind: timeUp ? 'up' : lastMinute ? 'minute' : 'start', at: Date.now() });
+    if (loaded) {
+      const summary = roundFeedback.takeCompletion(session, Date.now());
+      if (summary) setCelebration(summary);
+    }
+  }, [choice, elapsed, loaded, now, remainingMs, round.segmentIndex, session, speechRunning]);
+  useEffect(() => {
+    if (!reaction) return;
+    const timeout = setTimeout(() => setReaction(null), 1100);
+    return () => clearTimeout(timeout);
+  }, [reaction]);
   const prepRunning = isPrepRunning(round, 'a') || isPrepRunning(round, 'b');
   useKeepAwakeWhile(speechRunning || prepRunning);
 
@@ -152,17 +187,17 @@ export default function TimerScreen() {
   const ringSize = Math.round(wideLayout ? Math.min(width * 0.36, height * 0.5, 400) : Math.min(width - 72, height * 0.34, 320));
 
   const formatPill = (
-    <Pressable
+    <BouncePressable
       accessibilityRole="button"
       accessibilityLabel={`${t('timer.selectFormat')}: ${name}`}
       onPress={() => setMenu(true)}
       testID="timer-format"
-      style={({ pressed }) => [styles.format, { borderColor: colors.border, backgroundColor: colors.input }, pressed && styles.pressed]}>
+      style={[styles.format, { borderColor: colors.border, backgroundColor: colors.input }]}>
       <Text weight="medium" style={styles.formatLabel} numberOfLines={1}>
         {name}
       </Text>
       <Icon name="chevronDown" color={colors.tabInactive} size={18} />
-    </Pressable>
+    </BouncePressable>
   );
 
   const clock = (
@@ -178,7 +213,7 @@ export default function TimerScreen() {
         accessibilityRole="timer"
         accessibilityLabel={`${tools('timer.clockLabel')}: ${face.text}, ${status}`}
         testID="timer-display">
-        <TimerRing size={ringSize} fraction={overtime ? 1 : remainingMs / (segment.seconds * 1000)} warning={warning}>
+        <TimerRing size={ringSize} fraction={Math.max(0, remainingMs / (segment.seconds * 1000))} warning={warning} durationMs={segment.seconds * 1000} running={speechRunning}>
           <Text weight="medium" tone="faint" style={styles.status} testID="timer-status">
             {status}
           </Text>
@@ -192,6 +227,10 @@ export default function TimerScreen() {
             {t('mobile.timer.ofTotal', { total: formatDuration(segment.seconds) })}
           </Text>
         </TimerRing>
+        {/* Absolute: no height or width is taken from the ring, POI pills or controls, even at 320×568. */}
+        <View pointerEvents="none" style={{ position: 'absolute', right: -8, bottom: 0 }}>
+          <Owl pose={reaction?.kind === 'minute' || reaction?.kind === 'up' ? 'surprised' : 'timekeeper'} size={wideLayout ? 72 : 48} gesture={reaction ? 'hop' : false} replay={reaction} breathe={false} />
+        </View>
       </View>
       <View style={styles.pills}>
         {poi && !overtime ? (
@@ -227,17 +266,16 @@ export default function TimerScreen() {
       {format.segments.map((item, index) => {
         const selected = index === round.segmentIndex;
         return (
-          <Pressable
+          <BouncePressable
             key={`${item.id}-${index}`}
             accessibilityRole="tab"
             accessibilityLabel={`${item.label}, ${formatDuration(item.seconds)}`}
             accessibilityState={{ selected }}
             onPress={() => go(index)}
             testID={`timer-speech-${index}`}
-            style={({ pressed }) => [
+            style={[
               styles.speech,
               { borderColor: selected ? colors.primaryFill : colors.border, backgroundColor: selected ? colors.primaryFill : colors.card },
-              pressed && styles.pressed,
             ]}>
             <Text weight="semibold" style={[styles.speechShort, selected && { color: colors.onPrimary }]} numberOfLines={2}>
               {item.short}
@@ -246,7 +284,7 @@ export default function TimerScreen() {
               <View style={[styles.speechDot, { backgroundColor: selected ? colors.onPrimary : sideColors[item.side] }]} />
               <Text style={[styles.speechTime, { color: selected ? colors.onPrimary : colors.faint }]}>{formatDuration(item.seconds)}</Text>
             </View>
-          </Pressable>
+          </BouncePressable>
         );
       })}
     </ScrollView>
@@ -259,7 +297,7 @@ export default function TimerScreen() {
           const left = prepRemainingMs(round, side, now);
           const running = isPrepRunning(round, side);
           return (
-            <Pressable
+            <BouncePressable
               key={side}
               accessibilityRole="button"
               accessibilityState={{ selected: running, disabled: left === 0 }}
@@ -281,7 +319,7 @@ export default function TimerScreen() {
               <Text weight="semibold" style={[styles.prepAction, { color: left === 0 ? colors.faint : colors.primary }]}>
                 {left === 0 ? tools('timer.prepUsed') : running ? tools('timer.pausePrep') : tools('timer.startPrep')}
               </Text>
-            </Pressable>
+            </BouncePressable>
           );
         })}
       </View>
@@ -356,6 +394,16 @@ export default function TimerScreen() {
         <SideControl icon="skip" label={t('mobile.timer.next')} onPress={() => go(round.segmentIndex + 1)} disabled={isLast} testID="timer-next" />
       </View>
 
+      {celebration ? (
+        <Celebration
+          title={t('mobile.animation.roundReady')}
+          stats={[
+            { key: 'speeches', label: t('mobile.animation.speechesTimed'), value: celebration.speeches },
+            { key: 'time', label: t('mobile.animation.totalTime'), value: celebration.seconds, format: formatDuration },
+          ]}
+          onDone={() => setCelebration(null)}
+        />
+      ) : null}
       <ActionMenu
         visible={menu}
         title={t('timer.selectFormat')}

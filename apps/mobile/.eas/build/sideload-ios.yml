@@ -1,0 +1,86 @@
+# The `sideload` profile in eas.json: a Release build for iPhone and iPad that
+# no Apple team has signed, packaged as an IPA that a free Apple ID re-signs in
+# Sideloadly or AltStore. EAS cannot export an unsigned IPA (every export
+# method signs), so this archives with signing off and packs Payload/ itself.
+# Each bundle is then signed ad hoc ("-") with the entitlements prebuild wrote,
+# so a re-signer can read the App Group from the IPA; app.config.ts keeps
+# nothing else in a release build without DEBATELAB_APPLE_ACCOUNT.
+# See docs/development.md#sideloaded-ipa.
+build:
+  name: Unsigned iOS device build for sideloading
+  steps:
+    - eas/checkout
+    - eas/install_node_modules
+    - eas/resolve_build_config
+    # Custom builds skip npm's eas-build-* hooks, so the patches run here:
+    # before prebuild, which copies the share extension's template, and again
+    # after it, because prebuild may reinstall node_modules.
+    - run:
+        name: Patch native modules before prebuild
+        command: npm run eas-build-post-install
+    - eas/prebuild
+    - run:
+        name: Patch native modules after prebuild
+        command: |
+          npm run eas-build-post-install
+          grep -l ALTAppGroups ios/DebateOwlShare/*.swift
+    - run:
+        name: Install pods
+        working_directory: ./ios
+        command: |
+          export LANG=en_US.UTF-8 LC_ALL=en_US.UTF-8
+          pod install
+    - run:
+        name: Archive without signing
+        command: |
+          set -eo pipefail
+          mkdir -p ios/build/logs
+          LOG=ios/build/logs/xcodebuild.log
+          if ! xcodebuild archive \
+              -workspace ios/DebateOwl.xcworkspace \
+              -scheme DebateOwl \
+              -configuration Release \
+              -sdk iphoneos \
+              -destination 'generic/platform=iOS' \
+              -archivePath ios/build/DebateOwl.xcarchive \
+              CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" \
+              > "$LOG" 2>&1; then
+            grep -nE 'error:|\*\* ARCHIVE FAILED' "$LOG" | head -60 || true
+            tail -80 "$LOG"
+            exit 1
+          fi
+          tail -5 "$LOG"
+    - run:
+        name: Sign ad hoc and pack the IPA
+        command: |
+          set -eo pipefail
+          OUT=ios/build/Payload
+          rm -rf "$OUT" ios/build/*.ipa
+          mkdir -p "$OUT"
+          cp -R ios/build/DebateOwl.xcarchive/Products/Applications/DebateOwl.app "$OUT/"
+          APP="$OUT/DebateOwl.app"
+          sign() { codesign --force --sign - --timestamp=none --generate-entitlement-der "$@"; }
+          # Frameworks and dylibs first, then each extension, then the app.
+          find "$APP" -depth \( -name '*.framework' -o -name '*.dylib' \) -print0 | while IFS= read -r -d '' f; do sign "$f"; done
+          entitlements_for() {
+            case "$1" in
+              ExpoWidgetsTarget) echo ios/ExpoWidgetsTarget/ExpoWidgetsTarget.entitlements ;;
+              DebateOwlShare) echo ios/DebateOwlShare/ShareExtension.entitlements ;;
+              *) echo "No entitlements known for the extension $1; add it to sideload-ios.yml." >&2; return 1 ;;
+            esac
+          }
+          for x in "$APP"/PlugIns/*.appex; do
+            [ -e "$x" ] || continue
+            ENT=$(entitlements_for "$(basename "$x" .appex)")
+            sign --entitlements "$ENT" "$x"
+          done
+          sign --entitlements ios/DebateOwl/DebateOwl.entitlements "$APP"
+          echo "Extensions: $(ls "$APP/PlugIns" 2>/dev/null | tr '\n' ' ')"
+          for b in "$APP" "$APP"/PlugIns/*.appex; do
+            echo "== $(basename "$b")"
+            codesign -d --entitlements - --xml "$b" 2>/dev/null | plutil -p - || true
+          done
+          /usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' -c 'Print :CFBundleShortVersionString' -c 'Print :CFBundleVersion' -c 'Print :MinimumOSVersion' "$APP/Info.plist"
+          (cd ios/build && zip -qry DebateOwl-sideload.ipa Payload)
+          ls -la ios/build/*.ipa
+    - eas/find_and_upload_build_artifacts

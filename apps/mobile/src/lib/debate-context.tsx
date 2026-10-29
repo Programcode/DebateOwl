@@ -1,6 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { AppState } from 'react-native';
 
+import { runRequest } from './run-request';
 import { publishCurrentDebate } from './debate-widget';
 import { clearSpotlight, clearSpotlightDomain } from './spotlight';
 import { useAuth } from './auth';
@@ -8,7 +9,7 @@ import {
   continueDebate,
   createDebate,
   deleteDebate,
-  fetchDebates,
+  fetchDebatesFrom,
   sortDebates,
   switchDebate,
   updateDebate,
@@ -21,6 +22,8 @@ type Status = 'loading' | 'ready' | 'error';
 
 type DebateContextValue = {
   status: Status;
+  /** The list came from the server, not from the saved copy painted while it loads; the five-day check waits for it. */
+  fresh: boolean;
   debates: Debate[];
   current: Debate | null;
   /** Session-only, as on the website: tools run without reading from or saving to any debate. */
@@ -47,6 +50,7 @@ export function DebateProvider({ children }: { children: ReactNode }) {
   const { session } = useAuth();
   const userId = session?.user.id ?? null;
   const [status, setStatus] = useState<Status>('loading');
+  const [fresh, setFresh] = useState(false);
   const [debates, setDebates] = useState<Debate[]>([]);
   const [currentId, setCurrentId] = useState<string | null>(null);
   const [oneOff, setOneOff] = useState(false);
@@ -59,25 +63,40 @@ export function DebateProvider({ children }: { children: ReactNode }) {
   const refreshes = useRef(0);
   const owner = useRef(userId);
   const generation = useRef(0);
+  // The list on screen is a saved copy (painted while loading, or answered offline), not the server's.
+  const showingCopy = useRef(false);
 
   const refresh = useCallback(async () => {
     const forUser = owner.current;
     if (!forUser) return;
     const writesBefore = writes.current;
     const request = ++refreshes.current;
-    try {
-      const next = await fetchDebates(forUser);
-      if (owner.current !== forUser || refreshes.current !== request || writes.current !== writesBefore) return;
+    const gen = generation.current;
+    const current = () => generation.current === gen && owner.current === forUser && refreshes.current === request && writes.current === writesBefore;
+    return await runRequest(async () => {
+      const show = (next: Awaited<ReturnType<typeof fetchDebatesFrom>>['value']) => {
+        if (!current()) return;
+        showingCopy.current = true;
+        setFresh(false);
+        setDebates((previous) => keepIfSame(previous, next.debates));
+        setCurrentId(next.currentId);
+        setStatus('ready');
+      };
+      const { value: next, fromCopy } = await fetchDebatesFrom(forUser, show);
+      if (!current()) return;
       // Refreshes run on every Debate tab focus; an unchanged list keeps its identity so the tabs do not re-render.
       setDebates((previous) => keepIfSame(previous, next.debates));
       setCurrentId(next.currentId);
       setStatus('ready');
-    } catch (cause) {
-      if (owner.current !== forUser || refreshes.current !== request) return;
+      showingCopy.current = fromCopy;
+      setFresh(!fromCopy);
+    }, async (cause) => {
+      // A switch or create since this refresh began already holds newer state.
+      if (!current()) return;
       console.warn('Could not load debates:', cause instanceof Error ? cause.message : cause);
-      // Keep what is on screen; only an empty first load becomes an error.
-      setStatus((previous) => (previous === 'ready' ? previous : 'error'));
-    }
+      // Keep a list the server gave; a saved copy on screen must not hide its refusal.
+      setStatus((previous) => (previous === 'ready' && !showingCopy.current ? previous : 'error'));
+    });
   }, []);
 
   useEffect(() => {
@@ -87,6 +106,8 @@ export function DebateProvider({ children }: { children: ReactNode }) {
     setCurrentId(null);
     setOneOff(false);
     setStatus('loading');
+    setFresh(false);
+    showingCopy.current = false;
     if (!userId) return;
     void refresh();
     // Pick up debates started or switched on the website while the app was in the background.
@@ -117,6 +138,7 @@ export function DebateProvider({ children }: { children: ReactNode }) {
     const current = debates.find((debate) => debate.id === currentId) ?? null;
     return {
       status,
+      fresh,
       debates,
       current,
       oneOff,
@@ -190,7 +212,7 @@ export function DebateProvider({ children }: { children: ReactNode }) {
         setStatus('ready');
       },
     };
-  }, [status, debates, currentId, oneOff, refresh]);
+  }, [status, fresh, debates, currentId, oneOff, refresh]);
 
   return <DebateContext.Provider value={value}>{children}</DebateContext.Provider>;
 }

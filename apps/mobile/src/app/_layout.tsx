@@ -11,6 +11,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 import { AppSidebar } from '@/components/app-sidebar';
 import { KeyboardDoneBar } from '@/components/app-text-input';
+import { RoundFeedbackObserver } from '@/components/round-feedback-observer';
 import { TimerRunner } from '@/components/timer-runner';
 import { ToastHost, ToastProvider } from '@/components/toast';
 import { AuthProvider, useAuth } from '@/lib/auth';
@@ -58,10 +59,6 @@ function Root() {
   const sidebarWidth = useSidebarWidth();
   // Settings come from the device here, so the app opens in the account's language and theme.
   const ready = (fontsLoaded || fontError !== null) && !loading && settingsReady;
-
-  useEffect(() => {
-    if (ready) void SplashScreen.hideAsync();
-  }, [ready]);
 
   // Offline, reads answer from saved copies and the screens say so.
   useEffect(() => watchNetwork(), []);
@@ -118,7 +115,7 @@ function Root() {
     <ThemeProvider value={navigationTheme}>
       <StatusBar style={scheme === 'dark' ? 'light' : 'dark'} />
       {/* The screenshot script waits for auth-settled before it checks an offline cold start. Swipeable rows need the gesture root. */}
-      <GestureHandlerRootView style={styles.root} testID={settled ? 'auth-settled' : 'auth-pending'}>
+      <GestureHandlerRootView onLayout={() => { void SplashScreen.hideAsync(); }} style={styles.root} testID={settled ? 'auth-settled' : 'auth-pending'}>
         <View style={styles.row}>
         {session !== null && sidebarWidth > 0 ? <AppSidebar width={sidebarWidth} /> : null}
         <ReservedWidth.Provider value={session !== null ? sidebarWidth : 0}>
@@ -165,6 +162,7 @@ function Root() {
             <Stack.Screen name="timer" options={{ presentation: 'fullScreenModal' }} />
             <Stack.Screen name="timer-format" options={sheet} />
             <Stack.Screen name="speech-time" />
+            <Stack.Screen name="flow-sheet" />
             <Stack.Screen name="motions" />
             <Stack.Screen name="crossfire" />
             <Stack.Screen name="crossfire-round/[id]" />
@@ -182,6 +180,7 @@ function Root() {
         <ToastHost />
         {/* The timer's signals and Live Activity keep going while the timer screen is closed. */}
         <TimerRunner />
+        <RoundFeedbackObserver />
         <KeyboardDoneBar />
       </GestureHandlerRootView>
     </ThemeProvider>

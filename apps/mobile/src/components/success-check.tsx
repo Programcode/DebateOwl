@@ -10,6 +10,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import Svg, { Path } from 'react-native-svg';
 
+import { useLatest } from '@/lib/live-value';
 import { haptics } from '@/lib/haptics';
 import { EASE, useReduceMotion } from '@/theme/motion';
 import { useTheme } from '@/theme/use-theme';
@@ -30,7 +31,7 @@ export function SuccessCheck({ size = 22, delay = 0, haptic = true }: { size?: n
   const pop = useSharedValue(reduce ? 1 : 0);
   const draw = useSharedValue(reduce ? 1 : 0);
 
-  useEffect(() => {
+  const play = useLatest(() => {
     if (haptic) haptics.success();
     if (reduce) {
       pop.set(1);
@@ -41,8 +42,8 @@ export function SuccessCheck({ size = 22, delay = 0, haptic = true }: { size?: n
     pop.set(withDelay(delay, withSequence(withTiming(1.14, { duration: 250, easing: EASE.decelerate }), withTiming(1, { duration: 170, easing: EASE.standard }))));
     draw.set(withDelay(delay + 140, withTiming(1, { duration: 360, easing: EASE.decelerate })));
     // One pop per mount: a re-render must not replay it.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  });
+  useEffect(() => { play.current(); }, [play]);
 
   const badge = useAnimatedStyle(() => ({
     opacity: Math.min(1, pop.value * 1.6),

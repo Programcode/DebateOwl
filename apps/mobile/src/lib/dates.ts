@@ -1,6 +1,10 @@
 import { isAppLanguage, toIntlLocale, type AppLanguage } from '@debatelab/core/languages';
-import { formatDistanceToNow, formatRelative, isToday } from 'date-fns';
-import { enGB, es, hu } from 'date-fns/locale';
+import { formatDistanceToNow } from 'date-fns/formatDistanceToNow';
+import { formatRelative } from 'date-fns/formatRelative';
+import { isToday } from 'date-fns/isToday';
+import { enGB } from 'date-fns/locale/en-GB';
+import { es } from 'date-fns/locale/es';
+import { hu } from 'date-fns/locale/hu';
 
 import i18n from './i18n';
 

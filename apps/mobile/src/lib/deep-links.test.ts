@@ -1,8 +1,26 @@
 import { describe, expect, it } from 'vitest';
 
+import { encodeCustomFormat, roundFormatToCustom, CUSTOM_LIMITS } from '@debatelab/core/free-tools/custom-format';
+import { FORMATS } from '@debatelab/core/free-tools/formats';
+
 import { appPathForUrl, isShareCode } from './deep-links';
 
 describe('appPathForUrl', () => {
+  it('imports a validated custom timer format, preserving the first value only', () => {
+    const custom = encodeCustomFormat(roundFormatToCustom(FORMATS.wsdc));
+    expect(appPathForUrl(`https://debateowl.com/tools/debate-timer?custom=${custom}&custom=invalid#top`)).toBe(`/timer?custom=${custom}`);
+    const longFormat = roundFormatToCustom(FORMATS.wsdc);
+    longFormat.segments = Array.from({ length: CUSTOM_LIMITS.segments }, () => ({ ...longFormat.segments[0], label: 'x'.repeat(CUSTOM_LIMITS.label) }));
+    const longCustom = encodeCustomFormat(longFormat);
+    expect(longCustom.length).toBeGreaterThan(2048);
+    expect(appPathForUrl(`https://www.debateowl.com/tools/debate-timer/?custom=${longCustom}`)).toBe(`/timer?custom=${longCustom}`);
+    expect(appPathForUrl('https://debateowl.com/tools/debate-timer?custom=invalid')).toBe('/timer');
+    expect(appPathForUrl('https://debateowl.com/tools/debate-timer?custom=%zz')).toBe('/timer');
+    expect(appPathForUrl('https://debateowl.com/tools/debate-timer#?custom=invalid')).toBe('/timer');
+    expect(appPathForUrl(`https://evil.com/tools/debate-timer?custom=${custom}`)).toBeNull();
+    expect(appPathForUrl(`https://debateowl.com/tools/debate-timer?custom=${'a'.repeat(CUSTOM_LIMITS.encoded + 1)}`)).toBeNull();
+  });
+
   it('opens a share link on either host', () => {
     expect(appPathForUrl('https://debateowl.com/share/Ab3dEf7hIj9kLm0n')).toBe('/share/Ab3dEf7hIj9kLm0n');
     expect(appPathForUrl('https://www.debateowl.com/share/Ab3dEf7hIj9kLm0n/')).toBe('/share/Ab3dEf7hIj9kLm0n');
@@ -75,6 +93,7 @@ describe('appPathForUrl', () => {
     expect(appPathForUrl('https://debateowl.com/tools/debate-timer')).toBe('/timer');
     expect(appPathForUrl('https://www.debateowl.com/tools/speech-time-calculator?lang=es')).toBe('/speech-time');
     expect(appPathForUrl('https://debateowl.com/tools/debate-motion-generator/')).toBe('/motions');
+    expect(appPathForUrl('https://debateowl.com/tools/debate-flow-sheet')).toBe('/flow-sheet');
   });
 });
 

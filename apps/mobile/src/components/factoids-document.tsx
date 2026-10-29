@@ -2,8 +2,9 @@ import type { DiscoveredSource } from '@debatelab/core/ai/discovered-sources';
 import type { Factoid, FactoidsInput, FactoidsOutput } from '@debatelab/core/ai/schemas/factoids';
 import { SafeWebUrlSchema } from '@debatelab/core/ai/schemas/url';
 import { useTranslation } from 'react-i18next';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
+import { PressScale as BouncePressable } from '@/components/press-scale';
 import { TextButton } from './buttons';
 import { ResearchedSources } from './case-document';
 import { hostOf, shorten, type CitationTarget } from './citation-target';
@@ -157,17 +158,17 @@ export function FactoidsDocument({
               </Text>
             </View>
           ) : (
-            <Pressable
+            <BouncePressable
               key={index}
               accessibilityRole="button"
               accessibilityLabel={`${t('factoidsResults.useSuggestion')}: ${query}`}
               onPress={() => onSearch(query)}
-              style={({ pressed }) => [styles.suggestion, { backgroundColor: colors.background }, pressed && styles.pressed]}>
+              style={[styles.suggestion, { backgroundColor: colors.background }]}>
               <Text style={styles.suggestionText} selectable>
                 {query}
               </Text>
               <Icon name="search" color={colors.primary} size={18} />
-            </Pressable>
+            </BouncePressable>
           ))}
         </DocSection>
       ) : null}
@@ -190,5 +191,4 @@ const styles = StyleSheet.create({
   body: { fontSize: 15.5, lineHeight: 22 },
   suggestion: { flexDirection: 'row', alignItems: 'center', gap: 10, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 10 },
   suggestionText: { flex: 1, fontSize: 14.5, lineHeight: 20 },
-  pressed: { opacity: 0.7 },
 });

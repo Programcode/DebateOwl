@@ -1,8 +1,10 @@
-import { createContext, useCallback, useContext, useEffect, useId, useMemo, useRef, useState, type ReactNode, type RefObject } from 'react';
+import { createContext, useContext, useEffect, useId, useMemo, useRef, useState, type ReactNode, type RefObject } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { ScrollView, StyleSheet, View } from 'react-native';
 
+import { PressScale as BouncePressable } from '@/components/press-scale';
 import { Text } from './text';
+import { useLatest } from '@/lib/live-value';
 
 import { useTheme } from '@/theme/use-theme';
 
@@ -43,16 +45,16 @@ export function useOutlineItems(items: { key: string; title: string }[], enabled
   const views = useRef(new Map<string, View | null>());
   const id = useId();
   const active = outline && enabled ? outline : null;
+  const latestItems = useLatest(items);
   const signature = items.map((item) => `${item.key}\u0000${item.title}`).join('\u0001');
   useEffect(() => {
     if (!active) return;
-    const removals = items.map((item, index) =>
+    const removals = latestItems.current.map((item, index) =>
       active.register({ id: `${id}-${item.key}`, label: item.title, number: index + 1, view: () => views.current.get(item.key) ?? null }),
     );
     return () => removals.forEach((remove) => remove());
     // The signature stands for the items' keys and titles.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [active, id, signature]);
+  }, [active, id, signature, latestItems]);
   if (!active) return undefined;
   return (key) => (view) => {
     views.current.set(key, view);
@@ -67,7 +69,9 @@ export function useOutlineItems(items: { key: string; title: string }[], enabled
 export function useOutlineRail(content: RefObject<View | null>, scroll: RefObject<ScrollView | null>, covered: number) {
   const [anchors, setAnchors] = useState<ReadonlyMap<string, Anchor>>(new Map());
   const [positions, setPositions] = useState<ReadonlyMap<string, number>>(new Map());
-  const [scrollY, setScrollY] = useState(0);
+  const scrollY = useRef(0);
+  const selected = useRef<string | undefined>(undefined);
+  const [current, setCurrent] = useState<string | undefined>(undefined);
 
   const outline = useMemo<Outline>(
     () => ({
@@ -84,7 +88,7 @@ export function useOutlineRail(content: RefObject<View | null>, scroll: RefObjec
     [],
   );
 
-  const measure = useCallback(() => {
+  const measure = () => {
     const root = content.current;
     if (!root) return;
     anchors.forEach((anchor) => {
@@ -93,13 +97,21 @@ export function useOutlineRail(content: RefObject<View | null>, scroll: RefObjec
         setPositions((previous) => (previous.get(anchor.id) === y ? previous : new Map(previous).set(anchor.id, y))),
       );
     });
-  }, [anchors, content]);
-
-  useEffect(measure, [measure]);
+  };
+  const latestMeasure = useLatest(measure);
+  useEffect(() => latestMeasure.current(), [anchors, content, latestMeasure]);
 
   const entries = [...anchors.values()].sort((a, b) => (positions.get(a.id) ?? Infinity) - (positions.get(b.id) ?? Infinity));
   // The part whose heading has scrolled to the top of the page, or the first.
-  const current = entries.reduce<string | undefined>((found, anchor) => ((positions.get(anchor.id) ?? Infinity) <= scrollY + covered + 32 ? anchor.id : found), entries[0]?.id);
+  const onScroll = (y: number) => {
+    scrollY.current = y;
+    const next = entries.reduce<string | undefined>((found, anchor) => ((positions.get(anchor.id) ?? Infinity) <= y + covered + 32 ? anchor.id : found), entries[0]?.id);
+    if (next === selected.current) return;
+    selected.current = next;
+    setCurrent(next);
+  };
+  const latestScroll = useLatest(onScroll);
+  useEffect(() => latestScroll.current(scrollY.current), [anchors, positions, covered, latestScroll]);
 
   const jump = (anchor: Anchor) => {
     const root = content.current;
@@ -108,7 +120,7 @@ export function useOutlineRail(content: RefObject<View | null>, scroll: RefObjec
     view.measureLayout(root, (_x, y) => scroll.current?.scrollTo({ y: y - covered - 12, animated: true }));
   };
 
-  return { outline, entries, current, measure, jump, onScroll: setScrollY };
+  return { outline, entries, current: current ?? entries[0]?.id, measure, jump, onScroll };
 }
 
 export function OutlineProvider({ outline, children }: { outline: Outline; children: ReactNode }) {
@@ -127,19 +139,19 @@ export function OutlineRail({ entries, current, onJump }: { entries: Anchor[]; c
       {entries.map((anchor) => {
         const on = anchor.id === current;
         return (
-          <Pressable
+          <BouncePressable
             key={anchor.id}
             accessibilityRole="menuitem"
             accessibilityState={{ selected: on }}
             onPress={() => onJump(anchor)}
-            style={({ pressed }) => [styles.entry, on && { backgroundColor: colors.tile }, pressed && styles.pressed]}>
+            style={[styles.entry, on && { backgroundColor: colors.tile }]}>
             <Text weight="bold" style={[styles.number, { color: colors.primary }]}>
               {anchor.number ?? ''}
             </Text>
             <Text weight={on ? 'semibold' : 'regular'} style={[styles.label, { color: on ? colors.chipSelectedForeground : colors.secondary }]} numberOfLines={2}>
               {anchor.label}
             </Text>
-          </Pressable>
+          </BouncePressable>
         );
       })}
     </View>
@@ -152,5 +164,4 @@ const styles = StyleSheet.create({
   entry: { flexDirection: 'row', gap: 8, borderRadius: 10, paddingVertical: 7, paddingHorizontal: 8 },
   number: { width: 14, fontSize: 14, lineHeight: 19 },
   label: { flex: 1, fontSize: 14.5, lineHeight: 19 },
-  pressed: { opacity: 0.7 },
 });

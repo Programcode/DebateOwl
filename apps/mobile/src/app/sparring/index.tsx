@@ -18,9 +18,10 @@ import { measureDelivery } from '@debatelab/core/voice/delivery';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { AppState, Keyboard, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native';
+import { AppState, Keyboard, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { PressScale as BouncePressable } from '@/components/press-scale';
 import { AppTextInput } from '@/components/app-text-input';
 import { ActionMenu } from '@/components/action-menu';
 import { MainActionButton, TextButton } from '@/components/buttons';
@@ -47,7 +48,7 @@ import { AIError, isAbortError, untilAborted } from '@/lib/ai-request';
 import { useAuth } from '@/lib/auth';
 import { backLabel } from '@/lib/back-label';
 import { useDebates } from '@/lib/debate-context';
-import { fetchFeatureConfig } from '@/lib/feature-config';
+import { ModelPicker } from '@/components/model-picker';
 import { useContentWidth } from '@/lib/layout';
 import { openRefusal } from '@/lib/refusal';
 import { sessionQuotaRefusal, useSessionQuota } from '@/lib/session-quota';
@@ -64,7 +65,7 @@ import { useVoiceAvailability } from '@/lib/voice-availability';
 import { radius } from '@/theme/colors';
 import { fontFamily } from '@/theme/fonts';
 import { useTheme } from '@/theme/use-theme';
-import { OwlAvatar, OwlLoader } from '@/components/owl';
+import { Owl, OwlAvatar, OwlLoader } from '@/components/owl';
 
 const TICK_MS = 250;
 const MIN_MOTION_CHARS = 8;
@@ -108,7 +109,7 @@ export default function SparringScreen() {
   const { session: auth } = useAuth();
   const userId = auth?.user.id ?? null;
   const { debates, current, oneOff, create, switchTo, refresh } = useDebates();
-  const { outputLanguage } = useSettings();
+  const { outputLanguage, readFeatureConfig } = useSettings();
   const { colors } = useTheme();
 
   const [session, setSession] = useState<SparringSession | null>(() => sparringDraft.get());
@@ -181,7 +182,7 @@ export default function SparringScreen() {
     setRequest({ status: 'pending' });
     try {
       // Read under the request's abort, so leaving while the settings load sends nothing.
-      const config = await untilAborted(fetchFeatureConfig(forUser, 'sparring'), controller.signal);
+      const config = await untilAborted(readFeatureConfig(forUser, 'sparring'), controller.signal);
       const scorecard = await judgeSparring(
         { action: 'score', sessionId: snapshot.id, motion: snapshot.motion, userSide: snapshot.userSide, format: snapshot.format, difficulty: snapshot.difficulty, speeches: snapshot.speeches, language: outputLanguage },
         { config, debateId: snapshot.debateId ?? null, signal: controller.signal },
@@ -209,7 +210,7 @@ export default function SparringScreen() {
       setRequest({ status: 'failed', failure: classify(cause, true) });
       openRefusal(router, cause, 'sparring');
     }
-  }, [commit, outputLanguage, refresh, router, t]);
+  }, [commit, outputLanguage, readFeatureConfig, refresh, router, t]);
 
   const runTurn = useCallback(async (snapshot: SparringSession, forUser: string) => {
     const turn = currentSparringTurn(snapshot);
@@ -220,7 +221,7 @@ export default function SparringScreen() {
     setRequest({ status: 'pending' });
     try {
       // Read under the request's abort, so leaving while the settings load sends nothing.
-      const config = await untilAborted(fetchFeatureConfig(forUser, 'sparring'), controller.signal);
+      const config = await untilAborted(readFeatureConfig(forUser, 'sparring'), controller.signal);
       const { speaker: _speaker, ...currentTurn } = turn;
       const spoken = voiceActiveRef.current;
       const { speech: generated, voice } = await sparringTurn(
@@ -256,28 +257,32 @@ export default function SparringScreen() {
       setRequest({ status: 'failed', failure: classify(cause, false) });
       openRefusal(router, cause, 'sparring');
     }
-  }, [commit, outputLanguage, refresh, router, runJudge, voiceActiveRef]);
+  }, [commit, outputLanguage, readFeatureConfig, refresh, router, runJudge, voiceActiveRef]);
 
-  // The clock counts down from its deadline; the tick only redraws it, and coming back from the background redraws at once.
+  // Only expiry changes the session. The small clock components tick independently.
   const timerRunning = session?.timerRunning ?? false;
+  const timerDeadline = session?.timerDeadline ?? null;
   useEffect(() => {
-    if (!timerRunning) return;
+    if (!timerRunning || timerDeadline === null) return;
+    let timer: ReturnType<typeof setTimeout> | undefined;
     const tick = () => {
+      clearTimeout(timer);
       const latest = sessionRef.current;
-      if (!latest) return;
+      if (!latest || !latest.timerRunning || latest.timerDeadline === null) return;
+      const delay = latest.timerDeadline - Date.now();
+      if (delay > 0) { timer = setTimeout(tick, delay); return; }
       const next = tickSparringTimer(latest, Date.now());
       if (next !== latest) commit(next);
     };
     tick();
-    const timer = setInterval(tick, TICK_MS);
     const subscription = AppState.addEventListener('change', (state) => {
       if (state === 'active') tick();
     });
     return () => {
-      clearInterval(timer);
+      clearTimeout(timer);
       subscription.remove();
     };
-  }, [commit, timerRunning]);
+  }, [commit, timerRunning, timerDeadline]);
 
   const begin = (side: SparringSide, debateId: string | null, forUser: string) => {
     const started = startSparringSession({ motion, userSide: side, format, difficulty, debateId, ...(voiceMode ? { voice: true } : {}) }, newSparringId(), Date.now());
@@ -485,13 +490,17 @@ export default function SparringScreen() {
             </View>
           ))}
         </FormGroup>
+        <ModelPicker feature="sparring" />
         <VoiceModeSwitch value={voiceMode} onChange={setVoiceMode} description={t('voiceRound.mode.sparringDescription')} />
         <ContextLine feature="sparring" side="both" />
         <SessionCostNote quota={roundQuota.quota} />
         {formError ? (
-          <Text accessibilityRole="alert" style={[styles.formError, { color: colors.destructive }]} testID="sparring-form-error">
-            {formError}
-          </Text>
+          <View>
+            <Owl pose="skeptical" size={48} gesture="shake" breathe={false} />
+            <Text accessibilityRole="alert" style={[styles.formError, { color: colors.destructive }]} testID="sparring-form-error">
+              {formError}
+            </Text>
+          </View>
         ) : null}
         <ActionMenu
           visible={sideMenu}
@@ -526,7 +535,8 @@ export default function SparringScreen() {
         {celebrate ? (
           <Celebration
             eyebrow={t('sparring.round.complete')}
-            title={winnerText(t, session.scorecard.winner)}
+            encouraging={session.scorecard.userScore < 75}
+            title={session.scorecard.userScore < 75 ? t('mobile.animation.keepPractising') : winnerText(t, session.scorecard.winner)}
             stats={[
               { key: 'score', label: t('sparring.scorecard.yourScore'), value: session.scorecard.userScore },
               { key: 'speeches', label: t('export.sparringSpeeches'), value: session.speeches.length },
@@ -629,8 +639,6 @@ function LiveRound({
   const failure = request.status === 'failed' ? request.failure : null;
   const waiting = !failure && (judging || !userTurn);
   const total = turn?.timeLimitSeconds ?? 0;
-  const remaining = judging ? 0 : session.timerRemainingSeconds;
-  const warning = userTurn && remaining <= 30;
   const timeExpired = userTurn && (session.timerRemainingSeconds <= 0 || (session.timerDeadline !== null && session.timerDeadline <= Date.now()));
   const lastAi = [...session.speeches].reverse().find((speech) => speech.speaker === 'ai');
   const turnLabel = turn ? t(`sparring.turns.${turn.id}`) : t('sparring.round.complete');
@@ -677,28 +685,7 @@ function LiveRound({
         keyboardShouldPersistTaps="handled"
         keyboardDismissMode="interactive">
         {keyboard ? null : (
-          <View style={styles.ringWrap} accessible accessibilityRole="timer" accessibilityLabel={judging ? status : `${status}: ${t('sparring.round.timeRemaining', { time: formatClock(remaining) })}`} testID="sparring-clock">
-            <TimerRing size={ringSize} fraction={judging ? 0 : total > 0 ? remaining / total : 0} warning={warning}>
-              <Text weight="medium" tone="faint" style={styles.status} numberOfLines={2}>
-                {status}
-              </Text>
-              {judging ? (
-                <SuccessCheck size={Math.round(ringSize * 0.26)} haptic={false} />
-              ) : (
-                <Text
-                  weight="bold"
-                  style={[styles.time, { fontSize: Math.round(ringSize * 0.25), lineHeight: Math.round(ringSize * 0.29) }, warning && { color: colors.destructive }]}
-                  testID="sparring-time">
-                  {formatClock(remaining)}
-                </Text>
-              )}
-              {judging ? null : (
-                <Text tone="faint" style={styles.status}>
-                  {t('mobile.timer.ofTotal', { total: formatClock(total) })}
-                </Text>
-              )}
-            </TimerRing>
-          </View>
+          <SparringClock session={session} total={total} ringSize={ringSize} judging={judging} userTurn={userTurn} status={status} />
         )}
 
         {voice ? <OpponentVoiceBar /> : null}
@@ -711,7 +698,7 @@ function LiveRound({
 
         {failure ? (
           <View accessibilityRole="alert" style={[styles.caption, styles.centredCard, { backgroundColor: colors.card, borderColor: colors.border }]} testID="sparring-error">
-            <Icon name="alert" color={colors.destructive} size={24} />
+            <Owl pose="skeptical" size={48} gesture="shake" breathe={false} />
             <Text weight="semibold" style={styles.captionTitle}>
               {judging ? t('sparring.round.scoreFailed') : t('sparring.round.opponentFailed')}
             </Text>
@@ -733,7 +720,7 @@ function LiveRound({
         ) : null}
 
         {userTurn && lastAi ? (
-          <Pressable
+          <BouncePressable
             accessibilityRole="button"
             accessibilityState={{ expanded }}
             onPress={() => setExpanded((value) => !value)}
@@ -748,7 +735,7 @@ function LiveRound({
             <Text style={styles.speechText} numberOfLines={expanded ? undefined : keyboard ? 2 : 4}>
               {lastAi.content}
             </Text>
-          </Pressable>
+          </BouncePressable>
         ) : null}
 
         {userTurn ? (
@@ -787,9 +774,7 @@ function LiveRound({
       {keyboard ? (
         // With the keyboard up, the speech goes in from a slim bar above it, beside its clock.
         <View style={[styles.keyboardBar, { borderTopColor: colors.line, backgroundColor: colors.tabBar }]}>
-          <Text weight="semibold" style={[styles.keyboardClock, warning && { color: colors.destructive }]}>
-            {formatClock(remaining)}
-          </Text>
+          <SparringKeyboardClock session={session} userTurn={userTurn} />
           <TextButton label={t('sparring.round.submitSpeech')} onPress={onSubmit} disabled={!canSubmit} />
         </View>
       ) : (
@@ -806,6 +791,66 @@ function LiveRound({
         </View>
       )}
     </KeyboardAvoidingView>
+  );
+}
+
+/** Display-only ticks never write the saved round or redraw the speech form. */
+function useSparringSeconds(session: SparringSession) {
+  const [now, setNow] = useState(() => Date.now());
+  const { timerRunning, timerDeadline, timerRemainingSeconds } = session;
+  useEffect(() => {
+    if (!timerRunning || timerDeadline === null) return;
+    setNow(Date.now());
+    const timer = setInterval(() => setNow(Date.now()), TICK_MS);
+    const subscription = AppState.addEventListener('change', (state) => {
+      if (state === 'active') setNow(Date.now());
+    });
+    return () => { clearInterval(timer); subscription.remove(); };
+  }, [timerRunning, timerDeadline]);
+  return timerRunning && timerDeadline !== null ? Math.max(0, Math.ceil((timerDeadline - now) / 1000)) : timerRemainingSeconds;
+}
+
+function SparringClock({ session, total, ringSize, judging, userTurn, status }: {
+  session: SparringSession; total: number; ringSize: number; judging: boolean; userTurn: boolean; status: string;
+}) {
+  const { t } = useTranslation();
+  const { colors } = useTheme();
+  const seconds = useSparringSeconds(session);
+  const remaining = judging ? 0 : seconds;
+  const warning = userTurn && remaining <= 30;
+  return (
+    <View style={styles.ringWrap} accessible accessibilityRole="timer" accessibilityLabel={judging ? status : `${status}: ${t('sparring.round.timeRemaining', { time: formatClock(remaining) })}`} testID="sparring-clock">
+      <TimerRing size={ringSize} fraction={judging ? 0 : total > 0 ? remaining / total : 0} warning={warning}>
+        <Text weight="medium" tone="faint" style={styles.status} numberOfLines={2}>
+          {status}
+        </Text>
+        {judging ? (
+          <SuccessCheck size={Math.round(ringSize * 0.26)} haptic={false} />
+        ) : (
+          <Text
+            weight="bold"
+            style={[styles.time, { fontSize: Math.round(ringSize * 0.25), lineHeight: Math.round(ringSize * 0.29) }, warning && { color: colors.destructive }]}
+            testID="sparring-time">
+            {formatClock(remaining)}
+          </Text>
+        )}
+        {judging ? null : (
+          <Text tone="faint" style={styles.status}>
+            {t('mobile.timer.ofTotal', { total: formatClock(total) })}
+          </Text>
+        )}
+      </TimerRing>
+    </View>
+  );
+}
+
+function SparringKeyboardClock({ session, userTurn }: { session: SparringSession; userTurn: boolean }) {
+  const { colors } = useTheme();
+  const remaining = useSparringSeconds(session);
+  return (
+    <Text weight="semibold" style={[styles.keyboardClock, userTurn && remaining <= 30 && { color: colors.destructive }]}>
+      {formatClock(remaining)}
+    </Text>
   );
 }
 

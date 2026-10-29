@@ -2663,6 +2663,18 @@
     "promoFailed": "No se pudo canjear el código promocional. Inténtalo de nuevo."
   },
   "mobile": {
+    "animation": {
+      "attackReady": "Refutaciones listas",
+      "brainstormReady": "Ideas listas",
+      "factoidsReady": "Datos listos",
+      "rebuttals": "Refutaciones",
+      "ideas": "Ideas",
+      "factoids": "Datos",
+      "roundReady": "Ronda completada",
+      "speechesTimed": "Discursos cronometrados",
+      "totalTime": "Tiempo total",
+      "keepPractising": "Sigue practicando, vas por buen camino"
+    },
     "tabs": {
       "debate": "Debate",
       "prepare": "Preparar",
@@ -2738,7 +2750,12 @@
         "openSettings": "Abrir Ajustes",
         "unavailable": "Esta versión de la app todavía no puede recibir notificaciones.",
         "failed": "No se pudieron cambiar las notificaciones. Inténtalo de nuevo."
-      }
+      },
+      "signInApple": "Sesión iniciada con Apple",
+      "signInAppleOrEmail": "Sesión iniciada con Apple o correo electrónico",
+      "signInAppleOrGoogle": "Sesión iniciada con Apple o Google",
+      "signInAppleGoogleOrEmail": "Sesión iniciada con Apple, Google o correo electrónico",
+      "manageWebsiteSubscription": "Gestiona tu suscripción en debateowl.com"
     },
     "deleteAccount": {
       "failedHint": "Tu cuenta sigue activa. Comprueba tu conexión e inténtalo de nuevo."
@@ -2997,7 +3014,8 @@
       "speechTimeIntro": "Pega o escribe un discurso para ver cuánto tarda en pronunciarse.",
       "calcPrivacy": "Se cuenta en este dispositivo. El texto nunca se sube ni se guarda.",
       "motionsDesc": "Saca una moción de práctica",
-      "motionsIntro": "Mociones de práctica originales, por tema, nivel y tipo."
+      "motionsIntro": "Mociones de práctica originales, por tema, nivel y tipo.",
+      "flowSheetDesc": "Una columna por discurso, lista para imprimir o compartir en PDF."
     },
     "sidebar": {
       "dashboard": "Panel",
@@ -3116,6 +3134,9 @@
         "year_one": "{{count}} año",
         "year_other": "{{count}} años"
       }
+    },
+    "flowSheet": {
+      "exportFailed": "No se pudo exportar la hoja de debate."
     }
   }
 }

@@ -24,6 +24,34 @@
         "DEBATELAB_BUILD": "dev",
         "DEBATELAB_APP_GROUP": "group.com.pistack.debateowl"
       }
+    },
+    "release-simulator": {
+      "distribution": "internal",
+      "node": "22.23.2",
+      "ios": {
+        "simulator": true,
+        "buildConfiguration": "Release"
+      },
+      "env": {
+        "DEBATELAB_BUILD": "release",
+        "DEBATELAB_APP_GROUP": "group.com.pistack.debateowl"
+      }
+    },
+    "sideload": {
+      "distribution": "internal",
+      "withoutCredentials": true,
+      "node": "22.23.2",
+      "buildArtifactPaths": ["ios/build/logs/*"],
+      "ios": {
+        "config": "sideload-ios.yml",
+        "buildConfiguration": "Release",
+        "applicationArchivePath": "ios/build/*.ipa"
+      },
+      "env": {
+        "DEBATELAB_BUILD": "release",
+        "DEBATELAB_APP_GROUP": "group.com.pistack.debateowl",
+        "EXPO_PUBLIC_SUPABASE_ENV": "production"
+      }
     }
   }
 }

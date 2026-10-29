@@ -276,7 +276,7 @@ async function shoot(page: Page, name: string) {
 }
 
 /**
- * A finished round or case opens under its celebration: shoot it as `name`, then tap it away
+ * A finished round or a new case, attack, brainstorm or factoids result opens under its celebration: shoot it as `name`, then tap it away
  * (unless it already went on its own) and wait until the screen underneath is clear.
  */
 async function shootCelebration(page: Page, name: string) {
@@ -744,13 +744,14 @@ async function shootResultScreens(context: BrowserContext, prefix: string, langu
   // A wide iPad shows the outline rail: jumping to a part scrolls that part's heading to the top of the case.
   const outline = page.getByTestId('document-outline');
   if (await outline.isVisible()) {
-    const part = /^(Case structure|Esetstruktúra|Estructura del caso)$/i;
+    // A part far enough from the end of the case to reach the top.
+    const part = /^(If they say…|Ha azt mondják…|Si dicen…)$/;
     const heading = page.getByTestId('case-document').getByRole('heading', { name: part });
     const before = (await heading.boundingBox())?.y ?? 0;
     await outline.getByRole('menuitem').filter({ hasText: part }).click();
     await page.waitForTimeout(800);
     const after = (await heading.boundingBox())?.y ?? 0;
-    if (!(after < before && after < 200)) throw new Error(`The outline did not scroll to Case Structure (heading at ${before}, then ${after})`);
+    if (!(after < before && after < 200)) throw new Error(`The outline did not scroll to If they say (heading at ${before}, then ${after})`);
     await shoot(page, `${prefix}-case-outline`);
   }
   // Close the open argument, so every argument shows collapsed.
@@ -801,6 +802,7 @@ async function shootResultScreens(context: BrowserContext, prefix: string, langu
   await shoot(page, `${prefix}-attack-form`);
   await page.getByRole('button', { name: /^(Find weaknesses|Gyengeségek keresése|Encontrar debilidades)$/i }).click();
   await page.getByTestId('attack-document').waitFor({ timeout: 30_000 });
+  await shootCelebration(page, `${prefix}-attack-celebration`);
   await page.waitForTimeout(400);
   await shoot(page, `${prefix}-attack-result`);
   // The case stays mounted under the attack, so its menu is looked up inside the attack.
@@ -857,6 +859,7 @@ async function shootTool(context: BrowserContext, prefix: string, language: stri
   const page = await open(false);
   await page.getByRole('button', { name: spec.submit }).click();
   await page.getByTestId(spec.document).waitFor({ timeout: 30_000 });
+  await shootCelebration(page, `${prefix}-${tool}-celebration`);
   await page.waitForTimeout(400);
   await shoot(page, `${prefix}-${tool}`);
   // Close the open item, so every item shows collapsed.
@@ -1745,6 +1748,8 @@ async function shootVoiceScreens(context: BrowserContext, prefix: string, langua
   await page.getByTestId('sparring-input').waitFor({ timeout: 15_000 });
   await page.getByTestId('sparring-input').fill(text.speeches[1]);
   await page.getByTestId('sparring-main').click();
+  // A strong score keeps its celebration up until it is tapped away.
+  await shootCelebration(page, `${prefix}-voice-celebration`);
   await page.getByTestId('spoken-delivery').waitFor({ timeout: 15_000 });
   await page.getByTestId('spoken-delivery').scrollIntoViewIfNeeded();
   await page.waitForTimeout(400);
@@ -2768,7 +2773,8 @@ async function main() {
           await page.goto(`${ORIGIN}/sign-in`);
           await page.getByRole('tablist').waitFor();
           await shoot(page, `${prefix}-sign-in`);
-          await page.getByRole('button').first().click();
+          // The language menu sits above the form, so press Send code by name.
+          await page.getByRole('button', { name: /^(Send code|Kód küldése|Enviar código)$/ }).click();
           await page.getByRole('alert').waitFor();
           await shoot(page, `${prefix}-sign-in-error`);
           await page.getByRole('tab').nth(1).click();

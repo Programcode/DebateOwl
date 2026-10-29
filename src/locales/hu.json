@@ -2663,6 +2663,18 @@
     "promoFailed": "Nem sikerült beváltani a promóciós kódot. Próbáld újra."
   },
   "mobile": {
+    "animation": {
+      "attackReady": "Elkészültek a cáfolatok",
+      "brainstormReady": "Elkészültek az ötletek",
+      "factoidsReady": "Elkészültek a tények",
+      "rebuttals": "Cáfolatok",
+      "ideas": "Ötletek",
+      "factoids": "Tények",
+      "roundReady": "A forduló véget ért",
+      "speechesTimed": "Mért beszédek",
+      "totalTime": "Összes idő",
+      "keepPractising": "Gyakorolj tovább, jó úton jársz"
+    },
     "tabs": {
       "debate": "Vita",
       "prepare": "Felkészülés",
@@ -2738,7 +2750,12 @@
         "openSettings": "Beállítások megnyitása",
         "unavailable": "Az alkalmazás ezen verziója még nem tud értesítéseket fogadni.",
         "failed": "Nem sikerült módosítani az értesítéseket. Próbáld újra."
-      }
+      },
+      "signInApple": "Bejelentkezve Apple-fiókkal",
+      "signInAppleOrEmail": "Bejelentkezve Apple-fiókkal vagy e-maillel",
+      "signInAppleOrGoogle": "Bejelentkezve Apple- vagy Google-fiókkal",
+      "signInAppleGoogleOrEmail": "Bejelentkezve Apple- vagy Google-fiókkal, illetve e-maillel",
+      "manageWebsiteSubscription": "Előfizetés kezelése a debateowl.com oldalon"
     },
     "deleteAccount": {
       "failedHint": "A fiókod megmaradt. Ellenőrizd a kapcsolatot, és próbáld újra."
@@ -2997,7 +3014,8 @@
       "speechTimeIntro": "Illeszd be vagy írd be a beszédet, és megtudod, mennyi ideig tart elmondani.",
       "calcPrivacy": "Ezen az eszközön számoljuk. A szöveget nem töltjük fel és nem tároljuk.",
       "motionsDesc": "Gyakorló vitatétel húzása",
-      "motionsIntro": "Saját gyakorló vitatételek téma, szint és típus szerint."
+      "motionsIntro": "Saját gyakorló vitatételek téma, szint és típus szerint.",
+      "flowSheetDesc": "Minden beszédnek külön oszlop, nyomtatáshoz vagy PDF-ként megosztáshoz."
     },
     "sidebar": {
       "dashboard": "Áttekintés",
@@ -3116,6 +3134,9 @@
         "year_one": "{{count}} évig",
         "year_other": "{{count}} évig"
       }
+    },
+    "flowSheet": {
+      "exportFailed": "Nem sikerült exportálni a vita jegyzetlapját."
     }
   }
 }

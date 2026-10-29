@@ -3,8 +3,9 @@ import { useRouter } from 'expo-router';
 import * as WebBrowser from 'expo-web-browser';
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, StyleSheet, View } from 'react-native';
 
+import { PressScale as BouncePressable } from '@/components/press-scale';
 import { SuccessCheck } from './success-check';
 import { Chip, CiteBadge } from './chip';
 import { FadingScrollRow } from './edge-fade';
@@ -122,7 +123,7 @@ function SaveToLibrary({ onSave }: { onSave: () => Promise<boolean> }) {
     );
   }
   return (
-    <Pressable
+    <BouncePressable
       accessibilityRole="button"
       accessibilityLabel={t('askChat.saveMessage')}
       disabled={state === 'saving'}
@@ -131,13 +132,13 @@ function SaveToLibrary({ onSave }: { onSave: () => Promise<boolean> }) {
         setState('saving');
         void onSave().then((saved) => setState(saved ? 'saved' : 'idle'));
       }}
-      style={({ pressed }) => [styles.save, pressed && styles.pressed]}
+      style={[styles.save]}
       testID="ask-save">
       {state === 'saving' ? <ActivityIndicator size="small" color={colors.primary} /> : <Icon name="bookmark" color={colors.primary} size={17} />}
       <Text weight="semibold" style={[styles.saveText, { color: colors.primary }]}>
         {t('askChat.saveToLibrary')}
       </Text>
-    </Pressable>
+    </BouncePressable>
   );
 }
 
@@ -169,5 +170,4 @@ const styles = StyleSheet.create({
   saved: { flexDirection: 'row', alignItems: 'center', gap: 7, alignSelf: 'flex-start', minHeight: 32 },
   savedCheck: { width: 20, height: 20, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
   saveText: { fontSize: 14.5 },
-  pressed: { opacity: 0.6 },
 });

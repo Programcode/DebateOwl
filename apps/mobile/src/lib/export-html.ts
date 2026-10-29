@@ -3,6 +3,7 @@ import type { AttackOutput } from '@debatelab/core/ai/schemas/attack';
 import type { BrainstormOutput } from '@debatelab/core/ai/schemas/brainstorm';
 import type { FactoidsOutput } from '@debatelab/core/ai/schemas/factoids';
 import type { GenerateOutput } from '@debatelab/core/ai/schemas/generate';
+import { questioningSegments, speakingSegments, type RoundFormat } from '@debatelab/core/free-tools/formats';
 import { mapRows, type FlowchartDocument, type FlowNodeType } from '@debatelab/core/flowchart';
 import { formatRoundTime } from '@debatelab/core/sparring/formats';
 import type { SparringSession } from '@debatelab/core/sparring/session';
@@ -309,4 +310,48 @@ export function sparringExportHtml(session: SparringSession, t: Translate): stri
       delivery}${speech.content.split(/\n{2,}/).map((block) => `<p>${escape(block)}</p>`).join('')}</div>`);
   });
   return page(t('export.sparringTranscript'), `${sparringSide(session.userSide, t)} | ${format} | ${difficulty}`, parts.join(''), t);
+}
+
+/** The website's printable flow sheet, sized for expo-print's chosen paper. */
+export function flowSheetExportHtml(options: {
+  format: RoundFormat;
+  paper: 'letter' | 'a4';
+  orientation: 'landscape' | 'portrait';
+  strip: boolean;
+  motion: string;
+  round: string;
+  judge: string;
+}, t: Translate): string {
+  const { format, paper, orientation, strip } = options;
+  const columns = speakingSegments(format);
+  const questions = questioningSegments(format);
+  const size = paper === 'a4' ? { long: 277, short: 190 } : { long: 259, short: 196 };
+  const width = orientation === 'landscape' ? size.long : size.short;
+  const height = orientation === 'landscape' ? size.short : size.long;
+  const notesHeight = height * 0.18;
+  const speechHeight = height - 22 - (strip ? notesHeight + 2 : 0);
+  const field = (key: 'motion' | 'round' | 'judge') => `<span class="field"><b>${escape(t(`flow.${key}Short`))}</b> ${escape(options[key])}</span>`;
+  const headings = columns.map((segment) => `<th style="border-top-color:${{ a: '#0284c7', b: '#e11d48', both: '#64748b' }[segment.side]}">
+    ${escape(segment.short)}<small>${segment.side === 'both' ? '' : escape(format.sideNames[segment.side === 'a' ? 0 : 1])} ${segment.seconds / 60} min</small></th>`).join('');
+  const notes = strip ? `<table class="notes"><tr>${questions.length
+    ? questions.map((segment) => `<td><b>${escape(segment.short)}: ${escape(segment.label)}</b></td>`).join('')
+    : `<td><b>${escape(t('flow.notesBox'))}</b></td>`}</tr></table>` : '';
+  return `<!doctype html><html><head><meta charset="utf-8"><style>
+    @page { size: ${paper === 'a4' ? 'A4' : 'letter'} ${orientation}; margin: 10mm; }
+    * { box-sizing: border-box; } body { margin: 0; color: #0f172a; font: 10px Arial, sans-serif; }
+    .sheet { width: ${width}mm; height: ${height - 1}mm; padding: 3mm; overflow: hidden; }
+    header { height: 13mm; border-bottom: 2px solid #1e293b; line-height: 6mm; }
+    .headline { display: flex; gap: 4mm; min-width: 0; } .headline > b { flex-shrink: 0; }
+    .field { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; border-bottom: 1px solid #94a3b8; }
+    .motion .field { display: block; }
+    .motion { display: block; margin-left: 0; white-space: nowrap; overflow: hidden; }
+    table { table-layout: fixed; width: 100%; border-collapse: collapse; }
+    .speeches { height: ${speechHeight}mm; margin-top: 2mm; }
+    th { height: 12mm; vertical-align: top; text-align: left; padding: 1mm; border-top: 4px solid; border-left: 1px solid #cbd5e1; overflow-wrap: anywhere; }
+    small { display: block; font-size: 8px; font-weight: normal; color: #475569; }
+    .lines td { border-left: 1px solid #cbd5e1; background: repeating-linear-gradient(to bottom, transparent 0, transparent 19px, #e2e8f0 19px, #e2e8f0 20px); }
+    .notes { height: ${notesHeight}mm; margin-top: 2mm; } .notes td { border: 1px solid #94a3b8; vertical-align: top; padding: 1mm; }
+  </style></head><body><div class="sheet"><header><div class="headline"><b>${escape(format.name)}</b>${field('round')}${field('judge')}</div><span class="motion">${field('motion')}</span></header>
+    <table class="speeches"><thead><tr>${headings}</tr></thead><tbody><tr class="lines">${columns.map(() => '<td></td>').join('')}</tr></tbody></table>${notes}
+  </div></body></html>`;
 }

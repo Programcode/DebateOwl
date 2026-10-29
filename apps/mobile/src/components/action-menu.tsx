@@ -1,4 +1,5 @@
-import { useEffect, useRef } from 'react';
+import { useEffect } from 'react';
+import { useLatest } from '@/lib/live-value';
 import { ActionSheetIOS, Alert, Platform } from 'react-native';
 
 import type { IconName } from './icon-paths';
@@ -26,8 +27,7 @@ export interface ActionMenuProps {
 
 /** A native iOS action sheet, opened while `visible` is true. The web preview draws its own (action-menu.web.tsx). */
 export function ActionMenu({ visible, title, items, cancelLabel, onSelect, onClose }: ActionMenuProps) {
-  const latest = useRef({ items, onSelect, onClose });
-  latest.current = { items, onSelect, onClose };
+  const latest = useLatest({ items, onSelect, onClose, title, cancelLabel });
   useEffect(() => {
     if (!visible) return;
     let live = true;
@@ -38,6 +38,7 @@ export function ActionMenu({ visible, title, items, cancelLabel, onSelect, onClo
       const item = index === undefined ? undefined : current[index];
       if (item && !item.disabled) select(item.key);
     };
+    const { title, cancelLabel } = latest.current;
     const labels = latest.current.items.map((item) => item.label);
     if (Platform.OS === 'ios') {
       ActionSheetIOS.showActionSheetWithOptions(
@@ -60,7 +61,6 @@ export function ActionMenu({ visible, title, items, cancelLabel, onSelect, onClo
       live = false;
     };
     // Shown once per opening; the latest items and handlers are read from the ref.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [visible]);
+  }, [visible, latest]);
   return null;
 }

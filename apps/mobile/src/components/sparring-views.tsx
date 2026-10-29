@@ -14,10 +14,12 @@ import { DocumentHeader } from './document-header';
 import { Text } from './text';
 import { DeliveryFacts } from './voice';
 
+import { runRequest } from '@/lib/run-request';
 import { useAuth } from '@/lib/auth';
 import { backLabel } from '@/lib/back-label';
 import { confirmDestructive } from '@/lib/confirm';
 import { sharePdf, shareText } from '@/lib/export';
+import { shareSparringDocx } from '@/lib/export-docx';
 import { sparringExportFileName, sparringExportHtml } from '@/lib/export-html';
 import { deleteSparringRound } from '@/lib/sparring';
 import { radius } from '@/theme/colors';
@@ -92,22 +94,31 @@ export function SparringScorecardScreen({
       cancel: t('common.cancel'),
     });
     if (!confirmed || !live.current || owner.current !== forUser) return;
-    try {
+    return await runRequest(async () => {
       await deleteSparringRound(forUser, session.id);
       if (live.current && owner.current === forUser) onDeleted();
-    } catch (cause) {
+    }, async (cause) => {
       console.warn('Could not delete the round:', cause instanceof Error ? cause.message : cause);
       if (live.current) setFailed(t('historyPage.sparringDeleteFailed'));
-    }
+    });
   };
 
-  const exportPdf = async () => {
+  const exportWord = async () => {
     try {
-      await sharePdf(sparringExportHtml(session, t), sparringExportFileName(session), winnerText(t, session.scorecard.winner));
+      await shareSparringDocx(session, t, t('common.docx'));
     } catch (cause) {
       console.warn('Could not export the round:', cause instanceof Error ? cause.message : cause);
       if (live.current) setFailed(t('mobile.sparring.exportFailed'));
     }
+  };
+
+  const exportPdf = async () => {
+    return await runRequest(async () => {
+      await sharePdf(sparringExportHtml(session, t), sparringExportFileName(session), winnerText(t, session.scorecard.winner));
+    }, async (cause) => {
+      console.warn('Could not export the round:', cause instanceof Error ? cause.message : cause);
+      if (live.current) setFailed(t('mobile.sparring.exportFailed'));
+    });
   };
 
   return (
@@ -119,7 +130,8 @@ export function SparringScorecardScreen({
           backLabel={backLabel(t, from, 'practice')}
           onShare={() => void shareText(winnerText(t, session.scorecard.winner), scorecardText(t, session, session.scorecard)).catch(() => {})}
           actions={[
-            // The website's PDF export of the scorecard and transcript, through the share sheet.
+            // The website's Word and PDF exports of the scorecard and transcript.
+            { key: 'word', label: t('common.docx'), symbol: 'doc.text', icon: 'file', onPress: () => void exportWord() },
             { key: 'pdf', label: t('mobile.sparring.exportPdf'), symbol: 'arrow.down.doc', icon: 'download', onPress: () => void exportPdf() },
             { key: 'delete', label: t('common.delete'), symbol: 'trash', icon: 'trash', destructive: true, onPress: () => void remove() },
           ]}

@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { StyleSheet, View } from 'react-native';
 
+import { runRequest } from '@/lib/run-request';
 import { MainActionButton, TextButton } from '@/components/buttons';
 import { Field } from '@/components/field';
 import { FolderSelect } from '@/components/folder-select';
@@ -47,18 +48,18 @@ export default function NewNoteSheet() {
     if (!ready || !userId || !current) return;
     setSaving(true);
     setError('');
-    try {
+    return await runRequest(async () => {
       const { status } = await queueAddSource(userId, { title: title.trim(), content: content.trim(), type: 'text', folder, debateId: current.id });
       toast(status === 'saved'
         ? { tone: 'success', title: t('libraryPage.sourceSaved', { title: title.trim() }) }
         : { tone: 'info', title: t('mobile.offlineQueue.noteQueuedTitle'), message: t('mobile.offlineQueue.noteQueuedDesc') });
       router.back();
-    } catch (cause) {
+    }, async (cause) => {
       console.warn('Could not save the note:', cause instanceof Error ? cause.message : cause);
       haptics.warning();
       setError(t('mobile.library.saveFailed'));
       setSaving(false);
-    }
+    });
   };
 
   return (

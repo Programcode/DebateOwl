@@ -65,6 +65,7 @@ const SAME_AS_ENGLISH: Record<string, string[]> = {
     'es translation:askChat.pros', 'es translation:historyPage.tabChats', 'es translation:sourceQuality.types.social',
     'es translation:debateContext.debateHeading', 'es tools:motions.types.actor',
     'es translation:mobile.tabs.debate', 'es translation:mobile.brainstorm.ideaCount_one', 'es translation:mobile.brainstorm.ideaCount_other',
+    'es translation:mobile.animation.ideas',
   ],
   'Hungarian words spelled the same as the English ones': [
     'hu tools:motions.topics.sport', 'hu translation:mobile.library.types.url',

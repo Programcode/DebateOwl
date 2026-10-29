@@ -1,3 +1,4 @@
+import { APP_LANGUAGES, isAppLanguage } from '@debatelab/core/languages';
 import * as AppleAuthentication from 'expo-apple-authentication';
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -11,9 +12,11 @@ import { SegmentedControl } from '@/components/segmented-control';
 import { Text } from '@/components/text';
 import { useAuth } from '@/lib/auth';
 import { signInErrorKey } from '@/lib/sign-in-errors';
+import { changeAppLanguage } from '@/lib/i18n';
 import { appleSignInAvailable, googleSignInAvailable, signInWithApple, signInWithGoogle } from '@/lib/social-sign-in';
 import { Icon } from '@/components/icon';
 import { OwlMark } from '@/components/owl';
+import { ActionMenu } from '@/components/action-menu';
 import { useTheme } from '@/theme/use-theme';
 
 type Mode = 'email' | 'demo';
@@ -30,13 +33,15 @@ const DEMO_CODE_PATTERN = /^DEMO-[A-Z0-9]{4}-[A-Z0-9]{4}$/;
  * Google too.
  */
 export default function SignInScreen() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { colors, scheme } = useTheme();
   const insets = useSafeAreaInsets();
   // On iPad the form sits in the middle of the screen instead of under the status bar.
   const centred = useWindowDimensions().width >= 700;
   const { signInWithEmailOtp, verifyEmailOtp, signInWithDemoCode, sessionExpired } = useAuth();
   const [mode, setMode] = useState<Mode>('email');
+  const [languageMenu, setLanguageMenu] = useState(false);
+  const languageLabel = APP_LANGUAGES[isAppLanguage(i18n.language) ? i18n.language : 'en'].label;
   const [status, setStatus] = useState<Status>('idle');
   const [codeSent, setCodeSent] = useState(false);
   const [email, setEmail] = useState('');
@@ -139,7 +144,22 @@ export default function SignInScreen() {
           centred && styles.centred,
           { paddingTop: insets.top + 32, paddingBottom: insets.bottom + 24 },
         ]}>
-        <OwlMark size={64} />
+        <View style={styles.brandRow}>
+          <OwlMark size={64} />
+          <TextButton
+            label={languageLabel}
+            accessibilityLabel={`${t('settings.uiLanguage')}: ${languageLabel}`}
+            onPress={() => setLanguageMenu(true)}
+          />
+        </View>
+        <ActionMenu
+          visible={languageMenu}
+          title={t('settings.uiLanguage')}
+          items={Object.entries(APP_LANGUAGES).map(([key, language]) => ({ key, label: language.label, icon: key === i18n.language ? 'check' : undefined }))}
+          cancelLabel={t('common.cancel')}
+          onClose={() => setLanguageMenu(false)}
+          onSelect={(language) => { if (isAppLanguage(language)) void changeAppLanguage(language); }}
+        />
         <View style={styles.heading}>
           <Text accessibilityRole="header" weight="display" style={styles.title}>
             {t('login.title')}
@@ -306,6 +326,7 @@ const styles = StyleSheet.create({
   notice: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, borderWidth: 2, borderRadius: 14, padding: 12 },
   noticeText: { flex: 1 },
   root: { flex: 1 },
+  brandRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 16 },
   // Phone-width on iPad, centred.
   content: { paddingHorizontal: 24, gap: 24, width: '100%', maxWidth: 460, alignSelf: 'center' },
   centred: { flexGrow: 1, justifyContent: 'center' },

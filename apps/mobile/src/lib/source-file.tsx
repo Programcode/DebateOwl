@@ -28,12 +28,16 @@ export const SOURCE_FILE_PICKER_TYPES = [
 
 let jobs = 0;
 
+function nextId() {
+  return ++jobs;
+}
+
 // A picked file waits here while the Import file sheet opens: the web preview's
 // asset holds a browser File, which cannot travel in a route's params.
 const picked = new Map<string, DocumentPickerAsset>();
 
 export function holdPickedFile(asset: DocumentPickerAsset): string {
-  const id = `picked-${++jobs}`;
+  const id = `picked-${nextId()}`;
   picked.clear();
   picked.set(id, asset);
   return id;
@@ -84,7 +88,7 @@ export function useSourceFileReader(): { reader: ReactNode; read: (asset: Docume
     }
     // One file at a time: a new one replaces the read in progress.
     if (current.current) finish(current.current.id, { ok: false, code: 'cancelled', message: 'Another file replaced this one' });
-    const id = `file-${++jobs}`;
+    const id = `file-${nextId()}`;
     return new Promise<SourceFileOutcome>((resolve) => {
       const timer = setTimeout(() => finish(id, { ok: false, code: 'timeout', message: 'The file reader did not answer' }), READ_TIMEOUT_MS);
       current.current = { id, asset, size, resolve, timer };

@@ -1,30 +1,39 @@
-import type { ReactNode } from 'react';
-import { Pressable, type PressableProps, type StyleProp, type ViewStyle } from 'react-native';
-import Animated, { useAnimatedStyle, useSharedValue, withSpring, withTiming } from 'react-native-reanimated';
+import { useEffect, useState, type Ref } from 'react';
+import { Pressable, type PressableProps, type View } from 'react-native';
+import Animated, { cancelAnimation, useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
 
 import { SPRING, useReduceMotion } from '@/theme/motion';
 
-/**
- * A pressable card or row that gives under the finger: it eases to 97% as a finger lands and
- * springs back on release, on the UI thread. Rows never lift (the website's motion-list-item);
- * they only press in. Under Reduce Motion it does not move.
- */
-export function PressScale({ children, style, scaleTo = 0.97, onPressIn, onPressOut, ...props }: Omit<PressableProps, 'style' | 'children'> & { children: ReactNode; style?: StyleProp<ViewStyle>; scaleTo?: number }) {
+const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
+
+/** A UI-thread spring press, on the hit target itself so flex, refs and accessibility stay intact. */
+export function PressScale({ style, scaleTo = 0.97, onPressIn, onPressOut, disabled, ref, ...props }: PressableProps & { scaleTo?: number; ref?: Ref<View> }) {
   const reduce = useReduceMotion();
   const scale = useSharedValue(1);
-  const animated = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
+  const [pressed, setPressed] = useState(false);
+  useEffect(() => {
+    if (reduce || disabled) {
+      cancelAnimation(scale);
+      scale.set(1);
+    }
+  }, [reduce, disabled, scale]);
+  const animated = useAnimatedStyle(() => ({ transform: [{ scale: reduce ? 1 : scale.value }] }));
   return (
-    <Pressable
+    <AnimatedPressable
       {...props}
+      ref={ref}
+      disabled={disabled}
+      style={[typeof style === 'function' ? style({ pressed }) : style, animated]}
       onPressIn={(event) => {
-        if (!reduce) scale.set(withTiming(scaleTo, { duration: 90 }));
+        if (typeof style === 'function') setPressed(true);
+        if (!reduce) scale.set(withSpring(scaleTo, SPRING.press));
         onPressIn?.(event);
       }}
       onPressOut={(event) => {
-        if (!reduce) scale.set(withSpring(1, SPRING.pop));
+        if (typeof style === 'function') setPressed(false);
+        scale.set(reduce ? 1 : withSpring(1, SPRING.pop));
         onPressOut?.(event);
-      }}>
-      <Animated.View style={[style, animated]}>{children}</Animated.View>
-    </Pressable>
+      }}
+    />
   );
 }

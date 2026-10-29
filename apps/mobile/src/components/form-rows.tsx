@@ -1,7 +1,8 @@
 import { useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Platform, Pressable, StyleSheet, Switch, View } from 'react-native';
+import { Platform, StyleSheet, Switch, View } from 'react-native';
 
+import { PressScale as BouncePressable } from '@/components/press-scale';
 import { ActionMenu } from './action-menu';
 import { Icon } from './icon';
 import { Text } from './text';
@@ -59,14 +60,14 @@ export function SelectRow<T extends string>({
   const chosen = options.find((option) => option.value === value)?.label ?? value;
   return (
     <>
-      <Pressable
+      <BouncePressable
         accessibilityRole="button"
         accessibilityLabel={`${label}: ${chosen}`}
         accessibilityState={{ disabled: Boolean(disabled) }}
         disabled={disabled}
         onPress={() => setOpen(true)}
         testID={testID}
-        style={({ pressed }) => [pressed && styles.pressed, disabled && styles.disabled]}>
+        style={[disabled && styles.disabled]}>
         <RowFrame first={first}>
           <Text style={styles.rowLabel}>
             {label}
@@ -77,7 +78,7 @@ export function SelectRow<T extends string>({
           </Text>
           <Icon name="chevronDown" color={colors.tabInactive} size={18} />
         </RowFrame>
-      </Pressable>
+      </BouncePressable>
       <ActionMenu
         visible={open}
         title={label}
@@ -139,6 +140,5 @@ const styles = StyleSheet.create({
   rowValue: { flex: 1, fontSize: 16, textAlign: 'right' },
   switchText: { flex: 1, gap: 2 },
   description: { fontSize: 13.5, lineHeight: 18 },
-  pressed: { opacity: 0.7 },
   disabled: { opacity: 0.45 },
 });

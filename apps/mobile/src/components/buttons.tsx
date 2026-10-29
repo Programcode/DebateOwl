@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withSpring, withTiming } from 'react-native-reanimated';
 
+import { PressScale as BouncePressable } from '@/components/press-scale';
 import { Icon } from './icon';
 import type { IconName } from './icon-paths';
 import { Text } from './text';
@@ -203,18 +204,18 @@ export function TextButton({
 }) {
   const { colors } = useTheme();
   return (
-    <Pressable
+    <BouncePressable
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel}
       accessibilityState={{ disabled }}
       disabled={disabled}
       onPress={onPress}
       hitSlop={6}
-      style={({ pressed }) => [styles.text, (pressed || disabled) && styles.dimmed]}>
+      style={[styles.text, disabled && styles.dimmed]}>
       <Text weight="semibold" style={[styles.textLabel, { color: destructive ? colors.destructive : colors.primary }]}>
         {label}
       </Text>
-    </Pressable>
+    </BouncePressable>
   );
 }
 

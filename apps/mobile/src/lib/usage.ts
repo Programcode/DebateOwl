@@ -58,3 +58,10 @@ export function useDailyUsage(): DailyUsage | null {
   }, [userId]);
   return userId && current?.userId === userId ? current.usage : null;
 }
+
+/** Next midnight UTC, shown on the student's local clock, as on the website. */
+export function dailyResetTime(locale: string): string {
+  const now = new Date();
+  const reset = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1));
+  return reset.toLocaleTimeString(locale, { hour: 'numeric', minute: '2-digit' });
+}

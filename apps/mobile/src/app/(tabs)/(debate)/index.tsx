@@ -4,10 +4,12 @@ import { useTranslation } from 'react-i18next';
 import { Pressable, StyleSheet, View } from 'react-native';
 import Animated from 'react-native-reanimated';
 
+import { PressScale as BouncePressable } from '@/components/press-scale';
+import { runRequest } from '@/lib/run-request';
 import { AnnouncementBanner } from '@/components/announcement-banner';
 import { TrialBanner } from '@/components/trial-banner';
 import { MainActionButton, TextButton } from '@/components/buttons';
-import { Card, IconTile, ListItemIn, usePressScale } from '@/components/card';
+import { Card, IconTile, ListItemIn, SessionEntrance, usePressScale } from '@/components/card';
 import { Icon } from '@/components/icon';
 import type { IconName } from '@/components/icon-paths';
 import { OneOffNotice } from '@/components/one-off-notice';
@@ -18,9 +20,12 @@ import { Skeleton, SkeletonRows } from '@/components/skeleton';
 import { SOURCE_ICONS, sourceMeta } from '@/components/source-display';
 import { Text } from '@/components/text';
 import { WorkRow } from '@/components/work-row';
+import { takeNewDebate } from '@/lib/debate-arrival';
+import { PopIn } from '@/components/celebration';
 import { publishCurrentDebate } from '@/lib/debate-widget';
 import { indexForSpotlight, spotlightAvailable } from '@/lib/spotlight';
 import { SPOTLIGHT_LIMIT, spotlightWorkItems } from '@/lib/spotlight-items';
+import { useLatest } from '@/lib/live-value';
 import { useAuth } from '@/lib/auth';
 import { useDebates } from '@/lib/debate-context';
 import {
@@ -120,10 +125,8 @@ export default function DebateScreen() {
         <TrialBanner style={styles.banner} />
         <SwitcherPill onPress={openSwitcher} />
         <OneOffNotice style={styles.notice} />
-        <Text accessibilityRole="header" weight="display" style={[styles.motion, styles.motionWide]} testID="current-debate-motion">
-          {current.motion}
-        </Text>
-        <DebateSettingsCard debate={current} />
+        <DebateMotion key={current.id} debate={current} wide />
+        <SessionEntrance name="debate:settings"><DebateSettingsCard debate={current} /></SessionEntrance>
         <DebateDetails key={current.id} debateId={current.id} dashboard />
       </Screen>
     );
@@ -135,12 +138,34 @@ export default function DebateScreen() {
       <TrialBanner style={styles.banner} />
       <SwitcherPill onPress={openSwitcher} />
       <OneOffNotice style={styles.notice} />
-      <Text accessibilityRole="header" weight="display" style={styles.motion} testID="current-debate-motion">
-        {current.motion}
-      </Text>
-      <DebateSettingsCard debate={current} />
+      <DebateMotion key={current.id} debate={current} />
+      <SessionEntrance name="debate:settings"><DebateSettingsCard debate={current} /></SessionEntrance>
       <DebateDetails key={current.id} debateId={current.id} />
     </Screen>
+  );
+}
+
+/** A newly created debate greets once on focus, after its sheet has closed. */
+function DebateMotion({ debate, wide = false }: { debate: Debate; wide?: boolean }) {
+  const [welcome, setWelcome] = useState(false);
+  useFocusEffect(useCallback(() => {
+    setWelcome(takeNewDebate(debate.id));
+    return () => setWelcome(false);
+  }, [debate.id]));
+  const motion = (
+    <Text accessibilityRole="header" weight="display" style={[styles.motion, wide && styles.motionWide]} testID="current-debate-motion">
+      {debate.motion}
+    </Text>
+  );
+  return (
+    <View>
+      {welcome ? <PopIn key={debate.id}>{motion}</PopIn> : motion}
+      {welcome ? (
+        <View pointerEvents="none" style={{ position: 'absolute', right: 0, top: -36 }}>
+          <Owl pose="coach" size={44} gesture="wave" breathe={false} />
+        </View>
+      ) : null}
+    </View>
   );
 }
 
@@ -172,17 +197,17 @@ function DebateSettingsCard({ debate }: { debate: Debate }) {
           </Text>
         ) : null}
       </View>
-      <Pressable
+      <BouncePressable
         accessibilityRole="button"
         onPress={() => router.push('/edit-debate')}
         testID="edit-debate"
         hitSlop={6}
-        style={({ pressed }) => [styles.editButton, { backgroundColor: colors.tile }, pressed && styles.pressed]}>
+        style={[styles.editButton, { backgroundColor: colors.tile }]}>
         <Icon name="pencil" color={colors.tileForeground} size={15} />
         <Text weight="semibold" style={[styles.editLabel, { color: colors.tileForeground }]} numberOfLines={1}>
           {t('debate.editSettings')}
         </Text>
-      </Pressable>
+      </BouncePressable>
     </View>
   );
 }
@@ -191,17 +216,17 @@ function SwitcherPill({ onPress }: { onPress: () => void }) {
   const { t } = useTranslation();
   const { colors } = useTheme();
   return (
-    <Pressable
+    <BouncePressable
       accessibilityRole="button"
       accessibilityHint={t('debate.switch')}
       onPress={onPress}
       testID="current-debate-pill"
-      style={({ pressed }) => [styles.pill, { backgroundColor: colors.tile }, pressed && styles.pressed]}>
+      style={[styles.pill, { backgroundColor: colors.tile }]}>
       <Text weight="semibold" style={[styles.pillLabel, { color: colors.tileForeground }]}>
         {t('nav.currentDebate')}
       </Text>
       <Icon name="chevronDown" color={colors.tileForeground} size={17} />
-    </Pressable>
+    </BouncePressable>
   );
 }
 
@@ -218,8 +243,7 @@ function DebateDetails({ debateId, dashboard = false }: { debateId: string; dash
   const userId = session?.user.id ?? null;
   // Read when counts land, for the Home Screen widget; not a reason to load again.
   const { current } = useDebates();
-  const currentRef = useRef(current);
-  currentRef.current = current;
+  const currentRef = useLatest(current);
   // Retry and the reload after a delete run with no focus guard; a component gone since then keeps an old
   // currentRef, so Spotlight also asks whether this one is still on screen.
   const mounted = useRef(true);
@@ -242,12 +266,12 @@ function DebateDetails({ debateId, dashboard = false }: { debateId: string; dash
     if (!userId) return;
     const limit = dashboard ? DASHBOARD_RECENT_LIMIT : RECENT_LIMIT;
     const mark = copies.mark();
-    try {
+    return await runRequest(async () => {
       const [nextCounts, pro, con, nextSources] = await Promise.all([
-        fetchDebateCounts(userId, debateId, mark),
-        fetchRecentWork(userId, debateId, 'pro', limit, mark),
-        fetchRecentWork(userId, debateId, 'con', limit, mark),
-        dashboard ? fetchSources(userId, debateId, mark) : null,
+        fetchDebateCounts(userId, debateId, mark, (copy) => { if (isCurrent()) setCounts(copy); }),
+        fetchRecentWork(userId, debateId, 'pro', limit, mark, (copy) => { if (isCurrent()) setRecent((previous) => ({ pro: copy, con: previous?.con ?? [] })); }),
+        fetchRecentWork(userId, debateId, 'con', limit, mark, (copy) => { if (isCurrent()) setRecent((previous) => ({ pro: previous?.pro ?? [], con: copy })); }),
+        dashboard ? fetchSources(userId, debateId, mark, (copy) => { if (isCurrent()) setSources(copy.slice(0, DASHBOARD_SOURCES)); }) : null,
       ]);
       if (!isCurrent()) return;
       setCounts(nextCounts);
@@ -268,12 +292,12 @@ function DebateDetails({ debateId, dashboard = false }: { debateId: string; dash
       setRecent({ pro, con });
       setSources(nextSources?.slice(0, DASHBOARD_SOURCES) ?? null);
       setFailed(false);
-    } catch (cause) {
+    }, async (cause) => {
       if (!isCurrent()) return;
       console.warn('Could not load the debate:', cause instanceof Error ? cause.message : cause);
       setFailed(true);
-    }
-  }, [userId, debateId, dashboard, copies, t]);
+    });
+  }, [userId, debateId, dashboard, copies, t, currentRef]);
 
   // Reload on focus, so work saved on the website shows up. Out of view, its saved copies no longer count.
   useFocusEffect(
@@ -318,7 +342,7 @@ function DebateDetails({ debateId, dashboard = false }: { debateId: string; dash
 
     </>
   );
-  const spar = <SparCard onPress={() => router.push({ pathname: '/sparring', params: { from: 'debate' } })} />;
+  const spar = <SessionEntrance name="debate:spar" index={1}><SparCard onPress={() => router.push({ pathname: '/sparring', params: { from: 'debate' } })} /></SessionEntrance>;
   const prepare = (
     <>
       <Text accessibilityRole="header" weight="bold" tone="heading" style={styles.section}>
@@ -326,9 +350,9 @@ function DebateDetails({ debateId, dashboard = false }: { debateId: string; dash
       </Text>
       <View style={styles.grid}>
         {PREPARE_TOOLS.map((tool, index) => (
-          <ListItemIn key={tool.key} index={index} style={styles.tileSlot}>
+          <SessionEntrance key={tool.key} name={`debate:${tool.key}`} index={index + 2} style={styles.tileSlot}>
             <ToolTile icon={tool.icon} label={t(`nav.${tool.key}`)} onPress={() => router.push(prepareToolHref(tool.key, 'debate'))} />
-          </ListItemIn>
+          </SessionEntrance>
         ))}
       </View>
     </>
@@ -467,8 +491,8 @@ function RecentSourceRow({ source, first, onPress }: { source: Source; first: bo
       onPressOut={press.onPressOut}
       testID="recent-source"
       style={!first ? { borderTopWidth: 1, borderTopColor: colors.line } : undefined}>
-      {({ pressed }) => (
-        <Animated.View style={[styles.sourceRow, pressed && styles.pressed, press.style]}>
+      {() => (
+        <Animated.View style={[styles.sourceRow, press.style]}>
           <IconTile name={SOURCE_ICONS[source.type]} size={42} />
           <View style={styles.sourceText}>
             <Text weight="semibold" style={styles.sourceTitle} numberOfLines={2}>
@@ -579,7 +603,6 @@ function DebateSkeleton() {
 
 const styles = StyleSheet.create({
   body: { fontSize: 16, lineHeight: 22 },
-  pressed: { opacity: 0.7 },
   pill: {
     alignSelf: 'flex-start',
     flexDirection: 'row',

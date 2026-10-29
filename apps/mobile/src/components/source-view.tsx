@@ -1,12 +1,13 @@
 import { useFocusEffect } from 'expo-router';
 import * as WebBrowser from 'expo-web-browser';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 
+import { PressScale as BouncePressable } from '@/components/press-scale';
 import { SuccessCheck } from './success-check';
 import { MainActionButton, SecondaryButton, TextButton } from './buttons';
-import { Card, IconTile } from './card';
+import { IconTile } from './card';
 import { Field } from './field';
 import { FolderSelect } from './folder-select';
 import { FormGroup, SelectRow, SwitchRow } from './form-rows';
@@ -14,6 +15,10 @@ import { Icon } from './icon';
 import { folderLabel, SOURCE_ICONS, sourceMeta } from './source-display';
 import { WaitingToSync } from './source-row';
 import { Text } from './text';
+import { CardRowFrame, ListScreen } from './list-screen';
+import { SheetList } from './sheet';
+import { runRequest } from '@/lib/run-request';
+import { sourceParagraphs } from '@/lib/source-paragraphs';
 import { useToast } from './toast';
 
 import { useAuth } from '@/lib/auth';
@@ -38,40 +43,11 @@ const TYPE_LABELS: Record<SourceType, string> = { text: 'libraryPage.textSource'
 
 type Draft = Pick<Source, 'title' | 'content' | 'type'> & { origin: string };
 
-/**
- * A source, as the website's source sheet shows it: its quality and use, the
- * switch that decides whether the AI uses it, its folder and its text, with
- * Copy, Share and Delete (with Undo). Edit opens the website's fields for
- * title, type, origin and text; Save sends only what was changed.
- * The source sheet shows it with a Done button; the iPad Library shows it
- * beside the list. Mount it with a key per source, so a new selection never shows the last one.
- * Edits, the switch and moves go through the offline queue; a note that has
- * not reached the server is read from the queue, and its temporary id gives way
- * to the row's once it syncs.
- */
-export function SourceView({ id, onDone, onRemoved }: { id: string; onDone?: () => void; onRemoved?: () => void }) {
-  const { t, i18n } = useTranslation();
-  const { colors } = useTheme();
-  const toast = useToast();
-  const { session } = useAuth();
-  const userId = session?.user.id ?? null;
+/** Keep the source read's focus lifetime separate from edits and queue overlays. */
+function useSourceCopy(userId: string | null, realId: string, local: boolean) {
   const [source, setSource] = useState<Source | null | undefined>(undefined);
   const [failed, setFailed] = useState(false);
-  const [draft, setDraft] = useState<Draft | null>(null);
-  const [saving, setSaving] = useState(false);
-  const [saved, setSaved] = useState(false);
-  const [saveError, setSaveError] = useState('');
   const copies = useCopyHolder();
-  const actions = useSourceActions();
-  const queued = useQueuedWrites(userId);
-  const realId = currentSourceId(queued, id);
-  const local = isLocalSourceId(realId);
-  // What shows: a waiting note from the queue, or the row read with the queued changes on top.
-  const view: Source | null | undefined = local ? queuedSource(queued, realId) : source && withQueuedWrite(queued, source);
-  const waiting = view ? waitingSourceIds(queued).has(view.id) : false;
-  const { offline } = useOfflineStatus();
-  const { folders } = useLibraryFolders(view?.debateId ?? null);
-
   // A write anywhere, a queued change syncing or one the server refused reads the row again,
   // so the view ends on what the server holds, never on an edit that did not save.
   const [reloads, setReloads] = useState(0);
@@ -81,6 +57,7 @@ export function SourceView({ id, onDone, onRemoved }: { id: string; onDone?: () 
   // A note that waits has no row to read yet.
   useFocusEffect(
     useCallback(() => {
+      void reloads;
       if (!userId || local) return;
       let active = true;
       setFailed(false);
@@ -98,9 +75,44 @@ export function SourceView({ id, onDone, onRemoved }: { id: string; onDone?: () 
         active = false;
         copies.release();
       };
-      // eslint-disable-next-line react-hooks/exhaustive-deps -- `reloads` only asks for the read again.
+      // `reloads` only asks for the read again.
     }, [userId, realId, local, copies, reloads]),
   );
+
+  return { source, setSource, failed };
+}
+
+/**
+ * A source, as the website's source sheet shows it: its quality and use, the
+ * switch that decides whether the AI uses it, its folder and its text, with
+ * Copy, Share and Delete (with Undo). Edit opens the website's fields for
+ * title, type, origin and text; Save sends only what was changed.
+ * The source sheet shows it with a Done button; the iPad Library shows it
+ * beside the list. Mount it with a key per source, so a new selection never shows the last one.
+ * Edits, the switch and moves go through the offline queue; a note that has
+ * not reached the server is read from the queue, and its temporary id gives way
+ * to the row's once it syncs.
+ */
+export function SourceView({ id, onDone, onRemoved, style, contentStyle }: { id: string; onDone?: () => void; onRemoved?: () => void; style?: StyleProp<ViewStyle>; contentStyle?: StyleProp<ViewStyle> }) {
+  const { t, i18n } = useTranslation();
+  const { colors } = useTheme();
+  const toast = useToast();
+  const { session } = useAuth();
+  const userId = session?.user.id ?? null;
+  const [draft, setDraft] = useState<Draft | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+  const [saveError, setSaveError] = useState('');
+  const actions = useSourceActions();
+  const queued = useQueuedWrites(userId);
+  const realId = currentSourceId(queued, id);
+  const local = isLocalSourceId(realId);
+  const { source, setSource, failed } = useSourceCopy(userId, realId, local);
+  // What shows: a waiting note from the queue, or the row read with the queued changes on top.
+  const view: Source | null | undefined = local ? queuedSource(queued, realId) : source && withQueuedWrite(queued, source);
+  const waiting = view ? waitingSourceIds(queued).has(view.id) : false;
+  const { offline } = useOfflineStatus();
+  const { folders } = useLibraryFolders(view?.debateId ?? null);
 
   const url = webUrl(view?.origin ?? null);
 
@@ -136,11 +148,12 @@ export function SourceView({ id, onDone, onRemoved }: { id: string; onDone?: () 
     if (draft.content.trim() !== view.content) patch.content = draft.content;
     if (draft.type !== view.type) patch.type = draft.type;
     if (draft.origin.trim() !== (view.origin ?? '')) patch.origin = draft.origin;
+    const debateId = view.debateId;
     setSaving(true);
     setSaveError('');
-    try {
+    return await runRequest(async () => {
       // Offline the edit waits on the phone; the marker below says so instead of the mint confirmation.
-      const status = await queueUpdateSource(userId, view.debateId, view.id, patch);
+      const status = await queueUpdateSource(userId, debateId, view.id, patch);
       // A saved edit shows at once; a queued one shows through the queue until it syncs or is refused.
       if (status === 'saved') {
         setSource((current) => current && { ...current, title: draft.title.trim(), content: draft.content.trim(), type: draft.type, origin: draft.origin.trim() || null });
@@ -153,19 +166,19 @@ export function SourceView({ id, onDone, onRemoved }: { id: string; onDone?: () 
         // A sheet sits above the toast, so the sheet says it here; the iPad pane gets the toast too.
         if (!onDone) toast({ tone: 'success', title: t('libraryPage.sourceUpdated'), message: t('libraryPage.sourceUpdatedDesc') });
       }
-    } catch (cause) {
+    }, async (cause) => {
       console.warn('Could not save the source:', cause instanceof Error ? cause.message : cause);
       haptics.warning();
       setSaveError(t('libraryPage.saveFailed'));
-    } finally {
+    }, () => {
       setSaving(false);
-    }
+    });
   };
 
   const semantic = view?.metadata?.semantic;
   const words = view ? view.content.trim().split(/\s+/).filter(Boolean).length : 0;
 
-  return (
+  const header = (
     <>
       <View style={styles.header}>
         <View style={styles.headerText}>
@@ -258,17 +271,17 @@ export function SourceView({ id, onDone, onRemoved }: { id: string; onDone?: () 
             </View>
           ) : null}
           {url ? (
-            <Pressable
+            <BouncePressable
               accessibilityRole="link"
               accessibilityHint={t('mobile.library.openPage')}
               onPress={() => void WebBrowser.openBrowserAsync(url)}
-              style={({ pressed }) => [styles.origin, { backgroundColor: colors.card, borderColor: colors.border }, pressed && styles.pressed]}>
+              style={[styles.origin, { backgroundColor: colors.card, borderColor: colors.border }]}>
               <Icon name="globe" color={colors.primary} size={19} />
               <Text weight="medium" style={[styles.originText, { color: colors.primary }]} numberOfLines={1}>
                 {url.replace(/^https?:\/\/(www\.)?/i, '')}
               </Text>
               <Icon name="externalLink" color={colors.primary} size={17} />
-            </Pressable>
+            </BouncePressable>
           ) : view.origin ? (
             <Text tone="faint" style={styles.meta}>
               {view.origin}
@@ -306,28 +319,51 @@ export function SourceView({ id, onDone, onRemoved }: { id: string; onDone?: () 
               <SecondaryButton icon="share" label={t('mobile.library.share')} onPress={() => actions.share(view)} />
             </View>
           </View>
-          <Card>
-            <Text style={styles.text} selectable>
-              {view.content}
-            </Text>
-          </Card>
-          <Pressable
-            accessibilityRole="button"
-            onPress={() => void remove()}
-            testID="source-delete"
-            style={({ pressed }) => [styles.delete, { borderColor: colors.border }, pressed && styles.pressed]}>
-            <Icon name="trash" color={colors.destructive} size={19} />
-            <Text weight="semibold" style={[styles.deleteText, { color: colors.destructive }]}>
-              {t('common.delete')}
-            </Text>
-          </Pressable>
         </>
       )}
     </>
   );
+  const paragraphs = useMemo(() => !failed && view && !draft ? sourceParagraphs(view.content) : [], [failed, view, draft]);
+  const List = onDone ? SheetList<string> : ListScreen<string>;
+  return (
+    <List
+      testID="source-sheet"
+      gap={14}
+      style={style}
+      contentStyle={contentStyle ?? styles.sheetContent}
+      header={header}
+      data={paragraphs}
+      keyExtractor={(_text, index) => String(index)}
+      initialNumToRender={6}
+      maxToRenderPerBatch={6}
+      windowSize={5}
+      renderItem={({ item, index }) => (
+        <CardRowFrame index={index} count={paragraphs.length}>
+          <Text style={[styles.text, styles.paragraph, index === 0 && styles.paragraphFirst, index === paragraphs.length - 1 && styles.paragraphLast]} selectable>{index < paragraphs.length - 1 && item.endsWith('\n') ? item.slice(0, -1) : item}</Text>
+        </CardRowFrame>
+      )}
+      ListFooterComponentStyle={{ paddingTop: 14 }}
+      ListFooterComponent={!failed && view && !draft ? (
+        <BouncePressable
+            accessibilityRole="button"
+            onPress={() => void remove()}
+            testID="source-delete"
+            style={[styles.delete, { borderColor: colors.border }]}>
+            <Icon name="trash" color={colors.destructive} size={19} />
+            <Text weight="semibold" style={[styles.deleteText, { color: colors.destructive }]}>
+              {t('common.delete')}
+            </Text>
+        </BouncePressable>
+      ) : null}
+    />
+  );
 }
 
 const styles = StyleSheet.create({
+  sheetContent: { paddingTop: 18 },
+  paragraph: { paddingHorizontal: 16 },
+  paragraphFirst: { paddingTop: 16 },
+  paragraphLast: { paddingBottom: 16 },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
   headerText: { flex: 1 },
   kind: { flexDirection: 'row', alignItems: 'center', gap: 9 },
@@ -338,7 +374,6 @@ const styles = StyleSheet.create({
   title: { fontSize: 23, lineHeight: 29, letterSpacing: -0.4 },
   origin: { flexDirection: 'row', alignItems: 'center', gap: 9, borderWidth: 2, borderRadius: 12, paddingHorizontal: 13, minHeight: 46 },
   originText: { flex: 1, fontSize: 15 },
-  pressed: { opacity: 0.7 },
   text: { fontSize: 16, lineHeight: 24 },
   quality: { borderWidth: 2, borderRadius: radius.field, paddingVertical: 10, paddingHorizontal: 13, gap: 3 },
   qualityTitle: { fontSize: 15 },

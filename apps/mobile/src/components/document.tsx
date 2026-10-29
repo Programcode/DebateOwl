@@ -1,8 +1,9 @@
 import { Children, Fragment, isValidElement, useRef, useState, type ReactNode } from 'react';
-import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { ScrollView, StyleSheet, View } from 'react-native';
 import Svg, { Defs, LinearGradient, Rect, Stop } from 'react-native-svg';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { PressScale as BouncePressable } from '@/components/press-scale';
 import { SuccessCheck } from './success-check';
 import { Chip, CiteBadge } from './chip';
 import type { CitationTarget } from './citation-target';
@@ -278,13 +279,13 @@ export function NumberedItems({ items, testID, outline = false }: { items: Numbe
           {group.entries.map(({ item, n }, index) => (
             <Fragment key={item.key}>
               {index > 0 ? <View style={[styles.divider, { backgroundColor: colors.line }]} /> : null}
-              <Pressable
+              <BouncePressable
                 ref={anchorFor?.(item.key)}
                 accessibilityRole="button"
                 accessibilityState={{ expanded: group.open }}
                 onPress={() => toggle(item.key)}
                 testID="document-item"
-                style={({ pressed }) => [styles.itemHeader, pressed && styles.pressed]}>
+                style={[styles.itemHeader]}>
                 <Text weight="bold" style={[styles.itemNumber, { color: colors.primary }, group.open && styles.itemNumberOpen]}>
                   {n}
                 </Text>
@@ -299,7 +300,7 @@ export function NumberedItems({ items, testID, outline = false }: { items: Numbe
                   )}
                 </View>
                 <Icon name={group.open ? 'chevronUp' : 'chevronDown'} color={colors.tabInactive} size={20} />
-              </Pressable>
+              </BouncePressable>
               {group.open ? <View style={styles.itemBody}>{item.body}</View> : null}
             </Fragment>
           ))}
@@ -468,7 +469,6 @@ const styles = StyleSheet.create({
   contentRail: { alignSelf: 'flex-start', paddingLeft: 20, paddingRight: 28 },
   pinnedRail: { alignItems: 'flex-start' },
   pinnedRowRail: { paddingLeft: 16, paddingRight: 24 },
-  pressed: { opacity: 0.7 },
   notice: { position: 'absolute', left: 24, right: 24, borderRadius: 14, paddingHorizontal: 16, paddingVertical: 11, alignSelf: 'center', maxWidth: 560 },
   noticeRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, borderWidth: 2 },
   noticeCheck: { width: 24, height: 24, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },

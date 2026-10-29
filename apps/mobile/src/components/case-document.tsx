@@ -4,8 +4,9 @@ import type { GenerateOutput } from '@debatelab/core/ai/schemas/generate';
 import * as WebBrowser from 'expo-web-browser';
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
+import { PressScale as BouncePressable } from '@/components/press-scale';
 import { hostOf, shorten, type CitationTarget } from './citation-target';
 import { Bullets, Callout, Divider, DocSection, Labeled, NumberedItems, Quote, SubHeading, Tag } from './document';
 import { Icon } from './icon';
@@ -284,19 +285,19 @@ export function CaseDocument({
             const url = source.url;
             const label = [sourceLabel(source), source.claim].filter(Boolean).join(' – ');
             return url ? (
-              <Pressable
+              <BouncePressable
                 key={index}
                 accessibilityRole="link"
                 accessibilityHint={hostOf(url)}
                 onPress={() => void WebBrowser.openBrowserAsync(url)}
-                style={({ pressed }) => [styles.caseSource, pressed && styles.pressed]}>
+                style={[styles.caseSource]}>
                 <Text style={[styles.body, styles.flex]}>
                   <Text weight="semibold">{sourceLabel(source)}</Text>
                   {source.claim ? `${source.org ? ' – ' : ''}${source.claim}` : ''}
                   <Text style={{ color: colors.primary }}>{` – ${hostOf(url)}`}</Text>
                 </Text>
                 <Icon name="globe" color={colors.primary} size={16} />
-              </Pressable>
+              </BouncePressable>
             ) : (
               <Text key={index} style={styles.body} selectable>
                 {label}
@@ -325,11 +326,11 @@ export function ResearchedSources({ sources }: { sources: DiscoveredSource[] }) 
   return (
     <DocSection title={t('sourceQuality.researchedSources')} description={t('sourceQuality.fallbackNote')} testID="researched-sources">
       {sources.map((source, index) => (
-        <Pressable
+        <BouncePressable
           key={`${source.url}-${index}`}
           accessibilityRole="link"
           onPress={() => void WebBrowser.openBrowserAsync(source.url)}
-          style={({ pressed }) => [styles.source, index > 0 && { borderTopWidth: 1, borderTopColor: colors.line }, pressed && styles.pressed]}>
+          style={[styles.source, index > 0 && { borderTopWidth: 1, borderTopColor: colors.line }]}>
           <Icon name="globe" color={colors.primary} size={18} />
           <View style={styles.sourceText}>
             <Text weight="medium" style={styles.sourceTitle} numberOfLines={2}>
@@ -344,7 +345,7 @@ export function ResearchedSources({ sources }: { sources: DiscoveredSource[] }) 
               ].filter(Boolean).join(' · ')}
             </Text>
           </View>
-        </Pressable>
+        </BouncePressable>
       ))}
     </DocSection>
   );
@@ -375,5 +376,4 @@ const styles = StyleSheet.create({
   sourceText: { flex: 1, gap: 2 },
   sourceTitle: { fontSize: 15, lineHeight: 20 },
   sourceMeta: { fontSize: 13 },
-  pressed: { opacity: 0.7 },
 });

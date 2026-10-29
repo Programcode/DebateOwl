@@ -18,6 +18,7 @@ import { Owl } from './owl';
 import { SuccessCheck } from './success-check';
 import { Text } from './text';
 
+import { sessionSlot } from '@/lib/session-memory';
 import { haptics } from '@/lib/haptics';
 import { palette, radius } from '@/theme/colors';
 import { DURATION, EASE, SPRING, staggerDelay, useReduceMotion } from '@/theme/motion';
@@ -47,19 +48,19 @@ const plain = (value: number) => String(value);
  * Results that should celebrate when their document opens: Generate marks the case it just
  * made, and the case screen takes the mark once, so reopening a saved case never celebrates.
  */
-const pending = new Set<string>();
+const pending = sessionSlot(() => new Set<string>());
 
 export function markCelebration(key: string) {
-  pending.add(key);
+  pending.get().add(key);
 }
 
 /** Whether `key` was just finished; the mark is cleared by `clearCelebration` once the screen has read it. */
 export function hasCelebration(key: string | undefined): boolean {
-  return Boolean(key && pending.has(key));
+  return Boolean(key && pending.get().has(key));
 }
 
 export function clearCelebration(key: string | undefined) {
-  if (key) pending.delete(key);
+  if (key) pending.get().delete(key);
 }
 
 /**
@@ -76,12 +77,15 @@ export function Celebration({
   stats,
   onDone,
   haptic = true,
+  encouraging = false,
 }: {
   eyebrow?: string;
   title: string;
   stats: CelebrationStat[];
   onDone: () => void;
   haptic?: boolean;
+  /** A completed practice with a lower score gets encouragement, without a victory burst. */
+  encouraging?: boolean;
 }) {
   const { t } = useTranslation();
   const { colors } = useTheme();
@@ -149,11 +153,11 @@ export function Celebration({
         style={[StyleSheet.absoluteFill, styles.scrim, { backgroundColor: colors.background }]}>
         <Animated.View style={[styles.column, card]}>
           <View style={styles.hero}>
-            <Owl pose="celebrating" size={148} gesture={reduce ? false : 'cheer'} breathe={false} />
+            <Owl pose={encouraging ? 'coach' : 'celebrating'} size={148} gesture={reduce ? false : encouraging ? 'wave' : 'cheer'} breathe={false} />
             <View style={styles.check}>
               <SuccessCheck size={46} delay={reduce ? 0 : 220} haptic={haptic} />
             </View>
-            {reduce ? null : <Confetti />}
+            {reduce || encouraging ? null : <Confetti />}
           </View>
           <View style={styles.heading}>
             {eyebrow ? (
@@ -206,7 +210,7 @@ function StatTile({ stat, index, animate, last }: { stat: CelebrationStat; index
   );
 }
 
-/** The number alone re-renders while it counts, on the display's frames, eased out over 600 ms. */
+/** The number alone re-renders while it counts, at most ten times a second, eased out over 600 ms. */
 function CountUp({ value, format, delay, animate, tick }: { value: number; format: (value: number) => string; delay: number; animate: boolean; tick: boolean }) {
   const { colors } = useTheme();
   const [counted, setCurrent] = useState(animate ? 0 : value);
@@ -214,21 +218,24 @@ function CountUp({ value, format, delay, animate, tick }: { value: number; forma
   const current = animate ? counted : value;
   useEffect(() => {
     if (!animate) return;
-    let frame = 0;
+    let interval: ReturnType<typeof setInterval> | undefined;
     let start = 0;
-    const step = (now: number) => {
-      if (!start) start = now;
+    const step = () => {
+      const now = Date.now();
       const progress = Math.min(1, (now - start) / COUNT_MS);
       setCurrent(Math.round(value * (1 - Math.pow(1 - progress, 3))));
-      if (progress < 1) frame = requestAnimationFrame(step);
-      else if (tick) haptics.select();
+      if (progress >= 1) {
+        clearInterval(interval);
+        if (tick) haptics.select();
+      }
     };
     const timer = setTimeout(() => {
-      frame = requestAnimationFrame(step);
+      start = Date.now();
+      interval = setInterval(step, 100);
     }, delay);
     return () => {
       clearTimeout(timer);
-      cancelAnimationFrame(frame);
+      clearInterval(interval);
     };
   }, [animate, delay, tick, value]);
   return (

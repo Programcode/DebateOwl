@@ -3,7 +3,7 @@ import { useCallback, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { StyleSheet, View } from 'react-native';
 
-import { Card, IconTile, ListItemIn } from '@/components/card';
+import { Card, IconTile, ListItemIn, SessionEntrance } from '@/components/card';
 import { EmptyState } from '@/components/empty-state';
 import { Icon } from '@/components/icon';
 import { PressScale } from '@/components/press-scale';
@@ -28,6 +28,7 @@ const TOOL_ROUTES: Record<PracticeTool, Href> = {
   sparring: { pathname: '/sparring', params: { from: 'practice' } },
   timer: '/timer',
   'speech-time': { pathname: '/speech-time', params: { from: 'practice' } },
+  'flow-sheet': { pathname: '/flow-sheet', params: { from: 'practice' } },
   motions: { pathname: '/motions', params: { from: 'practice' } },
 };
 
@@ -85,7 +86,7 @@ export default function PracticeScreen() {
       <ScreenTitle title={t('mobile.tabs.practice')} />
       <Card style={styles.list}>
         {PRACTICE_TOOLS.map((tool, index) => (
-          <ListItemIn key={tool.key} index={index} style={index > 0 && { borderTopWidth: 1, borderTopColor: colors.line }}>
+          <SessionEntrance key={tool.key} name={`practice:${tool.key}`} index={index} style={index > 0 && { borderTopWidth: 1, borderTopColor: colors.line }}>
             <PressScale accessibilityRole="button" onPress={() => router.push(TOOL_ROUTES[tool.key])} testID={`practice-tool-${tool.key}`} style={styles.row}>
               <IconTile name={tool.icon} size={42} />
               <View style={styles.rowText}>
@@ -98,7 +99,7 @@ export default function PracticeScreen() {
               </View>
               <Icon name="chevronRight" color={colors.tabInactive} size={20} />
             </PressScale>
-          </ListItemIn>
+          </SessionEntrance>
         ))}
       </Card>
 
