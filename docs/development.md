@@ -137,13 +137,13 @@ Stop it with `$PREVIEW down "debatelab mobile expo-go"` when you are done.
 
 ### Development build
 
-A development build is the app's own binary with `expo-dev-client`, so it loads JavaScript from Metro like Expo Go but carries native modules Expo Go lacks: speech recognition for voice rounds and dictation, the timer's Live Activity and lock-screen widget (with an App Group), and later Google sign-in (Expo Go cannot receive OAuth redirects). Its Info.plist also gets the 120 Hz key, which Expo Go ignores. JavaScript-only changes never need a new build.
+A development build is the app's own binary with `expo-dev-client`, so it loads JavaScript from Metro like Expo Go but carries native modules Expo Go lacks: speech recognition for voice rounds and dictation, iPad keyboard shortcuts (the app's own `apps/mobile/modules/key-commands`), Home Screen quick actions and Spotlight, the timer's Live Activity, the widgets and the share extension (with an App Group), and later Google sign-in (Expo Go cannot receive OAuth redirects). Its Info.plist also gets the 120 Hz key, which Expo Go ignores. JavaScript-only changes never need a new build.
 
 [`apps/mobile/app.config.ts`](../apps/mobile/app.config.ts) builds one config with two switches:
 
 - No `DEBATELAB_BUILD`: the Expo Go and web export config, unchanged.
 - `DEBATELAB_BUILD=dev`: adds `expo-dev-client`, `expo-speech-recognition` with the microphone and speech prompts (English in Info.plist, Spanish and Hungarian as `InfoPlist.strings` from `mobile.permissions` in the catalogs) and `CFBundleAllowMixedLocalizations`. The `development` profile in [`apps/mobile/eas.json`](../apps/mobile/eas.json) sets it.
-- `DEBATELAB_APP_GROUP=group.<id>`, only with `dev`: adds the `expo-widgets` extension (`ExpoWidgetsTarget`, bundle `com.pistack.debateowl.ExpoWidgetsTarget`) with the timer's lock-screen widget (`DebateTimerWidget`) and Live Activity, `NSSupportsLiveActivities`, and the App Group `group.com.pistack.debateowl` (the only value the config accepts) on both targets. Register that group for both bundle ids in the Apple Developer account. For a device build, set it only when the provisioning profile carries that group; a borrowed wildcard profile does not. A simulator build is not signed, so the `development-simulator` profile always sets it. EAS does not see your shell, so it goes in the profile's `env` in `eas.json`, committed with the build.
+- `DEBATELAB_APP_GROUP=group.<id>`, only with `dev`: adds the `expo-widgets` extension (`ExpoWidgetsTarget`, bundle `com.pistack.debateowl.ExpoWidgetsTarget`) with the timer's lock-screen widget (`DebateTimerWidget`), the Current Debate widget and Live Activity, `NSSupportsLiveActivities`; the share extension from `expo-share-intent` (`DebateOwlShare`, bundle `com.pistack.debateowl.share-extension`, shown as "DebateOwl Share" in the share sheet); and the App Group `group.com.pistack.debateowl` (the only value the config accepts) on all three targets. Register that group for all three bundle ids in the Apple Developer account. For a device build, set it only when the provisioning profile carries that group; a borrowed wildcard profile does not. A simulator build is not signed, so the `development-simulator` profile always sets it. EAS does not see your shell, so it goes in the profile's `env` in `eas.json`, committed with the build.
 
 `nativeCapabilities()` in `apps/mobile/src/lib/native-capabilities.ts` tells the app at runtime what the binary has. Feature code checks it and never imports a dev-build module at the top level, so Expo Go keeps working.
 
@@ -194,7 +194,7 @@ Go on only if all of these hold:
 - the profile is enterprise (`all devices` true) or ad hoc with Adam's iPhone UDID among its devices: ask Adam for the UDID. A development profile (`get-task-allow` true) is not what EAS internal distribution expects; ask Adam first;
 - the `.p12`'s SHA-1 equals one of the profile's certificate SHA-1s.
 
-Set `DEBATELAB_APP_GROUP` in the profile's `env` in `eas.json` only if `app groups` lists a group, and then pass `widgets` to step 4. Don't export it in this shell: outside a build the config rejects it without `DEBATELAB_BUILD=dev`, which breaks `eas init`. Without an App Group this build has no Live Activity.
+Set `DEBATELAB_APP_GROUP` in the profile's `env` in `eas.json` only if `app groups` lists a group, and then pass `widgets` to step 4. Don't export it in this shell: outside a build the config rejects it without `DEBATELAB_BUILD=dev`, which breaks `eas init`. Without an App Group this build has no Live Activity, widgets or share extension.
 
 **2. The EAS project is linked.** `app.config.ts` has `owner: 'pi-stack'` and the project ID of `@pi-stack/debateowl`, set with `eas init --account pi-stack --force --non-interactive` (which cannot edit a dynamic config, so it printed the ID). Nothing to do here unless the project changes.
 
@@ -220,9 +220,10 @@ import json, os, sys
 s = sys.argv[1]
 cert = {'path': f'{s}/cert.p12', 'password': open(f'{s}/p12-password').read().strip()}
 target = {'provisioningProfilePath': f'{s}/profile.mobileprovision', 'distributionCertificate': cert}
-# With DEBATELAB_APP_GROUP the widget extension is a second target and needs its own entry,
-# signed by a profile valid for both bundle ids (a wildcard profile is).
-ios = {'DebateLab': target, 'ExpoWidgetsTarget': target} if sys.argv[2:] == ['widgets'] else target
+# With DEBATELAB_APP_GROUP the widget and share extensions are two more targets and need their
+# own entries, signed by a profile valid for all three bundle ids (a wildcard profile is). The keys
+# are the Xcode target names prebuild writes; the app's follows `name` in app.config.ts.
+ios = {'DebateOwl': target, 'ExpoWidgetsTarget': target, 'DebateOwlShare': target} if sys.argv[2:] == ['widgets'] else target
 fd = os.open('credentials.json', os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
 os.write(fd, json.dumps({'ios': ios}).encode())
 os.close(fd)
