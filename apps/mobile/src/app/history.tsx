@@ -33,6 +33,7 @@ import {
   type UnsortedEntry,
 } from '@/lib/history';
 import { keepIfSame } from '@/lib/keep-if-same';
+import { useLatest } from '@/lib/live-value';
 import { suggestDebate } from '@/lib/motion';
 import { deleteResult } from '@/lib/results';
 import { deleteSparringRound, sparringDraft } from '@/lib/sparring';
@@ -109,6 +110,7 @@ export default function HistoryScreen() {
   const scope = scopeChoice && (scopeChoice === OUTSIDE || debates.some((debate) => debate.id === scopeChoice))
     ? scopeChoice
     : current?.id ?? OUTSIDE;
+  const shownScope = useLatest(scope);
   const [tab, setTab] = useState<HistoryTab>('cases');
   const [loaded, setLoaded] = useState<Loaded | null>(null);
   const [failed, setFailed] = useState<string | null>(null);
@@ -198,10 +200,15 @@ export default function HistoryScreen() {
   };
 
   const attached = (entry: UnsortedEntry) => {
-    loads.current += 1;
-    setLoaded((previous) => previous?.kind === 'unsorted'
-      ? { ...previous, entries: previous.entries.filter((candidate) => !(candidate.kind === entry.kind && candidate.id === entry.id)) }
-      : previous);
+    // Only while the unsorted list is on screen: a load running now read it before the attach. After a
+    // switch to a debate's History the load running is that debate's, and the unsorted list is read
+    // again when it is opened.
+    if (shownScope.current === OUTSIDE) {
+      loads.current += 1;
+      setLoaded((previous) => previous?.kind === 'unsorted'
+        ? { ...previous, entries: previous.entries.filter((candidate) => !(candidate.kind === entry.kind && candidate.id === entry.id)) }
+        : previous);
+    }
     // The debate's last activity moved; the switcher and the Debate tab show the new order.
     void refreshDebates();
   };
@@ -217,7 +224,7 @@ export default function HistoryScreen() {
     try {
       await attachToDebate(forUser, entry, debateId);
       if (!live.current || owner.current !== forUser) return;
-      setAttachNotice({ scope: OUTSIDE, text: t('debate.attached') });
+      if (shownScope.current === OUTSIDE) setAttachNotice({ scope: OUTSIDE, text: t('debate.attached') });
       attached(entry);
     } catch (cause) {
       console.warn('Could not add to the debate:', cause instanceof Error ? cause.message : cause);

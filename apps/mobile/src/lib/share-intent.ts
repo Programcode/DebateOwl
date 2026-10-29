@@ -59,12 +59,13 @@ export function useShareIntent(ready: boolean): void {
     if (!nativeCapabilities().shareIntent) return;
     const native = requireOptionalNativeModule<ShareIntentModule>('ExpoShareIntentModule');
     if (!native) return;
-    // The account a read started under; the item it brings back is that account's.
+    // Reads run one at a time, so the item an event brings back is the last read's: it belongs to the
+    // account that read started under, which stays set until the next read starts.
     let readOwner: string | null = null;
+    let reading: Promise<void> = Promise.resolve();
     const changed = native.addListener('onChange', (event) => {
       const next = parseSharedItem(event.value);
-      const owner = readOwner ?? user.current;
-      readOwner = null;
+      const owner = readOwner;
       // Read once: the item does not open again on the next launch.
       try {
         native.clearShareIntent(SHARE_KEY);
@@ -80,8 +81,10 @@ export function useShareIntent(ready: boolean): void {
     const stopListening = listenForShareUrls((url) => {
       takeShareUrl();
       if (!isReadableShareUrl(url)) return;
-      readOwner = user.current;
-      native.getShareIntent(url).catch((cause: unknown) => console.warn('Could not read what was shared:', cause instanceof Error ? cause.message : cause));
+      reading = reading.then(() => {
+        readOwner = user.current;
+        return native.getShareIntent(url);
+      }).catch((cause: unknown) => console.warn('Could not read what was shared:', cause instanceof Error ? cause.message : cause));
     });
     return () => {
       stopListening();
