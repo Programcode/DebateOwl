@@ -938,7 +938,7 @@
     }
   },
   "features": {
-    "title": "Todo lo que necesitas para ganar",
+    "title": "Todo para tu próxima ronda",
     "generate": "Generador de casos",
     "generateDesc": "Apertura, argumentos con evidencia, respuestas «Si dicen…», cierre.",
     "attack": "Atacante de casos",

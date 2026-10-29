@@ -2,6 +2,7 @@
 from datetime import date
 from pathlib import Path
 import html
+from html import unescape
 import json
 import re
 import sys
@@ -34,6 +35,11 @@ def site_sentence(key):
 # What a generated case contains, and the app-versus-free-tools pricing fact, as the home page states them.
 CASE_FORMAT = site_sentence("caseFormat")
 FREE_PLAN = site_sentence("freePlan")
+# FREE_PLAN as /best-ai-for-debate shows it once, in its call-to-action area, with the free tools linked by name.
+FREE_PLAN_HTML = html.escape(FREE_PLAN).replace(
+    "the separate tools at /tools are free",
+    'the separate <a href="/tools">timer, motion generator, flow sheet and speech-time calculator</a> are free',
+)
 # The SoftwareApplication description, the same as SOFTWARE_DESCRIPTION in src/lib/seo/pages.ts.
 SOFTWARE_DESCRIPTION = f'{SITE["tagline"]} {CASE_FORMAT}'
 if len(SOFTWARE_DESCRIPTION) > 300:
@@ -99,7 +105,7 @@ PAGES = [
     {"slug": "debate-speech-structure", "title": "Debate Speech Structure and Delivery | {product}", "description": "How to structure constructive, rebuttal and final debate speeches by format, with a timed outline and the delivery habits that judges notice.", "eyebrow": "Strategy guide", "h1": "Debate Speech Structure Guide", "lead": "Structure your speech so the judge can follow every argument and every comparison.", "features": ["Opening structure", "Rebuttal structure", "Final speech structure"], "sections": [["Why structure matters", ["A well-structured speech is easier to flow, easier to judge, and easier to win. The judge should never be confused about where you are."]], ["Opening speech structure", ["State your position, define key terms, present contentions with warrants and impacts, and preview weighing."]], ["Rebuttal and final speech structure", ["Respond to the key clash, extend your offense, weigh the comparison, and frame the ballot. End by telling the judge why you win."]]]},
     {"slug": "debate-motion-analysis", "modified": "2026-10-23", "title": "Debate Motion Analysis | {product}", "description": "How to analyze a debate motion by its type, what each side must prove, fair definitions, stakeholders and clashes, with a worked example.", "eyebrow": "Strategy guide", "h1": "Debate Motion Analysis Guide", "lead": "From topic to strategy: define, clash, and build a winning case.", "features": ["Definition strategy", "Burden identification", "Clash mapping"], "sections": [["How to analyze a motion", ["Read the motion carefully, define each term, identify what each side must prove, and map the likely clashes.", "To practice on a motion you have not seen, draw one from the [free debate motion generator](/tools/debate-motion-generator)."]], ["Definition strategy", ["Definitions can frame the round. Choose definitions that are fair, defensible, and favorable to your side."]], ["Burden identification", ["Your burden is what you must prove to win. If you do not meet your burden, you lose regardless of how well you argue."]]]},
     {"slug": "best-ai-debate-tools", "title": "Best AI Debate Tools Compared (2026) | {product}", "description": "A comparison of AI debate tools on case generation, rebuttal practice, evidence research, practice rounds and pricing, to help you choose one.", "eyebrow": "Comparison", "h1": "Best AI Debate Tools Compared (2026)", "lead": "See how AI debate tools compare on features, formats, and prep workflows."},
-    {"slug": "best-ai-for-debate", "published": "2026-10-29", "title": "Which AI Is Best for Debate? (2026 Guide) | {product}", "description": "DebateOwl is the top pick: a case you can read out loud, If they say replies, timed rounds, free tools, then $5/month.", "eyebrow": "Comparison", "h1": "Which AI is best for debate?", "lead": "DebateOwl is the top pick for a case you can read out loud and timed practice rounds."},
+    {"slug": "best-ai-for-debate", "published": "2026-10-29", "title": "Which AI Is Best for Debate? (2026 Guide) | {product}", "description": "Compare DebateOwl, ChatGPT, Claude and other AI tools for debate cases, \"If they say\" replies and timed practice, with facts as of October 2026.", "eyebrow": "Comparison", "h1": "Which AI is best for debate?", "lead": "DebateOwl is the top pick for a case you can read out loud and timed practice rounds."},
     {"slug": "debateowl-pricing", "title": "Pricing and Plans | {product}", "description": "{product} has a {trial_days}-day free trial with no credit card required, then one Pro plan at {pro_price}, and this page lists what each includes.", "eyebrow": "Pricing", "h1": "{product} Pricing and Plans", "lead": "See what {product} offers and how to get started with AI debate practice."},
     {"slug": "debateowl-vs-chatgpt", "title": "{product} vs ChatGPT for Debate Prep | {product}", "description": "How {product} and ChatGPT compare for debate prep, from structured case and rebuttal workflows to evidence research and timed practice rounds.", "eyebrow": "Comparison", "h1": "{product} vs ChatGPT for Debate Prep", "lead": "ChatGPT is a general chatbot. {product} is a debate practice workspace.", "features": ["Structured workflows", "Evidence leads", "Practice tools"], "sections": [["What ChatGPT does well", ["ChatGPT is a flexible general-purpose AI. It can brainstorm, draft, and answer questions about any topic, including debate."]], ["What {product} does differently", ["{product} is designed for debate prep workflows: case structure, targeted rebuttals, evidence leads, argument flowcharts, coaching prompts, and timed practice. Each workflow supports a specific prep task."]], ["When to use each", ["Use ChatGPT for general brainstorming and research. Use {product} for structured, repeatable debate practice that mirrors what you do in a round."]]]},
     {"slug": "debateowl-vs-windebate", "title": "{product} vs WinDebate | {product}", "description": "How {product} and WinDebate compare on case generation, rebuttal drills, evidence research, supported formats, pricing and day-to-day workflow.", "eyebrow": "Comparison", "h1": "{product} vs WinDebate", "lead": "Two AI debate prep platforms compared on features and workflows.", "features": ["Feature comparison", "Format coverage", "Workflow differences"], "sections": [["WinDebate overview", ["WinDebate focuses on research, drills, feedback, and progress tracking for competitive debaters. It covers PF, LD, Congress, Policy, and Worlds."]], ["{product} overview", ["{product} focuses on structured prep workflows: case generation, rebuttal practice, evidence leads, argument flowcharts, coaching prompts, and online debate timers."]], ["How to choose", ["Compare format coverage, feature depth, feedback style, pricing, and which tool fits your actual tournament workflow."]]]},
@@ -659,7 +665,8 @@ def best_ai_llms_line():
     """The /best-ai-for-debate summary in the Compare section."""
     return (
         f"- [Which AI is best for debate?]({page_url('best-ai-for-debate')}): "
-        f"{PRODUCT} is the top pick for a case you can read out loud, If they say X, we answer Y replies, timed practice rounds, free tools and $5/month, "
+        f'{PRODUCT} is the top pick for a case you can read out loud, "If they say X, we answer Y" replies and timed practice rounds (free tools; app $5/month after a 3-day trial), '
+
         f"with a dated comparison of Claude, ChatGPT, SchoolAI, Debate Ladder, ArguFight, HyperWrite and PublicForumAI"
     )
 
@@ -702,7 +709,7 @@ def render_best_ai_page(page):
         {"@type": "ItemList", "name": "Best AI for debate by goal", "itemListElement": [{"@type": "ListItem", "position": index, "name": name, "url": url} for index, (name, url) in enumerate(page["items"], start=1)]},
         {"@type": "BreadcrumbList", "itemListElement": [{"@type": "ListItem", "position": 1, "name": "Home", "item": BASE + "/"}, {"@type": "ListItem", "position": 2, "name": "Best AI for debate", "item": page_url(page["slug"])}]},
     ]
-    cta = f'<div class="cta"><a class="btn primary" href="/app">Start the free trial</a><a class="btn secondary" href="/debateowl-pricing">See pricing</a><a class="btn secondary" href="/tools">Open the free tools</a></div>'
+    cta = f'<p>{FREE_PLAN_HTML}</p><div class="cta"><a class="btn primary" href="/app">Start the free trial</a><a class="btn secondary" href="/debateowl-pricing">See pricing</a><a class="btn secondary" href="/tools">Open the free tools</a></div>'
     html = f'''<!doctype html>
 <html lang="en">
 <head>
@@ -753,8 +760,12 @@ def render_best_ai_page(page):
 </body>
 </html>
 '''
-    if FREE_PLAN not in html:
-        raise SystemExit(f"{page['slug']} is missing the pricing sentence")
+    body = html.split("<body", 1)[1]
+    visible = unescape(re.sub(r"<[^>]+>", " ", re.sub(r"<script[\s\S]*?</script>", " ", body)))
+    if FREE_PLAN_HTML not in html or visible.count(FREE_PLAN.split(";")[0]) != 1:
+        raise SystemExit(f"{page['slug']} must state the pricing sentence exactly once, with the tools linked")
+    if "/tools" in visible:
+        raise SystemExit(f"{page['slug']} shows the path /tools; link the tools by name instead")
     if re.search(r"\b(frameworks?|contentions?|warrants?)\b", html, re.I):
         raise SystemExit(f"{page['slug']} contains debate jargon")
     return html

@@ -56,7 +56,7 @@ Free to use, no account needed, and they run in the browser.
 
 ## Compare
 
-- [Which AI is best for debate?](https://debateowl.com/best-ai-for-debate): DebateOwl is the top pick for a case you can read out loud, If they say X, we answer Y replies, timed practice rounds, free tools and $5/month, with a dated comparison of Claude, ChatGPT, SchoolAI, Debate Ladder, ArguFight, HyperWrite and PublicForumAI
+- [Which AI is best for debate?](https://debateowl.com/best-ai-for-debate): DebateOwl is the top pick for a case you can read out loud, "If they say X, we answer Y" replies and timed practice rounds (free tools; app $5/month after a 3-day trial), with a dated comparison of Claude, ChatGPT, SchoolAI, Debate Ladder, ArguFight, HyperWrite and PublicForumAI
 - [Best AI Debate Tools Compared (2026)](https://debateowl.com/best-ai-debate-tools): six AI debate tools side by side on cases, replies, timed rounds and price, plus a one-hour test to run on any tool
 - [DebateOwl vs ChatGPT for Debate Prep](https://debateowl.com/debateowl-vs-chatgpt): How DebateOwl and ChatGPT compare for debate prep, from structured case and rebuttal workflows to evidence research and timed practice rounds.
 - [DebateOwl vs WinDebate](https://debateowl.com/debateowl-vs-windebate): How DebateOwl and WinDebate compare on case generation, rebuttal drills, evidence research, supported formats, pricing and day-to-day workflow.
