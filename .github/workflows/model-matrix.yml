@@ -2,17 +2,10 @@ name: Model matrix
 
 # Generates one case with every model in the catalog, unpinned, so a model that
 # times out or returns invalid JSON fails here before users hit it. One run
-# costs about $1, so it runs weekly and when model routing, prompts, or the ai
-# function change.
+# costs about $1, so it runs weekly and on demand. A branch that changes model
+# routing, prompts, or the ai function runs it with
+# `gh workflow run model-matrix.yml --ref <branch>`.
 on:
-  pull_request:
-    paths:
-      - supabase/functions/_shared/**
-      - supabase/functions/ai/**
-      - src/lib/ai/**
-      - packages/**
-      - e2e/model-matrix/**
-      - .github/workflows/model-matrix.yml
   schedule:
     - cron: "29 4 * * 1"
   workflow_dispatch:
@@ -51,8 +44,9 @@ jobs:
         run: npx playwright install --with-deps chromium
 
       # db-gate.sh fails before starting anything when either key is missing.
-      # Accepted risk (2026-09-24): pull-request code runs with these keys, so
-      # anyone who can push a branch here could read them. Keep them low-limit.
+      # Accepted risk (2026-09-24): a dispatch can run branch code with these
+      # keys, so anyone who can push a branch here could read them. Keep them
+      # low-limit.
       - name: Case generation with every catalog model
         env:
           LIVE_PROVIDERS: 1

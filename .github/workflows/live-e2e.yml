@@ -1,18 +1,11 @@
 name: Live provider E2E
 
 # Real OpenRouter, Jev, and Exa behind the local stack. Every run spends
-# provider credit, so pull requests run it only when AI or research code
-# changes. Nightly runs catch provider drift without code changes.
+# provider credit and takes about 17 minutes, so it runs nightly and on demand,
+# never on pull requests. To check a branch that changes AI or research code:
+# `gh workflow run live-e2e.yml --ref <branch>`. Nightly runs also catch
+# provider drift without code changes.
 on:
-  pull_request:
-    paths:
-      - "supabase/functions/**"
-      - "src/lib/ai/**"
-      - "packages/**"
-      - "e2e/live/**"
-      - "e2e/full-stack/fake-openrouter.mjs"
-      - ".superset/db-gate.sh"
-      - ".github/workflows/live-e2e.yml"
   schedule:
     - cron: "17 3 * * *"
   workflow_dispatch:
@@ -51,8 +44,9 @@ jobs:
         run: npx playwright install --with-deps chromium
 
       # db-gate.sh fails before starting anything when either key is missing.
-      # Accepted risk (2026-09-24): pull-request code runs with these keys, so
-      # anyone who can push a branch here could read them. Keep them low-limit.
+      # Accepted risk (2026-09-24): a dispatch can run branch code with these
+      # keys, so anyone who can push a branch here could read them. Keep them
+      # low-limit.
       - name: Live provider journeys
         env:
           LIVE_PROVIDERS: 1

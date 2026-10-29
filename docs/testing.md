@@ -110,7 +110,7 @@ This proves the Vite production bundle compiles, prerenders the public pages, ch
 npm run test:sw
 ```
 
-Run this after `npm run build`. It serves `dist/` through Vite preview (which applies the `vercel.json` rewrites, so app routes get `app-shell.html` as in production) and proves that a v2 worker cache upgrades to this build's caches and claims the page; that after one visit to `/app`, Home, Library, History, Settings and Timer open offline as fresh navigations, the timer runs, the offline indicator shows, and switching to Spanish works; that a visited public page answers offline only with itself and an unvisited one gets the offline page; that an unvisited route shows recovery UI and an intent-prefetched one opens; and that private API paths and `/auth/callback` do not enter Cache Storage. It uses a stub session and blocks external requests, so it is not authenticated backend or deployed-host proof.
+Run this after `npm run build`; `npm run verify:full` and the nightly browser workflow run it. It serves `dist/` through Vite preview (which applies the `vercel.json` rewrites, so app routes get `app-shell.html` as in production) and proves that a v2 worker cache upgrades to this build's caches and claims the page; that after one visit to `/app`, Home, Library, History, Settings and Timer open offline as fresh navigations, the timer runs, the offline indicator shows, and switching to Spanish works; that a visited public page answers offline only with itself and an unvisited one gets the offline page; that an unvisited route shows recovery UI and an intent-prefetched one opens; and that private API paths and `/auth/callback` do not enter Cache Storage. It uses a stub session and blocks external requests, so it is not authenticated backend or deployed-host proof.
 
 ## Credential-free browser gate
 
@@ -118,7 +118,7 @@ Run this after `npm run build`. It serves `dist/` through Vite preview (which ap
 P=$(bash .superset/e2e-port.sh) && CI=1 PORT=$P PLAYWRIGHT_BASE_URL=http://127.0.0.1:$P npm run test:e2e
 ```
 
-Pull requests run only tests tagged `@smoke` on desktop Chromium (`npm run test:e2e:smoke`, about 30 tests). Tag a test `@smoke` only when it covers a whole user path that would otherwise go unchecked until the nightly run.
+Pull requests run only tests tagged `@smoke` on desktop Chromium (`npm run test:e2e:smoke`, 26 tests): the startup shell, Login, every public and signed-in page in English, and the first-run tour. Each test pays a full page load from the dev server, about 6 seconds on a 2-CPU runner, so the set stays small enough for a 3-minute check. Tool journeys (Crossfire, Sparring, the free tools, layout regressions) run in the nightly suite. Tag a test `@smoke` only when a break there would stop most users and nothing else on the pull request would catch it.
 
 `.superset/e2e-port.sh` gives each worktree its own port from `18100-18179`, recorded in `~/.superset/debatelab-ports/allocations.json`, so two worktrees can run the gate at once. Without `PORT`, Playwright falls back to `18080`. Playwright starts a new Vite server on that port and runs:
 
@@ -135,7 +135,7 @@ The one-time DebateOwl welcome stays closed whenever `VITE_E2E` or `VITE_LOCAL_P
 
 `e2e/first-run.spec.ts` drives the same first run against stubbed Supabase routes in English and Hungarian, so it proves the client flow only.
 
-`e2e/free-tools.spec.ts` (tag `@smoke`) opens every `/tools` page signed out and checks its heading, canonical URL and JSON-LD, and that it makes no Supabase request. On a paused Playwright clock it runs the timer past the BP protected minute, through a reload, and runs the two Public Forum prep banks; it also draws a motion set and reloads its permalink, times a pasted speech, lays out a BP flow sheet under print media, and checks that `/embed/debate-timer` is `noindex` and requests nothing from another origin. The format data, timer transitions, custom-format links, motion filters and speech-time arithmetic have unit tests in `src/test/free-tools/`. The dev server cannot prove the response headers: `src/test/vercel-deployment-config.test.ts` checks which paths may be framed.
+`e2e/free-tools.spec.ts` (nightly) opens every `/tools` page signed out and checks its heading, canonical URL and JSON-LD, and that it makes no Supabase request. On a paused Playwright clock it runs the timer past the BP protected minute, through a reload, and runs the two Public Forum prep banks; it also draws a motion set and reloads its permalink, times a pasted speech, lays out a BP flow sheet under print media, and checks that `/embed/debate-timer` is `noindex` and requests nothing from another origin. The format data, timer transitions, custom-format links, motion filters and speech-time arithmetic have unit tests in `src/test/free-tools/`. The dev server cannot prove the response headers: `src/test/vercel-deployment-config.test.ts` checks which paths may be framed.
 
 `src/test/i18n-keys.test.ts` fails when a literal `t()` key in `src/` is missing from `en.json`, or when a call that passes `count` lacks its `_one` and `_other` forms. Dynamic keys such as ``t(`nav.${key}`)`` are out of its reach. `src/test/i18n.test.ts` requires the same keys in all three catalogs. Together they prove every literal key has a Spanish and Hungarian entry, not that the translation is natural.
 
@@ -151,20 +151,16 @@ AI client and Edge tests prove that every request path carries a validated langu
 npm run verify
 ```
 
-The gate runs, in order:
+This is the pull-request check run locally, in about 100 seconds on the VPS. [`scripts/verify.mjs`](../scripts/verify.mjs) runs two lanes side by side:
 
-1. documentation checks
-2. the guide jargon check (`npm run seo:jargon`): no generated guide in `public/` other than `/lincoln-douglas-debate` and `/policy-debate` may use framework, contention, warrant or impact calculus more than once in its visible text or its JSON-LD ([`scripts/check_jargon.py`](../scripts/check_jargon.py))
-3. lint
-4. type checking
-5. unit tests
-6. collaboration service tests
-7. native Edge Function tests
-8. production build
-9. production service-worker offline smoke
-10. the desktop Chromium `@smoke` set (`npm run verify:full` adds the full desktop and mobile suite)
+1. documentation checks, the guide jargon check, lint, production build, native Edge Function tests
+2. type checking, unit tests, collaboration service tests, the desktop Chromium `@smoke` set
 
-It does not start local Supabase, run pgTAP, run WebKit, or use protected staging.
+The jargon check (`npm run seo:jargon`) fails when a generated guide in `public/` other than `/lincoln-douglas-debate` and `/policy-debate` uses framework, contention, warrant or impact calculus more than once in its visible text or its JSON-LD ([`scripts/check_jargon.py`](../scripts/check_jargon.py)).
+
+Each step logs to `.verify/npm-verify/<step>.log`. The terminal shows one line per step, then the end of each failed step's log. Both lanes run to the end, so one run reports every failure. Two lanes keep the peak about 4 GB above idle; NODE_OPTIONS defaults to `--max-old-space-size=3072`.
+
+`npm run verify:full` adds the production service-worker offline test and the full desktop and mobile suite. Neither starts local Supabase, runs pgTAP, runs WebKit, or uses protected staging.
 
 ## Database and RLS gate
 
@@ -180,7 +176,7 @@ In Superset, run:
 ./.superset/db-gate.sh
 ```
 
-The wrapper acquires `~/.superset/debatelab-db.lock`, starts full local Supabase, runs `npm run test:db`, then holds the same lock while a controlled Mailpit relay, collaboration process, fake model provider, and Vite client run the real-Auth desktop/mobile workspace and full-stack feature journeys. The `Database` workflow runs this same gate on pull requests that touch its paths, and retains its logs and browser traces on failure. It stops every owned process and the stack on exit, including after failure. To run only the database portion under the same lock, use `./.superset/db-gate.sh --db-only`. Outside Superset, run it with:
+The wrapper acquires `~/.superset/debatelab-db.lock`, starts full local Supabase, runs `npm run test:db`, then holds the same lock while a controlled Mailpit relay, collaboration process, fake model provider, and Vite client run the real-Auth desktop/mobile workspace and full-stack feature journeys. The `Database` workflow runs this full gate daily and on demand, and retains its logs and browser traces on failure. It stops every owned process and the stack on exit, including after failure. To run only the database portion under the same lock, use `./.superset/db-gate.sh --db-only`: it starts Postgres alone (`supabase db start`), which pgTAP and the database scripts need and nothing more, in about 35 seconds locally. Pull requests that change the schema run this. Outside Superset, run it with:
 
 ```bash
 npx supabase db start
@@ -233,7 +229,7 @@ The specs cover web-researched case generation, verified Factoids citations, Ask
 
 A live failure means the pipeline broke with this model. It does not prove how production models behave, because each model has its own latency and JSON quality.
 
-`.github/workflows/live-e2e.yml` runs this nightly at 03:17 UTC, on demand, and on pull requests that change `supabase/functions/`, `src/lib/ai/`, `e2e/live/`, the fake provider, or the gate, using the `LIVE_OPENROUTER_API_KEY` and `LIVE_EXA_API_KEY` repository secrets. The gate exits before starting anything when either key is missing, so a misconfigured job fails instead of skipping.
+`.github/workflows/live-e2e.yml` runs this nightly at 03:17 UTC and on demand (`gh workflow run live-e2e.yml --ref <branch>` checks a branch before merging), using the `LIVE_OPENROUTER_API_KEY` and `LIVE_EXA_API_KEY` repository secrets. The gate exits before starting anything when either key is missing, so a misconfigured job fails instead of skipping.
 
 ### Model matrix
 
@@ -243,7 +239,7 @@ LIVE_PROVIDERS=1 LIVE_MODEL=as-requested LIVE_OPENROUTER_API_KEY=... LIVE_EXA_AP
 
 `LIVE_MODEL=as-requested` switches the gate to `e2e/model-matrix/`. The proxy forwards whatever model the Edge Function chose, and the spec picks each model in `MODEL_CATALOG` from the Generate page's model menu and generates one researched case. A model that exhausts the `ai` function's shared 130-second request budget or returns invalid JSON fails its test. Each test prints the provider latency (`latency <model>: <ms>`) so the run log shows how close each model gets to the budget.
 
-`.github/workflows/model-matrix.yml` runs this on Mondays at 04:29 UTC, on demand, and on pull requests that change `supabase/functions/_shared/`, `supabase/functions/ai/`, or `src/lib/ai/`. It is not a required check, because it runs only on those paths. One run costs about $1 in model and search usage.
+`.github/workflows/model-matrix.yml` runs this on Mondays at 04:29 UTC and on demand. A branch that changes model routing, prompts, or the `ai` function can run it with `gh workflow run model-matrix.yml --ref <branch>`. One run costs about $1 in model and search usage.
 
 ## Agentic browser tests
 
@@ -278,7 +274,7 @@ To write a test, import `test`, `expect`, and the fixtures from [`agentic/suppor
 
 A bug bash runs several explorations in parallel, one charter per area and persona, then proves each finding with a repro test. Ask an agent to "bug bash <area>"; the `e2e` skill's `bug-bash` topic has the procedure. A finding counts only when its repro test fails for the reported reason. Tag repro tests `{ tags: ["repro"] }` so the scheduled suite skips them until the fix lands, then remove the tag so they become regression tests. The client runs on a Vite dev server, so a route that is still compiling can look like a dead link to an explorer. Reproduce before you believe it.
 
-[`.github/workflows/agentic-e2e.yml`](../.github/workflows/agentic-e2e.yml) runs the suite nightly at 03:47 UTC and on pull requests that change the app (`src/`, `public/`, Edge Functions, migrations, dependencies) or the suite, in four jobs: the page sweep and everything else, on each viewport. Every Sunday at 05:13 UTC it runs a bug bash instead: one exploration per persona, each with its own charter. On demand with a goal, it runs one exploration with the chosen persona and viewport. It uses the `LIVE_OPENROUTER_API_KEY` secret (the `E2E_AGENT_MODEL` and `E2E_JUDGE_MODEL` repository variables override the models), fails when the key is missing, and writes the report to the job summary. Explorations never fail the workflow: their findings are leads to reproduce. The suite is not a required check: model judgments can flake, and a red nightly is a finding to triage.
+[`.github/workflows/agentic-e2e.yml`](../.github/workflows/agentic-e2e.yml) runs the suite nightly at 03:47 UTC and on demand (`gh workflow run agentic-e2e.yml --ref <branch>`), never on pull requests, in four jobs: the page sweep and everything else, on each viewport. Every Sunday at 05:13 UTC it runs a bug bash instead: one exploration per persona, each with its own charter. On demand with a goal, it runs one exploration with the chosen persona and viewport. It uses the `LIVE_OPENROUTER_API_KEY` secret (the `E2E_AGENT_MODEL` and `E2E_JUDGE_MODEL` repository variables override the models), fails when the key is missing, and writes the report to the job summary. Explorations never fail the workflow: their findings are leads to reproduce. The suite is not a required check: model judgments can flake, and a red nightly is a finding to triage.
 
 e2e is pre-1.0 and its minor releases have broken APIs, so it is pinned exactly. Read its changelog before upgrading, refresh the vendored skill as its header says, and expect the replay cache to re-record after a minor bump.
 
@@ -300,7 +296,7 @@ npx playwright test --config=playwright.production.config.ts
 
 The last two checks are the only production writes, and they touch only the canary account: its `ai_requests` usage rows and whatever the Generate page saves for it. The dedicated canary account has Pro promo access capped at 10 requests a day. Captures are disabled because they could retain its session.
 
-`.github/workflows/prod-canary.yml` runs after every successful Vercel production deployment of the `debate-navigator` project (GitHub environment `Production – debate-navigator`; the `debatelab-staging` project's production deployments do not start it), daily at 06:41 UTC, and on demand. Main can deploy more than 10 times a day, so deployment runs set `CANARY_AI_REQUESTS=false` and skip the two AI checks. The signed-in session check still runs on every deployment. Only the daily and manual runs make real AI requests: two per run, plus at most two retries. It reads the password and email from secrets and the public anon key from the `PROD_SUPABASE_ANON_KEY` repository variable.
+`.github/workflows/prod-canary.yml` runs after every push to `main`, daily at 06:41 UTC, and on demand. A push run first waits, up to 15 minutes, for Vercel's production deployment of that commit to the `debate-navigator` project (GitHub environment `Production – debate-navigator`), and skips when `main` moves on first, because the newer commit's run checks the newer deployment. Main can deploy more than 10 times a day, so push runs set `CANARY_AI_REQUESTS=false` and skip the two AI checks. The signed-in session check still runs after every deployment. Only the daily and manual runs make real AI requests: two per run, plus at most two retries. It reads the password and email from secrets and the public anon key from the `PROD_SUPABASE_ANON_KEY` repository variable.
 
 The local stack begins at port `54321` and is not parallel-safe across worktrees. The task that starts it must stop it before finishing or abandoning the run. Use `supabase stop --no-backup` unless another active task explicitly owns the same stack.
 
@@ -371,11 +367,11 @@ Tests are not the proof that a change works; using it is. Two local recipes that
 
 ## CI evidence
 
-[`.github/workflows/deploy.yml`](../.github/workflows/deploy.yml), the `Quality` workflow, runs documentation, lint, type, unit, collaboration, Edge Function, and build checks. On pull requests a parallel `browser-smoke` job runs the `@smoke` set on desktop Chromium. [`.github/workflows/browser-nightly.yml`](../.github/workflows/browser-nightly.yml) runs the full desktop and mobile suite nightly and on demand. [`.github/workflows/database.yml`](../.github/workflows/database.yml) runs the database gate when backend-facing paths change.
+[`.github/workflows/deploy.yml`](../.github/workflows/deploy.yml), the `Quality` workflow, is the pull-request check: documentation, lint, type, unit, collaboration, Edge Function, and build checks, and the `@smoke` set on desktop Chromium, in parallel jobs. [`.github/workflows/database.yml`](../.github/workflows/database.yml) runs pgTAP on pull requests that change the schema, and the full database gate daily. [`.github/workflows/browser-nightly.yml`](../.github/workflows/browser-nightly.yml) runs the full desktop and mobile suite daily. [operations.md](operations.md#ci-workflows) lists every schedule and how to dispatch one on a branch.
 
 [`.github/workflows/staging-e2e.yml`](../.github/workflows/staging-e2e.yml) owns protected staging conditions.
 
-[`.github/workflows/agentic-e2e.yml`](../.github/workflows/agentic-e2e.yml) runs the agentic suite and on-demand explorations. [`.github/workflows/live-e2e.yml`](../.github/workflows/live-e2e.yml) runs the live provider journeys, and [`.github/workflows/prod-canary.yml`](../.github/workflows/prod-canary.yml) runs the production canary. `main` has no branch protection or rulesets (checked 2026-10-01; GitHub Free does not enforce them on private repositories), so no check is required. Path-filtered workflows that skip therefore don't block merges. Read the PR's checks before merging.
+[`.github/workflows/agentic-e2e.yml`](../.github/workflows/agentic-e2e.yml) runs the agentic suite and on-demand explorations. [`.github/workflows/live-e2e.yml`](../.github/workflows/live-e2e.yml) runs the live provider journeys, and [`.github/workflows/prod-canary.yml`](../.github/workflows/prod-canary.yml) runs the production canary. `main` has no branch protection or rulesets (checked 2026-10-01; GitHub Free does not enforce them on private repositories), so no check is required. Path-filtered workflows that don't run therefore don't block merges. Read the PR's checks before merging.
 
 To see why a run failed, use `npm run ci:failures` (current branch's PR), `npm run ci:failures -- <pr>` or `npm run ci:failures -- <run-id>`. It works while the run is still going, as soon as a job fails. It lists failed jobs and steps, prints the Playwright or Vitest summary from each job log, downloads the `*-failure-<run-id>` artifacts into ignored `.ci-failures/`, and prints each failed test's error plus the dialogs and headings from its `error-context.md` page snapshot. A dialog the spec never answered shows up there. Protected staging uploads no artifact, so only its job log is available.
 

@@ -8,8 +8,10 @@
 # `supabase db start` directly whenever more than one workspace might be
 # active.
 #
-# --db-only stops after `npm run test:db` (pgTAP and the database scripts),
-# still holding the lock and stopping the stack on exit.
+# --db-only starts only Postgres (`supabase db start`) and stops after
+# `npm run test:db` (pgTAP and the database scripts), still holding the lock
+# and stopping the stack on exit. pgTAP needs nothing else, and Postgres is
+# one image pull instead of the full stack's dozen.
 set -euo pipefail
 
 DB_ONLY=false
@@ -95,9 +97,11 @@ else
   runtime_dir="$(mktemp -d)"
 fi
 # Shared CI runners intermittently hit registry rate limits while pulling images.
+start_command=(start)
+if [ "$DB_ONLY" = true ]; then start_command=(db start); fi
 stack_started=true
 for attempt in 1 2 3; do
-  if supabase start >>"$runtime_dir/supabase.log" 2>&1; then break; fi
+  if supabase "${start_command[@]}" >>"$runtime_dir/supabase.log" 2>&1; then break; fi
   if [ "$attempt" -eq 3 ]; then exit 1; fi
   echo "supabase start failed (attempt $attempt); retrying after $((attempt * 30))s"
   tail -n 3 "$runtime_dir/supabase.log"

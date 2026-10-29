@@ -1,14 +1,12 @@
 name: Quality
 
+# The pull-request check. Five jobs run side by side so the check takes as long
+# as the slowest one, about 2.5 minutes. Slow, paid, and full-stack suites run
+# on a schedule instead; docs/operations.md lists them.
 on:
   push:
     branches: [ "main" ]
   pull_request:
-    # Docs-only pull requests run docs.yml instead.
-    paths-ignore:
-      - "docs/**"
-      - "plans/**"
-      - "**/*.md"
   workflow_dispatch:
 
 permissions:
@@ -19,28 +17,16 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  quality:
+  lint:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - name: Checkout code
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
 
-      - name: Set up Node
-        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
-        with:
-          node-version: 22
-          cache: npm
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Set up Deno
-        uses: denoland/setup-deno@22d081ff2d3a40755e97629de92e3bcbfa7cf2ed # v2.0.5
-        with:
-          deno-version: 2.9.6
-          cache: true
+      - uses: ./.github/actions/node-deps
 
       - name: Documentation
         run: npm run docs:check
@@ -48,8 +34,33 @@ jobs:
       - name: Lint
         run: npm run lint
 
+  typecheck-build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: ./.github/actions/node-deps
+
       - name: Typecheck
         run: npm run typecheck
+
+      - name: Build
+        run: npm run build
+
+  unit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: ./.github/actions/node-deps
 
       - name: Test
         run: npm test
@@ -57,31 +68,40 @@ jobs:
       - name: Collaboration service tests
         run: npm run test:collaboration
 
-      - name: Edge function tests
-        run: npm run test:edge
-
-      - name: Build
-        run: npm run build
-
-  # Runs beside quality so the pull-request check takes as long as the slower
-  # of the two. The full desktop and mobile suite runs in browser-nightly.yml.
-  browser-smoke:
-    if: github.event_name == 'pull_request'
+  # Edge Function tests import only jsr:, npm: and https: modules, so this job
+  # needs Deno and no npm install.
+  edge:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - name: Checkout code
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
 
-      - name: Set up Node
-        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+      - name: Set up Deno
+        uses: denoland/setup-deno@22d081ff2d3a40755e97629de92e3bcbfa7cf2ed # v2.0.5
         with:
-          node-version: 22
-          cache: npm
+          deno-version: 2.9.6
+          cache: true
 
-      - name: Install dependencies
-        run: npm ci
+      - name: Edge function tests
+        run: npm run test:edge
+
+  # The @smoke set: the app boots, sign-in works, every public and signed-in
+  # page renders without errors, and the first-run tour starts a debate. The
+  # full desktop and mobile suite runs in browser-nightly.yml.
+  browser-smoke:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: ./.github/actions/node-deps
 
       - name: Cache Playwright browsers
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0

@@ -10,25 +10,31 @@ Never infer authorization from access. Never use production to replace missing l
 
 ## CI workflows
 
-[`.github/workflows/deploy.yml`](../.github/workflows/deploy.yml) (the `Quality` workflow) owns credential-free quality and the pull-request browser smoke set. It does not deploy anything; Vercel does.
+A pull request gets one check, [`.github/workflows/deploy.yml`](../.github/workflows/deploy.yml) (the `Quality` workflow), plus a short database job when it changes the schema. Both finish in about 3 minutes. Everything slow, paid, or full-stack runs on a schedule and on demand, never on pull requests. `Quality` does not deploy anything; Vercel does.
 
-The quality job uses Node 22, `npm ci`, and Deno 2.9.6, then runs:
+`Quality` runs five jobs side by side on every pull request and every push to `main`. Each restores `node_modules` from a cache keyed on `package-lock.json` (`.github/actions/node-deps`) and runs `npm ci` only on a miss:
 
-- `npm run docs:check`
-- `npm run lint`
-- `npm run typecheck`
-- `npm test`
-- `npm run test:collaboration`
-- `npm run test:edge`
-- `npm run build`
+- `lint`: `npm run docs:check` and `npm run lint`
+- `typecheck-build`: `npm run typecheck` and `npm run build`
+- `unit`: `npm test` and `npm run test:collaboration`
+- `edge`: `npm run test:edge` under Deno 2.9.6, with no npm install
+- `browser-smoke` (pull requests only): the Playwright tests tagged `@smoke` on desktop Chromium, port `18080`. They check that the app boots, that sign-in works, that every public and signed-in page renders without errors, and that the first-run tour starts a debate.
 
-On pull requests a parallel `browser-smoke` job runs the Playwright tests tagged `@smoke` (about 30) on desktop Chromium, port `18080`, with the browser download cached. [`.github/workflows/browser-nightly.yml`](../.github/workflows/browser-nightly.yml) runs the full desktop and mobile suite nightly and on demand. Pull requests that change only `docs/`, `plans/`, or Markdown skip `Quality` and run [`.github/workflows/docs.yml`](../.github/workflows/docs.yml), which runs `npm run docs:check` alone.
+Per-step timings taken on 2 CPUs, the size of a private-repository runner, put the slowest job (`browser-smoke`) at about 2.5 minutes including setup.
 
-[`.github/workflows/database.yml`](../.github/workflows/database.yml) starts isolated local Supabase for pgTAP and the full-stack browser journeys. It takes about 20 minutes, so it runs on pull requests and `main` pushes only when they change the backend, the stores or clients that talk to it, or the gate itself (the `paths` list in the file), plus weekly and on demand.
+[`.github/workflows/database.yml`](../.github/workflows/database.yml) runs on pull requests that change migrations, `supabase/tests/`, the seed, `supabase/config.toml`, the database scripts, or the gate. The pull-request job runs `./.superset/db-gate.sh --db-only`, which starts Postgres alone and runs pgTAP and the concurrency scripts. The full gate (local Supabase, pgTAP, and the full-stack journeys on desktop and mobile, about 20 minutes) runs daily at 05:23 UTC and on demand.
 
-[`.github/workflows/live-e2e.yml`](../.github/workflows/live-e2e.yml) runs the local stack against real providers nightly and on pull requests that change AI or research code. [`.github/workflows/model-matrix.yml`](../.github/workflows/model-matrix.yml) generates a case with every catalog model weekly and when AI code changes. [`.github/workflows/prod-canary.yml`](../.github/workflows/prod-canary.yml) checks production after each Vercel production deployment and daily. See [testing.md](testing.md) for all three. Both Supabase-starting jobs pull images from `public.ecr.aws`, because ghcr.io rate-limits shared runners.
+Scheduled and on-demand suites:
 
-[`.github/workflows/staging-e2e.yml`](../.github/workflows/staging-e2e.yml) owns protected staging. It accepts eligible successful main-branch `Quality` runs or a manual dispatch from `main`. It runs only when `STAGING_E2E_ENABLED=true` and all protected values exist.
+- [`.github/workflows/browser-nightly.yml`](../.github/workflows/browser-nightly.yml): the full desktop and mobile browser suite and the service-worker offline test, daily at 02:47 UTC.
+- [`.github/workflows/live-e2e.yml`](../.github/workflows/live-e2e.yml): the local stack against real providers, daily at 03:17 UTC.
+- [`.github/workflows/agentic-e2e.yml`](../.github/workflows/agentic-e2e.yml): the agentic suite daily at 03:47 UTC, and the bug bash on Sundays.
+- [`.github/workflows/model-matrix.yml`](../.github/workflows/model-matrix.yml): a case from every catalog model, Mondays at 04:29 UTC.
+- [`.github/workflows/prod-canary.yml`](../.github/workflows/prod-canary.yml): after every push to `main`, once Vercel reports the commit's production deployment, and daily at 06:41 UTC.
+
+See [testing.md](testing.md) for what each proves. To run a scheduled suite on a branch before merging, for example when a change touches AI code, research, or the full-stack flows, dispatch it: `gh workflow run live-e2e.yml --ref <branch>` (likewise `database.yml`, `browser-nightly.yml`, `agentic-e2e.yml`, `model-matrix.yml`). Supabase-starting jobs pull images from `public.ecr.aws`, because ghcr.io rate-limits shared runners.
+
+[`.github/workflows/staging-e2e.yml`](../.github/workflows/staging-e2e.yml) owns protected staging. It starts only from `main`-branch `Quality` runs (a `branches` filter, so pull-request runs no longer start it) or a manual dispatch from `main`. It runs only when `STAGING_E2E_ENABLED=true` and all protected values exist. [`.github/workflows/staging-preview-note.yml`](../.github/workflows/staging-preview-note.yml) comments once on a pull request that opens with `supabase/` changes.
 
 ## When GitHub Actions cannot run
 
@@ -36,7 +42,7 @@ If Actions jobs fail within 2 to 5 seconds with no runner and no logs, the accou
 
 ## Frontend hosting on Vercel
 
-Vercel builds and serves the frontend from the Git repository. A push to `main` deploys both projects: `debate-navigator` to `https://debateowl.com` (the previous domain, `https://debate.pi-stack.org`, 301s there with the path and query kept; see `vercel.json`; `https://www.debateowl.com` redirects to the apex through the project's Domains setting, not `vercel.json`, also keeping the path and query), and `debatelab-staging` to `https://debatelab-staging.vercel.app`. Any other branch waits for an explicit preview (see [Opt-in previews](#opt-in-previews)). For a staging-pinned preview on the tailnet, use `npm run dev:preview` (see [development.md](development.md#preview-on-the-tailnet)). The production canary runs after each successful Vercel `Production` deployment of `debate-navigator`.
+Vercel builds and serves the frontend from the Git repository. A push to `main` deploys both projects: `debate-navigator` to `https://debateowl.com` (the previous domain, `https://debate.pi-stack.org`, 301s there with the path and query kept; see `vercel.json`; `https://www.debateowl.com` redirects to the apex through the project's Domains setting, not `vercel.json`, also keeping the path and query), and `debatelab-staging` to `https://debatelab-staging.vercel.app`. Any other branch waits for an explicit preview (see [Opt-in previews](#opt-in-previews)). For a staging-pinned preview on the tailnet, use `npm run dev:preview` (see [development.md](development.md#preview-on-the-tailnet)). The production canary runs after each push to `main`, once Vercel reports the commit's `debate-navigator` production deployment.
 
 [`vercel.json`](../vercel.json) owns:
 
@@ -95,7 +101,7 @@ The staging browser suite disables trace, screenshot, and video capture. It crea
 
 Do not enable the staging repository variable before every prerequisite is present. A skipped staging job is not a pass.
 
-`STAGING_E2E_ENABLED` has been `true` since 2026-09-18. The job runs after every successful `Quality` run from a push to `main`, and it first waits up to 20 minutes for a successful `staging-sync` status on that commit. Quality runs from pull requests also trigger it, and those show as skipped by design. Check the latest real result with `gh run list --workflow staging-e2e.yml` and `npm run ci:failures -- <run-id>`, not this page. The run uploads no artifact, so the job log is the only evidence. On failure the log names the failed step and the URL path, for example `Staging step "add a source to the debate" failed at path /app/library`.
+`STAGING_E2E_ENABLED` has been `true` since 2026-09-18. The job runs after every successful `Quality` run from a push to `main`, and it first waits up to 20 minutes for a successful `staging-sync` status on that commit. Check the latest real result with `gh run list --workflow staging-e2e.yml` and `npm run ci:failures -- <run-id>`, not this page. The run uploads no artifact, so the job log is the only evidence. On failure the log names the failed step and the URL path, for example `Staging step "add a source to the debate" failed at path /app/library`.
 
 No staging run passed after 2026-09-23. Until 2026-10-01 the job did not run, because the `Quality` run it waits for never started. Once Actions came back, it failed on every `main` push through 2026-10-02. The cause was the spec, not staging: since the Current Debate change (#72), Library disables **Add source** until a debate is current, and the spec never started one. The spec now starts a uniquely named debate and deletes it afterwards. The suite drives the real UI, so a change to a flow it covers can break it with no backend drift; run it locally before blaming staging.
 

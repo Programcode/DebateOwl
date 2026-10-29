@@ -37,7 +37,7 @@ function watchErrors(page: Page): string[] {
   return errors;
 }
 
-test.describe('free debate tools', { tag: '@smoke' }, () => {
+test.describe('free debate tools', () => {
   for (const tool of TOOL_PAGES) {
     test(`${tool.path} renders signed out with its head and structured data`, async ({ page }) => {
       const supabase = watchSupabase(page);

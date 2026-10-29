@@ -1,51 +1,22 @@
 name: Database
 
-# Local Supabase, pgTAP, and the full-stack browser journeys. About 20 minutes,
-# so pull requests run it only when they touch the backend, the stores and
-# clients that talk to it, or the gate itself. Pushes to main use the same
-# filter, and the weekly run catches frontend-only regressions.
+# Pull requests that change the schema, its tests, or the gate run pgTAP and
+# the database scripts against Postgres alone, about 2 minutes. The full gate
+# (local Supabase, pgTAP, and the full-stack browser journeys on desktop and
+# mobile, about 20 minutes) runs nightly and on demand.
 on:
   pull_request:
     paths:
-      - "supabase/**"
-      - "services/collaboration/**"
-      - "src/lib/supabase/**"
-      - "src/lib/stores/**"
-      - "src/lib/ai/**"
-      - "packages/**"
-      - "e2e/full-stack/**"
-      - "e2e/workspace-collaboration.spec.ts"
-      - "playwright.workspace.config.ts"
+      - "supabase/migrations/**"
+      - "supabase/tests/**"
+      - "supabase/seed.sql"
+      - "supabase/config.toml"
+      - "scripts/test-*.sh"
       - ".superset/db-gate.sh"
       - ".superset/lib/**"
-      - ".superset/workspace-test.env"
-      - "scripts/test-*.sh"
-      - "scripts/workspace-test-env.mjs"
-      - "package.json"
-      - "package-lock.json"
-      - ".github/workflows/database.yml"
-  push:
-    branches: [ "main" ]
-    paths:
-      - "supabase/**"
-      - "services/collaboration/**"
-      - "src/lib/supabase/**"
-      - "src/lib/stores/**"
-      - "src/lib/ai/**"
-      - "packages/**"
-      - "e2e/full-stack/**"
-      - "e2e/workspace-collaboration.spec.ts"
-      - "playwright.workspace.config.ts"
-      - ".superset/db-gate.sh"
-      - ".superset/lib/**"
-      - ".superset/workspace-test.env"
-      - "scripts/test-*.sh"
-      - "scripts/workspace-test-env.mjs"
-      - "package.json"
-      - "package-lock.json"
       - ".github/workflows/database.yml"
   schedule:
-    - cron: "23 5 * * 0"
+    - cron: "23 5 * * *"
   workflow_dispatch:
 
 permissions:
@@ -55,27 +26,38 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+env:
+  # ghcr.io rate-limits shared runners; the same images are on ECR.
+  SUPABASE_INTERNAL_IMAGE_REGISTRY: public.ecr.aws
+
 jobs:
-  database-tests:
+  pgtap:
+    if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - name: Checkout code
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
 
-      - name: Set up Node
-        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
-        with:
-          node-version: 22
+      # The gate runs the repo-pinned Supabase CLI from node_modules.
+      - uses: ./.github/actions/node-deps
 
-      - name: Set up Supabase CLI
-        uses: supabase/setup-cli@46f7f98c7f948ad727d22c1e67fab04c223a0520 # v3.0.0
-        with:
-          version: 2.121.0
+      - name: pgTAP and database scripts
+        run: ./.superset/db-gate.sh --db-only
 
-      - name: Install dependencies
-        run: npm ci
+  full-gate:
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: ./.github/actions/node-deps
 
       - name: Cache Playwright browsers
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
@@ -88,8 +70,6 @@ jobs:
 
       - name: Database and real workspace journey
         env:
-          # ghcr.io rate-limits shared runners; the same images are on ECR.
-          SUPABASE_INTERNAL_IMAGE_REGISTRY: public.ecr.aws
           WORKSPACE_GATE_ARTIFACT_ROOT: ${{ runner.temp }}/workspace-gate
         run: ./.superset/db-gate.sh
 

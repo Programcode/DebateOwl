@@ -36,7 +36,7 @@ function countAnnouncementListRequests(page: Page) {
   return () => count;
 }
 
-test('user sees and permanently dismisses an active announcement', { tag: '@smoke' }, async ({ page }) => {
+test('user sees and permanently dismisses an active announcement', async ({ page }) => {
   let dismissBody: Record<string, unknown> | null = null;
   await page.route('**/functions/v1/announcements*', async (route) => {
     const request = route.request();

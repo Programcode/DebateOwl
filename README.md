@@ -43,9 +43,10 @@ npm run lint
 npm run typecheck
 npm test
 npm run build
-npm run verify         # credential-free gate with the desktop Chromium smoke set
+npm run verify         # the pull-request check, locally, in about 100 seconds
 npm run verify:full    # adds the full desktop and mobile browser suite
 ./.superset/db-gate.sh # migrations, pgTAP, and full-stack journeys on local Supabase
+./.superset/db-gate.sh --db-only # migrations and pgTAP on Postgres alone
 ```
 
 [`docs/testing.md`](docs/testing.md) explains what each gate proves and covers WebKit, protected staging, live-provider runs, and the production canary.

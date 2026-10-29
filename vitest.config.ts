@@ -6,6 +6,10 @@ export default defineConfig({
   plugins: [react()],
   test: {
     environment: "jsdom",
+    // Each file still gets a fresh jsdom context, but the workers are reused
+    // instead of rebuilding jsdom per file: 43s instead of 95s on 2 CPUs.
+    // src/test/setup.ts adds the Node globals a bare VM context lacks.
+    pool: "vmThreads",
     globals: true,
     setupFiles: ["./src/test/setup.ts"],
     // Globals and env stubbed with vi.stubGlobal / vi.stubEnv reset after
