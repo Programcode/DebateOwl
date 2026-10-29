@@ -66,25 +66,30 @@ export function DebateProvider({ children }: { children: ReactNode }) {
     if (!forUser) return;
     const writesBefore = writes.current;
     const request = ++refreshes.current;
+    const gen = generation.current;
+    const current = () => generation.current === gen && owner.current === forUser && refreshes.current === request && writes.current === writesBefore;
+    // Whether this request painted the saved copy, which a failed refresh must not leave on screen.
+    let paintedCopy = false;
     return await runRequest(async () => {
-      const gen = generation.current;
       const show = (next: Awaited<ReturnType<typeof fetchDebates>>) => {
-        if (generation.current !== gen || owner.current !== forUser || refreshes.current !== request || writes.current !== writesBefore) return;
+        if (!current()) return;
+        paintedCopy = true;
         setDebates((previous) => keepIfSame(previous, next.debates));
         setCurrentId(next.currentId);
         setStatus('ready');
       };
       const next = await fetchDebates(forUser, show);
-      if (generation.current !== gen || owner.current !== forUser || refreshes.current !== request || writes.current !== writesBefore) return;
+      if (!current()) return;
       // Refreshes run on every Debate tab focus; an unchanged list keeps its identity so the tabs do not re-render.
       setDebates((previous) => keepIfSame(previous, next.debates));
       setCurrentId(next.currentId);
       setStatus('ready');
     }, async (cause) => {
-      if (owner.current !== forUser || refreshes.current !== request) return;
+      // A switch or create since this refresh began already holds newer state.
+      if (!current()) return;
       console.warn('Could not load debates:', cause instanceof Error ? cause.message : cause);
-      // A copy painted during refresh must not hide a server refusal.
-      setStatus('error');
+      // Keep a list the server already gave; a copy painted by this refresh must not hide its refusal.
+      setStatus((previous) => (previous === 'ready' && !paintedCopy ? previous : 'error'));
     });
   }, []);
 
