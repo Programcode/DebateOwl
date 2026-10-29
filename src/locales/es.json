@@ -896,7 +896,7 @@
   },
   "hero": {
     "headline": "{{product}}: preparación y práctica de debate con IA",
-    "subheadline": "Prepara casos y practica rondas con IA.",
+    "subheadline": "{{product}} te ayuda a preparar casos y practicar rondas con IA.",
     "trialBadge": "Prueba gratis de {{trialDays}} días",
     "cta": "Comenzar prueba gratis",
     "trustBullet1": "Sin tarjeta de crédito",

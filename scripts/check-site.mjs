@@ -171,7 +171,8 @@ function checkStructuredData(where, data, body) {
   if (!Array.isArray(byType('WebSite').alternateName)) report(where, 'WebSite.alternateName is not a list');
   const organization = byType('Organization');
   const sameAs = organization.sameAs;
-  if (!Array.isArray(sameAs) || !sameAs.length || sameAs.some((url) => !url.startsWith('https://'))) report(where, 'Organization.sameAs is not a list of https URLs');
+  // sameAs is optional (site.json lists only profiles that spell the name "DebateOwl"), but when present it is a non-empty list of https URLs.
+  if (sameAs !== undefined && (!Array.isArray(sameAs) || !sameAs.length || sameAs.some((url) => !url.startsWith('https://')))) report(where, 'Organization.sameAs is not a list of https URLs');
   // One name for one entity: the Organization on this domain is the product, and the company
   // that builds it is its parent, never a sameAs.
   if (organization.name !== SITE.product) report(where, `Organization.name is "${organization.name}", not the product name "${SITE.product}"`);
