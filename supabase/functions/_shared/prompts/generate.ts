@@ -151,17 +151,38 @@ export const SPEECH_MINUTES: Record<string, number> = { intro: 4, r1: 6, r2: 6, 
 /** A student speaks about this many words a minute in a round. */
 export const SPOKEN_WORDS_PER_MINUTE = 130;
 
+/** Arguments per length setting, as the Length Instruction asks for them. */
+const CONTENTION_COUNT: Record<string, number> = { brief: 2, standard: 3, comprehensive: 4 };
+/** Words the opening hook, the thesis line and the closing line take together. */
+const FRAME_WORDS = 90;
+const roundTo5 = (words: number) => Math.max(5, Math.round(words / 5) * 5);
+
+/**
+ * Word targets for each spoken field of one argument, so the arguments add up
+ * to the speech's budget. A single total is not enough: a model asked for
+ * "about 600 words" wrote 750-820, while per-field targets it can follow.
+ */
+function argumentWordTargets(spokenWords: number, length: string): string {
+  const count = CONTENTION_COUNT[length] ?? 3;
+  const perArgument = Math.floor((spokenWords - FRAME_WORDS) / count);
+  const claim = Math.min(20, roundTo5(perArgument * 0.12));
+  const reasoning = roundTo5(perArgument * 0.45);
+  const evidence = roundTo5(perArgument * 0.28);
+  const whyItMatters = roundTo5(perArgument * 0.15);
+  return `With ${count} arguments, each argument is about ${perArgument} spoken words: claim one sentence of at most ${claim} words, reasoning about ${reasoning} words, evidence about ${evidence} words, whyItMatters about ${whyItMatters} words. opening.hook and caseStructure.thesis at most 35 words each, closingLine one sentence of at most 25 words. Aim for these numbers, not under them: a shorter field leaves the speaker's time unused, a longer one runs past it.`;
+}
+
 /** The word budget the speaker reads out, stated in the request so speeches fit their time. */
-export function speechBudgetInstruction(role: string): string | undefined {
+export function speechBudgetInstruction(role: string, length = "standard"): string | undefined {
   const minutes = SPEECH_MINUTES[role];
   if (!minutes) return undefined;
   const words = minutes * SPOKEN_WORDS_PER_MINUTE;
   const head = `${minutes} minutes, about ${words} spoken words at ${SPOKEN_WORDS_PER_MINUTE} words a minute.`;
   switch (role) {
     case "intro":
-      return `${head} The opening, the "we will show" line, the arguments in short form and the closing line together stay within ${words} words. The "If they say..." answers are a separate short prep list.`;
+      return `${head} The opening, the "we will show" line, the arguments in short form and the closing line together stay within ${words} words. ${argumentWordTargets(words, length)} The "If they say..." answers are a separate short prep list.`;
     case "r1":
-      return `${head} The opening, the arguments and the closing line together stay within about ${words - 180} words, leaving time for the "If they say..." answers the speaker picks.`;
+      return `${head} The opening, the arguments and the closing line together stay within about ${words - 180} words, leaving time for the "If they say..." answers the speaker picks. ${argumentWordTargets(words - 180, length)}`;
     case "r2":
       return `${head} The opening, the backing-up paragraphs and the closing line together stay within about 300 words (about 2 minutes); the rest of the time is for the "If they say..." blocks the other side actually used.`;
     default:
@@ -202,7 +223,7 @@ export function buildGenerateUserPrompt(input: Record<string, unknown>, searchCo
     conversational: "Use natural spoken-round phrasing without slang or filler.",
     aggressive: "Use sharper strategic phrasing and clearer attack language while staying professional.",
   }[tone] || "Use polished, judge-facing language with controlled phrasing.";
-  const speechBudget = speechBudgetInstruction(role);
+  const speechBudget = speechBudgetInstruction(role, length);
   return `Motion: ${asString(input.motion)}
 Side: ${asString(input.side, "pro")}
 Format: ${asString(input.format, "custom")}
@@ -216,4 +237,54 @@ Tone Instruction: ${toneInstruction}
 ${outputLanguageInstruction(language)}
 
 ${searchContext}`;
+}
+
+// === R2 written in parts ===
+// One R2 case is about 12 full answers plus the speech, which one call wrote
+// in up to 124 s of the 130 s budget. A short plan call picks our arguments
+// and the claims to answer; the parts then write at the same time from it.
+
+/** "If they say..." answers in an R2 case, by length. */
+export function r2CounterCount(length: string): number {
+  return length === "brief" ? 10 : 12;
+}
+
+/** Words per R2 answer, by length (the Length Instruction's range). */
+export function r2AnswerWords(length: string): string {
+  return ({ brief: "100-130", standard: "120-150", comprehensive: "150-180" } as Record<string, string>)[length] ?? "120-150";
+}
+
+export interface R2Plan {
+  ourArguments: Array<{ title: string; claim: string }>;
+  theirClaims: string[];
+}
+
+export function r2PlanInstruction(counterCount: number): string {
+  return `=== PLANNING STEP: do not write the case yet ===
+This R2 case is written in parts at the same time, all from the plan you write now. This step overrides the Length Instruction and the output format: return ONLY this JSON object, in the output language:
+{"ourArguments": [{"title": "a few words", "claim": "one sentence"}, {"title": "a few words", "claim": "one sentence"}], "theirClaims": ["one sentence", "..."]}
+- ourArguments: exactly 2. The team's earlier arguments when CURRENT DEBATE CONTEXT has them, by their own names; otherwise the two strongest arguments for our side that the research backs.
+- theirClaims: exactly ${counterCount} different things the other side is likely to say, each one sentence the way they would put it: first their 2-3 main arguments, then the supporting points they will use to back each of them up, then the answers they will give to each of our two arguments. No two claims make the same point. Prefer claims the attached research lets us answer with facts.`;
+}
+
+/**
+ * The instruction for one part. Part 1 writes the speech (opening, backing up
+ * our case, closing) and its share of the answers; every other part writes
+ * only answers. Answers are numbered across the whole case.
+ */
+export function r2PartInstruction(plan: R2Plan, claims: string[], firstNumber: number, part: number, parts: number, length: string): string {
+  const ours = plan.ourArguments.map((argument, index) => `${index + 1}. ${argument.title}: ${argument.claim}`).join("\n");
+  const list = claims.map((claim, index) => `${firstNumber + index}) ${claim}`).join("\n");
+  const answers = `exactly ${claims.length} counters, one for each of these claims, in this order, each using the claim as its targetArgument:\n${list}\nEach answer about ${r2AnswerWords(length)} words, built as the R2 rules ask, and tied to our arguments by name.`;
+  const head = `=== WRITING PART ${part} OF ${parts}: claims ${firstNumber}-${firstNumber + claims.length - 1} ===
+This R2 case is written in ${parts} parts at the same time, from one plan. This part overrides the Length Instruction's counts.
+Our arguments, in this order (call them "our first argument" and "our second argument"):
+${ours}`;
+  return part === 1
+    ? `${head}
+Write the opening, caseStructure, exactly ${plan.ourArguments.length} reinforce items (one for each of our arguments, in order), the closingLine, and ${answers}
+contentions stays an empty array. sources lists every source this part names.`
+    : `${head}
+Write only "If they say..." answers: return a JSON object with only "counters" and "sources". Write ${answers}
+No opening, reinforce, whyWeWin or closingLine: another part writes them. sources lists every source this part names.`;
 }
