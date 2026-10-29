@@ -42,7 +42,7 @@ env:
 
 jobs:
   suite:
-    if: github.event.schedule != '13 5 * * 0' && (github.event_name != 'workflow_dispatch' || inputs.explore == '')
+    if: github.repository == 'Programcode/DebateOwl' && github.event.schedule != '13 5 * * 0' && (github.event_name != 'workflow_dispatch' || inputs.explore == '')
     runs-on: ubuntu-latest
     timeout-minutes: 45
     # Four legs keep each well under the timeout: the page sweep makes about
@@ -125,7 +125,7 @@ jobs:
 
   # The weekly bug bash explores with every persona; a manual run explores once.
   plan-explore:
-    if: github.event.schedule == '13 5 * * 0' || (github.event_name == 'workflow_dispatch' && inputs.explore != '')
+    if: github.repository == 'Programcode/DebateOwl' && (github.event.schedule == '13 5 * * 0' || (github.event_name == 'workflow_dispatch' && inputs.explore != ''))
     runs-on: ubuntu-latest
     outputs:
       legs: ${{ steps.plan.outputs.legs }}
