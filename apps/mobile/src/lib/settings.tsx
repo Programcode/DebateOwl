@@ -2,9 +2,9 @@ import { getDefaultFeatureConfigs, type FeatureTab } from '@debatelab/core/ai/fe
 import { readProModelAccess } from '@debatelab/core/supabase/billing';
 import { DEFAULT_MODEL, DEFAULT_PRO_MODEL } from '@debatelab/core/contract/model-catalog';
 import { isAppLanguage, type AppLanguage } from '@debatelab/core/languages';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 
+import { runRequest } from './run-request';
 import { useAuth } from './auth';
 import {
   canUseProModels,
@@ -15,7 +15,8 @@ import {
   type FeatureConfigChange,
 } from './feature-config';
 import { readFeatureConfigAfterWrites } from './feature-config-read';
-import i18n, { deviceLanguage } from './i18n';
+import i18n, { deviceLanguage, changeAppLanguage } from './i18n';
+import { keepSettingsCopy, preloadSettingsCopy, readSettingsCopy } from './settings-cache';
 import { createSerialQueue } from './serial-queue';
 import { billingQuery } from './billing-query';
 import { supabase } from './supabase';
@@ -74,8 +75,6 @@ function parseSettings(value: unknown): Settings | null {
     theme: isThemePreference(record.theme) ? record.theme : 'system',
   };
 }
-
-const cacheKey = (userId: string) => `debatelab.settings.${userId}`;
 
 /** How long a tool waits for earlier settings writes before reading its model anyway, with the choice still being saved on top. */
 const READ_WAIT_MS = 5000;
@@ -160,7 +159,10 @@ async function writeFeatureConfig(userId: string, feature: FeatureTab, change: F
 export function SettingsProvider({ children }: { children: ReactNode }) {
   const { session, loading } = useAuth();
   const userId = session?.user.id ?? null;
-  const [settings, setSettings] = useState<Settings>(SIGNED_OUT);
+  const [initialCopy] = useState(preloadSettingsCopy);
+  const startupCopy = useRef<typeof initialCopy | null>(initialCopy);
+  const [snapshot, setSnapshot] = useState<{ owner: string | null; value: Settings }>({ owner: null, value: SIGNED_OUT });
+  const settings = snapshot.owner === userId ? snapshot.value : SIGNED_OUT;
   const [ready, setReady] = useState(false);
   const owner = useRef(userId);
   // Bumped on every owner change, including signing out and back in as the
@@ -190,11 +192,11 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const apply = useCallback((next: Settings, forUser: string | null, gen: number) => {
     if (generation.current !== gen) return;
     latest.current = next;
-    setSettings(next);
-    if (i18n.language !== next.language) void i18n.changeLanguage(next.language);
+    setSnapshot({ owner: forUser, value: next });
+    if (i18n.language !== next.language) void changeAppLanguage(next.language);
     applyColorScheme(next.theme);
     if (forUser) {
-      AsyncStorage.setItem(cacheKey(forUser), JSON.stringify(next)).catch((cause: unknown) =>
+      keepSettingsCopy(forUser, JSON.stringify(next)).catch((cause: unknown) =>
         console.warn('Could not keep settings on this device:', cause),
       );
     }
@@ -202,6 +204,8 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (loading) return;
+    const preloaded = startupCopy.current;
+    startupCopy.current = null;
     owner.current = userId;
     const gen = ++generation.current;
     configsSaved.current = null;
@@ -212,6 +216,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       setReady(true);
       return;
     }
+    apply({ ...SIGNED_OUT, language: deviceLanguage() }, null, gen);
     confirmed.current = { ...latest.current };
     let cancelled = false;
     const started = { ...versions.current };
@@ -227,12 +232,12 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       return next;
     };
     void (async () => {
-      try {
-        const cached = parseSettings(JSON.parse((await AsyncStorage.getItem(cacheKey(userId))) ?? 'null'));
+      await runRequest(async () => {
+        const cached = parseSettings(JSON.parse((await readSettingsCopy(userId, preloaded)) ?? 'null'));
         if (!cancelled && cached) apply(merge(cached), userId, gen);
-      } catch (cause) {
+      }, async (cause) => {
         console.warn('Could not read settings from this device:', cause);
-      }
+      });
       if (!cancelled) setReady(true);
       const { data, error } = await supabase
         .from('user_settings')
@@ -251,7 +256,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     return () => {
       cancelled = true;
     };
-  }, [loading, userId, apply]);
+  }, [loading, userId, apply, initialCopy]);
 
   const save = useCallback(async <K extends SettingKey>(key: K, value: Settings[K]) => {
     const forUser = owner.current;
@@ -259,7 +264,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     const gen = generation.current;
     const version = ++versions.current[key];
     apply({ ...latest.current, [key]: value }, forUser, gen);
-    try {
+    return await runRequest(async () => {
       await writes(async () => {
         // A save made before an owner change is dropped, not written after it,
         // even when the same account has signed in again since.
@@ -269,11 +274,11 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         configsSaved.current = true;
         Object.assign(confirmed.current, { [key]: value });
       });
-    } catch (cause) {
+    }, async (cause) => {
       if (generation.current !== gen) return;
       if (versions.current[key] === version) apply({ ...latest.current, [key]: confirmed.current[key] }, forUser, gen);
       throw cause;
-    }
+    });
   }, [apply, writes]);
 
   // The picker shows its own optimistic value and rolls it back on failure (model-picker.tsx).
@@ -288,18 +293,18 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       pendingConfigs.current.set(key, { feature, change: { [field]: change[field] }, seq });
       return key;
     });
-    try {
+    return await runRequest(async () => {
       await writes(async () => {
         if (generation.current !== gen) return;
         await writeFeatureConfig(forUser, feature, change);
         if (generation.current !== gen) return;
         configsSaved.current = true;
       });
-    } finally {
+    }, undefined, () => {
       if (generation.current === gen) {
         for (const key of keys) if (pendingConfigs.current.get(key)?.seq === seq) pendingConfigs.current.delete(key);
       }
-    }
+    });
   }, [writes]);
 
   const readFeatureConfig = useCallback((forUser: string, feature: FeatureTab) => {

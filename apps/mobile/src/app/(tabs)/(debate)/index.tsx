@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { Pressable, StyleSheet, View } from 'react-native';
 import Animated from 'react-native-reanimated';
 
+import { runRequest } from '@/lib/run-request';
 import { AnnouncementBanner } from '@/components/announcement-banner';
 import { TrialBanner } from '@/components/trial-banner';
 import { MainActionButton, TextButton } from '@/components/buttons';
@@ -21,6 +22,7 @@ import { WorkRow } from '@/components/work-row';
 import { publishCurrentDebate } from '@/lib/debate-widget';
 import { indexForSpotlight, spotlightAvailable } from '@/lib/spotlight';
 import { SPOTLIGHT_LIMIT, spotlightWorkItems } from '@/lib/spotlight-items';
+import { useLatest } from '@/lib/live-value';
 import { useAuth } from '@/lib/auth';
 import { useDebates } from '@/lib/debate-context';
 import {
@@ -218,8 +220,7 @@ function DebateDetails({ debateId, dashboard = false }: { debateId: string; dash
   const userId = session?.user.id ?? null;
   // Read when counts land, for the Home Screen widget; not a reason to load again.
   const { current } = useDebates();
-  const currentRef = useRef(current);
-  currentRef.current = current;
+  const currentRef = useLatest(current);
   // Retry and the reload after a delete run with no focus guard; a component gone since then keeps an old
   // currentRef, so Spotlight also asks whether this one is still on screen.
   const mounted = useRef(true);
@@ -242,12 +243,12 @@ function DebateDetails({ debateId, dashboard = false }: { debateId: string; dash
     if (!userId) return;
     const limit = dashboard ? DASHBOARD_RECENT_LIMIT : RECENT_LIMIT;
     const mark = copies.mark();
-    try {
+    return await runRequest(async () => {
       const [nextCounts, pro, con, nextSources] = await Promise.all([
-        fetchDebateCounts(userId, debateId, mark),
-        fetchRecentWork(userId, debateId, 'pro', limit, mark),
-        fetchRecentWork(userId, debateId, 'con', limit, mark),
-        dashboard ? fetchSources(userId, debateId, mark) : null,
+        fetchDebateCounts(userId, debateId, mark, (copy) => { if (isCurrent()) setCounts(copy); }),
+        fetchRecentWork(userId, debateId, 'pro', limit, mark, (copy) => { if (isCurrent()) setRecent((previous) => ({ pro: copy, con: previous?.con ?? [] })); }),
+        fetchRecentWork(userId, debateId, 'con', limit, mark, (copy) => { if (isCurrent()) setRecent((previous) => ({ pro: previous?.pro ?? [], con: copy })); }),
+        dashboard ? fetchSources(userId, debateId, mark, (copy) => { if (isCurrent()) setSources(copy.slice(0, DASHBOARD_SOURCES)); }) : null,
       ]);
       if (!isCurrent()) return;
       setCounts(nextCounts);
@@ -268,12 +269,12 @@ function DebateDetails({ debateId, dashboard = false }: { debateId: string; dash
       setRecent({ pro, con });
       setSources(nextSources?.slice(0, DASHBOARD_SOURCES) ?? null);
       setFailed(false);
-    } catch (cause) {
+    }, async (cause) => {
       if (!isCurrent()) return;
       console.warn('Could not load the debate:', cause instanceof Error ? cause.message : cause);
       setFailed(true);
-    }
-  }, [userId, debateId, dashboard, copies, t]);
+    });
+  }, [userId, debateId, dashboard, copies, t, currentRef]);
 
   // Reload on focus, so work saved on the website shows up. Out of view, its saved copies no longer count.
   useFocusEffect(

@@ -6,6 +6,7 @@ import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { runRequest } from '@/lib/run-request';
 import { AppTextInput } from '@/components/app-text-input';
 import { AskAnswer } from '@/components/ask-answer';
 import { AskChatPane } from '@/components/ask-chat-list';
@@ -213,22 +214,17 @@ export default function AskScreen() {
     const owner = conversation.current;
     saves.current = saves.current.then(async () => {
       if (owner !== conversation.current || recordRef.current.persisted >= snapshot.length) return;
-      try {
+      return await runRequest(async () => {
         const next = await saveChat(userId, recordRef.current, snapshot, activeDebateRef.current);
         if (next && owner === conversation.current) setRecord(next);
-      } catch (cause) {
+      }, async (cause) => {
         console.warn('Could not save the chat:', cause instanceof Error ? cause.message : cause);
         if (owner !== conversation.current) return;
         if (cause instanceof ChatSaveError) setRecord(cause.record);
         setNotice(t('debate.recordFailed'));
-      }
+      });
     });
   };
-
-  // ⌘↩ sends, as the send button does.
-  useFocusedKeyCommand('cmd+enter', () => {
-    if (!busy && input.trim()) void send(input, messages, attachments);
-  });
 
   const send = async (text: string, history: ChatMessage[], files: AskAttachment[] = []) => {
     const question = text.trim();
@@ -256,7 +252,7 @@ export default function AskScreen() {
     setLoading(true);
     const started = Date.now();
 
-    try {
+    return await runRequest(async () => {
       const open = recordRef.current;
       const debateId = open.chatId ? open.debateId : activeDebateRef.current;
       const [askSettings, debateContext] = await Promise.all([
@@ -291,8 +287,8 @@ export default function AskScreen() {
         let pending = '';
         let flush: ReturnType<typeof setTimeout> | null = null;
         setStreaming('');
-        try {
-          result = await streamAsk(askRequest, {
+        result = await runRequest(async () => {
+          return await streamAsk(askRequest, {
             signal: controller.signal,
             onDelta: (delta) => {
               if (!isCurrent()) return;
@@ -300,7 +296,7 @@ export default function AskScreen() {
               partial.current = received;
               pending += delta;
               // Tokens arrive faster than the screen needs; paint every 30 ms like the website.
-              flush ??= setTimeout(() => {
+              if (flush === null) flush = setTimeout(() => {
                 flush = null;
                 const batch = pending;
                 pending = '';
@@ -308,23 +304,23 @@ export default function AskScreen() {
               }, 30);
             },
           });
-        } catch (streamError) {
+        }, async (streamError) => {
           if (isAbortError(streamError) || !isCurrent()) throw streamError;
           // Whitespace alone is not an answer (main #187): a model that spent its cap on
           // reasoning may send a newline first. Ask the structured endpoint then.
           if (received.trim()) {
             setNotice(`${t('ask.streamInterrupted')} ${t('ask.streamInterruptedDesc')}`);
-            result = { response: received.trim(), followUpQuestions: [], uncertainties: [t('ask.streamInterrupted')] };
+            return { response: received.trim(), followUpQuestions: [], uncertainties: [t('ask.streamInterrupted')] };
           } else if (isFinalAskError(streamError)) {
             throw streamError;
           } else {
             // Nothing usable arrived: ask once more without streaming, as the website does.
             setStreaming(null);
-            result = await askOnce(askRequest, controller.signal, keepExtras, showText);
+            return await askOnce(askRequest, controller.signal, keepExtras, showText);
           }
-        } finally {
+        }, () => {
           if (flush) clearTimeout(flush);
-        }
+        });
       } else {
         setStreaming('');
         result = await askOnce(askRequest, controller.signal, keepExtras, showText);
@@ -355,7 +351,7 @@ export default function AskScreen() {
       partial.current = '';
       setMessages((previous) => [...previous, { id: nextId(), role: 'assistant', content: result.response, timestamp: Date.now(), output }]);
       announceAnswer(result.response);
-    } catch (cause) {
+    }, async (cause) => {
       if (!isCurrent() || isAbortError(cause)) return;
       setStreaming(null);
       const kind = cause instanceof AIError ? cause.kind : 'failed';
@@ -365,13 +361,13 @@ export default function AskScreen() {
       setError({ kind, question, files });
       // The question stays as not sent, and the website's dialog opens too.
       openRefusal(router, cause, 'ask');
-    } finally {
+    }, () => {
       if (isCurrent()) {
         setLoading(false);
         setStreaming(null);
         abort.current = null;
       }
-    }
+    });
   };
 
   // Discuss on a case or an attack opens Ask with the website's message and sends it once.
@@ -420,15 +416,15 @@ export default function AskScreen() {
       setNotice(`${t('ask.saveFailed')}. ${t('debate.sourceNeedsDebate')}`);
       return false;
     }
-    try {
+    return await runRequest(async () => {
       await addSource(userId, { title: content.length > 30 ? `${content.slice(0, 30)}...` : content, content, type: 'text', folder: 'Ask', debateId });
       setNotice(`${t('ask.saved')}. ${t('ask.savedDesc')}`);
       return true;
-    } catch (cause) {
+    }, async (cause) => {
       console.warn('Could not save the answer to the Library:', cause instanceof Error ? cause.message : cause);
       setNotice(`${t('ask.saveFailed')}. ${t('ask.sourceSaveFailedDesc')}`);
       return false;
-    }
+    });
   };
 
   // Stable, so the saved messages do not render again for a keystroke or a token.
@@ -436,15 +432,15 @@ export default function AskScreen() {
   const onSaveAnswer = useCallback((content: string) => saveAnswerRef.current(content), [saveAnswerRef]);
 
   const attach = async () => {
-    try {
+    return await runRequest(async () => {
       const picked = await pickAskFiles(attachments);
       if (!picked) return;
       setAttachments(picked.files);
       if (picked.problem?.kind === 'tooMany') setNotice(`${t('askChat.tooManyFiles')}. ${t('askChat.tooManyFilesDesc', { max: 5 })}`);
       else if (picked.problem) setNotice(`${t('askChat.fileValidationFailed')}. ${t(picked.problem.kind === 'tooLarge' ? 'mobile.ask.fileTooLarge' : 'mobile.ask.fileType', { name: picked.problem.name })}`);
-    } catch (cause) {
+    }, async (cause) => {
       console.warn('Could not pick files:', cause instanceof Error ? cause.message : cause);
-    }
+    });
   };
 
   const openChat = async (chatId: string) => {
@@ -453,17 +449,17 @@ export default function AskScreen() {
     startConversation([], NEW_CHAT);
     const owner = conversation.current;
     setOpening(true);
-    try {
+    return await runRequest(async () => {
       const chat = await fetchChat(userId, chatId, chatCopies.mark());
       if (owner !== conversation.current) return;
       setMessages(chat.messages);
       setRecord({ chatId, debateId: chat.debateId, persisted: chat.messages.length });
-    } catch (cause) {
+    }, async (cause) => {
       console.warn('Could not open the chat:', cause instanceof Error ? cause.message : cause);
       if (owner === conversation.current) setNotice(t('mobile.ask.openFailed'));
-    } finally {
+    }, () => {
       if (owner === conversation.current) setOpening(false);
-    }
+    });
   };
 
   // A chat picked in History opens here, as the website's Resume loads it into Ask. Once per opening.
@@ -477,6 +473,11 @@ export default function AskScreen() {
 
   const subtitle = oneOff ? t('debate.oneOffActive') : current?.motion ?? '';
   const busy = loading || opening;
+
+  // ⌘↩ sends, as the send button does.
+  useFocusedKeyCommand('cmd+enter', () => {
+    if (!busy && input.trim()) void send(input, messages, attachments);
+  });
   // Beside the list, the chat is titled by its first question, as its saved row is.
   const question = messages.find((message) => message.role === 'user')?.content;
   const title = split ? question ?? t('askChat.newChat') : t('nav.ask');

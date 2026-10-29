@@ -5,13 +5,15 @@ import { ActivityIndicator, Pressable, StyleSheet, Switch, View, type PressableP
 import ReanimatedSwipeable from 'react-native-gesture-handler/ReanimatedSwipeable';
 import Animated from 'react-native-reanimated';
 
+import { runRequest } from '@/lib/run-request';
 import { AppTextInput } from '@/components/app-text-input';
 import { PrimaryButton, TextButton } from '@/components/buttons';
 import { Card, ListItemIn, SkeletonTextRows, usePressScale } from '@/components/card';
 import { WEB_SWITCH_THUMB } from '@/components/form-rows';
 import { Icon } from '@/components/icon';
-import { SheetScrollView } from '@/components/sheet';
+import { SheetList } from '@/components/sheet';
 import { Text } from '@/components/text';
+import { CardRowFrame, useRowArrivals } from '@/components/list-screen';
 import { useAuth } from '@/lib/auth';
 import { confirmDestructive } from '@/lib/confirm';
 import { useDebates } from '@/lib/debate-context';
@@ -74,14 +76,14 @@ export default function DebatesSheet() {
     haptics.select();
     setSwitching(debate.id);
     setError('');
-    try {
+    return await runRequest(async () => {
       await switchTo(debate.id);
       router.back();
-    } catch {
+    }, async () => {
       setError(t('debate.switchFailed'));
-    } finally {
+    }, () => {
       setSwitching(null);
-    }
+    });
   };
 
   // The website deletes any debate but the current one, after its warning; its sources and saved work go too.
@@ -96,169 +98,178 @@ export default function DebatesSheet() {
     if (!confirmed) return;
     setDeleting(debate.id);
     setError('');
-    try {
+    return await runRequest(async () => {
       await remove(debate.id);
       haptics.success();
-    } catch {
+    }, async () => {
       haptics.warning();
       setError(t('debate.deleteFailed'));
-    } finally {
+    }, () => {
       setDeleting(null);
-    }
+    });
   };
 
-  return (
-    <SheetScrollView contentContainerStyle={styles.content} testID="debates-sheet">
-      <View style={styles.header}>
-        <Text accessibilityRole="header" weight="display" style={styles.title}>
-          {t('debate.yourDebates')}
-        </Text>
-        <TextButton label={t('mobile.common.done')} onPress={() => router.back()} />
-      </View>
-
-      <View style={[styles.search, { backgroundColor: colors.segmentTrack }]}>
-        <Icon name="search" color={colors.faint} size={19} />
-        <AppTextInput
-          value={query}
-          onChangeText={setQuery}
-          placeholder={t('mobile.debates.search')}
-          placeholderTextColor={colors.faint}
-          accessibilityLabel={t('mobile.debates.search')}
-          autoCorrect={false}
-          clearButtonMode="while-editing"
-          returnKeyType="search"
-          style={[styles.searchInput, { color: colors.foreground }]}
-        />
-      </View>
-
-      {/* Only before any debate is known: a refresh keeps showing the list it has. */}
-      {status === 'loading' && debates.length === 0 ? <SkeletonTextRows rows={3} /> : null}
-      {status === 'error' ? (
-        <Card>
-          <Text tone="secondary" style={styles.body}>
-            {t('mobile.debates.loadFailed')}
+  const arrivals = useRowArrivals(visible.map((debate) => debate.id));
+  const renderDebate = (debate: Debate, index: number) => {
+    const isCurrent = debate.id === current?.id;
+    const sources = sourceCounts[debate.id];
+    const when = isToday(debate.lastActivityAt)
+      ? t('mobile.debates.activeToday')
+      : formatRelativeDate(debate.lastActivityAt);
+    const row = (
+      <DebateRowPress
+        accessibilityRole="button"
+        accessibilityLabel={t('debate.switchToAria', { motion: debate.motion })}
+        accessibilityState={{ selected: isCurrent, busy: switching === debate.id || deleting === debate.id }}
+        accessibilityActions={isCurrent ? undefined : [{ name: 'delete', label: t('common.delete') }]}
+        onAccessibilityAction={(event) => {
+          if (event.nativeEvent.actionName === 'delete') void removeDebate(debate);
+        }}
+        disabled={switching !== null}
+        onPress={() => void pick(debate)}>
+        <View style={styles.rowText}>
+          <Text weight="semibold" style={styles.motion}>
+            {debate.motion}
           </Text>
-          <TextButton label={t('common.retry')} onPress={() => void refresh()} />
-        </Card>
-      ) : null}
-      {status === 'ready' && debates.length === 0 ? (
-        <Text tone="secondary" style={styles.body}>
-          {t('debate.noOtherDebates')}
-        </Text>
-      ) : null}
-      {status === 'ready' && debates.length > 0 && visible.length === 0 ? (
-        <Text tone="secondary" style={styles.body}>
-          {t('mobile.debates.noMatches')}
-        </Text>
-      ) : null}
-      {visible.length > 0 ? (
-        <Card style={styles.list}>
-          {visible.map((debate, index) => {
-            const isCurrent = debate.id === current?.id;
-            const sources = sourceCounts[debate.id];
-            const when = isToday(debate.lastActivityAt)
-              ? t('mobile.debates.activeToday')
-              : formatRelativeDate(debate.lastActivityAt);
-            const row = (
-              <DebateRowPress
-                accessibilityRole="button"
-                accessibilityLabel={t('debate.switchToAria', { motion: debate.motion })}
-                accessibilityState={{ selected: isCurrent, busy: switching === debate.id || deleting === debate.id }}
-                accessibilityActions={isCurrent ? undefined : [{ name: 'delete', label: t('common.delete') }]}
-                onAccessibilityAction={(event) => {
-                  if (event.nativeEvent.actionName === 'delete') void removeDebate(debate);
-                }}
-                disabled={switching !== null}
-                onPress={() => void pick(debate)}>
-                <View style={styles.rowText}>
-                  <Text weight="semibold" style={styles.motion}>
-                    {debate.motion}
-                  </Text>
-                  <Text tone="faint" style={styles.meta} numberOfLines={1}>
-                    {sources === undefined
-                      ? when
-                      : t('mobile.debates.meta', { sources: t('mobile.debates.sourceCount', { count: sources }), when })}
-                  </Text>
-                </View>
-                {switching === debate.id || deleting === debate.id ? (
-                  <ActivityIndicator />
-                ) : isCurrent ? (
-                  <Icon name="check" color={colors.primary} size={22} />
-                ) : null}
-              </DebateRowPress>
-            );
-            const divider = index > 0 && { borderTopWidth: 1, borderTopColor: colors.line };
-            // The current debate cannot be deleted, as on the website.
-            if (isCurrent) {
-              return (
-                <ListItemIn key={debate.id} index={index} layout style={divider}>
-                  {row}
-                </ListItemIn>
-              );
-            }
-            return (
-              <ListItemIn key={debate.id} index={index} layout>
-                <ReanimatedSwipeable
-                  friction={2}
-                  rightThreshold={40}
-                  overshootRight={false}
-                  containerStyle={divider}
-                  renderRightActions={() => (
-                    <Pressable
-                      accessibilityRole="button"
-                      accessibilityLabel={t('debate.deleteAria', { motion: debate.motion })}
-                      onPress={() => void removeDebate(debate)}
-                      style={[styles.deleteAction, { backgroundColor: colors.destructive }]}>
-                      <Icon name="trash" color="#ffffff" size={20} />
-                      <Text weight="semibold" style={styles.deleteLabel}>
-                        {t('common.delete')}
-                      </Text>
-                    </Pressable>
-                  )}>
-                  {row}
-                </ReanimatedSwipeable>
-              </ListItemIn>
-            );
-          })}
-        </Card>
-      ) : null}
-
-      <Card style={styles.oneOffCard}>
-        <View style={styles.oneOff}>
-          <View style={[styles.oneOffIcon, { backgroundColor: colors.line }]}>
-            <Icon name="x" color={colors.secondary} size={21} />
-          </View>
-          <View style={styles.rowText}>
-            <Text weight="semibold" style={styles.motion}>
-              {t('mobile.debates.oneOff')}
-            </Text>
-            <Text tone="faint" style={styles.meta}>
-              {t('mobile.debates.oneOffDesc')}
-            </Text>
-          </View>
-          <Switch
-            value={oneOff}
-            onValueChange={(value) => {
-              haptics.tap();
-              setOneOff(value);
-            }}
-            accessibilityLabel={t('mobile.debates.oneOff')}
-            trackColor={{ false: colors.border, true: colors.primaryFill }}
-            ios_backgroundColor={colors.border}
-            thumbColor="#ffffff"
-            {...WEB_SWITCH_THUMB}
-          />
+          <Text tone="faint" style={styles.meta} numberOfLines={1}>
+            {sources === undefined
+              ? when
+              : t('mobile.debates.meta', { sources: t('mobile.debates.sourceCount', { count: sources }), when })}
+          </Text>
         </View>
-      </Card>
+        {switching === debate.id || deleting === debate.id ? (
+          <ActivityIndicator />
+        ) : isCurrent ? (
+          <Icon name="check" color={colors.primary} size={22} />
+        ) : null}
+      </DebateRowPress>
+    );
+    const divider = index > 0 && { borderTopWidth: 1, borderTopColor: colors.line };
+    // The current debate cannot be deleted, as on the website.
+    if (isCurrent) {
+      return (
+        <ListItemIn key={debate.id} index={index} enter={arrivals.entersNow(debate.id)} layout style={divider}>
+          {row}
+        </ListItemIn>
+      );
+    }
+    return (
+      <ListItemIn key={debate.id} index={index} enter={arrivals.entersNow(debate.id)} layout>
+        <ReanimatedSwipeable
+          friction={2}
+          rightThreshold={40}
+          overshootRight={false}
+          containerStyle={divider}
+          renderRightActions={() => (
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={t('debate.deleteAria', { motion: debate.motion })}
+              onPress={() => void removeDebate(debate)}
+              style={[styles.deleteAction, { backgroundColor: colors.destructive }]}>
+              <Icon name="trash" color="#ffffff" size={20} />
+              <Text weight="semibold" style={styles.deleteLabel}>
+                {t('common.delete')}
+              </Text>
+            </Pressable>
+          )}>
+          {row}
+        </ReanimatedSwipeable>
+      </ListItemIn>
+    );
+  };
+  return (
+    <SheetList
+      testID="debates-sheet"
+      gap={14}
+      data={visible}
+      keyExtractor={(debate) => debate.id}
+      renderItem={({ item, index }) => <CardRowFrame index={index} count={visible.length}>{renderDebate(item, index)}</CardRowFrame>}
+      header={
+        <>
+          <View style={styles.header}>
+            <Text accessibilityRole="header" weight="display" style={styles.title}>
+              {t('debate.yourDebates')}
+            </Text>
+            <TextButton label={t('mobile.common.done')} onPress={() => router.back()} />
+          </View>
 
-      {error ? (
-        <Text accessibilityRole="alert" weight="medium" style={[styles.body, { color: colors.destructive }]}>
-          {error}
-        </Text>
-      ) : null}
+          <View style={[styles.search, { backgroundColor: colors.segmentTrack }]}>
+            <Icon name="search" color={colors.faint} size={19} />
+            <AppTextInput
+              value={query}
+              onChangeText={setQuery}
+              placeholder={t('mobile.debates.search')}
+              placeholderTextColor={colors.faint}
+              accessibilityLabel={t('mobile.debates.search')}
+              autoCorrect={false}
+              clearButtonMode="while-editing"
+              returnKeyType="search"
+              style={[styles.searchInput, { color: colors.foreground }]}
+            />
+          </View>
 
-      <PrimaryButton icon="plus" label={t('mobile.debates.newDebate')} onPress={() => router.push('/new-debate')} />
-    </SheetScrollView>
+          {/* Only before any debate is known: a refresh keeps showing the list it has. */}
+          {status === 'loading' && debates.length === 0 ? <SkeletonTextRows rows={3} /> : null}
+          {status === 'error' ? (
+            <Card>
+              <Text tone="secondary" style={styles.body}>
+                {t('mobile.debates.loadFailed')}
+              </Text>
+              <TextButton label={t('common.retry')} onPress={() => void refresh()} />
+            </Card>
+          ) : null}
+          {status === 'ready' && debates.length === 0 ? (
+            <Text tone="secondary" style={styles.body}>
+              {t('debate.noOtherDebates')}
+            </Text>
+          ) : null}
+          {status === 'ready' && debates.length > 0 && visible.length === 0 ? (
+            <Text tone="secondary" style={styles.body}>
+              {t('mobile.debates.noMatches')}
+            </Text>
+          ) : null}
+        </>
+      }
+      ListFooterComponent={
+        <>
+          <Card style={styles.oneOffCard}>
+            <View style={styles.oneOff}>
+              <View style={[styles.oneOffIcon, { backgroundColor: colors.line }]}>
+                <Icon name="x" color={colors.secondary} size={21} />
+              </View>
+              <View style={styles.rowText}>
+                <Text weight="semibold" style={styles.motion}>
+                  {t('mobile.debates.oneOff')}
+                </Text>
+                <Text tone="faint" style={styles.meta}>
+                  {t('mobile.debates.oneOffDesc')}
+                </Text>
+              </View>
+              <Switch
+                value={oneOff}
+                onValueChange={(value) => {
+                  haptics.tap();
+                  setOneOff(value);
+                }}
+                accessibilityLabel={t('mobile.debates.oneOff')}
+                trackColor={{ false: colors.border, true: colors.primaryFill }}
+                ios_backgroundColor={colors.border}
+                thumbColor="#ffffff"
+                {...WEB_SWITCH_THUMB}
+              />
+            </View>
+          </Card>
+
+          {error ? (
+            <Text accessibilityRole="alert" weight="medium" style={[styles.body, { color: colors.destructive }]}>
+              {error}
+            </Text>
+          ) : null}
+
+          <PrimaryButton icon="plus" label={t('mobile.debates.newDebate')} onPress={() => router.push('/new-debate')} />
+        </>
+      }
+    />
   );
 }
 
@@ -276,7 +287,6 @@ function DebateRowPress({ children, ...props }: Omit<PressableProps, 'style' | '
 }
 
 const styles = StyleSheet.create({
-  content: { gap: 14 },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
   title: { fontSize: 21, lineHeight: 26, letterSpacing: -0.3, flexShrink: 1 },
   search: {
@@ -289,7 +299,6 @@ const styles = StyleSheet.create({
   },
   searchInput: { flex: 1, fontSize: 16.5, fontFamily: fontFamily.regular, paddingVertical: 10 },
   body: { fontSize: 15, lineHeight: 21 },
-  list: { padding: 0, gap: 0, overflow: 'hidden' },
   deleteAction: { width: 92, alignItems: 'center', justifyContent: 'center', gap: 3 },
   deleteLabel: { color: '#ffffff', fontSize: 13 },
   row: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 13, paddingHorizontal: 16 },

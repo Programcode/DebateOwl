@@ -6,6 +6,8 @@ import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { StyleSheet, View } from 'react-native';
 
+import { useLatest } from '@/lib/live-value';
+import { runRequest } from '@/lib/run-request';
 import { MainActionButton, SecondaryButton, TextButton } from '@/components/buttons';
 import { Card } from '@/components/card';
 import { Field } from '@/components/field';
@@ -109,14 +111,14 @@ export default function AddFileSheet() {
     setContent(outcome.result.content);
   };
 
+  const readAssetOnArrival = useLatest(readAsset);
   useEffect(() => {
     if (started.current) return;
     started.current = true;
     const asset = pickedFile(fileId);
-    if (asset) void readAsset(asset);
+    if (asset) void readAssetOnArrival.current(asset);
     // Reads the file it was opened with, once.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [fileId]);
+  }, [fileId, readAssetOnArrival]);
 
   const chooseAnother = async () => {
     const asset = await pickSourceFile();
@@ -130,7 +132,7 @@ export default function AddFileSheet() {
     if (!draft || !ready || !userId || !current || saving) return;
     setSaving(true);
     setSaveError('');
-    try {
+    return await runRequest(async () => {
       // The website matches a file by its name within the debate.
       const name = draft.origin.trim().toLowerCase();
       const saved = await fetchSources(userId, current.id);
@@ -138,13 +140,13 @@ export default function AddFileSheet() {
       await addSource(userId, { title: title.trim(), content: content.trim(), type: 'file', origin: draft.origin, folder, debateId: current.id });
       toast({ tone: 'success', title: t('libraryPage.sourceSaved', { title: title.trim() }) });
       router.back();
-    } catch (cause) {
+    }, async (cause) => {
       haptics.warning();
       setSaveError(cause instanceof DuplicateSourceError
         ? `${t('libraryPage.duplicateSource')}. ${t('libraryPage.duplicateSourceDesc')}`
         : t('mobile.library.saveFailed'));
       setSaving(false);
-    }
+    });
   };
 
   const fileKind = draft ? draft.fileType.toUpperCase() : '';

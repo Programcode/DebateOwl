@@ -5,6 +5,7 @@ import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import Animated from 'react-native-reanimated';
 import ReanimatedSwipeable, { type SwipeableMethods } from 'react-native-gesture-handler/ReanimatedSwipeable';
 
+import { runRequest } from '@/lib/run-request';
 import { ActionMenu } from '@/components/action-menu';
 import { PrimaryButton, TextButton } from '@/components/buttons';
 import { Card, IconTile, ListItemIn, usePressScale } from '@/components/card';
@@ -141,19 +142,24 @@ export default function HistoryScreen() {
     const request = ++loads.current;
     const isCurrent = () => live.current && loads.current === request && owner.current === forUser;
     const mark = copies.mark();
-    try {
+    return await runRequest(async () => {
       const next: Loaded = target === OUTSIDE
-        ? { scope: OUTSIDE, kind: 'unsorted', entries: await fetchUnsortedWork(forUser, mark) }
-        : { scope: target, kind: 'debate', lists: await fetchDebateHistory(forUser, target, mark) };
+        ? { scope: OUTSIDE, kind: 'unsorted', entries: await fetchUnsortedWork(forUser, mark, (entries) => {
+          if (isCurrent()) { setLoaded({ scope: OUTSIDE, kind: 'unsorted', entries }); setFailed(null); }
+        }) }
+        : { scope: target, kind: 'debate', lists: await fetchDebateHistory(forUser, target, mark, (lists) => {
+          if (isCurrent()) { setLoaded({ scope: target, kind: 'debate', lists }); setFailed(null); }
+        }) };
       if (!isCurrent()) return;
       // Focus refreshes usually reread the same rows; keep the shown lists when they did not change.
       setLoaded((previous) => keepIfSame(previous, next));
       setFailed(null);
-    } catch (cause) {
+    }, async (cause) => {
       if (!isCurrent()) return;
       console.warn('Could not load history:', cause instanceof Error ? cause.message : cause);
+      setLoaded(null);
       setFailed(target);
-    }
+    });
   }, [userId, copies]);
 
   // Reload on focus, so a case deleted in its document or work saved on the website shows up.
@@ -183,13 +189,15 @@ export default function HistoryScreen() {
       cancel: t('common.cancel'),
     });
     if (!confirmed || owner.current !== forUser) return false;
-    try {
+    const removed = await runRequest(async () => {
       await deletion.run(forUser, item.id);
-    } catch (cause) {
+      return true;
+    }, async (cause) => {
       console.warn(`Could not delete the ${item.kind}:`, cause instanceof Error ? cause.message : cause);
       if (live.current && owner.current === forUser) showNotice(t(deletion.failed));
       return false;
-    }
+    });
+    if (!removed) return false;
     if (!live.current || owner.current !== forUser) return true;
     // Any load still running read the list before this delete.
     loads.current += 1;
@@ -227,15 +235,15 @@ export default function HistoryScreen() {
     const forUser = owner.current;
     if (!forUser || attaching.has(key)) return;
     setAttaching((previous) => new Set(previous).add(key));
-    try {
+    return await runRequest(async () => {
       await attachToDebate(forUser, entry, debateId);
       if (!live.current || owner.current !== forUser) return;
       if (shownScope.current === OUTSIDE) setAttachNotice({ scope: OUTSIDE, text: t('debate.attached') });
       attached(entry);
-    } catch (cause) {
+    }, async (cause) => {
       console.warn('Could not add to the debate:', cause instanceof Error ? cause.message : cause);
       if (live.current && owner.current === forUser) showNotice(t('debate.attachFailed'));
-    } finally {
+    }, () => {
       if (live.current) {
         setAttaching((previous) => {
           const next = new Set(previous);
@@ -243,7 +251,7 @@ export default function HistoryScreen() {
           return next;
         });
       }
-    }
+    });
   };
 
   // The attach notice belongs to the list it was shown for.

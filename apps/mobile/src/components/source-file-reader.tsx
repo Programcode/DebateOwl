@@ -4,6 +4,7 @@ import mammoth from 'mammoth';
 import * as pdfjs from 'pdfjs-dist/legacy/build/pdf.mjs';
 import * as pdfjsWorker from 'pdfjs-dist/legacy/build/pdf.worker.mjs';
 import { useEffect } from 'react';
+import { useLatest } from '../lib/live-value';
 import {
   importSourceFile,
   SourceFileImportError,
@@ -55,13 +56,16 @@ const readers = {
  * browser. It draws nothing; give it a job and it answers through `onDone`.
  */
 export default function SourceFileReader({ job, readChunk, onDone }: Props) {
+  const latest = useLatest({ job, readChunk, onDone });
+  const jobId = job?.id;
   useEffect(() => {
-    if (!job) return;
+    const { job, readChunk, onDone } = latest.current;
+    if (!job || job.id !== jobId) return;
     let stopped = false;
     let bytes: Promise<ArrayBuffer> | null = null;
     // One slice at a time into one buffer the file's size, so at most one slice is in flight.
     const read = () => {
-      bytes ??= (async () => {
+      if (bytes === null) bytes = (async () => {
         const out = new Uint8Array(job.size);
         let offset = 0;
         for (let index = 0; index < job.chunks; index += 1) {
@@ -98,7 +102,6 @@ export default function SourceFileReader({ job, readChunk, onDone }: Props) {
       stopped = true;
     };
     // A job runs once; its id names it.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [job?.id]);
+  }, [jobId, latest]);
   return null;
 }

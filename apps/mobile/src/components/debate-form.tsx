@@ -19,6 +19,7 @@ import {
   type Debate,
   type DebateSettings,
 } from '@/lib/debates';
+import { runRequest } from '@/lib/run-request';
 import { haptics } from '@/lib/haptics';
 import { useTheme } from '@/theme/use-theme';
 
@@ -62,20 +63,20 @@ export function DebateForm({
     savingRef.current = true;
     setSaving(true);
     setError('');
-    try {
+    return await runRequest(async () => {
       const settings: DebateSettings = { ...initial?.settings, format, role };
       if (judge.trim()) settings.judge = judge.trim();
       else delete settings.judge;
       await onSubmit({ motion: motion.trim(), settings, instructions: instructions.trim() });
       haptics.success();
-    } catch (cause) {
+    }, async (cause) => {
       console.warn('Could not save the debate:', cause instanceof Error ? cause.message : cause);
       haptics.warning();
       setError(t('debate.saveFailed'));
-    } finally {
+    }, () => {
       savingRef.current = false;
       setSaving(false);
-    }
+    });
   };
 
   return (

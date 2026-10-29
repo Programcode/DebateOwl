@@ -15,6 +15,7 @@ import { useTheme } from '@/theme/use-theme';
 type ListScreenProps<T> = Omit<FlatListProps<T>, 'ListHeaderComponent' | 'contentContainerStyle' | 'CellRendererComponent' | 'onRefresh' | 'refreshing'> & {
   /** What `Screen` would show above the list: titles, pickers, search. */
   header?: ReactNode;
+  gap?: number;
   safeTop?: boolean;
   wide?: boolean;
   /** The column's style when the list sits in an iPad pane instead of a tab. */
@@ -31,7 +32,7 @@ type ListScreenProps<T> = Omit<FlatListProps<T>, 'ListHeaderComponent' | 'conten
  * the rows are a FlatList, so only those near the screen are drawn. Rows that
  * should look like one card use `CardRowFrame`.
  */
-export function ListScreen<T>({ header, safeTop, wide, contentStyle, animateLayout = false, onRefresh, ...list }: ListScreenProps<T>): ReactElement {
+export function ListScreen<T>({ header, gap = 16, safeTop, wide, contentStyle, animateLayout = false, onRefresh, ...list }: ListScreenProps<T>): ReactElement {
   const insets = useSafeAreaInsets();
   const reduce = useReduceMotion();
   const { colors } = useTheme();
@@ -52,7 +53,7 @@ export function ListScreen<T>({ header, safeTop, wide, contentStyle, animateLayo
       refreshControl={refresh ? <RefreshControl refreshing={refreshing} onRefresh={refresh} tintColor={colors.primary} /> : undefined}
       {...list}
       ListHeaderComponent={
-        <View style={styles.header}>
+        <View style={[styles.header, { gap, paddingBottom: gap }]}>
           <OfflineNotice />
           {header}
         </View>

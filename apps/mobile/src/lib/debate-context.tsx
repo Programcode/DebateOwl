@@ -1,6 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { AppState } from 'react-native';
 
+import { runRequest } from './run-request';
 import { publishCurrentDebate } from './debate-widget';
 import { clearSpotlight, clearSpotlightDomain } from './spotlight';
 import { useAuth } from './auth';
@@ -65,19 +66,26 @@ export function DebateProvider({ children }: { children: ReactNode }) {
     if (!forUser) return;
     const writesBefore = writes.current;
     const request = ++refreshes.current;
-    try {
-      const next = await fetchDebates(forUser);
-      if (owner.current !== forUser || refreshes.current !== request || writes.current !== writesBefore) return;
+    return await runRequest(async () => {
+      const gen = generation.current;
+      const show = (next: Awaited<ReturnType<typeof fetchDebates>>) => {
+        if (generation.current !== gen || owner.current !== forUser || refreshes.current !== request || writes.current !== writesBefore) return;
+        setDebates((previous) => keepIfSame(previous, next.debates));
+        setCurrentId(next.currentId);
+        setStatus('ready');
+      };
+      const next = await fetchDebates(forUser, show);
+      if (generation.current !== gen || owner.current !== forUser || refreshes.current !== request || writes.current !== writesBefore) return;
       // Refreshes run on every Debate tab focus; an unchanged list keeps its identity so the tabs do not re-render.
       setDebates((previous) => keepIfSame(previous, next.debates));
       setCurrentId(next.currentId);
       setStatus('ready');
-    } catch (cause) {
+    }, async (cause) => {
       if (owner.current !== forUser || refreshes.current !== request) return;
       console.warn('Could not load debates:', cause instanceof Error ? cause.message : cause);
-      // Keep what is on screen; only an empty first load becomes an error.
-      setStatus((previous) => (previous === 'ready' ? previous : 'error'));
-    }
+      // A copy painted during refresh must not hide a server refusal.
+      setStatus('error');
+    });
   }, []);
 
   useEffect(() => {

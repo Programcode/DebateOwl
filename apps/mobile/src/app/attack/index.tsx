@@ -5,6 +5,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { StyleSheet, View } from 'react-native';
 
+import { runRequest } from '@/lib/run-request';
 import { MainActionButton } from '@/components/buttons';
 import { DocumentScreen } from '@/components/document';
 import { DocumentHeader } from '@/components/document-header';
@@ -121,7 +122,7 @@ export default function AttackScreen() {
     abort.current = controller;
     setError(null);
     setPhase('attacking');
-    try {
+    return await runRequest(async () => {
       const [config, debateContext] = await Promise.all([
         readFeatureConfig(forUser, 'attack'),
         debateId ? buildDebateContext(forUser, debateId, 'attack', 'both') : Promise.resolve(undefined),
@@ -145,12 +146,12 @@ export default function AttackScreen() {
       let savedId: string | null = null;
       let recordFailed = false;
       if (debateId) {
-        try {
+        await runRequest(async () => {
           savedId = await recordResult(forUser, 'attack', { title, input, output: result, debateId, side: 'neutral' });
-        } catch (cause) {
+        }, async (cause) => {
           console.warn('Could not save the attack to the debate:', cause instanceof Error ? cause.message : cause);
           recordFailed = true;
-        }
+        });
       }
       if (!isCurrent()) return;
       const key = keepOpenResult({ kind: 'attack', savedId, title, side: 'neutral', debateId, createdAt: Date.now(), input, output: result, sources: discoveredSources });
@@ -165,7 +166,7 @@ export default function AttackScreen() {
           ...(sources.failed > 0 ? { failed: String(sources.failed) } : {}),
         },
       });
-    } catch (cause) {
+    }, async (cause) => {
       if (!isCurrent() || isAbortError(cause)) return;
       const kind = cause instanceof AIError ? cause.kind : 'failed';
       if (!(cause instanceof AIError)) console.warn('Attack failed:', cause instanceof Error ? cause.message : cause);
@@ -175,9 +176,9 @@ export default function AttackScreen() {
       // A limit or model refusal opens the website's dialog as a sheet, not an inline error.
       if (openRefusal(router, cause, 'attack')) return;
       setError(kind);
-    } finally {
+    }, () => {
       if (requests.current === request) abort.current = null;
-    }
+    });
   };
 
   const attacking = phase === 'attacking';
@@ -193,7 +194,7 @@ export default function AttackScreen() {
         <LiveToolRun
           label={t('attack.working')}
           run={liveRun.state}
-          sections={liveRun.state.draft ? attackDraftSections(liveRun.state.draft, t) : []}
+          sections={attackDraftSections}
           onCancel={() => {
             abortActive();
             setPhase('form');

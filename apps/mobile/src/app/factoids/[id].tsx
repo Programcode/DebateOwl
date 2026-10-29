@@ -4,6 +4,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { runRequest } from '@/lib/run-request';
 import { ActionMenu } from '@/components/action-menu';
 import { PrimaryButton, SecondaryButton } from '@/components/buttons';
 import { openCitation } from '@/components/citation-target';
@@ -94,7 +95,7 @@ export default function FactoidsResultScreen() {
     }
     const url = SafeWebUrlSchema.safeParse(factoid.citation?.url);
     setSaving(true);
-    try {
+    return await runRequest(async () => {
       await addSource(forUser, {
         title: factoid.shortClaim,
         content: `${factoid.context}\n\nKey Figure: ${factoid.keyFigure}\nLimitations: ${factoid.limitations}`,
@@ -104,12 +105,12 @@ export default function FactoidsResultScreen() {
         debateId,
       });
       if (live.current && owner.current === forUser) setNotice(`${t('factoids.savedToLibrary')}. ${t('factoids.savedToLibraryDesc')}`);
-    } catch (cause) {
+    }, async (cause) => {
       console.warn('Could not save the factoid to the Library:', cause instanceof Error ? cause.message : cause);
       if (live.current && owner.current === forUser) setNotice(t('factoids.saveFailed'));
-    } finally {
+    }, () => {
       if (live.current) setSaving(false);
-    }
+    });
   };
 
   const savedId = result.savedId;

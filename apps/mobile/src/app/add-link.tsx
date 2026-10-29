@@ -4,6 +4,8 @@ import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { StyleSheet, View } from 'react-native';
 
+import { useLatest } from '@/lib/live-value';
+import { runRequest } from '@/lib/run-request';
 import { MainActionButton, PrimaryButton, TextButton } from '@/components/buttons';
 import { Card } from '@/components/card';
 import { Field } from '@/components/field';
@@ -53,19 +55,20 @@ export default function AddLinkSheet() {
     }
     setBusy('import');
     setError('');
-    try {
+    return await runRequest(async () => {
       const imported = await importSourceFromUrl(trimmed);
       setDraft(imported);
       setTitle(imported.title || shared?.title || '');
-    } catch (cause) {
+    }, async (cause) => {
       console.warn('Could not import the source:', cause instanceof Error ? cause.message : cause);
       setError(`${t('libraryPage.importFailed')}. ${t('libraryPage.importFailedDesc')}`);
-    } finally {
+    }, () => {
       setBusy(null);
-    }
+    });
   };
 
   // A shared page is read once the Current Debate is known; the student still checks and saves it.
+  const runImportOnArrival = useLatest(runImport);
   const autoImported = useRef(false);
   useEffect(() => {
     if (fromShare) forgetShared();
@@ -73,17 +76,16 @@ export default function AddLinkSheet() {
   useEffect(() => {
     if (autoImported.current || !shared || !current) return;
     autoImported.current = true;
-    void runImport();
+    void runImportOnArrival.current();
     // runImport reads the address the hand-off filled in; it runs once per opening.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [shared, current]);
+  }, [shared, current, runImportOnArrival]);
 
   const save = async () => {
     const userId = session?.user.id;
     if (!draft || !userId || !current || !title.trim()) return;
     setBusy('save');
     setError('');
-    try {
+    return await runRequest(async () => {
       if (isDuplicateOrigin(await fetchSources(userId, current.id, copies.mark()), draft.url)) {
         setError(`${t('libraryPage.duplicateSource')}. ${t('libraryPage.duplicateSourceDesc')}`);
         setBusy(null);
@@ -92,12 +94,12 @@ export default function AddLinkSheet() {
       await addSource(userId, { title: title.trim(), content: draft.content.trim(), type: 'url', origin: draft.url, folder, debateId: current.id });
       toast({ tone: 'success', title: t('libraryPage.sourceSaved', { title: title.trim() }) });
       router.back();
-    } catch (cause) {
+    }, async (cause) => {
       console.warn('Could not save the source:', cause instanceof Error ? cause.message : cause);
       haptics.warning();
       setError(t('mobile.library.saveFailed'));
       setBusy(null);
-    }
+    });
   };
 
   return (

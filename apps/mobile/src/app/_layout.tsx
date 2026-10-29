@@ -59,10 +59,6 @@ function Root() {
   // Settings come from the device here, so the app opens in the account's language and theme.
   const ready = (fontsLoaded || fontError !== null) && !loading && settingsReady;
 
-  useEffect(() => {
-    if (ready) void SplashScreen.hideAsync();
-  }, [ready]);
-
   // Offline, reads answer from saved copies and the screens say so.
   useEffect(() => watchNetwork(), []);
   // Notes, source edits and Active switches made offline sync when the connection returns.
@@ -118,7 +114,7 @@ function Root() {
     <ThemeProvider value={navigationTheme}>
       <StatusBar style={scheme === 'dark' ? 'light' : 'dark'} />
       {/* The screenshot script waits for auth-settled before it checks an offline cold start. Swipeable rows need the gesture root. */}
-      <GestureHandlerRootView style={styles.root} testID={settled ? 'auth-settled' : 'auth-pending'}>
+      <GestureHandlerRootView onLayout={() => { void SplashScreen.hideAsync(); }} style={styles.root} testID={settled ? 'auth-settled' : 'auth-pending'}>
         <View style={styles.row}>
         {session !== null && sidebarWidth > 0 ? <AppSidebar width={sidebarWidth} /> : null}
         <ReservedWidth.Provider value={session !== null ? sidebarWidth : 0}>

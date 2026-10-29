@@ -6,6 +6,7 @@ import { useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
 
+import { runRequest } from '@/lib/run-request';
 import { SecondaryButton, TextButton } from '@/components/buttons';
 import { ListItemIn, SkeletonTextRows } from '@/components/card';
 import { Icon } from '@/components/icon';
@@ -55,14 +56,14 @@ export default function ContextReviewSheet() {
     const key = `${output.ref.kind}:${output.ref.id}`;
     setPinning(key);
     setPinError('');
-    try {
+    return await runRequest(async () => {
       await togglePin(userId, plan.debateId, output.ref, plan.resultKeys);
-    } catch (cause) {
+    }, async (cause) => {
       if (!(cause instanceof PinLimitError)) console.warn('Could not save the pin:', cause instanceof Error ? cause.message : cause);
       setPinError(cause instanceof PinLimitError ? t('debateContext.pinLimit') : t('debateContext.pinFailed'));
-    } finally {
+    }, () => {
       setPinning(null);
-    }
+    });
   };
 
   return (

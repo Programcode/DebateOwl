@@ -206,7 +206,7 @@ function StatTile({ stat, index, animate, last }: { stat: CelebrationStat; index
   );
 }
 
-/** The number alone re-renders while it counts, on the display's frames, eased out over 600 ms. */
+/** The number alone re-renders while it counts, at most ten times a second, eased out over 600 ms. */
 function CountUp({ value, format, delay, animate, tick }: { value: number; format: (value: number) => string; delay: number; animate: boolean; tick: boolean }) {
   const { colors } = useTheme();
   const [counted, setCurrent] = useState(animate ? 0 : value);
@@ -214,21 +214,24 @@ function CountUp({ value, format, delay, animate, tick }: { value: number; forma
   const current = animate ? counted : value;
   useEffect(() => {
     if (!animate) return;
-    let frame = 0;
+    let interval: ReturnType<typeof setInterval> | undefined;
     let start = 0;
-    const step = (now: number) => {
-      if (!start) start = now;
+    const step = () => {
+      const now = Date.now();
       const progress = Math.min(1, (now - start) / COUNT_MS);
       setCurrent(Math.round(value * (1 - Math.pow(1 - progress, 3))));
-      if (progress < 1) frame = requestAnimationFrame(step);
-      else if (tick) haptics.select();
+      if (progress >= 1) {
+        clearInterval(interval);
+        if (tick) haptics.select();
+      }
     };
     const timer = setTimeout(() => {
-      frame = requestAnimationFrame(step);
+      start = Date.now();
+      interval = setInterval(step, 100);
     }, delay);
     return () => {
       clearTimeout(timer);
-      cancelAnimationFrame(frame);
+      clearInterval(interval);
     };
   }, [animate, delay, tick, value]);
   return (
