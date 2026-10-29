@@ -1,0 +1,112 @@
+DebateOwl
+Copyright (c) 2026 Ádám Gáborjáni. All rights not expressly granted below are reserved.
+
+Required Notice: Copyright (c) 2026 Ádám Gáborjáni (https://debateowl.com)
+
+DebateOwl is source-available software, not open-source software. The licensor
+offers it only under the PolyForm Strict License 1.0.0, reproduced in full
+below, as narrowed by the Additional Limitations in this section. The
+Additional Limitations are conditions of every license granted for the
+software. Where they and the PolyForm Strict License differ, the Additional
+Limitations control. Nothing in them limits any right you have under the
+"Fair Use" section or under applicable law.
+
+## Additional Limitations
+
+1. Personal use only. The only permitted purpose is personal, noncommercial
+   use by an individual, running the software on hardware that individual
+   controls, for that individual's own benefit. The "Noncommercial
+   Organizations" section of the PolyForm Strict License does not apply.
+
+2. No hosting or service. You may not make the software, or any part of its
+   functionality, available to anyone other than yourself over a network. That
+   includes a public website, a hosted or shared instance, software as a
+   service, or an API, whether free or paid and whether open to the public or
+   to a limited group such as a class, club, school, team, or customers.
+
+3. No sale. You may not sell, rent, lease, sublicense, or otherwise charge for
+   the software, for access to it, or for anything that includes it.
+
+4. No redistribution. You may not distribute, publish, mirror, or share copies
+   of the software or any part of it, changed or unchanged, except as the terms
+   of service of the platform hosting the licensor's repository require.
+
+5. No changes or rebranding. You may not make changes or new works based on
+   the software, including any copy, version, or derivative that removes,
+   replaces, or alters the DebateOwl name, logo, or branding.
+
+6. Names and logos. These terms grant no trademark rights. The name
+   "DebateOwl", the owl logo and mascot, and the debateowl.com domain are
+   reserved by the licensor. You may not use them, or anything
+   confusingly similar, to name, brand, or promote any product, service,
+   website, or copy of the software. Accurately stating that something refers
+   to the original DebateOwl project is allowed.
+
+7. Third-party components. Files and packages that come from third parties
+   (for example npm dependencies, fonts, and vendored tools) remain under
+   their own licenses. These terms apply only to the licensor's own work.
+
+For any use these terms do not allow, ask for a separate license at
+hello@debateowl.com.
+
+---
+
+# PolyForm Strict License 1.0.0
+
+<https://polyformproject.org/licenses/strict/1.0.0>
+
+## Acceptance
+
+In order to get any license under these terms, you must agree to them as both strict obligations and conditions to all your licenses.
+
+## Copyright License
+
+The licensor grants you a copyright license for the software to do everything you might do with the software that would otherwise infringe the licensor's copyright in it for any permitted purpose, other than distributing the software or making changes or new works based on the software.
+
+## Patent License
+
+The licensor grants you a patent license for the software that covers patent claims the licensor can license, or becomes able to license, that you would infringe by using the software.
+
+## Noncommercial Purposes
+
+Any noncommercial purpose is a permitted purpose.
+
+## Personal Uses
+
+Personal use for research, experiment, and testing for the benefit of public knowledge, personal study, private entertainment, hobby projects, amateur pursuits, or religious observance, without any anticipated commercial application, is use for a permitted purpose.
+
+## Noncommercial Organizations
+
+Use by any charitable organization, educational institution, public research organization, public safety or health organization, environmental protection organization, or government institution is use for a permitted purpose regardless of the source of funding or obligations resulting from the funding.
+
+## Fair Use
+
+You may have "fair use" rights for the software under the law. These terms do not limit them.
+
+## No Other Rights
+
+These terms do not allow you to sublicense or transfer any of your licenses to anyone else, or prevent the licensor from granting licenses to anyone else.  These terms do not imply any other licenses.
+
+## Patent Defense
+
+If you make any written claim that the software infringes or contributes to infringement of any patent, your patent license for the software granted under these terms ends immediately. If your company makes such a claim, your patent license ends immediately for work on behalf of your company.
+
+## Violations
+
+The first time you are notified in writing that you have violated any of these terms, or done anything with the software not covered by your licenses, your licenses can nonetheless continue if you come into full compliance with these terms, and take practical steps to correct past violations, within 32 days of receiving notice.  Otherwise, all your licenses end immediately.
+
+## No Liability
+
+***As far as the law allows, the software comes as is, without any warranty or condition, and the licensor will not be liable to you for any damages arising out of these terms or the use or nature of the software, under any kind of legal claim.***
+
+## Definitions
+
+The **licensor** is the individual or entity offering these terms, and the **software** is the software the licensor makes available under these terms.
+
+**You** refers to the individual or entity agreeing to these terms.
+
+**Your company** is any legal entity, sole proprietorship, or other kind of organization that you work for, plus all organizations that have control over, are under the control of, or are under common control with that organization.  **Control** means ownership of substantially all the assets of an entity, or the power to direct its management and policies by vote, contract, or otherwise.  Control can be direct or indirect.
+
+**Your licenses** are all the licenses granted to you for the software under these terms.
+
+**Use** means anything you do with the software requiring one of your licenses.
