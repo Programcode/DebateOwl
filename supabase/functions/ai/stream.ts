@@ -79,6 +79,12 @@ export interface StreamFeatureOptions {
    * result and waiting for the browser to read it are bounded by what is left.
    */
   endMs?: number;
+  /**
+   * Called with the final result once it is stored, whether or not the client
+   * is still reading: the iOS app is often suspended by then (a push tells it
+   * the answer is ready). Must not throw or hold the stream.
+   */
+  onResult?: (payload: Record<string, unknown>) => void;
 }
 
 /**
@@ -187,6 +193,11 @@ export function streamFeatureResponse(
       const recordLeft = () => recordBy === undefined ? undefined : Math.max(0, recordBy - Date.now());
       await within(began, recordLeft(), undefined);
       await options.recorder.finish(payload, recordLeft());
+    }
+    try {
+      options.onResult?.(payload);
+    } catch (error) {
+      console.error("[AI_STREAM] onResult failed:", error instanceof Error ? error.message : "Unknown error");
     }
     push(sse("result", payload));
     stop();

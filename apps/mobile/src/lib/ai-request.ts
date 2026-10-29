@@ -201,7 +201,11 @@ export function postAI<T>(
   const startedAt = Date.now();
   const resultKey = `req_${startedAt}_${Math.random().toString(36).slice(2, 8)}`;
   const feature = String(body.feature);
-  return postFunction('ai', { ...body, stream: true, resultKey }, options.signal, async (response, signal) => {
+  // notifyWhenReady: iOS suspends the app soon after it leaves the screen, so the
+  // server pushes "ready" once the answer is stored (Generate, Attack, Brainstorm
+  // and Factoids; it ignores the flag for the rest). push.ts hides that push
+  // while the app is on screen.
+  return postFunction('ai', { ...body, stream: true, resultKey, notifyWhenReady: true }, options.signal, async (response, signal) => {
     // A server from before live generation answers with the whole JSON body.
     if (!(response.headers.get('content-type') ?? '').includes('text/event-stream') || !response.body) {
       return parse(await functionOutput(response));

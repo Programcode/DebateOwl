@@ -22,21 +22,51 @@ export const RECEIPT_DELAY_MS = 15 * 60_000;
 export const RECEIPT_TTL_MS = 24 * 60 * 60_000;
 const REQUEST_TIMEOUT_MS = 10_000;
 
-export type PushNotification = {
-  kind: "sparring_scored";
-  userId: string;
-  sessionId: string;
-};
+/** The tools whose finished live run the app can ask to be told about (`notifyWhenReady`). */
+export type ReadyFeature = "generate" | "attack" | "brainstorm" | "factoids";
+
+export type PushNotification =
+  | { kind: "sparring_scored"; userId: string; sessionId: string }
+  | { kind: "result_ready"; userId: string; feature: ReadyFeature };
 
 type PushLocale = "en" | "es" | "hu";
+type Copy = Record<PushLocale, { title: string; body: string }>;
 
-const COPY: Record<PushNotification["kind"], Record<PushLocale, { title: string; body: string }>> = {
-  sparring_scored: {
-    en: { title: "Your round is scored", body: "See the judge's feedback in DebateLab." },
-    es: { title: "Tu ronda ya está puntuada", body: "Mira los comentarios del juez en DebateLab." },
-    hu: { title: "Elkészült a forduló értékelése", body: "Nézd meg a bíró visszajelzését a DebateLabben." },
+const SPARRING_SCORED: Copy = {
+  en: { title: "Your round is scored", body: "See the judge's feedback in DebateLab." },
+  es: { title: "Tu ronda ya está puntuada", body: "Mira los comentarios del juez en DebateLab." },
+  hu: { title: "Elkészült a forduló értékelése", body: "Nézd meg a bíró visszajelzését a DebateLabben." },
+};
+
+// A live run finished while the app was away. Fixed copy that names the tool only, never the motion.
+const RESULT_READY: Record<ReadyFeature, Copy> = {
+  generate: {
+    en: { title: "Your case is ready", body: "Open DebateOwl to read it." },
+    es: { title: "Tu caso está listo", body: "Abre DebateOwl para leerlo." },
+    hu: { title: "Elkészült az eseted", body: "Nyisd meg a DebateOwlt, hogy elolvasd." },
+  },
+  attack: {
+    en: { title: "Your attack is ready", body: "Open DebateOwl to read it." },
+    es: { title: "Tu ataque está listo", body: "Abre DebateOwl para leerlo." },
+    hu: { title: "Elkészült a támadásod", body: "Nyisd meg a DebateOwlt, hogy elolvasd." },
+  },
+  brainstorm: {
+    en: { title: "Your ideas are ready", body: "Open DebateOwl to read them." },
+    es: { title: "Tus ideas están listas", body: "Abre DebateOwl para leerlas." },
+    hu: { title: "Elkészültek az ötleteid", body: "Nyisd meg a DebateOwlt, hogy elolvasd őket." },
+  },
+  factoids: {
+    en: { title: "Your evidence is ready", body: "Open DebateOwl to read it." },
+    es: { title: "Tus pruebas están listas", body: "Abre DebateOwl para leerlas." },
+    hu: { title: "Elkészültek a bizonyítékaid", body: "Nyisd meg a DebateOwlt, hogy elolvasd őket." },
   },
 };
+
+const READY_FEATURES = new Set<string>(Object.keys(RESULT_READY));
+
+export function isReadyFeature(value: unknown): value is ReadyFeature {
+  return typeof value === "string" && READY_FEATURES.has(value);
+}
 
 export type PushTokenRow = { token: string; user_id: string; locale: string };
 export type PushTicketRow = { id: string; token: string; created_at: string };
@@ -62,7 +92,7 @@ export type ExpoMessage = {
   title: string;
   body: string;
   sound: "default";
-  data: { kind: PushNotification["kind"]; sessionId: string };
+  data: { kind: "sparring_scored"; sessionId: string } | { kind: "result_ready"; feature: ReadyFeature };
 };
 
 type ExpoTicket = { status: "ok"; id: string } | { status: "error"; message?: string; details?: { error?: string } };
@@ -83,14 +113,13 @@ function localeOf(value: string): PushLocale {
 }
 
 function message(notification: PushNotification, row: PushTokenRow): ExpoMessage {
-  const copy = COPY[notification.kind][localeOf(row.locale)];
-  return {
-    to: row.token,
-    title: copy.title,
-    body: copy.body,
-    sound: "default",
-    data: { kind: notification.kind, sessionId: notification.sessionId },
-  };
+  const locale = localeOf(row.locale);
+  if (notification.kind === "result_ready") {
+    const copy = RESULT_READY[notification.feature][locale];
+    return { to: row.token, ...copy, sound: "default", data: { kind: notification.kind, feature: notification.feature } };
+  }
+  const copy = SPARRING_SCORED[locale];
+  return { to: row.token, ...copy, sound: "default", data: { kind: notification.kind, sessionId: notification.sessionId } };
 }
 
 /**

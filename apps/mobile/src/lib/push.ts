@@ -55,9 +55,13 @@ type Registration = { userId: string; token: string; id: string; confirmed: bool
 // flight instead of before it, and the next account never inherits the row.
 const serial = createSerialQueue();
 
-// Shown while the app is open too; without a handler iOS drops it.
+// Shown while the app is open too; without a handler iOS drops it. A "ready"
+// push for a live run is not: on screen, the answer itself has arrived.
 Notifications.setNotificationHandler({
-  handleNotification: async () => ({ shouldShowBanner: true, shouldShowList: true, shouldPlaySound: false, shouldSetBadge: false }),
+  handleNotification: async (notification) => {
+    const show = (notification.request.content.data as { kind?: unknown } | undefined)?.kind !== 'result_ready';
+    return { shouldShowBanner: show, shouldShowList: show, shouldPlaySound: false, shouldSetBadge: false };
+  },
 });
 
 function projectId(): string | undefined {
