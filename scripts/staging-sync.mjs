@@ -27,7 +27,7 @@ import { backendStatus } from "./backend-status.mjs";
 
 export const STAGING_REF = "brifeyypjauyusmkptkx";
 export const PRODUCTION_REF = "uziwdtkzofptihahfooo";
-export const GITHUB_REPO = "Programcode/DebateLab";
+export const GITHUB_REPO = "Programcode/DebateOwl";
 const STATUS_CONTEXT = "staging-sync";
 const DRIFT_ISSUE_TITLE = "Staging is out of sync with main";
 
