@@ -14,6 +14,7 @@ import { useToast } from '@/components/toast';
 import { useAuth } from '@/lib/auth';
 import { useDebates } from '@/lib/debate-context';
 import { haptics } from '@/lib/haptics';
+import { forgetShared, sharedItem } from '@/lib/share-intent';
 import { addSource, fetchSources, importSourceFromUrl, isDuplicateOrigin } from '@/lib/sources';
 import { useCopyHolder } from '@/lib/use-copy-holder';
 import { useLibraryFolders } from '@/lib/use-library-folders';
@@ -31,8 +32,10 @@ export default function AddLinkSheet() {
   const { colors } = useTheme();
   const { session } = useAuth();
   const { current } = useDebates();
-  const shared = useLocalSearchParams<{ url?: string; title?: string }>();
-  const [url, setUrl] = useState(() => (typeof shared.url === 'string' ? shared.url : ''));
+  // Only the share extension's hand-off fills the sheet in (share-intent.ts); route parameters never do.
+  const { shared: fromShare } = useLocalSearchParams<{ shared?: string }>();
+  const [shared] = useState(() => (fromShare ? sharedItem('link') : null));
+  const [url, setUrl] = useState(() => shared?.url ?? '');
   const [draft, setDraft] = useState<SourceImportOutput | null>(null);
   const [title, setTitle] = useState('');
   const [busy, setBusy] = useState<'import' | 'save' | null>(null);
@@ -53,7 +56,7 @@ export default function AddLinkSheet() {
     try {
       const imported = await importSourceFromUrl(trimmed);
       setDraft(imported);
-      setTitle(imported.title || (typeof shared.title === 'string' ? shared.title : ''));
+      setTitle(imported.title || shared?.title || '');
     } catch (cause) {
       console.warn('Could not import the source:', cause instanceof Error ? cause.message : cause);
       setError(`${t('libraryPage.importFailed')}. ${t('libraryPage.importFailedDesc')}`);
@@ -65,12 +68,15 @@ export default function AddLinkSheet() {
   // A shared page is read once the Current Debate is known; the student still checks and saves it.
   const autoImported = useRef(false);
   useEffect(() => {
-    if (autoImported.current || !shared.url || !current) return;
+    if (fromShare) forgetShared();
+  }, [fromShare]);
+  useEffect(() => {
+    if (autoImported.current || !shared || !current) return;
     autoImported.current = true;
     void runImport();
-    // runImport reads the address set from the same parameter; it runs once per opening.
+    // runImport reads the address the hand-off filled in; it runs once per opening.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [shared.url, current]);
+  }, [shared, current]);
 
   const save = async () => {
     const userId = session?.user.id;
@@ -121,7 +127,7 @@ export default function AddLinkSheet() {
             keyboardType="url"
             autoCapitalize="none"
             autoCorrect={false}
-            autoFocus={!shared.url}
+            autoFocus={!shared}
             returnKeyType="go"
             onSubmitEditing={() => void runImport()}
             editable={busy === null}

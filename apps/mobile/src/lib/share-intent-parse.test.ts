@@ -55,8 +55,8 @@ describe('noteTitleFrom', () => {
 });
 
 describe('sharedItemRoute', () => {
-  it('opens Add link for a link and New note for text', () => {
-    expect(sharedItemRoute({ kind: 'link', url: 'https://example.org' })).toEqual({ pathname: '/add-link', params: { url: 'https://example.org' } });
+  it('opens Add link for a link and New note for text, with nothing shared in the route', () => {
+    expect(sharedItemRoute({ kind: 'link', url: 'https://example.org', title: 'Page' })).toEqual({ pathname: '/add-link', params: { shared: '1' } });
     expect(sharedItemRoute({ kind: 'text', text: 'Body', title: 'Body' })).toEqual({ pathname: '/new-note', params: { shared: '1' } });
   });
 });

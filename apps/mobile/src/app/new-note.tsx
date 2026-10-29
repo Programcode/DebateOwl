@@ -13,7 +13,7 @@ import { useAuth } from '@/lib/auth';
 import { useDebates } from '@/lib/debate-context';
 import { haptics } from '@/lib/haptics';
 import { queueAddSource } from '@/lib/offline-queue';
-import { forgetSharedNote, sharedNote } from '@/lib/share-intent';
+import { forgetShared, sharedItem } from '@/lib/share-intent';
 import { useLibraryFolders } from '@/lib/use-library-folders';
 import { useTheme } from '@/theme/use-theme';
 
@@ -29,10 +29,10 @@ export default function NewNoteSheet() {
   const { session } = useAuth();
   const { current } = useDebates();
   const { shared } = useLocalSearchParams<{ shared?: string }>();
-  const [title, setTitle] = useState(() => (shared ? sharedNote()?.title ?? '' : ''));
-  const [content, setContent] = useState(() => (shared ? sharedNote()?.text ?? '' : ''));
+  const [title, setTitle] = useState(() => (shared ? sharedItem('text')?.title ?? '' : ''));
+  const [content, setContent] = useState(() => (shared ? sharedItem('text')?.text ?? '' : ''));
   useEffect(() => {
-    if (shared) forgetSharedNote();
+    if (shared) forgetShared();
   }, [shared]);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');

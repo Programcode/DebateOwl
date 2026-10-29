@@ -11,7 +11,7 @@ import { Card, IconTile, ListItemIn, usePressScale } from '@/components/card';
 import { Chip } from '@/components/chip';
 import { DocumentHeader } from '@/components/document-header';
 import { Icon } from '@/components/icon';
-import { Screen } from '@/components/screen';
+import { CardRowFrame, ListScreen, useRowArrivals } from '@/components/list-screen';
 import { SkeletonRows } from '@/components/skeleton';
 import { Text } from '@/components/text';
 import { KIND_ICONS, workHref } from '@/components/work-row';
@@ -99,6 +99,7 @@ function historyHref(item: HistoryItem): Href | null {
 /** The website's History (src/pages/HistoryPage.tsx): saved work per debate, and work outside every debate. */
 export default function HistoryScreen() {
   const { t } = useTranslation();
+  const router = useRouter();
   const { from } = useLocalSearchParams<{ from?: string }>();
   const { session } = useAuth();
   const userId = session?.user.id ?? null;
@@ -205,66 +206,139 @@ export default function HistoryScreen() {
     void refreshDebates();
   };
 
+  // The attach notice belongs to the list it was shown for.
+  const [attachNotice, setAttachNotice] = useState<{ scope: string; text: string } | null>(null);
+  const notice = attachNotice?.scope === scope ? attachNotice.text : null;
+
+  const rows: HistoryListRow[] = !shown
+    ? []
+    : shown.kind === 'unsorted'
+      ? shown.entries.map((entry) => ({ type: 'unsorted', key: `${entry.kind}-${entry.id}`, entry }))
+      : shown.lists[tab].map((item) => ({ type: 'item', key: `${item.kind}-${item.id}`, item }));
+  const arrivals = useRowArrivals(rows.map((row) => row.key));
+
+  const header = (
+    <>
+      <Text accessibilityRole="header" weight="display" style={styles.title}>
+        {t('historyPage.title')}
+      </Text>
+      <ScopePicker label={scopeLabel} onPress={() => setScopeOpen(true)} />
+      <ActionMenu
+        visible={scopeOpen}
+        title={t('debate.historyScope')}
+        items={[
+          ...debates.map((debate) => ({
+            key: debate.id,
+            label: `${debate.id === current?.id ? `${t('nav.currentDebate')}: ` : ''}${debate.motion}`,
+          })),
+          { key: OUTSIDE, label: t('debate.outsideDebates') },
+        ]}
+        cancelLabel={t('common.cancel')}
+        onClose={() => setScopeOpen(false)}
+        onSelect={(key) => {
+          if (key !== scope) haptics.select();
+          setScopeChoice(key);
+        }}
+        testID="history-scope-menu"
+      />
+
+      {scope !== OUTSIDE ? (
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.tabRow} contentContainerStyle={styles.tabs} accessibilityRole="tablist">
+          {HISTORY_TABS.map((entry) => (
+            <Chip
+              key={entry.key}
+              accessibilityRole="tab"
+              icon={KIND_ICONS[entry.kind]}
+              label={t(`historyPage.tab${entry.key[0].toUpperCase()}${entry.key.slice(1)}`)}
+              selected={tab === entry.key}
+              onPress={() => setTab(entry.key)}
+              testID={`history-tab-${entry.key}`}
+            />
+          ))}
+        </ScrollView>
+      ) : null}
+
+      {shown?.kind === 'unsorted' && shown.entries.length > 0 ? (
+        <>
+          <Text tone="secondary" style={styles.body}>
+            {t('debate.unsortedDesc')}
+          </Text>
+          {notice ? (
+            <Text weight="semibold" accessibilityRole="alert" accessibilityLiveRegion="polite" style={styles.body} testID="unsorted-notice">
+              {notice}
+            </Text>
+          ) : null}
+        </>
+      ) : null}
+    </>
+  );
+
+  const empty =
+    failed === scope && !shown ? (
+      <Card>
+        <Text tone="secondary" style={styles.body}>
+          {t('mobile.history.loadFailed')}
+        </Text>
+        <TextButton label={t('common.retry')} onPress={() => void load(scope)} />
+      </Card>
+    ) : !shown ? (
+      <SkeletonRows rows={4} />
+    ) : shown.kind === 'unsorted' ? (
+      <UnsortedEmpty notice={notice} />
+    ) : (
+      <TabEmpty tab={tab} />
+    );
+
   return (
     <View style={styles.root}>
       <DocumentHeader backLabel={backLabel(t, from, 'debate')} actions={[]} />
-      <Screen>
-        <Text accessibilityRole="header" weight="display" style={styles.title}>
-          {t('historyPage.title')}
-        </Text>
-        <ScopePicker label={scopeLabel} onPress={() => setScopeOpen(true)} />
-        <ActionMenu
-          visible={scopeOpen}
-          title={t('debate.historyScope')}
-          items={[
-            ...debates.map((debate) => ({
-              key: debate.id,
-              label: `${debate.id === current?.id ? `${t('nav.currentDebate')}: ` : ''}${debate.motion}`,
-            })),
-            { key: OUTSIDE, label: t('debate.outsideDebates') },
-          ]}
-          cancelLabel={t('common.cancel')}
-          onClose={() => setScopeOpen(false)}
-          onSelect={(key) => {
-            if (key !== scope) haptics.select();
-            setScopeChoice(key);
-          }}
-          testID="history-scope-menu"
-        />
-
-        {scope !== OUTSIDE ? (
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.tabRow} contentContainerStyle={styles.tabs} accessibilityRole="tablist">
-            {HISTORY_TABS.map((entry) => (
-              <Chip
-                key={entry.key}
-                accessibilityRole="tab"
-                icon={KIND_ICONS[entry.kind]}
-                label={t(`historyPage.tab${entry.key[0].toUpperCase()}${entry.key.slice(1)}`)}
-                selected={tab === entry.key}
-                onPress={() => setTab(entry.key)}
-                testID={`history-tab-${entry.key}`}
-              />
-            ))}
-          </ScrollView>
-        ) : null}
-
-        {failed === scope && !shown ? (
-          <Card>
-            <Text tone="secondary" style={styles.body}>
-              {t('mobile.history.loadFailed')}
-            </Text>
-            <TextButton label={t('common.retry')} onPress={() => void load(scope)} />
-          </Card>
-        ) : !shown ? (
-          <SkeletonRows rows={4} />
-        ) : shown.kind === 'unsorted' ? (
-          <UnsortedList entries={shown.entries} debates={debates} userId={userId} onAttached={attached} />
-        ) : (
-          <TabList tab={tab} items={shown.lists[tab]} onDelete={remove} />
-        )}
-      </Screen>
+      <ListScreen
+        header={header}
+        data={rows}
+        keyExtractor={(row) => row.key}
+        extraData={notice}
+        animateLayout
+        ListEmptyComponent={empty}
+        ItemSeparatorComponent={shown?.kind === 'unsorted' ? UnsortedGap : undefined}
+        renderItem={({ item: row, index }) => {
+          if (row.type === 'unsorted') {
+            return (
+              <ListItemIn index={index} enter={arrivals.entersNow(row.key)}>
+                <UnsortedRow
+                  entry={row.entry}
+                  debates={debates}
+                  userId={userId}
+                  onAttached={() => {
+                    setAttachNotice({ scope, text: t('debate.attached') });
+                    attached(row.entry);
+                  }}
+                />
+              </ListItemIn>
+            );
+          }
+          const href = historyHref(row.item);
+          return (
+            <CardRowFrame index={index} count={rows.length}>
+              <ListItemIn index={index} enter={arrivals.entersNow(row.key)}>
+                <HistoryRow
+                  item={row.item}
+                  first={index === 0}
+                  onPress={href ? () => router.push(href) : undefined}
+                  onDelete={row.item.kind === 'case' || row.item.kind === 'sparring' ? () => remove(row.item) : undefined}
+                />
+              </ListItemIn>
+            </CardRowFrame>
+          );
+        }}
+      />
     </View>
   );
+}
+
+type HistoryListRow = { type: 'item'; key: string; item: HistoryItem } | { type: 'unsorted'; key: string; entry: UnsortedEntry };
+
+function UnsortedGap() {
+  return <View style={styles.gap} />;
 }
 
 function ScopePicker({ label, onPress }: { label: string; onPress: () => void }) {
@@ -290,33 +364,14 @@ function ScopePicker({ label, onPress }: { label: string; onPress: () => void })
   );
 }
 
-function TabList({ tab, items, onDelete }: { tab: HistoryTab; items: HistoryItem[]; onDelete: (item: HistoryItem) => Promise<boolean> }) {
+function TabEmpty({ tab }: { tab: HistoryTab }) {
   const { t } = useTranslation();
   const router = useRouter();
-  if (items.length === 0) {
-    const empty = EMPTY[tab];
-    return (
-      <EmptyState pose="sleepy" title={t(empty.title)} description={t(empty.desc)}>
-        {empty.href ? <TextButton label={t(empty.action)} onPress={() => router.push(empty.href!)} /> : null}
-      </EmptyState>
-    );
-  }
+  const empty = EMPTY[tab];
   return (
-    <Card style={styles.list}>
-      {items.map((item, index) => {
-        const href = historyHref(item);
-        return (
-          <ListItemIn key={`${item.kind}-${item.id}`} index={index} layout>
-            <HistoryRow
-              item={item}
-              first={index === 0}
-              onPress={href ? () => router.push(href) : undefined}
-              onDelete={item.kind === 'case' || item.kind === 'sparring' ? () => onDelete(item) : undefined}
-            />
-          </ListItemIn>
-        );
-      })}
-    </Card>
+    <EmptyState pose="sleepy" title={t(empty.title)} description={t(empty.desc)}>
+      {empty.href ? <TextButton label={t(empty.action)} onPress={() => router.push(empty.href!)} /> : null}
+    </EmptyState>
   );
 }
 
@@ -437,61 +492,23 @@ function HistoryRow({ item, first, onPress, onDelete }: { item: HistoryItem; fir
   );
 }
 
-/** The website's UnsortedWork: one-off and older work outside every debate, each with "Add to debate". */
-function UnsortedList({
-  entries,
-  debates,
-  userId,
-  onAttached,
-}: {
-  entries: UnsortedEntry[];
-  debates: Debate[];
-  userId: string | null;
-  onAttached: (entry: UnsortedEntry) => void;
-}) {
+/** The website's UnsortedWork with nothing in it. Its rows ("Add to debate") are UnsortedRow. */
+function UnsortedEmpty({ notice }: { notice: string | null }) {
   const { t } = useTranslation();
-  const [notice, setNotice] = useState<string | null>(null);
-  if (entries.length === 0) {
-    return (
-      <Card>
-        <Text weight="semibold" style={styles.rowTitle}>
-          {t('debate.unsortedEmpty')}
-        </Text>
-        <Text tone="secondary" style={styles.body}>
-          {t('debate.unsortedEmptyDesc')}
-        </Text>
-        {notice ? (
-          <Text tone="secondary" accessibilityRole="alert" accessibilityLiveRegion="polite" style={styles.body} testID="unsorted-notice">
-            {notice}
-          </Text>
-        ) : null}
-      </Card>
-    );
-  }
   return (
-    <>
+    <Card>
+      <Text weight="semibold" style={styles.rowTitle}>
+        {t('debate.unsortedEmpty')}
+      </Text>
       <Text tone="secondary" style={styles.body}>
-        {t('debate.unsortedDesc')}
+        {t('debate.unsortedEmptyDesc')}
       </Text>
       {notice ? (
-        <Text weight="semibold" accessibilityRole="alert" accessibilityLiveRegion="polite" style={styles.body} testID="unsorted-notice">
+        <Text tone="secondary" accessibilityRole="alert" accessibilityLiveRegion="polite" style={styles.body} testID="unsorted-notice">
           {notice}
         </Text>
       ) : null}
-      {entries.map((entry, index) => (
-        <ListItemIn key={`${entry.kind}-${entry.id}`} index={index} layout>
-          <UnsortedRow
-            entry={entry}
-            debates={debates}
-            userId={userId}
-            onAttached={() => {
-              setNotice(t('debate.attached'));
-              onAttached(entry);
-            }}
-          />
-        </ListItemIn>
-      ))}
-    </>
+    </Card>
   );
 }
 
@@ -589,7 +606,7 @@ const styles = StyleSheet.create({
   scope: { flexDirection: 'row', alignItems: 'center', gap: 12, borderWidth: 2, borderRadius: 14, paddingVertical: 11, paddingHorizontal: 14 },
   tabRow: { marginHorizontal: -20, flexGrow: 0 },
   tabs: { gap: 8, paddingHorizontal: 20 },
-  list: { padding: 0, gap: 0, overflow: 'hidden' },
+  gap: { height: 16 },
   row: { flexDirection: 'row', alignItems: 'center', gap: 13, paddingVertical: 12, paddingHorizontal: 14 },
   rowText: { flex: 1, gap: 2 },
   rowTitle: { fontSize: 16, lineHeight: 21 },

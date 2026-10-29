@@ -26,16 +26,17 @@ type ShareIntentModule = {
 let pendingUrl: string | null = null;
 const urlListeners = new Set<(url: string) => void>();
 
-// The shared text New note opens with, read once.
-let heldNote: { text: string; title: string } | null = null;
+// What the sheet opened by the share extension fills in, read once. Only useShareIntent sets it,
+// so the sheets' own route parameters can never start an import.
+let held: SharedItem | null = null;
 
-/** The shared note New note was opened for, if any; `forget` once it is in the form. */
-export function sharedNote(): { text: string; title: string } | null {
-  return heldNote;
+/** The shared item of this kind the sheet was opened for, if any; `forgetShared` once it is in the form. */
+export function sharedItem<K extends SharedItem['kind']>(kind: K): Extract<SharedItem, { kind: K }> | null {
+  return held?.kind === kind ? (held as Extract<SharedItem, { kind: K }>) : null;
 }
 
-export function forgetSharedNote(): void {
-  heldNote = null;
+export function forgetShared(): void {
+  held = null;
 }
 
 /** Called by +native-intent.tsx with the share extension's URL. */
@@ -90,7 +91,7 @@ export function useShareIntent(ready: boolean): void {
     // After the stack has committed its first screens, as useQuickActions does.
     const timer = setTimeout(() => {
       setItem(null);
-      heldNote = item.kind === 'text' ? { text: item.text, title: item.title } : null;
+      held = item;
       router.push(sharedItemRoute(item));
     }, 0);
     return () => clearTimeout(timer);

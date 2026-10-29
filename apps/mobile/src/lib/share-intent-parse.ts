@@ -92,13 +92,11 @@ export function parseSharedItem(value: unknown): SharedItem | null {
 }
 
 /**
- * The sheet a shared item opens. A link's address goes in the route; a note's
- * text can be long, so it is handed over beside the route (share-intent.ts's
- * held note) and the route only says there is one.
+ * The sheet a shared item opens. What was shared never travels in the route:
+ * share-intent.ts holds it for the sheet, and the route only says it is there,
+ * so a link from anywhere else (debatelab://add-link?url=…) cannot start an
+ * import or fill in a note.
  */
-export function sharedItemRoute(item: SharedItem):
-  | { pathname: '/add-link'; params: { url: string; title?: string } }
-  | { pathname: '/new-note'; params: { shared: '1' } } {
-  if (item.kind === 'link') return { pathname: '/add-link', params: item.title ? { url: item.url, title: item.title } : { url: item.url } };
-  return { pathname: '/new-note', params: { shared: '1' } };
+export function sharedItemRoute(item: SharedItem): { pathname: '/add-link' | '/new-note'; params: { shared: '1' } } {
+  return { pathname: item.kind === 'link' ? '/add-link' : '/new-note', params: { shared: '1' } };
 }
