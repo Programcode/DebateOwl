@@ -98,8 +98,8 @@ function withDefaults(source: Source): Source {
  */
 
 /** One debate's sources, newest first, as the website's Library lists them by default. Offline, the saved copy. */
-export function fetchSources(userId: string, debateId: string, mark?: CopyMark): Promise<Source[]> {
-  return cachedRead(userId, 'sources', debateId, () => loadSources(userId, debateId), mark).then((sources) => sources.map(withDefaults));
+export function fetchSources(userId: string, debateId: string, mark?: CopyMark, onCopy?: (value: Source[]) => void): Promise<Source[]> {
+  return cachedRead(userId, 'sources', debateId, () => loadSources(userId, debateId), mark, onCopy && ((sources) => onCopy(sources.map(withDefaults)))).then((sources) => sources.map(withDefaults));
 }
 
 async function loadSources(userId: string, debateId: string): Promise<Source[]> {

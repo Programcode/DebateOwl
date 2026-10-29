@@ -9,6 +9,7 @@ import { SheetScrollView } from '@/components/sheet';
 import { Text } from '@/components/text';
 import { useDebates } from '@/lib/debate-context';
 import { formatRelativeDate } from '@/lib/dates';
+import { useLatest } from '@/lib/live-value';
 import { haptics } from '@/lib/haptics';
 import { useTheme } from '@/theme/use-theme';
 
@@ -25,12 +26,11 @@ export default function DebateCheckSheet() {
   const [continuing, setContinuing] = useState(false);
   const [error, setError] = useState('');
   const answered = useRef(false);
-  const latest = useRef(continueCurrent);
-  latest.current = continueCurrent;
+  const latest = useLatest(continueCurrent);
 
   useEffect(() => () => {
     if (!answered.current) latest.current().catch(() => {});
-  }, []);
+  }, [latest]);
 
   const keep = async () => {
     if (continuing) return;

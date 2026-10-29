@@ -2,10 +2,11 @@ import { generateDraftSections } from '@debatelab/core/ai/live-sections';
 import { GenerateInputSchema, type GenerateInput } from '@debatelab/core/ai/schemas/generate';
 import { MAX_MOTION_LENGTH } from '@debatelab/core/validation/motion';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { StyleSheet, View } from 'react-native';
 
+import { runRequest } from '@/lib/run-request';
 import { MainActionButton } from '@/components/buttons';
 import { markCelebration } from '@/components/celebration';
 import { DocumentScreen } from '@/components/document';
@@ -65,10 +66,16 @@ export default function GenerateScreen() {
   const abort = useRef<AbortController | null>(null);
   const live = useRef(true);
   const liveRun = useLiveRun({ tool: 'case', parts: (draft) => generateDraftSections(draft, t).length });
+  const setForm = useCallback((patch: Partial<GenerateInput>) =>
+    setFormState((previous) => {
+      const next = { ...previous, ...patch };
+      lastForm.set(next);
+      return next;
+    }), []);
   // Dictation fills the motion, as the website's microphone beside it does. The
   // ref holds words that arrived before the last ones were drawn.
   const motionRef = useRef(form.motion);
-  motionRef.current = form.motion;
+  useLayoutEffect(() => { motionRef.current = form.motion; }, [form.motion]);
   const dictation = useSpeechCapture(language, (text) => {
     const motion = appendDictation(motionRef.current, text, MAX_MOTION_LENGTH);
     motionRef.current = motion;
@@ -76,12 +83,6 @@ export default function GenerateScreen() {
     setMotionError(false);
   });
 
-  const setForm = useCallback((patch: Partial<GenerateInput>) =>
-    setFormState((previous) => {
-      const next = { ...previous, ...patch };
-      lastForm.set(next);
-      return next;
-    }), []);
 
   const endLiveRun = liveRun.end;
   const abortActive = useCallback(() => {
@@ -125,7 +126,7 @@ export default function GenerateScreen() {
     abort.current = controller;
     setError(null);
     setPhase('generating');
-    try {
+    return await runRequest(async () => {
       const [config, debateContext] = await Promise.all([
         readFeatureConfig(forUser, 'generate'),
         debateId ? buildDebateContext(forUser, debateId, 'generate', input.side) : Promise.resolve(undefined),
@@ -148,12 +149,12 @@ export default function GenerateScreen() {
       let savedId: string | null = null;
       let recordFailed = false;
       if (debateId) {
-        try {
+        await runRequest(async () => {
           savedId = await recordResult(forUser, 'case', { title: input.motion, input, output: result, debateId, side: input.side });
-        } catch (cause) {
+        }, async (cause) => {
           console.warn('Could not save the case to the debate:', cause instanceof Error ? cause.message : cause);
           recordFailed = true;
-        }
+        });
       }
       if (!isCurrent()) return;
       const key = keepOpenResult({
@@ -175,7 +176,7 @@ export default function GenerateScreen() {
         pathname: '/case/[id]',
         params: { id: key, from: from ?? 'prepare', ...(notice ? { notice } : {}), ...(sources.failed > 0 ? { failed: String(sources.failed) } : {}) },
       });
-    } catch (cause) {
+    }, async (cause) => {
       if (!isCurrent() || isAbortError(cause)) return;
       const kind = cause instanceof AIError ? cause.kind : 'failed';
       if (!(cause instanceof AIError)) console.warn('Generate failed:', cause instanceof Error ? cause.message : cause);
@@ -186,9 +187,9 @@ export default function GenerateScreen() {
       // A limit or model refusal opens the website's dialog as a sheet, not an inline error.
       if (openRefusal(router, cause, 'generate')) return;
       setError(kind);
-    } finally {
+    }, () => {
       if (requests.current === request) abort.current = null;
-    }
+    });
   };
 
   const submit = async () => {
@@ -215,18 +216,20 @@ export default function GenerateScreen() {
     });
     if (!choice || !live.current) return;
     let debateId: string | null = null;
-    try {
+    const selected = await runRequest(async () => {
       if (choice.kind === 'switch') {
         await switchTo(choice.debateId);
         debateId = choice.debateId;
       } else if (choice.kind === 'create') {
         debateId = (await create({ motion: input.motion, settings: {} })).id;
       }
-    } catch (cause) {
+      return true;
+    }, async (cause) => {
       console.warn('Could not save the debate:', cause instanceof Error ? cause.message : cause);
       if (live.current) setError('debate');
-      return;
-    }
+      return false;
+    });
+    if (!selected) return;
     if (live.current) void start(input, debateId, forUser);
   };
 
@@ -248,7 +251,7 @@ export default function GenerateScreen() {
         <LiveToolRun
           label={t('generate.working')}
           run={liveRun.state}
-          sections={liveRun.state.draft ? generateDraftSections(liveRun.state.draft, t) : []}
+          sections={generateDraftSections}
           detail={form.motion}
           onCancel={cancel}
           pose="thinking"

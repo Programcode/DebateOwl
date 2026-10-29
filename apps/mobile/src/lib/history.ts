@@ -145,8 +145,8 @@ async function fetchRounds(userId: string, scope: Scope): Promise<HistoryItem[]>
 }
 
 /** The seven lists of one debate. Offline, the saved copy. */
-export function fetchDebateHistory(userId: string, debateId: string, mark?: CopyMark): Promise<HistoryLists> {
-  return cachedRead(userId, 'history', debateId, () => loadDebateHistory(userId, debateId), mark);
+export function fetchDebateHistory(userId: string, debateId: string, mark?: CopyMark, onCopy?: (value: HistoryLists) => void): Promise<HistoryLists> {
+  return cachedRead(userId, 'history', debateId, () => loadDebateHistory(userId, debateId), mark, onCopy);
 }
 
 async function loadDebateHistory(userId: string, debateId: string): Promise<HistoryLists> {
@@ -164,8 +164,8 @@ async function loadDebateHistory(userId: string, debateId: string): Promise<Hist
 }
 
 /** Work of every kind and Library sources that belong to no debate, newest first. Offline, the saved copy. */
-export function fetchUnsortedWork(userId: string, mark?: CopyMark): Promise<UnsortedEntry[]> {
-  return cachedRead(userId, 'history', 'one-off', () => loadUnsortedWork(userId), mark);
+export function fetchUnsortedWork(userId: string, mark?: CopyMark, onCopy?: (value: UnsortedEntry[]) => void): Promise<UnsortedEntry[]> {
+  return cachedRead(userId, 'history', 'one-off', () => loadUnsortedWork(userId), mark, onCopy);
 }
 
 async function loadUnsortedWork(userId: string): Promise<UnsortedEntry[]> {

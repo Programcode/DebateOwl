@@ -1,3 +1,4 @@
+import type { TFunction } from 'i18next';
 import type { LiveGeneration, LivePhase } from '@debatelab/core/ai/live';
 import type { DraftBlock, DraftSection } from '@debatelab/core/ai/live-sections';
 import { useCallback, useEffect, useRef, useState } from 'react';
@@ -12,6 +13,7 @@ import { ToolProgress } from './tool-form';
 
 import { beginGeneratingActivity, type GeneratingActivityHandle } from '@/lib/generating-activity';
 import type { GeneratingTool } from '@/lib/generating-activity-state';
+import { useLatest, useLiveValue, useLiveValueStore, type LiveValue } from '@/lib/live-value';
 import { noteFinishedResult } from '@/lib/review-prompt';
 import { motionSetting, SPRING } from '@/theme/motion';
 import { radius } from '@/theme/colors';
@@ -43,20 +45,22 @@ export interface LiveRunActivity {
  * marks it ready, `end('failed')` as failed, and any other end takes it away.
  */
 export function useLiveRun(activity?: LiveRunActivity) {
-  const [state, setState] = useState<LiveRunState>({});
+  const state = useLiveValueStore<LiveRunState>({});
   const run = useRef(0);
   const live = useRef(true);
   const lockScreen = useRef<GeneratingActivityHandle | null>(null);
-  const activityRef = useRef(activity);
-  activityRef.current = activity;
-  useEffect(() => () => {
-    live.current = false;
-    lockScreen.current?.finish('cancelled');
+  const activityRef = useLatest(activity);
+  useEffect(() => {
+    live.current = true;
+    return () => {
+      live.current = false;
+      lockScreen.current?.finish('cancelled');
+    };
   }, []);
 
   const begin = useCallback((title?: string): LiveGeneration => {
     const id = ++run.current;
-    setState({});
+    state.set({});
     lockScreen.current?.finish('cancelled');
     const tool = activityRef.current;
     const handle = tool && title ? beginGeneratingActivity(tool.tool, title) : null;
@@ -67,26 +71,26 @@ export function useLiveRun(activity?: LiveRunActivity) {
     return {
       onDraft: (draft) => {
         if (!current()) return;
-        setState((previous) => ({ ...previous, phase: 'writing', draft }));
+        state.set((previous) => ({ ...previous, phase: 'writing', draft }));
         phase = 'writing';
         parts = activityRef.current?.parts(draft) ?? parts;
         handle?.update({ phase, parts });
       },
       onPhase: (next) => {
         if (!current()) return;
-        setState((previous) => ({ ...previous, phase: next }));
+        state.set((previous) => ({ ...previous, phase: next }));
         phase = next;
         handle?.update({ phase, parts });
       },
     };
-  }, []);
+  }, [state, activityRef]);
 
   const end = useCallback((outcome: 'failed' | 'cancelled' = 'cancelled') => {
     run.current += 1;
     lockScreen.current?.finish(outcome);
     lockScreen.current = null;
-    if (live.current) setState({});
-  }, []);
+    if (live.current) state.set({});
+  }, [state]);
 
   /** The answer arrived: the Lock Screen says it is ready. The screen moves on to the document itself. */
   const complete = useCallback(() => {
@@ -121,7 +125,7 @@ function usePhaseLabel(phase: LivePhase | undefined, fallback: string): string {
 /** A blinking bar where the model is writing; steady under Reduce Motion, as on the website. */
 function Caret() {
   const { colors } = useTheme();
-  const opacity = useRef(new Animated.Value(1)).current;
+  const [opacity] = useState(() => new Animated.Value(1));
   const reduceMotion = useReduceMotion();
   useEffect(() => {
     if (reduceMotion) {
@@ -190,14 +194,14 @@ function Block({ block, writing }: { block: DraftBlock; writing: boolean }) {
 export function LiveToolRun({
   label,
   run,
-  sections,
+  sections: buildSections,
   detail,
   onCancel,
   pose,
 }: {
   label: string;
-  run: LiveRunState;
-  sections: DraftSection[];
+  run: LiveValue<LiveRunState>;
+  sections: (draft: Record<string, unknown>, t: TFunction) => DraftSection[];
   detail?: string;
   onCancel: () => void;
   /** The tool's own owl before the answer starts; the phase picks it otherwise. */
@@ -206,21 +210,23 @@ export function LiveToolRun({
   const reduceMotion = useReduceMotion();
   const { t } = useTranslation();
   const { colors } = useTheme();
-  const status = usePhaseLabel(run.phase, label);
+  const state = useLiveValue(run);
+  const sections = state.draft ? buildSections(state.draft, t) : [];
+  const status = usePhaseLabel(state.phase, label);
   const elapsed = useElapsedSeconds();
   // The owl looks things up while researching or checking sources, as on the website.
   if (sections.length === 0) {
-    const looking = run.phase === 'research' || run.phase === 'checking';
-    return <ToolProgress step={run.phase} pose={looking ? 'skeptical' : pose ?? 'idea'} messages={[status]} detail={detail} elapsed={elapsed} onCancel={onCancel} />;
+    const looking = state.phase === 'research' || state.phase === 'checking';
+    return <ToolProgress step={state.phase} pose={looking ? 'skeptical' : pose ?? 'idea'} messages={[status]} detail={detail} elapsed={elapsed} onCancel={onCancel} />;
   }
 
-  const writing = run.phase === 'writing';
+  const writing = state.phase === 'writing';
   const lastSection = sections.length - 1;
   const lastBlock = sections[lastSection].blocks.length - 1;
   return (
     <View style={styles.root} testID="live-draft">
       <View style={[styles.strip, { backgroundColor: colors.tile, borderColor: colors.tileBorder }]}>
-        <OwlAvatar pose={writing ? 'point' : run.phase === 'checking' ? 'skeptical' : run.phase === 'research' ? 'reading' : 'idea'} size={36} blink />
+        <OwlAvatar pose={writing ? 'point' : state.phase === 'checking' ? 'skeptical' : state.phase === 'research' ? 'reading' : 'idea'} size={36} blink />
         <View style={styles.stripText}>
           <Text weight="bold" style={styles.stripStatus} accessibilityRole="progressbar" accessibilityLiveRegion="polite">
             {writing ? t('tools.live.writingLive') : status}

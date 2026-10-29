@@ -31,7 +31,7 @@ vi.mock('expo-network', () => ({
 let offlineFailure: () => Promise<never>;
 
 function deferred<T>() {
-  let resolve!: (value: T) => void;
+  let resolve!: (value: T | PromiseLike<T>) => void;
   const promise = new Promise<T>((done) => {
     resolve = done;
   });
@@ -390,4 +390,110 @@ describe('after a write', () => {
     expect(offline.currentId).toBe('debate-2');
     expect(offline.debates[0].id).toBe('debate-2');
   });
+});
+
+describe('copy-first refreshes', () => {
+  it('shows the copy while refreshing without marking it offline, then returns the fresh answer', async () => {
+    const cache = await load();
+    cache.setCacheOwner('user-a');
+    await cache.cachedRead('user-a', 'sources', 'debate-1', async () => ['saved']);
+    await cache.copiesWritten();
+    const response = deferred<string[]>();
+    const onCopy = vi.fn();
+    const refresh = cache.cachedRead('user-a', 'sources', 'debate-1', () => response.promise, undefined, onCopy);
+    await cache.copiesWritten();
+    expect(onCopy).toHaveBeenCalledWith(['saved']);
+    expect(cache.getOfflineStatus().savedCopies).toBe(false);
+    response.resolve(['fresh']);
+    await expect(refresh).resolves.toEqual(['fresh']);
+    await expect(cache.cachedRead('user-a', 'sources', 'debate-1', offlineFailure)).resolves.toEqual(['fresh']);
+  });
+
+  it('keeps the copy and marks it offline only when the refresh gets no answer', async () => {
+    const cache = await load();
+    cache.setCacheOwner('user-a');
+    await cache.cachedRead('user-a', 'sources', 'debate-1', async () => ['saved']);
+    const onCopy = vi.fn();
+    const response = deferred<string[]>();
+    const refresh = cache.cachedRead('user-a', 'sources', 'debate-1', () => response.promise, undefined, onCopy);
+    await cache.copiesWritten();
+    expect(onCopy).toHaveBeenCalledWith(['saved']);
+    response.resolve(offlineFailure());
+    await expect(refresh).resolves.toEqual(['saved']);
+    expect(cache.getOfflineStatus().savedCopies).toBe(true);
+  });
+
+  it.each([401, 403, 500])('still throws a server error (%s) after showing a copy', async (status) => {
+    const cache = await load();
+    cache.setCacheOwner('user-a');
+    await cache.cachedRead('user-a', 'sources', 'debate-1', async () => ['saved']);
+    const response = deferred<string[]>();
+    const onCopy = vi.fn();
+    const refresh = cache.cachedRead('user-a', 'sources', 'debate-1', () => response.promise, undefined, onCopy);
+    await cache.copiesWritten();
+    expect(onCopy).toHaveBeenCalledWith(['saved']);
+    response.resolve(Promise.reject(cache.readFailed({ message: 'Refused' }, status)));
+    await expect(refresh).rejects.toThrow('Refused');
+    expect(cache.getOfflineStatus().savedCopies).toBe(false);
+  });
+});
+
+it('does not deliver an early copy after its screen releases the load or its owner changes', async () => {
+  const cache = await load();
+  cache.setCacheOwner('user-a');
+  await cache.cachedRead('user-a', 'sources', 'debate-1', async () => ['A secret']);
+  const holder = new cache.CopyHolder();
+  const onCopy = vi.fn();
+  const response = deferred<string[]>();
+  const refresh = cache.cachedRead('user-a', 'sources', 'debate-1', () => response.promise, holder.mark(), onCopy);
+  holder.release();
+  cache.setCacheOwner('user-b');
+  await cache.copiesWritten();
+  expect(onCopy).not.toHaveBeenCalled();
+  response.resolve(['A refreshed']);
+  await refresh;
+  await cache.copiesWritten();
+  expect([...storage.values()].some((raw) => raw.includes('A secret') || raw.includes('A refreshed'))).toBe(false);
+});
+
+it('does not write an unchanged Library payload again, but keeps same-id edits', async () => {
+  const cache = await load();
+  const asyncStorage = (await import('@react-native-async-storage/async-storage')).default;
+  const writes = vi.spyOn(asyncStorage, 'multiSet');
+  cache.setCacheOwner('user-a');
+  const rows = [{ id: 'source-1', content: 'Full text', isActive: true }];
+  await cache.cachedRead('user-a', 'sources', 'debate-1', async () => rows);
+  await cache.copiesWritten();
+  writes.mockClear();
+  await cache.cachedRead('user-a', 'sources', 'debate-1', async () => rows.map((row) => ({ ...row })));
+  await cache.copiesWritten();
+  const entry = 'debatelab.cache.v1:user-a:sources:debate-1';
+  expect(writes.mock.calls.flatMap(([pairs]) => pairs).some(([key]) => key === entry)).toBe(false);
+  await cache.cachedRead('user-a', 'sources', 'debate-1', async () => [{ ...rows[0], content: 'Edited elsewhere' }]);
+  await cache.copiesWritten();
+  expect(writes.mock.calls.flatMap(([pairs]) => pairs).some(([key]) => key === entry)).toBe(true);
+  await expect(cache.cachedRead('user-a', 'sources', 'debate-1', offlineFailure)).resolves.toEqual([{ ...rows[0], content: 'Edited elsewhere' }]);
+});
+
+it('surfaces a fast server refusal even while disk is still reading', async () => {
+  const cache = await load();
+  cache.setCacheOwner('user-a');
+  await cache.cachedRead('user-a', 'sources', 'debate-1', async () => ['saved']);
+  await cache.copiesWritten();
+  const asyncStorage = (await import('@react-native-async-storage/async-storage')).default;
+  const disk = deferred<string | null>();
+  const spy = vi.spyOn(asyncStorage, 'getItem').mockImplementationOnce(() => disk.promise);
+  const refusal = cache.readFailed({ message: 'Expired session' }, 401);
+  const onCopy = vi.fn();
+  let failure: unknown;
+  const refresh = cache.cachedRead('user-a', 'sources', 'debate-1', () => Promise.reject(refusal), undefined, onCopy).catch((cause: unknown) => { failure = cause; });
+  try {
+    await new Promise((done) => setTimeout(done, 0));
+    expect(failure).toBe(refusal);
+    expect(onCopy).not.toHaveBeenCalled();
+  } finally {
+    disk.resolve(null);
+    await refresh;
+    spy.mockRestore();
+  }
 });

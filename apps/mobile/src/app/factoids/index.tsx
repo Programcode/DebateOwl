@@ -6,6 +6,8 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { StyleSheet, View } from 'react-native';
 
+import { useLatest } from '@/lib/live-value';
+import { runRequest } from '@/lib/run-request';
 import { MainActionButton } from '@/components/buttons';
 import { DocumentScreen } from '@/components/document';
 import { DocumentHeader } from '@/components/document-header';
@@ -111,7 +113,7 @@ export default function FactoidsScreen() {
     abort.current = controller;
     setError(null);
     setPhase('working');
-    try {
+    return await runRequest(async () => {
       const [config, debateContext] = await Promise.all([
         readFeatureConfig(forUser, 'factoids'),
         debateId ? buildDebateContext(forUser, debateId, 'factoids', input.direction === 'against' ? 'con' : 'pro') : Promise.resolve(undefined),
@@ -134,12 +136,12 @@ export default function FactoidsScreen() {
       let savedId: string | null = null;
       let recordFailed = false;
       if (debateId) {
-        try {
+        await runRequest(async () => {
           savedId = await recordResult(forUser, 'factoids', { title: input.claim, input, output: result, debateId, side: 'neutral' });
-        } catch (cause) {
+        }, async (cause) => {
           console.warn('Could not save the factoids to the debate:', cause instanceof Error ? cause.message : cause);
           recordFailed = true;
-        }
+        });
       }
       if (!isCurrent()) return;
       const key = keepOpenResult({
@@ -165,7 +167,7 @@ export default function FactoidsScreen() {
           ...(sources.failed > 0 ? { failed: String(sources.failed) } : {}),
         },
       });
-    } catch (cause) {
+    }, async (cause) => {
       if (!isCurrent() || isAbortError(cause)) return;
       const kind = cause instanceof AIError ? cause.kind : 'failed';
       if (!(cause instanceof AIError)) console.warn('Factoids failed:', cause instanceof Error ? cause.message : cause);
@@ -175,10 +177,12 @@ export default function FactoidsScreen() {
       // A limit or model refusal opens the website's dialog as a sheet, not an inline error.
       if (openRefusal(router, cause, 'factoids')) return;
       setError(kind);
-    } finally {
+    }, () => {
       if (requests.current === request) abort.current = null;
-    }
+    });
   };
+
+  const submitOnArrival = useLatest(submit);
 
   // A suggestion searches its query with the rest of the last form, once, as the website's handleUseSuggestion.
   useEffect(() => {
@@ -186,10 +190,9 @@ export default function FactoidsScreen() {
     ranSuggestion.current = true;
     const input = { ...lastForm.get(), claim: suggested.trim() };
     setForm({ claim: input.claim });
-    void submit(input);
+    void submitOnArrival.current(input);
     // submit reads the latest debate and account itself; the suggestion runs only on arrival.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [suggested, userId]);
+  }, [suggested, userId, submitOnArrival, setForm]);
 
   const cancel = () => {
     abortActive();
@@ -209,7 +212,7 @@ export default function FactoidsScreen() {
         <LiveToolRun
           label={t('factoids.working')}
           run={liveRun.state}
-          sections={liveRun.state.draft ? factoidsDraftSections(liveRun.state.draft, t) : []}
+          sections={factoidsDraftSections}
           detail={form.claim}
           onCancel={cancel}
           pose="reading"

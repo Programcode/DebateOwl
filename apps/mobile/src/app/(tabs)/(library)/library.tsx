@@ -22,6 +22,7 @@ import { SourceRow } from '@/components/source-row';
 import { SourceView } from '@/components/source-view';
 import { Text } from '@/components/text';
 import { useToast } from '@/components/toast';
+import { useLatest } from '@/lib/live-value';
 import { useAuth } from '@/lib/auth';
 import { confirmDestructive, promptText } from '@/lib/confirm';
 import { useDebates } from '@/lib/debate-context';
@@ -191,11 +192,11 @@ function LibraryView({ debateId, layout }: { debateId: string | null; layout: Re
         </ScrollView>
       )}
       {shown && selected && userId ? (
-        <ScrollView style={styles.detailPane} contentInsetAdjustmentBehavior="automatic" automaticallyAdjustKeyboardInsets keyboardShouldPersistTaps="handled" keyboardDismissMode="interactive" contentContainerStyle={styles.detailContent} testID="source-sheet">
+        <>
           {/* Keyed by the id that was opened: a note that syncs swaps its local id for the row's, and the
               view follows that itself, so an edit in progress survives the sync. */}
-          <SourceView key={`${userId}:${debateId}:${selected.id}`} id={selected.id} onRemoved={() => setSelected((current) => (current?.id === selected.id ? null : current))} />
-        </ScrollView>
+          <SourceView key={`${userId}:${debateId}:${selected.id}`} id={selected.id} style={styles.detailPane} contentStyle={styles.detailContent} onRemoved={() => setSelected((current) => (current?.id === selected.id ? null : current))} />
+        </>
       ) : null}
     </View>
   );
@@ -222,13 +223,18 @@ function useLibrary(debateId: string | null) {
     if (!userId || !debateId) return;
     const load = ++loads.current;
     try {
-      const next = await fetchSources(userId, debateId, copies.mark());
+      const next = await fetchSources(userId, debateId, copies.mark(), (copy) => {
+        if (load !== loads.current) return;
+        setSources(copy);
+        setFailed(false);
+      });
       if (load !== loads.current) return;
       setSources(next);
       setFailed(false);
     } catch (cause) {
       if (load !== loads.current) return;
       console.warn('Could not load sources:', cause instanceof Error ? cause.message : cause);
+      setSources(null);
       setFailed(true);
     }
   }, [userId, debateId, copies]);
@@ -238,7 +244,7 @@ function useLibrary(debateId: string | null) {
   useFocusEffect(
     useCallback(() => {
       void load();
-      return () => copies.release();
+      return () => { loads.current += 1; copies.release(); };
     }, [load, copies]),
   );
   useEffect(() => subscribeSourcesChanged(() => void load()), [load]);
@@ -261,11 +267,10 @@ function useLibrary(debateId: string | null) {
   // A folder that no longer exists here (renamed or deleted elsewhere, or only another debate's)
   // shows all folders again. Checked only when the folder list reloads: a folder just created or
   // renamed here is chosen before its reload lands, and the reload then lists it.
-  const chosen = useRef(folder);
-  chosen.current = folder;
+  const chosen = useLatest(folder);
   useEffect(() => {
     if (chosen.current !== ALL && !folders.includes(chosen.current)) setFolder(ALL);
-  }, [folders]);
+  }, [folders, chosen]);
 
   const inFolder = useMemo(
     () => (sources ?? []).filter((source) => folder === ALL || normalizeFolder(source.folder) === folder),
@@ -499,5 +504,5 @@ const styles = StyleSheet.create({
   listContent: { paddingHorizontal: 20, paddingBottom: 32 },
   listGap: { gap: 16 },
   detailPane: { flex: 1 },
-  detailContent: { width: '100%', maxWidth: 700, alignSelf: 'center', paddingHorizontal: 36, paddingTop: 14, paddingBottom: 48, gap: 14 },
+  detailContent: { width: '100%', maxWidth: 700, alignSelf: 'center', paddingHorizontal: 36, paddingTop: 14, paddingBottom: 48 },
 });

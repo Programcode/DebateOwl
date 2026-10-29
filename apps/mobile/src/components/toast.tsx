@@ -42,6 +42,10 @@ const TAB_BAR = 56;
 
 let ids = 0;
 
+function nextId() {
+  return ++ids;
+}
+
 /**
  * The app's toasts: the provider holds the one showing, and `ToastHost` draws
  * it above the screens. Form sheets are drawn above the root view, so a sheet
@@ -55,7 +59,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     if (next.tone === 'success') haptics.success();
     else if (next.tone === 'error') haptics.warning();
     AccessibilityInfo.announceForAccessibility([next.title, next.message].filter(Boolean).join('. '));
-    setToast({ ...next, id: ++ids });
+    setToast({ ...next, id: nextId() });
   }, []);
 
   useEffect(() => {

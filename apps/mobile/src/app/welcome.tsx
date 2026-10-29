@@ -90,7 +90,7 @@ function Intro({ onDone }: { onDone: (tourDone: boolean) => void }) {
   const reduceMotion = useReduceMotion();
   const [beat, setBeat] = useState(0);
   const [settled, setSettled] = useState(false);
-  const lines = useRef(BEATS.slice(1).map(() => new Animated.Value(0))).current;
+  const [lines] = useState(() => BEATS.slice(1).map(() => new Animated.Value(0)));
 
   useEffect(() => {
     if (reduceMotion || settled) {

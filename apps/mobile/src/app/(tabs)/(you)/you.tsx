@@ -8,6 +8,7 @@ import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, AppState, Linking, Pressable, StyleSheet, View, type PressableProps } from 'react-native';
 import Animated from 'react-native-reanimated';
 
+import { runRequest } from '@/lib/run-request';
 import { TextButton } from '@/components/buttons';
 import { Card, IconTile, usePressScale } from '@/components/card';
 import { SwitchRow } from '@/components/form-rows';
@@ -105,16 +106,16 @@ export default function YouScreen() {
     const forUser = owner.current;
     if (!forUser || exporting) return;
     setExporting(true);
-    try {
+    return await runRequest(async () => {
       const { fileName, json } = await exportAccountData();
       if (!live.current || owner.current !== forUser) return;
       await shareJson(json, fileName, t('settings.downloadData'));
-    } catch (cause) {
+    }, async (cause) => {
       console.warn('Could not download the data:', cause instanceof Error ? cause.message : cause);
       if (live.current && owner.current === forUser) showNotice(t('settings.downloadDataFailed'));
-    } finally {
+    }, () => {
       if (live.current) setExporting(false);
-    }
+    });
   };
 
   const save = (change: () => Promise<void>) => {
@@ -396,16 +397,16 @@ function SubscriptionCard({ userId }: { userId: string | undefined }) {
 
   const load = useCallback(async (isCurrent: () => boolean) => {
     if (!userId) return;
-    try {
+    return await runRequest(async () => {
       const next = await fetchSubscription(userId);
       if (!isCurrent()) return;
       setSubscription(next);
       setFailed(false);
-    } catch (cause) {
+    }, async (cause) => {
       if (!isCurrent()) return;
       console.warn('Could not load the subscription:', cause instanceof Error ? cause.message : cause);
       setFailed(true);
-    }
+    });
   }, [userId]);
 
   // Usage changes as the student works, so read it again whenever You comes into view.

@@ -6,6 +6,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { StyleSheet } from 'react-native';
 
+import { runRequest } from '@/lib/run-request';
 import { MainActionButton } from '@/components/buttons';
 import { DocumentScreen } from '@/components/document';
 import { DocumentHeader } from '@/components/document-header';
@@ -103,7 +104,7 @@ export default function BrainstormScreen() {
     abort.current = controller;
     setError(null);
     setPhase('working');
-    try {
+    return await runRequest(async () => {
       const [config, debateContext] = await Promise.all([
         readFeatureConfig(forUser, 'brainstorm'),
         debateId ? buildDebateContext(forUser, debateId, 'brainstorm', input.side) : Promise.resolve(undefined),
@@ -126,12 +127,12 @@ export default function BrainstormScreen() {
       let savedId: string | null = null;
       let recordFailed = false;
       if (debateId) {
-        try {
+        await runRequest(async () => {
           savedId = await recordResult(forUser, 'brainstorm', { title: input.motion, input, output: result, debateId, side: input.side });
-        } catch (cause) {
+        }, async (cause) => {
           console.warn('Could not save the brainstorm to the debate:', cause instanceof Error ? cause.message : cause);
           recordFailed = true;
-        }
+        });
       }
       if (!isCurrent()) return;
       const key = keepOpenResult({
@@ -157,7 +158,7 @@ export default function BrainstormScreen() {
           ...(sources.failed > 0 ? { failed: String(sources.failed) } : {}),
         },
       });
-    } catch (cause) {
+    }, async (cause) => {
       if (!isCurrent() || isAbortError(cause)) return;
       const kind = cause instanceof AIError ? cause.kind : 'failed';
       if (!(cause instanceof AIError)) console.warn('Brainstorm failed:', cause instanceof Error ? cause.message : cause);
@@ -168,9 +169,9 @@ export default function BrainstormScreen() {
       // A limit or model refusal opens the website's dialog as a sheet, not an inline error.
       if (openRefusal(router, cause, 'brainstorm')) return;
       setError(kind);
-    } finally {
+    }, () => {
       if (requests.current === request) abort.current = null;
-    }
+    });
   };
 
   const submit = async () => {
@@ -197,18 +198,20 @@ export default function BrainstormScreen() {
     });
     if (!choice || !live.current || owner.current !== forUser) return;
     let debateId: string | null = null;
-    try {
+    const selected = await runRequest(async () => {
       if (choice.kind === 'switch') {
         await switchTo(choice.debateId);
         debateId = choice.debateId;
       } else if (choice.kind === 'create') {
         debateId = (await create({ motion: input.motion, settings: {} })).id;
       }
-    } catch (cause) {
+      return true;
+    }, async (cause) => {
       console.warn('Could not save the debate:', cause instanceof Error ? cause.message : cause);
       if (live.current) setError('debate');
-      return;
-    }
+      return false;
+    });
+    if (!selected) return;
     if (live.current && owner.current === forUser) void start(input, debateId, forUser);
   };
 
@@ -230,7 +233,7 @@ export default function BrainstormScreen() {
         <LiveToolRun
           label={t('brainstorm.working')}
           run={liveRun.state}
-          sections={liveRun.state.draft ? brainstormDraftSections(liveRun.state.draft, t) : []}
+          sections={brainstormDraftSections}
           detail={form.motion}
           onCancel={cancel}
           pose="idea"

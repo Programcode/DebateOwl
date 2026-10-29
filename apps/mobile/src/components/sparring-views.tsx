@@ -14,6 +14,7 @@ import { DocumentHeader } from './document-header';
 import { Text } from './text';
 import { DeliveryFacts } from './voice';
 
+import { runRequest } from '@/lib/run-request';
 import { useAuth } from '@/lib/auth';
 import { backLabel } from '@/lib/back-label';
 import { confirmDestructive } from '@/lib/confirm';
@@ -93,13 +94,13 @@ export function SparringScorecardScreen({
       cancel: t('common.cancel'),
     });
     if (!confirmed || !live.current || owner.current !== forUser) return;
-    try {
+    return await runRequest(async () => {
       await deleteSparringRound(forUser, session.id);
       if (live.current && owner.current === forUser) onDeleted();
-    } catch (cause) {
+    }, async (cause) => {
       console.warn('Could not delete the round:', cause instanceof Error ? cause.message : cause);
       if (live.current) setFailed(t('historyPage.sparringDeleteFailed'));
-    }
+    });
   };
 
   const exportWord = async () => {
@@ -112,12 +113,12 @@ export function SparringScorecardScreen({
   };
 
   const exportPdf = async () => {
-    try {
+    return await runRequest(async () => {
       await sharePdf(sparringExportHtml(session, t), sparringExportFileName(session), winnerText(t, session.scorecard.winner));
-    } catch (cause) {
+    }, async (cause) => {
       console.warn('Could not export the round:', cause instanceof Error ? cause.message : cause);
       if (live.current) setFailed(t('mobile.sparring.exportFailed'));
-    }
+    });
   };
 
   return (

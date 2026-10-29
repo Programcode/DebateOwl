@@ -48,7 +48,9 @@ export default function PrepareScreen() {
     const request = ++loads.current;
     const isCurrent = () => loads.current === request;
     try {
-      const next = await fetchPrepareWork(userId, forDebate, SAVED_LIMIT, copies.mark());
+      const next = await fetchPrepareWork(userId, forDebate, SAVED_LIMIT, copies.mark(), (copy) => {
+        if (isCurrent()) setLoaded({ debateId: forDebate, items: copy, failed: false });
+      });
       if (!isCurrent()) return;
       // Every focus rereads the list; an unchanged one keeps its identity, so the rows do not re-render.
       setLoaded((previous) => keepIfSame(previous, { debateId: forDebate, items: next, failed: false }));

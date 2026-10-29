@@ -4,12 +4,15 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
 
+import { runRequest } from '@/lib/run-request';
 import { PrimaryButton, TextButton } from '@/components/buttons';
 import { ListItemIn, SkeletonTextRows } from '@/components/card';
 import { Icon } from '@/components/icon';
 import { PressScale } from '@/components/press-scale';
-import { SheetScrollView } from '@/components/sheet';
+import { useRowArrivals } from '@/components/list-screen';
+import { SheetList } from '@/components/sheet';
 import { Text } from '@/components/text';
+import { useLatest } from '@/lib/live-value';
 import { useAuth } from '@/lib/auth';
 import { confirmDestructive } from '@/lib/confirm';
 import { formatRelativeDate } from '@/lib/dates';
@@ -43,8 +46,7 @@ export default function SavedMapsSheet() {
   // Only the latest tap may open a map; an earlier one still loading is dropped.
   const selections = useRef(0);
   const live = useRef(true);
-  const owner = useRef(userId);
-  owner.current = userId;
+  const owner = useLatest(userId);
 
   useEffect(() => () => {
     live.current = false;
@@ -56,14 +58,14 @@ export default function SavedMapsSheet() {
     const forUser = userId;
     const forScope = scope;
     const isCurrent = () => loads.current === request && live.current && owner.current === forUser;
-    try {
+    return await runRequest(async () => {
       const items = await fetchFlowchartList(forUser, debateId, copies.mark());
       if (isCurrent()) setList((previous) => keepIfSame(previous, { for: `${forUser}:${forScope}`, items, failed: false }));
-    } catch (cause) {
+    }, async (cause) => {
       console.warn('Could not load saved flowcharts:', cause instanceof Error ? cause.message : cause);
       if (isCurrent()) setList((previous) => (previous?.for === `${forUser}:${forScope}` && previous.items ? previous : { for: `${forUser}:${forScope}`, items: null, failed: true }));
-    }
-  }, [debateId, scope, userId, copies]);
+    });
+  }, [debateId, scope, userId, copies, owner]);
 
   useEffect(() => {
     void load();
@@ -86,7 +88,7 @@ export default function SavedMapsSheet() {
     const forUser = userId;
     setOpening(index);
     setFailedOpen(false);
-    try {
+    return await runRequest(async () => {
       // The map shows on the Flowchart screen once this sheet closes, so it counts there.
       const row = await fetchFlowchart(forUser, item.id, flowchartScreenCopies.mark());
       if (!live.current || owner.current !== forUser || selections.current !== selection) return;
@@ -97,12 +99,12 @@ export default function SavedMapsSheet() {
       }
       showDraft(scope, savedDraft(row));
       router.back();
-    } catch (cause) {
+    }, async (cause) => {
       console.warn('Could not open the flowchart:', cause instanceof Error ? cause.message : cause);
       if (live.current && selections.current === selection) setFailedOpen(true);
-    } finally {
+    }, () => {
       if (live.current && selections.current === selection) setOpening(null);
-    }
+    });
   };
 
   const startNew = async () => {
@@ -121,8 +123,12 @@ export default function SavedMapsSheet() {
     router.back();
   };
 
+  const items = shown?.items ?? [];
+  const rows = [...(unsaved ? [{ key: NEW_MAP, item: null }] : []), ...items.map((item) => ({ key: item.id, item }))];
+  const arrivals = useRowArrivals(rows.map((entry) => entry.key));
+
   const row = (key: string, title: string, meta: string, selected: boolean, onPress: () => void, index: number, busy = false) => (
-    <ListItemIn key={key} index={index} style={index > 0 && { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.line }}>
+    <ListItemIn key={key} index={index} enter={arrivals.entersNow(key)} style={index > 0 && { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.line }}>
       <PressScale
         accessibilityRole="button"
         // While a map opens, the rows wait for it.
@@ -148,54 +154,64 @@ export default function SavedMapsSheet() {
     </ListItemIn>
   );
 
-  const items = shown?.items ?? [];
+
   return (
-    <SheetScrollView testID="maps-sheet">
-      <View style={styles.header}>
-        <Text accessibilityRole="header" weight="display" style={styles.title}>
-          {t('flowchart.savedFlowcharts')}
-        </Text>
-        <TextButton label={t('common.close')} onPress={() => router.back()} />
-      </View>
-      <Text tone="secondary" style={styles.body}>
-        {t('flowchart.savedFlowchartsDesc')}
-      </Text>
-      <PrimaryButton icon="plus" label={t('mobile.flowchart.newMap')} onPress={() => void startNew()} testID="new-map" />
-      {unsaved || items.length > 0 ? (
-        <View style={[styles.list, { backgroundColor: background, borderColor: colors.border }]}>
-          {unsaved
-            ? row(NEW_MAP, t('mobile.flowchart.untitled'), unsaved.edited ? t('mobile.flowchart.edited') : t('mobile.flowchart.notSaved'), open?.key === NEW_MAP, () => {
-                showDraft(scope, unsaved);
-                router.back();
-              }, 0)
-            : null}
-          {items.map((item, index) => {
-            const held = scope ? getDraft(scope, item.id) : undefined;
-            const meta = held?.edited ? `${formatRelativeDate(item.createdAt)} · ${t('mobile.flowchart.edited')}` : formatRelativeDate(item.createdAt);
-            return row(`${index}`, item.title, meta, open?.key === item.id, () => void choose(item, index), index + (unsaved ? 1 : 0), opening === index);
-          })}
-        </View>
-      ) : null}
-      {!shown ? (
-        <SkeletonTextRows rows={3} />
-      ) : shown.failed ? (
-        <View style={styles.failed}>
+    <SheetList
+      testID="maps-sheet"
+      data={rows}
+      keyExtractor={(entry) => entry.key}
+      header={
+        <>
+          <View style={styles.header}>
+            <Text accessibilityRole="header" weight="display" style={styles.title}>
+              {t('flowchart.savedFlowcharts')}
+            </Text>
+            <TextButton label={t('common.close')} onPress={() => router.back()} />
+          </View>
           <Text tone="secondary" style={styles.body}>
-            {t('mobile.flowchart.loadFailed')}
+            {t('flowchart.savedFlowchartsDesc')}
           </Text>
-          <TextButton label={t('common.retry')} onPress={() => void load()} />
-        </View>
-      ) : items.length === 0 ? (
-        <Text tone="faint" style={styles.body}>
-          {t('flowchart.noSavedFlowcharts')}
-        </Text>
-      ) : null}
-      {failedOpen ? (
-        <Text accessibilityRole="alert" style={[styles.body, { color: colors.destructive }]}>
-          {t('mobile.flowchart.openFailed')}
-        </Text>
-      ) : null}
-    </SheetScrollView>
+          <PrimaryButton icon="plus" label={t('mobile.flowchart.newMap')} onPress={() => void startNew()} testID="new-map" />
+        </>
+      }
+      renderItem={({ item: entry, index }) => {
+        const item = entry.item;
+        const held = item && scope ? getDraft(scope, item.id) : undefined;
+        const itemIndex = index - (unsaved ? 1 : 0);
+        const meta = item ? (held?.edited ? `${formatRelativeDate(item.createdAt)} · ${t('mobile.flowchart.edited')}` : formatRelativeDate(item.createdAt)) : unsaved?.edited ? t('mobile.flowchart.edited') : t('mobile.flowchart.notSaved');
+        return (
+          <View style={[styles.list, { backgroundColor: background, borderColor: colors.border }, index === 0 && styles.firstRow, index === rows.length - 1 && styles.lastRow]}>
+            {row(entry.key, item?.title ?? t('mobile.flowchart.untitled'), meta, open?.key === entry.key, () => {
+              if (item) void choose(item, itemIndex);
+              else if (unsaved) { showDraft(scope, unsaved); router.back(); }
+            }, index, item !== null && opening === itemIndex)}
+          </View>
+        );
+      }}
+      ListFooterComponent={
+        <>
+          {!shown ? (
+            <SkeletonTextRows rows={3} />
+          ) : shown.failed ? (
+            <View style={styles.failed}>
+              <Text tone="secondary" style={styles.body}>
+                {t('mobile.flowchart.loadFailed')}
+              </Text>
+              <TextButton label={t('common.retry')} onPress={() => void load()} />
+            </View>
+          ) : items.length === 0 ? (
+            <Text tone="faint" style={styles.body}>
+              {t('flowchart.noSavedFlowcharts')}
+            </Text>
+          ) : null}
+          {failedOpen ? (
+            <Text accessibilityRole="alert" style={[styles.body, { color: colors.destructive }]}>
+              {t('mobile.flowchart.openFailed')}
+            </Text>
+          ) : null}
+        </>
+      }
+    />
   );
 }
 
@@ -203,7 +219,9 @@ const styles = StyleSheet.create({
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
   title: { fontSize: 21, lineHeight: 26, letterSpacing: -0.3, flexShrink: 1 },
   body: { fontSize: 15, lineHeight: 21 },
-  list: { borderWidth: 2, borderRadius: radius.field, overflow: 'hidden' },
+  list: { borderLeftWidth: 2, borderRightWidth: 2, overflow: 'hidden' },
+  firstRow: { borderTopWidth: 2, borderTopLeftRadius: radius.field, borderTopRightRadius: radius.field },
+  lastRow: { borderBottomWidth: 2, borderBottomLeftRadius: radius.field, borderBottomRightRadius: radius.field },
   row: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 15, paddingVertical: 11, minHeight: 56 },
   rowText: { flex: 1, gap: 2 },
   rowTitle: { fontSize: 16 },

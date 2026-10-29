@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { StyleSheet, View } from 'react-native';
 
+import { runRequest } from '@/lib/run-request';
 import { PrimaryButton, TextButton } from '@/components/buttons';
 import { Owl } from '@/components/owl';
 import { SheetScrollView } from '@/components/sheet';
@@ -67,12 +68,12 @@ export default function LimitSheet() {
     const switchToLow = async () => {
       if (!feature || !userId) return close();
       setSwitching(true);
-      try {
+      await runRequest(async () => {
         const current = await readFeatureConfig(userId, feature);
         await setFeatureConfig(feature, isProOnlyModel(current.model) ? { model: DEFAULT_MODEL, reasoningEffort: 'low' } : { reasoningEffort: 'low' });
-      } catch (cause) {
+      }, async (cause) => {
         console.warn('Could not switch to low reasoning:', cause instanceof Error ? cause.message : cause);
-      }
+      });
       close();
     };
     return (
