@@ -276,7 +276,7 @@ async function shoot(page: Page, name: string) {
 }
 
 /**
- * A finished round or case opens under its celebration: shoot it as `name`, then tap it away
+ * A finished round or a new case, attack, brainstorm or factoids result opens under its celebration: shoot it as `name`, then tap it away
  * (unless it already went on its own) and wait until the screen underneath is clear.
  */
 async function shootCelebration(page: Page, name: string) {
@@ -801,6 +801,7 @@ async function shootResultScreens(context: BrowserContext, prefix: string, langu
   await shoot(page, `${prefix}-attack-form`);
   await page.getByRole('button', { name: /^(Find weaknesses|Gyengeségek keresése|Encontrar debilidades)$/i }).click();
   await page.getByTestId('attack-document').waitFor({ timeout: 30_000 });
+  await shootCelebration(page, `${prefix}-attack-celebration`);
   await page.waitForTimeout(400);
   await shoot(page, `${prefix}-attack-result`);
   // The case stays mounted under the attack, so its menu is looked up inside the attack.
@@ -857,6 +858,7 @@ async function shootTool(context: BrowserContext, prefix: string, language: stri
   const page = await open(false);
   await page.getByRole('button', { name: spec.submit }).click();
   await page.getByTestId(spec.document).waitFor({ timeout: 30_000 });
+  await shootCelebration(page, `${prefix}-${tool}-celebration`);
   await page.waitForTimeout(400);
   await shoot(page, `${prefix}-${tool}`);
   // Close the open item, so every item shows collapsed.

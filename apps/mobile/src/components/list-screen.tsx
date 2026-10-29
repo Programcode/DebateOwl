@@ -52,6 +52,8 @@ export function ListScreen<T>({ header, gap = 16, safeTop, wide, contentStyle, a
       itemLayoutAnimation={animateLayout ? LinearTransition.duration(200).reduceMotion(motionSetting(reduce)) : undefined}
       refreshControl={refresh ? <RefreshControl refreshing={refreshing} onRefresh={refresh} tintColor={colors.primary} /> : undefined}
       {...list}
+      // Above the rows, so a menu the header opens (the web preview draws its own) is not drawn under a row's entrance animation.
+      ListHeaderComponentStyle={styles.headerLayer}
       ListHeaderComponent={
         <View style={[styles.header, { gap, paddingBottom: gap }]}>
           <OfflineNotice />
@@ -97,6 +99,7 @@ const styles = StyleSheet.create({
   content: { paddingHorizontal: 20, paddingBottom: 32, width: '100%', maxWidth: 640, alignSelf: 'center' },
   wide: { paddingHorizontal: 36, paddingBottom: 48, maxWidth: HOME_MAX_WIDTH },
   header: { gap: 16, paddingBottom: 16 },
+  headerLayer: { zIndex: 1 },
   frame: { borderLeftWidth: 2, borderRightWidth: 2, overflow: 'hidden' },
   frameFirst: { borderTopWidth: 2, borderTopLeftRadius: radius.card, borderTopRightRadius: radius.card },
   frameLast: { borderBottomWidth: 2, borderBottomLeftRadius: radius.card, borderBottomRightRadius: radius.card },
