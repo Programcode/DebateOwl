@@ -938,7 +938,7 @@
     }
   },
   "features": {
-    "title": "Minden, ami a győzelemhez kell",
+    "title": "Minden a következő fordulódhoz",
     "generate": "Esetgenerátor",
     "generateDesc": "Nyitás, érvek bizonyítékkal, „Ha azt mondják…” válaszok, zárás.",
     "attack": "Esettámadó",

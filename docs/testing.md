@@ -157,7 +157,7 @@ The gate runs, in order:
 2. the guide jargon check (`npm run seo:jargon`): no generated guide in `public/` other than `/lincoln-douglas-debate` and `/policy-debate` may use framework, contention, warrant or impact calculus more than once in its visible text or its JSON-LD ([`scripts/check_jargon.py`](../scripts/check_jargon.py))
 3. lint
 4. type checking
-5. unit tests
+5. unit tests, including the comparison-page templating check: no sentence of more than 12 words may appear on more than two of the seven comparison pages, apart from the pricing sentence and the byline and disclosure lines ([`scripts/check_templating.py`](../scripts/check_templating.py), run by `src/test/seo/comparison-templating.test.ts`)
 6. collaboration service tests
 7. native Edge Function tests
 8. production build
