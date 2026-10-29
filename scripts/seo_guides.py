@@ -257,11 +257,26 @@ GUIDES = {
         "modified": "2026-10-29",
         "callout": ("Short answer by goal:", "/best-ai-for-debate", "which AI is best for debate"),
         "features": [
-            ("Feature comparison", "What each kind of tool does well: general chatbots, research assistants, dedicated debate platforms, and timers or flowing tools."),
+            ("Six tools side by side", "{product}, ChatGPT, Claude, debatelab.ai, WinDebate and Debate Ladder on cases, replies, timed rounds and price."),
             ("Format coverage", "Which formats a tool actually models, from Public Forum and Lincoln-Douglas to WSDC and British Parliamentary, and where you still prep by hand."),
             ("Workflow differences", "Whether cases, sources, practice rounds and feedback stay connected to one motion, or end up scattered across chats and documents."),
         ],
         "sections": [
+            ("Feature comparison", [
+                {"table": {
+                    "caption": "AI debate tools compared, as of October 2026. Facts about other products come from their own websites; \"Not stated\" means we did not find it there.",
+                    "head": ["Tool", "Best for", "Case you can read out", "Rebuttal / \"If they say\" practice", "Timed rounds", "Price (as of Oct 2026)"],
+                    "rows": [
+                        ["[{product}](/)", "Preparing a specific motion for a school or competitive round", "Yes: an opening, two to four arguments, \"If they say… we answer…\" replies, a closing line and sources", "Yes: replies in every case, plus Attack and Crossfire drills", "Yes: Sparring in School 4-6-6-3, Lincoln-Douglas and Public Forum, ending in a verdict", "{trial_days}-day free trial, then {pro_price}; no free plan. The [free debate tools](/tools) need no account."],
+                        ["[ChatGPT](https://chatgpt.com)", "Open brainstorming and counter-arguments", "Only if you prompt for it", "Only if you prompt for it", "No built-in debate timer", "Free version; paid Go, Plus and Pro plans"],
+                        ["[Claude](https://claude.ai)", "Critique of a long case you paste in", "Only if you prompt for it", "Only if you prompt for it", "No built-in debate timer", "Free plan; Pro $20/month, or $17/month billed annually"],
+                        ["[debatelab.ai](https://debatelab.ai) (a separate product)", "Free practice against an AI opponent in World Schools or Asian Parliamentary style", "Not stated", "Drills for rebuttal, structure, weighing and evidence", "Speeches of 3, 5 or 7 minutes against an AI opponent", "Says it is completely free"],
+                        ["[WinDebate](https://windebate.ai)", "Policy, Congress or British Parliamentary prep and season tracking", "Not stated", "Drills for attack, defense, weighing and speeches, plus rebuttal trees", "Not stated; it lists a Live Round Assistant and replay review", "Free tier with monthly limits; Plus $19.99/month, Pro $39.99/month"],
+                        ["[Debate Ladder](https://debateladder.com)", "Ranked out-loud practice with an Elo rating", "Not stated", "You speak a rebuttal in each debate against an AI", "Not stated; you speak an opening, rebuttal and closing", "100 free credits for new accounts, then credits (about 1 per minute of speaking)"],
+                    ],
+                }},
+                "{product} makes one of these tools. Check each product's own site before you pay: prices and plans change. The [{product} vs WinDebate](/debateowl-vs-windebate) page compares those two in more detail.",
+            ]),
             ("The four kinds of AI debate tool", [
                 "Debaters use AI tools for different jobs, and the categories overlap less than the marketing suggests. Most prep setups combine at least two of these.",
                 {"h3": "General AI chatbots"},
@@ -323,7 +338,7 @@ GUIDES = {
             ]),
         ],
         "faqs": [
-            ("What is the best AI tool for debate?", "It depends on the job. General chatbots are flexible for brainstorming, research tools find sources, and dedicated debate platforms add structure, opponents and practice. Most debaters do best with a dedicated platform plus a way to verify sources."),
+            ("What is the best AI tool for debate?", "For preparing a specific motion, {product} gives you a case you can read out loud, \"If they say X, we answer Y\" replies and timed practice rounds. General chatbots are flexible for brainstorming and research tools find sources. Most debaters do best with a dedicated platform plus a way to verify sources."),
             ("Is a general chatbot good enough for debate prep?", "For brainstorming and explaining concepts, often yes. It is weaker at keeping a motion, side and format in context, predicting the opposing case, timing speeches and giving round-style feedback."),
             ("Are free AI debate tools enough?", "Free tiers are a good way to run the comparison test. Check the daily or monthly limits against how many practice sessions you plan before a tournament."),
             ("Can I use AI tools during a debate round?", "Usually not. Most leagues restrict or ban internet access and electronic help during rounds. Check your league's rules, and use AI tools for preparation."),
@@ -2218,6 +2233,17 @@ GUIDES = {
                 }},
                 "Prices and features as of October 2026, from each product's website. Check before you subscribe.",
                 "For a way to test tools on one motion, see [Best AI debate tools compared](/best-ai-debate-tools).",
+            ]),
+            ("Compare by question", [
+                "Each of these pages answers one narrower question:",
+                {"list": [
+                    "[AI debate tools for teachers and debate clubs](/ai-debate-tools-for-teachers): five classroom scenarios, from a lesson with no sign-ups to a club preparing for a competition.",
+                    "[The best AI for Public Forum](/best-ai-for-public-forum): tools compared speech by speech, from the constructive to final focus.",
+                    "[ChatGPT vs Claude for debate](/chatgpt-vs-claude-for-debate): where each general chatbot fits, with prompts that make them argue back.",
+                    "[{product} vs Debate Ladder](/debateowl-vs-debate-ladder): written case prep and timed rounds, or a ranked voice game.",
+                    "[Free vs paid AI debate tools](/free-vs-paid-ai-debate-tools): what $0 gets you and what paid plans add, with prices.",
+                    "[Step-by-step debate prep with AI](/how-to-prepare-for-a-debate-with-ai): a seven-step plan and a worked second speech.",
+                ]},
             ]),
             ("Which should you pick?", [
                 "You have a tournament or school debate coming up and need a case you can read out loud, plus practice against the other side. {product} writes that case, with \"If they say X, we answer Y\" replies, and runs timed sparring. The {product} app has no free plan ({trial_days}-day free trial, then $5/month); the separate tools at [/tools](/tools) are free with no account.",

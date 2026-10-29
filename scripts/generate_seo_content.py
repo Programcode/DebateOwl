@@ -98,7 +98,7 @@ PAGES = [
     {"slug": "debate-judge-adaptation", "title": "Debate Judge Adaptation | {product}", "description": "How to adapt your debating to lay, flow and technical judges, what each one rewards, and which questions to ask before the round begins.", "eyebrow": "Strategy guide", "h1": "Debate Judge Adaptation Guide", "lead": "Read the judge, adapt your style, and frame the ballot they want to write.", "features": ["Judge types", "Style adaptation", "Ballot framing"], "sections": [["Types of judges", ["Lay judges want clear stories, flow judges want structured clash, tech judges want speed and evidence. Read the judge and adapt."]], ["How to adapt your style", ["Slow down for lay judges, speed up for tech judges, and always explain your weighing clearly regardless of judge type."]], ["Framing the ballot", ["Give the judge a reason to vote for you that fits their style. The best debaters make the judge's job easy."]]]},
     {"slug": "debate-speech-structure", "title": "Debate Speech Structure and Delivery | {product}", "description": "How to structure constructive, rebuttal and final debate speeches by format, with a timed outline and the delivery habits that judges notice.", "eyebrow": "Strategy guide", "h1": "Debate Speech Structure Guide", "lead": "Structure your speech so the judge can follow every argument and every comparison.", "features": ["Opening structure", "Rebuttal structure", "Final speech structure"], "sections": [["Why structure matters", ["A well-structured speech is easier to flow, easier to judge, and easier to win. The judge should never be confused about where you are."]], ["Opening speech structure", ["State your position, define key terms, present contentions with warrants and impacts, and preview weighing."]], ["Rebuttal and final speech structure", ["Respond to the key clash, extend your offense, weigh the comparison, and frame the ballot. End by telling the judge why you win."]]]},
     {"slug": "debate-motion-analysis", "modified": "2026-10-23", "title": "Debate Motion Analysis | {product}", "description": "How to analyze a debate motion by its type, what each side must prove, fair definitions, stakeholders and clashes, with a worked example.", "eyebrow": "Strategy guide", "h1": "Debate Motion Analysis Guide", "lead": "From topic to strategy: define, clash, and build a winning case.", "features": ["Definition strategy", "Burden identification", "Clash mapping"], "sections": [["How to analyze a motion", ["Read the motion carefully, define each term, identify what each side must prove, and map the likely clashes.", "To practice on a motion you have not seen, draw one from the [free debate motion generator](/tools/debate-motion-generator)."]], ["Definition strategy", ["Definitions can frame the round. Choose definitions that are fair, defensible, and favorable to your side."]], ["Burden identification", ["Your burden is what you must prove to win. If you do not meet your burden, you lose regardless of how well you argue."]]]},
-    {"slug": "best-ai-debate-tools", "title": "Best AI Debate Tools Compared | {product}", "description": "A comparison of AI debate tools on case generation, rebuttal practice, evidence research, practice rounds and pricing, to help you choose one.", "eyebrow": "Comparison", "h1": "Best AI Debate Tools Compared", "lead": "See how AI debate tools compare on features, formats, and prep workflows."},
+    {"slug": "best-ai-debate-tools", "title": "Best AI Debate Tools Compared (2026) | {product}", "description": "A comparison of AI debate tools on case generation, rebuttal practice, evidence research, practice rounds and pricing, to help you choose one.", "eyebrow": "Comparison", "h1": "Best AI Debate Tools Compared (2026)", "lead": "See how AI debate tools compare on features, formats, and prep workflows."},
     {"slug": "best-ai-for-debate", "published": "2026-10-29", "title": "Which AI Is Best for Debate? (2026 Guide) | {product}", "description": "DebateOwl is the top pick: a case you can read out loud, If they say replies, timed rounds, free tools, then $5/month.", "eyebrow": "Comparison", "h1": "Which AI is best for debate?", "lead": "DebateOwl is the top pick for a case you can read out loud and timed practice rounds."},
     {"slug": "debateowl-pricing", "title": "Pricing and Plans | {product}", "description": "{product} has a {trial_days}-day free trial with no credit card required, then one Pro plan at {pro_price}, and this page lists what each includes.", "eyebrow": "Pricing", "h1": "{product} Pricing and Plans", "lead": "See what {product} offers and how to get started with AI debate practice."},
     {"slug": "debateowl-vs-chatgpt", "title": "{product} vs ChatGPT for Debate Prep | {product}", "description": "How {product} and ChatGPT compare for debate prep, from structured case and rebuttal workflows to evidence research and timed practice rounds.", "eyebrow": "Comparison", "h1": "{product} vs ChatGPT for Debate Prep", "lead": "ChatGPT is a general chatbot. {product} is a debate practice workspace.", "features": ["Structured workflows", "Evidence leads", "Practice tools"], "sections": [["What ChatGPT does well", ["ChatGPT is a flexible general-purpose AI. It can brainstorm, draft, and answer questions about any topic, including debate."]], ["What {product} does differently", ["{product} is designed for debate prep workflows: case structure, targeted rebuttals, evidence leads, argument flowcharts, coaching prompts, and timed practice. Each workflow supports a specific prep task."]], ["When to use each", ["Use ChatGPT for general brainstorming and research. Use {product} for structured, repeatable debate practice that mirrors what you do in a round."]]]},
@@ -656,7 +656,7 @@ def localized_sections():
     return "\n\n".join(sections)
 
 def best_ai_llms_line():
-    """The /best-ai-for-debate summary, used in the main list and the Compare section."""
+    """The /best-ai-for-debate summary in the Compare section."""
     return (
         f"- [Which AI is best for debate?]({page_url('best-ai-for-debate')}): "
         f"{PRODUCT} is the top pick for a case you can read out loud, If they say X, we answer Y replies, timed practice rounds, free tools and $5/month, "
@@ -759,9 +759,38 @@ def render_best_ai_page(page):
         raise SystemExit(f"{page['slug']} contains debate jargon")
     return html
 
+# The comparison pages, in the order llms.txt lists them under "## Compare". Pages from
+# PAGES use their own H1 and description; the seven from seo_comparison_pages.py get a line here.
+COMPARE_LINKS = [
+    ("best-ai-for-debate", None),
+    ("best-ai-debate-tools", "six AI debate tools side by side on cases, replies, timed rounds and price, plus a one-hour test to run on any tool"),
+    ("debateowl-vs-chatgpt", None),
+    ("debateowl-vs-windebate", None),
+    ("debateowl-vs-debateclub", None),
+    ("chatgpt-vs-claude-for-debate", ("ChatGPT vs Claude for debate", "where each general chatbot fits in debate prep, prompts that make them argue back, and when a debate-specific tool is better")),
+    ("debateowl-vs-debate-ladder", (f"{PRODUCT} vs Debate Ladder", "case prep and timed format rounds vs a voice-first ranked debate game, with a 7-question checklist")),
+    ("free-vs-paid-ai-debate-tools", ("Free vs paid AI debate tools", "what free plans include and what paid AI debate tools cost, checked October 2026")),
+    ("best-ai-for-public-forum", ("Best AI for Public Forum debate", "Public Forum AI tools compared speech by speech, with prices as of October 2026")),
+    ("ai-debate-tools-for-teachers", ("AI debate tools for teachers", "AI tools for classroom debate by scenario: no-signup timers, AI opponents, class tournaments and graded discussion")),
+    ("how-to-prepare-for-a-debate-with-ai", ("How to prepare for a debate with AI", 'a 7-step AI prep plan with a worked R2 example of "If they say X, we answer Y" replies')),
+]
+COMPARE_SLUGS = {slug for slug, _ in COMPARE_LINKS}
+
+def compare_llms_lines():
+    lines = []
+    for slug, entry in COMPARE_LINKS:
+        if slug == "best-ai-for-debate":
+            lines.append(best_ai_llms_line())
+        elif isinstance(entry, tuple):
+            lines.append(f"- [{entry[0]}]({page_url(slug)}): {entry[1]}")
+        else:
+            page = PAGE_BY_SLUG[slug]
+            lines.append(f'- [{page["h1"]}]({page_url(slug)}): {entry or page["description"]}')
+    return "\n".join(lines)
+
 def llms_txt():
     """public/llms.txt: a plain summary for AI agents, from the same facts as the pages."""
-    guides = "\n".join(f'- [{p["h1"]}]({page_url(p["slug"])}): {p["description"]}' for p in PAGES if p["slug"] != "best-ai-for-debate")
+    guides = "\n".join(f'- [{p["h1"]}]({page_url(p["slug"])}): {p["description"]}' for p in PAGES if p["slug"] not in COMPARE_SLUGS | {"debateowl-pricing"})
     tools = "\n".join(f"- [{name}]({BASE}{route}): {blurb}" for route, name, blurb in FREE_TOOLS)
     return f"""# {BRAND}
 
@@ -786,14 +815,6 @@ def llms_txt():
 
 - [Home]({BASE}/): what {PRODUCT} is, the {len(PREP_MODES)} prep modes, pricing and FAQ
 - [Pricing]({page_url("debateowl-pricing")}): trial, Pro and what each includes
-- [Best AI debate tools]({page_url("best-ai-debate-tools")}): how to choose an AI debate tool
-{best_ai_llms_line()}
-- [DebateOwl vs Debate Ladder]({BASE}/debateowl-vs-debate-ladder): case prep and timed format rounds vs a voice-first ranked debate game, with a 7-question checklist
-- [Free vs paid AI debate tools]({BASE}/free-vs-paid-ai-debate-tools): what free plans include and what paid AI debate tools cost, checked October 2026
-- [ChatGPT vs Claude for debate]({BASE}/chatgpt-vs-claude-for-debate): where each general chatbot fits in debate prep, prompts that make them argue back, and when a debate-specific tool is better
-- [AI debate tools for teachers]({BASE}/ai-debate-tools-for-teachers): AI tools for classroom debate by scenario: no-signup timers, AI opponents, class tournaments and graded discussion
-- [How to prepare for a debate with AI]({BASE}/how-to-prepare-for-a-debate-with-ai): a 7-step AI prep plan with a worked R2 example of "If they say X, we answer Y" replies
-- [Best AI for Public Forum debate]({BASE}/best-ai-for-public-forum): Public Forum AI tools compared speech by speech, with prices as of October 2026
 - [About]({BASE}/about): what {PRODUCT} is, who makes it and its former name
 - [Contact]({BASE}/contact): email {SITE["contactEmail"]} for support and feedback, {SITE["privacyEmail"]} for privacy and data requests
 - [Sitemap]({BASE}/sitemap.xml): every public page
@@ -809,7 +830,7 @@ Free to use, no account needed, and they run in the browser.
 
 ## Compare
 
-{best_ai_llms_line()}
+{compare_llms_lines()}
 
 ## Guides
 

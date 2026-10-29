@@ -86,7 +86,7 @@ function landingQuestions(language: PageLanguage = 'en'): Array<[string, string]
     [i18n.t('shortAnswer.question'), i18n.t('shortAnswer.answer', { asOf })],
     [i18n.t('faq.q6'), i18n.t('faq.a6', { modes: PREP_MODE_COUNT })],
     [i18n.t('faq.q8'), i18n.t('faq.a8')],
-    [i18n.t('faq.q7'), i18n.t('faq.a7')],
+    [i18n.t('faq.q7'), i18n.t('faq.a7', { asOf })],
     [i18n.t('faq.q1'), i18n.t('faq.a1', { asOf })],
     [i18n.t('faq.q9'), i18n.t('faq.a9')],
     ...[2, 3, 4, 5].map((n): [string, string] => [i18n.t(`faq.q${n}`), i18n.t(`faq.a${n}`)]),

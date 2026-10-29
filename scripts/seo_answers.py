@@ -10,7 +10,7 @@ Name the product with {product} and the Pro price with {pro_price}.
 ANSWERS = {
     "best-ai-debate-tools": (
         "Which AI debate tool should you use?",
-        "It depends on the job. For brainstorming or learning a topic, a general chatbot such as ChatGPT is flexible. For motion-by-motion prep plus timed practice rounds that end in a verdict, a dedicated platform such as {product} fits. As of October 2026, debatelab.ai, a separate product, says it is free and runs World Schools and Asian Parliamentary practice, and WinDebate adds round replay and progress tracking from $19.99/month. Give each tool the same motion and tasks before you decide.",
+        "For preparing a specific motion, {product} gives you a case you can read out loud, \"If they say X, we answer Y\" replies and timed practice rounds ({trial_days}-day free trial, then $5/month). General chatbots are better for open brainstorming, and research tools for finding sources. Other debate platforms differ in formats, practice style and price; the table below compares six tools as of October 2026. Give each tool the same motion and tasks before you decide.",
     ),
     "debateowl-pricing": (
         "How much does {product} cost?",
