@@ -64,7 +64,7 @@ export default function GenerateScreen() {
   const requests = useRef(0);
   const abort = useRef<AbortController | null>(null);
   const live = useRef(true);
-  const liveRun = useLiveRun();
+  const liveRun = useLiveRun({ tool: 'case', parts: (draft) => generateDraftSections(draft, t).length });
   // Dictation fills the motion, as the website's microphone beside it does. The
   // ref holds words that arrived before the last ones were drawn.
   const motionRef = useRef(form.motion);
@@ -122,7 +122,7 @@ export default function GenerateScreen() {
         language: outputLanguage,
         debateContext,
         signal: controller.signal,
-        live: liveRun.begin(),
+        live: liveRun.begin(input.motion),
       });
       // Review choices cover one request, as on the website.
       resetContextChoices('generate');
@@ -156,6 +156,7 @@ export default function GenerateScreen() {
       const notice = arrivalNotices({ recordFailed, sourcesFailed: sources.failed, assessed, truncated });
       // The case just made celebrates when its document opens; reopening it later does not.
       markCelebration(key);
+      liveRun.complete();
       router.replace({
         pathname: '/case/[id]',
         params: { id: key, from: from ?? 'prepare', ...(notice ? { notice } : {}), ...(sources.failed > 0 ? { failed: String(sources.failed) } : {}) },
@@ -166,7 +167,7 @@ export default function GenerateScreen() {
       if (!(cause instanceof AIError)) console.warn('Generate failed:', cause instanceof Error ? cause.message : cause);
       // A missing debate was deleted elsewhere; reload the list so the app stops using it.
       if (kind === 'debateMissing') void refresh();
-      liveRun.end();
+      liveRun.end('failed');
       setPhase('form');
       // A limit or model refusal opens the website's dialog as a sheet, not an inline error.
       if (openRefusal(router, cause, 'generate')) return;

@@ -70,7 +70,7 @@ export default function FactoidsScreen() {
       return next;
     }), []);
 
-  const liveRun = useLiveRun();
+  const liveRun = useLiveRun({ tool: 'factoids', parts: (draft) => factoidsDraftSections(draft, t).length });
   const endLiveRun = liveRun.end;
   const abortActive = useCallback(() => {
     requests.current += 1;
@@ -121,7 +121,7 @@ export default function FactoidsScreen() {
         language: outputLanguage,
         debateContext,
         signal: controller.signal,
-        live: liveRun.begin(),
+        live: liveRun.begin(input.claim),
       });
       // Review choices cover one request, as on the website.
       resetContextChoices('factoids');
@@ -153,6 +153,7 @@ export default function FactoidsScreen() {
         sources: discoveredSources,
       });
       const notice = arrivalNotices({ recordFailed, sourcesFailed: sources.failed, assessed, truncated });
+      liveRun.complete();
       router.replace({
         pathname: '/factoids/[id]',
         params: {
@@ -167,7 +168,7 @@ export default function FactoidsScreen() {
       const kind = cause instanceof AIError ? cause.kind : 'failed';
       if (!(cause instanceof AIError)) console.warn('Factoids failed:', cause instanceof Error ? cause.message : cause);
       if (kind === 'debateMissing') void refresh();
-      liveRun.end();
+      liveRun.end('failed');
       setPhase('form');
       // A limit or model refusal opens the website's dialog as a sheet, not an inline error.
       if (openRefusal(router, cause, 'factoids')) return;
