@@ -1,5 +1,5 @@
 import { Link, useFocusEffect, useRouter } from 'expo-router';
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, StyleSheet, View } from 'react-native';
 import Animated from 'react-native-reanimated';
@@ -220,6 +220,15 @@ function DebateDetails({ debateId, dashboard = false }: { debateId: string; dash
   const { current } = useDebates();
   const currentRef = useRef(current);
   currentRef.current = current;
+  // Retry and the reload after a delete run with no focus guard; a component gone since then keeps an old
+  // currentRef, so Spotlight also asks whether this one is still on screen.
+  const mounted = useRef(true);
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+    };
+  }, []);
   const [view, setView] = useState<DebateSide>('pro');
   const [counts, setCounts] = useState<DebateCounts | null>(null);
   const [recent, setRecent] = useState<Record<DebateSide, DebateItem[]> | null>(null);
@@ -250,7 +259,7 @@ function DebateDetails({ debateId, dashboard = false }: { debateId: string; dash
           const motion = shown.motion;
           fetchDocumentsForSpotlight(userId, debateId, SPOTLIGHT_LIMIT)
             .then((documents) => {
-              if (!isCurrent() || currentRef.current?.id !== debateId) return;
+              if (!mounted.current || !isCurrent() || currentRef.current?.id !== debateId) return;
               void indexForSpotlight('work', spotlightWorkItems(documents, motion, (kind) => t(`debate.kinds.${kind}`)));
             })
             .catch((cause: unknown) => console.warn('Could not read documents for Spotlight:', cause instanceof Error ? cause.message : cause));
