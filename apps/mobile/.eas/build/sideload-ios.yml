@@ -12,12 +12,18 @@ build:
     - eas/checkout
     - eas/install_node_modules
     - eas/resolve_build_config
-    - eas/prebuild
-    # Custom builds skip npm's eas-build-* hooks; prebuild may reinstall
-    # node_modules, so the expo-widgets patch runs after it.
+    # Custom builds skip npm's eas-build-* hooks, so the patches run here:
+    # before prebuild, which copies the share extension's template, and again
+    # after it, because prebuild may reinstall node_modules.
     - run:
-        name: Patch expo-widgets for the workspace
+        name: Patch native modules before prebuild
         command: npm run eas-build-post-install
+    - eas/prebuild
+    - run:
+        name: Patch native modules after prebuild
+        command: |
+          npm run eas-build-post-install
+          grep -l ALTAppGroups ios/DebateOwlShare/*.swift
     - run:
         name: Install pods
         working_directory: ./ios

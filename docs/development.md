@@ -262,7 +262,7 @@ The artifact is a `.tar.gz` of the `.app`; drag the unpacked app onto a Simulato
 
 #### Sideloaded IPA
 
-The `sideload` profile builds the release app for iPhone and iPad against **production** (`EXPO_PUBLIC_SUPABASE_ENV=production`), signed by no Apple team, for someone to re-sign with a free Apple ID in Sideloadly or AltStore. `release-simulator` builds the same app for the Simulator against staging. A normal EAS device build refuses to run without credentials, so `sideload` is a custom build, [`apps/mobile/.eas/build/sideload-ios.yml`](../apps/mobile/.eas/build/sideload-ios.yml): prebuild, the expo-widgets patch (custom builds skip npm's `eas-build-*` hooks), `pod install`, `xcodebuild archive` with signing off, then each bundle is signed ad hoc with the entitlements prebuild wrote and packed as `DebateOwl-sideload.ipa`. It needs no credentials, only a logged-in `eas`, and counts as one iOS build:
+The `sideload` profile builds the release app for iPhone and iPad against **production** (`EXPO_PUBLIC_SUPABASE_ENV=production`), signed by no Apple team, for someone to re-sign with a free Apple ID in Sideloadly or AltStore. `release-simulator` builds the same app for the Simulator against staging. A normal EAS device build refuses to run without credentials, so `sideload` is a custom build, [`apps/mobile/.eas/build/sideload-ios.yml`](../apps/mobile/.eas/build/sideload-ios.yml): prebuild, the `eas-build-post-install` patches (custom builds skip npm's `eas-build-*` hooks), `pod install`, `xcodebuild archive` with signing off, then each bundle is signed ad hoc with the entitlements prebuild wrote and packed as `DebateOwl-sideload.ipa`. It needs no credentials, only a logged-in `eas`, and counts as one iOS build:
 
 ```bash
 cd apps/mobile
@@ -273,7 +273,7 @@ EAS keeps the artifact for a limited time (the build's `expirationDate`), so att
 
 - push (the switch says this version cannot receive notifications), Sign in with Apple (the button is hidden), the Time Sensitive alert (it arrives as a normal notification), universal links and Handoff from Safari;
 - in-app purchase (`plans.tsx` shows the App Store as unavailable);
-- Live Activities, the widgets and the share extension whenever the re-signer does not provision the App Group `group.com.pistack.debateowl` under that exact name: `nativeCapabilities()` finds no container and the app runs without them. AltStore renames groups to `<group>.<TEAMID>`, so they are off there too.
+- Live Activities, the widgets and the share extension whenever the re-signer does not provision the App Group: `nativeCapabilities()` finds no container and the app runs without them. AltStore provisions it as `group.com.pistack.debateowl.<TEAMID>` and writes that name into each bundle's `ALTAppGroups`; `scripts/patch-app-group-lookup.mjs` makes expo-widgets and expo-share-intent read that key first, so they work there. Sideloadly may not provision the group at all.
 
 Everything else works as in any build: email code, demo code and Google sign-in (once production allows the `debatelab://auth/callback` redirect), every tool, the timer with its local time-up alert, voice and dictation, quick actions, Spotlight, Siri and Shortcuts, iPad shortcuts and offline reading. A free signature lasts seven days.
 
