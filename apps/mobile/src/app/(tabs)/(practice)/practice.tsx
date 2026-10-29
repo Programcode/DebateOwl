@@ -28,6 +28,7 @@ const TOOL_ROUTES: Record<PracticeTool, Href> = {
   sparring: { pathname: '/sparring', params: { from: 'practice' } },
   timer: '/timer',
   'speech-time': { pathname: '/speech-time', params: { from: 'practice' } },
+  'flow-sheet': { pathname: '/flow-sheet', params: { from: 'practice' } },
   motions: { pathname: '/motions', params: { from: 'practice' } },
 };
 

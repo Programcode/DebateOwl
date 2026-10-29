@@ -2,11 +2,13 @@ import type { AttackOutput } from '@debatelab/core/ai/schemas/attack';
 import type { BrainstormOutput } from '@debatelab/core/ai/schemas/brainstorm';
 import type { FactoidsOutput } from '@debatelab/core/ai/schemas/factoids';
 import type { GenerateOutput } from '@debatelab/core/ai/schemas/generate';
+import type { SparringSession } from '@debatelab/core/sparring/session';
 import {
   buildAttackDocx,
   buildBrainstormDocx,
   buildCaseDocx,
   buildFactoidsDocx,
+  buildSparringDocx,
   type BuiltDocx,
   type DocxContext,
   type DocxModule,
@@ -58,3 +60,6 @@ export const brainstormDocx = (result: BrainstormOutput, t: Translate): DocxBuil
 
 export const factoidsDocx = (result: FactoidsOutput, t: Translate): DocxBuild =>
   (docx) => buildFactoidsDocx(docx, result, docxContext(t));
+
+export const sparringDocx = (session: SparringSession, t: Translate): DocxBuild =>
+  (docx) => buildSparringDocx(docx, session, docxContext(t));

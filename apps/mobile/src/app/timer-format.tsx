@@ -1,4 +1,4 @@
-import { CUSTOM_LIMITS, customToRoundFormat, parseCustomFormat, roundFormatToCustom, type CustomFormat, type CustomSegment } from '@debatelab/core/free-tools/custom-format';
+import { CUSTOM_LIMITS, customToRoundFormat, encodeCustomFormat, parseCustomFormat, roundFormatToCustom, type CustomFormat, type CustomSegment } from '@debatelab/core/free-tools/custom-format';
 import { initialRoundState } from '@debatelab/core/free-tools/round-timer';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
@@ -14,6 +14,8 @@ import { SegmentedControl } from '@/components/segmented-control';
 import { SheetScrollView } from '@/components/sheet';
 import { Text } from '@/components/text';
 import { haptics } from '@/lib/haptics';
+import { shareUrl } from '@/lib/export';
+import { showNotice } from '@/lib/confirm';
 import { formatFor, formatName } from '@/lib/timer';
 import { getTimer, saveFormat, updateSession } from '@/lib/timer-store';
 import { radius } from '@/theme/colors';
@@ -200,6 +202,10 @@ export default function TimerFormatSheet() {
         {tools('custom.poiHint')}
       </Text>
       <SecondaryButton icon="plus" label={tools('custom.add')} onPress={add} disabled={draft.segments.length >= CUSTOM_LIMITS.segments} testID="timer-format-add" />
+      <SecondaryButton icon="share" label={t('mobile.library.share')} disabled={!cleaned || encodeCustomFormat(cleaned).length > CUSTOM_LIMITS.encoded}
+        onPress={() => {
+          if (cleaned) void shareUrl(cleaned.name, `https://debateowl.com/tools/debate-timer?custom=${encodeCustomFormat(cleaned)}`).catch(() => showNotice(t('common.error')));
+        }} />
       <MainActionButton label={tools('custom.apply')} onPress={apply} disabled={!cleaned} />
     </SheetScrollView>
   );

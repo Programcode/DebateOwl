@@ -7,7 +7,7 @@ import Constants from 'expo-constants';
  */
 const websiteUrl = (Constants.expoConfig?.extra as { websiteUrl?: string } | undefined)?.websiteUrl ?? 'https://debateowl.com';
 
-export function websitePage(path: '/terms' | '/privacy'): string {
+export function websitePage(path: '/terms' | '/privacy' | '/app/settings'): string {
   return `${websiteUrl}${path}`;
 }
 

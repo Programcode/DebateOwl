@@ -21,6 +21,7 @@ export interface Subscription {
   /** Charged AI units today, or null when the counter cannot be read. */
   dailyUsed: number | null;
   trialEndsAt: string | null;
+  hasOpenStripeSubscription: boolean;
 }
 
 // The server's tier defaults (supabase/functions/_shared/usage-limits.ts).
@@ -52,6 +53,7 @@ export async function fetchSubscription(userId: string): Promise<Subscription> {
 
   return {
     tier: billing.tier,
+    hasOpenStripeSubscription: billing.hasOpenSubscription,
     billingState: billing.state,
     billingDate: billing.date,
     billingDateKind: billing.dateKind,

@@ -1,3 +1,4 @@
+import { customToRoundFormat, decodeCustomFormat } from '@debatelab/core/free-tools/custom-format';
 import { BUILT_IN_FORMAT_IDS, FORMATS, formatDuration, type RoundSegment } from '@debatelab/core/free-tools/formats';
 import {
   clockFace,
@@ -12,8 +13,8 @@ import {
   toggleSpeech,
   type PrepSide,
 } from '@debatelab/core/free-tools/round-timer';
-import { useRouter } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { AppState, Pressable, ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -53,6 +54,15 @@ export default function TimerScreen() {
   const { t } = useTranslation();
   const tools: Translate = (key, options) => t(key, { ns: 'tools', ...options });
   const router = useRouter();
+  const { custom: customParam } = useLocalSearchParams<{ custom?: string | string[] }>();
+  const appliedCustom = useRef<string | null>(null);
+  useEffect(() => {
+    const encoded = Array.isArray(customParam) ? customParam[0] : customParam;
+    if (!encoded || appliedCustom.current === encoded) return;
+    appliedCustom.current = encoded;
+    const custom = decodeCustomFormat(encoded);
+    if (custom) updateSession((current) => ({ ...current, choice: { id: 'custom', custom }, round: initialRoundState(customToRoundFormat(custom)) }));
+  }, [customParam]);
   const insets = useSafeAreaInsets();
   const { width, height } = useWindowDimensions();
   const layout = useLayoutClass();

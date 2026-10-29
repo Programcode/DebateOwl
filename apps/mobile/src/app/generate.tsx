@@ -1,5 +1,5 @@
 import { generateDraftSections } from '@debatelab/core/ai/live-sections';
-import type { GenerateInput } from '@debatelab/core/ai/schemas/generate';
+import { GenerateInputSchema, type GenerateInput } from '@debatelab/core/ai/schemas/generate';
 import { MAX_MOTION_LENGTH } from '@debatelab/core/validation/motion';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
@@ -100,7 +100,10 @@ export default function GenerateScreen() {
   // The motion follows the Current Debate unless the student typed their own.
   useEffect(() => {
     if (oneOff || !current) return;
-    if (shouldPrefillMotion(lastForm.get().motion, current.motion, debates.map((debate) => debate.motion))) setForm({ motion: current.motion });
+    if (shouldPrefillMotion(lastForm.get().motion, current.motion, debates.map((debate) => debate.motion))) {
+      const role = GenerateInputSchema.shape.role.safeParse(current.settings.role);
+      setForm({ motion: current.motion, ...(role.success ? { role: role.data } : {}) });
+    }
   }, [current, debates, oneOff, setForm]);
 
   // A motion from Siri or Shortcuts (debatelab://generate?motion=) fills the form once, over the Current Debate's.
@@ -297,6 +300,7 @@ export default function GenerateScreen() {
               value={form.role}
               onChange={(role) => setForm({ role })}
               options={[
+                { value: 'general', label: t('debate.roleAny') },
                 { value: 'intro', label: t('generateForm.roleIntro') },
                 { value: 'r1', label: t('generateForm.roleR1') },
                 { value: 'r2', label: t('generateForm.roleR2') },

@@ -1,4 +1,6 @@
 import { describe, expect, it } from 'vitest';
+import { encodeCustomFormat, roundFormatToCustom } from '@debatelab/core/free-tools/custom-format';
+import { FORMATS } from '@debatelab/core/free-tools/formats';
 
 import { continuedRoute, handoffTarget } from './app-intent-links';
 
@@ -9,6 +11,7 @@ describe('handoffTarget', () => {
     expect(handoffTarget('/library/')?.webPath).toBe('/app/library');
     expect(handoffTarget('/you')?.webPath).toBe('/app/settings');
     expect(handoffTarget('/timer')?.webPath).toBe('/tools/debate-timer');
+    expect(handoffTarget('/flow-sheet')?.webPath).toBe('/tools/debate-flow-sheet');
     expect(handoffTarget('/flowchart/claim')?.webPath).toBe('/app/flowchart');
   });
 
@@ -33,6 +36,16 @@ describe('continuedRoute', () => {
     expect(continuedRoute('/case/abc')).toBe('/case/abc');
     expect(continuedRoute('https://debateowl.com/app/library')).toBe('/library');
     expect(continuedRoute('https://debateowl.com/tools/debate-timer')).toBe('/timer');
+  });
+
+  it('carries custom timer formats through Handoff beyond the app-path length limit', () => {
+    const format = roundFormatToCustom(FORMATS.wsdc);
+    format.segments = format.segments.map((segment) => ({ ...segment, label: 'x'.repeat(40) }));
+    const custom = encodeCustomFormat(format);
+    const url = `https://debateowl.com/tools/debate-timer?custom=${custom}`;
+    expect(url.length).toBeGreaterThan(512);
+    expect(continuedRoute(url)).toBe(`/timer?custom=${custom}`);
+    expect(continuedRoute(`https://debateowl.com/tools/debate-timer?custom=${'a'.repeat(5000)}`)).toBeNull();
   });
 
   it('opens History for a result only the other device has', () => {

@@ -165,6 +165,7 @@ function Root() {
             <Stack.Screen name="timer" options={{ presentation: 'fullScreenModal' }} />
             <Stack.Screen name="timer-format" options={sheet} />
             <Stack.Screen name="speech-time" />
+            <Stack.Screen name="flow-sheet" />
             <Stack.Screen name="motions" />
             <Stack.Screen name="crossfire" />
             <Stack.Screen name="crossfire-round/[id]" />

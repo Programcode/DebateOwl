@@ -29,8 +29,8 @@ const under = (...prefixes: string[]) => (pathname: string) =>
 /**
  * Every place in the app, grouped the way Adam asked for the iPad sidebar:
  * Debate, Prepare, Practice, Library and You. A tool's documents count as the
- * tool, so a saved case keeps Generate highlighted. The two free tools from
- * round 3 close the Practice section, named from the website's `tools` catalog
+ * tool, so a saved case keeps Generate highlighted. The free tools
+ * close the Practice section, named from the website's `tools` catalog
  * as the Practice tab names them.
  */
 export const SIDEBAR_SECTIONS: SidebarSection[] = [
@@ -62,6 +62,7 @@ export const SIDEBAR_SECTIONS: SidebarSection[] = [
       { key: 'flowchart', label: 'nav.flowchart', icon: 'branch', target: { kind: 'screen', pathname: '/flowchart' }, matches: under('/flowchart') },
       { key: 'timer', label: 'nav.timer', icon: 'timer', target: { kind: 'screen', pathname: '/timer' }, matches: under('/timer', '/timer-format') },
       { key: 'speech-time', label: 'tools:calc.region', icon: 'quote', target: { kind: 'screen', pathname: '/speech-time' }, matches: under('/speech-time') },
+      { key: 'flow-sheet', label: 'tools:flow.region', icon: 'file', target: { kind: 'screen', pathname: '/flow-sheet' }, matches: under('/flow-sheet') },
       { key: 'motions', label: 'tools:motions.region', icon: 'sparkles', target: { kind: 'screen', pathname: '/motions' }, matches: under('/motions') },
     ],
   },

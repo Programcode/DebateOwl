@@ -13,7 +13,7 @@ function probe() {
   return target.__debatelabExport;
 }
 
-export function sharePdf(html: string, fileName: string): Promise<void> {
+export function sharePdf(html: string, fileName: string, _dialogTitle?: string, _page?: { width: number; height: number }): Promise<void> {
   Object.assign(probe(), { html, fileName });
   return Promise.resolve();
 }
