@@ -5,7 +5,8 @@ import { useEffect, useState } from 'react';
 import { useAuth } from './auth';
 import { nativeCapabilities } from './native-capabilities';
 import { listenForShareUrls, takeShareUrl } from './share-inbox';
-import { parseSharedItem, SHARE_KEY, sharedItemRoute, type SharedItem } from './share-intent-parse';
+import { useLatest } from './live-value';
+import { isReadableShareUrl, parseSharedItem, SHARE_KEY, sharedItemRoute, type SharedItem } from './share-intent-parse';
 
 /**
  * Text and web pages shared from Safari or any other app. The share extension
@@ -26,6 +27,8 @@ type ShareIntentModule = {
 // What the sheet opened by the share extension fills in, read once. Only useShareIntent sets it,
 // so the sheets' own route parameters can never start an import.
 let held: SharedItem | null = null;
+// The account the hand-off was made for; another account never sees it.
+let heldOwner: string | null = null;
 
 /** The shared item of this kind the sheet was opened for, if any; `forgetShared` once it is in the form. */
 export function sharedItem<K extends SharedItem['kind']>(kind: K): Extract<SharedItem, { kind: K }> | null {
@@ -34,31 +37,41 @@ export function sharedItem<K extends SharedItem['kind']>(kind: K): Extract<Share
 
 export function forgetShared(): void {
   held = null;
+  heldOwner = null;
 }
 
 /**
  * Opens what was shared. Call it in the root layout's Root component with its
  * `ready`, like useQuickActions: the item waits until the stack is mounted and
  * someone is signed in, because the sheets it opens add to the Current Debate.
+ * An item belongs to the account signed in when it was read: if that account
+ * signs out first, it is dropped, never opened for the next one. An item read
+ * before any session exists goes to whoever signs in on this phone.
  */
 export function useShareIntent(ready: boolean): void {
   const router = useRouter();
   const { session } = useAuth();
-  const [item, setItem] = useState<SharedItem | null>(null);
+  const userId = session?.user.id ?? null;
+  const user = useLatest(userId);
+  const [item, setItem] = useState<{ item: SharedItem; owner: string | null } | null>(null);
 
   useEffect(() => {
     if (!nativeCapabilities().shareIntent) return;
     const native = requireOptionalNativeModule<ShareIntentModule>('ExpoShareIntentModule');
     if (!native) return;
+    // The account a read started under; the item it brings back is that account's.
+    let readOwner: string | null = null;
     const changed = native.addListener('onChange', (event) => {
       const next = parseSharedItem(event.value);
+      const owner = readOwner ?? user.current;
+      readOwner = null;
       // Read once: the item does not open again on the next launch.
       try {
         native.clearShareIntent(SHARE_KEY);
       } catch {
         // Nothing to clear.
       }
-      if (next) setItem(next);
+      if (next) setItem({ item: next, owner });
     });
     const failed = native.addListener('onError', (event) => {
       console.warn('Could not read what was shared:', typeof event.value === 'string' ? event.value : 'unknown error');
@@ -66,6 +79,8 @@ export function useShareIntent(ready: boolean): void {
     // A URL from a cold start waited in the inbox until now.
     const stopListening = listenForShareUrls((url) => {
       takeShareUrl();
+      if (!isReadableShareUrl(url)) return;
+      readOwner = user.current;
       native.getShareIntent(url).catch((cause: unknown) => console.warn('Could not read what was shared:', cause instanceof Error ? cause.message : cause));
     });
     return () => {
@@ -73,17 +88,24 @@ export function useShareIntent(ready: boolean): void {
       changed.remove();
       failed.remove();
     };
-  }, []);
+  }, [user]);
 
-  const signedIn = session !== null;
+  // Another account: what the previous one shared is dropped, waiting or handed off.
   useEffect(() => {
-    if (!item || !ready || !signedIn) return;
+    setItem((pending) => (pending && pending.owner !== null && pending.owner !== userId ? null : pending));
+    if (heldOwner !== userId) forgetShared();
+  }, [userId]);
+
+  useEffect(() => {
+    if (!item || !ready || !userId) return;
+    if (item.owner !== null && item.owner !== userId) return;
     // After the stack has committed its first screens, as useQuickActions does.
     const timer = setTimeout(() => {
       setItem(null);
-      held = item;
-      router.push(sharedItemRoute(item));
+      held = item.item;
+      heldOwner = userId;
+      router.push(sharedItemRoute(item.item));
     }, 0);
     return () => clearTimeout(timer);
-  }, [item, ready, signedIn, router]);
+  }, [item, ready, userId, router]);
 }

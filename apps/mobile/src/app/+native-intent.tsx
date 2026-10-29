@@ -1,6 +1,6 @@
 import { appPathForUrl } from '@/lib/deep-links';
 import { receiveShareUrl } from '@/lib/share-inbox';
-import { isShareIntentUrl } from '@/lib/share-intent-parse';
+import { isReadableShareUrl, isShareIntentUrl } from '@/lib/share-intent-parse';
 
 /**
  * Every URL the system hands the app passes here first (Expo Router's native
@@ -15,7 +15,8 @@ import { isShareIntentUrl } from '@/lib/share-intent-parse';
 export function redirectSystemPath({ path }: { path: string; initial: boolean }): string {
   try {
     if (isShareIntentUrl(path)) {
-      receiveShareUrl(path);
+      // Only the extension's own URL is read; anything else in its shape just opens the Debate tab.
+      if (isReadableShareUrl(path)) receiveShareUrl(path);
       return '/';
     }
     if (!/^https?:/i.test(path)) return path;

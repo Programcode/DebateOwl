@@ -20,8 +20,22 @@ export type SharedItem =
   | { kind: 'link'; url: string; title?: string }
   | { kind: 'text'; text: string; title: string };
 
+/**
+ * Exactly what our extension opens (key, a UUID nonce, a text or web page
+ * type), and nothing else. expo-share-intent's native reader force-unwraps the
+ * fragment, so `debatelab://dataUrl=x` from any web page would crash the app if
+ * it reached it; files are never shared in, so their types are refused too.
+ */
+const READABLE_SHARE_URL = new RegExp(`^debatelab://dataUrl=${SHARE_KEY}(\\?nonce=[0-9A-Fa-f-]{1,64})?#(text|weburl)$`);
+
+/** Any URL in the share extension's shape: never a route, whether or not it can be read. */
 export function isShareIntentUrl(url: unknown): url is string {
   return typeof url === 'string' && SHARE_URL.test(url);
+}
+
+/** A share URL the native module may be asked to read. */
+export function isReadableShareUrl(url: unknown): url is string {
+  return typeof url === 'string' && url.length <= 256 && READABLE_SHARE_URL.test(url);
 }
 
 /** An http or https address on its own, without spaces or control characters. */

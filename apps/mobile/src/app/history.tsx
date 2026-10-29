@@ -206,6 +206,33 @@ export default function HistoryScreen() {
     void refreshDebates();
   };
 
+  // "Add to debate" lives here, not in its row: a virtualized row can unmount while scrolled away,
+  // and the debate picked for it and a request in flight must outlast that.
+  const [attachChoices, setAttachChoices] = useState<Record<string, string>>({});
+  const [attaching, setAttaching] = useState<ReadonlySet<string>>(() => new Set());
+  const attachEntry = async (key: string, entry: UnsortedEntry, debateId: string) => {
+    const forUser = owner.current;
+    if (!forUser || attaching.has(key)) return;
+    setAttaching((previous) => new Set(previous).add(key));
+    try {
+      await attachToDebate(forUser, entry, debateId);
+      if (!live.current || owner.current !== forUser) return;
+      setAttachNotice({ scope: OUTSIDE, text: t('debate.attached') });
+      attached(entry);
+    } catch (cause) {
+      console.warn('Could not add to the debate:', cause instanceof Error ? cause.message : cause);
+      if (live.current && owner.current === forUser) showNotice(t('debate.attachFailed'));
+    } finally {
+      if (live.current) {
+        setAttaching((previous) => {
+          const next = new Set(previous);
+          next.delete(key);
+          return next;
+        });
+      }
+    }
+  };
+
   // The attach notice belongs to the list it was shown for.
   const [attachNotice, setAttachNotice] = useState<{ scope: string; text: string } | null>(null);
   const notice = attachNotice?.scope === scope ? attachNotice.text : null;
@@ -296,7 +323,7 @@ export default function HistoryScreen() {
         header={header}
         data={rows}
         keyExtractor={(row) => row.key}
-        extraData={notice}
+        extraData={{ notice, attachChoices, attaching }}
         animateLayout
         onRefresh={() => load(scope)}
         ListEmptyComponent={empty}
@@ -308,11 +335,10 @@ export default function HistoryScreen() {
                 <UnsortedRow
                   entry={row.entry}
                   debates={debates}
-                  userId={userId}
-                  onAttached={() => {
-                    setAttachNotice({ scope, text: t('debate.attached') });
-                    attached(row.entry);
-                  }}
+                  choice={attachChoices[row.key]}
+                  busy={attaching.has(row.key)}
+                  onChoose={(debateId) => setAttachChoices((previous) => ({ ...previous, [row.key]: debateId }))}
+                  onAttach={(debateId) => void attachEntry(row.key, row.entry, debateId)}
                 />
               </ListItemIn>
             );
@@ -522,34 +548,41 @@ function UnsortedEmpty({ notice }: { notice: string | null }) {
   );
 }
 
-function UnsortedRow({ entry, debates, userId, onAttached }: { entry: UnsortedEntry; debates: Debate[]; userId: string | null; onAttached: () => void }) {
+/**
+ * One unsorted item with "Add to debate". The list is virtualized, so the row may unmount while
+ * scrolled away: the debate picked and the request in flight belong to the screen (`choice`, `busy`,
+ * `onAttach`), and only the open menu is the row's own.
+ */
+function UnsortedRow({
+  entry,
+  debates,
+  choice,
+  busy,
+  onChoose,
+  onAttach,
+}: {
+  entry: UnsortedEntry;
+  debates: Debate[];
+  /** The debate picked for it, if the student changed the suggestion. */
+  choice: string | undefined;
+  busy: boolean;
+  onChoose: (debateId: string) => void;
+  onAttach: (debateId: string) => void;
+}) {
   const { t } = useTranslation();
   const router = useRouter();
   const { colors } = useTheme();
   const suggestion = suggestDebate(debates, entry.kind === 'source' ? [entry.title] : [entry.motion, entry.title]);
-  const [target, setTarget] = useState(suggestion?.id ?? '');
+  const target = choice ?? suggestion?.id ?? '';
+  const setTarget = onChoose;
   const [picking, setPicking] = useState(false);
-  const [busy, setBusy] = useState(false);
-  const live = useRef(true);
-  useEffect(() => () => {
-    live.current = false;
-  }, []);
   const chosen = debates.find((debate) => debate.id === target);
   const href = entry.kind === 'source' ? null : historyHref(entry);
   const title = entry.title || t(`debate.kinds.${entry.kind}`);
 
-  const attach = async () => {
-    if (!chosen || !userId || busy) return;
-    setBusy(true);
-    try {
-      await attachToDebate(userId, entry, chosen.id);
-      if (live.current) onAttached();
-    } catch (cause) {
-      console.warn('Could not add to the debate:', cause instanceof Error ? cause.message : cause);
-      if (live.current) showNotice(t('debate.attachFailed'));
-    } finally {
-      if (live.current) setBusy(false);
-    }
+  const attach = () => {
+    if (!chosen || busy) return;
+    onAttach(chosen.id);
   };
 
   return (
@@ -601,7 +634,7 @@ function UnsortedRow({ entry, debates, userId, onAttached }: { entry: UnsortedEn
               setTarget(key);
             }}
           />
-          <PrimaryButton label={t('debate.attachConfirm')} busy={busy} disabled={!chosen} onPress={() => void attach()} />
+          <PrimaryButton label={t('debate.attachConfirm')} busy={busy} disabled={!chosen} onPress={attach} />
         </>
       ) : null}
     </Card>

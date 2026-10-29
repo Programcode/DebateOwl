@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { isShareIntentUrl, MAX_SHARED_TEXT, noteTitleFrom, parseSharedItem, sharedItemRoute } from './share-intent-parse';
+import { isReadableShareUrl, isShareIntentUrl, MAX_SHARED_TEXT, noteTitleFrom, parseSharedItem, sharedItemRoute } from './share-intent-parse';
 
 describe('isShareIntentUrl', () => {
   it('knows the URL the share extension opens the app with, and nothing else', () => {
@@ -8,6 +8,20 @@ describe('isShareIntentUrl', () => {
     expect(isShareIntentUrl('debatelab://case/abc')).toBe(false);
     expect(isShareIntentUrl('https://debateowl.com/dataUrl=x')).toBe(false);
     expect(isShareIntentUrl(null)).toBe(false);
+  });
+});
+
+describe('isReadableShareUrl', () => {
+  it('passes only what the extension opens, so a crafted link never reaches the native reader', () => {
+    expect(isReadableShareUrl('debatelab://dataUrl=debatelabShareKey?nonce=0F8FAD5B-D9CB-469F-A165-70867728950E#weburl')).toBe(true);
+    expect(isReadableShareUrl('debatelab://dataUrl=debatelabShareKey#text')).toBe(true);
+    // No fragment: the module would force-unwrap it and crash.
+    expect(isReadableShareUrl('debatelab://dataUrl=debatelabShareKey')).toBe(false);
+    expect(isReadableShareUrl('debatelab://dataUrl=debatelabShareKey?nonce=1#')).toBe(false);
+    // Files are not taken, another key reads another store entry.
+    expect(isReadableShareUrl('debatelab://dataUrl=debatelabShareKey#media')).toBe(false);
+    expect(isReadableShareUrl('debatelab://dataUrl=otherKey#text')).toBe(false);
+    expect(isReadableShareUrl('debatelab://dataUrl=debatelabShareKey?nonce=x#text&y')).toBe(false);
   });
 });
 
