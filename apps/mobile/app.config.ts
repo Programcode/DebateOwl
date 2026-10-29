@@ -10,9 +10,10 @@ import { type ConfigPlugin, withEntitlementsPlist } from 'expo/config-plugins';
 // DEBATELAB_BUILD=dev (set by the `development` profile in eas.json) adds the
 // native modules Expo Go lacks. Without it the config is the one Expo Go has
 // always used. DEBATELAB_APP_GROUP adds the timer's widget extension (its Live
-// Activity, Dynamic Island clock and lock-screen widget), which needs the App
-// Group `group.com.pistack.debateowl`, registered for both
-// `com.pistack.debateowl` and `com.pistack.debateowl.ExpoWidgetsTarget`. On a
+// Activity, Dynamic Island clock and lock-screen widget) and the share
+// extension, which need the App Group `group.com.pistack.debateowl`, registered
+// for `com.pistack.debateowl`, `com.pistack.debateowl.ExpoWidgetsTarget` and
+// `com.pistack.debateowl.share-extension`. On a
 // device, set it only when the provisioning profile carries that group; a
 // simulator build is not signed and always can.
 // See docs/development.md#development-build.
@@ -253,6 +254,25 @@ export default ({ projectRoot }: ConfigContext): ExpoConfig => {
             ios: { supportedFamilies: ['accessoryRectangular', 'accessoryCircular', 'accessoryInline'] },
           },
         ],
+      },
+    ]);
+  }
+  if (appGroup) {
+    // The share extension: Safari and other apps share a web page or text into DebateOwl
+    // (src/lib/share-intent.ts). Its bundle id is `${bundleIdentifier}.share-extension`, which
+    // needs the same App Group registered on the Apple account. Text and pages only; files stay
+    // with Import file.
+    config.plugins!.push([
+      'expo-share-intent',
+      {
+        iosActivationRules: {
+          NSExtensionActivationSupportsWebURLWithMaxCount: 1,
+          NSExtensionActivationSupportsWebPageWithMaxCount: 1,
+          NSExtensionActivationSupportsText: true,
+        },
+        iosAppGroupIdentifier: APP_GROUP,
+        iosShareExtensionName: 'DebateOwl Share',
+        disableAndroid: true,
       },
     ]);
   }

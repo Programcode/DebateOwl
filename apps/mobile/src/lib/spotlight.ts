@@ -1,29 +1,20 @@
 import { requireOptionalNativeModule } from 'expo';
 
 import { nativeCapabilities } from './native-capabilities';
+import type { SpotlightItem } from './spotlight-items';
 
 /**
- * Spotlight search for debates and saved cases, through expo-core-spotlight
- * (2.x is the line for SDK 56 and 57; it needs its config plugin, which
- * app.config.ts adds once the package is installed). It is reached
- * by its native module name, so nothing here loads in Expo Go, on the web or
- * in a build without the package: there every call is a no-op.
+ * Spotlight search for the Current Debate's saved documents, through
+ * expo-core-spotlight (2.x: 3.0 drops the config plugin app.config.ts adds).
+ * It is reached by its native module name, so nothing here loads in Expo Go,
+ * on the web or in a build without the package: there every call is a no-op.
  *
- * The Debate tab indexes the Current Debate's cases and the debate context
- * clears the index on sign-out. TODO(spotlight): install expo-core-spotlight@^2
- * for the development build, and clear the index after Delete all my data.
+ * The Debate tab indexes the Current Debate's documents (spotlight-items.ts);
+ * the debate context clears the index on sign-out and Delete all my data
+ * clears it too. A tapped result opens its debatelab:// URL.
  */
 
-/** One searchable item. Its URL is also its Spotlight identifier, which the package opens when the result is tapped. */
-export type SpotlightItem = {
-  /** An app link, such as `debatelab://case/<id>`. */
-  url: `debatelab://${string}`;
-  title: string;
-  description?: string;
-  keywords?: string[];
-};
-
-export type SpotlightDomain = 'debates' | 'cases';
+export type SpotlightDomain = 'debates' | 'work';
 
 type CoreSpotlightModule = {
   indexItems: (items: Record<string, unknown>[]) => Promise<void>;
@@ -55,6 +46,17 @@ export async function indexForSpotlight(domain: SpotlightDomain, items: Spotligh
         domainIdentifier: domainId(domain),
       })),
     );
+  } catch (cause) {
+    console.warn('Could not update Spotlight:', cause instanceof Error ? cause.message : cause);
+  }
+}
+
+/** Removes one domain's items, such as the documents of a debate that is no longer the Current Debate. */
+export async function clearSpotlightDomain(domain: SpotlightDomain): Promise<void> {
+  const native = spotlight();
+  if (!native) return;
+  try {
+    await native.removeAllItemsFromDomain(domainId(domain));
   } catch (cause) {
     console.warn('Could not update Spotlight:', cause instanceof Error ? cause.message : cause);
   }

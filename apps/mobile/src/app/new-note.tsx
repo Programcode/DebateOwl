@@ -1,5 +1,5 @@
-import { useRouter } from 'expo-router';
-import { useState } from 'react';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { StyleSheet, View } from 'react-native';
 
@@ -13,12 +13,14 @@ import { useAuth } from '@/lib/auth';
 import { useDebates } from '@/lib/debate-context';
 import { haptics } from '@/lib/haptics';
 import { queueAddSource } from '@/lib/offline-queue';
+import { forgetSharedNote, sharedNote } from '@/lib/share-intent';
 import { useLibraryFolders } from '@/lib/use-library-folders';
 import { useTheme } from '@/theme/use-theme';
 
 /**
  * Write a note: a text source in the Current Debate, like the website's manual
  * entry. Offline it is kept on the phone and added once the connection is back.
+ * Text shared from another app (share-intent.ts) opens it filled in.
  */
 export default function NewNoteSheet() {
   const { t } = useTranslation();
@@ -26,8 +28,12 @@ export default function NewNoteSheet() {
   const { colors } = useTheme();
   const { session } = useAuth();
   const { current } = useDebates();
-  const [title, setTitle] = useState('');
-  const [content, setContent] = useState('');
+  const { shared } = useLocalSearchParams<{ shared?: string }>();
+  const [title, setTitle] = useState(() => (shared ? sharedNote()?.title ?? '' : ''));
+  const [content, setContent] = useState(() => (shared ? sharedNote()?.text ?? '' : ''));
+  useEffect(() => {
+    if (shared) forgetSharedNote();
+  }, [shared]);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const toast = useToast();
