@@ -444,6 +444,7 @@ function LibraryBody({
       keyExtractor={(source) => source.id}
       extraData={`${selectedId ?? ''}:${folder}:${chipFolders.join('/')}:${[...waiting].join(',')}`}
       animateLayout
+      onRefresh={library.load}
       style={style}
       contentStyle={contentStyle}
       ListEmptyComponent={

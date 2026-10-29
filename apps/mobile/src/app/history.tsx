@@ -298,6 +298,7 @@ export default function HistoryScreen() {
         keyExtractor={(row) => row.key}
         extraData={notice}
         animateLayout
+        onRefresh={() => load(scope)}
         ListEmptyComponent={empty}
         ItemSeparatorComponent={shown?.kind === 'unsorted' ? UnsortedGap : undefined}
         renderItem={({ item: row, index }) => {

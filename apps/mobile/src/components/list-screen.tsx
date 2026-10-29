@@ -1,5 +1,5 @@
 import { useState, type ReactElement, type ReactNode } from 'react';
-import { StyleSheet, View, type FlatListProps, type StyleProp, type ViewStyle } from 'react-native';
+import { RefreshControl, StyleSheet, View, type FlatListProps, type StyleProp, type ViewStyle } from 'react-native';
 import Animated, { LinearTransition } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -12,7 +12,7 @@ import { motionSetting, useReduceMotion } from '@/theme/motion';
 import { useTheme } from '@/theme/use-theme';
 
 // Reanimated's FlatList draws its own cells (for itemLayoutAnimation).
-type ListScreenProps<T> = Omit<FlatListProps<T>, 'ListHeaderComponent' | 'contentContainerStyle' | 'CellRendererComponent'> & {
+type ListScreenProps<T> = Omit<FlatListProps<T>, 'ListHeaderComponent' | 'contentContainerStyle' | 'CellRendererComponent' | 'onRefresh' | 'refreshing'> & {
   /** What `Screen` would show above the list: titles, pickers, search. */
   header?: ReactNode;
   safeTop?: boolean;
@@ -21,6 +21,8 @@ type ListScreenProps<T> = Omit<FlatListProps<T>, 'ListHeaderComponent' | 'conten
   contentStyle?: StyleProp<ViewStyle>;
   /** Rows slide into the gap a removed row leaves (Reanimated, on the UI thread; still under Reduce Motion). */
   animateLayout?: boolean;
+  /** Pull to refresh: the spinner shows until the reload settles. */
+  onRefresh?: () => Promise<unknown>;
 };
 
 /**
@@ -29,9 +31,17 @@ type ListScreenProps<T> = Omit<FlatListProps<T>, 'ListHeaderComponent' | 'conten
  * the rows are a FlatList, so only those near the screen are drawn. Rows that
  * should look like one card use `CardRowFrame`.
  */
-export function ListScreen<T>({ header, safeTop, wide, contentStyle, animateLayout = false, ...list }: ListScreenProps<T>): ReactElement {
+export function ListScreen<T>({ header, safeTop, wide, contentStyle, animateLayout = false, onRefresh, ...list }: ListScreenProps<T>): ReactElement {
   const insets = useSafeAreaInsets();
   const reduce = useReduceMotion();
+  const { colors } = useTheme();
+  const [refreshing, setRefreshing] = useState(false);
+  const refresh = onRefresh
+    ? () => {
+      setRefreshing(true);
+      void onRefresh().finally(() => setRefreshing(false));
+    }
+    : undefined;
   return (
     <Animated.FlatList
       contentInsetAdjustmentBehavior="automatic"
@@ -39,6 +49,7 @@ export function ListScreen<T>({ header, safeTop, wide, contentStyle, animateLayo
       keyboardShouldPersistTaps="handled"
       keyboardDismissMode="interactive"
       itemLayoutAnimation={animateLayout ? LinearTransition.duration(200).reduceMotion(motionSetting(reduce)) : undefined}
+      refreshControl={refresh ? <RefreshControl refreshing={refreshing} onRefresh={refresh} tintColor={colors.primary} /> : undefined}
       {...list}
       ListHeaderComponent={
         <View style={styles.header}>
