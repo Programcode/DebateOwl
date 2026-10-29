@@ -13,7 +13,7 @@ const GROUPS = [
     { id: "formats", paths: ["/public-forum-debate", "/lincoln-douglas-debate", "/policy-debate", "/british-parliamentary-debate", "/world-schools-debate", "/congress-debate"] },
     { id: "skills", paths: ["/how-to-write-a-debate-case", "/how-to-practice-rebuttals", "/debate-clash-points", "/debate-fallacies", "/debate-judge-adaptation", "/how-to-prepare-for-a-debate-tournament"] },
     { id: "tools", paths: ["/tools", "/tools/debate-timer", "/tools/debate-motion-generator", "/tools/debate-flow-sheet", "/tools/speech-time-calculator"] },
-    { id: "compare", paths: ["/best-ai-debate-tools", "/best-ai-for-debate", "/debateowl-vs-chatgpt"] },
+    { id: "compare", paths: ["/best-ai-debate-tools", "/best-ai-for-debate", "/debateowl-vs-chatgpt", "/debateowl-vs-debate-ladder", "/free-vs-paid-ai-debate-tools", "/chatgpt-vs-claude-for-debate", "/best-ai-for-public-forum"] },
 ] as const;
 
 const TOOLS = GROUPS.find((group) => group.id === "tools")!;
@@ -54,7 +54,10 @@ const TranslatedToolsHub = ({ language }: { language: "hu" | "es" }) => {
                         </ul>
                     </nav>
                     {/* The English home page lists every guide; a plain link loads it from the server. */}
-                    <p className="mt-5">
+                    <p className="mt-5 flex flex-col items-start gap-2">
+                        {language === "hu" && (
+                            <a href="/hu/mi-vitafelkeszules" hrefLang="hu" className="inline-flex items-center font-semibold text-primary underline-offset-4 hover:underline pointer-coarse:min-h-11">{t('guideHub.hungarianPrep')}</a>
+                        )}
                         <a href="/#guide-hub-title" hrefLang="en" className="inline-flex items-center font-semibold text-primary underline-offset-4 hover:underline pointer-coarse:min-h-11">{t('guideHub.englishGuides')}</a>
                     </p>
                 </Reveal>

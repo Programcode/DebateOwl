@@ -1016,13 +1016,14 @@
   },
   "guideHub": {
     "title": "Vitaútmutatók és ingyenes eszközök",
-    "subtitle": "Olvass el egy útmutatót a következő forduló előtt, vagy nyiss meg egy ingyenes eszközt, fiók nélkül. Az útmutatók angol nyelvűek.",
+    "subtitle": "Olvass el egy útmutatót a következő forduló előtt, vagy nyiss meg egy ingyenes eszközt, fiók nélkül. Az útmutatók többsége angol nyelvű.",
     "practice": "Gyakorlás MI-vel",
     "formats": "Vitaformátumok",
     "skills": "Készségfejlesztő útmutatók",
     "tools": "Ingyenes eszközök",
     "compare": "Összehasonlítás",
     "englishGuides": "Angol nyelvű útmutatók",
+    "hungarianPrep": "Vitafelkészülés MI-vel (magyar útmutató)",
     "links": {
       "ai-debate-practice": "MI-alapú vitagyakorlás",
       "ai-debate-case-generator": "MI-esetgenerátor hivatkozásokkal",
@@ -1048,7 +1049,11 @@
       "tools/speech-time-calculator": "Beszédidő-kalkulátor",
       "best-ai-debate-tools": "A legjobb MI-alapú vitaeszközök",
       "best-ai-for-debate": "Melyik MI a legjobb vitához",
-      "debateowl-vs-chatgpt": "{{product}} vagy ChatGPT"
+      "debateowl-vs-chatgpt": "{{product}} vagy ChatGPT",
+      "debateowl-vs-debate-ladder": "{{product}} vagy Debate Ladder",
+      "free-vs-paid-ai-debate-tools": "Ingyenes és fizetős MI-vitaeszközök",
+      "chatgpt-vs-claude-for-debate": "ChatGPT vagy Claude vitára",
+      "best-ai-for-public-forum": "A legjobb MI Public Forumhoz"
     }
   },
   "finalCta": {

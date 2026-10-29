@@ -1023,6 +1023,7 @@
     "tools": "Herramientas gratis",
     "compare": "Comparar",
     "englishGuides": "Guías en inglés",
+    "hungarianPrep": "Preparación de debate con IA, en húngaro",
     "links": {
       "ai-debate-practice": "Práctica de debate con IA",
       "ai-debate-case-generator": "Generador de casos con IA y citas",
@@ -1048,7 +1049,11 @@
       "tools/speech-time-calculator": "Calculadora de tiempo de discurso",
       "best-ai-debate-tools": "Las mejores herramientas de IA para debate",
       "best-ai-for-debate": "Qué IA es mejor para el debate",
-      "debateowl-vs-chatgpt": "{{product}} frente a ChatGPT"
+      "debateowl-vs-chatgpt": "{{product}} frente a ChatGPT",
+      "debateowl-vs-debate-ladder": "{{product}} frente a Debate Ladder",
+      "free-vs-paid-ai-debate-tools": "Herramientas de debate con IA: gratis o de pago",
+      "chatgpt-vs-claude-for-debate": "ChatGPT o Claude para debatir",
+      "best-ai-for-public-forum": "La mejor IA para Public Forum"
     }
   },
   "finalCta": {

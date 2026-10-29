@@ -256,6 +256,16 @@ CLUSTERS = {
 }
 RELATED_SIBLINGS = 6
 RELATED_CROSS = 2
+# Links added on top of the rotating set. These pages are not in PAGES, so the
+# cluster rotation cannot name them. Labels are the pages' own H1s.
+EXTRA_RELATED = {
+    "best-ai-debate-tools": [
+        ("/free-vs-paid-ai-debate-tools", "Free vs paid AI debate tools: what you actually get"),
+        ("/chatgpt-vs-claude-for-debate", "ChatGPT vs Claude for debate prep"),
+        ("/ai-debate-tools-for-teachers", "AI debate tools for teachers"),
+        ("/best-ai-for-public-forum", "Best AI for Public Forum debate"),
+    ],
+}
 
 # In-body links. In this order, each entry links the first paragraph text that matches it
 # (whole words, any case) to its guide, until the page has IN_BODY_LINKS of them. Specific
@@ -566,6 +576,7 @@ def render_page(page):
     if page.get("callout"):
         label, href, text = page["callout"]
         callout = f'\n      <p class="callout">{esc(label)} <a href="{esc(href)}">{esc(text)}</a></p>'
+    extra = "".join(f'<a href="{esc(href)}">{esc(label)}</a>' for href, label in EXTRA_RELATED.get(page["slug"], []))
     nav = "".join(f'<a href="{href}">{esc(label)}</a>' for label, href in NAV)
     dates = f'Published <time datetime="{published}">{long_date(published)}</time> · Updated <time datetime="{modified}">{long_date(modified)}</time>'
     # A guide that supports a free tool leads with that tool, so the tool page owns the topic.
@@ -619,7 +630,7 @@ def render_page(page):
       <section class="section faq article" aria-labelledby="faq"><h2 id="faq">Frequently asked questions</h2>{faq_html}</section>
     </article>
     {about(page["slug"])}
-    <section class="section article" aria-labelledby="related"><h2 id="related">Related {PRODUCT} guides</h2><nav class="links" aria-label="Related guides">{internal_links(page["slug"])}</nav></section>
+    <section class="section article" aria-labelledby="related"><h2 id="related">Related {PRODUCT} guides</h2><nav class="links" aria-label="Related guides">{internal_links(page["slug"])}{extra}</nav></section>
   </main>
   <footer class="footer"><div class="wrap">{BRAND}: <a href="/">Home</a> / <a href="/debateowl-pricing">Pricing</a> / <a href="/privacy">Privacy</a> / <a href="/terms">Terms</a> / <a href="/about">About</a> / <a href="/contact">Contact</a> / <a href="/sitemap.xml">Sitemap</a></div></footer>
 </body>
@@ -639,6 +650,8 @@ def localized_sections():
             head = heads[PAGE_HEAD_IDS[route]]
             title, description = (head[key].replace("{{brand}}", BRAND).replace("{{product}}", PRODUCT) for key in ("title", "description"))
             lines.append(f"- [{title}]({BASE}{paths[language]}): {description}")
+        if language == "hu":
+            lines.append(f"- [Vitafelkészülés MI-vel]({BASE}/hu/mi-vitafelkeszules): melyik MI mire jó a vitára készülésben, magyarul")
         sections.append(f"## {heading}\n\n" + "\n".join(lines))
     return "\n\n".join(sections)
 
@@ -775,6 +788,12 @@ def llms_txt():
 - [Pricing]({page_url("debateowl-pricing")}): trial, Pro and what each includes
 - [Best AI debate tools]({page_url("best-ai-debate-tools")}): how to choose an AI debate tool
 {best_ai_llms_line()}
+- [DebateOwl vs Debate Ladder]({BASE}/debateowl-vs-debate-ladder): case prep and timed format rounds vs a voice-first ranked debate game, with a 7-question checklist
+- [Free vs paid AI debate tools]({BASE}/free-vs-paid-ai-debate-tools): what free plans include and what paid AI debate tools cost, checked October 2026
+- [ChatGPT vs Claude for debate]({BASE}/chatgpt-vs-claude-for-debate): where each general chatbot fits in debate prep, prompts that make them argue back, and when a debate-specific tool is better
+- [AI debate tools for teachers]({BASE}/ai-debate-tools-for-teachers): AI tools for classroom debate by scenario: no-signup timers, AI opponents, class tournaments and graded discussion
+- [How to prepare for a debate with AI]({BASE}/how-to-prepare-for-a-debate-with-ai): a 7-step AI prep plan with a worked R2 example of "If they say X, we answer Y" replies
+- [Best AI for Public Forum debate]({BASE}/best-ai-for-public-forum): Public Forum AI tools compared speech by speech, with prices as of October 2026
 - [About]({BASE}/about): what {PRODUCT} is, who makes it and its former name
 - [Contact]({BASE}/contact): email {SITE["contactEmail"]} for support and feedback, {SITE["privacyEmail"]} for privacy and data requests
 - [Sitemap]({BASE}/sitemap.xml): every public page
@@ -804,6 +823,9 @@ def main():
         directory.mkdir(parents=True, exist_ok=True)
         renderer = render_best_ai_page if page["slug"] == "best-ai-for-debate" else render_page
         (directory / "index.html").write_text(renderer(page))
+    # Imported here so a failure in the comparison pages still names this script.
+    from seo_comparison_pages import write_comparison_pages
+    write_comparison_pages(PUBLIC)
     (PUBLIC / "llms.txt").write_text(llms_txt())
 
     print(f"Generated {len(PAGES)} public SEO pages and llms.txt; the build writes sitemap.xml")

@@ -1023,6 +1023,7 @@
     "tools": "Free tools",
     "compare": "Compare",
     "englishGuides": "Guides in English",
+    "hungarianPrep": "Debate prep with AI, in Hungarian",
     "links": {
       "ai-debate-practice": "AI debate practice",
       "ai-debate-case-generator": "AI case generator with citations",
@@ -1048,7 +1049,11 @@
       "tools/speech-time-calculator": "Speech time calculator",
       "best-ai-debate-tools": "Best AI debate tools compared",
       "best-ai-for-debate": "Which AI is best for debate?",
-      "debateowl-vs-chatgpt": "{{product}} vs ChatGPT"
+      "debateowl-vs-chatgpt": "{{product}} vs ChatGPT",
+      "debateowl-vs-debate-ladder": "{{product}} vs Debate Ladder",
+      "free-vs-paid-ai-debate-tools": "Free vs paid AI debate tools",
+      "chatgpt-vs-claude-for-debate": "ChatGPT vs Claude for debate",
+      "best-ai-for-public-forum": "Best AI for Public Forum"
     }
   },
   "finalCta": {

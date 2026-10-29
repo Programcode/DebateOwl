@@ -36,6 +36,7 @@ export default function ToolsHubPage() {
         <p>The <Link to="/tools/debate-flow-sheet">flow sheet</Link> prints a page with one column per speech for the format you choose, and the <Link to="/tools/speech-time-calculator">speech time calculator</Link> tells you how long a written speech takes to deliver and which slots it fits.</p>
         <p>Two guides go with them: <a href="/online-debate-timer">how debate speech times work</a> in each format, and <a href="/how-to-flow-in-debate">how to flow in debate</a>.</p>
         <p>Looking for an AI to practice with? See <a href="/best-ai-for-debate">which AI is best for debate</a>.</p>
+        <p>Teaching? See <a href="/ai-debate-tools-for-teachers">AI debate tools for teachers</a>.</p>
         <p>The four tools share one set of format data, taken from the NSDA, WUDC, WSDC and UADC rules and cited on the timer page, so a Public Forum round has the same speeches on the timer, the flow sheet and the calculator.</p>
       </section>
 

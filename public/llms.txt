@@ -23,6 +23,12 @@ DebateOwl runs at https://debateowl.com/. It is a separate product from debatela
 - [Pricing](https://debateowl.com/debateowl-pricing): trial, Pro and what each includes
 - [Best AI debate tools](https://debateowl.com/best-ai-debate-tools): how to choose an AI debate tool
 - [Which AI is best for debate?](https://debateowl.com/best-ai-for-debate): DebateOwl is the top pick for a case you can read out loud, If they say X, we answer Y replies, timed practice rounds, free tools and $5/month, with a dated comparison of Claude, ChatGPT, SchoolAI, Debate Ladder, ArguFight, HyperWrite and PublicForumAI
+- [DebateOwl vs Debate Ladder](https://debateowl.com/debateowl-vs-debate-ladder): case prep and timed format rounds vs a voice-first ranked debate game, with a 7-question checklist
+- [Free vs paid AI debate tools](https://debateowl.com/free-vs-paid-ai-debate-tools): what free plans include and what paid AI debate tools cost, checked October 2026
+- [ChatGPT vs Claude for debate](https://debateowl.com/chatgpt-vs-claude-for-debate): where each general chatbot fits in debate prep, prompts that make them argue back, and when a debate-specific tool is better
+- [AI debate tools for teachers](https://debateowl.com/ai-debate-tools-for-teachers): AI tools for classroom debate by scenario: no-signup timers, AI opponents, class tournaments and graded discussion
+- [How to prepare for a debate with AI](https://debateowl.com/how-to-prepare-for-a-debate-with-ai): a 7-step AI prep plan with a worked R2 example of "If they say X, we answer Y" replies
+- [Best AI for Public Forum debate](https://debateowl.com/best-ai-for-public-forum): Public Forum AI tools compared speech by speech, with prices as of October 2026
 - [About](https://debateowl.com/about): what DebateOwl is, who makes it and its former name
 - [Contact](https://debateowl.com/contact): email hello@debateowl.com for support and feedback, privacy@debateowl.com for privacy and data requests
 - [Sitemap](https://debateowl.com/sitemap.xml): every public page
@@ -45,6 +51,7 @@ Free to use, no account needed, and they run in the browser.
 - [Vitatétel-generátor | DebateOwl](https://debateowl.com/hu/tools/vitatetel-generator): Ingyenes vitatétel-generátor, amely egy véletlen tételt, vagy vétógyakorláshoz hármat húz 300 eredeti, téma és típus szerint rendezett tételből.
 - [Nyomtatható vitajegyzetlapok | DebateOwl](https://debateowl.com/hu/tools/jegyzetlap): Ingyenes, nyomtatható vitajegyzetlap minden beszédhez külön oszloppal PF, LD, Policy, BP, World Schools vagy Asian Parliamentary formátumhoz.
 - [Beszédidő-kalkulátor | DebateOwl](https://debateowl.com/hu/tools/beszedido-kalkulator): Ingyenes beszédidő-kalkulátor, amely megszámolja egy vitabeszéd szavait, és megmutatja, mennyi ideig tart lassú, átlagos és gyors tempóban.
+- [Vitafelkészülés MI-vel](https://debateowl.com/hu/mi-vitafelkeszules): melyik MI mire jó a vitára készülésben, magyarul
 
 ## Español
 
