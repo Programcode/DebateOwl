@@ -17,6 +17,7 @@ import { confirmDestructive, showNotice } from '@/lib/confirm';
 import { useLatest } from '@/lib/live-value';
 import { formatWhen } from '@/lib/dates';
 import { shareText } from '@/lib/export';
+import { runRequest } from '@/lib/run-request';
 import { useCopyHolder } from '@/lib/use-copy-holder';
 
 type State = { status: 'loading' } | { status: 'missing' } | { status: 'failed' } | { status: 'ready'; round: SavedCrossfire };
@@ -55,12 +56,14 @@ export default function SavedCrossfireScreen() {
       cancel: t('common.cancel'),
     });
     if (!confirmed || !live.current || owner.current !== forUser || roundId.current !== id) return;
-    try {
-      await deleteCrossfireRound(forUser, id);
-      if (live.current && owner.current === forUser && roundId.current === id) router.back();
-    } catch {
-      if (live.current && owner.current === forUser && roundId.current === id) showNotice(t('historyPage.crossfireDeleteFailed'));
-    }
+    const stillHere = () => live.current && owner.current === forUser && roundId.current === id;
+    const deleted = await runRequest(
+      () => deleteCrossfireRound(forUser, id).then(() => true),
+      () => false,
+    );
+    if (!stillHere()) return;
+    if (deleted) router.back();
+    else showNotice(t('historyPage.crossfireDeleteFailed'));
   };
 
   useEffect(() => {

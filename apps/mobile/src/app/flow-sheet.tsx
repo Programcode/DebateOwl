@@ -14,6 +14,7 @@ import { showNotice } from '@/lib/confirm';
 import { sharePdf } from '@/lib/export';
 import { flowSheetExportHtml } from '@/lib/export-html';
 import { useLayoutClass } from '@/lib/layout';
+import { runRequest } from '@/lib/run-request';
 
 /** The website's flow sheet controls, with the result sent to the PDF share sheet. */
 export default function FlowSheetScreen() {
@@ -32,19 +33,18 @@ export default function FlowSheetScreen() {
   const exportPdf = async () => {
     if (exporting) return;
     setExporting(true);
-    try {
-      const [short, long] = paper === 'a4' ? [595.28, 841.89] : [612, 792];
-      await sharePdf(
-        flowSheetExportHtml({ format, paper, orientation, strip, ...header }, tools),
-        `DebateFlowSheet_${formatId}.pdf`,
-        tools('flow.region'),
-        orientation === 'landscape' ? { width: long, height: short } : { width: short, height: long },
-      );
-    } catch {
-      showNotice(t('mobile.flowSheet.exportFailed'));
-    } finally {
-      setExporting(false);
-    }
+    const [short, long] = paper === 'a4' ? [595.28, 841.89] : [612, 792];
+    await runRequest(
+      () =>
+        sharePdf(
+          flowSheetExportHtml({ format, paper, orientation, strip, ...header }, tools),
+          `DebateFlowSheet_${formatId}.pdf`,
+          tools('flow.region'),
+          orientation === 'landscape' ? { width: long, height: short } : { width: short, height: long },
+        ),
+      () => showNotice(t('mobile.flowSheet.exportFailed')),
+      () => setExporting(false),
+    );
   };
 
   return (
