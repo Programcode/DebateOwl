@@ -41,6 +41,7 @@ import { TimerRing } from '@/components/timer-ring';
 import { ToolTitle, WorkingIn } from '@/components/tool-form';
 import { appendDictation, OpponentVoiceBar, VoiceMicControl, VoiceModeSwitch } from '@/components/voice';
 import { useFocusedKeyCommand } from '@/lib/key-commands';
+import { useLatest } from '@/lib/live-value';
 import { AIError, isAbortError, untilAborted } from '@/lib/ai-request';
 import { useAuth } from '@/lib/auth';
 import { backLabel } from '@/lib/back-label';
@@ -135,8 +136,7 @@ export default function SparringScreen() {
   // A voice round falls back to typing when the microphone is lost.
   const voiceAvailability = useVoiceAvailability();
   const voiceActive = Boolean(session?.voice) && voiceAvailability.available;
-  const voiceActiveRef = useRef(voiceActive);
-  voiceActiveRef.current = voiceActive;
+  const voiceActiveRef = useLatest(voiceActive);
   // The round judged while this screen watched celebrates once; a round reopened or kept from earlier does not.
   const [celebrating, setCelebrating] = useState<string | null>(null);
 
@@ -254,7 +254,7 @@ export default function SparringScreen() {
       setRequest({ status: 'failed', failure: classify(cause, false) });
       openRefusal(router, cause, 'sparring');
     }
-  }, [commit, outputLanguage, refresh, router, runJudge]);
+  }, [commit, outputLanguage, refresh, router, runJudge, voiceActiveRef]);
 
   // The clock counts down from its deadline; the tick only redraws it, and coming back from the background redraws at once.
   const timerRunning = session?.timerRunning ?? false;
@@ -342,52 +342,6 @@ export default function SparringScreen() {
     if (live.current && owner.current === forUser && startAttempt.current === attempt) begin(side, debateId, forUser);
   };
 
-  // ⌘↩ submits the speech on an iPad keyboard.
-  useFocusedKeyCommand('cmd+enter', () => void submit());
-
-  const submit = async () => {
-    const before = sessionRef.current;
-    // A second tap after the speech went in lands on the opponent's turn; it is not a rejected speech.
-    if (!before || !userId || before.phase !== 'round' || currentSparringTurn(before)?.speaker !== 'user') return;
-    Keyboard.dismiss();
-    // Stopping also withdraws a start still waiting for permission; the last words land in the draft first.
-    if (capture.listening) await capture.stop();
-    else void capture.stop();
-    const latest = sessionRef.current;
-    if (!latest || latest.id !== before.id || latest.currentTurnIndex !== before.currentTurnIndex) return;
-    // Send pressed while listening, and nothing was heard: there is no speech to send yet.
-    if (!latest.draft.trim()) return;
-    const delivery = voiceActiveRef.current ? measureDelivery(capture.getTake(), outputLanguage) : null;
-    const next = submitSparringSpeech(latest, latest.draft, { now: Date.now(), createId: newSparringId, delivery });
-    if (!next) {
-      setSubmissionError(t('sparring.round.speechRejected'));
-      return;
-    }
-    capture.resetTake();
-    setSubmissionError('');
-    commit(next);
-    if (next.phase === 'judging') void runJudge(next, userId);
-    else void runTurn(next, userId);
-  };
-
-  const retry = () => {
-    const latest = sessionRef.current;
-    if (!latest || !userId) return;
-    if (latest.phase === 'judging') void runJudge(latest, userId);
-    else void runTurn(latest, userId);
-  };
-
-  const restart = () => {
-    requestRef.current?.abort();
-    opponentVoice.stop();
-    capture.cancel();
-    setRequest({ status: 'idle' });
-    setNotice('');
-    setSubmissionError('');
-    setCelebrating(null);
-    commit(null);
-  };
-
   const move = (change: (round: SparringSession, now: number) => SparringSession) => {
     const latest = sessionRef.current;
     if (!latest) return;
@@ -427,6 +381,52 @@ export default function SparringScreen() {
   const turnKey = session ? `${session.id}:${currentSparringTurn(session)?.id ?? ''}` : '';
   const cancelCapture = capture.cancel;
   useEffect(() => cancelCapture, [cancelCapture, turnKey]);
+
+  const submit = async () => {
+    const before = sessionRef.current;
+    // A second tap after the speech went in lands on the opponent's turn; it is not a rejected speech.
+    if (!before || !userId || before.phase !== 'round' || currentSparringTurn(before)?.speaker !== 'user') return;
+    Keyboard.dismiss();
+    // Stopping also withdraws a start still waiting for permission; the last words land in the draft first.
+    if (capture.listening) await capture.stop();
+    else void capture.stop();
+    const latest = sessionRef.current;
+    if (!latest || latest.id !== before.id || latest.currentTurnIndex !== before.currentTurnIndex) return;
+    // Send pressed while listening, and nothing was heard: there is no speech to send yet.
+    if (!latest.draft.trim()) return;
+    const delivery = voiceActiveRef.current ? measureDelivery(capture.getTake(), outputLanguage) : null;
+    const next = submitSparringSpeech(latest, latest.draft, { now: Date.now(), createId: newSparringId, delivery });
+    if (!next) {
+      setSubmissionError(t('sparring.round.speechRejected'));
+      return;
+    }
+    capture.resetTake();
+    setSubmissionError('');
+    commit(next);
+    if (next.phase === 'judging') void runJudge(next, userId);
+    else void runTurn(next, userId);
+  };
+
+  // ⌘↩ submits the speech on an iPad keyboard.
+  useFocusedKeyCommand('cmd+enter', () => void submit());
+
+  const retry = () => {
+    const latest = sessionRef.current;
+    if (!latest || !userId) return;
+    if (latest.phase === 'judging') void runJudge(latest, userId);
+    else void runTurn(latest, userId);
+  };
+
+  const restart = () => {
+    requestRef.current?.abort();
+    opponentVoice.stop();
+    capture.cancel();
+    setRequest({ status: 'idle' });
+    setNotice('');
+    setSubmissionError('');
+    setCelebrating(null);
+    commit(null);
+  };
 
   if (!session) {
     const turns = buildSparringTurns(format, 'pro');

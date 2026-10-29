@@ -1,7 +1,7 @@
 import { askDisplayContent, askMessageWithFiles } from '@debatelab/core/ai/ask-files';
 import type { AskOutput } from '@debatelab/core/ai/schemas/ask';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { memo, useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -37,6 +37,7 @@ import { openRefusal } from '@/lib/refusal';
 import { keepSourceAssessments } from '@/lib/results';
 import { useSettings } from '@/lib/settings';
 import { addSource, fetchSources, type Source } from '@/lib/sources';
+import { useLatest, useLiveValue, useLiveValueStore, type LiveValue } from '@/lib/live-value';
 import { useCopyHolder } from '@/lib/use-copy-holder';
 import { useSpeechCapture } from '@/lib/use-speech-capture';
 import { radius } from '@/theme/colors';
@@ -87,7 +88,11 @@ export default function AskScreen() {
   const { language, outputLanguage, readFeatureConfig } = useSettings();
 
   const [messages, setMessages] = useState<ChatMessage[]>([]);
-  const [streaming, setStreaming] = useState<string | null>(null);
+  // The answer as it streams in. Only StreamingAnswer reads the text, so a token repaints the answer alone;
+  // the screen reads whether one is under way (`streamPhase`).
+  const stream = useLiveValueStore<string | null>(null);
+  const setStreaming = stream.set;
+  const streamPhase = useLiveValue(stream, (text) => (text === null ? 'none' : text === '' ? 'empty' : 'text'));
   const [loading, setLoading] = useState(false);
   const [opening, setOpening] = useState(false);
   const [record, setRecordState] = useState<ChatRecord>(NEW_CHAT);
@@ -109,6 +114,8 @@ export default function AskScreen() {
   const [library, setLibrary] = useState<Source[]>([]);
 
   const scroll = useRef<ScrollView>(null);
+  // The handlers the effects above them call, filled in after each render (see the end of the component).
+  const actions = useRef<AskActions | null>(null);
   // The answer's text so far, kept by Stop as the website keeps it.
   const partial = useRef('');
   const requests = useRef(0);
@@ -120,8 +127,7 @@ export default function AskScreen() {
   const chatCopies = useCopyHolder();
   const recordRef = useRef(record);
   const saves = useRef<Promise<void>>(Promise.resolve());
-  const activeDebateRef = useRef(activeDebateId);
-  activeDebateRef.current = activeDebateId;
+  const activeDebateRef = useLatest(activeDebateId);
 
   const setRecord = (next: ChatRecord) => {
     recordRef.current = next;
@@ -162,9 +168,7 @@ export default function AskScreen() {
     if (scopeRef.current === scope) return;
     scopeRef.current = scope;
     const open = recordRef.current;
-    if (!(open.chatId && open.debateId === scope)) startConversation([], NEW_CHAT);
-    // startConversation only touches refs and setters.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    if (!(open.chatId && open.debateId === scope)) actions.current?.startConversation([], NEW_CHAT);
   }, [scope]);
 
   // The debate this conversation reads from: a loaded chat keeps its own.
@@ -192,7 +196,10 @@ export default function AskScreen() {
   const lastRole = messages[messages.length - 1]?.role;
   useEffect(() => {
     if (loading || lastRole !== 'assistant' || !userId) return;
-    const snapshot = messages;
+    actions.current?.saveExchange(userId, messages);
+  }, [loading, lastRole, messages, userId]);
+
+  const saveExchange = (userId: string, snapshot: ChatMessage[]) => {
     const owner = conversation.current;
     saves.current = saves.current.then(async () => {
       if (owner !== conversation.current || recordRef.current.persisted >= snapshot.length) return;
@@ -206,8 +213,7 @@ export default function AskScreen() {
         setNotice(t('debate.recordFailed'));
       }
     });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [loading, lastRole, messages, userId]);
+  };
 
   // ⌘↩ sends, as the send button does.
   useFocusedKeyCommand('cmd+enter', () => {
@@ -363,9 +369,8 @@ export default function AskScreen() {
   useEffect(() => {
     if (prompted.current || !prompt?.trim() || !userId) return;
     prompted.current = true;
-    void send(prompt, []);
-    // send reads refs and state setters; it runs once per opening.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // Once per opening.
+    void actions.current?.send(prompt, []);
   }, [prompt, userId]);
 
   // Retrying replaces the unanswered question instead of asking it twice.
@@ -406,6 +411,10 @@ export default function AskScreen() {
     }
   };
 
+  // Stable, so the saved messages do not render again for a keystroke or a token.
+  const saveAnswerRef = useLatest(saveAnswer);
+  const onSaveAnswer = useCallback((content: string) => saveAnswerRef.current(content), [saveAnswerRef]);
+
   const attach = async () => {
     try {
       const picked = await pickAskFiles(attachments);
@@ -442,9 +451,8 @@ export default function AskScreen() {
   useEffect(() => {
     if (resumed.current || !resumeChatId || !userId) return;
     resumed.current = true;
-    void openChat(resumeChatId);
-    // openChat reads refs and state setters; it runs once per opening.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // Once per opening.
+    void actions.current?.openChat(resumeChatId);
   }, [resumeChatId, userId]);
 
   const subtitle = oneOff ? t('debate.oneOffActive') : current?.motion ?? '';
@@ -523,9 +531,9 @@ export default function AskScreen() {
         keyboardShouldPersistTaps="handled"
         keyboardDismissMode="interactive"
         // A streamed answer grows every 30 ms; restarting an animated scroll each time stutters.
-        onContentSizeChange={() => scroll.current?.scrollToEnd({ animated: streaming === null })}>
+        onContentSizeChange={() => scroll.current?.scrollToEnd({ animated: stream.get() === null })}>
         <OneOffNotice />
-        {messages.length === 0 && streaming === null && !busy ? (
+        {messages.length === 0 && streamPhase === 'none' && !busy ? (
           <View style={styles.empty}>
             <Owl pose="point" size={112} />
             <Text accessibilityRole="header" weight="display" style={styles.emptyTitle}>
@@ -538,20 +546,10 @@ export default function AskScreen() {
           </View>
         ) : null}
 
-        {messages.map((message) =>
-          message.role === 'user' ? (
-            <View key={message.id} style={[styles.bubble, { backgroundColor: colors.primaryFill }]}>
-              <Text style={[styles.bubbleText, { color: colors.onPrimary }]} selectable>
-                {message.content}
-              </Text>
-            </View>
-          ) : (
-            <AskAnswer key={message.id} content={message.content} output={message.output} library={library} onSave={() => saveAnswer(message.content)} />
-          ),
-        )}
+        <AskMessages messages={messages} library={library} onSave={onSaveAnswer} />
 
-        {streaming !== null && streaming !== '' ? <AskAnswer content={streaming} streaming library={library} /> : null}
-        {loading && !streaming ? <Thinking /> : null}
+        {streamPhase === 'text' ? <StreamingAnswer stream={stream} library={library} /> : null}
+        {loading && streamPhase !== 'text' ? <Thinking /> : null}
         {opening ? <ActivityIndicator style={styles.opening} accessibilityRole="progressbar" /> : null}
 
         {/* What the next question sends, below the conversation as the website shows it above its input. */}
@@ -667,6 +665,10 @@ export default function AskScreen() {
     startConversation([], NEW_CHAT);
   };
 
+  useLayoutEffect(() => {
+    actions.current = { startConversation, saveExchange, send, openChat };
+  });
+
   if (split) {
     return (
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={[styles.root, { backgroundColor: colors.card }]}>
@@ -699,6 +701,40 @@ export default function AskScreen() {
       />
     </KeyboardAvoidingView>
   );
+}
+
+type AskActions = {
+  startConversation: (messages: ChatMessage[], record: ChatRecord) => void;
+  saveExchange: (userId: string, snapshot: ChatMessage[]) => void;
+  send: (text: string, history: ChatMessage[], files?: AskAttachment[]) => Promise<void>;
+  openChat: (chatId: string) => Promise<void>;
+};
+
+/**
+ * The conversation so far. AskScreen is not compiled by React Compiler (its request code uses
+ * try/finally), so this is memoized by hand: it renders again only when a message is added or
+ * the Library's sources (for citations) change, never for typing or a streamed token.
+ */
+const AskMessages = memo(function AskMessages({ messages, library, onSave }: { messages: ChatMessage[]; library: Source[]; onSave: (content: string) => Promise<boolean> }) {
+  const { colors } = useTheme();
+  return messages.map((message) =>
+    message.role === 'user' ? (
+      <View key={message.id} style={[styles.bubble, { backgroundColor: colors.primaryFill }]}>
+        <Text style={[styles.bubbleText, { color: colors.onPrimary }]} selectable>
+          {message.content}
+        </Text>
+      </View>
+    ) : (
+      <AskAnswer key={message.id} content={message.content} output={message.output} library={library} onSave={() => onSave(message.content)} />
+    ),
+  );
+});
+
+/** The answer while it streams in: the one part of Ask that renders for every batch of tokens. */
+function StreamingAnswer({ stream, library }: { stream: LiveValue<string | null>; library: Source[] }) {
+  const text = useLiveValue(stream);
+  if (!text) return null;
+  return <AskAnswer content={text} streaming library={library} />;
 }
 
 /** What the coach is doing while a whole answer is prepared, cycling like the website's. */
