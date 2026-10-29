@@ -1,5 +1,5 @@
 import { appPathForUrl } from '@/lib/deep-links';
-import { receiveShareUrl } from '@/lib/share-intent';
+import { receiveShareUrl } from '@/lib/share-inbox';
 import { isShareIntentUrl } from '@/lib/share-intent-parse';
 
 /**

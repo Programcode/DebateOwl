@@ -88,11 +88,21 @@ export default function AskScreen() {
   const { language, outputLanguage, readFeatureConfig } = useSettings();
 
   const [messages, setMessages] = useState<ChatMessage[]>([]);
-  // The answer as it streams in. Only StreamingAnswer reads the text, so a token repaints the answer alone;
-  // the screen reads whether one is under way (`streamPhase`).
-  const stream = useLiveValueStore<string | null>(null);
-  const setStreaming = stream.set;
-  const streamPhase = useLiveValue(stream, (text) => (text === null ? 'none' : text === '' ? 'empty' : 'text'));
+  // The answer as it streams in. Only StreamingAnswer reads the text, so a token repaints the answer alone.
+  // Whether one is under way (`streamPhase`) is plain state, so it changes in the same render as the
+  // finished message, the error or Stop. Ending a stream changes only the phase: the text stays until the
+  // next answer starts, so the answer never blinks out before the finished message takes its place.
+  const stream = useLiveValueStore('');
+  const [streamPhase, setStreamPhase] = useState<'none' | 'empty' | 'text'>('none');
+  const phase = useLatest(streamPhase);
+  const setStreaming = useCallback((next: string | null | ((previous: string) => string)) => {
+    if (next === null) {
+      setStreamPhase('none');
+      return;
+    }
+    stream.set(next);
+    setStreamPhase(stream.get() === '' ? 'empty' : 'text');
+  }, [stream]);
   const [loading, setLoading] = useState(false);
   const [opening, setOpening] = useState(false);
   const [record, setRecordState] = useState<ChatRecord>(NEW_CHAT);
@@ -294,7 +304,7 @@ export default function AskScreen() {
                 flush = null;
                 const batch = pending;
                 pending = '';
-                if (isCurrent()) setStreaming((previous) => (previous ?? '') + batch);
+                if (isCurrent()) setStreaming((previous) => previous + batch);
               }, 30);
             },
           });
@@ -531,7 +541,7 @@ export default function AskScreen() {
         keyboardShouldPersistTaps="handled"
         keyboardDismissMode="interactive"
         // A streamed answer grows every 30 ms; restarting an animated scroll each time stutters.
-        onContentSizeChange={() => scroll.current?.scrollToEnd({ animated: stream.get() === null })}>
+        onContentSizeChange={() => scroll.current?.scrollToEnd({ animated: phase.current === 'none' })}>
         <OneOffNotice />
         {messages.length === 0 && streamPhase === 'none' && !busy ? (
           <View style={styles.empty}>
@@ -731,7 +741,7 @@ const AskMessages = memo(function AskMessages({ messages, library, onSave }: { m
 });
 
 /** The answer while it streams in: the one part of Ask that renders for every batch of tokens. */
-function StreamingAnswer({ stream, library }: { stream: LiveValue<string | null>; library: Source[] }) {
+function StreamingAnswer({ stream, library }: { stream: LiveValue<string>; library: Source[] }) {
   const text = useLiveValue(stream);
   if (!text) return null;
   return <AskAnswer content={text} streaming library={library} />;
