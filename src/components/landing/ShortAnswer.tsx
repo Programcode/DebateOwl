@@ -46,6 +46,10 @@ const ShortAnswer = () => {
                             {t('shortAnswer.compare')}
                             <ArrowRight aria-hidden="true" className="h-4 w-4" />
                         </a>
+                        <a href="/best-ai-for-debate" className={linkClass}>
+                            {t('shortAnswer.bestAi')}
+                            <ArrowRight aria-hidden="true" className="h-4 w-4" />
+                        </a>
                         <Link to={localizedPath("/tools", language)} className={linkClass}>
                             {t('tools:footer.freeTools')}
                             <ArrowRight aria-hidden="true" className="h-4 w-4" />
