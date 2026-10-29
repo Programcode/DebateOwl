@@ -2663,6 +2663,18 @@
     "promoFailed": "No se pudo canjear el código promocional. Inténtalo de nuevo."
   },
   "mobile": {
+    "animation": {
+      "attackReady": "Refutaciones listas",
+      "brainstormReady": "Ideas listas",
+      "factoidsReady": "Datos listos",
+      "rebuttals": "Refutaciones",
+      "ideas": "Ideas",
+      "factoids": "Datos",
+      "roundReady": "Ronda completada",
+      "speechesTimed": "Discursos cronometrados",
+      "totalTime": "Tiempo total",
+      "keepPractising": "Sigue practicando, vas por buen camino"
+    },
     "tabs": {
       "debate": "Debate",
       "prepare": "Preparar",

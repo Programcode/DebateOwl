@@ -6,6 +6,7 @@ import { TextButton } from '@/components/buttons';
 import { DebateForm } from '@/components/debate-form';
 import { SheetScrollView } from '@/components/sheet';
 import { Text } from '@/components/text';
+import { markNewDebate } from '@/lib/debate-arrival';
 import { useDebates } from '@/lib/debate-context';
 
 /**
@@ -34,9 +35,11 @@ export default function NewDebateSheet() {
         initial={motion ? { motion } : undefined}
         submitLabel={t('debate.startDebate')}
         onSubmit={async (values) => {
-          await create(values);
+          const debate = await create(values);
+          markNewDebate(debate.id);
           // Closes this sheet and the switcher under it, if it was opened from there.
           router.dismissAll();
+          router.navigate('/(tabs)/(debate)');
         }}
       />
     </SheetScrollView>

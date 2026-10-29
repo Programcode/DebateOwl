@@ -1,7 +1,8 @@
 import { flowColumns, mapRows, type FlowchartDocument, type FlowEdgeKind, type FlowNode, type FlowNodeType } from '@debatelab/core/flowchart';
 import { useTranslation } from 'react-i18next';
-import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { ScrollView, StyleSheet, View } from 'react-native';
 
+import { PressScale as BouncePressable } from '@/components/press-scale';
 import { Text } from './text';
 
 import { flowMeta, mapMeta, typeLabel, viaLabel } from '@/lib/flowchart-text';
@@ -52,18 +53,17 @@ export function FlowCard({ node, meta, onPress, testID, selected = false }: { no
   const { colors } = useTheme();
   const flow = useFlowColors();
   return (
-    <Pressable
+    <BouncePressable
       accessibilityRole="button"
       accessibilityLabel={`${typeLabel(t, node.data.type)}: ${node.data.label}`}
       accessibilityState={selected ? { selected } : undefined}
       onPress={onPress}
       testID={testID}
-      style={({ pressed }) => [
+      style={[
         styles.card,
         { backgroundColor: flow.cardFill, borderColor: colors.border, borderLeftColor: flow.type[node.data.type] },
         // The card open in the iPad inspector.
         selected && { backgroundColor: colors.tile, borderColor: colors.chipSelectedBorder, borderLeftColor: flow.type[node.data.type] },
-        pressed && styles.pressed,
       ]}>
       <Text weight="medium" style={styles.cardLabel}>
         {node.data.label}
@@ -73,7 +73,7 @@ export function FlowCard({ node, meta, onPress, testID, selected = false }: { no
           {meta}
         </Text>
       ) : null}
-    </Pressable>
+    </BouncePressable>
   );
 }
 
@@ -168,7 +168,6 @@ const styles = StyleSheet.create({
   card: { borderWidth: 2, borderLeftWidth: 4, borderRadius: radius.field, paddingHorizontal: 11, paddingVertical: 10, marginBottom: 10 },
   cardLabel: { fontSize: 14.5, lineHeight: 19 },
   cardMeta: { fontSize: 12.5, lineHeight: 17, marginTop: 3 },
-  pressed: { opacity: 0.7 },
   legend: { flexDirection: 'row', flexWrap: 'wrap', columnGap: 12, rowGap: 6, paddingHorizontal: SIDE, marginBottom: 12 },
   legendItem: { flexDirection: 'row', alignItems: 'center', gap: 5 },
   swatch: { width: 10, height: 10, borderRadius: 3 },

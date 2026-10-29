@@ -11,6 +11,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 import { AppSidebar } from '@/components/app-sidebar';
 import { KeyboardDoneBar } from '@/components/app-text-input';
+import { RoundFeedbackObserver } from '@/components/round-feedback-observer';
 import { TimerRunner } from '@/components/timer-runner';
 import { ToastHost, ToastProvider } from '@/components/toast';
 import { AuthProvider, useAuth } from '@/lib/auth';
@@ -183,6 +184,7 @@ function Root() {
         <ToastHost />
         {/* The timer's signals and Live Activity keep going while the timer screen is closed. */}
         <TimerRunner />
+        <RoundFeedbackObserver />
         <KeyboardDoneBar />
       </GestureHandlerRootView>
     </ThemeProvider>

@@ -1,9 +1,10 @@
 import { TabList, TabSlot, TabTrigger, Tabs, type TabTriggerSlotProps } from 'expo-router/ui';
 import { forwardRef } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { PressScale as BouncePressable } from '@/components/press-scale';
 import { Icon } from './icon';
 import type { IconName } from './icon-paths';
 import { TABS } from './tabs';
@@ -53,13 +54,13 @@ const TabButton = forwardRef<View, TabTriggerSlotProps & { icon: IconName; label
   const { colors } = useTheme();
   const color = isFocused ? colors.primary : colors.tabInactive;
   return (
-    <Pressable ref={ref} {...props} accessibilityRole="tab" accessibilityState={{ selected: isFocused }} style={styles.tab}>
+    <BouncePressable ref={ref} {...props} accessibilityRole="tab" accessibilityState={{ selected: isFocused }} style={styles.tab}>
       <Icon name={icon} color={color} size={25} />
       {/* Tab labels are fixed chrome, so they stop growing at a modest Dynamic Type size. */}
       <Text weight="medium" style={[styles.label, { color }]} numberOfLines={1} maxFontSizeMultiplier={1.3}>
         {label}
       </Text>
-    </Pressable>
+    </BouncePressable>
   );
 });
 

@@ -1,6 +1,9 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { View } from 'react-native';
+
+import { Celebration, clearCelebration, hasCelebration } from '@/components/celebration';
 
 import { ActionMenu } from '@/components/action-menu';
 import { AttackDocument } from '@/components/attack-document';
@@ -29,6 +32,8 @@ export default function AttackResultScreen() {
   const { id, from, notice: arrival, failed } = useLocalSearchParams<{ id: string; from?: string; notice?: string; failed?: string }>();
   const doc = useResultDocument('attack', id);
   const [exportOpen, setExportOpen] = useState(false);
+  const [celebrate, setCelebrate] = useState(() => hasCelebration(id));
+  useEffect(() => clearCelebration(id), [id]);
   const { setNotice } = doc;
   const shareLink = useShareLink(setNotice);
 
@@ -79,41 +84,51 @@ export default function AttackResultScreen() {
   ];
 
   return (
-    <DocumentScreen
-      testID="attack-document"
-      outline
-      notice={doc.notice}
-      noticeTone={doc.noticeTone}
-      header={<DocumentHeader backLabel={back} onShare={() => run(() => shareText(title, text()))} actions={actions} />}
-      actions={
-        <>
-          <SecondaryButton floating icon="chat" label={t('attackResults.discuss')} onPress={discuss} testID="discuss-button" />
-          <PrimaryButton floating icon="download" label={t('common.export')} onPress={() => setExportOpen(true)} disabled={doc.busy} testID="export-button" />
-        </>
-      }>
-      <DocumentTitle title={title} meta={t('mobile.debate.itemMeta', { kind: t('debate.kinds.attack'), when: formatWhen(result.createdAt) })} />
-      <AttackDocument output={output} sources={result.sources} />
-      <ActionMenu
-        visible={exportOpen}
-        title={t('common.export')}
-        testID="export-menu"
-        items={[
-          { key: 'pdf', label: t('common.pdf'), icon: 'file' },
-          { key: 'copy', label: t('mobile.results.copyText'), icon: 'copy' },
-          // The website's Word export, built by the same code (packages/core/src/export/docx.ts).
-          { key: 'docx', label: t('common.docx'), icon: 'file' },
-        ]}
-        cancelLabel={t('common.cancel')}
-        onClose={() => setExportOpen(false)}
-        onSelect={(choice) => {
-          if (choice === 'pdf') run(() => sharePdf(attackExportHtml(output, t), attackExportFileName(output), title));
-          if (choice === 'docx') run(() => shareAttackDocx(output, t, title));
-          if (choice === 'copy') run(async () => {
-            await copyText(text());
-            setNotice(t('generateResults.copiedToClipboard'));
-          });
-        }}
-      />
-    </DocumentScreen>
+    <View style={{ flex: 1 }}>
+      <DocumentScreen
+        testID="attack-document"
+        outline
+        notice={doc.notice}
+        noticeTone={doc.noticeTone}
+        header={<DocumentHeader backLabel={back} onShare={() => run(() => shareText(title, text()))} actions={actions} />}
+        actions={
+          <>
+            <SecondaryButton floating icon="chat" label={t('attackResults.discuss')} onPress={discuss} testID="discuss-button" />
+            <PrimaryButton floating icon="download" label={t('common.export')} onPress={() => setExportOpen(true)} disabled={doc.busy} testID="export-button" />
+          </>
+        }>
+        <DocumentTitle title={title} meta={t('mobile.debate.itemMeta', { kind: t('debate.kinds.attack'), when: formatWhen(result.createdAt) })} />
+        <AttackDocument output={output} sources={result.sources} />
+        <ActionMenu
+          visible={exportOpen}
+          title={t('common.export')}
+          testID="export-menu"
+          items={[
+            { key: 'pdf', label: t('common.pdf'), icon: 'file' },
+            { key: 'copy', label: t('mobile.results.copyText'), icon: 'copy' },
+            // The website's Word export, built by the same code (packages/core/src/export/docx.ts).
+            { key: 'docx', label: t('common.docx'), icon: 'file' },
+          ]}
+          cancelLabel={t('common.cancel')}
+          onClose={() => setExportOpen(false)}
+          onSelect={(choice) => {
+            if (choice === 'pdf') run(() => sharePdf(attackExportHtml(output, t), attackExportFileName(output), title));
+            if (choice === 'docx') run(() => shareAttackDocx(output, t, title));
+            if (choice === 'copy') run(async () => {
+              await copyText(text());
+              setNotice(t('generateResults.copiedToClipboard'));
+            });
+          }}
+        />
+      </DocumentScreen>
+      {celebrate ? (
+        <Celebration
+          title={t('mobile.animation.attackReady')}
+          stats={[{ key: 'rebuttals', label: t('mobile.animation.rebuttals'), value: output.weaknesses.length }]}
+          haptic={false}
+          onDone={() => setCelebrate(false)}
+        />
+      ) : null}
+    </View>
   );
 }

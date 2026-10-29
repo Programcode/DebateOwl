@@ -13,8 +13,9 @@ import {
 } from '@debatelab/core/flowchart';
 import { useState, type ComponentType, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { ScrollView, StyleSheet, View } from 'react-native';
 
+import { PressScale as BouncePressable } from '@/components/press-scale';
 import { ActionMenu } from './action-menu';
 import { TextButton } from './buttons';
 import { Chip } from './chip';
@@ -168,7 +169,7 @@ export function ClaimPanel({
           {others.map((other, index) => {
             const allowed = canLink(draft.doc, other.id, node.id);
             return (
-              <Pressable
+              <BouncePressable
                 key={index}
                 accessibilityRole="button"
                 accessibilityState={{ disabled: !allowed }}
@@ -177,7 +178,7 @@ export function ClaimPanel({
                   change((current) => ({ ...current, doc: linkCards(current.doc, other.id, node.id, kind), edited: true }));
                   setMode('view');
                 }}
-                style={({ pressed }) => [styles.row, index > 0 && { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.line }, pressed && styles.pressed, !allowed && styles.disabled]}
+                style={[styles.row, index > 0 && { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.line }, !allowed && styles.disabled]}
                 testID="link-target">
                 <View style={[styles.dot, { backgroundColor: flow.type[other.data.type] }]} />
                 <View style={styles.rowText}>
@@ -188,7 +189,7 @@ export function ClaimPanel({
                     {allowed ? typeLabel(t, other.data.type) : t('mobile.flowchart.alreadyLinked')}
                   </Text>
                 </View>
-              </Pressable>
+              </BouncePressable>
             );
           })}
         </View>
@@ -225,15 +226,15 @@ export function ClaimPanel({
                 <View key={index} style={[styles.row, index > 0 && { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.line }]}>
                   <View style={[styles.dot, { backgroundColor: flow.via[link.kind] }]} />
                   <Text style={[styles.rowLabel, styles.rowText]}>{line}</Text>
-                  <Pressable
+                  <BouncePressable
                     accessibilityRole="button"
                     accessibilityLabel={t('mobile.flowchart.removeLink', { link: line })}
                     hitSlop={8}
                     onPress={() => change((current) => ({ ...current, doc: unlinkCards(current.doc, link.edgeId), edited: true }))}
-                    style={({ pressed }) => [styles.remove, pressed && styles.pressed]}
+                    style={[styles.remove]}
                     testID="remove-link">
                     <Icon name="x" color={colors.tabInactive} size={18} />
-                  </Pressable>
+                  </BouncePressable>
                 </View>
               );
             })}
@@ -288,9 +289,9 @@ export function ClaimInspector({ claim, width, onClose }: { claim: { scope: stri
         <Text accessibilityRole="header" weight="display" style={styles.inspectorTitle}>
           {t('export.claim')}
         </Text>
-        <Pressable accessibilityRole="button" accessibilityLabel={t('common.close')} hitSlop={8} onPress={onClose} style={styles.remove} testID="claim-close">
+        <BouncePressable accessibilityRole="button" accessibilityLabel={t('common.close')} hitSlop={8} onPress={onClose} style={styles.remove} testID="claim-close">
           <Icon name="x" color={colors.tabInactive} size={20} />
-        </Pressable>
+        </BouncePressable>
       </View>
       <ClaimPanel key={`${claim.scope}:${claim.map}:${claim.node}`} scope={claim.scope} map={claim.map} nodeId={claim.node} container={DockScrollView} onClose={onClose} docked />
     </View>
@@ -317,6 +318,5 @@ const styles = StyleSheet.create({
   rowMeta: { fontSize: 13, lineHeight: 17 },
   dot: { width: 10, height: 10, borderRadius: 3 },
   remove: { minWidth: 32, minHeight: 32, alignItems: 'center', justifyContent: 'center' },
-  pressed: { opacity: 0.7 },
   disabled: { opacity: 0.45 },
 });

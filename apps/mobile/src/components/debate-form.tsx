@@ -1,7 +1,8 @@
 import { useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
+import { PressScale as BouncePressable } from '@/components/press-scale';
 import { MainActionButton } from './buttons';
 import { Card } from './card';
 import { Field } from './field';
@@ -105,7 +106,7 @@ export function DebateForm({
           {DEBATE_FORMATS.map((value, index) => {
             const selected = value === format;
             return (
-              <Pressable
+              <BouncePressable
                 key={value}
                 accessibilityRole="radio"
                 accessibilityState={{ selected, disabled: saving }}
@@ -114,12 +115,12 @@ export function DebateForm({
                   haptics.select();
                   setFormat(value);
                 }}
-                style={({ pressed }) => [styles.option, index > 0 && { borderTopWidth: 1, borderTopColor: colors.line }, pressed && styles.pressed]}>
+                style={[styles.option, index > 0 && { borderTopWidth: 1, borderTopColor: colors.line }]}>
                 <Text weight={selected ? 'semibold' : 'regular'} style={styles.optionLabel}>
                   {t(`debate.formats.${value}`)}
                 </Text>
                 {selected ? <Icon name="check" color={colors.primary} size={21} /> : null}
-              </Pressable>
+              </BouncePressable>
             );
           })}
         </Card>
@@ -188,5 +189,4 @@ const styles = StyleSheet.create({
   list: { padding: 0, gap: 0 },
   option: { flexDirection: 'row', alignItems: 'center', minHeight: 48, paddingHorizontal: 16, gap: 12 },
   optionLabel: { flex: 1, fontSize: 16 },
-  pressed: { opacity: 0.6 },
 });

@@ -18,9 +18,10 @@ import { measureDelivery } from '@debatelab/core/voice/delivery';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { AppState, Keyboard, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native';
+import { AppState, Keyboard, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { PressScale as BouncePressable } from '@/components/press-scale';
 import { AppTextInput } from '@/components/app-text-input';
 import { ActionMenu } from '@/components/action-menu';
 import { MainActionButton, TextButton } from '@/components/buttons';
@@ -64,7 +65,7 @@ import { useVoiceAvailability } from '@/lib/voice-availability';
 import { radius } from '@/theme/colors';
 import { fontFamily } from '@/theme/fonts';
 import { useTheme } from '@/theme/use-theme';
-import { OwlAvatar, OwlLoader } from '@/components/owl';
+import { Owl, OwlAvatar, OwlLoader } from '@/components/owl';
 
 const TICK_MS = 250;
 const MIN_MOTION_CHARS = 8;
@@ -490,9 +491,12 @@ export default function SparringScreen() {
         <ContextLine feature="sparring" side="both" />
         <SessionCostNote quota={roundQuota.quota} />
         {formError ? (
-          <Text accessibilityRole="alert" style={[styles.formError, { color: colors.destructive }]} testID="sparring-form-error">
-            {formError}
-          </Text>
+          <View>
+            <Owl pose="skeptical" size={48} gesture="shake" breathe={false} />
+            <Text accessibilityRole="alert" style={[styles.formError, { color: colors.destructive }]} testID="sparring-form-error">
+              {formError}
+            </Text>
+          </View>
         ) : null}
         <ActionMenu
           visible={sideMenu}
@@ -527,7 +531,8 @@ export default function SparringScreen() {
         {celebrate ? (
           <Celebration
             eyebrow={t('sparring.round.complete')}
-            title={winnerText(t, session.scorecard.winner)}
+            encouraging={session.scorecard.userScore < 75}
+            title={session.scorecard.userScore < 75 ? t('mobile.animation.keepPractising') : winnerText(t, session.scorecard.winner)}
             stats={[
               { key: 'score', label: t('sparring.scorecard.yourScore'), value: session.scorecard.userScore },
               { key: 'speeches', label: t('export.sparringSpeeches'), value: session.speeches.length },
@@ -712,7 +717,7 @@ function LiveRound({
 
         {failure ? (
           <View accessibilityRole="alert" style={[styles.caption, styles.centredCard, { backgroundColor: colors.card, borderColor: colors.border }]} testID="sparring-error">
-            <Icon name="alert" color={colors.destructive} size={24} />
+            <Owl pose="skeptical" size={48} gesture="shake" breathe={false} />
             <Text weight="semibold" style={styles.captionTitle}>
               {judging ? t('sparring.round.scoreFailed') : t('sparring.round.opponentFailed')}
             </Text>
@@ -734,7 +739,7 @@ function LiveRound({
         ) : null}
 
         {userTurn && lastAi ? (
-          <Pressable
+          <BouncePressable
             accessibilityRole="button"
             accessibilityState={{ expanded }}
             onPress={() => setExpanded((value) => !value)}
@@ -749,7 +754,7 @@ function LiveRound({
             <Text style={styles.speechText} numberOfLines={expanded ? undefined : keyboard ? 2 : 4}>
               {lastAi.content}
             </Text>
-          </Pressable>
+          </BouncePressable>
         ) : null}
 
         {userTurn ? (

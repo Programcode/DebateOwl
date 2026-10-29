@@ -1,8 +1,9 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import { AccessibilityInfo, Pressable, StyleSheet, View } from 'react-native';
+import { AccessibilityInfo, StyleSheet, View } from 'react-native';
 import Animated, { FadeInDown, FadeOutDown } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { PressScale as BouncePressable } from '@/components/press-scale';
 import { SuccessCheck } from './success-check';
 import { Icon } from './icon';
 import { Text } from './text';
@@ -99,7 +100,7 @@ function ToastView({ toast, onClose }: { toast: ShownToast; onClose: () => void 
         ) : toast.tone === 'error' ? (
           <Icon name="alert" color={scheme === 'dark' ? colors.destructive : '#FF9FA2'} size={20} />
         ) : null}
-        <Pressable accessibilityRole="button" onPress={onClose} style={styles.text}>
+        <BouncePressable accessibilityRole="button" onPress={onClose} style={styles.text}>
           <Text weight="semibold" style={[styles.title, { color: text }]} numberOfLines={2}>
             {toast.title}
           </Text>
@@ -108,9 +109,9 @@ function ToastView({ toast, onClose }: { toast: ShownToast; onClose: () => void 
               {toast.message}
             </Text>
           ) : null}
-        </Pressable>
+        </BouncePressable>
         {toast.action ? (
-          <Pressable
+          <BouncePressable
             accessibilityRole="button"
             hitSlop={8}
             onPress={() => {
@@ -118,11 +119,11 @@ function ToastView({ toast, onClose }: { toast: ShownToast; onClose: () => void 
               toast.action?.onPress();
             }}
             testID="toast-action"
-            style={({ pressed }) => [styles.action, pressed && styles.pressed]}>
+            style={[styles.action]}>
             <Text weight="display" style={[styles.actionLabel, { color: colors.accent }]}>
               {toast.action.label}
             </Text>
-          </Pressable>
+          </BouncePressable>
         ) : null}
       </Animated.View>
     </View>
@@ -149,5 +150,4 @@ const styles = StyleSheet.create({
   message: { fontSize: 14, lineHeight: 19, opacity: 0.86 },
   action: { paddingHorizontal: 6, paddingVertical: 4 },
   actionLabel: { fontSize: 16 },
-  pressed: { opacity: 0.6 },
 });

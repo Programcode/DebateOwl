@@ -2,8 +2,9 @@ import { useRouter } from 'expo-router';
 import * as WebBrowser from 'expo-web-browser';
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
+import { PressScale as BouncePressable } from '@/components/press-scale';
 import { PrimaryButton, TextButton } from '@/components/buttons';
 import { Icon } from '@/components/icon';
 import { Owl } from '@/components/owl';
@@ -130,7 +131,7 @@ export default function PlansSheet() {
       : [t('mobile.plans.dailyUses', { count: DAILY_USES.basic }), t('pricingModal.freeFeature2'), t('pricingModal.proFeature5')];
     const intro = product?.introOffer && product.isEligibleForIntroOffer ? product.introOffer : null;
     return (
-      <Pressable
+      <BouncePressable
         key={key}
         accessibilityRole="radio"
         accessibilityState={{ selected }}
@@ -181,7 +182,7 @@ export default function PlansSheet() {
             </View>
           ))}
         </View>
-      </Pressable>
+      </BouncePressable>
     );
   };
 

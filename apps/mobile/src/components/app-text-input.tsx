@@ -1,7 +1,8 @@
 import { forwardRef } from 'react';
-import { InputAccessoryView, Keyboard, Platform, Pressable, StyleSheet, TextInput, View, type TextInputProps } from 'react-native';
+import { InputAccessoryView, Keyboard, Platform, StyleSheet, TextInput, View, type TextInputProps } from 'react-native';
 import { useTranslation } from 'react-i18next';
 
+import { PressScale as BouncePressable } from '@/components/press-scale';
 import { scaledForPreview, Text } from './text';
 
 import { useTheme } from '@/theme/use-theme';
@@ -33,11 +34,11 @@ export function KeyboardDoneBar() {
   return (
     <InputAccessoryView nativeID={DONE_BAR_ID} backgroundColor={colors.card}>
       <View style={[styles.bar, { borderTopColor: colors.line }]}>
-        <Pressable accessibilityRole="button" onPress={() => Keyboard.dismiss()} hitSlop={8} style={styles.done}>
+        <BouncePressable accessibilityRole="button" onPress={() => Keyboard.dismiss()} hitSlop={8} style={styles.done}>
           <Text weight="semibold" style={[styles.doneText, { color: colors.primary }]} maxFontSizeMultiplier={1.5}>
             {t('mobile.common.done')}
           </Text>
-        </Pressable>
+        </BouncePressable>
       </View>
     </InputAccessoryView>
   );

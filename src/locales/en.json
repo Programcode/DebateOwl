@@ -2663,6 +2663,18 @@
     "promoFailed": "Unable to redeem promo code. Please try again."
   },
   "mobile": {
+    "animation": {
+      "attackReady": "Rebuttals ready",
+      "brainstormReady": "Ideas ready",
+      "factoidsReady": "Factoids ready",
+      "rebuttals": "Rebuttals",
+      "ideas": "Ideas",
+      "factoids": "Factoids",
+      "roundReady": "Round complete",
+      "speechesTimed": "Speeches timed",
+      "totalTime": "Total time",
+      "keepPractising": "Keep practising — you’re getting there"
+    },
     "tabs": {
       "debate": "Debate",
       "prepare": "Prepare",

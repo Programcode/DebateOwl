@@ -5,6 +5,7 @@ import { ActivityIndicator, Pressable, StyleSheet, Switch, View, type PressableP
 import ReanimatedSwipeable from 'react-native-gesture-handler/ReanimatedSwipeable';
 import Animated from 'react-native-reanimated';
 
+import { PressScale as BouncePressable } from '@/components/press-scale';
 import { AppTextInput } from '@/components/app-text-input';
 import { PrimaryButton, TextButton } from '@/components/buttons';
 import { Card, ListItemIn, SkeletonTextRows, usePressScale } from '@/components/card';
@@ -204,7 +205,7 @@ export default function DebatesSheet() {
                   overshootRight={false}
                   containerStyle={divider}
                   renderRightActions={() => (
-                    <Pressable
+                    <BouncePressable
                       accessibilityRole="button"
                       accessibilityLabel={t('debate.deleteAria', { motion: debate.motion })}
                       onPress={() => void removeDebate(debate)}
@@ -213,7 +214,7 @@ export default function DebatesSheet() {
                       <Text weight="semibold" style={styles.deleteLabel}>
                         {t('common.delete')}
                       </Text>
-                    </Pressable>
+                    </BouncePressable>
                   )}>
                   {row}
                 </ReanimatedSwipeable>
@@ -270,7 +271,7 @@ function DebateRowPress({ children, ...props }: Omit<PressableProps, 'style' | '
   const press = usePressScale();
   return (
     <Pressable {...props} onPressIn={press.onPressIn} onPressOut={press.onPressOut} style={{ backgroundColor: colors.card }}>
-      {({ pressed }) => <Animated.View style={[styles.row, pressed && styles.pressed, press.style]}>{children}</Animated.View>}
+      {() => <Animated.View style={[styles.row, press.style]}>{children}</Animated.View>}
     </Pressable>
   );
 }
@@ -296,7 +297,6 @@ const styles = StyleSheet.create({
   rowText: { flex: 1, gap: 3 },
   motion: { fontSize: 16.5, lineHeight: 22 },
   meta: { fontSize: 14, lineHeight: 19 },
-  pressed: { opacity: 0.6 },
   oneOffCard: { padding: 0, gap: 0 },
   oneOff: { flexDirection: 'row', alignItems: 'center', gap: 13, paddingVertical: 13, paddingHorizontal: 16 },
   oneOffIcon: { width: 42, height: 42, borderRadius: radius.tile, alignItems: 'center', justifyContent: 'center' },

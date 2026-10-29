@@ -3,9 +3,10 @@ import type { AskOutput } from '@debatelab/core/ai/schemas/ask';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { memo, useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ActivityIndicator, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { PressScale as BouncePressable } from '@/components/press-scale';
 import { AppTextInput } from '@/components/app-text-input';
 import { AskAnswer } from '@/components/ask-answer';
 import { AskChatPane } from '@/components/ask-chat-list';
@@ -515,9 +516,9 @@ export default function AskScreen() {
         {split ? (
           <View style={styles.headerButton} />
         ) : (
-          <Pressable accessibilityRole="button" accessibilityLabel={t('common.back')} hitSlop={8} onPress={() => router.back()} style={styles.headerButton}>
+          <BouncePressable accessibilityRole="button" accessibilityLabel={t('common.back')} hitSlop={8} onPress={() => router.back()} style={styles.headerButton}>
             <Icon name="chevronLeft" color={colors.primary} size={28} />
-          </Pressable>
+          </BouncePressable>
         )}
         <View style={styles.headerText}>
           <Text accessibilityRole="header" weight="display" style={styles.headerTitle} numberOfLines={split ? 1 : undefined}>
@@ -532,7 +533,7 @@ export default function AskScreen() {
         {split ? (
           <View style={styles.headerButton} />
         ) : (
-          <Pressable
+          <BouncePressable
             accessibilityRole="button"
             accessibilityLabel={t('askChat.openSavedChats')}
             hitSlop={8}
@@ -540,7 +541,7 @@ export default function AskScreen() {
             style={styles.headerButton}
             testID="ask-history-button">
             <Icon name="history" color={colors.primary} size={26} />
-          </Pressable>
+          </BouncePressable>
         )}
       </View>
 
@@ -583,6 +584,7 @@ export default function AskScreen() {
 
         {error ? (
           <View accessibilityRole="alert" style={[styles.error, { borderColor: colors.border, backgroundColor: colors.background }]}>
+            <Owl pose="skeptical" size={48} gesture="shake" breathe={false} />
             <Text weight="semibold" style={styles.errorTitle}>
               {t('ask.failed')}
             </Text>
@@ -625,7 +627,7 @@ export default function AskScreen() {
             </View>
           ) : null}
           <View style={[styles.inputRow, { borderColor: colors.border, backgroundColor: colors.input }]}>
-            <Pressable
+            <BouncePressable
               accessibilityRole="button"
               accessibilityLabel={t('askChat.attachFiles')}
               disabled={busy}
@@ -634,7 +636,7 @@ export default function AskScreen() {
               style={[styles.attach, busy && styles.sendDisabled]}
               testID="ask-attach">
               <Icon name="paperclip" color={colors.secondary} size={20} />
-            </Pressable>
+            </BouncePressable>
             <DictationButton capture={dictation} startLabel={t('askChat.startVoice')} stopLabel={t('askChat.stopListening')} inline />
             <AppTextInput
               value={input}
@@ -650,16 +652,16 @@ export default function AskScreen() {
             />
             {loading ? (
               // The website's Stop: the answer so far stays in the chat.
-              <Pressable
+              <BouncePressable
                 accessibilityRole="button"
                 accessibilityLabel={t('askChat.stop')}
                 onPress={stop}
                 style={[styles.send, styles.stop, { borderColor: colors.primaryFill }]}
                 testID="ask-stop">
                 <Icon name="stop" color={colors.primaryFill} size={16} />
-              </Pressable>
+              </BouncePressable>
             ) : (
-              <Pressable
+              <BouncePressable
                 accessibilityRole="button"
                 accessibilityLabel={t('askChat.send')}
                 accessibilityState={{ disabled: busy || !input.trim() }}
@@ -672,7 +674,7 @@ export default function AskScreen() {
                 style={[styles.send, { backgroundColor: colors.primaryFill }, (busy || !input.trim()) && styles.sendDisabled]}
                 testID="ask-send">
                 {busy ? <ActivityIndicator color={colors.onPrimary} size="small" /> : <Icon name="arrowUp" color={colors.onPrimary} size={19} />}
-              </Pressable>
+              </BouncePressable>
             )}
           </View>
         </View>

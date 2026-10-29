@@ -1,12 +1,14 @@
-import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useState } from 'react';
+import type { NativeStackNavigationProp } from 'expo-router';
+import { useLocalSearchParams, useNavigation, useRouter } from 'expo-router';
+import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { StyleSheet, View } from 'react-native';
+import { Platform, StyleSheet, View } from 'react-native';
 
 import { PrimaryButton, TextButton } from '@/components/buttons';
 import { Field } from '@/components/field';
 import { SheetScrollView } from '@/components/sheet';
 import { Text } from '@/components/text';
+import { useToast } from '@/components/toast';
 import { useAuth } from '@/lib/auth';
 import { openResult, updateOpenResult } from '@/lib/open-results';
 import { saveCase } from '@/lib/results';
@@ -19,6 +21,15 @@ import { useTheme } from '@/theme/use-theme';
 export default function SaveCaseSheet() {
   const { t } = useTranslation();
   const router = useRouter();
+  const navigation = useNavigation<NativeStackNavigationProp<Record<string, object | undefined>>>();
+  const toast = useToast();
+  const saved = useRef(false);
+  useEffect(() => navigation.addListener('transitionEnd', (event) => {
+    if (event.data.closing && saved.current) {
+      saved.current = false;
+      toast({ tone: 'success', title: t('generate.saved') });
+    }
+  }), [navigation, toast, t]);
   const { colors } = useTheme();
   const { key } = useLocalSearchParams<{ key: string }>();
   const { session } = useAuth();
@@ -39,7 +50,15 @@ export default function SaveCaseSheet() {
     try {
       const savedId = await saveCase(userId, name, current.output);
       updateOpenResult(key, { savedId, title: name });
+      saved.current = true;
       router.back();
+      // Web has no native sheet transition. Native waits for transitionEnd above.
+      if (Platform.OS === 'web') {
+        requestAnimationFrame(() => {
+          saved.current = false;
+          toast({ tone: 'success', title: t('generate.saved') });
+        });
+      }
     } catch (cause) {
       console.warn('Could not save the case:', cause instanceof Error ? cause.message : cause);
       setSaving(false);

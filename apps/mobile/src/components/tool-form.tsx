@@ -13,7 +13,7 @@ import { useDebates } from '@/lib/debate-context';
 import { haptics } from '@/lib/haptics';
 import { radius } from '@/theme/colors';
 import { useTheme } from '@/theme/use-theme';
-import { OwlLoader, type OwlPose } from '@/components/owl';
+import { Owl, OwlLoader, type OwlPose } from '@/components/owl';
 
 /** The tool's large title, the line under it, and today's AI uses left, as the website's PageHeader. */
 export function ToolTitle({ title, subtitle }: { title: string; subtitle: string }) {
@@ -79,6 +79,7 @@ export function ToolError({ title, error, onRetry }: { title: string; error: AIE
   useEffect(() => haptics.warning(), [error]);
   return (
     <View accessibilityRole="alert" style={[styles.error, { borderColor: colors.border, backgroundColor: colors.card }]} testID="tool-error">
+      <Owl pose={error === 'timeout' ? 'surprised' : 'skeptical'} size={48} gesture="shake" breathe={false} replay={error} />
       <Text weight="semibold" style={styles.errorTitle}>
         {title}
       </Text>
@@ -103,6 +104,7 @@ export function ToolProgress({
   elapsed,
   onCancel,
   pose = 'thinking',
+  step,
 }: {
   messages: string[];
   detail?: string;
@@ -110,6 +112,7 @@ export function ToolProgress({
   elapsed?: number;
   onCancel: () => void;
   pose?: OwlPose;
+  step?: string;
 }) {
   const { t } = useTranslation();
   const { colors } = useTheme();
@@ -120,7 +123,7 @@ export function ToolProgress({
   }, [messages.length]);
   return (
     <View style={[styles.progress, { borderColor: colors.border, backgroundColor: colors.card }]} testID="tool-progress">
-      <OwlLoader pose={pose} size={96} />
+      <OwlLoader pose={pose} size={96} step={step} />
       <Text weight="display" style={styles.progressText} accessibilityRole="progressbar" accessibilityLiveRegion="polite">
         {messages[index]}
       </Text>

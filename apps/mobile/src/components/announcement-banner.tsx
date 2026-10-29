@@ -1,6 +1,7 @@
 import { useTranslation } from 'react-i18next';
-import { ActivityIndicator, Pressable, StyleSheet, View, type ViewStyle } from 'react-native';
+import { ActivityIndicator, StyleSheet, View, type ViewStyle } from 'react-native';
 
+import { PressScale as BouncePressable } from '@/components/press-scale';
 import { IconTile } from './card';
 import { Icon } from './icon';
 import { Text } from './text';
@@ -43,16 +44,16 @@ export function AnnouncementBanner({ announcements, style }: { announcements: An
           </Text>
         ) : null}
       </View>
-      <Pressable
+      <BouncePressable
         accessibilityRole="button"
         accessibilityLabel={t('announcements.dismissLabel', { title: announcement.title })}
         disabled={dismissing}
         onPress={dismiss}
         hitSlop={8}
         testID="announcement-dismiss"
-        style={({ pressed }) => [styles.dismiss, pressed && styles.pressed]}>
+        style={[styles.dismiss]}>
         {dismissing ? <ActivityIndicator /> : <Icon name="x" color={colors.tabInactive} size={20} />}
-      </Pressable>
+      </BouncePressable>
     </View>
   );
 }
@@ -65,5 +66,4 @@ const styles = StyleSheet.create({
   position: { fontSize: 13 },
   body: { fontSize: 14.5, lineHeight: 20 },
   dismiss: { width: 32, height: 32, alignItems: 'center', justifyContent: 'center', marginTop: -4, marginRight: -6 },
-  pressed: { opacity: 0.6 },
 });
