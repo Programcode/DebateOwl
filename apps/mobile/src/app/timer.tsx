@@ -28,6 +28,7 @@ import { confirmDestructive } from '@/lib/confirm';
 import { haptics } from '@/lib/haptics';
 import { useLayoutClass } from '@/lib/layout';
 import { formatFor, formatName, sideNameFor, speechStatus, type FormatChoice, type TimerSession, type Translate } from '@/lib/timer';
+import { askForTimerAlerts } from '@/lib/timer-alerts';
 import { useKeepAwakeWhile } from '@/lib/timer-signals';
 import { deleteSavedFormat, updateSession, useTimerStore } from '@/lib/timer-store';
 import { useTheme } from '@/theme/use-theme';
@@ -86,6 +87,7 @@ export default function TimerScreen() {
   };
   const toggle = () => {
     haptics.tap();
+    if (!speechRunning) void askForTimerAlerts();
     change((current) => ({ ...current, round: toggleSpeech(current.round, Date.now()) }));
   };
   const reset = () => change((current) => ({ ...current, round: resetSpeech(current.round) }));
@@ -95,6 +97,7 @@ export default function TimerScreen() {
   };
   const prep = (side: PrepSide) => {
     haptics.tap();
+    if (!prepRunning) void askForTimerAlerts();
     change((current) => ({ ...current, round: togglePrep(current.round, side, Date.now()) }));
   };
   const choose = (next: FormatChoice) => change((current) => ({ ...current, choice: next, round: initialRoundState(formatFor(next)) }));

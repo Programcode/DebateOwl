@@ -1,14 +1,17 @@
 import { cueBetween, elapsedMs, isSpeechRunning, settlePrep } from '@debatelab/core/free-tools/round-timer';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { AppState } from 'react-native';
+import { AppState, Platform } from 'react-native';
 
 import { syncTimerActivity } from '@/lib/live-activity';
 import { formatFor, isActive, sideNameFor, timerActivityState, type TimerSession } from '@/lib/timer';
+import { useTimerAlerts } from '@/lib/timer-alerts';
 import { useTimerSignals } from '@/lib/timer-signals';
 import { loadTimer, updateSession, useTimerStore } from '@/lib/timer-store';
 
 const TICK_MS = 250;
+/** iOS runs a Live Activity's buttons from iOS 17; before that they would draw and do nothing. */
+const LIVE_ACTIVITY_BUTTONS = Platform.OS === 'ios' && Number.parseInt(String(Platform.Version), 10) >= 17;
 /** A longer gap between readings means the app was in the background. */
 const GAP_MS = 2_000;
 /** How long the signals stay after the last clock stops, so a time-up signal plays to its end. */
@@ -44,11 +47,18 @@ export function TimerRunner() {
         paused: tools('timer.paused'),
         overtime: tools('timer.overtime'),
         prep: tools('timer.prepGroup'),
+        pause: tools('timer.pause'),
+        resume: t('mobile.liveActivity.resume'),
+        next: t('mobile.liveActivity.next'),
         ...idle,
       },
+      controls: LIVE_ACTIVITY_BUTTONS,
     });
     syncTimerActivity(state, idle);
   }, [format, i18n.language, loaded, session, t]);
+
+  // A clock that runs out while the phone is locked still says so (timer-alerts.ts).
+  useTimerAlerts(session, loaded);
 
   const active = loaded && isActive(session.round);
   const [lingering, setLingering] = useState(false);

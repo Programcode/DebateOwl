@@ -11,12 +11,15 @@ import { customToRoundFormat, parseCustomFormat, type CustomFormat } from '@deba
 import { FORMATS, isBuiltInFormatId, type BuiltInFormatId, type RoundFormat, type RoundSegment } from '@debatelab/core/free-tools/formats';
 import {
   elapsedMs,
+  goToSegment,
   initialRoundState,
   isPrepRunning,
   isSpeechRunning,
   parseRoundState,
   prepRemainingMs,
   segmentStatus,
+  togglePrep,
+  toggleSpeech,
   type PrepSide,
   type RoundState,
   type TimerCue,
@@ -147,6 +150,10 @@ export interface TimerActivityLabels {
   prep: string;
   idleTitle: string;
   idleLine: string;
+  /** The Live Activity's buttons. */
+  pause: string;
+  resume: string;
+  next: string;
 }
 
 /**
@@ -169,6 +176,14 @@ export interface TimerActivityState {
   /** Side colour: `a`, `b` or `both`. */
   side: RoundSegment['side'];
   labels: TimerActivityLabels;
+  /**
+   * Pause or Resume, and Next speech, on the Lock Screen and in the Dynamic
+   * Island. iOS runs a Live Activity's buttons from iOS 17, so the app turns
+   * them off before that (the layout cannot ask which iOS it runs on).
+   */
+  controls: boolean;
+  /** A later speech exists to move on to (never while prep runs). */
+  canAdvance: boolean;
 }
 
 /**
@@ -179,8 +194,9 @@ export interface TimerActivityState {
 export function timerActivityState(
   session: TimerSession,
   now: number,
-  text: { sideName: (side: RoundSegment['side']) => string; prepLine: (side: PrepSide) => string; labels: TimerActivityLabels },
+  text: { sideName: (side: RoundSegment['side']) => string; prepLine: (side: PrepSide) => string; labels: TimerActivityLabels; controls?: boolean },
 ): TimerActivityState | null {
+  const controls = text.controls === true;
   const format = formatFor(session.choice);
   const { round } = session;
   for (const side of ['a', 'b'] as PrepSide[]) {
@@ -196,6 +212,8 @@ export function timerActivityState(
       pausedAt: null,
       side,
       labels: text.labels,
+      controls,
+      canAdvance: false,
     };
   }
   const segment = format.segments[round.segmentIndex] ?? format.segments[0];
@@ -212,7 +230,42 @@ export function timerActivityState(
     pausedAt: running ? null : now,
     side: segment.side,
     labels: text.labels,
+    controls,
+    canAdvance: round.segmentIndex < format.segments.length - 1,
   };
+}
+
+/** A button on the timer's Live Activity: Pause or Resume, or Next speech. */
+export type TimerActivityAction = 'toggle' | 'next';
+
+/**
+ * What a Live Activity button does to the round, at `now`. Toggle acts on the
+ * clock the activity shows: a running prep bank, else the speech. Next moves
+ * to the next speech with a fresh, paused clock, as the timer screen's Next does.
+ */
+export function applyTimerActivityAction(session: TimerSession, action: TimerActivityAction, now: number): TimerSession {
+  const { round } = session;
+  if (action === 'next') {
+    const next = goToSegment(round, formatFor(session.choice), round.segmentIndex + 1, now);
+    return next === round ? session : { ...session, round: next };
+  }
+  const prepSide = (['a', 'b'] as PrepSide[]).find((side) => isPrepRunning(round, side));
+  return { ...session, round: prepSide ? togglePrep(round, prepSide, now) : toggleSpeech(round, now) };
+}
+
+/** When the clock on screen reaches its limit while the app is away, for the time-up alert; null when nothing will. */
+export function timerAlertAt(session: TimerSession, now: number): { at: number; kind: 'speech' | 'prep'; segment: RoundSegment } | null {
+  const format = formatFor(session.choice);
+  const { round } = session;
+  const segment = format.segments[round.segmentIndex] ?? format.segments[0];
+  for (const side of ['a', 'b'] as PrepSide[]) {
+    if (!isPrepRunning(round, side)) continue;
+    const left = prepRemainingMs(round, side, now);
+    return left > 0 ? { at: now + left, kind: 'prep', segment } : null;
+  }
+  if (!isSpeechRunning(round)) return null;
+  const left = segment.seconds * 1000 - elapsedMs(round.speech, now);
+  return left > 0 ? { at: now + left, kind: 'speech', segment } : null;
 }
 
 /** The speech's status for the screen: time left (negative in overtime), POI window and grace. */
