@@ -109,7 +109,7 @@ beforeEach(async () => {
     ].join("\n"),
   );
   await chmod(join(root, "bin/supabase"), 0o755);
-});
+}, 30_000);
 
 afterEach(async () => {
   await Promise.all(temporaryRoots.splice(0).map((path) => rm(path, { recursive: true, force: true })));

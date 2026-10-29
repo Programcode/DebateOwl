@@ -47,6 +47,14 @@ function mainText(html: string, { withAbout }: { withAbout: boolean }): string {
 
 const wordCount = (text: string) => text.match(/[A-Za-z0-9][\w'’-]*/g)?.length ?? 0;
 
+// Required, word for word, on the comparison pages. The duplicate-sentence check
+// still applies to every other line.
+const ALLOWED_REPEATS = new Set([
+  "The DebateOwl app has no free plan (3-day free trial, then $5/month); the separate tools at /tools are free with no account",
+  "Facts about other products come from their own websites, checked on October 29, 2026",
+  "By the DebateOwl team · Published October 29, 2026 · Last updated October 29, 2026",
+]);
+
 describe("generated guide pages", () => {
   it("finds the guides", () => {
     expect(guides.length).toBeGreaterThan(20);
@@ -65,7 +73,7 @@ describe("generated guide pages", () => {
     for (const { slug, html } of guides) {
       for (const raw of mainText(html, { withAbout: true }).split(/(?<=[.!?])\s+/)) {
         const sentence = raw.replace(/^[\s.]+|[\s.]+$/g, "");
-        if (sentence.length <= SHARED_SENTENCE_LENGTH) continue;
+        if (sentence.length <= SHARED_SENTENCE_LENGTH || ALLOWED_REPEATS.has(sentence)) continue;
         pagesBySentence.set(sentence, (pagesBySentence.get(sentence) ?? new Set()).add(slug));
       }
     }

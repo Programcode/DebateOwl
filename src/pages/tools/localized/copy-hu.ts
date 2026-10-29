@@ -1,7 +1,7 @@
 import type { LocalizedToolsCopy } from './copy-types';
 
 export const COPY_HU: LocalizedToolsCopy = {
-  modified: '2026-10-26',
+  modified: '2026-10-29',
   tools: {
     '/tools/debate-timer': {
       name: 'Vitaidőmérő',
@@ -23,7 +23,7 @@ export const COPY_HU: LocalizedToolsCopy = {
   pages: {
     '/tools': {
       title: 'Ingyenes vitaeszközök',
-      intro: 'Eszközök a vitagyakorláshoz, amelyek bármelyik böngészőben működnek, és nem kell hozzájuk fiók. Az időmérő a fordulódat ebben a böngészőben menti, nem szerveren. Használd őket szakköri foglalkozáson vagy kivetítve az osztályteremben.',
+      intro: 'Eszközök a vitagyakorláshoz, amelyek bármelyik böngészőben működnek, és nem kell hozzájuk fiók. Az időmérő a fordulódat ebben a böngészőben menti, nem szerveren. Használd őket szakköri foglalkozáson vagy kivetítve az osztályteremben. Ha az órára készülsz MI-vel, a [vitafelkészülés magyar útmutatója](/hu/mi-vitafelkeszules) azt mondja meg, mire jó egy általános asszisztens, az alkalmazás és az ingyenes eszközök.',
       sections: [
         {
           heading: 'Melyik eszköz mire való',
@@ -44,7 +44,7 @@ export const COPY_HU: LocalizedToolsCopy = {
 
     '/tools/debate-timer': {
       title: 'Ingyenes vitaidőmérő minden formátumhoz',
-      intro: 'Válassz formátumot, és az időmérő már tudja a beszédek sorrendjét, a védett perceket és az oldalak felkészülési idejét. Nem kell hozzá fiók, teljes egészében ebben a böngészőlapon fut, és az oldal újratöltése után is megtartja a fordulót.',
+      intro: 'Válassz formátumot, és az időmérő már tudja a beszédek sorrendjét, a védett perceket és az oldalak felkészülési idejét. Nem kell hozzá fiók, teljes egészében ebben a böngészőlapon fut, és az oldal újratöltése után is megtartja a fordulót. A felkészülés többi részéhez lásd a [vitafelkészülés MI-vel](/hu/mi-vitafelkeszules) útmutatót.',
       sections: [
         {
           heading: 'Így vezess le vele egy fordulót',

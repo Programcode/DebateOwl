@@ -254,7 +254,7 @@ GUIDES = {
     },
     "best-ai-debate-tools": {
         "software": True,
-        "modified": "2026-10-28",
+        "modified": "2026-10-29",
         "features": [
             ("Feature comparison", "What each kind of tool does well: general chatbots, research assistants, dedicated debate platforms, and timers or flowing tools."),
             ("Format coverage", "Which formats a tool actually models, from Public Forum and Lincoln-Douglas to WSDC and British Parliamentary, and where you still prep by hand."),
@@ -583,7 +583,7 @@ GUIDES = {
         ],
     },
     "how-to-write-a-debate-case": {
-        "modified": "2026-10-28",
+        "modified": "2026-10-29",
         "features": [
             ("Motion analysis first", "Define the terms, write down what your side has to prove and find where the two sides disagree before writing a single argument."),
             ("Arguments that hold up", "Build each argument as a point, an explanation, evidence and why it matters, so a judge can follow it and an opponent cannot break it with one question."),
@@ -620,6 +620,7 @@ GUIDES = {
                     ("Closing line:", "That is why free fares are the fairest way to pay for the buses a whole city depends on."),
                 ]}},
                 "Notice what the outline does not contain: a long introduction, rhetorical questions or a list of statistics without explanations. Every line either defines the debate, proves something, answers the other side or tells the judge what to remember.",
+                "For the second speech in particular, the [worked example of how to prepare for a debate with AI](/how-to-prepare-for-a-debate-with-ai#worked-example) writes the two-minute reinforcement and the \"If they say… we answer…\" replies in full.",
             ]),
             ("How case structure changes by format", [
                 {"h3": "Public Forum (PF)"},
@@ -748,7 +749,7 @@ GUIDES = {
         ],
     },
     "public-forum-debate": {
-        "modified": "2026-10-28",
+        "modified": "2026-10-29",
         "features": [
             ("The PF round, speech by speech", "What each of the eight speeches and three crossfires is for, with the standard times."),
             ("Summary and final focus that agree", "How to collapse to two issues in summary and extend exactly those into final focus."),
@@ -819,6 +820,7 @@ GUIDES = {
             ("Practising Public Forum in {product}", [
                 "Sparring runs Public Forum rounds with pro and con constructives, rebuttals, summaries and final focuses at the 4-4-3-2 times above, ending with a judged verdict. The simulated round leaves out the crossfire periods, so practise questioning separately in Crossfire. Despite the shared name, that feature is a cross-examination drill: you either question the AI, which answers from the opposing side, or let it question you about your case.",
                 "A useful preparation loop: start a Current Debate with the resolution, generate a case for each side, paste the opposing case into Attack to find its weakest links, run a Sparring round on your assigned side, and finish by checking whether your final focus extended only what your summary did. The timer's Public Forum preset covers the same eight speeches when you practise with a partner.",
+                "Comparing PF tools? See [the best AI for Public Forum](/best-ai-for-public-forum).",
             ]),
         ],
         "faqs": [
@@ -831,7 +833,7 @@ GUIDES = {
     },
     "debateowl-vs-chatgpt": {
         "software": True,
-        "modified": "2026-10-28",
+        "modified": "2026-10-29",
         "features": [
             ("A general assistant", "ChatGPT can brainstorm, explain, draft and revise on any subject, including debate."),
             ("A debate workspace", "{product} organises prep around one motion at a time, with structured cases, an AI opponent, a timer and judged practice rounds."),
@@ -887,7 +889,7 @@ GUIDES = {
                     "Practising speeches and rounds: you need timing, an opponent and a verdict, which a general chat does not provide.",
                     "Polishing wording: either works; use the one you are already in.",
                 ]},
-                "A practical split is to use a general assistant for open-ended learning and {product} for motion-specific preparation and practice.",
+                "A practical split is to use a general assistant for open-ended learning and {product} for motion-specific preparation and practice. [ChatGPT vs Claude for debate](/chatgpt-vs-claude-for-debate) is the page for where each general chatbot fits, and when a debate tool saves the setup.",
             ]),
             ("Things that are true of both", [
                 "Both can state things confidently that are not true, so neither replaces reading original sources before you quote them. Neither should be used during a round where your league forbids electronic help, which is most leagues. And neither replaces a coach or teammates who have watched you debate.",
