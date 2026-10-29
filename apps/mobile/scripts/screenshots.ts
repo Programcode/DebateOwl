@@ -744,13 +744,14 @@ async function shootResultScreens(context: BrowserContext, prefix: string, langu
   // A wide iPad shows the outline rail: jumping to a part scrolls that part's heading to the top of the case.
   const outline = page.getByTestId('document-outline');
   if (await outline.isVisible()) {
-    const part = /^(Case structure|Esetstruktúra|Estructura del caso)$/i;
+    // A part far enough from the end of the case to reach the top.
+    const part = /^(If they say…|Ha azt mondják…|Si dicen…)$/;
     const heading = page.getByTestId('case-document').getByRole('heading', { name: part });
     const before = (await heading.boundingBox())?.y ?? 0;
     await outline.getByRole('menuitem').filter({ hasText: part }).click();
     await page.waitForTimeout(800);
     const after = (await heading.boundingBox())?.y ?? 0;
-    if (!(after < before && after < 200)) throw new Error(`The outline did not scroll to Case Structure (heading at ${before}, then ${after})`);
+    if (!(after < before && after < 200)) throw new Error(`The outline did not scroll to If they say (heading at ${before}, then ${after})`);
     await shoot(page, `${prefix}-case-outline`);
   }
   // Close the open argument, so every argument shows collapsed.
@@ -1747,6 +1748,8 @@ async function shootVoiceScreens(context: BrowserContext, prefix: string, langua
   await page.getByTestId('sparring-input').waitFor({ timeout: 15_000 });
   await page.getByTestId('sparring-input').fill(text.speeches[1]);
   await page.getByTestId('sparring-main').click();
+  // A strong score keeps its celebration up until it is tapped away.
+  await shootCelebration(page, `${prefix}-voice-celebration`);
   await page.getByTestId('spoken-delivery').waitFor({ timeout: 15_000 });
   await page.getByTestId('spoken-delivery').scrollIntoViewIfNeeded();
   await page.waitForTimeout(400);
