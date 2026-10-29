@@ -5,6 +5,9 @@ import path from 'node:path';
 import type { ConfigContext, ExpoConfig } from 'expo/config';
 import { type ConfigPlugin, withEntitlementsPlist } from 'expo/config-plugins';
 
+// CommonJS, because Node loads what app.config.ts imports as it is.
+import { withAppIntents } from './plugins/with-app-intents';
+
 
 // One config for Expo Go, the web export and the development build.
 // DEBATELAB_BUILD=dev (set by the `development` profile in eas.json) adds the
@@ -182,6 +185,14 @@ export function withRound4(config: ExpoConfig, opts: { appGroup?: string; projec
 // so the Expo Go config never changes. What needs DebateOwl's own Apple
 // account waits for DEBATELAB_APPLE_ACCOUNT.
 export function withApplePlatform(config: ExpoConfig, opts: { appleAccount: boolean }): ExpoConfig {
+  // Handoff (src/lib/handoff.ts), next to Expo Router's own activity type.
+  config.ios = {
+    ...config.ios,
+    infoPlist: {
+      ...config.ios?.infoPlist,
+      NSUserActivityTypes: [...((config.ios?.infoPlist?.NSUserActivityTypes as string[] | undefined) ?? []), 'com.pistack.debateowl.browsing'],
+    },
+  };
   config.extra = {
     ...config.extra,
     // Google sign-in runs in any development build: the redirect comes back on the app's own scheme.
@@ -300,9 +311,11 @@ export default ({ projectRoot }: ConfigContext): ExpoConfig => {
   // The Current Debate widget (with the App Group), quick actions and Spotlight; see withRound4 above.
   withRound4(config, { appGroup, projectRoot });
   withApplePlatform(config, { appleAccount: appleAccount === '1' });
-  // DebateOwl's own account has Push on its App ID, so its builds keep the entitlement.
-  if (appleAccount === '1') return config;
+  // Siri and Shortcuts: the intents compile into the app target (plugins/with-app-intents.js).
+  const withIntents = withAppIntents(config);
+  // DebateOwl's own account has Push and Sign in with Apple on its App ID, so its builds keep both.
+  if (appleAccount === '1') return withIntents;
   // Registered before Expo applies the plugins list. Mods registered later act
   // first, so this one runs after the plugins have written their entitlements.
-  return withoutAccountEntitlements(config);
+  return withoutAccountEntitlements(withIntents);
 };

@@ -20,13 +20,15 @@ export type NativeCapabilities = {
   quickActions: boolean;
   /** expo-core-spotlight is linked, so debates and saved cases can be indexed (src/lib/spotlight.ts). */
   spotlight: boolean;
+  /** modules/handoff is linked, so the open screen is offered to other devices (src/lib/handoff.ts). */
+  handoff: boolean;
 };
 
 type WidgetsModule = { widgetsDirectory?: string | null };
 
 export function nativeCapabilities(): NativeCapabilities {
   if (Constants.executionEnvironment === ExecutionEnvironment.StoreClient) {
-    return { speechRecognition: false, liveActivity: false, widgets: false, quickActions: false, spotlight: false };
+    return { speechRecognition: false, liveActivity: false, widgets: false, quickActions: false, spotlight: false, handoff: false };
   }
   // expo-widgets links into every development build, but without the App
   // Group (DEBATELAB_APP_GROUP) it has no extension and no container.
@@ -38,5 +40,6 @@ export function nativeCapabilities(): NativeCapabilities {
     widgets: widgetContainer,
     quickActions: requireOptionalNativeModule('ExpoQuickActions') != null,
     spotlight: requireOptionalNativeModule('ExpoCoreSpotlight') != null,
+    handoff: requireOptionalNativeModule('DebateOwlHandoff') != null,
   };
 }

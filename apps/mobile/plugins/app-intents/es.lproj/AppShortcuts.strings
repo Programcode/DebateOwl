@@ -1,0 +1,19 @@
+/* Frases de Siri para los App Shortcuts de DebateOwlAppIntents.swift. Cada frase nombra la app una vez. */
+
+"Start a debate timer in ${applicationName}" = "Inicia un cronómetro de debate en ${applicationName}";
+"Start the ${applicationName} timer" = "Inicia el cronómetro de ${applicationName}";
+
+"Ask ${applicationName} a question" = "Hazle una pregunta a ${applicationName}";
+"Ask ${applicationName}" = "Pregunta a ${applicationName}";
+
+"Start a new debate in ${applicationName}" = "Empieza un nuevo debate en ${applicationName}";
+"New ${applicationName} debate" = "Nuevo debate en ${applicationName}";
+
+"Generate a case in ${applicationName}" = "Genera un caso en ${applicationName}";
+"Build a case with ${applicationName}" = "Construye un caso con ${applicationName}";
+
+"Open my ${applicationName} library" = "Abre mi biblioteca de ${applicationName}";
+"Show my sources in ${applicationName}" = "Muestra mis fuentes en ${applicationName}";
+
+"Start sparring in ${applicationName}" = "Empieza un sparring en ${applicationName}";
+"Spar with ${applicationName}" = "Haz sparring con ${applicationName}";

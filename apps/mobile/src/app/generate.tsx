@@ -51,7 +51,7 @@ const lastForm = sessionSlot<GenerateInput>(() => DEFAULT_FORM);
 export default function GenerateScreen() {
   const { t } = useTranslation();
   const router = useRouter();
-  const { from } = useLocalSearchParams<{ from?: string }>();
+  const { from, motion: motionParam } = useLocalSearchParams<{ from?: string; motion?: string }>();
   const { session } = useAuth();
   const userId = session?.user.id ?? null;
   const { debates, current, oneOff, create, switchTo, refresh } = useDebates();
@@ -102,6 +102,15 @@ export default function GenerateScreen() {
     if (oneOff || !current) return;
     if (shouldPrefillMotion(lastForm.get().motion, current.motion, debates.map((debate) => debate.motion))) setForm({ motion: current.motion });
   }, [current, debates, oneOff, setForm]);
+
+  // A motion from Siri or Shortcuts (debatelab://generate?motion=) fills the form once, over the Current Debate's.
+  const motionApplied = useRef(false);
+  useEffect(() => {
+    if (motionApplied.current || !motionParam?.trim()) return;
+    motionApplied.current = true;
+    setForm({ motion: motionParam.trim().slice(0, MAX_MOTION_LENGTH) });
+    setMotionError(false);
+  }, [motionParam, setForm]);
 
   const start = async (input: GenerateInput, debateId: string | null, forUser: string) => {
     abortActive();

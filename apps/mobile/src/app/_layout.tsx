@@ -15,6 +15,7 @@ import { TimerRunner } from '@/components/timer-runner';
 import { ToastHost, ToastProvider } from '@/components/toast';
 import { AuthProvider, useAuth } from '@/lib/auth';
 import { useApplePlatform } from '@/lib/use-apple-platform';
+import { useHandoff } from '@/lib/handoff';
 import { DebateProvider } from '@/lib/debate-context';
 import { useFirstRun } from '@/lib/use-first-run';
 import { useKeyCommand } from '@/lib/key-commands';
@@ -71,6 +72,8 @@ function Root() {
   useFirstRun(ready ? userId ?? null : null);
   // Notification taps, Live Activity cleanup, purchases and Handoff (use-apple-platform.ts).
   useApplePlatform(ready, userId ?? null);
+  // Handoff: the open screen continues on a Mac (debateowl.com) or an iPad (development build only).
+  useHandoff(ready);
   // Home Screen quick actions (development build with expo-quick-actions; nothing in Expo Go).
   useQuickActions(ready);
   // iPad hardware keyboard: ⌘N starts a debate, ⌘K opens the switcher (key-commands.ts).
