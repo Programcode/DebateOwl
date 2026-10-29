@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { StyleSheet, View } from 'react-native';
 
 import { TextButton } from '@/components/buttons';
-import { Card, IconTile, ListItemIn } from '@/components/card';
+import { Card, IconTile, ListItemIn, SessionEntrance } from '@/components/card';
 import { Icon } from '@/components/icon';
 import { OneOffNotice } from '@/components/one-off-notice';
 import { PressScale } from '@/components/press-scale';
@@ -76,7 +76,7 @@ export default function PrepareScreen() {
       <OneOffNotice />
       <Card style={styles.list}>
         {PREPARE_TOOLS.map((tool, index) => (
-          <ListItemIn key={tool.key} index={index} style={index > 0 && { borderTopWidth: 1, borderTopColor: colors.line }}>
+          <SessionEntrance key={tool.key} name={`prepare:${tool.key}`} index={index} style={index > 0 && { borderTopWidth: 1, borderTopColor: colors.line }}>
             <PressScale accessibilityRole="button" onPress={() => openTool(tool.key)} testID={`prepare-tool-${tool.key}`} style={styles.row}>
               <IconTile name={tool.icon} size={42} />
               <View style={styles.rowText}>
@@ -89,7 +89,7 @@ export default function PrepareScreen() {
               </View>
               <Icon name="chevronRight" color={colors.tabInactive} size={20} />
             </PressScale>
-          </ListItemIn>
+          </SessionEntrance>
         ))}
       </Card>
 

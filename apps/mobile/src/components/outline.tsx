@@ -1,7 +1,8 @@
 import { createContext, useCallback, useContext, useEffect, useId, useMemo, useRef, useState, type ReactNode, type RefObject } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { ScrollView, StyleSheet, View } from 'react-native';
 
+import { PressScale as BouncePressable } from '@/components/press-scale';
 import { Text } from './text';
 
 import { useTheme } from '@/theme/use-theme';
@@ -127,19 +128,19 @@ export function OutlineRail({ entries, current, onJump }: { entries: Anchor[]; c
       {entries.map((anchor) => {
         const on = anchor.id === current;
         return (
-          <Pressable
+          <BouncePressable
             key={anchor.id}
             accessibilityRole="menuitem"
             accessibilityState={{ selected: on }}
             onPress={() => onJump(anchor)}
-            style={({ pressed }) => [styles.entry, on && { backgroundColor: colors.tile }, pressed && styles.pressed]}>
+            style={[styles.entry, on && { backgroundColor: colors.tile }]}>
             <Text weight="bold" style={[styles.number, { color: colors.primary }]}>
               {anchor.number ?? ''}
             </Text>
             <Text weight={on ? 'semibold' : 'regular'} style={[styles.label, { color: on ? colors.chipSelectedForeground : colors.secondary }]} numberOfLines={2}>
               {anchor.label}
             </Text>
-          </Pressable>
+          </BouncePressable>
         );
       })}
     </View>
@@ -152,5 +153,4 @@ const styles = StyleSheet.create({
   entry: { flexDirection: 'row', gap: 8, borderRadius: 10, paddingVertical: 7, paddingHorizontal: 8 },
   number: { width: 14, fontSize: 14, lineHeight: 19 },
   label: { flex: 1, fontSize: 14.5, lineHeight: 19 },
-  pressed: { opacity: 0.7 },
 });

@@ -1,20 +1,33 @@
-import type { ReactNode } from 'react';
+import { useEffect, type ReactNode } from 'react';
 import { StyleSheet, View } from 'react-native';
+import Animated, { Easing, useAnimatedProps, useSharedValue, withTiming } from 'react-native-reanimated';
 import Svg, { Circle, Defs, LinearGradient, Stop } from 'react-native-svg';
 
+import { useReduceMotion } from '@/theme/motion';
 import { useTheme } from '@/theme/use-theme';
 
 const STROKE = 9;
+const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 
 /**
  * The live round's ring from mock 05: a faint track and a gradient arc for the
  * time left, drawn from the top. `warning` turns the arc red for the last seconds.
  */
-export function TimerRing({ size, fraction, warning, children }: { size: number; fraction: number; warning?: boolean; children: ReactNode }) {
+export function TimerRing({ size, fraction, warning, children, durationMs, running = false }: { size: number; fraction: number; warning?: boolean; children: ReactNode; durationMs?: number; running?: boolean }) {
   const { colors, scheme } = useTheme();
   const radius = (size - STROKE) / 2;
   const circumference = 2 * Math.PI * radius;
   const left = Math.min(1, Math.max(0, fraction));
+  const reduce = useReduceMotion();
+  const sweep = useSharedValue(left);
+  useEffect(() => {
+    // Anchor to the wall-clock reading, then draw the next 250 ms on the UI thread.
+    sweep.set(left);
+    if (!reduce && running && durationMs && left > 0) {
+      sweep.set(withTiming(Math.max(0, left - 250 / durationMs), { duration: 250, easing: Easing.linear }));
+    }
+  }, [durationMs, fraction, left, reduce, running, sweep]);
+  const animatedProps = useAnimatedProps(() => ({ strokeDashoffset: circumference * (1 - sweep.value) }));
   // Plume, from the button face to its lighter tint: the website has no gradient, so the ring stays in one hue.
   const [from, to] = scheme === 'dark' ? ['#4CA6FD', '#7CC0FE'] : ['#0A6FF0', '#4CA6FD'];
   return (
@@ -35,7 +48,8 @@ export function TimerRing({ size, fraction, warning, children }: { size: number;
           strokeWidth={STROKE}
         />
         {left > 0 ? (
-          <Circle
+          <AnimatedCircle
+            animatedProps={animatedProps}
             cx={size / 2}
             cy={size / 2}
             r={radius}
@@ -44,7 +58,6 @@ export function TimerRing({ size, fraction, warning, children }: { size: number;
             strokeWidth={STROKE}
             strokeLinecap="round"
             strokeDasharray={circumference}
-            strokeDashoffset={circumference * (1 - left)}
           />
         ) : null}
       </Svg>

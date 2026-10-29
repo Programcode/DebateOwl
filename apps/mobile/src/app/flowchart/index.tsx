@@ -2,9 +2,10 @@ import { starterFlowchart, type FlowNode } from '@debatelab/core/flowchart';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { PressScale as BouncePressable } from '@/components/press-scale';
 import { ActionMenu } from '@/components/action-menu';
 import { TextButton } from '@/components/buttons';
 import { ClaimInspector } from '@/components/claim-panel';
@@ -303,11 +304,11 @@ export default function FlowchartScreen() {
           {t('nav.flowchart')}
         </Text>
         {draft && scope ? (
-          <Pressable
+          <BouncePressable
             accessibilityRole="button"
             accessibilityLabel={`${t('flowchart.savedFlowcharts')}: ${mapTitle}`}
             onPress={() => router.push({ pathname: '/flowchart/maps', params: { scope } })}
-            style={({ pressed }) => [styles.mapRow, pressed && styles.pressed]}
+            style={[styles.mapRow]}
             testID="flowchart-maps">
             <View style={styles.mapText}>
               <Text weight="semibold" style={styles.mapTitle} numberOfLines={1}>
@@ -322,7 +323,7 @@ export default function FlowchartScreen() {
               </Text>
             </View>
             {busy ? <ActivityIndicator color={colors.primary} /> : <Icon name="chevronDown" color={colors.primary} size={20} />}
-          </Pressable>
+          </BouncePressable>
         ) : null}
         {oneOff ? <OneOffNotice /> : null}
         <OfflineNotice />
@@ -432,7 +433,6 @@ const styles = StyleSheet.create({
   mapText: { flex: 1, gap: 1 },
   mapTitle: { fontSize: 16.5, lineHeight: 22 },
   mapMeta: { fontSize: 13.5, lineHeight: 18 },
-  pressed: { opacity: 0.7 },
   state: { alignItems: 'center', gap: 10, paddingVertical: 40, paddingHorizontal: 24 },
   stateText: { fontSize: 15, lineHeight: 21, textAlign: 'center' },
   notice: { position: 'absolute', left: 24, right: 24, borderRadius: 14, paddingHorizontal: 16, paddingVertical: 11, alignSelf: 'center', maxWidth: 560 },

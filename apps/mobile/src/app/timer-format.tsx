@@ -3,8 +3,9 @@ import { initialRoundState } from '@debatelab/core/free-tools/round-timer';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
+import { PressScale as BouncePressable } from '@/components/press-scale';
 import { MainActionButton, SecondaryButton, TextButton } from '@/components/buttons';
 import { Field } from '@/components/field';
 import { FormGroup, SwitchRow } from '@/components/form-rows';
@@ -51,16 +52,16 @@ function MinutesField({ label, seconds, min, max, onChange, testID }: {
 function SmallIconButton({ icon, label, onPress, disabled }: { icon: IconName; label: string; onPress: () => void; disabled?: boolean }) {
   const { colors } = useTheme();
   return (
-    <Pressable
+    <BouncePressable
       accessibilityRole="button"
       accessibilityLabel={label}
       accessibilityState={{ disabled }}
       disabled={disabled}
       onPress={onPress}
       hitSlop={6}
-      style={({ pressed }) => [styles.iconButton, { backgroundColor: colors.segmentTrack }, (pressed || disabled) && styles.dimmed]}>
+      style={[styles.iconButton, { backgroundColor: colors.segmentTrack }, disabled && styles.dimmed]}>
       <Icon name={icon} color={colors.foreground} size={18} />
-    </Pressable>
+    </BouncePressable>
   );
 }
 

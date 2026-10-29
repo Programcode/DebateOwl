@@ -285,7 +285,7 @@ function PressRow({ divider = false, children, ...props }: Omit<PressableProps, 
   const press = usePressScale();
   return (
     <Pressable {...props} onPressIn={press.onPressIn} onPressOut={press.onPressOut} style={divider ? { borderTopWidth: 1, borderTopColor: colors.line } : undefined}>
-      {({ pressed }) => <Animated.View style={[styles.row, pressed && styles.pressed, press.style]}>{children}</Animated.View>}
+      {() => <Animated.View style={[styles.row, press.style]}>{children}</Animated.View>}
     </Pressable>
   );
 }
@@ -478,6 +478,5 @@ const styles = StyleSheet.create({
   rowText: { flex: 1, gap: 3 },
   rowTitle: { fontSize: 16 },
   email: { fontSize: 17 },
-  pressed: { opacity: 0.6 },
   inset: { paddingHorizontal: 16, paddingBottom: 12 },
 });

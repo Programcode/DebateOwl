@@ -2,8 +2,9 @@ import { formatRoundTime } from '@debatelab/core/sparring/formats';
 import { LONG_PAUSE_SECONDS, type SpeechDelivery } from '@debatelab/core/voice/delivery';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Linking, Pressable, StyleSheet, View } from 'react-native';
+import { Linking, StyleSheet, View } from 'react-native';
 
+import { PressScale as BouncePressable } from '@/components/press-scale';
 import { PrimaryButton, SecondaryButton, TextButton } from './buttons';
 import { FormGroup, SwitchRow } from './form-rows';
 import { Icon } from './icon';
@@ -131,7 +132,7 @@ export function VoiceMicControl({ capture, onStart, onStop, disabled }: { captur
   return (
     <View style={styles.mic} testID="voice-mic-control">
       <View style={styles.micRow}>
-        <Pressable
+        <BouncePressable
           accessibilityRole="button"
           accessibilityState={{ disabled, selected: listening }}
           accessibilityLabel={listening ? t('voiceRound.mic.stop') : t('voiceRound.mic.start')}
@@ -142,18 +143,18 @@ export function VoiceMicControl({ capture, onStart, onStop, disabled }: { captur
             else onStart();
           }}
           testID="voice-mic"
-          style={({ pressed }) => [
+          style={[
             styles.micButton,
             listening
               ? { backgroundColor: colors.destructive, borderColor: colors.destructive }
               : { backgroundColor: colors.card, borderColor: colors.primaryFill },
-            (pressed || disabled) && styles.dimmed,
+            disabled && styles.dimmed,
           ]}>
           <Icon name={listening ? 'stop' : 'mic'} color={listening ? '#FFFFFF' : colors.primary} size={18} />
           <Text weight="semibold" style={[styles.micLabel, { color: listening ? '#FFFFFF' : colors.primary }]}>
             {listening ? t('voiceRound.mic.stop') : t('voiceRound.mic.start')}
           </Text>
-        </Pressable>
+        </BouncePressable>
         {listening ? <ListeningIndicator label={t('voiceRound.mic.listening')} /> : null}
       </View>
       {listening && capture.interim ? (
@@ -270,7 +271,7 @@ export function DictationButton({ capture, startLabel, stopLabel, inline }: { ca
   if (inline) {
     // Inside a composer, beside the paperclip: an icon that turns red while listening.
     return (
-      <Pressable
+      <BouncePressable
         accessibilityRole="button"
         accessibilityLabel={listening ? stopLabel : startLabel}
         accessibilityState={{ selected: listening }}
@@ -281,13 +282,13 @@ export function DictationButton({ capture, startLabel, stopLabel, inline }: { ca
         }}
         hitSlop={6}
         testID="dictate"
-        style={({ pressed }) => [styles.dictateInline, pressed && styles.dimmed]}>
+        style={styles.dictateInline}>
         <Icon name={listening ? 'stop' : 'mic'} color={listening ? colors.destructive : colors.secondary} size={20} />
-      </Pressable>
+      </BouncePressable>
     );
   }
   return (
-    <Pressable
+    <BouncePressable
       accessibilityRole="button"
       accessibilityLabel={listening ? stopLabel : startLabel}
       accessibilityState={{ selected: listening }}
@@ -298,13 +299,12 @@ export function DictationButton({ capture, startLabel, stopLabel, inline }: { ca
       }}
       hitSlop={6}
       testID="dictate"
-      style={({ pressed }) => [
+      style={[
         styles.dictate,
         listening ? { backgroundColor: colors.destructive, borderColor: colors.destructive } : { backgroundColor: colors.card, borderColor: colors.border },
-        pressed && styles.dimmed,
       ]}>
       <Icon name={listening ? 'stop' : 'mic'} color={listening ? '#FFFFFF' : colors.primary} size={20} />
-    </Pressable>
+    </BouncePressable>
   );
 }
 

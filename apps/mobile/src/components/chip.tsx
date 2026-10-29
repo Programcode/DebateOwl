@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
+import { PressScale as BouncePressable } from '@/components/press-scale';
 import { Icon } from './icon';
 import type { IconName } from './icon-paths';
 import { Text } from './text';
@@ -35,7 +36,7 @@ export function Chip({
   const { colors } = useTheme();
   const foreground = selected ? colors.chipSelectedForeground : colors.secondary;
   return (
-    <Pressable
+    <BouncePressable
       accessibilityRole={accessibilityRole}
       accessibilityLabel={accessibilityLabel}
       accessibilityState={accessibilityRole === 'switch' || accessibilityRole === 'radio' ? { checked: Boolean(selected) } : { selected: Boolean(selected) }}
@@ -46,12 +47,11 @@ export function Chip({
         onPress();
       }}
       testID={testID}
-      style={({ pressed }) => [
+      style={[
         styles.chip,
         selected
           ? { backgroundColor: colors.tile, borderColor: colors.chipSelectedBorder }
           : { backgroundColor: colors.input, borderColor: colors.border },
-        pressed && styles.pressed,
       ]}>
       {leading}
       {icon ? <Icon name={icon} color={foreground} size={16} /> : null}
@@ -59,7 +59,7 @@ export function Chip({
         {label}
       </Text>
       {trailing}
-    </Pressable>
+    </BouncePressable>
   );
 }
 
@@ -87,7 +87,6 @@ const styles = StyleSheet.create({
     maxWidth: 280,
   },
   label: { fontSize: 14.5, flexShrink: 1 },
-  pressed: { opacity: 0.7 },
   cite: { minWidth: 20, height: 20, borderRadius: 6, paddingHorizontal: 5, alignItems: 'center', justifyContent: 'center' },
   citeText: { fontSize: 12, lineHeight: 15 },
 });

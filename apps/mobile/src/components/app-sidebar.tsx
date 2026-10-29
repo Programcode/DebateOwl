@@ -2,10 +2,11 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useNavigationContainerRef, usePathname, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { ScrollView, StyleSheet, View } from 'react-native';
 import Animated, { FadeInUp, FadeOutUp, LinearTransition, useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { PressScale as BouncePressable } from '@/components/press-scale';
 import { Icon } from './icon';
 import { OwlMark, useReduceMotion } from './owl';
 import { PressScale } from './press-scale';
@@ -154,7 +155,7 @@ export function AppSidebar({ width }: { width: number }) {
         </View>
 
         <View style={styles.switcherRow}>
-          <Pressable
+          <BouncePressable
             accessibilityRole="button"
             accessibilityLabel={t('debate.menuAria', { motion })}
             accessibilityHint={t('debate.switchDesc')}
@@ -162,7 +163,7 @@ export function AppSidebar({ width }: { width: number }) {
               haptics.tap();
               router.push('/debates');
             }}
-            style={({ pressed }) => [styles.switcher, { backgroundColor: colors.tile, borderColor: colors.tileBorder }, pressed && styles.pressed]}
+            style={[styles.switcher, { backgroundColor: colors.tile, borderColor: colors.tileBorder }]}
             testID="sidebar-debate-switcher">
             <View style={styles.switcherText}>
               <Text weight="semibold" style={[styles.switcherLabel, { color: colors.chipSelectedForeground }]}>
@@ -173,8 +174,8 @@ export function AppSidebar({ width }: { width: number }) {
               </Text>
             </View>
             <Icon name="chevronDown" color={colors.chipSelectedForeground} size={18} />
-          </Pressable>
-          <Pressable
+          </BouncePressable>
+          <BouncePressable
             accessibilityRole="button"
             accessibilityLabel={t('debate.startNew')}
             onPress={() => {
@@ -182,10 +183,10 @@ export function AppSidebar({ width }: { width: number }) {
               router.push('/new-debate');
             }}
             hitSlop={6}
-            style={({ pressed }) => [styles.newDebate, { backgroundColor: colors.primaryFill }, pressed && styles.pressed]}
+            style={[styles.newDebate, { backgroundColor: colors.primaryFill }]}
             testID="sidebar-new-debate">
             <Icon name="plus" color={colors.onPrimary} size={20} />
-          </Pressable>
+          </BouncePressable>
         </View>
 
         {SIDEBAR_SECTIONS.map((section) => (
@@ -241,7 +242,7 @@ function SidebarGroup({
   return (
     <Animated.View layout={LinearTransition.duration(DURATION.fast).reduceMotion(motionSetting(reduce))} style={styles.group} testID={`sidebar-section-${section.key}`}>
       {/* A heading for VoiceOver's rotor that also opens and closes the section, as iPadOS sidebar headers do. */}
-      <Pressable
+      <BouncePressable
         accessibilityRole="header"
         accessibilityLabel={title}
         aria-expanded={expanded}
@@ -249,7 +250,7 @@ function SidebarGroup({
         accessibilityActions={[{ name: 'activate' }]}
         onAccessibilityAction={onToggle}
         onPress={onToggle}
-        style={({ pressed }) => [styles.groupHeader, pressed && styles.pressed]}
+        style={[styles.groupHeader]}
         testID={`sidebar-toggle-${section.key}`}>
         <Text weight="bold" style={[styles.groupTitle, { color: colors.heading }]} maxFontSizeMultiplier={SIDEBAR_MAX_FONT_SCALE}>
           {title}
@@ -259,7 +260,7 @@ function SidebarGroup({
         <Animated.View style={chevron}>
           <Icon name="chevronRight" color={colors.primary} size={18} />
         </Animated.View>
-      </Pressable>
+      </BouncePressable>
       {expanded && loaded
         ? section.items.map((item, index) => {
             const selected = item.key === active;
@@ -311,5 +312,4 @@ const styles = StyleSheet.create({
   activeDot: { width: 7, height: 7, borderRadius: 4 },
   row: { flexDirection: 'row', alignItems: 'center', gap: 12, borderRadius: 11, paddingHorizontal: 12, paddingVertical: 9, minHeight: 44 },
   rowLabel: { flex: 1, fontSize: 16, lineHeight: 21 },
-  pressed: { opacity: 0.7 },
 });

@@ -1,9 +1,10 @@
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { PressScale as BouncePressable } from '@/components/press-scale';
 import { ActionMenu } from './action-menu';
 import type { HeaderAction, HeaderButton } from './document-header';
 import { Icon } from './icon';
@@ -20,27 +21,27 @@ export function DocumentHeader({ backLabel, onShare, actions, buttons = [] }: { 
   const [open, setOpen] = useState(false);
   return (
     <View style={[styles.bar, { paddingTop: insets.top + 8 }]}>
-      <Pressable accessibilityRole="button" accessibilityLabel={backLabel} onPress={() => router.back()} style={styles.back} testID="document-back">
+      <BouncePressable accessibilityRole="button" accessibilityLabel={backLabel} onPress={() => router.back()} style={styles.back} testID="document-back">
         <Icon name="chevronLeft" color={colors.primary} size={26} />
         <Text style={[styles.backLabel, { color: colors.primary }]} numberOfLines={1}>
           {backLabel}
         </Text>
-      </Pressable>
+      </BouncePressable>
       <View style={styles.actions}>
         {buttons.map((button) => (
-          <Pressable key={button.key} accessibilityRole="button" accessibilityLabel={button.label} onPress={button.onPress} hitSlop={8} style={styles.icon} testID={`document-${button.key}`}>
+          <BouncePressable key={button.key} accessibilityRole="button" accessibilityLabel={button.label} onPress={button.onPress} hitSlop={8} style={styles.icon} testID={`document-${button.key}`}>
             <Icon name={button.icon} color={colors.primary} size={27} />
-          </Pressable>
+          </BouncePressable>
         ))}
         {onShare ? (
-          <Pressable accessibilityRole="button" accessibilityLabel={t('mobile.results.share')} onPress={onShare} hitSlop={8} style={styles.icon}>
+          <BouncePressable accessibilityRole="button" accessibilityLabel={t('mobile.results.share')} onPress={onShare} hitSlop={8} style={styles.icon}>
             <Icon name="share" color={colors.primary} size={25} />
-          </Pressable>
+          </BouncePressable>
         ) : null}
         {actions.length > 0 ? (
-          <Pressable accessibilityRole="button" accessibilityLabel={t('nav.more')} onPress={() => setOpen(true)} hitSlop={8} style={styles.icon} testID="document-more">
+          <BouncePressable accessibilityRole="button" accessibilityLabel={t('nav.more')} onPress={() => setOpen(true)} hitSlop={8} style={styles.icon} testID="document-more">
             <Icon name="more" color={colors.primary} size={27} />
-          </Pressable>
+          </BouncePressable>
         ) : null}
       </View>
       <ActionMenu

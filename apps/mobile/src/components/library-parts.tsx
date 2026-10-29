@@ -1,8 +1,9 @@
 import { GENERAL_FOLDER } from '@debatelab/core/library';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Pressable, StyleSheet, Switch, View } from 'react-native';
+import { StyleSheet, Switch, View } from 'react-native';
 
+import { PressScale as BouncePressable } from '@/components/press-scale';
 import { ActionMenu } from './action-menu';
 import { WEB_SWITCH_THUMB } from './form-rows';
 import { Icon } from './icon';
@@ -93,15 +94,15 @@ export function FolderBar({
         testID="folder-active"
         {...WEB_SWITCH_THUMB}
       />
-      <Pressable
+      <BouncePressable
         accessibilityRole="button"
         accessibilityLabel={t('libraryPage.folderActions')}
         hitSlop={8}
         onPress={() => setMenu(true)}
         testID="folder-menu"
-        style={({ pressed }) => [styles.more, { backgroundColor: colors.segmentTrack }, pressed && styles.pressed]}>
+        style={[styles.more, { backgroundColor: colors.segmentTrack }]}>
         <Icon name="more" color={colors.secondary} size={20} />
-      </Pressable>
+      </BouncePressable>
       <ActionMenu
         visible={menu}
         title={name}
@@ -140,5 +141,4 @@ const styles = StyleSheet.create({
   folderName: { fontSize: 16 },
   folderMeta: { fontSize: 13.5, lineHeight: 18 },
   more: { width: 34, height: 34, borderRadius: 17, alignItems: 'center', justifyContent: 'center' },
-  pressed: { opacity: 0.6 },
 });

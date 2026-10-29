@@ -5,6 +5,7 @@ import { Pressable, StyleSheet, Switch, View } from 'react-native';
 import Animated from 'react-native-reanimated';
 import ReanimatedSwipeable, { type SwipeableMethods } from 'react-native-gesture-handler/ReanimatedSwipeable';
 
+import { PressScale as BouncePressable } from '@/components/press-scale';
 import { IconTile, usePressScale } from './card';
 import { WEB_SWITCH_THUMB } from './form-rows';
 import { Icon } from './icon';
@@ -128,7 +129,7 @@ export function SourceRow({
       overshootRight={false}
       containerStyle={!first && { borderTopWidth: 1, borderTopColor: colors.line }}
       renderLeftActions={() => (
-        <Pressable
+        <BouncePressable
           accessibilityRole="button"
           accessibilityLabel={toggleLabel}
           onPress={toggle}
@@ -137,10 +138,10 @@ export function SourceRow({
           <Text weight="semibold" style={styles.swipeLabel} numberOfLines={2}>
             {toggleLabel}
           </Text>
-        </Pressable>
+        </BouncePressable>
       )}
       renderRightActions={() => (
-        <Pressable
+        <BouncePressable
           accessibilityRole="button"
           accessibilityLabel={t('libraryPage.deleteSourceLabel', { title })}
           onPress={() => void remove()}
@@ -149,7 +150,7 @@ export function SourceRow({
           <Text weight="semibold" style={styles.swipeLabel}>
             {t('common.delete')}
           </Text>
-        </Pressable>
+        </BouncePressable>
       )}>
       {/* The switch sits beside the link, not in it, so turning a source on or off never opens it. */}
       <View style={[styles.row, { backgroundColor: selected ? colors.tile : colors.card }]}>
@@ -187,8 +188,8 @@ export function SourceRow({
               testID="source-row"
               // One flat style object: inside a Link's slot the web preview hands it to the DOM as is.
               style={{ flex: 1 }}>
-              {({ pressed }) => (
-                <Animated.View style={[styles.content, pressed && styles.pressed, press.style]}>
+              {() => (
+                <Animated.View style={[styles.content, press.style]}>
                   <View style={!source.isActive && styles.off}>
                     <IconTile name={SOURCE_ICONS[source.type]} size={42} />
                   </View>
@@ -259,7 +260,6 @@ const styles = StyleSheet.create({
   rowTitle: { fontSize: 16 },
   rowMeta: { fontSize: 14 },
   off: { opacity: 0.5 },
-  pressed: { opacity: 0.7 },
   badges: { flexDirection: 'row', flexWrap: 'wrap', gap: 5, marginTop: 4 },
   badge: { borderWidth: 1, borderRadius: radius.pill, paddingHorizontal: 8, paddingVertical: 1, maxWidth: '100%' },
   folderBadge: { flexDirection: 'row', alignItems: 'center', gap: 4, maxWidth: 200 },

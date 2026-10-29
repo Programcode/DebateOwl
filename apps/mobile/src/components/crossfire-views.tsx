@@ -1,12 +1,14 @@
 import type { CrossfireDebrief, CrossfireTurn } from '@debatelab/core/crossfire/schemas';
 import { useTranslation } from 'react-i18next';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
+import { PressScale as BouncePressable } from '@/components/press-scale';
 import { PopIn } from './celebration';
 import { Callout, DocSection, Paragraph, Tag } from './document';
 import { Icon } from './icon';
 import { Text } from './text';
 
+import { haptics } from '@/lib/haptics';
 import { radius } from '@/theme/colors';
 import { useTheme } from '@/theme/use-theme';
 
@@ -34,13 +36,16 @@ export function ChoiceCards<T extends string>({
         {options.map((option, index) => {
           const selected = option.value === value;
           return (
-            <Pressable
+            <BouncePressable
               key={option.value}
               accessibilityRole="radio"
               accessibilityState={{ checked: selected }}
-              onPress={() => onChange(option.value)}
+              onPress={() => {
+                if (!selected) haptics.select();
+                onChange(option.value);
+              }}
               testID={`${testIDPrefix}-${option.value}`}
-              style={({ pressed }) => [styles.card, index > 0 && { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.line }, pressed && styles.pressed]}>
+              style={[styles.card, index > 0 && { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.line }]}>
               <View style={styles.cardText}>
                 <Text weight={selected ? 'semibold' : 'regular'} style={styles.cardLabel}>
                   {option.label}
@@ -50,7 +55,7 @@ export function ChoiceCards<T extends string>({
                 </Text>
               </View>
               {selected ? <Icon name="check" color={colors.primary} size={20} /> : <View style={styles.checkSpace} />}
-            </Pressable>
+            </BouncePressable>
           );
         })}
       </View>
@@ -235,7 +240,6 @@ const styles = StyleSheet.create({
   cardLabel: { fontSize: 16.5 },
   cardDescription: { fontSize: 14, lineHeight: 19 },
   checkSpace: { width: 20 },
-  pressed: { opacity: 0.7 },
   tags: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 4 },
   empty: { borderWidth: 2, borderStyle: 'dashed', borderRadius: radius.card, padding: 22 },
   emptyText: { fontSize: 15, lineHeight: 21, textAlign: 'center' },

@@ -2663,6 +2663,18 @@
     "promoFailed": "Nem sikerült beváltani a promóciós kódot. Próbáld újra."
   },
   "mobile": {
+    "animation": {
+      "attackReady": "Elkészültek a cáfolatok",
+      "brainstormReady": "Elkészültek az ötletek",
+      "factoidsReady": "Elkészültek a tények",
+      "rebuttals": "Cáfolatok",
+      "ideas": "Ötletek",
+      "factoids": "Tények",
+      "roundReady": "A forduló véget ért",
+      "speechesTimed": "Mért beszédek",
+      "totalTime": "Összes idő",
+      "keepPractising": "Gyakorolj tovább, jó úton jársz"
+    },
     "tabs": {
       "debate": "Vita",
       "prepare": "Felkészülés",

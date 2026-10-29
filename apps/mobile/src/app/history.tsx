@@ -5,6 +5,7 @@ import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import Animated from 'react-native-reanimated';
 import ReanimatedSwipeable, { type SwipeableMethods } from 'react-native-gesture-handler/ReanimatedSwipeable';
 
+import { PressScale as BouncePressable } from '@/components/press-scale';
 import { ActionMenu } from '@/components/action-menu';
 import { PrimaryButton, TextButton } from '@/components/buttons';
 import { Card, IconTile, ListItemIn, usePressScale } from '@/components/card';
@@ -385,12 +386,12 @@ function ScopePicker({ label, onPress }: { label: string; onPress: () => void })
   const { t } = useTranslation();
   const { colors } = useTheme();
   return (
-    <Pressable
+    <BouncePressable
       accessibilityRole="button"
       accessibilityLabel={`${t('debate.historyScope')}: ${label}`}
       onPress={onPress}
       testID="history-scope"
-      style={({ pressed }) => [styles.scope, { backgroundColor: colors.card, borderColor: colors.border }, pressed && styles.pressed]}>
+      style={[styles.scope, { backgroundColor: colors.card, borderColor: colors.border }]}>
       <View style={styles.rowText}>
         <Text tone="faint" style={styles.meta}>
           {t('debate.historyScope')}
@@ -400,7 +401,7 @@ function ScopePicker({ label, onPress }: { label: string; onPress: () => void })
         </Text>
       </View>
       <Icon name="chevronDown" color={colors.tabInactive} size={20} />
-    </Pressable>
+    </BouncePressable>
   );
 }
 
@@ -468,8 +469,8 @@ function HistoryRow({ item, first, onPress, onDelete }: { item: HistoryItem; fir
       onPressOut={press.onPressOut}
       testID="history-row"
       style={{ backgroundColor: colors.card }}>
-      {({ pressed }) => (
-        <Animated.View style={[styles.row, pressed && styles.pressed, press.style]}>
+      {() => (
+        <Animated.View style={[styles.row, press.style]}>
           <IconTile name={KIND_ICONS[item.kind]} size={42} />
           <View style={styles.rowText}>
             <Text weight="semibold" style={styles.rowTitle} numberOfLines={2}>
@@ -525,7 +526,7 @@ function HistoryRow({ item, first, onPress, onDelete }: { item: HistoryItem; fir
       overshootRight={false}
       containerStyle={divider}
       renderRightActions={() => (
-        <Pressable
+        <BouncePressable
           accessibilityRole="button"
           accessibilityLabel={item.kind === 'sparring' ? t(DELETIONS.sparring.label, { motion: title }) : t(DELETIONS.case.label, { title })}
           onPress={() => void remove()}
@@ -534,7 +535,7 @@ function HistoryRow({ item, first, onPress, onDelete }: { item: HistoryItem; fir
           <Text weight="semibold" style={styles.deleteLabel}>
             {t('common.delete')}
           </Text>
-        </Pressable>
+        </BouncePressable>
       )}>
       {body}
     </ReanimatedSwipeable>
@@ -624,18 +625,18 @@ function UnsortedRow({
       ) : null}
       {debates.length > 0 ? (
         <>
-          <Pressable
+          <BouncePressable
             accessibilityRole="button"
             accessibilityLabel={`${t('debate.attachTo')}: ${chosen?.motion ?? t('debate.chooseDebate')}`}
             onPress={() => setPicking(true)}
             disabled={busy}
             testID="unsorted-target"
-            style={({ pressed }) => [styles.target, { borderColor: colors.border, backgroundColor: colors.input }, pressed && styles.pressed]}>
+            style={[styles.target, { borderColor: colors.border, backgroundColor: colors.input }]}>
             <Text tone={chosen ? 'foreground' : 'faint'} style={[styles.body, styles.targetText]} numberOfLines={2}>
               {chosen?.motion ?? t('debate.chooseDebate')}
             </Text>
             <Icon name="chevronDown" color={colors.tabInactive} size={18} />
-          </Pressable>
+          </BouncePressable>
           <ActionMenu
             visible={picking}
             title={t('debate.attachTo')}
@@ -658,7 +659,6 @@ const styles = StyleSheet.create({
   root: { flex: 1 },
   title: { fontSize: 32, lineHeight: 38, letterSpacing: -0.8 },
   body: { fontSize: 15, lineHeight: 21 },
-  pressed: { opacity: 0.7 },
   scope: { flexDirection: 'row', alignItems: 'center', gap: 12, borderWidth: 2, borderRadius: 14, paddingVertical: 11, paddingHorizontal: 14 },
   tabRow: { marginHorizontal: -20, flexGrow: 0 },
   tabs: { gap: 8, paddingHorizontal: 20 },

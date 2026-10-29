@@ -211,7 +211,7 @@ export function LiveToolRun({
   // The owl looks things up while researching or checking sources, as on the website.
   if (sections.length === 0) {
     const looking = run.phase === 'research' || run.phase === 'checking';
-    return <ToolProgress pose={looking ? 'skeptical' : pose ?? 'idea'} messages={[status]} detail={detail} elapsed={elapsed} onCancel={onCancel} />;
+    return <ToolProgress step={run.phase} pose={looking ? 'skeptical' : pose ?? 'idea'} messages={[status]} detail={detail} elapsed={elapsed} onCancel={onCancel} />;
   }
 
   const writing = run.phase === 'writing';
@@ -220,7 +220,7 @@ export function LiveToolRun({
   return (
     <View style={styles.root} testID="live-draft">
       <View style={[styles.strip, { backgroundColor: colors.tile, borderColor: colors.tileBorder }]}>
-        <OwlAvatar pose={writing ? 'point' : 'idea'} size={36} blink />
+        <OwlAvatar pose={writing ? 'point' : run.phase === 'checking' ? 'skeptical' : run.phase === 'research' ? 'reading' : 'idea'} size={36} blink />
         <View style={styles.stripText}>
           <Text weight="bold" style={styles.stripStatus} accessibilityRole="progressbar" accessibilityLiveRegion="polite">
             {writing ? t('tools.live.writingLive') : status}

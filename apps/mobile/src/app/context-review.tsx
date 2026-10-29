@@ -4,8 +4,9 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import type { TFunction } from 'i18next';
 import { useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, StyleSheet, View } from 'react-native';
 
+import { PressScale as BouncePressable } from '@/components/press-scale';
 import { SecondaryButton, TextButton } from '@/components/buttons';
 import { ListItemIn, SkeletonTextRows } from '@/components/card';
 import { Icon } from '@/components/icon';
@@ -170,7 +171,7 @@ function CheckRow({ checked, label, meta, note, first, onChange, trailing }: {
   const { colors } = useTheme();
   return (
     <View style={[styles.row, !first && { borderTopWidth: 1, borderTopColor: colors.line }]}>
-      <Pressable
+      <BouncePressable
         accessibilityRole="checkbox"
         accessibilityState={{ checked }}
         accessibilityLabel={label}
@@ -178,7 +179,7 @@ function CheckRow({ checked, label, meta, note, first, onChange, trailing }: {
           haptics.tap();
           onChange(!checked);
         }}
-        style={({ pressed }) => [styles.rowMain, pressed && styles.pressed]}>
+        style={[styles.rowMain]}>
         <View style={[styles.box, checked ? { backgroundColor: colors.primaryFill, borderColor: colors.primaryFill } : { borderColor: colors.inputBorder }]}>
           {checked ? <Icon name="check" color={colors.onPrimary} size={14} /> : null}
         </View>
@@ -195,7 +196,7 @@ function CheckRow({ checked, label, meta, note, first, onChange, trailing }: {
             </Text>
           ) : null}
         </View>
-      </Pressable>
+      </BouncePressable>
       {trailing}
     </View>
   );
@@ -228,7 +229,7 @@ function OutputRow({ output, first, pinning, onChange, onPin }: {
       first={first}
       onChange={onChange}
       trailing={
-        <Pressable
+        <BouncePressable
           accessibilityRole="button"
           accessibilityState={{ selected: output.pinned, disabled: pinning }}
           accessibilityLabel={output.pinned ? t('debateContext.unpinAria', { title }) : t('debateContext.pinAria', { title })}
@@ -238,10 +239,10 @@ function OutputRow({ output, first, pinning, onChange, onPin }: {
             haptics.tap();
             onPin();
           }}
-          style={({ pressed }) => [styles.pin, output.pinned && { backgroundColor: colors.tile }, pressed && styles.pressed]}
+          style={[styles.pin, output.pinned && { backgroundColor: colors.tile }]}
           testID="debate-context-pin">
           {pinning ? <ActivityIndicator size="small" color={colors.primary} /> : <Icon name="pin" color={output.pinned ? colors.primary : colors.secondary} size={18} />}
-        </Pressable>
+        </BouncePressable>
       }
     />
   );
@@ -262,5 +263,4 @@ const styles = StyleSheet.create({
   rowLabel: { fontSize: 15.5, lineHeight: 21 },
   rowMeta: { fontSize: 13.5, lineHeight: 18 },
   pin: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
-  pressed: { opacity: 0.6 },
 });

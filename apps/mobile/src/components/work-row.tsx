@@ -110,8 +110,8 @@ export function WorkRow({
       testID="work-row"
       // One flat style object: inside a Link's slot the web preview hands it to the DOM as is.
       style={StyleSheet.flatten([!first && { borderTopWidth: 1, borderTopColor: colors.line }, { backgroundColor: colors.card }])}>
-      {({ pressed }) => (
-        <Animated.View style={[styles.row, pressed && styles.pressed, press.style]}>
+      {() => (
+        <Animated.View style={[styles.row, press.style]}>
           <IconTile name={KIND_ICONS[item.kind]} size={42} />
           <View style={styles.rowText}>
             <Text weight="semibold" style={styles.rowTitle} numberOfLines={2}>
@@ -157,5 +157,4 @@ const styles = StyleSheet.create({
   rowText: { flex: 1, gap: 2 },
   rowTitle: { fontSize: 16 },
   rowMeta: { fontSize: 14 },
-  pressed: { opacity: 0.7 },
 });

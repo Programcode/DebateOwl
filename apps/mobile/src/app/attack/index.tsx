@@ -13,6 +13,7 @@ import { FormGroup, SelectRow, SwitchRow } from '@/components/form-rows';
 import { ModelPicker } from '@/components/model-picker';
 import { Text } from '@/components/text';
 import { ContextLine } from '@/components/context-line';
+import { markCelebration } from '@/components/celebration';
 import { LiveToolRun, useLiveRun } from '@/components/live-run';
 import { ToolError, ToolTitle, WorkingIn } from '@/components/tool-form';
 import { AIError, isAbortError, type AIErrorKind } from '@/lib/ai-request';
@@ -155,6 +156,7 @@ export default function AttackScreen() {
       if (!isCurrent()) return;
       const key = keepOpenResult({ kind: 'attack', savedId, title, side: 'neutral', debateId, createdAt: Date.now(), input, output: result, sources: discoveredSources });
       const notice = arrivalNotices({ recordFailed, sourcesFailed: sources.failed, assessed, truncated });
+      markCelebration(key);
       liveRun.complete();
       router.replace({
         pathname: '/attack/[id]',

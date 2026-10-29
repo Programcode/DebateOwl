@@ -2,8 +2,9 @@ import { useFocusEffect } from 'expo-router';
 import * as WebBrowser from 'expo-web-browser';
 import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, StyleSheet, View } from 'react-native';
 
+import { PressScale as BouncePressable } from '@/components/press-scale';
 import { SuccessCheck } from './success-check';
 import { MainActionButton, SecondaryButton, TextButton } from './buttons';
 import { Card, IconTile } from './card';
@@ -258,17 +259,17 @@ export function SourceView({ id, onDone, onRemoved }: { id: string; onDone?: () 
             </View>
           ) : null}
           {url ? (
-            <Pressable
+            <BouncePressable
               accessibilityRole="link"
               accessibilityHint={t('mobile.library.openPage')}
               onPress={() => void WebBrowser.openBrowserAsync(url)}
-              style={({ pressed }) => [styles.origin, { backgroundColor: colors.card, borderColor: colors.border }, pressed && styles.pressed]}>
+              style={[styles.origin, { backgroundColor: colors.card, borderColor: colors.border }]}>
               <Icon name="globe" color={colors.primary} size={19} />
               <Text weight="medium" style={[styles.originText, { color: colors.primary }]} numberOfLines={1}>
                 {url.replace(/^https?:\/\/(www\.)?/i, '')}
               </Text>
               <Icon name="externalLink" color={colors.primary} size={17} />
-            </Pressable>
+            </BouncePressable>
           ) : view.origin ? (
             <Text tone="faint" style={styles.meta}>
               {view.origin}
@@ -311,16 +312,16 @@ export function SourceView({ id, onDone, onRemoved }: { id: string; onDone?: () 
               {view.content}
             </Text>
           </Card>
-          <Pressable
+          <BouncePressable
             accessibilityRole="button"
             onPress={() => void remove()}
             testID="source-delete"
-            style={({ pressed }) => [styles.delete, { borderColor: colors.border }, pressed && styles.pressed]}>
+            style={[styles.delete, { borderColor: colors.border }]}>
             <Icon name="trash" color={colors.destructive} size={19} />
             <Text weight="semibold" style={[styles.deleteText, { color: colors.destructive }]}>
               {t('common.delete')}
             </Text>
-          </Pressable>
+          </BouncePressable>
         </>
       )}
     </>
@@ -338,7 +339,6 @@ const styles = StyleSheet.create({
   title: { fontSize: 23, lineHeight: 29, letterSpacing: -0.4 },
   origin: { flexDirection: 'row', alignItems: 'center', gap: 9, borderWidth: 2, borderRadius: 12, paddingHorizontal: 13, minHeight: 46 },
   originText: { flex: 1, fontSize: 15 },
-  pressed: { opacity: 0.7 },
   text: { fontSize: 16, lineHeight: 24 },
   quality: { borderWidth: 2, borderRadius: radius.field, paddingVertical: 10, paddingHorizontal: 13, gap: 3 },
   qualityTitle: { fontSize: 15 },
