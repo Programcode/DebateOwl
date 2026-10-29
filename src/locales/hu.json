@@ -1048,6 +1048,7 @@
       "tools/debate-flow-sheet": "Jegyzetlap",
       "tools/speech-time-calculator": "Beszédidő-kalkulátor",
       "best-ai-debate-tools": "A legjobb MI-alapú vitaeszközök",
+      "best-ai-for-debate": "Melyik MI a legjobb vitához",
       "debateowl-vs-chatgpt": "{{product}} vagy ChatGPT",
       "debateowl-vs-debate-ladder": "{{product}} vagy Debate Ladder",
       "free-vs-paid-ai-debate-tools": "Ingyenes és fizetős MI-vitaeszközök",
@@ -2612,6 +2613,7 @@
     "question": "Melyik a legjobb MI-alapú vitagyakorló eszköz?",
     "answer": "Attól függ, mire van szükséged. {{asOf}} állapot szerint a {{product}} azoknak a diákoknak és versenyvitázóknak való, akik egy helyen szeretnének eseteket építeni, gyenge pontokat találni, bizonyítékokat ellenőrizni és időzített gyakorlófordulókat futtatni angolul, spanyolul vagy magyarul: {{trialDays}} napos ingyenes próba bankkártya nélkül, utána ${{proMonthly}}/hó + adó. Ha ingyen szeretnél MI-ellenféllel gyakorolni World Schools vagy Asian Parliamentary stílusban, a debatelab.ai, egy másik termék, azt írja magáról, hogy ingyenes. Ha főleg ötletelésre vagy írási segítségre van szükséged bármilyen témában, egy általános asszisztens, például a ChatGPT rugalmasabb.",
     "compare": "MI-alapú vitaeszközök összehasonlítása",
+    "bestAi": "Melyik MI a legjobb vitához?",
     "more": "Bővebben",
     "less": "Kevesebb"
   },

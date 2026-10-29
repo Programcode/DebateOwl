@@ -1048,6 +1048,7 @@
       "tools/debate-flow-sheet": "Debate flow sheet",
       "tools/speech-time-calculator": "Speech time calculator",
       "best-ai-debate-tools": "Best AI debate tools compared",
+      "best-ai-for-debate": "Which AI is best for debate?",
       "debateowl-vs-chatgpt": "{{product}} vs ChatGPT",
       "debateowl-vs-debate-ladder": "{{product}} vs Debate Ladder",
       "free-vs-paid-ai-debate-tools": "Free vs paid AI debate tools",
@@ -2612,6 +2613,7 @@
     "question": "What is the best AI debate practice tool?",
     "answer": "It depends on what you need. As of {{asOf}}, {{product}} fits students and competitive debaters who want one place to build cases, find weak points, check evidence and run timed practice rounds, in English, Spanish or Hungarian: a {{trialDays}}-day free trial with no card, then ${{proMonthly}}/month + tax. If you want free practice against an AI opponent in World Schools or Asian Parliamentary style, debatelab.ai, a separate product, says it is free. If you mostly need brainstorming or writing help on any subject, a general assistant such as ChatGPT is more flexible.",
     "compare": "Compare AI debate tools",
+    "bestAi": "Which AI is best for debate?",
     "more": "Read more",
     "less": "Show less"
   },

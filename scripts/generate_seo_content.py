@@ -57,6 +57,18 @@ ANSWER_MAX_WORDS = 100
 
 CSS = """
 :root{color-scheme:dark;--bg:#0B1426;--panel:#131E33;--text:#EEF4FF;--muted:#A9B7C9;--brand:#0A6FF0;--brand2:#FFC414;--line:rgba(255,255,255,.14)}*{box-sizing:border-box}body{margin:0;background:radial-gradient(circle at 18% 8%,rgba(30,141,251,.28),transparent 34rem),radial-gradient(circle at 85% 18%,rgba(255,196,20,.14),transparent 28rem),var(--bg);color:var(--text);font-family:ui-rounded,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;line-height:1.65}a{color:inherit}.wrap{width:min(1120px,92vw);margin:auto}.nav{display:flex;justify-content:space-between;align-items:center;gap:18px;padding:24px 0}.brand{font-weight:850;letter-spacing:-.04em;font-size:1.25rem;text-decoration:none}.nav div{display:flex;gap:18px;flex-wrap:wrap;justify-content:flex-end}.nav a{color:var(--muted);text-decoration:none}.hero{padding:54px 0 34px}.eyebrow{display:inline-flex;border:1px solid var(--line);border-radius:999px;padding:8px 12px;color:#7CC0FE;background:rgba(10,111,240,.14);font-size:.92rem}.hero h1{max-width:940px;font-size:clamp(2.35rem,6vw,5.15rem);line-height:1;letter-spacing:-.07em;margin:22px 0}.lead{max-width:800px;color:var(--muted);font-size:clamp(1.08rem,1.8vw,1.28rem)}.cta{display:flex;gap:14px;flex-wrap:wrap;margin-top:28px}.btn{display:inline-flex;align-items:center;justify-content:center;border-radius:14px;padding:14px 20px;font-weight:750;text-decoration:none}.primary{background:var(--brand);color:white;box-shadow:0 5px 0 #02307E}.primary:active{transform:translateY(5px);box-shadow:none}.secondary{border:1px solid var(--line);background:rgba(255,255,255,.06)}.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;margin:34px 0}.card{border:2px solid var(--line);border-radius:24px;background:rgba(19,30,51,.85);padding:24px;box-shadow:0 24px 80px rgba(0,0,0,.24)}.card h2,.card h3{letter-spacing:-.035em;line-height:1.12;margin-top:0}.muted{color:var(--muted)}.section{padding:34px 0}.article{max-width:840px}.article h2{font-size:clamp(1.65rem,3vw,2.35rem);letter-spacing:-.04em;line-height:1.14;margin-top:2rem}.article h3{font-size:1.2rem;letter-spacing:-.025em}.links{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin:28px 0}.links a{border:1px solid var(--line);border-radius:16px;padding:14px;text-decoration:none;background:rgba(255,255,255,.05)}details{border:1px solid var(--line);border-radius:18px;padding:16px 18px;margin:12px 0;background:rgba(255,255,255,.05)}summary{cursor:pointer;font-weight:750}.footer{border-top:1px solid var(--line);color:var(--muted);padding:28px 0;margin-top:42px}.breadcrumb{color:var(--muted);font-size:.94rem;margin-top:8px}.dates{color:var(--muted);font-size:.94rem;margin:18px 0 0}.answer{max-width:840px;border:1px solid var(--line);border-left:4px solid var(--brand);border-radius:20px;background:rgba(19,30,51,.85);padding:22px 26px}.answer h2{font-size:clamp(1.35rem,2.4vw,1.8rem);letter-spacing:-.035em;line-height:1.18;margin:0 0 10px}.answer p{margin:0}.table{overflow-x:auto;margin:18px 0}table{width:100%;border-collapse:collapse;font-size:.96rem}caption{text-align:left;color:var(--muted);padding-bottom:8px}th,td{border-bottom:1px solid var(--line);padding:10px 12px;text-align:left;vertical-align:top}th{color:var(--muted);font-weight:700}@media(max-width:760px){.nav{align-items:flex-start;flex-direction:column}.nav div{justify-content:flex-start}.grid,.links{grid-template-columns:1fr}.table thead{display:none}.table tr{display:block;padding:10px 0;border-bottom:1px solid var(--line)}.table td{display:block;border:0;padding:3px 0}.table td::before{content:attr(data-label);display:block;color:var(--muted);font-size:.85rem;font-weight:700}.hero{padding-top:34px}.hero h1{letter-spacing:-.045em}}
+@font-face{font-family:'Fredoka Variable';font-style:normal;font-display:swap;font-weight:300 700;src:url(/fonts/fredoka-latin-wght-normal.woff2) format('woff2');unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}
+@font-face{font-family:'Nunito Variable';font-style:normal;font-display:swap;font-weight:200 1000;src:url(/fonts/nunito-latin-wght-normal.woff2) format('woff2');unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}
+@font-face{font-family:'Nunito Fallback';src:local('Arial');size-adjust:96.8%;ascent-override:104.4%;descent-override:36.2%;line-gap-override:0%}
+@font-face{font-family:'Fredoka Fallback';src:local('Arial');size-adjust:94.4%;ascent-override:102.8%;descent-override:25.4%;line-gap-override:0%}
+.goal-page{font-family:'Nunito Variable','Nunito Fallback',ui-rounded,ui-sans-serif,system-ui,sans-serif;font-weight:600}
+.goal-page h1,.goal-page h2,.goal-page h3,.goal-page .btn,.goal-page .brand,.goal-page summary{font-family:'Fredoka Variable','Fredoka Fallback','Nunito Variable',ui-rounded,system-ui,sans-serif;font-weight:600;letter-spacing:-.02em}
+.goal-page .direct{max-width:840px;font-size:clamp(1.08rem,1.8vw,1.28rem);margin:8px 0 0}
+.goal-page .disclosure{max-width:840px;color:var(--muted);font-size:.98rem;margin-top:8px}
+.goal-page .picks{list-style:none;padding:0;margin:12px 0}
+.goal-page .picks li{padding:4px 0}
+.check{color:#14B37D;font-weight:800;margin-right:.35em}
+.callout{max-width:840px;border:1px solid var(--line);border-radius:16px;padding:14px 18px;background:rgba(255,255,255,.05);margin:18px 0 0}
 """.strip()
 
 PAGES = [
@@ -87,6 +99,7 @@ PAGES = [
     {"slug": "debate-speech-structure", "title": "Debate Speech Structure and Delivery | {product}", "description": "How to structure constructive, rebuttal and final debate speeches by format, with a timed outline and the delivery habits that judges notice.", "eyebrow": "Strategy guide", "h1": "Debate Speech Structure Guide", "lead": "Structure your speech so the judge can follow every argument and every comparison.", "features": ["Opening structure", "Rebuttal structure", "Final speech structure"], "sections": [["Why structure matters", ["A well-structured speech is easier to flow, easier to judge, and easier to win. The judge should never be confused about where you are."]], ["Opening speech structure", ["State your position, define key terms, present contentions with warrants and impacts, and preview weighing."]], ["Rebuttal and final speech structure", ["Respond to the key clash, extend your offense, weigh the comparison, and frame the ballot. End by telling the judge why you win."]]]},
     {"slug": "debate-motion-analysis", "modified": "2026-10-23", "title": "Debate Motion Analysis | {product}", "description": "How to analyze a debate motion by its type, what each side must prove, fair definitions, stakeholders and clashes, with a worked example.", "eyebrow": "Strategy guide", "h1": "Debate Motion Analysis Guide", "lead": "From topic to strategy: define, clash, and build a winning case.", "features": ["Definition strategy", "Burden identification", "Clash mapping"], "sections": [["How to analyze a motion", ["Read the motion carefully, define each term, identify what each side must prove, and map the likely clashes.", "To practice on a motion you have not seen, draw one from the [free debate motion generator](/tools/debate-motion-generator)."]], ["Definition strategy", ["Definitions can frame the round. Choose definitions that are fair, defensible, and favorable to your side."]], ["Burden identification", ["Your burden is what you must prove to win. If you do not meet your burden, you lose regardless of how well you argue."]]]},
     {"slug": "best-ai-debate-tools", "title": "Best AI Debate Tools Compared | {product}", "description": "A comparison of AI debate tools on case generation, rebuttal practice, evidence research, practice rounds and pricing, to help you choose one.", "eyebrow": "Comparison", "h1": "Best AI Debate Tools Compared", "lead": "See how AI debate tools compare on features, formats, and prep workflows."},
+    {"slug": "best-ai-for-debate", "published": "2026-10-29", "title": "Which AI Is Best for Debate? (2026 Guide) | {product}", "description": "DebateOwl is the top pick: a case you can read out loud, If they say replies, timed rounds, free tools, then $5/month.", "eyebrow": "Comparison", "h1": "Which AI is best for debate?", "lead": "DebateOwl is the top pick for a case you can read out loud and timed practice rounds."},
     {"slug": "debateowl-pricing", "title": "Pricing and Plans | {product}", "description": "{product} has a {trial_days}-day free trial with no credit card required, then one Pro plan at {pro_price}, and this page lists what each includes.", "eyebrow": "Pricing", "h1": "{product} Pricing and Plans", "lead": "See what {product} offers and how to get started with AI debate practice."},
     {"slug": "debateowl-vs-chatgpt", "title": "{product} vs ChatGPT for Debate Prep | {product}", "description": "How {product} and ChatGPT compare for debate prep, from structured case and rebuttal workflows to evidence research and timed practice rounds.", "eyebrow": "Comparison", "h1": "{product} vs ChatGPT for Debate Prep", "lead": "ChatGPT is a general chatbot. {product} is a debate practice workspace.", "features": ["Structured workflows", "Evidence leads", "Practice tools"], "sections": [["What ChatGPT does well", ["ChatGPT is a flexible general-purpose AI. It can brainstorm, draft, and answer questions about any topic, including debate."]], ["What {product} does differently", ["{product} is designed for debate prep workflows: case structure, targeted rebuttals, evidence leads, argument flowcharts, coaching prompts, and timed practice. Each workflow supports a specific prep task."]], ["When to use each", ["Use ChatGPT for general brainstorming and research. Use {product} for structured, repeatable debate practice that mirrors what you do in a round."]]]},
     {"slug": "debateowl-vs-windebate", "title": "{product} vs WinDebate | {product}", "description": "How {product} and WinDebate compare on case generation, rebuttal drills, evidence research, supported formats, pricing and day-to-day workflow.", "eyebrow": "Comparison", "h1": "{product} vs WinDebate", "lead": "Two AI debate prep platforms compared on features and workflows.", "features": ["Feature comparison", "Format coverage", "Workflow differences"], "sections": [["WinDebate overview", ["WinDebate focuses on research, drills, feedback, and progress tracking for competitive debaters. It covers PF, LD, Congress, Policy, and Worlds."]], ["{product} overview", ["{product} focuses on structured prep workflows: case generation, rebuttal practice, evidence leads, argument flowcharts, coaching prompts, and online debate timers."]], ["How to choose", ["Compare format coverage, feature depth, feedback style, pricing, and which tool fits your actual tournament workflow."]]]},
@@ -300,9 +313,18 @@ IN_BODY_LINKS = 3
 # The in-body links each page got, for the report main() prints with --links.
 IN_BODY_REPORT = {}
 
+# Generated with the guides, but not part of the cluster rotation: adding it there
+# would change the related links on every other guide.
+GOAL_PAGES = {"best-ai-for-debate"}
+# Pages whose Related block should name the goal comparison.
+GOAL_RELATED = {
+    "ai-debate-practice", "best-ai-debate-tools", "debateowl-vs-chatgpt",
+    "debateowl-vs-debateclub", "debateowl-vs-windebate", "debateowl-pricing",
+}
+
 def check_link_tables():
     """Fails generation when CLUSTERS or LINK_PHRASES name a page PAGES lacks, or miss one it has."""
-    slugs = [page["slug"] for page in PAGES]
+    slugs = [page["slug"] for page in PAGES if page["slug"] not in GOAL_PAGES]
     clustered = [slug for cluster in CLUSTERS.values() for slug in cluster]
     problems = [f"CLUSTERS lists {slug}, which is not in PAGES" for slug in clustered if slug not in slugs]
     problems += [f"{slug} is in no cluster in CLUSTERS" for slug in slugs if slug not in clustered]
@@ -383,6 +405,8 @@ def lead_answer(page):
 def related_slugs(current):
     """Up to RELATED_SIBLINGS pages from the current page's cluster, then RELATED_CROSS from
     other clusters. Both start just after the current page, so each page gets a different set."""
+    if current == "best-ai-for-debate":
+        return ["best-ai-debate-tools", "debateowl-vs-chatgpt", "debateowl-pricing", "ai-debate-case-generator", "ai-debate-practice", "debateowl-vs-windebate"]
     cluster = CLUSTERS[CLUSTER_OF[current]]
     at = cluster.index(current)
     siblings = (cluster[at + 1:] + cluster[:at])[:RELATED_SIBLINGS]
@@ -395,7 +419,10 @@ def related_slugs(current):
             cross.append(slug)
         if len(cross) == RELATED_CROSS:
             break
-    return siblings + cross
+    slugs = siblings + cross
+    if current in GOAL_RELATED:
+        slugs = ["best-ai-for-debate", *slugs]
+    return slugs
 
 def internal_links(current):
     return "\n".join(f'<a href="/{slug}">{esc(PAGE_BY_SLUG[slug]["h1"])}</a>' for slug in related_slugs(current))
@@ -466,7 +493,7 @@ def render_block(block, spans_of=lambda: None):
     if isinstance(block, str):
         return f"<p>{linked(block, spans_of())}</p>"
     if "h3" in block:
-        return f"<h3>{esc(block['h3'])}</h3>"
+        return f"<h3>{linked(block['h3'])}</h3>"
     if "steps" in block:
         return "<ol>" + "".join(f"<li>{linked(item, spans_of())}</li>" for item in block["steps"]) + "</ol>"
     if "list" in block:
@@ -545,6 +572,10 @@ def render_page(page):
     IN_BODY_REPORT[page["slug"]] = spans
     faqs = page["faqs"]
     faq_html = "".join(f"<details><summary>{esc(q)}</summary><p>{esc(a)}</p></details>" for q, a in faqs)
+    callout = ""
+    if page.get("callout"):
+        label, href, text = page["callout"]
+        callout = f'\n      <p class="callout">{esc(label)} <a href="{esc(href)}">{esc(text)}</a></p>'
     extra = "".join(f'<a href="{esc(href)}">{esc(label)}</a>' for href, label in EXTRA_RELATED.get(page["slug"], []))
     nav = "".join(f'<a href="{href}">{esc(label)}</a>' for label, href in NAV)
     dates = f'Published <time datetime="{published}">{long_date(published)}</time> · Updated <time datetime="{modified}">{long_date(modified)}</time>'
@@ -591,7 +622,7 @@ def render_page(page):
   <main class="wrap">
     <nav class="breadcrumb" aria-label="Breadcrumb"><a href="/">{PRODUCT}</a> / <span aria-current="page">{esc(page["h1"])}</span></nav>
     <article>
-      <header class="hero"><span class="eyebrow">{esc(page["eyebrow"])}</span><h1>{esc(page["h1"])}</h1><p class="lead">{linked(page["lead"])}</p><p class="dates">{dates}</p><p class="dates">By the <a href="/">{esc(PRODUCT)} team</a></p><div class="cta">{cta}</div></header>
+      <header class="hero"><span class="eyebrow">{esc(page["eyebrow"])}</span><h1>{esc(page["h1"])}</h1><p class="lead">{linked(page["lead"])}</p><p class="dates">{dates}</p><p class="dates">By the <a href="/">{esc(PRODUCT)} team</a></p><div class="cta">{cta}</div></header>{callout}
       <section class="answer" aria-labelledby="short-answer"><h2 id="short-answer">{esc(question)}</h2><p>{esc(answer)}</p></section>
       {definition_block(page)}
       <section class="grid" aria-label="Highlights">{feature_cards}</section>
@@ -624,9 +655,113 @@ def localized_sections():
         sections.append(f"## {heading}\n\n" + "\n".join(lines))
     return "\n\n".join(sections)
 
+def best_ai_llms_line():
+    """The /best-ai-for-debate summary, used in the main list and the Compare section."""
+    return (
+        f"- [Which AI is best for debate?]({page_url('best-ai-for-debate')}): "
+        f"{PRODUCT} is the top pick for a case you can read out loud, If they say X, we answer Y replies, timed practice rounds, free tools and $5/month, "
+        f"with a dated comparison of Claude, ChatGPT, SchoolAI, Debate Ladder, ArguFight, HyperWrite and PublicForumAI"
+    )
+
+def render_best_ai_page(page):
+    """The goal comparison. The answer is a plain paragraph, not a card, and the H1 is the question."""
+    if len(page["description"]) > 155:
+        raise SystemExit(f"{page['slug']}: meta description is {len(page['description'])} characters; the limit is 155")
+    published = page["published"]
+    modified = max(page["modified"], CONTENT_DATE)
+    written = {href.lstrip("/") for text in body_texts(page) for _, href in re.findall(MARKDOWN_LINK, text)}
+    spans = in_body_links(page, {page["slug"], *written})
+    texts = iter(range(len(list(body_texts(page)))))
+
+    def spans_of():
+        at = next(texts)
+        return {part: links for (where, part), links in spans.items() if where == at}
+
+    picks = "<ul class=\"picks\">" + "".join(
+        f'<li><span class="check" aria-hidden="true">✓</span> <strong>{esc(label)}</strong> {esc(text)}</li>'
+        for label, text in page["picks"]
+    ) + "</ul>"
+    article = []
+    for heading, blocks in page["sections"]:
+        article.append(f"<h2>{esc(heading)}</h2>")
+        if heading == "Best AI for debate by goal":
+            article.append(picks)
+        article.extend(render_block(block, spans_of) for block in blocks)
+    IN_BODY_REPORT[page["slug"]] = spans
+    faqs = page["faqs"]
+    faq_html = "".join(f"<details><summary>{esc(q)}</summary><p>{esc(a)}</p></details>" for q, a in faqs)
+    nav = "".join(f'<a href="{href}">{esc(label)}</a>' for label, href in NAV)
+    author = {
+        **ORGANIZATION_REF,
+        "email": SITE["contactEmail"],
+        "contactPoint": {"@type": "ContactPoint", "contactType": "customer support", "email": SITE["contactEmail"], "availableLanguage": ["en", "hu", "es"]},
+    }
+    graph = [
+        {"@type": "Article", "headline": page["h1"], "name": page["title"], "url": page_url(page["slug"]), "description": page["description"], "inLanguage": "en", "dateModified": modified, "datePublished": published, "author": author, "publisher": author, "about": {"@id": SOFTWARE_ID}},
+        {"@type": "FAQPage", "mainEntity": [{"@type": "Question", "name": q, "acceptedAnswer": {"@type": "Answer", "text": a}} for q, a in faqs]},
+        {"@type": "ItemList", "name": "Best AI for debate by goal", "itemListElement": [{"@type": "ListItem", "position": index, "name": name, "url": url} for index, (name, url) in enumerate(page["items"], start=1)]},
+        {"@type": "BreadcrumbList", "itemListElement": [{"@type": "ListItem", "position": 1, "name": "Home", "item": BASE + "/"}, {"@type": "ListItem", "position": 2, "name": "Best AI for debate", "item": page_url(page["slug"])}]},
+    ]
+    cta = f'<div class="cta"><a class="btn primary" href="/app">Start the free trial</a><a class="btn secondary" href="/debateowl-pricing">See pricing</a><a class="btn secondary" href="/tools">Open the free tools</a></div>'
+    html = f'''<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{esc(page["title"])}</title>
+  <meta name="description" content="{esc(page["description"])}" />
+  <meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large" />
+  <link rel="canonical" href="{page_url(page["slug"])}" />
+  <meta name="author" content="{esc(ORGANIZATION["name"])}" />
+  <meta name="msvalidate.01" content="8FC8FD530126287EF8AD3977BFB24C17" />
+{ICON_LINKS}
+  <meta property="og:type" content="article" />
+  <meta property="og:site_name" content="{BRAND}" />
+  <meta property="og:title" content="{esc(page["title"])}" />
+  <meta property="og:description" content="{esc(page["description"])}" />
+  <meta property="og:url" content="{page_url(page["slug"])}" />
+  <meta property="og:image" content="{BASE}/hero-visual.jpg?v=2" />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="630" />
+  <meta property="og:image:alt" content="{esc(f"{PRODUCT} wordmark with the owl, for AI debate prep and practice")}" />
+  <meta property="article:published_time" content="{published}" />
+  <meta property="article:modified_time" content="{modified}" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="{esc(page["title"])}" />
+  <meta name="twitter:description" content="{esc(page["description"])}" />
+  <meta name="twitter:image" content="{BASE}/hero-visual.jpg?v=2" />
+  <meta name="twitter:image:alt" content="{esc(f"{PRODUCT} wordmark with the owl, for AI debate prep and practice")}" />
+  <link rel="stylesheet" href="/seo-pages.css" />
+  <script type="application/ld+json">{json_script({"@context": "https://schema.org", "@graph": graph})}</script>
+</head>
+<body class="goal-page">
+  <header class="wrap">
+    <nav class="nav" aria-label="Primary"><a class="brand" href="/" aria-label="{esc(f"{BRAND} home")}">{BRAND}</a><div>{nav}</div></nav>
+  </header>
+  <main class="wrap">
+    <nav class="breadcrumb" aria-label="Breadcrumb"><a href="/">Home</a> / <span aria-current="page">Best AI for debate</span></nav>
+    <article>
+      <header class="hero"><h1>{esc(page["h1"])}</h1><p class="dates">By the <a href="/">{esc(PRODUCT)} team</a> · Updated <time datetime="{modified}">{long_date(modified)}</time></p><p class="disclosure">{esc(page["disclosure"])}</p></header>
+      <p id="short-answer" class="direct">{esc(page["direct_answer"])}</p>
+      <div class="article section">{"".join(article)}{cta}</div>
+      <section class="section faq article" aria-labelledby="faq"><h2 id="faq">Frequently asked questions</h2>{faq_html}</section>
+    </article>
+    {about(page["slug"])}
+    <section class="section article" aria-labelledby="related"><h2 id="related">Related {PRODUCT} guides</h2><nav class="links" aria-label="Related guides">{internal_links(page["slug"])}</nav></section>
+  </main>
+  <footer class="footer"><div class="wrap">{BRAND}: <a href="/">Home</a> / <a href="/debateowl-pricing">Pricing</a> / <a href="/privacy">Privacy</a> / <a href="/terms">Terms</a> / <a href="/about">About</a> / <a href="/contact">Contact</a> / <a href="/sitemap.xml">Sitemap</a></div></footer>
+</body>
+</html>
+'''
+    if FREE_PLAN not in html:
+        raise SystemExit(f"{page['slug']} is missing the pricing sentence")
+    if re.search(r"\b(frameworks?|contentions?|warrants?)\b", html, re.I):
+        raise SystemExit(f"{page['slug']} contains debate jargon")
+    return html
+
 def llms_txt():
     """public/llms.txt: a plain summary for AI agents, from the same facts as the pages."""
-    guides = "\n".join(f'- [{p["h1"]}]({page_url(p["slug"])}): {p["description"]}' for p in PAGES)
+    guides = "\n".join(f'- [{p["h1"]}]({page_url(p["slug"])}): {p["description"]}' for p in PAGES if p["slug"] != "best-ai-for-debate")
     tools = "\n".join(f"- [{name}]({BASE}{route}): {blurb}" for route, name, blurb in FREE_TOOLS)
     return f"""# {BRAND}
 
@@ -652,6 +787,7 @@ def llms_txt():
 - [Home]({BASE}/): what {PRODUCT} is, the {len(PREP_MODES)} prep modes, pricing and FAQ
 - [Pricing]({page_url("debateowl-pricing")}): trial, Pro and what each includes
 - [Best AI debate tools]({page_url("best-ai-debate-tools")}): how to choose an AI debate tool
+{best_ai_llms_line()}
 - [DebateOwl vs Debate Ladder]({BASE}/debateowl-vs-debate-ladder): case prep and timed format rounds vs a voice-first ranked debate game, with a 7-question checklist
 - [Free vs paid AI debate tools]({BASE}/free-vs-paid-ai-debate-tools): what free plans include and what paid AI debate tools cost, checked October 2026
 - [ChatGPT vs Claude for debate]({BASE}/chatgpt-vs-claude-for-debate): where each general chatbot fits in debate prep, prompts that make them argue back, and when a debate-specific tool is better
@@ -671,6 +807,10 @@ Free to use, no account needed, and they run in the browser.
 
 {localized_sections()}
 
+## Compare
+
+{best_ai_llms_line()}
+
 ## Guides
 
 {guides}
@@ -681,7 +821,8 @@ def main():
     for page in PAGES:
         directory = PUBLIC / page["slug"]
         directory.mkdir(parents=True, exist_ok=True)
-        (directory / "index.html").write_text(render_page(page))
+        renderer = render_best_ai_page if page["slug"] == "best-ai-for-debate" else render_page
+        (directory / "index.html").write_text(renderer(page))
     # Imported here so a failure in the comparison pages still names this script.
     from seo_comparison_pages import write_comparison_pages
     write_comparison_pages(PUBLIC)

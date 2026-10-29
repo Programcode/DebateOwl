@@ -11,7 +11,9 @@
 //   product or without its logo and parent;
 // - an indexed page without the favicon and 192px icon links, or whose meta
 //   author is not the organization;
-// - an indexed page without its question H2 (#short-answer) as the first H2;
+// - an indexed page without its question H2 (#short-answer) as the first H2,
+//   unless the H1 is itself the question and a #short-answer paragraph
+//   (the extractable answer) comes before that H2;
 // - a page whose first heading is not its H1, or a heading that skips a level (H1 to H3);
 // - an image without alt text, a button without a name, or a form field without a label;
 // - hreflang links that do not resolve, leave out the page itself or x-default,
@@ -225,9 +227,17 @@ for (const file of htmlFiles(DIST)) {
   const author = head.match(/<meta name="author" content="([^"]*)"/)?.[1];
   if (indexed && author !== SITE.organization.name) report(where, `meta author is "${author}", not "${SITE.organization.name}"`);
   if (indexed && !NO_SHORT_ANSWER.has(routeOf(file))) {
-    const firstH2 = body.match(/<h2\b([^>]*)>([\s\S]*?)<\/h2>/);
-    if (!firstH2 || !/\sid="short-answer"/.test(firstH2[1])) report(where, 'the first H2 is not the #short-answer question');
-    else if (!textOf(firstH2[2]).endsWith('?')) report(where, 'the #short-answer H2 is not a question');
+    const h1 = body.match(/<h1\b[^>]*>([\s\S]*?)<\/h1>/);
+    const firstH2At = body.search(/<h2\b/);
+    const beforeFirstH2 = firstH2At === -1 ? body : body.slice(0, firstH2At);
+    // A page whose H1 is the question can put the answer in a plain paragraph
+    // before the first H2, so answer engines can quote it without a card.
+    const answerFirst = Boolean(h1) && textOf(h1[1]).endsWith('?') && /<p\b[^>]*\sid="short-answer"[^>]*>[\s\S]*?<\/p>/.test(beforeFirstH2);
+    if (!answerFirst) {
+      const firstH2 = body.match(/<h2\b([^>]*)>([\s\S]*?)<\/h2>/);
+      if (!firstH2 || !/\sid="short-answer"/.test(firstH2[1])) report(where, 'the first H2 is not the #short-answer question');
+      else if (!textOf(firstH2[2]).endsWith('?')) report(where, 'the #short-answer H2 is not a question');
+    }
   }
 
   const levels = [...body.matchAll(/<h([1-6])\b/g)].map((match) => Number(match[1]));
