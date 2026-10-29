@@ -31,10 +31,11 @@ describe('nativeCapabilities', () => {
       ExpoWidgets: { widgetsDirectory: 'file:///group/ExpoWidgets/' },
       ExpoQuickActions: {},
       ExpoCoreSpotlight: {},
+      DebateOwlHandoff: {},
       DebateOwlKeyCommands: {},
       ExpoShareIntentModule: {},
     };
-    expect(nativeCapabilities()).toEqual({ speechRecognition: false, liveActivity: false, widgets: false, quickActions: false, spotlight: false, keyCommands: false, shareIntent: false });
+    expect(nativeCapabilities()).toEqual({ speechRecognition: false, liveActivity: false, widgets: false, quickActions: false, spotlight: false, handoff: false, keyCommands: false, shareIntent: false });
     expect(requireOptionalNativeModule).not.toHaveBeenCalled();
   });
 
@@ -47,6 +48,7 @@ describe('nativeCapabilities', () => {
       widgets: false,
       quickActions: false,
       spotlight: false,
+      handoff: false,
       keyCommands: false,
       shareIntent: false,
     });
@@ -61,6 +63,7 @@ describe('nativeCapabilities', () => {
       widgets: true,
       quickActions: false,
       spotlight: false,
+      handoff: false,
       keyCommands: false,
       shareIntent: false,
     });
@@ -75,6 +78,7 @@ describe('nativeCapabilities', () => {
       widgets: false,
       quickActions: true,
       spotlight: true,
+      handoff: false,
       keyCommands: true,
       shareIntent: true,
     });
@@ -83,6 +87,6 @@ describe('nativeCapabilities', () => {
   it('reports nothing where the modules are missing, as in the web preview', () => {
     env.executionEnvironment = 'bare';
     env.modules = {};
-    expect(nativeCapabilities()).toEqual({ speechRecognition: false, liveActivity: false, widgets: false, quickActions: false, spotlight: false, keyCommands: false, shareIntent: false });
+    expect(nativeCapabilities()).toEqual({ speechRecognition: false, liveActivity: false, widgets: false, quickActions: false, spotlight: false, handoff: false, keyCommands: false, shareIntent: false });
   });
 });

@@ -15,6 +15,9 @@ export const supabase = createClient(supabaseProject.url, supabaseProject.anonKe
     autoRefreshToken: true,
     persistSession: true,
     detectSessionInUrl: false,
+    // Google sign-in (social-sign-in.ts) exchanges a code with the verifier kept
+    // in this storage. Email and demo codes verify directly and are unaffected.
+    flowType: 'pkce',
   },
 });
 

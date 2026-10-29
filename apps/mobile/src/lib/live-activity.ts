@@ -1,7 +1,8 @@
 import type { LiveActivity } from 'expo-widgets';
 
 import { nativeCapabilities } from './native-capabilities';
-import type { TimerActivityState } from './timer';
+import { applyTimerActivityAction, type TimerActivityAction, type TimerActivityState } from './timer';
+import { updateSession } from './timer-store';
 
 import type { TimerWidgetProps } from '@/widgets/timer-widgets';
 
@@ -11,6 +12,10 @@ import type { TimerWidgetProps } from '@/widgets/timer-widgets';
 // here does nothing and the widgets module is never loaded.
 
 type WidgetsModule = typeof import('@/widgets/timer-widgets');
+type ExpoWidgets = typeof import('expo-widgets');
+
+/** The Live Activity's buttons (src/widgets/timer-widgets.tsx) by their fixed targets. */
+const BUTTONS: Record<string, TimerActivityAction> = { 'timer-toggle': 'toggle', 'timer-next': 'next' };
 
 let widgets: WidgetsModule | null | undefined;
 let activity: LiveActivity<TimerActivityState> | null = null;
@@ -25,10 +30,31 @@ function load(): WidgetsModule | null {
     // Loaded on first use: its top level registers the layouts with the extension.
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     widgets = require('@/widgets/timer-widgets') as WidgetsModule;
+    listenForButtons();
   } catch (cause) {
     console.warn('Timer widgets are unavailable:', cause instanceof Error ? cause.message : cause);
   }
   return widgets;
+}
+
+/**
+ * Pause, Resume and Next on the Lock Screen and in the Dynamic Island. iOS
+ * runs the button's intent in the app's process, waking it in the background
+ * if it has to; expo-widgets passes the press on here, and the round changes
+ * as if the student had pressed the timer screen's own button. The change
+ * reaches the activity through TimerRunner, like any other.
+ */
+function listenForButtons() {
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { addUserInteractionListener } = require('expo-widgets') as ExpoWidgets;
+    addUserInteractionListener((event) => {
+      const action = event.source === 'DebateTimerActivity' ? BUTTONS[event.target] : undefined;
+      if (action) updateSession((current) => applyTimerActivityAction(current, action, Date.now()));
+    });
+  } catch (cause) {
+    console.warn("Could not listen for the timer's Live Activity buttons:", cause instanceof Error ? cause.message : cause);
+  }
 }
 
 function warn(what: string, cause: unknown) {

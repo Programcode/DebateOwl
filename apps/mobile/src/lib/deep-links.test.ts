@@ -67,6 +67,14 @@ describe('appPathForUrl', () => {
     expect(appPathForUrl('https://debateowl.com')).toBeNull();
     expect(appPathForUrl('https://debateowl.com/privacy')).toBeNull();
     expect(appPathForUrl('https://debateowl.com/application')).toBeNull();
+    expect(appPathForUrl('https://debateowl.com/tools/flow-sheet')).toBeNull();
+    expect(appPathForUrl('https://debateowl.com/tools/debate-timer/extra')).toBeNull();
+  });
+
+  it('opens the free tools the app has, for Handoff from Safari', () => {
+    expect(appPathForUrl('https://debateowl.com/tools/debate-timer')).toBe('/timer');
+    expect(appPathForUrl('https://www.debateowl.com/tools/speech-time-calculator?lang=es')).toBe('/speech-time');
+    expect(appPathForUrl('https://debateowl.com/tools/debate-motion-generator/')).toBe('/motions');
   });
 });
 

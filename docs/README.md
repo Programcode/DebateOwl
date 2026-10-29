@@ -22,6 +22,7 @@ Start with the smallest document that answers the task instead of loading every 
 ## Set up and develop
 
 - [Development guide](development.md), current. Open for installation, environment behavior, linked worktrees, frontend, backend, or database workflows.
+- [DebateOwl on Apple platforms](apple-platform.md), current. Open before changing the iOS app's Live Activities, sign-in, in-app purchase, Siri, Handoff or notifications, and for the Apple account checklist.
 - [Supabase backend](../supabase/README.md), current. Open before changing Edge Functions, shared backend modules, migrations, RLS, RPCs, or backend secrets.
 - [Collaboration service](../services/collaboration/README.md), current. Only for the hidden Workspace.
 

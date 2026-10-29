@@ -5,6 +5,9 @@ import path from 'node:path';
 import type { ConfigContext, ExpoConfig } from 'expo/config';
 import { type ConfigPlugin, withEntitlementsPlist } from 'expo/config-plugins';
 
+// CommonJS, because Node loads what app.config.ts imports as it is.
+import { withAppIntents } from './plugins/with-app-intents';
+
 
 // One config for Expo Go, the web export and the development build.
 // DEBATELAB_BUILD=dev (set by the `development` profile in eas.json) adds the
@@ -22,8 +25,20 @@ type PermissionStrings = { speechRecognition: string; microphone: string };
 
 const build = process.env.DEBATELAB_BUILD;
 const appGroup = process.env.DEBATELAB_APP_GROUP;
+// DEBATELAB_APPLE_ACCOUNT=1: the build is signed by DebateOwl's own Apple
+// Developer team, whose App IDs carry the capabilities in docs/apple-platform.md
+// (Sign in with Apple, Push, Time Sensitive Notifications, Associated Domains,
+// In-App Purchase). Without it a development build keeps to what the borrowed
+// signing profile allows.
+const appleAccount = process.env.DEBATELAB_APPLE_ACCOUNT;
 if (build !== undefined && build !== '' && build !== 'dev') {
   throw new Error(`DEBATELAB_BUILD must be "dev" or unset, not "${build}".`);
+}
+if (appleAccount !== undefined && appleAccount !== '' && appleAccount !== '1') {
+  throw new Error(`DEBATELAB_APPLE_ACCOUNT must be "1" or unset, not "${appleAccount}".`);
+}
+if (appleAccount === '1' && build !== 'dev') {
+  throw new Error('DEBATELAB_APPLE_ACCOUNT only applies to a development build (DEBATELAB_BUILD=dev).');
 }
 if (appGroup && build !== 'dev') {
   throw new Error('DEBATELAB_APP_GROUP only applies to a development build (DEBATELAB_BUILD=dev).');
@@ -54,11 +69,14 @@ function iosLocale(strings: PermissionStrings) {
 
 // expo-widgets adds the push entitlement even with its push option off, and
 // prebuild applies expo-notifications' plugin on its own once the package is
-// installed, which adds it too. The signing profile has no push, so every
-// development build drops it until a profile with push exists.
-const withoutPushEntitlement: ConfigPlugin = (config) =>
+// installed, which adds it too; expo-apple-authentication's plugin, also
+// applied on its own, adds Sign in with Apple. The borrowed signing profile
+// has neither, so a development build drops both unless it is signed by
+// DebateOwl's own account (DEBATELAB_APPLE_ACCOUNT).
+const withoutAccountEntitlements: ConfigPlugin = (config) =>
   withEntitlementsPlist(config, (mod) => {
     delete mod.modResults['aps-environment'];
+    delete mod.modResults['com.apple.developer.applesignin'];
     return mod;
   });
 
@@ -160,6 +178,40 @@ export function withRound4(config: ExpoConfig, opts: { appGroup?: string; projec
     config.plugins = [...(config.plugins ?? []).filter((plugin) => plugin !== 'expo-core-spotlight'), 'expo-core-spotlight'];
   }
 
+  return config;
+}
+
+// Round 6 (docs/apple-platform.md): Sign in with Apple and Google, the
+// time-sensitive timer alert, Handoff and push, for development builds only,
+// so the Expo Go config never changes. What needs DebateOwl's own Apple
+// account waits for DEBATELAB_APPLE_ACCOUNT.
+export function withApplePlatform(config: ExpoConfig, opts: { appleAccount: boolean }): ExpoConfig {
+  // Handoff (src/lib/handoff.ts), next to Expo Router's own activity type.
+  config.ios = {
+    ...config.ios,
+    infoPlist: {
+      ...config.ios?.infoPlist,
+      NSUserActivityTypes: [...((config.ios?.infoPlist?.NSUserActivityTypes as string[] | undefined) ?? []), 'com.pistack.debateowl.browsing'],
+    },
+  };
+  config.extra = {
+    ...config.extra,
+    // Google sign-in runs in any development build: the redirect comes back on the app's own scheme.
+    googleSignIn: true,
+    signInWithApple: opts.appleAccount,
+  };
+  if (!opts.appleAccount) return config;
+  config.ios = { ...config.ios, usesAppleSignIn: true };
+  config.ios.associatedDomains = [
+    ...(config.ios.associatedDomains ?? []),
+    // Handoff from debateowl.com in Safari to the app.
+    'activitycontinuation:debateowl.com',
+  ];
+  config.ios.entitlements = {
+    ...config.ios.entitlements,
+    // The timer's time-up alert breaks through a Focus (src/lib/timer-alerts.ts).
+    'com.apple.developer.usernotifications.time-sensitive': true,
+  };
   return config;
 }
 
@@ -278,7 +330,12 @@ export default ({ projectRoot }: ConfigContext): ExpoConfig => {
   }
   // The Current Debate widget (with the App Group), quick actions and Spotlight; see withRound4 above.
   withRound4(config, { appGroup, projectRoot });
+  withApplePlatform(config, { appleAccount: appleAccount === '1' });
+  // Siri and Shortcuts: the intents compile into the app target (plugins/with-app-intents.js).
+  const withIntents = withAppIntents(config);
+  // DebateOwl's own account has Push and Sign in with Apple on its App ID, so its builds keep both.
+  if (appleAccount === '1') return withIntents;
   // Registered before Expo applies the plugins list. Mods registered later act
   // first, so this one runs after the plugins have written their entitlements.
-  return withoutPushEntitlement(config);
+  return withoutAccountEntitlements(withIntents);
 };

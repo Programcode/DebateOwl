@@ -99,6 +99,7 @@ The iOS app files its Expo push token through the `register_push_token` RPC (`20
 Wired triggers:
 
 - `sparring_scored`: the `ai` function, after the scorecard is saved, through `EdgeRuntime.waitUntil` so the response does not wait for Expo.
+- `result_ready`: the `ai` function, when a streamed Generate, Attack, Brainstorm or Factoids run that sent `notifyWhenReady` with its `notifyInstallId` (and a `resultKey`) has stored a successful answer (`onResult` in `ai/stream.ts`). It goes only to the token rows of that `installation_id`, not every device on the account. The iOS app asks on every live run, because iOS suspends the app soon after it leaves the screen; the copy names the tool only, and the app hides the push while it is on screen.
 
 Not wired yet:
 
@@ -154,6 +155,8 @@ The stack begins at port `54321` and is not parallel-safe across worktrees. Coor
 The database gate proves migration replay and pgTAP assertions locally. It does not prove staging or production state.
 
 `20261014130000_push_tokens.sql` is additive: it creates `push_tokens`, `push_tickets`, `register_push_token` and `release_push_token`. `20261014200000_push_registration_withdrawal.sql` adds `push_tokens.registration_id` and the server-only `push_withdrawn_registrations`, and replaces both functions with versions that take the registration ID. `20261014220000_push_release_by_registration.sql` replaces `release_push_token(text, uuid, uuid)` with `release_push_token(uuid, uuid)`, which no longer deletes by token. See [Push notifications](#push-notifications).
+
+`20261029120000_app_store_debateowl_products.sql` adds the DebateOwl app's product ids (`com.pistack.debateowl.basic.monthly`, `com.pistack.debateowl.pro.monthly`) and keeps the placeholders, which the database tests use; its down script is in `rollbacks/`.
 
 `20261014123154_app_store_entitlements.sql` is additive: it creates `app_store_products` (with placeholder product ids), `app_store_subscriptions` (users read their own, only the service role writes) and `app_store_notifications` (service role only), `effective_entitlement()`, and `apply_app_store_transaction()` (service role only), and adds the App Store flag to `account_deletion_plan`. `supabase/tests/app_store_entitlements_test.sql` covers update ordering, idempotency and isolation, and the tier rules of `effective_entitlement()`, which nothing calls any more: the plan is resolved by `resolveBillingState`, whose App Store rules are pinned in `_shared/billing-state.test.ts`. A follow-up migration can drop the function. The plan readers treat a missing `app_store_subscriptions` table as no App Store rows, so the frontend and the AI functions keep working on a project without this migration. `account` needs it for the deletion plan's App Store flag; deploy it after the migration. The two App Store functions can follow later. Its timestamp is earlier than main's 2026-10-16 to 2026-10-24 migrations, so a project that already has those needs `supabase db push --include-all`.
 

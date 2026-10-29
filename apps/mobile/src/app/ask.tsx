@@ -79,7 +79,7 @@ export default function AskScreen() {
   const { t } = useTranslation();
   const split = useLayoutClass() !== 'phone';
   const router = useRouter();
-  const { prompt, chat: resumeChatId } = useLocalSearchParams<{ prompt?: string; chat?: string }>();
+  const { prompt, chat: resumeChatId, q } = useLocalSearchParams<{ prompt?: string; chat?: string; q?: string | string[] }>();
   const insets = useSafeAreaInsets();
   const { colors } = useTheme();
   const { session } = useAuth();
@@ -382,6 +382,16 @@ export default function AskScreen() {
     // Once per opening.
     void actions.current?.send(prompt, []);
   }, [prompt, userId]);
+
+  // Siri's "Ask DebateOwl" opens Ask with the question filled in; the student sends it, so arriving spends nothing.
+  const prefilled = useRef(false);
+  useEffect(() => {
+    // A link may repeat the parameter; Expo Router then gives an array.
+    const question = (Array.isArray(q) ? q[0] : q)?.trim();
+    if (prefilled.current || prompt || !question) return;
+    prefilled.current = true;
+    setInput(question);
+  }, [q, prompt, setInput]);
 
   // Retrying replaces the unanswered question instead of asking it twice.
   const retry = (question: string, files?: AskAttachment[]) => {

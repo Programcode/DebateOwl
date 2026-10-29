@@ -11,12 +11,15 @@ import { customToRoundFormat, parseCustomFormat, type CustomFormat } from '@deba
 import { FORMATS, isBuiltInFormatId, type BuiltInFormatId, type RoundFormat, type RoundSegment } from '@debatelab/core/free-tools/formats';
 import {
   elapsedMs,
+  goToSegment,
   initialRoundState,
   isPrepRunning,
   isSpeechRunning,
   parseRoundState,
   prepRemainingMs,
   segmentStatus,
+  togglePrep,
+  toggleSpeech,
   type PrepSide,
   type RoundState,
   type TimerCue,
@@ -31,6 +34,12 @@ export interface TimerSession {
   choice: FormatChoice;
   round: RoundState;
   muted: boolean;
+  /**
+   * The prep bank last paused while it ran, with time left, while no clock
+   * runs: the clock the student just stopped, which the Lock Screen keeps
+   * showing so its Resume restarts it. Kept in step by `settleHeld`.
+   */
+  held?: PrepSide | null;
 }
 
 /** A custom format the student saved on this device. */
@@ -88,13 +97,14 @@ export function serializeSession(session: TimerSession): unknown {
     ...(choice.id === 'custom' ? { custom: choice.custom, ...(choice.savedId ? { savedId: choice.savedId } : {}) } : {}),
     round: session.round,
     muted: session.muted,
+    ...(session.held ? { held: session.held } : {}),
   };
 }
 
 /** A stored session read back, or null when it does not fit (an old version, a format that changed). */
 export function parseSession(value: unknown): TimerSession | null {
   if (typeof value !== 'object' || value === null) return null;
-  const { v, format, custom, savedId, round, muted } = value as Record<string, unknown>;
+  const { v, format, custom, savedId, round, muted, held } = value as Record<string, unknown>;
   if (v !== 1) return null;
   let choice: FormatChoice | null = null;
   if (format === 'custom') {
@@ -105,7 +115,8 @@ export function parseSession(value: unknown): TimerSession | null {
   }
   if (!choice) return null;
   const parsedRound = parseRoundState(round, formatFor(choice));
-  return parsedRound ? { choice, round: parsedRound, muted: muted === true } : null;
+  if (!parsedRound) return null;
+  return { choice, round: parsedRound, muted: muted === true, ...(held === 'a' || held === 'b' ? { held } : {}) };
 }
 
 /** Saved custom formats read back; anything malformed is dropped, the rest kept. */
@@ -147,6 +158,10 @@ export interface TimerActivityLabels {
   prep: string;
   idleTitle: string;
   idleLine: string;
+  /** The Live Activity's buttons. */
+  pause: string;
+  resume: string;
+  next: string;
 }
 
 /**
@@ -169,6 +184,14 @@ export interface TimerActivityState {
   /** Side colour: `a`, `b` or `both`. */
   side: RoundSegment['side'];
   labels: TimerActivityLabels;
+  /**
+   * Pause or Resume, and Next speech, on the Lock Screen and in the Dynamic
+   * Island. iOS runs a Live Activity's buttons from iOS 17, so the app turns
+   * them off before that (the layout cannot ask which iOS it runs on).
+   */
+  controls: boolean;
+  /** A later speech exists to move on to (never while prep runs). */
+  canAdvance: boolean;
 }
 
 /**
@@ -179,8 +202,9 @@ export interface TimerActivityState {
 export function timerActivityState(
   session: TimerSession,
   now: number,
-  text: { sideName: (side: RoundSegment['side']) => string; prepLine: (side: PrepSide) => string; labels: TimerActivityLabels },
+  text: { sideName: (side: RoundSegment['side']) => string; prepLine: (side: PrepSide) => string; labels: TimerActivityLabels; controls?: boolean },
 ): TimerActivityState | null {
+  const controls = text.controls === true;
   const format = formatFor(session.choice);
   const { round } = session;
   for (const side of ['a', 'b'] as PrepSide[]) {
@@ -196,6 +220,26 @@ export function timerActivityState(
       pausedAt: null,
       side,
       labels: text.labels,
+      controls,
+      canAdvance: false,
+    };
+  }
+  // The bank the student just paused stays on the Lock Screen, paused, until another clock starts.
+  const held = !isSpeechRunning(round) ? session.held : null;
+  if (held && round.prep[held].remainingMs > 0) {
+    const left = prepRemainingMs(round, held, now);
+    const total = format.prepSeconds * 1000;
+    return {
+      kind: 'prep',
+      title: text.labels.prep,
+      line: text.prepLine(held),
+      startedAt: now - (total - left),
+      endsAt: now + left,
+      pausedAt: now,
+      side: held,
+      labels: text.labels,
+      controls,
+      canAdvance: false,
     };
   }
   const segment = format.segments[round.segmentIndex] ?? format.segments[0];
@@ -212,7 +256,64 @@ export function timerActivityState(
     pausedAt: running ? null : now,
     side: segment.side,
     labels: text.labels,
+    controls,
+    canAdvance: round.segmentIndex < format.segments.length - 1,
   };
+}
+
+const runningPrep = (round: RoundState): PrepSide | null => (['a', 'b'] as PrepSide[]).find((side) => isPrepRunning(round, side)) ?? null;
+
+/**
+ * `next` with `held` brought up to date after a change from `previous`: set
+ * when a running prep bank stopped with time left and nothing else started,
+ * cleared when any clock runs, the format changes or the held bank is empty.
+ * Every change goes through it (timer-store.ts's updateSession), so the timer
+ * screen's buttons and the Lock Screen's keep it the same way.
+ */
+export function settleHeld(previous: TimerSession, next: TimerSession): TimerSession {
+  const { round } = next;
+  let held: PrepSide | null;
+  if (isActive(round) || next.choice !== previous.choice) held = null;
+  else held = runningPrep(previous.round) ?? previous.held ?? null;
+  if (held && round.prep[held].remainingMs <= 0) held = null;
+  if ((next.held ?? null) === held) return next;
+  const settled: TimerSession = { ...next, held };
+  if (!held) delete settled.held;
+  return settled;
+}
+
+/** A button on the timer's Live Activity: Pause or Resume, or Next speech. */
+export type TimerActivityAction = 'toggle' | 'next';
+
+/**
+ * What a Live Activity button does to the round, at `now`. Toggle acts on the
+ * clock the activity shows: a running prep bank, else the speech. Next moves
+ * to the next speech with a fresh, paused clock, as the timer screen's Next does.
+ */
+export function applyTimerActivityAction(session: TimerSession, action: TimerActivityAction, now: number): TimerSession {
+  const { round } = session;
+  if (action === 'next') {
+    const next = goToSegment(round, formatFor(session.choice), round.segmentIndex + 1, now);
+    return next === round ? session : settleHeld(session, { ...session, round: next });
+  }
+  // A running bank pauses; a bank held on the Lock Screen resumes; otherwise the speech toggles.
+  const prepSide = runningPrep(round) ?? (!isSpeechRunning(round) ? session.held ?? null : null);
+  return settleHeld(session, { ...session, round: prepSide ? togglePrep(round, prepSide, now) : toggleSpeech(round, now) });
+}
+
+/** When the clock on screen reaches its limit while the app is away, for the time-up alert; null when nothing will. */
+export function timerAlertAt(session: TimerSession, now: number): { at: number; kind: 'speech' | 'prep'; segment: RoundSegment } | null {
+  const format = formatFor(session.choice);
+  const { round } = session;
+  const segment = format.segments[round.segmentIndex] ?? format.segments[0];
+  for (const side of ['a', 'b'] as PrepSide[]) {
+    if (!isPrepRunning(round, side)) continue;
+    const left = prepRemainingMs(round, side, now);
+    return left > 0 ? { at: now + left, kind: 'prep', segment } : null;
+  }
+  if (!isSpeechRunning(round)) return null;
+  const left = segment.seconds * 1000 - elapsedMs(round.speech, now);
+  return left > 0 ? { at: now + left, kind: 'speech', segment } : null;
 }
 
 /** The speech's status for the screen: time left (negative in overtime), POI window and grace. */

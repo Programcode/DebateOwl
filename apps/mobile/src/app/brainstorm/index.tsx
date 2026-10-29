@@ -64,7 +64,7 @@ export default function BrainstormScreen() {
       return next;
     }), []);
 
-  const liveRun = useLiveRun();
+  const liveRun = useLiveRun({ tool: 'brainstorm', parts: (draft) => brainstormDraftSections(draft, t).length });
   const endLiveRun = liveRun.end;
   const abortActive = useCallback(() => {
     requests.current += 1;
@@ -113,7 +113,7 @@ export default function BrainstormScreen() {
         language: outputLanguage,
         debateContext,
         signal: controller.signal,
-        live: liveRun.begin(),
+        live: liveRun.begin(input.motion),
       });
       // Review choices cover one request, as on the website.
       resetContextChoices('brainstorm');
@@ -145,6 +145,7 @@ export default function BrainstormScreen() {
         sources: discoveredSources,
       });
       const notice = arrivalNotices({ recordFailed, sourcesFailed: sources.failed, assessed, truncated });
+      liveRun.complete();
       router.replace({
         pathname: '/brainstorm/[id]',
         params: {
@@ -160,7 +161,7 @@ export default function BrainstormScreen() {
       if (!(cause instanceof AIError)) console.warn('Brainstorm failed:', cause instanceof Error ? cause.message : cause);
       // A missing debate was deleted elsewhere; reload the list so the app stops using it.
       if (kind === 'debateMissing') void refresh();
-      liveRun.end();
+      liveRun.end('failed');
       setPhase('form');
       // A limit or model refusal opens the website's dialog as a sheet, not an inline error.
       if (openRefusal(router, cause, 'brainstorm')) return;

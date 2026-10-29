@@ -70,7 +70,7 @@ export default function AttackScreen() {
       return next;
     }), []);
 
-  const liveRun = useLiveRun();
+  const liveRun = useLiveRun({ tool: 'attack', parts: (draft) => attackDraftSections(draft, t).length });
   const endLiveRun = liveRun.end;
   const abortActive = useCallback(() => {
     requests.current += 1;
@@ -132,7 +132,7 @@ export default function AttackScreen() {
         language: outputLanguage,
         debateContext,
         signal: controller.signal,
-        live: liveRun.begin(),
+        live: liveRun.begin(input.caseText),
       });
       // Review choices cover one request, as on the website.
       resetContextChoices('attack');
@@ -155,6 +155,7 @@ export default function AttackScreen() {
       if (!isCurrent()) return;
       const key = keepOpenResult({ kind: 'attack', savedId, title, side: 'neutral', debateId, createdAt: Date.now(), input, output: result, sources: discoveredSources });
       const notice = arrivalNotices({ recordFailed, sourcesFailed: sources.failed, assessed, truncated });
+      liveRun.complete();
       router.replace({
         pathname: '/attack/[id]',
         params: {
@@ -169,7 +170,7 @@ export default function AttackScreen() {
       const kind = cause instanceof AIError ? cause.kind : 'failed';
       if (!(cause instanceof AIError)) console.warn('Attack failed:', cause instanceof Error ? cause.message : cause);
       if (kind === 'debateMissing') void refresh();
-      liveRun.end();
+      liveRun.end('failed');
       setPhase('form');
       // A limit or model refusal opens the website's dialog as a sheet, not an inline error.
       if (openRefusal(router, cause, 'attack')) return;

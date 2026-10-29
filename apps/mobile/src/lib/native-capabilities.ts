@@ -22,13 +22,15 @@ export type NativeCapabilities = {
   keyCommands: boolean;
   /** expo-share-intent is linked, so text and links shared from other apps reach the app (src/lib/share-intent.ts). */
   shareIntent: boolean;
+  /** modules/handoff is linked, so the open screen is offered to other devices (src/lib/handoff.ts). */
+  handoff: boolean;
 };
 
 type WidgetsModule = { widgetsDirectory?: string | null };
 
 export function nativeCapabilities(): NativeCapabilities {
   if (Constants.executionEnvironment === ExecutionEnvironment.StoreClient) {
-    return { speechRecognition: false, liveActivity: false, widgets: false, quickActions: false, spotlight: false, keyCommands: false, shareIntent: false };
+    return { speechRecognition: false, liveActivity: false, widgets: false, quickActions: false, spotlight: false, handoff: false, keyCommands: false, shareIntent: false };
   }
   // expo-widgets links into every development build, but without the App
   // Group (DEBATELAB_APP_GROUP) it has no extension and no container.
@@ -40,6 +42,7 @@ export function nativeCapabilities(): NativeCapabilities {
     widgets: widgetContainer,
     quickActions: requireOptionalNativeModule('ExpoQuickActions') != null,
     spotlight: requireOptionalNativeModule('ExpoCoreSpotlight') != null,
+    handoff: requireOptionalNativeModule('DebateOwlHandoff') != null,
     keyCommands: requireOptionalNativeModule('DebateOwlKeyCommands') != null,
     shareIntent: requireOptionalNativeModule('ExpoShareIntentModule') != null,
   };

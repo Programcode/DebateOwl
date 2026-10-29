@@ -1,0 +1,21 @@
+/* Siri phrases for the App Shortcuts in DebateOwlAppIntents.swift (DebateOwlShortcuts).
+   Keys are the English phrases with ${applicationName} where the Swift has \(.applicationName).
+   Every phrase, in every language, names the app exactly once. */
+
+"Start a debate timer in ${applicationName}" = "Start a debate timer in ${applicationName}";
+"Start the ${applicationName} timer" = "Start the ${applicationName} timer";
+
+"Ask ${applicationName} a question" = "Ask ${applicationName} a question";
+"Ask ${applicationName}" = "Ask ${applicationName}";
+
+"Start a new debate in ${applicationName}" = "Start a new debate in ${applicationName}";
+"New ${applicationName} debate" = "New ${applicationName} debate";
+
+"Generate a case in ${applicationName}" = "Generate a case in ${applicationName}";
+"Build a case with ${applicationName}" = "Build a case with ${applicationName}";
+
+"Open my ${applicationName} library" = "Open my ${applicationName} library";
+"Show my sources in ${applicationName}" = "Show my sources in ${applicationName}";
+
+"Start sparring in ${applicationName}" = "Start sparring in ${applicationName}";
+"Spar with ${applicationName}" = "Spar with ${applicationName}";

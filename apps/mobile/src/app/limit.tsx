@@ -14,6 +14,7 @@ import { formatDate } from '@/lib/dates';
 import { isProOnlyModel } from '@/lib/feature-config';
 import { LIMIT_TITLES, limitMessage, limitVariant } from '@/lib/refusal';
 import { useSettings } from '@/lib/settings';
+import { storeKit } from '@/lib/store-kit';
 import { fetchSubscription, type Subscription } from '@/lib/subscription';
 
 const FEATURES = new Set<FeatureTab>(['generate', 'attack', 'brainstorm', 'factoids', 'ask', 'sparring']);
@@ -21,8 +22,8 @@ const number = (value: string | undefined) => (value !== undefined && value !== 
 
 /**
  * The website's limit-reached and model-restricted dialogs as a sheet, with
- * its words and next steps. Upgrading waits for in-app purchase, so where the
- * website offers Pro, the sheet opens the plan in You instead; a paid plan's
+ * its words and next steps. Where the website offers Pro, the sheet opens the
+ * App Store plans (plans.tsx), or the plan in You in a build without StoreKit; a paid plan's
  * daily cap and the weekly allowance only say when access returns, as there.
  */
 export default function LimitSheet() {
@@ -50,10 +51,14 @@ export default function LimitSheet() {
   }, [userId, params.kind]);
 
   const close = () => router.back();
+  // With in-app purchase the next step is the plans themselves; otherwise the plan in You.
+  const canBuy = storeKit() !== null;
   const seePlan = () => {
     router.back();
-    router.navigate('/you');
+    if (canBuy) router.push('/plans');
+    else router.navigate('/you');
   };
+  const seePlanLabel = canBuy ? t('mobile.plans.see') : t('mobile.ask.openYou');
 
   if (params.kind === 'model') {
     const feature = FEATURES.has(params.feature as FeatureTab) ? (params.feature as FeatureTab) : null;
@@ -83,7 +88,7 @@ export default function LimitSheet() {
         </View>
         <PrimaryButton label={t('modelModal.useFree')} busy={switching} onPress={() => void switchToLow()} testID="limit-primary" />
         <View style={styles.secondary}>
-          <TextButton label={t('mobile.ask.openYou')} onPress={seePlan} />
+          <TextButton label={seePlanLabel} onPress={seePlan} />
         </View>
       </SheetScrollView>
     );
@@ -112,7 +117,7 @@ export default function LimitSheet() {
         <PrimaryButton label={variant === 'weekly_budget_reached' ? t('limitModal.ok') : t('limitModal.gotIt')} onPress={close} testID="limit-primary" />
       ) : (
         <>
-          <PrimaryButton label={t('mobile.ask.openYou')} onPress={seePlan} testID="limit-primary" />
+          <PrimaryButton label={seePlanLabel} onPress={seePlan} testID="limit-primary" />
           <View style={styles.secondary}>
             <TextButton label={t('limitModal.notNow')} onPress={close} />
           </View>

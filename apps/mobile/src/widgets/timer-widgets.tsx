@@ -1,5 +1,5 @@
-import { HStack, Image, Spacer, Text, VStack } from '@expo/ui/swift-ui';
-import { font, foregroundStyle, lineLimit, monospacedDigit, padding } from '@expo/ui/swift-ui/modifiers';
+import { Button, HStack, Image, Spacer, Text, VStack } from '@expo/ui/swift-ui';
+import { buttonStyle, controlSize, font, foregroundStyle, lineLimit, monospacedDigit, padding, tint } from '@expo/ui/swift-ui/modifiers';
 import { createLiveActivity, createWidget, type LiveActivityEnvironment, type WidgetEnvironment } from 'expo-widgets';
 
 import type { TimerActivityState } from '@/lib/timer';
@@ -47,6 +47,28 @@ const DebateTimerActivity = (props: TimerActivityState, environment: LiveActivit
       />
     );
   const icon = props.kind === 'prep' ? 'hourglass' : props.pausedAt !== null ? 'pause.fill' : 'timer';
+  // iOS 17's interactive Live Activities: the app runs the press (live-activity.ts) and sends the new clock back.
+  // Fixed targets, so the app knows which button it was whatever the layout around them.
+  const paused = props.pausedAt !== null;
+  const controls = (spacing: number) =>
+    props.controls ? (
+      <HStack spacing={spacing}>
+        <Button
+          target="timer-toggle"
+          label={paused ? props.labels.resume : props.labels.pause}
+          systemImage={paused ? 'play.fill' : 'pause.fill'}
+          modifiers={[buttonStyle('borderedProminent'), controlSize('small'), tint(accent)]}
+        />
+        {props.canAdvance ? (
+          <Button
+            target="timer-next"
+            label={props.labels.next}
+            systemImage="forward.end.fill"
+            modifiers={[buttonStyle('bordered'), controlSize('small'), tint(accent)]}
+          />
+        ) : null}
+      </HStack>
+    ) : null;
   return {
     banner: (
       <HStack spacing={12} modifiers={[padding({ all: 16 })]}>
@@ -57,6 +79,7 @@ const DebateTimerActivity = (props: TimerActivityState, environment: LiveActivit
           </HStack>
           <Text modifiers={[font({ size: 13 }), foregroundStyle({ type: 'hierarchical', style: 'secondary' }), lineLimit(1)]}>{props.line}</Text>
           <Text modifiers={[font({ size: 12, weight: 'medium' }), foregroundStyle({ type: 'hierarchical', style: 'secondary' })]}>{status}</Text>
+          {controls(8)}
         </VStack>
         <Spacer />
         {clock(40)}
@@ -73,7 +96,10 @@ const DebateTimerActivity = (props: TimerActivityState, environment: LiveActivit
     ),
     expandedTrailing: <VStack modifiers={[padding({ trailing: 6 })]}>{clock(30)}</VStack>,
     expandedBottom: (
-      <Text modifiers={[font({ size: 13 }), foregroundStyle({ type: 'hierarchical', style: 'secondary' }), lineLimit(1)]}>{props.line}</Text>
+      <VStack alignment="leading" spacing={8} modifiers={[padding({ horizontal: 6 })]}>
+        <Text modifiers={[font({ size: 13 }), foregroundStyle({ type: 'hierarchical', style: 'secondary' }), lineLimit(1)]}>{props.line}</Text>
+        {controls(10)}
+      </VStack>
     ),
   };
 };

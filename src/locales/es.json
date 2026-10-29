@@ -2681,7 +2681,8 @@
         "demoCodeExpired": "Este código demo ha caducado. Pide uno nuevo al organizador del evento.",
         "demoCodeUsedUp": "Este código demo ya no tiene usos disponibles. Pide uno nuevo al organizador del evento.",
         "demoCodeUnavailable": "Este código demo no se puede usar. Pide ayuda al organizador del evento."
-      }
+      },
+      "socialError": "No se pudo iniciar sesión. Vuelve a intentarlo en un momento."
     },
     "placeholder": {
       "title": "Aún no está en la app",
@@ -3056,6 +3057,65 @@
       "noteRefused": "El servidor rechazó la nota \"{{title}}\", así que se quitó de este teléfono.",
       "notKeptTitle": "Aún no se guardó en este teléfono",
       "notKeptDesc": "Tus cambios se sincronizan cuando vuelvas a estar en línea. Mantén la app abierta hasta entonces."
+    },
+    "liveActivity": {
+      "caseReady": "Tu caso está listo",
+      "attackReady": "Tu ataque está listo",
+      "brainstormReady": "Tus ideas están listas",
+      "factoidsReady": "Tu evidencia está lista",
+      "failed": "No se pudo terminar",
+      "waiting": "Abre DebateOwl para terminar",
+      "parts_one": "{{count}} parte escrita",
+      "parts_other": "{{count}} partes escritas",
+      "resume": "Reanudar",
+      "next": "Siguiente"
+    },
+    "timerAlert": {
+      "speechTitle": "Se acabó el tiempo: {{speech}}",
+      "speechBody": "{{speech}} se pasó del tiempo. Abre el cronómetro para seguir.",
+      "prepTitle": "Se acabó la preparación",
+      "prepBody": "El tiempo de preparación se ha agotado."
+    },
+    "plans": {
+      "title": "Elige tu plan",
+      "see": "Ver planes",
+      "subscribeFor": "Suscribirse por {{price}}",
+      "purchased": "Ya tienes la suscripción. ¡Gracias!",
+      "pending": "Esperando aprobación. Tu plan empieza cuando se apruebe la compra.",
+      "unavailable": "Las compras dentro de la app aún no están disponibles.",
+      "offline": "No tienes conexión. Conéctate a internet y vuelve a intentarlo.",
+      "accountChanged": "Cambiaste de cuenta. Vuelve a abrir los planes para suscribirte con esta.",
+      "failed": "La compra no se completó. Vuelve a intentarlo en un momento.",
+      "restored": "Tus compras se han restaurado.",
+      "restoredOtherAccount": "Tus compras pertenecen a otra cuenta de DebateOwl. Inicia sesión con esa cuenta para usarlas.",
+      "nothingToRestore": "No hay compras que restaurar.",
+      "dailyUses_one": "{{count}} uso de IA al día",
+      "dailyUses_other": "{{count}} usos de IA al día",
+      "freeTrial": "Gratis durante {{period}}; después se renueva automáticamente.",
+      "introPrice": "{{price}} durante {{period}}; después se renueva automáticamente.",
+      "renewalTerms": "El pago se carga a tu cuenta de Apple. La suscripción se renueva automáticamente al mismo precio cada periodo, salvo que la canceles al menos 24 horas antes de que termine. Puedes gestionarla o cancelarla cuando quieras en los ajustes de tu cuenta de Apple.",
+      "restore": "Restaurar compras",
+      "manage": "Gestionar suscripción",
+      "period": {
+        "day_one": "al día",
+        "day_other": "cada {{count}} días",
+        "week_one": "a la semana",
+        "week_other": "cada {{count}} semanas",
+        "month_one": "al mes",
+        "month_other": "cada {{count}} meses",
+        "year_one": "al año",
+        "year_other": "cada {{count}} años"
+      },
+      "length": {
+        "day_one": "{{count}} día",
+        "day_other": "{{count}} días",
+        "week_one": "{{count}} semana",
+        "week_other": "{{count}} semanas",
+        "month_one": "{{count}} mes",
+        "month_other": "{{count}} meses",
+        "year_one": "{{count}} año",
+        "year_other": "{{count}} años"
+      }
     }
   }
 }

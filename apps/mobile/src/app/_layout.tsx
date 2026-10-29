@@ -14,6 +14,8 @@ import { KeyboardDoneBar } from '@/components/app-text-input';
 import { TimerRunner } from '@/components/timer-runner';
 import { ToastHost, ToastProvider } from '@/components/toast';
 import { AuthProvider, useAuth } from '@/lib/auth';
+import { useApplePlatform } from '@/lib/use-apple-platform';
+import { useHandoff } from '@/lib/handoff';
 import { DebateProvider } from '@/lib/debate-context';
 import { useFirstRun } from '@/lib/use-first-run';
 import { useKeyCommand } from '@/lib/key-commands';
@@ -69,6 +71,10 @@ function Root() {
   // A phone that opted in registers again on launch and when the language changes (see refreshPush).
   const userId = session?.user.id;
   useFirstRun(ready ? userId ?? null : null);
+  // Notification taps, Live Activity cleanup, purchases and Handoff (use-apple-platform.ts).
+  useApplePlatform(ready, userId ?? null);
+  // Handoff: the open screen continues on a Mac (debateowl.com) or an iPad (development build only).
+  useHandoff(ready);
   // Home Screen quick actions (development build with expo-quick-actions; nothing in Expo Go).
   useQuickActions(ready);
   // Text and pages shared from other apps (development build with the share extension; nothing in Expo Go).
@@ -133,6 +139,8 @@ function Root() {
             <Stack.Screen name="limit" options={{ ...sheet, sheetAllowedDetents: [0.56, 0.86] }} />
             <Stack.Screen name="save-case" options={{ ...sheet, sheetAllowedDetents: [0.56, 0.86] }} />
             <Stack.Screen name="context-review" options={sheet} />
+            {/* Basic and Pro through the App Store (purchases.ts). */}
+            <Stack.Screen name="plans" options={{ ...sheet, sheetAllowedDetents: [1] }} />
             {/* Ollie's welcome and the first-run tour, at full height so the owl and the buttons both fit. */}
             <Stack.Screen name="welcome" options={{ ...sheet, sheetAllowedDetents: [1] }} />
             {/* Full screen above the tabs, as in mock 07. */}

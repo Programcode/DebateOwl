@@ -1,13 +1,10 @@
-import { requireOptionalNativeModule } from 'expo';
-import { File } from 'expo-file-system';
-import { Image } from 'react-native';
-
 import { palette } from '@/theme/colors';
 import type { CurrentDebateWidgetProps, WidgetColors } from '@/widgets/current-debate';
 
 import type { DebateCounts } from './debates';
 import i18n from './i18n';
 import { nativeCapabilities } from './native-capabilities';
+import { widgetOwl } from './widget-images';
 
 /**
  * What the Current Debate's Home Screen widget shows: the motion and the
@@ -19,15 +16,10 @@ import { nativeCapabilities } from './native-capabilities';
  */
 export type CurrentDebateSnapshot = { debateId?: string; motion: string; counts: DebateCounts | null } | null;
 
-type WidgetsModule = { widgetsDirectory?: string | null };
 type CurrentDebateWidget = { updateSnapshot: (props: CurrentDebateWidgetProps) => void };
-
-const OWL_FILE = 'owl-mark.png';
-const MARK = require('@/assets/owl/mark.png');
 
 let enabled: boolean | undefined;
 let widget: Promise<CurrentDebateWidget | null> | undefined;
-let owl: Promise<string | null> | undefined;
 let latest: CurrentDebateSnapshot | undefined;
 let known: { debateId?: string; motion: string; counts: DebateCounts } | null = null;
 let written: string | null = null;
@@ -68,8 +60,7 @@ function sameDebate(a: { debateId?: string; motion: string }, b: { debateId?: st
 async function write(snapshot: CurrentDebateSnapshot): Promise<void> {
   try {
     widget ??= loadWidget();
-    owl ??= copyOwl();
-    const [target, owlUri] = await Promise.all([widget, owl]);
+    const [target, owlUri] = await Promise.all([widget, widgetOwl('mark')]);
     // A newer publish landed while this one waited; it writes instead.
     if (!target || snapshot !== latest) return;
     const props = widgetProps(snapshot, owlUri);
@@ -89,31 +80,6 @@ async function loadWidget(): Promise<CurrentDebateWidget | null> {
     return (await import('@/widgets/current-debate')).default;
   } catch (cause) {
     console.warn('The Current Debate widget is not available:', cause instanceof Error ? cause.message : cause);
-    return null;
-  }
-}
-
-/**
- * The widget extension cannot read the app's bundle, so the owl mark is
- * copied into the App Group folder once. Without it the widget shows a symbol.
- */
-async function copyOwl(): Promise<string | null> {
-  try {
-    const directory = requireOptionalNativeModule<WidgetsModule>('ExpoWidgets')?.widgetsDirectory;
-    if (!directory) return null;
-    const target = new File(directory, OWL_FILE);
-    if (target.exists) return target.uri;
-    const source = Image.resolveAssetSource(MARK)?.uri;
-    if (!source) return null;
-    // A development build serves assets from Metro; a release build has them on disk.
-    if (/^https?:/i.test(source)) {
-      await File.downloadFileAsync(source, target, { idempotent: true });
-    } else {
-      new File(source).copy(target);
-    }
-    return target.uri;
-  } catch (cause) {
-    console.warn('Could not give the widget the owl mark:', cause instanceof Error ? cause.message : cause);
     return null;
   }
 }

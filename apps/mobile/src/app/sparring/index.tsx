@@ -40,6 +40,7 @@ import { Text } from '@/components/text';
 import { TimerRing } from '@/components/timer-ring';
 import { ToolTitle, WorkingIn } from '@/components/tool-form';
 import { appendDictation, OpponentVoiceBar, VoiceMicControl, VoiceModeSwitch } from '@/components/voice';
+import { noteFinishedResult } from '@/lib/review-prompt';
 import { useFocusedKeyCommand } from '@/lib/key-commands';
 import { useLatest } from '@/lib/live-value';
 import { AIError, isAbortError, untilAborted } from '@/lib/ai-request';
@@ -194,6 +195,7 @@ export default function SparringScreen() {
       if (!completed) return;
       commit(completed);
       setCelebrating(completed.id);
+      noteFinishedResult();
       // The server saved the judged round before it answered; file it in its debate.
       if (completed.debateId) {
         attachSparring(forUser, completed.id, completed.debateId, completed.userSide).catch((cause: unknown) => {

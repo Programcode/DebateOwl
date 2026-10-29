@@ -1,0 +1,21 @@
+/* Siri-kifejezések a DebateOwlAppIntents.swift App Shortcutjaihoz. Minden kifejezés egyszer nevezi meg az appot.
+   A „…itt: ${applicationName}” forma elkerüli a toldalékot az app nevén. A Siri nem beszél magyarul,
+   ezért ezek a Parancsok appban és a Spotlightban látszanak. */
+
+"Start a debate timer in ${applicationName}" = "Vitaidőmérő indítása itt: ${applicationName}";
+"Start the ${applicationName} timer" = "${applicationName} időmérő indítása";
+
+"Ask ${applicationName} a question" = "Kérdés feltevése itt: ${applicationName}";
+"Ask ${applicationName}" = "Kérdezés itt: ${applicationName}";
+
+"Start a new debate in ${applicationName}" = "Új vita indítása itt: ${applicationName}";
+"New ${applicationName} debate" = "Új ${applicationName} vita";
+
+"Generate a case in ${applicationName}" = "Eset generálása itt: ${applicationName}";
+"Build a case with ${applicationName}" = "Vitaeset építése itt: ${applicationName}";
+
+"Open my ${applicationName} library" = "Könyvtár megnyitása itt: ${applicationName}";
+"Show my sources in ${applicationName}" = "Forrásaim megjelenítése itt: ${applicationName}";
+
+"Start sparring in ${applicationName}" = "Vitapárbaj indítása itt: ${applicationName}";
+"Spar with ${applicationName}" = "Vitapárbaj itt: ${applicationName}";

@@ -1,7 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useSyncExternalStore } from 'react';
 
-import { initialSession, parseSavedFormats, parseSession, serializeSession, upsertSavedFormat, type SavedFormat, type TimerSession } from './timer';
+import { initialSession, parseSavedFormats, parseSession, serializeSession, settleHeld, upsertSavedFormat, type SavedFormat, type TimerSession } from './timer';
 
 // The timer's round and the custom formats saved on this device, as the
 // website keeps its round in localStorage. Not tied to an account: a timer
@@ -64,7 +64,8 @@ export function getTimer(): TimerStoreState {
 }
 
 export function updateSession(change: (current: TimerSession) => TimerSession) {
-  const next = change(state.session);
+  // Which prep bank was last paused, whichever button stopped it (timer.ts's settleHeld).
+  const next = settleHeld(state.session, change(state.session));
   if (next === state.session) return;
   if (!state.loaded) changedBeforeLoad.session = true;
   state = { ...state, session: next };

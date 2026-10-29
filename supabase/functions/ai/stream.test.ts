@@ -380,6 +380,24 @@ Deno.test("a run that outlives the stream's deadline ends with its own refunded 
   assert(JSON.stringify(stored[0]) === JSON.stringify(result), "the stored result differs from the sent one");
 });
 
+Deno.test("onResult hears the stored result, and one that throws does not lose the stream", async () => {
+  const { streamFeatureResponse } = await import("./stream.ts");
+  const order: string[] = [];
+  const heard: Array<Record<string, unknown>> = [];
+  const response = streamFeatureResponse({}, new AbortController(), () => Promise.resolve(Response.json({ ok: true })), {
+    recorder: { begin: async () => {}, finish: async () => void order.push("stored") },
+    onResult: (payload) => {
+      order.push("heard");
+      heard.push(payload);
+      throw new Error("a push that fails");
+    },
+  });
+  const result = (await readEvents(response)).at(-1);
+  assert(result?.event === "result" && result.data.status === 200, `the stream lost its result: ${JSON.stringify(result)}`);
+  assert(order.join(",") === "stored,heard", `onResult ran before the result was stored: ${order.join(",")}`);
+  assert(JSON.stringify(heard[0]) === JSON.stringify(result.data), "onResult heard another result than the one sent");
+});
+
 Deno.test("a run that ignores the deadline abort still ends with a retryable timeout", async () => {
   const { streamFeatureResponse } = await import("./stream.ts");
   const cancel = new AbortController();

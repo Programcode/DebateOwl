@@ -105,7 +105,7 @@ Deno.test("each user's tokens get only that user's notification, in that token's
   const sent = expo.sends().flatMap((call) => call.body as ExpoMessage[]);
   assertEquals(summary.messages, 3);
   assertEquals(
-    sent.map((message) => [message.to, message.data.sessionId, message.title]),
+    sent.map((message) => [message.to, "sessionId" in message.data ? message.data.sessionId : null, message.title]),
     [
       [token("alice-phone"), "alice-session", "Elkészült a forduló értékelése"],
       [token("alice-ipad"), "alice-session", "Your round is scored"],
@@ -115,6 +115,28 @@ Deno.test("each user's tokens get only that user's notification, in that token's
   assert(!sent.some((message) => message.to === token("mallory-phone")), "a token nobody asked for got a message");
   assertEquals(store.requestedUsers, [[ALICE, BOB]]);
   assertEquals(Object.keys(sent[0].data).sort(), ["kind", "sessionId"]);
+});
+
+Deno.test("a ready result goes to the phone that asked, naming its tool only, in its language", async () => {
+  const alicePhone = "a0000000-0000-4000-8000-000000000001";
+  const bobPhone = "b0000000-0000-4000-8000-000000000001";
+  const store = memoryStore([
+    { token: token("alice-phone"), user_id: ALICE, locale: "es", installation_id: alicePhone },
+    { token: token("alice-ipad"), user_id: ALICE, locale: "es", installation_id: "a0000000-0000-4000-8000-000000000002" },
+    { token: token("bob-phone"), user_id: BOB, locale: "en", installation_id: bobPhone },
+  ]);
+  const expo = fakeExpo();
+
+  await sendPush(store, [
+    { kind: "result_ready", userId: ALICE, feature: "generate", installationId: alicePhone },
+    { kind: "result_ready", userId: BOB, feature: "factoids", installationId: bobPhone },
+  ], { fetch: expo.fetch });
+
+  const sent = expo.sends().flatMap((call) => call.body as ExpoMessage[]);
+  assertEquals(sent.map((message) => [message.to, message.title, message.data]), [
+    [token("alice-phone"), "Tu caso está listo", { kind: "result_ready", feature: "generate" }],
+    [token("bob-phone"), "Your evidence is ready", { kind: "result_ready", feature: "factoids" }],
+  ]);
 });
 
 Deno.test("messages go out in batches of 100 and every ticket is kept with its token", async () => {

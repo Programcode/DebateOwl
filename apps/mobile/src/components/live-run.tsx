@@ -10,6 +10,9 @@ import { OwlAvatar, useReduceMotion, type OwlPose } from './owl';
 import { Text } from './text';
 import { ToolProgress } from './tool-form';
 
+import { beginGeneratingActivity, type GeneratingActivityHandle } from '@/lib/generating-activity';
+import type { GeneratingTool } from '@/lib/generating-activity-state';
+import { noteFinishedResult } from '@/lib/review-prompt';
 import { motionSetting, SPRING } from '@/theme/motion';
 import { radius } from '@/theme/colors';
 import { useTheme } from '@/theme/use-theme';
@@ -27,35 +30,72 @@ export interface LiveRunState {
   draft?: Record<string, unknown>;
 }
 
-/** One screen's live run: `begin` hands the request its updates; a later `begin` or `end` silences them. */
-export function useLiveRun() {
+/** What a tool tells its Live Activity: which tool it is and how many parts a draft has. */
+export interface LiveRunActivity {
+  tool: GeneratingTool;
+  parts: (draft: Record<string, unknown>) => number;
+}
+
+/**
+ * One screen's live run: `begin` hands the request its updates; a later
+ * `begin` or `end` silences them. With `activity`, the run also shows on the
+ * Lock Screen and in the Dynamic Island (generating-activity.ts): `complete`
+ * marks it ready, `end('failed')` as failed, and any other end takes it away.
+ */
+export function useLiveRun(activity?: LiveRunActivity) {
   const [state, setState] = useState<LiveRunState>({});
   const run = useRef(0);
   const live = useRef(true);
+  const lockScreen = useRef<GeneratingActivityHandle | null>(null);
+  const activityRef = useRef(activity);
+  activityRef.current = activity;
   useEffect(() => () => {
     live.current = false;
+    lockScreen.current?.finish('cancelled');
   }, []);
 
-  const begin = useCallback((): LiveGeneration => {
+  const begin = useCallback((title?: string): LiveGeneration => {
     const id = ++run.current;
     setState({});
+    lockScreen.current?.finish('cancelled');
+    const tool = activityRef.current;
+    const handle = tool && title ? beginGeneratingActivity(tool.tool, title) : null;
+    lockScreen.current = handle;
+    let phase: LivePhase | undefined;
+    let parts = 0;
     const current = () => live.current && run.current === id;
     return {
       onDraft: (draft) => {
-        if (current()) setState((previous) => ({ ...previous, phase: 'writing', draft }));
+        if (!current()) return;
+        setState((previous) => ({ ...previous, phase: 'writing', draft }));
+        phase = 'writing';
+        parts = activityRef.current?.parts(draft) ?? parts;
+        handle?.update({ phase, parts });
       },
-      onPhase: (phase) => {
-        if (current()) setState((previous) => ({ ...previous, phase }));
+      onPhase: (next) => {
+        if (!current()) return;
+        setState((previous) => ({ ...previous, phase: next }));
+        phase = next;
+        handle?.update({ phase, parts });
       },
     };
   }, []);
 
-  const end = useCallback(() => {
+  const end = useCallback((outcome: 'failed' | 'cancelled' = 'cancelled') => {
     run.current += 1;
+    lockScreen.current?.finish(outcome);
+    lockScreen.current = null;
     if (live.current) setState({});
   }, []);
 
-  return { state, begin, end };
+  /** The answer arrived: the Lock Screen says it is ready. The screen moves on to the document itself. */
+  const complete = useCallback(() => {
+    lockScreen.current?.finish('done');
+    lockScreen.current = null;
+    noteFinishedResult();
+  }, []);
+
+  return { state, begin, end, complete };
 }
 
 /** Whole seconds since the run started, as the website's useElapsedSeconds. */
