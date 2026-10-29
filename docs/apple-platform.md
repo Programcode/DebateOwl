@@ -14,7 +14,7 @@ Current. What the iOS and iPadOS app (`apps/mobile`, bundle id `com.pistack.deba
 - **Generating Live Activity**: Generate, Attack, Brainstorm and Factoids show Ollie, the step (research, write, check), the parts written and the time on the Lock Screen and in the Dynamic Island. When the app is suspended the activity says to open DebateOwl, and the server pushes "Your case is ready" when the answer is stored.
 - **Time-up alert**: a local notification at the moment a running speech or prep bank runs out while the phone is locked, with sound unless the timer is muted, marked Time Sensitive.
 - **Sign in with Apple and Google**, into the same accounts as the website.
-- **In-app purchase** (StoreKit 2): Basic and Pro monthly, restore, Manage subscription, offer codes, and Ask to Buy.
+- **In-app purchase** (StoreKit 2): Basic and Pro monthly, restore, Manage subscription, and Ask to Buy.
 - **Siri, Shortcuts and Spotlight actions** (App Intents): start the timer, ask the coach, start a debate, write a case, open the Library, spar.
 - **Handoff**: the screen open on the iPhone or iPad continues on a Mac in Safari at the matching debateowl.com page.
 - **App Store review prompt**: Apple's own, after the third finished result, at most every 120 days.
@@ -60,7 +60,7 @@ Work through it in order. Each item says what it switches on.
   - `com.pistack.debateowl.pro.monthly`, Pro, 1 month, ranked above Basic so moving between them is an upgrade or downgrade.
   Give each a price, a display name and description in en, es and hu, and a review screenshot of the plan screen. An introductory free trial is optional; the account trial DebateOwl already gives new users still applies.
 - [ ] App Store Server Notifications, version 2: production and sandbox URL `https://<project-ref>.supabase.co/functions/v1/app-store-notifications`.
-- [ ] Offer codes, if promo codes should work in the app: they are redeemed from the plan screen's Redeem code.
+- [ ] Offer codes: not offered in the app yet. A code redeemed through Apple carries no DebateOwl account id, which `app-store-purchase` needs to apply it; that is a server decision first.
 - [ ] Sandbox testers (Users and Access › Sandbox) to try purchases on a device.
 - [ ] App Privacy answers, and the review notes: a demo code for the reviewer, and that accounts are deleted in You › Delete account.
 
@@ -93,4 +93,5 @@ These are configuration, migrations and deploys. Each one needs Adam's go-ahead 
 
 - A Live Activity button press runs in the app's process. When iOS has ended the app, the press starts it in the background, and the timer may miss that press.
 - iOS suspends the app soon after it leaves the screen. The answer is then read back from `ai_run_results` when the app is opened again. If the student closes the app completely before that, the answer is not saved to the debate.
+- An App Store subscription with no DebateOwl account id (an offer code redeemed in the App Store app, Family Sharing) is not applied to any account.
 - App Review asks that Sign in with Apple tokens are revoked when an account is deleted. That needs the Sign in with Apple key on the server and is not built yet.

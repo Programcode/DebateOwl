@@ -86,6 +86,8 @@ const serial = createSerialQueue();
 // What the server answered for each transaction finished in this run of the
 // app, so a purchase that a queued deliverPending already sent is not sent again.
 const delivered = new Map<string, PurchasedPlan | null>();
+/** The signed versions the server has taken this run, so an update that repeats one is not sent again. */
+const deliveredVersions = new Set<string>();
 
 function planOf(payload: Record<string, unknown> | null): PurchasedPlan | null {
   const plan = payload?.entitlement;
@@ -141,6 +143,7 @@ async function deliver(transaction: StoreTransaction, userId: string): Promise<D
   const result = await post(transaction, userId);
   if (!result.ok) return result;
   delivered.set(transaction.transactionId, result.plan);
+  deliveredVersions.add(transaction.signedTransaction);
   await storeKit()
     ?.finish(transaction.transactionId)
     .catch((cause: unknown) => console.warn('Could not finish an App Store transaction:', storeKitErrorCode(cause) ?? cause));
@@ -245,7 +248,9 @@ export async function restore(userId: string): Promise<RestoreOutcome> {
       plan = result.plan ?? plan;
       await native.finish(transaction.transactionId).catch(() => {});
     }
-    return { kind: 'restored', applied, otherAccount: entitlements.length - own.length, plan };
+    // Only a purchase made out to another account counts as theirs; one without a token belongs to no account yet.
+    const otherAccount = entitlements.filter((transaction) => transaction.appAccountToken !== null && !belongsTo(transaction, userId)).length;
+    return { kind: 'restored', applied, otherAccount, plan };
   });
 }
 
@@ -259,23 +264,34 @@ export async function manageSubscriptions(): Promise<boolean> {
   );
 }
 
-/** Apple's offer code sheet. False without StoreKit or when it could not be shown. A redeemed code arrives as a transaction update. */
-export async function redeemOfferCode(): Promise<boolean> {
-  const native = storeKit();
-  if (!native) return false;
-  return native.presentOfferCodeRedeemSheet().then(
-    () => true,
-    () => false,
-  );
+
+/**
+ * A transaction StoreKit reports as updated: sent even when this run already
+ * delivered its id, because an update can be a new signed version of the same
+ * transaction (a refund, a revocation, a changed expiry), which the server
+ * should have before App Store Server Notifications bring it.
+ */
+function deliverUpdate(transaction: StoreTransaction, userId: string): Promise<void> {
+  if (!belongsTo(transaction, userId)) return Promise.resolve();
+  return serial(async () => {
+    if (deliveredVersions.has(transaction.signedTransaction)) return;
+    const result = await post(transaction, userId);
+    if (!result.ok) return;
+    delivered.set(transaction.transactionId, result.plan);
+    deliveredVersions.add(transaction.signedTransaction);
+    await storeKit()
+      ?.finish(transaction.transactionId)
+      .catch((cause: unknown) => console.warn('Could not finish an App Store transaction:', storeKitErrorCode(cause) ?? cause));
+  });
 }
 
 /**
- * For the root layout: delivers unfinished transactions now, on every
- * transaction update (a renewal, an approved Ask to Buy, an offer code, a
- * purchase on another device) and whenever the app returns to the
- * foreground, for whoever `getUserId` says is signed in. Returns the
- * unsubscribe. Updates that arrive while nobody is signed in stay unfinished
- * until the buyer signs in again.
+ * For the root layout: delivers unfinished transactions now and whenever the
+ * app returns to the foreground, and each transaction update as it comes (a
+ * renewal, an approved Ask to Buy, a refund, a purchase on another device),
+ * for whoever `getUserId` says is signed in. Returns the unsubscribe. Updates
+ * that arrive while nobody is signed in stay unfinished until the buyer signs
+ * in again; a finished one comes back as a current entitlement on Restore.
  */
 export function startPurchaseListener(getUserId: () => string | null): () => void {
   const native = storeKit();
@@ -285,7 +301,11 @@ export function startPurchaseListener(getUserId: () => string | null): () => voi
     if (!userId) return;
     deliverPending(userId).catch((cause: unknown) => console.warn('Could not deliver App Store purchases:', storeKitErrorCode(cause) ?? cause));
   };
-  const updates = native.addListener('onTransactionUpdate', run);
+  const updates = native.addListener('onTransactionUpdate', (transaction) => {
+    const userId = getUserId();
+    if (!userId) return;
+    deliverUpdate(transaction, userId).catch((cause: unknown) => console.warn('Could not deliver an App Store update:', storeKitErrorCode(cause) ?? cause));
+  });
   const foreground = AppState.addEventListener('change', (state) => {
     if (state === 'active') run();
   });

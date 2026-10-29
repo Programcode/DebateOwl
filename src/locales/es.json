@@ -3095,7 +3095,6 @@
       "introPrice": "{{price}} durante {{period}}; después se renueva automáticamente.",
       "renewalTerms": "El pago se carga a tu cuenta de Apple. La suscripción se renueva automáticamente al mismo precio cada periodo, salvo que la canceles al menos 24 horas antes de que termine. Puedes gestionarla o cancelarla cuando quieras en los ajustes de tu cuenta de Apple.",
       "restore": "Restaurar compras",
-      "redeem": "Canjear un código",
       "manage": "Gestionar suscripción",
       "period": {
         "day_one": "al día",

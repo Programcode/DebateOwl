@@ -46,7 +46,7 @@ function fakeStore() {
   const store = {
     unfinishedList: [] as StoreTransaction[],
     finished: [] as string[],
-    listeners: [] as (() => void)[],
+    listeners: [] as ((transaction: StoreTransaction) => void)[],
     /** What Apple's sheet answers; by default a completed purchase. */
     sheet: (_token: string): Promise<StorePurchaseResult> => Promise.resolve({ status: 'cancelled' }),
     purchase: async (_productId: string, token: string) => {
@@ -61,7 +61,7 @@ function fakeStore() {
     unfinished: async () => [...store.unfinishedList],
     currentEntitlements: async () => [],
     sync: async () => {},
-    addListener: (_event: string, listener: () => void) => (store.listeners.push(listener), { remove: () => {} }),
+    addListener: (_event: string, listener: (transaction: StoreTransaction) => void) => (store.listeners.push(listener), { remove: () => {} }),
   };
   store.sheet = (token) => Promise.resolve({ status: 'purchased', ...transaction(token) });
   return store;
@@ -134,12 +134,13 @@ describe('buying a subscription', () => {
 
 describe('delivering unfinished transactions', () => {
   it('sends each one once when launch and an update event both deliver', async () => {
-    store.unfinishedList.push(transaction(USER_A));
+    const bought = transaction(USER_A);
+    store.unfinishedList.push(bought);
     const answer = deferred<Answer>();
     env.respond = () => answer.promise;
 
     startPurchaseListener(() => USER_A);
-    store.listeners.forEach((listener) => listener());
+    store.listeners.forEach((listener) => listener(bought));
     const third = deliverPending(USER_A);
     await vi.waitFor(() => expect(env.posts).toHaveLength(1));
     answer.resolve(APPLIED);
@@ -147,6 +148,23 @@ describe('delivering unfinished transactions', () => {
 
     expect(env.posts).toHaveLength(1);
     expect(store.finished).toHaveLength(1);
+  });
+
+  it('sends a new signed version of a transaction it already delivered, such as a refund', async () => {
+    const bought = transaction(USER_A);
+    store.unfinishedList.push(bought);
+    env.respond = () => Promise.resolve(APPLIED);
+    await deliverPending(USER_A);
+    expect(env.posts).toHaveLength(1);
+
+    startPurchaseListener(() => USER_A);
+    const refunded = { ...bought, signedTransaction: `${bought.signedTransaction}-revoked` };
+    store.listeners.forEach((listener) => listener(refunded));
+    await vi.waitFor(() => expect(env.posts).toHaveLength(2));
+    // The same version again is not.
+    store.listeners.forEach((listener) => listener(refunded));
+    await deliverPending(USER_A);
+    expect(env.posts).toHaveLength(2);
   });
 
   it('does not send a purchase under the account that signed in while the sheet was open', async () => {

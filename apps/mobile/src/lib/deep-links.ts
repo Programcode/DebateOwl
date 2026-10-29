@@ -31,6 +31,17 @@ const APP_PAGES: Record<string, string> = {
   billing: '/you',
 };
 
+/**
+ * The website's free tools the app has as its own screens (the round timer,
+ * speech time calculator and motion generator), so Handoff from Safari opens
+ * them. Universal links do not include /tools; only Handoff brings these here.
+ */
+const TOOL_PAGES: Record<string, string> = {
+  'debate-timer': '/timer',
+  'speech-time-calculator': '/speech-time',
+  'debate-motion-generator': '/motions',
+};
+
 /** A share code as the share screen accepts it, from a universal link or the app's own scheme. */
 export function isShareCode(code: unknown): code is string {
   return typeof code === 'string' && SHARE_CODE.test(code);
@@ -63,6 +74,10 @@ export function appPathForUrl(url: unknown): string | null {
     if (rest.length > 1) return '/';
     const page = (rest[0] ?? '').toLowerCase();
     return Object.prototype.hasOwnProperty.call(APP_PAGES, page) ? APP_PAGES[page] : '/';
+  }
+  if (first?.toLowerCase() === 'tools' && rest.length === 1) {
+    const tool = rest[0].toLowerCase();
+    return Object.prototype.hasOwnProperty.call(TOOL_PAGES, tool) ? TOOL_PAGES[tool] : null;
   }
   return null;
 }

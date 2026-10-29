@@ -3095,7 +3095,6 @@
       "introPrice": "{{period}} {{price}}, utána automatikusan megújul.",
       "renewalTerms": "A fizetést az Apple-fiókod terheli. Az előfizetés minden időszak végén ugyanazon az áron automatikusan megújul, hacsak legalább 24 órával a lejárta előtt le nem mondod. Bármikor kezelheted vagy lemondhatod az Apple-fiókod beállításaiban.",
       "restore": "Vásárlások visszaállítása",
-      "redeem": "Kód beváltása",
       "manage": "Előfizetés kezelése",
       "period": {
         "day_one": "naponta",

@@ -32,6 +32,12 @@ describe('continuedRoute', () => {
   it('opens routes Handoff offers and website links the app opens', () => {
     expect(continuedRoute('/case/abc')).toBe('/case/abc');
     expect(continuedRoute('https://debateowl.com/app/library')).toBe('/library');
+    expect(continuedRoute('https://debateowl.com/tools/debate-timer')).toBe('/timer');
+  });
+
+  it('opens History for a result only the other device has', () => {
+    expect(continuedRoute('/case/local-1730000000000-1')).toBe('/history');
+    expect(continuedRoute('/attack/local-1730000000000-2')).toBe('/history');
   });
 
   it('refuses anything else', () => {

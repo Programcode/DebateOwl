@@ -51,7 +51,7 @@ const lastForm = sessionSlot<GenerateInput>(() => DEFAULT_FORM);
 export default function GenerateScreen() {
   const { t } = useTranslation();
   const router = useRouter();
-  const { from, motion: motionParam } = useLocalSearchParams<{ from?: string; motion?: string }>();
+  const { from, motion: motionParam } = useLocalSearchParams<{ from?: string; motion?: string | string[] }>();
   const { session } = useAuth();
   const userId = session?.user.id ?? null;
   const { debates, current, oneOff, create, switchTo, refresh } = useDebates();
@@ -106,9 +106,11 @@ export default function GenerateScreen() {
   // A motion from Siri or Shortcuts (debatelab://generate?motion=) fills the form once, over the Current Debate's.
   const motionApplied = useRef(false);
   useEffect(() => {
-    if (motionApplied.current || !motionParam?.trim()) return;
+    // A link may repeat the parameter; Expo Router then gives an array.
+    const motion = (Array.isArray(motionParam) ? motionParam[0] : motionParam)?.trim();
+    if (motionApplied.current || !motion) return;
     motionApplied.current = true;
-    setForm({ motion: motionParam.trim().slice(0, MAX_MOTION_LENGTH) });
+    setForm({ motion: motion.slice(0, MAX_MOTION_LENGTH) });
     setMotionError(false);
   }, [motionParam, setForm]);
 

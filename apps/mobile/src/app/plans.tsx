@@ -1,6 +1,6 @@
 import { useRouter } from 'expo-router';
 import * as WebBrowser from 'expo-web-browser';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, StyleSheet, View } from 'react-native';
 
@@ -12,7 +12,7 @@ import { SuccessCheck } from '@/components/success-check';
 import { Text } from '@/components/text';
 import { useAuth } from '@/lib/auth';
 import { haptics } from '@/lib/haptics';
-import { buy, loadProducts, manageSubscriptions, redeemOfferCode, restore, type PurchaseOutcome, type PurchaseTier } from '@/lib/purchases';
+import { buy, loadProducts, manageSubscriptions, restore, type PurchaseOutcome, type PurchaseTier } from '@/lib/purchases';
 import type { StoreProduct, SubscriptionPeriod } from '@/lib/store-kit';
 import { websitePage } from '@/lib/website';
 import { radius } from '@/theme/colors';
@@ -25,8 +25,8 @@ const DAILY_USES: Record<PurchaseTier, number> = { basic: 20, pro: 50 };
 
 /**
  * Basic and Pro through the App Store (purchases.ts): prices in the
- * student's own currency from StoreKit, Subscribe, Restore, Redeem code and
- * Manage subscription, and the renewal terms App Review asks for beside the
+ * student's own currency from StoreKit, Subscribe, Restore and Manage
+ * subscription, and the renewal terms App Review asks for beside the
  * button. The server applies a purchase to the signed-in account; until App
  * Store Connect and the server are set up (docs/apple-platform.md), the
  * screen says purchases are not available yet.
@@ -41,6 +41,13 @@ export default function PlansSheet() {
   const [tier, setTier] = useState<PurchaseTier>('pro');
   const [busy, setBusy] = useState<'buy' | 'restore' | null>(null);
   const [notice, setNotice] = useState<Notice>(null);
+  // A purchase can finish after the sheet closed; it then changes nothing on screen.
+  const mounted = useRef(true);
+  const closing = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => () => {
+    mounted.current = false;
+    if (closing.current) clearTimeout(closing.current);
+  }, []);
 
   useEffect(() => {
     let live = true;
@@ -81,11 +88,14 @@ export default function PlansSheet() {
     setBusy('buy');
     setNotice(null);
     const outcome = await buy(tier, userId);
+    if (!mounted.current) return;
     setBusy(null);
     setNotice(outcomeNotice(outcome));
     if (outcome.kind === 'purchased') {
       haptics.success();
-      setTimeout(() => router.back(), 1_400);
+      closing.current = setTimeout(() => {
+        if (mounted.current) router.back();
+      }, 1_400);
     } else if (outcome.kind === 'failed') {
       haptics.warning();
     }
@@ -96,6 +106,7 @@ export default function PlansSheet() {
     setBusy('restore');
     setNotice(null);
     const outcome = await restore(userId);
+    if (!mounted.current) return;
     setBusy(null);
     if (outcome.kind === 'restored') {
       if (outcome.applied > 0) haptics.success();
@@ -222,7 +233,6 @@ export default function PlansSheet() {
 
       <View style={styles.links}>
         <TextButton label={t('mobile.plans.restore')} disabled={busy !== null} onPress={() => void restorePurchases()} />
-        <TextButton label={t('mobile.plans.redeem')} disabled={busy !== null} onPress={() => void redeemOfferCode()} />
         <TextButton label={t('mobile.plans.manage')} disabled={busy !== null} onPress={() => void manageSubscriptions()} />
         <View style={styles.legal}>
           <TextButton label={t('footer.terms')} onPress={() => void WebBrowser.openBrowserAsync(websitePage('/terms'))} />

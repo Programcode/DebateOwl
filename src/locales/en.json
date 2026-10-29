@@ -3095,7 +3095,6 @@
       "introPrice": "{{price}} for {{period}}, then it renews automatically.",
       "renewalTerms": "Payment is charged to your Apple Account. Your subscription renews automatically at the same price each period unless you cancel at least 24 hours before it ends. Manage or cancel it any time in your Apple Account settings.",
       "restore": "Restore purchases",
-      "redeem": "Redeem a code",
       "manage": "Manage subscription",
       "period": {
         "day_one": "a day",

@@ -118,6 +118,11 @@ class Run implements GeneratingActivityHandle {
 
   /** The app left the screen or came back: claim progress only while it can still be making it. */
   appStateChanged() {
+    // Off screen when the owls arrived: iOS only starts an activity for an app on screen, so it starts now.
+    if (!this.activity) {
+      this.start();
+      return;
+    }
     this.sent = '';
     this.send();
   }
@@ -127,7 +132,7 @@ class Run implements GeneratingActivityHandle {
   }
 
   private start() {
-    if (this.ended || !this.owls) return;
+    if (this.ended || !this.owls || this.activity || AppState.currentState !== 'active') return;
     try {
       // No link: tapping the activity opens the app where the student left it, on the tool's screen.
       const state = this.state();

@@ -117,5 +117,9 @@ export function continuedRoute(value: unknown): string | null {
   if (typeof value !== 'string' || value.length > MAX_PATH_LENGTH) return null;
   if (/^https:/i.test(value)) return appPathForUrl(value);
   if (!value.startsWith('/') || value.includes('//')) return null;
-  return handoffTarget(value) ? value : null;
+  if (!handoffTarget(value)) return null;
+  // A result kept only on the device that made it (open-results.ts's local- keys) is not here; its History is.
+  const [, first, id] = value.split('/');
+  if (Object.prototype.hasOwnProperty.call(DOCUMENTS, first) && id?.startsWith('local-')) return '/history';
+  return value;
 }
