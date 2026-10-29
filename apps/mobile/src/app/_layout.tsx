@@ -133,6 +133,8 @@ function Root() {
             <Stack.Screen name="limit" options={{ ...sheet, sheetAllowedDetents: [0.56, 0.86] }} />
             <Stack.Screen name="save-case" options={{ ...sheet, sheetAllowedDetents: [0.56, 0.86] }} />
             <Stack.Screen name="context-review" options={sheet} />
+            {/* Basic and Pro through the App Store (purchases.ts). */}
+            <Stack.Screen name="plans" options={{ ...sheet, sheetAllowedDetents: [1] }} />
             {/* Ollie's welcome and the first-run tour, at full height so the owl and the buttons both fit. */}
             <Stack.Screen name="welcome" options={{ ...sheet, sheetAllowedDetents: [1] }} />
             {/* Full screen above the tabs, as in mock 07. */}

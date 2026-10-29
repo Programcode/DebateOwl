@@ -2681,7 +2681,8 @@
         "demoCodeExpired": "This demo code has expired. Ask your event host for a new one.",
         "demoCodeUsedUp": "This demo code has no uses left. Ask your event host for a new one.",
         "demoCodeUnavailable": "This demo code cannot be used. Ask your event host for help."
-      }
+      },
+      "socialError": "Could not sign in. Try again in a moment."
     },
     "placeholder": {
       "title": "Not in the app yet",
@@ -3056,6 +3057,66 @@
       "noteRefused": "The server refused the note \"{{title}}\", so it was removed from this phone.",
       "notKeptTitle": "Not saved on this phone yet",
       "notKeptDesc": "Your changes sync when you are back online. Keep the app open until then."
+    },
+    "liveActivity": {
+      "caseReady": "Your case is ready",
+      "attackReady": "Your attack is ready",
+      "brainstormReady": "Your ideas are ready",
+      "factoidsReady": "Your evidence is ready",
+      "failed": "This one didn't finish",
+      "waiting": "Open DebateOwl to finish",
+      "parts_one": "{{count}} part written",
+      "parts_other": "{{count}} parts written",
+      "resume": "Resume",
+      "next": "Next"
+    },
+    "timerAlert": {
+      "speechTitle": "Time's up: {{speech}}",
+      "speechBody": "{{speech}} is over time. Open the timer to move on.",
+      "prepTitle": "Prep time is over",
+      "prepBody": "The prep clock has run out."
+    },
+    "plans": {
+      "title": "Choose your plan",
+      "see": "See plans",
+      "subscribeFor": "Subscribe for {{price}}",
+      "purchased": "You're subscribed. Thank you!",
+      "pending": "Waiting for approval. Your plan starts once the purchase is approved.",
+      "unavailable": "In-app purchases aren't available yet.",
+      "offline": "You're offline. Connect to the internet and try again.",
+      "accountChanged": "You switched accounts. Open the plans again to subscribe on this one.",
+      "failed": "The purchase did not go through. Try again in a moment.",
+      "restored": "Your purchases are restored.",
+      "restoredOtherAccount": "Your purchases belong to another DebateOwl account. Sign in with that one to use them.",
+      "nothingToRestore": "No purchases to restore.",
+      "dailyUses_one": "{{count}} AI use a day",
+      "dailyUses_other": "{{count}} AI uses a day",
+      "freeTrial": "Free for {{period}}, then it renews automatically.",
+      "introPrice": "{{price}} for {{period}}, then it renews automatically.",
+      "renewalTerms": "Payment is charged to your Apple Account. Your subscription renews automatically at the same price each period unless you cancel at least 24 hours before it ends. Manage or cancel it any time in your Apple Account settings.",
+      "restore": "Restore purchases",
+      "redeem": "Redeem a code",
+      "manage": "Manage subscription",
+      "period": {
+        "day_one": "a day",
+        "day_other": "every {{count}} days",
+        "week_one": "a week",
+        "week_other": "every {{count}} weeks",
+        "month_one": "a month",
+        "month_other": "every {{count}} months",
+        "year_one": "a year",
+        "year_other": "every {{count}} years"
+      },
+      "length": {
+        "day_one": "{{count}} day",
+        "day_other": "{{count}} days",
+        "week_one": "{{count}} week",
+        "week_other": "{{count}} weeks",
+        "month_one": "{{count}} month",
+        "month_other": "{{count}} months",
+        "year_one": "{{count}} year",
+        "year_other": "{{count}} years"
+      }
     }
   }
 }

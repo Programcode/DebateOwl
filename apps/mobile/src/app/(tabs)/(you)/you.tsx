@@ -26,6 +26,7 @@ import { shareJson } from '@/lib/export';
 import { disablePush, enablePush, readPushState, type PushState } from '@/lib/push';
 import { createPushSwitch, type PushSwitchView } from '@/lib/push-switch';
 import { useSettings, type ThemePreference } from '@/lib/settings';
+import { storeKit } from '@/lib/store-kit';
 import { fetchSubscription, type Subscription } from '@/lib/subscription';
 import { supabaseEnv } from '@/lib/supabase-config';
 import { websitePage } from '@/lib/website';
@@ -384,6 +385,8 @@ function PlanBadge({ state }: { state: BillingStateName }) {
 function SubscriptionCard({ userId }: { userId: string | undefined }) {
   const { t } = useTranslation();
   const { colors } = useTheme();
+  const router = useRouter();
+  const canBuy = storeKit() !== null;
   const [subscription, setSubscription] = useState<Subscription | null>(null);
   const [failed, setFailed] = useState(false);
 
@@ -449,6 +452,8 @@ function SubscriptionCard({ userId }: { userId: string | undefined }) {
           <Text tone="secondary" style={styles.small}>
             {planDescription(t, subscription)}
           </Text>
+          {/* Basic and Pro through the App Store, where the build has StoreKit (plans.tsx). */}
+          {canBuy ? <TextButton label={t('mobile.plans.see')} onPress={() => router.push('/plans')} /> : null}
         </View>
       )}
     </Card>

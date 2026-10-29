@@ -2681,7 +2681,8 @@
         "demoCodeExpired": "Ez a demókód lejárt. Kérj újat az esemény szervezőjétől.",
         "demoCodeUsedUp": "Ez a demókód elfogyott. Kérj újat az esemény szervezőjétől.",
         "demoCodeUnavailable": "Ez a demókód nem használható. Kérj segítséget az esemény szervezőjétől."
-      }
+      },
+      "socialError": "Nem sikerült bejelentkezni. Próbáld újra egy kicsit később."
     },
     "placeholder": {
       "title": "Még nincs az appban",
@@ -3056,6 +3057,66 @@
       "noteRefused": "A szerver elutasította a(z) „{{title}}” jegyzetet, ezért törlődött erről a telefonról.",
       "notKeptTitle": "Még nincs mentve ezen a telefonon",
       "notKeptDesc": "A módosításaid szinkronizálódnak, amikor újra online leszel. Addig tartsd nyitva az alkalmazást."
+    },
+    "liveActivity": {
+      "caseReady": "Elkészült az eseted",
+      "attackReady": "Elkészült a támadásod",
+      "brainstormReady": "Elkészültek az ötleteid",
+      "factoidsReady": "Elkészültek a bizonyítékaid",
+      "failed": "Ez most nem készült el",
+      "waiting": "Nyisd meg a DebateOwlt a befejezéshez",
+      "parts_one": "{{count}} rész kész",
+      "parts_other": "{{count}} rész kész",
+      "resume": "Folytatás",
+      "next": "Következő"
+    },
+    "timerAlert": {
+      "speechTitle": "Lejárt az idő: {{speech}}",
+      "speechBody": "{{speech}} túllépte az időt. Nyisd meg az időmérőt a továbblépéshez.",
+      "prepTitle": "Lejárt a felkészülési idő",
+      "prepBody": "A felkészülési idő elfogyott."
+    },
+    "plans": {
+      "title": "Válassz csomagot",
+      "see": "Csomagok",
+      "subscribeFor": "Feliratkozás: {{price}}",
+      "purchased": "Sikeres feliratkozás. Köszönjük!",
+      "pending": "Jóváhagyásra vár. A csomagod a vásárlás jóváhagyása után indul.",
+      "unavailable": "Az alkalmazáson belüli vásárlás még nem érhető el.",
+      "offline": "Nincs internetkapcsolat. Csatlakozz, és próbáld újra.",
+      "accountChanged": "Fiókot váltottál. Nyisd meg újra a csomagokat, hogy ezzel a fiókkal fizess elő.",
+      "failed": "A vásárlás nem sikerült. Próbáld újra egy kicsit később.",
+      "restored": "A vásárlásaidat visszaállítottuk.",
+      "restoredOtherAccount": "A vásárlásaid egy másik DebateOwl-fiókhoz tartoznak. Jelentkezz be azzal a fiókkal a használatukhoz.",
+      "nothingToRestore": "Nincs visszaállítható vásárlás.",
+      "dailyUses_one": "Napi {{count}} AI-használat",
+      "dailyUses_other": "Napi {{count}} AI-használat",
+      "freeTrial": "{{period}} ingyenes, utána automatikusan megújul.",
+      "introPrice": "{{period}} {{price}}, utána automatikusan megújul.",
+      "renewalTerms": "A fizetést az Apple-fiókod terheli. Az előfizetés minden időszak végén ugyanazon az áron automatikusan megújul, hacsak legalább 24 órával a lejárta előtt le nem mondod. Bármikor kezelheted vagy lemondhatod az Apple-fiókod beállításaiban.",
+      "restore": "Vásárlások visszaállítása",
+      "redeem": "Kód beváltása",
+      "manage": "Előfizetés kezelése",
+      "period": {
+        "day_one": "naponta",
+        "day_other": "{{count}} naponta",
+        "week_one": "hetente",
+        "week_other": "{{count}} hetente",
+        "month_one": "havonta",
+        "month_other": "{{count}} havonta",
+        "year_one": "évente",
+        "year_other": "{{count}} évente"
+      },
+      "length": {
+        "day_one": "{{count}} napig",
+        "day_other": "{{count}} napig",
+        "week_one": "{{count}} hétig",
+        "week_other": "{{count}} hétig",
+        "month_one": "{{count}} hónapig",
+        "month_other": "{{count}} hónapig",
+        "year_one": "{{count}} évig",
+        "year_other": "{{count}} évig"
+      }
     }
   }
 }

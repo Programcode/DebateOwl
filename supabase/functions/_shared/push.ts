@@ -57,7 +57,7 @@ const RESULT_READY: Record<ReadyFeature, Copy> = {
   },
   factoids: {
     en: { title: "Your evidence is ready", body: "Open DebateOwl to read it." },
-    es: { title: "Tus pruebas están listas", body: "Abre DebateOwl para leerlas." },
+    es: { title: "Tu evidencia está lista", body: "Abre DebateOwl para leerla." },
     hu: { title: "Elkészültek a bizonyítékaid", body: "Nyisd meg a DebateOwlt, hogy elolvasd őket." },
   },
 };
