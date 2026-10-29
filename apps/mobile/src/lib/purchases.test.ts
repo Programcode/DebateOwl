@@ -180,6 +180,21 @@ describe('delivering unfinished transactions', () => {
     expect(store.unfinishedList).toHaveLength(0);
   });
 
+  it('finishes on the next delivery a transaction whose finish failed, without sending it again', async () => {
+    const bought = transaction(USER_A);
+    store.unfinishedList.push(bought);
+    env.respond = () => Promise.resolve(APPLIED);
+    const finish = store.finish;
+    store.finish = () => Promise.reject(new Error('StoreKit busy'));
+    await deliverPending(USER_A);
+    expect(store.unfinishedList).toHaveLength(1);
+
+    store.finish = finish;
+    await deliverPending(USER_A);
+    expect(env.posts).toHaveLength(1);
+    expect(store.unfinishedList).toHaveLength(0);
+  });
+
   it('does not send a purchase under the account that signed in while the sheet was open', async () => {
     const sheet = deferred<StorePurchaseResult>();
     let opened = false;

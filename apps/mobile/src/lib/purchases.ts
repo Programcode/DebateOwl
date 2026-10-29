@@ -140,8 +140,8 @@ async function post(transaction: StoreTransaction, userId: string): Promise<Deli
  */
 async function deliver(transaction: StoreTransaction, userId: string): Promise<Delivery> {
   const version = transaction.signedTransaction;
-  if (delivered.has(version)) return { ok: true, plan: delivered.get(version) ?? null };
-  const result = await post(transaction, userId);
+  // The server already has this version: only finish it, in case the last finish failed.
+  const result: Delivery = delivered.has(version) ? { ok: true, plan: delivered.get(version) ?? null } : await post(transaction, userId);
   if (!result.ok) return result;
   delivered.set(version, result.plan);
   await storeKit()
@@ -273,6 +273,8 @@ export async function manageSubscriptions(): Promise<boolean> {
 function deliverUpdate(transaction: StoreTransaction, userId: string): Promise<void> {
   if (!belongsTo(transaction, userId)) return Promise.resolve();
   return serial(async () => {
+    // A version the server already took this run was finished then; an update repeating it needs nothing.
+    if (delivered.has(transaction.signedTransaction)) return;
     await deliver(transaction, userId);
   });
 }
