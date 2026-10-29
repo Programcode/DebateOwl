@@ -184,6 +184,14 @@ describe('which failures fall back', () => {
     await expect(cachedRead('user-a', 'sources', 'debate-1', offlineFailure)).resolves.toEqual(['source']);
   });
 
+  // The five-day question waits for a list the server gave (debate-context.tsx), never a copy.
+  it('says when the answer is the saved copy rather than the server', async () => {
+    const { cachedReadFrom, setCacheOwner } = await load();
+    setCacheOwner('user-a');
+    await expect(cachedReadFrom('user-a', 'debates', 'all', async () => ['debate'])).resolves.toEqual({ value: ['debate'], fromCopy: false });
+    await expect(cachedReadFrom('user-a', 'debates', 'all', offlineFailure)).resolves.toEqual({ value: ['debate'], fromCopy: true });
+  });
+
   it('throws a refused session, a policy error or any other server answer instead of serving the copy', async () => {
     const { cachedRead, readFailed, setCacheOwner } = await load();
     setCacheOwner('user-a');

@@ -9,7 +9,7 @@ import {
   continueDebate,
   createDebate,
   deleteDebate,
-  fetchDebates,
+  fetchDebatesFrom,
   sortDebates,
   switchDebate,
   updateDebate,
@@ -63,6 +63,8 @@ export function DebateProvider({ children }: { children: ReactNode }) {
   const refreshes = useRef(0);
   const owner = useRef(userId);
   const generation = useRef(0);
+  // The list on screen is a saved copy (painted while loading, or answered offline), not the server's.
+  const showingCopy = useRef(false);
 
   const refresh = useCallback(async () => {
     const forUser = owner.current;
@@ -71,30 +73,29 @@ export function DebateProvider({ children }: { children: ReactNode }) {
     const request = ++refreshes.current;
     const gen = generation.current;
     const current = () => generation.current === gen && owner.current === forUser && refreshes.current === request && writes.current === writesBefore;
-    // Whether this request painted the saved copy, which a failed refresh must not leave on screen.
-    let paintedCopy = false;
     return await runRequest(async () => {
-      const show = (next: Awaited<ReturnType<typeof fetchDebates>>) => {
+      const show = (next: Awaited<ReturnType<typeof fetchDebatesFrom>>['value']) => {
         if (!current()) return;
-        paintedCopy = true;
+        showingCopy.current = true;
         setFresh(false);
         setDebates((previous) => keepIfSame(previous, next.debates));
         setCurrentId(next.currentId);
         setStatus('ready');
       };
-      const next = await fetchDebates(forUser, show);
+      const { value: next, fromCopy } = await fetchDebatesFrom(forUser, show);
       if (!current()) return;
       // Refreshes run on every Debate tab focus; an unchanged list keeps its identity so the tabs do not re-render.
       setDebates((previous) => keepIfSame(previous, next.debates));
       setCurrentId(next.currentId);
       setStatus('ready');
-      setFresh(true);
+      showingCopy.current = fromCopy;
+      setFresh(!fromCopy);
     }, async (cause) => {
       // A switch or create since this refresh began already holds newer state.
       if (!current()) return;
       console.warn('Could not load debates:', cause instanceof Error ? cause.message : cause);
-      // Keep a list the server already gave; a copy painted by this refresh must not hide its refusal.
-      setStatus((previous) => (previous === 'ready' && !paintedCopy ? previous : 'error'));
+      // Keep a list the server gave; a saved copy on screen must not hide its refusal.
+      setStatus((previous) => (previous === 'ready' && !showingCopy.current ? previous : 'error'));
     });
   }, []);
 
@@ -106,6 +107,7 @@ export function DebateProvider({ children }: { children: ReactNode }) {
     setOneOff(false);
     setStatus('loading');
     setFresh(false);
+    showingCopy.current = false;
     if (!userId) return;
     void refresh();
     // Pick up debates started or switched on the website while the app was in the background.

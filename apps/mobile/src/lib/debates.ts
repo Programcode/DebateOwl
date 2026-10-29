@@ -1,4 +1,4 @@
-import { afterWrite, cachedRead, pickFailure, readAll, readFailed, updateCopy, type CopyMark, type CopyScope } from './offline-cache';
+import { afterWrite, cachedRead, cachedReadFrom, pickFailure, readAll, readFailed, updateCopy, type CopyMark, type CopyScope } from './offline-cache';
 import { supabase } from './supabase';
 
 /**
@@ -110,6 +110,11 @@ async function setCurrentPointer(userId: string, debateId: string) {
 /** Every debate, newest activity first, and the current one when it is still in the list. Offline, the saved copy. */
 export function fetchDebates(userId: string, onCopy?: (value: DebateList) => void): Promise<DebateList> {
   return cachedRead(userId, 'debates', 'all', () => loadDebates(userId), undefined, onCopy);
+}
+
+/** fetchDebates, saying whether the list is the saved copy rather than the server's answer. */
+export function fetchDebatesFrom(userId: string, onCopy?: (value: DebateList) => void): Promise<{ value: DebateList; fromCopy: boolean }> {
+  return cachedReadFrom(userId, 'debates', 'all', () => loadDebates(userId), undefined, onCopy);
 }
 
 async function loadDebates(userId: string): Promise<DebateList> {

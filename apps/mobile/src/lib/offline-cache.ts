@@ -322,6 +322,11 @@ function noteShown(storageKey: string, group: CacheGroup, fromCopy: boolean, mar
  * A screen passes its load's `mark` so a copy it shows stops counting once it moves on.
  */
 export async function cachedRead<T>(userId: string, group: CacheGroup, key: string, load: () => Promise<T>, mark?: CopyMark, onCopy?: (value: T) => void): Promise<T> {
+  return (await cachedReadFrom(userId, group, key, load, mark, onCopy)).value;
+}
+
+/** cachedRead, also saying whether the answer is the saved copy (offline or unreachable) rather than the server's. */
+export async function cachedReadFrom<T>(userId: string, group: CacheGroup, key: string, load: () => Promise<T>, mark?: CopyMark, onCopy?: (value: T) => void): Promise<{ value: T; fromCopy: boolean }> {
   const ticket = ++tickets;
   const gen = generation;
   const storageKey = entryKey(userId, group, key);
@@ -331,7 +336,7 @@ export async function cachedRead<T>(userId: string, group: CacheGroup, key: stri
     if (copy && gen === generation && userId === owner) {
       settle(ticket);
       if (gen === generation) noteShown(storageKey, group, true, mark);
-      return copy.value;
+      return { value: copy.value, fromCopy: true };
     }
   }
   let value: T;
@@ -365,11 +370,11 @@ export async function cachedRead<T>(userId: string, group: CacheGroup, key: stri
     const copy = await readCopy<T>(userId, group, key).catch(() => undefined);
     if (!copy || gen !== generation || userId !== owner) throw cause;
     if (gen === generation) noteShown(storageKey, group, true, mark);
-    return copy.value;
+    return { value: copy.value, fromCopy: true };
   }
   if (gen === generation) noteShown(storageKey, group, false, mark);
   writeCopy(userId, group, key, value, ticket, gen).catch(warn('Could not keep a saved copy'));
-  return value;
+  return { value, fromCopy: false };
 }
 
 /**
