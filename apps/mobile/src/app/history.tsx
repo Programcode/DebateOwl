@@ -405,13 +405,22 @@ function HistoryRow({ item, first, onPress, onDelete }: { item: HistoryItem; fir
     if (!removed) swipeable.current?.close();
   };
 
+  // VoiceOver offers the long-press menu's actions on the row itself (swipe up or down).
+  const document = href !== null && hasDocumentText(item);
+  const a11yActions = [
+    ...(document ? [{ name: 'discuss', label: t('common.discuss') }, { name: 'share', label: t('mobile.library.share') }] : []),
+    ...(onDelete ? [{ name: 'delete', label: t('common.delete') }] : []),
+  ];
   const row = (
     <Pressable
       accessibilityRole={onPress ? 'button' : undefined}
       accessibilityLabel={onPress ? t('mobile.common.openItem', { title }) : undefined}
-      accessibilityActions={onDelete ? [{ name: 'delete', label: t('common.delete') }] : undefined}
+      accessibilityActions={a11yActions.length > 0 ? a11yActions : undefined}
       onAccessibilityAction={(event) => {
-        if (event.nativeEvent.actionName === 'delete') void remove();
+        const name = event.nativeEvent.actionName;
+        if (name === 'discuss') void work.discuss(item);
+        else if (name === 'share') void work.share(item);
+        else if (name === 'delete') void remove();
       }}
       disabled={!onPress}
       onPress={onPress}

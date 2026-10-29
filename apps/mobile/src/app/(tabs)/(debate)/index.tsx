@@ -431,9 +431,19 @@ function RecentSourceRow({ source, first, onPress }: { source: Source; first: bo
   const { t } = useTranslation();
   const { colors } = useTheme();
   const press = usePressScale();
+  const actions = useSourceActions();
   return (
     <Pressable
       accessibilityRole="button"
+      // VoiceOver offers the long-press menu's Copy and Share on the row itself (swipe up or down).
+      accessibilityActions={[
+        { name: 'copy', label: t('common.copy') },
+        { name: 'share', label: t('mobile.library.share') },
+      ]}
+      onAccessibilityAction={(event) => {
+        if (event.nativeEvent.actionName === 'copy') void actions.copy(source);
+        else if (event.nativeEvent.actionName === 'share') actions.share(source);
+      }}
       onPress={onPress}
       onPressIn={press.onPressIn}
       onPressOut={press.onPressOut}
