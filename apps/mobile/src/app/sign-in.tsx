@@ -12,6 +12,7 @@ import { SegmentedControl } from '@/components/segmented-control';
 import { Text } from '@/components/text';
 import { useAuth } from '@/lib/auth';
 import { signInErrorKey } from '@/lib/sign-in-errors';
+import { changeAppLanguage } from '@/lib/i18n';
 import { appleSignInAvailable, googleSignInAvailable, signInWithApple, signInWithGoogle } from '@/lib/social-sign-in';
 import { Icon } from '@/components/icon';
 import { OwlMark } from '@/components/owl';
@@ -40,6 +41,7 @@ export default function SignInScreen() {
   const { signInWithEmailOtp, verifyEmailOtp, signInWithDemoCode, sessionExpired } = useAuth();
   const [mode, setMode] = useState<Mode>('email');
   const [languageMenu, setLanguageMenu] = useState(false);
+  const languageLabel = APP_LANGUAGES[isAppLanguage(i18n.language) ? i18n.language : 'en'].label;
   const [status, setStatus] = useState<Status>('idle');
   const [codeSent, setCodeSent] = useState(false);
   const [email, setEmail] = useState('');
@@ -144,7 +146,11 @@ export default function SignInScreen() {
         ]}>
         <View style={styles.brandRow}>
           <OwlMark size={64} />
-          <TextButton label={APP_LANGUAGES[isAppLanguage(i18n.language) ? i18n.language : 'en'].label} onPress={() => setLanguageMenu(true)} />
+          <TextButton
+            label={languageLabel}
+            accessibilityLabel={`${t('settings.uiLanguage')}: ${languageLabel}`}
+            onPress={() => setLanguageMenu(true)}
+          />
         </View>
         <ActionMenu
           visible={languageMenu}
@@ -152,7 +158,7 @@ export default function SignInScreen() {
           items={Object.entries(APP_LANGUAGES).map(([key, language]) => ({ key, label: language.label, icon: key === i18n.language ? 'check' : undefined }))}
           cancelLabel={t('common.cancel')}
           onClose={() => setLanguageMenu(false)}
-          onSelect={(language) => { if (isAppLanguage(language)) void i18n.changeLanguage(language); }}
+          onSelect={(language) => { if (isAppLanguage(language)) void changeAppLanguage(language); }}
         />
         <View style={styles.heading}>
           <Text accessibilityRole="header" weight="display" style={styles.title}>

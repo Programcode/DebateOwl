@@ -2768,7 +2768,8 @@ async function main() {
           await page.goto(`${ORIGIN}/sign-in`);
           await page.getByRole('tablist').waitFor();
           await shoot(page, `${prefix}-sign-in`);
-          await page.getByRole('button').first().click();
+          // The language menu sits above the form, so press Send code by name.
+          await page.getByRole('button', { name: /^(Send code|Kód küldése|Enviar código)$/ }).click();
           await page.getByRole('alert').waitFor();
           await shoot(page, `${prefix}-sign-in-error`);
           await page.getByRole('tab').nth(1).click();
