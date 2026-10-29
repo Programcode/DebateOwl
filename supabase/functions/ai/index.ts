@@ -6,7 +6,7 @@
 
 import { buildUserPrompt } from "./prompt-builder.ts";
 import { validateControlInput } from "../_shared/control-enforcement.ts";
-import { isReadyFeature } from "../_shared/push.ts";
+import { isInstallId, isReadyFeature } from "../_shared/push.ts";
 import {
   boundPromptSources,
   buildSystemPrompt,
@@ -233,7 +233,8 @@ export async function handleRequest(req: Request): Promise<Response> {
   // The iOS app asks to be told when a streamed run's answer is stored,
   // because iOS suspends it soon after it leaves the screen. Only with a
   // result key, so the app can read that answer back when it opens.
-  const notifyWhenReady = resultKey !== null && body.notifyWhenReady === true && isReadyFeature(body.feature);
+  // It names the install that asked, so only that phone is told.
+  const notifyInstallId = resultKey !== null && body.notifyWhenReady === true && isInstallId(body.notifyInstallId) ? body.notifyInstallId : null;
   // The per-user custom system prompt was replaced by each Current Debate's
   // settings and instructions. A customSystemPrompt field from an older
   // client is ignored.
@@ -982,13 +983,13 @@ export async function handleRequest(req: Request): Promise<Response> {
   if (!streamRequested) return await runFeature();
   return streamFeatureResponse(corsHeaders, streamCancel, runFeature, {
     recorder: resultKey ? createRunResultRecorder(supabase as unknown as RunResultsDatabase, userId, feature, resultKey) : undefined,
-    onResult: notifyWhenReady && isReadyFeature(feature)
+    onResult: notifyInstallId !== null && isReadyFeature(feature)
       ? (payload) => {
         // Only an answer: a refusal or a failure is for the screen to explain.
         const answer = payload.body;
         const succeeded = typeof payload.status === "number" && payload.status >= 200 && payload.status < 300 &&
           typeof answer === "object" && answer !== null && !("error" in answer);
-        if (succeeded) void sendPushAfterResponse([{ kind: "result_ready", userId, feature }]);
+        if (succeeded) void sendPushAfterResponse([{ kind: "result_ready", userId, feature, installationId: notifyInstallId }]);
       }
       : undefined,
     deadlineMs: STREAM_DEADLINE_MS - (Date.now() - receivedAt),

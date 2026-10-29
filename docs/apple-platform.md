@@ -11,7 +11,7 @@ Current. What the iOS and iPadOS app (`apps/mobile`, bundle id `com.pistack.deba
 ## The features
 
 - **Timer Live Activity and Dynamic Island**, with the lock-screen widget: the speech or prep clock counts on the Lock Screen without the app. From iOS 17 it has Pause/Resume and Next speech buttons that run in the app's process.
-- **Generating Live Activity**: Generate, Attack, Brainstorm and Factoids show Ollie, the step (research, write, check), the parts written and the time on the Lock Screen and in the Dynamic Island. When the app is suspended the activity says to open DebateOwl, and the server pushes "Your case is ready" when the answer is stored.
+- **Generating Live Activity**: Generate, Attack, Brainstorm and Factoids show Ollie, the step (research, write, check), the parts written and the time on the Lock Screen and in the Dynamic Island. When the app is suspended the activity says to open DebateOwl, and the server pushes "Your case is ready" to that phone when the answer is stored.
 - **Time-up alert**: a local notification at the moment a running speech or prep bank runs out while the phone is locked, with sound unless the timer is muted, marked Time Sensitive.
 - **Sign in with Apple and Google**, into the same accounts as the website.
 - **In-app purchase** (StoreKit 2): Basic and Pro monthly, restore, Manage subscription, and Ask to Buy.

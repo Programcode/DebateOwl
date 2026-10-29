@@ -113,6 +113,17 @@ export type FunctionResponse = Awaited<ReturnType<typeof fetch>>;
 
 const settledListeners = new Set<() => void>();
 
+let readyInstallId: string | null = null;
+
+/**
+ * This install's id (device-storage.ts's getInstallId), set once at launch by
+ * use-apple-platform.ts. Live runs ask for a "ready" push only once it is
+ * known, so the push goes to this phone and not every device on the account.
+ */
+export function setReadyPushInstall(installId: string): void {
+  readyInstallId = installId;
+}
+
 /** Called after every AI request ends, however it ends, as the website refreshes its usage count (refreshAIUsage). */
 export function onAIRequestSettled(listener: () => void): () => void {
   settledListeners.add(listener);
@@ -203,9 +214,10 @@ export function postAI<T>(
   const feature = String(body.feature);
   // notifyWhenReady: iOS suspends the app soon after it leaves the screen, so the
   // server pushes "ready" once the answer is stored (Generate, Attack, Brainstorm
-  // and Factoids; it ignores the flag for the rest). push.ts hides that push
-  // while the app is on screen.
-  return postFunction('ai', { ...body, stream: true, resultKey, notifyWhenReady: true }, options.signal, async (response, signal) => {
+  // and Factoids; it ignores the flag for the rest), to this install's phone
+  // only. push.ts hides that push while the app is on screen.
+  const notify = readyInstallId ? { notifyWhenReady: true, notifyInstallId: readyInstallId } : {};
+  return postFunction('ai', { ...body, stream: true, resultKey, ...notify }, options.signal, async (response, signal) => {
     // A server from before live generation answers with the whole JSON body.
     if (!(response.headers.get('content-type') ?? '').includes('text/event-stream') || !response.body) {
       return parse(await functionOutput(response));

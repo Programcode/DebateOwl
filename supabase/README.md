@@ -99,7 +99,7 @@ The iOS app files its Expo push token through the `register_push_token` RPC (`20
 Wired triggers:
 
 - `sparring_scored`: the `ai` function, after the scorecard is saved, through `EdgeRuntime.waitUntil` so the response does not wait for Expo.
-- `result_ready`: the `ai` function, when a streamed Generate, Attack, Brainstorm or Factoids run that sent `notifyWhenReady` (with a `resultKey`) has stored a successful answer (`onResult` in `ai/stream.ts`). The iOS app sends it on every live run, because iOS suspends the app soon after it leaves the screen; the copy names the tool only, and the app hides the push while it is on screen.
+- `result_ready`: the `ai` function, when a streamed Generate, Attack, Brainstorm or Factoids run that sent `notifyWhenReady` with its `notifyInstallId` (and a `resultKey`) has stored a successful answer (`onResult` in `ai/stream.ts`). It goes only to the token rows of that `installation_id`, not every device on the account. The iOS app asks on every live run, because iOS suspends the app soon after it leaves the screen; the copy names the tool only, and the app hides the push while it is on screen.
 
 Not wired yet:
 

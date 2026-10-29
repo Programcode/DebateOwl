@@ -117,16 +117,19 @@ Deno.test("each user's tokens get only that user's notification, in that token's
   assertEquals(Object.keys(sent[0].data).sort(), ["kind", "sessionId"]);
 });
 
-Deno.test("a ready result names its tool only, in each token's language", async () => {
+Deno.test("a ready result goes to the phone that asked, naming its tool only, in its language", async () => {
+  const alicePhone = "a0000000-0000-4000-8000-000000000001";
+  const bobPhone = "b0000000-0000-4000-8000-000000000001";
   const store = memoryStore([
-    { token: token("alice-phone"), user_id: ALICE, locale: "es" },
-    { token: token("bob-phone"), user_id: BOB, locale: "en" },
+    { token: token("alice-phone"), user_id: ALICE, locale: "es", installation_id: alicePhone },
+    { token: token("alice-ipad"), user_id: ALICE, locale: "es", installation_id: "a0000000-0000-4000-8000-000000000002" },
+    { token: token("bob-phone"), user_id: BOB, locale: "en", installation_id: bobPhone },
   ]);
   const expo = fakeExpo();
 
   await sendPush(store, [
-    { kind: "result_ready", userId: ALICE, feature: "generate" },
-    { kind: "result_ready", userId: BOB, feature: "factoids" },
+    { kind: "result_ready", userId: ALICE, feature: "generate", installationId: alicePhone },
+    { kind: "result_ready", userId: BOB, feature: "factoids", installationId: bobPhone },
   ], { fetch: expo.fetch });
 
   const sent = expo.sends().flatMap((call) => call.body as ExpoMessage[]);

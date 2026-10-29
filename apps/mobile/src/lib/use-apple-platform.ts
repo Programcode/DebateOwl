@@ -2,6 +2,8 @@ import * as Notifications from 'expo-notifications';
 import { useRouter } from 'expo-router';
 import { useEffect, useRef } from 'react';
 
+import { setReadyPushInstall } from './ai-request';
+import { getInstallId } from './device-storage';
 import { endLeftoverGeneratingActivities } from './generating-activity';
 import { notificationHref } from './notification-routes';
 import { deliverPending, startPurchaseListener } from './purchases';
@@ -22,6 +24,10 @@ export function useApplePlatform(ready: boolean, userId: string | null) {
 
   useEffect(() => {
     endLeftoverGeneratingActivities();
+    // A live run's "ready" push goes to this phone only (ai-request.ts).
+    getInstallId()
+      .then(setReadyPushInstall)
+      .catch((cause: unknown) => console.warn('Could not read the install id:', cause instanceof Error ? cause.message : cause));
   }, []);
 
   const currentUser = useRef(userId);

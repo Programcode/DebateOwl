@@ -27,7 +27,7 @@ export type ReadyFeature = "generate" | "attack" | "brainstorm" | "factoids";
 
 export type PushNotification =
   | { kind: "sparring_scored"; userId: string; sessionId: string }
-  | { kind: "result_ready"; userId: string; feature: ReadyFeature };
+  | { kind: "result_ready"; userId: string; feature: ReadyFeature; installationId: string };
 
 type PushLocale = "en" | "es" | "hu";
 type Copy = Record<PushLocale, { title: string; body: string }>;
@@ -64,11 +64,16 @@ const RESULT_READY: Record<ReadyFeature, Copy> = {
 
 const READY_FEATURES = new Set<string>(Object.keys(RESULT_READY));
 
+/** The app's per-install id (push_tokens.installation_id), a UUID. */
+export function isInstallId(value: unknown): value is string {
+  return typeof value === "string" && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value);
+}
+
 export function isReadyFeature(value: unknown): value is ReadyFeature {
   return typeof value === "string" && READY_FEATURES.has(value);
 }
 
-export type PushTokenRow = { token: string; user_id: string; locale: string };
+export type PushTokenRow = { token: string; user_id: string; locale: string; installation_id?: string | null };
 export type PushTicketRow = { id: string; token: string; created_at: string };
 
 /** The database operations the sender needs, all done with the service role. */
@@ -131,7 +136,12 @@ export function buildMessages(notifications: PushNotification[], rows: PushToken
   for (const notification of notifications) {
     byUser.set(notification.userId, [...(byUser.get(notification.userId) ?? []), notification]);
   }
-  return rows.flatMap((row) => (byUser.get(row.user_id) ?? []).map((notification) => message(notification, row)));
+  return rows.flatMap((row) =>
+    (byUser.get(row.user_id) ?? [])
+      // A ready result is for the phone that started the run, not every device on the account.
+      .filter((notification) => notification.kind !== "result_ready" || row.installation_id === notification.installationId)
+      .map((notification) => message(notification, row))
+  );
 }
 
 async function postJson(url: string, body: unknown, options: PushOptions): Promise<unknown> {
@@ -271,7 +281,7 @@ export function supabasePushStore(client: SupabaseClient): PushStore {
     async enabledTokens(userIds) {
       const result = await client
         .from("push_tokens")
-        .select("token,user_id,locale")
+        .select("token,user_id,locale,installation_id")
         .in("user_id", userIds)
         .eq("enabled", true);
       throwOnError(result, "Reading push tokens");
