@@ -1,6 +1,14 @@
 {
-  "name": "vite_react_shadcn_ts",
+  "name": "debateowl",
   "private": true,
+  "license": "SEE LICENSE IN LICENSE",
+  "description": "DebateOwl: AI debate prep and practice for competitive debaters.",
+  "homepage": "https://debateowl.com",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Programcode/DebateOwl.git"
+  },
+  "author": "Ádám Gáborjáni",
   "version": "0.0.0",
   "type": "module",
   "engines": {

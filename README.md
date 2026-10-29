@@ -1,108 +1,124 @@
-# DebateLab
+<p align="center">
+  <img src="public/icon-192.png" alt="DebateOwl logo" width="96" height="96">
+</p>
 
-DebateLab is an AI debate preparation and practice app for competitive debaters. Students keep one Current Debate for the motion they are preparing, build cases and research for both sides, and practise against the AI, with everything saved to that debate.
+<h1 align="center">DebateOwl</h1>
 
-Live application: [debateowl.com](https://debateowl.com) (previously debate.pi-stack.org, which now redirects here)
+<p align="center">
+  AI debate prep and practice for competitive debaters.<br>
+  <a href="https://debateowl.com"><strong>debateowl.com</strong></a>
+</p>
+
+<p align="center">
+  <img src="docs/images/home-desktop.jpg" alt="The DebateOwl home page with a generated case for the motion 'Should schools ban phones?'" width="860">
+</p>
+
+DebateOwl helps students prepare a motion and practise it. You pick the motion you are debating, build cases and research for both sides, then practise against the AI. Everything you make is saved to that debate.
+
+The easiest way to use it is the hosted app at [debateowl.com](https://debateowl.com). This repository is its source code, published so people can read it, learn from it, and run it for themselves. It is source-available, not open source: see [License](#license).
 
 ## What it does
 
-- **Current Debate.** One motion follows the signed-in user across the app. Sources and results attach to it automatically, both sides (A favor and En contra) are tracked, and older debates stay available. One-off mode runs a tool without saving to any debate.
-- **Prepare.** Generate builds a full case. Brainstorm explores angles. Factoids finds cited evidence. Flowchart maps claims and rebuttals.
-- **Practice.** Attack finds weak points. Ask is a streaming debate coach. Crossfire drills questioning. Sparring runs a timed round against the AI and scores it.
-- **Library and History.** Sources and saved work, scoped to the Current Debate.
-- **Account.** Google, email code, and demo-code sign-in; Basic and Pro plans through Stripe; sharing; admin announcements.
-- **Platforms.** Web and installable PWA with an offline shell.
-- **Languages.** English, Spanish, and Hungarian interface and AI output.
+- **Current Debate.** One motion follows you around the app. Sources and results attach to it automatically, both sides are tracked, and older debates stay available. One-off mode runs a tool without saving.
+- **Prepare.** Generate writes a full case you can read out loud. Brainstorm explores angles. Factoids finds cited evidence. Flowchart maps claims and rebuttals.
+- **Practise.** Attack finds weak points. Ask is a streaming debate coach. Crossfire drills questioning. Sparring runs a timed round against the AI and scores it, with optional voice.
+- **Free tools.** A [debate timer](https://debateowl.com/tools/debate-timer) that knows the speech order of each format, with no account needed.
+- **Everywhere.** Web and installable app (PWA) with an offline shell. Interface and AI output in English, Spanish and Hungarian.
 
-Collaborative Workspace exists in the code but is hidden and on hold. Its routes appear only when `VITE_COLLABORATION_URL` is set.
+<p align="center">
+  <img src="docs/images/timer-desktop.jpg" alt="The free DebateOwl debate timer set to Public Forum" width="560">
+  &nbsp;
+  <img src="docs/images/home-mobile.jpg" alt="DebateOwl on a phone" width="200">
+</p>
 
-The route source of truth is [`src/App.tsx`](src/App.tsx).
+## Tech stack
 
-## Quick start
+- **Client:** React 18, TypeScript, Vite, Tailwind CSS, Zustand and TanStack Query, installable as a PWA.
+- **Backend:** Supabase: Postgres with Row Level Security, Auth (Google, email code), and Deno Edge Functions.
+- **AI:** models through OpenRouter, web research through Exa, and voice through ElevenLabs. All provider calls happen in Edge Functions, never in the browser.
+- **Payments and hosting:** Stripe for plans, Vercel for the web app.
+- **Testing:** Vitest, Deno tests, pgTAP for database policies, and Playwright for the browser.
 
-Requirements:
+```text
+Browser or PWA
+  -> React + Vite client
+  -> Supabase Auth, Postgres (RLS), Edge Functions (Deno)
+  -> OpenRouter, Exa, ElevenLabs, Stripe
+```
 
-- Node.js 22.x and npm, using the committed `package-lock.json`
-- Deno 2.x for Edge Function tests
-- Docker and Supabase CLI 2.121.0, pinned in `package.json` (`npm ci` installs it) for the local database gate
-- Playwright browsers for browser tests
+## Run it yourself
+
+The license lets you run DebateOwl on your own computer for your own personal, non-commercial use. You need your own Supabase stack (local is fine) and your own AI provider keys.
+
+Requirements: Node.js 22 and npm, and Docker (for the local Supabase stack).
 
 ```bash
-git clone https://github.com/Programcode/DebateLab.git
-cd DebateLab
+git clone https://github.com/Programcode/DebateOwl.git
+cd DebateOwl
 npm ci
+
+# 1. Start a local Supabase stack (Postgres, Auth, a local mail inbox).
+#    It applies every migration in supabase/migrations/.
+npx supabase start
+npx supabase status        # note the API URL and the anon key
+
+# 2. Give the Edge Functions your own keys, then serve them.
+cat > supabase/functions/.env <<'EOF'
+OPENROUTER_API_KEY=your-openrouter-key
+EXA_API_KEY=your-exa-key
+EOF
+npx supabase functions serve --env-file supabase/functions/.env
+
+# 3. In another terminal, start the client against the local stack.
+VITE_LOCAL_PREVIEW=true \
+VITE_LOCAL_SUPABASE_URL=http://127.0.0.1:54321 \
+VITE_LOCAL_SUPABASE_ANON_KEY=<anon key from step 1> \
 npm run dev
 ```
 
-Vite serves on port `8080` by default. In a Superset workspace or other linked worktree, stay in the directory `git rev-parse --show-toplevel` returns.
+Open <http://localhost:8080> and sign in with an email code. The code arrives in the local inbox that `npx supabase status` lists (Mailpit, usually <http://127.0.0.1:54324>). Without `EXA_API_KEY`, web research is unavailable; without an OpenRouter key, the AI tools fail.
 
-## Checks
+Always set `VITE_LOCAL_PREVIEW` as shown. Without it the client connects to the hosted DebateOwl project instead of your stack. When you are done, stop the stack with `npx supabase stop`.
+
+## Development
 
 ```bash
 npm run lint
 npm run typecheck
-npm test
+npm test               # unit tests
+npm run test:edge      # Edge Function tests (needs Deno 2)
 npm run build
-npm run verify         # the pull-request check, locally, in about 100 seconds
-npm run verify:full    # adds the full desktop and mobile browser suite
-./.superset/db-gate.sh # migrations, pgTAP, and full-stack journeys on local Supabase
-./.superset/db-gate.sh --db-only # migrations and pgTAP on Postgres alone
 ```
 
-[`docs/testing.md`](docs/testing.md) explains what each gate proves and covers WebKit, protected staging, live-provider runs, and the production canary.
-
-## How it fits together
-
-```text
-Browser or PWA
-  -> React 18 + Vite client (Zustand stores, TanStack Query)
-  -> Supabase Auth, PostgreSQL with RLS, Edge Functions (Deno)
-  -> OpenRouter models, research providers, Stripe, Google APIs
-```
-
-- The frontend is hosted on **Vercel**. [`vercel.json`](vercel.json) owns the build, app-route rewrites, cache policy, and security headers. Merging to `main` deploys it to production. Pushes to other branches do not.
-- **Supabase** holds auth, data, and Edge Functions. Migrations and function deploys are separate operations that need explicit authorization.
-- The browser never holds provider secrets. AI requests go to the `ai` and `ai-stream` Edge Functions, which check auth, quotas, and controls, load debate sources by ID, call the model through OpenRouter, validate the output, and record usage.
-
-Key entry points:
-
-- [`src/App.tsx`](src/App.tsx): routes and providers
-- [`src/lib/stores/`](src/lib/stores/): client state and Supabase hydration, including the Current Debate
-- [`src/lib/ai/client.ts`](src/lib/ai/client.ts): the browser's AI boundary
-- [`supabase/functions/`](supabase/functions/): Edge Functions, with shared code in `_shared/`
-- [`supabase/migrations/`](supabase/migrations/): database schema and policy history
-
-## Repository map
+More detail lives in [`docs/`](docs/README.md): [architecture](docs/architecture.md), [development](docs/development.md), [testing](docs/testing.md) and [operations](docs/operations.md). Backend functions and migrations are described in [`supabase/README.md`](supabase/README.md). [`AGENTS.md`](AGENTS.md) holds the rules the project's coding agents follow.
 
 ```text
 src/                 React client, stores, hooks, and unit tests
 packages/core/       Platform-neutral shared code: schemas, validation, languages
 supabase/            Edge Functions, migrations, pgTAP tests, local config
-e2e/                 Playwright browser, full-stack, live, staging, and canary tests
-services/            Collaboration service for the hidden Workspace
+e2e/, agentic/       Playwright and agent-driven browser tests
 public/              Static pages, PWA assets, and SEO files
-scripts/             Build, docs, SEO, and test helpers
-.github/workflows/   Quality, live-provider, model-matrix, staging, and canary CI
-.superset/           Worktree dev server, port allocation, and database gate
 docs/                Architecture, development, testing, and operations guides
-plans/               Plan index and every plan
 ```
 
-## Documentation
+## License
 
-- [`AGENTS.md`](AGENTS.md): the rules and commands coding agents follow
-- [`docs/README.md`](docs/README.md): documentation index
-- [`docs/architecture.md`](docs/architecture.md): runtime boundaries and request flows
-- [`docs/development.md`](docs/development.md): setup and everyday workflows
-- [`docs/testing.md`](docs/testing.md): verification gates
-- [`docs/operations.md`](docs/operations.md): CI, Vercel, staging, deployment, and rollback
-- [`supabase/README.md`](supabase/README.md): backend functions, migrations, and secret names
-- [`plans/README.md`](plans/README.md): current work and backlog
+DebateOwl is licensed under the [PolyForm Strict License 1.0.0](https://polyformproject.org/licenses/strict/1.0.0) with additional limitations. The [LICENSE](LICENSE) file is the binding text. In plain words:
+
+- **You may** read the code, learn from it, and download and run it on your own computer for your own personal, non-commercial use.
+- **You may not** host it for anyone else (no public website, shared instance, or service, free or paid), sell it, redistribute copies, change it, or publish a version of your own.
+- **You may not** use the DebateOwl name, logo, or owl mascot for anything else. They are reserved.
+
+Viewing and forking on GitHub are allowed by GitHub's own terms; a fork carries no extra rights. For anything else, such as using DebateOwl in a school or organisation, ask at [hello@debateowl.com](mailto:hello@debateowl.com).
+
+Third-party packages, fonts, and vendored tools keep their own licenses.
 
 ## Security
 
-Provider keys, service-role keys, and webhook secrets stay in Supabase or protected CI environments, never in `VITE_*` variables or docs. Row Level Security and handler-level checks are the authorization boundary; client routing is not. Report suspected vulnerabilities privately instead of opening a public issue.
+Please don't report vulnerabilities in public issues. See [SECURITY.md](SECURITY.md) for how to report one privately.
 
 ## Contributing
 
-Work on a feature branch, preserve unrelated changes, start bug fixes with a failing test, and run the relevant gates before asking for review. Pushing, merging (which deploys the frontend), migrations, Edge Function deploys, and secret changes need Adam's authorization. The full contract is in [`AGENTS.md`](AGENTS.md).
+Bug reports and ideas are welcome as [issues](https://github.com/Programcode/DebateOwl/issues). The project does not accept outside pull requests at the moment.
+
+Copyright © 2026 Ádám Gáborjáni. The DebateOwl name, logo, and owl mascot are reserved and are not licensed for any other use.

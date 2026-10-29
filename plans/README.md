@@ -17,24 +17,8 @@ Every plan lives in this folder and opens with a `**Status:**` line; a plan list
 
 ## On hold
 
-- **Collaborative Workspace.** Hidden in production. Plans: [debate workspace](2026-09-20_131317-debate-workspace.md) and [debate workspace, reduced scope](2026-09-21-debate-workspace-no-bs.md).
+- **Collaborative Workspace.** Hidden in production. Its plans were removed from the tree on 2026-10-29; git history keeps them.
 
 ## Shipped
 
-These plans are finished. Most of their files were removed and git history keeps them. The linked plans below are kept as the record, and each says `**Status:** Shipped`.
-
-- Design audit: UI audit against Emil Kowalski's Apple-design and motion skills, shipped as a four-PR stack (Foundations #124, Shell #126, AI tools, Landing): fixed toast stacking, text-colour tokens, the global CSS override layer, touch and reduced-motion gaps, wayfinding, undo and the landing loops. Plan: [2026-10-09 design audit](2026-10-09-design-audit.md).
-- Missing translation keys: 90 literal keys and 40 count forms added to each catalog. Plan: [2026-10-02 missing translation keys](2026-10-02-missing-translation-keys.md).
-- Voice Sparring and Crossfire: #84. Plan kept as the record: [2026-10-01 voice sparring and crossfire](2026-10-01-voice-sparring-crossfire.md).
-- Debate-aware AI and smaller modules: #75. Plan kept as the record: [2026-09-25 debate AI quality modules](2026-09-25_074255-debate-ai-quality-modules.md).
-- Current Debate foundation: #72. Plan kept as the record: [2026-09-25 current debate foundation](2026-09-25_074255-current-debate-foundation.md).
-- Email OTP and demo-code sign-in: #40, #41.
-- AI control enforcement at the edge: #32, #42.
-- System prompt improvement and prompt evaluation: #42.
-- Model cost accounting: #46; the direct-provider pricing table was later removed because OpenRouter reports the charge.
-- Separate source-import quota (PR #11 salvage): #50.
-- Startup and navigation performance: #49, #51, #57.
-- Hungarian parity and Jev decisions: merged together before the Workspace release.
-- Rate-limit UI cleanup: Settings no longer shows the numeric daily limit.
-- Bug backlog of 2026-09-06: the stale source date, the Factoids save label, and Flowchart node-delete feedback are fixed; the nav-versus-heading mismatch went away when the header dropped feature links.
-- Earlier: admin announcements (#19, #26), agent verification loop (#21, #26, #27), analytics and error tracking (#16, #18, #22–#25, #28), animation polish (#20), Ask and search quality (#17).
+Finished plans are removed from the tree and git history keeps them. Recent ones: Design audit (#124, #126), missing translation keys, Voice Sparring and Crossfire (#84), debate-aware AI modules (#75), and the Current Debate foundation (#72). The 2026-10-08 review report was removed on 2026-10-29; the security pre-ship pass under In progress tracks what is left.

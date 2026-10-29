@@ -1,6 +1,6 @@
 [Unit]
 Description=Sync DebateLab staging Supabase with main
-Documentation=https://github.com/Programcode/DebateLab/blob/main/docs/staging.md
+Documentation=https://github.com/Programcode/DebateOwl/blob/main/docs/staging.md
 Wants=network-online.target
 After=network-online.target
 

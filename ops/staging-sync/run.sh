@@ -14,7 +14,7 @@ exec 9>"$BASE/lock"
 flock -n 9 || { echo "Another sync is running."; exit 0; }
 
 if [ ! -d "$REPO/.git" ]; then
-  git clone --quiet https://github.com/Programcode/DebateLab.git "$REPO"
+  git clone --quiet https://github.com/Programcode/DebateOwl.git "$REPO"
 fi
 git -C "$REPO" fetch --quiet origin main
 sha="$(git -C "$REPO" rev-parse origin/main)"
@@ -35,10 +35,10 @@ fail_query() {
   exit 1
 }
 busy=0
-runs="$(gh run list --repo Programcode/DebateLab --workflow staging-e2e.yml --status in_progress --limit 100 \
+runs="$(gh run list --repo Programcode/DebateOwl --workflow staging-e2e.yml --status in_progress --limit 100 \
   --json databaseId --jq '.[].databaseId')" || fail_query
 for id in $runs; do
-  testing="$(gh run view "$id" --repo Programcode/DebateLab --json jobs \
+  testing="$(gh run view "$id" --repo Programcode/DebateOwl --json jobs \
     --jq '[.jobs[] | select(.name == "staging-e2e" and .status == "in_progress")] | length')" || fail_query
   [ "$testing" = "0" ] || busy=1
 done

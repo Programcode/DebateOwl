@@ -12,7 +12,7 @@ The checklist follows the shape of a 25-item pre-ship security pass run by paral
 - Report only. Do not change source. The one exception: for each database finding, write a pgTAP snippet that fails today and paste it into your report.
 - A Pass needs evidence too: a file and line, or a command and its output.
 - Hosted settings you cannot read (Supabase Auth dashboard, Google OAuth client, Vercel env, Stripe endpoint config, network restrictions) get the verdict "Needs Adam" with exactly what to check.
-- Earlier reviews already list some issues: `plans/2026-10-08-ultracode-review-report.md` (sections 3, 9, 10, 11, 16) and `plans/2026-10-01-next-15.md` (items 1, 2, 4). Check whether each is still open at this head and say so rather than re-discovering it.
+- Earlier reviews already list some issues: the 2026-10-08 review report (removed from the tree on 2026-10-29; in git history) (sections 3, 9, 10, 11, 16) and `plans/2026-10-01-next-15.md` (items 1, 2, 4). Check whether each is still open at this head and say so rather than re-discovering it.
 
 Severity: Critical (exploitable now, data or money at risk), High (exploitable with modest effort or a precondition), Medium (defence in depth missing where it matters), Low (hardening), Info.
 

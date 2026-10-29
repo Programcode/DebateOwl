@@ -19,6 +19,8 @@ concurrency:
 
 jobs:
   live-e2e:
+    # Forks have none of the secrets this job needs.
+    if: github.repository == 'Programcode/DebateOwl'
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
