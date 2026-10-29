@@ -2,7 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import { AppState } from 'react-native';
 
 import { publishCurrentDebate } from './debate-widget';
-import { clearSpotlight } from './spotlight';
+import { clearSpotlight, clearSpotlightDomain } from './spotlight';
 import { useAuth } from './auth';
 import {
   continueDebate,
@@ -102,6 +102,13 @@ export function DebateProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!userId) void clearSpotlight();
   }, [userId]);
+  // Spotlight holds the Current Debate's documents only; another debate, or none, empties it until the Debate tab fills it again.
+  const indexedDebate = useRef(currentId);
+  useEffect(() => {
+    if (indexedDebate.current === currentId) return;
+    indexedDebate.current = currentId;
+    void clearSpotlightDomain('work');
+  }, [currentId]);
   useEffect(() => {
     publishCurrentDebate(userId && currentId && currentMotion ? { debateId: currentId, motion: currentMotion, counts: null } : null);
   }, [userId, currentId, currentMotion]);

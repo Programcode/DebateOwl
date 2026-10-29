@@ -11,7 +11,7 @@ import { Card, IconTile, ListItemIn, usePressScale } from '@/components/card';
 import { Chip } from '@/components/chip';
 import { DocumentHeader } from '@/components/document-header';
 import { Icon } from '@/components/icon';
-import { Screen } from '@/components/screen';
+import { CardRowFrame, ListScreen, useRowArrivals } from '@/components/list-screen';
 import { SkeletonRows } from '@/components/skeleton';
 import { Text } from '@/components/text';
 import { KIND_ICONS, workHref } from '@/components/work-row';
@@ -33,6 +33,7 @@ import {
   type UnsortedEntry,
 } from '@/lib/history';
 import { keepIfSame } from '@/lib/keep-if-same';
+import { useLatest } from '@/lib/live-value';
 import { suggestDebate } from '@/lib/motion';
 import { deleteResult } from '@/lib/results';
 import { deleteSparringRound, sparringDraft } from '@/lib/sparring';
@@ -99,6 +100,7 @@ function historyHref(item: HistoryItem): Href | null {
 /** The website's History (src/pages/HistoryPage.tsx): saved work per debate, and work outside every debate. */
 export default function HistoryScreen() {
   const { t } = useTranslation();
+  const router = useRouter();
   const { from } = useLocalSearchParams<{ from?: string }>();
   const { session } = useAuth();
   const userId = session?.user.id ?? null;
@@ -108,8 +110,10 @@ export default function HistoryScreen() {
   const scope = scopeChoice && (scopeChoice === OUTSIDE || debates.some((debate) => debate.id === scopeChoice))
     ? scopeChoice
     : current?.id ?? OUTSIDE;
+  const shownScope = useLatest(scope);
   const [tab, setTab] = useState<HistoryTab>('cases');
   const [loaded, setLoaded] = useState<Loaded | null>(null);
+  const shownLoaded = useLatest(loaded);
   const [failed, setFailed] = useState<string | null>(null);
   const [scopeOpen, setScopeOpen] = useState(false);
 
@@ -197,74 +201,184 @@ export default function HistoryScreen() {
   };
 
   const attached = (entry: UnsortedEntry) => {
-    loads.current += 1;
-    setLoaded((previous) => previous?.kind === 'unsorted'
-      ? { ...previous, entries: previous.entries.filter((candidate) => !(candidate.kind === entry.kind && candidate.id === entry.id)) }
-      : previous);
+    // The unsorted list on screen loses the item at once, and a load running now (which read it before
+    // the attach) is dropped. Back on the unsorted scope before its list has loaded, it is read again
+    // instead, so the item cannot come back. On a debate's History, that debate's load is left alone and
+    // the unsorted list is read when it is opened.
+    if (shownScope.current === OUTSIDE) {
+      if (shownLoaded.current?.kind === 'unsorted') {
+        loads.current += 1;
+        setLoaded((previous) => previous?.kind === 'unsorted'
+          ? { ...previous, entries: previous.entries.filter((candidate) => !(candidate.kind === entry.kind && candidate.id === entry.id)) }
+          : previous);
+      } else {
+        void load(OUTSIDE);
+      }
+    }
     // The debate's last activity moved; the switcher and the Debate tab show the new order.
     void refreshDebates();
   };
 
+  // "Add to debate" lives here, not in its row: a virtualized row can unmount while scrolled away,
+  // and the debate picked for it and a request in flight must outlast that.
+  const [attachChoices, setAttachChoices] = useState<Record<string, string>>({});
+  const [attaching, setAttaching] = useState<ReadonlySet<string>>(() => new Set());
+  const attachEntry = async (key: string, entry: UnsortedEntry, debateId: string) => {
+    const forUser = owner.current;
+    if (!forUser || attaching.has(key)) return;
+    setAttaching((previous) => new Set(previous).add(key));
+    try {
+      await attachToDebate(forUser, entry, debateId);
+      if (!live.current || owner.current !== forUser) return;
+      if (shownScope.current === OUTSIDE) setAttachNotice({ scope: OUTSIDE, text: t('debate.attached') });
+      attached(entry);
+    } catch (cause) {
+      console.warn('Could not add to the debate:', cause instanceof Error ? cause.message : cause);
+      if (live.current && owner.current === forUser) showNotice(t('debate.attachFailed'));
+    } finally {
+      if (live.current) {
+        setAttaching((previous) => {
+          const next = new Set(previous);
+          next.delete(key);
+          return next;
+        });
+      }
+    }
+  };
+
+  // The attach notice belongs to the list it was shown for.
+  const [attachNotice, setAttachNotice] = useState<{ scope: string; text: string } | null>(null);
+  const notice = attachNotice?.scope === scope ? attachNotice.text : null;
+
+  const rows: HistoryListRow[] = !shown
+    ? []
+    : shown.kind === 'unsorted'
+      ? shown.entries.map((entry) => ({ type: 'unsorted', key: `${entry.kind}-${entry.id}`, entry }))
+      : shown.lists[tab].map((item) => ({ type: 'item', key: `${item.kind}-${item.id}`, item }));
+  const arrivals = useRowArrivals(rows.map((row) => row.key));
+
+  const header = (
+    <>
+      <Text accessibilityRole="header" weight="display" style={styles.title}>
+        {t('historyPage.title')}
+      </Text>
+      <ScopePicker label={scopeLabel} onPress={() => setScopeOpen(true)} />
+      <ActionMenu
+        visible={scopeOpen}
+        title={t('debate.historyScope')}
+        items={[
+          ...debates.map((debate) => ({
+            key: debate.id,
+            label: `${debate.id === current?.id ? `${t('nav.currentDebate')}: ` : ''}${debate.motion}`,
+          })),
+          { key: OUTSIDE, label: t('debate.outsideDebates') },
+        ]}
+        cancelLabel={t('common.cancel')}
+        onClose={() => setScopeOpen(false)}
+        onSelect={(key) => {
+          if (key !== scope) haptics.select();
+          setScopeChoice(key);
+        }}
+        testID="history-scope-menu"
+      />
+
+      {scope !== OUTSIDE ? (
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.tabRow} contentContainerStyle={styles.tabs} accessibilityRole="tablist">
+          {HISTORY_TABS.map((entry) => (
+            <Chip
+              key={entry.key}
+              accessibilityRole="tab"
+              icon={KIND_ICONS[entry.kind]}
+              label={t(`historyPage.tab${entry.key[0].toUpperCase()}${entry.key.slice(1)}`)}
+              selected={tab === entry.key}
+              onPress={() => setTab(entry.key)}
+              testID={`history-tab-${entry.key}`}
+            />
+          ))}
+        </ScrollView>
+      ) : null}
+
+      {shown?.kind === 'unsorted' && shown.entries.length > 0 ? (
+        <>
+          <Text tone="secondary" style={styles.body}>
+            {t('debate.unsortedDesc')}
+          </Text>
+          {notice ? (
+            <Text weight="semibold" accessibilityRole="alert" accessibilityLiveRegion="polite" style={styles.body} testID="unsorted-notice">
+              {notice}
+            </Text>
+          ) : null}
+        </>
+      ) : null}
+    </>
+  );
+
+  const empty =
+    failed === scope && !shown ? (
+      <Card>
+        <Text tone="secondary" style={styles.body}>
+          {t('mobile.history.loadFailed')}
+        </Text>
+        <TextButton label={t('common.retry')} onPress={() => void load(scope)} />
+      </Card>
+    ) : !shown ? (
+      <SkeletonRows rows={4} />
+    ) : shown.kind === 'unsorted' ? (
+      <UnsortedEmpty notice={notice} />
+    ) : (
+      <TabEmpty tab={tab} />
+    );
+
   return (
     <View style={styles.root}>
       <DocumentHeader backLabel={backLabel(t, from, 'debate')} actions={[]} />
-      <Screen>
-        <Text accessibilityRole="header" weight="display" style={styles.title}>
-          {t('historyPage.title')}
-        </Text>
-        <ScopePicker label={scopeLabel} onPress={() => setScopeOpen(true)} />
-        <ActionMenu
-          visible={scopeOpen}
-          title={t('debate.historyScope')}
-          items={[
-            ...debates.map((debate) => ({
-              key: debate.id,
-              label: `${debate.id === current?.id ? `${t('nav.currentDebate')}: ` : ''}${debate.motion}`,
-            })),
-            { key: OUTSIDE, label: t('debate.outsideDebates') },
-          ]}
-          cancelLabel={t('common.cancel')}
-          onClose={() => setScopeOpen(false)}
-          onSelect={(key) => {
-            if (key !== scope) haptics.select();
-            setScopeChoice(key);
-          }}
-          testID="history-scope-menu"
-        />
-
-        {scope !== OUTSIDE ? (
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.tabRow} contentContainerStyle={styles.tabs} accessibilityRole="tablist">
-            {HISTORY_TABS.map((entry) => (
-              <Chip
-                key={entry.key}
-                accessibilityRole="tab"
-                icon={KIND_ICONS[entry.kind]}
-                label={t(`historyPage.tab${entry.key[0].toUpperCase()}${entry.key.slice(1)}`)}
-                selected={tab === entry.key}
-                onPress={() => setTab(entry.key)}
-                testID={`history-tab-${entry.key}`}
-              />
-            ))}
-          </ScrollView>
-        ) : null}
-
-        {failed === scope && !shown ? (
-          <Card>
-            <Text tone="secondary" style={styles.body}>
-              {t('mobile.history.loadFailed')}
-            </Text>
-            <TextButton label={t('common.retry')} onPress={() => void load(scope)} />
-          </Card>
-        ) : !shown ? (
-          <SkeletonRows rows={4} />
-        ) : shown.kind === 'unsorted' ? (
-          <UnsortedList entries={shown.entries} debates={debates} userId={userId} onAttached={attached} />
-        ) : (
-          <TabList tab={tab} items={shown.lists[tab]} onDelete={remove} />
-        )}
-      </Screen>
+      <ListScreen
+        header={header}
+        data={rows}
+        keyExtractor={(row) => row.key}
+        extraData={{ notice, attachChoices, attaching }}
+        animateLayout
+        onRefresh={() => load(scope)}
+        ListEmptyComponent={empty}
+        ItemSeparatorComponent={shown?.kind === 'unsorted' ? UnsortedGap : undefined}
+        renderItem={({ item: row, index }) => {
+          if (row.type === 'unsorted') {
+            return (
+              <ListItemIn index={index} enter={arrivals.entersNow(row.key)}>
+                <UnsortedRow
+                  entry={row.entry}
+                  debates={debates}
+                  choice={attachChoices[row.key]}
+                  busy={attaching.has(row.key)}
+                  onChoose={(debateId) => setAttachChoices((previous) => ({ ...previous, [row.key]: debateId }))}
+                  onAttach={(debateId) => void attachEntry(row.key, row.entry, debateId)}
+                />
+              </ListItemIn>
+            );
+          }
+          const href = historyHref(row.item);
+          return (
+            <CardRowFrame index={index} count={rows.length}>
+              <ListItemIn index={index} enter={arrivals.entersNow(row.key)}>
+                <HistoryRow
+                  item={row.item}
+                  first={index === 0}
+                  onPress={href ? () => router.push(href) : undefined}
+                  onDelete={row.item.kind === 'case' || row.item.kind === 'sparring' ? () => remove(row.item) : undefined}
+                />
+              </ListItemIn>
+            </CardRowFrame>
+          );
+        }}
+      />
     </View>
   );
+}
+
+type HistoryListRow = { type: 'item'; key: string; item: HistoryItem } | { type: 'unsorted'; key: string; entry: UnsortedEntry };
+
+function UnsortedGap() {
+  return <View style={styles.gap} />;
 }
 
 function ScopePicker({ label, onPress }: { label: string; onPress: () => void }) {
@@ -290,33 +404,14 @@ function ScopePicker({ label, onPress }: { label: string; onPress: () => void })
   );
 }
 
-function TabList({ tab, items, onDelete }: { tab: HistoryTab; items: HistoryItem[]; onDelete: (item: HistoryItem) => Promise<boolean> }) {
+function TabEmpty({ tab }: { tab: HistoryTab }) {
   const { t } = useTranslation();
   const router = useRouter();
-  if (items.length === 0) {
-    const empty = EMPTY[tab];
-    return (
-      <EmptyState pose="sleepy" title={t(empty.title)} description={t(empty.desc)}>
-        {empty.href ? <TextButton label={t(empty.action)} onPress={() => router.push(empty.href!)} /> : null}
-      </EmptyState>
-    );
-  }
+  const empty = EMPTY[tab];
   return (
-    <Card style={styles.list}>
-      {items.map((item, index) => {
-        const href = historyHref(item);
-        return (
-          <ListItemIn key={`${item.kind}-${item.id}`} index={index} layout>
-            <HistoryRow
-              item={item}
-              first={index === 0}
-              onPress={href ? () => router.push(href) : undefined}
-              onDelete={item.kind === 'case' || item.kind === 'sparring' ? () => onDelete(item) : undefined}
-            />
-          </ListItemIn>
-        );
-      })}
-    </Card>
+    <EmptyState pose="sleepy" title={t(empty.title)} description={t(empty.desc)}>
+      {empty.href ? <TextButton label={t(empty.action)} onPress={() => router.push(empty.href!)} /> : null}
+    </EmptyState>
   );
 }
 
@@ -350,13 +445,22 @@ function HistoryRow({ item, first, onPress, onDelete }: { item: HistoryItem; fir
     if (!removed) swipeable.current?.close();
   };
 
+  // VoiceOver offers the long-press menu's actions on the row itself (swipe up or down).
+  const document = href !== null && hasDocumentText(item);
+  const a11yActions = [
+    ...(document ? [{ name: 'discuss', label: t('common.discuss') }, { name: 'share', label: t('mobile.library.share') }] : []),
+    ...(onDelete ? [{ name: 'delete', label: t('common.delete') }] : []),
+  ];
   const row = (
     <Pressable
       accessibilityRole={onPress ? 'button' : undefined}
       accessibilityLabel={onPress ? t('mobile.common.openItem', { title }) : undefined}
-      accessibilityActions={onDelete ? [{ name: 'delete', label: t('common.delete') }] : undefined}
+      accessibilityActions={a11yActions.length > 0 ? a11yActions : undefined}
       onAccessibilityAction={(event) => {
-        if (event.nativeEvent.actionName === 'delete') void remove();
+        const name = event.nativeEvent.actionName;
+        if (name === 'discuss') void work.discuss(item);
+        else if (name === 'share') void work.share(item);
+        else if (name === 'delete') void remove();
       }}
       disabled={!onPress}
       onPress={onPress}
@@ -437,92 +541,61 @@ function HistoryRow({ item, first, onPress, onDelete }: { item: HistoryItem; fir
   );
 }
 
-/** The website's UnsortedWork: one-off and older work outside every debate, each with "Add to debate". */
-function UnsortedList({
-  entries,
-  debates,
-  userId,
-  onAttached,
-}: {
-  entries: UnsortedEntry[];
-  debates: Debate[];
-  userId: string | null;
-  onAttached: (entry: UnsortedEntry) => void;
-}) {
+/** The website's UnsortedWork with nothing in it. Its rows ("Add to debate") are UnsortedRow. */
+function UnsortedEmpty({ notice }: { notice: string | null }) {
   const { t } = useTranslation();
-  const [notice, setNotice] = useState<string | null>(null);
-  if (entries.length === 0) {
-    return (
-      <Card>
-        <Text weight="semibold" style={styles.rowTitle}>
-          {t('debate.unsortedEmpty')}
-        </Text>
-        <Text tone="secondary" style={styles.body}>
-          {t('debate.unsortedEmptyDesc')}
-        </Text>
-        {notice ? (
-          <Text tone="secondary" accessibilityRole="alert" accessibilityLiveRegion="polite" style={styles.body} testID="unsorted-notice">
-            {notice}
-          </Text>
-        ) : null}
-      </Card>
-    );
-  }
   return (
-    <>
+    <Card>
+      <Text weight="semibold" style={styles.rowTitle}>
+        {t('debate.unsortedEmpty')}
+      </Text>
       <Text tone="secondary" style={styles.body}>
-        {t('debate.unsortedDesc')}
+        {t('debate.unsortedEmptyDesc')}
       </Text>
       {notice ? (
-        <Text weight="semibold" accessibilityRole="alert" accessibilityLiveRegion="polite" style={styles.body} testID="unsorted-notice">
+        <Text tone="secondary" accessibilityRole="alert" accessibilityLiveRegion="polite" style={styles.body} testID="unsorted-notice">
           {notice}
         </Text>
       ) : null}
-      {entries.map((entry, index) => (
-        <ListItemIn key={`${entry.kind}-${entry.id}`} index={index} layout>
-          <UnsortedRow
-            entry={entry}
-            debates={debates}
-            userId={userId}
-            onAttached={() => {
-              setNotice(t('debate.attached'));
-              onAttached(entry);
-            }}
-          />
-        </ListItemIn>
-      ))}
-    </>
+    </Card>
   );
 }
 
-function UnsortedRow({ entry, debates, userId, onAttached }: { entry: UnsortedEntry; debates: Debate[]; userId: string | null; onAttached: () => void }) {
+/**
+ * One unsorted item with "Add to debate". The list is virtualized, so the row may unmount while
+ * scrolled away: the debate picked and the request in flight belong to the screen (`choice`, `busy`,
+ * `onAttach`), and only the open menu is the row's own.
+ */
+function UnsortedRow({
+  entry,
+  debates,
+  choice,
+  busy,
+  onChoose,
+  onAttach,
+}: {
+  entry: UnsortedEntry;
+  debates: Debate[];
+  /** The debate picked for it, if the student changed the suggestion. */
+  choice: string | undefined;
+  busy: boolean;
+  onChoose: (debateId: string) => void;
+  onAttach: (debateId: string) => void;
+}) {
   const { t } = useTranslation();
   const router = useRouter();
   const { colors } = useTheme();
   const suggestion = suggestDebate(debates, entry.kind === 'source' ? [entry.title] : [entry.motion, entry.title]);
-  const [target, setTarget] = useState(suggestion?.id ?? '');
+  const target = choice ?? suggestion?.id ?? '';
+  const setTarget = onChoose;
   const [picking, setPicking] = useState(false);
-  const [busy, setBusy] = useState(false);
-  const live = useRef(true);
-  useEffect(() => () => {
-    live.current = false;
-  }, []);
   const chosen = debates.find((debate) => debate.id === target);
   const href = entry.kind === 'source' ? null : historyHref(entry);
   const title = entry.title || t(`debate.kinds.${entry.kind}`);
 
-  const attach = async () => {
-    if (!chosen || !userId || busy) return;
-    setBusy(true);
-    try {
-      await attachToDebate(userId, entry, chosen.id);
-      if (live.current) onAttached();
-    } catch (cause) {
-      console.warn('Could not add to the debate:', cause instanceof Error ? cause.message : cause);
-      if (live.current) showNotice(t('debate.attachFailed'));
-    } finally {
-      if (live.current) setBusy(false);
-    }
+  const attach = () => {
+    if (!chosen || busy) return;
+    onAttach(chosen.id);
   };
 
   return (
@@ -574,7 +647,7 @@ function UnsortedRow({ entry, debates, userId, onAttached }: { entry: UnsortedEn
               setTarget(key);
             }}
           />
-          <PrimaryButton label={t('debate.attachConfirm')} busy={busy} disabled={!chosen} onPress={() => void attach()} />
+          <PrimaryButton label={t('debate.attachConfirm')} busy={busy} disabled={!chosen} onPress={attach} />
         </>
       ) : null}
     </Card>
@@ -589,7 +662,7 @@ const styles = StyleSheet.create({
   scope: { flexDirection: 'row', alignItems: 'center', gap: 12, borderWidth: 2, borderRadius: 14, paddingVertical: 11, paddingHorizontal: 14 },
   tabRow: { marginHorizontal: -20, flexGrow: 0 },
   tabs: { gap: 8, paddingHorizontal: 20 },
-  list: { padding: 0, gap: 0, overflow: 'hidden' },
+  gap: { height: 16 },
   row: { flexDirection: 'row', alignItems: 'center', gap: 13, paddingVertical: 12, paddingHorizontal: 14 },
   rowText: { flex: 1, gap: 2 },
   rowTitle: { fontSize: 16, lineHeight: 21 },

@@ -1,14 +1,15 @@
 import { GENERAL_FOLDER, matchesLibrarySearch, normalizeFolder, sortLibrarySources, type LibrarySort } from '@debatelab/core/library';
 import { useFocusEffect, useRouter } from 'expo-router';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ScrollView, StyleSheet, View } from 'react-native';
+import { ScrollView, StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 
 import { TextButton } from '@/components/buttons';
 import { Card, ListItemIn } from '@/components/card';
 import { Chip } from '@/components/chip';
 import { EmptyState } from '@/components/empty-state';
 import { LibraryHeader } from '@/components/library-header';
+import { CardRowFrame, ListScreen, useRowArrivals } from '@/components/list-screen';
 import type { AddSourceKind, SourceTypeFilter } from '@/components/library-options';
 import { FolderBar, GroundingBanner } from '@/components/library-parts';
 import { OfflineNotice } from '@/components/offline-notice';
@@ -141,19 +142,23 @@ function LibraryView({ debateId, layout }: { debateId: string | null; layout: Re
       <TextButton label={t('debate.switch')} onPress={() => router.push('/debates')} />
     </Card>
   ) : null;
-  const body = debateId ? (
-    <LibraryBody library={library} selectedId={shown} onSelect={layout === 'phone' || !userId ? undefined : (source) => setSelected({ userId, id: source.id })} onRemoved={(id) => setSelected((current) => (current && currentSourceId(library.queued, current.id) === id ? null : current))} />
-  ) : null;
+  const select = layout === 'phone' || !userId ? undefined : (source: Source) => setSelected({ userId, id: source.id });
+  const removed = (id: string) => setSelected((current) => (current && currentSourceId(library.queued, current.id) === id ? null : current));
+  // New sources still go to the Current Debate in one-off mode, as on the website, so this only says the mode is on.
+  const top = (
+    <>
+      {header}
+      <OneOffNotice message="debate.oneOffActive" />
+    </>
+  );
 
   if (layout === 'phone') {
+    if (debateId) return <LibraryBody library={library} top={top} selectedId={shown} onSelect={select} onRemoved={removed} />;
     return (
       <Screen>
-        {header}
-        {/* New sources still go to the Current Debate in one-off mode, as on the website, so this only says the mode is on. */}
-        <OneOffNotice message="debate.oneOffActive" />
-        {status === 'loading' && !debateId ? <SkeletonRows rows={4} /> : null}
+        {top}
+        {status === 'loading' ? <SkeletonRows rows={4} /> : null}
         {noDebate}
-        {body}
       </Screen>
     );
   }
@@ -164,20 +169,27 @@ function LibraryView({ debateId, layout }: { debateId: string | null; layout: Re
   const listWidth = Math.max(available >= LIBRARY_ROOMY_WIDTH ? LIST_WIDTH.libraryRoomy : LIST_WIDTH.library, Math.round(available * 0.4));
   return (
     <View style={styles.split}>
-      <ScrollView
-        style={shown ? [styles.listPane, { width: listWidth, borderRightColor: colors.line }] : styles.listPaneFull}
-        contentInsetAdjustmentBehavior="automatic"
-        automaticallyAdjustKeyboardInsets
-        keyboardShouldPersistTaps="handled"
-        keyboardDismissMode="interactive"
-        contentContainerStyle={[styles.listContent, !shown && styles.listContentFull]}>
-        <OfflineNotice />
-        {header}
-        <OneOffNotice message="debate.oneOffActive" />
-        {status === 'loading' && !debateId ? <SkeletonRows rows={4} /> : null}
-        {noDebate}
-        {body}
-      </ScrollView>
+      {debateId ? (
+        <LibraryBody
+          library={library}
+          top={top}
+          selectedId={shown}
+          onSelect={select}
+          onRemoved={removed}
+          style={shown ? [styles.listPane, { width: listWidth, borderRightColor: colors.line }] : styles.listPaneFull}
+          contentStyle={[styles.listContent, !shown && styles.listContentFull]}
+        />
+      ) : (
+        <ScrollView
+          style={styles.listPaneFull}
+          contentInsetAdjustmentBehavior="automatic"
+          contentContainerStyle={[styles.listContent, styles.listContentFull, styles.listGap]}>
+          <OfflineNotice />
+          {top}
+          {status === 'loading' ? <SkeletonRows rows={4} /> : null}
+          {noDebate}
+        </ScrollView>
+      )}
       {shown && selected && userId ? (
         <ScrollView style={styles.detailPane} contentInsetAdjustmentBehavior="automatic" automaticallyAdjustKeyboardInsets keyboardShouldPersistTaps="handled" keyboardDismissMode="interactive" contentContainerStyle={styles.detailContent} testID="source-sheet">
           {/* Keyed by the id that was opened: a note that syncs swaps its local id for the row's, and the
@@ -272,25 +284,56 @@ function useLibrary(debateId: string | null) {
   return { userId, debateId: debateId!, sources, setSources, queued, waiting, failed, load, query, setQuery, filter, setFilter, sort, setSort, folder, setFolder, folders, inFolder, visible, patch };
 }
 
-function LibraryBody({ library, selectedId, onSelect, onRemoved }: { library: Library; selectedId: string | null; onSelect?: (source: Source) => void; onRemoved?: (id: string) => void }) {
+function LibraryBody({
+  library,
+  top,
+  selectedId,
+  onSelect,
+  onRemoved,
+  style,
+  contentStyle,
+}: {
+  library: Library;
+  /** The tab's header above the list. */
+  top: ReactNode;
+  selectedId: string | null;
+  onSelect?: (source: Source) => void;
+  onRemoved?: (id: string) => void;
+  /** The iPad list pane's size and its column. */
+  style?: StyleProp<ViewStyle>;
+  contentStyle?: StyleProp<ViewStyle>;
+}) {
   const { t } = useTranslation();
   const router = useRouter();
   const toast = useToast();
   const actions = useSourceActions();
   const activeWrites = useRef({ seq: 0, latest: new Map<string, number>(), confirmed: new Map<string, boolean>() });
   const { sources, failed, folders, folder, inFolder, visible, patch, userId, debateId, waiting } = library;
+  const arrivals = useRowArrivals(visible.map((source) => source.id));
 
-  if (failed && !sources) {
+  if (!sources) {
     return (
-      <Card>
-        <Text tone="secondary" style={styles.body}>
-          {t('mobile.library.loadFailed')}
-        </Text>
-        <TextButton label={t('common.retry')} onPress={() => void library.load()} />
-      </Card>
+      <ListScreen
+        header={top}
+        data={[]}
+        renderItem={() => null}
+        style={style}
+        contentStyle={contentStyle}
+        ListEmptyComponent={
+          failed ? (
+            <Card>
+              <Text tone="secondary" style={styles.body}>
+                {t('mobile.library.loadFailed')}
+              </Text>
+              <TextButton label={t('common.retry')} onPress={() => void library.load()} />
+            </Card>
+          ) : (
+            <SkeletonRows rows={5} />
+          )
+        }
+      />
     );
   }
-  if (!sources) return <SkeletonRows rows={5} />;
 
   const active = sources.filter((source) => source.isActive).length;
   const chipFolders = Array.from(new Set([...folders, ...sources.map((source) => source.folder)])).sort();
@@ -360,75 +403,87 @@ function LibraryBody({ library, selectedId, onSelect, onRemoved }: { library: Li
   };
 
   return (
-    <>
-      <Text tone="secondary" style={styles.summary} testID="library-summary">
-        {t('libraryPage.summary', {
-          sources: t('libraryPage.sourceCount', { count: sources.length }),
-          active: t('libraryPage.activeCount', { count: active }),
-          folders: t('libraryPage.folderCount', { count: chipFolders.length }),
-        })}
-      </Text>
-      {sources.length > 0 ? <GroundingBanner active={active > 0} /> : null}
-      <SearchField value={library.query} onChangeText={library.setQuery} placeholder={t('mobile.library.search', { count: sources.length })} />
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chips} style={styles.chipRow} accessibilityLabel={t('libraryPage.folder')}>
-        {[ALL, ...chipFolders].map((option) => (
-          <Chip
-            key={option}
-            label={option === ALL ? t('libraryPage.allFolders') : folderLabel(t, option)}
-            icon={option === ALL ? undefined : 'folder'}
-            selected={folder === option}
-            accessibilityRole="tab"
-            testID="folder-chip"
-            onPress={() => library.setFolder(option)}
-          />
-        ))}
-      </ScrollView>
-      {folder !== ALL ? (
-        <FolderBar
-          folder={folder}
-          sources={inFolder}
-          onSetActive={(isActive) => void toggle(inFolder, isActive, folder)}
-          onRename={() => void rename()}
-          onDelete={() => void removeFolder()}
-        />
-      ) : null}
-
-      {sources.length === 0 ? (
-        <EmptyState pose="reading" title={t('libraryPage.emptyTitle')} description={t('libraryPage.emptyDesc')} />
-      ) : visible.length === 0 ? (
-        <EmptyState pose="surprised" title={t('libraryPage.noMatchingSources')} description={t('libraryPage.noMatchingSourcesDesc')} />
-      ) : (
-        <Card style={styles.list}>
-          {visible.map((source, index) => (
-            <ListItemIn key={source.id} index={index} layout>
-              <SourceRow
-                source={source}
-                folders={chipFolders}
-                first={index === 0}
-                selected={selectedId === source.id}
-                selectInstead={Boolean(onSelect)}
-                showFolder={folder === ALL}
-                compact={Boolean(selectedId)}
-                pending={waiting.has(source.id)}
-                actions={{
-                  onOpen: () => (onSelect ? onSelect(source) : router.push({ pathname: '/source/[id]', params: { id: source.id } })),
-                  onToggle: (isActive) => void toggle([source], isActive),
-                  onDelete: () => remove(source),
-                  onCopy: () => void actions.copy(source),
-                  onShare: () => actions.share(source),
-                  onMove: (target) => {
-                    patch([source.id], { folder: target });
-                    void actions.move(source, target).then((moved) => {
-                      if (!moved) patch([source.id], { folder: source.folder });
-                    });
-                  },
-                }}
+    <ListScreen
+      header={
+        <>
+          {top}
+          <Text tone="secondary" style={styles.summary} testID="library-summary">
+            {t('libraryPage.summary', {
+              sources: t('libraryPage.sourceCount', { count: sources.length }),
+              active: t('libraryPage.activeCount', { count: active }),
+              folders: t('libraryPage.folderCount', { count: chipFolders.length }),
+            })}
+          </Text>
+          {sources.length > 0 ? <GroundingBanner active={active > 0} /> : null}
+          <SearchField value={library.query} onChangeText={library.setQuery} placeholder={t('mobile.library.search', { count: sources.length })} />
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chips} style={styles.chipRow} accessibilityLabel={t('libraryPage.folder')}>
+            {[ALL, ...chipFolders].map((option) => (
+              <Chip
+                key={option}
+                label={option === ALL ? t('libraryPage.allFolders') : folderLabel(t, option)}
+                icon={option === ALL ? undefined : 'folder'}
+                selected={folder === option}
+                accessibilityRole="tab"
+                testID="folder-chip"
+                onPress={() => library.setFolder(option)}
               />
-            </ListItemIn>
-          ))}
-        </Card>
+            ))}
+          </ScrollView>
+          {folder !== ALL ? (
+            <FolderBar
+              folder={folder}
+              sources={inFolder}
+              onSetActive={(isActive) => void toggle(inFolder, isActive, folder)}
+              onRename={() => void rename()}
+              onDelete={() => void removeFolder()}
+            />
+          ) : null}
+        </>
+      }
+      data={visible}
+      keyExtractor={(source) => source.id}
+      extraData={`${selectedId ?? ''}:${folder}:${chipFolders.join('/')}:${[...waiting].join(',')}`}
+      animateLayout
+      onRefresh={library.load}
+      style={style}
+      contentStyle={contentStyle}
+      ListEmptyComponent={
+        sources.length === 0 ? (
+          <EmptyState pose="reading" title={t('libraryPage.emptyTitle')} description={t('libraryPage.emptyDesc')} />
+        ) : (
+          <EmptyState pose="surprised" title={t('libraryPage.noMatchingSources')} description={t('libraryPage.noMatchingSourcesDesc')} />
+        )
+      }
+      renderItem={({ item: source, index }) => (
+        <CardRowFrame index={index} count={visible.length}>
+          <ListItemIn index={index} enter={arrivals.entersNow(source.id)}>
+            <SourceRow
+              source={source}
+              folders={chipFolders}
+              first={index === 0}
+              selected={selectedId === source.id}
+              selectInstead={Boolean(onSelect)}
+              showFolder={folder === ALL}
+              compact={Boolean(selectedId)}
+              pending={waiting.has(source.id)}
+              actions={{
+                onOpen: () => (onSelect ? onSelect(source) : router.push({ pathname: '/source/[id]', params: { id: source.id } })),
+                onToggle: (isActive) => void toggle([source], isActive),
+                onDelete: () => remove(source),
+                onCopy: () => void actions.copy(source),
+                onShare: () => actions.share(source),
+                onMove: (target) => {
+                  patch([source.id], { folder: target });
+                  void actions.move(source, target).then((moved) => {
+                    if (!moved) patch([source.id], { folder: source.folder });
+                  });
+                },
+              }}
+            />
+          </ListItemIn>
+        </CardRowFrame>
       )}
-    </>
+    />
   );
 }
 
@@ -437,12 +492,12 @@ const styles = StyleSheet.create({
   summary: { fontSize: 14.5, marginHorizontal: 2, marginTop: -6 },
   chipRow: { marginHorizontal: -20, flexGrow: 0 },
   chips: { gap: 8, paddingHorizontal: 20 },
-  list: { padding: 0, gap: 0, overflow: 'hidden' },
   split: { flex: 1, flexDirection: 'row' },
   listPane: { flexGrow: 0, flexShrink: 0, borderRightWidth: StyleSheet.hairlineWidth },
   listPaneFull: { flex: 1 },
   listContentFull: { width: '100%', maxWidth: 880, alignSelf: 'center' },
-  listContent: { paddingHorizontal: 20, paddingBottom: 32, gap: 16 },
+  listContent: { paddingHorizontal: 20, paddingBottom: 32 },
+  listGap: { gap: 16 },
   detailPane: { flex: 1 },
   detailContent: { width: '100%', maxWidth: 700, alignSelf: 'center', paddingHorizontal: 36, paddingTop: 14, paddingBottom: 48, gap: 14 },
 });

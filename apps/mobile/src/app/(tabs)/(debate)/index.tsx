@@ -1,5 +1,5 @@
 import { Link, useFocusEffect, useRouter } from 'expo-router';
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, StyleSheet, View } from 'react-native';
 import Animated from 'react-native-reanimated';
@@ -19,11 +19,13 @@ import { SOURCE_ICONS, sourceMeta } from '@/components/source-display';
 import { Text } from '@/components/text';
 import { WorkRow } from '@/components/work-row';
 import { publishCurrentDebate } from '@/lib/debate-widget';
-import { indexForSpotlight } from '@/lib/spotlight';
+import { indexForSpotlight, spotlightAvailable } from '@/lib/spotlight';
+import { SPOTLIGHT_LIMIT, spotlightWorkItems } from '@/lib/spotlight-items';
 import { useAuth } from '@/lib/auth';
 import { useDebates } from '@/lib/debate-context';
 import {
   fetchDebateCounts,
+  fetchDocumentsForSpotlight,
   fetchRecentWork,
   ROLE_LABEL_KEYS,
   type Debate,
@@ -218,6 +220,15 @@ function DebateDetails({ debateId, dashboard = false }: { debateId: string; dash
   const { current } = useDebates();
   const currentRef = useRef(current);
   currentRef.current = current;
+  // Retry and the reload after a delete run with no focus guard; a component gone since then keeps an old
+  // currentRef, so Spotlight also asks whether this one is still on screen.
+  const mounted = useRef(true);
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+    };
+  }, []);
   const [view, setView] = useState<DebateSide>('pro');
   const [counts, setCounts] = useState<DebateCounts | null>(null);
   const [recent, setRecent] = useState<Record<DebateSide, DebateItem[]> | null>(null);
@@ -243,9 +254,16 @@ function DebateDetails({ debateId, dashboard = false }: { debateId: string; dash
       const shown = currentRef.current;
       if (shown?.id === debateId) {
         publishCurrentDebate({ debateId, motion: shown.motion, counts: nextCounts });
-        // Spotlight finds this debate's cases (development build with expo-core-spotlight; a no-op otherwise).
-        const cases = [...pro, ...con].filter((item, index, all) => item.kind === 'case' && all.findIndex((other) => other.id === item.id) === index);
-        void indexForSpotlight('cases', cases.map((item) => ({ url: `debatelab://case/${item.id}` as const, title: item.title, description: shown.motion })));
+        // Spotlight finds this debate's documents of every side (development build with expo-core-spotlight only).
+        if (spotlightAvailable()) {
+          const motion = shown.motion;
+          fetchDocumentsForSpotlight(userId, debateId, SPOTLIGHT_LIMIT)
+            .then((documents) => {
+              if (!mounted.current || !isCurrent() || currentRef.current?.id !== debateId) return;
+              void indexForSpotlight('work', spotlightWorkItems(documents, motion, (kind) => t(`debate.kinds.${kind}`)));
+            })
+            .catch((cause: unknown) => console.warn('Could not read documents for Spotlight:', cause instanceof Error ? cause.message : cause));
+        }
       }
       setRecent({ pro, con });
       setSources(nextSources?.slice(0, DASHBOARD_SOURCES) ?? null);
@@ -255,7 +273,7 @@ function DebateDetails({ debateId, dashboard = false }: { debateId: string; dash
       console.warn('Could not load the debate:', cause instanceof Error ? cause.message : cause);
       setFailed(true);
     }
-  }, [userId, debateId, dashboard, copies]);
+  }, [userId, debateId, dashboard, copies, t]);
 
   // Reload on focus, so work saved on the website shows up. Out of view, its saved copies no longer count.
   useFocusEffect(
@@ -431,9 +449,19 @@ function RecentSourceRow({ source, first, onPress }: { source: Source; first: bo
   const { t } = useTranslation();
   const { colors } = useTheme();
   const press = usePressScale();
+  const actions = useSourceActions();
   return (
     <Pressable
       accessibilityRole="button"
+      // VoiceOver offers the long-press menu's Copy and Share on the row itself (swipe up or down).
+      accessibilityActions={[
+        { name: 'copy', label: t('common.copy') },
+        { name: 'share', label: t('mobile.library.share') },
+      ]}
+      onAccessibilityAction={(event) => {
+        if (event.nativeEvent.actionName === 'copy') void actions.copy(source);
+        else if (event.nativeEvent.actionName === 'share') actions.share(source);
+      }}
       onPress={onPress}
       onPressIn={press.onPressIn}
       onPressOut={press.onPressOut}

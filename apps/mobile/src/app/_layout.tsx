@@ -20,6 +20,7 @@ import { DebateProvider } from '@/lib/debate-context';
 import { useFirstRun } from '@/lib/use-first-run';
 import { useKeyCommand } from '@/lib/key-commands';
 import { useQuickActions } from '@/lib/quick-actions';
+import { useShareIntent } from '@/lib/share-intent';
 import { useOfflineQueue } from '@/lib/use-offline-queue';
 import { ReservedWidth, useSidebarWidth } from '@/lib/layout';
 import { watchNetwork } from '@/lib/network-status';
@@ -76,6 +77,8 @@ function Root() {
   useHandoff(ready);
   // Home Screen quick actions (development build with expo-quick-actions; nothing in Expo Go).
   useQuickActions(ready);
+  // Text and pages shared from other apps (development build with the share extension; nothing in Expo Go).
+  useShareIntent(ready);
   // iPad hardware keyboard: ⌘N starts a debate, ⌘K opens the switcher (key-commands.ts).
   const router = useRouter();
   useKeyCommand('cmd+n', () => router.push('/new-debate'), ready && Boolean(userId));

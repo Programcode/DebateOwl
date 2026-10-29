@@ -1,11 +1,12 @@
 import { useFocusEffect } from 'expo-router';
-import { useCallback, useState } from 'react';
+import { useCallback, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { FlatList, Pressable, StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Card, ListItemIn, SkeletonTextRows } from './card';
 import { Icon } from './icon';
+import { CardRowFrame, useRowArrivals } from './list-screen';
 import { PressScale } from './press-scale';
 import { Text } from './text';
 
@@ -16,13 +17,20 @@ import { haptics } from '@/lib/haptics';
 import { useCopyHolder } from '@/lib/use-copy-holder';
 import { useTheme } from '@/theme/use-theme';
 
-/** Saved chats as rows, with their loading, failed and empty states. */
-export function ChatRows({
+/**
+ * Saved chats as a list with their loading, failed and empty states, below `header`. It is the
+ * scroll view itself (a FlatList), so a debate with hundreds of chats draws only those on screen.
+ */
+export function ChatList({
   chats,
   failed,
   openChatId,
   onPick,
   highlightOpen = false,
+  header,
+  style,
+  contentContainerStyle,
+  testID,
 }: {
   chats: ChatSummary[] | null;
   failed: boolean;
@@ -30,19 +38,23 @@ export function ChatRows({
   onPick: (chatId: string) => void;
   /** The iPad list marks the open chat with a tinted row instead of a check. */
   highlightOpen?: boolean;
+  header: ReactNode;
+  style?: StyleProp<ViewStyle>;
+  contentContainerStyle?: StyleProp<ViewStyle>;
+  testID?: string;
 }) {
   const { t } = useTranslation();
   const { colors } = useTheme();
-  if (failed && !chats) {
-    return (
+  const rows = chats ?? [];
+  const arrivals = useRowArrivals(rows.map((chat) => chat.id));
+  const empty =
+    failed && !chats ? (
       <Text tone="secondary" style={styles.body}>
         {t('mobile.ask.historyFailed')}
       </Text>
-    );
-  }
-  if (chats === null) return <SkeletonTextRows rows={4} />;
-  if (chats.length === 0) {
-    return (
+    ) : chats === null ? (
+      <SkeletonTextRows rows={4} />
+    ) : (
       <Card>
         <Text weight="semibold" style={styles.rowTitle}>
           {t('askChat.noSavedChats')}
@@ -52,36 +64,45 @@ export function ChatRows({
         </Text>
       </Card>
     );
-  }
   return (
-    <Card style={styles.list}>
-      {chats.map((chat, index) => {
+    <FlatList
+      data={rows}
+      keyExtractor={(chat) => chat.id}
+      extraData={openChatId}
+      style={style}
+      contentContainerStyle={contentContainerStyle}
+      testID={testID}
+      ListHeaderComponent={<View style={styles.listHeader}>{header}</View>}
+      ListEmptyComponent={empty}
+      renderItem={({ item: chat, index }) => {
         const open = chat.id === openChatId;
         return (
-          <ListItemIn key={chat.id} index={index} style={index > 0 && { borderTopWidth: 1, borderTopColor: colors.line }}>
-            <PressScale
-              accessibilityRole="button"
-              accessibilityState={{ selected: open }}
-              onPress={() => {
-                if (!open) haptics.select();
-                onPick(chat.id);
-              }}
-              testID="ask-chat-row"
-              style={[styles.row, highlightOpen && open && { backgroundColor: colors.tile }]}>
-              <View style={styles.rowText}>
-                <Text weight="semibold" style={[styles.rowTitle, highlightOpen && open && { color: colors.chipSelectedForeground }]} numberOfLines={2}>
-                  {chat.title}
-                </Text>
-                <Text tone="faint" style={styles.meta}>
-                  {`${formatDate(new Date(chat.createdAt).toISOString())} · ${t('askChat.messageCount', { count: chat.messageCount })}`}
-                </Text>
-              </View>
-              {open && !highlightOpen ? <Icon name="check" color={colors.primary} size={21} /> : null}
-            </PressScale>
-          </ListItemIn>
+          <CardRowFrame index={index} count={rows.length}>
+            <ListItemIn index={index} enter={arrivals.entersNow(chat.id)} style={index > 0 && { borderTopWidth: 1, borderTopColor: colors.line }}>
+              <PressScale
+                accessibilityRole="button"
+                accessibilityState={{ selected: open }}
+                onPress={() => {
+                  if (!open) haptics.select();
+                  onPick(chat.id);
+                }}
+                testID="ask-chat-row"
+                style={[styles.row, highlightOpen && open && { backgroundColor: colors.tile }]}>
+                <View style={styles.rowText}>
+                  <Text weight="semibold" style={[styles.rowTitle, highlightOpen && open && { color: colors.chipSelectedForeground }]} numberOfLines={2}>
+                    {chat.title}
+                  </Text>
+                  <Text tone="faint" style={styles.meta}>
+                    {`${formatDate(new Date(chat.createdAt).toISOString())} · ${t('askChat.messageCount', { count: chat.messageCount })}`}
+                  </Text>
+                </View>
+                {open && !highlightOpen ? <Icon name="check" color={colors.primary} size={21} /> : null}
+              </PressScale>
+            </ListItemIn>
+          </CardRowFrame>
         );
-      })}
-    </Card>
+      }}
+    />
   );
 }
 
@@ -152,19 +173,26 @@ export function AskChatPane({
           <Icon name="plus" color={colors.primary} size={26} />
         </Pressable>
       </View>
-      <ScrollView contentContainerStyle={[styles.paneContent, { paddingBottom: insets.bottom + 24 }]}>
-        <Text accessibilityRole="header" weight="display" style={styles.paneTitle}>
-          {t('nav.ask')}
-        </Text>
-        <ChatRows chats={mine ? state.chats : null} failed={mine && state.failed} openChatId={openChatId} onPick={onPick} highlightOpen />
-      </ScrollView>
+      <ChatList
+        chats={mine ? state.chats : null}
+        failed={mine && state.failed}
+        openChatId={openChatId}
+        onPick={onPick}
+        highlightOpen
+        contentContainerStyle={[styles.paneContent, { paddingBottom: insets.bottom + 24 }]}
+        header={
+          <Text accessibilityRole="header" weight="display" style={styles.paneTitle}>
+            {t('nav.ask')}
+          </Text>
+        }
+      />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   body: { fontSize: 15, lineHeight: 21 },
-  list: { padding: 0, gap: 0 },
+  listHeader: { gap: 14, paddingBottom: 14 },
   row: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 13, paddingHorizontal: 16 },
   rowText: { flex: 1, gap: 3 },
   rowTitle: { fontSize: 16, lineHeight: 21 },
@@ -172,6 +200,6 @@ const styles = StyleSheet.create({
   pane: { borderRightWidth: StyleSheet.hairlineWidth },
   paneTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 12, paddingBottom: 4 },
   iconButton: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
-  paneContent: { paddingHorizontal: 18, gap: 14 },
+  paneContent: { paddingHorizontal: 18 },
   paneTitle: { fontSize: 32, lineHeight: 38, letterSpacing: -0.9 },
 });

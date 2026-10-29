@@ -11,7 +11,7 @@ import {
 import { formatRoundTime } from '@debatelab/core/sparring/formats';
 import { combineDelivery, measureDelivery } from '@debatelab/core/voice/delivery';
 import { Stack, useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
-import { useCallback, useEffect, useReducer, useRef, useState } from 'react';
+import { memo, useCallback, useEffect, useReducer, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, AppState, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -33,7 +33,7 @@ import { Text } from '@/components/text';
 import { TimerRing } from '@/components/timer-ring';
 import { ToolTitle, WorkingIn } from '@/components/tool-form';
 import { appendDictation, DeliverySummary, OpponentVoiceBar, VoiceMicControl, VoiceModeSwitch } from '@/components/voice';
-import { useKeyCommand } from '@/lib/key-commands';
+import { useFocusedKeyCommand } from '@/lib/key-commands';
 import { announceAnswer } from '@/lib/a11y';
 import { abortError, AIError, isAbortError, type ResponseExtras, untilAborted } from '@/lib/ai-request';
 import { useAuth } from '@/lib/auth';
@@ -65,6 +65,7 @@ import { chooseMotionTarget } from '@/lib/motion-gate';
 import { keepSourceAssessments } from '@/lib/results';
 import { useSettings } from '@/lib/settings';
 import { formatClock } from '@/lib/timer';
+import { useLatest } from '@/lib/live-value';
 import { fontFamily } from '@/theme/fonts';
 import { radius } from '@/theme/colors';
 import { useTheme } from '@/theme/use-theme';
@@ -146,13 +147,11 @@ export default function CrossfireScreen() {
     draftRef.current = value;
     setDraftTurnState(value);
   }, []);
-  const stateRef = useRef(state);
-  stateRef.current = state;
+  const stateRef = useLatest(state);
   // A voice round falls back to typing when the microphone is lost.
   const voiceAvailability = useVoiceAvailability();
   const voiceActive = Boolean(state.voice) && voiceAvailability.available;
-  const voiceActiveRef = useRef(voiceActive);
-  voiceActiveRef.current = voiceActive;
+  const voiceActiveRef = useLatest(voiceActive);
   const capture = useSpeechCapture(outputLanguage, (text) => setDraftTurn(appendDictation(draftRef.current, text, MAX_CROSSFIRE_TURN_CHARS)));
   // Each round is measured on its own, and a start still waiting for permission does not carry over.
   const captureScope = state.phase === 'setup' ? 'setup' : state.sessionId;
@@ -164,7 +163,6 @@ export default function CrossfireScreen() {
   useEffect(() => {
     if (!awaitingUserTurn) void stopCapture();
   }, [awaitingUserTurn, stopCapture]);
-  const [now, setNow] = useState(() => Date.now());
   const [formError, setFormError] = useState('');
   // A case or an attack opened in Crossfire while a round runs is not brought in, as on the website; say so.
   const [notice, setNotice] = useState(() => (imported && state.phase !== 'setup' ? t('mobile.crossfire.prefillHeld') : ''));
@@ -231,19 +229,6 @@ export default function CrossfireScreen() {
     }, [userId, sourceDebate]),
   );
 
-  // The round's clock reads its end timestamp; the tick only redraws it, and coming back from the background redraws at once.
-  useEffect(() => {
-    if (state.phase !== 'active') return;
-    setNow(Date.now());
-    const timer = setInterval(() => setNow(Date.now()), 500);
-    const subscription = AppState.addEventListener('change', (next) => {
-      if (next === 'active') setNow(Date.now());
-    });
-    return () => {
-      clearInterval(timer);
-      subscription.remove();
-    };
-  }, [state.phase]);
 
   /** What the website does with every whole answer: save the source rankings, and say when the input was shortened. */
   const afterResponse = useCallback((forUser: string, debateId: string | null, extras: ResponseExtras) => {
@@ -310,7 +295,7 @@ export default function CrossfireScreen() {
       // Crossfire runs on Ask's model settings, so a model refusal switches Ask's.
       openRefusal(router, cause, 'ask');
     }
-  }, [afterResponse, outputLanguage, refresh, requestContext, router]);
+  }, [afterResponse, outputLanguage, refresh, requestContext, router, voiceActiveRef]);
 
   const runDebrief = useCallback(async (snapshot: Debriefing, forUser: string) => {
     requestRef.current?.abort();
@@ -371,9 +356,6 @@ export default function CrossfireScreen() {
     if (next.phase === 'debriefing') void runDebrief(next, userId);
   }, [capture, runDebrief, state, t, userId]);
 
-  useEffect(() => {
-    if (state.phase === 'active' && now >= state.endsAt) endSession('timer');
-  }, [endSession, now, state]);
 
   const beginSession = (debateId: string | null, forUser: string) => {
     if (state.phase !== 'setup') return;
@@ -437,9 +419,6 @@ export default function CrossfireScreen() {
     if (live.current) beginSession(debateId, forUser);
   };
 
-  // ⌘↩ submits the turn on an iPad keyboard.
-  useKeyCommand('cmd+enter', () => void submitTurn());
-
   const submitTurn = async () => {
     if (state.phase !== 'active' || !userId) return;
     // Stopping also withdraws a start still waiting for permission; the last words land in the box first.
@@ -461,6 +440,9 @@ export default function CrossfireScreen() {
     setDraftTurn('');
     if (next.phase === 'active') void runNextTurn(next, expectedReply, userId);
   };
+
+  // ⌘↩ submits the turn on an iPad keyboard.
+  useFocusedKeyCommand('cmd+enter', () => void submitTurn());
 
   const startSpeaking = () => {
     // Speaking over the opponent ends its audio.
@@ -623,7 +605,7 @@ export default function CrossfireScreen() {
           <CrossfireDebriefDocument debrief={state.debrief} holdEntrance={celebrate} />
           {spokenDelivery ? <DeliverySummary delivery={spokenDelivery} /> : null}
           <SectionHeading title={t('crossfire.transcript')} />
-          <CrossfireTranscript turns={state.turns} />
+          <Transcript turns={state.turns} />
         </DocumentScreen>
         {celebrate ? (
           <Celebration
@@ -643,7 +625,6 @@ export default function CrossfireScreen() {
   // The live round and its debrief wait: full screen, following the system theme like mock 05.
   const inputKind = expectedUserTurnKind(state);
   const total = state.config.durationSeconds;
-  const remaining = state.phase === 'active' ? Math.max(0, Math.ceil((state.endsAt - now) / 1000)) : 0;
   const modeLabel = state.config.mode === 'question-ai' ? t('crossfire.modeQuestionAi') : t('crossfire.modeAiQuestionsUser');
   const styleKey = `crossfire.style${state.config.style[0].toUpperCase()}${state.config.style.slice(1)}`;
   const canSend = (Boolean(draftTurn.trim()) || capture.listening) && inputKind !== null;
@@ -658,13 +639,7 @@ export default function CrossfireScreen() {
         subtitle={`${modeLabel} · ${t(styleKey)}`}
       />
       <View style={[styles.clockRow, { borderBottomColor: colors.line }]}>
-        <View accessible accessibilityRole="timer" accessibilityLabel={`${t('crossfire.timerLabel')}: ${formatClock(remaining)}`}>
-          <TimerRing size={58} fraction={total > 0 ? remaining / total : 0} warning={state.phase === 'active' && remaining < 30}>
-            <Text weight="bold" style={styles.clockText} testID="crossfire-clock">
-              {formatClock(remaining)}
-            </Text>
-          </TimerRing>
-        </View>
+        <CrossfireClock active={state.phase === 'active'} endsAt={state.phase === 'active' ? state.endsAt : 0} total={total} onExpired={() => endSession('timer')} />
         <View style={styles.clockInfo}>
           <Text tone="faint" style={styles.clockLabel}>
             {t('crossfire.timerLabel')}
@@ -693,7 +668,7 @@ export default function CrossfireScreen() {
         keyboardShouldPersistTaps="handled"
         keyboardDismissMode="interactive"
         onContentSizeChange={() => scroll.current?.scrollToEnd({ animated: true })}>
-        <CrossfireTranscript turns={state.turns} />
+        <Transcript turns={state.turns} />
 
         {voiceActive ? <OpponentVoiceBar /> : null}
 
@@ -795,6 +770,45 @@ export default function CrossfireScreen() {
         </View>
       ) : null}
     </KeyboardAvoidingView>
+  );
+}
+
+/** The transcript, drawn again only when a turn is added: not for typing, the clock or the microphone. */
+const Transcript = memo(CrossfireTranscript);
+
+/**
+ * The round's clock. It reads the end timestamp and ticks on its own, so the
+ * rest of the round does not render twice a second; coming back from the
+ * background redraws it at once, and it ends the round when time is up.
+ */
+function CrossfireClock({ active, endsAt, total, onExpired }: { active: boolean; endsAt: number; total: number; onExpired: () => void }) {
+  const { t } = useTranslation();
+  const [now, setNow] = useState(() => Date.now());
+  const expired = useLatest(onExpired);
+  useEffect(() => {
+    if (!active) return;
+    setNow(Date.now());
+    const timer = setInterval(() => setNow(Date.now()), 500);
+    const subscription = AppState.addEventListener('change', (next) => {
+      if (next === 'active') setNow(Date.now());
+    });
+    return () => {
+      clearInterval(timer);
+      subscription.remove();
+    };
+  }, [active]);
+  useEffect(() => {
+    if (active && now >= endsAt) expired.current();
+  }, [active, now, endsAt, expired]);
+  const remaining = active ? Math.max(0, Math.ceil((endsAt - now) / 1000)) : 0;
+  return (
+    <View accessible accessibilityRole="timer" accessibilityLabel={`${t('crossfire.timerLabel')}: ${formatClock(remaining)}`}>
+      <TimerRing size={58} fraction={total > 0 ? remaining / total : 0} warning={active && remaining < 30}>
+        <Text weight="bold" style={styles.clockText} testID="crossfire-clock">
+          {formatClock(remaining)}
+        </Text>
+      </TimerRing>
+    </View>
   );
 }
 

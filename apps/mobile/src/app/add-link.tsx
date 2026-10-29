@@ -1,6 +1,6 @@
 import type { SourceImportOutput } from '@debatelab/core/ai/schemas/source-import';
-import { useRouter } from 'expo-router';
-import { useState } from 'react';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { StyleSheet, View } from 'react-native';
 
@@ -14,6 +14,7 @@ import { useToast } from '@/components/toast';
 import { useAuth } from '@/lib/auth';
 import { useDebates } from '@/lib/debate-context';
 import { haptics } from '@/lib/haptics';
+import { forgetShared, sharedItem } from '@/lib/share-intent';
 import { addSource, fetchSources, importSourceFromUrl, isDuplicateOrigin } from '@/lib/sources';
 import { useCopyHolder } from '@/lib/use-copy-holder';
 import { useLibraryFolders } from '@/lib/use-library-folders';
@@ -22,7 +23,8 @@ import { useTheme } from '@/theme/use-theme';
 /**
  * Paste a link: the import-source Edge Function reads the page into an
  * editable draft, and saving adds it to the Current Debate, as the website's
- * Import from URL does.
+ * Import from URL does. A page shared from another app (share-intent.ts) opens
+ * this sheet with its address, and the import starts by itself.
  */
 export default function AddLinkSheet() {
   const { t, i18n } = useTranslation();
@@ -30,7 +32,10 @@ export default function AddLinkSheet() {
   const { colors } = useTheme();
   const { session } = useAuth();
   const { current } = useDebates();
-  const [url, setUrl] = useState('');
+  // Only the share extension's hand-off fills the sheet in (share-intent.ts); route parameters never do.
+  const { shared: fromShare } = useLocalSearchParams<{ shared?: string }>();
+  const [shared] = useState(() => (fromShare ? sharedItem('link') : null));
+  const [url, setUrl] = useState(() => shared?.url ?? '');
   const [draft, setDraft] = useState<SourceImportOutput | null>(null);
   const [title, setTitle] = useState('');
   const [busy, setBusy] = useState<'import' | 'save' | null>(null);
@@ -51,7 +56,7 @@ export default function AddLinkSheet() {
     try {
       const imported = await importSourceFromUrl(trimmed);
       setDraft(imported);
-      setTitle(imported.title);
+      setTitle(imported.title || shared?.title || '');
     } catch (cause) {
       console.warn('Could not import the source:', cause instanceof Error ? cause.message : cause);
       setError(`${t('libraryPage.importFailed')}. ${t('libraryPage.importFailedDesc')}`);
@@ -59,6 +64,19 @@ export default function AddLinkSheet() {
       setBusy(null);
     }
   };
+
+  // A shared page is read once the Current Debate is known; the student still checks and saves it.
+  const autoImported = useRef(false);
+  useEffect(() => {
+    if (fromShare) forgetShared();
+  }, [fromShare]);
+  useEffect(() => {
+    if (autoImported.current || !shared || !current) return;
+    autoImported.current = true;
+    void runImport();
+    // runImport reads the address the hand-off filled in; it runs once per opening.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [shared, current]);
 
   const save = async () => {
     const userId = session?.user.id;
@@ -109,7 +127,7 @@ export default function AddLinkSheet() {
             keyboardType="url"
             autoCapitalize="none"
             autoCorrect={false}
-            autoFocus
+            autoFocus={!shared}
             returnKeyType="go"
             onSubmitEditing={() => void runImport()}
             editable={busy === null}
