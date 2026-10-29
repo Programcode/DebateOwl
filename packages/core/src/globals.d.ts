@@ -22,8 +22,10 @@ declare class URL {
 
 // WHATWG URL parameters are also available in Hermes.
 declare class URLSearchParams {
-  constructor();
+  constructor(init?: string);
   append(name: string, value: string): void;
+  get(name: string): string | null;
+  set(name: string, value: string): void;
   forEach(callback: (value: string, key: string) => void): void;
   toString(): string;
 }

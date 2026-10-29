@@ -16,11 +16,13 @@ import { backLabel } from '@/lib/back-label';
 import { formatWhen } from '@/lib/dates';
 import { useDebates } from '@/lib/debate-context';
 import { copyText, sharePdf, shareText } from '@/lib/export';
+import { shareFactoidsDocx } from '@/lib/export-docx';
 import { FACTOIDS_EXPORT_FILE_NAME, factoidsExportHtml } from '@/lib/export-html';
 import { discussFactoidsMessage, factoidsToText } from '@/lib/result-text';
 import { readFactoids } from '@/lib/results';
 import { addSource } from '@/lib/sources';
 import { arrivalNoticeText, useResultDocument } from '@/lib/use-result-document';
+import { useShareLink } from '@/lib/use-share-link';
 
 /**
  * Factoids read as a document. Each factoid's source opens from its
@@ -41,6 +43,7 @@ export default function FactoidsResultScreen() {
   const live = useRef(true);
   const owner = useRef(userId);
   const { setNotice } = doc;
+  const shareLink = useShareLink(setNotice);
   const { notice: arrival, failed } = params;
 
   useEffect(() => {
@@ -109,10 +112,12 @@ export default function FactoidsResultScreen() {
     }
   };
 
+  const savedId = result.savedId;
   const actions: HeaderAction[] = [
     ...(doc.autoSaved.length > 0
       ? [{ key: 'undo-sources', label: t('autoSavedSources.undo'), symbol: 'arrow.uturn.backward' as const, icon: 'history' as const, onPress: () => void doc.undoAutoSaved() }]
       : []),
+    ...(savedId ? [{ key: 'share-link', label: t('mobile.share.shareLink'), symbol: 'link' as const, icon: 'link' as const, onPress: () => void shareLink('factoids', savedId, title, output) }] : []),
     ...(result.savedId ? [{ key: 'delete', label: t('common.delete'), symbol: 'trash' as const, icon: 'trash' as const, destructive: true, onPress: () => void doc.remove() }] : []),
   ];
 
@@ -121,6 +126,7 @@ export default function FactoidsResultScreen() {
       testID="factoids-document"
       outline
       notice={doc.notice}
+      noticeTone={doc.noticeTone}
       header={<DocumentHeader backLabel={back} onShare={() => run(() => shareText(title, factoidsToText(output, t)))} actions={actions} />}
       actions={
         <>
@@ -152,11 +158,14 @@ export default function FactoidsResultScreen() {
         items={[
           { key: 'pdf', label: t('common.pdf'), icon: 'file' },
           { key: 'copy', label: t('mobile.results.copyText'), icon: 'copy' },
+          // The website's Word export, built by the same code (packages/core/src/export/docx.ts).
+          { key: 'docx', label: t('common.docx'), icon: 'file' },
         ]}
         cancelLabel={t('common.cancel')}
         onClose={() => setExportOpen(false)}
         onSelect={(choice) => {
           if (choice === 'pdf') run(() => sharePdf(factoidsExportHtml(output, t), FACTOIDS_EXPORT_FILE_NAME, title));
+          if (choice === 'docx') run(() => shareFactoidsDocx(output, t, title));
           if (choice === 'copy') run(async () => {
             await copyText(factoidsToText(output, t));
             setNotice(t('generateResults.copiedToClipboard'));

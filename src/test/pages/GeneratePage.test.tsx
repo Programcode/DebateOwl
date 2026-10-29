@@ -246,7 +246,7 @@ describe('GeneratePage Integration', () => {
             state: expect.objectContaining({
                 source: 'generate',
                 resolution: 'Existing motion',
-                argument: expect.stringContaining('Thesis: Existing Thesis'),
+                argument: expect.stringContaining('What we will show: Existing Thesis'),
             }),
         });
     });

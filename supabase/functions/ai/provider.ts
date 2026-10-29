@@ -13,6 +13,7 @@ import {
 } from "../_shared/model-catalog.ts";
 import {
   outputTokenLimit,
+  REASONING_FLOOR_TOKENS,
   REPLY_TOKEN_CAPS,
   type ReplyCap,
   TRUNCATION_RETRY_FACTOR,
@@ -294,14 +295,15 @@ export async function callAI(
   outputSchema?: JsonOutputSchema,
 ): Promise<AIResult> {
   const replyTokens = REPLY_TOKEN_CAPS[cap];
+  const reasoningFloor = REASONING_FLOOR_TOKENS[cap] ?? 0;
   try {
-    return await callAIOnce(provider, model, systemPrompt, messages, reasoningEffort, replyTokens, signal, stream, outputSchema);
+    return await callAIOnce(provider, model, systemPrompt, messages, reasoningEffort, replyTokens, signal, stream, outputSchema, reasoningFloor);
   } catch (err) {
     if (err instanceof OutputTruncatedError) {
       console.warn(`[AI] Reply hit its ${cap} cap (${replyTokens} tokens, ${model}, effort ${reasoningEffort}); retrying with ${replyTokens * TRUNCATION_RETRY_FACTOR}`);
       stream?.reset();
       return await retryOnce(err.usage, "truncation_retry", () =>
-        callAIOnce(provider, model, systemPrompt, messages, reasoningEffort, replyTokens * TRUNCATION_RETRY_FACTOR, signal, stream, outputSchema)
+        callAIOnce(provider, model, systemPrompt, messages, reasoningEffort, replyTokens * TRUNCATION_RETRY_FACTOR, signal, stream, outputSchema, reasoningFloor)
       );
     }
     if (!(err instanceof InvalidJsonResponseError)) throw attachMissingUsage(err, "call");
@@ -319,6 +321,7 @@ export async function callAI(
         signal,
         stream,
         outputSchema,
+        reasoningFloor,
       )
     );
   }
@@ -384,6 +387,7 @@ export async function callAIOnce(
   signal?: AbortSignal,
   stream?: GenerationStream,
   outputSchema?: JsonOutputSchema,
+  reasoningFloor = 0,
 ): Promise<AIResult> {
   if (provider !== OPENROUTER_PROVIDER) throw new Error(`Unsupported provider: ${provider}`);
   return await callOpenRouter(
@@ -394,6 +398,7 @@ export async function callAIOnce(
     signal,
     stream,
     outputSchema,
+    reasoningFloor,
   );
 }
 
@@ -418,6 +423,7 @@ export async function callOpenRouter(
   signal?: AbortSignal,
   stream?: GenerationStream,
   outputSchema?: JsonOutputSchema,
+  reasoningFloor = 0,
 ): Promise<AIResult> {
   const apiKey = Deno.env.get("OPENROUTER_API_KEY");
   if (!apiKey) throw new Error("OPENROUTER_API_KEY missing");
@@ -426,7 +432,7 @@ export async function callOpenRouter(
   const payload: Record<string, unknown> = {
     model,
     messages: withPromptCaching(model, messages),
-    max_tokens: outputTokenLimit(replyTokens, reasoningEffort, modelEntry.maxTokens),
+    max_tokens: outputTokenLimit(replyTokens, reasoningEffort, modelEntry.maxTokens, reasoningFloor),
     // With require_parameters, a schema routes only to endpoints that enforce it.
     response_format: outputSchema
       ? { type: "json_schema", json_schema: { name: outputSchema.name, strict: true, schema: outputSchema.schema } }

@@ -1,15 +1,17 @@
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
 import { TextButton } from '@/components/buttons';
-import { Card, IconTile } from '@/components/card';
+import { Card, IconTile, ListItemIn } from '@/components/card';
 import { Icon } from '@/components/icon';
 import { OneOffNotice } from '@/components/one-off-notice';
+import { PressScale } from '@/components/press-scale';
 import { PREPARE_TOOLS, prepareToolHref, type PrepareTool } from '@/components/prepare-tools';
 import { Screen } from '@/components/screen';
 import { ScreenTitle } from '@/components/screen-title';
+import { SkeletonRows } from '@/components/skeleton';
 import { Text } from '@/components/text';
 import { WorkRow } from '@/components/work-row';
 import { useAuth } from '@/lib/auth';
@@ -74,23 +76,20 @@ export default function PrepareScreen() {
       <OneOffNotice />
       <Card style={styles.list}>
         {PREPARE_TOOLS.map((tool, index) => (
-          <Pressable
-            key={tool.key}
-            accessibilityRole="button"
-            onPress={() => openTool(tool.key)}
-            testID={`prepare-tool-${tool.key}`}
-            style={({ pressed }) => [styles.row, index > 0 && { borderTopWidth: 1, borderTopColor: colors.line }, pressed && styles.pressed]}>
-            <IconTile name={tool.icon} size={42} />
-            <View style={styles.rowText}>
-              <Text weight="semibold" style={styles.rowTitle}>
-                {t(`nav.${tool.key}`)}
-              </Text>
-              <Text tone="faint" style={styles.rowMeta} numberOfLines={1}>
-                {t(`navDesc.${tool.key}`)}
-              </Text>
-            </View>
-            <Icon name="chevronRight" color={colors.tabInactive} size={20} />
-          </Pressable>
+          <ListItemIn key={tool.key} index={index} style={index > 0 && { borderTopWidth: 1, borderTopColor: colors.line }}>
+            <PressScale accessibilityRole="button" onPress={() => openTool(tool.key)} testID={`prepare-tool-${tool.key}`} style={styles.row}>
+              <IconTile name={tool.icon} size={42} />
+              <View style={styles.rowText}>
+                <Text weight="semibold" style={styles.rowTitle}>
+                  {t(`nav.${tool.key}`)}
+                </Text>
+                <Text tone="faint" style={styles.rowMeta} numberOfLines={1}>
+                  {t(`navDesc.${tool.key}`)}
+                </Text>
+              </View>
+              <Icon name="chevronRight" color={colors.tabInactive} size={20} />
+            </PressScale>
+          </ListItemIn>
         ))}
       </Card>
 
@@ -110,7 +109,7 @@ export default function PrepareScreen() {
           <TextButton label={t('common.retry')} onPress={() => void load()} />
         </Card>
       ) : items === null ? (
-        <ActivityIndicator style={styles.loading} accessibilityRole="progressbar" />
+        <SkeletonRows rows={3} />
       ) : items.length === 0 ? (
         <Card>
           <Text tone="secondary" style={styles.body}>
@@ -120,7 +119,9 @@ export default function PrepareScreen() {
       ) : (
         <Card style={styles.list}>
           {items.map((item, index) => (
-            <WorkRow key={`${item.kind}-${item.id}`} item={item} first={index === 0} from="prepare" onDeleted={() => void load()} />
+            <ListItemIn key={`${item.kind}-${item.id}`} index={index} layout>
+              <WorkRow item={item} first={index === 0} from="prepare" onDeleted={() => void load()} />
+            </ListItemIn>
           ))}
         </Card>
       )}
@@ -134,8 +135,6 @@ const styles = StyleSheet.create({
   rowText: { flex: 1, gap: 2 },
   rowTitle: { fontSize: 16 },
   rowMeta: { fontSize: 14 },
-  pressed: { opacity: 0.7 },
   section: { fontSize: 18.5, lineHeight: 24, letterSpacing: -0.2, marginTop: 8, marginHorizontal: 2 },
   body: { fontSize: 15.5, lineHeight: 21 },
-  loading: { marginTop: 16 },
 });

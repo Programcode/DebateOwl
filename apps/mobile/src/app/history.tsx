@@ -1,22 +1,25 @@
 import { Link, useFocusEffect, useLocalSearchParams, useRouter, type Href } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import Animated from 'react-native-reanimated';
 import ReanimatedSwipeable, { type SwipeableMethods } from 'react-native-gesture-handler/ReanimatedSwipeable';
 
 import { ActionMenu } from '@/components/action-menu';
 import { PrimaryButton, TextButton } from '@/components/buttons';
-import { Card, IconTile } from '@/components/card';
+import { Card, IconTile, ListItemIn, usePressScale } from '@/components/card';
 import { Chip } from '@/components/chip';
 import { DocumentHeader } from '@/components/document-header';
 import { Icon } from '@/components/icon';
 import { Screen } from '@/components/screen';
+import { SkeletonRows } from '@/components/skeleton';
 import { Text } from '@/components/text';
 import { KIND_ICONS, workHref } from '@/components/work-row';
 import { useAuth } from '@/lib/auth';
 import { backLabel } from '@/lib/back-label';
 import { confirmDestructive, showNotice } from '@/lib/confirm';
 import { formatWhen } from '@/lib/dates';
+import { haptics } from '@/lib/haptics';
 import { useDebates } from '@/lib/debate-context';
 import type { Debate } from '@/lib/debates';
 import {
@@ -80,16 +83,14 @@ const EMPTY: Record<HistoryTab, { title: string; desc: string; action: string; h
 
 /**
  * Where a History row opens, or null when the app cannot open it. Chats load
- * back into Ask, as the website's Resume does, and a Sparring round opens its
- * scorecard, as the website's Load does. The website cannot reopen a
- * Crossfire round, so neither can the app.
+ * back into Ask, as the website's Resume does, a Sparring round opens its
+ * scorecard, as the website's Load does, and a Crossfire round opens its
+ * debrief and transcript to read (crossfire-round/[id]).
  */
 function historyHref(item: HistoryItem): Href | null {
   switch (item.kind) {
     case 'chat':
       return { pathname: '/ask', params: { chat: item.id } };
-    case 'crossfire':
-      return null;
     default:
       return workHref(item, 'history');
   }
@@ -224,7 +225,10 @@ export default function HistoryScreen() {
           ]}
           cancelLabel={t('common.cancel')}
           onClose={() => setScopeOpen(false)}
-          onSelect={setScopeChoice}
+          onSelect={(key) => {
+            if (key !== scope) haptics.select();
+            setScopeChoice(key);
+          }}
           testID="history-scope-menu"
         />
 
@@ -252,7 +256,7 @@ export default function HistoryScreen() {
             <TextButton label={t('common.retry')} onPress={() => void load(scope)} />
           </Card>
         ) : !shown ? (
-          <ActivityIndicator style={styles.loading} accessibilityRole="progressbar" />
+          <SkeletonRows rows={4} />
         ) : shown.kind === 'unsorted' ? (
           <UnsortedList entries={shown.entries} debates={debates} userId={userId} onAttached={attached} />
         ) : (
@@ -302,13 +306,14 @@ function TabList({ tab, items, onDelete }: { tab: HistoryTab; items: HistoryItem
       {items.map((item, index) => {
         const href = historyHref(item);
         return (
-          <HistoryRow
-            key={`${item.kind}-${item.id}`}
-            item={item}
-            first={index === 0}
-            onPress={href ? () => router.push(href) : undefined}
-            onDelete={item.kind === 'case' || item.kind === 'sparring' ? () => onDelete(item) : undefined}
-          />
+          <ListItemIn key={`${item.kind}-${item.id}`} index={index} layout>
+            <HistoryRow
+              item={item}
+              first={index === 0}
+              onPress={href ? () => router.push(href) : undefined}
+              onDelete={item.kind === 'case' || item.kind === 'sparring' ? () => onDelete(item) : undefined}
+            />
+          </ListItemIn>
         );
       })}
     </Card>
@@ -336,6 +341,7 @@ function HistoryRow({ item, first, onPress, onDelete }: { item: HistoryItem; fir
   const { colors } = useTheme();
   const swipeable = useRef<SwipeableMethods>(null);
   const work = useWorkActions();
+  const press = usePressScale();
   const href = historyHref(item);
   const title = item.title || t(`debate.kinds.${item.kind}`);
 
@@ -354,10 +360,12 @@ function HistoryRow({ item, first, onPress, onDelete }: { item: HistoryItem; fir
       }}
       disabled={!onPress}
       onPress={onPress}
+      onPressIn={press.onPressIn}
+      onPressOut={press.onPressOut}
       testID="history-row"
       style={{ backgroundColor: colors.card }}>
       {({ pressed }) => (
-        <View style={[styles.row, pressed && styles.pressed]}>
+        <Animated.View style={[styles.row, pressed && styles.pressed, press.style]}>
           <IconTile name={KIND_ICONS[item.kind]} size={42} />
           <View style={styles.rowText}>
             <Text weight="semibold" style={styles.rowTitle} numberOfLines={2}>
@@ -368,7 +376,7 @@ function HistoryRow({ item, first, onPress, onDelete }: { item: HistoryItem; fir
             </Text>
           </View>
           {onPress ? <Icon name="chevronRight" color={colors.tabInactive} size={20} /> : null}
-        </View>
+        </Animated.View>
       )}
     </Pressable>
   );
@@ -470,17 +478,18 @@ function UnsortedList({
           {notice}
         </Text>
       ) : null}
-      {entries.map((entry) => (
-        <UnsortedRow
-          key={`${entry.kind}-${entry.id}`}
-          entry={entry}
-          debates={debates}
-          userId={userId}
-          onAttached={() => {
-            setNotice(t('debate.attached'));
-            onAttached(entry);
-          }}
-        />
+      {entries.map((entry, index) => (
+        <ListItemIn key={`${entry.kind}-${entry.id}`} index={index} layout>
+          <UnsortedRow
+            entry={entry}
+            debates={debates}
+            userId={userId}
+            onAttached={() => {
+              setNotice(t('debate.attached'));
+              onAttached(entry);
+            }}
+          />
+        </ListItemIn>
       ))}
     </>
   );
@@ -560,7 +569,10 @@ function UnsortedRow({ entry, debates, userId, onAttached }: { entry: UnsortedEn
             items={debates.map((debate) => ({ key: debate.id, label: debate.motion }))}
             cancelLabel={t('common.cancel')}
             onClose={() => setPicking(false)}
-            onSelect={setTarget}
+            onSelect={(key) => {
+              if (key !== target) haptics.select();
+              setTarget(key);
+            }}
           />
           <PrimaryButton label={t('debate.attachConfirm')} busy={busy} disabled={!chosen} onPress={() => void attach()} />
         </>
@@ -573,7 +585,6 @@ const styles = StyleSheet.create({
   root: { flex: 1 },
   title: { fontSize: 32, lineHeight: 38, letterSpacing: -0.8 },
   body: { fontSize: 15, lineHeight: 21 },
-  loading: { marginTop: 32 },
   pressed: { opacity: 0.7 },
   scope: { flexDirection: 'row', alignItems: 'center', gap: 12, borderWidth: 2, borderRadius: 14, paddingVertical: 11, paddingHorizontal: 14 },
   tabRow: { marginHorizontal: -20, flexGrow: 0 },

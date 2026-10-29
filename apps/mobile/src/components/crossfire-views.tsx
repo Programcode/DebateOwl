@@ -2,6 +2,7 @@ import type { CrossfireDebrief, CrossfireTurn } from '@debatelab/core/crossfire/
 import { useTranslation } from 'react-i18next';
 import { Pressable, StyleSheet, View } from 'react-native';
 
+import { PopIn } from './celebration';
 import { Callout, DocSection, Paragraph, Tag } from './document';
 import { Icon } from './icon';
 import { Text } from './text';
@@ -163,47 +164,64 @@ function Findings({ title, items }: { title: string; items: { turnIds: string[];
   );
 }
 
-/** The debrief as a document (mock 03's style), in the website's order. */
-export function CrossfireDebriefDocument({ debrief }: { debrief: CrossfireDebrief }) {
+/**
+ * The debrief as a document (mock 03's style), in the website's order. Its parts pop in one
+ * after another, once `holdEntrance` (a celebration over them) is off.
+ */
+export function CrossfireDebriefDocument({ debrief, holdEntrance = false }: { debrief: CrossfireDebrief; holdEntrance?: boolean }) {
   const { t } = useTranslation();
   return (
     <View style={styles.debrief} testID="crossfire-debrief">
-      <Findings title={t('crossfire.concessionsSecured')} items={debrief.concessionsSecured} />
-      <Findings title={t('crossfire.controlledQuestions')} items={debrief.controlledQuestions} />
-      <Findings title={t('crossfire.weakOrRepetitiveQuestions')} items={debrief.weakOrRepetitiveQuestions} />
-      <Findings title={t('crossfire.evasiveOrIncompleteAnswers')} items={debrief.evasiveOrIncompleteAnswers} />
-      <Findings title={t('crossfire.missedFollowUps')} items={debrief.missedFollowUps} />
-      <DocSection title={t('crossfire.betterFollowUpQuestions')}>
-        {debrief.betterFollowUpQuestions.length === 0 ? (
-          <Text tone="faint" style={styles.none}>
-            {t('crossfire.noGroundedFinding')}
-          </Text>
-        ) : (
-          debrief.betterFollowUpQuestions.map((item, index) => (
-            <View key={index} style={styles.finding}>
-              <Text weight="semibold" style={styles.question} selectable>
-                {item.question}
-              </Text>
-              <Paragraph text={item.reason} />
-              <TurnRefs turnIds={item.turnIds} />
-            </View>
-          ))
-        )}
-      </DocSection>
-      <View style={styles.strongest}>
-        <Callout title={t('crossfire.strongestExchange')}>
-          {debrief.strongestExchange ? (
-            <View style={styles.finding}>
-              <Paragraph text={debrief.strongestExchange.claim} tone="foreground" />
-              <TurnRefs turnIds={debrief.strongestExchange.turnIds} />
-            </View>
-          ) : (
+      <PopIn index={0} hold={holdEntrance}>
+        <Findings title={t('crossfire.concessionsSecured')} items={debrief.concessionsSecured} />
+      </PopIn>
+      <PopIn index={1} hold={holdEntrance}>
+        <Findings title={t('crossfire.controlledQuestions')} items={debrief.controlledQuestions} />
+      </PopIn>
+      <PopIn index={2} hold={holdEntrance}>
+        <Findings title={t('crossfire.weakOrRepetitiveQuestions')} items={debrief.weakOrRepetitiveQuestions} />
+      </PopIn>
+      <PopIn index={3} hold={holdEntrance}>
+        <Findings title={t('crossfire.evasiveOrIncompleteAnswers')} items={debrief.evasiveOrIncompleteAnswers} />
+      </PopIn>
+      <PopIn index={4} hold={holdEntrance}>
+        <Findings title={t('crossfire.missedFollowUps')} items={debrief.missedFollowUps} />
+      </PopIn>
+      <PopIn index={5} hold={holdEntrance}>
+        <DocSection title={t('crossfire.betterFollowUpQuestions')}>
+          {debrief.betterFollowUpQuestions.length === 0 ? (
             <Text tone="faint" style={styles.none}>
               {t('crossfire.noGroundedFinding')}
             </Text>
+          ) : (
+            debrief.betterFollowUpQuestions.map((item, index) => (
+              <View key={index} style={styles.finding}>
+                <Text weight="semibold" style={styles.question} selectable>
+                  {item.question}
+                </Text>
+                <Paragraph text={item.reason} />
+                <TurnRefs turnIds={item.turnIds} />
+              </View>
+            ))
           )}
-        </Callout>
-      </View>
+        </DocSection>
+      </PopIn>
+      <PopIn index={6} hold={holdEntrance}>
+        <View style={styles.strongest}>
+          <Callout title={t('crossfire.strongestExchange')}>
+            {debrief.strongestExchange ? (
+              <View style={styles.finding}>
+                <Paragraph text={debrief.strongestExchange.claim} tone="foreground" />
+                <TurnRefs turnIds={debrief.strongestExchange.turnIds} />
+              </View>
+            ) : (
+              <Text tone="faint" style={styles.none}>
+                {t('crossfire.noGroundedFinding')}
+              </Text>
+            )}
+          </Callout>
+        </View>
+      </PopIn>
     </View>
   );
 }

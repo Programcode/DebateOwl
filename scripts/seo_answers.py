@@ -18,7 +18,7 @@ ANSWERS = {
     ),
     "debateowl-vs-chatgpt": (
         "Which is better for debate prep, {product} or ChatGPT?",
-        "It depends on the task. ChatGPT is better for learning a new topic, open brainstorming and general writing help, and it works for any subject. {product} is better when you are preparing a specific motion: it keeps your cases, sources and practice rounds together, predicts the opposing case, times your speeches and gives a verdict on practice rounds. Many debaters use both, ChatGPT for background and {product} for motion prep and practice. Neither replaces checking original sources.",
+        "It depends on the task. ChatGPT is better for learning a new topic, open brainstorming and general writing help, and it works for any subject. {product} is better when you are preparing a specific motion: it keeps your cases, sources and practice rounds together, drafts answers to what the other side will say, times your speeches and gives a verdict on practice rounds. Many debaters use both, ChatGPT for background and {product} for motion prep and practice. Neither replaces checking original sources.",
     ),
     "debateowl-vs-windebate": (
         "Which is better, {product} or WinDebate?",
@@ -34,7 +34,7 @@ ANSWERS = {
     ),
     "ai-debate-case-generator": (
         "Can an AI debate case generator write a case I can actually use?",
-        "Yes, as a draft. {product}'s case generator turns a motion into a structured case (thesis, framework, contentions with warrants and impacts, the likely opposing case and counters) and lists the web sources it used, which you then verify and rewrite in your own words. Treat its citations as research leads: open every source and confirm the exact claim. The judgement calls, such as which contention to cut and where to pre-empt the opposition, stay with you.",
+        "Yes, as a draft. {product}'s case generator turns a motion into a ready-to-read case: an opening, arguments with explanation, evidence and why it matters, \"If they say… we answer…\" replies, a closing line and the sources it used. You then verify it and rewrite it in your own words. Treat its citations as research leads: open every source and confirm the exact claim. The judgement calls, such as which argument to cut and where to answer the opposition early, stay with you.",
     ),
     "debate-rebuttal-practice": (
         "How do you find the weak link in an argument you need to rebut?",
@@ -42,7 +42,7 @@ ANSWERS = {
     ),
     "ai-debate-coach": (
         "Can an AI debate coach actually help you prepare?",
-        "Yes. {product}'s Ask coach is an AI debate coach that answers specific prep questions about burdens, clash, weighing and speech structure, and gives feedback on practice speeches; it works best when you name the format, side and speaker role. Vague questions get generic answers. Treat any sources it cites as leads to check. An AI coach has not watched you speak and does not know your judges or your partner, so take its conclusions to your human coach or team.",
+        "Yes. {product}'s Ask coach is an AI debate coach that answers specific prep questions about what your side has to prove, which argument decides the round and how to structure a speech, and gives feedback on practice speeches; it works best when you name the format, side and speaker role. Vague questions get generic answers. Treat any sources it cites as leads to check. An AI coach has not watched you speak and does not know your judges or your partner, so take its conclusions to your human coach or team.",
     ),
     "debate-evidence-finder": (
         "Can AI find reliable evidence for a debate case?",
@@ -50,7 +50,7 @@ ANSWERS = {
     ),
     "argument-flowchart": (
         "When is an argument flowchart useful for debate prep?",
-        "It is useful before and after a round, not during one. A flowchart maps your thesis, your arguments, the attacks on them and your rebuttals, so you can see which link breaks a chain and where two contentions rely on the same assumption. Build it from the motion outward, add the strongest attack to each contention, and note the weighing at each clash. During the round itself, a written flow on paper or a laptop is faster than any canvas, so keep your in-round notes there and use the map to plan and review.",
+        "It is useful before and after a round, not during one. A flowchart maps your case's main line, your arguments, the attacks on them and your answers, so you can see which link breaks a chain and where two arguments rely on the same assumption. Build it from the motion outward, add the strongest attack to each argument, and note at each clash why your side matters more. During the round itself, a written flow on paper or a laptop is faster than any canvas, so keep your in-round notes there and use the map to plan and review.",
     ),
     "online-debate-timer": (
         "How long are debate speeches in each format?",
@@ -58,7 +58,7 @@ ANSWERS = {
     ),
     "how-to-write-a-debate-case": (
         "How do you write a debate case?",
-        "Start with the motion, not the arguments. Read it word by word, define the key terms fairly and write your burden in one sentence. Brainstorm widely, then keep two to four contentions, each built as claim, warrant, evidence, impact and weighing. Add a framework telling the judge how to decide, pre-empt the obvious response inside each contention, and read the case aloud against a timer until it fits. The format changes the details: Public Forum constructives usually fit two contentions, Lincoln-Douglas cases centre on a value and criterion, and BP closing teams prepare an extension instead.",
+        "Start with the motion, not the arguments. Define the key terms fairly and write down in one sentence what your side has to prove. Keep two to four arguments, each with a point, an explanation, evidence and why it matters. Open with a hook and what you will show, add \"If they say… we answer…\" replies, end on a closing line, and time a reading aloud. The format changes the details: Public Forum constructives usually fit two arguments, Lincoln-Douglas cases centre on a value and criterion, and BP closing teams prepare an extension instead.",
     ),
     "how-to-practice-rebuttals": (
         "What is the best way to practise debate rebuttals?",

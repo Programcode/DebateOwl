@@ -1,37 +1,13 @@
 /**
  * A coach's own round format, small enough to share in a URL (`?custom=`).
  * The parameter is untrusted input: anything that does not fit the limits
- * below is rejected rather than repaired.
+ * below is rejected rather than repaired. The format itself is shared with
+ * the app in @debatelab/core.
  */
-import type { RoundFormat, RoundSegment, SegmentSide } from './formats';
+import type { SegmentSide } from './formats';
+import { cleanText, CUSTOM_LIMITS, isWholeSeconds, type CustomFormat, type CustomSegment } from '@debatelab/core/free-tools/custom-format';
 
-export interface CustomSegment {
-  label: string;
-  seconds: number;
-  /** Questioning periods have no points of information and no flow column. */
-  kind: 'speech' | 'cross-examination';
-  side: SegmentSide;
-  /** Points of information between the first and last minute. */
-  poi: boolean;
-}
-
-export interface CustomFormat {
-  name: string;
-  /** Prep time per side, in seconds. */
-  prepSeconds: number;
-  segments: CustomSegment[];
-}
-
-export const CUSTOM_LIMITS = {
-  segments: 30,
-  label: 40,
-  name: 60,
-  minSeconds: 10,
-  maxSeconds: 60 * 60,
-  maxPrepSeconds: 30 * 60,
-  /** Encoded length; well under any browser's URL limit. */
-  encoded: 4000,
-} as const;
+export * from '@debatelab/core/free-tools/custom-format';
 
 type WireSegment = [label: string, seconds: number, kind: 's' | 'q', side: SegmentSide, poi: 0 | 1];
 interface Wire { v: 1; n: string; p: number; s: WireSegment[] }
@@ -48,12 +24,6 @@ function fromBase64Url(value: string): string {
   return new TextDecoder('utf-8', { fatal: true }).decode(Uint8Array.from(binary, (char) => char.charCodeAt(0)));
 }
 
-/** Control characters become spaces, runs of space collapse, and the result is cut to `max`. */
-function cleanText(value: string, max: number): string {
-  const visible = Array.from(value, (char) => (char.charCodeAt(0) < 32 || char.charCodeAt(0) === 127 ? ' ' : char)).join('');
-  return visible.replace(/\s+/g, ' ').trim().slice(0, max);
-}
-
 export function encodeCustomFormat(format: CustomFormat): string {
   const wire: Wire = {
     v: 1,
@@ -63,9 +33,6 @@ export function encodeCustomFormat(format: CustomFormat): string {
   };
   return toBase64Url(JSON.stringify(wire));
 }
-
-const isWholeSeconds = (value: unknown, min: number, max: number): value is number =>
-  Number.isInteger(value) && Number(value) >= min && Number(value) <= max;
 
 /** The custom format in a `?custom=` value, or null when it is malformed or out of bounds. */
 export function decodeCustomFormat(value: string | null | undefined): CustomFormat | null {
@@ -94,42 +61,3 @@ export function decodeCustomFormat(value: string | null | undefined): CustomForm
   return { name: cleanText(n, CUSTOM_LIMITS.name) || 'Custom format', prepSeconds: p, segments };
 }
 
-/** The timer's view of a custom format. POI windows need at least a minute between the protected ends. */
-export function customToRoundFormat(custom: CustomFormat): RoundFormat {
-  const segments: RoundSegment[] = custom.segments.map((segment, index) => ({
-    id: `c${index + 1}`,
-    short: segment.label,
-    label: segment.label,
-    side: segment.side,
-    kind: segment.kind,
-    seconds: segment.seconds,
-    ...(segment.poi && segment.kind === 'speech' && segment.seconds >= 180
-      ? { poi: { opensAt: 60, closesAt: segment.seconds - 60 } }
-      : {}),
-  }));
-  return {
-    id: 'custom',
-    name: custom.name,
-    shortName: 'Custom',
-    sideNames: ['Side A', 'Side B'],
-    segments,
-    prepSeconds: custom.prepSeconds,
-    sources: [],
-    note: 'A custom format. Share its link so your club times rounds the same way.',
-  };
-}
-
-/** A starting point for editing: a built-in format as a custom one. */
-export function roundFormatToCustom(format: RoundFormat): CustomFormat {
-  return {
-    name: `${format.name} (custom)`.slice(0, CUSTOM_LIMITS.name),
-    prepSeconds: format.prepSeconds,
-    segments: format.segments.map((segment) => ({
-      label: segment.short.slice(0, CUSTOM_LIMITS.label),
-      seconds: segment.seconds,
-      kind: segment.kind === 'speech' || segment.kind === 'reply' ? 'speech' : 'cross-examination',
-      side: segment.side,
-      poi: Boolean(segment.poi),
-    })),
-  };
-}

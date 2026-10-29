@@ -12,6 +12,18 @@
       "env": {
         "DEBATELAB_BUILD": "dev"
       }
+    },
+    "development-simulator": {
+      "developmentClient": true,
+      "distribution": "internal",
+      "node": "22.23.2",
+      "ios": {
+        "simulator": true
+      },
+      "env": {
+        "DEBATELAB_BUILD": "dev",
+        "DEBATELAB_APP_GROUP": "group.com.pistack.debateowl"
+      }
     }
   }
 }

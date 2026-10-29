@@ -1,5 +1,6 @@
-import { StyleSheet, TextInput, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
+import { AppTextInput } from './app-text-input';
 import { Icon } from './icon';
 
 import { radius } from '@/theme/colors';
@@ -12,7 +13,7 @@ export function SearchField({ value, onChangeText, placeholder }: { value: strin
   return (
     <View style={[styles.search, { backgroundColor: colors.segmentTrack }]}>
       <Icon name="search" color={colors.faint} size={19} />
-      <TextInput
+      <AppTextInput
         value={value}
         onChangeText={onChangeText}
         placeholder={placeholder}

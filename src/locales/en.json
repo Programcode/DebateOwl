@@ -1090,34 +1090,10 @@
     "save": "Save",
     "discuss": "Discuss",
     "flowcharts": "Flowcharts",
-    "exordio": "Exordio",
-    "exordioDesc": "Your compelling opening",
-    "hook": "Hook",
-    "transition": "Transition",
-    "caseStructure": "Case structure",
-    "caseStructureDesc": "Your argument framework",
-    "thesis": "Thesis",
-    "framework": "Framework",
-    "burdenOfProof": "Burden of proof",
-    "keyDefinitions": "Key definitions",
-    "noDefinitions": "No definitions provided",
     "arguments": "Arguments",
-    "structuredArguments": "structured arguments",
-    "predictedOpponent": "Predicted opponent case",
-    "predictedOpponentDesc": "What they'll likely argue",
-    "likelyArguments": "Likely arguments",
-    "strategicWeaknesses": "Strategic weaknesses",
-    "keyClashes": "Key clashes",
-    "preparedCounters": "Prepared counters",
-    "preparedCountersDesc": "Ready-to-use rebuttals",
     "needsSource": "Needs source",
-    "reasoning": "Reasoning:",
     "evidence": "Evidence:",
     "searchSuggestion": "Search suggestion:",
-    "impact": "Impact:",
-    "target": "Target",
-    "counter": "Counter:",
-    "rebuttal": "Rebuttal:",
     "exportedGdocs": "Case exported to Google Docs!",
     "open": "Open",
     "exportFailed": "Failed to export to Google Docs",
@@ -1127,7 +1103,36 @@
     "undo": "Undo",
     "resultTitle": "Your case",
     "unverified": "Unverified",
-    "unresearchedCaveat": "AI-generated, and no web research backs this evidence. Check facts and sources before using them in a round."
+    "unresearchedCaveat": "AI-generated, and no web research backs this evidence. Check facts and sources before using them in a round.",
+    "opening": "Opening",
+    "openingDesc": "How your speech starts",
+    "definition": "What we mean:",
+    "roadmap": "What we will show",
+    "argumentCount_one": "{{count}} argument",
+    "argumentCount_other": "{{count}} arguments",
+    "point": "Point:",
+    "explanation": "Explanation:",
+    "whyItMatters": "Why it matters:",
+    "ifTheySay": "If they say…",
+    "ifTheySayDesc": "Their likely claims and your answers",
+    "theySay": "They say",
+    "weAnswer": "We answer:",
+    "source": "Source:",
+    "whyWeWin": "Why we win",
+    "whyWeWinDesc": "What the judge should remember",
+    "closingLine": "Closing line",
+    "closingLineDesc": "Your last sentence",
+    "sources": "Sources",
+    "sourcesDesc": "Everything this case cites",
+    "reinforce": "Backing up our case",
+    "reinforceDesc": "About 2 minutes on the arguments your team already made",
+    "legacyJudgeBy": "How to judge this debate",
+    "legacyMustShow": "What we have to show",
+    "legacyDefinitions": "What we mean by the motion",
+    "legacyAlsoSay": "They may also say",
+    "legacyWeakSpots": "Where we're weakest",
+    "legacyDecidingPoints": "What the debate comes down to",
+    "legacySayItLike": "Say it like this:"
   },
   "attackForm": {
     "argument": "Your argument",
@@ -1873,8 +1878,6 @@
     "unknown": "Unknown",
     "standard": "Standard",
     "format": "Format",
-    "contentionNumber": "Contention #{{number}}",
-    "noThesis": "No thesis provided.",
     "assessmentSummary": "Assessment summary",
     "noSummary": "No summary provided.",
     "strengthAreas": "Strength areas",
@@ -1914,17 +1917,7 @@
       "unverified": "Unverified",
       "pending": "Pending"
     },
-    "reasoning": "Reasoning",
     "evidence": "Evidence",
-    "impact": "Impact",
-    "hook": "Hook",
-    "transition": "Transition",
-    "noArguments": "No arguments provided.",
-    "noOpponentArgs": "No predicted opponent arguments provided.",
-    "noCounters": "No counters provided.",
-    "target": "Target",
-    "counter": "Counter",
-    "rebuttal": "Rebuttal",
     "debateCase": "Debate case",
     "side": "Side",
     "proposition": "In favor",
@@ -1945,15 +1938,7 @@
     "howToUse": "How to use",
     "source": "Source",
     "noFactoids": "No factoids found.",
-    "exordio": "Exordio",
-    "caseStructure": "Case structure",
-    "thesis": "Thesis",
-    "framework": "Framework",
-    "burdenOfProof": "Burden of proof",
-    "keyDefinitions": "Key definitions",
     "arguments": "Arguments",
-    "predictedOpponent": "Predicted opponent case",
-    "counters": "Prepared counters",
     "weaknesses": "Weaknesses identified",
     "fallacies": "Fallacies detected",
     "crossExQuestions": "Cross-examination questions",
@@ -1982,7 +1967,26 @@
     "factoidsSummary_one": "{{count}} fact • {{verified}} verified",
     "factoidsSummary_other": "{{count}} facts • {{verified}} verified",
     "topIdeasCount_one": "{{count}} top idea",
-    "topIdeasCount_other": "{{count}} top ideas"
+    "topIdeasCount_other": "{{count}} top ideas",
+    "opening": "Opening",
+    "roadmap": "What we will show",
+    "definition": "What we mean",
+    "argumentNumber": "Argument {{number}}",
+    "point": "Point",
+    "whyItMatters": "Why it matters",
+    "ifTheySay": "If they say…",
+    "theySay": "They say",
+    "weAnswer": "We answer",
+    "whyWeWin": "Why we win",
+    "closingLine": "Closing line",
+    "sources": "Sources",
+    "reinforce": "Backing up our case",
+    "legacyJudgeBy": "How to judge this debate",
+    "legacyMustShow": "What we have to show",
+    "legacyDefinitions": "What we mean by the motion",
+    "legacyAlsoSay": "They may also say",
+    "legacySayItLike": "Say it like this",
+    "untitledCase": "Untitled case"
   },
   "sparring": {
     "pro": "Pro",
@@ -2029,10 +2033,10 @@
       "hard": "Ruthless"
     },
     "roleGuidance": {
-      "introductor": "Open with an exordio, define the key terms, set the framework and thesis, then give the roadmap. Save the full arguments for R1.",
-      "r1": "Build the core arguments with claims, warrants, support, and impacts. Use the final part to anticipate or answer the strongest opposition.",
-      "r2": "Extend R1, answer the opponent directly, identify the central clashes, and compare the impacts. Do not simply repeat the case.",
-      "conclusor": "Add no new arguments. Crystallize the decisive clashes, weigh the round, and close with the reason your side wins."
+      "introductor": "Open with a hook, say \"we will show N arguments that prove…\", and give each argument in short form. Explain a motion word in one line only if it is unclear. Save the full arguments for R1.",
+      "r1": "Build the arguments in full: the point, why it is true, evidence with its source and year, and why it matters. Use the last part to answer what they are most likely to say.",
+      "r2": "Bring no new arguments. Spend about 2 minutes backing up your team's arguments, then about 4 minutes answering theirs: \"If they say…, we answer…\".",
+      "conclusor": "Add no new arguments. Give two or three reasons your side won, then end with one clear closing line."
     },
     "category": {
       "Logic": "Logic",
@@ -2708,9 +2712,6 @@
       "done": "Done",
       "openItem": "Open {{title}}"
     },
-    "offline": {
-      "notice": "Offline: showing saved copies. AI and saving wait for the connection."
-    },
     "debates": {
       "search": "Search motions",
       "noMatches": "No debates match your search.",
@@ -2860,7 +2861,16 @@
       "speechOf": "Speech {{n}} of {{of}}",
       "ofTotal": "of {{total}}",
       "next": "Next speech",
-      "reset": "Reset"
+      "reset": "Reset",
+      "widgetTitle": "DebateOwl timer",
+      "widgetIdle": "No speech is on the clock.",
+      "poiSignal": "Points of information open or close",
+      "knock": "A knock",
+      "keepsRunning": "The clock keeps running when you close the timer.",
+      "editFormat": "Edit this format",
+      "deleteFormat": "Delete this format",
+      "deleteFormatTitle": "Delete “{{name}}”?",
+      "deleteFormatMessage": "It is removed from this device. The round on the timer keeps its speeches."
     },
     "crossfire": {
       "voiceLater": "Coming with the app build.",
@@ -2874,7 +2884,9 @@
       "resume": "Resume",
       "replay": "Replay",
       "versus": "{{user}} vs {{opponent}}",
-      "roundsFailed": "Could not load your sparring rounds."
+      "roundsFailed": "Could not load your sparring rounds.",
+      "exportPdf": "Export as PDF",
+      "exportFailed": "The PDF could not be made. Try again."
     },
     "brainstorm": {
       "strengths": {
@@ -2969,6 +2981,81 @@
     "permissions": {
       "speechRecognition": "DebateOwl turns your voice into text when you dictate a question, a Crossfire answer or a Sparring speech. Apple processes the audio to recognize it.",
       "microphone": "DebateOwl uses the microphone while you dictate a question, a Crossfire answer or a Sparring speech."
+    },
+    "voice": {
+      "recognition": "Apple's speech recognition turns your speech into text. iOS may send the audio to Apple to recognize it.",
+      "denied": "Voice is off because DebateOwl may not use the microphone or speech recognition. Allow both in Settings. Typing works as usual.",
+      "openSettings": "Open Settings",
+      "notAllowed": "DebateOwl may not use the microphone or speech recognition. Allow both in Settings, or type instead.",
+      "limit": "Today's allowance for the opponent's ElevenLabs voice is used up, so your device's voice is reading the replies.",
+      "deliveryDescription": "These figures come from the clock and the transcript of what you said. Nobody listened for tone, confidence or volume, and the transcript can miss words.",
+      "spoken": "Spoken"
+    },
+    "practice": {
+      "speechTimeDesc": "How long a speech runs",
+      "speechTimeIntro": "Paste or type a speech to see how long it takes to deliver.",
+      "calcPrivacy": "Counted on this device. The text is never uploaded or stored.",
+      "motionsDesc": "Draw a practice motion to argue",
+      "motionsIntro": "Original practice motions, by topic, level and type."
+    },
+    "sidebar": {
+      "dashboard": "Dashboard",
+      "sources": "Sources",
+      "account": "Account and settings",
+      "noDebate": "No current debate",
+      "collapseHint": "Hides this section’s tools",
+      "expandHint": "Shows this section’s tools"
+    },
+    "trialBanner": {
+      "seePlan": "See plan"
+    },
+    "tour": {
+      "progress": "Step {{step}} of {{steps}}"
+    },
+    "a11y": {
+      "answerReady": "Answer ready",
+      "resultReady": "Ready: {{title}}"
+    },
+    "share": {
+      "shareLink": "Share link",
+      "linkCopied": "Link copied",
+      "failed": "Could not create a share link. Try again.",
+      "limitReached": "You've reached the daily share limit ({{limit}}). Try again tomorrow.",
+      "tooLarge": "This is too large to share as a link.",
+      "signIn": "Sign in again to share a link.",
+      "timeout": "Creating the link took too long. Try again.",
+      "openWebsite": "Open on the website",
+      "unknownKind": "This shared item can only be opened on the website."
+    },
+    "widget": {
+      "spar": "Spar",
+      "description": "Your motion and preparation at a glance."
+    },
+    "quickActions": {
+      "startTimer": "Start timer"
+    },
+    "offlineQueue": {
+      "notice": "Offline: showing saved copies. New notes, source edits and switches sync when you're back online. AI and other changes wait for the connection.",
+      "pending_one": "{{count}} change will sync when you're back online",
+      "pending_other": "{{count}} changes will sync when you're back online",
+      "syncing_one": "{{count}} change is waiting to sync",
+      "syncing_other": "{{count}} changes are waiting to sync",
+      "waiting": "Waiting to sync",
+      "syncsWhenOnline": "Saved on this phone. It syncs when you're back online.",
+      "syncingSoon": "Saved on this phone. It syncs as soon as the server can be reached.",
+      "noteQueuedTitle": "Note saved on this phone",
+      "noteQueuedDesc": "It's added to your Library when you're back online.",
+      "changeQueuedTitle": "Saved on this phone",
+      "changeQueuedDesc": "It syncs when you're back online.",
+      "synced_one": "{{count}} change synced",
+      "synced_other": "{{count}} changes synced",
+      "refusedTitle_one": "{{count}} change could not be saved",
+      "refusedTitle_other": "{{count}} changes could not be saved",
+      "refusedDesc_one": "The server refused it, so it was removed from this phone.",
+      "refusedDesc_other": "The server refused them, so they were removed from this phone.",
+      "noteRefused": "The server refused the note \"{{title}}\", so it was removed from this phone.",
+      "notKeptTitle": "Not saved on this phone yet",
+      "notKeptDesc": "Your changes sync when you are back online. Keep the app open until then."
     }
   }
 }

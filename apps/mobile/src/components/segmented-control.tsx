@@ -39,7 +39,7 @@ export function SegmentedControl<T extends string>({
               selected && [styles.selected, { backgroundColor: colors.segmentSelected }],
               selected && scheme === 'light' && styles.selectedShadow,
             ]}>
-            <Text weight="semibold" tone={selected ? 'foreground' : 'secondary'} style={styles.label}>
+            <Text weight="semibold" tone={selected ? 'foreground' : 'secondary'} style={styles.label} maxFontSizeMultiplier={1.6}>
               {option.label}
             </Text>
           </Pressable>

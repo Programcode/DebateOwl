@@ -10,7 +10,7 @@ function assert(condition: unknown, message: string): asserts condition {
 
 // The feature-specific quality rules each prompt must carry.
 const QUALITY_RULES: Record<Feature, string[]> = {
-  generate: ["SPEECH-READY CONTENTIONS", "weigh it", "TEAM CONSISTENCY"],
+  generate: ["SPEECH-READY ARGUMENTS", "Do not use debate theory terms", "never invent or guess a link", "TEAM CONSISTENCY"],
   attack: ["TARGET, FLAW, RESPONSE", "exact words from CASE TEXT", "word for word"],
   brainstorm: ["GENUINELY DIFFERENT DIRECTIONS", "same response are one idea"],
   factoids: ["CUTTABLE AND HONEST", "limitations: never empty", "Never round, combine, or extrapolate"],

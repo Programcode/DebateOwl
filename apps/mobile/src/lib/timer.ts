@@ -1,130 +1,224 @@
 /**
- * The debate timer, as the website's TimerPage (src/pages/TimerPage.tsx): the
- * same formats, speeches and signals. The clock keeps timestamps, never counts
- * ticks, so it shows the right time after the app has been in the background.
+ * The debate timer, as the website's free round timer
+ * (src/components/free-tools/DebateTimer.tsx and timer-session.ts): the same
+ * formats, speeches, prep banks, points of information and custom formats,
+ * from @debatelab/core/free-tools. A speech counts up and runs into overtime;
+ * prep banks count down and stop at zero. Every clock is a timestamp, never a
+ * count of ticks, so it is right after the app comes back from the background
+ * or is opened again.
  */
+import { customToRoundFormat, parseCustomFormat, type CustomFormat } from '@debatelab/core/free-tools/custom-format';
+import { FORMATS, isBuiltInFormatId, type BuiltInFormatId, type RoundFormat, type RoundSegment } from '@debatelab/core/free-tools/formats';
+import {
+  elapsedMs,
+  initialRoundState,
+  isPrepRunning,
+  isSpeechRunning,
+  parseRoundState,
+  prepRemainingMs,
+  segmentStatus,
+  type PrepSide,
+  type RoundState,
+  type TimerCue,
+} from '@debatelab/core/free-tools/round-timer';
 
-export interface TimerSpeech {
+export type TimerSignal = TimerCue;
+
+/** A built-in format, or a custom one; `savedId` names the saved custom format it came from, if any. */
+export type FormatChoice = { id: BuiltInFormatId } | { id: 'custom'; custom: CustomFormat; savedId?: string };
+
+export interface TimerSession {
+  choice: FormatChoice;
+  round: RoundState;
+  muted: boolean;
+}
+
+/** A custom format the student saved on this device. */
+export interface SavedFormat {
   id: string;
-  labelKey: string;
-  minutes: number;
+  format: CustomFormat;
 }
 
-export interface TimerFormat {
-  id: string;
-  nameKey: string;
-  speeches: TimerSpeech[];
+/** DebateOwl's own school format opens first, as the app's timer always has. */
+export const DEFAULT_FORMAT: BuiltInFormatId = 'school';
+export const MAX_SAVED_FORMATS = 20;
+
+// The website's in-app timer translates these format names; the free timer's other names are proper names.
+const FORMAT_NAME_KEYS: Partial<Record<BuiltInFormatId, string>> = {
+  school: 'timer.formatStandard',
+  pf: 'timer.formatPF',
+  ld: 'timer.formatLD',
+  policy: 'timer.formatPolicy',
+};
+
+export function formatNameKey(id: BuiltInFormatId): string | undefined {
+  return FORMAT_NAME_KEYS[id];
 }
 
-export const TIMER_FORMATS: TimerFormat[] = [
-  {
-    id: 'standard',
-    nameKey: 'timer.formatStandard',
-    speeches: [
-      { id: 'intro', labelKey: 'timer.speeches.standard.intro', minutes: 4 },
-      { id: 'r1', labelKey: 'timer.speeches.standard.r1', minutes: 6 },
-      { id: 'r2', labelKey: 'timer.speeches.standard.r2', minutes: 6 },
-      { id: 'conc', labelKey: 'timer.speeches.standard.conc', minutes: 3 },
-    ],
-  },
-  {
-    id: 'ld',
-    nameKey: 'timer.formatLD',
-    speeches: [
-      { id: 'ac', labelKey: 'timer.speeches.ld.ac', minutes: 6 },
-      { id: 'nc', labelKey: 'timer.speeches.ld.nc', minutes: 7 },
-      { id: 'ar1', labelKey: 'timer.speeches.ld.ar1', minutes: 4 },
-      { id: 'nr', labelKey: 'timer.speeches.ld.nr', minutes: 6 },
-      { id: 'ar2', labelKey: 'timer.speeches.ld.ar2', minutes: 3 },
-    ],
-  },
-  {
-    id: 'pf',
-    nameKey: 'timer.formatPF',
-    speeches: [
-      { id: 'team1_c', labelKey: 'timer.speeches.pf.team1c', minutes: 4 },
-      { id: 'team2_c', labelKey: 'timer.speeches.pf.team2c', minutes: 4 },
-      { id: 'team1_r', labelKey: 'timer.speeches.pf.team1r', minutes: 4 },
-      { id: 'team2_r', labelKey: 'timer.speeches.pf.team2r', minutes: 4 },
-      { id: 'team1_s', labelKey: 'timer.speeches.pf.team1s', minutes: 3 },
-      { id: 'team2_s', labelKey: 'timer.speeches.pf.team2s', minutes: 3 },
-      { id: 'team1_ff', labelKey: 'timer.speeches.pf.team1ff', minutes: 2 },
-      { id: 'team2_ff', labelKey: 'timer.speeches.pf.team2ff', minutes: 2 },
-    ],
-  },
-  {
-    id: 'policy',
-    nameKey: 'timer.formatPolicy',
-    speeches: [
-      { id: '1ac', labelKey: 'timer.speeches.policy.1ac', minutes: 8 },
-      { id: '1nc', labelKey: 'timer.speeches.policy.1nc', minutes: 8 },
-      { id: '2ac', labelKey: 'timer.speeches.policy.2ac', minutes: 8 },
-      { id: '2nc', labelKey: 'timer.speeches.policy.2nc', minutes: 8 },
-      { id: '1nr', labelKey: 'timer.speeches.policy.1nr', minutes: 5 },
-      { id: '1ar', labelKey: 'timer.speeches.policy.1ar', minutes: 5 },
-      { id: '2nr', labelKey: 'timer.speeches.policy.2nr', minutes: 5 },
-      { id: '2ar', labelKey: 'timer.speeches.policy.2ar', minutes: 5 },
-    ],
-  },
-];
+export type Translate = (key: string, options?: Record<string, unknown>) => string;
 
-/** One speech's clock: its length, when it last started running, and the time it ran before that. */
-export interface TimerClock {
-  durationMs: number;
-  /** When the clock last started; null while it is stopped. */
-  startedAt: number | null;
-  /** Time that ran before the last start, across pauses. */
-  elapsedBeforeMs: number;
+/** A format's name: the in-app timer's translated names where the website has them, else its own. */
+export function formatName(choice: FormatChoice, format: RoundFormat, t: Translate): string {
+  if (choice.id === 'custom') return choice.custom.name;
+  const key = formatNameKey(choice.id);
+  return key ? t(key) : format.name;
 }
 
-export function idleClock(minutes: number): TimerClock {
-  return { durationMs: minutes * 60_000, startedAt: null, elapsedBeforeMs: 0 };
+/** A side's name: the format's own (Government, Team A), translated for custom formats. */
+export function sideNameFor(choice: FormatChoice, format: RoundFormat, side: RoundSegment['side'], t: Translate): string {
+  if (side === 'both') return t('timer.bothSides', { ns: 'tools' });
+  if (choice.id === 'custom') return t(side === 'a' ? 'custom.sideA' : 'custom.sideB', { ns: 'tools' });
+  return format.sideNames[side === 'a' ? 0 : 1];
 }
 
-export function elapsedMs(clock: TimerClock, now: number): number {
-  const running = clock.startedAt === null ? 0 : Math.max(0, now - clock.startedAt);
-  return Math.min(clock.durationMs, clock.elapsedBeforeMs + running);
+export function formatFor(choice: FormatChoice): RoundFormat {
+  return choice.id === 'custom' ? customToRoundFormat(choice.custom) : FORMATS[choice.id];
 }
 
-/** Whole seconds left, rounded up as the website shows them: 0:01 until the last moment. */
-export function remainingSeconds(clock: TimerClock, now: number): number {
-  return Math.max(0, Math.ceil((clock.durationMs - elapsedMs(clock, now)) / 1000));
+export function initialSession(choice: FormatChoice = { id: DEFAULT_FORMAT }, muted = false): TimerSession {
+  return { choice, round: initialRoundState(formatFor(choice)), muted };
 }
 
-export function startClock(clock: TimerClock, now: number): TimerClock {
-  if (clock.startedAt !== null || elapsedMs(clock, now) >= clock.durationMs) return clock;
-  return { ...clock, startedAt: now };
+/** What is kept on the device: the round's timestamps, so a running speech keeps running while the timer is closed. */
+export function serializeSession(session: TimerSession): unknown {
+  const { choice } = session;
+  return {
+    v: 1,
+    format: choice.id,
+    ...(choice.id === 'custom' ? { custom: choice.custom, ...(choice.savedId ? { savedId: choice.savedId } : {}) } : {}),
+    round: session.round,
+    muted: session.muted,
+  };
 }
 
-export function pauseClock(clock: TimerClock, now: number): TimerClock {
-  if (clock.startedAt === null) return clock;
-  return { ...clock, startedAt: null, elapsedBeforeMs: elapsedMs(clock, now) };
+/** A stored session read back, or null when it does not fit (an old version, a format that changed). */
+export function parseSession(value: unknown): TimerSession | null {
+  if (typeof value !== 'object' || value === null) return null;
+  const { v, format, custom, savedId, round, muted } = value as Record<string, unknown>;
+  if (v !== 1) return null;
+  let choice: FormatChoice | null = null;
+  if (format === 'custom') {
+    const parsed = parseCustomFormat(custom);
+    if (parsed) choice = { id: 'custom', custom: parsed, ...(typeof savedId === 'string' ? { savedId } : {}) };
+  } else if (typeof format === 'string' && isBuiltInFormatId(format)) {
+    choice = { id: format };
+  }
+  if (!choice) return null;
+  const parsedRound = parseRoundState(round, formatFor(choice));
+  return parsedRound ? { choice, round: parsedRound, muted: muted === true } : null;
 }
 
-export type TimerSignal = 'beep' | 'double-beep';
-
-/**
- * The signal due when the time left moves from `previous` to `current`
- * seconds: one beep on reaching the last minute, two beeps at time up. After
- * a gap in the background that crossed both, only time up sounds.
- */
-export function signalBetween(previous: number, current: number): TimerSignal | null {
-  if (previous > 0 && current === 0) return 'double-beep';
-  if (previous > 60 && current <= 60 && current > 0) return 'beep';
-  return null;
+/** Saved custom formats read back; anything malformed is dropped, the rest kept. */
+export function parseSavedFormats(value: unknown): SavedFormat[] {
+  if (!Array.isArray(value)) return [];
+  const seen = new Set<string>();
+  const saved: SavedFormat[] = [];
+  for (const entry of value) {
+    if (typeof entry !== 'object' || entry === null) continue;
+    const { id, format } = entry as Record<string, unknown>;
+    const parsed = parseCustomFormat(format);
+    if (typeof id !== 'string' || !id || seen.has(id) || !parsed) continue;
+    seen.add(id);
+    saved.push({ id, format: parsed });
+    if (saved.length === MAX_SAVED_FORMATS) break;
+  }
+  return saved;
 }
 
-/**
- * The signal due between two readings of the time left, as the screen redraws.
- * Time left only falls while the clock runs, so every fall is checked, also one
- * that ends in a pause: pausing as 1:01 turns to 1:00 still beeps. A fresh
- * clock (a reset or another speech) moves the reading up and sounds nothing.
- */
-export function signalFor(previous: number, current: number, clock: TimerClock): TimerSignal | null {
-  if (clock.startedAt === null && clock.elapsedBeforeMs === 0) return null;
-  return signalBetween(previous, current);
+/** Adds or replaces a saved format, newest first, keeping at most MAX_SAVED_FORMATS. */
+export function upsertSavedFormat(list: readonly SavedFormat[], entry: SavedFormat): SavedFormat[] {
+  return [entry, ...list.filter((item) => item.id !== entry.id)].slice(0, MAX_SAVED_FORMATS);
+}
+
+/** True when anything is on the clock or a speech has time on it, so closing the timer would leave something behind. */
+export function isActive(round: RoundState): boolean {
+  return isSpeechRunning(round) || isPrepRunning(round, 'a') || isPrepRunning(round, 'b');
 }
 
 export function formatClock(seconds: number): string {
   return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`;
+}
+
+/** Text the lock screen shows, in the app's language: the layouts cannot reach i18n. */
+export interface TimerActivityLabels {
+  speaking: string;
+  paused: string;
+  overtime: string;
+  prep: string;
+  idleTitle: string;
+  idleLine: string;
+}
+
+/**
+ * What a Live Activity and the lock-screen widget show: one clock, as times,
+ * so iOS can draw it counting without the app. A speech's clock is its limit
+ * counting down from `startedAt` to `endsAt` (pinned at `pausedAt` when
+ * paused); after `endsAt` it reads as overtime. Prep counts its bank down.
+ */
+export interface TimerActivityState {
+  kind: 'speech' | 'prep';
+  /** "PM", "1AC", or the side whose prep runs. */
+  title: string;
+  /** The speech's full name and side, or "Prep". */
+  line: string;
+  /** When this clock would have started had it run without stopping, in epoch ms. */
+  startedAt: number;
+  endsAt: number;
+  /** Set while paused: the moment the clock stands at. */
+  pausedAt: number | null;
+  /** Side colour: `a`, `b` or `both`. */
+  side: RoundSegment['side'];
+  labels: TimerActivityLabels;
+}
+
+/**
+ * The Live Activity for a session at `now`, or null when no clock has time on
+ * it (a fresh speech with no prep running), so the activity ends. A running
+ * prep bank wins over a paused speech, because that is what is on the clock.
+ */
+export function timerActivityState(
+  session: TimerSession,
+  now: number,
+  text: { sideName: (side: RoundSegment['side']) => string; prepLine: (side: PrepSide) => string; labels: TimerActivityLabels },
+): TimerActivityState | null {
+  const format = formatFor(session.choice);
+  const { round } = session;
+  for (const side of ['a', 'b'] as PrepSide[]) {
+    if (!isPrepRunning(round, side)) continue;
+    const left = prepRemainingMs(round, side, now);
+    const total = format.prepSeconds * 1000;
+    return {
+      kind: 'prep',
+      title: text.labels.prep,
+      line: text.prepLine(side),
+      startedAt: now - (total - left),
+      endsAt: now + left,
+      pausedAt: null,
+      side,
+      labels: text.labels,
+    };
+  }
+  const segment = format.segments[round.segmentIndex] ?? format.segments[0];
+  const elapsed = elapsedMs(round.speech, now);
+  const running = isSpeechRunning(round);
+  if (!running && elapsed === 0) return null;
+  const startedAt = now - elapsed;
+  return {
+    kind: 'speech',
+    title: segment.short,
+    line: `${segment.label} · ${text.sideName(segment.side)}`,
+    startedAt,
+    endsAt: startedAt + segment.seconds * 1000,
+    pausedAt: running ? null : now,
+    side: segment.side,
+    labels: text.labels,
+  };
+}
+
+/** The speech's status for the screen: time left (negative in overtime), POI window and grace. */
+export function speechStatus(session: TimerSession, now: number) {
+  const format = formatFor(session.choice);
+  const segment = format.segments[session.round.segmentIndex] ?? format.segments[0];
+  const elapsed = elapsedMs(session.round.speech, now);
+  return { format, segment, elapsed, ...segmentStatus(segment, elapsed, format.graceSeconds) };
 }

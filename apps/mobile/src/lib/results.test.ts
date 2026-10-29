@@ -56,6 +56,11 @@ describe('reading Brainstorm and Factoids output', () => {
     expect(output).toBeNull();
   });
 
+  it('rejects shared brainstorm data the transform cannot read, instead of throwing', () => {
+    // A public share link can hold any JSON; this one breaks String() inside the transform.
+    expect(readBrainstorm({ topFive: [{ idea: { title: { toString: null } } }] })).toBeNull();
+  });
+
   it('rejects a saved factoids row whose factoid does not fit the schema', () => {
     const factoid = {
       id: 'f1',

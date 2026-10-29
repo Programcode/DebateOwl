@@ -11,7 +11,7 @@ export function EmptyState({ pose, title, description, children }: { pose: OwlPo
     <Card style={styles.card}>
       <Owl pose={pose} size={88} />
       <View style={styles.text}>
-        <Text weight="bold" tone="heading" style={styles.title}>
+        <Text accessibilityRole="header" weight="bold" tone="heading" style={styles.title}>
           {title}
         </Text>
         {description ? (

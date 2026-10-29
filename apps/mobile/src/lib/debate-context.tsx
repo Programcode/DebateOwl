@@ -1,6 +1,8 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { AppState } from 'react-native';
 
+import { publishCurrentDebate } from './debate-widget';
+import { clearSpotlight } from './spotlight';
 import { useAuth } from './auth';
 import {
   continueDebate,
@@ -93,6 +95,16 @@ export function DebateProvider({ children }: { children: ReactNode }) {
     });
     return () => subscription.remove();
   }, [userId, refresh]);
+
+  // The Home Screen widget shows the Current Debate (a no-op in Expo Go); the Debate tab adds its counts.
+  const currentMotion = debates.find((debate) => debate.id === currentId)?.motion ?? null;
+  // Signed out, nothing of the account stays searchable in Spotlight.
+  useEffect(() => {
+    if (!userId) void clearSpotlight();
+  }, [userId]);
+  useEffect(() => {
+    publishCurrentDebate(userId && currentId && currentMotion ? { debateId: currentId, motion: currentMotion, counts: null } : null);
+  }, [userId, currentId, currentMotion]);
 
   const value = useMemo<DebateContextValue>(() => {
     const current = debates.find((debate) => debate.id === currentId) ?? null;

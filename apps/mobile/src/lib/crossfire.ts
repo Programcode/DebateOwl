@@ -1,8 +1,10 @@
 import { QUOTA_SESSION_KEY } from '@debatelab/core/ai/session-quota';
 import {
   collectDebriefTurnIds,
+  CrossfireConfigSchema,
   CrossfireDebriefSchema,
   CrossfireReplySchema,
+  CrossfireTranscriptSchema,
   CrossfireTurnSignalSchema,
   type CrossfireAIInput,
   type CrossfireConfig,
@@ -15,10 +17,11 @@ import {
 } from '@debatelab/core/crossfire/schemas';
 import type { DebateContextRequest } from '@debatelab/core/contract/debate-context';
 
+import { parseVoicePayload, type VoicePayload } from '@debatelab/core/voice/payload';
 import { abortError, AIError, functionOutput, postFunction, PROVIDER, responseExtras, type ResponseExtras } from './ai-request';
 import { debateListScopes } from './debates';
 import type { FeatureConfig } from './feature-config';
-import { afterWrite } from './offline-cache';
+import { afterWrite, cachedRead, readFailed, type CopyMark } from './offline-cache';
 import { sessionSlot } from './session-memory';
 import { supabase } from './supabase';
 
@@ -53,6 +56,8 @@ interface RequestOptions {
    * (SESSION_QUOTA) instead of every turn. Signals are not charged per round.
    */
   quotaSession?: string;
+  /** A voice round: ask for a reply the opponent's voice can perform. */
+  voice?: boolean;
 }
 
 // Turn signals and measured delivery facts are client annotations. The Edge
@@ -72,6 +77,8 @@ function requestBody(input: Record<string, unknown> & { transcript: CrossfireTur
     // Servers from before Current Debate context read only this field.
     sourceIds: options.debateContext?.sourceIds ?? [],
     ...(options.debateContext ? { debateContext: options.debateContext } : {}),
+    // Beside `input`, as the website sends it, and only for turns: a server from before voice rounds ignores it.
+    ...(options.voice && input.operation === 'next-turn' ? { voice: true } : {}),
   };
 }
 
@@ -108,7 +115,7 @@ export async function withTurnDeadline<T>(signal: AbortSignal, work: (signal: Ab
   }
 }
 
-export type CrossfireNextTurn = CrossfireReply & { signalToken?: string };
+export type CrossfireNextTurn = CrossfireReply & { signalToken?: string; voice?: VoicePayload };
 
 /** The opponent's next question or answer, checked as the website checks it. */
 export function crossfireTurn(
@@ -125,7 +132,12 @@ export function crossfireTurn(
     if (token !== undefined && (typeof token !== 'string' || !token.trim() || token.length > 128)) {
       throw new CrossfireResponseError('Crossfire signal token was invalid.');
     }
-    return { reply: typeof token === 'string' ? { ...reply.data, signalToken: token } : reply.data, ...responseExtras(data) };
+    // A missing or malformed voice payload only means the device voice reads the reply.
+    const voice = options.voice ? parseVoicePayload(data.voice) : undefined;
+    return {
+      reply: { ...reply.data, ...(typeof token === 'string' ? { signalToken: token } : {}), ...(voice ? { voice } : {}) },
+      ...responseExtras(data),
+    };
   }, TURN_TIMEOUT_MS);
 }
 
@@ -219,3 +231,38 @@ export const crossfireDraft = sessionSlot<{ state: CrossfireState; debateId: str
  * screen, as the website's route state: taken once, when the screen opens.
  */
 export const crossfirePrefill = sessionSlot<CrossfirePrefill | null>(() => null);
+
+/** A saved round as it was recorded: the transcript with its signals and delivery, and the debrief. */
+export interface SavedCrossfire {
+  id: string;
+  title: string;
+  createdAt: number;
+  config: CrossfireConfig | null;
+  turns: CrossfireTurn[];
+  debrief: CrossfireDebrief | null;
+}
+
+async function loadCrossfireRound(userId: string, id: string): Promise<SavedCrossfire | null> {
+  const { data, error, status } = await supabase.from('crossfires').select('id,title,input,output,created_at').eq('user_id', userId).eq('id', id).maybeSingle();
+  if (error) throw readFailed(error, status);
+  if (!data) return null;
+  const row = data as { id: string; title: string | null; input: unknown; output: unknown; created_at: string };
+  const output = row.output && typeof row.output === 'object' ? (row.output as Record<string, unknown>) : {};
+  // The website's own rows, read with its schemas; a part that does not parse is left out, not guessed.
+  const turns = CrossfireTranscriptSchema.safeParse(output.turns);
+  const debrief = CrossfireDebriefSchema.safeParse(output.debrief);
+  const config = CrossfireConfigSchema.safeParse(row.input);
+  return {
+    id: row.id,
+    title: row.title ?? '',
+    createdAt: new Date(row.created_at).getTime(),
+    config: config.success ? config.data : null,
+    turns: turns.success ? turns.data : [],
+    debrief: debrief.success ? debrief.data : null,
+  };
+}
+
+/** A saved round, for reading it again from History or the Debate tab. */
+export function fetchCrossfireRound(userId: string, id: string, mark?: CopyMark): Promise<SavedCrossfire | null> {
+  return cachedRead(userId, 'crossfire', id, () => loadCrossfireRound(userId, id), mark);
+}

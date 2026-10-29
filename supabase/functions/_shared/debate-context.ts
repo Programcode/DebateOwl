@@ -45,8 +45,18 @@ export const MAX_AUTO_OUTPUTS_PER_KIND = 2;
 export const MAX_PINNED_OUTPUTS = 3;
 /** Characters one saved result may contribute. */
 export const MAX_OUTPUT_DIGEST_CHARS = 2_500;
+/**
+ * Characters one saved case may contribute. A case is read out in the round,
+ * so its R2 "backing up" paragraphs, "If they say" answers and Conclusor
+ * reasons reach the prompt in full: an R2 with 6-8 answers runs ~10,000.
+ */
+export const MAX_CASE_DIGEST_CHARS = 12_000;
+/** Characters kept from one of those spoken paragraphs; a safety bound, not a summary length. */
+export const MAX_CASE_PARAGRAPH_CHARS = 2_000;
+/** "If they say" answers kept from one case; R2 writes at most 8. */
+export const MAX_CASE_COUNTERS = 8;
 /** Characters all saved results together may contribute. */
-export const MAX_OUTPUTS_TOTAL_CHARS = 8_000;
+export const MAX_OUTPUTS_TOTAL_CHARS = 16_000;
 
 /**
  * Saved results that help each feature, in order of usefulness. Results of
@@ -179,13 +189,16 @@ function digestCase(data: Record<string, unknown>): string {
   const counters = list(data.counters).map(record).filter(Boolean) as Record<string, unknown>[];
   return lines([
     text(structure.thesis, 300) && `Thesis: ${text(structure.thesis, 300)}`,
-    text(structure.framework, 240) && `Framework: ${text(structure.framework, 240)}`,
+    text(structure.framework, 240) && `How to judge this debate: ${text(structure.framework, 240)}`,
     ...contentions.slice(0, 4).map((item, index) => lines([
-      `Contention ${index + 1}: ${text(item.claim, 200)}`,
-      text(item.reasoning, 320) && `  Warrant: ${text(item.reasoning, 320)}`,
-      text(item.impact, 240) && `  Impact: ${text(item.impact, 240)}`,
+      `Argument ${index + 1}: ${text(item.title, 80) ? `${text(item.title, 80)}. ` : ""}${text(item.claim, 200)}`,
+      text(item.reasoning, 320) && `  Explanation: ${text(item.reasoning, 320)}`,
+      text(item.impact, 240) && `  Why it matters: ${text(item.impact, 240)}`,
     ])),
-    ...counters.slice(0, 3).map((item) => `Prepared answer to "${text(item.targetArgument, 120)}": ${text(item.counterpoint, 200)}`),
+    ...list(data.reinforce).map(record).filter(Boolean).slice(0, 3).map((item) =>
+      text(item!.text, MAX_CASE_PARAGRAPH_CHARS) && `Backing up ${text(item!.argument, 200) || "an argument"}: ${text(item!.text, MAX_CASE_PARAGRAPH_CHARS)}`),
+    ...list(data.whyWeWin).slice(0, 3).map((item) => text(item, MAX_CASE_PARAGRAPH_CHARS) && `Why we win: ${text(item, MAX_CASE_PARAGRAPH_CHARS)}`),
+    ...counters.slice(0, MAX_CASE_COUNTERS).map((item) => `If they say "${text(item.targetArgument, 200)}", we answer: ${text(item.counterpoint, MAX_CASE_PARAGRAPH_CHARS)}`),
   ]);
 }
 
@@ -273,7 +286,8 @@ export function digestOutput(kind: DebateContextOutputKind, data: unknown): stri
     : kind === "chat" ? digestChat(data)
     : kind === "crossfire" ? digestCrossfire(value)
     : digestSparring(value);
-  return digest.length > MAX_OUTPUT_DIGEST_CHARS ? `${digest.slice(0, MAX_OUTPUT_DIGEST_CHARS - 1)}…` : digest;
+  const max = kind === "case" ? MAX_CASE_DIGEST_CHARS : MAX_OUTPUT_DIGEST_CHARS;
+  return digest.length > max ? `${digest.slice(0, max - 1)}…` : digest;
 }
 
 export interface DebateOutputDigest extends DebateOutputRef {

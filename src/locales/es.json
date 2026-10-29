@@ -1090,34 +1090,10 @@
     "save": "Guardar",
     "discuss": "Discutir",
     "flowcharts": "Diagramas",
-    "exordio": "Exordio",
-    "exordioDesc": "Tu apertura convincente",
-    "hook": "Gancho",
-    "transition": "Transición",
-    "caseStructure": "Estructura del caso",
-    "caseStructureDesc": "Tu marco argumentativo",
-    "thesis": "Tesis",
-    "framework": "Marco",
-    "burdenOfProof": "Carga de la prueba",
-    "keyDefinitions": "Definiciones clave",
-    "noDefinitions": "No se proporcionaron definiciones",
     "arguments": "Argumentos",
-    "structuredArguments": "argumentos estructurados",
-    "predictedOpponent": "Caso predicho del oponente",
-    "predictedOpponentDesc": "Lo que probablemente argumentarán",
-    "likelyArguments": "Argumentos probables",
-    "strategicWeaknesses": "Debilidades estratégicas",
-    "keyClashes": "Choques clave",
-    "preparedCounters": "Contra-argumentos preparados",
-    "preparedCountersDesc": "Refutaciones listas para usar",
     "needsSource": "Necesita fuente",
-    "reasoning": "Razonamiento:",
     "evidence": "Evidencia:",
     "searchSuggestion": "Sugerencia de búsqueda:",
-    "impact": "Impacto:",
-    "target": "Objetivo",
-    "counter": "Contra:",
-    "rebuttal": "Refutación:",
     "exportedGdocs": "¡Caso exportado a Google Docs!",
     "open": "Abrir",
     "exportFailed": "Error al exportar a Google Docs",
@@ -1127,7 +1103,36 @@
     "undo": "Deshacer",
     "resultTitle": "Tu caso",
     "unverified": "Sin verificar",
-    "unresearchedCaveat": "Generado por IA, y ninguna búsqueda web respalda esta evidencia. Comprueba los datos y las fuentes antes de usarlos en una ronda."
+    "unresearchedCaveat": "Generado por IA, y ninguna búsqueda web respalda esta evidencia. Comprueba los datos y las fuentes antes de usarlos en una ronda.",
+    "opening": "Apertura",
+    "openingDesc": "Cómo empieza tu discurso",
+    "definition": "Qué entendemos por:",
+    "roadmap": "Lo que vamos a demostrar",
+    "argumentCount_one": "{{count}} argumento",
+    "argumentCount_other": "{{count}} argumentos",
+    "point": "Idea:",
+    "explanation": "Explicación:",
+    "whyItMatters": "Por qué importa:",
+    "ifTheySay": "Si dicen…",
+    "ifTheySayDesc": "Lo que probablemente dirán y tus respuestas",
+    "theySay": "Dicen",
+    "weAnswer": "Respondemos:",
+    "source": "Fuente:",
+    "whyWeWin": "Por qué ganamos",
+    "whyWeWinDesc": "Lo que el jurado debe recordar",
+    "closingLine": "Frase de cierre",
+    "closingLineDesc": "Tu última frase",
+    "sources": "Fuentes",
+    "sourcesDesc": "Todo lo que cita tu caso",
+    "reinforce": "Reforzamos nuestro caso",
+    "reinforceDesc": "Unos 2 minutos sobre los argumentos que tu equipo ya dio",
+    "legacyJudgeBy": "Cómo juzgar este debate",
+    "legacyMustShow": "Lo que tenemos que demostrar",
+    "legacyDefinitions": "Qué entendemos por la moción",
+    "legacyAlsoSay": "También pueden decir",
+    "legacyWeakSpots": "Dónde somos más débiles",
+    "legacyDecidingPoints": "En qué se decide el debate",
+    "legacySayItLike": "Dilo así:"
   },
   "attackForm": {
     "argument": "Tu argumento",
@@ -1873,8 +1878,6 @@
     "unknown": "Desconocido",
     "standard": "Estándar",
     "format": "Formato",
-    "contentionNumber": "Argumento n.º {{number}}",
-    "noThesis": "No se proporcionó ninguna tesis.",
     "assessmentSummary": "Resumen de la evaluación",
     "noSummary": "No se proporcionó ningún resumen.",
     "strengthAreas": "Puntos fuertes",
@@ -1914,17 +1917,7 @@
       "unverified": "No verificado",
       "pending": "Pendiente"
     },
-    "reasoning": "Razonamiento",
     "evidence": "Evidencia",
-    "impact": "Impacto",
-    "hook": "Gancho",
-    "transition": "Transición",
-    "noArguments": "No se proporcionaron argumentos.",
-    "noOpponentArgs": "No se proporcionaron argumentos predichos del oponente.",
-    "noCounters": "No se proporcionaron contra-argumentos.",
-    "target": "Objetivo",
-    "counter": "Contra",
-    "rebuttal": "Refutación",
     "debateCase": "Caso de debate",
     "side": "Lado",
     "proposition": "A favor",
@@ -1945,15 +1938,7 @@
     "howToUse": "Cómo usar",
     "source": "Fuente",
     "noFactoids": "No se encontraron datos.",
-    "exordio": "Exordio",
-    "caseStructure": "Estructura del caso",
-    "thesis": "Tesis",
-    "framework": "Marco",
-    "burdenOfProof": "Carga de la prueba",
-    "keyDefinitions": "Definiciones clave",
     "arguments": "Argumentos",
-    "predictedOpponent": "Caso predicho del oponente",
-    "counters": "Contra-argumentos preparados",
     "weaknesses": "Debilidades identificadas",
     "fallacies": "Falacias detectadas",
     "crossExQuestions": "Preguntas de interrogatorio cruzado",
@@ -1982,7 +1967,26 @@
     "factoidsSummary_one": "{{count}} dato • Verificados: {{verified}}",
     "factoidsSummary_other": "{{count}} datos • Verificados: {{verified}}",
     "topIdeasCount_one": "{{count}} idea destacada",
-    "topIdeasCount_other": "{{count}} ideas destacadas"
+    "topIdeasCount_other": "{{count}} ideas destacadas",
+    "opening": "Apertura",
+    "roadmap": "Lo que vamos a demostrar",
+    "definition": "Qué entendemos por",
+    "argumentNumber": "Argumento {{number}}",
+    "point": "Idea",
+    "whyItMatters": "Por qué importa",
+    "ifTheySay": "Si dicen…",
+    "theySay": "Dicen",
+    "weAnswer": "Respondemos",
+    "whyWeWin": "Por qué ganamos",
+    "closingLine": "Frase de cierre",
+    "sources": "Fuentes",
+    "reinforce": "Reforzamos nuestro caso",
+    "legacyJudgeBy": "Cómo juzgar este debate",
+    "legacyMustShow": "Lo que tenemos que demostrar",
+    "legacyDefinitions": "Qué entendemos por la moción",
+    "legacyAlsoSay": "También pueden decir",
+    "legacySayItLike": "Dilo así",
+    "untitledCase": "Caso sin título"
   },
   "sparring": {
     "pro": "A favor",
@@ -2029,10 +2033,10 @@
       "hard": "Despiadado"
     },
     "roleGuidance": {
-      "introductor": "Abre con un exordio, define los términos clave, fija el marco y la tesis, y presenta la hoja de ruta. Reserva los argumentos completos para R1.",
-      "r1": "Construye los argumentos centrales con afirmaciones, razonamientos, apoyo e impactos. Usa la parte final para anticipar o responder a la oposición más fuerte.",
-      "r2": "Amplía R1, responde directamente al oponente, identifica los choques centrales y compara los impactos. No te limites a repetir el caso.",
-      "conclusor": "No añadas argumentos nuevos. Cristaliza los choques decisivos, sopesa la ronda y cierra explicando por qué gana tu lado."
+      "introductor": "Empieza con un gancho, di «vamos a demostrar N argumentos que prueban que…» y presenta cada argumento en pocas palabras. Explica una palabra de la moción en una línea solo si no está clara. Deja los argumentos completos para el R1.",
+      "r1": "Desarrolla los argumentos completos: la idea, por qué es cierta, la evidencia con su fuente y año, y por qué importa. Usa la última parte para responder lo que probablemente dirán.",
+      "r2": "No traigas argumentos nuevos. Dedica unos 2 minutos a reforzar los argumentos de tu equipo y unos 4 minutos a responder los suyos: «Si dicen…, respondemos…».",
+      "conclusor": "No añadas argumentos nuevos. Da dos o tres razones por las que tu lado ganó y termina con una frase de cierre clara."
     },
     "category": {
       "Logic": "Lógica",
@@ -2708,9 +2712,6 @@
       "done": "Listo",
       "openItem": "Abrir {{title}}"
     },
-    "offline": {
-      "notice": "Sin conexión: se muestran las copias guardadas. La IA y el guardado esperan a la conexión."
-    },
     "debates": {
       "search": "Buscar mociones",
       "noMatches": "Ningún debate coincide con tu búsqueda.",
@@ -2860,7 +2861,16 @@
       "speechOf": "Discurso {{n}} de {{of}}",
       "ofTotal": "de {{total}}",
       "next": "Siguiente discurso",
-      "reset": "Reiniciar"
+      "reset": "Reiniciar",
+      "widgetTitle": "Cronómetro de DebateOwl",
+      "widgetIdle": "No hay ningún discurso en marcha.",
+      "poiSignal": "Se abren o se cierran los POI",
+      "knock": "Un golpe",
+      "keepsRunning": "El reloj sigue en marcha aunque cierres el cronómetro.",
+      "editFormat": "Editar este formato",
+      "deleteFormat": "Eliminar este formato",
+      "deleteFormatTitle": "¿Eliminar «{{name}}»?",
+      "deleteFormatMessage": "Se elimina de este dispositivo. La ronda del cronómetro conserva sus discursos."
     },
     "crossfire": {
       "voiceLater": "Llegará con la versión de la app.",
@@ -2874,7 +2884,9 @@
       "resume": "Reanudar",
       "replay": "Repasar",
       "versus": "{{user}} vs. {{opponent}}",
-      "roundsFailed": "No se pudieron cargar tus rondas de sparring."
+      "roundsFailed": "No se pudieron cargar tus rondas de sparring.",
+      "exportPdf": "Exportar como PDF",
+      "exportFailed": "No se pudo crear el PDF. Inténtalo de nuevo."
     },
     "brainstorm": {
       "strengths": {
@@ -2969,6 +2981,81 @@
     "permissions": {
       "speechRecognition": "DebateOwl convierte tu voz en texto cuando dictas una pregunta, una respuesta de Interrogatorio o un discurso de Sparring. Apple procesa el audio para reconocerlo.",
       "microphone": "DebateOwl usa el micrófono mientras dictas una pregunta, una respuesta de Interrogatorio o un discurso de Sparring."
+    },
+    "voice": {
+      "recognition": "El reconocimiento de voz de Apple convierte tu voz en texto. iOS puede enviar el audio a Apple para reconocerlo.",
+      "denied": "La voz está desactivada porque DebateOwl no puede usar el micrófono ni el reconocimiento de voz. Permite ambos en Ajustes. Puedes escribir como siempre.",
+      "openSettings": "Abrir Ajustes",
+      "notAllowed": "DebateOwl no puede usar el micrófono ni el reconocimiento de voz. Permite ambos en Ajustes o escribe.",
+      "limit": "La cuota de hoy para la voz de ElevenLabs del oponente se agotó, así que la voz de tu dispositivo lee las respuestas.",
+      "deliveryDescription": "Estas cifras provienen del reloj y de la transcripción de lo que dijiste. Nadie escuchó tu tono, tu seguridad ni tu volumen, y la transcripción puede omitir palabras.",
+      "spoken": "Hablado"
+    },
+    "practice": {
+      "speechTimeDesc": "Cuánto dura un discurso",
+      "speechTimeIntro": "Pega o escribe un discurso para ver cuánto tarda en pronunciarse.",
+      "calcPrivacy": "Se cuenta en este dispositivo. El texto nunca se sube ni se guarda.",
+      "motionsDesc": "Saca una moción de práctica",
+      "motionsIntro": "Mociones de práctica originales, por tema, nivel y tipo."
+    },
+    "sidebar": {
+      "dashboard": "Panel",
+      "sources": "Fuentes",
+      "account": "Cuenta y ajustes",
+      "noDebate": "Ningún debate actual",
+      "collapseHint": "Oculta las herramientas de esta sección",
+      "expandHint": "Muestra las herramientas de esta sección"
+    },
+    "trialBanner": {
+      "seePlan": "Ver plan"
+    },
+    "tour": {
+      "progress": "Paso {{step}} de {{steps}}"
+    },
+    "a11y": {
+      "answerReady": "Respuesta lista",
+      "resultReady": "Listo: {{title}}"
+    },
+    "share": {
+      "shareLink": "Compartir enlace",
+      "linkCopied": "Enlace copiado",
+      "failed": "No se pudo crear el enlace para compartir. Inténtalo de nuevo.",
+      "limitReached": "Has alcanzado el límite diario de enlaces compartidos ({{limit}}). Inténtalo de nuevo mañana.",
+      "tooLarge": "Es demasiado grande para compartirlo como enlace.",
+      "signIn": "Vuelve a iniciar sesión para compartir un enlace.",
+      "timeout": "Crear el enlace tardó demasiado. Inténtalo de nuevo.",
+      "openWebsite": "Abrir en el sitio web",
+      "unknownKind": "Este contenido compartido solo se puede abrir en el sitio web."
+    },
+    "widget": {
+      "spar": "Entrenar",
+      "description": "Tu moción y tu preparación de un vistazo."
+    },
+    "quickActions": {
+      "startTimer": "Iniciar cronómetro"
+    },
+    "offlineQueue": {
+      "notice": "Sin conexión: se muestran copias guardadas. Las notas nuevas, los cambios en las fuentes y los interruptores se sincronizan cuando vuelvas a tener conexión. La IA y los demás cambios esperan a la conexión.",
+      "pending_one": "{{count}} cambio se sincronizará cuando vuelvas a tener conexión",
+      "pending_other": "{{count}} cambios se sincronizarán cuando vuelvas a tener conexión",
+      "syncing_one": "{{count}} cambio está esperando para sincronizarse",
+      "syncing_other": "{{count}} cambios están esperando para sincronizarse",
+      "waiting": "Pendiente de sincronizar",
+      "syncsWhenOnline": "Guardado en este teléfono. Se sincroniza cuando vuelvas a tener conexión.",
+      "syncingSoon": "Guardado en este teléfono. Se sincroniza en cuanto se pueda conectar con el servidor.",
+      "noteQueuedTitle": "Nota guardada en este teléfono",
+      "noteQueuedDesc": "Se añadirá a la Biblioteca cuando vuelvas a tener conexión.",
+      "changeQueuedTitle": "Guardado en este teléfono",
+      "changeQueuedDesc": "Se sincroniza cuando vuelvas a tener conexión.",
+      "synced_one": "{{count}} cambio sincronizado",
+      "synced_other": "{{count}} cambios sincronizados",
+      "refusedTitle_one": "No se pudo guardar {{count}} cambio",
+      "refusedTitle_other": "No se pudieron guardar {{count}} cambios",
+      "refusedDesc_one": "El servidor lo rechazó, así que se quitó de este teléfono.",
+      "refusedDesc_other": "El servidor los rechazó, así que se quitaron de este teléfono.",
+      "noteRefused": "El servidor rechazó la nota \"{{title}}\", así que se quitó de este teléfono.",
+      "notKeptTitle": "Aún no se guardó en este teléfono",
+      "notKeptDesc": "Tus cambios se sincronizan cuando vuelvas a estar en línea. Mantén la app abierta hasta entonces."
     }
   }
 }

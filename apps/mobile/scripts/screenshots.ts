@@ -12,9 +12,10 @@
  * separate several with commas (ONLY=iphone-light-en,ipad-dark-hu).
  * SCREENS=you,timer limits the signed-in screens to those groups: debate,
  * debate-check, library, prepare, practice, you, empty, ask, results, brainstorm,
- * factoids, case-edits, context, limits,
- * timer, crossfire, sparring, flowchart, one-off, history, announcements,
+ * factoids, case-edits, context, limits, sidebar, first-run, share,
+ * timer, voice, tools, crossfire, sparring, flowchart, one-off, history, announcements,
  * account, model. Sign-in screens are always shot.
+ * KEEP_GOING=1 carries on past a failed group (see groupFailed).
  * ONLY=offline runs only the offline reading check (see shootOfflineScreens).
  *
  * The iPad sizes are portrait (1024x1366), landscape (1366x1024), an 11-inch
@@ -25,8 +26,9 @@
  * script signs in once through the real sign-in screen and also checks that a
  * cold start without a network keeps the user signed in. The deployed Edge
  * Functions only accept browser calls from a few origins, so for that run use
- * PORT=18080 (http://127.0.0.1:18080). Never print the code or put it in a
- * screenshot.
+ * PORT=18080 (http://127.0.0.1:18080), or another port with
+ * FUNCTIONS_ORIGIN=http://127.0.0.1:18080 (see newContext). Never print the
+ * code or put it in a screenshot.
  *
  * Signed in, the app applies the account's saved language and theme, which
  * would override the locale and colour scheme under test. Screenshot runs
@@ -130,7 +132,63 @@ const SCHEMES = ['light', 'dark'] as const;
 const LOCALES = { en: 'en-GB', hu: 'hu-HU', es: 'es-ES' } as const;
 const SIGNED_IN_ROUTES = { prepare: '/prepare', practice: '/practice', you: '/you' };
 const NOTIFICATIONS = { en: 'Notifications', hu: 'Értesítések', es: 'Notificaciones' } as const;
+// The Timer format menu's custom format entry.
+const TIMER_NEW_FORMAT = { en: 'Build a custom format', hu: 'Saját formátum készítése', es: 'Crear un formato personalizado' } as const;
 const REST = `https://${STAGING_HOST}/rest/v1`;
+
+/**
+ * The deployed Edge Functions answer browser calls only from a few origins
+ * (supabase/functions/_shared/cors.ts), 127.0.0.1:18080 among them. When
+ * several worktrees take screenshots at once, set FUNCTIONS_ORIGIN to that
+ * origin and use any PORT: each function call the page makes is sent again
+ * from Node with that Origin and its answer handed back to the page. Staging only.
+ */
+const FUNCTIONS_ORIGIN = process.env.FUNCTIONS_ORIGIN;
+
+/**
+ * FONT_SCALE draws a Dynamic Type size (src/theme/font-scale.web.ts): 3.1 is
+ * iOS's largest accessibility size for body text. Use it with SHOTS_DIR, so
+ * the large-text shots do not replace the usual ones.
+ */
+const FONT_SCALE = Number(process.env.FONT_SCALE ?? '1');
+
+/**
+ * Screenshots show each screen at rest: contexts prefer reduced motion, which the app's
+ * animations follow (Reanimated and react-native-web read prefers-reduced-motion), so
+ * confetti, count-ups, entrances and springs land at once. MOTION=1 plays them; with
+ * RECORD_DIR set, every page is also recorded as a video there.
+ */
+const MOTION = process.env.MOTION === '1';
+const RECORD_DIR = process.env.RECORD_DIR;
+
+async function newContext(browser: Browser, options: BrowserContextOptions): Promise<BrowserContext> {
+  const context = await browser.newContext({
+    reducedMotion: MOTION ? 'no-preference' : 'reduce',
+    ...(RECORD_DIR && options.viewport ? { recordVideo: { dir: RECORD_DIR, size: options.viewport } } : {}),
+    ...options,
+  });
+  if (FONT_SCALE > 0 && FONT_SCALE !== 1) {
+    await context.addInitScript((scale) => {
+      (window as unknown as { __debateowlFontScale?: number }).__debateowlFontScale = scale;
+    }, FONT_SCALE);
+  }
+  if (FUNCTIONS_ORIGIN && FUNCTIONS_ORIGIN !== ORIGIN) {
+    // Context routes run after page routes, so a page that fakes a function keeps its fake.
+    await context.route(`https://${STAGING_HOST}/functions/v1/**`, async (route) => {
+      const request = route.request();
+      const cors = { 'access-control-allow-origin': ORIGIN, 'access-control-allow-headers': '*', 'access-control-allow-methods': 'GET, POST, PUT, DELETE, OPTIONS', vary: 'Origin' };
+      if (request.method() === 'OPTIONS') return route.fulfill({ status: 204, headers: cors });
+      // A page that closes mid-call ends the relay quietly: Playwright's error would print the request's headers, session included.
+      try {
+        const response = await route.fetch({ headers: { ...request.headers(), origin: FUNCTIONS_ORIGIN } });
+        await route.fulfill({ response, headers: { ...response.headers(), ...cors } });
+      } catch {
+        await route.abort().catch(() => undefined);
+      }
+    });
+  }
+  return context;
+}
 
 const TYPES: Record<string, string> = {
   '.html': 'text/html; charset=utf-8',
@@ -146,8 +204,8 @@ const TYPES: Record<string, string> = {
 function serve(): Promise<Server> {
   const server = createServer((req, res) => {
     const path = normalize(decodeURIComponent(new URL(req.url ?? '/', ORIGIN).pathname)).replace(/^(\.\.[/\\])+/, '');
-    // A dynamic route such as /case/<id> is exported once, as case/[id].html.
-    const candidates = [join(DIST, path), join(DIST, `${path}.html`), join(DIST, path, 'index.html'), join(DIST, dirname(path), '[id].html')];
+    // A dynamic route such as /case/<id> is exported once, as case/[id].html (share/[code].html for /share/<code>).
+    const candidates = [join(DIST, path), join(DIST, `${path}.html`), join(DIST, path, 'index.html'), join(DIST, dirname(path), '[id].html'), join(DIST, dirname(path), '[code].html')];
     const file = candidates.find((candidate) => candidate.startsWith(DIST) && existsSync(candidate) && statSync(candidate).isFile());
     if (!file) {
       res.writeHead(404).end('Not found');
@@ -217,6 +275,19 @@ async function shoot(page: Page, name: string) {
   await page.screenshot({ path: join(OUT, `${name}.png`), mask: [page.getByTestId('account-email'), page.getByTestId('delete-data-confirmation')] });
 }
 
+/**
+ * A finished round or case opens under its celebration: shoot it as `name`, then tap it away
+ * (unless it already went on its own) and wait until the screen underneath is clear.
+ */
+async function shootCelebration(page: Page, name: string) {
+  const celebration = page.getByTestId('celebration');
+  await celebration.waitFor({ timeout: 30_000 });
+  await page.waitForTimeout(400);
+  await shoot(page, name);
+  await celebration.click({ timeout: 2_000 }).catch(() => {});
+  await celebration.waitFor({ state: 'detached', timeout: 5_000 });
+}
+
 /** Answers user_settings reads with the run's language and the System theme (see the header). */
 async function pinSettings(page: Page, language: string) {
   await pinDebateActivity(page, 0);
@@ -252,9 +323,31 @@ async function pinDebateActivity(page: Page, ageMs: number) {
 }
 
 /** Waits until the screen's data has arrived, so no spinner is caught mid-load. */
+/** The app's navigation: the tab bar on iPhone and in Split View, the sidebar in a full-screen iPad window. */
+const appShell = (page: Page) => page.locator(':is([data-testid="app-tab-bar"], [data-testid="app-sidebar"]):visible').first();
+
+/** Opens a Prepare tool the way the layout offers it: from the iPad sidebar, or from the Prepare tab's tile. */
+async function openPrepareTool(page: Page, tool: string) {
+  const sidebar = page.getByTestId('app-sidebar');
+  if (await sidebar.isVisible()) {
+    await sidebar.getByTestId(`sidebar-item-${tool}`).click();
+    return;
+  }
+  if (!(await page.getByTestId(`prepare-tool-${tool}`).filter({ visible: true }).isVisible())) {
+    await page.getByRole('tab', { name: /^(Prepare|Felkészülés|Preparar)$/ }).click();
+  }
+  await page.getByTestId(`prepare-tool-${tool}`).filter({ visible: true }).click();
+}
+
 async function settle(page: Page) {
   await page.waitForLoadState('networkidle');
-  await page.waitForFunction(() => document.querySelectorAll('[role="progressbar"]').length === 0, undefined, { timeout: 15_000 });
+  // Only what shows: a screen opened from a link has the Debate tab mounted, unfocused, beneath it,
+  // and that tab loads only once it is shown.
+  await page.waitForFunction(
+    () => Array.from(document.querySelectorAll('[role="progressbar"]')).every((el) => !(el as HTMLElement).checkVisibility()),
+    undefined,
+    { timeout: 15_000 },
+  );
 }
 
 async function shootDebateScreens(page: Page, prefix: string) {
@@ -411,16 +504,19 @@ async function fakeAsk(page: Page, hold: boolean) {
 }
 
 // A made-up case in GenerateOutput's shape, after mock 03: three arguments for a Standard case.
+// A made-up case in the new format (#244): opening, titled arguments, "If they say…", closing line and sources.
 const FAKE_CASE = {
+  opening: {
+    hook: 'Picture a school run where the loudest thing on the street is children talking.',
+    definition: 'City centre: the area inside the inner ring road, with exemptions for disabled drivers and deliveries.',
+  },
   caseStructure: {
-    thesis: 'City centres are shared public space, and private cars take the most of it while costing everyone else their health.',
-    framework: 'City centres are shared public space. The motion asks who gets to use that space, and at what cost to everyone else\'s health.',
-    keyDefinitions: ['City centre: the area inside a city\'s inner ring road', 'Private cars: privately owned passenger vehicles, with exemptions for disabled drivers'],
-    burdenOfProof: 'We must show that removing private cars improves health and access for most people who use the centre.',
+    thesis: 'We will show three arguments that prove city centres work better for everyone without private cars: cleaner air, streets back for people, and buses that run on time.',
   },
   contentions: [
     {
       id: '1',
+      title: 'Clean air',
       claim: 'Clean air is a public health duty',
       reasoning: 'Traffic is the largest source of roadside pollution, and the people who breathe it most are pedestrians, cyclists and residents, not drivers.',
       evidence: 'Low-traffic zones cut roadside NO₂ within their first year, according to the Clean Streets Review.',
@@ -429,7 +525,8 @@ const FAKE_CASE = {
     },
     {
       id: '2',
-      claim: 'Streets back for people',
+      title: 'Streets back for people',
+      claim: 'Cars take most of the street while carrying a minority of the people in it',
       reasoning: 'Parked and moving cars take most of a centre\'s street space while carrying a minority of the people in it.',
       evidence: 'The Street Space Audit found cars use most of the road area; the Footfall Study found shops gain visits when streets close to traffic.',
       needsSource: false,
@@ -437,6 +534,7 @@ const FAKE_CASE = {
     },
     {
       id: '3',
+      title: 'Buses on time',
       claim: 'Transit works when it isn\'t stuck in traffic',
       reasoning: 'Buses lose most of their delay to congestion caused by private cars.',
       evidence: 'Bus journeys became quicker and more reliable after the centre closed to through traffic, per the Clean Streets Review.',
@@ -444,13 +542,16 @@ const FAKE_CASE = {
       impact: 'Faster, more reliable buses make the ban fair to people who cannot walk or cycle.',
     },
   ],
-  predictedOpponentCase: {
-    likelyArguments: ['Shift workers and carers need cars at hours when transit is thin', 'Businesses lose customers who drive in'],
-    strategicWeaknesses: ['Depends on exemptions working in practice'],
-    keyClashes: ['Access for the few against health for the many', 'Shops and footfall'],
-  },
   counters: [
-    { targetArgument: 'Shift workers need cars', counterpoint: 'Exemptions and night buses cover them.', rebuttal: 'Every real ban exempts carers and shift workers, and transit follows demand.' },
+    { targetArgument: 'Shift workers and carers need cars at night', counterpoint: 'Every real ban exempts carers and shift workers, and night buses follow demand.', source: 'Clean Streets Review' },
+    { targetArgument: 'Shops lose customers who drive in', counterpoint: 'Footfall rose when streets closed to traffic: people on foot shop more often than drivers.', source: 'Footfall Study' },
+    { targetArgument: 'It just moves traffic to the suburbs', counterpoint: 'Through traffic falls overall when the centre closes, because some trips stop being made by car at all.' },
+  ],
+  closingLine: 'A city centre should belong to the people in it, not the cars passing through it.',
+  sources: [
+    { org: 'Clean Streets Review', year: '2025', claim: 'Low-traffic zones cut roadside NO₂ within a year', url: 'https://example.org/clean-streets' },
+    { org: 'Street Space Audit', year: '2024', claim: 'Cars use most of the road area in city centres', url: 'https://example.org/street-space' },
+    { org: 'Footfall Study', claim: 'Shops gain visits when streets close to traffic', url: 'https://example.org/footfall' },
   ],
   metadata: {
     side: 'pro',
@@ -636,6 +737,7 @@ async function shootResultScreens(context: BrowserContext, prefix: string, langu
   await page.getByTestId('generate-motion').waitFor({ timeout: 30_000 });
   await page.waitForFunction(() => (document.querySelector('[data-testid="generate-motion"]') as HTMLTextAreaElement | null)?.value.trim());
   await page.getByRole('button', { name: /^(Generate debate case|Vitaeset generálása|Generar caso de debate)$/i }).click();
+  await shootCelebration(page, `${prefix}-case-celebration`);
   await page.getByTestId('case-document').waitFor({ timeout: 30_000 });
   await page.waitForTimeout(400);
   await shoot(page, `${prefix}-case`);
@@ -695,7 +797,7 @@ async function shootResultScreens(context: BrowserContext, prefix: string, langu
 
   await page.getByTestId('attack-this-case').click();
   await page.getByTestId('attack-case-text').waitFor({ timeout: 15_000 });
-  await page.waitForFunction(() => (document.querySelector('[data-testid="attack-case-text"]') as HTMLTextAreaElement | null)?.value.startsWith('THESIS:'));
+  await page.waitForFunction(() => (document.querySelector('[data-testid="attack-case-text"]') as HTMLTextAreaElement | null)?.value.startsWith('OPENING:'));
   await shoot(page, `${prefix}-attack-form`);
   await page.getByRole('button', { name: /^(Find weaknesses|Gyengeségek keresése|Encontrar debilidades)$/i }).click();
   await page.getByTestId('attack-document').waitFor({ timeout: 30_000 });
@@ -786,6 +888,7 @@ const MENU = {
   regenerate: /^(Regenerate a section|Szakasz újragenerálása|Regenerar una sección)$/,
   arguments: /^(Regenerate Arguments|Érvek újragenerálása|Regenerar Argumentos)$/,
   save: /^(Save|Mentés|Guardar)$/,
+  shareLink: /^(Share link|Link megosztása|Compartir enlace)$/,
 };
 
 /**
@@ -822,6 +925,9 @@ async function shootCaseEdits(context: BrowserContext, prefix: string, language:
     await page.waitForFunction(() => (document.querySelector('[data-testid="generate-motion"]') as HTMLTextAreaElement | null)?.value.trim());
     await page.getByRole('button', { name: /^(Generate debate case|Vitaeset generálása|Generar caso de debate)$/i }).click();
     await page.getByTestId('case-document').waitFor({ timeout: 30_000 });
+    // A new case opens with its celebration (shot in the results group); tap it away first.
+    await page.getByTestId('celebration').click({ timeout: 5_000 }).catch(() => {});
+    await page.getByTestId('celebration').waitFor({ state: 'detached', timeout: 5_000 });
     await page.waitForTimeout(3800); // The arrival notice fades.
     return { page, seen };
   };
@@ -1064,9 +1170,7 @@ async function shootFlowchart(context: BrowserContext, prefix: string, language:
   if (!(await toggle.isChecked())) throw new Error('The one-off switch did not turn on');
   await oneOff.getByTestId('debates-sheet').getByRole('button', { name: /^(Done|Kész|Listo)$/ }).click();
   await oneOff.getByTestId('debates-sheet').waitFor({ state: 'detached' });
-  await oneOff.getByRole('tab', { name: /^(Prepare|Felkészülés|Preparar)$/ }).click();
-  await oneOff.getByTestId('prepare-tool-flowchart').waitFor({ timeout: 30_000 });
-  await oneOff.getByTestId('prepare-tool-flowchart').click();
+  await openPrepareTool(oneOff, 'flowchart');
   await oneOff.getByTestId('flowchart-screen').getByTestId('one-off-notice').waitFor({ timeout: 30_000 });
   await oneOff.getByTestId('flow-card').first().waitFor({ timeout: 30_000 });
   await settle(oneOff);
@@ -1135,6 +1239,13 @@ async function fakeLibrary(page: Page) {
       const removed = (rows ?? []).filter((row) => row.id === id);
       rows = (rows ?? []).filter((row) => row.id !== id);
       return route.fulfill({ status: 200, headers: CORS, json: removed.map((row) => ({ debate_id: row.debate_id })) });
+    }
+    if (request.method() === 'PATCH') {
+      // An edit or an Active switch, kept as the server keeps it, so the list read after a write shows it.
+      const filter = url.searchParams.get('id') ?? '';
+      const ids = filter.startsWith('eq.') ? [filter.slice(3)] : filter.startsWith('in.(') ? filter.slice(4, -1).split(',').map((id) => id.replace(/"/g, '')) : [];
+      const body = request.postDataJSON() as Record<string, unknown>;
+      rows = (rows ?? []).map((row) => (ids.includes(String(row.id)) ? { ...row, ...body } : row));
     }
     return route.fulfill({ status: 204, headers: CORS });
   });
@@ -1355,7 +1466,7 @@ async function fakeCrossfire(page: Page, language: keyof typeof CROSSFIRE_TEXT) 
     if (input.operation === 'next-turn') {
       const type = input.expectedReply ?? 'answer';
       output = { type, text: type === 'answer' ? text.answers[exchange] : text.questions[exchange] };
-      extra = { signalToken: 'screenshot-signal' };
+      extra = { signalToken: 'screenshot-signal', ...((body as { voice?: boolean }).voice ? { voice: { segments: [{ text: 'Screenshot voice segment.', token: 'screenshot-voice-token' }] } } : {}) };
     } else if (input.operation === 'signal') {
       output = { signal: { answerTurnId: `T${turns.length + 1}`, answerQuality: exchange === 0 ? 'direct' : 'partial', answerQualityConfidence: 0.82, concession: exchange === 0 ? 'none' : 'implicit', concessionConfidence: 0.74, followUpOpportunity: 0.81 } };
     } else {
@@ -1413,6 +1524,7 @@ async function shootCrossfireScreens(context: BrowserContext, prefix: string, la
   await shoot(page, `${prefix}-crossfire-exchange`);
 
   await page.getByTestId('crossfire-end').click();
+  await shootCelebration(page, `${prefix}-crossfire-celebration`);
   await page.getByTestId('crossfire-debrief').waitFor({ timeout: 15_000 });
   await page.waitForTimeout(400);
   await shoot(page, `${prefix}-crossfire-debrief`);
@@ -1488,7 +1600,9 @@ async function fakeSparring(page: Page, language: keyof typeof SPARRING_TEXT) {
         },
       };
     }
-    return route.fulfill({ status: 200, headers: { 'access-control-allow-origin': '*' }, json: { output } });
+    // A voice round's turn carries a signed segment for the opponent's voice; the web preview only records it.
+    const voice = action === 'respond' && (body as { voice?: boolean }).voice ? { voice: { segments: [{ text: 'Screenshot voice segment.', token: 'screenshot-voice-token' }] } } : {};
+    return route.fulfill({ status: 200, headers: { 'access-control-allow-origin': '*' }, json: { output, ...voice } });
   });
   await page.route(`${REST}/rpc/attach_to_debate`, (route) => route.fulfill({ status: 204, body: '' }));
   return {
@@ -1557,6 +1671,7 @@ async function shootSparringScreens(context: BrowserContext, prefix: string, lan
   await shoot(page, `${prefix}-sparring-judging`);
   fake.release('score');
 
+  await shootCelebration(page, `${prefix}-sparring-celebration`);
   await page.getByTestId('sparring-scorecard').waitFor({ timeout: 15_000 });
   await page.waitForTimeout(400);
   await shoot(page, `${prefix}-sparring-scorecard`);
@@ -1565,10 +1680,243 @@ async function shootSparringScreens(context: BrowserContext, prefix: string, lan
   await page.close();
 }
 
+// What the web preview's fake recognizer "hears" (speech-recognition.web.ts): a filler, then a pause long enough to count.
+const SPOKEN = {
+  en: [
+    { text: 'Um, a ban punishes the people with the fewest choices.', afterMs: 1_200 },
+    { text: 'The nurse who drives in at five has no bus at that hour,', afterMs: 3_600 },
+    { text: 'and permits only help those who know how to apply.', afterMs: 1_400 },
+  ],
+  hu: [
+    { text: 'Hát, a tilalom azokat bünteti, akiknek a legkevesebb választásuk van.', afterMs: 1_200 },
+    { text: 'A hajnali ötkor munkába autózó ápolónak abban az órában nincs busza,', afterMs: 3_600 },
+    { text: 'az engedély pedig csak annak segít, aki tudja, hogyan kérje.', afterMs: 1_400 },
+  ],
+} as const;
+
 /**
- * The Timer from the Practice tab: idle, running, and after time up. The page's
- * clock is Playwright's, so minutes pass at once; the web preview records the
- * signals it would sound (timer-signals.web.ts) and the run checks them.
+ * Voice rounds and dictation, on the web preview's fake recognizer and
+ * opponent voice: the first-use notice, a spoken Sparring speech while it is
+ * heard, the measured delivery on the scorecard, a spoken Crossfire question
+ * and the round's delivery in the debrief, and Generate's dictation. The run
+ * checks that the turns asked the server for the opponent's voice and that
+ * the opponent's replies went to it.
+ */
+async function shootVoiceScreens(context: BrowserContext, prefix: string, language: string, problems: string[]) {
+  const lang = language === 'hu' ? 'hu' : 'en';
+  const text = SPARRING_TEXT[lang];
+  const page = await context.newPage();
+  watchErrors(page, problems, `${prefix} voice`);
+  await pinSettings(page, language);
+  await page.addInitScript((phrases) => {
+    (window as unknown as { __debatelabFakeSpeech: unknown }).__debatelabFakeSpeech = { phrases };
+    localStorage.removeItem('debatelab.voice-notice-v1');
+  }, [...SPOKEN[lang]]);
+  const voiceRequests: boolean[] = [];
+  page.on('request', (request) => {
+    if (!request.url().endsWith('/functions/v1/ai') || request.method() !== 'POST') return;
+    const body = request.postDataJSON() as { input?: { action?: string; operation?: string }; quotaCheck?: boolean } | null;
+    if (!body?.quotaCheck && (body?.input?.action === 'respond' || body?.input?.operation === 'next-turn')) voiceRequests.push((body as { voice?: boolean }).voice === true);
+  });
+  const fake = await fakeSparring(page, lang);
+  await page.goto(`${ORIGIN}/practice`);
+  await page.getByTestId('practice-tool-sparring').click({ timeout: 30_000 });
+  await page.getByTestId('sparring-setup').waitFor({ timeout: 15_000 });
+  await page.waitForFunction(() => (document.querySelector('[data-testid="sparring-motion"]') as HTMLTextAreaElement | null)?.value.trim());
+  await page.getByTestId('sparring-format').click();
+  await page.getByRole('menuitem', { name: 'Lincoln-Douglas' }).click();
+  await page.getByTestId('voice-mode').getByRole('switch').click();
+  await page.getByTestId('voice-notice').waitFor();
+  await page.getByTestId('voice-notice').scrollIntoViewIfNeeded();
+  await settle(page);
+  await shoot(page, `${prefix}-voice-notice`);
+  await page.getByTestId('voice-notice-accept').click();
+
+  await page.getByRole('button', { name: /^(Start round|Forduló indítása|Iniciar ronda)$/ }).click();
+  await page.getByRole('menuitem', { name: /^(Con|Ellene|En contra)$/ }).click();
+  await page.getByTestId('voice-mic').waitFor({ timeout: 15_000 });
+  await page.getByTestId('voice-mic').click();
+  // Listening: the words fill the draft as they are heard.
+  await page.waitForFunction((last) => (document.querySelector('[data-testid="sparring-input"]') as HTMLTextAreaElement | null)?.value.includes(last), SPOKEN[lang][1].text);
+  await page.waitForTimeout(300);
+  await shoot(page, `${prefix}-voice-speaking`);
+  await page.waitForFunction((last) => (document.querySelector('[data-testid="sparring-input"]') as HTMLTextAreaElement | null)?.value.includes(last), SPOKEN[lang][2].text);
+  await page.getByTestId('sparring-main').click();
+  await page.getByTestId('sparring-input').waitFor({ timeout: 15_000 });
+  await page.getByTestId('sparring-input').fill(text.speeches[1]);
+  await page.getByTestId('sparring-main').click();
+  await page.getByTestId('spoken-delivery').waitFor({ timeout: 15_000 });
+  await page.getByTestId('spoken-delivery').scrollIntoViewIfNeeded();
+  await page.waitForTimeout(400);
+  await shoot(page, `${prefix}-voice-scorecard`);
+  // The scorecard's PDF (export.web.ts keeps the HTML expo-print would print), rendered as a page of its own.
+  // A wide iPad's outline rail is a menu too; the export is the item named PDF in every language.
+  await page.getByTestId('document-more').click();
+  await page.getByRole('menuitem', { name: /PDF/ }).click();
+  const exported = await page.evaluate(() => (window as unknown as { __debatelabExport?: { html?: string; fileName?: string } }).__debatelabExport ?? {});
+  if (!exported.html || !exported.fileName?.startsWith('SparringTranscript_')) problems.push(`${prefix} voice: the scorecard PDF was ${exported.fileName ?? 'not made'}`);
+  else {
+    const pdf = await context.newPage();
+    await pdf.setViewportSize({ width: 794, height: 1123 });
+    await pdf.setContent(exported.html);
+    await pdf.screenshot({ path: join(OUT, `${prefix}-voice-sparring-pdf-html.png`), fullPage: true });
+    await pdf.close();
+  }
+  const facts = (await page.getByTestId('delivery-facts').first().textContent()) ?? '';
+  if (!/\d/.test(facts) || !facts.includes(lang === 'hu' ? 'hát' : 'um')) problems.push(`${prefix} voice: the delivery facts read "${facts}"`);
+  const spoken = await page.evaluate(() => (window as unknown as { __debatelabOpponentVoice?: { segments: number }[] }).__debatelabOpponentVoice ?? []);
+  if (spoken.length < 2 || spoken.some((item) => item.segments !== 1)) problems.push(`${prefix} voice: the opponent voice got ${JSON.stringify(spoken)}`);
+  await page.close();
+
+  // Crossfire: a spoken question, then the round's delivery in the debrief.
+  const crossfire = await context.newPage();
+  watchErrors(crossfire, problems, `${prefix} voice crossfire`);
+  await pinSettings(crossfire, language);
+  await crossfire.addInitScript((phrases) => {
+    (window as unknown as { __debatelabFakeSpeech: unknown }).__debatelabFakeSpeech = { phrases };
+  }, [{ text: CROSSFIRE_TEXT[lang].questions[0], afterMs: 1_000 }]);
+  crossfire.on('request', (request) => {
+    if (!request.url().endsWith('/functions/v1/ai') || request.method() !== 'POST') return;
+    const body = request.postDataJSON() as { input?: { operation?: string }; quotaCheck?: boolean } | null;
+    if (!body?.quotaCheck && body?.input?.operation === 'next-turn') voiceRequests.push((body as { voice?: boolean }).voice === true);
+  });
+  await fakeCrossfire(crossfire, lang);
+  await crossfire.goto(`${ORIGIN}/practice`);
+  await crossfire.getByTestId('practice-tool-crossfire').click({ timeout: 30_000 });
+  await crossfire.getByTestId('crossfire-setup').waitFor({ timeout: 15_000 });
+  await crossfire.waitForFunction(() => (document.querySelector('[data-testid="crossfire-resolution"]') as HTMLTextAreaElement | null)?.value.trim());
+  await crossfire.getByTestId('crossfire-argument').fill(CROSSFIRE_TEXT[lang].argument);
+  // The notice was accepted in the Sparring round, so the switch turns on at once.
+  await crossfire.getByTestId('voice-mode').getByRole('switch').click();
+  await crossfire.getByRole('button', { name: /^(Start crossfire|Keresztkérdezés indítása|Iniciar interrogatorio)$/ }).click();
+  await crossfire.getByTestId('voice-mic').click({ timeout: 15_000 });
+  await crossfire.waitForFunction((question) => (document.querySelector('[data-testid="crossfire-input"]') as HTMLTextAreaElement | null)?.value.includes(question), CROSSFIRE_TEXT[lang].questions[0]);
+  await crossfire.waitForTimeout(300);
+  await shoot(crossfire, `${prefix}-voice-crossfire`);
+  await crossfire.getByTestId('crossfire-send').click();
+  await crossfire.getByTestId('crossfire-turn').nth(1).waitFor({ timeout: 15_000 });
+  // A typed second question: the fixed debrief cites the second exchange.
+  await crossfire.getByTestId('crossfire-input').fill(CROSSFIRE_TEXT[lang].questions[1]);
+  await crossfire.getByTestId('crossfire-send').click();
+  await crossfire.getByTestId('crossfire-turn').nth(3).waitFor({ timeout: 15_000 });
+  await crossfire.getByTestId('crossfire-end').click();
+  await crossfire.getByTestId('spoken-delivery').waitFor({ timeout: 15_000 });
+  await crossfire.getByTestId('spoken-delivery').scrollIntoViewIfNeeded();
+  await crossfire.waitForTimeout(400);
+  await shoot(crossfire, `${prefix}-voice-crossfire-debrief`);
+  await crossfire.close();
+  if (voiceRequests.length < 4 || voiceRequests.some((asked) => !asked)) problems.push(`${prefix} voice: turns asked for the voice as ${JSON.stringify(voiceRequests)}`);
+
+  // Generate: dictating the motion.
+  const generate = await context.newPage();
+  watchErrors(generate, problems, `${prefix} dictation`);
+  await pinSettings(generate, language);
+  await generate.addInitScript((phrases) => {
+    (window as unknown as { __debatelabFakeSpeech: unknown }).__debatelabFakeSpeech = { phrases };
+  }, [{ text: lang === 'hu' ? 'Tiltsuk ki az autókat a belvárosból' : 'This House would ban private cars from city centres', afterMs: 800 }]);
+  await generate.goto(`${ORIGIN}/generate`);
+  await generate.getByTestId('generate-motion').waitFor({ timeout: 30_000 });
+  await generate.getByTestId('generate-motion').fill('');
+  await generate.getByTestId('dictate').click();
+  await generate.waitForFunction(() => ((document.querySelector('[data-testid="generate-motion"]') as HTMLTextAreaElement | null)?.value ?? '').length > 10);
+  await generate.waitForTimeout(300);
+  await shoot(generate, `${prefix}-voice-dictation`);
+  await generate.close();
+}
+
+// A saved Crossfire round, as CrossfirePage and the app save it, for the read-only view.
+const SAVED_CROSSFIRE_ID = '00000000-0000-4000-8000-00000000cf02';
+
+/**
+ * The free tools in Practice: the speech time calculator with a speech in
+ * it, the motion generator after drawing three, a drawn motion opened as a
+ * new debate (shown, never saved), and a saved Crossfire round read again
+ * from a fixed row.
+ */
+async function shootPracticeTools(context: BrowserContext, prefix: string, language: string, problems: string[]) {
+  const lang = language === 'hu' ? 'hu' : 'en';
+  const page = await context.newPage();
+  watchErrors(page, problems, `${prefix} practice tools`);
+  await pinSettings(page, language);
+  await page.goto(`${ORIGIN}/practice`);
+  await page.getByTestId('practice-tool-speech-time').click({ timeout: 30_000 });
+  await page.getByTestId('speech-time-text').fill([...SPARRING_TEXT[lang].speeches, ...SPARRING_TEXT[lang].opponent].join('\n\n'));
+  await page.getByTestId('slot-fits').waitFor();
+  const words = Number(await page.getByTestId('word-count').textContent());
+  if (!(words > 100)) problems.push(`${prefix} speech time: counted ${words} words`);
+  await settle(page);
+  await shoot(page, `${prefix}-tools-speech-time`);
+  await page.getByTestId('slot-fits').scrollIntoViewIfNeeded();
+  await page.waitForTimeout(300);
+  await shoot(page, `${prefix}-tools-speech-fits`);
+
+  await page.goto(`${ORIGIN}/practice`);
+  await page.getByTestId('practice-tool-motions').click({ timeout: 30_000 });
+  await page.getByTestId('motion-filter-education').click();
+  await page.getByTestId('motions-draw-three').click();
+  await page.getByTestId('motion-card').nth(2).waitFor();
+  await settle(page);
+  await shoot(page, `${prefix}-tools-motions`);
+  const drawn = (await page.getByTestId('motion-card').first().textContent()) ?? '';
+  await page.getByTestId('motion-card').first().getByRole('button').last().click();
+  await page.getByTestId('new-debate-sheet').waitFor({ timeout: 15_000 });
+  const prefilled = await page.locator('[data-testid="new-debate-sheet"] textarea, [data-testid="new-debate-sheet"] input').first().inputValue();
+  if (!prefilled || !drawn.includes(prefilled)) problems.push(`${prefix} motions: the new debate opened with "${prefilled}" for "${drawn}"`);
+  await settle(page);
+  await shoot(page, `${prefix}-tools-motion-debate`);
+  await page.close();
+
+  const saved = await context.newPage();
+  watchErrors(saved, problems, `${prefix} saved crossfire`);
+  await pinSettings(saved, language);
+  const text = CROSSFIRE_TEXT[lang];
+  const turns = [
+    { id: 'T1', sequence: 1, speaker: 'user', kind: 'question', text: text.questions[0], createdAt: 1, delivery: { speakingSeconds: 6, wordCount: 9, wordsPerMinute: 90, fillerCount: 1, fillers: [{ word: lang === 'hu' ? 'hát' : 'um', count: 1 }], longPauses: 0, longestPauseSeconds: 0 } },
+    { id: 'T2', sequence: 2, speaker: 'ai', kind: 'answer', text: text.answers[0], createdAt: 2 },
+    { id: 'T3', sequence: 3, speaker: 'user', kind: 'question', text: text.questions[1], createdAt: 3 },
+    { id: 'T4', sequence: 4, speaker: 'ai', kind: 'answer', text: text.answers[1], createdAt: 4 },
+  ];
+  const d = text.debrief;
+  await saved.route(`${REST}/crossfires*`, (route) => route.fulfill({
+    status: 200,
+    headers: { 'access-control-allow-origin': '*' },
+    json: {
+      id: SAVED_CROSSFIRE_ID,
+      title: 'This House would ban private cars from city centres',
+      input: { resolution: 'This House would ban private cars from city centres', argument: text.argument, mode: 'question-ai', style: 'cooperative', durationSeconds: 300, seedQuestions: [], useSourceLibrary: false },
+      output: {
+        turns,
+        debrief: {
+          concessionsSecured: [{ turnIds: ['T4'], claim: d.concession }],
+          controlledQuestions: [{ turnIds: ['T1'], claim: d.controlled }],
+          weakOrRepetitiveQuestions: [],
+          evasiveOrIncompleteAnswers: [],
+          missedFollowUps: [{ turnIds: ['T2'], claim: d.missed }],
+          betterFollowUpQuestions: [{ turnIds: ['T2'], question: d.better, reason: d.reason }],
+          strongestExchange: { turnIds: ['T3', 'T4'], claim: d.strongest },
+        },
+        endedReason: 'manual',
+      },
+      created_at: new Date().toISOString(),
+    },
+  }));
+  await saved.goto(`${ORIGIN}/crossfire-round/${SAVED_CROSSFIRE_ID}`);
+  await saved.getByTestId('crossfire-saved').waitFor({ timeout: 30_000 });
+  await saved.getByTestId('spoken-delivery').waitFor();
+  await settle(saved);
+  await shoot(saved, `${prefix}-tools-saved-crossfire`);
+  await saved.close();
+}
+
+/**
+ * The Timer from the Practice tab, on the website's free timer: idle,
+ * running, and over time on the school format; a British Parliamentary
+ * speech with points of information open; Public Forum prep; and the custom
+ * format sheet. The page's clock is Playwright's, so minutes pass at once;
+ * the web preview records the signals it would sound (timer-signals.web.ts)
+ * and what the Lock Screen would show (live-activity.web.ts), and the run
+ * checks both. The round is kept in the page's storage, so each run starts
+ * from a cleared one.
  */
 async function shootTimerScreens(context: BrowserContext, prefix: string, language: string, problems: string[]) {
   const page = await context.newPage();
@@ -1576,27 +1924,67 @@ async function shootTimerScreens(context: BrowserContext, prefix: string, langua
   await pinSettings(page, language);
   await page.clock.install();
   await page.goto(`${ORIGIN}/practice`);
+  await page.evaluate(() => {
+    localStorage.removeItem('debatelab.timer.session');
+    localStorage.removeItem('debatelab.timer.formats');
+  });
+  await page.reload();
   await page.getByTestId('practice-tool-timer').click({ timeout: 30_000 });
   await page.getByTestId('timer-screen').waitFor({ timeout: 15_000 });
   await settle(page);
   await shoot(page, `${prefix}-timer`);
 
-  // The first Standard speech is 4:00. After 1:14 it shows 2:46 and keeps running.
+  // The school format's first speech is 4:00. After 1:14 it shows 2:46 and keeps running.
   await page.getByTestId('timer-toggle').click();
   await page.clock.fastForward('01:14');
   await page.getByTestId('timer-time').filter({ hasText: '2:46' }).waitFor();
+  const activity = await page.evaluate(() => (window as unknown as { __debatelabTimerActivity?: { state: { kind: string; pausedAt: number | null } | null } }).__debatelabTimerActivity);
+  if (activity?.state?.kind !== 'speech' || activity.state.pausedAt !== null) problems.push(`${prefix} timer: the Lock Screen state was ${JSON.stringify(activity)}`);
   await shoot(page, `${prefix}-timer-running`);
 
-  // Past the last minute and on to time up: one beep, then two.
-  await page.clock.fastForward('01:50');
+  // Past the last minute and on into overtime: one beep, then two, and the clock counts on.
+  // runFor ticks through the marks; a jump (fastForward) reads as a return from the background, where only time up sounds.
+  await page.clock.runFor('01:50');
   await page.getByTestId('timer-time').filter({ hasText: '0:56' }).waitFor();
   await page.clock.fastForward('01:00');
-  await page.getByTestId('timer-time').filter({ hasText: '0:00' }).waitFor();
+  await page.getByTestId('timer-time').filter({ hasText: '+0:04' }).waitFor();
   await page.waitForTimeout(100);
-  const signals = await page.evaluate(() => (window as unknown as { __debatelabTimerSignals?: { signal: string; sound: boolean }[] }).__debatelabTimerSignals ?? []);
-  const heard = signals.map((item) => item.signal).join(',');
+  const signals = async () => (await page.evaluate(() => (window as unknown as { __debatelabTimerSignals?: { signal: string }[] }).__debatelabTimerSignals ?? [])).map((item) => item.signal).join(',');
+  const heard = await signals();
   if (heard !== 'beep,double-beep') throw new Error(`Timer signals were ${heard || 'none'}, expected beep,double-beep`);
   await shoot(page, `${prefix}-timer-time-up`);
+  await page.getByTestId('timer-toggle').click();
+
+  // British Parliamentary: 1:30 into the PM's speech, points of information are open and the knock sounded.
+  await page.getByTestId('timer-format').click();
+  await page.getByTestId('timer-format-menu').getByRole('menuitem', { name: 'British Parliamentary' }).click();
+  await page.getByTestId('timer-time').filter({ hasText: '7:00' }).waitFor();
+  await page.getByTestId('timer-toggle').click();
+  await page.clock.runFor('01:30');
+  await page.getByTestId('timer-time').filter({ hasText: '5:30' }).waitFor();
+  await page.getByTestId('timer-poi').waitFor();
+  await page.waitForTimeout(100);
+  const withKnock = await signals();
+  if (withKnock !== 'beep,double-beep,knock') problems.push(`${prefix} timer: BP signals were ${withKnock}, expected a knock when POIs opened`);
+  await shoot(page, `${prefix}-timer-bp-poi`);
+  await page.getByTestId('timer-toggle').click();
+
+  // Public Forum prep: the first team's bank runs while the speech waits.
+  await page.getByTestId('timer-format').click();
+  await page.getByTestId('timer-format-menu').getByRole('menuitem', { name: 'Public Forum' }).click();
+  await page.getByTestId('timer-prep-a').click();
+  await page.clock.fastForward('00:40');
+  await page.getByTestId('timer-prep-a').filter({ hasText: '2:20' }).waitFor();
+  await page.getByTestId('timer-prep-a').scrollIntoViewIfNeeded();
+  await shoot(page, `${prefix}-timer-prep`);
+  await page.getByTestId('timer-prep-a').click();
+
+  // The custom format sheet starts from the format on the timer.
+  await page.getByTestId('timer-format').click();
+  await page.getByTestId('timer-format-menu').getByRole('menuitem', { name: TIMER_NEW_FORMAT[language as keyof typeof TIMER_NEW_FORMAT] }).click();
+  await page.getByTestId('timer-format-sheet').waitFor({ timeout: 15_000 });
+  await settle(page);
+  await shoot(page, `${prefix}-timer-format`);
   await page.close();
 }
 
@@ -1612,20 +2000,27 @@ async function shootOneOffTools(page: Page, prefix: string) {
   await settle(page);
   await turnOnOneOff(page);
   await closeSwitcher(page);
-  await page.getByRole('tab', { name: /^(Prepare|Felkészülés|Preparar)$/ }).click();
-  await page.getByTestId('prepare-tool-generate').waitFor({ timeout: 30_000 });
-  // The Debate tab stays mounted behind Prepare with its own notice; only the visible one is Prepare's.
-  await page.getByTestId('one-off-notice').filter({ visible: true }).waitFor();
-  await settle(page);
-  await shoot(page, `${prefix}-prepare-oneoff`);
+  // The iPad sidebar lists the tools themselves, so there is no Prepare tab to shoot there.
+  const sidebar = await page.getByTestId('app-sidebar').isVisible();
+  if (!sidebar) {
+    await page.getByRole('tab', { name: /^(Prepare|Felkészülés|Preparar)$/ }).click();
+    await page.getByTestId('prepare-tool-generate').waitFor({ timeout: 30_000 });
+    // The Debate tab stays mounted behind Prepare with its own notice; only the visible one is Prepare's.
+    await page.getByTestId('one-off-notice').filter({ visible: true }).waitFor();
+    await settle(page);
+    await shoot(page, `${prefix}-prepare-oneoff`);
+  }
   // Brainstorm and Factoids say it through the same strip; a reload would end one-off mode, so go back in the app.
   for (const tool of ['brainstorm', 'factoids'] as const) {
-    await page.getByTestId(`prepare-tool-${tool}`).click();
+    await openPrepareTool(page, tool);
     await page.getByTestId(`${tool}-screen`).getByTestId('one-off-notice').waitFor({ timeout: 30_000 });
-    await page.goBack();
-    await page.getByTestId('prepare-tool-generate').filter({ visible: true }).waitFor();
+    // The sidebar goes from tool to tool; on a phone the tool goes back to Prepare's tiles.
+    if (!sidebar) {
+      await page.goBack();
+      await page.getByTestId('prepare-tool-generate').filter({ visible: true }).waitFor();
+    }
   }
-  await page.getByTestId('prepare-tool-generate').click();
+  await openPrepareTool(page, 'generate');
   await page.getByTestId('generate-motion').waitFor({ timeout: 30_000 });
   const notice = page.getByTestId('generate-screen').getByTestId('one-off-notice');
   await notice.waitFor();
@@ -1633,6 +2028,228 @@ async function shootOneOffTools(page: Page, prefix: string) {
   // Return to debate turns the mode off in place, and the strip says where work goes again.
   await notice.getByRole('button').click();
   await page.getByTestId('generate-screen').getByTestId('working-in').waitFor();
+}
+
+/**
+ * The iPad sidebar (ipad devices only): every tool under Debate, Prepare,
+ * Practice, Library and You. It shoots the sidebar fully expanded, then with
+ * Practice and Library closed while Generate is open, and checks that the
+ * closed sections stay closed after a reload, that a row highlights the screen
+ * it opens, that picking another row from an open tool replaces that tool
+ * instead of stacking a second screen, and that a 600-point window (Split View)
+ * has the tab bar instead.
+ */
+async function shootSidebar(context: BrowserContext, prefix: string, language: string, problems: string[]): Promise<number> {
+  const page = await context.newPage();
+  watchErrors(page, problems, `${prefix} sidebar`);
+  await pinSettings(page, language);
+  const viewport = page.viewportSize();
+  await page.goto(`${ORIGIN}/`);
+  await page.evaluate(() => localStorage.removeItem('debateowl.sidebar.collapsed'));
+  await page.goto(`${ORIGIN}/`);
+  const sidebar = page.getByTestId('app-sidebar');
+  if (viewport && viewport.width < 700) {
+    await page.getByTestId('app-tab-bar').waitFor();
+    if (await sidebar.isVisible()) throw new Error(`${prefix}: a ${viewport.width}-point window shows the sidebar`);
+    await page.close();
+    return 0;
+  }
+  await sidebar.waitFor({ timeout: 30_000 });
+  if (await page.getByTestId('app-tab-bar').isVisible()) throw new Error(`${prefix}: the tab bar shows beside the sidebar`);
+  await page.getByTestId('current-debate-motion').waitFor({ timeout: 30_000 });
+  await settle(page);
+  const selected = async () => sidebar.locator('[aria-selected="true"]').getAttribute('data-testid');
+  if ((await selected()) !== 'sidebar-item-dashboard') throw new Error(`${prefix}: the Debate tab does not highlight Dashboard`);
+  await shoot(page, `${prefix}-sidebar-expanded`);
+
+  // Generate from the sidebar, then Attack from Generate: the sidebar replaces the open tool.
+  await sidebar.getByTestId('sidebar-item-generate').click();
+  await page.getByTestId('generate-motion').waitFor({ timeout: 30_000 });
+  await sidebar.getByTestId('sidebar-item-attack').click();
+  await page.waitForURL('**/attack**');
+  await sidebar.getByTestId('sidebar-item-generate').click();
+  await page.getByTestId('generate-motion').waitFor({ timeout: 30_000 });
+  if ((await selected()) !== 'sidebar-item-generate') throw new Error(`${prefix}: Generate is not highlighted on Generate`);
+  await page.goBack();
+  await page.waitForURL((url) => url.pathname === '/');
+  await page.getByTestId('current-debate-motion').waitFor({ timeout: 30_000 });
+  await sidebar.getByTestId('sidebar-item-generate').click();
+  await page.getByTestId('generate-motion').waitFor({ timeout: 30_000 });
+
+  // A tool opened cold, as from a link: the sidebar still replaces it, and Back reaches the tabs.
+  await page.goto(`${ORIGIN}/generate`);
+  await page.getByTestId('generate-motion').waitFor({ timeout: 30_000 });
+  await sidebar.getByTestId('sidebar-item-ask').click();
+  await page.waitForURL('**/ask**');
+  await sidebar.getByTestId('sidebar-item-attack').click();
+  await page.waitForURL('**/attack**');
+  // The app's own Back (browser history on the web does not follow the stack).
+  await page.getByTestId('document-back').filter({ visible: true }).click();
+  await page.waitForURL((url) => url.pathname === '/', { timeout: 15_000 });
+  // The dashboard drops a load it loses focus during, so let it finish before covering it again.
+  await page.getByTestId('current-debate-motion').waitFor({ timeout: 30_000 });
+  await settle(page);
+  await sidebar.getByTestId('sidebar-item-generate').click();
+  await page.getByTestId('generate-motion').waitFor({ timeout: 30_000 });
+
+  for (const section of ['practice', 'library']) {
+    const toggle = sidebar.getByTestId(`sidebar-toggle-${section}`);
+    await toggle.click();
+    if ((await toggle.getAttribute('aria-expanded')) !== 'false') throw new Error(`${prefix}: ${section} did not collapse`);
+  }
+  await settle(page);
+  await shoot(page, `${prefix}-sidebar-collapsed`);
+
+  await page.goto(`${ORIGIN}/library`);
+  await sidebar.waitFor({ timeout: 30_000 });
+  for (const section of ['practice', 'library']) {
+    if (await sidebar.getByTestId(`sidebar-section-${section}`).locator('[data-testid^="sidebar-item-"]').count()) {
+      throw new Error(`${prefix}: ${section} opened again after a reload`);
+    }
+  }
+  // A closed section still marks the screen it holds.
+  await sidebar.getByTestId('sidebar-toggle-library').click();
+  if ((await selected()) !== 'sidebar-item-sources') throw new Error(`${prefix}: Sources is not highlighted on the Library`);
+
+  // Split View: the same iPad at 600 points keeps the tab bar.
+  if (viewport) {
+    await page.setViewportSize({ width: 600, height: viewport.height });
+    await page.getByTestId('app-tab-bar').waitFor();
+    if (await sidebar.isVisible()) throw new Error(`${prefix}: the sidebar stays in a 600-point window`);
+    await page.setViewportSize(viewport);
+  }
+  await page.close();
+  return 2;
+}
+
+/**
+ * A share link, end to end on staging: the made-up saved case's Share link
+ * calls the real `share` function (one new link), and the link's code opens
+ * the in-app viewer, which reads it back with the public get_shared_item RPC.
+ */
+async function shootShareLink(context: BrowserContext, prefix: string, language: string, problems: string[]): Promise<number> {
+  const page = await context.newPage();
+  watchErrors(page, problems, `${prefix} share`);
+  await pinSettings(page, language);
+  await fakeSavedCase(page);
+  await page.goto(`${ORIGIN}/case/${SAVED_CASE_ID}`);
+  await page.getByTestId('case-document').waitFor({ timeout: 30_000 });
+  await page.getByTestId('document-more').click();
+  await page.getByRole('menuitem', { name: MENU.shareLink }).last().click();
+  await page.waitForFunction(() => Boolean((window as unknown as { __debatelabExport?: { sharedUrl?: string } }).__debatelabExport?.sharedUrl), undefined, { timeout: 30_000 });
+  const url = await page.evaluate(() => (window as unknown as { __debatelabExport?: { sharedUrl?: string } }).__debatelabExport?.sharedUrl ?? '');
+  const code = /^\/share\/([A-Za-z0-9_-]+)$/.exec(new URL(url).pathname)?.[1];
+  if (!code) throw new Error(`The share link has no code: ${new URL(url).host}${new URL(url).pathname.replace(/[^/]+$/, '…')}`);
+  console.log(`${prefix}: share link on ${new URL(url).host}, a ${code.length}-character code`);
+  await page.close();
+
+  const viewer = await context.newPage();
+  watchErrors(viewer, problems, `${prefix} shared view`);
+  await viewer.goto(`${ORIGIN}/share/${code}`);
+  await viewer.getByTestId('shared-document').waitFor({ timeout: 30_000 });
+  await viewer.getByTestId('case-opening').waitFor();
+  await settle(viewer);
+  await shoot(viewer, `${prefix}-shared-case`);
+  await viewer.close();
+  return 1;
+}
+
+/**
+ * The first run and two account notices, each in a context of its own:
+ * Ollie's welcome (asked for with ?intro=show, as on the website) and the
+ * tour's first and last steps; the trial reminder, from a user_settings read
+ * answered as a trial ending in two days with no subscription rows; and the
+ * expired-session notice, from a stored session whose refresh the page
+ * answers with invalid_grant. Nothing is written.
+ */
+async function shootFirstRun(
+  browser: Browser,
+  options: BrowserContextOptions,
+  session: StorageState,
+  prefix: string,
+  language: string,
+  problems: string[],
+): Promise<number> {
+  let shots = 0;
+  const welcome = await newContext(browser, { ...options, storageState: session });
+  const page = await welcome.newPage();
+  watchErrors(page, problems, `${prefix} welcome`);
+  await pinSettings(page, language);
+  await page.goto(`${ORIGIN}/?intro=show`);
+  await page.getByTestId('debateowl-intro').waitFor({ timeout: 30_000 });
+  // The owl's lines land over 6.6 seconds.
+  await page.waitForTimeout(7_000);
+  await shoot(page, `${prefix}-welcome`);
+  await page.getByTestId('intro-done').click();
+  await page.getByTestId('tour-step-debate').waitFor();
+  await shoot(page, `${prefix}-tour-debate`);
+  for (const step of ['library', 'generate', 'ready']) {
+    await page.getByTestId('tour-next').click();
+    await page.getByTestId(`tour-step-${step}`).waitFor();
+  }
+  await shoot(page, `${prefix}-tour-ready`);
+  await page.getByTestId('tour-next').click();
+  await page.getByTestId('tour-step-ready').waitFor({ state: 'detached' });
+  shots += 3;
+  await page.unrouteAll({ behavior: 'ignoreErrors' });
+  await welcome.close();
+
+  const trial = await newContext(browser, { ...options, storageState: session });
+  const trialPage = await trial.newPage();
+  watchErrors(trialPage, problems, `${prefix} trial`);
+  await pinSettings(trialPage, language);
+  const endsAt = new Date(Date.now() + 2 * 24 * 60 * 60 * 1000 + 60 * 60 * 1000).toISOString();
+  await trialPage.route(`${REST}/user_settings*`, async (route) => {
+    if (route.request().method() !== 'GET' || !route.request().url().includes('trial_ends_at')) return route.fallback();
+    // A read still running when the context closes ends quietly: Playwright's error would print the request's headers.
+    try {
+      const response = await route.fetch();
+      const body: unknown = await response.json();
+      const asTrial = (row: Record<string, unknown>) => ({ ...row, subscription_tier: 'trial', trial_ends_at: endsAt, grace_period_ends_at: null, daily_limit_override: null });
+      await route.fulfill({ response, json: Array.isArray(body) ? body.map((row) => asTrial(row as Record<string, unknown>)) : asTrial(body as Record<string, unknown>) });
+    } catch {
+      await route.abort().catch(() => undefined);
+    }
+  });
+  for (const table of ['subscriptions', 'app_store_subscriptions']) {
+    await trialPage.route(`${REST}/${table}*`, (route) => route.fulfill({ status: 200, contentType: 'application/json', json: [] }));
+  }
+  await trialPage.goto(`${ORIGIN}/`);
+  await trialPage.getByTestId('trial-banner').waitFor({ timeout: 30_000 });
+  await settle(trialPage);
+  await shoot(trialPage, `${prefix}-trial-banner`);
+  await trialPage.getByTestId('trial-banner-dismiss').click();
+  await trialPage.getByTestId('trial-banner').waitFor({ state: 'detached' });
+  shots += 1;
+  await trialPage.unrouteAll({ behavior: 'ignoreErrors' });
+  await trial.close();
+
+  // The stored session's access token has expired and the server refuses its refresh token.
+  const expired = await newContext(browser, { ...options, storageState: session });
+  await expired.addInitScript(() => {
+    for (const key of Object.keys(localStorage)) {
+      if (!key.includes('auth')) continue;
+      try {
+        const value = JSON.parse(localStorage.getItem(key) ?? 'null') as { expires_at?: number } | null;
+        if (value && typeof value === 'object' && 'expires_at' in value) localStorage.setItem(key, JSON.stringify({ ...value, expires_at: 1 }));
+      } catch {
+        // Not a session.
+      }
+    }
+  });
+  await expired.route(`https://${STAGING_HOST}/auth/v1/token*`, (route) =>
+    route.fulfill({ status: 400, contentType: 'application/json', json: { error: 'invalid_grant', error_description: 'Invalid Refresh Token: Refresh Token Not Found', code: 'refresh_token_not_found' } }),
+  );
+  // The refused refresh is the point of this page, so its 400 is not reported as a problem.
+  const expiredPage = await expired.newPage();
+  await expiredPage.goto(`${ORIGIN}/`);
+  await expiredPage.getByTestId('session-expired').waitFor({ timeout: 45_000 });
+  await shoot(expiredPage, `${prefix}-session-expired`);
+  shots += 1;
+  await expiredPage.unrouteAll({ behavior: 'ignoreErrors' });
+  await expired.unrouteAll({ behavior: 'ignoreErrors' });
+  await expired.close();
+  return shots;
 }
 
 async function shootEmptyDebate(page: Page, prefix: string) {
@@ -1826,16 +2443,31 @@ async function shootModelPicker(context: BrowserContext, prefix: string, languag
 }
 
 /** Shoots whatever page of the group is open when it fails, and names the group in the error. */
+/**
+ * KEEP_GOING=1 records a failed group and runs the rest, so one flaky step
+ * does not cost every later shot; the run still exits with 1 and lists them.
+ */
+const KEEP_GOING = process.env.KEEP_GOING === '1';
+const groupFailures: string[] = [];
+
+function groupFailed(label: string, error: unknown): number {
+  const message = `${label}: ${(error instanceof Error ? error.message : String(error)).split('\n')[0]}`;
+  if (!KEEP_GOING) throw new Error(message);
+  console.error(`FAILED ${message}`);
+  groupFailures.push(message);
+  return 0;
+}
+
 function failedIn(context: BrowserContext, prefix: string, group: string) {
-  return async (error: unknown) => {
+  return async (error: unknown): Promise<number> => {
     const page = context.pages().at(-1);
     if (page) await shoot(page, `${prefix}-failed-${group}`).catch(() => undefined);
-    throw new Error(`${group}: ${error instanceof Error ? error.message : String(error)}`);
+    return groupFailed(`${prefix} ${group}`, error);
   };
 }
 
 async function signIn(browser: Browser, problems: string[]): Promise<StorageState> {
-  const context = await browser.newContext({ ...DEVICES.iphone, locale: LOCALES.en });
+  const context = await newContext(browser, { ...DEVICES.iphone, locale: LOCALES.en });
   const page = await context.newPage();
   watchErrors(page, problems, 'sign-in');
   const authHosts: string[] = [];
@@ -1872,7 +2504,7 @@ async function checkOfflineColdStart(browser: Browser, state: StorageState, prob
   session.expires_at = Math.floor(Date.now() / 1000) - 60;
   entry.value = JSON.stringify(session);
 
-  const context = await browser.newContext({ ...DEVICES.iphone, locale: LOCALES.en, storageState: expired });
+  const context = await newContext(browser, { ...DEVICES.iphone, locale: LOCALES.en, storageState: expired });
   const page = await context.newPage();
   // Offline for the backend only; the page itself still loads from the local server.
   const toBackend = (url: URL) => url.host === STAGING_HOST;
@@ -1961,7 +2593,7 @@ async function openFlowchart(page: Page) {
  */
 async function shootOfflineScreens(browser: Browser, state: StorageState, problems: string[], run: (typeof OFFLINE_RUNS)[number], isolation: boolean) {
   const { prefix, scheme, language } = run;
-  const context = await browser.newContext({ ...DEVICES.iphone, colorScheme: scheme, locale: LOCALES[language], storageState: state });
+  const context = await newContext(browser, { ...DEVICES.iphone, colorScheme: scheme, locale: LOCALES[language], storageState: state });
   const page = await context.newPage();
   try {
     return await readOffline(context, page, problems, run, isolation);
@@ -2130,7 +2762,7 @@ async function main() {
         for (const [language, locale] of Object.entries(LOCALES)) {
           const prefix = `${device}-${scheme}-${language}`;
           if (ONLY.length > 0 && !ONLY.some((only) => prefix.startsWith(only))) continue;
-          const signedOut = await browser.newContext({ ...options, colorScheme: scheme, locale });
+          const signedOut = await newContext(browser, { ...options, colorScheme: scheme, locale });
           const page = await signedOut.newPage();
           watchErrors(page, problems, prefix);
           await page.goto(`${ORIGIN}/sign-in`);
@@ -2145,14 +2777,14 @@ async function main() {
           await signedOut.close();
 
           if (!session) continue;
-          const signedIn = await browser.newContext({ ...options, colorScheme: scheme, locale, storageState: session });
+          const signedIn = await newContext(browser, { ...options, colorScheme: scheme, locale, storageState: session });
           const tabPage = await signedIn.newPage();
           watchErrors(tabPage, problems, `${prefix} signed in`);
           await pinSettings(tabPage, language);
           if (want('debate')) {
             await shootDebateScreens(tabPage, prefix).catch(async (error: unknown) => {
               await shoot(tabPage, `${prefix}-failed`);
-              throw error;
+              groupFailed(prefix, error);
             });
             shots += 10;
           }
@@ -2163,14 +2795,14 @@ async function main() {
           if (want('library')) {
             await shootLibraryScreens(tabPage, prefix, problems).catch(async (error: unknown) => {
               await shoot(tabPage, `${prefix}-failed`);
-              throw error;
+              groupFailed(prefix, error);
             });
             shots += 14;
           }
           for (const [name, route] of Object.entries(SIGNED_IN_ROUTES)) {
             if (!want(name)) continue;
             await tabPage.goto(`${ORIGIN}${route}`);
-            await tabPage.getByRole('tablist').first().waitFor();
+            await appShell(tabPage).waitFor();
             if (name === 'you') await tabPage.getByTestId('subscription-tier').waitFor({ timeout: 30_000 });
             await settle(tabPage);
             await shoot(tabPage, `${prefix}-${name}`);
@@ -2191,6 +2823,16 @@ async function main() {
             await pinSettings(emptyPage, language);
             await shootEmptyDebate(emptyPage, prefix);
             shots += 2;
+          }
+          if (want('sidebar') && device.startsWith('ipad')) {
+            shots += await shootSidebar(signedIn, prefix, language, problems).catch(failedIn(signedIn, prefix, 'sidebar'));
+          }
+          // Each run makes one real share link on staging, so English only.
+          if (want('share') && language === 'en') {
+            shots += await shootShareLink(signedIn, prefix, language, problems).catch(failedIn(signedIn, prefix, 'share'));
+          }
+          if (want('first-run')) {
+            shots += await shootFirstRun(browser, { ...options, colorScheme: scheme, locale }, session, prefix, language, problems).catch(failedIn(signedIn, prefix, 'first-run'));
           }
           if (want('ask')) {
             await shootAskScreens(signedIn, prefix, language, problems).catch(failedIn(signedIn, prefix, 'ask'));
@@ -2217,9 +2859,17 @@ async function main() {
             await shootLimitSheets(signedIn, prefix, language, problems).catch(failedIn(signedIn, prefix, 'limits'));
             shots += 2;
           }
+          if (want('tools')) {
+            await shootPracticeTools(signedIn, prefix, language, problems).catch(failedIn(signedIn, prefix, 'tools'));
+            shots += 6;
+          }
+          if (want('voice')) {
+            await shootVoiceScreens(signedIn, prefix, language, problems).catch(failedIn(signedIn, prefix, 'voice'));
+            shots += 6;
+          }
           if (want('timer')) {
             await shootTimerScreens(signedIn, prefix, language, problems);
-            shots += 3;
+            shots += 6;
           }
           if (want('crossfire')) {
             await shootCrossfireScreens(signedIn, prefix, language, problems).catch(failedIn(signedIn, prefix, 'crossfire'));
@@ -2269,8 +2919,8 @@ async function main() {
   console.log(`${shots} screenshots in ${OUT}`);
   await writeFile(join(OUT, 'clipped.json'), JSON.stringify(clipped, null, 2));
   console.log(`${Object.keys(clipped).length} shots with clipped text (clipped.json)`);
-  if (problems.length > 0) {
-    console.error(problems.join('\n'));
+  if (problems.length > 0 || groupFailures.length > 0) {
+    console.error([...groupFailures, ...problems].join('\n'));
     process.exitCode = 1;
   }
 }

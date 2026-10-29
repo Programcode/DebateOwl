@@ -1090,34 +1090,10 @@
     "save": "Mentés",
     "discuss": "Megvitatás",
     "flowcharts": "Folyamatábrák",
-    "exordio": "Exordio",
-    "exordioDesc": "A meggyőző nyitásod",
-    "hook": "Felvezetés",
-    "transition": "Átvezetés",
-    "caseStructure": "Esetstruktúra",
-    "caseStructureDesc": "Az érvelési kereted",
-    "thesis": "Tézis",
-    "framework": "Keretrendszer",
-    "burdenOfProof": "Bizonyítási teher",
-    "keyDefinitions": "Kulcsdefiníciók",
-    "noDefinitions": "Nincsenek megadott definíciók",
     "arguments": "Érvek",
-    "structuredArguments": "strukturált érv",
-    "predictedOpponent": "Az ellenfél várható esete",
-    "predictedOpponentDesc": "Amit valószínűleg érvelni fognak",
-    "likelyArguments": "Valószínű érvek",
-    "strategicWeaknesses": "Stratégiai gyengeségek",
-    "keyClashes": "Kulcs ütközések",
-    "preparedCounters": "Előkészített ellenérvek",
-    "preparedCountersDesc": "Használatra kész cáfolatok",
     "needsSource": "Forrás szükséges",
-    "reasoning": "Indoklás:",
     "evidence": "Bizonyíték:",
     "searchSuggestion": "Keresési javaslat:",
-    "impact": "Hatás:",
-    "target": "Célpont",
-    "counter": "Ellenérv:",
-    "rebuttal": "Cáfolat:",
     "exportedGdocs": "Eset exportálva Google Docs-ba!",
     "open": "Megnyitás",
     "exportFailed": "Nem sikerült exportálni Google Docs-ba",
@@ -1127,7 +1103,36 @@
     "undo": "Visszavonás",
     "resultTitle": "Az eseted",
     "unverified": "Ellenőrizetlen",
-    "unresearchedCaveat": "MI által készült, és ezt a bizonyítékot nem támasztja alá webes kutatás. Ellenőrizd a tényeket és a forrásokat, mielőtt egy fordulóban használod."
+    "unresearchedCaveat": "MI által készült, és ezt a bizonyítékot nem támasztja alá webes kutatás. Ellenőrizd a tényeket és a forrásokat, mielőtt egy fordulóban használod.",
+    "opening": "Nyitás",
+    "openingDesc": "Így kezdődik a beszéded",
+    "definition": "Mit értünk alatta:",
+    "roadmap": "Amit bemutatunk",
+    "argumentCount_one": "{{count}} érv",
+    "argumentCount_other": "{{count}} érv",
+    "point": "Állítás:",
+    "explanation": "Magyarázat:",
+    "whyItMatters": "Miért fontos:",
+    "ifTheySay": "Ha azt mondják…",
+    "ifTheySayDesc": "Várható állításaik és a válaszaid",
+    "theySay": "Azt mondják",
+    "weAnswer": "Válaszunk:",
+    "source": "Forrás:",
+    "whyWeWin": "Miért nyerünk",
+    "whyWeWinDesc": "Amire a bírónak emlékeznie kell",
+    "closingLine": "Zárómondat",
+    "closingLineDesc": "Az utolsó mondatod",
+    "sources": "Források",
+    "sourcesDesc": "Minden, amire az eseted hivatkozik",
+    "reinforce": "Érveink megerősítése",
+    "reinforceDesc": "Kb. 2 perc a csapatod korábbi érveiről",
+    "legacyJudgeBy": "Hogyan érdemes megítélni a vitát",
+    "legacyMustShow": "Amit be kell bizonyítanunk",
+    "legacyDefinitions": "Mit értünk a témán",
+    "legacyAlsoSay": "Ezt is mondhatják",
+    "legacyWeakSpots": "Hol vagyunk a leggyengébbek",
+    "legacyDecidingPoints": "Min dől el a vita",
+    "legacySayItLike": "Így mondd:"
   },
   "attackForm": {
     "argument": "Az érved",
@@ -1873,8 +1878,6 @@
     "unknown": "Ismeretlen",
     "standard": "Általános",
     "format": "formátum",
-    "contentionNumber": "{{number}}. érv",
-    "noThesis": "Nincs megadott tézis.",
     "assessmentSummary": "Az értékelés összefoglalása",
     "noSummary": "Nincs megadott összefoglalás.",
     "strengthAreas": "Erősségek",
@@ -1914,17 +1917,7 @@
       "unverified": "Nem ellenőrzött",
       "pending": "Függőben"
     },
-    "reasoning": "Indoklás",
     "evidence": "Bizonyíték",
-    "impact": "Hatás",
-    "hook": "Felvezetés",
-    "transition": "Átvezetés",
-    "noArguments": "Nincsenek megadott érvek.",
-    "noOpponentArgs": "Nincsenek megadott várható ellenfél érvek.",
-    "noCounters": "Nincsenek megadott ellenérvek.",
-    "target": "Célpont",
-    "counter": "Ellenérv",
-    "rebuttal": "Cáfolat",
     "debateCase": "Vitaeset",
     "side": "Oldal",
     "proposition": "Mellette",
@@ -1945,15 +1938,7 @@
     "howToUse": "Használat",
     "source": "Forrás",
     "noFactoids": "Nem találhatók tények.",
-    "exordio": "Exordio",
-    "caseStructure": "Esetstruktúra",
-    "thesis": "Tézis",
-    "framework": "Keretrendszer",
-    "burdenOfProof": "Bizonyítási teher",
-    "keyDefinitions": "Kulcsdefiníciók",
     "arguments": "Érvek",
-    "predictedOpponent": "Az ellenfél várható esete",
-    "counters": "Előkészített ellenérvek",
     "weaknesses": "Azonosított gyengeségek",
     "fallacies": "Észlelt téves következtetések",
     "crossExQuestions": "Keresztkérdezési kérdések",
@@ -1982,7 +1967,26 @@
     "factoidsSummary_one": "{{count}} tény • Ellenőrzött: {{verified}}",
     "factoidsSummary_other": "{{count}} tény • Ellenőrzött: {{verified}}",
     "topIdeasCount_one": "{{count}} legjobb ötlet",
-    "topIdeasCount_other": "{{count}} legjobb ötlet"
+    "topIdeasCount_other": "{{count}} legjobb ötlet",
+    "opening": "Nyitás",
+    "roadmap": "Amit bemutatunk",
+    "definition": "Mit értünk alatta",
+    "argumentNumber": "{{number}}. érv",
+    "point": "Állítás",
+    "whyItMatters": "Miért fontos",
+    "ifTheySay": "Ha azt mondják…",
+    "theySay": "Azt mondják",
+    "weAnswer": "Válaszunk",
+    "whyWeWin": "Miért nyerünk",
+    "closingLine": "Zárómondat",
+    "sources": "Források",
+    "reinforce": "Érveink megerősítése",
+    "legacyJudgeBy": "Hogyan érdemes megítélni a vitát",
+    "legacyMustShow": "Amit be kell bizonyítanunk",
+    "legacyDefinitions": "Mit értünk a témán",
+    "legacyAlsoSay": "Ezt is mondhatják",
+    "legacySayItLike": "Így mondd",
+    "untitledCase": "Névtelen eset"
   },
   "sparring": {
     "pro": "Mellette",
@@ -2029,10 +2033,10 @@
       "hard": "Kíméletlen"
     },
     "roleGuidance": {
-      "introductor": "Kezdj exordióval, határozd meg a kulcsfogalmakat, állítsd fel a keretet és a tézist, majd ismertesd az érvelés menetét. A teljes érveket hagyd az R1-re.",
-      "r1": "Építsd fel a fő érveket állítással, indoklással, alátámasztással és hatással. A végén előzd meg vagy válaszold meg a legerősebb ellenérvet.",
-      "r2": "Mélyítsd el az R1 érveit, válaszolj közvetlenül az ellenfélnek, nevezd meg a fő ütközési pontokat, és mérd össze a hatásokat. Ne csak ismételd az esetet.",
-      "conclusor": "Ne hozz új érvet. Kristályosítsd ki a döntő ütközési pontokat, mérlegeld a fordulót, és zárd le azzal, miért a te oldalad nyer."
+      "introductor": "Kezdj egy figyelemfelkeltő nyitással, mondd ki: „N érvvel bizonyítjuk, hogy…”, és röviden mutasd be az érveket. A téma egy szavát csak akkor magyarázd el egy mondatban, ha nem egyértelmű. A teljes érveket hagyd az R1-nek.",
+      "r1": "Fejtsd ki teljesen az érveket: az állítást, hogy miért igaz, a bizonyítékot forrással és évszámmal, és hogy miért fontos. A végén válaszolj arra, amit a másik csapat a legvalószínűbben mond.",
+      "r2": "Ne hozz új érvet. Kb. 2 percben erősítsd meg a csapatod érveit, majd kb. 4 percben válaszolj az övéikre: „Ha azt mondják…, mi azt feleljük…”.",
+      "conclusor": "Ne hozz új érvet. Mondj két-három okot, amiért az oldalad nyert, és zárj egy világos zárómondattal."
     },
     "category": {
       "Logic": "Logika",
@@ -2708,9 +2712,6 @@
       "done": "Kész",
       "openItem": "Megnyitás: {{title}}"
     },
-    "offline": {
-      "notice": "Offline: a mentett másolatokat látod. Az MI és a mentés megvárja a kapcsolatot."
-    },
     "debates": {
       "search": "Tételek keresése",
       "noMatches": "Nincs a keresésnek megfelelő vita.",
@@ -2860,7 +2861,16 @@
       "speechOf": "{{n}}. beszéd / {{of}}",
       "ofTotal": "összesen {{total}}",
       "next": "Következő beszéd",
-      "reset": "Visszaállítás"
+      "reset": "Visszaállítás",
+      "widgetTitle": "DebateOwl időmérő",
+      "widgetIdle": "Most nem fut beszéd.",
+      "poiSignal": "Megnyílik vagy lezárul a POI-idő",
+      "knock": "Kopogás",
+      "keepsRunning": "Ha bezárod az időmérőt, az óra tovább fut.",
+      "editFormat": "Formátum szerkesztése",
+      "deleteFormat": "Formátum törlése",
+      "deleteFormatTitle": "Törlöd ezt: „{{name}}”?",
+      "deleteFormatMessage": "Törlődik erről az eszközről. Az időmérőn lévő forduló megtartja a beszédeit."
     },
     "crossfire": {
       "voiceLater": "Az alkalmazás következő verziójával érkezik.",
@@ -2874,7 +2884,9 @@
       "resume": "Folytatás",
       "replay": "Visszanézés",
       "versus": "{{user}} – {{opponent}}",
-      "roundsFailed": "Nem sikerült betölteni a vitapárbaj-fordulóidat."
+      "roundsFailed": "Nem sikerült betölteni a vitapárbaj-fordulóidat.",
+      "exportPdf": "Exportálás PDF-be",
+      "exportFailed": "Nem sikerült elkészíteni a PDF-et. Próbáld újra."
     },
     "brainstorm": {
       "strengths": {
@@ -2969,6 +2981,81 @@
     "permissions": {
       "speechRecognition": "A DebateOwl szöveggé alakítja a hangodat, amikor kérdést, keresztkérdezési választ vagy vitapárbaj-beszédet diktálsz. A hangot az Apple dolgozza fel a felismeréshez.",
       "microphone": "A DebateOwl a mikrofont használja, amíg kérdést, keresztkérdezési választ vagy vitapárbaj-beszédet diktálsz."
+    },
+    "voice": {
+      "recognition": "A beszédedet az Apple beszédfelismerése alakítja szöveggé. Ehhez az iOS elküldheti a hangot az Apple-nek.",
+      "denied": "A hang ki van kapcsolva, mert a DebateOwl nem használhatja a mikrofont vagy a beszédfelismerést. Engedélyezd mindkettőt a Beállításokban. Gépelni a szokott módon lehet.",
+      "openSettings": "Beállítások megnyitása",
+      "notAllowed": "A DebateOwl nem használhatja a mikrofont vagy a beszédfelismerést. Engedélyezd mindkettőt a Beállításokban, vagy gépelj.",
+      "limit": "Az ellenfél ElevenLabs-hangjának mai kerete elfogyott, ezért a válaszokat az eszközöd hangja olvassa fel.",
+      "deliveryDescription": "Ezek a számok az órából és az elhangzottak leiratából származnak. Senki nem figyelte a hangszínedet, a magabiztosságodat vagy a hangerődet, és a leiratból kimaradhatnak szavak.",
+      "spoken": "Szóban"
+    },
+    "practice": {
+      "speechTimeDesc": "Mennyi ideig tart egy beszéd",
+      "speechTimeIntro": "Illeszd be vagy írd be a beszédet, és megtudod, mennyi ideig tart elmondani.",
+      "calcPrivacy": "Ezen az eszközön számoljuk. A szöveget nem töltjük fel és nem tároljuk.",
+      "motionsDesc": "Gyakorló vitatétel húzása",
+      "motionsIntro": "Saját gyakorló vitatételek téma, szint és típus szerint."
+    },
+    "sidebar": {
+      "dashboard": "Áttekintés",
+      "sources": "Források",
+      "account": "Fiók és beállítások",
+      "noDebate": "Nincs aktuális vita",
+      "collapseHint": "Elrejti a szakasz eszközeit",
+      "expandHint": "Megjeleníti a szakasz eszközeit"
+    },
+    "trialBanner": {
+      "seePlan": "Csomag megtekintése"
+    },
+    "tour": {
+      "progress": "{{step}}. lépés / {{steps}}"
+    },
+    "a11y": {
+      "answerReady": "Kész a válasz",
+      "resultReady": "Elkészült: {{title}}"
+    },
+    "share": {
+      "shareLink": "Link megosztása",
+      "linkCopied": "Link másolva",
+      "failed": "Nem sikerült megosztási linket létrehozni. Próbáld újra.",
+      "limitReached": "Elérted a napi megosztási korlátot ({{limit}}). Próbáld újra holnap.",
+      "tooLarge": "Ez túl nagy ahhoz, hogy linkként megoszd.",
+      "signIn": "Jelentkezz be újra a link megosztásához.",
+      "timeout": "A link létrehozása túl sokáig tartott. Próbáld újra.",
+      "openWebsite": "Megnyitás a weboldalon",
+      "unknownKind": "Ez a megosztott tartalom csak a weboldalon nyitható meg."
+    },
+    "widget": {
+      "spar": "Gyakorlás",
+      "description": "A tételed és a felkészülésed egy pillantásra."
+    },
+    "quickActions": {
+      "startTimer": "Időmérő indítása"
+    },
+    "offlineQueue": {
+      "notice": "Offline: mentett másolatok láthatók. Az új jegyzetek, a forrásmódosítások és a kapcsolók akkor szinkronizálódnak, amikor újra lesz kapcsolat. Az MI és a többi módosítás megvárja a kapcsolatot.",
+      "pending_one": "{{count}} módosítás szinkronizálódik, amikor újra lesz kapcsolat",
+      "pending_other": "{{count}} módosítás szinkronizálódik, amikor újra lesz kapcsolat",
+      "syncing_one": "{{count}} módosítás vár szinkronizálásra",
+      "syncing_other": "{{count}} módosítás vár szinkronizálásra",
+      "waiting": "Szinkronizálásra vár",
+      "syncsWhenOnline": "Ezen a telefonon mentve. Akkor szinkronizálódik, amikor újra lesz kapcsolat.",
+      "syncingSoon": "Ezen a telefonon mentve. Szinkronizálódik, amint a szerver elérhető.",
+      "noteQueuedTitle": "A jegyzet ezen a telefonon mentve",
+      "noteQueuedDesc": "Akkor kerül a Könyvtárba, amikor újra lesz kapcsolat.",
+      "changeQueuedTitle": "Ezen a telefonon mentve",
+      "changeQueuedDesc": "Akkor szinkronizálódik, amikor újra lesz kapcsolat.",
+      "synced_one": "{{count}} módosítás szinkronizálva",
+      "synced_other": "{{count}} módosítás szinkronizálva",
+      "refusedTitle_one": "{{count}} módosítást nem sikerült menteni",
+      "refusedTitle_other": "{{count}} módosítást nem sikerült menteni",
+      "refusedDesc_one": "A szerver elutasította, ezért törlődött erről a telefonról.",
+      "refusedDesc_other": "A szerver elutasította őket, ezért törlődtek erről a telefonról.",
+      "noteRefused": "A szerver elutasította a(z) „{{title}}” jegyzetet, ezért törlődött erről a telefonról.",
+      "notKeptTitle": "Még nincs mentve ezen a telefonon",
+      "notKeptDesc": "A módosításaid szinkronizálódnak, amikor újra online leszel. Addig tartsd nyitva az alkalmazást."
     }
   }
 }

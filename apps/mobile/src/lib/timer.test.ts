@@ -1,79 +1,55 @@
+import { togglePrep, toggleSpeech } from '@debatelab/core/free-tools/round-timer';
 import { describe, expect, it } from 'vitest';
 
-import { idleClock, pauseClock, remainingSeconds, signalBetween, signalFor, startClock, type TimerClock, type TimerSignal } from './timer';
+import { initialSession, parseSavedFormats, parseSession, serializeSession, timerActivityState, type TimerSession } from './timer';
 
 const T0 = 1_000_000;
+const text = {
+  sideName: (side: string) => side,
+  prepLine: (side: string) => `prep ${side}`,
+  labels: { speaking: 'Speaking', paused: 'Paused', overtime: 'Over time', prep: 'Prep', idleTitle: 'Timer', idleLine: 'Idle' },
+};
+const custom = { name: 'Club', prepSeconds: 120, segments: [{ label: 'Opening', seconds: 300, kind: 'speech' as const, side: 'a' as const, poi: true }] };
 
-describe('timer clock', () => {
-  it('shows the right time after a gap with no ticks, as after the app was in the background', () => {
-    const clock = startClock(idleClock(4), T0);
-    // No tick ran for 90 s; the time comes from the start timestamp alone.
-    expect(remainingSeconds(clock, T0 + 90_000)).toBe(150);
+describe('stored timer session', () => {
+  it('reopens a running speech where it was, with its custom format', () => {
+    const running: TimerSession = { ...initialSession({ id: 'custom', custom, savedId: 'x1' }), muted: true };
+    running.round = toggleSpeech(running.round, T0);
+    const reopened = parseSession(JSON.parse(JSON.stringify(serializeSession(running))));
+    expect(reopened).toEqual(running);
   });
 
-  it('keeps the time that ran before a pause and stops at zero', () => {
-    let clock = startClock(idleClock(1), T0);
-    clock = pauseClock(clock, T0 + 20_500);
-    // Paused time does not count.
-    expect(remainingSeconds(clock, T0 + 600_000)).toBe(40);
-    clock = startClock(clock, T0 + 600_000);
-    expect(remainingSeconds(clock, T0 + 610_000)).toBe(30);
-    expect(remainingSeconds(clock, T0 + 900_000)).toBe(0);
-    // A finished clock does not start again.
-    expect(startClock(pauseClock(clock, T0 + 900_000), T0 + 900_000).startedAt).toBeNull();
-  });
-});
-
-describe('timer signals', () => {
-  it('beeps once on reaching the last minute and twice at time up', () => {
-    expect(signalBetween(61, 60)).toBe('beep');
-    expect(signalBetween(60, 59)).toBeNull();
-    expect(signalBetween(1, 0)).toBe('double-beep');
-    expect(signalBetween(0, 0)).toBeNull();
+  it('refuses a round that does not fit its format and a format past the limits', () => {
+    const stored = serializeSession(initialSession({ id: 'bp' })) as { round: { segmentIndex: number } };
+    expect(parseSession({ ...stored, round: { ...stored.round, segmentIndex: 8 } })).toBeNull();
+    expect(parseSession({ ...stored, format: 'custom', custom: { ...custom, segments: [] } })).toBeNull();
+    expect(parseSession({ ...stored, format: 'unknown' })).toBeNull();
   });
 
-  it('sounds only time up when a background gap crossed both thresholds', () => {
-    expect(signalBetween(150, 0)).toBe('double-beep');
-    expect(signalBetween(150, 30)).toBe('beep');
+  it('keeps the saved formats that parse and drops the rest', () => {
+    const saved = parseSavedFormats([{ id: 'a', format: custom }, { id: 'a', format: custom }, { id: 'b', format: { ...custom, prepSeconds: -1 } }, 'junk']);
+    expect(saved.map((item) => item.id)).toEqual(['a']);
   });
 });
 
-describe('timer signals across a pause', () => {
-  /** Reads the clock as the screen does on each redraw, collecting the signals it sounds. */
-  function reader(clock: TimerClock, now: number) {
-    let last = remainingSeconds(clock, now);
-    const heard: TimerSignal[] = [];
-    return {
-      heard,
-      read(next: TimerClock, at: number) {
-        const current = remainingSeconds(next, at);
-        const due = signalFor(last, current, next);
-        last = current;
-        if (due) heard.push(due);
-      },
-    };
-  }
-
-  it('beeps once when a pause lands as 1:01 turns to 1:00, and not again on resume', () => {
-    let clock = startClock(idleClock(2), T0);
-    const screen = reader(clock, T0);
-    screen.read(clock, T0 + 59_200); // shows 1:01
-    clock = pauseClock(clock, T0 + 60_100); // real time left is now 59.9 s, shown as 1:00
-    screen.read(clock, T0 + 60_100);
-    clock = startClock(clock, T0 + 90_000);
-    screen.read(clock, T0 + 91_000); // 0:59
-    expect(screen.heard).toEqual(['beep']);
+describe('Live Activity clock', () => {
+  it('counts a running speech down from its virtual start to its limit', () => {
+    let session = initialSession({ id: 'bp' });
+    expect(timerActivityState(session, T0, text)).toBeNull();
+    session = { ...session, round: toggleSpeech(session.round, T0) };
+    const state = timerActivityState(session, T0 + 90_000, text);
+    expect(state).toMatchObject({ kind: 'speech', title: 'PM', startedAt: T0, endsAt: T0 + 7 * 60_000, pausedAt: null });
   });
 
-  it('sounds nothing when a reset or another speech moves the time left', () => {
-    let clock = startClock(idleClock(2), T0);
-    const screen = reader(clock, T0);
-    screen.read(clock, T0 + 30_000); // 1:30
-    // A fresh one-minute clock drops the reading from 1:30 to 1:00 without the speech running.
-    clock = idleClock(1);
-    screen.read(clock, T0 + 30_000);
-    clock = idleClock(4);
-    screen.read(clock, T0 + 30_000);
-    expect(screen.heard).toEqual([]);
+  it('stands still at the paused moment, and a running prep bank takes over', () => {
+    let session = initialSession({ id: 'pf' });
+    session = { ...session, round: toggleSpeech(session.round, T0) };
+    session = { ...session, round: toggleSpeech(session.round, T0 + 30_000) };
+    expect(timerActivityState(session, T0 + 500_000, text)).toMatchObject({ startedAt: T0 + 470_000, pausedAt: T0 + 500_000, endsAt: T0 + 470_000 + 240_000 });
+
+    session = { ...session, round: togglePrep(session.round, 'b', T0 + 600_000) };
+    const prep = timerActivityState(session, T0 + 660_000, text);
+    // PF prep is 3:00; a minute used leaves the bank ending two minutes on.
+    expect(prep).toMatchObject({ kind: 'prep', line: 'prep b', side: 'b', endsAt: T0 + 780_000, pausedAt: null });
   });
 });

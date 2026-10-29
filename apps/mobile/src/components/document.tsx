@@ -1,8 +1,9 @@
 import { Children, Fragment, isValidElement, useRef, useState, type ReactNode } from 'react';
-import { Pressable, ScrollView, StyleSheet, View, useWindowDimensions } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import Svg, { Defs, LinearGradient, Rect, Stop } from 'react-native-svg';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { SuccessCheck } from './success-check';
 import { Chip, CiteBadge } from './chip';
 import type { CitationTarget } from './citation-target';
 import { Icon } from './icon';
@@ -11,7 +12,7 @@ import { OfflineNotice } from './offline-notice';
 import { OutlineProvider, OutlineRail, useOutlineAnchor, useOutlineItems, useOutlineRail } from './outline';
 import { Text } from './text';
 
-import { RAIL_MIN_WIDTH, RAIL_WIDTH, useHeaderCover, useLayoutClass } from '@/lib/layout';
+import { RAIL_MIN_WIDTH, RAIL_WIDTH, useContentWidth, useHeaderCover, useLayoutClass } from '@/lib/layout';
 import { radius } from '@/theme/colors';
 import { useTheme } from '@/theme/use-theme';
 
@@ -77,9 +78,7 @@ function DocumentNotice({ text, tone = 'info', bottom }: { text: string; tone?: 
       testID="document-notice">
       {/* As the website's success toast: the mint check carries the meaning, the text stays readable. */}
       {success ? (
-        <View style={[styles.noticeCheck, { backgroundColor: colors.successFill }]}>
-          <Icon name="check" color={colors.successTint} size={15} />
-        </View>
+        <SuccessCheck size={24} haptic={false} />
       ) : null}
       <Text weight={success ? 'semibold' : 'regular'} style={[styles.noticeText, { color: success ? colors.success : colors.background }]}>
         {text}
@@ -114,7 +113,7 @@ export function DocumentScreen({
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
   const layout = useLayoutClass();
-  const { width } = useWindowDimensions();
+  const width = useContentWidth();
   const bottom = Math.max(insets.bottom - 6, 14);
   // The bar grows when a label wraps, so the page and the notice clear its measured height.
   const [barHeight, setBarHeight] = useState(PINNED_FADE + PINNED_HEIGHT + bottom);
@@ -128,8 +127,12 @@ export function DocumentScreen({
   return (
     <View style={[styles.root, { backgroundColor: colors.card }]} testID={testID}>
       {header}
+      {/* Tool forms are documents too: fields scroll clear of the keyboard. */}
       <ScrollView
         contentInsetAdjustmentBehavior="automatic"
+        automaticallyAdjustKeyboardInsets
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="interactive"
         contentContainerStyle={[styles.content, { paddingBottom: actions ? barHeight + 8 : 16 + bottom }]}>
         <OfflineNotice />
         {children}
@@ -176,6 +179,9 @@ function RailDocument({
           <ScrollView
             ref={scroll}
             contentInsetAdjustmentBehavior="automatic"
+            automaticallyAdjustKeyboardInsets
+            keyboardShouldPersistTaps="handled"
+            keyboardDismissMode="interactive"
             scrollEventThrottle={32}
             onScroll={(event) => rail.onScroll(event.nativeEvent.contentOffset.y)}
             onContentSizeChange={rail.measure}>

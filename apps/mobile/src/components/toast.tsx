@@ -3,9 +3,11 @@ import { AccessibilityInfo, Pressable, StyleSheet, View } from 'react-native';
 import Animated, { FadeInDown, FadeOutDown } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { SuccessCheck } from './success-check';
 import { Icon } from './icon';
 import { Text } from './text';
 
+import { motionSetting, useReduceMotion } from '@/theme/motion';
 import { haptics } from '@/lib/haptics';
 import { radius } from '@/theme/colors';
 import { useTheme } from '@/theme/use-theme';
@@ -80,21 +82,20 @@ export function ToastHost() {
 
 function ToastView({ toast, onClose }: { toast: ShownToast; onClose: () => void }) {
   const { colors, scheme } = useTheme();
+  const reduce = useReduceMotion();
   const insets = useSafeAreaInsets();
   const face = scheme === 'dark' ? colors.card : colors.heading;
   const text = scheme === 'dark' ? colors.foreground : '#FFFFFF';
   return (
     <View pointerEvents="box-none" style={[styles.layer, { bottom: insets.bottom + TAB_BAR }]}>
       <Animated.View
-        entering={FadeInDown.duration(180)}
-        exiting={FadeOutDown.duration(160)}
+        entering={FadeInDown.duration(180).reduceMotion(motionSetting(reduce))}
+        exiting={FadeOutDown.duration(160).reduceMotion(motionSetting(reduce))}
         accessibilityLiveRegion="polite"
         testID="toast"
         style={[styles.toast, { backgroundColor: face, borderColor: scheme === 'dark' ? colors.border : face }]}>
         {toast.tone === 'success' ? (
-          <View style={[styles.badge, { backgroundColor: colors.successFill }]}>
-            <Icon name="check" color="#FFFFFF" size={15} />
-          </View>
+          <SuccessCheck size={22} delay={120} haptic={false} />
         ) : toast.tone === 'error' ? (
           <Icon name="alert" color={scheme === 'dark' ? colors.destructive : '#FF9FA2'} size={20} />
         ) : null}

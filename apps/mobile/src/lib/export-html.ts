@@ -1,8 +1,12 @@
+import { readCase, sourceLine } from '@debatelab/core/ai/case-view';
 import type { AttackOutput } from '@debatelab/core/ai/schemas/attack';
 import type { BrainstormOutput } from '@debatelab/core/ai/schemas/brainstorm';
 import type { FactoidsOutput } from '@debatelab/core/ai/schemas/factoids';
 import type { GenerateOutput } from '@debatelab/core/ai/schemas/generate';
 import { mapRows, type FlowchartDocument, type FlowNodeType } from '@debatelab/core/flowchart';
+import { formatRoundTime } from '@debatelab/core/sparring/formats';
+import type { SparringSession } from '@debatelab/core/sparring/session';
+import { LONG_PAUSE_SECONDS } from '@debatelab/core/voice/delivery';
 
 import { mapMeta, typeLabel, viaLabel } from './flowchart-text';
 
@@ -37,6 +41,8 @@ const STYLE = `
   li { margin-bottom: 3px; }
   .tag { display: inline-block; border: 1px solid #CDD7E4; border-radius: 6px; padding: 0 6px; font-size: 9pt; font-weight: 700; margin-right: 4px; }
   .critical { color: #D23239; border-color: #D23239; }
+  .hook { font-style: italic; }
+  .closing { font-weight: 600; }
   .major { color: #A15C06; border-color: #A15C06; }
   .minor { color: #0556D6; border-color: #0556D6; }
   footer { margin-top: 26px; color: #8494AB; font-size: 9pt; text-align: center; }
@@ -64,35 +70,52 @@ export function caseExportHtml(result: GenerateOutput, t: Translate): string {
   const title = result.metadata?.motion || t('export.debateCase');
   const parts: string[] = [];
 
-  parts.push(`<div class="framing"><p><span class="label">${escape(t('export.thesis'))}:</span> ${escape(result.caseStructure?.thesis || t('export.noThesis'))}</p>${
-    result.caseStructure?.framework ? `<p><span class="label">${escape(t('export.framework'))}:</span> ${escape(result.caseStructure.framework)}</p>` : ''
-  }</div>`);
-  if (result.exordio && (result.exordio.hook || result.exordio.transition)) {
-    parts.push(`<h2>${escape(t('export.exordio'))}</h2>`);
-    if (result.exordio.hook) parts.push(paragraph(t('export.hook'), result.exordio.hook));
-    if (result.exordio.transition) parts.push(paragraph(t('export.transition'), result.exordio.transition));
+  const view = readCase(result);
+  const label = (key: string) => escape(t(key));
+
+  // Opening: hook, an unclear term when there is one, and the roadmap; older cases add their framework, burden and definitions.
+  parts.push(`<h2>${label('export.opening')}</h2>`);
+  if (view.opening.hook) parts.push(`<p class="hook">${escape(view.opening.hook)}</p>`);
+  if (view.opening.definition) parts.push(paragraph(t('export.definition'), view.opening.definition));
+  parts.push(paragraph(t('export.roadmap'), view.opening.roadmap || t('export.untitledCase')));
+  if (view.legacy.framework) parts.push(paragraph(t('export.legacyJudgeBy'), view.legacy.framework));
+  if (view.legacy.burdenOfProof) parts.push(paragraph(t('export.legacyMustShow'), view.legacy.burdenOfProof));
+  if (view.legacy.definitions.length) parts.push(`<h3>${label('export.legacyDefinitions')}</h3>${bullets(view.legacy.definitions)}`);
+
+  if (view.arguments.length) {
+    parts.push(`<h2>${label('export.arguments')}</h2>`);
+    view.arguments.forEach((argument, i) => {
+      parts.push(`<div class="block"><h3><span class="number">${escape(t('export.argumentNumber', { number: i + 1 }))}</span>${escape(argument.title ?? argument.point)}</h3>${
+        argument.title && argument.point ? paragraph(t('export.point'), argument.point) : ''
+      }${argument.explanation ? paragraph(t('export.explanation'), argument.explanation) : ''}${
+        argument.evidence ? paragraph(t('export.evidence'), argument.evidence) : ''
+      }${argument.whyItMatters ? paragraph(t('export.whyItMatters'), argument.whyItMatters) : ''}</div>`);
+    });
   }
-  if (result.caseStructure?.burdenOfProof) parts.push(paragraph(t('export.burdenOfProof'), result.caseStructure.burdenOfProof));
-  if (result.caseStructure?.keyDefinitions?.length) parts.push(`<h3>${escape(t('export.keyDefinitions'))}</h3>${bullets(result.caseStructure.keyDefinitions)}`);
 
-  parts.push(`<h2>${escape(t('export.arguments'))}</h2>`);
-  if (!result.contentions?.length) parts.push(`<p>${escape(t('export.noArguments'))}</p>`);
-  result.contentions?.forEach((c, i) => {
-    parts.push(`<div class="block"><h3><span class="number">${escape(t('export.contentionNumber', { number: i + 1 }))}</span>${escape(c.claim)}</h3>${
-      c.reasoning ? paragraph(t('export.reasoning'), c.reasoning) : ''
-    }${c.evidence ? paragraph(t('export.evidence'), c.evidence) : ''}${c.impact ? paragraph(t('export.impact'), c.impact) : ''}</div>`);
-  });
+  // R2: the team's earlier arguments, backed up, instead of new ones.
+  if (view.reinforce.length) {
+    parts.push(`<h2>${label('export.reinforce')}</h2>`);
+    view.reinforce.forEach((item) => parts.push(`<div class="block">${item.argument ? `<h3>${escape(item.argument)}</h3>` : ''}<p>${escape(item.text)}</p></div>`));
+  }
 
-  parts.push(`<h2>${escape(t('export.predictedOpponent'))}</h2>`);
-  parts.push(result.predictedOpponentCase?.likelyArguments?.length ? bullets(result.predictedOpponentCase.likelyArguments) : `<p>${escape(t('export.noOpponentArgs'))}</p>`);
+  // Conclusor: the reasons we win replace new arguments.
+  if (view.whyWeWin.length) {
+    parts.push(`<h2>${label('export.whyWeWin')}</h2><ol>${view.whyWeWin.map((reason) => `<li>${escape(reason)}</li>`).join('')}</ol>`);
+  }
 
-  parts.push(`<h2>${escape(t('export.counters'))}</h2>`);
-  if (!result.counters?.length) parts.push(`<p>${escape(t('export.noCounters'))}</p>`);
-  result.counters?.forEach((c) => {
-    parts.push(`<div class="block"><h3>${escape(t('export.target'))}: ${escape(c.targetArgument)}</h3>${
-      c.counterpoint ? paragraph(t('export.counter'), c.counterpoint) : ''
-    }${c.rebuttal ? paragraph(t('export.rebuttal'), c.rebuttal) : ''}</div>`);
-  });
+  if (view.ifTheySay.length || view.legacy.likelyArguments.length) {
+    parts.push(`<h2>${label('export.ifTheySay')}</h2>`);
+    view.ifTheySay.forEach((answer) => {
+      parts.push(`<div class="block"><h3>${label('export.theySay')}: ${escape(answer.theySay)}</h3>${
+        answer.weAnswer ? paragraph(t('export.weAnswer'), answer.weAnswer) : ''
+      }${answer.inRound ? paragraph(t('export.legacySayItLike'), answer.inRound) : ''}${answer.source ? paragraph(t('export.source'), answer.source) : ''}</div>`);
+    });
+    if (view.legacy.likelyArguments.length) parts.push(`<h3>${label('export.legacyAlsoSay')}</h3>${bullets(view.legacy.likelyArguments)}`);
+  }
+
+  if (view.closingLine) parts.push(`<h2>${label('export.closingLine')}</h2><p class="closing">${escape(view.closingLine)}</p>`);
+  if (view.sources.length) parts.push(`<h2>${label('export.sources')}</h2>${bullets(view.sources.map(sourceLine))}`);
 
   return page(title, `${side} • ${format} ${t('export.format')}`, parts.join(''), t);
 }
@@ -220,4 +243,70 @@ export function flowchartExportHtml(title: string, meta: string, doc: FlowchartD
       node.data.description ? `<p class="description">${escape(node.data.description)}</p>` : ''}${note && note !== typeLabel(t, node.data.type) ? `<div class="meta">${escape(note)}</div>` : ''}</div></div>`;
   });
   return page(title, meta, FLOW_STYLE + rows.join(''), t);
+}
+
+/** The website's file name (exportSparringToPdf): the day the round was last updated. */
+export function sparringExportFileName(session: SparringSession): string {
+  return `SparringTranscript_${new Date(session.updatedAt).toISOString().slice(0, 10)}.pdf`;
+}
+
+const sparringSide = (side: SparringSession['userSide'], t: Translate) => (side === 'pro' ? t('export.proposition') : t('export.opposition'));
+
+/**
+ * The website's Sparring PDF (exportSparringToPdf): the round's set-up, the
+ * totals, every category with its feedback, the judge's verdict, key
+ * moments and what to work on, and the transcript. A speech the student
+ * spoke aloud also lists its measured delivery, as the scorecard does.
+ */
+export function sparringExportHtml(session: SparringSession, t: Translate): string {
+  const scorecard = session.scorecard;
+  const format = t(`sparring.format.${session.format}`, { defaultValue: session.format.toUpperCase() });
+  const difficulty = t(`sparring.difficulty.${session.difficulty}`, { defaultValue: session.difficulty });
+  const used = session.speeches.reduce((total, speech) => total + speech.timeUsedSeconds, 0);
+  const limit = session.speeches.reduce((total, speech) => total + speech.timeLimitSeconds, 0);
+  const winner = scorecard?.winner === 'user' ? t('export.sparringUser') : scorecard?.winner === 'ai' ? t('export.sparringOpponent') : t('export.sparringTie');
+  const parts: string[] = [TABLE_STYLE];
+  parts.push(`<h2>${escape(t('export.sparringConfiguration'))}</h2>`);
+  parts.push(paragraph(t('export.motion'), session.motion));
+  parts.push(paragraph(t('export.sparringFormat'), format));
+  parts.push(paragraph(t('export.side'), sparringSide(session.userSide, t)));
+  parts.push(paragraph(t('export.sparringDifficulty'), difficulty));
+
+  parts.push(`<h2>${escape(t('export.sparringTotals'))}</h2>`);
+  parts.push(scorecard
+    ? table(
+      [t('export.sparringUser'), t('export.sparringScore'), t('export.sparringOpponent'), t('export.sparringScore'), t('export.sparringResult')],
+      [[t('export.sparringUser'), `${scorecard.userScore}/100`, t('export.sparringOpponent'), `${scorecard.aiScore}/100`, `${t('export.sparringWinner')}: ${winner}`]],
+    )
+    : `<p>${escape(t('export.sparringScorecardUnavailable'))}</p>`);
+  parts.push(paragraph(t('export.sparringSpeeches'), String(session.speeches.length)));
+  parts.push(paragraph(t('export.sparringTimeUsed'), `${formatRoundTime(used)} / ${formatRoundTime(limit)}`));
+
+  if (scorecard) {
+    parts.push(`<h2>${escape(t('export.sparringCategories'))}</h2>`);
+    parts.push(table(
+      [t('export.sparringCategory'), t('export.sparringUser'), t('export.sparringOpponent'), t('export.sparringFeedback')],
+      scorecard.categories.map((category) => [t(`sparring.category.${category.name}`, { defaultValue: category.name }), `${category.userScore}/25`, `${category.aiScore}/25`, category.feedback]),
+    ));
+    parts.push(`<h2>${escape(t('export.sparringFeedback'))}</h2><p>${escape(scorecard.verdict)}</p><p>${escape(scorecard.overallFeedback)}</p>`);
+    if (scorecard.keyMoments.length) parts.push(`<h2>${escape(t('export.sparringKeyMoments'))}</h2>${bullets(scorecard.keyMoments)}`);
+    if (scorecard.improvementAreas.length) parts.push(`<h2>${escape(t('export.sparringImprovementAreas'))}</h2>${bullets(scorecard.improvementAreas)}`);
+  }
+
+  parts.push(`<h2>${escape(t('export.sparringTranscript'))}</h2>`);
+  if (session.speeches.length === 0) parts.push(`<p>${escape(t('export.sparringNoTranscript'))}</p>`);
+  session.speeches.forEach((speech, index) => {
+    const delivery = speech.delivery
+      ? paragraph(t('voiceRound.delivery.title'), [
+        `${t('voiceRound.delivery.pace')}: ${t('voiceRound.delivery.wordsPerMinute', { count: speech.delivery.wordsPerMinute })}`,
+        `${t('voiceRound.delivery.fillers')}: ${speech.delivery.fillerCount}`,
+        `${t('voiceRound.delivery.longPauses', { seconds: LONG_PAUSE_SECONDS })}: ${speech.delivery.longPauses}`,
+      ].join(' · '))
+      : '';
+    parts.push(`<div class="block"><h3><span class="number">${index + 1}.</span>${escape(t(`sparring.turns.${speech.turnId}`, { defaultValue: speech.role }))}</h3>${
+      paragraph(t('export.side'), sparringSide(speech.side, t))}${
+      paragraph(t('export.sparringTimeUsed'), `${formatRoundTime(speech.timeUsedSeconds)} / ${formatRoundTime(speech.timeLimitSeconds)}`)}${
+      delivery}${speech.content.split(/\n{2,}/).map((block) => `<p>${escape(block)}</p>`).join('')}</div>`);
+  });
+  return page(t('export.sparringTranscript'), `${sparringSide(session.userSide, t)} | ${format} | ${difficulty}`, parts.join(''), t);
 }

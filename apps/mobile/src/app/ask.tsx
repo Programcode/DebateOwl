@@ -3,9 +3,10 @@ import type { AskOutput } from '@debatelab/core/ai/schemas/ask';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ActivityIndicator, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
+import { ActivityIndicator, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { AppTextInput } from '@/components/app-text-input';
 import { AskAnswer } from '@/components/ask-answer';
 import { AskChatPane } from '@/components/ask-chat-list';
 import { AskHistory } from '@/components/ask-history';
@@ -19,6 +20,9 @@ import { OneOffNotice } from '@/components/one-off-notice';
 import { ContextLine } from '@/components/context-line';
 import { DailyUsageLine } from '@/components/tool-form';
 import { Text } from '@/components/text';
+import { appendDictation, DictationButton } from '@/components/voice';
+import { useKeyCommand } from '@/lib/key-commands';
+import { announceAnswer } from '@/lib/a11y';
 import { AIError, isAbortError, type AIErrorKind, type ResponseExtras } from '@/lib/ai-request';
 import { askOnce, canStream, isFinalAskError, isMessageWithinBudget, streamAsk, type AskMode, type AskOptions } from '@/lib/ask';
 import { pickAskFiles, readAskFiles, type AskAttachment } from '@/lib/ask-attachments';
@@ -34,6 +38,7 @@ import { keepSourceAssessments } from '@/lib/results';
 import { useSettings } from '@/lib/settings';
 import { addSource, fetchSources, type Source } from '@/lib/sources';
 import { useCopyHolder } from '@/lib/use-copy-holder';
+import { useSpeechCapture } from '@/lib/use-speech-capture';
 import { radius } from '@/theme/colors';
 import { fontFamily } from '@/theme/fonts';
 import { useTheme } from '@/theme/use-theme';
@@ -79,7 +84,7 @@ export default function AskScreen() {
   const { session } = useAuth();
   const userId = session?.user.id ?? null;
   const { current, oneOff, activeDebateId, refresh } = useDebates();
-  const { outputLanguage, readFeatureConfig } = useSettings();
+  const { language, outputLanguage, readFeatureConfig } = useSettings();
 
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [streaming, setStreaming] = useState<string | null>(null);
@@ -89,7 +94,15 @@ export default function AskScreen() {
   const [options, setOptions] = useState<AskOptions>(NO_OPTIONS);
   const [mode, setMode] = useState<AskMode>('general');
   const [attachments, setAttachments] = useState<AskAttachment[]>([]);
-  const [input, setInput] = useState('');
+  const [input, setInputState] = useState('');
+  // Read when dictated words land, before React has drawn the last ones.
+  const inputRef = useRef('');
+  const setInput = useCallback((value: string) => {
+    inputRef.current = value;
+    setInputState(value);
+  }, []);
+  // Dictation fills the question, as the website's microphone beside it does.
+  const dictation = useSpeechCapture(language, (text) => setInput(appendDictation(inputRef.current, text)));
   const [error, setError] = useState<{ kind: AIErrorKind; question: string; files?: AskAttachment[] } | null>(null);
   const [notice, setNotice] = useState('');
   const [historyOpen, setHistoryOpen] = useState(false);
@@ -195,6 +208,11 @@ export default function AskScreen() {
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loading, lastRole, messages, userId]);
+
+  // ⌘↩ sends, as the send button does.
+  useKeyCommand('cmd+enter', () => {
+    if (!busy && input.trim()) void send(input, messages, attachments);
+  });
 
   const send = async (text: string, history: ChatMessage[], files: AskAttachment[] = []) => {
     const question = text.trim();
@@ -320,6 +338,7 @@ export default function AskScreen() {
       setStreaming(null);
       partial.current = '';
       setMessages((previous) => [...previous, { id: nextId(), role: 'assistant', content: result.response, timestamp: Date.now(), output }]);
+      announceAnswer(result.response);
     } catch (cause) {
       if (!isCurrent() || isAbortError(cause)) return;
       setStreaming(null);
@@ -509,7 +528,7 @@ export default function AskScreen() {
         {messages.length === 0 && streaming === null && !busy ? (
           <View style={styles.empty}>
             <Owl pose="point" size={112} />
-            <Text weight="display" style={styles.emptyTitle}>
+            <Text accessibilityRole="header" weight="display" style={styles.emptyTitle}>
               {t('askChat.startConversation')}
             </Text>
             <Text tone="secondary" style={styles.emptyBody}>
@@ -598,10 +617,11 @@ export default function AskScreen() {
               testID="ask-attach">
               <Icon name="paperclip" color={colors.secondary} size={20} />
             </Pressable>
-            <TextInput
+            <DictationButton capture={dictation} startLabel={t('askChat.startVoice')} stopLabel={t('askChat.stopListening')} inline />
+            <AppTextInput
               value={input}
               onChangeText={setInput}
-              placeholder={t('mobile.ask.placeholder')}
+              placeholder={dictation.listening ? t('askChat.placeholderListening') : t('mobile.ask.placeholder')}
               placeholderTextColor={colors.tabInactive}
               accessibilityLabel={t('mobile.ask.placeholder')}
               editable={!busy}
@@ -626,7 +646,11 @@ export default function AskScreen() {
                 accessibilityLabel={t('askChat.send')}
                 accessibilityState={{ disabled: busy || !input.trim() }}
                 disabled={busy || !input.trim()}
-                onPress={() => void send(input, messages, attachments)}
+                onPress={() => {
+                  // Words still on their way would land in the next question.
+                  dictation.cancel();
+                  void send(input, messages, attachments);
+                }}
                 style={[styles.send, { backgroundColor: colors.primaryFill }, (busy || !input.trim()) && styles.sendDisabled]}
                 testID="ask-send">
                 {busy ? <ActivityIndicator color={colors.onPrimary} size="small" /> : <Icon name="arrowUp" color={colors.onPrimary} size={19} />}
@@ -687,7 +711,7 @@ function Thinking() {
   }, []);
   return (
     <View style={styles.thinking} accessibilityRole="progressbar" accessibilityLiveRegion="polite">
-      <OwlAvatar pose="coach" size={32} />
+      <OwlAvatar pose="coach" size={32} blink />
       <Text tone="secondary" style={styles.thinkingText}>
         {t(THINKING[index])}
       </Text>

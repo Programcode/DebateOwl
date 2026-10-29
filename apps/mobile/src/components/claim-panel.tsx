@@ -126,7 +126,7 @@ export function ClaimPanel({
     return (
       <Container testID="claim-sheet">
         {header}
-        <Text weight="semibold" style={styles.section}>
+        <Text accessibilityRole="header" weight="semibold" style={styles.section}>
           {t('flowchart.editNode')}
         </Text>
         <CardForm
@@ -148,7 +148,7 @@ export function ClaimPanel({
       <Container testID="claim-sheet">
         {header}
         <View style={styles.block}>
-          <Text weight="semibold" style={styles.section}>
+          <Text accessibilityRole="header" weight="semibold" style={styles.section}>
             {t('mobile.flowchart.linkTitle')}
           </Text>
           <Text tone="secondary" style={styles.body}>
@@ -215,7 +215,7 @@ export function ClaimPanel({
       </View>
       {links.length > 0 ? (
         <View style={styles.block}>
-          <Text weight="semibold" style={styles.section}>
+          <Text accessibilityRole="header" weight="semibold" style={styles.section}>
             {t('mobile.flowchart.linksTitle')}
           </Text>
           <View style={[styles.list, { backgroundColor: flow.cardFill, borderColor: colors.border }]}>

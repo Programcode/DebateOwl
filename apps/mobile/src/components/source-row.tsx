@@ -2,9 +2,10 @@ import { Link } from 'expo-router';
 import { useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, StyleSheet, Switch, View } from 'react-native';
+import Animated from 'react-native-reanimated';
 import ReanimatedSwipeable, { type SwipeableMethods } from 'react-native-gesture-handler/ReanimatedSwipeable';
 
-import { IconTile } from './card';
+import { IconTile, usePressScale } from './card';
 import { WEB_SWITCH_THUMB } from './form-rows';
 import { Icon } from './icon';
 import { folderLabel, SOURCE_ICONS, sourceMeta } from './source-display';
@@ -25,7 +26,7 @@ export interface SourceRowActions {
 }
 
 /** The website's quality badges: used in a case, importance and strength. */
-function QualityBadges({ source, showFolder, compact }: { source: Source; showFolder: boolean; compact: boolean }) {
+function QualityBadges({ source, showFolder, compact, pending }: { source: Source; showFolder: boolean; compact: boolean; pending: boolean }) {
   const { t } = useTranslation();
   const { colors } = useTheme();
   const semantic = source.metadata?.semantic;
@@ -40,6 +41,7 @@ function QualityBadges({ source, showFolder, compact }: { source: Source; showFo
   );
   return (
     <View style={styles.badges}>
+      {pending ? <WaitingToSync /> : null}
       {showFolder ? (
         <View style={[styles.badge, styles.folderBadge, { backgroundColor: colors.segmentTrack, borderColor: colors.segmentTrack }]}>
           <Icon name="folder" color={colors.secondary} size={12} />
@@ -55,11 +57,26 @@ function QualityBadges({ source, showFolder, compact }: { source: Source; showFo
   );
 }
 
+/** A queued change that waits for the connection (offline-queue.ts). */
+export function WaitingToSync() {
+  const { t } = useTranslation();
+  const { colors } = useTheme();
+  return (
+    <View style={[styles.badge, styles.folderBadge, { backgroundColor: colors.line, borderColor: colors.line }]} testID="waiting-to-sync">
+      <Icon name="cloudOff" color={colors.faint} size={12} />
+      <Text weight="semibold" style={[styles.badgeText, { color: colors.faint }]} numberOfLines={1}>
+        {t('mobile.offlineQueue.waiting')}
+      </Text>
+    </View>
+  );
+}
+
 /**
  * A Library source. Its switch says whether the AI uses it, as on the
  * website, and a source that is off is dimmed. Swipe left to delete (with
  * Undo), swipe right to turn it on or off, and press and hold for a preview
- * and the menu. On iPad, `selectInstead` opens it beside the list.
+ * and the menu. On iPad, `selectInstead` opens it beside the list. A
+ * `pending` source has a change that waits for the connection.
  */
 export function SourceRow({
   source,
@@ -69,6 +86,7 @@ export function SourceRow({
   selectInstead = false,
   showFolder = true,
   compact = false,
+  pending = false,
   actions,
 }: {
   source: Source;
@@ -80,11 +98,13 @@ export function SourceRow({
   showFolder?: boolean;
   /** Beside an open source on iPad, whose pane shows the rankings: only the folder and use. */
   compact?: boolean;
+  pending?: boolean;
   actions: SourceRowActions;
 }) {
   const { t } = useTranslation();
   const { colors } = useTheme();
   const swipeable = useRef<SwipeableMethods>(null);
+  const press = usePressScale();
   const title = source.title || t('libraryPage.untitledSource');
   const toggleLabel = source.isActive ? t('mobile.library.turnOff') : t('mobile.library.turnOn');
 
@@ -139,6 +159,8 @@ export function SourceRow({
           onPress={(event) => {
             if (!selectInstead) return;
             event.preventDefault();
+            // On iPad the row is picked to open beside the list, not opened over it.
+            if (!selected) haptics.select();
             actions.onOpen();
           }}>
           <Link.Trigger>
@@ -154,11 +176,13 @@ export function SourceRow({
                 if (event.nativeEvent.actionName === 'toggle') toggle();
                 if (event.nativeEvent.actionName === 'delete') void remove();
               }}
+              onPressIn={press.onPressIn}
+              onPressOut={press.onPressOut}
               testID="source-row"
               // One flat style object: inside a Link's slot the web preview hands it to the DOM as is.
               style={{ flex: 1 }}>
               {({ pressed }) => (
-                <View style={[styles.content, pressed && styles.pressed]}>
+                <Animated.View style={[styles.content, pressed && styles.pressed, press.style]}>
                   <View style={!source.isActive && styles.off}>
                     <IconTile name={SOURCE_ICONS[source.type]} size={42} />
                   </View>
@@ -169,9 +193,9 @@ export function SourceRow({
                     <Text tone="faint" style={styles.rowMeta} numberOfLines={3}>
                       {source.isActive ? sourceMeta(t, source) : `${t('mobile.library.turnedOff')} · ${sourceMeta(t, source)}`}
                     </Text>
-                    <QualityBadges source={source} showFolder={showFolder} compact={compact} />
+                    <QualityBadges source={source} showFolder={showFolder} compact={compact} pending={pending} />
                   </View>
-                </View>
+                </Animated.View>
               )}
             </Pressable>
           </Link.Trigger>

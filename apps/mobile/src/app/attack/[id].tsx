@@ -11,11 +11,13 @@ import { DocumentStatus } from '@/components/document-status';
 import { backLabel } from '@/lib/back-label';
 import { formatWhen } from '@/lib/dates';
 import { copyText, sharePdf, shareText } from '@/lib/export';
+import { shareAttackDocx } from '@/lib/export-docx';
 import { attackExportFileName, attackExportHtml } from '@/lib/export-html';
 import { crossfireFromAttack } from '@/lib/result-links';
 import { attackToText, discussAttackMessage } from '@/lib/result-text';
 import { isCompleteAttack } from '@/lib/results';
 import { arrivalNoticeText, useResultDocument } from '@/lib/use-result-document';
+import { useShareLink } from '@/lib/use-share-link';
 
 /**
  * An attack analysis in the same document style as a case. Its pinned next
@@ -28,6 +30,7 @@ export default function AttackResultScreen() {
   const doc = useResultDocument('attack', id);
   const [exportOpen, setExportOpen] = useState(false);
   const { setNotice } = doc;
+  const shareLink = useShareLink(setNotice);
 
   useEffect(() => {
     const text = arrivalNoticeText(t, arrival, failed);
@@ -65,11 +68,13 @@ export default function AttackResultScreen() {
     router.push({ pathname: '/crossfire', params: { from: 'attack' } });
   };
 
+  const savedId = result.savedId;
   const actions: HeaderAction[] = [
     { key: 'crossfire', label: t('crossfire.openFromResult'), symbol: 'person.2.wave.2', icon: 'swords', onPress: openCrossfire },
     ...(doc.autoSaved.length > 0
       ? [{ key: 'undo-sources', label: t('autoSavedSources.undo'), symbol: 'arrow.uturn.backward' as const, icon: 'history' as const, onPress: () => void doc.undoAutoSaved() }]
       : []),
+    ...(savedId ? [{ key: 'share-link', label: t('mobile.share.shareLink'), symbol: 'link' as const, icon: 'link' as const, onPress: () => void shareLink('attack', savedId, result.title || title, output) }] : []),
     ...(result.savedId ? [{ key: 'delete', label: t('common.delete'), symbol: 'trash' as const, icon: 'trash' as const, destructive: true, onPress: () => void doc.remove() }] : []),
   ];
 
@@ -78,6 +83,7 @@ export default function AttackResultScreen() {
       testID="attack-document"
       outline
       notice={doc.notice}
+      noticeTone={doc.noticeTone}
       header={<DocumentHeader backLabel={back} onShare={() => run(() => shareText(title, text()))} actions={actions} />}
       actions={
         <>
@@ -94,11 +100,14 @@ export default function AttackResultScreen() {
         items={[
           { key: 'pdf', label: t('common.pdf'), icon: 'file' },
           { key: 'copy', label: t('mobile.results.copyText'), icon: 'copy' },
+          // The website's Word export, built by the same code (packages/core/src/export/docx.ts).
+          { key: 'docx', label: t('common.docx'), icon: 'file' },
         ]}
         cancelLabel={t('common.cancel')}
         onClose={() => setExportOpen(false)}
         onSelect={(choice) => {
           if (choice === 'pdf') run(() => sharePdf(attackExportHtml(output, t), attackExportFileName(output), title));
+          if (choice === 'docx') run(() => shareAttackDocx(output, t, title));
           if (choice === 'copy') run(async () => {
             await copyText(text());
             setNotice(t('generateResults.copiedToClipboard'));

@@ -13,7 +13,7 @@ export function RegeneratingStrip({ title }: { title: string }) {
   const { colors } = useTheme();
   return (
     <View style={[styles.strip, { backgroundColor: colors.tile, borderColor: colors.tileBorder }]} testID="regenerating">
-      <OwlAvatar pose="thinking" size={34} />
+      <OwlAvatar pose="thinking" size={34} blink />
       <Text weight="bold" style={styles.text} accessibilityRole="progressbar" accessibilityLiveRegion="polite">
         {t('common.regenerating', { title })}
       </Text>

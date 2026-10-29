@@ -65,42 +65,39 @@ function section(id: string, title: string, blocks: DraftBlock[]): DraftSection[
 }
 
 export function generateDraftSections(draft: Draft, t: Translate): DraftSection[] {
-  const exordio = record(draft.exordio);
+  const opening = record(draft.opening);
   const structure = record(draft.caseStructure);
-  const opponent = record(draft.predictedOpponentCase);
   return [
-    ...section('exordio', t('generateResults.exordio'), [
-      ...block(t('generateResults.hook'), exordio.hook),
-      ...block(t('generateResults.transition'), exordio.transition),
-    ]),
-    ...section('structure', t('generateResults.caseStructure'), [
-      ...block(t('generateResults.thesis'), structure.thesis),
-      ...block(t('generateResults.framework'), structure.framework),
-      ...itemsBlock(t('generateResults.keyDefinitions'), structure.keyDefinitions),
-      ...block(t('generateResults.burdenOfProof'), structure.burdenOfProof),
+    ...section('opening', t('generateResults.opening'), [
+      ...block(undefined, opening.hook),
+      ...block(t('generateResults.definition'), opening.definition),
+      ...block(t('generateResults.roadmap'), structure.thesis),
     ]),
     ...section('contentions', t('generateResults.arguments'), list(draft.contentions).flatMap((value) => {
       const contention = record(value);
       return [
-        ...heading(contention.claim),
-        ...block(t('generateResults.reasoning'), contention.reasoning),
+        ...heading(contention.title ?? contention.claim),
+        ...(text(contention.title) ? block(t('generateResults.point'), contention.claim) : []),
+        ...block(t('generateResults.explanation'), contention.reasoning),
         ...block(t('generateResults.evidence'), contention.evidence),
-        ...block(t('generateResults.impact'), contention.impact),
+        // The model writes whyItMatters; the server files it under impact.
+        ...block(t('generateResults.whyItMatters'), contention.whyItMatters ?? contention.impact),
       ];
     })),
-    ...section('opponent', t('generateResults.predictedOpponent'), [
-      ...itemsBlock(t('generateResults.likelyArguments'), opponent.likelyArguments),
-      ...itemsBlock(t('generateResults.strategicWeaknesses'), opponent.strategicWeaknesses),
-      ...itemsBlock(t('generateResults.keyClashes'), opponent.keyClashes),
-    ]),
-    ...section('counters', t('generateResults.preparedCounters'), list(draft.counters).flatMap((value) => {
+    ...section('reinforce', t('generateResults.reinforce'), list(draft.reinforce).flatMap((value) => {
+      const item = record(value);
+      return [...heading(item.argument), ...block(undefined, item.text)];
+    })),
+    ...section('whyWeWin', t('generateResults.whyWeWin'), itemsBlock(undefined, draft.whyWeWin)),
+    ...section('counters', t('generateResults.ifTheySay'), list(draft.counters).flatMap((value) => {
       const counter = record(value);
       return [
         ...heading(counter.targetArgument),
-        ...block(t('generateResults.counter'), counter.counterpoint),
-        ...block(t('generateResults.rebuttal'), counter.rebuttal),
+        ...block(t('generateResults.weAnswer'), counter.counterpoint),
+        ...block(t('generateResults.source'), counter.source),
       ];
     })),
+    ...section('closing', t('generateResults.closingLine'), block(undefined, draft.closingLine)),
   ];
 }
 

@@ -137,13 +137,13 @@ Stop it with `$PREVIEW down "debatelab mobile expo-go"` when you are done.
 
 ### Development build
 
-A development build is the app's own binary with `expo-dev-client`, so it loads JavaScript from Metro like Expo Go but carries native modules Expo Go lacks: speech recognition for dictation now, and later Google sign-in (Expo Go cannot receive OAuth redirects) and the lock-screen timer. Its Info.plist also gets the 120 Hz key, which Expo Go ignores. JavaScript-only changes never need a new build.
+A development build is the app's own binary with `expo-dev-client`, so it loads JavaScript from Metro like Expo Go but carries native modules Expo Go lacks: speech recognition for voice rounds and dictation, the timer's Live Activity and lock-screen widget (with an App Group), and later Google sign-in (Expo Go cannot receive OAuth redirects). Its Info.plist also gets the 120 Hz key, which Expo Go ignores. JavaScript-only changes never need a new build.
 
 [`apps/mobile/app.config.ts`](../apps/mobile/app.config.ts) builds one config with two switches:
 
 - No `DEBATELAB_BUILD`: the Expo Go and web export config, unchanged.
 - `DEBATELAB_BUILD=dev`: adds `expo-dev-client`, `expo-speech-recognition` with the microphone and speech prompts (English in Info.plist, Spanish and Hungarian as `InfoPlist.strings` from `mobile.permissions` in the catalogs) and `CFBundleAllowMixedLocalizations`. The `development` profile in [`apps/mobile/eas.json`](../apps/mobile/eas.json) sets it.
-- `DEBATELAB_APP_GROUP=group.<id>`, only with `dev`: adds the `expo-widgets` extension (`ExpoWidgetsTarget`, bundle `com.adam.debatelab.ExpoWidgetsTarget`) and the App Group on both targets, which a Live Activity needs. Set it only when the provisioning profile carries that group; a borrowed wildcard profile does not. EAS does not see your shell, so it goes in the profile's `env` in `eas.json`, committed with the build.
+- `DEBATELAB_APP_GROUP=group.<id>`, only with `dev`: adds the `expo-widgets` extension (`ExpoWidgetsTarget`, bundle `com.pistack.debateowl.ExpoWidgetsTarget`) with the timer's lock-screen widget (`DebateTimerWidget`) and Live Activity, `NSSupportsLiveActivities`, and the App Group `group.com.pistack.debateowl` (the only value the config accepts) on both targets. Register that group for both bundle ids in the Apple Developer account. For a device build, set it only when the provisioning profile carries that group; a borrowed wildcard profile does not. A simulator build is not signed, so the `development-simulator` profile always sets it. EAS does not see your shell, so it goes in the profile's `env` in `eas.json`, committed with the build.
 
 `nativeCapabilities()` in `apps/mobile/src/lib/native-capabilities.ts` tells the app at runtime what the binary has. Feature code checks it and never imports a dev-build module at the top level, so Expo Go keeps working.
 
@@ -190,21 +190,13 @@ openssl pkcs12 -legacy -in $S/cert.p12 -passin file:$S/p12-password -nokeys -clc
 Go on only if all of these hold:
 
 - the profile has not expired, and neither has the certificate (`notAfter`);
-- `application-identifier` is `<team>.*` or `<team>.com.adam.debatelab`;
+- `application-identifier` is `<team>.*` or `<team>.com.pistack.debateowl`;
 - the profile is enterprise (`all devices` true) or ad hoc with Adam's iPhone UDID among its devices: ask Adam for the UDID. A development profile (`get-task-allow` true) is not what EAS internal distribution expects; ask Adam first;
 - the `.p12`'s SHA-1 equals one of the profile's certificate SHA-1s.
 
 Set `DEBATELAB_APP_GROUP` in the profile's `env` in `eas.json` only if `app groups` lists a group, and then pass `widgets` to step 4. Don't export it in this shell: outside a build the config rejects it without `DEBATELAB_BUILD=dev`, which breaks `eas init`. Without an App Group this build has no Live Activity.
 
-**2. Link the EAS project, once.**
-
-```bash
-cd apps/mobile
-export EXPO_TOKEN="$(cat $S/eas-token)"
-npx eas-cli@24.13.0 init --account <account> --force --non-interactive
-```
-
-Without a project ID in the config, the non-interactive init needs both `--account` (the Expo account that owns the project, `adamgaborjani` on Adam's VPS) and `--force`, which links `@<account>/debatelab` if it exists and creates it otherwise. `eas init` cannot edit `app.config.ts`, so it prints the project ID. Add `owner: '<account>'` and `extra: { eas: { projectId: '<id>' } }` to the config, commit, and build from that commit. Expo Go's config gains those two fields, which is expected.
+**2. The EAS project is linked.** `app.config.ts` has `owner: 'pi-stack'` and the project ID of `@pi-stack/debateowl`, set with `eas init --account pi-stack --force --non-interactive` (which cannot edit a dynamic config, so it printed the ID). Nothing to do here unless the project changes.
 
 **3. Count the builds already used.**
 
@@ -252,6 +244,17 @@ Put the build ID, its URL and the reason for the build in the PR. Check it later
 rm -f credentials.json $S/profile.plist
 unset EXPO_TOKEN
 ```
+
+#### Simulator build
+
+`development-simulator` in `eas.json` builds the development client for the iOS Simulator, with the widget extension and App Group. It is not signed, so it needs no credentials, only a logged-in `eas` (`eas whoami`). It costs build minutes like any iOS build:
+
+```bash
+cd apps/mobile
+eas build --platform ios --profile development-simulator --non-interactive --no-wait
+```
+
+The artifact is a `.tar.gz` of the `.app`; drag the unpacked app onto a Simulator, then start Metro with `--dev-client`.
 
 #### Installing it
 

@@ -4,6 +4,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import { getInstallId, sessionStorage } from './device-storage';
 import { setCacheOwner } from './offline-cache';
 import { forgetPushOnSignOut } from './push';
+import { clearSessionExpired, sessionExpired as isSessionExpired, signingOutOnPurpose, subscribeSessionExpired } from './session-expiry';
 import { setSessionOwner } from './session-memory';
 import { supabase } from './supabase';
 import { sessionStorageKey } from './supabase-config';
@@ -18,6 +19,9 @@ type AuthContextValue = {
   verifyEmailOtp: (email: string, token: string) => Promise<void>;
   signInWithDemoCode: (code: string) => Promise<void>;
   signOut: () => Promise<void>;
+  /** The server ended the session (refresh refused), not the student: the sign-in screen says so, as the website's does. */
+  sessionExpired: boolean;
+  clearSessionExpired: () => void;
 };
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -89,6 +93,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
   const [loading, setLoading] = useState(true);
   const [settled, setSettled] = useState(false);
+  // Set by the session storage when supabase-js removes a session nobody signed out of (session-expiry.ts).
+  const [sessionExpired, setSessionExpired] = useState(isSessionExpired);
+  useEffect(() => subscribeSessionExpired(setSessionExpired), []);
   // Counts auth changes, so a storage read that lands after a newer change is dropped.
   const generation = useRef(0);
 
@@ -145,29 +152,33 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       });
       if (verificationError) throw verificationError;
     },
-    signOut: async () => {
-      // While the session still works, so the next person on this phone gets none of this account's notifications.
-      if (session) await forgetPushOnSignOut(session.user.id, session.access_token);
-      // supabase-js loads the session before signing out. Offline with an
-      // expired access token that refresh fails, and it returns the error
-      // without removing the stored session. Signing out must still sign out
-      // here, so the stored session is removed whatever the server said.
-      const globalError = await signOutError('global');
-      if (globalError) {
-        console.warn('Sign-out on the server failed; signing out on this device only:', globalError);
-        const localError = await signOutError('local');
-        if (localError) console.warn('Local sign-out failed:', localError);
-      }
-      try {
-        await sessionStorage.removeItem(sessionStorageKey);
-      } catch (cause) {
-        console.warn('Could not remove the stored session:', cause);
-      }
-      generation.current += 1;
-      setSession(null);
-      setLoading(false);
-    },
-  }), [session, loading, settled, setSession]);
+    signOut: () =>
+      // The removals below are the student's own, not an expired session.
+      signingOutOnPurpose(async () => {
+        // While the session still works, so the next person on this phone gets none of this account's notifications.
+        if (session) await forgetPushOnSignOut(session.user.id, session.access_token);
+        // supabase-js loads the session before signing out. Offline with an
+        // expired access token that refresh fails, and it returns the error
+        // without removing the stored session. Signing out must still sign out
+        // here, so the stored session is removed whatever the server said.
+        const globalError = await signOutError('global');
+        if (globalError) {
+          console.warn('Sign-out on the server failed; signing out on this device only:', globalError);
+          const localError = await signOutError('local');
+          if (localError) console.warn('Local sign-out failed:', localError);
+        }
+        try {
+          await sessionStorage.removeItem(sessionStorageKey);
+        } catch (cause) {
+          console.warn('Could not remove the stored session:', cause);
+        }
+        generation.current += 1;
+        setSession(null);
+        setLoading(false);
+      }),
+    sessionExpired,
+    clearSessionExpired,
+  }), [session, loading, settled, setSession, sessionExpired]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

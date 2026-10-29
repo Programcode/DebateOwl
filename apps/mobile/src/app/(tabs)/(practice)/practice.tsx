@@ -1,10 +1,12 @@
 import { useFocusEffect, useRouter, type Href } from 'expo-router';
 import { useCallback, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
-import { Card, IconTile } from '@/components/card';
+import { Card, IconTile, ListItemIn } from '@/components/card';
+import { EmptyState } from '@/components/empty-state';
 import { Icon } from '@/components/icon';
+import { PressScale } from '@/components/press-scale';
 import { PRACTICE_TOOLS, type PracticeTool } from '@/components/practice-tools';
 import { ScreenTitle } from '@/components/screen-title';
 import { Screen } from '@/components/screen';
@@ -25,6 +27,8 @@ const TOOL_ROUTES: Record<PracticeTool, Href> = {
   crossfire: { pathname: '/crossfire', params: { from: 'practice' } },
   sparring: { pathname: '/sparring', params: { from: 'practice' } },
   timer: '/timer',
+  'speech-time': { pathname: '/speech-time', params: { from: 'practice' } },
+  motions: { pathname: '/motions', params: { from: 'practice' } },
 };
 
 /**
@@ -81,23 +85,20 @@ export default function PracticeScreen() {
       <ScreenTitle title={t('mobile.tabs.practice')} />
       <Card style={styles.list}>
         {PRACTICE_TOOLS.map((tool, index) => (
-          <Pressable
-            key={tool.key}
-            accessibilityRole="button"
-            onPress={() => router.push(TOOL_ROUTES[tool.key])}
-            testID={`practice-tool-${tool.key}`}
-            style={({ pressed }) => [styles.row, index > 0 && { borderTopWidth: 1, borderTopColor: colors.line }, pressed && styles.pressed]}>
-            <IconTile name={tool.icon} size={42} />
-            <View style={styles.rowText}>
-              <Text weight="semibold" style={styles.rowTitle}>
-                {t(`nav.${tool.key}`)}
-              </Text>
-              <Text tone="faint" style={styles.rowMeta} numberOfLines={1}>
-                {t(`navDesc.${tool.key}`)}
-              </Text>
-            </View>
-            <Icon name="chevronRight" color={colors.tabInactive} size={20} />
-          </Pressable>
+          <ListItemIn key={tool.key} index={index} style={index > 0 && { borderTopWidth: 1, borderTopColor: colors.line }}>
+            <PressScale accessibilityRole="button" onPress={() => router.push(TOOL_ROUTES[tool.key])} testID={`practice-tool-${tool.key}`} style={styles.row}>
+              <IconTile name={tool.icon} size={42} />
+              <View style={styles.rowText}>
+                <Text weight="semibold" style={styles.rowTitle}>
+                  {'title' in tool ? t(tool.title, { ns: 'tools' }) : t(`nav.${tool.key}`)}
+                </Text>
+                <Text tone="faint" style={styles.rowMeta} numberOfLines={1}>
+                  {'description' in tool ? t(tool.description) : t(`navDesc.${tool.key}`)}
+                </Text>
+              </View>
+              <Icon name="chevronRight" color={colors.tabInactive} size={20} />
+            </PressScale>
+          </ListItemIn>
         ))}
       </Card>
 
@@ -114,21 +115,18 @@ export default function PracticeScreen() {
               </Text>
             </Card>
           ) : items.length === 0 ? (
-            <Card>
-              <Text tone="secondary" style={styles.body}>
-                {t('historyPage.emptySparringDesc')}
-              </Text>
-            </Card>
+            <EmptyState pose="arguing" title={t('historyPage.emptySparring')} description={t('historyPage.emptySparringDesc')} />
           ) : (
             <Card style={styles.list}>
               {items.map((round, index) => (
-                <WorkRow
-                  key={round.id}
-                  item={{ id: round.id, kind: 'sparring', title: round.motion, createdAt: round.updatedAt }}
-                  first={index === 0}
-                  from="practice"
-                  onDeleted={() => void load()}
-                />
+                <ListItemIn key={round.id} index={index} layout>
+                  <WorkRow
+                    item={{ id: round.id, kind: 'sparring', title: round.motion, createdAt: round.updatedAt }}
+                    first={index === 0}
+                    from="practice"
+                    onDeleted={() => void load()}
+                  />
+                </ListItemIn>
               ))}
             </Card>
           )}
@@ -144,7 +142,6 @@ const styles = StyleSheet.create({
   rowText: { flex: 1, gap: 2 },
   rowTitle: { fontSize: 16 },
   rowMeta: { fontSize: 14 },
-  pressed: { opacity: 0.7 },
   section: { fontSize: 20, lineHeight: 26, marginTop: 6 },
   body: { fontSize: 15.5, lineHeight: 22 },
 });

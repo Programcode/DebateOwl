@@ -50,9 +50,11 @@ export function FactoidsDocument({
   /** Researched sources, known only for factoids found in this session. */
   sources: DiscoveredSource[];
   onCite: (target: CitationTarget) => void;
-  onSave: (factoid: Factoid) => void;
-  onSearch: (query: string) => void;
-  saving: boolean;
+  /** Absent on a shared copy: the reader has no Library to keep it in. */
+  onSave?: (factoid: Factoid) => void;
+  /** Absent on a shared copy: the suggestions are shown as text. */
+  onSearch?: (query: string) => void;
+  saving?: boolean;
 }) {
   const { t } = useTranslation();
   const { colors } = useTheme();
@@ -90,14 +92,16 @@ export function FactoidsDocument({
             <Text style={[styles.unverifiedUrl, { color: colors.warning }]}>{t('factoidsResults.urlNeedsVerification')}</Text>
           )}
           <Labeled label={t('factoidsResults.howToUse')} text={factoid.howToUse} />
-          <View style={styles.saveRow}>
-            <TextButton
-              label={t('factoidsResults.saveToLibrary')}
-              accessibilityLabel={t('factoidsResults.saveClaimToLibrary', { claim: factoid.shortClaim })}
-              onPress={() => onSave(factoid)}
-              disabled={saving}
-            />
-          </View>
+          {onSave ? (
+            <View style={styles.saveRow}>
+              <TextButton
+                label={t('factoidsResults.saveToLibrary')}
+                accessibilityLabel={t('factoidsResults.saveClaimToLibrary', { claim: factoid.shortClaim })}
+                onPress={() => onSave(factoid)}
+                disabled={saving}
+              />
+            </View>
+          ) : null}
         </>
       ),
     };
@@ -146,7 +150,13 @@ export function FactoidsDocument({
 
       {suggestions.length > 0 ? (
         <DocSection title={t('factoidsResults.findMore')} description={t('factoidsResults.findMoreDesc')} testID="factoids-suggestions">
-          {suggestions.map((query, index) => (
+          {suggestions.map((query, index) => !onSearch ? (
+            <View key={index} style={[styles.suggestion, { backgroundColor: colors.background }]}>
+              <Text style={styles.suggestionText} selectable>
+                {query}
+              </Text>
+            </View>
+          ) : (
             <Pressable
               key={index}
               accessibilityRole="button"
