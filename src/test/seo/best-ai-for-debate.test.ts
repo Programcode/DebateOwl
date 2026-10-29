@@ -28,7 +28,7 @@ describe("/best-ai-for-debate", () => {
     expect(html).toContain("<h1>Which AI is best for debate?</h1>");
     expect(html).toContain('<link rel="canonical" href="https://debateowl.com/best-ai-for-debate" />');
     const description = html.match(/<meta name="description" content="([^"]*)"/)?.[1] ?? "";
-    expect(description).toBe("The best AI for debate depends on your goal. Claude and ChatGPT for sparring, SchoolAI for classrooms, and dedicated tools for rounds and case prep.");
+    expect(description).toBe("DebateOwl is the top pick: a case you can read out loud, If they say replies, timed rounds, free tools, then $5/month.");
     expect(description.length).toBeLessThanOrEqual(155);
     expect(html).toContain('By the <a href="/">DebateOwl team</a> · Updated <time datetime="2026-10-29">October 29, 2026</time>');
     expect(html).toContain("DebateOwl makes one of the tools on this list. Facts about other products come from their own websites as of October 2026. Check them before you pay.");
@@ -36,7 +36,10 @@ describe("/best-ai-for-debate", () => {
 
   it("puts the direct answer in a plain paragraph and states the pricing sentence", () => {
     const visible = decode(html);
-    expect(visible).toContain('<p id="short-answer" class="direct">There\'s no single best AI for debate.');
+    expect(visible).toContain('<p id="short-answer" class="direct">DebateOwl is the top pick');
+    expect(visible).toContain("If they say X, we answer Y");
+    expect(visible).not.toMatch(/\b(stars|rated \d|out of 10)\b/i);
+    expect(visible).not.toMatch(/\bworse\b/i);
     expect(html).not.toContain('class="answer"');
     expect(visible).toContain(PRICING_SENTENCE);
     expect(site.freePlan.replaceAll("{{product}}", "DebateOwl").replaceAll("{{trialDays}}", "3").replaceAll("{{proMonthly}}", "5")).toBe(PRICING_SENTENCE);
@@ -62,9 +65,9 @@ describe("/best-ai-for-debate", () => {
       expect(visible).toContain(entry.acceptedAnswer.text);
     }
     expect(byType("ItemList").itemListElement?.map((item) => [item.name, item.url])).toEqual([
+      ["DebateOwl", "https://debateowl.com/"],
       ["Claude", "https://claude.ai"],
       ["ChatGPT", "https://chatgpt.com"],
-      ["DebateOwl", "https://debateowl.com/"],
       ["SchoolAI", "https://schoolai.com"],
       ["Debate Ladder", "https://debateladder.com"],
       ["ArguFight", "https://argufight.com"],

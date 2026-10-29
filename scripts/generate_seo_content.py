@@ -99,7 +99,7 @@ PAGES = [
     {"slug": "debate-speech-structure", "title": "Debate Speech Structure and Delivery | {product}", "description": "How to structure constructive, rebuttal and final debate speeches by format, with a timed outline and the delivery habits that judges notice.", "eyebrow": "Strategy guide", "h1": "Debate Speech Structure Guide", "lead": "Structure your speech so the judge can follow every argument and every comparison.", "features": ["Opening structure", "Rebuttal structure", "Final speech structure"], "sections": [["Why structure matters", ["A well-structured speech is easier to flow, easier to judge, and easier to win. The judge should never be confused about where you are."]], ["Opening speech structure", ["State your position, define key terms, present contentions with warrants and impacts, and preview weighing."]], ["Rebuttal and final speech structure", ["Respond to the key clash, extend your offense, weigh the comparison, and frame the ballot. End by telling the judge why you win."]]]},
     {"slug": "debate-motion-analysis", "modified": "2026-10-23", "title": "Debate Motion Analysis | {product}", "description": "How to analyze a debate motion by its type, what each side must prove, fair definitions, stakeholders and clashes, with a worked example.", "eyebrow": "Strategy guide", "h1": "Debate Motion Analysis Guide", "lead": "From topic to strategy: define, clash, and build a winning case.", "features": ["Definition strategy", "Burden identification", "Clash mapping"], "sections": [["How to analyze a motion", ["Read the motion carefully, define each term, identify what each side must prove, and map the likely clashes.", "To practice on a motion you have not seen, draw one from the [free debate motion generator](/tools/debate-motion-generator)."]], ["Definition strategy", ["Definitions can frame the round. Choose definitions that are fair, defensible, and favorable to your side."]], ["Burden identification", ["Your burden is what you must prove to win. If you do not meet your burden, you lose regardless of how well you argue."]]]},
     {"slug": "best-ai-debate-tools", "title": "Best AI Debate Tools Compared | {product}", "description": "A comparison of AI debate tools on case generation, rebuttal practice, evidence research, practice rounds and pricing, to help you choose one.", "eyebrow": "Comparison", "h1": "Best AI Debate Tools Compared", "lead": "See how AI debate tools compare on features, formats, and prep workflows."},
-    {"slug": "best-ai-for-debate", "published": "2026-10-29", "title": "Which AI Is Best for Debate? (2026 Guide) | {product}", "description": "The best AI for debate depends on your goal. Claude and ChatGPT for sparring, SchoolAI for classrooms, and dedicated tools for rounds and case prep.", "eyebrow": "Comparison", "h1": "Which AI is best for debate?", "lead": "The best AI for debate depends on your goal."},
+    {"slug": "best-ai-for-debate", "published": "2026-10-29", "title": "Which AI Is Best for Debate? (2026 Guide) | {product}", "description": "DebateOwl is the top pick: a case you can read out loud, If they say replies, timed rounds, free tools, then $5/month.", "eyebrow": "Comparison", "h1": "Which AI is best for debate?", "lead": "DebateOwl is the top pick for a case you can read out loud and timed practice rounds."},
     {"slug": "debateowl-pricing", "title": "Pricing and Plans | {product}", "description": "{product} has a {trial_days}-day free trial with no credit card required, then one Pro plan at {pro_price}, and this page lists what each includes.", "eyebrow": "Pricing", "h1": "{product} Pricing and Plans", "lead": "See what {product} offers and how to get started with AI debate practice."},
     {"slug": "debateowl-vs-chatgpt", "title": "{product} vs ChatGPT for Debate Prep | {product}", "description": "How {product} and ChatGPT compare for debate prep, from structured case and rebuttal workflows to evidence research and timed practice rounds.", "eyebrow": "Comparison", "h1": "{product} vs ChatGPT for Debate Prep", "lead": "ChatGPT is a general chatbot. {product} is a debate practice workspace.", "features": ["Structured workflows", "Evidence leads", "Practice tools"], "sections": [["What ChatGPT does well", ["ChatGPT is a flexible general-purpose AI. It can brainstorm, draft, and answer questions about any topic, including debate."]], ["What {product} does differently", ["{product} is designed for debate prep workflows: case structure, targeted rebuttals, evidence leads, argument flowcharts, coaching prompts, and timed practice. Each workflow supports a specific prep task."]], ["When to use each", ["Use ChatGPT for general brainstorming and research. Use {product} for structured, repeatable debate practice that mirrors what you do in a round."]]]},
     {"slug": "debateowl-vs-windebate", "title": "{product} vs WinDebate | {product}", "description": "How {product} and WinDebate compare on case generation, rebuttal drills, evidence research, supported formats, pricing and day-to-day workflow.", "eyebrow": "Comparison", "h1": "{product} vs WinDebate", "lead": "Two AI debate prep platforms compared on features and workflows.", "features": ["Feature comparison", "Format coverage", "Workflow differences"], "sections": [["WinDebate overview", ["WinDebate focuses on research, drills, feedback, and progress tracking for competitive debaters. It covers PF, LD, Congress, Policy, and Worlds."]], ["{product} overview", ["{product} focuses on structured prep workflows: case generation, rebuttal practice, evidence leads, argument flowcharts, coaching prompts, and online debate timers."]], ["How to choose", ["Compare format coverage, feature depth, feedback style, pricing, and which tool fits your actual tournament workflow."]]]},
@@ -646,8 +646,8 @@ def best_ai_llms_line():
     """The /best-ai-for-debate summary, used in the main list and the Compare section."""
     return (
         f"- [Which AI is best for debate?]({page_url('best-ai-for-debate')}): "
-        f"the best AI for debate by goal (sparring, classroom, scored rounds, case prep), "
-        f"with a dated comparison of Claude, ChatGPT, {PRODUCT}, SchoolAI, Debate Ladder, ArguFight, HyperWrite and PublicForumAI"
+        f"{PRODUCT} is the top pick for a case you can read out loud, If they say X, we answer Y replies, timed practice rounds, free tools and $5/month, "
+        f"with a dated comparison of Claude, ChatGPT, SchoolAI, Debate Ladder, ArguFight, HyperWrite and PublicForumAI"
     )
 
 def render_best_ai_page(page):
@@ -664,13 +664,15 @@ def render_best_ai_page(page):
         at = next(texts)
         return {part: links for (where, part), links in spans.items() if where == at}
 
-    article = ["<h2>Best AI for debate by goal</h2>"]
-    article.append("<ul class=\"picks\">" + "".join(
+    picks = "<ul class=\"picks\">" + "".join(
         f'<li><span class="check" aria-hidden="true">✓</span> <strong>{esc(label)}</strong> {esc(text)}</li>'
         for label, text in page["picks"]
-    ) + "</ul>")
+    ) + "</ul>"
+    article = []
     for heading, blocks in page["sections"]:
         article.append(f"<h2>{esc(heading)}</h2>")
+        if heading == "Best AI for debate by goal":
+            article.append(picks)
         article.extend(render_block(block, spans_of) for block in blocks)
     IN_BODY_REPORT[page["slug"]] = spans
     faqs = page["faqs"]
