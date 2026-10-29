@@ -5,7 +5,7 @@ DebateOwl leads every page. Competitor facts stay sourced. The generator
 refuses jargon, a missing pricing sentence, or two pages that share more
 than two H2s.
 """
-from html import escape
+from html import escape, unescape
 from pathlib import Path
 import json
 import re
@@ -38,11 +38,13 @@ CASE = (
     'evidence that names its source and year, and why it matters, then "If they say… we answer…" replies, a closing line, and the sources it used. '
     "You can regenerate one weak section without touching the rest."
 )
-WINS = (
-    "That is the part DebateOwl is built for: a case you can read out loud, "
-    '"If they say X, we answer Y" replies, and timed practice rounds, '
-    "with the separate tools at /tools free and the app at $5/month after a 3-day trial."
+# The pricing sentence as the pages show it: once per page, in the call-to-action area,
+# with the free tools named and linked instead of a bare "/tools".
+PRICE_HTML = escape(PRICE).replace(
+    "the separate tools at /tools are free",
+    'the separate <a href="/tools">timer, motion generator, flow sheet and speech-time calculator</a> are free',
 )
+PRICE_START = f"The {PRODUCT} app has no free plan"
 
 JARGON = re.compile(
     r"\b(frameworks?|contentions?|warrants?|impact calculus|keretrendszer(?:t|ek)?|kontenció(?:k|t)?)\b",
@@ -234,7 +236,7 @@ def page_ladder():
     )
     faqs = [
         ("Is Debate Ladder free?", "New accounts get 100 free credits, and a debate costs about one credit per minute of speaking, according to its site (October 2026). More credits are sold; its /pricing page returned 404, so there is no published plan price beyond credits."),
-        ("Is DebateOwl free?", PRICE),
+        ("Is DebateOwl free?", "Not the app: it is paid after a 3-day free trial. Its debate timer, motion generator and flow sheet are free without an account."),
         ("Which should I use for a school debate next week?", "DebateOwl. It writes the case you will read and the answers to the other side, then lets you practise the round at real speech times. Debate Ladder is the better fit when the goal is ranked speaking reps on topics you did not choose."),
         ("Can I practise speaking out loud with DebateOwl?", "Yes. Sparring speeches can be typed or spoken."),
         ("Does Debate Ladder rank you?", "Yes. Ranked wins raise your Elo, which starts at 500, and losses lower it. Practice and custom debates are unrated."),
@@ -258,14 +260,14 @@ def page_ladder():
         ("Written case", 'Yes: opening, 2–4 arguments, "If they say… we answer…", closing, sources', "Not listed on its homepage"),
         ("Scoring", "Judged verdict after a Sparring round", "AI judge on 5 criteria, Elo from 500"),
         ("Voice", "Type or speak", "Voice-first; type in practice mode"),
-        ("Price", "No free plan: 3-day free trial, then $5/month + tax; /tools free", "100 free credits, then credits (about 1 per minute of speaking)"),
+        ("Price", "No free plan: 3-day free trial, then $5/month + tax; the free timer needs no account", "100 free credits, then credits (about 1 per minute of speaking)"),
     ]
     trs = "".join(f"<tr><th scope=\"row\">{esc(a)}</th><td>{esc(b)}</td><td>{esc(c)}</td></tr>" for a, b, c in rows)
     body = f"""
 <p class="lede">{TICK}<strong>Start here when the round is real.</strong> DebateOwl writes the case you will actually read, including the replies, then times the practice.</p>
 <section class="verdict">
   <h2>The pick for a dated round</h2>
-  <p>If your motion and your date are already set, DebateOwl is the pick. {esc(WINS)} The <a href="/best-ai-for-debate">short answer</a> across more tools is a separate page. Debate Ladder stays the right extra when you want frequent out-loud reps and a ranking, including if you are not in a tournament at all.</p>
+  <p>If your motion and your date are already set, DebateOwl is the pick. Its job is written prep: the speech and the replies are on the page before you say them, then a timed round gives you somewhere to say them, where Debate Ladder starts from your voice and a ranking. The <a href="/best-ai-for-debate">short answer</a> across more tools is a separate page. Debate Ladder stays the right extra when you want frequent out-loud reps and a ranking, including if you are not in a tournament at all.</p>
   {wins([
     "A case you can read out loud",
     '"If they say X, we answer Y" replies',
@@ -274,6 +276,7 @@ def page_ladder():
     "$5/month after a 3-day trial",
   ])}
   <p><a class="cta" href="/app">Build your case for the next round, then spar it</a></p>
+  <p>{PRICE_HTML}</p>
 </section>
 <section>
   <h2>The 7-question checklist</h2>
@@ -293,7 +296,7 @@ def page_ladder():
   <h2>What DebateOwl does well</h2>
   <p>{esc(CASE)}</p>
   <p>Speaker roles follow a school round. The introductor gets the opening and the headline arguments. The first refutation speaker gets the full arguments. The second speaker brings no new arguments: about two minutes backing up the team's arguments, then about four minutes on "If they say X, we answer Y" replies, usually five or six blocks. The closing speaker brings no new arguments either: two or three reasons your side won, then the closing line.</p>
-  <p>Around that case, Attack looks for the weak link in the other side, Factoids researches a claim and names sources you still have to open, Crossfire drills questions, and Sparring runs a timed round in School 4-6-6-3, Lincoln-Douglas or Public Forum and ends with a judged verdict. World Schools, British Parliamentary, Policy and Congress use the prep tools, not a full simulated round. The app is in English, Spanish and Hungarian. Pro adds expanded AI prep access, all 10 models (including Claude Opus and Sonnet, GPT-6.1 Sol and Gemini), Active Grounding research and priority support. Evidence leads still need checking against the original source. {esc(PRICE)}</p>
+  <p>Around that case, Attack looks for the weak link in the other side, Factoids researches a claim and names sources you still have to open, Crossfire drills questions, and Sparring runs a timed round in School 4-6-6-3, Lincoln-Douglas or Public Forum and ends with a judged verdict. World Schools, British Parliamentary, Policy and Congress use the prep tools, not a full simulated round. The app is in English, Spanish and Hungarian. Pro adds expanded AI prep access, all 10 models (including Claude Opus and Sonnet, GPT-6.1 Sol and Gemini), Active Grounding research and priority support. Evidence leads still need checking against the original source.</p>
   <p>The free <a href="/tools/debate-timer">debate timer</a> is separate from the app: seven formats, protected time, points-of-information knocks and prep banks, and it saves the round in the browser. See also the <a href="/ai-debate-case-generator">case generator</a>, <a href="/ai-debate-practice">practice rounds</a>, <a href="/how-to-practice-rebuttals">rebuttal practice</a> and <a href="/debateowl-pricing">pricing</a>.</p>
 </section>
 <section>
@@ -347,20 +350,20 @@ body.ladder details{border-bottom:1px solid #CDD7E4;padding:10px 0}
 
 def page_price():
     answer = (
-        "Start with DebateOwl when you want a case you can read out, replies to the other side and timed rounds at the low end of paid prices. "
-        + PRICE +
-        " You can practise with AI for free: ChatGPT and Claude have free plans, PublicForumAI gives 3 practice rounds a month, Debate Ladder gives new accounts 100 credits, and ArguFight is free to start. "
+        "Start with DebateOwl when you want a case you can read out, replies to the other side and timed rounds at the low end of paid prices: "
+        "$5/month after a 3-day free trial, with its separate debate tools free. "
+        "You can practise with AI for free: ChatGPT and Claude have free plans, PublicForumAI gives 3 practice rounds a month, Debate Ladder gives new accounts 100 credits, and ArguFight is free to start. "
         "Paid plans mostly add more rounds, linked evidence or speaking time, at roughly $5 to $20 a month."
     )
     faqs = [
-        ("Is there a free AI for debate practice?", "Yes. ChatGPT and Claude have free plans, PublicForumAI includes 3 full practice rounds a month, Debate Ladder gives new accounts 100 credits, and ArguFight is free to start. DebateOwl's app is a 3-day trial, then $5/month, and the tools at /tools are free with no account."),
+        ("Is there a free AI for debate practice?", "Yes. ChatGPT and Claude have free plans, PublicForumAI includes 3 full practice rounds a month, Debate Ladder gives new accounts 100 credits, and ArguFight is free to start. DebateOwl's app is paid after a 3-day trial, and its timer and motion generator cost nothing."),
         ("What is the cheapest paid AI debate tool?", "Among the tools in this table, the lowest monthly prices listed are Debatable's Tokens plan at $4.99/month, DebateOwl at $5/month + tax, and Symbai's individual plan at NZ$4.99/month. Debatable's Individual plan is $10 a year. Compare what each one actually includes before you treat the smallest number as the same product."),
-        ("Is DebateOwl free?", PRICE),
+        ("Is DebateOwl free?", "The app is not: you get a 3-day free trial, then Pro at $5/month + tax. The timer, flow sheet and motion generator on its free tools page cost nothing."),
         ("Are free AI debate tools good enough?", "For drills and background reading, often yes. Paid plans mainly add volume and linked evidence. Whatever you use, check evidence against the original source. For a tournament week, DebateOwl at $5/month is the low-priced way to get a case, replies and timed rounds together."),
         ("Is ChatGPT free for debate?", "Yes. OpenAI says the free version is available to everyone. Paid plans add more access."),
     ]
     tools = [
-        ("DebateOwl", "3-day free trial, no card; /tools free, no account", "$5/month + tax (Pro)", "All 10 models, Active Grounding, priority support. The case, the replies and timed rounds are the job.", "This site"),
+        ("DebateOwl", "3-day free trial, no card; the separate debate tools are free, no account", "$5/month + tax (Pro)", "All 10 models, Active Grounding, priority support. The case, the replies and timed rounds are the job.", "This site"),
         ("ChatGPT", "Free version available to everyone", "Go, Plus, Pro, plus Business and Enterprise (dollar prices not shown on the page we opened)", "More messages. Plus and Pro add more models and deep research. Study mode and voice are on the free plan too.", "P1"),
         ("Claude", "Free plan, $0", "Pro $20/mo monthly ($17/mo billed annually); Max from $100/mo", "More usage, Opus, Research. The free plan includes web search, memory and voice.", "P2"),
         ("PublicForumAI", "Free: 3 full practice rounds/mo, unlimited AI Flow drills, 5 AI cases/mo plus 2 Premium cases with real sources, 15 training modules", "Premium $9.99/mo or $79/yr", "Unlimited rounds, real sourced evidence with links, rounds and ballots kept. Free rounds are kept 30 days.", "P3"),
@@ -381,8 +384,8 @@ def page_price():
     body = f"""
 <section class="band">
   <h2>The pick on price</h2>
-  <p>For a case you can read, replies, and timed rounds, DebateOwl is the row to read first. {esc(PRICE)} See <a href="/best-ai-for-debate">the short answer</a> if you want the wider map, or <a href="/chatgpt-vs-claude-for-debate">ChatGPT and Claude</a> if the question is which general chatbot to open. <a href="/best-ai-for-public-forum">Public Forum tools</a> are compared speech by speech, and <a href="/debateowl-vs-debate-ladder">Debate Ladder</a> is the ranked voice game.</p>
-  {wins(["Readable case plus replies", "Timed Sparring rounds", "Free /tools, no account", "$5/month after the trial"])}
+  <p>For a case you can read, replies, and timed rounds, DebateOwl is the row to read first. {PRICE_HTML} See <a href="/best-ai-for-debate">the short answer</a> if you want the wider map, or <a href="/chatgpt-vs-claude-for-debate">ChatGPT and Claude</a> if the question is which general chatbot to open. <a href="/best-ai-for-public-forum">Public Forum tools</a> are compared speech by speech, and <a href="/debateowl-vs-debate-ladder">Debate Ladder</a> is the ranked voice game.</p>
+  <p class="row">{TICK}<strong>DebateOwl in one line:</strong> a readable case with replies and timed Sparring rounds, for $5 a month once the trial ends.</p>
   <p><a class="cta" href="/tools">Try the free tools first, no account</a></p>
 </section>
 <section>
@@ -461,8 +464,7 @@ body.prices .band{background:#FFF8DB;border-radius:0 0 24px 24px;padding:8px 18p
 body.prices table{min-width:920px;font-size:.95rem}
 body.prices tr.top{background:#EEF7FF}
 body.prices tr.top th{font-size:1.05rem}
-body.prices .wins{list-style:none;padding:0;margin:0 0 12px;display:flex;flex-wrap:wrap;gap:10px 18px}
-body.prices .wins li{display:flex;align-items:center}
+body.prices .row{display:flex;align-items:center;flex-wrap:wrap;gap:4px;background:#fff;border:2px solid #0B1426;border-radius:999px;padding:8px 16px;margin:0 0 14px}
 body.prices dt{font-family:Fredoka,Nunito,sans-serif;margin-top:16px}
 body.prices .steps{display:grid;grid-template-columns:1.2fr .8fr;gap:24px;align-items:start}
 body.prices .steps ol{font-size:1.05rem}
@@ -496,7 +498,7 @@ def page_chat():
         ("Can ChatGPT run a debate round with me?", "It can role-play an opponent if you set it up. It has no built-in speech timer or verdict for debate formats, so long rounds work better in a tool built for them."),
         ("Is Claude free?", "Yes. Claude has a free plan. Pro is $20/month billed monthly, or $17/month billed annually."),
         ("Will AI make up sources?", "It can, so open every source and confirm the exact claim before it goes on a card."),
-        ("What does DebateOwl add over a chatbot?", 'A saved workspace per motion, a case with "If they say… we answer…" replies, Crossfire drills and timed Sparring rounds with a verdict. ' + PRICE),
+        ("What does DebateOwl add over a chatbot?", 'A saved workspace per motion, a case with "If they say… we answer…" replies, Crossfire drills and timed Sparring rounds with a verdict. The app is paid after a 3-day trial.'),
     ]
     prompts = [
         ("1. Hold the other side", "Take the other side of this motion and do not concede unless my answer beats your point. Stay on that side for the whole exchange."),
@@ -509,9 +511,10 @@ def page_chat():
     body = f"""
 <section class="verdict">
   <h2>The pick when you want the round set up</h2>
-  <p>Open a chatbot for background. Come back to DebateOwl for the motion itself. {esc(WINS)} <a href="/best-ai-for-debate">The short answer</a> compares more tools. Prices for these plans are on <a href="/free-vs-paid-ai-debate-tools">free vs paid AI debate tools</a>, and the full prep sequence is <a href="/how-to-prepare-for-a-debate-with-ai">how to prepare for a debate with AI</a>.</p>
-  {wins(["One Current Debate per motion", "A case with replies, ready to read", "Sparring at real speech times", "$5/month after a 3-day trial"])}
+  <p>Open a chatbot for background. Come back to DebateOwl for the motion itself. A chatbot starts every new chat without your motion, your side or your speech times; DebateOwl keeps all three in one Current Debate, with the case and its replies saved beside them. <a href="/best-ai-for-debate">The short answer</a> compares more tools. Prices for these plans are on <a href="/free-vs-paid-ai-debate-tools">free vs paid AI debate tools</a>, and the full prep sequence is <a href="/how-to-prepare-for-a-debate-with-ai">how to prepare for a debate with AI</a>.</p>
+  <p class="ifyou"><strong>If you are</strong> exploring a topic you have never argued, pick ChatGPT. <strong>If you are</strong> pasting in a long case for critique, pick Claude. <strong>If you are</strong> preparing a set motion for a dated round, pick DebateOwl.</p>
   <p><a class="cta" href="/ai-debate-case-generator">Skip the prompt setup: get a case with replies ready</a></p>
+  <p>{PRICE_HTML}</p>
 </section>
 <section>
   <h2>Where a debate tool does the setup for you</h2>
@@ -522,10 +525,10 @@ def page_chat():
       <tr><th scope="row">Remembers your motion, side and role</th><td>Built in: one Current Debate per motion</td><td>Only if you set it up (Projects or memory)</td><td>Only if you set it up (Projects or memory)</td></tr>
       <tr><th scope="row">Case structure</th><td>Opening, 2–4 arguments, "If they say… we answer…", closing, sources</td><td>Whatever you prompt</td><td>Whatever you prompt</td></tr>
       <tr><th scope="row">Timed rounds with a verdict</th><td>Sparring: School 4-6-6-3, LD, PF</td><td>No built-in debate timer</td><td>No built-in debate timer</td></tr>
-      <tr><th scope="row">Free option</th><td>No free app plan: 3-day free trial, then $5/month; /tools free</td><td>Free version</td><td>Free plan</td></tr>
+      <tr><th scope="row">Free option</th><td>No free app plan: paid after a 3-day free trial; the debate timer is free</td><td>Free version</td><td>Free plan</td></tr>
     </tbody>
   </table></div>
-  <p>{esc(PRICE)} Pair that with the <a href="/debateowl-vs-chatgpt">DebateOwl vs ChatGPT</a> page if you already live in one chatbot, and with <a href="/how-to-practice-rebuttals">rebuttal practice</a> and <a href="/how-to-cross-examine-in-debate">cross-examination</a> when you want the drills.</p>
+  <p>If you already live in one chatbot, the <a href="/debateowl-vs-chatgpt">DebateOwl vs ChatGPT</a> page goes further. For the drills themselves, see <a href="/how-to-practice-rebuttals">rebuttal practice</a> and <a href="/how-to-cross-examine-in-debate">cross-examination</a>.</p>
 </section>
 <section>
   <h2>What general chatbots are good at in debate</h2>
@@ -561,7 +564,7 @@ def page_chat():
 </section>
 <section>
   <h2>Using a chatbot and DebateOwl together</h2>
-  <p>Use the chatbot for background reading and for a first list of ideas. Use DebateOwl once the motion is chosen: generate the case, read the replies, run Crossfire, then spar at the real times. {esc(PRICE)}</p>
+  <p>Use the chatbot for background reading and for a first list of ideas. Use DebateOwl once the motion is chosen: generate the case, read the replies, run Crossfire, then spar at the real times.</p>
 </section>
 {faq_block("Questions about chatbots and debate", faqs, "cards")}
 {sources("Notes on the chatbot pages", [
@@ -574,7 +577,8 @@ def page_chat():
 body.chat{background:linear-gradient(#F2EEFF,#F7FAFE 280px)}body.chat main{width:min(1040px,calc(100% - 32px));margin:28px auto 70px}
 body.chat h1{font-size:clamp(2.2rem,5vw,3.6rem);max-width:16ch}
 body.chat .verdict{display:grid;grid-template-columns:1.4fr .8fr;gap:18px;align-items:center}
-body.chat .wins{list-style:none;padding:0}body.chat .wins li{display:flex;align-items:center;margin:6px 0}
+body.chat .verdict>h2,body.chat .verdict>p:first-of-type,body.chat .verdict>p:last-child{grid-column:1/-1;margin-bottom:0}
+body.chat .ifyou{background:#fff;border-radius:18px;padding:12px 16px;border:1px solid #E2D9FF}
 body.chat .split{display:grid;grid-template-columns:1fr 1fr;gap:22px}
 body.chat .qcards{display:grid;gap:12px}body.chat .qcards article{background:#fff;border-radius:18px;padding:14px 16px;border:1px solid #E2D9FF}
 body.chat table{min-width:720px;background:#fff}body.chat th:nth-child(2),body.chat td:nth-child(2){background:#EEF7FF}
@@ -584,7 +588,7 @@ body.chat table{min-width:720px;background:#fff}body.chat th:nth-child(2),body.c
         "slug": "chatgpt-vs-claude-for-debate",
         "lang": "en",
         "body": "chat",
-        "title": "ChatGPT vs Claude for Debate: And When a Debate Tool Is Better | DebateOwl",
+        "title": "ChatGPT vs Claude for Debate (2026), and When to Use a Debate Tool | DebateOwl",
         "description": "ChatGPT and Claude both help with debate prep. Where each fits, prompts that make them argue back, and when a debate-specific tool saves time.",
         "h1": "ChatGPT vs Claude for debate prep",
         "question": "Is ChatGPT or Claude better for debate?",
@@ -605,21 +609,27 @@ def page_teachers():
     faqs = [
         ("What should I use if I want a free tool for class tomorrow?", "DebateOwl's free tools, if you want no student accounts: the timer, the motion generator and the flow sheet. For a written discussion you can grade, Kialo Edu. For AI-judged class tournaments, ArguFight for Schools is free for classrooms."),
         ("Can students debate an AI in class?", "Yes. Symbai gives each student their own AI opponent in a workspace the teacher sets up, and SchoolAI lets teachers build AI activities and watch them live. SchoolAI's pages we opened do not call it a debate product. It is a general classroom platform where you can build a debate activity as a Space."),
-        ("Do students need accounts for DebateOwl's tools?", "No. The tools at /tools run in the browser with no account. The timer saves the round in the browser, not on a server."),
-        ("Is the DebateOwl app free for schools?", PRICE),
+        ("Do students need accounts for DebateOwl's tools?", "No. The free tools run in the browser with no account. The timer saves the round in the browser, not on a server."),
+        ("Is the DebateOwl app free for schools?", "No. The app is paid after a 3-day free trial. The timer, motion generator and flow sheet stay free for the whole class, with no accounts."),
         ("Can I project the debate timer?", "Yes. It has a fullscreen mode, and it can be embedded on a class site."),
     ]
     body = f"""
 <section class="hero-note">
   <h2>The pick for a class with no sign-ups</h2>
-  <p>If the lesson is tomorrow, DebateOwl's free tools are the pick: nothing to install, no student accounts, and a timer you can put on the projector. {esc(PRICE)} For the wider map, see <a href="/best-ai-for-debate">the short answer</a>. Topic ideas live on <a href="/debate-topics-for-students">debate topics for students</a>, and flowing is covered in <a href="/how-to-flow-in-debate">how to flow in debate</a>. A club that needs cases and rounds should read <a href="/how-to-prepare-for-a-debate-with-ai">how to prepare for a debate with AI</a>.</p>
-  {wins(["Timer, motions and flow sheet, no account", "A case students can read out", "Replies to the other side", "Timed rounds, then $5/month"])}
+  <p>If the lesson is tomorrow, DebateOwl's free tools are the pick: nothing to install, no student accounts, and a timer you can put on the projector. {PRICE_HTML} For the wider map, see <a href="/best-ai-for-debate">the short answer</a>. Topic ideas live on <a href="/debate-topics-for-students">debate topics for students</a>, and flowing is covered in <a href="/how-to-flow-in-debate">how to flow in debate</a>. A club that needs cases and rounds should read <a href="/how-to-prepare-for-a-debate-with-ai">how to prepare for a debate with AI</a>.</p>
+  <p class="kicker">Checklist for tomorrow's lesson</p>
+  <ul class="checklist">
+    <li>Put the free timer on the projector and pick the format</li>
+    <li>Draw a motion with the motion generator, or veto three</li>
+    <li>Print one flow sheet per student</li>
+    <li>For a club with a competition coming: try the app's 3-day trial</li>
+  </ul>
   <p><a class="cta" href="/tools/debate-timer">Open the free classroom timer</a></p>
 </section>
 <section class="scene first">
   <p class="kicker">Scenario 1</p>
   <h2>I want to run a debate tomorrow with no sign-ups</h2>
-  <p>Use DebateOwl's free tools. The timer knows seven formats (Public Forum, Lincoln-Douglas, Policy, British Parliamentary, World Schools, Asian Parliamentary and School 4-6-6-3), shows protected time, and has points-of-information knocks and prep banks. You can build a custom format, share it as a link, and embed the timer. The motion generator has 300 original motions and a 3-motion veto drill. The flow sheet prints on A4 or Letter. The timer saves the round in the browser, not on a server. Spanish and Hungarian versions exist at /es/tools and /hu/tools.</p>
+  <p>Use DebateOwl's free tools. The timer knows seven formats (Public Forum, Lincoln-Douglas, Policy, British Parliamentary, World Schools, Asian Parliamentary and School 4-6-6-3), shows protected time, and has points-of-information knocks and prep banks. You can build a custom format, share it as a link, and embed the timer. The motion generator has 300 original motions and a 3-motion veto drill. The flow sheet prints on A4 or Letter. The timer saves the round in the browser, not on a server. There are <a href="/es/tools">Spanish</a> and <a href="/hu/tools">Hungarian</a> versions too.</p>
   <p>That is the clearest fit when you refuse to spend the lesson on accounts. Open the <a href="/tools">tools</a>, the <a href="/tools/debate-motion-generator">motion generator</a> and the <a href="/tools/debate-flow-sheet">flow sheet</a> from any laptop on the projector.</p>
 </section>
 <section class="scene">
@@ -643,7 +653,7 @@ def page_teachers():
 <section class="scene club">
   <p class="kicker">Scenario 5</p>
   <h2>My debate club is preparing for a competition</h2>
-  <p>This is where the DebateOwl app is the pick. Students get a case they can read out, with "If they say… we answer…" replies, Crossfire drills and timed Sparring in School 4-6-6-3, Lincoln-Douglas or Public Forum, in English, Spanish or Hungarian. There is no teacher dashboard. It is built for the students who are preparing, not for a screen that shows every student at once. {esc(PRICE)}</p>
+  <p>This is where the DebateOwl app is the pick. Students get a case they can read out, with "If they say… we answer…" replies, Crossfire drills and timed Sparring in School 4-6-6-3, Lincoln-Douglas or Public Forum, in English, Spanish or Hungarian. There is no teacher dashboard. It is built for the students who are preparing, not for a screen that shows every student at once. The app is paid after a 3-day free trial.</p>
   <p>If you also want roles, timing and judges' score sheets for a live in-class debate, with an AI analysis from uploaded audio, Camelot for Debate does that in Italian and English. <a href="#p17">P17</a></p>
 </section>
 <section>
@@ -674,7 +684,8 @@ body.teach{background:#F7FAFE}body.teach main{width:min(860px,calc(100% - 28px))
 body.teach h1{font-size:clamp(2.3rem,6vw,3.8rem);padding-top:28px}
 body.teach .hero-note{background:#0B1426;color:#EEF4FF;margin:0 -16px;padding:8px 22px 22px;border-radius:0 0 32px 32px}
 body.teach .hero-note a{color:#FCE48A}
-body.teach .wins{list-style:none;padding:0}body.teach .wins li{display:flex;align-items:center;margin:6px 0}
+body.teach .checklist{list-style:none;padding:0;margin:4px 0 12px}body.teach .checklist li{margin:6px 0}body.teach .checklist li::before{content:"";display:inline-block;width:.9em;height:.9em;border:2px solid #FCE48A;border-radius:4px;margin-right:10px;vertical-align:-1px}
+body.teach .hero-note .kicker{color:#FCE48A}
 body.teach .scene{padding:8px 0 4px;border-top:1px solid #CDD7E4}
 body.teach .scene.first{border-top:none;background:#fff;margin:18px -16px 0;padding:8px 22px 18px;border-radius:24px}
 body.teach .kicker{font-family:Fredoka,Nunito,sans-serif;color:#0556D6;margin-bottom:0}
@@ -731,7 +742,7 @@ def page_prep():
         ('What should a second speech include?', 'No new arguments: about two minutes backing up your team\'s arguments, then about four minutes of "If they say X, we answer Y" replies.'),
         ("Is using AI for debate prep cheating?", "Prep is usually fine, but most leagues restrict electronics or AI during the round itself. Check your league's rules."),
         ("How do I stop the AI making up evidence?", "Ask for the source and year of every fact, open each one, and cut anything you can't find."),
-        ("Which AI should I use?", "For this plan, DebateOwl is the pick, because the modes match the steps. " + PRICE + " A wider comparison is on the short-answer page linked above."),
+        ("Which AI should I use?", "For this plan, DebateOwl is the pick, because the modes match the steps, and it is paid after a 3-day trial. A wider comparison is on the short-answer page linked above."),
     ]
     howto = {
         "@type": "HowTo",
@@ -742,10 +753,11 @@ def page_prep():
     body = f"""
 <section class="rail">
   <h2>Seven steps, DebateOwl first</h2>
-  <p>{esc(WINS)} The wider comparison is <a href="/best-ai-for-debate">the short answer</a>. If you are choosing between chatbots first, read <a href="/chatgpt-vs-claude-for-debate">ChatGPT vs Claude for debate</a>. A head-to-head with a ranked voice game is <a href="/debateowl-vs-debate-ladder">DebateOwl vs Debate Ladder</a>. Teachers running the class itself should read <a href="/ai-debate-tools-for-teachers">AI debate tools for teachers</a>. Case structure in general is in <a href="/how-to-write-a-debate-case">how to write a debate case</a>.</p>
-  {wins(["Brainstorm, then a case you can read", "Replies in the case itself", "Crossfire, then a timed round", "Free timer for every other format"])}
+  <p>DebateOwl fits at step 3: once you know what each side must prove, the case generator drafts the arguments and the "If they say…" replies together, and Sparring times the round at step 7. The wider comparison is <a href="/best-ai-for-debate">the short answer</a>. If you are choosing between chatbots first, read <a href="/chatgpt-vs-claude-for-debate">ChatGPT vs Claude for debate</a>. A head-to-head with a ranked voice game is <a href="/debateowl-vs-debate-ladder">DebateOwl vs Debate Ladder</a>. Teachers running the class itself should read <a href="/ai-debate-tools-for-teachers">AI debate tools for teachers</a>. Case structure in general is in <a href="/how-to-write-a-debate-case">how to write a debate case</a>.</p>
+  <p class="row">{TICK}<strong>Where the app saves the most time:</strong> steps 3 to 5 come back as one draft you can read aloud.</p>
   <ol class="steps">{''.join(rendered)}</ol>
   <p><a class="cta" href="/app">Generate your first case in the 3-day trial</a></p>
+  <p>{PRICE_HTML}</p>
 </section>
 <section id="worked-example" class="sheet">
   <h2>A worked second speech: phones in class</h2>
@@ -766,7 +778,7 @@ def page_prep():
     <li>If they say "Parents want to reach their children", we answer: parents can call the office, and students can check messages at lunch. A class period is short enough that a delay is not the same as being unreachable.</li>
   </ol>
   <p><strong>Closing line.</strong> That is why phones belong outside the lesson: the class stays on the work, and a real emergency still has a way through.</p>
-  <p>This is the shape DebateOwl's case generator produces for the second-speaker role. Every case also ends with the sources it used. {esc(PRICE)}</p>
+  <p>This is the shape DebateOwl's case generator produces for the second-speaker role. Every case also ends with the sources it used.</p>
 </section>
 <section>
   <h2>What you still decide yourself</h2>
@@ -790,7 +802,7 @@ body.prep h1{font-size:clamp(2.2rem,5vw,3.5rem)}
 body.prep .steps{list-style:none;padding:0;margin:0;border-left:3px solid #0A6FF0}
 body.prep .steps li{padding:0 0 8px 22px;position:relative}
 body.prep .steps li::before{content:"";position:absolute;left:-8px;top:8px;width:13px;height:13px;border-radius:50%;background:#0A6FF0}
-body.prep .wins{list-style:none;padding:0}body.prep .wins li{display:flex;align-items:center;margin:4px 0}
+body.prep .row{display:flex;align-items:center;gap:4px;border-top:2px solid #0A6FF0;border-bottom:2px solid #0A6FF0;padding:10px 0;margin:14px 0}
 body.prep .sheet{background:#FFF8DB;border:3px solid #0B1426;border-radius:8px;padding:8px 22px 18px;margin-top:28px}
 body.prep .sheet ol li{margin:8px 0}
 """
@@ -823,7 +835,7 @@ def page_pf():
         ("Is there a free AI for PF practice?", "Yes. PublicForumAI's free plan has 3 full practice rounds a month, and Cardinal lists five free tools, described as free forever."),
         ("Can AI do crossfire practice?", "Yes. DebateOwl has timed Crossfire drills, and Prilo has a 3-minute cross-examination simulator. PublicForumAI says it doesn't yet have a crossfire feature, \"it's in the works\"."),
         ("Can I use AI during a PF round?", "PublicForumAI itself says its tools are for practice, not for live rounds. Check your league's rules."),
-        ("How much does DebateOwl cost for PF?", PRICE),
+        ("How much does DebateOwl cost for PF?", "Pro is $5/month + tax after a 3-day free trial, with no permanent free plan. The PF timer with prep banks and the flow sheet are free."),
     ]
     rows = [
         ("Constructive (4 min)", "A clear two-argument case with evidence", "DebateOwl case generator. PublicForumAI's case writer. Cardinal's card cutter."),
@@ -837,7 +849,7 @@ def page_pf():
     body = f"""
 <section class="order">
   <h2>The pick for a Public Forum case and a timed round</h2>
-  <p>DebateOwl is the first name in the speech table because it covers the case you read, the replies, the crossfire drill and the timed speeches together. {esc(PRICE)} The rules of the format, without the tool comparison, are on <a href="/public-forum-debate">Public Forum debate</a>. Question drills are in <a href="/how-to-cross-examine-in-debate">how to cross-examine</a>, and weighing is in <a href="/how-to-weigh-in-debate">how to weigh</a>. The wider list is <a href="/best-ai-for-debate">the short answer</a>. Prices are on <a href="/free-vs-paid-ai-debate-tools">free vs paid</a>.</p>
+  <p>DebateOwl is the first name in the speech table because it covers the case you read, the replies, the crossfire drill and the timed speeches together. {PRICE_HTML} The rules of the format, without the tool comparison, are on <a href="/public-forum-debate">Public Forum debate</a>. Question drills are in <a href="/how-to-cross-examine-in-debate">how to cross-examine</a>, and weighing is in <a href="/how-to-weigh-in-debate">how to weigh</a>. The wider list is <a href="/best-ai-for-debate">the short answer</a>. Prices are on <a href="/free-vs-paid-ai-debate-tools">free vs paid</a>.</p>
   {wins(["A PF case you can read out", '"If they say… we answer…" replies', "Crossfire as its own drill", "Sparring at 4-4-3-2, then $5/month"])}
   <p>Sparring runs the PF speeches at those times and ends with a judged verdict. It does not insert the three crossfire periods. Practise those in Crossfire. The free <a href="/tools/debate-timer">timer</a> does run the crossfires and the prep banks, and the <a href="/tools/debate-flow-sheet">flow sheet</a> prints the columns. <a href="/debate-clash-points">Clash</a> is where you decide which argument the summary should keep.</p>
   <p><a class="cta" href="/app">Spar a full PF round at 4-4-3-2 times</a></p>
@@ -852,7 +864,7 @@ def page_pf():
 </section>
 <section class="profiles">
   <h2>DebateOwl for Public Forum</h2>
-  <p>Best for students who want case writing, replies, crossfire and full speech rounds in one place at a low price. The case is an opening, two to four arguments with evidence and why each matters, the replies, a closing line and the sources. For PF, the first constructive carries the arguments, and the rebuttal is where you answer theirs without pretending a new argument belongs there. The app is in English, Spanish and Hungarian. The free timer has prep banks. {esc(PRICE)}</p>
+  <p>Best for students who want case writing, replies, crossfire and full speech rounds in one place at a low price. The case is an opening, two to four arguments with evidence and why each matters, the replies, a closing line and the sources. For PF, the first constructive carries the arguments, and the rebuttal is where you answer theirs without pretending a new argument belongs there. The app is in English, Spanish and Hungarian. The free timer has prep banks. The app is paid after the 3-day trial.</p>
   <h2>PublicForumAI, the PF-only practice round</h2>
   <p>Best for PF debaters who want a free, PF-only practice round. It was started in 2024 by students on a high school debate team in New York City. The free plan has 3 rounds a month and 5 cases a month. Premium is $9.99 a month or $79 a year. A round takes about 35 minutes including prep, without crossfire. There are middle school and high school difficulty levels. Its tools are for practice, not for live rounds. <a href="#p3">P3</a> <a href="#p18">P18</a></p>
   <h2>Cardinal, for the cards</h2>
@@ -1024,8 +1036,11 @@ def write_comparison_pages(public: Path):
             words = len(page["answer"].split())
             if words > 100:
                 raise SystemExit(f"{page['slug']}: opening answer has {words} words; keep it to 100")
-            if PRICE not in html:
-                raise SystemExit(f"{page['slug']}: missing the pricing sentence")
+            visible = unescape(visible_text(html))
+            if visible.count(PRICE_START) != 1 or PRICE_HTML not in html:
+                raise SystemExit(f"{page['slug']}: the pricing sentence must appear exactly once, with the tools linked")
+            if "/tools" in visible:
+                raise SystemExit(f"{page['slug']}: shows the path /tools; link the tools by name instead")
         else:
             if HU_PRICE not in html:
                 raise SystemExit("Hungarian page is missing the pricing sentence")

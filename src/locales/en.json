@@ -896,7 +896,7 @@
   },
   "hero": {
     "headline": "{{product}}: AI debate prep and practice",
-    "subheadline": "Prepare cases and practice rounds with AI.",
+    "subheadline": "{{product}} helps you prepare cases and practice rounds with AI.",
     "trialBadge": "{{trialDays}}-day free trial",
     "cta": "Start free trial",
     "trustBullet1": "No credit card required",
@@ -938,7 +938,7 @@
     }
   },
   "features": {
-    "title": "Everything you need to win",
+    "title": "Everything for your next round",
     "generate": "Case generator",
     "generateDesc": "Opening, arguments with evidence, \"If they say…\" replies, closing.",
     "attack": "Case attacker",
@@ -1008,7 +1008,7 @@
     "q6": "What is DebateOwl?",
     "a6": "DebateOwl is an AI debate prep and practice app for students and competitive debaters. It has {{modes}} prep modes, including a case generator, a case attacker, evidence research with citations, an AI coach, Crossfire and timed Sparring rounds against an AI opponent, and it is available in English, Spanish and Hungarian.",
     "q7": "Is {{product}} the same as debatelab.ai?",
-    "a7": "No. {{brand}} is a separate product at {{host}}.",
+    "a7": "No. {{brand}} is a separate product at {{host}}. As of {{asOf}}, debatelab.ai says it is free and runs World Schools and Asian Parliamentary practice against an AI opponent.",
     "q8": "What does a {{product}} case include?",
     "a8": "{{caseFormat}}",
     "q9": "Is {{product}} free?",
@@ -2611,7 +2611,7 @@
   },
   "shortAnswer": {
     "question": "What is the best AI debate practice tool?",
-    "answer": "It depends on what you need. As of {{asOf}}, {{product}} fits students and competitive debaters who want one place to build cases, find weak points, check evidence and run timed practice rounds, in English, Spanish or Hungarian: a {{trialDays}}-day free trial with no card, then ${{proMonthly}}/month + tax. If you want free practice against an AI opponent in World Schools or Asian Parliamentary style, debatelab.ai, a separate product, says it is free. If you mostly need brainstorming or writing help on any subject, a general assistant such as ChatGPT is more flexible.",
+    "answer": "For preparing a specific motion, {{product}} gives you a case you can read out loud, \"If they say X, we answer Y\" replies and timed practice rounds, in English, Spanish or Hungarian. As of {{asOf}}, it has a {{trialDays}}-day free trial with no card, then ${{proMonthly}}/month + tax. If you mostly need brainstorming or writing help on any subject, a general assistant such as ChatGPT is more flexible, and research tools are faster for finding sources.",
     "compare": "Compare AI debate tools",
     "bestAi": "Which AI is best for debate?",
     "more": "Read more",

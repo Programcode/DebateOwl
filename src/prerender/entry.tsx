@@ -86,7 +86,7 @@ function landingQuestions(language: PageLanguage = 'en'): Array<[string, string]
     [i18n.t('shortAnswer.question'), i18n.t('shortAnswer.answer', { asOf })],
     [i18n.t('faq.q6'), i18n.t('faq.a6', { modes: PREP_MODE_COUNT })],
     [i18n.t('faq.q8'), i18n.t('faq.a8')],
-    [i18n.t('faq.q7'), i18n.t('faq.a7')],
+    [i18n.t('faq.q7'), i18n.t('faq.a7', { asOf })],
     [i18n.t('faq.q1'), i18n.t('faq.a1', { asOf })],
     [i18n.t('faq.q9'), i18n.t('faq.a9')],
     ...[2, 3, 4, 5].map((n): [string, string] => [i18n.t(`faq.q${n}`), i18n.t(`faq.a${n}`)]),
@@ -124,20 +124,15 @@ function landingStructuredData(dateModified: string | undefined) {
         description: SOFTWARE_DESCRIPTION,
         inLanguage: ['en', 'es', 'hu'],
         featureList: [...APP_TOOLS.map((tool) => i18n.t(`features.${tool.key}`)), EXPORT_FEATURE],
+        // One paid offer. Google reads an Offer priced 0 as an app available without
+        // payment, so the trial is stated in the Pro offer's text, not as an offer of its own.
         offers: [
-          {
-            '@type': 'Offer',
-            name: 'Free trial',
-            price: '0',
-            priceCurrency: PRICING.currency,
-            description: `${PRICING.trialDays}-day free trial, no credit card required. ${FREE_PLAN}`,
-          },
           {
             '@type': 'Offer',
             name: 'Pro',
             price: PRICING.proMonthly,
             priceCurrency: PRICING.currency,
-            description: 'Monthly subscription, billed plus tax.',
+            description: `Monthly subscription, billed plus tax. New accounts get a ${PRICING.trialDays}-day free trial first, no credit card required. ${FREE_PLAN}`,
             priceSpecification: {
               '@type': 'UnitPriceSpecification',
               price: PRICING.proMonthly,

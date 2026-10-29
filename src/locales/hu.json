@@ -896,7 +896,7 @@
   },
   "hero": {
     "headline": "{{product}}: MI-alapú vitafelkészítés és gyakorlás",
-    "subheadline": "Készíts eseteket és gyakorolj fordulókat MI-vel.",
+    "subheadline": "A {{product}} segít eseteket készíteni és fordulókat gyakorolni MI-vel.",
     "trialBadge": "{{trialDays}} napos ingyenes próba",
     "cta": "Ingyenes próba indítása",
     "trustBullet1": "Bankkártya nem szükséges",
@@ -938,7 +938,7 @@
     }
   },
   "features": {
-    "title": "Minden, ami a győzelemhez kell",
+    "title": "Minden a következő fordulódhoz",
     "generate": "Esetgenerátor",
     "generateDesc": "Nyitás, érvek bizonyítékkal, „Ha azt mondják…” válaszok, zárás.",
     "attack": "Esettámadó",
@@ -1008,7 +1008,7 @@
     "q6": "Mi az a DebateOwl?",
     "a6": "A DebateOwl egy MI-alapú vitafelkészítő és gyakorló alkalmazás diákoknak és versenyvitázóknak. {{modes}} felkészülési módja van, köztük esetgenerátor, esettámadó, hivatkozásokkal támogatott bizonyítékkutatás, MI-edző, Keresztkérdezés és időzített Vitapárbaj-fordulók MI-ellenféllel, és angolul, spanyolul és magyarul is elérhető.",
     "q7": "Ugyanaz a {{product}}, mint a debatelab.ai?",
-    "a7": "Nem. A {{brand}} egy különálló termék, a {{host}} címen.",
+    "a7": "Nem. A {{brand}} egy különálló termék, a {{host}} címen. {{asOf}} állapot szerint a debatelab.ai azt írja magáról, hogy ingyenes, és World Schools és Asian Parliamentary stílusú gyakorlást kínál MI-ellenféllel.",
     "q8": "Mit tartalmaz egy {{product}} által írt eset?",
     "a8": "A {{product}} úgy írja meg az esetet, ahogy az iskolai vitázók készülnek: nyitás, két–négy érv, mindegyik magyarázattal, bizonyítékkal és azzal, hogy miért fontos, „Ha azt mondják… erre azt feleljük…” válaszok, egy zárómondat és a felhasznált források.",
     "q9": "Ingyenes a {{product}}?",
@@ -2611,7 +2611,7 @@
   },
   "shortAnswer": {
     "question": "Melyik a legjobb MI-alapú vitagyakorló eszköz?",
-    "answer": "Attól függ, mire van szükséged. {{asOf}} állapot szerint a {{product}} azoknak a diákoknak és versenyvitázóknak való, akik egy helyen szeretnének eseteket építeni, gyenge pontokat találni, bizonyítékokat ellenőrizni és időzített gyakorlófordulókat futtatni angolul, spanyolul vagy magyarul: {{trialDays}} napos ingyenes próba bankkártya nélkül, utána ${{proMonthly}}/hó + adó. Ha ingyen szeretnél MI-ellenféllel gyakorolni World Schools vagy Asian Parliamentary stílusban, a debatelab.ai, egy másik termék, azt írja magáról, hogy ingyenes. Ha főleg ötletelésre vagy írási segítségre van szükséged bármilyen témában, egy általános asszisztens, például a ChatGPT rugalmasabb.",
+    "answer": "Egy konkrét indítványra készülve a {{product}} felolvasható esetet ad „Ha azt mondják X-et, erre azt feleljük Y” válaszokkal, és időzített gyakorlófordulókat futtat angolul, spanyolul vagy magyarul. {{asOf}} állapot szerint {{trialDays}} napig ingyenesen kipróbálható bankkártya nélkül, utána ${{proMonthly}}/hó + adó. Ha főleg ötletelésre vagy írási segítségre van szükséged bármilyen témában, egy általános asszisztens, például a ChatGPT rugalmasabb, forrásokat keresni pedig a kutatóeszközökkel gyorsabb.",
     "compare": "MI-alapú vitaeszközök összehasonlítása",
     "bestAi": "Melyik MI a legjobb vitához?",
     "more": "Bővebben",

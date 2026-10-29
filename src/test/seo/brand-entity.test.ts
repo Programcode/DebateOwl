@@ -32,8 +32,10 @@ describe("brand entity", () => {
       logo: { "@type": "ImageObject", url: `${site.origin}/icon-512.png`, width: 512, height: 512 },
       parentOrganization: { "@type": "Organization", name: "Pi-Stack", url: "https://pi-stack.org/" },
     });
-    expect(node.sameAs.length).toBeGreaterThan(0);
-    expect(node.sameAs).not.toContain("https://pi-stack.org/");
+    // Only profiles that spell the name "DebateOwl" belong here, so the list may be empty; then the key is left out.
+    const sameAs: string[] = site.organization.sameAs;
+    expect(node).toEqual(sameAs.length ? expect.objectContaining({ sameAs }) : expect.not.objectContaining({ sameAs: expect.anything() }));
+    expect(sameAs).not.toContain("https://pi-stack.org/");
   });
 
   it("finds the guides", () => {

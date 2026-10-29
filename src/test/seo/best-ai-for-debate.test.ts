@@ -21,14 +21,18 @@ function decode(text: string): string {
 }
 
 const PRICING_SENTENCE = "The DebateOwl app has no free plan (3-day free trial, then $5/month); the separate tools at /tools are free with no account.";
+// The page states it once, with the free tools named and linked instead of the bare path.
+const PRICING_ON_PAGE = 'The DebateOwl app has no free plan (3-day free trial, then $5/month); the separate <a href="/tools">timer, motion generator, flow sheet and speech-time calculator</a> are free with no account.';
+const visibleText = (page: string) => decode(page.slice(page.indexOf("<body")).replace(/<script[\s\S]*?<\/script>/g, " ").replace(/<[^>]+>/g, " "));
 
 describe("/best-ai-for-debate", () => {
   it("uses the specified title, question, description and canonical URL", () => {
     expect(html).toContain("<title>Which AI Is Best for Debate? (2026 Guide) | DebateOwl</title>");
     expect(html).toContain("<h1>Which AI is best for debate?</h1>");
     expect(html).toContain('<link rel="canonical" href="https://debateowl.com/best-ai-for-debate" />');
-    const description = html.match(/<meta name="description" content="([^"]*)"/)?.[1] ?? "";
-    expect(description).toBe("DebateOwl is the top pick: a case you can read out loud, If they say replies, timed rounds, free tools, then $5/month.");
+    const description = decode(html.match(/<meta name="description" content="([^"]*)"/)?.[1] ?? "");
+    expect(description).toBe('Compare DebateOwl, ChatGPT, Claude and other AI tools for debate cases, "If they say" replies and timed practice, with facts as of October 2026.');
+    expect(description).not.toContain("top pick");
     expect(description.length).toBeLessThanOrEqual(155);
     expect(html).toContain('By the <a href="/">DebateOwl team</a> · Updated <time datetime="2026-10-29">October 29, 2026</time>');
     expect(html).toContain("DebateOwl makes one of the tools on this list. Facts about other products come from their own websites as of October 2026. Check them before you pay.");
@@ -41,7 +45,9 @@ describe("/best-ai-for-debate", () => {
     expect(visible).not.toMatch(/\b(stars|rated \d|out of 10)\b/i);
     expect(visible).not.toMatch(/\bworse\b/i);
     expect(html).not.toContain('class="answer"');
-    expect(visible).toContain(PRICING_SENTENCE);
+    expect(visible).toContain(PRICING_ON_PAGE);
+    expect(visibleText(html).split("The DebateOwl app has no free plan").length - 1).toBe(1);
+    expect(visibleText(html)).not.toContain("/tools");
     expect(site.freePlan.replaceAll("{{product}}", "DebateOwl").replaceAll("{{trialDays}}", "3").replaceAll("{{proMonthly}}", "5")).toBe(PRICING_SENTENCE);
     expect(html).not.toMatch(/\b(framework|contention|warrant)s?\b/i);
   });

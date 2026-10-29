@@ -26,6 +26,7 @@ const LANES = [
     { name: "jargon", command: "npm run seo:jargon" },
     { name: "lint", command: "npm run lint" },
     { name: "build", command: "npm run build" },
+    { name: "sw-offline", command: "npm run test:sw" },
     { name: "edge", command: "npm run test:edge" },
   ],
   [

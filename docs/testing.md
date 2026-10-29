@@ -153,14 +153,14 @@ npm run verify
 
 This is the pull-request check run locally, in about 100 seconds on the VPS. [`scripts/verify.mjs`](../scripts/verify.mjs) runs two lanes side by side:
 
-1. documentation checks, the guide jargon check, lint, production build, native Edge Function tests
-2. type checking, unit tests, collaboration service tests, the desktop Chromium `@smoke` set
+1. documentation checks, the guide jargon check, lint, production build, the production service-worker offline smoke, native Edge Function tests
+2. type checking, unit tests (including the comparison-page templating check: no sentence of more than 12 words may appear on more than two of the seven comparison pages, apart from the pricing sentence and the byline and disclosure lines; [`scripts/check_templating.py`](../scripts/check_templating.py), run by `src/test/seo/comparison-templating.test.ts`), collaboration service tests, the desktop Chromium `@smoke` set
 
 The jargon check (`npm run seo:jargon`) fails when a generated guide in `public/` other than `/lincoln-douglas-debate` and `/policy-debate` uses framework, contention, warrant or impact calculus more than once in its visible text or its JSON-LD ([`scripts/check_jargon.py`](../scripts/check_jargon.py)).
 
 Each step logs to `.verify/npm-verify/<step>.log`. The terminal shows one line per step, then the end of each failed step's log. Both lanes run to the end, so one run reports every failure. Two lanes keep the peak about 4 GB above idle; NODE_OPTIONS defaults to `--max-old-space-size=3072`.
 
-`npm run verify:full` adds the production service-worker offline test and the full desktop and mobile suite. Neither starts local Supabase, runs pgTAP, runs WebKit, or uses protected staging.
+`npm run verify:full` adds the full desktop and mobile suite. Neither starts local Supabase, runs pgTAP, runs WebKit, or uses protected staging.
 
 ## Database and RLS gate
 

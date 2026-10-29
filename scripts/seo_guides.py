@@ -257,11 +257,26 @@ GUIDES = {
         "modified": "2026-10-29",
         "callout": ("Short answer by goal:", "/best-ai-for-debate", "which AI is best for debate"),
         "features": [
-            ("Feature comparison", "What each kind of tool does well: general chatbots, research assistants, dedicated debate platforms, and timers or flowing tools."),
+            ("Six tools side by side", "{product}, ChatGPT, Claude, debatelab.ai, WinDebate and Debate Ladder on cases, replies, timed rounds and price."),
             ("Format coverage", "Which formats a tool actually models, from Public Forum and Lincoln-Douglas to WSDC and British Parliamentary, and where you still prep by hand."),
             ("Workflow differences", "Whether cases, sources, practice rounds and feedback stay connected to one motion, or end up scattered across chats and documents."),
         ],
         "sections": [
+            ("Feature comparison", [
+                {"table": {
+                    "caption": "AI debate tools compared, as of October 2026. Facts about other products come from their own websites; \"Not stated\" means we did not find it there.",
+                    "head": ["Tool", "Best for", "Case you can read out", "Rebuttal / \"If they say\" practice", "Timed rounds", "Price (as of Oct 2026)"],
+                    "rows": [
+                        ["[{product}](/)", "Preparing a specific motion for a school or competitive round", "Yes: an opening, two to four arguments, \"If they say… we answer…\" replies, a closing line and sources", "Yes: replies in every case, plus Attack and Crossfire drills", "Yes: Sparring in School 4-6-6-3, Lincoln-Douglas and Public Forum, ending in a verdict", "{trial_days}-day free trial, then {pro_price}; no free plan. The [free debate tools](/tools) need no account."],
+                        ["[ChatGPT](https://chatgpt.com)", "Open brainstorming and counter-arguments", "Only if you prompt for it", "Only if you prompt for it", "No built-in debate timer", "Free version; paid Go, Plus and Pro plans"],
+                        ["[Claude](https://claude.ai)", "Critique of a long case you paste in", "Only if you prompt for it", "Only if you prompt for it", "No built-in debate timer", "Free plan; Pro $20/month, or $17/month billed annually"],
+                        ["[debatelab.ai](https://debatelab.ai) (a separate product)", "Free practice against an AI opponent in World Schools or Asian Parliamentary style", "Not stated", "Drills for rebuttal, structure, weighing and evidence", "Speeches of 3, 5 or 7 minutes against an AI opponent", "Says it is completely free"],
+                        ["[WinDebate](https://windebate.ai)", "Policy, Congress or British Parliamentary prep and season tracking", "Not stated", "Drills for attack, defense, weighing and speeches, plus rebuttal trees", "Not stated; it lists a Live Round Assistant and replay review", "Free tier with monthly limits; Plus $19.99/month, Pro $39.99/month"],
+                        ["[Debate Ladder](https://debateladder.com)", "Ranked out-loud practice with an Elo rating", "Not stated", "You speak a rebuttal in each debate against an AI", "Not stated; you speak an opening, rebuttal and closing", "100 free credits for new accounts, then credits (about 1 per minute of speaking)"],
+                    ],
+                }},
+                "{product} makes one of these tools. Check each product's own site before you pay: prices and plans change. The [{product} vs WinDebate](/debateowl-vs-windebate) page compares those two in more detail.",
+            ]),
             ("The four kinds of AI debate tool", [
                 "Debaters use AI tools for different jobs, and the categories overlap less than the marketing suggests. Most prep setups combine at least two of these.",
                 {"h3": "General AI chatbots"},
@@ -323,7 +338,7 @@ GUIDES = {
             ]),
         ],
         "faqs": [
-            ("What is the best AI tool for debate?", "It depends on the job. General chatbots are flexible for brainstorming, research tools find sources, and dedicated debate platforms add structure, opponents and practice. Most debaters do best with a dedicated platform plus a way to verify sources."),
+            ("What is the best AI tool for debate?", "For preparing a specific motion, {product} gives you a case you can read out loud, \"If they say X, we answer Y\" replies and timed practice rounds. General chatbots are flexible for brainstorming and research tools find sources. Most debaters do best with a dedicated platform plus a way to verify sources."),
             ("Is a general chatbot good enough for debate prep?", "For brainstorming and explaining concepts, often yes. It is weaker at keeping a motion, side and format in context, predicting the opposing case, timing speeches and giving round-style feedback."),
             ("Are free AI debate tools enough?", "Free tiers are a good way to run the comparison test. Check the daily or monthly limits against how many practice sessions you plan before a tournament."),
             ("Can I use AI tools during a debate round?", "Usually not. Most leagues restrict or ban internet access and electronic help during rounds. Check your league's rules, and use AI tools for preparation."),
@@ -2139,10 +2154,10 @@ GUIDES = {
         "published": "2026-10-29",
         "modified": "2026-10-29",
         "h1": "Which AI is best for debate?",
-        "direct_answer": "DebateOwl is the top pick when you need a case you can read out loud, \"If they say X, we answer Y\" replies and timed practice rounds in one place. The DebateOwl app has no free plan (3-day free trial, then $5/month); the separate tools at /tools are free with no account. Claude or ChatGPT are the pick for open-ended sparring, SchoolAI for a teacher-run class, and Debate Ladder or ArguFight for scored ranked rounds.",
+        "direct_answer": "DebateOwl is the top pick when you need a case you can read out loud, \"If they say X, we answer Y\" replies and timed practice rounds in one place, paid after a 3-day free trial. Claude or ChatGPT are the pick for open-ended sparring, SchoolAI for a teacher-run class, and Debate Ladder or ArguFight for scored ranked rounds.",
         "disclosure": "{product} makes one of the tools on this list. Facts about other products come from their own websites as of October 2026. Check them before you pay.",
         "picks": [
-            ("Top pick:", "{product}. A case you can read out loud, \"If they say X, we answer Y\" replies, timed practice rounds, free tools at /tools, then $5/month."),
+            ("Top pick:", "{product}. A case you can read out loud, \"If they say X, we answer Y\" replies, timed practice rounds and free debate tools; the app is $5/month after the trial."),
             ("Sparring and brainstorming:", "Claude or ChatGPT."),
             ("Classroom debates run by a teacher:", "SchoolAI."),
             ("Scored, ranked practice rounds:", "Debate Ladder (voice) or ArguFight (text, AI judge panel)."),
@@ -2167,7 +2182,7 @@ GUIDES = {
                     "A case you can read out loud. The [case generator](/ai-debate-case-generator) writes it in the order you would say it: an opening, two to four arguments (each with an explanation, evidence and why it matters), a closing line and the sources it used.",
                     "\"If they say X, we answer Y\" replies. Each case includes \"If they say… we answer…\" answers to the other side. The second speech brings no new arguments: about two minutes reinforcing yours, then about four minutes of those replies.",
                     "Timed practice rounds. Sparring runs School 4-6-6-3, Lincoln-Douglas and Public Forum against an AI opponent and ends with a verdict. Crossfire drills questioning.",
-                    "Free tools, no account. The {product} app has no free plan ({trial_days}-day free trial, then $5/month); the separate tools at [/tools](/tools) are free with no account. They are a [debate timer](/tools/debate-timer), a [motion generator](/tools/debate-motion-generator), a [flow sheet](/tools/debate-flow-sheet) and a [speech time calculator](/tools/speech-time-calculator).",
+                    "Free tools, no account. The [free debate tools](/tools) are a [debate timer](/tools/debate-timer), a [motion generator](/tools/debate-motion-generator), a [flow sheet](/tools/debate-flow-sheet) and a [speech time calculator](/tools/speech-time-calculator), separate from the app.",
                     "$5/month. After the {trial_days}-day trial, Pro is {pro_price}. See [pricing](/debateowl-pricing).",
                 ]},
                 "The same workspace also has Attack (find weak points), Brainstorm, Factoids (evidence with citations), Ask (coach chat), a Library, a timer and a flowchart. It works in English, Spanish and Hungarian and exports to Word, PDF and Google Docs.",
@@ -2175,7 +2190,7 @@ GUIDES = {
             ]),
             ("Best AI for debate by goal", []),
             ("Where DebateOwl wins", [
-                "Choose {product} when you want these together: a case you can read out loud, \"If they say X, we answer Y\" replies, timed practice rounds, the free tools at [/tools](/tools), and $5/month after a {trial_days}-day trial. The {product} app has no free plan ({trial_days}-day free trial, then $5/month); the separate tools at [/tools](/tools) are free with no account.",
+                "Choose {product} when you want these together: a case you can read out loud, \"If they say X, we answer Y\" replies, timed practice rounds, [free debate tools](/tools), and $5/month after a {trial_days}-day trial.",
                 "Use another tool on this page when the goal is only open-ended sparring, a teacher-run class, or a scored ranked ladder.",
             ]),
             ("What other tools are best for", [
@@ -2206,7 +2221,7 @@ GUIDES = {
                 {"table": {
                     "head": ["Tool", "Best for", "Practice rounds against AI", "Case prep", "Formats", "Price (Oct 2026)"],
                     "rows": [
-                        ["[{product}](/)", "School and competitive case prep plus timed practice", "Yes: timed Sparring with a verdict, Crossfire drills", "Yes: opening, arguments, \"If they say… we answer…\", closing, sources", "Sparring: School 4-6-6-3, LD, PF; prep tools for any format", "No free plan: {trial_days}-day free trial, then {pro_price}; [/tools](/tools) free"],
+                        ["[{product}](/)", "School and competitive case prep plus timed practice", "Yes: timed Sparring with a verdict, Crossfire drills", "Yes: opening, arguments, \"If they say… we answer…\", closing, sources", "Sparring: School 4-6-6-3, LD, PF; prep tools for any format", "No free plan: {trial_days}-day free trial, then {pro_price}; [free tools](/tools)"],
                         ["[Claude](https://claude.ai)", "Sparring, nuanced topics", "Chat only (you set it up)", "Yes, by prompting", "Any (you set it up)", "Free tier, paid plans"],
                         ["[ChatGPT](https://chatgpt.com)", "Brainstorming, counter-arguments", "Chat only (you set it up)", "Yes, by prompting", "Any (you set it up)", "Free tier, paid plans"],
                         ["[SchoolAI](https://schoolai.com)", "Teacher-run K-12 classroom debates", "Through teacher-made Spaces", "Guided by the teacher's Space", "Classroom", "Free trial (5 Spaces/yr), paid school plans"],
@@ -2219,8 +2234,19 @@ GUIDES = {
                 "Prices and features as of October 2026, from each product's website. Check before you subscribe.",
                 "For a way to test tools on one motion, see [Best AI debate tools compared](/best-ai-debate-tools).",
             ]),
+            ("Compare by question", [
+                "Each of these pages answers one narrower question:",
+                {"list": [
+                    "[AI debate tools for teachers and debate clubs](/ai-debate-tools-for-teachers): five classroom scenarios, from a lesson with no sign-ups to a club preparing for a competition.",
+                    "[The best AI for Public Forum](/best-ai-for-public-forum): tools compared speech by speech, from the constructive to final focus.",
+                    "[ChatGPT vs Claude for debate](/chatgpt-vs-claude-for-debate): where each general chatbot fits, with prompts that make them argue back.",
+                    "[{product} vs Debate Ladder](/debateowl-vs-debate-ladder): written case prep and timed rounds, or a ranked voice game.",
+                    "[Free vs paid AI debate tools](/free-vs-paid-ai-debate-tools): what $0 gets you and what paid plans add, with prices.",
+                    "[Step-by-step debate prep with AI](/how-to-prepare-for-a-debate-with-ai): a seven-step plan and a worked second speech.",
+                ]},
+            ]),
             ("Which should you pick?", [
-                "You have a tournament or school debate coming up and need a case you can read out loud, plus practice against the other side. {product} writes that case, with \"If they say X, we answer Y\" replies, and runs timed sparring. The {product} app has no free plan ({trial_days}-day free trial, then $5/month); the separate tools at [/tools](/tools) are free with no account.",
+                "You have a tournament or school debate coming up and need a case you can read out loud, plus practice against the other side. {product} writes that case, with \"If they say X, we answer Y\" replies, and runs timed sparring.",
                 "You're a teacher running a class debate. SchoolAI is for teacher-run K-12 classroom debates.",
                 "You're new to debate and want someone to argue with tonight. Try Claude or ChatGPT first, then {product} when you want a case and timed rounds.",
             ]),
@@ -2229,10 +2255,10 @@ GUIDES = {
             ]),
         ],
         "faqs": [
-            ("Which AI is best for debate?", "DebateOwl is the top pick for a case you can read out loud, \"If they say X, we answer Y\" replies and timed practice rounds. The DebateOwl app has no free plan (3-day free trial, then $5/month); the separate tools at /tools are free with no account. Claude or ChatGPT fit open-ended sparring, SchoolAI a teacher-run class, and Debate Ladder or ArguFight scored ranked rounds."),
+            ("Which AI is best for debate?", "DebateOwl is the top pick for a case you can read out loud, \"If they say X, we answer Y\" replies and timed practice rounds; the app is paid after a 3-day free trial. Claude or ChatGPT fit open-ended sparring, SchoolAI a teacher-run class, and Debate Ladder or ArguFight scored ranked rounds."),
             ("Is ChatGPT or Claude better for debate practice?", "Both work. People often pick Claude for nuanced pushback and ChatGPT for fast brainstorming. Neither runs timed rounds unless you set that up yourself."),
             ("What is the best AI debate app for students?", "For a case you can read out loud and timed practice: DebateOwl. Classroom debates run by a teacher: SchoolAI. Ranked voice rounds: Debate Ladder."),
-            ("Is there a free AI for debate practice?", "Yes. General models have free tiers, ArguFight is free to start, Debate Ladder gives 100 free credits and PublicForumAI has free PF practice. The {product} app has no free plan ({trial_days}-day free trial, then $5/month); the separate tools at /tools are free with no account."),
+            ("Is there a free AI for debate practice?", "Yes. General models have free tiers, ArguFight is free to start, Debate Ladder gives 100 free credits and PublicForumAI has free PF practice. {product}'s debate timer, motion generator and flow sheet are free with no account; the app itself is paid after a {trial_days}-day trial."),
             ("What does a {product} case include?", "An opening, two to four arguments each with an explanation, evidence and why it matters, \"If they say X, we answer Y\" replies, a closing line and the sources it used. It is written in the order you would say it."),
             ("Can AI replace practicing with real people?", "No. It's useful for extra reps and finding weak points, but human opponents and judges are still unpredictable in ways AI isn't. Use both."),
         ],

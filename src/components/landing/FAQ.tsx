@@ -11,7 +11,7 @@ const FAQ = () => {
     const faqs = [
         { question: t('faq.q6'), answer: t('faq.a6', { modes: PREP_MODE_COUNT }) },
         { question: t('faq.q8'), answer: t('faq.a8') },
-        { question: t('faq.q7'), answer: t('faq.a7') },
+        { question: t('faq.q7'), answer: t('faq.a7', { asOf }) },
         { question: t('faq.q1'), answer: t('faq.a1', { asOf }) },
         { question: t('faq.q9'), answer: t('faq.a9') },
         { question: t('faq.q2'), answer: t('faq.a2') },
