@@ -277,7 +277,7 @@ export function settleHeld(previous: TimerSession, next: TimerSession): TimerSes
   else held = runningPrep(previous.round) ?? previous.held ?? null;
   if (held && round.prep[held].remainingMs <= 0) held = null;
   if ((next.held ?? null) === held) return next;
-  const settled = { ...next, held };
+  const settled: TimerSession = { ...next, held };
   if (!held) delete settled.held;
   return settled;
 }
