@@ -8,7 +8,7 @@ import { OneOffNotice } from './one-off-notice';
 import { Text } from './text';
 
 import type { AIErrorKind } from '@/lib/ai-request';
-import { useDailyUsage } from '@/lib/usage';
+import { dailyResetTime, useDailyUsage } from '@/lib/usage';
 import { useDebates } from '@/lib/debate-context';
 import { haptics } from '@/lib/haptics';
 import { radius } from '@/theme/colors';
@@ -31,13 +31,15 @@ export function ToolTitle({ title, subtitle }: { title: string; subtitle: string
 }
 
 /** "3 of 5 AI uses left today"; nothing while the count is unknown or the plan has no daily uses. */
-export function DailyUsageLine() {
-  const { t } = useTranslation();
+export function DailyUsageLine({ showReset = false }: { showReset?: boolean }) {
+  const { t, i18n } = useTranslation();
   const usage = useDailyUsage();
   if (!usage) return null;
   return (
     <Text tone="faint" style={styles.usage} testID="daily-usage">
-      {t('dailyLimit.remaining', { count: usage.remaining, limit: usage.limit })}
+      {showReset
+        ? t('dailyLimit.remainingWithReset', { count: usage.remaining, limit: usage.limit, time: dailyResetTime(i18n.language) })
+        : t('dailyLimit.remaining', { count: usage.remaining, limit: usage.limit })}
     </Text>
   );
 }

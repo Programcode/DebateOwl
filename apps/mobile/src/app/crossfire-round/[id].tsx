@@ -1,6 +1,6 @@
 import { combineDelivery } from '@debatelab/core/voice/delivery';
-import { useLocalSearchParams } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { StyleSheet } from 'react-native';
 
@@ -12,7 +12,9 @@ import { Text } from '@/components/text';
 import { DeliverySummary } from '@/components/voice';
 import { useAuth } from '@/lib/auth';
 import { backLabel } from '@/lib/back-label';
-import { fetchCrossfireRound, type SavedCrossfire } from '@/lib/crossfire';
+import { deleteCrossfireRound, fetchCrossfireRound, type SavedCrossfire } from '@/lib/crossfire';
+import { confirmDestructive, showNotice } from '@/lib/confirm';
+import { useLatest } from '@/lib/live-value';
 import { formatWhen } from '@/lib/dates';
 import { shareText } from '@/lib/export';
 import { useCopyHolder } from '@/lib/use-copy-holder';
@@ -27,13 +29,39 @@ type State = { status: 'loading' } | { status: 'missing' } | { status: 'failed' 
  */
 export default function SavedCrossfireScreen() {
   const { t } = useTranslation();
+  const router = useRouter();
   const { id, from } = useLocalSearchParams<{ id: string; from?: string }>();
   const { session } = useAuth();
   const userId = session?.user.id ?? null;
   // The state remembers whose round it holds, so another account never sees it while its own read runs.
-  const [held, setHeld] = useState<{ owner: string | null; state: State }>({ owner: userId, state: { status: 'loading' } });
-  const state: State = held.owner === userId ? held.state : { status: 'loading' };
+  const [held, setHeld] = useState<{ owner: string | null; id: string; state: State }>({ owner: userId, id, state: { status: 'loading' } });
+  const state: State = held.owner === userId && held.id === id ? held.state : { status: 'loading' };
   const copies = useCopyHolder();
+  const owner = useLatest(userId);
+  const roundId = useLatest(id);
+  const live = useRef(true);
+  useEffect(() => {
+    live.current = true;
+    return () => { live.current = false; };
+  }, []);
+
+  const remove = async () => {
+    const forUser = userId;
+    if (!forUser) return;
+    const confirmed = await confirmDestructive({
+      title: t('historyPage.deleteCrossfireTitle'),
+      message: t('historyPage.deleteCrossfireDesc'),
+      confirm: t('common.delete'),
+      cancel: t('common.cancel'),
+    });
+    if (!confirmed || !live.current || owner.current !== forUser || roundId.current !== id) return;
+    try {
+      await deleteCrossfireRound(forUser, id);
+      if (live.current && owner.current === forUser && roundId.current === id) router.back();
+    } catch {
+      if (live.current && owner.current === forUser && roundId.current === id) showNotice(t('historyPage.crossfireDeleteFailed'));
+    }
+  };
 
   useEffect(() => {
     if (!userId) return;
@@ -41,11 +69,11 @@ export default function SavedCrossfireScreen() {
     let active = true;
     fetchCrossfireRound(forUser, id, copies.mark())
       .then((round) => {
-        if (active) setHeld({ owner: forUser, state: round ? { status: 'ready', round } : { status: 'missing' } });
+        if (active) setHeld({ owner: forUser, id, state: round ? { status: 'ready', round } : { status: 'missing' } });
       })
       .catch((cause: unknown) => {
         console.warn('Could not load the crossfire:', cause instanceof Error ? cause.message : cause);
-        if (active) setHeld({ owner: forUser, state: { status: 'failed' } });
+        if (active) setHeld({ owner: forUser, id, state: { status: 'failed' } });
       });
     return () => {
       active = false;
@@ -74,7 +102,7 @@ export default function SavedCrossfireScreen() {
         <DocumentHeader
           backLabel={back}
           onShare={() => void shareText(resolution, `${resolution}\n\n${transcriptText}`).catch(() => {})}
-          actions={[]}
+          actions={[{ key: 'delete', label: t('common.delete'), symbol: 'trash', icon: 'trash', destructive: true, onPress: () => void remove() }]}
         />
       }>
       <DocumentTitle title={t('crossfire.debriefTitle')} meta={t('mobile.debate.itemMeta', { kind: t('debate.kinds.crossfire'), when: formatWhen(round.createdAt) })} />

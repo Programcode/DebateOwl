@@ -4,6 +4,7 @@ declare function setTimeout(callback: () => void, ms?: number): number;
 declare function clearTimeout(id: number | undefined): void;
 
 declare class TextDecoder {
+  constructor(label?: string, options?: { fatal?: boolean });
   decode(input?: Uint8Array, options?: { stream?: boolean }): string;
 }
 
@@ -29,3 +30,9 @@ declare class URLSearchParams {
   forEach(callback: (value: string, key: string) => void): void;
   toString(): string;
 }
+
+declare class TextEncoder {
+  encode(input: string): Uint8Array;
+}
+declare function btoa(value: string): string;
+declare function atob(value: string): string;

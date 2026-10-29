@@ -4,6 +4,8 @@ const storage = vi.hoisted(() => new Map<string, string>());
 // A Supabase client whose queries answer with the next queued result, for the modules that write.
 const supabase = vi.hoisted(() => ({ results: [] as unknown[], from: () => undefined as unknown }));
 vi.mock('./supabase', () => ({ supabase }));
+// Deletion does not send AI requests; keep Expo's transport out of this Node test.
+vi.mock('./ai-request', () => ({}));
 const network = vi.hoisted(() => ({ listener: null as ((state: { isConnected: boolean; isInternetReachable: boolean }) => void) | null }));
 
 vi.mock('@react-native-async-storage/async-storage', () => ({
@@ -49,7 +51,7 @@ async function load() {
   vi.resetModules();
   const cache = await import('./offline-cache');
   const status = await import('./network-status');
-  const writers = { ...(await import('./debates')), ...(await import('./sources')), ...(await import('./flowcharts')) };
+  const writers = { ...(await import('./debates')), ...(await import('./sources')), ...(await import('./flowcharts')), ...(await import('./crossfire')) };
   offlineFailure = () => Promise.reject(cache.readFailed({ message: 'TypeError: Network request failed' }, 0));
   return { ...cache, ...status, ...writers };
 }
@@ -293,6 +295,37 @@ describe('after a write', () => {
     await running;
     await expect(cachedRead('user-a', 'debate-lists', 'recent:debate-1:pro:5', offlineFailure)).rejects.toThrow();
     await expect(cachedRead('user-a', 'debate-lists', 'recent:debate-2:pro:5', offlineFailure)).resolves.toEqual(['other']);
+  });
+
+  it.each([['debate-1'], [null], []] as (string | null)[][])('deleting Crossfire drops its document and affected lists (%j)', async (...deletedFrom) => {
+    const cache = await load();
+    cache.setCacheOwner('user-a');
+    await cache.cachedRead('user-a', 'crossfire', 'round-1', async () => ({ transcript: 'private words' }));
+    for (const key of ['debate-1', 'debate-2', 'one-off']) {
+      await cache.cachedRead('user-a', 'history', key, async () => ['round-1']);
+      await cache.cachedRead('user-a', 'debate-lists', `counts:${key}`, async () => ({ crossfire: 1 }));
+      await cache.cachedRead('user-a', 'debate-lists', `recent:${key}:pro:5`, async () => ['round-1']);
+    }
+    const slow = deferred<string[]>();
+    const running = cache.cachedRead('user-a', 'history', deletedFrom[0] ?? 'one-off', () => slow.promise);
+    supabase.results.push({ data: deletedFrom.map((debate_id) => ({ debate_id })), error: null, status: 200 });
+    await cache.deleteCrossfireRound('user-a', 'round-1');
+    slow.resolve(['round-1']);
+    await running;
+    await expect(cache.cachedRead('user-a', 'crossfire', 'round-1', offlineFailure)).rejects.toThrow();
+    for (const key of ['debate-1', 'debate-2', 'one-off']) {
+      const affected = deletedFrom.length === 0 || key === (deletedFrom[0] ?? 'one-off');
+      const read = cache.cachedRead('user-a', 'history', key, offlineFailure);
+      if (affected) await expect(read).rejects.toThrow();
+      else await expect(read).resolves.toEqual(['round-1']);
+      if (key !== 'one-off') {
+        for (const list of [`counts:${key}`, `recent:${key}:pro:5`]) {
+          const count = cache.cachedRead('user-a', 'debate-lists', list, offlineFailure);
+          if (affected) await expect(count).rejects.toThrow();
+          else await expect(count).resolves.toBeDefined();
+        }
+      }
+    }
   });
 
   it('deleting a source drops it from the Library and the counts that held it', async () => {

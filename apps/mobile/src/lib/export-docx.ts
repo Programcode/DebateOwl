@@ -2,10 +2,11 @@ import type { AttackOutput } from '@debatelab/core/ai/schemas/attack';
 import type { BrainstormOutput } from '@debatelab/core/ai/schemas/brainstorm';
 import type { FactoidsOutput } from '@debatelab/core/ai/schemas/factoids';
 import type { GenerateOutput } from '@debatelab/core/ai/schemas/generate';
+import type { SparringSession } from '@debatelab/core/sparring/session';
 import { File, Paths } from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
 
-import { attackDocx, brainstormDocx, caseDocx, factoidsDocx, type DocxBuild } from './export-docx-content';
+import { attackDocx, brainstormDocx, caseDocx, factoidsDocx, sparringDocx, type DocxBuild } from './export-docx-content';
 
 type Translate = (key: string, options?: Record<string, unknown>) => string;
 
@@ -41,4 +42,8 @@ export function shareBrainstormDocx(result: BrainstormOutput, t: Translate, dial
 
 export function shareFactoidsDocx(result: FactoidsOutput, t: Translate, dialogTitle: string): Promise<void> {
   return shareDocx(factoidsDocx(result, t), dialogTitle);
+}
+
+export function shareSparringDocx(session: SparringSession, t: Translate, dialogTitle: string): Promise<void> {
+  return shareDocx(sparringDocx(session, t), dialogTitle);
 }

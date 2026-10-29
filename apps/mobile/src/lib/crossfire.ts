@@ -19,7 +19,7 @@ import type { DebateContextRequest } from '@debatelab/core/contract/debate-conte
 
 import { parseVoicePayload, type VoicePayload } from '@debatelab/core/voice/payload';
 import { abortError, AIError, functionOutput, postFunction, PROVIDER, responseExtras, type ResponseExtras } from './ai-request';
-import { debateListScopes } from './debates';
+import { debateListScopes, deletedListScopes } from './debates';
 import type { FeatureConfig } from './feature-config';
 import { afterWrite, cachedRead, readFailed, type CopyMark } from './offline-cache';
 import { sessionSlot } from './session-memory';
@@ -265,4 +265,12 @@ async function loadCrossfireRound(userId: string, id: string): Promise<SavedCros
 /** A saved round, for reading it again from History or the Debate tab. */
 export function fetchCrossfireRound(userId: string, id: string, mark?: CopyMark): Promise<SavedCrossfire | null> {
   return cachedRead(userId, 'crossfire', id, () => loadCrossfireRound(userId, id), mark);
+}
+
+/** Delete only this account's round and retire every offline copy its lists held. */
+export async function deleteCrossfireRound(userId: string, id: string): Promise<void> {
+  const { data, error } = await supabase.from('crossfires').delete().eq('user_id', userId).eq('id', id).select('debate_id');
+  if (error) throw new Error(error.message);
+  const deletedFrom = ((data ?? []) as { debate_id: string | null }[]).map((row) => row.debate_id);
+  afterWrite(userId, [{ group: 'crossfire', key: id }, ...deletedListScopes(deletedFrom, 'crossfire')]);
 }

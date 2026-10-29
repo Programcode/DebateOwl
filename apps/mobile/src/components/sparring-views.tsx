@@ -18,6 +18,7 @@ import { useAuth } from '@/lib/auth';
 import { backLabel } from '@/lib/back-label';
 import { confirmDestructive } from '@/lib/confirm';
 import { sharePdf, shareText } from '@/lib/export';
+import { shareSparringDocx } from '@/lib/export-docx';
 import { sparringExportFileName, sparringExportHtml } from '@/lib/export-html';
 import { deleteSparringRound } from '@/lib/sparring';
 import { radius } from '@/theme/colors';
@@ -101,6 +102,15 @@ export function SparringScorecardScreen({
     }
   };
 
+  const exportWord = async () => {
+    try {
+      await shareSparringDocx(session, t, t('common.docx'));
+    } catch (cause) {
+      console.warn('Could not export the round:', cause instanceof Error ? cause.message : cause);
+      if (live.current) setFailed(t('mobile.sparring.exportFailed'));
+    }
+  };
+
   const exportPdf = async () => {
     try {
       await sharePdf(sparringExportHtml(session, t), sparringExportFileName(session), winnerText(t, session.scorecard.winner));
@@ -119,7 +129,8 @@ export function SparringScorecardScreen({
           backLabel={backLabel(t, from, 'practice')}
           onShare={() => void shareText(winnerText(t, session.scorecard.winner), scorecardText(t, session, session.scorecard)).catch(() => {})}
           actions={[
-            // The website's PDF export of the scorecard and transcript, through the share sheet.
+            // The website's Word and PDF exports of the scorecard and transcript.
+            { key: 'word', label: t('common.docx'), symbol: 'doc.text', icon: 'file', onPress: () => void exportWord() },
             { key: 'pdf', label: t('mobile.sparring.exportPdf'), symbol: 'arrow.down.doc', icon: 'download', onPress: () => void exportPdf() },
             { key: 'delete', label: t('common.delete'), symbol: 'trash', icon: 'trash', destructive: true, onPress: () => void remove() },
           ]}

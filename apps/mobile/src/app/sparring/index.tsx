@@ -47,7 +47,7 @@ import { AIError, isAbortError, untilAborted } from '@/lib/ai-request';
 import { useAuth } from '@/lib/auth';
 import { backLabel } from '@/lib/back-label';
 import { useDebates } from '@/lib/debate-context';
-import { fetchFeatureConfig } from '@/lib/feature-config';
+import { ModelPicker } from '@/components/model-picker';
 import { useContentWidth } from '@/lib/layout';
 import { openRefusal } from '@/lib/refusal';
 import { sessionQuotaRefusal, useSessionQuota } from '@/lib/session-quota';
@@ -108,7 +108,7 @@ export default function SparringScreen() {
   const { session: auth } = useAuth();
   const userId = auth?.user.id ?? null;
   const { debates, current, oneOff, create, switchTo, refresh } = useDebates();
-  const { outputLanguage } = useSettings();
+  const { outputLanguage, readFeatureConfig } = useSettings();
   const { colors } = useTheme();
 
   const [session, setSession] = useState<SparringSession | null>(() => sparringDraft.get());
@@ -181,7 +181,7 @@ export default function SparringScreen() {
     setRequest({ status: 'pending' });
     try {
       // Read under the request's abort, so leaving while the settings load sends nothing.
-      const config = await untilAborted(fetchFeatureConfig(forUser, 'sparring'), controller.signal);
+      const config = await untilAborted(readFeatureConfig(forUser, 'sparring'), controller.signal);
       const scorecard = await judgeSparring(
         { action: 'score', sessionId: snapshot.id, motion: snapshot.motion, userSide: snapshot.userSide, format: snapshot.format, difficulty: snapshot.difficulty, speeches: snapshot.speeches, language: outputLanguage },
         { config, debateId: snapshot.debateId ?? null, signal: controller.signal },
@@ -209,7 +209,7 @@ export default function SparringScreen() {
       setRequest({ status: 'failed', failure: classify(cause, true) });
       openRefusal(router, cause, 'sparring');
     }
-  }, [commit, outputLanguage, refresh, router, t]);
+  }, [commit, outputLanguage, readFeatureConfig, refresh, router, t]);
 
   const runTurn = useCallback(async (snapshot: SparringSession, forUser: string) => {
     const turn = currentSparringTurn(snapshot);
@@ -220,7 +220,7 @@ export default function SparringScreen() {
     setRequest({ status: 'pending' });
     try {
       // Read under the request's abort, so leaving while the settings load sends nothing.
-      const config = await untilAborted(fetchFeatureConfig(forUser, 'sparring'), controller.signal);
+      const config = await untilAborted(readFeatureConfig(forUser, 'sparring'), controller.signal);
       const { speaker: _speaker, ...currentTurn } = turn;
       const spoken = voiceActiveRef.current;
       const { speech: generated, voice } = await sparringTurn(
@@ -256,7 +256,7 @@ export default function SparringScreen() {
       setRequest({ status: 'failed', failure: classify(cause, false) });
       openRefusal(router, cause, 'sparring');
     }
-  }, [commit, outputLanguage, refresh, router, runJudge, voiceActiveRef]);
+  }, [commit, outputLanguage, readFeatureConfig, refresh, router, runJudge, voiceActiveRef]);
 
   // The clock counts down from its deadline; the tick only redraws it, and coming back from the background redraws at once.
   const timerRunning = session?.timerRunning ?? false;
@@ -485,6 +485,7 @@ export default function SparringScreen() {
             </View>
           ))}
         </FormGroup>
+        <ModelPicker feature="sparring" />
         <VoiceModeSwitch value={voiceMode} onChange={setVoiceMode} description={t('voiceRound.mode.sparringDescription')} />
         <ContextLine feature="sparring" side="both" />
         <SessionCostNote quota={roundQuota.quota} />

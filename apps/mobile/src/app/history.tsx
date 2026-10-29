@@ -35,6 +35,7 @@ import {
 import { keepIfSame } from '@/lib/keep-if-same';
 import { useLatest } from '@/lib/live-value';
 import { suggestDebate } from '@/lib/motion';
+import { deleteCrossfireRound } from '@/lib/crossfire';
 import { deleteResult } from '@/lib/results';
 import { deleteSparringRound, sparringDraft } from '@/lib/sparring';
 import { hasDocumentText, useWorkActions } from '@/lib/work-actions';
@@ -43,7 +44,7 @@ import { useTheme } from '@/theme/use-theme';
 import { EmptyState } from '@/components/empty-state';
 
 /** What the History lists delete, with the website's confirmation and failure copy. */
-const DELETIONS: Record<'case' | 'sparring', { tab: HistoryTab; title: string; desc: string; failed: string; label: string; run: (userId: string, id: string) => Promise<void> }> = {
+const DELETIONS: Record<'case' | 'sparring' | 'crossfire', { tab: HistoryTab; title: string; desc: string; failed: string; label: string; run: (userId: string, id: string) => Promise<void> }> = {
   case: {
     tab: 'cases',
     title: 'historyPage.deleteCaseTitle',
@@ -51,6 +52,14 @@ const DELETIONS: Record<'case' | 'sparring', { tab: HistoryTab; title: string; d
     failed: 'historyPage.deleteFailed',
     label: 'historyPage.deleteCaseLabel',
     run: (userId, id) => deleteResult(userId, 'case', id),
+  },
+  crossfire: {
+    tab: 'crossfire',
+    title: 'historyPage.deleteCrossfireTitle',
+    desc: 'historyPage.deleteCrossfireDesc',
+    failed: 'historyPage.crossfireDeleteFailed',
+    label: 'historyPage.deleteCrossfireAria',
+    run: deleteCrossfireRound,
   },
   sparring: {
     tab: 'sparring',
@@ -74,6 +83,7 @@ type Loaded =
   | { scope: typeof OUTSIDE; kind: 'unsorted'; entries: UnsortedEntry[] };
 
 const EMPTY: Record<HistoryTab, { title: string; desc: string; action: string; href: Href | null }> = {
+  crossfire: { title: 'historyPage.emptyCrossfire', desc: 'historyPage.emptyCrossfireDesc', action: 'historyPage.startCrossfire', href: { pathname: '/crossfire', params: { from: 'history' } } },
   cases: { title: 'historyPage.emptyCases', desc: 'historyPage.emptyCasesDesc', action: 'historyPage.createCase', href: { pathname: '/generate', params: { from: 'history' } } },
   chats: { title: 'historyPage.emptyChats', desc: 'historyPage.emptyChatsDesc', action: 'historyPage.startChat', href: '/ask' },
   attacks: { title: 'historyPage.emptyAttacks', desc: 'historyPage.emptyAttacksDesc', action: 'historyPage.attackCase', href: { pathname: '/attack', params: { from: 'history' } } },
@@ -171,10 +181,10 @@ export default function HistoryScreen() {
     ? t('debate.outsideDebates')
     : `${scope === current?.id ? `${t('nav.currentDebate')}: ` : ''}${scopeDebate?.motion ?? ''}`;
 
-  // The website's History deletes cases and Sparring rounds, each after its own confirmation.
+  // The website's History deletes cases, Sparring and Crossfire rounds, each after its own confirmation.
   const remove = async (item: HistoryItem): Promise<boolean> => {
     const forUser = owner.current;
-    const deletion = item.kind === 'case' || item.kind === 'sparring' ? DELETIONS[item.kind] : null;
+    const deletion = item.kind === 'case' || item.kind === 'sparring' || item.kind === 'crossfire' ? DELETIONS[item.kind] : null;
     if (!forUser || !deletion) return false;
     const confirmed = await confirmDestructive({
       title: t(deletion.title),
@@ -195,8 +205,8 @@ export default function HistoryScreen() {
     loads.current += 1;
     const list = deletion.tab;
     setLoaded((previous) => previous?.kind === 'debate'
-      ? { ...previous, lists: { ...previous.lists, [list]: previous.lists[list].filter((entry) => entry.id !== item.id) } }
-      : previous);
+      ? { ...previous, lists: { ...previous.lists, [list]: (previous.lists[list] ?? []).filter((entry) => entry.id !== item.id) } }
+      : previous?.kind === 'unsorted' ? { ...previous, entries: previous.entries.filter((entry) => entry.id !== item.id || entry.kind !== item.kind) } : previous);
     return true;
   };
 
@@ -254,7 +264,7 @@ export default function HistoryScreen() {
     ? []
     : shown.kind === 'unsorted'
       ? shown.entries.map((entry) => ({ type: 'unsorted', key: `${entry.kind}-${entry.id}`, entry }))
-      : shown.lists[tab].map((item) => ({ type: 'item', key: `${item.kind}-${item.id}`, item }));
+      : (shown.lists[tab] ?? []).map((item) => ({ type: 'item', key: `${item.kind}-${item.id}`, item }));
   const arrivals = useRowArrivals(rows.map((row) => row.key));
 
   const header = (
@@ -350,6 +360,7 @@ export default function HistoryScreen() {
                   debates={debates}
                   choice={attachChoices[row.key]}
                   busy={attaching.has(row.key)}
+                  onDelete={row.entry.kind === 'crossfire' ? () => remove(row.entry as HistoryItem) : undefined}
                   onChoose={(debateId) => setAttachChoices((previous) => ({ ...previous, [row.key]: debateId }))}
                   onAttach={(debateId) => void attachEntry(row.key, row.entry, debateId)}
                 />
@@ -364,7 +375,7 @@ export default function HistoryScreen() {
                   item={row.item}
                   first={index === 0}
                   onPress={href ? () => router.push(href) : undefined}
-                  onDelete={row.item.kind === 'case' || row.item.kind === 'sparring' ? () => remove(row.item) : undefined}
+                  onDelete={row.item.kind === 'case' || row.item.kind === 'sparring' || row.item.kind === 'crossfire' ? () => remove(row.item) : undefined}
                 />
               </ListItemIn>
             </CardRowFrame>
@@ -527,7 +538,7 @@ function HistoryRow({ item, first, onPress, onDelete }: { item: HistoryItem; fir
       renderRightActions={() => (
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel={item.kind === 'sparring' ? t(DELETIONS.sparring.label, { motion: title }) : t(DELETIONS.case.label, { title })}
+          accessibilityLabel={item.kind === 'sparring' ? t(DELETIONS.sparring.label, { motion: title }) : t(item.kind === 'crossfire' ? DELETIONS.crossfire.label : DELETIONS.case.label, { title })}
           onPress={() => void remove()}
           style={[styles.deleteAction, { backgroundColor: colors.destructive }]}>
           <Icon name="trash" color="#ffffff" size={20} />
@@ -573,6 +584,7 @@ function UnsortedRow({
   busy,
   onChoose,
   onAttach,
+  onDelete,
 }: {
   entry: UnsortedEntry;
   debates: Debate[];
@@ -581,6 +593,7 @@ function UnsortedRow({
   busy: boolean;
   onChoose: (debateId: string) => void;
   onAttach: (debateId: string) => void;
+  onDelete?: () => Promise<boolean>;
 }) {
   const { t } = useTranslation();
   const router = useRouter();
@@ -611,6 +624,7 @@ function UnsortedRow({
           </Text>
         </View>
       </View>
+      {onDelete ? <TextButton label={t('common.delete')} onPress={() => void onDelete()} /> : null}
       {href ? <TextButton label={t('historyPage.load')} onPress={() => router.push(href)} /> : null}
       {suggestion ? (
         <View style={styles.suggested}>

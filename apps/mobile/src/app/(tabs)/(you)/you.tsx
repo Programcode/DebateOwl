@@ -31,6 +31,8 @@ import { fetchSubscription, type Subscription } from '@/lib/subscription';
 import { supabaseEnv } from '@/lib/supabase-config';
 import { websitePage } from '@/lib/website';
 import { useTheme } from '@/theme/use-theme';
+import { dailyResetTime } from '@/lib/usage';
+import { signInMethodKey } from '@/lib/sign-in-method';
 
 type BadgeTone = 'plan' | 'pro' | 'good' | 'bad';
 
@@ -84,6 +86,7 @@ export default function YouScreen() {
   const { colors } = useTheme();
   const { session, signOut } = useAuth();
   const settings = useSettings();
+  const signInMethod = signInMethodKey(session?.user ?? null);
   const [saveFailed, setSaveFailed] = useState(false);
 
   const [exporting, setExporting] = useState(false);
@@ -126,7 +129,7 @@ export default function YouScreen() {
     <Screen>
       <ScreenTitle title={t('mobile.tabs.you')} />
 
-      <SubscriptionCard userId={session?.user.id} />
+      <SubscriptionCard key={session?.user.id} userId={session?.user.id} />
 
       <Card style={styles.list}>
         <PressRow
@@ -197,6 +200,7 @@ export default function YouScreen() {
             <Text testID="account-email" weight="semibold" style={styles.email} numberOfLines={1}>
               {session?.user.email ?? ''}
             </Text>
+            {signInMethod ? <Text tone="faint" style={styles.small}>{t(signInMethod)}</Text> : null}
             {supabaseEnv === 'staging' ? (
               <View style={[styles.badge, { backgroundColor: colors.tile }]}>
                 <Text weight="semibold" style={[styles.badgeText, { color: colors.tileForeground }]}>
@@ -383,7 +387,7 @@ function PlanBadge({ state }: { state: BillingStateName }) {
 }
 
 function SubscriptionCard({ userId }: { userId: string | undefined }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { colors } = useTheme();
   const router = useRouter();
   const canBuy = storeKit() !== null;
@@ -444,14 +448,17 @@ function SubscriptionCard({ userId }: { userId: string | undefined }) {
               {t(DATE_LABELS[subscription.billingDateKind]!, { date: formatDate(subscription.billingDate) })}
             </Text>
           ) : null}
-          {subscription.dailyUsed !== null ? (
+          {subscription.dailyUsed !== null && subscription.dailyLimit > 0 ? (
             <Text weight="medium" style={styles.usage}>
-              {t('mobile.you.usage', { used: subscription.dailyUsed, limit: subscription.dailyLimit })}
+              {t('dailyLimit.remainingWithReset', { count: Math.max(0, subscription.dailyLimit - subscription.dailyUsed), limit: subscription.dailyLimit, time: dailyResetTime(i18n.language) })}
             </Text>
           ) : null}
           <Text tone="secondary" style={styles.small}>
             {planDescription(t, subscription)}
           </Text>
+          {subscription.hasOpenStripeSubscription ? (
+            <TextButton label={t('mobile.you.manageWebsiteSubscription')} onPress={() => void WebBrowser.openBrowserAsync(websitePage('/app/settings')).catch(() => showNotice(t('common.error')))} />
+          ) : null}
           {/* Basic and Pro through the App Store, where the build has StoreKit (plans.tsx). */}
           {canBuy ? <TextButton label={t('mobile.plans.see')} onPress={() => router.push('/plans')} /> : null}
         </View>

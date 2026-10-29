@@ -68,6 +68,7 @@ const SCREENS: Record<string, HandoffTarget> = {
   '/timer': TIMER,
   '/timer-format': TIMER,
   '/speech-time': target('/tools/speech-time-calculator', 'guideHub.links.tools/speech-time-calculator'),
+  '/flow-sheet': target('/tools/debate-flow-sheet', 'tools:flow.region'),
   '/motions': target('/tools/debate-motion-generator', 'guideHub.links.tools/debate-motion-generator'),
 };
 
@@ -114,8 +115,9 @@ export function handoffTarget(pathname: string): HandoffTarget | null {
  * offer, or a website link the app already opens, is accepted.
  */
 export function continuedRoute(value: unknown): string | null {
-  if (typeof value !== 'string' || value.length > MAX_PATH_LENGTH) return null;
+  if (typeof value !== 'string') return null;
   if (/^https:/i.test(value)) return appPathForUrl(value);
+  if (value.length > MAX_PATH_LENGTH) return null;
   if (!value.startsWith('/') || value.includes('//')) return null;
   if (!handoffTarget(value)) return null;
   // A result kept only on the device that made it (open-results.ts's local- keys) is not here; its History is.
