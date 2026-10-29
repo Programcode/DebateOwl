@@ -184,7 +184,8 @@ function persist(): Promise<boolean> {
   awaitingSave = [];
   if (!userId) return Promise.resolve(true);
   return storage(async () => {
-    if (gen !== generation) return;
+    // The account changed before this save ran: nothing is written, so nothing may count as kept.
+    if (gen !== generation) return false;
     // A stored queue that could not be read is never written over: it may hold unsynced work.
     if (!hydrated) throw new Error('The offline changes on this phone could not be read.');
     const write = () =>
@@ -196,8 +197,15 @@ function persist(): Promise<boolean> {
       await new Promise((resolve) => setTimeout(resolve, 200));
       await write();
     });
+    return true;
   }).then(
-    () => {
+    (wrote) => {
+      if (!wrote) {
+        // The changes belonged to the account that was replaced; it removed them, as a sign-out does.
+        const error = new Error('The account changed before this change was saved.');
+        confirming.forEach(({ waiter }) => waiter.reject(error));
+        return false;
+      }
       const recovered = storageTroubled;
       storageTroubled = false;
       confirming.forEach(({ waiter }) => waiter.resolve('queued'));

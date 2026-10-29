@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Source } from './sources';
 
 const storage = vi.hoisted(() => new Map<string, string>());
-const net = vi.hoisted(() => ({ offline: false, user: 'user-a' as string | null, uuids: 0, failGet: 0, failSet: 0 }));
+const net = vi.hoisted(() => ({ offline: false, user: 'user-a' as string | null, uuids: 0, failGet: 0, failSet: 0, holdSet: null as Promise<void> | null }));
 // supabase-js answers a request that never reached the server with status 0; readFailed marks it unreachable.
 // The saved copies, kept in memory so a test can see what an offline relaunch would show.
 const copies = vi.hoisted(() => new Map<string, unknown>());
@@ -43,6 +43,7 @@ vi.mock('@react-native-async-storage/async-storage', () => ({
       return storage.get(key) ?? null;
     },
     setItem: async (key: string, value: string) => {
+      if (net.holdSet) await net.holdSet;
       if (net.failSet > 0) {
         net.failSet -= 1;
         throw new Error('storage full');
@@ -98,6 +99,7 @@ beforeEach(async () => {
   net.uuids = 0;
   net.failGet = 0;
   net.failSet = 0;
+  net.holdSet = null;
   vi.clearAllMocks();
   sources.addSource.mockImplementation(async (_userId: string, input: { id: string; title: string; content: string; debateId: string }) => row(input.id, input));
   sources.updateSource.mockResolvedValue(undefined);
@@ -206,6 +208,39 @@ describe('offline queue', () => {
     expect(sources.addSource).not.toHaveBeenCalled();
     await expect(queue.queueUpdateSource('user-a', 'd1', 's1', { title: 'Newer' })).rejects.toThrow('cannot be saved on this phone');
     expect(sources.updateSource).not.toHaveBeenCalled();    net.failSet = 0;
+  });
+
+  it('never tells a caller a change is kept when the account changed before its save ran', async () => {
+    const queue = await load();
+    net.offline = true;
+    let release: () => void = () => undefined;
+    net.holdSet = new Promise<void>((resolve) => { release = resolve; });
+    // The first save waits in storage; the second is queued behind it.
+    const first = queue.queueAddSource('user-a', { title: 'First', content: 'Text', type: 'text', debateId: 'd1' });
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    const second = queue.queueAddSource('user-a', { title: 'Second', content: 'Text', type: 'text', debateId: 'd1' });
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    queue.setQueueOwner('user-b');
+    net.holdSet = null;
+    release();
+    // The second save never ran for its account, so it is not reported as kept.
+    await expect(second).rejects.toThrow('account changed');
+    await first.catch(() => undefined);
+  });
+
+  it('sends a change once when the save that retires it fails, however often replay is asked', async () => {
+    const queue = await load();
+    net.offline = true;
+    await queue.queueUpdateSource('user-a', 'd1', 's1', { title: 'One' });
+    await queue.queueUpdateSource('user-a', 'd1', 's2', { title: 'Two' });
+    // Back online, every save fails: "One" is sent, the save that retires it fails, and replay stops.
+    net.failSet = 1000;
+    net.offline = false;
+    await Promise.all([queue.replayOfflineQueue(), queue.replayOfflineQueue()]);
+    await queue.replayOfflineQueue();
+    expect(sent()).toEqual(['edit s1 {"title":"One"}']);
+    expect(queue.getQueueSnapshot().items.map((item) => (item.kind === 'edit' ? item.sourceId : ''))).toEqual(['s2']);
+    net.failSet = 0;
   });
 
   it('never writes over a stored queue it could not read, and keeps it once a read works', async () => {
