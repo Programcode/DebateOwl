@@ -40,6 +40,8 @@ import { LiveStreamError, readLiveResponse, type LiveGeneration } from './live';
 import { recoverRunResult } from './run-recovery';
 import { FunctionsFetchError, FunctionsHttpError } from '@supabase/supabase-js';
 import { refreshAIUsage } from '@/lib/query-client';
+import { aiFailureCode, aiFailureHttpStatus, aiFailureStage, type AIFailureStage } from './failure-reason';
+import { captureFirstAISuccess } from '@/lib/activation-events';
 
 // Request timeout in milliseconds (200 seconds)
 export const REQUEST_TIMEOUT_MS = 200 * 1000;
@@ -129,20 +131,30 @@ interface AIFailureReport {
   requestId: string;
   streaming?: boolean;
   userInitiatedAbort?: boolean;
+  /** How far the request got. A rejected answer always reports `parse`. */
+  stage?: AIFailureStage;
 }
 
 /** Reports an AI failure without forwarding user-controlled error text. */
 export function reportAIFailure(report: AIFailureReport): void {
   const classification = classifyAIError(report.error, report.userInitiatedAbort);
   const durationMs = Math.round(performance.now() - report.startTime);
+  const httpStatus = aiFailureHttpStatus(report.error);
   const properties = {
     feature: report.feature,
-    ...(report.streaming === undefined ? {} : { streaming: report.streaming }),
+    streaming: report.streaming ?? false,
     provider: report.provider,
     model: report.model,
     durationMs,
     errorName: classification.errorName,
     statusCode: classification.statusCode,
+    // The reason fields the funnel reads. feature, durationMs and statusCode
+    // above stay for the insights and Sentry metrics already built on them.
+    tool: report.feature,
+    error_code: aiFailureCode(report.error, report.userInitiatedAbort),
+    stage: aiFailureStage(report.error, report.stage),
+    ...(httpStatus === undefined ? {} : { http_status: httpStatus }),
+    duration_ms: durationMs,
   };
   captureProductEvent('ai_request_failed', properties);
 
@@ -185,6 +197,8 @@ export async function callSupabaseAI<T = unknown>(
     model: config.model,
   });
 
+  // Moves on to `stream` when a streamed answer breaks and to `parse` once the answer is checked.
+  let stage: AIFailureStage = 'request';
   const reportFailure = (error: unknown, userInitiatedAbort = false): void => {
     reportAIFailure({
       error,
@@ -193,7 +207,9 @@ export async function callSupabaseAI<T = unknown>(
       model: config.model,
       startTime,
       requestId,
+      streaming: Boolean(options.live),
       userInitiatedAbort,
+      stage,
     });
   };
 
@@ -265,6 +281,7 @@ export async function callSupabaseAI<T = unknown>(
     // The stream dropped before its answer arrived. The server keeps running
     // while the connection lasts and stores the final result before sending
     // it, so the answer may be waiting even though the browser never got it.
+    if (live && error instanceof FunctionsFetchError && error.context instanceof LiveStreamError) stage = 'stream';
     if (live && error instanceof FunctionsFetchError && error.context instanceof LiveStreamError && !browserIsOffline()) {
       const recovered = await recoverRunResult(feature, requestId, startedAt, controller.signal, error.context.reason === 'stalled' ? Infinity : undefined);
       if (recovered && recovered.status >= 200 && recovered.status < 300) {
@@ -379,6 +396,7 @@ export async function callSupabaseAI<T = unknown>(
     const resolvedModel = typeof responseMeta?.resolvedModel === 'string'
       ? responseMeta.resolvedModel
       : config.model;
+    stage = 'parse';
     const response = options.transformResponse ? options.transformResponse(data) : data as T;
     if (debateContext) {
       // Review choices cover one request (or one round); the next starts from the defaults.
@@ -393,6 +411,7 @@ export async function callSupabaseAI<T = unknown>(
       ...(resolvedModel !== config.model ? { requestedModel: config.model } : {}),
       durationMs: Math.round(performance.now() - startTime),
     });
+    captureFirstAISuccess(feature);
     return response;
   } catch (err) {
     // Re-throw our custom errors

@@ -2596,7 +2596,8 @@
     "invalidOutput": "The AI's answer came back malformed. Please try again.",
     "unexpected": "An unexpected error occurred",
     "offline": "Check your connection and try again.",
-    "notCharged": "You were not charged for this request."
+    "notCharged": "You were not charged for this request.",
+    "signInAgain": "Sign in again"
   },
   "clock": {
     "timeUp": "Time is up.",
@@ -2689,7 +2690,7 @@
   },
   "serverErrors": {
     "signInRequired": "Please sign in to continue.",
-    "sessionExpired": "Authentication failed. Your session may have expired. Please sign in again.",
+    "sessionExpired": "We couldn't confirm you're signed in. Sign in again to keep going.",
     "accessDenied": "Access denied. Your session may have expired. Please sign in again.",
     "banned": "Your account has been suspended. Please contact support.",
     "requestTooLarge": "Request is too large. Shorten the input and try again.",

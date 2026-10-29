@@ -76,14 +76,31 @@ const PRODUCT_EVENT_NAMES = new Set([
   "ai_request_succeeded",
   "ai_stream_recovered",
   "content_exported",
+  "first_ai_success",
   "free_tool_used",
+  "paywall_shown",
+  "signup_completed",
   "sparring_round_completed",
   "sparring_session_judged",
   "tool_opened",
+  "trial_started",
+  "welcome_completed",
 ]);
 
 const STRING_PROPERTY_VALUES: Record<string, ReadonlySet<string>> = {
   action: new Set(["calculate", "draw", "print", "start"]),
+  error_code: new Set([
+    "aborted",
+    "auth_expired",
+    "invalid_response",
+    "limit_reached",
+    "model_restricted",
+    "network",
+    "provider_error",
+    "server_error",
+    "timeout",
+    "unknown",
+  ]),
   errorName: new Set([
     "AIAuthError",
     "AINetworkError",
@@ -102,8 +119,18 @@ const STRING_PROPERTY_VALUES: Record<string, ReadonlySet<string>> = {
   feature: new Set(["ask", "attack", "brainstorm", "crossfire", "factoids", "generate", "sparring"]),
   format: new Set(["ap", "bp", "custom", "docx", "google_docs", "ld", "pdf", "pf", "policy", "school", "standard", "wsdc"]),
   freeTool: new Set(["debate-flow-sheet", "debate-motion-generator", "debate-timer", "speech-time-calculator"]),
+  method: new Set(["demo", "email", "google"]),
   model: new Set(AVAILABLE_MODELS.map((model) => model.id)),
   provider: new Set([PROVIDER_ID]),
+  reason: new Set([
+    "limit_reached",
+    "model_restricted",
+    "payment_failed",
+    "subscription_ended",
+    "trial_ended",
+    "weekly_budget_reached",
+  ]),
+  stage: new Set(["parse", "request", "stream"]),
   tool: new Set([
     "admin",
     "ask",
@@ -132,13 +159,13 @@ function safeProductProperties(properties?: Record<string, unknown>): Record<str
   for (const [key, value] of Object.entries(properties)) {
     if (typeof value === "string" && STRING_PROPERTY_VALUES[key]?.has(value)) safeProperties[key] = value;
     if (key === "streaming" && typeof value === "boolean") safeProperties[key] = value;
-    if (key === "durationMs" && typeof value === "number" && Number.isFinite(value) && value >= 0 && value <= 3_600_000) {
+    if ((key === "durationMs" || key === "duration_ms") && typeof value === "number" && Number.isFinite(value) && value >= 0 && value <= 3_600_000) {
       safeProperties[key] = value;
     }
     if ((key === "roundIndex" || key === "speechCount") && Number.isInteger(value) && Number(value) >= 0 && Number(value) <= 100) {
       safeProperties[key] = Number(value);
     }
-    if (key === "statusCode" && Number.isInteger(value) && Number(value) >= 100 && Number(value) <= 599) {
+    if ((key === "statusCode" || key === "http_status") && Number.isInteger(value) && Number(value) >= 100 && Number(value) <= 599) {
       safeProperties[key] = Number(value);
     }
   }

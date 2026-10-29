@@ -9,13 +9,12 @@ import { FactoidsForm } from '@/components/features/factoids/FactoidsForm';
 import { FactoidsResults } from '@/components/features/factoids/FactoidsResults';
 import { factoids, type DiscoveredSource } from '@/lib/ai/client';
 import { useSubscriptionError } from '@/hooks/use-subscription-error';
-import { getUserFacingAIError } from '@/lib/ai/error-display';
 import { DailyUsage, SubscriptionErrorModals } from '@/components/features/subscription';
 import type { FactoidsInput } from '@/lib/ai/schemas/factoids';
 import { useToast } from '@/hooks/use-toast';
 import { EmptyState } from '@/components/ui/empty-state';
 import { PageHeader } from '@/components/layout/PageHeader';
-import { ToolRunErrorPanel, isCanceled, useRevealResults, useToolRun } from '@/components/features/tools/tool-run';
+import { ToolRunErrorPanel, isCanceled, toolRunError, useRevealResults, useToolRun } from '@/components/features/tools/tool-run';
 import { LiveToolRun } from '@/components/features/tools/live-draft';
 import { factoidsDraftSections } from '@/components/features/tools/live-sections';
 import { factoidsDiscussPrompt, openDiscussion } from '@/components/features/tools/discuss';
@@ -52,7 +51,7 @@ export default function FactoidsPage() {
   }, [drafting, revealResults]);
   const lastInput = useRef<FactoidsInput | null>(null);
   const navigate = useNavigate();
-  const subError = useSubscriptionError();
+  const subError = useSubscriptionError('factoids');
   const { t } = useTranslation();
   const [discoveredSources, setDiscoveredSources] = useState<DiscoveredSource[]>([]);
   const resultSaved = useResultSaved(factoidsResult);
@@ -80,7 +79,7 @@ export default function FactoidsPage() {
       if (isCanceled(error, signal)) return;
       console.error('Failed to find factoids:', error);
       if (!subError.handleSubscriptionError(error)) {
-        run.setError({ title: t('factoids.failed'), description: getUserFacingAIError(error) });
+        run.setError(toolRunError(t('factoids.failed'), error));
       }
     } finally {
       setFactoidsLoading(false);
