@@ -137,13 +137,15 @@ Stop it with `$PREVIEW down "debatelab mobile expo-go"` when you are done.
 
 ### Development build
 
-A development build is the app's own binary with `expo-dev-client`, so it loads JavaScript from Metro like Expo Go but carries native modules Expo Go lacks: speech recognition for voice rounds and dictation, the timer's Live Activity and lock-screen widget (with an App Group), and later Google sign-in (Expo Go cannot receive OAuth redirects). Its Info.plist also gets the 120 Hz key, which Expo Go ignores. JavaScript-only changes never need a new build.
+A development build is the app's own binary with `expo-dev-client`, so it loads JavaScript from Metro like Expo Go but carries native modules Expo Go lacks: speech recognition for voice rounds and dictation, the timer's and the generating Live Activities and the widgets (with an App Group), Siri and Shortcuts, Handoff, StoreKit, and Google sign-in (Expo Go cannot receive OAuth redirects). [apple-platform.md](apple-platform.md) lists what each needs from the Apple account. Its Info.plist also gets the 120 Hz key, which Expo Go ignores. JavaScript-only changes never need a new build.
 
 [`apps/mobile/app.config.ts`](../apps/mobile/app.config.ts) builds one config with two switches:
 
 - No `DEBATELAB_BUILD`: the Expo Go and web export config, unchanged.
 - `DEBATELAB_BUILD=dev`: adds `expo-dev-client`, `expo-speech-recognition` with the microphone and speech prompts (English in Info.plist, Spanish and Hungarian as `InfoPlist.strings` from `mobile.permissions` in the catalogs) and `CFBundleAllowMixedLocalizations`. The `development` profile in [`apps/mobile/eas.json`](../apps/mobile/eas.json) sets it.
 - `DEBATELAB_APP_GROUP=group.<id>`, only with `dev`: adds the `expo-widgets` extension (`ExpoWidgetsTarget`, bundle `com.pistack.debateowl.ExpoWidgetsTarget`) with the timer's lock-screen widget (`DebateTimerWidget`) and Live Activity, `NSSupportsLiveActivities`, and the App Group `group.com.pistack.debateowl` (the only value the config accepts) on both targets. Register that group for both bundle ids in the Apple Developer account. For a device build, set it only when the provisioning profile carries that group; a borrowed wildcard profile does not. A simulator build is not signed, so the `development-simulator` profile always sets it. EAS does not see your shell, so it goes in the profile's `env` in `eas.json`, committed with the build.
+
+- `DEBATELAB_APPLE_ACCOUNT=1`, only with `dev`: the build is signed by DebateOwl's own Apple account. It keeps the push and Sign in with Apple entitlements that every other development build drops (the borrowed profile has neither) and adds Time Sensitive Notifications and Handoff from Safari. See [apple-platform.md](apple-platform.md#checklist-for-debateowls-apple-account).
 
 `nativeCapabilities()` in `apps/mobile/src/lib/native-capabilities.ts` tells the app at runtime what the binary has. Feature code checks it and never imports a dev-build module at the top level, so Expo Go keeps working.
 
