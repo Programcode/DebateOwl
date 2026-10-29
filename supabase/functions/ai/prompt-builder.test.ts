@@ -70,6 +70,8 @@ Deno.test("generate prompt matrix preserves every school role and length rule", 
     ["comprehensive", "4"],
   ] as const;
   const roles = ["intro", "r1", "r2", "conc"] as const;
+  // 4-6-6-3 minutes at about 130 spoken words a minute.
+  const budgets = { intro: "4 minutes, about 520", r1: "6 minutes, about 780", r2: "6 minutes, about 780", conc: "3 minutes, about 390" };
 
   for (const role of roles) {
     for (const [length, contentionCount] of lengths) {
@@ -90,12 +92,17 @@ Deno.test("generate prompt matrix preserves every school role and length rule", 
         ? `Length Instruction: Return no contentions and no counters. Return exactly ${length === "brief" ? 2 : 3} whyWeWin items`
         : role === "r2"
           // R2 brings no new arguments: one full answer for each thing they are likely to say.
-          ? `Length Instruction: Return no contentions. Return exactly 2 reinforce items and exactly ${length === "brief" ? 5 : 6} counters`
+          ? `Length Instruction: Return no contentions. Return exactly 2 reinforce items and exactly ${length === "brief" ? 10 : 12} counters`
           : `Length Instruction: Return exactly ${contentionCount} contentions`);
+      // Each speech states its word budget so it fits the speaker's time.
+      assertIncludes(prompt, `Speech Budget: ${budgets[role]} spoken words at 130 words a minute.`);
       assertIncludes(prompt, "Language: Hungarian (hu)");
       assertIncludes(prompt, "RESEARCH CONTEXT");
     }
   }
+
+  const general = buildUserPrompt("generate", { motion: "MATRIX MOTION", role: "general" }, "");
+  if (general.includes("Speech Budget:")) throw new Error("a case with no speaker role has no speech budget");
 });
 
 Deno.test("attack prompt includes intensity, paradigm, and toggle states", () => {

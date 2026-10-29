@@ -1,4 +1,4 @@
-import { buildSearchRequests, rankSearchResults } from "../_shared/source-quality.ts";
+import { buildSearchRequests, rankSearchResults, researchCountryForLanguage } from "../_shared/source-quality.ts";
 
 function assert(condition: boolean, message: string) {
   if (!condition) throw new Error(message);
@@ -101,4 +101,41 @@ Deno.test("intergovernmental domains satisfy the government source preference", 
     content: "World Bank official indicator data with methodology and country statistics.",
   }], "GDP statistics", "government");
   assert(ranked[0]?.sourceType === "government", `Expected World Bank to classify as government, got ${ranked[0]?.sourceType}`);
+});
+
+Deno.test("a Hungarian or Spanish request searches that country's sources first and keeps the international ones", () => {
+  const motion = "Ez a ház eltörölné a házi feladatot az általános iskolákban";
+  const international = buildSearchRequests(motion);
+  const hungarian = buildSearchRequests(motion, "", "any", "", { language: "hu", country: "HU" });
+  // First, so the seed-query limit (four) can never drop it.
+  assert(hungarian[0].includeDomains?.includes("ksh.hu") === true, "the first Hungarian search must target Hungarian sources");
+  assert(hungarian[0].query.includes("Magyarország"), `expected a Hungarian search, got ${hungarian[0].query}`);
+  assert(JSON.stringify(hungarian.slice(1, 1 + 3)) === JSON.stringify(international.slice(0, 3)), "international fallback searches must follow unchanged");
+
+  const spanish = buildSearchRequests("Esta casa prohibiría los deberes", "", "any", "", { language: "es" });
+  assert(spanish[0].includeDomains?.includes("ine.es") === true, "the language alone must pick Spain's sources");
+  assert(researchCountryForLanguage("hu") === "HU" && researchCountryForLanguage("es") === "ES", "language to country mapping changed");
+
+  // English, an unknown country, or no locale at all: the requests are exactly as before.
+  const before = JSON.stringify(buildSearchRequests("school phone ban", "United States", "government", "2024-2026"));
+  for (const locale of [undefined, {}, { language: "en" }, { country: "ZZ" }]) {
+    assert(JSON.stringify(buildSearchRequests("school phone ban", "United States", "government", "2024-2026", locale)) === before,
+      `locale ${JSON.stringify(locale)} must not change the requests`);
+  }
+});
+
+Deno.test("a Hungarian request ranks Hungarian pages above equally good foreign ones", () => {
+  const content = "Official statistics report on homework time in primary schools, with survey data from 2025 and detailed methodology for each school year.";
+  const results = [
+    { title: "Homework report", url: "https://example.org/homework-report", content, publishedDate: "2025-03-01" },
+    { title: "Homework report", url: "https://www.ksh.hu/homework-report", content, publishedDate: "2025-03-01" },
+    { title: "Homework report", url: "https://news.example.hu/homework-report", content, publishedDate: "2025-03-01" },
+  ];
+  const plain = rankSearchResults(results, "homework primary schools");
+  const hungarian = rankSearchResults(results, "homework primary schools", "any", { language: "hu" });
+  const score = (ranked: typeof plain, host: string) => ranked.find((item) => item.url?.includes(host))!.qualityScore;
+  assert(score(plain, "ksh.hu") === score(plain, "example.org"), "without a locale the pages must score the same");
+  assert(score(hungarian, "ksh.hu") > score(hungarian, "example.org"), "a Hungarian statistics page must outrank a foreign one");
+  assert(score(hungarian, "example.hu") > score(hungarian, "example.org"), "any .hu page must outrank a foreign one");
+  assert(score(hungarian, "example.org") === score(plain, "example.org"), "foreign pages keep their score");
 });

@@ -93,6 +93,68 @@ const LEGAL_PRIMARY_DOMAINS = [
   "curia.europa.eu",
 ];
 
+/** The output language and country a research request should favour. */
+export type ResearchLocale = {
+  /** Output language code, e.g. "hu". */
+  language?: string;
+  /** ISO 3166 country code, e.g. "HU". Derived from the language when absent. */
+  country?: string;
+};
+
+type NationalSources = {
+  /** Words added to the national search, in the country's language. */
+  searchTerms: string;
+  /** Statistics offices, ministries, universities and national press. */
+  domains: string[];
+  /** Country-code domain: any site under it counts as national when ranking. */
+  tld: string;
+  /** Named in the follow-up query prompt. */
+  description: string;
+};
+
+// Sources a debater in that country would quote. Research tries these first
+// and falls back to international sources when they have nothing.
+const NATIONAL_SOURCES: Record<string, NationalSources> = {
+  HU: {
+    searchTerms: "Magyarország kutatás adatok felmérés",
+    domains: [
+      "ksh.hu", "kormany.hu", "oktatas.hu", "parlament.hu", "njt.hu", "mnb.hu", "ajbh.hu",
+      "mta.hu", "mtak.hu", "elte.hu", "u-szeged.hu", "unideb.hu", "pte.hu", "uni-corvinus.hu", "bme.hu",
+      "hvg.hu", "telex.hu", "index.hu", "444.hu", "portfolio.hu", "eduline.hu", "magyarnemzet.hu", "hirado.hu",
+    ],
+    tld: "hu",
+    description: "Hungarian sources: KSH, Hungarian ministries and the Oktatási Hivatal, Hungarian universities and the Hungarian press",
+  },
+  ES: {
+    searchTerms: "España estudio datos informe",
+    domains: [
+      "ine.es", "gob.es", "boe.es", "cis.es", "bde.es", "csic.es", "defensordelpueblo.es",
+      "ucm.es", "uam.es", "uc3m.es", "ub.edu", "uv.es", "us.es", "unav.edu",
+      "elpais.com", "elmundo.es", "rtve.es", "abc.es", "lavanguardia.com", "eldiario.es", "europapress.es", "magisnet.com",
+    ],
+    tld: "es",
+    description: "Spanish sources: the INE, Spanish ministries, the BOE, Spanish universities and the Spanish press",
+  },
+};
+
+const COUNTRY_FOR_LANGUAGE: Record<string, string> = { hu: "HU", es: "ES" };
+
+/** The country whose sources a case in this language should prefer, if any. */
+export function researchCountryForLanguage(language?: string): string | undefined {
+  return language ? COUNTRY_FOR_LANGUAGE[language.toLowerCase()] : undefined;
+}
+
+function nationalSources(locale?: ResearchLocale): NationalSources | undefined {
+  const country = locale?.country?.toUpperCase() || researchCountryForLanguage(locale?.language);
+  return country ? NATIONAL_SOURCES[country] : undefined;
+}
+
+/** A line for the follow-up query prompt naming the sources to look for, if any. */
+export function nationalSourceHint(locale?: ResearchLocale): string | undefined {
+  const national = nationalSources(locale);
+  return national && `Write at least one query in the language of the claim that finds ${national.description}. International sources are the fallback.`;
+}
+
 const RESULTS_PATTERNS = [
   /\btab\b/i,
   /\btabs\b/i,
@@ -198,11 +260,14 @@ function specificityScore(result: ExaResult, claim: string): number {
   return Math.min(22, Math.round((matches / Math.min(claimTokens.length, 8)) * 22));
 }
 
-function domainBonus(result: ExaResult, claim: string): number {
+function domainBonus(result: ExaResult, claim: string, locale?: ResearchLocale): number {
   const url = result.url || "";
   const host = hostFromUrl(url);
   const haystack = `${result.title || ""} ${url} ${result.content || ""}`;
   let score = 0;
+  const national = nationalSources(locale);
+
+  if (national && (host.endsWith(`.${national.tld}`) || national.domains.some((domain) => hostMatchesDomain(host, domain)))) score += 12;
 
   if (WEAK_DOMAINS.some((domain) => hostMatchesDomain(host, domain))) score -= 30;
   if (/\b(tabbycat|calicotab|tabroom|debatekeeper)\b/i.test(haystack)) score += 18;
@@ -219,6 +284,7 @@ export function rankSearchResults(
   results: Array<ExaResult & { query?: string }>,
   claim: string,
   preferredSourceType = "any",
+  locale?: ResearchLocale,
 ): RankedSearchResult[] {
   const seen = new Set<string>();
 
@@ -234,7 +300,7 @@ export function rankSearchResults(
         typeScore(sourceType, preferredSourceType) +
         specificity +
         recency +
-        domainBonus(result, claim);
+        domainBonus(result, claim, locale);
 
       if (["official", "results", "government", "academic"].includes(sourceType)) qualityReasons.push(`${sourceType} source`);
       if (["encyclopedia", "video", "social"].includes(sourceType)) qualityReasons.push(`${sourceType} fallback`);
@@ -308,7 +374,13 @@ export function buildFollowUpSearchRequest(
   return { query, ...filtersForSourceType(preferredSourceType, timeframe) };
 }
 
-export function buildSearchRequests(claim: string, region = "", preferredSourceType = "any", timeframe = ""): ExaSearchRequest[] {
+export function buildSearchRequests(
+  claim: string,
+  region = "",
+  preferredSourceType = "any",
+  timeframe = "",
+  locale?: ResearchLocale,
+): ExaSearchRequest[] {
   const base = `${claim} ${region}`.trim().replace(/\s+/g, " ");
   const years = timeframe || (/\b202[0-9]\b/.test(base) ? "" : "2025 2026");
   const requests: ExaSearchRequest[] = [];
@@ -316,6 +388,13 @@ export function buildSearchRequests(claim: string, region = "", preferredSourceT
     requests.push({ query: query.trim(), excludeDomains: WEAK_DOMAINS, ...filters });
   };
   const publishedDateRange = publishedDateRangeFromTimeframe(timeframe);
+
+  // National sources first, so the seed-query limit never drops them; the
+  // queries below stay as the international fallback.
+  const national = nationalSources(locale);
+  if (national) {
+    add(`${base} ${national.searchTerms} ${years}`, { includeDomains: national.domains, ...publishedDateRange });
+  }
 
   // Topic-specific queries first (highest priority)
   if (OFFICIAL_DEBATE_PATTERNS.some((pattern) => pattern.test(base)) || /\bdebate|debating\b/i.test(base)) {

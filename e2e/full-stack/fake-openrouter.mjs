@@ -70,6 +70,10 @@ const counter = (index) => ({
     "Cities cannot afford the extra buses.",
     "Fares already have discounts for people who need them.",
     "Free transport has been tried and dropped elsewhere.",
+    "Better buses would help more than free buses.",
+    "Fare-free cities still have empty buses at night.",
+    "Taxpayers who never ride would pay for everyone else.",
+    "Free fares crowd out walking and cycling.",
   ][index],
   counterpoint: `${MARK} answer ${index + 1}: fare collection itself costs a large share of what it brings in, so the real gap is far smaller.`,
   ...(index % 2 === 0 ? { source: "UITP, 2024" } : {}),
@@ -87,13 +91,33 @@ const r2Answer = (index) => ({
 // theirs, and the Conclusor brings reasons why we win. Neither R2 nor the
 // Conclusor brings new arguments.
 const generate = (user) => {
+  // R2 is planned, then written in parts (supabase/functions/ai/r2-case.ts).
+  const planCount = /PLANNING STEP[\s\S]*?theirClaims: exactly (\d+)/.exec(user)?.[1];
+  if (planCount) {
+    return {
+      ourArguments: [
+        { title: "Fares shut people out", claim: "Fares keep the riders who need transit most off the bus." },
+        { title: "More people ride", claim: "Free fares bring more passengers onto public transport." },
+      ],
+      theirClaims: Array.from({ length: Number(planCount) }, (_, index) => `Free transit claim ${index + 1}: it costs the city too much.`),
+    };
+  }
+  const part = /=== WRITING PART (\d+) OF \d+: claims (\d+)-(\d+) ===/.exec(user);
+  if (part && part[1] !== "1") {
+    const [first, last] = [Number(part[2]), Number(part[3])];
+    return {
+      counters: Array.from({ length: last - first + 1 }, (_, index) => r2Answer(first - 1 + index)),
+      sources: [{ org: "UITP", year: "2024", claim: "Ridership rose after fares were removed", url: "https://www.uitp.org/free-fares-2024" }],
+    };
+  }
   const length = /^Length: (\w+)/m.exec(user)?.[1] ?? "standard";
   const role = /^Role: (\w+)/m.exec(user)?.[1] ?? "r1";
   const count = { brief: 2, standard: 3, comprehensive: 4 }[length] ?? 3;
   const conc = role === "conc";
   const r2 = role === "r2";
-  // R2: one full answer for each thing they are likely to say.
-  const answers = length === "brief" ? 5 : 6;
+  // R2: one full answer for each thing they are likely to say; part 1 of a
+  // split R2 case writes only its own share of them.
+  const answers = part ? Number(part[3]) - Number(part[2]) + 1 : length === "brief" ? 10 : 12;
   return {
     opening: {
       hook: `${MARK} opening hook: picture a nurse who skips the night bus because the fare is a tenth of her shift's pay.`,

@@ -26,6 +26,18 @@ export const REPLY_TOKEN_CAPS = {
    * limit. The cap only bounds the reply, so room costs nothing unless used.
    */
   generate: 12_000,
+  /**
+   * The R2 plan: our two arguments and the claims the other side will make,
+   * one line each. Written at low effort before the parts below.
+   */
+  casePlan: 1_500,
+  /**
+   * One of the parts an R2 case is written in at the same time: the speech
+   * and three answers, or three answers. A part is a quarter of the case, so
+   * its smaller cap also keeps its reasoning budget (a share of max_tokens)
+   * small enough that the slowest part finishes well inside the 130 s budget.
+   */
+  caseWriterPart: 6_000,
   attack: 4_000,
   brainstorm: 4_000,
   factoids: 4_000,
@@ -66,6 +78,7 @@ const REASONING_HEADROOM: Record<ReasoningEffort, number> = { low: 2_048, medium
  */
 export const REASONING_FLOOR_TOKENS: Partial<Record<ReplyCap, number>> = {
   generate: 10_000,
+  caseWriterPart: 10_000,
 };
 
 /**

@@ -1,6 +1,7 @@
 import { logUsage } from "../../_shared/entitlements.ts";
 import { mergeNormalizedUsage } from "../../_shared/cost.ts";
 import { callAI } from "../provider.ts";
+import { writeR2Case } from "../r2-case.ts";
 import { isRecord } from "../request.ts";
 import { cleanGeneratedText } from "../text.ts";
 import { buildUserPrompt } from "../prompt-builder.ts";
@@ -12,6 +13,7 @@ import {
   getResearchSources,
   withResearchPreferences,
 } from "../../_shared/research.ts";
+import { researchCountryForLanguage } from "../../_shared/source-quality.ts";
 import { enforceGenerateControls, enforceGenerateSources } from "../../_shared/control-enforcement.ts";
 import { boundPromptSources } from "../../_shared/prompts.ts";
 import { JEV_MODEL } from "../../_shared/jev.ts";
@@ -32,12 +34,16 @@ export async function handleGenerate(ctx: FeatureContext): Promise<Response> {
   const format = String(sanitizedInput.format || "custom");
   const length = String(sanitizedInput.length || "standard");
   const role = String(sanitizedInput.role || "intro");
+  const language = String(sanitizedInput.language || "en");
 
   // Perform deep research to find supporting evidence
   console.log("[GENERATE] Starting deep research for motion:", motion);
   ctx.stream?.phase("research");
+  // A Hungarian or Spanish case looks for that country's sources first.
   const research = await deepResearch(motion, "", researchDeps, withResearchPreferences(DEEP_RESEARCH, {
     preferredSourceType: "any",
+    language,
+    country: researchCountryForLanguage(language),
   }));
   const discoveredSources = buildDiscoveredSources(research);
   const discoveredCandidates: SourceDecisionCandidate[] = discoveredSources.map((source) => ({
@@ -82,7 +88,11 @@ export async function handleGenerate(ctx: FeatureContext): Promise<Response> {
   const systemPrompt = await buildSystemPromptFor(feature, research);
   const userPrompt = buildUserPrompt(feature, sanitizedInput, searchContext);
   const messages = [{ role: "user", content: userPrompt }];
-  const aiResult = recordMainResult(await callAI(provider, model, systemPrompt, messages, reasoningEffort, "generate", workSignal, ctx.stream));
+  // R2 is the longest reply by far, so it is planned and written in parts at
+  // the same time to finish well inside the request budget (see r2-case.ts).
+  const aiResult = recordMainResult(role === "r2"
+    ? await writeR2Case({ callAI, provider, model, reasoningEffort, systemPrompt, userPrompt, length, signal: workSignal, stream: ctx.stream })
+    : await callAI(provider, model, systemPrompt, messages, reasoningEffort, "generate", workSignal, ctx.stream));
   const output = cleanGeneratedText(aiResult.output);
 
   // Preserve model evidence warnings when research exists. If research

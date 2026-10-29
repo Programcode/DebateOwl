@@ -7,11 +7,13 @@ import {
   buildFollowUpSearchRequest,
   buildSearchRequests,
   formatRankedSearchResults,
+  nationalSourceHint,
   rankSearchResults,
   sourceTitleFromUrl,
   type ExaResult,
   type ExaSearchRequest,
   type RankedSearchResult,
+  type ResearchLocale,
   type ResearchSource,
 } from "./source-quality.ts";
 
@@ -50,6 +52,10 @@ export interface ResearchOptions {
   overallTimeoutMs: number;   // Hard timeout for entire research
   preferredSourceType?: string;
   timeframe?: string;
+  /** Output language code: a Hungarian or Spanish request prefers that country's sources. */
+  language?: string;
+  /** ISO country code whose sources to prefer; derived from language when absent. */
+  country?: string;
 }
 
 export const DEEP_RESEARCH: ResearchOptions = {
@@ -487,10 +493,12 @@ export async function decideAskSearch(
 async function generateFollowUpQueries(
   claim: string,
   currentResults: string,
-  deps: ResearchDeps
+  deps: ResearchDeps,
+  locale?: ResearchLocale,
 ): Promise<string[]> {
   throwIfAborted(deps.signal);
-  const prompt = `Claim: "${claim}"\n\nCurrent search results:\n${currentResults.slice(0, 3000)}\n\nGenerate 2-3 specific follow-up queries to find more evidence.`;
+  const hint = nationalSourceHint(locale);
+  const prompt = `Claim: "${claim}"\n\nCurrent search results:\n${currentResults.slice(0, 3000)}\n\nGenerate 2-3 specific follow-up queries to find more evidence.${hint ? ` ${hint}` : ""}`;
   try {
     const result = await deps.callModel({
       provider: deps.provider,
@@ -525,7 +533,8 @@ async function deepResearchInner(
   console.log(`[RESEARCH] Starting (mode: ${options.maxFollowUpQueries > 0 ? "deep" : "light"}) claimLength=${claim.length}`);
 
   const preferredSourceType = options.preferredSourceType || "any";
-  const seedRequests = buildSearchRequests(claim, region, preferredSourceType, options.timeframe).slice(0, options.maxSeedQueries);
+  const locale: ResearchLocale = { language: options.language, country: options.country };
+  const seedRequests = buildSearchRequests(claim, region, preferredSourceType, options.timeframe, locale).slice(0, options.maxSeedQueries);
   const allResults: Array<ExaResult & { query: string }> = [];
   const matchesPreferredSourceType = (result: RankedSearchResult) => (
     preferredSourceType === "any" ||
@@ -547,7 +556,7 @@ async function deepResearchInner(
     const { query } = request;
     const results = await searchWithFallback(request);
     throwIfAborted(signal);
-    const ranked = rankSearchResults(results.map((result) => ({ ...result, query })), claim, preferredSourceType);
+    const ranked = rankSearchResults(results.map((result) => ({ ...result, query })), claim, preferredSourceType, locale);
     const visibleRanked = preferredSourceType === "any" ? ranked : ranked.filter(matchesPreferredSourceType);
     context.searches.push({ query, results: visibleRanked });
     console.log(`[RESEARCH] Seed queryLength=${query.length}: ${results.length} results`);
@@ -555,19 +564,19 @@ async function deepResearchInner(
   }));
   seedResults.forEach((results) => allResults.push(...results));
 
-  const initialRanked = rankSearchResults(allResults, claim, preferredSourceType);
+  const initialRanked = rankSearchResults(allResults, claim, preferredSourceType, locale);
   const initialText = formatRankedSearchResults(initialRanked.slice(0, 12));
 
   // Round 2: AI generates follow-up queries (skipped in light mode)
   if (options.maxFollowUpQueries > 0) {
-    const followUpQueries = await generateFollowUpQueries(claim, initialText, deps);
+    const followUpQueries = await generateFollowUpQueries(claim, initialText, deps, locale);
     throwIfAborted(signal);
     console.log(`[RESEARCH] Follow-up query count: ${followUpQueries.length}`);
 
     const followUpPromises = followUpQueries.slice(0, options.maxFollowUpQueries).map(async (query) => {
       const results = await searchWithFallback(buildFollowUpSearchRequest(query, preferredSourceType, options.timeframe));
       throwIfAborted(signal);
-      const ranked = rankSearchResults(results.map((result) => ({ ...result, query })), claim, preferredSourceType);
+      const ranked = rankSearchResults(results.map((result) => ({ ...result, query })), claim, preferredSourceType, locale);
       const visibleRanked = preferredSourceType === "any" ? ranked : ranked.filter(matchesPreferredSourceType);
       context.searches.push({ query, results: visibleRanked });
       allResults.push(...results.map((result) => ({ ...result, query })));
@@ -577,7 +586,7 @@ async function deepResearchInner(
     console.log(`[RESEARCH] Round 2 complete, ${context.searches.length} total searches`);
   }
 
-  context.rankedResults = rankSearchResults(allResults, claim, preferredSourceType);
+  context.rankedResults = rankSearchResults(allResults, claim, preferredSourceType, locale);
   const readCandidates = preferredSourceType === "any"
     ? context.rankedResults
     : context.rankedResults.filter(matchesPreferredSourceType);

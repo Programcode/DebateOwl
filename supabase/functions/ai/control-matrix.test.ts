@@ -29,7 +29,7 @@ Deno.test("generate length and role controls preserve the output contract", () =
         exordio: { hook: "hook", transition: "transition" },
         opening: { hook: "hook", definition: "definition" },
         contentions: [{}, {}, {}, {}],
-        counters: Array.from({ length: 9 }, () => ({})),
+        counters: Array.from({ length: 14 }, () => ({})),
         reinforce: [{ argument: "Our first argument", text: "backed up" }, { argument: "", text: "  " }],
         whyWeWin: ["a", "b", "c", "d"],
         metadata: {},
@@ -39,7 +39,7 @@ Deno.test("generate length and role controls preserve the output contract", () =
         // R2 brings no new arguments: it backs up the team's and answers theirs.
         assert((output.contentions as unknown[]).length === 0, `generate.${length}.r2 has no contentions`);
         assert((output.reinforce as unknown[]).length === 1, `generate.${length}.r2 keeps only reinforce items with text`);
-        assert((output.counters as unknown[]).length === (length === "brief" ? 5 : 6), `generate.${length}.r2 answer count`);
+        assert((output.counters as unknown[]).length === (length === "brief" ? 10 : 12), `generate.${length}.r2 answer count`);
         assert(!("whyWeWin" in output), "generate.r2 has no whyWeWin");
       } else if (role === "conc") {
         // The Conclusor brings 2-3 reasons we win and no new arguments.
