@@ -1,34 +1,37 @@
+import * as AppleAuthentication from 'expo-apple-authentication';
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, View, useWindowDimensions, type TextInput } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { SuccessCheck } from '@/components/success-check';
-import { MainActionButton, TextButton } from '@/components/buttons';
+import { MainActionButton, SecondaryButton, TextButton } from '@/components/buttons';
 import { Field } from '@/components/field';
 import { SegmentedControl } from '@/components/segmented-control';
 import { Text } from '@/components/text';
 import { useAuth } from '@/lib/auth';
 import { signInErrorKey } from '@/lib/sign-in-errors';
+import { appleSignInAvailable, googleSignInAvailable, signInWithApple, signInWithGoogle } from '@/lib/social-sign-in';
 import { Icon } from '@/components/icon';
 import { OwlMark } from '@/components/owl';
 import { useTheme } from '@/theme/use-theme';
 
 type Mode = 'email' | 'demo';
-type Status = 'idle' | 'sending' | 'code-sent' | 'verifying' | 'signing-in' | 'error';
+type Status = 'idle' | 'sending' | 'code-sent' | 'verifying' | 'signing-in' | 'social' | 'error';
 
 // The website's checks (src/pages/LoginPage.tsx).
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const DEMO_CODE_PATTERN = /^DEMO-[A-Z0-9]{4}-[A-Z0-9]{4}$/;
 
 /**
- * Email code and demo code, as on the website. Google sign-in needs an OAuth
- * redirect back into the app, which Expo Go cannot do, so it arrives with the
- * first development build; Sign in with Apple comes after that.
+ * Email code and demo code, as on the website, then Sign in with Apple and
+ * Google where the build can finish them (social-sign-in.ts). Apple's button
+ * comes first and is Apple's own, as App Review asks of an app that offers
+ * Google too.
  */
 export default function SignInScreen() {
   const { t } = useTranslation();
-  const { colors } = useTheme();
+  const { colors, scheme } = useTheme();
   const insets = useSafeAreaInsets();
   // On iPad the form sits in the middle of the screen instead of under the status bar.
   const centred = useWindowDimensions().width >= 700;
@@ -43,7 +46,19 @@ export default function SignInScreen() {
   const [error, setError] = useState('');
   const otpRef = useRef<TextInput>(null);
 
-  const busy = status === 'sending' || status === 'verifying' || status === 'signing-in';
+  const busy = status === 'sending' || status === 'verifying' || status === 'signing-in' || status === 'social';
+  const [apple, setApple] = useState(false);
+  const google = googleSignInAvailable();
+
+  useEffect(() => {
+    let live = true;
+    void appleSignInAvailable().then((available) => {
+      if (live) setApple(available);
+    });
+    return () => {
+      live = false;
+    };
+  }, []);
 
   useEffect(() => {
     if (codeSent) otpRef.current?.focus();
@@ -98,6 +113,18 @@ export default function SignInScreen() {
       await signInWithDemoCode(normalized);
     } catch (cause) {
       fail(signInErrorKey(cause, 'login.demoError'));
+    }
+  };
+
+  const social = async (provider: () => Promise<'signed-in' | 'cancelled'>) => {
+    setError('');
+    setStatus('social');
+    try {
+      // Signed in, the auth provider moves on from this screen.
+      if ((await provider()) === 'cancelled') setStatus('idle');
+    } catch (cause) {
+      console.warn('Social sign-in failed:', cause instanceof Error ? cause.message : cause);
+      fail(signInErrorKey(cause, 'mobile.signIn.socialError'));
     }
   };
 
@@ -218,6 +245,30 @@ export default function SignInScreen() {
           </View>
         ) : null}
 
+        {(apple || google) && !codeSent ? (
+          <View style={styles.form}>
+            <View style={styles.divider} accessibilityRole="text">
+              <View style={[styles.rule, { backgroundColor: colors.line }]} />
+              <Text tone="secondary" weight="semibold" style={styles.dividerText}>
+                {t('login.orContinueWith')}
+              </Text>
+              <View style={[styles.rule, { backgroundColor: colors.line }]} />
+            </View>
+            {apple ? (
+              <View pointerEvents={busy ? 'none' : 'auto'} style={busy ? styles.dimmed : undefined}>
+                <AppleAuthentication.AppleAuthenticationButton
+                  buttonType={AppleAuthentication.AppleAuthenticationButtonType.CONTINUE}
+                  buttonStyle={scheme === 'dark' ? AppleAuthentication.AppleAuthenticationButtonStyle.WHITE : AppleAuthentication.AppleAuthenticationButtonStyle.BLACK}
+                  cornerRadius={16}
+                  style={styles.appleButton}
+                  onPress={() => void social(signInWithApple)}
+                />
+              </View>
+            ) : null}
+            {google ? <SecondaryButton label={t('login.google')} disabled={busy} onPress={() => void social(signInWithGoogle)} testID="google-sign-in" /> : null}
+          </View>
+        ) : null}
+
         {sessionExpired && status !== 'code-sent' ? (
           // The website's login notice after the server ended the session; it goes once a sign-in succeeds.
           <View style={[styles.notice, { backgroundColor: colors.tile, borderColor: colors.tileBorder }]} accessibilityRole="alert" testID="session-expired">
@@ -264,4 +315,9 @@ const styles = StyleSheet.create({
   form: { gap: 18 },
   secondary: { gap: 2 },
   message: { fontSize: 15, lineHeight: 21 },
+  divider: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  rule: { flex: 1, height: 2, borderRadius: 1 },
+  dividerText: { fontSize: 14 },
+  appleButton: { height: 52 },
+  dimmed: { opacity: 0.5 },
 });
