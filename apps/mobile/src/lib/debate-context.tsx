@@ -22,6 +22,8 @@ type Status = 'loading' | 'ready' | 'error';
 
 type DebateContextValue = {
   status: Status;
+  /** The list came from the server, not from the saved copy painted while it loads; the five-day check waits for it. */
+  fresh: boolean;
   debates: Debate[];
   current: Debate | null;
   /** Session-only, as on the website: tools run without reading from or saving to any debate. */
@@ -48,6 +50,7 @@ export function DebateProvider({ children }: { children: ReactNode }) {
   const { session } = useAuth();
   const userId = session?.user.id ?? null;
   const [status, setStatus] = useState<Status>('loading');
+  const [fresh, setFresh] = useState(false);
   const [debates, setDebates] = useState<Debate[]>([]);
   const [currentId, setCurrentId] = useState<string | null>(null);
   const [oneOff, setOneOff] = useState(false);
@@ -74,6 +77,7 @@ export function DebateProvider({ children }: { children: ReactNode }) {
       const show = (next: Awaited<ReturnType<typeof fetchDebates>>) => {
         if (!current()) return;
         paintedCopy = true;
+        setFresh(false);
         setDebates((previous) => keepIfSame(previous, next.debates));
         setCurrentId(next.currentId);
         setStatus('ready');
@@ -84,6 +88,7 @@ export function DebateProvider({ children }: { children: ReactNode }) {
       setDebates((previous) => keepIfSame(previous, next.debates));
       setCurrentId(next.currentId);
       setStatus('ready');
+      setFresh(true);
     }, async (cause) => {
       // A switch or create since this refresh began already holds newer state.
       if (!current()) return;
@@ -100,6 +105,7 @@ export function DebateProvider({ children }: { children: ReactNode }) {
     setCurrentId(null);
     setOneOff(false);
     setStatus('loading');
+    setFresh(false);
     if (!userId) return;
     void refresh();
     // Pick up debates started or switched on the website while the app was in the background.
@@ -130,6 +136,7 @@ export function DebateProvider({ children }: { children: ReactNode }) {
     const current = debates.find((debate) => debate.id === currentId) ?? null;
     return {
       status,
+      fresh,
       debates,
       current,
       oneOff,
@@ -203,7 +210,7 @@ export function DebateProvider({ children }: { children: ReactNode }) {
         setStatus('ready');
       },
     };
-  }, [status, debates, currentId, oneOff, refresh]);
+  }, [status, fresh, debates, currentId, oneOff, refresh]);
 
   return <DebateContext.Provider value={value}>{children}</DebateContext.Provider>;
 }
