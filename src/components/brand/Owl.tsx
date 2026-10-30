@@ -134,7 +134,7 @@ export function Owl({ pose, size, className, label, priority = false, gesture, b
                 src={POSES[pose]}
                 width={size}
                 height={size}
-                alt=""
+                alt={label ?? ''}
                 draggable={false}
                 decoding="async"
                 loading={priority ? 'eager' : 'lazy'}
@@ -192,7 +192,7 @@ export function OwlAvatar({ pose, size = 40, className, label, blink = false }: 
             src={POSES[pose]}
             width={size}
             height={size}
-            alt=""
+            alt={label ?? ''}
             draggable={false}
             decoding="async"
             className="absolute inset-0 h-full w-full select-none object-contain"
