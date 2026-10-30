@@ -1348,31 +1348,26 @@ def page_argufight():
         ("Which languages do they support?", "ArguFight's site lists 26 languages. The DebateOwl app is in English, Spanish and Hungarian."),
     ]
     debaters = [
-        ("You have a school debate on a set motion next week", "DebateOwl", "You need the speech written in the order you will say it, the answers to what the other side will say, and a timed run-through. That is the job DebateOwl is built for."),
-        ("You compete in Public Forum or Lincoln-Douglas", "DebateOwl", "Sparring runs those rounds at their real speech times and ends with a verdict that names a reason. ArguFight's rounds are its own written format, not a PF or LD round."),
-        ("You enjoy arguing online and want to beat real people", "ArguFight", "Its core loop is a challenge another person accepts, written rounds, a judged result and an ELO rating. DebateOwl has no human opponents."),
-        ("You run a class and want a tournament that marks itself", "ArguFight", "Its schools page offers free, private, invite-only tournaments with every match judged 0–100 with written reasons."),
-        ("You debate in French, German or Turkish", "ArguFight", "Its site lists 26 languages. The DebateOwl app covers English, Spanish and Hungarian."),
-        ("You want both prep and a crowd", "Both", "Write and drill the case in DebateOwl, then post your strongest argument as an ArguFight challenge and see whether it survives a stranger."),
+        ("You have a tournament motion next week", "DebateOwl", "It writes the case in the order you will say it, with \"If they say… we answer…\" replies, then times a practice round in School 4-6-6-3, Lincoln-Douglas or Public Forum."),
+        ("You want quick, casual argument practice", "ArguFight", "You can test a take against its AI in about a minute or start a speed debate of 3 rounds in 1 hour, and it is free to start."),
+        ("You coach a club", "ArguFight", "Its schools page offers free, private class tournaments where an AI judges every match 0–100 with written reasons. For a live round in the room, DebateOwl's free timer and flow sheet need no accounts."),
+        ("You debate in Spanish or Hungarian", "DebateOwl", "The app is in both languages and its AI writes the case, the replies and the practice opponent in them. ArguFight's site lists both languages too, but it does not write a case."),
+        ("You debate in French, German or another language", "ArguFight", "Its site lists 26 languages. The DebateOwl app covers English, Spanish and Hungarian."),
     ]
     cards = "".join(
-        f'<article class="who {"owl" if pick == "DebateOwl" else "af" if pick == "ArguFight" else "both"}"><h3>{esc(who)}</h3><p class="pick">{TICK if pick == "DebateOwl" else ""}Pick: {esc(pick)}</p><p>{esc(why)}</p></article>'
+        f'<article class="who {"owl" if pick == "DebateOwl" else "af"}"><h3>{esc(who)}</h3><p class="pick">{TICK if pick == "DebateOwl" else ""}Pick: {esc(pick)}</p><p>{esc(why)}</p></article>'
         for who, pick, why in debaters
     )
+    head = ["", "Made for", "Case you can read out", "\"If they say… we answer…\" replies", "Timed rounds in real formats", "Languages", "Price (as of Oct 2026)"]
     rows = [
-        ("Main job", "Prepare one motion and rehearse it", "Win written debates against people, judged by AI"),
-        ("Opponent", "An AI that argues the other side", "Real people; AI opponents for a warm-up"),
-        ("Round shape", "Your format's speeches at real times (School 4-6-6-3, LD, PF)", "Standard: 5 written rounds over 24 hours. Speed: 3 rounds in 1 hour"),
-        ("Who decides", "A judged verdict that names the reason", "A panel of up to three AI judges, each scoring 0–100 with reasons"),
-        ("What you keep", 'A case: opening, arguments, "If they say… we answer…", closing, sources', "A verdict, an ELO change, sometimes a belt"),
-        ("Written case", "Yes, exportable to Word, PDF or Google Docs", "Not listed"),
-        ("Languages", "English, Spanish, Hungarian", "26 listed"),
-        ("Price", "3-day free trial, then $5/month + tax", "Free to start; paid tiers not stated"),
+        ("DebateOwl", "Preparing one motion and rehearsing it", "Yes: opening, arguments with evidence and why they matter, closing, sources", "Yes, in every case", "Yes: School 4-6-6-3, LD and PF in Sparring, typed or spoken", "English, Spanish, Hungarian", "3-day free trial, then $5/month + tax"),
+        ("ArguFight", "Written debates against people, judged by AI", "Not listed", "Not listed", "No: its own written rounds, 5 over 24 hours or 3 in 1 hour", "26 listed", "Free to start; paid tiers not stated"),
     ]
-    trs = "".join(f'<tr><th scope="row">{esc(a)}</th><td>{esc(b)}</td><td>{esc(c)}</td></tr>' for a, b, c in rows)
+    ths = "".join(f'<th scope="col">{esc(h)}</th>' for h in head)
+    trs = "".join(f'<tr{OWN if i == 0 else ""}><th scope="row">{esc(r[0])}</th>' + "".join(f"<td>{esc(c)}</td>" for c in r[1:]) + "</tr>" for i, r in enumerate(rows))
     body = f"""
 <section class="who-grid">
-  <h2>Six debaters, six picks</h2>
+  <h2>Five debaters, five picks</h2>
   <p>Find the line that sounds like you. The pick is about the job in front of you this month, not about which product is bigger.</p>
   <div class="cards">{cards}</div>
 </section>
@@ -1409,7 +1404,7 @@ def page_argufight():
   <h2>Matrix: DebateOwl and ArguFight</h2>
   <div class="scroll"><table>
     <caption>As of October 2026, from each product's own pages. DebateOwl is the first column.</caption>
-    <thead><tr><th scope="col"></th><th scope="col">DebateOwl</th><th scope="col">ArguFight</th></tr></thead>
+    <thead><tr>{ths}</tr></thead>
     <tbody>{trs}</tbody>
   </table></div>
 </section>
@@ -1437,12 +1432,12 @@ body.argu{background:#F6F7FB}body.argu main{width:min(1060px,calc(100% - 32px));
 body.argu h1{font-size:clamp(2.3rem,5.6vw,3.9rem);color:#0B1426}
 body.argu .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(290px,1fr));gap:14px}
 body.argu .who{background:#fff;border-radius:22px;padding:4px 18px 10px;border:2px solid #D9DEEA}
-body.argu .who.owl{border-color:#0A6FF0}body.argu .who.af{border-color:#E4572E}body.argu .who.both{border-style:dashed}
+body.argu .who.owl{border-color:#0A6FF0}body.argu .who.af{border-color:#E4572E}
 body.argu .pick{font-family:Fredoka,Nunito,sans-serif;display:flex;align-items:center;margin:0}
 body.argu .cta-band{background:#0B1426;color:#EEF4FF;border-radius:28px;padding:8px 24px 20px;margin:28px 0}
 body.argu .cta-band a:not(.cta){color:#FCE48A}
 body.argu .case{display:grid;gap:8px;padding-left:1.3rem}body.argu .case li{background:#fff;border-radius:14px;padding:8px 12px}
-body.argu table{min-width:680px;background:#fff}body.argu td:nth-child(2){background:#EEF7FF}
+body.argu table{min-width:900px;background:#fff}body.argu tr.own{background:#EEF7FF}
 body.argu details{border-bottom:1px solid #D9DEEA;padding:10px 0}
 """
     return {
@@ -1477,16 +1472,14 @@ def page_mindduel():
         ("Can I speak instead of type in both?", "Yes. MindDuel uses voice-to-text. DebateOwl's Sparring speeches can be typed or spoken."),
     ]
     mind = [
-        ("Set up", "Choose a topic (its listing names politics, technology, ethics and society) and a level: Beginner, Intermediate or Expert. Set thinking time and speaking time, each 5 to 60 seconds."),
-        ("Debate", "Ten rounds, you against the AI, spoken through voice-to-text."),
-        ("Result", "A 0–100 total, scored on clarity, logic and structure, evidence and examples, persuasiveness and rebuttal, with a short explanation."),
-        ("Afterwards", "The debate is saved to your history, and your score can put you on a global leaderboard."),
+        ("Prepare", "Its listing names no prep step. Choose a topic (its listing names politics, technology, ethics and society) and a level: Beginner, Intermediate or Expert. Set thinking time and speaking time, each 5 to 60 seconds."),
+        ("Practise", "Ten rounds, you against the AI, spoken through voice-to-text."),
+        ("Review", "A 0–100 total, scored on clarity, logic and structure, evidence and examples, persuasiveness and rebuttal, with a short explanation. The debate goes into your history, and there is a global leaderboard."),
     ]
     owl = [
-        ("Set up", "Open a Current Debate with the motion as it will be announced, and pick your side."),
-        ("Prepare", 'Generate the case: opening, two to four arguments with evidence and why they matter, "If they say… we answer…" replies, closing line, sources. Open the sources.'),
-        ("Debate", "Run Sparring in School 4-6-6-3, Lincoln-Douglas or Public Forum at the real speech times, typed or spoken. Drill questions in Crossfire if you like."),
-        ("Result", "A judged verdict that names the reason. Rebuild that one part and run the speech again."),
+        ("Prepare", 'Open a Current Debate with the motion and your side, and generate the case: opening, two to four arguments with evidence and why they matter, "If they say… we answer…" replies, closing line, sources. Open the sources.'),
+        ("Practise", "Run Sparring in School 4-6-6-3, Lincoln-Douglas or Public Forum at the real speech times, typed or spoken. Crossfire drills the questions."),
+        ("Review", "A judged verdict that names the reason. Rebuild that one part, with Attack or by regenerating the section, and give the speech again."),
     ]
     def lane(steps):
         return "".join(f"<li><strong>{esc(step)}.</strong> {esc(text)}</li>" for step, text in steps)
@@ -1511,7 +1504,7 @@ def page_mindduel():
     <div class="lane md"><h3>In MindDuel</h3><ol>{lane(mind)}</ol></div>
     <div class="lane owl"><h3>{TICK}In DebateOwl</h3><ol>{lane(owl)}</ol></div>
   </div>
-  <p>MindDuel trains how fast you can answer. DebateOwl trains what you say when the round is real. Neither replaces the other.</p>
+  <p>Both columns follow the same three steps: prepare, practise, review. MindDuel trains how fast you can answer. DebateOwl trains what you say when the round is real.</p>
 </section>
 <section>
   <h2>What the DebateOwl case looks like for this motion</h2>
@@ -1526,18 +1519,6 @@ def page_mindduel():
   <p>The two "If they say…" lines make good MindDuel material: each is a 30-second answer you can practise saying without notes. That is one honest way to use both.</p>
 </section>
 <section>
-  <h2>Pick by what you have this week</h2>
-  <ul class="picks">
-    <li><strong>Ten spare minutes and a phone:</strong> MindDuel. Short turns are the point.</li>
-    <li><strong>A motion and a tournament date:</strong> DebateOwl. You need the case before the reflexes.</li>
-    <li><strong>Nerves when you speak:</strong> start with MindDuel on Beginner, then move to full timed speeches in DebateOwl.</li>
-    <li><strong>A Public Forum or Lincoln-Douglas round:</strong> DebateOwl, because Sparring uses those formats' speech order and times.</li>
-  </ul>
-  <p><a class="cta" href="/ai-debate-case-generator">Get the case for your motion</a></p>
-  <p>{PRICE_HTML}</p>
-  <p>Other tools are compared on <a href="/best-ai-for-debate">which AI is best for debate</a>, and written rounds against real people on <a href="/debateowl-vs-argufight">DebateOwl vs ArguFight</a>.</p>
-</section>
-<section>
   <h2>The two apps in one table</h2>
   <div class="scroll"><table>
     <caption>As of October 2026. MindDuel facts come from its Google Play listing. DebateOwl is the right-hand column.</caption>
@@ -1545,6 +1526,22 @@ def page_mindduel():
     <tbody>{trs}</tbody>
   </table></div>
   <p>MindDuel's listing places it in the Entertainment category. Its only public page we found is that listing, so anything it does not say is marked not stated.</p>
+</section>
+<section class="ending">
+  <h2>When MindDuel is enough, and when you want DebateOwl</h2>
+  <div class="two">
+    <div>
+      <h3>MindDuel is enough when</h3>
+      <p>you have ten spare minutes and an Android phone, you want to get used to answering out loud in under a minute, and a score out of 100 is the feedback you need. It is also a gentle start if speaking makes you nervous: begin on Beginner with long thinking time.</p>
+    </div>
+    <div class="owl">
+      <h3>{TICK}You want DebateOwl when</h3>
+      <p>a motion and a date are set. Then you need the case written before the reflexes, replies ready for the other side, and a round at your format's real speech times that ends with a reason, not only a number.</p>
+      <p><a class="cta" href="/ai-debate-case-generator">Get the case for your motion</a></p>
+      <p>{PRICE_HTML}</p>
+    </div>
+  </div>
+  <p>Other tools are compared on <a href="/best-ai-for-debate">which AI is best for debate</a>, and written rounds against real people on <a href="/debateowl-vs-argufight">DebateOwl vs ArguFight</a>.</p>
 </section>
 {faq_block("MindDuel questions", faqs, "defs")}
 {sources("Sources (checked October 2026)", [
@@ -1563,7 +1560,7 @@ body.duel .lane{background:#fff;border-radius:22px;padding:4px 18px 10px;border:
 body.duel .lane.owl{border-color:#0A6FF0;background:#F2F8FF}body.duel .lane h3{display:flex;align-items:center}
 body.duel .lane li{margin:8px 0}
 body.duel .case{background:#fff;border-radius:22px;padding:6px 20px;border-left:5px solid #0A6FF0}
-body.duel .picks{list-style:none;padding:0;display:grid;gap:8px}body.duel .picks li{background:#fff;border-radius:14px;padding:8px 14px}
+body.duel .ending .two>div{background:#fff;border-radius:22px;padding:4px 18px 10px;border:2px solid #E3D8F7}body.duel .ending .owl{border-color:#0A6FF0!important;background:#F2F8FF!important}body.duel .ending h3{display:flex;align-items:center}
 body.duel table{min-width:640px;background:#fff}body.duel td:nth-child(3){background:#EEF7FF}
 body.duel dt{font-family:Fredoka,Nunito,sans-serif;margin-top:14px}
 @media(max-width:760px){body.duel .two{grid-template-columns:1fr}}
