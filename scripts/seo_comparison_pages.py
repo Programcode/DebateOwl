@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Seven comparison and prep pages, each with its own layout.
+"""The comparison and prep pages, each with its own layout, including the native Spanish and Hungarian ones.
 
 DebateOwl leads every page. Competitor facts stay sourced. The generator
 refuses jargon, a missing pricing sentence, or two pages that share more
@@ -1120,11 +1120,11 @@ def page_es():
     ]
     cards = "".join(f"<div><dt>{esc(q)}</dt><dd>{esc(a)}</dd></div>" for q, a in situations)
     rows = [
-        ("DebateOwl", "Preparar una moción concreta y ensayarla", "Sí: apertura, argumentos, «Si dicen… respondemos…», cierre y fuentes", "Sí: Sparring cronometrado con veredicto (School 4-6-6-3, LD, PF)", "Prueba de 3 días, luego 5 $/mes + impuestos; herramientas aparte gratis"),
+        ("DebateOwl", "Preparar una moción concreta y ensayarla", "Sí: apertura, argumentos, «Si dicen… respondemos…», cierre y fuentes", "Sí: Sparring cronometrado con veredicto (School 4-6-6-3, LD, PF)", "Prueba de 3 días, luego $5/mes + impuestos; herramientas aparte gratis"),
         ("ChatGPT", "Ideas y contraargumentos rápidos", "Solo si se lo pides cada vez", "Solo si montas tú la conversación", "Versión gratis para todos; planes Go, Plus y Pro"),
-        ("Claude", "Revisar un caso largo que pegas", "Solo si se lo pides cada vez", "Solo si montas tú la conversación", "Plan gratis; Pro 20 $/mes (17 $/mes anual)"),
+        ("Claude", "Revisar un caso largo que pegas", "Solo si se lo pides cada vez", "Solo si montas tú la conversación", "Plan gratis; Pro $20/mes ($17/mes anual)"),
         ("ArguFight", "Debates escritos contra personas, con jueces de IA", "No", "Puedes calentar contra una IA; el núcleo es contra personas", "Gratis para empezar; precios de pago no indicados"),
-        ("PublicForumAI", "Public Forum en inglés", "Sí, casos de Public Forum", "Sí: 3 rondas/mes gratis", "Gratis; Premium 9,99 $/mes o 79 $/año"),
+        ("PublicForumAI", "Public Forum en inglés", "Sí, casos de Public Forum", "Sí: 3 rondas/mes gratis", "Gratis; Premium $9,99/mes o $79/año"),
         ("Debate Ladder", "Hablar en voz alta y subir en un ranking", "No", "Sí, por voz: apertura, réplica y cierre", "100 créditos gratis; luego ~1 crédito por minuto"),
     ]
     trs = "".join(
@@ -1165,11 +1165,11 @@ def page_es():
   <h3>ChatGPT</h3>
   <p>A octubre de 2026, OpenAI dice que la versión gratis está disponible para todos; los planes de pago son Go, Plus y Pro, además de Business y Enterprise. Va muy bien para una lluvia de ideas rápida. Tu moción, tu lado y los tiempos de cada discurso solo los guarda si se lo preparas tú, con proyectos o memoria. <a href="#es1">F1</a></p>
   <h3>Claude</h3>
-  <p>A octubre de 2026, Claude tiene un plan gratis de 0 $. Pro cuesta 20 $ al mes con pago mensual o 17 $ al mes con pago anual, y Max empieza en 100 $ al mes. Es un buen sitio para pegar un caso largo y pedir una crítica. <a href="#es2">F2</a></p>
+  <p>A octubre de 2026, Claude tiene un plan gratis de $0. Pro cuesta $20 al mes con pago mensual o $17 al mes con pago anual, y Max empieza en $100 al mes. Es un buen sitio para pegar un caso largo y pedir una crítica. <a href="#es2">F2</a></p>
   <h3>ArguFight</h3>
   <p>A octubre de 2026, ArguFight es una plataforma de debates por escrito: lanzas un reto, eliges a favor o en contra y otra persona lo acepta. Hay modo estándar (5 rondas en 24 horas) y modo rápido (3 rondas en 1 hora). Un panel de hasta tres jueces de IA puntúa cada debate de 0 a 100 y explica su decisión; su propia web habla de un plantel de seis, siete o diez personalidades según la página. Tiene clasificación ELO, cinturones, dictado por voz y la web en 26 idiomas, entre ellos el español. Es gratis para empezar. No publica ningún precio de pago: su página /pricing devuelve un error 404. Si lo que buscas es debatir en español contra gente real, aquí ArguFight te sirve mejor que DebateOwl. <a href="#es3">F3</a> <a href="#es4">F4</a></p>
   <h3>PublicForumAI</h3>
-  <p>A octubre de 2026, solo trabaja Public Forum. El plan gratis incluye 3 rondas completas al mes, ejercicios de flujo ilimitados, 5 casos al mes y 15 módulos de formación. Premium cuesta 9,99 $ al mes o 79 $ al año y añade rondas ilimitadas con fuentes enlazadas. <a href="#es5">F5</a></p>
+  <p>A octubre de 2026, solo trabaja Public Forum. El plan gratis incluye 3 rondas completas al mes, ejercicios de flujo ilimitados, 5 casos al mes y 15 módulos de formación. Premium cuesta $9,99 al mes o $79 al año y añade rondas ilimitadas con fuentes enlazadas. <a href="#es5">F5</a></p>
   <h3>Debate Ladder</h3>
   <p>A octubre de 2026, es un juego de debate por voz: te toca a favor o en contra, das apertura, réplica y cierre por micrófono, y un juez de IA puntúa lógica, capacidad de respuesta, claridad, expresión y persuasión. Las victorias en partidas puntuadas suben tu ELO, que empieza en 500. Las cuentas nuevas reciben 100 créditos y cada debate cuesta más o menos un crédito por minuto. <a href="#es6">F6</a></p>
 </section>
@@ -1190,10 +1190,10 @@ def page_es():
 <p class="langs">Esta guía también está en <a href="/best-ai-for-debate" hreflang="en">inglés</a>, con más herramientas, y en <a href="/hu/melyik-ai-a-legjobb-vitara" hreflang="hu">húngaro</a>.</p>
 {sources("Fuentes (consultadas en octubre de 2026)", [
     ("es1", "https://chatgpt.com/pricing", "Versión gratis disponible para todos; planes Go, Plus y Pro; Business y Enterprise en las preguntas frecuentes."),
-    ("es2", "https://claude.com/pricing", "Plan gratis de 0 $; Pro 17 $/mes anual o 20 $ mensual; Max desde 100 $/mes."),
+    ("es2", "https://claude.com/pricing", "Plan gratis de $0; Pro $17/mes anual o $20 mensual; Max desde $100/mes."),
     ("es3", "https://www.argufight.com/", "Retos, modos de 5 y 3 rondas, jueces de IA de 0 a 100, ELO, cinturones, voz, 26 idiomas, gratis para empezar. /pricing devuelve 404."),
     ("es4", "https://www.argufight.com/judges", "Panel de tres jueces elegidos entre diez personalidades; la portada habla de siete y la página About de seis."),
-    ("es5", "https://publicforumai.com/pricing", "Plan gratis y Premium a 9,99 $/mes o 79 $/año."),
+    ("es5", "https://publicforumai.com/pricing", "Plan gratis y Premium a $9,99/mes o $79/año."),
     ("es6", "https://debateladder.com/", "Juego de debate por voz, ELO desde 500, 100 créditos gratis, un crédito por minuto aproximadamente."),
 ], "Consultado el 30 de octubre de 2026.")}
 """
