@@ -56,7 +56,8 @@ def operate(action, path, owner):
                 if pause:
                     # Tests only: hold the guard here to prove a second caller is refused.
                     Path(pause + ".ready").touch()
-                    Path(pause).read_text()
+                    while not Path(pause).exists():
+                        time.sleep(0.05)
                 shutil.rmtree(path)
             else:
                 return 1

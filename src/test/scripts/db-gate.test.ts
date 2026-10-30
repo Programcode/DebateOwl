@@ -71,14 +71,14 @@ it("refuses a second caller while another reclaims a stale lock", async () => {
   // Round-1 review race: two waiters both judged one stale lock reclaimable
   // and both returned success. The fcntl guard in lock.py must make the
   // second caller wait. A pauses inside the guard, between judging the lock
-  // stale and removing it; without the guard, B would take the lock here.
+  // stale and removing it, until `pause` exists; without the guard, B would
+  // take the lock here.
   const root = await mkdtemp(join(tmpdir(), "debatelab-lock-race-"));
   temporaryRoots.push(root);
   const lock = join(root, "slot.lock");
   const pause = join(root, "pause");
   await mkdir(lock);
   await utimes(lock, new Date(2000, 0, 1), new Date(2000, 0, 1));
-  expect(spawnSync("mkfifo", [pause]).status).toBe(0);
   const helper = resolve(".superset/lib/lock.py");
   const a = spawn("python3", [helper, "acquire", lock, "4242"], {
     env: { ...process.env, DEBATELAB_LOCK_TEST_PAUSE: pause },
