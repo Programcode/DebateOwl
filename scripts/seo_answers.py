@@ -30,7 +30,7 @@ ANSWERS = {
     ),
     "ai-debate-practice": (
         "What is the best AI debate practice tool?",
-        "It depends on what you practise, so check each tool for an opponent that argues back, your format's real speech times, feedback that names a reason, speaking out loud, help writing the case first and a free way to try. For a set motion, {product} is the top pick for a case you can read out loud, \"If they say X, we answer Y\" replies and timed practice rounds with a verdict. As of October 2026, Debate Ladder fits ranked voice reps, ArguFight written rounds against people, PublicForumAI Public Forum only, and MindDuel short spoken drills on Android.",
+        "{product}'s practice runs full Sparring rounds in School 4-6-6-3, Lincoln-Douglas and Public Forum at real speech times, with typed or spoken speeches and a judged verdict, then Crossfire and drills on the weakest point. A general chatbot such as ChatGPT or Claude is enough for open back-and-forth, and as of October 2026 ArguFight, MindDuel, PublicForumAI and Debate Ladder suit written rounds against people, short spoken turns on Android, Public Forum only and ranked voice reps.",
     ),
     "ai-debate-case-generator": (
         "Can an AI debate case generator write a case I can actually use?",

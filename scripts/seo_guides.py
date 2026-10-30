@@ -18,34 +18,35 @@ GUIDES = {
             ("Keep private prep out of search", "Cases, sources, rounds and history stay inside your Current Debate behind sign-in. Only these public guides are indexed."),
         ],
         "sections": [
-            ("The checklist: seven things a practice tool should do", [
-                "Before you compare products, decide what you are practising. Tick the lines that matter for your next month; the matrix below shows which tools do each one.",
-                {"checklist": [
-                    "An opponent argues back against what you actually said.",
-                    "Rounds follow my format's speech order and times.",
-                    "Feedback names a reason I won or lost, not only a number.",
-                    "I can say my speeches out loud, not only type them.",
-                    "It helps me write the case before I practise it.",
-                    "It remembers my motion and side between sessions.",
-                    "There is a free way to try it first.",
-                ]},
-                "No tool does all seven equally well, and you may not need all seven. A debater with a tournament motion needs the first five. Someone building confidence before their first round mostly needs the first and the fourth.",
+            ("Can practising debate against an AI actually make you better?", [
+                "Yes, if it shortens the loop of giving a speech, finding what failed, fixing one thing and giving it again. A useful session needs a motion, a side, real speech times, an opponent that responds to what you said and a verdict that names why you won or lost. {product}'s Sparring runs School 4-6-6-3, Lincoln-Douglas and Public Forum rounds this way. AI practice adds repetitions between team practices but does not replace them: judge adaptation, delivery under pressure and strategic judgement still develop fastest with a coach and real rounds.",
             ]),
-            ("Comparison matrix (as of October 2026)", [
+            ("What to look for in an AI practice partner", [
+                "Tick the lines that matter for your next month. The table below shows which tools do each one.",
+                {"checklist": [
+                    "The opponent replies to what I actually said, not to a script.",
+                    "Rounds use my format's real speech times.",
+                    "The verdict gives reasons, not only a score.",
+                    "The verdict turns into drills on my weakest point.",
+                    "It works in my language.",
+                    "My prep stays private.",
+                ]},
+                "You may not need all six. A debater with a tournament motion needs the first four. Someone building confidence before a first round mostly needs the first one and a way to speak out loud.",
+            ]),
+            ("How practice tools compare (as of October 2026)", [
                 {"table": {
-                    "caption": "Each competitor cell comes from that product's own page, checked October 30, 2026. Not stated means its pages do not say.",
-                    "head": ["Tool", "Opponent", "Real format times", "Feedback", "Out loud", "Writes the case first", "Keeps your motion", "Free way to try"],
+                    "caption": "AI practice tools against the checklist, as of October 2026, from each product's own pages. Not stated means its pages do not say.",
+                    "head": ["Tool", "Replies to what you said", "Real speech times", "Verdict with reasons", "Drills from the verdict", "Your language", "Private prep"],
                     "rows": [
-                        ["[{product}](/)", "An AI that argues the other side", "Yes: School 4-6-6-3, LD and PF in Sparring", "A judged verdict that names the reason", "Yes, typed or spoken", "Yes: opening, arguments, \"If they say… we answer…\", closing, sources", "Yes: one Current Debate per motion", "3-day free trial; free timer and tools with no account"],
-                        ["[Debate Ladder](https://debateladder.com/)", "An AI, voice first", "No: its own opening, rebuttal and closing", "AI judge on five criteria, with feedback", "Yes; practice mode lets you type", "Not listed", "Saves your custom debates", "100 free credits"],
-                        ["[ArguFight](https://www.argufight.com/)", "People; an AI for a warm-up", "No: 5 written rounds over 24 hours, or 3 in 1 hour", "Up to three AI judges, 0–100 with reasons", "Speech-to-text input", "Not listed", "Debate history", "Free to start"],
-                        ["[PublicForumAI](https://publicforumai.com/pricing)", "An AI", "Public Forum only", "Tech and lay judge feedback", "Not stated", "Yes: Public Forum cases", "Rounds kept 30 days on the free plan", "3 full rounds a month"],
-                        ["[MindDuel](https://play.google.com/store/apps/details?id=com.serdaryalkabov.brightmint)", "An AI", "No: 10 turns of 5–60 seconds", "0–100 score in five areas, short explanation", "Yes, voice-to-text", "Not listed", "Debate history", "In-app purchases; prices not stated"],
-                        ["[ChatGPT](https://chatgpt.com/pricing)", "The chat, if you set it up", "Only if you set it up", "Only if you ask", "Voice chats, limited on the free plan", "By prompting", "With memory, limited on the free plan", "Free version for everyone"],
-                        ["[Claude](https://claude.com/pricing)", "The chat, if you set it up", "Only if you set it up", "Only if you ask", "Not stated on its pricing page", "By prompting", "Memory across conversations", "Free plan, $0"],
+                        ["[{product}](/)", "Yes: the AI opponent answers your speech", "Yes: School 4-6-6-3, LD and PF in Sparring", "Yes: a judged verdict that names the reason", "Yes: Crossfire, Attack, or regenerate the weak section", "English, Spanish, Hungarian", "Yes: behind sign-in, not indexed"],
+                        ["[ChatGPT](https://chatgpt.com/pricing) or [Claude](https://claude.com/pricing), voice or chat", "Yes, in the chat", "Only if you set them", "Only if you ask", "Only if you ask", "Not stated on their pricing pages", "Not stated"],
+                        ["[ArguFight](https://www.argufight.com/)", "A person replies; an AI for a warm-up", "No: 5 written rounds over 24 hours, or 3 in 1 hour", "Yes: up to three AI judges, 0–100 with reasons", "Each verdict names a fix and your next move", "26 listed", "No: debates are public, with spectators; class tournaments can be private"],
+                        ["[MindDuel](https://play.google.com/store/apps/details?id=com.serdaryalkabov.brightmint)", "An AI opponent", "No: 10 turns of 5–60 seconds", "0–100 score in five areas, short explanation", "Not stated", "Not stated", "Not stated"],
+                        ["[PublicForumAI](https://publicforumai.com/pricing)", "Not stated", "Public Forum rounds", "Tech and lay judge feedback", "Flow drills and 15 training modules", "Not stated", "Not stated"],
+                        ["[Debate Ladder](https://debateladder.com/)", "An AI argues the other side", "No: its own opening, rebuttal and closing", "AI judge on five criteria, with feedback", "Not stated", "Not stated", "Not stated"],
                     ],
                 }},
-                "Read the matrix against your ticks, not against a total. A tool with fewer \"yes\" cells can still be the right one if it does the two things you need.",
+                "Read the table against your ticks, not against a total. A tool with fewer \"yes\" cells can still be the right one if it does the two things you need.",
             ]),
             ("Which tool for which debater", [
                 {"list": [
@@ -133,7 +134,7 @@ GUIDES = {
             ]),
         ],
         "faqs": [
-            ("Is there a free AI debate practice tool?", "Yes. As of October 2026, ArguFight is free to start, Debate Ladder gives new accounts 100 credits, PublicForumAI includes 3 full rounds a month, and ChatGPT and Claude have free plans. {product}'s debate timer and other tools are free with no account; its app is paid after a {trial_days}-day trial."),
+            ("Which AI can I practise debate against?", "{product}'s Sparring gives you an AI opponent for full timed rounds in School 4-6-6-3, Lincoln-Douglas and Public Forum. As of October 2026, Debate Ladder and MindDuel also put you against an AI by voice, PublicForumAI runs Public Forum rounds, and ChatGPT or Claude will argue back in a chat if you set them up. ArguFight's debates are mainly against people."),
             ("Which formats can I spar against the AI in?", "Sparring runs School 4-6-6-3, Lincoln-Douglas and Public Forum rounds with their speech order and times. For WSDC, British Parliamentary and other formats you can still generate cases, get coaching and drill rebuttals, and time speeches yourself."),
             ("Can I give my practice speeches out loud?", "Yes. Sparring and Crossfire can run as spoken rounds in the browser, so you can practise delivery as well as content."),
             ("How often should I practise against an AI opponent?", "Two or three focused sessions a week usually beats one long one. Each session should end with one specific fix that you drill before the next round."),
@@ -2295,6 +2296,7 @@ GUIDES = {
                     "[{product} vs Debate Ladder](/debateowl-vs-debate-ladder): written case prep and timed rounds, or a ranked voice game.",
                     "[{product} vs ArguFight](/debateowl-vs-argufight): which debater should pick a case and timed rounds, and which should pick written rounds against people with AI judges.",
                     "[{product} vs MindDuel](/debateowl-vs-mindduel): one motion through both, from ten short spoken turns to a full timed round.",
+                    "[AI debate practice tools compared](/ai-debate-practice): for practice rounds, a checklist and a table of the tools you can practise against.",
                     "[Free vs paid AI debate tools](/free-vs-paid-ai-debate-tools): what $0 gets you and what paid plans add, with prices.",
                     "[Step-by-step debate prep with AI](/how-to-prepare-for-a-debate-with-ai): a seven-step plan and a worked second speech.",
                 ]},
