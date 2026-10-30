@@ -95,9 +95,13 @@ test("the canary account signs in and loads its account", async ({ page }) => {
 });
 
 test("the canary account gets a streamed answer from a real model", async ({ page }) => {
+  test.setTimeout(120_000);
   await signInAsCanary(page, { aiRequest: true });
   await page.goto("/app/ask");
+  // Ask keeps its model picker in the Options popover above the message box.
+  await page.getByRole("button", { name: "Options" }).click();
   await pickBasicDefault(page, "ask");
+  await page.keyboard.press("Escape");
   await page.getByPlaceholder("Ask your debate coach").fill("Reply with one short sentence: what is a rebuttal?");
   const stream = page.waitForResponse((response) => response.url().endsWith("/functions/v1/ai-stream"), { timeout: 90_000 });
   await page.getByRole("button", { name: "Send message" }).click();
