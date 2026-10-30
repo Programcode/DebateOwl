@@ -1,32 +1,22 @@
 #!/usr/bin/env bash
-# Portable (macOS + Linux) advisory locking via atomic mkdir. Superset does
-# not serialize setup/run/teardown across workspaces of the same repo, so
-# scripts that touch shared state (a port registry, the local Supabase
-# stack) take one of these locks first.
+# Portable (macOS + Linux) advisory mkdir locks. Python 3's standard-library
+# fcntl guard serializes recovery, acquisition and release, including PID writes.
 #
 # Usage:
 #   source lib/lock.sh
 #   lock_acquire "$HOME/.superset/some.lock" 30
 #   trap 'lock_release "$HOME/.superset/some.lock"' EXIT
+DEBATELAB_LOCK_HELPER="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lock.py"
 
 lock_acquire() {
-  local lock_dir="$1"
-  local timeout="${2:-30}"
-  local waited=0
-
-  mkdir -p "$(dirname "$lock_dir")"
-
-  while ! mkdir "$lock_dir" 2>/dev/null; do
-    # Reclaim a lock left behind by a process that no longer exists.
-    if [ -f "$lock_dir/pid" ]; then
-      local owner_pid
-      owner_pid="$(cat "$lock_dir/pid" 2>/dev/null || true)"
-      if [ -n "$owner_pid" ] && ! kill -0 "$owner_pid" 2>/dev/null; then
-        rm -rf "$lock_dir"
-        continue
-      fi
+  local lock_dir="$1" timeout="${2:-30}" waited=0 status
+  while :; do
+    if python3 "$DEBATELAB_LOCK_HELPER" acquire "$lock_dir" "$$"; then
+      return 0
+    else
+      status=$?
+      [ "$status" -eq 1 ] || return "$status"
     fi
-
     if [ "$waited" -ge "$timeout" ]; then
       echo "lock: timed out after ${timeout}s waiting for $lock_dir" >&2
       return 1
@@ -34,11 +24,9 @@ lock_acquire() {
     sleep 1
     waited=$((waited + 1))
   done
-
-  echo $$ > "$lock_dir/pid"
 }
 
 lock_release() {
-  local lock_dir="$1"
-  rm -rf "$lock_dir"
+  # Verification hands ownership to a long-lived holder; other callers use $$.
+  python3 "$DEBATELAB_LOCK_HELPER" release "$1" "${2:-$$}"
 }

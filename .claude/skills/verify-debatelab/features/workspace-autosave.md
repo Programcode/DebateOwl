@@ -25,6 +25,6 @@ Preconditions:
 
 ## Gotchas
 
-- `e2e/workspace-collaboration.spec.ts` starts its own collaboration process on port 12345 and must not run against `up --collab`. This recipe is the opposite: it needs `up --collab` and skips without it. Don't drive both on one stack.
+- `e2e/workspace-collaboration.spec.ts` starts its own collaboration process on the slot's collaboration port (`12345` or `12445`) and must not run against `up --collab`. This recipe is the opposite: it needs `up --collab` and skips without it. Don't drive both on one stack.
 - `up` always gives the client `VITE_COLLABORATION_URL`, so Workspace routes render without `--collab` but the editor never connects. The recipe keys its skip off `VERIFY_COLLAB` in `drive.env`, not off the page.
 - The Workspace editor reports uncaught page errors through the fixture. Hocuspocus hands empty outgoing messages to `onOutgoingMessage`; `durableMutationFromMessage` ignores them (`src/lib/workspace/durable-ack.ts`).

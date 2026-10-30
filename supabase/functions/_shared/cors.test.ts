@@ -1,6 +1,28 @@
 import { assertEquals } from "jsr:@std/assert@1.0.19";
 import { ALLOWED_ORIGINS, getCorsHeaders, isAllowedOrigin, isDevOrigin } from "./cors.ts";
 
+Deno.test("local gate origins require both explicit listing and a dev origin", () => {
+  const previous = Deno.env.get("LOCAL_GATE_APP_ORIGINS");
+  const local = "http://127.0.0.1:18181";
+  try {
+    Deno.env.delete("LOCAL_GATE_APP_ORIGINS");
+    assertEquals(isAllowedOrigin(local), false);
+    assertEquals(getCorsHeaders(local)["Access-Control-Allow-Origin"], ALLOWED_ORIGINS[0]);
+    Deno.env.set("LOCAL_GATE_APP_ORIGINS", `${local}, http://localhost:18181, https://evil.example, http://localhost.evil.com`);
+    for (const origin of [local, "http://localhost:18181"]) {
+      assertEquals(isAllowedOrigin(origin), true);
+      assertEquals(getCorsHeaders(origin)["Access-Control-Allow-Origin"], origin);
+    }
+    for (const origin of ["https://evil.example", "http://localhost.evil.com", "http://127.0.0.1:18182"]) {
+      assertEquals(isAllowedOrigin(origin), false);
+      assertEquals(getCorsHeaders(origin)["Access-Control-Allow-Origin"], ALLOWED_ORIGINS[0]);
+    }
+  } finally {
+    if (previous === undefined) Deno.env.delete("LOCAL_GATE_APP_ORIGINS");
+    else Deno.env.set("LOCAL_GATE_APP_ORIGINS", previous);
+  }
+});
+
 Deno.test("allows the isolated staging browser origin", () => {
   const headers = getCorsHeaders("http://127.0.0.1:18080");
   assertEquals(headers["Access-Control-Allow-Origin"], "http://127.0.0.1:18080");

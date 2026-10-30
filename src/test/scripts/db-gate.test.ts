@@ -1,5 +1,5 @@
-import { spawnSync } from "node:child_process";
-import { chmod, mkdtemp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
+import { spawn, spawnSync } from "node:child_process";
+import { chmod, cp, mkdtemp, mkdir, readFile, rm, utimes, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { afterEach, expect, it } from "vitest";
@@ -15,6 +15,121 @@ afterEach(async () => {
   await Promise.all(temporaryRoots.splice(0).map((root) => rm(root, { recursive: true, force: true })));
 });
 
+it("reclaims stale lock paths without taking fresh or live locks", async () => {
+  const root = await mkdtemp(join(tmpdir(), "debatelab-lock-"));
+  temporaryRoots.push(root);
+  const stale = join(root, "stale");
+  const plain = join(root, "plain");
+  const fresh = join(root, "fresh");
+  const live = join(root, "live");
+  const dead = join(root, "dead");
+  for (const path of [stale, fresh, live, dead]) await mkdir(path);
+  const old = new Date(Date.now() - 180_000);
+  await utimes(stale, old, old);
+  await writeFile(plain, "");
+  await writeFile(join(live, "pid"), String(process.pid));
+  const result = spawnSync("bash", ["-c", `
+    set -euo pipefail
+    source "$1"
+    # Reap a real child, so its pid is known to be dead.
+    true & dead_pid=$!; wait "$dead_pid"
+    echo "$dead_pid" > "$2/dead/pid"
+    for name in stale plain dead; do
+      lock_acquire "$2/$name" 0
+      [ "$(cat "$2/$name/pid")" = "$$" ]
+      lock_release "$2/$name"
+    done
+    ! lock_acquire "$2/fresh" 0
+    ! lock_acquire "$2/live" 0
+  `, "lock-test", resolve(".superset/lib/lock.sh"), root], { encoding: "utf8" });
+  expect(result.status, result.stderr).toBe(0);
+});
+
+it("uses slot 2 when slot 1 is held, and respects the single-slot cap", async () => {
+  const root = await mkdtemp(join(tmpdir(), "debatelab-slots-"));
+  temporaryRoots.push(root);
+  const lock = join(root, ".superset/debatelab-db.lock");
+  await mkdir(lock, { recursive: true });
+  await writeFile(join(lock, "pid"), String(process.pid));
+  const result = spawnSync("bash", ["-c", `
+    set -euo pipefail
+    source "$1/lock.sh"
+    source "$1/slot.sh"
+    DEBATELAB_STACK_SLOTS=2 stack_slot_acquire 0
+    [ "$DEBATELAB_STACK_SLOT" = 2 ]
+    [ "$SUPABASE_DB_URL" = postgresql://postgres:postgres@127.0.0.1:54422/postgres ]
+    [ "$FAKE_PROVIDER" = debatelab-fake-openrouter-s2 ]
+    [ "$APP_ORIGIN" = http://127.0.0.1:18181 ]
+    lock_release "$DB_LOCK"
+    ! DEBATELAB_STACK_SLOTS=1 stack_slot_acquire 0
+    ! DEBATELAB_STACK_SLOTS=3 stack_slot_acquire 0
+  `, "slot-test", resolve(".superset/lib")], { encoding: "utf8", env: { ...process.env, HOME: root } });
+  expect(result.status, result.stderr).toBe(0);
+});
+
+it("refuses a second caller while another reclaims a stale lock", async () => {
+  // Round-1 review race: two waiters both judged one stale lock reclaimable
+  // and both returned success. The fcntl guard in lock.py must make the
+  // second caller wait. A pauses inside the guard, between judging the lock
+  // stale and removing it, until `pause` exists; without the guard, B would
+  // take the lock here.
+  const root = await mkdtemp(join(tmpdir(), "debatelab-lock-race-"));
+  temporaryRoots.push(root);
+  const lock = join(root, "slot.lock");
+  const pause = join(root, "pause");
+  await mkdir(lock);
+  await utimes(lock, new Date(2000, 0, 1), new Date(2000, 0, 1));
+  const helper = resolve(".superset/lib/lock.py");
+  const a = spawn("python3", [helper, "acquire", lock, "4242"], {
+    env: { ...process.env, DEBATELAB_LOCK_TEST_PAUSE: pause },
+  });
+  const aExit = new Promise<number | null>((done) => a.on("exit", done));
+  await expect.poll(() => readFile(`${pause}.ready`, "utf8").then(() => true, () => false)).toBe(true);
+
+  const b = spawnSync("python3", [helper, "acquire", lock, String(process.pid)], { encoding: "utf8", timeout: 5000 });
+  expect(b.status, "the second caller while the first holds the guard").toBe(1);
+
+  await writeFile(pause, "go\n");
+  expect(await aExit).toBe(0);
+  expect((await readFile(join(lock, "pid"), "utf8")).trim()).toBe("4242");
+});
+
+it("releases the verification holder and state when network creation fails", async () => {
+  const root = await mkdtemp(join(tmpdir(), "debatelab-up-failure-"));
+  temporaryRoots.push(root);
+  const bin = join(root, "bin");
+  const harness = join(root, ".claude/skills/verify-debatelab/bin/verify.sh");
+  await mkdir(bin);
+  await mkdir(join(root, ".superset"));
+  await mkdir(join(root, ".claude/skills/verify-debatelab/bin"), { recursive: true });
+  await cp(resolve(".superset/lib"), join(root, ".superset/lib"), { recursive: true });
+  await cp(resolve(".claude/skills/verify-debatelab/bin/verify.sh"), harness);
+  await executable(join(bin, "git"), '#!/usr/bin/env bash\ncase "$*" in *--show-toplevel*) echo "$TEST_REPO";; *) echo fixture-head;; esac\n');
+  await executable(join(bin, "docker"), `#!/usr/bin/env bash
+case "$1 $2" in
+  "network inspect") exit 1;;
+  "network create") sed -n 's/^HOLDER_PID=//p' "$TEST_REPO/.verify/state/stack.env" > "$TEST_REPO/holder.pid"; exit 17;;
+esac
+`);
+  await executable(join(bin, "supabase"), '#!/usr/bin/env bash\nexit 0\n');
+  await executable(join(bin, "ss"), '#!/usr/bin/env bash\nexit 0\n');
+  const result = spawnSync("bash", [harness, "up"], {
+    encoding: "utf8", timeout: 5000,
+    env: { ...process.env, HOME: root, TEST_REPO: root, DEBATELAB_SUPABASE_BIN_DIR: bin, PATH: `${bin}:${process.env.PATH}` },
+  });
+  const state = await readFile(join(root, ".verify/state/stack.env"), "utf8").catch(() => "");
+  const holder = (await readFile(join(root, "holder.pid"), "utf8")).trim();
+  let holderAlive = false;
+  if (holder) {
+    try { process.kill(Number(holder), 0); holderAlive = true; } catch { /* Already stopped. */ }
+    if (holderAlive) process.kill(Number(holder), "SIGTERM");
+  }
+  expect(result.status, result.stderr).toBe(17);
+  expect(state).toBe("");
+  expect(holderAlive).toBe(false);
+  await expect(readFile(join(root, ".superset/debatelab-db.lock/pid"), "utf8")).rejects.toThrow();
+});
+
 it("stops local Supabase when database tests fail", async () => {
   const root = await mkdtemp(join(tmpdir(), "debatelab-db-gate-"));
   temporaryRoots.push(root);
@@ -25,7 +140,7 @@ it("stops local Supabase when database tests fail", async () => {
   // docker here would kill a gate running in any other worktree, so log it instead.
   await executable(
     join(bin, "docker"),
-    '#!/usr/bin/env bash\nprintf "docker %s\\n" "$*" >> "$CALL_LOG"\n',
+    '#!/usr/bin/env bash\nprintf "docker %s\\n" "$*" >> "$CALL_LOG"\nif [ "$1 $2" = "network inspect" ]; then exit 1; fi\n',
   );
   await executable(
     join(bin, "supabase"),
@@ -50,7 +165,7 @@ it("stops local Supabase when database tests fail", async () => {
   });
 
   expect(result.status).toBe(17);
-  await expect(readFile(log, "utf8")).resolves.toBe(
-    "supabase start\nnpm run test:db\nsupabase stop --no-backup\n",
+  expect((await readFile(log, "utf8")).split("\n").filter((line) => !line.startsWith("docker network ")).join("\n")).toBe(
+    "supabase start -x studio,postgres-meta,logflare,vector,supavisor,realtime\nnpm run test:db\nsupabase stop --no-backup\n",
   );
 });

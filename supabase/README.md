@@ -165,6 +165,7 @@ Document names, never values. Depending on deployed features, server-side config
 
 - Supabase URL, anon key, and service-role key;
 - `OPENROUTER_API_KEY` for all model requests, plus `OPENROUTER_API_URL`, which only the local full-stack gate sets to reach its fake provider (leave it unset everywhere else);
+- `LOCAL_GATE_APP_ORIGINS`, which only the local gate and verify stack set, so the CORS check accepts the slot's own app origin (`http://127.0.0.1:18181` for slot 2). It is honoured only for local dev origins; leave it unset everywhere else;
 - `ELEVENLABS_API_KEY` for the opponent's voice, and optionally `ELEVENLABS_VOICE_ID` to replace the default voice; without the key, voice rounds use the browser's voice;
 - research provider keys;
 - Stripe secret, webhook secret, and price configuration, plus `STRIPE_API_URL`, which only the local full-stack gate sets so the `account` function reaches its fake Stripe (leave it unset everywhere else);

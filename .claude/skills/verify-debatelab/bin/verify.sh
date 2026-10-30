@@ -25,15 +25,10 @@ SKILL_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 REPO="$(git -C "$SKILL_DIR" rev-parse --show-toplevel)"
 cd "$REPO"
 source "$REPO/.superset/lib/lock.sh"
+source "$REPO/.superset/lib/slot.sh"
 source "$REPO/.superset/lib/supabase-cli.sh"
 use_pinned_supabase_cli "$REPO"
 
-DB_LOCK="$HOME/.superset/debatelab-db.lock"
-FAKE_PROVIDER=debatelab-fake-openrouter
-APP_PORT=18081            # the only local client origin the Edge Function CORS list and invite fixture allow
-FAKE_PORT=18090
-COLLAB_PORT=12345
-APP_ORIGIN="http://127.0.0.1:$APP_PORT"
 VERIFY_ROOT="$REPO/.verify"
 STATE_DIR="$VERIFY_ROOT/state"     # secrets and pids; removed by down
 STATE="$STATE_DIR/stack.env"
@@ -50,7 +45,7 @@ LIVE_KEYS_FILE="${VERIFY_LIVE_KEYS_FILE:-$HOME/.config/debatelab/live-verify.env
 say() { printf '%s\n' "$*"; }
 fail() { printf 'FAIL %s\n' "$*" >&2; exit 1; }
 record() { printf '%s=%q\n' "$1" "$2" >>"$STATE"; }
-load_state() { [ -f "$STATE" ] || fail "no running verification stack (state file missing); run: verify.sh up"; source "$STATE"; }
+load_state() { [ -f "$STATE" ] || fail "no running verification stack (state file missing); run: verify.sh up"; source "$STATE"; stack_slot_configure "${DEBATELAB_STACK_SLOT:-1}"; }
 alive() { [ -n "${1:-}" ] && kill -0 "$1" 2>/dev/null; }
 port_busy() { ss -ltnH "sport = :$1" 2>/dev/null | grep -q .; }
 wait_url() {
@@ -96,13 +91,12 @@ cmd_up() {
     fi
   fi
 
-  # The stack uses the CLI's default ports and shared container names, so only
-  # one worktree may run it. Refuse instead of waiting or double-driving.
-  lock_acquire "$DB_LOCK" 0 || fail "the local Supabase stack lock is held by pid $(cat "$DB_LOCK/pid" 2>/dev/null || echo '?'); another worktree owns it"
-  if docker ps --format '{{.Names}}' | grep -q '^supabase_'; then
-    lock_release "$DB_LOCK"; fail "Supabase containers are already running (not started by this run)"
+  stack_slot_acquire 600 || fail "no local Supabase slot available"
+  # Other projects may run in the other slot; never adopt this project's stack.
+  if docker ps --format '{{.Names}}' | grep -qxF "supabase_db_$PROJECT_ID"; then
+    lock_release "$DB_LOCK"; fail "Supabase containers for this worktree are already running"
   fi
-  for port in 54321 "$APP_PORT" "$FAKE_PORT"; do
+  for port in "$SUPABASE_API_PORT" "$SUPABASE_DB_PORT" "$APP_PORT" "$FAKE_PORT" "$COLLAB_PORT"; do
     if port_busy "$port"; then lock_release "$DB_LOCK"; fail "port $port is already in use"; fi
   done
 
@@ -112,6 +106,7 @@ cmd_up() {
   local log_dir="$VERIFY_ROOT/logs/$run_id"
   mkdir -p "$log_dir"
   : >"$STATE"; : >"$USERS"
+  record DEBATELAB_STACK_SLOT "$DEBATELAB_STACK_SLOT"
   record PROJECT_ID "$PROJECT_ID"
   record LOG_DIR "$log_dir"
   record HEAD "$(git rev-parse HEAD)"
@@ -129,15 +124,22 @@ cmd_up() {
   trap 'say "up failed; tearing down (logs: $log_dir)"; cmd_down || true' ERR
 
   say "Starting local Supabase (logs: $log_dir)..."
+  stack_network_prepare "$REPO" || {
+    local network_status=$?
+    trap - ERR
+    say "up failed preparing the local network; tearing down (logs: $log_dir)"
+    cmd_down
+    return "$network_status"
+  }
   record STACK_STARTED true
-  supabase start >>"$log_dir/supabase.log" 2>&1
+  supabase start -x "$SUPABASE_START_EXCLUDE" >>"$log_dir/supabase.log" 2>&1
 
   local status_json; status_json="$(supabase status -o json 2>/dev/null)"
   sv() { node -e 'const v=JSON.parse(process.argv[1])[process.argv[2]]; if (!v) process.exit(1); process.stdout.write(String(v))' "$status_json" "$1"; }
   local api_url anon_key service_key db_url mailer_url mailer_host
   api_url="$(sv API_URL)"; anon_key="$(sv ANON_KEY)"; service_key="$(sv SERVICE_ROLE_KEY)"
   db_url="$(sv DB_URL)"; mailer_url="$(sv MAILPIT_URL)"
-  mailer_host="$(docker ps --filter "name=supabase_inbucket_$PROJECT_ID" --format '{{.Names}}')"
+  mailer_host="$(docker ps --filter "name=^supabase_inbucket_${PROJECT_ID}$" --format '{{.Names}}')"
   [ -n "$mailer_host" ] || { say "Local Mailpit container is unavailable"; false; }
 
   LOCAL_SERVICE_ROLE_KEY="$service_key" LOCAL_MAILER_HOST="$mailer_host" \
@@ -164,6 +166,8 @@ cmd_up() {
       printf 'FAKE_OPENROUTER_URL=%s\n' "http://127.0.0.1:$FAKE_PORT"
       printf 'WORKSPACE_TEST_MAILER_URL=%s\n' "$mailer_url"
       printf 'DEMO_CODE_PEPPER=%s\n' "$(sed -n 's/^DEMO_CODE_PEPPER=//p' .superset/workspace-test.env)"
+      printf 'COLLABORATION_PORT=%s\n' "$COLLAB_PORT"
+      printf 'SUPABASE_DB_URL=%s\n' "$db_url"
       printf 'PLAYWRIGHT_BASE_URL=%s\n' "$APP_ORIGIN"
       printf 'VERIFY_MODE=%s\n' "$([ "$live" = true ] && echo live || echo fake)"
       printf 'LIVE_MODEL=%s\n' "$([ "$live" = true ] && echo "$LIVE_MODEL")"
@@ -330,7 +334,7 @@ cmd_e2e() {
 
 cmd_down() {
   if [ ! -f "$STATE" ]; then say "nothing recorded in $STATE; nothing to stop"; return 0; fi
-  source "$STATE"
+  load_state
   if [ -s "$USERS" ] && [ -f "$STATE_DIR/drive.env" ]; then
     ( set -a; source "$STATE_DIR/drive.env"; set +a; node "$SKILL_DIR/bin/demo-user.mjs" delete-all "$USERS" ) || say "warn: could not delete minted demo users (stack is about to be wiped anyway)"
   fi
@@ -348,7 +352,7 @@ cmd_down() {
     supabase stop --no-backup >>"${LOG_DIR:-/dev/null}/supabase.log" 2>&1 || say "warn: supabase stop failed; see ${LOG_DIR:-}/supabase.log"
   fi
   if [ -n "${HOLDER_PID:-}" ]; then
-    if [ "$(cat "$DB_LOCK/pid" 2>/dev/null)" = "$HOLDER_PID" ]; then lock_release "$DB_LOCK"; fi
+    if [ "$(cat "$DB_LOCK/pid" 2>/dev/null)" = "$HOLDER_PID" ]; then lock_release "$DB_LOCK" "$HOLDER_PID"; fi
     kill "$HOLDER_PID" 2>/dev/null || true
   fi
   rm -rf -- "$STATE_DIR"

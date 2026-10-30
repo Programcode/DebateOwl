@@ -120,7 +120,11 @@ test("auth-email-link: the emailed sign-in link signs in after a failed resend, 
   await page.getByRole("button", { name: "Send code" }).click();
   // The link returns to the callback route with this sign-in's own flow id.
   const redirectTo = new URL((await otpRequest).url()).searchParams.get("redirect_to") ?? "";
-  expect(redirectTo).toMatch(/^http:\/\/127\.0\.0\.1:18081\/auth\/callback\?sb_flow_id=[0-9a-f]{32}$/);
+  const callback = new URL(redirectTo);
+  expect(callback.origin).toBe(process.env.PLAYWRIGHT_BASE_URL || "http://127.0.0.1:18081");
+  expect(callback.pathname).toBe("/auth/callback");
+  expect([...callback.searchParams.keys()]).toEqual(["sb_flow_id"]);
+  expect(callback.searchParams.get("sb_flow_id")).toMatch(/^[0-9a-f]{32}$/);
   await expect(page.getByText("Code sent").first()).toBeVisible();
   const otp = await readOtp(request, user.email, sentAfter);
   await evidence.step(`Sent a code; the link returns to ${redirectTo.replace(/sb_flow_id=.*/, "sb_flow_id=<flow>")}`);

@@ -32,7 +32,7 @@ export default defineConfig({
   timeout: live ? 600_000 : 120_000,
   reporter: [["list"], ["json", { outputFile: join(artifactDir, "report.json") }]],
   use: {
-    baseURL: "http://127.0.0.1:18081",
+    baseURL: process.env.PLAYWRIGHT_BASE_URL || "http://127.0.0.1:18081",
     locale: "en-US",
     actionTimeout: 15_000,
     // Proof runs keep everything, not only failures.

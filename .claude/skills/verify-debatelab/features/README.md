@@ -4,8 +4,8 @@ This directory is the maintained source for verifying DebateLab's user-facing be
 
 ## Baseline preconditions
 
-- `bin/verify.sh up` has printed `READY http://127.0.0.1:18081`, and `bin/verify.sh doctor` exits 0.
-- The browser client is the `up` instance at `http://127.0.0.1:18081`. Never use the `debatelab` container on `:8080` or a plain `npm run dev`, because both reach production.
+- `bin/verify.sh up` has printed `READY <app-origin>`, and `bin/verify.sh doctor` exits 0.
+- The browser client is the `up` instance at the printed app origin. Never use the `debatelab` container on `:8080` or a plain `npm run dev`, because both reach production.
 - Each scripted test signs in with its own fresh demo-code user (a Pro account with a daily limit of 999) and deletes it afterwards. The fixture marks the onboarding tour as seen, and the user starts with no Current Debate.
 - Most tools work inside a Current Debate (see [current-debate](./current-debate.md)). Start one with `startDebate(page, motion)` first, or answer the motion dialog that opens after submit with `chooseForMotion(page, "create" | "once")`. The Library's `Add source` stays disabled until a debate exists.
 - In fake mode, model answers come from the fake provider and contain the marker `FAKE-PROVIDER`. In live mode (`up --live`), every chat call goes to real OpenRouter pinned to `anthropic/claude-haiku-5.5` on the Anthropic BYOK key, research uses real Exa, and answers are real model text.

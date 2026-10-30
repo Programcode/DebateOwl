@@ -1,12 +1,6 @@
 #!/usr/bin/env bash
 # Runs the Docker-backed Supabase, database, collaboration, and full-stack browser gate
-# with exclusive access across
-# Superset workspaces of this repo. `supabase/config.toml` sets no
-# project_id or custom port block, so `supabase db start` always binds the
-# CLI's default ports and container names - two workspaces running it at
-# once collide in Docker, not just on a socket. Use this instead of calling
-# `supabase db start` directly whenever more than one workspace might be
-# active.
+# using one of two isolated local-stack slots across worktrees.
 #
 # --db-only starts only Postgres (`supabase db start`) and stops after
 # `npm run test:db` (pgTAP and the database scripts), still holding the lock
@@ -23,11 +17,10 @@ esac
 
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$DIR/lib/lock.sh"
+source "$DIR/lib/slot.sh"
 source "$DIR/lib/supabase-cli.sh"
 use_pinned_supabase_cli "$(cd "$DIR/.." && pwd)"
 
-DB_LOCK="$HOME/.superset/debatelab-db.lock"
-FAKE_PROVIDER=debatelab-fake-openrouter
 # LIVE_PROVIDERS=1 runs e2e/live against real OpenRouter, Jev, and Exa instead of
 # the fake provider. It needs LIVE_OPENROUTER_API_KEY and LIVE_EXA_API_KEY.
 # LIVE_MODEL=as-requested runs e2e/model-matrix instead: one case per catalog model.
@@ -65,7 +58,7 @@ cleanup() {
   trap - EXIT
 
   stop_owned_processes
-  # The container name is shared by every worktree, so only remove our own.
+  # Remove only the provider for the slot we hold.
   if [ "$provider_started" = true ]; then
     docker rm -f "$FAKE_PROVIDER" >/dev/null 2>&1 || true
   fi
@@ -86,8 +79,8 @@ cleanup() {
   exit "$status"
 }
 
-echo "Waiting for exclusive access to the local Supabase stack..."
-lock_acquire "$DB_LOCK" 600
+echo "Waiting for a local Supabase slot..."
+stack_slot_acquire 600
 trap cleanup EXIT
 
 if [ -n "${WORKSPACE_GATE_ARTIFACT_ROOT:-}" ]; then
@@ -97,10 +90,11 @@ else
   runtime_dir="$(mktemp -d)"
 fi
 # Shared CI runners intermittently hit registry rate limits while pulling images.
-start_command=(start)
+start_command=(start -x "$SUPABASE_START_EXCLUDE")
 if [ "$DB_ONLY" = true ]; then start_command=(db start); fi
-stack_started=true
 for attempt in 1 2 3; do
+  stack_network_prepare "$(pwd)"
+  stack_started=true
   if supabase "${start_command[@]}" >>"$runtime_dir/supabase.log" 2>&1; then break; fi
   if [ "$attempt" -eq 3 ]; then exit 1; fi
   echo "supabase start failed (attempt $attempt); retrying after $((attempt * 30))s"
@@ -119,9 +113,9 @@ api_url="$(status_value API_URL)"
 anon_key="$(status_value ANON_KEY)"
 service_role_key="$(status_value SERVICE_ROLE_KEY)"
 database_url="$(status_value DB_URL)"
-app_origin="http://127.0.0.1:18081"
+app_origin="$APP_ORIGIN"
 project_id="$(basename "$(pwd)")"
-mailer_host="$(docker ps --filter "name=supabase_inbucket_$project_id" --format '{{.Names}}')"
+mailer_host="$(docker ps --filter "name=^supabase_inbucket_${project_id}$" --format '{{.Names}}')"
 if [ -z "$mailer_host" ]; then
   echo "Local Mailpit container is unavailable" >&2
   exit 1
@@ -143,7 +137,7 @@ fi
 docker rm -f "$FAKE_PROVIDER" >/dev/null 2>&1 || true
 provider_started=true
 docker run -d --rm --name "$FAKE_PROVIDER" --network "supabase_network_$project_id" \
-  "${provider_mode[@]}" -p 127.0.0.1:18090:8787 -v "$(pwd)/e2e/full-stack/fake-openrouter.mjs:/fake.mjs:ro" \
+  "${provider_mode[@]}" -p "127.0.0.1:$FAKE_PORT:8787" -v "$(pwd)/e2e/full-stack/fake-openrouter.mjs:/fake.mjs:ro" \
   node:22-alpine node /fake.mjs >/dev/null
 
 setsid supabase functions serve --no-verify-jwt \
@@ -153,12 +147,12 @@ owned_pids+=("$!")
 VITE_LOCAL_PREVIEW=true \
 VITE_LOCAL_SUPABASE_URL="$api_url" \
 VITE_LOCAL_SUPABASE_ANON_KEY="$anon_key" \
-VITE_COLLABORATION_URL=ws://127.0.0.1:12345 \
-  setsid npm run dev -- --host 127.0.0.1 --port 18081 --strictPort >"$runtime_dir/vite.log" 2>&1 &
+VITE_COLLABORATION_URL="ws://127.0.0.1:$COLLAB_PORT" \
+  setsid npm run dev -- --host 127.0.0.1 --port "$APP_PORT" --strictPort >"$runtime_dir/vite.log" 2>&1 &
 owned_pids+=("$!")
 
 mailer_url="$(status_value MAILPIT_URL)"
-for url in "$mailer_url/api/v1/messages" "$app_origin" "http://127.0.0.1:18090/__requests"; do
+for url in "$mailer_url/api/v1/messages" "$app_origin" "$FAKE_OPENROUTER_URL/__requests"; do
   for _ in $(seq 1 200); do
     if curl --fail --silent --output /dev/null "$url"; then break; fi
     sleep 0.1
@@ -186,12 +180,12 @@ LOCAL_SUPABASE_ANON_KEY="$anon_key" \
 LOCAL_SUPABASE_SERVICE_ROLE_KEY="$service_role_key" \
 WORKSPACE_TEST_MAILER_URL="$mailer_url" \
 COLLABORATION_DATABASE_URL="$database_url" \
-COLLABORATION_PORT=12345 \
+COLLABORATION_PORT="$COLLAB_PORT" \
 COLLABORATION_ALLOWED_ORIGINS="$app_origin" \
 SUPABASE_URL="$api_url" \
 SUPABASE_ANON_KEY="$anon_key" \
-FAKE_OPENROUTER_URL=http://127.0.0.1:18090 \
+FAKE_OPENROUTER_URL="$FAKE_OPENROUTER_URL" \
 LIVE_MODEL="$LIVE_MODEL" \
 DEMO_CODE_PEPPER="$(sed -n 's/^DEMO_CODE_PEPPER=//p' .superset/workspace-test.env)" \
 PLAYWRIGHT_BASE_URL="$app_origin" \
-  npx playwright test --config=playwright.workspace.config.ts "${test_selection[@]}"
+  bash "$DIR/heavy.sh" npx playwright test --config=playwright.workspace.config.ts "${test_selection[@]}"
