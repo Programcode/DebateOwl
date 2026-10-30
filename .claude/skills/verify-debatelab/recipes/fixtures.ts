@@ -90,9 +90,28 @@ export async function expectProviderCalls(features: string[]) {
   return calls;
 }
 
+/**
+ * What no screenshot should show: a page wider than the screen, or an image
+ * that failed to load. Agents keep evidence they never open (one shipped a
+ * broken badge image in its own screenshot), so every `shot` checks for both.
+ * Soft, so one recipe reports every bad screen. Lazy images not yet fetched
+ * are skipped; an image that tried and got nothing is not.
+ */
+export async function expectSoundScreen(target: Page, name: string) {
+  const { overflow, brokenImages } = await target.evaluate(() => ({
+    overflow: document.documentElement.scrollWidth - document.documentElement.clientWidth,
+    brokenImages: [...document.images]
+      .filter((img) => img.currentSrc && img.complete && img.naturalWidth === 0)
+      .filter((img) => img.getClientRects().length > 0 && getComputedStyle(img).visibility !== "hidden")
+      .map((img) => img.currentSrc),
+  }));
+  expect.soft(overflow, `${name}: horizontal page overflow in px`).toBeLessThanOrEqual(1);
+  expect.soft(brokenImages, `${name}: images that failed to load`).toEqual([]);
+}
+
 export type Evidence = {
   dir: string;
-  /** Full-page screenshot, `<name>.png`. */
+  /** Full-page screenshot, `<name>.png`, after `expectSoundScreen`. */
   shot(name: string, target?: Page): Promise<string>;
   /** ARIA snapshot of a region (default: whole page), `<name>.aria.yml`. */
   aria(name: string, locator?: Locator): Promise<string>;
@@ -133,6 +152,7 @@ export const test = stackTest.extend<{ evidence: Evidence }>({
       async shot(name, target = page) {
         const path = file(`${name}.png`);
         await target.screenshot({ path, fullPage: true });
+        await expectSoundScreen(target, name);
         return path;
       },
       async aria(name, locator = page.locator("body")) {

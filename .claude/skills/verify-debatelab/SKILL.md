@@ -86,7 +86,7 @@ It also prints the commit the stack started at and whether there are uncommitted
 - `followSystemTheme(page)`: new accounts start on the light theme. A recipe that compares light and dark calls this first; it picks System in Settings, so `page.emulateMedia({ colorScheme })` then drives the theme.
 - `expectStreamed([...])`: every provider call for those features asked the model to stream, which proves the page showed the answer live.
 - `expectProviderCalls([...])`: what reached the provider. Each test writes `provider-calls.json`, and in live mode the fixture fails the test if any chat call was answered by a model other than the pin.
-- `evidence`: `step(line)`, `aria(name, locator?)`, `shot(name)` and `json(name, value)`.
+- `evidence`: `step(line)`, `aria(name, locator?)`, `shot(name)` and `json(name, value)`. Every `shot` also fails the recipe (softly, so all bad screens are reported) when the page is wider than the screen or a visible image failed to load. Still open the screenshots: this check can't see clipped text, overlaps or wrong colours.
 - Automatic failure on any uncaught page error, horizontal overflow, or remote Supabase request.
 
 Every result, source and practice round belongs to a Current Debate or is explicitly one-off. A tool given a motion when no debate exists opens `Start a debate with this motion?`; a motion that differs from the Current Debate's opens `This is a different motion`. Both open after the submit click and before the AI request, so create the `aiResponse()` promise, click, answer with `chooseForMotion`, then await. Or call `startDebate` first, after which tools prefill its motion and open no dialog. The Library's `Add source` is disabled until a debate exists. See `features/current-debate.md`.
