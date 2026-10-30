@@ -26,6 +26,7 @@ PAGES = [
     "hu/melyik-ai-a-legjobb-vitara",
     "debateowl-vs-argufight",
     "debateowl-vs-mindduel",
+    "ai-debate-practice",
 ]
 MAX_WORDS = 12
 MAX_PAGES = 2

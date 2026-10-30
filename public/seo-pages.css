@@ -10,4 +10,6 @@
 .goal-page .picks{list-style:none;padding:0;margin:12px 0}
 .goal-page .picks li{padding:4px 0}
 .check{color:#14B37D;font-weight:800;margin-right:.35em}
+.checklist{list-style:none;padding:0;margin:14px 0;display:grid;gap:8px}.checklist label{display:flex;gap:10px;align-items:flex-start;border:1px solid var(--line);border-radius:14px;padding:10px 14px;background:rgba(255,255,255,.05);cursor:pointer}.checklist input{accent-color:#14B37D;width:1.1rem;height:1.1rem;margin-top:5px;flex:none}
+.hero .price{max-width:800px;color:var(--muted);margin:14px 0 0}
 .callout{max-width:840px;border:1px solid var(--line);border-radius:16px;padding:14px 18px;background:rgba(255,255,255,.05);margin:18px 0 0}
