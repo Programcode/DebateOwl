@@ -44,7 +44,6 @@ Free to use, no account needed, and they run in the browser.
 - [Nyomtatható vitajegyzetlapok | DebateOwl](https://debateowl.com/hu/tools/jegyzetlap): Ingyenes, nyomtatható vitajegyzetlap minden beszédhez külön oszloppal PF, LD, Policy, BP, World Schools vagy Asian Parliamentary formátumhoz.
 - [Beszédidő-kalkulátor | DebateOwl](https://debateowl.com/hu/tools/beszedido-kalkulator): Ingyenes beszédidő-kalkulátor, amely megszámolja egy vitabeszéd szavait, és megmutatja, mennyi ideig tart lassú, átlagos és gyors tempóban.
 - [Vitafelkészülés MI-vel](https://debateowl.com/hu/mi-vitafelkeszules): egy felkészülő este menete, és melyik MI mire jó a vitára készülésben, magyarul
-- [Melyik MI a legjobb vitára?](https://debateowl.com/hu/melyik-ai-a-legjobb-vitara): a DebateOwl, a ChatGPT, a Claude, az ArguFight és mások egyenként, mikor igen és mikor nem, árakkal (2026. október)
 
 ## Español
 
@@ -54,7 +53,6 @@ Free to use, no account needed, and they run in the browser.
 - [Generador de mociones de debate | DebateOwl](https://debateowl.com/es/tools/generador-mociones): Generador gratis de mociones de debate que saca una moción al azar, o tres para practicar el veto, de 300 mociones originales por tema y tipo.
 - [Hojas de flujo de debate imprimibles | DebateOwl](https://debateowl.com/es/tools/hoja-de-flujo): Hojas de flujo de debate gratis e imprimibles, con una columna por discurso en PF, LD, Policy, BP, World Schools o Asian Parliamentary, en A4 o Carta.
 - [Calculadora de tiempo de discurso | DebateOwl](https://debateowl.com/es/tools/calculadora-tiempo-discurso): Calculadora gratis que cuenta las palabras de un discurso de debate y muestra cuánto dura a ritmo lento, medio o rápido y en qué turnos cabe.
-- [¿Qué IA es mejor para preparar un debate?](https://debateowl.com/es/mejor-ia-para-preparar-un-debate): DebateOwl, ChatGPT, Claude, ArguFight y otras según lo que necesitas, con un caso de ejemplo y precios (octubre de 2026)
 
 ## Compare
 
@@ -64,6 +62,8 @@ Free to use, no account needed, and they run in the browser.
 - [DebateOwl vs WinDebate](https://debateowl.com/debateowl-vs-windebate): How DebateOwl and WinDebate compare on case generation, rebuttal drills, evidence research, supported formats, pricing and day-to-day workflow.
 - [DebateOwl vs DebateClub](https://debateowl.com/debateowl-vs-debateclub): How DebateOwl and DebateClub compare for debate practice, from voice sparring to structured case prep, rebuttal drills and evidence research.
 - [ChatGPT vs Claude for debate](https://debateowl.com/chatgpt-vs-claude-for-debate): where each general chatbot fits in debate prep, prompts that make them argue back, and when a debate-specific tool is better
+- [¿Qué IA sirve para preparar un debate?](https://debateowl.com/es/mejor-ia-para-preparar-un-debate): in Spanish: a four-step prep guide (motion, case, replies, timed practice) that says which AI fits each step, DebateOwl included, as of October 2026
+- [Melyik AI a legjobb vitafelkészüléshez?](https://debateowl.com/hu/melyik-ai-a-legjobb-vitara): in Hungarian: questions and answers for school debaters and teachers on which AI to use, whether it works in Hungarian, what DebateOwl costs and what AI is not good for
 - [DebateOwl vs Debate Ladder](https://debateowl.com/debateowl-vs-debate-ladder): case prep and timed format rounds vs a voice-first ranked debate game, with a 7-question checklist
 - [DebateOwl vs ArguFight](https://debateowl.com/debateowl-vs-argufight): which debater should pick which: a case and timed rounds against an AI, or written debates against people scored by AI judges, as of October 2026
 - [DebateOwl vs MindDuel](https://debateowl.com/debateowl-vs-mindduel): one motion through two workflows: MindDuel's ten short spoken turns and 0-100 score, or a written case and a timed round, as of October 2026

@@ -96,7 +96,7 @@ PRICE_HTML = escape(PRICE).replace(
 PRICE_START = f"The {PRODUCT} app has no free plan"
 
 JARGON = re.compile(
-    r"\b(frameworks?|contentions?|warrants?|impact calculus|keretrendszer(?:t|ek)?|kontenció(?:k|t)?|contenci[oó]n(?:es)?|marco teórico)\b",
+    r"\b(frameworks?|contentions?|warrants?|impact calculus|keretrendszer(?:t|ek)?|kontenció(?:k|t)?|contenci[oó]n(?:es)?|garant[ií]as?|marco teórico|érvelési keret\w*)\b",
     re.I,
 )
 SIBLINGS = {
@@ -1025,7 +1025,7 @@ def page_hu():
 <section class="lead-block">
   <h2>Mit tartalmaz egy DebateOwl-eset?</h2>
   <p>{esc(case)}</p>
-  <p>A többi eszköz rövid angol összevetése: <a href="/best-ai-for-debate">the short answer</a>. Itthon a kiindulás a felolvasható eset, a válaszok és az időzített forduló. Ha az a kérdés, melyik eszközt válaszd, az összevetés egyenként, magyarul: <a href="/hu/melyik-ai-a-legjobb-vitara">melyik MI a legjobb vitára</a>.</p>
+  <p>A többi eszköz rövid angol összevetése: <a href="/best-ai-for-debate">the short answer</a>. Itthon a kiindulás a felolvasható eset, a válaszok és az időzített forduló. Ha az a kérdés, melyik eszközt válaszd, arra külön oldal felel, kérdésekkel és válaszokkal: <a href="/hu/melyik-ai-a-legjobb-vitara">melyik AI a legjobb vitára</a>.</p>
   {wins(["Felolvasható eset", "„Ha azt mondják… erre azt feleljük…”", "Időzített Vitapárbaj", "Ingyenes eszközök, aztán havi $5"])}
   <p><a class="cta" href="/app">Próbáld ki 3 napig ingyen</a></p>
 </section>
@@ -1101,48 +1101,39 @@ body.hu table{min-width:560px}
 
 def page_es():
     answer = (
-        "Si tienes una moción y una fecha, DebateOwl es la primera opción: escribe un caso que puedes leer en voz alta, "
-        "con respuestas «Si dicen… respondemos…», y te deja practicar rondas cronometradas contra una IA, todo en español. "
-        "Para sacar ideas sin pagar, ChatGPT y Claude tienen planes gratis. "
-        "Si prefieres debatir por escrito contra otras personas y que decidan jueces de IA, ArguFight tiene la web en español y es gratis para empezar."
+        "DebateOwl sirve para preparar un debate concreto: te da un caso que puedes leer en voz alta, "
+        "respuestas «Si dicen… respondemos…» y rondas cronometradas contra una IA, con la app y lo que escribe la IA en español. "
+        "Para sacar ideas sin pagar bastan ChatGPT o Claude, y para entrenar réplicas cortas en español, Socrátiko ofrece debates gratis cada semana."
     )
     faqs = [
-        ("¿Hay alguna IA gratis para preparar un debate?", "Sí. A octubre de 2026, ChatGPT y Claude tienen planes gratis, ArguFight es gratis para empezar y PublicForumAI da 3 rondas de práctica al mes. El cronómetro, el generador de mociones y la hoja de flujo de DebateOwl son gratis y sin cuenta. La app de DebateOwl es de pago cuando acaba la prueba de 3 días."),
-        ("¿DebateOwl funciona en español?", "Sí. La app está en español, inglés y húngaro, y las herramientas gratis tienen su versión en español."),
+        ("¿La IA de DebateOwl escribe en español?", "Sí. Con la app en español, el caso, las respuestas, el oponente de Sparring y el coach escriben en español. La app también está en inglés y en húngaro."),
+        ("¿Hay alguna IA gratis para preparar un debate?", "Sí. A octubre de 2026, ChatGPT tiene una versión gratis para todos, Claude un plan gratis y Socrátiko 3 debates gratis cada semana. El cronómetro, el generador de mociones, la hoja de flujo y la calculadora de tiempo de DebateOwl son gratis y sin cuenta; la app es de pago cuando acaba la prueba de 3 días."),
         ("¿Puedo usar la IA durante el debate?", "Casi nunca. La mayoría de las ligas y torneos limitan los dispositivos y la IA durante la ronda. Úsala para preparar y revisa el reglamento de tu competición."),
         ("¿La IA se inventa fuentes?", "Puede pasar. Abre cada fuente y comprueba que dice exactamente lo que vas a citar. Si no la encuentras, esa frase no entra en tu discurso."),
-        ("¿Qué formatos puedo practicar en una ronda completa?", "Sparring simula rondas de School 4-6-6-3, Lincoln-Douglas y Public Forum. Para Parlamentario Británico, World Schools y otros formatos tienes las herramientas de preparación y el cronómetro gratis, no una ronda simulada."),
+        ("¿Qué formatos puedo practicar en una ronda completa?", "Sparring simula rondas del formato escolar 4-6-6-3, Lincoln-Douglas y Public Forum. Para Parlamentario Británico, World Schools y otros formatos tienes las herramientas de preparación y el cronómetro gratis, no una ronda simulada."),
     ]
-    situations = [
-        ("Tengo un debate escolar o un torneo dentro de unos días", "DebateOwl. Te deja el caso escrito para leerlo, las respuestas a lo que dirá el otro equipo y una ronda cronometrada para ensayarlo."),
-        ("Solo quiero entender el tema y sacar ideas", "ChatGPT o Claude, con su plan gratis. Pídele que defienda el lado contrario y que no ceda si tu respuesta no lo convence."),
-        ("Quiero debatir contra personas reales y que me puntúen", "ArguFight. Los debates son por escrito, por rondas, y un panel de jueces de IA decide con razones."),
-        ("Compito en Public Forum, en inglés", "PublicForumAI. Solo trabaja ese formato y tiene un plan gratis con 3 rondas al mes."),
-        ("Quiero soltarme hablando en voz alta, sin un torneo concreto", "Debate Ladder. Hablas por micrófono contra una IA y subes en una clasificación. Su web está en inglés."),
-    ]
-    cards = "".join(f"<div><dt>{esc(q)}</dt><dd>{esc(a)}</dd></div>" for q, a in situations)
     rows = [
-        ("DebateOwl", "Preparar una moción concreta y ensayarla", "Sí: apertura, argumentos, «Si dicen… respondemos…», cierre y fuentes", "Sí: Sparring cronometrado con veredicto (School 4-6-6-3, LD, PF)", "Prueba de 3 días, luego $5/mes + impuestos; herramientas aparte gratis"),
-        ("ChatGPT", "Ideas y contraargumentos rápidos", "Solo si se lo pides cada vez", "Solo si montas tú la conversación", "Versión gratis para todos; planes Go, Plus y Pro"),
-        ("Claude", "Revisar un caso largo que pegas", "Solo si se lo pides cada vez", "Solo si montas tú la conversación", "Plan gratis; Pro $20/mes ($17/mes anual)"),
-        ("ArguFight", "Debates escritos contra personas, con jueces de IA", "No", "Puedes calentar contra una IA; el núcleo es contra personas", "Gratis para empezar; precios de pago no indicados"),
-        ("PublicForumAI", "Public Forum en inglés", "Sí, casos de Public Forum", "Sí: 3 rondas/mes gratis", "Gratis; Premium $9,99/mes o $79/año"),
-        ("Debate Ladder", "Hablar en voz alta y subir en un ranking", "No", "Sí, por voz: apertura, réplica y cierre", "100 créditos gratis; luego ~1 crédito por minuto"),
+        ("DebateOwl", "Lluvia de ideas guardada en tu Debate actual", "Sí: caso completo en español", "Sí: «Si dicen… respondemos…» y Atacante de casos", "Sí: Sparring con tiempos reales y veredicto", "Prueba de 3 días, luego $5/mes + impuestos"),
+        ("ChatGPT", "Sí, si le das la moción", "Si se lo pides cada vez", "Si se lo pides cada vez", "Solo si montas tú la conversación", "Versión gratis para todos; planes Go, Plus y Pro"),
+        ("Claude", "Sí, si le das la moción", "Si se lo pides cada vez", "Si se lo pides cada vez", "Solo si montas tú la conversación", "Plan gratis; Pro $20/mes ($17/mes anual)"),
+        ("Socrátiko", "No consta", "No consta", "Debates en los que la IA te lleva la contraria", "Debates con nota y consejos; tiempos de torneo: no consta", "3 debates gratis cada semana; precio de pago no indicado"),
+        ("Debatly", "No consta", "No consta", "Ejercicios de refutación contra un entrenador de IA", "Sesiones con un juez que puntúa tres criterios", "Desde 19 €/mes; no indica plan gratis"),
     ]
     trs = "".join(
         f'<tr{OWN if i == 0 else ""}><th scope="row">{esc(r[0])}</th>' + "".join(f"<td>{esc(c)}</td>" for c in r[1:]) + "</tr>"
         for i, r in enumerate(rows)
     )
     body = f"""
-<section class="pick">
-  <h2>Elige según lo que te toca esta semana</h2>
-  <p>No hay una IA que gane en todo. La pregunta útil es qué tienes delante: una ronda con fecha, un tema que no entiendes o ganas de practicar sin más.</p>
-  <dl class="situations">{cards}</dl>
-  <p><a class="cta" href="/app">Prueba DebateOwl 3 días gratis</a></p>
-  <p class="price">{ES_PRICE_HTML}</p>
+<ol class="route" aria-label="Los cuatro pasos">
+  <li><a href="#paso-1">Analizar la moción</a></li><li><a href="#paso-2">Escribir el caso</a></li><li><a href="#paso-3">Preparar las respuestas</a></li><li><a href="#paso-4">Practicar con tiempo</a></li>
+</ol>
+<section class="step" id="paso-1">
+  <h2>Paso 1: analizar la moción</h2>
+  <p>Lee la moción palabra por palabra. ¿Quién actúa, qué cambia y a quién afecta? «Prohibir» no es lo mismo que «regular», y «en primaria» deja fuera a la secundaria. Escribe en una línea qué tiene que demostrar cada equipo.</p>
+  <p class="decision"><strong>Decisión:</strong> aquí cualquier IA ayuda. ChatGPT o Claude, con su plan gratis, te dan ideas de los dos lados si les pegas la moción. En DebateOwl haces lo mismo con Lluvia de ideas, y lo que salga queda guardado en el Debate actual de esa moción. Si solo quieres practicar con mociones nuevas, el <a href="/es/tools/generador-mociones">generador de mociones</a> es gratis.</p>
 </section>
-<section>
-  <h2>Así queda un caso de DebateOwl, de principio a fin</h2>
+<section class="step" id="paso-2">
+  <h2>Paso 2: escribir el caso</h2>
   <p>Un caso de DebateOwl se escribe como lo preparan los debatientes escolares, en el orden en que lo vas a decir. Este es el esqueleto con una moción de ejemplo, sin datos inventados: donde va la evidencia te decimos qué buscar, porque esa parte la compruebas tú.</p>
   <div class="case">
     <p class="motion">Moción: «Este colegio eliminaría los deberes en primaria». Equipo a favor.</p>
@@ -1152,63 +1143,65 @@ def page_es():
     <p><strong>Explicación:</strong> a esa edad, jugar, leer por gusto y dormir bien ayudan a aprender al día siguiente. <strong>Evidencia:</strong> busca un estudio sobre deberes y rendimiento en primaria; anota autor y año, y ábrelo antes de citarlo. <strong>Por qué importa:</strong> si los deberes no mejoran las notas a esta edad, el coste en descanso no se compensa.</p>
     <h3>Argumento 2: los deberes amplían la distancia entre familias</h3>
     <p><strong>Explicación:</strong> en casa, unos niños tienen ayuda y otros no. <strong>Evidencia:</strong> busca un informe sobre apoyo escolar en casa según el nivel de estudios de los padres. <strong>Por qué importa:</strong> una tarea que depende de quién te ayuda en casa mide a la familia, no al alumno.</p>
-    <h3>Respuestas</h3>
-    <p><strong>Si dicen</strong> que los deberes crean hábito de estudio, <strong>respondemos:</strong> el hábito se crea igual con lectura libre y con tareas cortas en clase, sin cargar la tarde.</p>
-    <p><strong>Si dicen</strong> que los padres quieren saber qué se hace en clase, <strong>respondemos:</strong> para eso sirve un resumen semanal del profesor, no una ficha diaria.</p>
     <h3>Cierre</h3>
     <p>Si de verdad queremos que aprendan más, dejemos que la tarde haga su parte.</p>
   </div>
-  <p>En la app puedes regenerar solo el argumento que te parezca flojo, sin tocar el resto, y exportar el caso a Word, PDF o Google Docs.</p>
+  <p class="decision"><strong>Decisión:</strong> si tienes moción y fecha, este es el paso donde DebateOwl ahorra el trabajo de montar la estructura. Con la app en español, el caso sale en español. Puedes regenerar solo el argumento flojo y exportar el caso a Word, PDF o Google Docs. Un chatbot también puede escribirlo, pero tienes que pedirle esta estructura cada vez.</p>
+</section>
+<section class="step" id="paso-3">
+  <h2>Paso 3: preparar las respuestas</h2>
+  <p>El otro equipo va a atacar tus argumentos más fuertes. Prepara una respuesta corta para cada ataque probable, dicha en una sola respiración.</p>
+  <div class="replies">
+    <p><strong>Si dicen</strong> que los deberes crean hábito de estudio, <strong>respondemos:</strong> el hábito se crea igual con lectura libre y con tareas cortas en clase, sin cargar la tarde.</p>
+    <p><strong>Si dicen</strong> que los padres quieren saber qué se hace en clase, <strong>respondemos:</strong> para eso sirve un resumen semanal del profesor, no una ficha diaria.</p>
+  </div>
+  <p class="decision"><strong>Decisión:</strong> cada caso de DebateOwl trae estas respuestas, y el Atacante de casos busca los puntos débiles de tu propio caso antes que el rival. Si lo que quieres es entrenar la réplica rápida contra una IA, Socrátiko y Debatly están en español y están hechos para eso.</p>
+</section>
+<section class="step" id="paso-4">
+  <h2>Paso 4: practicar con tiempo</h2>
+  <p>Un caso que no has dicho en voz alta todavía no está listo. Cronométrate: los jueces notan cuándo te sobra un minuto o te falta medio.</p>
+  <p class="decision"><strong>Decisión:</strong> Sparring en DebateOwl simula una ronda completa del formato escolar 4-6-6-3, Lincoln-Douglas o Public Forum, con los tiempos reales, escribiendo o hablando, y termina con un veredicto que dice por qué ganaste o perdiste. Interrogatorio entrena preguntas y respuestas. Para Parlamentario Británico o World Schools no hay ronda simulada: usa el <a href="/es/tools/cronometro-debate">cronómetro de debate</a>, que trae esos formatos, la <a href="/es/tools/hoja-de-flujo">hoja de flujo</a> imprimible y la <a href="/es/tools/calculadora-tiempo-discurso">calculadora de tiempo de discurso</a> para ver si tu texto cabe.</p>
+  <div class="cta-box">
+    <p><a class="cta" href="/app">Prepara tu moción en DebateOwl</a></p>
+    <p class="price">{ES_PRICE_HTML}</p>
+  </div>
 </section>
 <section>
-  <h2>Qué hace bien cada herramienta (octubre de 2026)</h2>
-  <h3>DebateOwl</h3>
-  <p>Guarda cada moción en su propio Debate actual, con el caso, las fuentes y las rondas. Además del generador de casos tiene el Atacante de casos, que busca los puntos débiles; Datos, que propone evidencia con la fuente que tienes que abrir; Interrogatorio, para ensayar preguntas y respuestas; y Sparring, una ronda cronometrada contra una IA que acaba con un veredicto. Puedes escribir o hablar cada discurso. Su límite: Sparring simula School 4-6-6-3, Lincoln-Douglas y Public Forum, no Parlamentario Británico ni World Schools.</p>
-  <h3>ChatGPT</h3>
-  <p>A octubre de 2026, OpenAI dice que la versión gratis está disponible para todos; los planes de pago son Go, Plus y Pro, además de Business y Enterprise. Va muy bien para una lluvia de ideas rápida. Tu moción, tu lado y los tiempos de cada discurso solo los guarda si se lo preparas tú, con proyectos o memoria. <a href="#es1">F1</a></p>
-  <h3>Claude</h3>
-  <p>A octubre de 2026, Claude tiene un plan gratis de $0. Pro cuesta $20 al mes con pago mensual o $17 al mes con pago anual, y Max empieza en $100 al mes. Es un buen sitio para pegar un caso largo y pedir una crítica. <a href="#es2">F2</a></p>
-  <h3>ArguFight</h3>
-  <p>A octubre de 2026, ArguFight es una plataforma de debates por escrito: lanzas un reto, eliges a favor o en contra y otra persona lo acepta. Hay modo estándar (5 rondas en 24 horas) y modo rápido (3 rondas en 1 hora). Un panel de hasta tres jueces de IA puntúa cada debate de 0 a 100 y explica su decisión; su propia web habla de un plantel de seis, siete o diez personalidades según la página. Tiene clasificación ELO, cinturones, dictado por voz y la web en 26 idiomas, entre ellos el español. Es gratis para empezar. No publica ningún precio de pago: su página /pricing devuelve un error 404. Si lo que buscas es debatir en español contra gente real, aquí ArguFight te sirve mejor que DebateOwl. <a href="#es3">F3</a> <a href="#es4">F4</a></p>
-  <h3>PublicForumAI</h3>
-  <p>A octubre de 2026, solo trabaja Public Forum. El plan gratis incluye 3 rondas completas al mes, ejercicios de flujo ilimitados, 5 casos al mes y 15 módulos de formación. Premium cuesta $9,99 al mes o $79 al año y añade rondas ilimitadas con fuentes enlazadas. <a href="#es5">F5</a></p>
-  <h3>Debate Ladder</h3>
-  <p>A octubre de 2026, es un juego de debate por voz: te toca a favor o en contra, das apertura, réplica y cierre por micrófono, y un juez de IA puntúa lógica, capacidad de respuesta, claridad, expresión y persuasión. Las victorias en partidas puntuadas suben tu ELO, que empieza en 500. Las cuentas nuevas reciben 100 créditos y cada debate cuesta más o menos un crédito por minuto. <a href="#es6">F6</a></p>
+  <h2>¿ChatGPT o una herramienta de debate?</h2>
+  <p>ChatGPT y Claude son buenos compañeros para pensar: responden rápido, te llevan la contraria si se lo pides y tienen planes gratis. Lo que no hacen por su cuenta es recordar tu moción, tu lado y los tiempos de cada discurso, ni darte el caso con la estructura de arriba sin que se la pidas. A octubre de 2026, OpenAI dice que la versión gratis de ChatGPT está disponible para todos, y Claude tiene un plan gratis de $0 y Pro a $20 al mes. <a href="#es1">F1</a> <a href="#es2">F2</a></p>
+  <p>Las herramientas de debate en español van por otro lado. A octubre de 2026, en Socrátiko eliges un tema o escribes el tuyo, una IA te lleva la contraria y se adapta a tu nivel, y al final recibes una nota, tus puntos fuertes y débiles y consejos; tiene campañas con historia y da 3 debates gratis cada semana. <a href="#es3">F3</a> En el entrenamiento de Debatly eliges una moción y una postura, un entrenador de IA defiende la contraria y señala falacias, y un juez puntúa tres criterios con consejos; sus planes empiezan en 19 € al mes, con devolución durante los primeros 7 días. <a href="#es4">F4</a> <a href="#es5">F5</a></p>
+  <p>Para una réplica rápida, cualquiera de estas sirve. Para llegar a un torneo con el caso escrito, las respuestas preparadas y una ronda cronometrada, DebateOwl hace las tres cosas en el mismo sitio.</p>
 </section>
 <section>
-  <h2>Comparativa rápida</h2>
+  <h2>Qué herramienta para cada paso</h2>
   <div class="scroll"><table>
-    <caption>Datos de la web de cada producto, consultados el 30 de octubre de 2026. DebateOwl es la primera fila.</caption>
-    <thead><tr><th scope="col">Herramienta</th><th scope="col">Sirve sobre todo para</th><th scope="col">Caso para leer en voz alta</th><th scope="col">Práctica contra una IA</th><th scope="col">Precio</th></tr></thead>
+    <caption>A octubre de 2026, según la web de cada producto. «No consta» significa que su web no lo dice.</caption>
+    <thead><tr><th scope="col">Herramienta</th><th scope="col">1. Moción</th><th scope="col">2. Caso</th><th scope="col">3. Respuestas</th><th scope="col">4. Práctica con tiempo</th><th scope="col">Precio</th></tr></thead>
     <tbody>{trs}</tbody>
   </table></div>
-  <p>Los precios cambian. Antes de pagar, mira la página del producto.</p>
-</section>
-<section>
-  <h2>¿Y si debates en Parlamentario Británico?</h2>
-  <p>Si tu torneo usa Parlamentario Británico, con cuatro equipos y siete minutos por orador, DebateOwl no simula esa ronda completa. Lo que sí puedes hacer: crear el Debate actual con ese formato, generar el caso de tu posición, pedir al Atacante de casos los puntos débiles y cronometrar cada discurso con el <a href="/es/tools/cronometro-debate">cronómetro de debate gratis</a>, que trae Parlamentario Británico, World Schools y Parlamentario Asiático. Para sacar mociones de práctica está el <a href="/es/tools/generador-mociones">generador de mociones</a>, y para tomar notas, la <a href="/es/tools/hoja-de-flujo">hoja de flujo</a> imprimible.</p>
 </section>
 {faq_block("Preguntas frecuentes", faqs, "details")}
 <p class="langs">Esta guía también está en <a href="/best-ai-for-debate" hreflang="en">inglés</a>, con más herramientas, y en <a href="/hu/melyik-ai-a-legjobb-vitara" hreflang="hu">húngaro</a>.</p>
 {sources("Fuentes (consultadas en octubre de 2026)", [
-    ("es1", "https://chatgpt.com/pricing", "Versión gratis disponible para todos; planes Go, Plus y Pro; Business y Enterprise en las preguntas frecuentes."),
-    ("es2", "https://claude.com/pricing", "Plan gratis de $0; Pro $17/mes anual o $20 mensual; Max desde $100/mes."),
-    ("es3", "https://www.argufight.com/", "Retos, modos de 5 y 3 rondas, jueces de IA de 0 a 100, ELO, cinturones, voz, 26 idiomas, gratis para empezar. /pricing devuelve 404."),
-    ("es4", "https://www.argufight.com/judges", "Panel de tres jueces elegidos entre diez personalidades; la portada habla de siete y la página About de seis."),
-    ("es5", "https://publicforumai.com/pricing", "Plan gratis y Premium a $9,99/mes o $79/año."),
-    ("es6", "https://debateladder.com/", "Juego de debate por voz, ELO desde 500, 100 créditos gratis, un crédito por minuto aproximadamente."),
+    ("es1", "https://chatgpt.com/pricing", "Versión gratis disponible para todos; planes Go, Plus y Pro."),
+    ("es2", "https://claude.com/pricing", "Plan gratis de $0; Pro $17/mes anual o $20 mensual."),
+    ("es3", "https://www.socratiko.com/", "Debates contra una IA que te lleva la contraria, campañas, nota y consejos, 3 debates gratis cada semana y 2 batallas de campaña al día."),
+    ("es4", "https://debatly.com/es/ia-debate", "Entrenamiento con moción y postura, entrenador de IA en contra, juez que puntúa tres criterios."),
+    ("es5", "https://debatly.com/es/pricing", "Starter 19 €/mes, Pro 39 €/mes, Max 89 €/mes; devolución en los primeros 7 días."),
 ], "Consultado el 30 de octubre de 2026.")}
 """
     style = """
-body.es{background:#FFFBF2}body.es main{width:min(900px,calc(100% - 32px));margin:30px auto 72px}
+body.es{background:#FFFBF2}body.es main{width:min(880px,calc(100% - 32px));margin:30px auto 72px}
 body.es h1{font-size:clamp(2.1rem,5.4vw,3.6rem);color:#0B1426;max-width:18ch}
-body.es .pick{background:#fff;border:2px solid #F2C14E;border-radius:26px;padding:6px 22px 18px;margin:24px 0}
-body.es .situations{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px;margin:16px 0}
-body.es .situations div{background:#FFF6DC;border-radius:18px;padding:12px 14px}
-body.es .situations div:first-child{background:#EEF7FF;outline:2px solid #0A6FF0}
-body.es dt{font-family:Fredoka,Nunito,sans-serif;font-size:1.05rem}body.es dd{margin:6px 0 0}
+body.es .route{display:flex;flex-wrap:wrap;gap:8px;padding:0;list-style:none;counter-reset:paso;margin:22px 0}
+body.es .route li{counter-increment:paso;background:#fff;border:2px solid #F2C14E;border-radius:999px;padding:6px 14px}
+body.es .route li::before{content:counter(paso) ". ";font-family:Fredoka,Nunito,sans-serif}
+body.es .step{border-left:4px solid #F2C14E;padding-left:20px;margin:28px 0}
+body.es .decision{background:#fff;border-radius:18px;padding:12px 16px;border:1px solid #F0DFB2}
 body.es .case{background:#fff;border-left:5px solid #0A6FF0;border-radius:0 22px 22px 0;padding:6px 20px 12px}
 body.es .case h3{margin:16px 0 4px}body.es .motion{font-family:Fredoka,Nunito,sans-serif;font-size:1.1rem}
+body.es .replies p{background:#EEF7FF;border-radius:14px;padding:10px 14px}
+body.es .cta-box{background:#0B1426;color:#EEF4FF;border-radius:22px;padding:8px 20px 14px}body.es .cta-box a:not(.cta){color:#FCE48A}
 body.es table{min-width:820px;background:#fff}body.es tr.own{background:#EEF7FF}
 body.es details{border-bottom:1px solid #E8DCC0;padding:10px 0}
 """
@@ -1220,10 +1213,10 @@ body.es details{border-bottom:1px solid #E8DCC0;padding:10px 0}
         "modified": "2026-10-30",
         "alternates": BEST_AI_ALTERNATES,
         "price": (ES_PRICE_START, ES_PRICE_HTML),
-        "title": "¿Qué IA es mejor para preparar un debate? (2026) | DebateOwl",
-        "description": "Qué IA usar para preparar un debate en español: DebateOwl, ChatGPT, Claude, ArguFight y otras, según lo que necesitas. Datos de octubre de 2026.",
-        "h1": "La IA para preparar un debate, según lo que necesitas",
-        "question": "¿Qué IA es mejor para preparar un debate?",
+        "title": "Mejor IA para preparar un debate: guía paso a paso (2026) | DebateOwl",
+        "description": "Qué IA usar en cada paso de la preparación de un debate: analizar la moción, escribir el caso, preparar respuestas y practicar con tiempo, en español.",
+        "h1": "Cómo preparar un debate con IA, paso a paso",
+        "question": "¿Qué IA sirve para preparar un debate?",
         "answer": answer,
         "faqs": faqs,
         "style": style,
@@ -1233,54 +1226,41 @@ body.es details{border-bottom:1px solid #E8DCC0;padding:10px 0}
 
 def page_hu_best():
     answer = (
-        "Ha konkrét indítványra és időpontra készülsz, a DebateOwl az első választás: felolvasható esetet ír "
-        "„Ha azt mondják… erre azt feleljük…” válaszokkal, és időzített gyakorlófordulót futtat MI-ellenféllel, magyar felületen. "
-        "Ötleteléshez a ChatGPT vagy a Claude ingyenes csomagja is elég. "
-        "Ha élő emberekkel vitáznál írásban, MI-bírókkal, az ArguFight felülete magyarul is elérhető, és ingyen kezdhető."
+        "A DebateOwl az első választás, ha konkrét tételre és időpontra készülsz: felolvasható esetet ír "
+        "„Ha azt mondják… erre azt feleljük…” válaszokkal, és időzített gyakorlófordulót futtat egy AI-ellenféllel, magyarul. "
+        "Ha csak ötletelsz, egy általános chatbot ingyenes csomagja is elég, például a ChatGPT vagy a Claude."
     )
-    faqs = [
-        ("Van ingyenes MI vitára?", "Igen. 2026 októberében a ChatGPT-nek és a Claude-nak van ingyenes csomagja, az ArguFight ingyen kezdhető, a PublicForumAI pedig havi 3 gyakorlófordulót ad. A DebateOwl időmérője, tételgenerátora és jegyzetlapja ingyenes, fiók nélkül. Maga az alkalmazás a 3 napos próba után fizetős."),
-        ("Magyarul is működik a DebateOwl?", "Igen. Az alkalmazás magyarul, angolul és spanyolul érhető el, és az ingyenes eszközöknek is van magyar változata."),
-        ("Melyik a jobb: ChatGPT vagy Claude?", "Egyik sem jobb mindenkinek. A ChatGPT gyors ötleteléshez jó, a Claude-ba egy hosszabb esetet is bemásolhatsz, hogy kritizálja. Az indítványt, az oldaladat és a beszédidőket egyik sem tartja meg magától, csak ha beállítod."),
-        ("Kitalálhat forrást az MI?", "Igen, előfordul. Minden forrást nyiss meg, és nézd meg, hogy pontosan azt mondja-e, amit idézni akarsz. Ami nincs meg, az nem kerül a beszédbe."),
+    q_lang = "Tud-e magyarul az AI vitapartner?"
+    a_lang = "A DebateOwl igen: magyar felületen az eset, a válaszok, a Vitapárbaj ellenfele és az Edző is magyarul ír. Egy általános chatbotnak minden beszélgetésben meg kell adnod az indítványt, az oldaladat és a beszédidőket."
+    q_price = "Mennyibe kerül?"
+    a_price = "Az alkalmazás 3 napos ingyenes próba után havi $5 + adó. Az időmérő, a tételgenerátor, a jegyzetlap és a beszédidő-kalkulátor ingyenes, fiók nélkül. 2026 októberében a ChatGPT ingyenes változata mindenkinek elérhető, a Claude-nak $0-s csomagja van."
+    q_not = "Mire nem jó az AI a vitában?"
+    a_not = "Nem ellenőrzi helyetted a forrásokat, nem ismeri a bírádat, és a forduló alatt általában nem is használhatod. A döntést, hogy melyik érvre építed a zárást, neked kell meghoznod."
+    q_teacher = "Hogyan használja egy tanár a vitaszakkörön?"
+    a_teacher = "Az ingyenes eszközökkel, fiók nélkül: kivetített vitaidőmérő, tételgenerátor, nyomtatott jegyzetlap. A versenyre készülő diákok a DebateOwl alkalmazásban írják meg az esetet és gyakorolnak időre."
+    faqs = [(q_lang, a_lang), (q_price, a_price), (q_not, a_not), (q_teacher, a_teacher)]
+    choices = [
+        ("Ha konkrét tételre és időpontra készülsz,", "akkor a DebateOwl: megírja az esetet, a válaszokat, és időre elpróbálhatod a Vitapárbajban."),
+        ("Ha csak ötletelsz vagy egy új témát értenél meg,", "akkor egy általános chatbot ingyenes csomagja elég, például a ChatGPT vagy a Claude."),
+        ("Ha a szakkörön óra közben kell egy időmérő,", 'akkor az ingyenes <a href="/hu/tools/vitaidomero">vitaidőmérő</a>, kivetítve, fiók nélkül.'),
+        ("Ha gyakorló tétel kell,", 'akkor a <a href="/hu/tools/vitatetel-generator">vitatétel-generátor</a>.'),
+        ("Ha a beszédedet hangosan akarod elpróbálni,", "akkor a Vitapárbaj, ahol gépelni és beszélni is lehet."),
+        ("Ha egy forrás kell a beszédbe,", "akkor kérj nyomot az AI-tól, de a forrást te nyisd meg és olvasd el."),
     ]
-    steps = [
-        ("Van már indítványod és időpontod?", "Ha igen, a DebateOwl. Megírja az esetet felolvasható formában, a másik oldal várható érveire adott válaszokkal, és a Vitapárbajban időre elpróbálhatod."),
-        ("Csak meg akarod érteni a témát?", "Akkor egy általános MI-asszisztens ingyenes csomagja elég: ChatGPT vagy Claude. Kérd meg, hogy a másik oldalt képviselje, és ne engedjen, amíg a válaszod nem győzi meg."),
-        ("Emberekkel vitáznál, pontozással?", "Az ArguFight írásos vitákat rendez emberek között, és MI-bírók döntenek, indoklással. A felülete magyarul is elérhető."),
-    ]
-    ol = "".join(f"<li><strong>{esc(q)}</strong> {esc(a)}</li>" for q, a in steps)
-    tools = [
-        ("DebateOwl", "konkrét indítványra készülsz iskolai vagy versenyvitára, és felolvasható eset, válaszok, időzített forduló kell.", "teljes brit parlamenti vagy World Schools fordulót akarsz szimulálni: ezekhez csak a felkészítő eszközök és az időmérő való."),
-        ("ChatGPT", "gyorsan akarsz ötletelni, ellenérveket gyűjteni, akár hangalapú beszélgetésben.", "azt várod, hogy magától megjegyezze az indítványt, az oldaladat és a beszédidőket: ezt csak akkor teszi, ha projektben vagy memóriában beállítod."),
-        ("Claude", "egy hosszú esetet másolnál be, és részletes kritikát kérnél rá.", "időzített fordulót és ítéletet keresel: ezt magától nem ad."),
-        ("ArguFight", "élő ellenfelekkel vitáznál írásban, és érdekel a rangsor meg a pontszám.", "egy adott indítványra kell felolvasható eset: esetet nem ír."),
-        ("PublicForumAI", "angolul versenyzel Public Forum formátumban.", "más formátumban vitázol: csak Public Forummal foglalkozik."),
-        ("Debate Ladder", "hangosan, mikrofonba akarsz gyakorolni, és motivál a rangsor.", "magyar felületet keresel: a weboldala angol."),
-    ]
-    cards = "".join(
-        f'<article{OWN if i == 0 else ""}><h3>{esc(name)}</h3><p><strong>Akkor válaszd, ha</strong> {esc(yes)}</p><p><strong>Ne ezt válaszd, ha</strong> {esc(no)}</p></article>'
-        for i, (name, yes, no) in enumerate(tools)
-    )
-    prices = [
-        ("DebateOwl", "3 napos próba; az időmérő, a tételgenerátor és a jegyzetlap ingyenes, fiók nélkül", "havi $5 + adó"),
-        ("ChatGPT", "Ingyenes változat mindenkinek", "Go, Plus, Pro (a megnyitott oldalon dollárár nélkül)"),
-        ("Claude", "Ingyenes csomag, $0", "Pro havi $20 (éves fizetéssel havi $17), Max havi $100-tól"),
-        ("ArguFight", "Ingyen kezdhető", "Nincs feltüntetve (a /pricing oldal 404-et ad)"),
-        ("PublicForumAI", "Havi 3 teljes gyakorlóforduló", "Premium havi $9,99 vagy évi $79"),
-        ("Debate Ladder", "100 kredit új fióknak", "További kredit, nagyjából 1 kredit percenként"),
-    ]
-    prows = "".join(f'<tr><th scope="row">{esc(a)}</th><td>{esc(b)}</td><td>{esc(c)}</td></tr>' for a, b, c in prices)
+    choice_html = "".join(f"<li><strong>{esc(a)}</strong> {b}</li>" for a, b in choices)
     body = f"""
-<section class="flow">
-  <h2>Három kérdés, és megvan, melyik kell</h2>
-  <ol>{ol}</ol>
-  <p><a class="cta" href="/app">Kipróbálom a DebateOwlt 3 napig</a></p>
-  <p class="price">{HU_PRICE_HTML}</p>
+<section class="ifthen">
+  <h2>Ha… akkor…</h2>
+  <ul>{choice_html}</ul>
 </section>
-<section>
-  <h2>Egy eset vázlata, ahogy a DebateOwl megírja</h2>
-  <p>Indítvány: „Az iskolák térjenek át négynapos tanítási hétre.” Ellenző oldal. A bizonyítékok helyén csak az áll, mit keress, mert azt neked kell megnyitnod és ellenőrizned.</p>
+<section class="qa">
+  <h2>{esc(q_lang)}</h2>
+  <p>A DebateOwl igen. Ha magyarra állítod a felületet, az AI minden szöveget magyarul ír: az esetet, a „Ha azt mondják…” válaszokat, a Vitapárbaj ellenfelének beszédeit és az Edző tanácsait. Az alkalmazás angolul és spanyolul is elérhető.</p>
+  <p>Egy általános chatbotot neked kell beállítanod: minden új beszélgetésben újra meg kell adnod az indítványt, az oldaladat és a beszédidőket. A DebateOwlban ezek az aktuális vitádhoz tartoznak, és ott maradnak.</p>
+</section>
+<section class="qa">
+  <h2>Mit ír meg az AI, és mi marad rád?</h2>
+  <p>Egy példa: „Az iskolák térjenek át négynapos tanítási hétre.” Ellenző oldal. A bizonyítékok helyén csak az áll, mit keress, mert azt neked kell megnyitnod és ellenőrizned.</p>
   <ul class="outline">
     <li><strong>Nyitás:</strong> Egy rövidebb hét jól hangzik, amíg meg nem kérdezzük, ki vigyáz a gyerekre pénteken.</li>
     <li><strong>1. érv, a dolgozó szülők:</strong> a szabad pénteket valakinek meg kell oldania. Bizonyíték: keress felmérést arról, hány családban dolgozik mindkét szülő. Miért fontos: ha a teher a családokra kerül, a reform költsége csak máshol jelenik meg.</li>
@@ -1289,44 +1269,42 @@ def page_hu_best():
     <li><strong>Ha azt mondják,</strong> hogy a pénteki napon lehet szakkör, <strong>erre azt feleljük:</strong> akkor az iskola továbbra is nyitva van, csak nem tanít, és ez nem rövidebb hét.</li>
     <li><strong>Zárás:</strong> A jó tanítási hét nem a napok számán múlik, hanem azon, mennyit marad meg belőle.</li>
   </ul>
-  <p>Az alkalmazásban egyetlen gyenge részt is újragenerálhatsz, a többi marad. Az esetet Wordbe, PDF-be vagy Google Docsba is kiviheted.</p>
+  <p>Ezt a vázat írja meg a DebateOwl, a te tételedre. Rád marad a források megnyitása, a gyenge rész újragenerálása vagy átírása, és a zárómondat, amit a saját szavaiddal mondasz. Az esetet Wordbe, PDF-be vagy Google Docsba is kiviheted.</p>
 </section>
-<section>
-  <h2>Az eszközök egyenként: mikor igen, mikor nem</h2>
-  <div class="cards">{cards}</div>
-  <p>Jól működik a kettő együtt: egy általános asszisztens a háttérhez, a DebateOwl magához az indítványhoz. Ha egy felkészülő este menetére vagy kíváncsi, azt a <a href="/hu/mi-vitafelkeszules">vitafelkészülés MI-vel</a> útmutató írja le.</p>
+<section class="qa price-box">
+  <h2>{esc(q_price)}</h2>
+  <p class="price">{HU_PRICE_HTML}</p>
+  <p><a class="cta" href="/app">Kipróbálom a DebateOwlt 3 napig</a></p>
+  <p>Ha csak ötletelni akarsz, nem kell fizetned: 2026 októberében a ChatGPT ingyenes változata mindenkinek elérhető, a Claude-nak pedig $0-s csomagja van. <a href="#hu1">F1</a> <a href="#hu2">F2</a></p>
 </section>
-<section>
-  <h2>Ingyen és pénzért (2026. október)</h2>
-  <div class="scroll"><table>
-    <caption>A termékek saját oldaláról, 2026. október 30-án. A DebateOwl az első sor.</caption>
-    <thead><tr><th scope="col">Eszköz</th><th scope="col">Ingyenes lehetőség</th><th scope="col">Fizetős ár</th></tr></thead>
-    <tbody>{prows}</tbody>
-  </table></div>
-  <p>2026 októberében az ArguFight saját oldalai háromféleképpen írják le a bírói kört: a „The Judges” oldal tíz személyiséget mutat, a kezdőlap hetet, az „About” hatot. Mindegyik szerint vitánként legfeljebb három MI-bíró pontoz 0-tól 100-ig, indoklással.</p>
-  <p>Ez az összevetés angolul, több eszközzel: <a href="/best-ai-for-debate" hreflang="en">Which AI is best for debate?</a> Spanyolul: <a href="/es/mejor-ia-para-preparar-un-debate" hreflang="es">¿Qué IA es mejor para preparar un debate?</a></p>
+<section class="qa">
+  <h2>{esc(q_not)}</h2>
+  <ul>
+    <li>Nem ellenőrzi helyetted a forrást. A név és az év a lapon még nem ellenőrzés: nyisd meg, és nézd meg, hogy tényleg azt mondja-e.</li>
+    <li>Nem ismeri a bírádat és a ligád szabályait. Ezt egy edző vagy a csapattársaid tudják.</li>
+    <li>A forduló alatt általában nem használhatod. A legtöbb verseny korlátozza az elektronikát, ezért az AI a felkészülésé.</li>
+    <li>A DebateOwl Vitapárbaja iskolai 4-6-6-3, Lincoln-Douglas és Public Forum fordulót futtat. Brit parlamenti vagy World Schools fordulóhoz a felkészítő eszközök és az időmérő valók.</li>
+  </ul>
 </section>
-{faq_block("Gyakori kérdések", faqs, "defs")}
+<section class="qa">
+  <h2>{esc(q_teacher)}</h2>
+  <p>Egy szakköri foglalkozáshoz nem kell fiók. Vetítsd ki a <a href="/hu/tools/vitaidomero">vitaidőmérőt</a>, húzz egy tételt a <a href="/hu/tools/vitatetel-generator">tételgenerátorral</a>, nyomtass mindenkinek <a href="/hu/tools/jegyzetlap">jegyzetlapot</a>, és a <a href="/hu/tools/beszedido-kalkulator">beszédidő-kalkulátorral</a> nézd meg, belefér-e egy megírt beszéd az időbe.</p>
+  <p>A versenyre készülő diákok a DebateOwl alkalmazásban írják meg az esetet, és a Vitapárbajban gyakorolnak időre. Egy teljes felkészülő este menetét a <a href="/hu/mi-vitafelkeszules">vitafelkészülés MI-vel</a> útmutató írja le.</p>
+</section>
+<p class="langs">Ez az oldal <a href="/best-ai-for-debate" hreflang="en">angolul</a> is elérhető, több eszközzel, és <a href="/es/mejor-ia-para-preparar-un-debate" hreflang="es">spanyolul</a> is.</p>
 {sources("Források (ellenőrizve: 2026. október)", [
-    ("hu1", "https://chatgpt.com/pricing", "Ingyenes változat mindenkinek; Go, Plus, Pro; a GYIK-ben Business és Enterprise."),
-    ("hu2", "https://claude.com/pricing", "Ingyenes csomag $0; Pro havi $20 vagy éves fizetéssel havi $17; Max havi $100-tól."),
-    ("hu3", "https://www.argufight.com/", "Írásos viták, MI-bírók 0–100 pontozással, ELO, 26 nyelv köztük magyar, ingyen kezdhető. A /pricing 404."),
-    ("hu4", "https://www.argufight.com/judges", "Tíz bírószemélyiség, vitánként háromtagú panel."),
-    ("hu5", "https://publicforumai.com/pricing", "Ingyenes csomag és Premium havi $9,99 vagy évi $79."),
-    ("hu6", "https://debateladder.com/", "Hangalapú vitajáték, ELO 500-ról, 100 ingyenes kredit."),
+    ("hu1", "https://chatgpt.com/pricing", "Ingyenes változat mindenkinek; Go, Plus és Pro csomag."),
+    ("hu2", "https://claude.com/pricing", "Ingyenes csomag $0; Pro havi $20, éves fizetéssel havi $17."),
 ], "Ellenőrizve: 2026. október 30.")}
 """
     style = """
-body.hubest{background:#F4F8F2}body.hubest main{width:min(960px,calc(100% - 32px));margin:30px auto 72px}
-body.hubest h1{font-size:clamp(2.1rem,5.4vw,3.5rem);color:#10301F;max-width:20ch}
-body.hubest .flow{background:#fff;border-radius:26px;padding:6px 22px 18px;border:2px solid #14B37D;margin:22px 0}
-body.hubest .flow ol{display:grid;gap:10px;padding-left:1.4rem}body.hubest .flow li::marker{font-family:Fredoka,Nunito,sans-serif;font-weight:700;color:#0E8A5F}
+body.hubest{background:#F4F8F2}body.hubest main{width:min(760px,calc(100% - 32px));margin:30px auto 72px}
+body.hubest h1{font-size:clamp(2.1rem,5.4vw,3.4rem);color:#10301F;max-width:20ch}
+body.hubest .ifthen{background:#fff;border-radius:26px;padding:6px 22px 14px;border:2px solid #14B37D;margin:22px 0}
+body.hubest .ifthen ul{list-style:none;padding:0;display:grid;gap:8px}body.hubest .ifthen li{padding:6px 0;border-bottom:1px dashed #CFE3D5}
+body.hubest .qa h2{border-top:3px solid #14B37D;padding-top:14px}
 body.hubest .outline{list-style:none;padding:0;display:grid;gap:8px}body.hubest .outline li{background:#fff;border-radius:16px;padding:10px 14px;border:1px solid #CFE3D5}
-body.hubest .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px}
-body.hubest .cards article{background:#fff;border-radius:20px;padding:4px 16px 8px;border:1px solid #CFE3D5}
-body.hubest .cards article.own{border:2px solid #0A6FF0;background:#EEF7FF}
-body.hubest table{min-width:640px;background:#fff}
-body.hubest dt{font-family:Fredoka,Nunito,sans-serif;margin-top:16px;font-size:1.05rem}body.hubest dd{margin:4px 0 0}
+body.hubest .price-box{background:#fff;border-radius:22px;padding:2px 20px 12px;margin-top:24px}
 """
     return {
         "slug": "hu/melyik-ai-a-legjobb-vitara",
@@ -1340,10 +1318,10 @@ body.hubest dt{font-family:Fredoka,Nunito,sans-serif;margin-top:16px;font-size:1
             "2026. október 30-án ellenőrizve. Fizetés előtt nézd meg őket."
         ),
         "price": (HU_PRICE_START, HU_PRICE_HTML),
-        "title": "Melyik MI a legjobb vitára? Eszközök összevetése (2026) | DebateOwl",
-        "description": "Melyik MI-t válaszd vitára: DebateOwl, ChatGPT, Claude, ArguFight és mások, mikor igen és mikor nem, árakkal. 2026. októberi adatok.",
-        "h1": "Vitára készülsz? Így válassz MI-eszközt",
-        "question": "Melyik MI a legjobb vitára?",
+        "title": "Melyik AI a legjobb vitára? Kérdések és válaszok (2026) | DebateOwl",
+        "description": "Melyik AI segít a vitára készülésben, tud-e magyarul, mennyibe kerül, mire nem jó, és hogyan használja egy tanár a szakkörön. 2026. októberi adatok.",
+        "h1": "AI a vitafelkészüléshez: kérdések és válaszok diákoknak és tanároknak",
+        "question": "Melyik AI a legjobb vitafelkészüléshez?",
         "answer": answer,
         "faqs": faqs,
         "style": style,
@@ -1370,31 +1348,26 @@ def page_argufight():
         ("Which languages do they support?", "ArguFight's site lists 26 languages. The DebateOwl app is in English, Spanish and Hungarian."),
     ]
     debaters = [
-        ("You have a school debate on a set motion next week", "DebateOwl", "You need the speech written in the order you will say it, the answers to what the other side will say, and a timed run-through. That is the job DebateOwl is built for."),
-        ("You compete in Public Forum or Lincoln-Douglas", "DebateOwl", "Sparring runs those rounds at their real speech times and ends with a verdict that names a reason. ArguFight's rounds are its own written format, not a PF or LD round."),
-        ("You enjoy arguing online and want to beat real people", "ArguFight", "Its core loop is a challenge another person accepts, written rounds, a judged result and an ELO rating. DebateOwl has no human opponents."),
-        ("You run a class and want a tournament that marks itself", "ArguFight", "Its schools page offers free, private, invite-only tournaments with every match judged 0–100 with written reasons."),
-        ("You debate in French, German or Turkish", "ArguFight", "Its site lists 26 languages. The DebateOwl app covers English, Spanish and Hungarian."),
-        ("You want both prep and a crowd", "Both", "Write and drill the case in DebateOwl, then post your strongest argument as an ArguFight challenge and see whether it survives a stranger."),
+        ("You have a tournament motion next week", "DebateOwl", "It writes the case in the order you will say it, with \"If they say… we answer…\" replies, then times a practice round in School 4-6-6-3, Lincoln-Douglas or Public Forum."),
+        ("You want quick, casual argument practice", "ArguFight", "You can test a take against its AI in about a minute or start a speed debate of 3 rounds in 1 hour, and it is free to start."),
+        ("You coach a club", "ArguFight", "Its schools page offers free, private class tournaments where an AI judges every match 0–100 with written reasons. For a live round in the room, DebateOwl's free timer and flow sheet need no accounts."),
+        ("You debate in Spanish or Hungarian", "DebateOwl", "The app is in both languages and its AI writes the case, the replies and the practice opponent in them. ArguFight's site lists both languages too, but it does not write a case."),
+        ("You debate in French, German or another language", "ArguFight", "Its site lists 26 languages. The DebateOwl app covers English, Spanish and Hungarian."),
     ]
     cards = "".join(
-        f'<article class="who {"owl" if pick == "DebateOwl" else "af" if pick == "ArguFight" else "both"}"><h3>{esc(who)}</h3><p class="pick">{TICK if pick == "DebateOwl" else ""}Pick: {esc(pick)}</p><p>{esc(why)}</p></article>'
+        f'<article class="who {"owl" if pick == "DebateOwl" else "af"}"><h3>{esc(who)}</h3><p class="pick">{TICK if pick == "DebateOwl" else ""}Pick: {esc(pick)}</p><p>{esc(why)}</p></article>'
         for who, pick, why in debaters
     )
+    head = ["", "Made for", "Case you can read out", "\"If they say… we answer…\" replies", "Timed rounds in real formats", "Languages", "Price (as of Oct 2026)"]
     rows = [
-        ("Main job", "Prepare one motion and rehearse it", "Win written debates against people, judged by AI"),
-        ("Opponent", "An AI that argues the other side", "Real people; AI opponents for a warm-up"),
-        ("Round shape", "Your format's speeches at real times (School 4-6-6-3, LD, PF)", "Standard: 5 written rounds over 24 hours. Speed: 3 rounds in 1 hour"),
-        ("Who decides", "A judged verdict that names the reason", "A panel of up to three AI judges, each scoring 0–100 with reasons"),
-        ("What you keep", 'A case: opening, arguments, "If they say… we answer…", closing, sources', "A verdict, an ELO change, sometimes a belt"),
-        ("Written case", "Yes, exportable to Word, PDF or Google Docs", "Not listed"),
-        ("Languages", "English, Spanish, Hungarian", "26 listed"),
-        ("Price", "3-day free trial, then $5/month + tax", "Free to start; paid tiers not stated"),
+        ("DebateOwl", "Preparing one motion and rehearsing it", "Yes: opening, arguments with evidence and why they matter, closing, sources", "Yes, in every case", "Yes: School 4-6-6-3, LD and PF in Sparring, typed or spoken", "English, Spanish, Hungarian", "3-day free trial, then $5/month + tax"),
+        ("ArguFight", "Written debates against people, judged by AI", "Not listed", "Not listed", "No: its own written rounds, 5 over 24 hours or 3 in 1 hour", "26 listed", "Free to start; paid tiers not stated"),
     ]
-    trs = "".join(f'<tr><th scope="row">{esc(a)}</th><td>{esc(b)}</td><td>{esc(c)}</td></tr>' for a, b, c in rows)
+    ths = "".join(f'<th scope="col">{esc(h)}</th>' for h in head)
+    trs = "".join(f'<tr{OWN if i == 0 else ""}><th scope="row">{esc(r[0])}</th>' + "".join(f"<td>{esc(c)}</td>" for c in r[1:]) + "</tr>" for i, r in enumerate(rows))
     body = f"""
 <section class="who-grid">
-  <h2>Six debaters, six picks</h2>
+  <h2>Five debaters, five picks</h2>
   <p>Find the line that sounds like you. The pick is about the job in front of you this month, not about which product is bigger.</p>
   <div class="cards">{cards}</div>
 </section>
@@ -1431,7 +1404,7 @@ def page_argufight():
   <h2>Matrix: DebateOwl and ArguFight</h2>
   <div class="scroll"><table>
     <caption>As of October 2026, from each product's own pages. DebateOwl is the first column.</caption>
-    <thead><tr><th scope="col"></th><th scope="col">DebateOwl</th><th scope="col">ArguFight</th></tr></thead>
+    <thead><tr>{ths}</tr></thead>
     <tbody>{trs}</tbody>
   </table></div>
 </section>
@@ -1459,12 +1432,12 @@ body.argu{background:#F6F7FB}body.argu main{width:min(1060px,calc(100% - 32px));
 body.argu h1{font-size:clamp(2.3rem,5.6vw,3.9rem);color:#0B1426}
 body.argu .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(290px,1fr));gap:14px}
 body.argu .who{background:#fff;border-radius:22px;padding:4px 18px 10px;border:2px solid #D9DEEA}
-body.argu .who.owl{border-color:#0A6FF0}body.argu .who.af{border-color:#E4572E}body.argu .who.both{border-style:dashed}
+body.argu .who.owl{border-color:#0A6FF0}body.argu .who.af{border-color:#E4572E}
 body.argu .pick{font-family:Fredoka,Nunito,sans-serif;display:flex;align-items:center;margin:0}
 body.argu .cta-band{background:#0B1426;color:#EEF4FF;border-radius:28px;padding:8px 24px 20px;margin:28px 0}
 body.argu .cta-band a:not(.cta){color:#FCE48A}
 body.argu .case{display:grid;gap:8px;padding-left:1.3rem}body.argu .case li{background:#fff;border-radius:14px;padding:8px 12px}
-body.argu table{min-width:680px;background:#fff}body.argu td:nth-child(2){background:#EEF7FF}
+body.argu table{min-width:900px;background:#fff}body.argu tr.own{background:#EEF7FF}
 body.argu details{border-bottom:1px solid #D9DEEA;padding:10px 0}
 """
     return {
@@ -1499,16 +1472,14 @@ def page_mindduel():
         ("Can I speak instead of type in both?", "Yes. MindDuel uses voice-to-text. DebateOwl's Sparring speeches can be typed or spoken."),
     ]
     mind = [
-        ("Set up", "Choose a topic (its listing names politics, technology, ethics and society) and a level: Beginner, Intermediate or Expert. Set thinking time and speaking time, each 5 to 60 seconds."),
-        ("Debate", "Ten rounds, you against the AI, spoken through voice-to-text."),
-        ("Result", "A 0–100 total, scored on clarity, logic and structure, evidence and examples, persuasiveness and rebuttal, with a short explanation."),
-        ("Afterwards", "The debate is saved to your history, and your score can put you on a global leaderboard."),
+        ("Prepare", "Its listing names no prep step. Choose a topic (its listing names politics, technology, ethics and society) and a level: Beginner, Intermediate or Expert. Set thinking time and speaking time, each 5 to 60 seconds."),
+        ("Practise", "Ten rounds, you against the AI, spoken through voice-to-text."),
+        ("Review", "A 0–100 total, scored on clarity, logic and structure, evidence and examples, persuasiveness and rebuttal, with a short explanation. The debate goes into your history, and there is a global leaderboard."),
     ]
     owl = [
-        ("Set up", "Open a Current Debate with the motion as it will be announced, and pick your side."),
-        ("Prepare", 'Generate the case: opening, two to four arguments with evidence and why they matter, "If they say… we answer…" replies, closing line, sources. Open the sources.'),
-        ("Debate", "Run Sparring in School 4-6-6-3, Lincoln-Douglas or Public Forum at the real speech times, typed or spoken. Drill questions in Crossfire if you like."),
-        ("Result", "A judged verdict that names the reason. Rebuild that one part and run the speech again."),
+        ("Prepare", 'Open a Current Debate with the motion and your side, and generate the case: opening, two to four arguments with evidence and why they matter, "If they say… we answer…" replies, closing line, sources. Open the sources.'),
+        ("Practise", "Run Sparring in School 4-6-6-3, Lincoln-Douglas or Public Forum at the real speech times, typed or spoken. Crossfire drills the questions."),
+        ("Review", "A judged verdict that names the reason. Rebuild that one part, with Attack or by regenerating the section, and give the speech again."),
     ]
     def lane(steps):
         return "".join(f"<li><strong>{esc(step)}.</strong> {esc(text)}</li>" for step, text in steps)
@@ -1533,7 +1504,7 @@ def page_mindduel():
     <div class="lane md"><h3>In MindDuel</h3><ol>{lane(mind)}</ol></div>
     <div class="lane owl"><h3>{TICK}In DebateOwl</h3><ol>{lane(owl)}</ol></div>
   </div>
-  <p>MindDuel trains how fast you can answer. DebateOwl trains what you say when the round is real. Neither replaces the other.</p>
+  <p>Both columns follow the same three steps: prepare, practise, review. MindDuel trains how fast you can answer. DebateOwl trains what you say when the round is real.</p>
 </section>
 <section>
   <h2>What the DebateOwl case looks like for this motion</h2>
@@ -1548,18 +1519,6 @@ def page_mindduel():
   <p>The two "If they say…" lines make good MindDuel material: each is a 30-second answer you can practise saying without notes. That is one honest way to use both.</p>
 </section>
 <section>
-  <h2>Pick by what you have this week</h2>
-  <ul class="picks">
-    <li><strong>Ten spare minutes and a phone:</strong> MindDuel. Short turns are the point.</li>
-    <li><strong>A motion and a tournament date:</strong> DebateOwl. You need the case before the reflexes.</li>
-    <li><strong>Nerves when you speak:</strong> start with MindDuel on Beginner, then move to full timed speeches in DebateOwl.</li>
-    <li><strong>A Public Forum or Lincoln-Douglas round:</strong> DebateOwl, because Sparring uses those formats' speech order and times.</li>
-  </ul>
-  <p><a class="cta" href="/ai-debate-case-generator">Get the case for your motion</a></p>
-  <p>{PRICE_HTML}</p>
-  <p>Other tools are compared on <a href="/best-ai-for-debate">which AI is best for debate</a>, and written rounds against real people on <a href="/debateowl-vs-argufight">DebateOwl vs ArguFight</a>.</p>
-</section>
-<section>
   <h2>The two apps in one table</h2>
   <div class="scroll"><table>
     <caption>As of October 2026. MindDuel facts come from its Google Play listing. DebateOwl is the right-hand column.</caption>
@@ -1567,6 +1526,22 @@ def page_mindduel():
     <tbody>{trs}</tbody>
   </table></div>
   <p>MindDuel's listing places it in the Entertainment category. Its only public page we found is that listing, so anything it does not say is marked not stated.</p>
+</section>
+<section class="ending">
+  <h2>When MindDuel is enough, and when you want DebateOwl</h2>
+  <div class="two">
+    <div>
+      <h3>MindDuel is enough when</h3>
+      <p>you have ten spare minutes and an Android phone, you want to get used to answering out loud in under a minute, and a score out of 100 is the feedback you need. It is also a gentle start if speaking makes you nervous: begin on Beginner with long thinking time.</p>
+    </div>
+    <div class="owl">
+      <h3>{TICK}You want DebateOwl when</h3>
+      <p>a motion and a date are set. Then you need the case written before the reflexes, replies ready for the other side, and a round at your format's real speech times that ends with a reason, not only a number.</p>
+      <p><a class="cta" href="/ai-debate-case-generator">Get the case for your motion</a></p>
+      <p>{PRICE_HTML}</p>
+    </div>
+  </div>
+  <p>Other tools are compared on <a href="/best-ai-for-debate">which AI is best for debate</a>, and written rounds against real people on <a href="/debateowl-vs-argufight">DebateOwl vs ArguFight</a>.</p>
 </section>
 {faq_block("MindDuel questions", faqs, "defs")}
 {sources("Sources (checked October 2026)", [
@@ -1585,7 +1560,7 @@ body.duel .lane{background:#fff;border-radius:22px;padding:4px 18px 10px;border:
 body.duel .lane.owl{border-color:#0A6FF0;background:#F2F8FF}body.duel .lane h3{display:flex;align-items:center}
 body.duel .lane li{margin:8px 0}
 body.duel .case{background:#fff;border-radius:22px;padding:6px 20px;border-left:5px solid #0A6FF0}
-body.duel .picks{list-style:none;padding:0;display:grid;gap:8px}body.duel .picks li{background:#fff;border-radius:14px;padding:8px 14px}
+body.duel .ending .two>div{background:#fff;border-radius:22px;padding:4px 18px 10px;border:2px solid #E3D8F7}body.duel .ending .owl{border-color:#0A6FF0!important;background:#F2F8FF!important}body.duel .ending h3{display:flex;align-items:center}
 body.duel table{min-width:640px;background:#fff}body.duel td:nth-child(3){background:#EEF7FF}
 body.duel dt{font-family:Fredoka,Nunito,sans-serif;margin-top:14px}
 @media(max-width:760px){body.duel .two{grid-template-columns:1fr}}
