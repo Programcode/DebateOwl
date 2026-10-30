@@ -2241,6 +2241,8 @@ GUIDES = {
                     "[The best AI for Public Forum](/best-ai-for-public-forum): tools compared speech by speech, from the constructive to final focus.",
                     "[ChatGPT vs Claude for debate](/chatgpt-vs-claude-for-debate): where each general chatbot fits, with prompts that make them argue back.",
                     "[{product} vs Debate Ladder](/debateowl-vs-debate-ladder): written case prep and timed rounds, or a ranked voice game.",
+                    "[{product} vs ArguFight](/debateowl-vs-argufight): which debater should pick a case and timed rounds, and which should pick written rounds against people with AI judges.",
+                    "[{product} vs MindDuel](/debateowl-vs-mindduel): one motion through both, from ten short spoken turns to a full timed round.",
                     "[Free vs paid AI debate tools](/free-vs-paid-ai-debate-tools): what $0 gets you and what paid plans add, with prices.",
                     "[Step-by-step debate prep with AI](/how-to-prepare-for-a-debate-with-ai): a seven-step plan and a worked second speech.",
                 ]},
