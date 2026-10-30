@@ -77,7 +77,7 @@ it("stops local Supabase when database tests fail", async () => {
   // docker here would kill a gate running in any other worktree, so log it instead.
   await executable(
     join(bin, "docker"),
-    '#!/usr/bin/env bash\nprintf "docker %s\\n" "$*" >> "$CALL_LOG"\n',
+    '#!/usr/bin/env bash\nprintf "docker %s\\n" "$*" >> "$CALL_LOG"\nif [ "$1 $2" = "network inspect" ]; then exit 1; fi\n',
   );
   await executable(
     join(bin, "supabase"),
@@ -102,7 +102,7 @@ it("stops local Supabase when database tests fail", async () => {
   });
 
   expect(result.status).toBe(17);
-  await expect(readFile(log, "utf8")).resolves.toBe(
+  expect((await readFile(log, "utf8")).split("\n").filter((line) => !line.startsWith("docker network ")).join("\n")).toBe(
     "supabase start\nnpm run test:db\nsupabase stop --no-backup\n",
   );
 });

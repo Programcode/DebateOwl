@@ -92,8 +92,9 @@ fi
 # Shared CI runners intermittently hit registry rate limits while pulling images.
 start_command=(start)
 if [ "$DB_ONLY" = true ]; then start_command=(db start); fi
-stack_started=true
 for attempt in 1 2 3; do
+  stack_network_prepare "$(pwd)"
+  stack_started=true
   if supabase "${start_command[@]}" >>"$runtime_dir/supabase.log" 2>&1; then break; fi
   if [ "$attempt" -eq 3 ]; then exit 1; fi
   echo "supabase start failed (attempt $attempt); retrying after $((attempt * 30))s"

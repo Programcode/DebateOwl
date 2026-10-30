@@ -15,6 +15,9 @@ stack_slot_configure() {
   export APP_ORIGIN="http://127.0.0.1:$APP_PORT"
   export FAKE_OPENROUTER_URL="http://127.0.0.1:$FAKE_PORT"
   export COLLABORATION_PORT="$COLLAB_PORT"
+  # Docker's next default subnet on the VPS overlaps the Pi's tailnet route.
+  # Reserve one subnet per locked slot instead of depending on its free pool.
+  STACK_SUBNET="10.254.$((230 + $1)).0/24"
   # CLI 2.121.0 maps config paths to env keys (dots become underscores).
   # Mailpit is [local_smtp], formerly [inbucket]. SMTP/POP3 host ports stay
   # disabled (0), as in today's defaults; the web/API port is allocated here.
@@ -25,6 +28,22 @@ stack_slot_configure() {
   export SUPABASE_ANALYTICS_PORT=$((54327 + offset)) SUPABASE_DB_POOLER_PORT=$((54329 + offset))
   export SUPABASE_EDGE_RUNTIME_INSPECTOR_PORT=$((8083 + offset))
   export SUPABASE_DB_URL="postgresql://postgres:postgres@127.0.0.1:$SUPABASE_DB_PORT/postgres"
+}
+
+stack_network_prepare() {
+  local project_id network subnet
+  project_id="$(basename "$1")"
+  network="supabase_network_$project_id"
+  if subnet="$(docker network inspect "$network" --format '{{range .IPAM.Config}}{{.Subnet}}{{end}}' 2>/dev/null)"; then
+    if [ "$subnet" != "$STACK_SUBNET" ]; then
+      echo "Existing $network uses $subnet instead of $STACK_SUBNET; stop its owning stack first" >&2
+      return 1
+    fi
+  else
+    docker network create --driver bridge --subnet "$STACK_SUBNET" \
+      --label "com.supabase.cli.project=$project_id" \
+      --label "com.docker.compose.project=$project_id" "$network" >/dev/null
+  fi
 }
 
 stack_slot_acquire() {

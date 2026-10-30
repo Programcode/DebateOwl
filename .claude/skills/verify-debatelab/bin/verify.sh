@@ -124,6 +124,7 @@ cmd_up() {
   trap 'say "up failed; tearing down (logs: $log_dir)"; cmd_down || true' ERR
 
   say "Starting local Supabase (logs: $log_dir)..."
+  stack_network_prepare "$REPO"
   record STACK_STARTED true
   supabase start >>"$log_dir/supabase.log" 2>&1
 
