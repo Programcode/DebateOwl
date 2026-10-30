@@ -791,7 +791,8 @@ def render_best_ai_page(page):
     return html
 
 # The comparison pages, in the order llms.txt lists them under "## Compare". Pages from
-# PAGES use their own H1 and description; the seven from seo_comparison_pages.py get a line here.
+# PAGES use their own H1 and description; the English pages from seo_comparison_pages.py get a line here
+# (the Spanish and Hungarian ones are listed under their language by localized_sections).
 COMPARE_LINKS = [
     ("best-ai-for-debate", None),
     ("best-ai-debate-tools", "six AI debate tools side by side on cases, replies, timed rounds and price, plus a one-hour test to run on any tool"),
