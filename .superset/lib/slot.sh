@@ -47,7 +47,7 @@ stack_network_prepare() {
 }
 
 stack_slot_acquire() {
-  local slots="${DEBATELAB_STACK_SLOTS:-2}" timeout="${1:-600}" waited=0 slot
+  local slots="${DEBATELAB_STACK_SLOTS:-2}" timeout="${1:-600}" waited=0 slot status
   case "$slots" in 1|2) ;; *) echo "DEBATELAB_STACK_SLOTS must be 1 or 2" >&2; return 1 ;; esac
   while :; do
     for ((slot=1; slot<=slots; slot++)); do
@@ -55,6 +55,12 @@ stack_slot_acquire() {
       if lock_acquire "$DB_LOCK" 0 2>/dev/null; then
         echo "Acquired local Supabase slot $slot (DB $SUPABASE_DB_PORT, app $APP_PORT)"
         return 0
+      else
+        status=$?
+        if [ "$status" -ne 1 ]; then
+          echo "Stack lock helper failed (exit $status); check Python 3 and permissions on $DB_LOCK" >&2
+          return "$status"
+        fi
       fi
     done
     if [ "$waited" -ge "$timeout" ]; then

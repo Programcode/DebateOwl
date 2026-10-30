@@ -124,7 +124,13 @@ cmd_up() {
   trap 'say "up failed; tearing down (logs: $log_dir)"; cmd_down || true' ERR
 
   say "Starting local Supabase (logs: $log_dir)..."
-  stack_network_prepare "$REPO"
+  stack_network_prepare "$REPO" || {
+    local network_status=$?
+    trap - ERR
+    say "up failed preparing the local network; tearing down (logs: $log_dir)"
+    cmd_down
+    return "$network_status"
+  }
   record STACK_STARTED true
   supabase start >>"$log_dir/supabase.log" 2>&1
 
@@ -346,7 +352,7 @@ cmd_down() {
     supabase stop --no-backup >>"${LOG_DIR:-/dev/null}/supabase.log" 2>&1 || say "warn: supabase stop failed; see ${LOG_DIR:-}/supabase.log"
   fi
   if [ -n "${HOLDER_PID:-}" ]; then
-    if [ "$(cat "$DB_LOCK/pid" 2>/dev/null)" = "$HOLDER_PID" ]; then lock_release "$DB_LOCK"; fi
+    if [ "$(cat "$DB_LOCK/pid" 2>/dev/null)" = "$HOLDER_PID" ]; then lock_release "$DB_LOCK" "$HOLDER_PID"; fi
     kill "$HOLDER_PID" 2>/dev/null || true
   fi
   rm -rf -- "$STATE_DIR"
