@@ -137,7 +137,9 @@ npm run test:db
 npx supabase stop --no-backup
 ```
 
-The default local stack begins at port `54321` and uses shared container names, so it is not parallel-safe across worktrees. The wrapper holds `~/.superset/debatelab-db.lock` through database tests and the real-Auth collaboration browser journey, and stops the stack and owned processes on exit. Outside Superset, coordinate ownership before starting it. The agent that starts the stack stops it before finishing, including after failures when safe.
+The wrapper and `verify.sh` share two local Supabase slots across worktrees. Slot 1 keeps today's ports (API `54321`, database `54322`, app `18081`, provider `18090`, collaboration `12345`) and `~/.superset/debatelab-db.lock`. Slot 2 adds 100 to ports and uses `~/.superset/debatelab-db.slot2.lock` plus the provider container `debatelab-fake-openrouter-s2`. The authoritative port table is [`.superset/lib/slot.sh`](../.superset/lib/slot.sh). Allocation takes the first free slot or waits up to 600 seconds for either; `DEBATELAB_STACK_SLOTS=1` restricts it to slot 1. Supabase containers and networks are named per worktree. A plain lock file, a dead owner, or an empty lock directory older than 120 seconds is reclaimed automatically. Use separate worktrees, and use the wrapper rather than starting Supabase directly when another task may be active. The task that starts a stack stops it before finishing, including after failures.
+
+Memory-heavy jobs share `~/.superset/debatelab-heavy.lock`. `npm run verify` wraps its build in [`.superset/heavy.sh`](../.superset/heavy.sh), and the full database gate wraps its browser phase. Use `bash .superset/heavy.sh npx expo export` for a local Expo export too. The helper skips locking when `CI` is set or `flock` is unavailable. It serializes these jobs without preventing two database stacks from running.
 
 ### A private database per agent
 

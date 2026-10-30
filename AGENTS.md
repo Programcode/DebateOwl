@@ -11,7 +11,7 @@
 
 Each Superset workspace is a separate git worktree. `.superset/config.json` runs `npm ci` when it creates a workspace and starts the app through `./.superset/dev.sh`. That script allocates a port from `8080-8179` in `~/.superset/debatelab-ports/allocations.json`; `./.superset/teardown.sh` releases it.
 
-The local Supabase stack still uses shared default ports and container names. In Superset, run the database gate through `./.superset/db-gate.sh`. It holds `~/.superset/debatelab-db.lock` while the stack runs and stops the stack afterward.
+Local Supabase verification has two slots shared by `./.superset/db-gate.sh` and `verify.sh`. Slot 1 keeps the default ports and `~/.superset/debatelab-db.lock`; slot 2 adds 100 to ports and uses `~/.superset/debatelab-db.slot2.lock`. Each worktree gets the first free slot and stops its stack afterward. `DEBATELAB_STACK_SLOTS=1` limits allocation to slot 1. See `.superset/lib/slot.sh` for the port table.
 
 ## System map
 
@@ -82,7 +82,7 @@ npm run test:db
 npx supabase stop --no-backup
 ```
 
-Use only the repo-pinned Supabase CLI (the exact `supabase` devDependency, 2.121.0). `npm run` scripts, `./.superset/db-gate.sh`, `scripts/agent-stack.sh`, and the verify harness already put it first on PATH; anywhere else, call `npx supabase`. Never use a global CLI or `npx supabase@latest`, and never bump the version in one worktree only: each CLI version pulls its own ~7 GB set of Docker images onto the shared VPS. Change it in `package.json`, `package-lock.json`, and the `setup-cli` steps in `.github/workflows/` together. Do not run this gate concurrently from multiple worktrees. If this task starts the stack, stop it before finishing, including after failures when safe.
+Use only the repo-pinned Supabase CLI (the exact `supabase` devDependency, 2.121.0). `npm run` scripts, `./.superset/db-gate.sh`, `scripts/agent-stack.sh`, and the verify harness already put it first on PATH; anywhere else, call `npx supabase`. Never use a global CLI or `npx supabase@latest`, and never bump the version in one worktree only: each CLI version pulls its own ~7 GB set of Docker images onto the shared VPS. Change it in `package.json`, `package-lock.json`, and the `setup-cli` steps in `.github/workflows/` together. Run concurrent gates only through the slot-aware wrapper, from separate worktrees. If this task starts the stack, stop it before finishing, including after failures when safe.
 
 WebKit is a separate release smoke test:
 

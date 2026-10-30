@@ -25,9 +25,9 @@ $H down          # stop everything `up` started; evidence stays
 
 ## Safety rules, read first
 
-- **Plain `npm run dev` talks to the PRODUCTION Supabase project** (`src/lib/supabase/env.ts` falls back to production). Never sign in or submit forms on a dev server you started yourself. Drive only the `up` instance. It sets `VITE_LOCAL_PREVIEW=true`, and `doctor` proves the client resolved to `http://127.0.0.1:54321`.
+- **Plain `npm run dev` talks to the PRODUCTION Supabase project** (`src/lib/supabase/env.ts` falls back to production). Never sign in or submit forms on a dev server you started yourself. Drive only the `up` instance. It sets `VITE_LOCAL_PREVIEW=true`, and `doctor` proves the client resolved to its allocated local API URL (`54321` or `54421`).
 - The Docker container `debatelab` on `127.0.0.1:8080` is Adam's deployed app. Never drive it, restart it, or point tests at it.
-- The local Supabase stack uses fixed ports (54321+) and shared container names, so only one worktree can run it at a time. `up` takes `~/.superset/debatelab-db.lock` (the lock `.superset/db-gate.sh` uses) and refuses to start if the lock is held, if any `supabase_*` container is running, or if port 18081 or 18090 is busy. Don't work around a refusal. Another worktree owns the stack.
+- Local verification shares two slots with `.superset/db-gate.sh`. `up` takes the first free slot or waits up to 600 seconds for either. Slot 1 keeps the default ports and `~/.superset/debatelab-db.lock`; slot 2 adds 100 to ports and uses `~/.superset/debatelab-db.slot2.lock`. Set `DEBATELAB_STACK_SLOTS=1` to restrict allocation to slot 1. The port table is `.superset/lib/slot.sh`. Containers and networks are named per worktree; the provider name is per slot. `up` refuses a stack already running for this worktree or busy slot ports. Never bypass an ownership check. Plain lock files, dead owners, and empty lock directories older than 120 seconds are reclaimed.
 - Recipes abort any request to `*.supabase.co` and fail the test if one is attempted.
 - Never print values from `.verify/state/` (`drive.env`, `function.env`). They are local test keys, but treat them as secrets.
 
@@ -50,11 +50,11 @@ It prints nothing about the values. Ask Adam before the first live run: it spend
 
 1. `supabase start`, which replays `supabase/migrations/`.
 2. Writes the function env from `.superset/workspace-test.env`.
-3. Starts the fake provider container `debatelab-fake-openrouter` (`127.0.0.1:18090`) on the stack network.
+3. Starts the slot's fake provider container (`debatelab-fake-openrouter` on `18090`, or `debatelab-fake-openrouter-s2` on `18190`) on the stack network.
 4. `supabase functions serve --no-verify-jwt`.
-5. Starts Vite on `http://127.0.0.1:18081` in local-preview mode.
+5. Starts Vite on the allocated app origin (`http://127.0.0.1:18081` or `http://127.0.0.1:18181`) in local-preview mode.
 
-It is ready when it prints `READY http://127.0.0.1:18081`. Port 18081 is fixed: the Edge Function CORS list (`supabase/functions/_shared/cors.ts`) allows it for the local full-stack gate, and it stays clear of the dev server (8080) and the credential-free browser run (18080), which the list also allows.
+It is ready when it prints `READY <app-origin>`. Use that URL for interactive driving. The chosen slot is saved in `.verify/state/stack.env` and restored by later commands. The generated `function.env` lists that app origin in `LOCAL_GATE_APP_ORIGINS`; CORS accepts this override only for dev origins. Production does not set it.
 
 Vite serves the working tree live, so uncommitted edits to `src/` apply on reload. Changes to `supabase/functions/` are picked up by `functions serve`. A new migration needs `down` then `up`.
 
@@ -65,7 +65,7 @@ If `up` fails, it tears itself down and prints the log directory (`.verify/logs/
 Run `$H doctor` first whenever anything looks off. It exits 0 only when all of these hold:
 
 - The stack lock is held by this run's holder process.
-- Port 18081 is served by this run's Vite process group.
+- The allocated app port is served by this run's Vite process group.
 - Vite's served `src/lib/supabase/env.ts` has `VITE_LOCAL_PREVIEW: "true"` and the local API URL.
 - The Edge Functions process is alive, and `demo-code-login` answers CORS for the app origin.
 - The fake provider answers.
@@ -106,7 +106,7 @@ Fake mode also runs `e2e/full-stack/`. Live mode runs the recipes, `e2e/live/`, 
 
 To prove a feature without a recipe, copy `recipes/case-generation.spec.ts` to `recipes/<feature>.spec.ts` and use the selectors from the matching file in `features/`. Recipes are maintained files. Keep the ones worth keeping.
 
-**Interactive.** Run `$H user` to mint a code. It prints `DEMO_CODE=...`, and `down` deletes that user. Then point a browser tool (Playwright MCP `browser_navigate` etc.) at `http://127.0.0.1:18081/login`, choose the `Demo code` tab, fill the `Demo code` textbox, and click `Sign in with demo code`. Save your own screenshots into `.verify/artifacts/<run-id>/`. The one-time DebateOwl welcome never opens on this stack (`VITE_LOCAL_PREVIEW`) or under Playwright (`VITE_E2E`); open `/app?intro=show` to see it, and close it with `Got it` or Esc. Closing it continues straight into the tour's Start debate step when that account has not finished the tour. A new account shows the onboarding tour on `/app`. Its first step offers `Start debate`; to skip the tour, click `Skip tour` (`[data-test-id="button-skip"]`). Then start a debate from the header (`Start debate`, test id `current-debate-desktop` or `current-debate-mobile`) or answer the motion dialog the first tool opens: `Start debate` files the work in a new debate, `Not now, use it once` keeps it one-off. Interactive runs have no remote-Supabase guard. Doctor's local-mode check is what protects you.
+**Interactive.** Run `$H user` to mint a code. It prints `DEMO_CODE=...`, and `down` deletes that user. Then point a browser tool (Playwright MCP `browser_navigate` etc.) at the printed app origin plus `/login`, choose the `Demo code` tab, fill the `Demo code` textbox, and click `Sign in with demo code`. Save your own screenshots into `.verify/artifacts/<run-id>/`. The one-time DebateOwl welcome never opens on this stack (`VITE_LOCAL_PREVIEW`) or under Playwright (`VITE_E2E`); open `/app?intro=show` to see it, and close it with `Got it` or Esc. Closing it continues straight into the tour's Start debate step when that account has not finished the tour. A new account shows the onboarding tour on `/app`. Its first step offers `Start debate`; to skip the tour, click `Skip tour` (`[data-test-id="button-skip"]`). Then start a debate from the header (`Start debate`, test id `current-debate-desktop` or `current-debate-mobile`) or answer the motion dialog the first tool opens: `Start debate` files the work in a new debate, `Not now, use it once` keeps it one-off. Interactive runs have no remote-Supabase guard. Doctor's local-mode check is what protects you.
 
 Selectors: use accessible names and roles as the feature files list them (`getByRole("button", { name: "Generate debate case" })`). The exceptions use `data-testid`: Crossfire's controls, the Current Debate control, strip and dashboard, and the voice controls (`voice-mode`, `voice-mic`). Use `exact: true` for short names such as `Start` or `Save`, because the header's `Start debate` also matches `Start`. Never use coordinates.
 
@@ -158,12 +158,12 @@ For those, see `docs/testing.md` (the live-provider gate and the production cana
 
 1. Deletes users minted by `user`.
 2. Kills only the process groups it recorded (functions, Vite, collaboration).
-3. Removes `debatelab-fake-openrouter`.
+3. Removes only the recorded slot's provider container.
 4. Runs `supabase stop --no-backup` (the local DB is wiped).
 5. Kills the lock holder and releases the lock if it is still ours.
 6. Deletes `.verify/state/`.
 
-It never touches `.verify/artifacts/` or `.verify/logs/`, and it is safe to run twice. Run it after every session, including failed ones. Never kill processes by name, and never run `supabase stop` for a stack you didn't start. After `down`, `docker ps` should show no `supabase_*` and no `debatelab-fake-openrouter` containers, and `~/.superset/debatelab-db.lock` should be gone.
+It never touches `.verify/artifacts/` or `.verify/logs/`, and it is safe to run twice. Run it after every session, including failed ones. Never kill processes by name, and never run `supabase stop` for a stack you didn't start. After `down`, this worktree's Supabase containers, its provider, and its slot lock should be gone. Another worktree may still own the other slot; leave it running.
 
 `.verify/` is gitignored. Delete old artifact directories by hand when they are no longer needed.
 
@@ -183,4 +183,4 @@ It never touches `.verify/artifacts/` or `.verify/logs/`, and it is safe to run 
 - The client files a result in its debate after it renders. A `page.goto` straight after the `ai` response can drop it; wait for the result on screen (and its row, if the next step reloads) first.
 - In a voice round, wait for the opponent's reply to finish (`spokenByBrowser`) before clicking `voice-mic` again; speaking over it abandons the voice request. `recipes/voice-rounds.spec.ts` shows the wait.
 - Account deletion is irreversible. `recipes/account-data.spec.ts` deletes only its own `@fullstack.test` demo user and checks that before clicking.
-- `.superset/db-gate.sh` and this skill share the lock. While your stack is up, the gate in any worktree waits (for up to 600 s) and then fails. Don't leave the stack up.
+- `.superset/db-gate.sh` and this skill share two slots. An idle verification stack still occupies one; always run `down` when finished. The full gate's browser phase and `npm run verify` builds also share a local heavy-job lock; CI skips it.

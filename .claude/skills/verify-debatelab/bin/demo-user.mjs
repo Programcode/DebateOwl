@@ -28,7 +28,7 @@ if (command === "create") {
     .single();
   if (error) throw error;
   await appendFile(usersFile, `${data.id}\t${email}\n`);
-  console.log(`DEMO_CODE=${code}\nEMAIL=${email}\nSign in at http://127.0.0.1:18081/login -> "Demo code" tab.`);
+  console.log(`DEMO_CODE=${code}\nEMAIL=${email}\nSign in at ${process.env.PLAYWRIGHT_BASE_URL || "http://127.0.0.1:18081"}/login -> "Demo code" tab.`);
 } else if (command === "delete-all") {
   const lines = (await readFile(args[0], "utf8")).split("\n").filter(Boolean);
   const { data } = await admin.auth.admin.listUsers({ perPage: 1000 });

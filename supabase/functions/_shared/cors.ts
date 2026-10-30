@@ -32,7 +32,9 @@ const STAGING_WEB_APP_ORIGIN = "https://debatelab-staging.vercel.app";
 export function isAllowedOrigin(origin: string): boolean {
   return (ALLOWED_ORIGINS as readonly string[]).includes(origin) ||
     origin === STAGING_WEB_APP_ORIGIN ||
-    VERCEL_PREVIEW_ORIGIN.test(origin);
+    VERCEL_PREVIEW_ORIGIN.test(origin) ||
+    (isDevOrigin(origin) && (Deno.env.get("LOCAL_GATE_APP_ORIGINS") ?? "")
+      .split(",").some((allowed) => allowed.trim() === origin));
 }
 
 export type CorsMethods = "POST, OPTIONS" | "GET, POST, OPTIONS" | "POST, GET, OPTIONS";

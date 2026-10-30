@@ -17,6 +17,11 @@ lock_acquire() {
   mkdir -p "$(dirname "$lock_dir")"
 
   while ! mkdir "$lock_dir" 2>/dev/null; do
+    # Old flock users could leave a plain file at a mkdir-lock path.
+    if [ -f "$lock_dir" ] && [ ! -L "$lock_dir" ]; then
+      rm -f -- "$lock_dir"
+      continue
+    fi
     # Reclaim a lock left behind by a process that no longer exists.
     if [ -f "$lock_dir/pid" ]; then
       local owner_pid
@@ -24,6 +29,15 @@ lock_acquire() {
       if [ -n "$owner_pid" ] && ! kill -0 "$owner_pid" 2>/dev/null; then
         rm -rf "$lock_dir"
         continue
+      fi
+    elif [ -d "$lock_dir" ]; then
+      # Leave time for a process between mkdir and writing its pid. Support
+      # both GNU and BSD stat; a fresh directory is never reclaimed.
+      local modified
+      modified="$(stat -c %Y "$lock_dir" 2>/dev/null || stat -f %m "$lock_dir" 2>/dev/null || date +%s)"
+      if [ "$(( $(date +%s) - modified ))" -gt 120 ]; then
+        # rmdir cannot delete a lock whose owner has since written its pid.
+        if rmdir -- "$lock_dir" 2>/dev/null; then continue; fi
       fi
     fi
 
