@@ -3,6 +3,7 @@
 set -euo pipefail
 if [ -z "${CI+x}" ] && command -v flock >/dev/null 2>&1; then
   mkdir -p "$HOME/.superset"
-  exec flock "$HOME/.superset/debatelab-heavy.lock" "$@"
+  # -o: detached children (the collaboration server) must not keep the lock.
+  exec flock -o "$HOME/.superset/debatelab-heavy.lock" "$@"
 fi
 exec "$@"

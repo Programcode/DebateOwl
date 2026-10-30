@@ -115,7 +115,7 @@ service_role_key="$(status_value SERVICE_ROLE_KEY)"
 database_url="$(status_value DB_URL)"
 app_origin="$APP_ORIGIN"
 project_id="$(basename "$(pwd)")"
-mailer_host="$(docker ps --filter "name=supabase_inbucket_$project_id" --format '{{.Names}}')"
+mailer_host="$(docker ps --filter "name=^supabase_inbucket_${project_id}$" --format '{{.Names}}')"
 if [ -z "$mailer_host" ]; then
   echo "Local Mailpit container is unavailable" >&2
   exit 1

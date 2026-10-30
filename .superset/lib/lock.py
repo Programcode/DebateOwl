@@ -52,6 +52,11 @@ def operate(action, path, owner):
                 stale = not alive(previous) if previous else time.time() - info.st_mtime > 120
                 if not stale:
                     return 1
+                pause = os.environ.get("DEBATELAB_LOCK_TEST_PAUSE")
+                if pause:
+                    # Tests only: hold the guard here to prove a second caller is refused.
+                    Path(pause + ".ready").touch()
+                    Path(pause).read_text()
                 shutil.rmtree(path)
             else:
                 return 1

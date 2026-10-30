@@ -1,4 +1,4 @@
-import { spawnSync } from "node:child_process";
+import { spawn, spawnSync } from "node:child_process";
 import { chmod, cp, mkdtemp, mkdir, readFile, rm, utimes, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
@@ -67,57 +67,31 @@ it("uses slot 2 when slot 1 is held, and respects the single-slot cap", async ()
   expect(result.status, result.stderr).toBe(0);
 });
 
-it("does not remove a replacement lock while its owner publishes the pid", async () => {
+it("refuses a second caller while another reclaims a stale lock", async () => {
+  // Round-1 review race: two waiters both judged one stale lock reclaimable
+  // and both returned success. The fcntl guard in lock.py must make the
+  // second caller wait. A pauses inside the guard, between judging the lock
+  // stale and removing it; without the guard, B would take the lock here.
   const root = await mkdtemp(join(tmpdir(), "debatelab-lock-race-"));
   temporaryRoots.push(root);
-  const result = spawnSync("bash", ["-c", `
-    set -euo pipefail
-    source "$1"
-    root="$2"
-    race_lock="$2/slot.lock"
-    mkdir "$race_lock"
-    touch -t 200001010000 "$race_lock"
-    mkfifo "$2/events" "$2/resume-a" "$2/resume-b" "$2/stop-a" "$2/stop-b"
-    (
-      # Pause a stale remover after classification, before it removes the path.
-      rmdir() { echo reaping > "$root/events"; read -r _ < "$root/resume-a"; command rmdir "$@"; }
-      lock_acquire "$race_lock" 0
-      echo acquired-a > "$root/events"
-      read -r _ < "$root/stop-a"
-      lock_release "$race_lock"
-    ) & a=$!
-    read -r first < "$2/events"
-    (
-      mkdir() {
-        command mkdir "$@" || return $?
-        if [ "$1" = "$race_lock" ]; then
-          echo fresh-b > "$root/events"
-          read -r _ < "$root/resume-b"
-        fi
-      }
-      if lock_acquire "$race_lock" 0; then
-        echo acquired-b > "$root/events"
-        read -r _ < "$root/stop-b"
-      else
-        echo busy-b > "$root/events"
-      fi
-    ) & b=$!
-    read -r next < "$2/events"
-    if [ "$first" = reaping ]; then
-      [ "$next" = fresh-b ]
-      echo resume > "$2/resume-a"
-      read -r first < "$2/events"
-      echo resume > "$2/resume-b"
-      read -r next < "$2/events"
-    fi
-    echo stop > "$2/stop-a"
-    if [ "$next" = acquired-b ]; then echo stop > "$2/stop-b"; fi
-    wait "$a"; wait "$b"
-    [ "$first" = acquired-a ] && [ "$next" = busy-b ]
-  `, "race-test", resolve(".superset/lib/lock.sh"), root], {
-    encoding: "utf8", timeout: 5000,
+  const lock = join(root, "slot.lock");
+  const pause = join(root, "pause");
+  await mkdir(lock);
+  await utimes(lock, new Date(2000, 0, 1), new Date(2000, 0, 1));
+  expect(spawnSync("mkfifo", [pause]).status).toBe(0);
+  const helper = resolve(".superset/lib/lock.py");
+  const a = spawn("python3", [helper, "acquire", lock, "4242"], {
+    env: { ...process.env, DEBATELAB_LOCK_TEST_PAUSE: pause },
   });
-  expect(result.status, result.stderr).toBe(0);
+  const aExit = new Promise<number | null>((done) => a.on("exit", done));
+  await expect.poll(() => readFile(`${pause}.ready`, "utf8").then(() => true, () => false)).toBe(true);
+
+  const b = spawnSync("python3", [helper, "acquire", lock, String(process.pid)], { encoding: "utf8", timeout: 5000 });
+  expect(b.status, "the second caller while the first holds the guard").toBe(1);
+
+  await writeFile(pause, "go\n");
+  expect(await aExit).toBe(0);
+  expect((await readFile(join(lock, "pid"), "utf8")).trim()).toBe("4242");
 });
 
 it("releases the verification holder and state when network creation fails", async () => {
@@ -192,6 +166,6 @@ it("stops local Supabase when database tests fail", async () => {
 
   expect(result.status).toBe(17);
   expect((await readFile(log, "utf8")).split("\n").filter((line) => !line.startsWith("docker network ")).join("\n")).toBe(
-    "supabase start\nnpm run test:db\nsupabase stop --no-backup\n",
+    "supabase start -x studio,postgres-meta,logflare,vector,supavisor,realtime\nnpm run test:db\nsupabase stop --no-backup\n",
   );
 });

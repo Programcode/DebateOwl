@@ -139,7 +139,7 @@ cmd_up() {
   local api_url anon_key service_key db_url mailer_url mailer_host
   api_url="$(sv API_URL)"; anon_key="$(sv ANON_KEY)"; service_key="$(sv SERVICE_ROLE_KEY)"
   db_url="$(sv DB_URL)"; mailer_url="$(sv MAILPIT_URL)"
-  mailer_host="$(docker ps --filter "name=supabase_inbucket_$PROJECT_ID" --format '{{.Names}}')"
+  mailer_host="$(docker ps --filter "name=^supabase_inbucket_${PROJECT_ID}$" --format '{{.Names}}')"
   [ -n "$mailer_host" ] || { say "Local Mailpit container is unavailable"; false; }
 
   LOCAL_SERVICE_ROLE_KEY="$service_key" LOCAL_MAILER_HOST="$mailer_host" \
