@@ -75,11 +75,13 @@ CSS = """
 .goal-page .picks{list-style:none;padding:0;margin:12px 0}
 .goal-page .picks li{padding:4px 0}
 .check{color:#14B37D;font-weight:800;margin-right:.35em}
+.checklist{list-style:none;padding:0;margin:14px 0;display:grid;gap:8px}.checklist label{display:flex;gap:10px;align-items:flex-start;border:1px solid var(--line);border-radius:14px;padding:10px 14px;background:rgba(255,255,255,.05);cursor:pointer}.checklist input{accent-color:#14B37D;width:1.1rem;height:1.1rem;margin-top:5px;flex:none}
+.hero .price{max-width:800px;color:var(--muted);margin:14px 0 0}
 .callout{max-width:840px;border:1px solid var(--line);border-radius:16px;padding:14px 18px;background:rgba(255,255,255,.05);margin:18px 0 0}
 """.strip()
 
 PAGES = [
-    {"slug": "ai-debate-practice", "title": "AI Debate Practice | {product}", "description": "Practice debate with {product} by running timed rounds against an AI opponent and getting feedback on your cases, rebuttals and speeches.", "eyebrow": "{product} guide", "h1": "AI Debate Practice for Stronger Cases, Rebuttals, and Speeches", "lead": "Use a focused debate workspace for cases, rebuttals, sources, flowcharts, coaching, and timed practice."},
+    {"slug": "ai-debate-practice", "title": "Best AI Debate Practice Tool? Checklist and Comparison (2026) | {product}", "description": "What to look for in an AI debate practice tool, then {product}, Debate Ladder, ArguFight, MindDuel and others compared, as of October 2026.", "eyebrow": "Comparison", "h1": "AI Debate Practice: How to Pick a Tool", "lead": "A seven-point checklist first, then a matrix of the tools against it, with facts as of October 2026."},
     {"slug": "ai-debate-case-generator", "title": "AI Debate Case Generator with Citations | {product}", "description": "{product} turns a motion into a ready-to-read debate case: an opening, arguments with evidence, If they say… replies, a closing line and sources to check.", "eyebrow": "Tool guide", "h1": "AI Debate Case Generator with Citations", "lead": "Draft faster, verify carefully, and walk into the round with a case you can read out."},
     {"slug": "debate-rebuttal-practice", "title": "Debate Rebuttal Practice | {product}", "description": "Paste an opposing argument into {product} to find its weak links, missing evidence and logic gaps, then practice the rebuttal you would give.", "eyebrow": "Feature guide", "h1": "Practice Rebuttals Before Your Opponent Finds the Weakness", "lead": "Choose the link to attack, explain why it matters, and turn pressure into round-winning collapse."},
     {"slug": "ai-debate-coach", "title": "AI Debate Coach | {product}", "description": "Ask {product}'s AI debate coach about strategy, arguments, rebuttals and speeches, with answers tied to your own motion, side and speaker role.", "eyebrow": "Feature guide", "h1": "Ask an AI Debate Coach for Round-Ready Prep", "lead": "Get focused help with strategy, arguments, rebuttals, speeches, and practice feedback."},
@@ -509,6 +511,9 @@ def render_block(block, spans_of=lambda: None):
         return "<ol>" + "".join(f"<li>{linked(item, spans_of())}</li>" for item in block["steps"]) + "</ol>"
     if "list" in block:
         return "<ul>" + "".join(f"<li>{linked(item, spans_of())}</li>" for item in block["list"]) + "</ul>"
+    if "checklist" in block:
+        # Tick boxes for the reader's own count; nothing is scored or stored.
+        return '<ul class="checklist">' + "".join(f'<li><label><input type="checkbox" /> {linked(item)}</label></li>' for item in block["checklist"]) + "</ul>"
     if "speech_times" in block:
         block = speech_times_table()
     if "table" in block:
@@ -595,7 +600,9 @@ def render_page(page):
     if "tool" in page:
         label, href = page["tool"]
         cta = f'<a class="btn primary" href="{esc(href)}">{esc(label)}</a><a class="btn secondary" href="/app">Start practicing</a>'
-    return f'''<!doctype html>
+    # A guide that compares paid tools states the app-versus-free-tools pricing once, beside its buttons.
+    price = f'<p class="price">{FREE_PLAN_HTML}</p>' if page.get("pricing_cta") else ""
+    html_out = f'''<!doctype html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
@@ -633,7 +640,7 @@ def render_page(page):
   <main class="wrap">
     <nav class="breadcrumb" aria-label="Breadcrumb"><a href="/">{PRODUCT}</a> / <span aria-current="page">{esc(page["h1"])}</span></nav>
     <article>
-      <header class="hero"><span class="eyebrow">{esc(page["eyebrow"])}</span><h1>{esc(page["h1"])}</h1><p class="lead">{linked(page["lead"])}</p><p class="dates">{dates}</p><p class="dates">By the <a href="/">{esc(PRODUCT)} team</a></p><div class="cta">{cta}</div></header>{callout}
+      <header class="hero"><span class="eyebrow">{esc(page["eyebrow"])}</span><h1>{esc(page["h1"])}</h1><p class="lead">{linked(page["lead"])}</p><p class="dates">{dates}</p><p class="dates">By the <a href="/">{esc(PRODUCT)} team</a></p><div class="cta">{cta}</div>{price}</header>{callout}
       <section class="answer" aria-labelledby="short-answer"><h2 id="short-answer">{esc(question)}</h2><p>{esc(answer)}</p></section>
       {definition_block(page)}
       <section class="grid" aria-label="Highlights">{feature_cards}</section>
@@ -647,6 +654,11 @@ def render_page(page):
 </body>
 </html>
 '''
+    if page.get("pricing_cta"):
+        visible = unescape(re.sub(r"<[^>]+>", " ", re.sub(r"<script[\s\S]*?</script>", " ", html_out.split("<body", 1)[1])))
+        if visible.count(FREE_PLAN.split(";")[0]) != 1:
+            raise SystemExit(f"{page['slug']} must state the pricing sentence exactly once")
+    return html_out
 
 # The Hungarian and Spanish pages (src/config/localized-routes.json), named by their own titles.
 LOCALIZED_ROUTES = json.loads((ROOT / "src" / "config" / "localized-routes.json").read_text())

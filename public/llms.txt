@@ -74,7 +74,7 @@ Free to use, no account needed, and they run in the browser.
 
 ## Guides
 
-- [AI Debate Practice for Stronger Cases, Rebuttals, and Speeches](https://debateowl.com/ai-debate-practice): Practice debate with DebateOwl by running timed rounds against an AI opponent and getting feedback on your cases, rebuttals and speeches.
+- [AI Debate Practice: How to Pick a Tool](https://debateowl.com/ai-debate-practice): What to look for in an AI debate practice tool, then DebateOwl, Debate Ladder, ArguFight, MindDuel and others compared, as of October 2026.
 - [AI Debate Case Generator with Citations](https://debateowl.com/ai-debate-case-generator): DebateOwl turns a motion into a ready-to-read debate case: an opening, arguments with evidence, If they say… replies, a closing line and sources to check.
 - [Practice Rebuttals Before Your Opponent Finds the Weakness](https://debateowl.com/debate-rebuttal-practice): Paste an opposing argument into DebateOwl to find its weak links, missing evidence and logic gaps, then practice the rebuttal you would give.
 - [Ask an AI Debate Coach for Round-Ready Prep](https://debateowl.com/ai-debate-coach): Ask DebateOwl's AI debate coach about strategy, arguments, rebuttals and speeches, with answers tied to your own motion, side and speaker role.

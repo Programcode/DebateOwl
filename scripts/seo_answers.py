@@ -29,8 +29,8 @@ ANSWERS = {
         "They solve different problems. As of October 2026, DebateClub is voice-only sparring for high-stakes conversations such as negotiations, pitches and meetings, with opponent personas and rhetorical technique scoring, and Pro costs $19/month. It names no competitive debate formats. {product} is built for school and competitive debate: cases, rebuttals, evidence, a timer and timed rounds in School 4-6-6-3, Lincoln-Douglas and Public Forum, at {pro_price} after a 3-day trial. Choose DebateClub for workplace persuasion practice and {product} for tournament prep.",
     ),
     "ai-debate-practice": (
-        "Can practising debate against an AI actually make you better?",
-        "Yes, if it shortens the loop of giving a speech, finding what failed, fixing one thing and giving it again. A useful session needs a motion, a side, real speech times, an opponent that responds to what you said and a verdict that names why you won or lost. {product}'s Sparring runs School 4-6-6-3, Lincoln-Douglas and Public Forum rounds this way. AI practice adds repetitions between team practices but does not replace them: judge adaptation, delivery under pressure and strategic judgement still develop fastest with a coach and real rounds.",
+        "What is the best AI debate practice tool?",
+        "It depends on what you practise, so check each tool for an opponent that argues back, your format's real speech times, feedback that names a reason, speaking out loud, help writing the case first and a free way to try. For a set motion, {product} is the top pick for a case you can read out loud, \"If they say X, we answer Y\" replies and timed practice rounds with a verdict. As of October 2026, Debate Ladder fits ranked voice reps, ArguFight written rounds against people, PublicForumAI Public Forum only, and MindDuel short spoken drills on Android.",
     ),
     "ai-debate-case-generator": (
         "Can an AI debate case generator write a case I can actually use?",

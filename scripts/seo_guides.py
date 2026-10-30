@@ -10,13 +10,54 @@ A format guide's speech times must match src/lib/free-tools/formats.ts, which th
 
 GUIDES = {
     "ai-debate-practice": {
-        "modified": "2026-10-29",
+        "modified": "2026-10-30",
+        "pricing_cta": True,
         "features": [
             ("Practice against AI opponents", "Run a full Sparring round in School 4-6-6-3, Lincoln-Douglas or Public Forum, type or speak each speech, and finish with a judged verdict."),
             ("Turn feedback into drills", "Take the weakest point from a verdict or a Crossfire debrief, rebuild it with Attack or Ask, and run that speech again."),
             ("Keep private prep out of search", "Cases, sources, rounds and history stay inside your Current Debate behind sign-in. Only these public guides are indexed."),
         ],
         "sections": [
+            ("The checklist: seven things a practice tool should do", [
+                "Before you compare products, decide what you are practising. Tick the lines that matter for your next month; the matrix below shows which tools do each one.",
+                {"checklist": [
+                    "An opponent argues back against what you actually said.",
+                    "Rounds follow my format's speech order and times.",
+                    "Feedback names a reason I won or lost, not only a number.",
+                    "I can say my speeches out loud, not only type them.",
+                    "It helps me write the case before I practise it.",
+                    "It remembers my motion and side between sessions.",
+                    "There is a free way to try it first.",
+                ]},
+                "No tool does all seven equally well, and you may not need all seven. A debater with a tournament motion needs the first five. Someone building confidence before their first round mostly needs the first and the fourth.",
+            ]),
+            ("Comparison matrix (as of October 2026)", [
+                {"table": {
+                    "caption": "Each competitor cell comes from that product's own page, checked October 30, 2026. Not stated means its pages do not say.",
+                    "head": ["Tool", "Opponent", "Real format times", "Feedback", "Out loud", "Writes the case first", "Keeps your motion", "Free way to try"],
+                    "rows": [
+                        ["[{product}](/)", "An AI that argues the other side", "Yes: School 4-6-6-3, LD and PF in Sparring", "A judged verdict that names the reason", "Yes, typed or spoken", "Yes: opening, arguments, \"If they say… we answer…\", closing, sources", "Yes: one Current Debate per motion", "3-day free trial; free timer and tools with no account"],
+                        ["[Debate Ladder](https://debateladder.com/)", "An AI, voice first", "No: its own opening, rebuttal and closing", "AI judge on five criteria, with feedback", "Yes; practice mode lets you type", "Not listed", "Saves your custom debates", "100 free credits"],
+                        ["[ArguFight](https://www.argufight.com/)", "People; an AI for a warm-up", "No: 5 written rounds over 24 hours, or 3 in 1 hour", "Up to three AI judges, 0–100 with reasons", "Speech-to-text input", "Not listed", "Debate history", "Free to start"],
+                        ["[PublicForumAI](https://publicforumai.com/pricing)", "An AI", "Public Forum only", "Tech and lay judge feedback", "Not stated", "Yes: Public Forum cases", "Rounds kept 30 days on the free plan", "3 full rounds a month"],
+                        ["[MindDuel](https://play.google.com/store/apps/details?id=com.serdaryalkabov.brightmint)", "An AI", "No: 10 turns of 5–60 seconds", "0–100 score in five areas, short explanation", "Yes, voice-to-text", "Not listed", "Debate history", "In-app purchases; prices not stated"],
+                        ["[ChatGPT](https://chatgpt.com/pricing)", "The chat, if you set it up", "Only if you set it up", "Only if you ask", "Voice chats, limited on the free plan", "By prompting", "With memory, limited on the free plan", "Free version for everyone"],
+                        ["[Claude](https://claude.com/pricing)", "The chat, if you set it up", "Only if you set it up", "Only if you ask", "Not stated on its pricing page", "By prompting", "Memory across conversations", "Free plan, $0"],
+                    ],
+                }},
+                "Read the matrix against your ticks, not against a total. A tool with fewer \"yes\" cells can still be the right one if it does the two things you need.",
+            ]),
+            ("Which tool for which debater", [
+                {"list": [
+                    "A set motion and a date: {product}, the top pick for a case you can read out loud, \"If they say X, we answer Y\" replies and timed practice rounds.",
+                    "Ranked speaking reps on any topic: Debate Ladder. See [{product} vs Debate Ladder](/debateowl-vs-debate-ladder).",
+                    "Written rounds against real people, judged by AI: ArguFight, which is free to start. See [{product} vs ArguFight](/debateowl-vs-argufight).",
+                    "Public Forum only, on a free plan: PublicForumAI. See [the best AI for Public Forum](/best-ai-for-public-forum).",
+                    "Short spoken drills on an Android phone: MindDuel. See [{product} vs MindDuel](/debateowl-vs-mindduel).",
+                    "A free partner for ideas: ChatGPT or Claude. See [ChatGPT vs Claude for debate](/chatgpt-vs-claude-for-debate).",
+                ]},
+                "Whichever you choose, open every source an AI suggests before it goes into a speech.",
+            ]),
             ("What a useful AI practice session looks like", [
                 "Most debaters improve through repetitions with feedback: give a speech, find out what failed, fix one thing, give it again. AI practice is valuable when it shortens that loop, not when it hands you a finished speech to read.",
                 "A chat window can produce arguments on request, but it does not hold a round together. It forgets which side you are on, does not time you, and rarely tells you which of your points the judge would have dropped. Practice needs a motion, a side, a format with real speech times, an opponent that responds to what you actually said, and a verdict that names the reason you lost or won.",
@@ -80,8 +121,19 @@ GUIDES = {
             ("Where AI practice stops being enough", [
                 "An AI opponent is consistent and always available, which is exactly what makes it a good training partner and a limited judge. It will not reproduce the judge who dislikes speed, the panel that splits, or the opponent who asks a question you never anticipated. Use AI rounds for volume between real practices, and save team practices and coached rounds for adaptation, delivery and the feedback only an experienced person can give.",
             ]),
+            ("Sources (checked October 2026)", [
+                {"list": [
+                    "[debateladder.com](https://debateladder.com/): voice-first rounds, AI judge on five criteria, Elo from 500, 100 free credits, custom debates.",
+                    "[argufight.com](https://www.argufight.com/): human challenges in 5-round or 3-round written modes, AI judge panel scoring 0–100, AI warm-up, speech-to-text, free to start. Its /pricing address returned 404. Its [schools page](https://www.argufight.com/for-schools) adds a debate history for every student.",
+                    "[publicforumai.com/pricing](https://publicforumai.com/pricing): free plan with 3 full rounds a month and Premium at $9.99/month or $79/year.",
+                    "[MindDuel on Google Play](https://play.google.com/store/apps/details?id=com.serdaryalkabov.brightmint): 10 rounds, 5–60 second turns, voice-to-text, 0–100 score, in-app purchases. We found no website for it.",
+                    "[chatgpt.com/pricing](https://chatgpt.com/pricing): free version for everyone, limited voice and memory on the free plan.",
+                    "[claude.com/pricing](https://claude.com/pricing): free plan at $0 with memory across conversations.",
+                ]},
+            ]),
         ],
         "faqs": [
+            ("Is there a free AI debate practice tool?", "Yes. As of October 2026, ArguFight is free to start, Debate Ladder gives new accounts 100 credits, PublicForumAI includes 3 full rounds a month, and ChatGPT and Claude have free plans. {product}'s debate timer and other tools are free with no account; its app is paid after a {trial_days}-day trial."),
             ("Which formats can I spar against the AI in?", "Sparring runs School 4-6-6-3, Lincoln-Douglas and Public Forum rounds with their speech order and times. For WSDC, British Parliamentary and other formats you can still generate cases, get coaching and drill rebuttals, and time speeches yourself."),
             ("Can I give my practice speeches out loud?", "Yes. Sparring and Crossfire can run as spoken rounds in the browser, so you can practise delivery as well as content."),
             ("How often should I practise against an AI opponent?", "Two or three focused sessions a week usually beats one long one. Each session should end with one specific fix that you drill before the next round."),
