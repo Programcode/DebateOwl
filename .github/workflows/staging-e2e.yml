@@ -93,19 +93,30 @@ jobs:
         with:
           persist-credentials: false
 
-      # By now staging has synced, which takes longer than Quality.
+      # A commit merged just before the schedule can reach staging while its
+      # Quality run is still queued or running, so wait for it to finish.
       - name: Verify the commit passed the quality workflow
         env:
           GH_TOKEN: ${{ github.token }}
         shell: bash
         run: |
-          successful_runs="$(gh api \
-            "repos/${GITHUB_REPOSITORY}/actions/workflows/deploy.yml/runs?head_sha=${GITHUB_SHA}&event=push&status=success&per_page=1" \
-            --jq '.workflow_runs | length')"
-          if [ "$successful_runs" -ne 1 ]; then
-            echo "::error::Main commit ${GITHUB_SHA} has no successful push run of the Quality workflow"
-            exit 1
-          fi
+          for _ in $(seq 1 30); do
+            read -r status conclusion < <(gh api \
+              "repos/${GITHUB_REPOSITORY}/actions/workflows/deploy.yml/runs?head_sha=${GITHUB_SHA}&event=push&per_page=1" \
+              --jq '.workflow_runs[0] // {} | "\(.status // "missing") \(.conclusion // "none")"') || true
+            case "$status" in
+              completed)
+                if [ "$conclusion" = success ]; then echo "Quality passed for ${GITHUB_SHA}."; exit 0; fi
+                echo "::error::Quality ended in ${conclusion} for main commit ${GITHUB_SHA}"
+                exit 1 ;;
+              missing)
+                echo "::error::Main commit ${GITHUB_SHA} has no push run of the Quality workflow"
+                exit 1 ;;
+            esac
+            sleep 20
+          done
+          echo "::error::Quality did not finish for ${GITHUB_SHA} within 10 minutes"
+          exit 1
 
       - name: Set up Node
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
