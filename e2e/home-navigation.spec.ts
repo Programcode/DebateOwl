@@ -87,7 +87,8 @@ test('onboarding keeps its original start schedule after a delayed lazy chunk', 
   await expect(page.locator('.react-joyride__tooltip')).toBeVisible({ timeout: 15_000 });
 });
 
-test('onboarding starts a fresh delay when a protected route reaches home', async ({ page }) => {
+test('onboarding stays closed on a protected tool and starts when it reaches home', async ({ page }) => {
+  await page.clock.install();
   await page.addInitScript(() => {
     window.localStorage.setItem('debate-trainer-onboarding', JSON.stringify({
       state: { hasCompletedOnboarding: false, isTourRunning: false },
@@ -96,12 +97,14 @@ test('onboarding starts a fresh delay when a protected route reaches home', asyn
   });
   await page.goto('/app/generate', { waitUntil: 'domcontentloaded' });
   await expect(page.getByRole('heading', { name: 'Your case will appear here' })).toBeVisible({ timeout: 15_000 });
-  // eslint-disable-next-line no-restricted-properties -- observation window: let the first onboarding delay run partway before navigating.
-  await page.waitForTimeout(650);
+  // Advance past the tour's 500ms deadline while still on the tool. The tour
+  // now starts when its Home target exists, rather than after a fixed delay.
+  await page.clock.runFor(1_000);
+  await expect(page.locator('.react-joyride__tooltip')).toHaveCount(0);
 
   await page.locator('header a[href="/app"]').first().click();
   await expect(page).toHaveURL(/\/app$/);
-  await expect(page.locator('.react-joyride__tooltip')).toHaveCount(0, { timeout: 100 });
+  await expect(page.locator('[data-tour="current-debate"]')).toBeVisible();
   await expect(page.locator('.react-joyride__tooltip')).toBeVisible({ timeout: 15_000 });
 });
 

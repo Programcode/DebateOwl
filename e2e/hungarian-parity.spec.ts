@@ -36,7 +36,7 @@ test.describe('Hungarian parity', () => {
 
     await expectHungarianDocument(page);
     await expect(page.getByRole('heading', { level: 1, name: `${site.product}: MI-alapú vitafelkészítés és gyakorlás` })).toBeVisible();
-    await expect(page.getByText(/^Attól függ, mire van szükséged\. 2026\. október állapot szerint/)).toBeAttached();
+    await expect(page.locator('#short-answer-text')).toContainText('Egy konkrét indítványra készülve');
     if ((page.viewportSize()?.width ?? 0) < 768) {
       await expect(page.getByRole('button', { name: 'Menü megnyitása' })).toBeVisible();
     } else {

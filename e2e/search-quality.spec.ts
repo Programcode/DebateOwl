@@ -80,11 +80,13 @@ test('authenticated Factoids shows the consulted-source quality panel', async ({
   await page.getByRole('textbox', { name: /statement/i }).fill('Solar energy costs are falling');
   await page.getByRole('button', { name: /find factoids/i }).click();
 
-  await expect(page.getByRole('heading', { name: /researched sources/i })).toBeVisible();
-  await expect(page.getByRole('link', { name: /official energy statistics/i }).first()).toHaveAttribute('href', strongSourceUrl);
-  await expect(page.getByRole('link', { name: /broad commentary/i })).toHaveAttribute('href', weakSourceUrl);
-  await expect(page.getByText('Strong', { exact: true })).toBeVisible();
-  await expect(page.getByText('Weak', { exact: true })).toBeVisible();
-  await expect(page.getByText('fallback context only', { exact: true })).toBeVisible();
+  const sources = page.locator('details').filter({ has: page.locator('summary', { hasText: 'Researched sources (2)' }) });
+  await sources.locator('summary').click();
+  await expect(sources).toHaveAttribute('open', '');
+  await expect(sources.getByRole('link', { name: /official energy statistics/i })).toHaveAttribute('href', strongSourceUrl);
+  await expect(sources.getByRole('link', { name: /broad commentary/i })).toHaveAttribute('href', weakSourceUrl);
+  await expect(sources.getByText('Strong', { exact: true })).toBeVisible();
+  await expect(sources.getByText('Weak', { exact: true })).toBeVisible();
+  await expect(sources.getByText('fallback context only', { exact: true })).toBeVisible();
   await expect(page.getByText('Solar costs fell by 42 percent')).toBeVisible();
 });

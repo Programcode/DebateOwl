@@ -94,7 +94,8 @@ test('workspaces stay unavailable without a collaboration endpoint', async ({ pa
 
   await expect(page.locator('a[href="/app/workspaces"]')).toHaveCount(0);
   await page.goto('/app/workspaces', { waitUntil: 'domcontentloaded' });
-  await expect(page.getByRole('heading', { name: '404' })).toBeVisible();
+  await expect(page.getByText('404', { exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { level: 1, name: 'Page not found' })).toBeVisible();
 });
 
 test('a delayed public route keeps the main landmark', async ({ page }) => {
@@ -177,7 +178,9 @@ test('a failed route chunk recovers after the offered reload', async ({ page }) 
   let attempts = 0;
   await page.route('**/src/pages/AttackPage.tsx*', async (route) => {
     attempts += 1;
-    if (attempts === 1) {
+    // The first failure reloads automatically. Fail that retry too, so the
+    // boundary offers its manual Reload action instead of recovering first.
+    if (attempts <= 2) {
       await route.fulfill({ status: 503, contentType: 'text/plain', body: 'chunk unavailable' });
       return;
     }
@@ -190,8 +193,9 @@ test('a failed route chunk recovers after the offered reload', async ({ page }) 
   await homeToolLink(page, 'attack').click();
 
   await expect(page.getByRole('heading', { name: 'Unable to load this page' })).toBeVisible();
+  expect(attempts).toBe(2);
   await page.getByRole('button', { name: 'Reload' }).click();
-  await expect.poll(() => attempts).toBe(2);
+  await expect.poll(() => attempts).toBe(3);
   await waitForContent(page, attackContent);
   await expect(page.getByRole('banner')).toBeVisible();
 });
@@ -365,14 +369,23 @@ test('subscription reads stay cached across sibling tool routes', async ({ page 
       await route.fulfill({ json: { announcements: [] } });
       return;
     }
+    if (url.pathname.endsWith('/rest/v1/rpc/ai_usage_today')) {
+      subscriptionRequests.push('ai_usage_today');
+      await route.fulfill({ json: 0 });
+      return;
+    }
     if (url.pathname.includes('/rest/v1/')) {
       const select = url.searchParams.get('select') ?? '';
       if (url.pathname.endsWith('/user_settings') && select.includes('subscription_tier')) {
         subscriptionRequests.push('user_settings');
       } else if (url.pathname.endsWith('/subscriptions')) {
         subscriptionRequests.push('subscriptions');
-      } else if (url.pathname.endsWith('/ai_requests')) {
-        subscriptionRequests.push('ai_requests');
+      }
+      // An empty single-row read is a PostgREST error, not a truthy array.
+      // Otherwise settings hydration treats [] as an account and reads billing.
+      if ((route.request().headers().accept ?? '').includes('vnd.pgrst.object')) {
+        await route.fulfill({ status: 406, json: { code: 'PGRST116', message: 'No rows returned' } });
+        return;
       }
       await route.fulfill({
         status: 200,
@@ -387,7 +400,7 @@ test('subscription reads stay cached across sibling tool routes', async ({ page 
 
   await page.goto('/app/generate');
   await waitForContent(page, { selector: 'main h1', text: 'Generate' });
-  await expect.poll(() => subscriptionRequests.filter((name) => name === 'ai_requests').length).toBe(1);
+  await expect.poll(() => subscriptionRequests.filter((name) => name === 'ai_usage_today').length).toBe(1);
 
   await openHome(page);
   await homeToolLink(page, 'attack').click();
@@ -395,5 +408,5 @@ test('subscription reads stay cached across sibling tool routes', async ({ page 
   // eslint-disable-next-line no-restricted-properties -- observation window: no extra subscription request may follow.
   await page.waitForTimeout(100);
 
-  expect(subscriptionRequests).toEqual(['user_settings', 'ai_requests']);
+  expect(subscriptionRequests).toEqual(['user_settings', 'ai_usage_today']);
 });

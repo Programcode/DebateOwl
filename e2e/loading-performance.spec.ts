@@ -70,7 +70,7 @@ test('authenticated routes keep the shell and current page after refresh', async
   ] as const) {
     await page.goto(path);
     await page.reload();
-    await expect(page.locator('header')).toBeVisible();
+    await expect(page.getByRole('banner')).toBeVisible();
     await expect(page.getByRole('heading', { name: heading, exact: true })).toBeVisible();
     await expect(page.getByText('DebateOwl is the official')).toHaveCount(0);
   }
