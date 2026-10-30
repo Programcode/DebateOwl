@@ -5,7 +5,8 @@
 - The repository is DebateLab. Never infer its directory from an old repository name.
 - Run `git rev-parse --show-toplevel` and stay inside that returned worktree. On Adam's VPS, `/home/codex/Projects/DebateLab` is the primary checkout, but Superset and other agents use linked worktrees elsewhere.
 - Before editing, inspect the branch and working tree. Preserve unrelated changes.
-- Use Node 22, npm, and the committed `package-lock.json`. `.nvmrc` pins 22, but the VPS default is Node 24: check `node -v` and run `nvm use` (with `NVM_DIR=$HOME/.nvm` set) when it isn't 22. Install with `npm ci` when `node_modules` is missing.
+- Use Node 22, npm, and the committed `package-lock.json`. On Adam's VPS, zsh puts the `.nvmrc` version first on PATH inside the repo, so `node -v` already reports 22; elsewhere run `nvm use`. Install with `npm ci` when `node_modules` is missing.
+- End every task report with a `Slowed down by:` line: what cost the most time or blocked you (a missing tool, a lock, a flaky test, an access gap) and what would remove it, or "nothing".
 
 ## Parallel Superset workspaces
 
@@ -36,6 +37,19 @@ npx vercel deploy --yes --non-interactive --scope adam-gaborjanis-projects
 ```
 
 That preview is pinned to staging. Do not pass `--prod`, and do not run `vercel --yes` before the link: the first deploy of a new project is production. For a preview that uses production data, link `debate-navigator` instead. One preview is enough. Adam can create the same preview from the Vercel dashboard (Create Deployment, pick the branch, leave the target as Preview) without changing project settings. [docs/operations.md](docs/operations.md#opt-in-previews) has the detail.
+
+### When a PR may merge without Adam
+
+Adam approved this on 2026-10-30. A PR is low-risk, and merges once its gate is green, when every changed file is copy, translations, SEO metadata, docs, plans, tests, or frontend code under `src/` with no effect on auth, billing, or quotas. The gate is `npm run verify` at the final head, the required CI checks, and a review of the current head with every finding fixed or answered.
+
+Anything else still needs Adam's OK before merging:
+
+- anything under `supabase/` (migrations, RLS, Edge Functions) or `services/`;
+- auth, sessions, billing, Stripe, quotas, or cost accounting, wherever the code lives;
+- `.github/`, `package.json`, `package-lock.json`, `vercel.json`, or other production config;
+- secrets.
+
+When unsure, treat the PR as not low-risk. Say in the PR which rule merged it.
 
 ## Normal ports
 
