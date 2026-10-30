@@ -65,6 +65,8 @@ Free to use, no account needed, and they run in the browser.
 - [¿Qué IA sirve para preparar un debate?](https://debateowl.com/es/mejor-ia-para-preparar-un-debate): in Spanish: a four-step prep guide (motion, case, replies, timed practice) that says which AI fits each step, DebateOwl included, as of October 2026
 - [Melyik AI a legjobb vitafelkészüléshez?](https://debateowl.com/hu/melyik-ai-a-legjobb-vitara): in Hungarian: questions and answers for school debaters and teachers on which AI to use, whether it works in Hungarian, what DebateOwl costs and what AI is not good for
 - [DebateOwl vs Debate Ladder](https://debateowl.com/debateowl-vs-debate-ladder): case prep and timed format rounds vs a voice-first ranked debate game, with a 7-question checklist
+- [DebateOwl vs ArguFight](https://debateowl.com/debateowl-vs-argufight): which debater should pick which: a case and timed rounds against an AI, or written debates against people scored by AI judges, as of October 2026
+- [DebateOwl vs MindDuel](https://debateowl.com/debateowl-vs-mindduel): one motion through two workflows: MindDuel's ten short spoken turns and 0-100 score, or a written case and a timed round, as of October 2026
 - [Free vs paid AI debate tools](https://debateowl.com/free-vs-paid-ai-debate-tools): what free plans include and what paid AI debate tools cost, checked October 2026
 - [Best AI for Public Forum debate](https://debateowl.com/best-ai-for-public-forum): Public Forum AI tools compared speech by speech, with prices as of October 2026
 - [AI debate tools for teachers](https://debateowl.com/ai-debate-tools-for-teachers): AI tools for classroom debate by scenario: no-signup timers, AI opponents, class tournaments and graded discussion

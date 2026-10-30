@@ -24,6 +24,8 @@ PAGES = [
     "how-to-prepare-for-a-debate-with-ai",
     "es/mejor-ia-para-preparar-un-debate",
     "hu/melyik-ai-a-legjobb-vitara",
+    "debateowl-vs-argufight",
+    "debateowl-vs-mindduel",
 ]
 MAX_WORDS = 12
 MAX_PAGES = 2

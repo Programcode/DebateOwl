@@ -109,6 +109,8 @@ SIBLINGS = {
     "hu/mi-vitafelkeszules",
     "es/mejor-ia-para-preparar-un-debate",
     "hu/melyik-ai-a-legjobb-vitara",
+    "debateowl-vs-argufight",
+    "debateowl-vs-mindduel",
 }
 
 
@@ -245,7 +247,7 @@ def chrome(page):
     return {
         "home": "/",
         "byline": f'By the <a href="/">{PRODUCT} team</a> · Published {published} · Last updated {modified}',
-        "disclosure": DISCLOSURE,
+        "disclosure": DISCLOSURE.replace(LONG, modified),
         "updated": f"Last updated: {modified}",
         "about": f'<aside class="about" aria-labelledby="about"><h2 id="about">About {PRODUCT}</h2><p><a href="/">{PRODUCT}</a> is an AI debate prep and practice app. See <a href="/">how it works</a> or <a href="/debateowl-pricing">pricing</a>.</p></aside>',
     }
@@ -1327,6 +1329,259 @@ body.hubest .price-box{background:#fff;border-radius:22px;padding:2px 20px 12px;
     }
 
 
+VS_CHECKED = "Checked Oct 30, 2026."
+
+
+def page_argufight():
+    answer = (
+        "Pick DebateOwl if a set motion and a date are coming: it writes a case you can read out, "
+        '"If they say… we answer…" replies, and runs timed practice rounds against an AI at real speech times. '
+        "Pick ArguFight if you want to argue in writing against real people, have a panel of AI judges score each debate, and climb a ranking, "
+        "or if you debate in a language DebateOwl does not offer. ArguFight is free to start. "
+        "Plenty of debaters could use both: prep in one, test the arguments on strangers in the other."
+    )
+    faqs = [
+        ("Is ArguFight free?", "As of October 2026 its homepage says it is free to start and \"free forever for base debating\", and its schools page says classrooms are free. Its /pricing address returned 404, so any paid tiers are not stated."),
+        ("Does ArguFight write a case for me?", "Not that its pages say. You write each round's argument yourself; the AI judges score it and explain the verdict. DebateOwl is the one that drafts a case with replies."),
+        ("Can I debate real people on DebateOwl?", "No. DebateOwl's practice rounds are against an AI opponent. ArguFight is built around human opponents, with AI opponents for warming up."),
+        ("Which is better for a teacher?", "For a class tournament that an AI judges, ArguFight for Schools is free and lets you make it private. For a live debate in the classroom, DebateOwl's free timer, motion generator and flow sheet need no student accounts."),
+        ("Which languages do they support?", "ArguFight's site lists 26 languages. The DebateOwl app is in English, Spanish and Hungarian."),
+    ]
+    debaters = [
+        ("You have a tournament motion next week", "DebateOwl", "It writes the case in the order you will say it, with \"If they say… we answer…\" replies, then times a practice round in School 4-6-6-3, Lincoln-Douglas or Public Forum."),
+        ("You want quick, casual argument practice", "ArguFight", "You can test a take against its AI in about a minute or start a speed debate of 3 rounds in 1 hour, and it is free to start."),
+        ("You coach a club", "ArguFight", "Its schools page offers free, private class tournaments where an AI judges every match 0–100 with written reasons. For a live round in the room, DebateOwl's free timer and flow sheet need no accounts."),
+        ("You debate in Spanish or Hungarian", "DebateOwl", "The app is in both languages and its AI writes the case, the replies and the practice opponent in them. ArguFight's site lists both languages too, but it does not write a case."),
+        ("You debate in French, German or another language", "ArguFight", "Its site lists 26 languages. The DebateOwl app covers English, Spanish and Hungarian."),
+    ]
+    cards = "".join(
+        f'<article class="who {"owl" if pick == "DebateOwl" else "af"}"><h3>{esc(who)}</h3><p class="pick">{TICK if pick == "DebateOwl" else ""}Pick: {esc(pick)}</p><p>{esc(why)}</p></article>'
+        for who, pick, why in debaters
+    )
+    head = ["", "Made for", "Case you can read out", "\"If they say… we answer…\" replies", "Timed rounds in real formats", "Languages", "Price (as of Oct 2026)"]
+    rows = [
+        ("DebateOwl", "Preparing one motion and rehearsing it", "Yes: opening, arguments with evidence and why they matter, closing, sources", "Yes, in every case", "Yes: School 4-6-6-3, LD and PF in Sparring, typed or spoken", "English, Spanish, Hungarian", "3-day free trial, then $5/month + tax"),
+        ("ArguFight", "Written debates against people, judged by AI", "Not listed", "Not listed", "No: its own written rounds, 5 over 24 hours or 3 in 1 hour", "26 listed", "Free to start; paid tiers not stated"),
+    ]
+    ths = "".join(f'<th scope="col">{esc(h)}</th>' for h in head)
+    trs = "".join(f'<tr{OWN if i == 0 else ""}><th scope="row">{esc(r[0])}</th>' + "".join(f"<td>{esc(c)}</td>" for c in r[1:]) + "</tr>" for i, r in enumerate(rows))
+    body = f"""
+<section class="who-grid">
+  <h2>Five debaters, five picks</h2>
+  <p>Find the line that sounds like you. The pick is about the job in front of you this month, not about which product is bigger.</p>
+  <div class="cards">{cards}</div>
+</section>
+<section class="cta-band">
+  <h2>If your round has a date</h2>
+  <p>Start with the case. DebateOwl writes it, lists the replies you will need, and gives you a timed round to say it in. ArguFight is a fine place to test the same arguments afterwards. <a href="/best-ai-for-debate">The short answer across more tools</a> is on its own page.</p>
+  <p><a class="cta" href="/app">Write the case for your motion</a></p>
+  <p>{PRICE_HTML}</p>
+</section>
+<section>
+  <h2>What ArguFight is, in its own words</h2>
+  <p>As of October 2026, ArguFight calls itself an AI-judged debate platform. You create a challenge, choose FOR or AGAINST, and pick standard mode (5 rounds over 24 hours) or speed mode (3 rounds in 1 hour). Someone accepts from the open challenges, you trade written arguments round by round, and spectators can watch. <a href="#af1">S1</a></p>
+  <p>Up to three AI judges score each debate from 0 to 100 and explain their reasoning, and the majority decides. Its pages count the roster differently: the judges page shows ten named personas with published paradigms, the homepage says both "3 of 7" and "up to 3" from six, and the About page says six. Every verdict also comes with coaching notes on what worked and what to fix. <a href="#af1">S1</a> <a href="#af2">S2</a> <a href="#af3">S3</a></p>
+  <p>Around that sit ELO rankings, championship belts in categories such as Science and Politics, bracket tournaments, community judging, a fact-check that the judges never see, speech-to-text input, and an AI opponent you can warm up against. The site lists 26 languages, including Spanish and Hungarian. It says it is free to start and free forever for base debating. <a href="#af1">S1</a></p>
+</section>
+<section>
+  <h2>What DebateOwl is for</h2>
+  <p>DebateOwl starts from a motion you have been given. You open a Current Debate for it, and the case, sources, drills and practice rounds stay filed under that motion. The case generator writes the speech in the order you would give it. Attack looks for the weak link in the other side, Factoids suggests evidence with a source you still have to open, Crossfire drills questions, and Sparring runs a timed round against an AI in School 4-6-6-3, Lincoln-Douglas or Public Forum, typed or spoken, ending with a verdict. World Schools and British Parliamentary get the prep tools, not a simulated round.</p>
+</section>
+<section>
+  <h2>One motion, prepared here and tested there</h2>
+  <p>Motion: "Social media apps should be banned for under-16s." Side: for. This is the shape DebateOwl gives you, with the evidence left as what to look for, because that part you check yourself.</p>
+  <ol class="case">
+    <li><strong>Opening.</strong> We do not let fourteen-year-olds sign phone contracts alone. We should not let them sign up to apps built to keep them scrolling.</li>
+    <li><strong>Argument 1: the design works against young users.</strong> Explanation: endless feeds and streaks reward time spent, not time well spent. Evidence: find a study on teenage sleep and late-night app use; note the author and year. Why it matters: lost sleep hits schoolwork and mood every day, not only on bad days.</li>
+    <li><strong>Argument 2: parents cannot police it alone.</strong> Explanation: one family's rules collapse when the whole class is on the app. Evidence: find a survey of parents on setting screen-time rules. Why it matters: a legal age gives every family the same line to point to.</li>
+    <li><strong>If they say</strong> teenagers will lie about their age, <strong>we answer:</strong> some will, as with any age limit, and the rule still moves the default for everyone else.</li>
+    <li><strong>If they say</strong> social media keeps isolated teenagers connected, <strong>we answer:</strong> messaging and video calls stay open; the ban targets feeds built to hold attention.</li>
+    <li><strong>Closing.</strong> A good age limit does not stop teenagers growing up online. It stops the apps deciding how fast.</li>
+  </ol>
+  <p>To test it on ArguFight, post the motion as a speed challenge. Your first round can carry the opening and argument 1, and the "If they say…" lines are ready for whatever the other person writes back. ArguFight's judges then tell you which point held. That split of rounds is our suggestion, not an ArguFight rule.</p>
+</section>
+<section>
+  <h2>Matrix: DebateOwl and ArguFight</h2>
+  <div class="scroll"><table>
+    <caption>As of October 2026, from each product's own pages. DebateOwl is the first column.</caption>
+    <thead><tr>{ths}</tr></thead>
+    <tbody>{trs}</tbody>
+  </table></div>
+</section>
+<section>
+  <h2>Where ArguFight is the better pick</h2>
+  <ul>
+    <li>Real human opponents. DebateOwl has none.</li>
+    <li>A free start, with no trial clock.</li>
+    <li>A class tournament the AI marks, free for classrooms and private if you want.</li>
+    <li>Languages beyond English, Spanish and Hungarian.</li>
+    <li>A public ranking, belts and spectators, if competition keeps you practising.</li>
+  </ul>
+  <p>For a ranked voice game instead of written rounds, see <a href="/debateowl-vs-debate-ladder">DebateOwl vs Debate Ladder</a>. For short spoken drills on a phone, <a href="/debateowl-vs-mindduel">DebateOwl vs MindDuel</a> follows one motion through both apps.</p>
+</section>
+{faq_block("ArguFight questions", faqs, "details")}
+{sources("Sources (checked October 2026)", [
+    ("af1", "https://www.argufight.com/", "Challenges, standard and speed modes, AI judge panel, ELO, belts, tournaments, voice input, 26 languages, free to start. Its /pricing address returned 404."),
+    ("af2", "https://www.argufight.com/judges", "Ten judge personas with published paradigms; three per debate."),
+    ("af3", "https://www.argufight.com/about", "A roster of six judge personalities; free to join and start debating."),
+    ("af4", "https://www.argufight.com/for-schools", "Free for classrooms; private, invite-only tournaments; every match judged 0–100 with written reasoning."),
+], VS_CHECKED)}
+"""
+    style = """
+body.argu{background:#F6F7FB}body.argu main{width:min(1060px,calc(100% - 32px));margin:28px auto 72px}
+body.argu h1{font-size:clamp(2.3rem,5.6vw,3.9rem);color:#0B1426}
+body.argu .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(290px,1fr));gap:14px}
+body.argu .who{background:#fff;border-radius:22px;padding:4px 18px 10px;border:2px solid #D9DEEA}
+body.argu .who.owl{border-color:#0A6FF0}body.argu .who.af{border-color:#E4572E}
+body.argu .pick{font-family:Fredoka,Nunito,sans-serif;display:flex;align-items:center;margin:0}
+body.argu .cta-band{background:#0B1426;color:#EEF4FF;border-radius:28px;padding:8px 24px 20px;margin:28px 0}
+body.argu .cta-band a:not(.cta){color:#FCE48A}
+body.argu .case{display:grid;gap:8px;padding-left:1.3rem}body.argu .case li{background:#fff;border-radius:14px;padding:8px 12px}
+body.argu table{min-width:900px;background:#fff}body.argu tr.own{background:#EEF7FF}
+body.argu details{border-bottom:1px solid #D9DEEA;padding:10px 0}
+"""
+    return {
+        "slug": "debateowl-vs-argufight",
+        "lang": "en",
+        "body": "argu",
+        "published": "2026-10-30",
+        "modified": "2026-10-30",
+        "title": "DebateOwl vs ArguFight: Which Debater Should Pick Which? | DebateOwl",
+        "description": "ArguFight runs written debates against people, scored by AI judges. DebateOwl writes a case and runs timed rounds. Which debater should pick which.",
+        "h1": "DebateOwl vs ArguFight: which debater should pick which",
+        "question": "Should I use DebateOwl or ArguFight?",
+        "answer": answer,
+        "faqs": faqs,
+        "style": style,
+        "html_body": body,
+    }
+
+
+def page_mindduel():
+    answer = (
+        "They train different things. MindDuel, an Android app, gives you ten short spoken turns against an AI, each 5 to 60 seconds, "
+        "then a 0–100 score across five areas. DebateOwl prepares a full round: a case you can read out, "
+        '"If they say… we answer…" replies, and a timed practice round at your format\'s real speech times, ending in a verdict. '
+        "Use MindDuel for quick reflexes on your phone, and DebateOwl when a motion and a date are set."
+    )
+    faqs = [
+        ("Which MindDuel is this page about?", "The Android app \"MindDuel – AI Debate Practice\" by Serdar Yalkabov on Google Play. We found no website for it. mindduel.io is an unrelated puzzle game."),
+        ("How much does MindDuel cost?", "As of October 2026 its Google Play listing shows in-app purchases but does not state prices."),
+        ("Can I enter my own motion in MindDuel?", "Not stated. Its listing describes real-world topics in politics, technology, ethics and society."),
+        ("Does DebateOwl score me out of 100?", "No. A Sparring round ends with a judged verdict that names the reason you won or lost, which you can turn into the next fix."),
+        ("Can I speak instead of type in both?", "Yes. MindDuel uses voice-to-text. DebateOwl's Sparring speeches can be typed or spoken."),
+    ]
+    mind = [
+        ("Prepare", "Its listing names no prep step. Choose a topic (its listing names politics, technology, ethics and society) and a level: Beginner, Intermediate or Expert. Set thinking time and speaking time, each 5 to 60 seconds."),
+        ("Practise", "Ten rounds, you against the AI, spoken through voice-to-text."),
+        ("Review", "A 0–100 total, scored on clarity, logic and structure, evidence and examples, persuasiveness and rebuttal, with a short explanation. The debate goes into your history, and there is a global leaderboard."),
+    ]
+    owl = [
+        ("Prepare", 'Open a Current Debate with the motion and your side, and generate the case: opening, two to four arguments with evidence and why they matter, "If they say… we answer…" replies, closing line, sources. Open the sources.'),
+        ("Practise", "Run Sparring in School 4-6-6-3, Lincoln-Douglas or Public Forum at the real speech times, typed or spoken. Crossfire drills the questions."),
+        ("Review", "A judged verdict that names the reason. Rebuild that one part, with Attack or by regenerating the section, and give the speech again."),
+    ]
+    def lane(steps):
+        return "".join(f"<li><strong>{esc(step)}.</strong> {esc(text)}</li>" for step, text in steps)
+    rows = [
+        ("What a turn is", "A short spoken answer, 5–60 seconds", "A full speech at your format's time, often several minutes"),
+        ("Preparation", "None built in; you argue from what you know", "A written case with replies, before you speak"),
+        ("Formats", "Its own 10-round format", "School 4-6-6-3, LD, PF in Sparring; prep tools for other formats"),
+        ("Feedback", "0–100 total across five areas, plus an explanation", "A verdict that names the reason, then a targeted fix"),
+        ("Where it runs", "Android app", "In the browser"),
+        ("Price", "In-app purchases; prices not stated", "3-day free trial, then $5/month + tax"),
+    ]
+    trs = "".join(f'<tr><th scope="row">{esc(a)}</th><td>{esc(b)}</td><td>{esc(c)}</td></tr>' for a, b, c in rows)
+    body = f"""
+<section class="motion-card">
+  <p class="label">The motion for this page</p>
+  <p class="motion">"Public transport in cities should be free to ride."</p>
+  <p>Below, the same motion goes through both apps, step by step. In MindDuel that works if one of its topics is this motion or close to it; whether you can type your own is not stated.</p>
+</section>
+<section class="lanes">
+  <h2>Two workflows, side by side</h2>
+  <div class="two">
+    <div class="lane md"><h3>In MindDuel</h3><ol>{lane(mind)}</ol></div>
+    <div class="lane owl"><h3>{TICK}In DebateOwl</h3><ol>{lane(owl)}</ol></div>
+  </div>
+  <p>Both columns follow the same three steps: prepare, practise, review. MindDuel trains how fast you can answer. DebateOwl trains what you say when the round is real.</p>
+</section>
+<section>
+  <h2>What the DebateOwl case looks like for this motion</h2>
+  <div class="case">
+    <p><strong>Opening:</strong> A bus that is free to board is a bus more people use, and a city where more people take the bus is easier to live in for everyone, drivers included.</p>
+    <p><strong>Argument 1, cleaner, quicker streets:</strong> fewer car trips means less traffic and less exhaust in the centre. Evidence: find a study of a city that dropped fares, with ridership before and after; note the year. Why it matters: every bus seat filled is a car not queuing.</p>
+    <p><strong>Argument 2, fairness:</strong> fares take the biggest share from people on the lowest wages. Evidence: find household spending data on transport by income. Why it matters: free fares are a raise for the people who need one most.</p>
+    <p><strong>If they say</strong> the city cannot afford it, <strong>we answer:</strong> fare collection has its own costs, and the city already pays for congestion in lost time and road repairs.</p>
+    <p><strong>If they say</strong> free buses will be overcrowded, <strong>we answer:</strong> crowding is a reason to run more buses, and that is a better problem than empty ones.</p>
+    <p><strong>Closing:</strong> Make the bus the easy choice, and the city gets moving.</p>
+  </div>
+  <p>The two "If they say…" lines make good MindDuel material: each is a 30-second answer you can practise saying without notes. That is one honest way to use both.</p>
+</section>
+<section>
+  <h2>The two apps in one table</h2>
+  <div class="scroll"><table>
+    <caption>As of October 2026. MindDuel facts come from its Google Play listing. DebateOwl is the right-hand column.</caption>
+    <thead><tr><th scope="col"></th><th scope="col">MindDuel</th><th scope="col">DebateOwl</th></tr></thead>
+    <tbody>{trs}</tbody>
+  </table></div>
+  <p>MindDuel's listing places it in the Entertainment category. Its only public page we found is that listing, so anything it does not say is marked not stated.</p>
+</section>
+<section class="ending">
+  <h2>When MindDuel is enough, and when you want DebateOwl</h2>
+  <div class="two">
+    <div>
+      <h3>MindDuel is enough when</h3>
+      <p>you have ten spare minutes and an Android phone, you want to get used to answering out loud in under a minute, and a score out of 100 is the feedback you need. It is also a gentle start if speaking makes you nervous: begin on Beginner with long thinking time.</p>
+    </div>
+    <div class="owl">
+      <h3>{TICK}You want DebateOwl when</h3>
+      <p>a motion and a date are set. Then you need the case written before the reflexes, replies ready for the other side, and a round at your format's real speech times that ends with a reason, not only a number.</p>
+      <p><a class="cta" href="/ai-debate-case-generator">Get the case for your motion</a></p>
+      <p>{PRICE_HTML}</p>
+    </div>
+  </div>
+  <p>Other tools are compared on <a href="/best-ai-for-debate">which AI is best for debate</a>, and written rounds against real people on <a href="/debateowl-vs-argufight">DebateOwl vs ArguFight</a>.</p>
+</section>
+{faq_block("MindDuel questions", faqs, "defs")}
+{sources("Sources (checked October 2026)", [
+    ("md1", "https://play.google.com/store/apps/details?id=com.serdaryalkabov.brightmint", "MindDuel – AI Debate Practice on Google Play: 10 rounds, 5–60 second thinking and speaking time, three levels, voice-to-text, 0–100 score in five areas, history, leaderboard, in-app purchases, Entertainment category. No prices listed."),
+    ("md2", "https://www.mindduel.io/", "A browser puzzle game with the same name, unrelated to the debate app."),
+], VS_CHECKED)}
+"""
+    style = """
+body.duel{background:#FBF7FF}body.duel main{width:min(1000px,calc(100% - 32px));margin:28px auto 72px}
+body.duel h1{font-size:clamp(2.2rem,5.4vw,3.7rem);color:#1D1036}
+body.duel .motion-card{background:#1D1036;color:#F3ECFF;border-radius:26px;padding:16px 24px;margin:22px 0}
+body.duel .motion-card .label{text-transform:uppercase;letter-spacing:.08em;font-size:.8rem;margin:0;color:#C9B6F2}
+body.duel .motion{font-family:Fredoka,Nunito,sans-serif;font-size:clamp(1.3rem,3vw,1.8rem);margin:6px 0}
+body.duel .two{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+body.duel .lane{background:#fff;border-radius:22px;padding:4px 18px 10px;border:2px solid #E3D8F7}
+body.duel .lane.owl{border-color:#0A6FF0;background:#F2F8FF}body.duel .lane h3{display:flex;align-items:center}
+body.duel .lane li{margin:8px 0}
+body.duel .case{background:#fff;border-radius:22px;padding:6px 20px;border-left:5px solid #0A6FF0}
+body.duel .ending .two>div{background:#fff;border-radius:22px;padding:4px 18px 10px;border:2px solid #E3D8F7}body.duel .ending .owl{border-color:#0A6FF0!important;background:#F2F8FF!important}body.duel .ending h3{display:flex;align-items:center}
+body.duel table{min-width:640px;background:#fff}body.duel td:nth-child(3){background:#EEF7FF}
+body.duel dt{font-family:Fredoka,Nunito,sans-serif;margin-top:14px}
+@media(max-width:760px){body.duel .two{grid-template-columns:1fr}}
+"""
+    return {
+        "slug": "debateowl-vs-mindduel",
+        "lang": "en",
+        "body": "duel",
+        "published": "2026-10-30",
+        "modified": "2026-10-30",
+        "title": "DebateOwl vs MindDuel: One Motion, Two Workflows | DebateOwl",
+        "description": "MindDuel gives you ten short spoken turns and a score. DebateOwl writes the case and runs a timed round. One motion through both apps, as of Oct 2026.",
+        "h1": "DebateOwl vs MindDuel: one motion, two workflows",
+        "question": "What is the difference between DebateOwl and MindDuel?",
+        "answer": answer,
+        "faqs": faqs,
+        "style": style,
+        "html_body": body,
+    }
+
+
 def visible_text(html):
     text = re.sub(r"<script[\s\S]*?</script>", " ", html)
     text = re.sub(r"<style[\s\S]*?</style>", " ", text)
@@ -1336,7 +1591,7 @@ def visible_text(html):
 
 def write_comparison_pages(public: Path):
     ensure_fonts(public)
-    pages = [page_ladder(), page_price(), page_chat(), page_teachers(), page_prep(), page_pf(), page_hu(), page_es(), page_hu_best()]
+    pages = [page_ladder(), page_price(), page_chat(), page_teachers(), page_prep(), page_pf(), page_hu(), page_es(), page_hu_best(), page_argufight(), page_mindduel()]
     h2s = {}
     answers = []
     for page in pages:

@@ -271,7 +271,11 @@ EXTRA_RELATED = {
         ("/chatgpt-vs-claude-for-debate", "ChatGPT vs Claude for debate prep"),
         ("/ai-debate-tools-for-teachers", "AI debate tools for teachers"),
         ("/best-ai-for-public-forum", "Best AI for Public Forum debate"),
+        ("/debateowl-vs-argufight", "DebateOwl vs ArguFight: which debater should pick which"),
+        ("/debateowl-vs-mindduel", "DebateOwl vs MindDuel: one motion, two workflows"),
     ],
+    "debateowl-vs-debateclub": [("/debateowl-vs-mindduel", "DebateOwl vs MindDuel: one motion, two workflows")],
+    "debateowl-vs-windebate": [("/debateowl-vs-argufight", "DebateOwl vs ArguFight: which debater should pick which")],
 }
 
 # In-body links. In this order, each entry links the first paragraph text that matches it
@@ -783,6 +787,8 @@ COMPARE_LINKS = [
     ("es/mejor-ia-para-preparar-un-debate", ("¿Qué IA sirve para preparar un debate?", f"in Spanish: a four-step prep guide (motion, case, replies, timed practice) that says which AI fits each step, {PRODUCT} included, as of October 2026")),
     ("hu/melyik-ai-a-legjobb-vitara", ("Melyik AI a legjobb vitafelkészüléshez?", f"in Hungarian: questions and answers for school debaters and teachers on which AI to use, whether it works in Hungarian, what {PRODUCT} costs and what AI is not good for")),
     ("debateowl-vs-debate-ladder", (f"{PRODUCT} vs Debate Ladder", "case prep and timed format rounds vs a voice-first ranked debate game, with a 7-question checklist")),
+    ("debateowl-vs-argufight", (f"{PRODUCT} vs ArguFight", "which debater should pick which: a case and timed rounds against an AI, or written debates against people scored by AI judges, as of October 2026")),
+    ("debateowl-vs-mindduel", (f"{PRODUCT} vs MindDuel", "one motion through two workflows: MindDuel's ten short spoken turns and 0-100 score, or a written case and a timed round, as of October 2026")),
     ("free-vs-paid-ai-debate-tools", ("Free vs paid AI debate tools", "what free plans include and what paid AI debate tools cost, checked October 2026")),
     ("best-ai-for-public-forum", ("Best AI for Public Forum debate", "Public Forum AI tools compared speech by speech, with prices as of October 2026")),
     ("ai-debate-tools-for-teachers", ("AI debate tools for teachers", "AI tools for classroom debate by scenario: no-signup timers, AI opponents, class tournaments and graded discussion")),
