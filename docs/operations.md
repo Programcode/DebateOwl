@@ -10,31 +10,30 @@ Never infer authorization from access. Never use production to replace missing l
 
 ## CI workflows
 
-A pull request gets one check, [`.github/workflows/deploy.yml`](../.github/workflows/deploy.yml) (the `Quality` workflow), plus a short database job when it changes the schema. Both finish in about 3 minutes. Everything slow, paid, or full-stack runs on a schedule and on demand, never on pull requests. `Quality` does not deploy anything; Vercel does.
+CI is a fast gate on every pull request plus end-to-end suites and AI evals that run weekly or on demand. There are no unit tests in CI; [testing.md](testing.md#guards) says why and what the Vitest guards still check. Billed minutes are rounded up per job, so fewer, longer jobs cost less than many short ones.
 
-`Quality` runs five jobs side by side on every pull request and every push to `main`. Each restores `node_modules` from a cache keyed on `package-lock.json` (`.github/actions/node-deps`) and runs `npm ci` only on a miss:
+A pull request gets one check, [`.github/workflows/deploy.yml`](../.github/workflows/deploy.yml) (the `Quality` workflow), plus a short database job when it changes the schema. Both finish in about 3 minutes. `Quality` does not deploy anything; Vercel does. It runs two jobs side by side, each restoring `node_modules` from a cache keyed on `package-lock.json` (`.github/actions/node-deps`) and running `npm ci` only on a miss:
 
-- `lint`: `npm run docs:check` and `npm run lint`
-- `typecheck-build`: `npm run typecheck` and `npm run build`
-- `unit`: `npm test` and `npm run test:collaboration`
-- `edge`: `npm run test:edge` under Deno 2.9.6, with no npm install
-- `browser-smoke` (pull requests only): the Playwright tests tagged `@smoke` on desktop Chromium, port `18080`. They check that the app boots, that sign-in works, that every public and signed-in page renders without errors, and that the first-run tour starts a debate.
+- `check`, on every pull request and every push to `main`: `npm run docs:check`, `npm run lint`, `npm run typecheck`, the guards (`npm test`), `npm run test:edge` under Deno 2.9.6, and `npm run build`. The build fails on broken links, JSON-LD, heading order and bundle boundaries, so this job is what catches a broken build before Vercel does.
+- `browser-smoke`, on pull requests only: the Playwright tests tagged `@smoke` on desktop Chromium, port `18080`. They check that the app boots, that sign-in works, that every public and signed-in page renders without errors, and that the first-run tour starts a debate.
 
-Per-step timings taken on 2 CPUs, the size of a private-repository runner, put the slowest job (`browser-smoke`) at about 2.5 minutes including setup.
+[`.github/workflows/database.yml`](../.github/workflows/database.yml) runs on pull requests that change migrations, `supabase/tests/`, the seed, `supabase/config.toml`, the database scripts, or the gate. The pull-request job runs `./.superset/db-gate.sh --db-only`, which starts Postgres alone and runs pgTAP and the concurrency scripts, in about 2 minutes.
 
-[`.github/workflows/database.yml`](../.github/workflows/database.yml) runs on pull requests that change migrations, `supabase/tests/`, the seed, `supabase/config.toml`, the database scripts, or the gate. The pull-request job runs `./.superset/db-gate.sh --db-only`, which starts Postgres alone and runs pgTAP and the concurrency scripts. The full gate (local Supabase, pgTAP, and the full-stack journeys on desktop and mobile, about 20 minutes) runs daily at 05:23 UTC and on demand.
+Weekly and on-demand suites, staggered so no two start local Supabase on the same day (each start pulls the Supabase images from `public.ecr.aws`, whose anonymous data limit failed the Database run on 2026-10-30):
 
-Scheduled and on-demand suites:
+- [`.github/workflows/live-e2e.yml`](../.github/workflows/live-e2e.yml), `AI evals`: the live provider journeys and the model matrix (one case from every catalog model), Mondays at 03:17 UTC. Dispatch one with `-f suite=live` (the default), `-f suite=model-matrix` or `-f suite=both`.
+- [`.github/workflows/browser-weekly.yml`](../.github/workflows/browser-weekly.yml): the full desktop and mobile browser suite and the service-worker offline test, Tuesdays at 02:47 UTC.
+- [`.github/workflows/agentic-e2e.yml`](../.github/workflows/agentic-e2e.yml): the agentic suite, Wednesdays at 03:47 UTC, and the bug bash on the 1st of each month at 05:13 UTC.
+- [`.github/workflows/database.yml`](../.github/workflows/database.yml): the full database gate (local Supabase, pgTAP, and the full-stack journeys on desktop and mobile, about 20 minutes), Thursdays at 05:23 UTC.
 
-- [`.github/workflows/browser-nightly.yml`](../.github/workflows/browser-nightly.yml): the full desktop and mobile browser suite and the service-worker offline test, daily at 02:47 UTC.
-- [`.github/workflows/live-e2e.yml`](../.github/workflows/live-e2e.yml): the local stack against real providers, daily at 03:17 UTC.
-- [`.github/workflows/agentic-e2e.yml`](../.github/workflows/agentic-e2e.yml): the agentic suite daily at 03:47 UTC, and the bug bash on Sundays.
-- [`.github/workflows/model-matrix.yml`](../.github/workflows/model-matrix.yml): a case from every catalog model, Mondays at 04:29 UTC.
-- [`.github/workflows/prod-canary.yml`](../.github/workflows/prod-canary.yml): after every push to `main`, once Vercel reports the commit's production deployment, and daily at 06:41 UTC.
+Production and staging:
 
-See [testing.md](testing.md) for what each proves. To run a scheduled suite on a branch before merging, for example when a change touches AI code, research, or the full-stack flows, dispatch it: `gh workflow run live-e2e.yml --ref <branch>` (likewise `database.yml`, `browser-nightly.yml`, `agentic-e2e.yml`, `model-matrix.yml`). Supabase-starting jobs pull images from `public.ecr.aws`, because ghcr.io rate-limits shared runners.
+- [`.github/workflows/prod-canary.yml`](../.github/workflows/prod-canary.yml): after every push to `main`, once Vercel reports the commit's production deployment, and daily at 06:41 UTC. The daily run makes two real AI requests, so provider drift shows up within a day even though the AI evals are weekly.
+- [`.github/workflows/staging-e2e.yml`](../.github/workflows/staging-e2e.yml): protected staging, daily at 07:11 UTC and on demand from `main`. It runs only when `STAGING_E2E_ENABLED=true` and all protected values exist. [`.github/workflows/staging-preview-note.yml`](../.github/workflows/staging-preview-note.yml) comments once on a pull request that opens with `supabase/` changes.
 
-[`.github/workflows/staging-e2e.yml`](../.github/workflows/staging-e2e.yml) owns protected staging. It starts only from `main`-branch `Quality` runs (a `branches` filter, so pull-request runs no longer start it) or a manual dispatch from `main`. It runs only when `STAGING_E2E_ENABLED=true` and all protected values exist. [`.github/workflows/staging-preview-note.yml`](../.github/workflows/staging-preview-note.yml) comments once on a pull request that opens with `supabase/` changes.
+See [testing.md](testing.md) for what each proves. A week is a long time for a regression to sit unseen, so run the matching suite on your branch before merging when a change is squarely in its area: `gh workflow run live-e2e.yml --ref <branch>` for AI, research, prompts or model routing; `browser-weekly.yml` for a change across many pages; `database.yml` for the full-stack flows; `agentic-e2e.yml` for a flow the agentic tests cover. Supabase-starting jobs pull images from `public.ecr.aws`, because ghcr.io rate-limits shared runners.
+
+Estimated cost, at about 150 pull-request runs and 50 pushes to `main` a month: about 1,700 billed minutes a month, down from about 4,400 when the agentic suite, the browser suite, the live journeys and the full database gate ran daily. The agentic suite is the largest single item, about 40 billed minutes a run. Measure before changing a schedule: `gh api repos/Programcode/DebateOwl/actions/runs/<id>/jobs` gives each job's start and end.
 
 ## When GitHub Actions cannot run
 
@@ -101,7 +100,7 @@ The staging browser suite disables trace, screenshot, and video capture. It crea
 
 Do not enable the staging repository variable before every prerequisite is present. A skipped staging job is not a pass.
 
-`STAGING_E2E_ENABLED` has been `true` since 2026-09-18. The job runs after every successful `Quality` run from a push to `main`, and it first waits up to 20 minutes for a successful `staging-sync` status on that commit. Check the latest real result with `gh run list --workflow staging-e2e.yml` and `npm run ci:failures -- <run-id>`, not this page. The run uploads no artifact, so the job log is the only evidence. On failure the log names the failed step and the URL path, for example `Staging step "add a source to the debate" failed at path /app/library`.
+`STAGING_E2E_ENABLED` has been `true` since 2026-09-18. The job runs daily and on demand from `main`, tests `main`'s head commit, and first waits up to 20 minutes for a successful `staging-sync` status on that commit. Until 2026-10-30 it ran after every push to `main`. Check the latest real result with `gh run list --workflow staging-e2e.yml` and `npm run ci:failures -- <run-id>`, not this page. The run uploads no artifact, so the job log is the only evidence. On failure the log names the failed step and the URL path, for example `Staging step "add a source to the debate" failed at path /app/library`.
 
 No staging run passed after 2026-09-23. Until 2026-10-01 the job did not run, because the `Quality` run it waits for never started. Once Actions came back, it failed on every `main` push through 2026-10-02. The cause was the spec, not staging: since the Current Debate change (#72), Library disables **Add source** until a debate is current, and the spec never started one. The spec now starts a uniquely named debate and deletes it afterwards. The suite drives the real UI, so a change to a flow it covers can break it with no backend drift; run it locally before blaming staging.
 
@@ -109,7 +108,7 @@ No staging run passed after 2026-09-23. Until 2026-10-01 the job did not run, be
 
 Staging is project `brifeyypjauyusmkptkx` ("DebateOwl Staging"). Production is `uziwdtkzofptihahfooo` ("DebateOwl"). Scripts go by ref; the display names can change. Staging syncs itself: a timer on the VPS applies migrations and deploys changed Edge Functions to staging within about 5 minutes of every commit on `main`. It sets the `staging-sync` commit status, and on failure it opens the **Staging is out of sync with main** issue. No per-run authorization is needed for staging. [staging.md](staging.md) covers the timer, its credential, the seed, and how to get in.
 
-Before a production backend deploy, check that the commit's `staging-sync` status is green and that `Protected staging E2E` passed for it. Then follow [Supabase changes](#supabase-changes) with the list of migrations and functions that `npm run backend:status` reports for production.
+Before a production backend deploy, check that the commit's `staging-sync` status is green and that `Protected staging E2E` passed for it. The daily run may not have reached that commit yet; dispatch it with `gh workflow run staging-e2e.yml --ref main` and wait for the result. Then follow [Supabase changes](#supabase-changes) with the list of migrations and functions that `npm run backend:status` reports for production.
 
 ## Switching the frontend to staging
 

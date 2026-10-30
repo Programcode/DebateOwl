@@ -24,4 +24,4 @@ When an AI request fails, the tool says why in one plain sentence and offers the
 ## Gotchas
 
 - A real 401 from a function makes the client refresh the session once (`verifySessionAfterRejection`). On this stack the refresh succeeds, so the tab stays signed in until `Sign in again` is clicked.
-- A timeout needs the 200-second client budget to pass, so no recipe forces one. `src/lib/ai/failure-reason.test.ts` covers its mapping.
+- A timeout needs the 200-second client budget to pass, so no recipe forces one. Its message mapping lives in `src/lib/ai/failure-reason.ts`.

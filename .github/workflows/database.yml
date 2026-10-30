@@ -3,7 +3,8 @@ name: Database
 # Pull requests that change the schema, its tests, or the gate run pgTAP and
 # the database scripts against Postgres alone, about 2 minutes. The full gate
 # (local Supabase, pgTAP, and the full-stack browser journeys on desktop and
-# mobile, about 20 minutes) runs nightly and on demand.
+# mobile, about 20 minutes) runs weekly and on demand. Weekly also keeps the
+# Supabase image pulls under public.ecr.aws's anonymous data limit.
 on:
   pull_request:
     paths:
@@ -16,7 +17,7 @@ on:
       - ".superset/lib/**"
       - ".github/workflows/database.yml"
   schedule:
-    - cron: "23 5 * * *"
+    - cron: "23 5 * * 4"
   workflow_dispatch:
 
 permissions:

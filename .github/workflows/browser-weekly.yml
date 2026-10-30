@@ -1,20 +1,20 @@
-name: Browser nightly
+name: Browser weekly
 
 # The full credential-free browser suite on desktop and mobile Chromium, and
 # the service worker's offline test against a production build. Pull requests
 # run only the @smoke subset (deploy.yml), so this catches what the subset
-# skips, at most a day late. Run it on a branch with
-# `gh workflow run browser-nightly.yml --ref <branch>`.
+# skips, at most a week late. A change that spans many pages runs it on its
+# branch with `gh workflow run browser-weekly.yml --ref <branch>`.
 on:
   schedule:
-    - cron: "47 2 * * *"
+    - cron: "47 2 * * 2"
   workflow_dispatch:
 
 permissions:
   contents: read
 
 concurrency:
-  group: browser-nightly
+  group: browser-weekly-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -53,7 +53,7 @@ jobs:
         if: failure()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: chromium-nightly-failure-${{ github.run_id }}
+          name: chromium-weekly-failure-${{ github.run_id }}
           path: |
             test-results/
             playwright-report/

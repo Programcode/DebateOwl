@@ -49,7 +49,7 @@ A user systemd timer on Adam's VPS, `debatelab-staging-sync.timer`, runs [`ops/s
 
 An already-synced commit is rechecked hourly, so drift from a hand deploy also shows up. A failed commit is retried hourly. The script stops instead of pushing when staging has a migration the commit lacks. It never deletes a function: one that is deployed on staging but gone from the commit fails the sync until someone runs `supabase functions delete <name> --project-ref brifeyypjauyusmkptkx`. `workspace-invites` is the exception, because it is hidden and never deployed.
 
-`Protected staging E2E` waits for a successful `staging-sync` status on its commit before testing, and the timer holds any sync while a browser job is running. If `main` moves past the commit while it waits, the run skips: staging then runs the newer backend, and the newer commit's run tests it. If no status arrives within 20 minutes, it fails with a pointer to this page.
+`Protected staging E2E` waits for a successful `staging-sync` status on its commit before testing, and the timer holds any sync while a browser job is running. It runs daily and on demand, on `main`'s head. If `main` moves past the commit while it waits, the run skips: staging then runs the newer backend, which the next daily run or a dispatch tests. If no status arrives within 20 minutes, it fails with a pointer to this page.
 
 PRs that change `supabase/migrations/` or `supabase/functions/` get a comment saying their staging preview still runs `main`'s backend. Those changes reach staging only after merge. To try them before then, use the `verify-debatelab` skill against a local stack.
 

@@ -3,16 +3,17 @@ name: Agentic E2E
 # The e2e suite in agentic/ against the local stack in fake mode: an AI agent
 # drives goal-level flows and judges screens. Recorded flows replay from
 # agentic/replay without model calls; judgments always call the model.
-# It runs nightly, not on pull requests: it takes far longer than the
-# pull-request check and each judgment is a paid model call. Run it on a
-# branch with `gh workflow run agentic-e2e.yml --ref <branch>`. A weekly bug
-# bash sends each persona exploring, and on demand one exploration runs
-# instead of the suite.
+# It runs weekly, not on pull requests: it takes far longer than the
+# pull-request check (about 40 billed minutes) and each judgment is a paid
+# model call. Run it on a branch with
+# `gh workflow run agentic-e2e.yml --ref <branch>`. A monthly bug bash sends
+# each persona exploring, and on demand one exploration runs instead of the
+# suite. The two job conditions below match the bug-bash cron string.
 # Not a required check. See docs/testing.md#agentic-browser-tests.
 on:
   schedule:
-    - cron: "47 3 * * *" # the suite
-    - cron: "13 5 * * 0" # the weekly bug bash
+    - cron: "47 3 * * 3" # the suite, Wednesdays
+    - cron: "13 5 1 * *" # the bug bash, on the 1st of each month
   workflow_dispatch:
     inputs:
       explore:
@@ -42,7 +43,7 @@ env:
 
 jobs:
   suite:
-    if: github.repository == 'Programcode/DebateOwl' && github.event.schedule != '13 5 * * 0' && (github.event_name != 'workflow_dispatch' || inputs.explore == '')
+    if: github.repository == 'Programcode/DebateOwl' && github.event.schedule != '13 5 1 * *' && (github.event_name != 'workflow_dispatch' || inputs.explore == '')
     runs-on: ubuntu-latest
     timeout-minutes: 45
     # Four legs keep each well under the timeout: the page sweep makes about
@@ -123,9 +124,9 @@ jobs:
           if-no-files-found: ignore
           retention-days: 7
 
-  # The weekly bug bash explores with every persona; a manual run explores once.
+  # The monthly bug bash explores with every persona; a manual run explores once.
   plan-explore:
-    if: github.repository == 'Programcode/DebateOwl' && (github.event.schedule == '13 5 * * 0' || (github.event_name == 'workflow_dispatch' && inputs.explore != ''))
+    if: github.repository == 'Programcode/DebateOwl' && (github.event.schedule == '13 5 1 * *' || (github.event_name == 'workflow_dispatch' && inputs.explore != ''))
     runs-on: ubuntu-latest
     outputs:
       legs: ${{ steps.plan.outputs.legs }}

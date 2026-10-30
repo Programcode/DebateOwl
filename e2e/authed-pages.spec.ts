@@ -19,7 +19,7 @@ const AUTH_ROUTES = [
 ] as const;
 
 for (const locale of LOCALES) {
-  // English runs in the pull-request smoke set; the other locales run nightly.
+  // English runs in the pull-request smoke set; the other locales run weekly.
   test.describe(`authed pages [${locale}]`, locale === 'en' ? { tag: '@smoke' } : {}, () => {
     test.beforeEach(async ({ page }) => {
       await setLocale(page, locale);
