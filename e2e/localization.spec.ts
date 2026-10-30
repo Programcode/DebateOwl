@@ -110,12 +110,12 @@ test('sign-in and not-found pages carry the language switcher', async ({ page })
   await shot(page, '02-login-hu');
 
   await page.goto('/no-such-page');
-  await expect(page.getByRole('heading', { level: 1, name: hu.notFound.title })).toBeVisible();
+  await expect(page.getByRole('heading', { level: 1, name: hu.notFound.message })).toBeVisible();
   await expect(page).toHaveTitle(brand(hu.pageHead.notFound.title));
   await shot(page, '03-not-found-hu');
   await choose(page, 'es');
   await expect(page).toHaveTitle(brand(es.pageHead.notFound.title));
-  await expect(page.getByText(es.notFound.message)).toBeVisible();
+  await expect(page.getByRole('heading', { level: 1, name: es.notFound.message })).toBeVisible();
   await shot(page, '04-not-found-es');
 });
 

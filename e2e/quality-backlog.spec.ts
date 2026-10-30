@@ -91,9 +91,9 @@ test('Flowchart deletes a selected node at once and Undo puts it back', async ({
   await page.getByText('Argument 1', { exact: true }).click();
   const remove = page.getByRole('button', { name: 'Delete' }).last();
   if (testInfo.project.name === 'mobile-chromium') {
-    const box = await remove.boundingBox();
-    expect(box).not.toBeNull();
-    await page.touchscreen.tap(box!.x + box!.width / 2, box!.y + box!.height / 2);
+    // Locator taps scroll into view and wait for layout stability, just like
+    // clicks. Raw viewport coordinates can hit the canvas after selection reflows.
+    await remove.tap();
   } else {
     await remove.click();
   }
