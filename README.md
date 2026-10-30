@@ -85,7 +85,7 @@ Always set `VITE_LOCAL_PREVIEW` as shown. Without it the client connects to the 
 ```bash
 npm run lint
 npm run typecheck
-npm test               # unit tests
+npm test               # guards: repo policy checks, about 2 seconds
 npm run test:edge      # Edge Function tests (needs Deno 2)
 npm run build
 ```
@@ -93,7 +93,7 @@ npm run build
 More detail lives in [`docs/`](docs/README.md): [architecture](docs/architecture.md), [development](docs/development.md), [testing](docs/testing.md) and [operations](docs/operations.md). Backend functions and migrations are described in [`supabase/README.md`](supabase/README.md). [`AGENTS.md`](AGENTS.md) holds the rules the project's coding agents follow.
 
 ```text
-src/                 React client, stores, hooks, and unit tests
+src/                 React client, stores, hooks, and the Vitest guards
 packages/core/       Platform-neutral shared code: schemas, validation, languages
 supabase/            Edge Functions, migrations, pgTAP tests, local config
 e2e/, agentic/       Playwright and agent-driven browser tests

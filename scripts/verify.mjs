@@ -7,9 +7,9 @@
 // runs to the end, so one run reports every failure.
 //
 // The VPS is short on memory. Alone, lint, build and smoke each take about
-// 2 GB and Vitest with three workers about 1.8 GB, so the lanes are ordered to
-// run at most two of them at once (about 4 GB above idle). A third lane was no
-// faster and took 6 GB. NODE_OPTIONS defaults to a 3 GB heap per Node process.
+// 2 GB, so the lanes are ordered to run at most two of them at once (about
+// 4 GB above idle). A third lane was no faster and took 6 GB. NODE_OPTIONS
+// defaults to a 3 GB heap per Node process.
 import { execFileSync, spawn } from "node:child_process";
 import { createWriteStream, mkdirSync, readFileSync, rmSync } from "node:fs";
 import { join } from "node:path";
@@ -27,12 +27,11 @@ const LANES = [
     { name: "lint", command: "npm run lint" },
     { name: "build", command: "bash .superset/heavy.sh npm run build" },
     { name: "sw-offline", command: "npm run test:sw" },
-    { name: "edge", command: "npm run test:edge" },
   ],
   [
     { name: "typecheck", command: "npm run typecheck" },
-    { name: "unit", command: "npm test -- --maxWorkers=3" },
-    { name: "collaboration", command: "npm run test:collaboration" },
+    { name: "guards", command: "npm test" },
+    { name: "edge", command: "npm run test:edge" },
     { name: "smoke", command: "npm run test:e2e:smoke", env: smokeEnv },
   ],
 ];

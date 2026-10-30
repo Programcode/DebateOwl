@@ -1,16 +1,17 @@
 name: Protected staging E2E
 
+# Daily, and on demand from main. It used to follow every push to main, and
+# about half of each run's billed minutes went to waiting for the staging
+# sync. A frontend merge is checked live by the production canary; before a
+# backend production deploy, dispatch this from main once staging runs the
+# merge: `gh workflow run staging-e2e.yml --ref main`.
 on:
-  workflow_run:
-    workflows: ["Quality"]
-    types: [completed]
-    # Without this, every pull-request Quality run starts a run here that
-    # only skips (about 600 a month).
-    branches: [main]
+  schedule:
+    - cron: "11 7 * * *"
   workflow_dispatch:
 
 permissions:
-  # Manual dispatch queries workflow runs for the selected main commit.
+  # Reads the Quality runs for the main commit under test.
   actions: read
   contents: read
   # Waits for the staging-sync commit status set by the VPS sync.
@@ -27,14 +28,8 @@ jobs:
   # moved past: staging runs the newer backend, and the newer commit's run
   # tests it.
   staging-sync-gate:
-    if: >-
-      (
-        (github.event_name == 'workflow_run' &&
-          github.event.workflow_run.conclusion == 'success' &&
-          github.event.workflow_run.event == 'push' &&
-          github.event.workflow_run.head_branch == 'main') ||
-        (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main')
-      ) && vars.STAGING_E2E_ENABLED == 'true'
+    # A scheduled run's ref is main; a dispatch must choose main.
+    if: github.ref == 'refs/heads/main' && vars.STAGING_E2E_ENABLED == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 25
     outputs:
@@ -44,7 +39,7 @@ jobs:
         id: wait
         env:
           GH_TOKEN: ${{ github.token }}
-          SHA: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.sha }}
+          SHA: ${{ github.sha }}
         shell: bash
         run: |
           for _ in $(seq 1 40); do
@@ -82,7 +77,7 @@ jobs:
       - name: Confirm staging still runs this commit
         env:
           GH_TOKEN: ${{ github.token }}
-          SHA: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.sha }}
+          SHA: ${{ github.sha }}
         shell: bash
         run: |
           main="$(gh api "repos/${GITHUB_REPOSITORY}/commits/main" --jq .sha)"
@@ -97,10 +92,9 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-          ref: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.sha }}
 
-      - name: Verify selected commit passed the quality workflow
-        if: github.event_name == 'workflow_dispatch'
+      # By now staging has synced, which takes longer than Quality.
+      - name: Verify the commit passed the quality workflow
         env:
           GH_TOKEN: ${{ github.token }}
         shell: bash
@@ -109,7 +103,7 @@ jobs:
             "repos/${GITHUB_REPOSITORY}/actions/workflows/deploy.yml/runs?head_sha=${GITHUB_SHA}&event=push&status=success&per_page=1" \
             --jq '.workflow_runs | length')"
           if [ "$successful_runs" -ne 1 ]; then
-            echo "::error::The selected main commit has no successful push run of the Quality workflow"
+            echo "::error::Main commit ${GITHUB_SHA} has no successful push run of the Quality workflow"
             exit 1
           fi
 

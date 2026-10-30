@@ -93,7 +93,7 @@ Platform-neutral code shared with the iOS app lives in [`packages/core/`](../pac
 
 Follow existing functional React, Zustand, Zod, and shadcn/Radix patterns. Reuse current helpers before adding another abstraction.
 
-Run the closest unit or component test while changing behavior. Run lint, type checking, and build before handing work off.
+Prove a change by using it: run the closest Playwright spec or drive it with the `verify-debatelab` skill. There are no unit tests to update ([testing.md](testing.md#guards)). Run lint, type checking, and build before handing work off.
 
 ## Collaboration service
 

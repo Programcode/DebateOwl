@@ -1,8 +1,10 @@
 name: Quality
 
-# The pull-request check. Five jobs run side by side so the check takes as long
-# as the slowest one, about 2.5 minutes. Slow, paid, and full-stack suites run
-# on a schedule instead; docs/operations.md lists them.
+# The pull-request check: two jobs side by side, about 2.5 minutes. `check`
+# proves the app builds and the repo rules hold; `browser-smoke` proves the
+# built pages load in a browser. There is no unit-test job: behavior is proven
+# end to end, and the slow, paid and full-stack suites run weekly or on demand
+# (docs/operations.md lists them).
 on:
   push:
     branches: [ "main" ]
@@ -17,7 +19,10 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  lint:
+  # One job, so a run pays for one runner start and one cache restore. Every
+  # step is a few seconds to half a minute; the guards are the Vitest files
+  # listed in vitest.config.ts, about 2 seconds.
+  check:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -27,57 +32,6 @@ jobs:
           persist-credentials: false
 
       - uses: ./.github/actions/node-deps
-
-      - name: Documentation
-        run: npm run docs:check
-
-      - name: Lint
-        run: npm run lint
-
-  typecheck-build:
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-
-      - uses: ./.github/actions/node-deps
-
-      - name: Typecheck
-        run: npm run typecheck
-
-      - name: Build
-        run: npm run build
-
-  unit:
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-
-      - uses: ./.github/actions/node-deps
-
-      - name: Test
-        run: npm test
-
-      - name: Collaboration service tests
-        run: npm run test:collaboration
-
-  # Edge Function tests import only jsr:, npm: and https: modules, so this job
-  # needs Deno and no npm install.
-  edge:
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
 
       - name: Set up Deno
         uses: denoland/setup-deno@22d081ff2d3a40755e97629de92e3bcbfa7cf2ed # v2.0.5
@@ -85,12 +39,29 @@ jobs:
           deno-version: 2.9.6
           cache: true
 
+      - name: Documentation
+        run: npm run docs:check
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Guards
+        run: npm test
+
+      # Edge Functions hold auth, quota and billing, which no pull-request
+      # browser test reaches.
       - name: Edge function tests
         run: npm run test:edge
 
+      - name: Build
+        run: npm run build
+
   # The @smoke set: the app boots, sign-in works, every public and signed-in
   # page renders without errors, and the first-run tour starts a debate. The
-  # full desktop and mobile suite runs in browser-nightly.yml.
+  # full desktop and mobile suite runs weekly in browser-weekly.yml.
   browser-smoke:
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest

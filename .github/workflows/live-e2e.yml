@@ -1,26 +1,43 @@
-name: Live provider E2E
+name: AI evals
 
-# Real OpenRouter, Jev, and Exa behind the local stack. Every run spends
-# provider credit and takes about 17 minutes, so it runs nightly and on demand,
-# never on pull requests. To check a branch that changes AI or research code:
-# `gh workflow run live-e2e.yml --ref <branch>`. Nightly runs also catch
-# provider drift without code changes.
+# The AI evals: the local stack against real OpenRouter, Jev, and Exa. Every
+# run spends provider credit, so it runs weekly and on demand, never on pull
+# requests. The production canary's daily run makes two real AI requests, so
+# provider drift still shows up within a day.
+# - live: the live provider journeys, about 8 minutes.
+# - model-matrix: one case from every catalog model, unpinned, so a model that
+#   times out or returns invalid JSON fails here before users hit it. About $1.
+# A branch that changes AI, research, prompts or model routing runs them with
+# `gh workflow run live-e2e.yml --ref <branch>` (add `-f suite=model-matrix`
+# or `-f suite=both`).
 on:
   schedule:
-    - cron: "17 3 * * *"
+    - cron: "17 3 * * 1"
   workflow_dispatch:
+    inputs:
+      suite:
+        description: "Which eval to run"
+        type: choice
+        default: live
+        options: [live, model-matrix, both]
 
 permissions:
   contents: read
 
 concurrency:
-  group: live-e2e-${{ github.ref }}
+  group: live-e2e-${{ github.ref }}-${{ inputs.suite || 'schedule' }}
   cancel-in-progress: true
 
 jobs:
-  live-e2e:
+  eval:
     # Forks have none of the secrets this job needs.
     if: github.repository == 'Programcode/DebateOwl'
+    strategy:
+      fail-fast: false
+      matrix:
+        # The schedule runs both; a dispatch runs the suite it names.
+        suite: ${{ fromJSON((github.event_name == 'schedule' || inputs.suite == 'both') && '["live","model-matrix"]' || format('["{0}"]', inputs.suite)) }}
+    name: ${{ matrix.suite }}
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
@@ -52,8 +69,9 @@ jobs:
       - name: Live provider journeys
         env:
           LIVE_PROVIDERS: 1
-          # Repository variable override; empty falls back to db-gate.sh's default.
-          LIVE_MODEL: ${{ vars.LIVE_MODEL }}
+          # live: a repository variable override, empty falls back to
+          # db-gate.sh's default. model-matrix: every catalog model.
+          LIVE_MODEL: ${{ matrix.suite == 'model-matrix' && 'as-requested' || vars.LIVE_MODEL }}
           LIVE_OPENROUTER_API_KEY: ${{ secrets.LIVE_OPENROUTER_API_KEY }}
           LIVE_EXA_API_KEY: ${{ secrets.LIVE_EXA_API_KEY }}
           SUPABASE_INTERNAL_IMAGE_REGISTRY: public.ecr.aws
@@ -64,7 +82,7 @@ jobs:
         if: failure()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: live-e2e-failure-${{ github.run_id }}
+          name: ${{ matrix.suite }}-failure-${{ github.run_id }}
           path: |
             ${{ runner.temp }}/workspace-gate/
             test-results/

@@ -60,14 +60,13 @@ When unsure, treat the PR as not low-risk. Say in the PR which rule merged it.
 
 ## Focused verification
 
-While working, run only the check that covers what you touched: the test file for the module (`npx vitest run <file>`), `npm run lint` or `npm run typecheck` when types moved, one spec (`npx playwright test <spec>`). Each of these takes seconds.
+While working, run only the check that covers what you touched: one spec (`npx playwright test <spec>`), one Edge Function's Deno test, `npm run lint` or `npm run typecheck` when types moved. Each of these takes seconds.
 
 ```bash
 npm run docs:check
 npm run lint
 npm run typecheck
-npm test
-npm run test:collaboration
+npm test               # the guards, about 2 seconds
 npm run test:edge
 npm run build
 P=$(bash .superset/e2e-port.sh) && CI=1 PORT=$P PLAYWRIGHT_BASE_URL=http://127.0.0.1:$P npm run test:e2e
@@ -75,7 +74,7 @@ P=$(bash .superset/e2e-port.sh) && CI=1 PORT=$P PLAYWRIGHT_BASE_URL=http://127.0
 
 Run `npm run verify` once, at the final head, before you push. It is the pull-request check run locally (about 100 seconds) and prints each failed step's log. `npm run verify:full` adds the full desktop and mobile browser suite; run it only when a change spans many pages or Adam asks.
 
-Push once, when the work is done and `verify` passes. Every push reruns the whole pull-request check, so batch review fixes into one push. CI on a pull request is the `Quality` workflow (about 3 minutes), plus pgTAP when the schema changes. The full-stack journeys, the full browser suite, live providers, the agentic suite, and the model matrix run on a schedule, never on pull requests. When your change is squarely in one of those areas (AI or research code, a full-stack flow, many pages), dispatch that suite on your branch once, for example `gh workflow run live-e2e.yml --ref <branch>`, and report its result. [docs/operations.md](docs/operations.md#ci-workflows) lists them.
+Push once, when the work is done and `verify` passes. Every push reruns the whole pull-request check, so batch review fixes into one push. CI on a pull request is the `Quality` workflow (about 3 minutes: build, lint, types, guards, Edge Function tests, and the `@smoke` browser set), plus pgTAP when the schema changes. The full-stack journeys, the full browser suite, the AI evals (live providers and the model matrix), and the agentic suite run weekly, never on pull requests. When your change is squarely in one of those areas (AI or research code, a full-stack flow, many pages), dispatch that suite on your branch once, for example `gh workflow run live-e2e.yml --ref <branch>`, and report its result. [docs/operations.md](docs/operations.md#ci-workflows) lists them.
 
 If GitHub Actions jobs fail within 2 to 5 seconds with no logs, they did not run: the account is out of Actions minutes (billing), not failing on the code. In that case run the same checks locally at the final head (`npm run verify`, and `./.superset/db-gate.sh --db-only` when the schema changed) and record the exact results in the PR. A local pass is not a CI pass; say which one you have.
 
@@ -141,26 +140,28 @@ Never weaken a recipe's assertions to make it pass.
 
 Prove a change by using it: `npm run lint`, `npm run typecheck`, `npm run build`, then drive the feature in the real app with `verify-debatelab`. New tests are not a substitute for that, and a test-heavy diff is harder to review.
 
-Write a test only when a regression would be costly or hard to notice by using the app:
+Tests here are end to end. When a change deserves a lasting test, because a regression would be costly or hard to notice by using the app, write it at the level that runs the real thing:
 
-- auth, sessions, RLS and pgTAP policies, and cross-user or cross-debate isolation;
-- billing, Stripe webhooks, quotas, daily limits, and cost accounting;
-- migrations and data integrity, concurrency, and the collaboration service;
-- parsers, validators, schemas at a trust boundary, prompt routing in the fake provider, and stream accounting;
-- a fixed bug that could plausibly come back.
+- a Playwright spec in `e2e/` for a client flow (tag it `@smoke` only when a break would stop most users), or in `e2e/full-stack/` when it needs real Auth and Postgres;
+- an agentic test in `agentic/` for a journey or a judged screen;
+- a Deno test beside the Edge Function for auth, sessions, billing, Stripe webhooks, quotas, cost or stream accounting, and validators at a trust boundary;
+- a pgTAP test or `scripts/test-*.sh` for RLS, migrations, data integrity, and concurrency;
+- the same, as a regression test, for a fixed bug that could plausibly come back.
+
+The Vitest files are guards, listed in `vitest.config.ts`: each reads repo config or content and enforces a policy no browser run sees, such as Claude-only routing, the Vercel security headers, the production-target refusals, or catalog parity across languages. Add a guard only for a rule of that kind. Components, stores, hooks and pages are proven end to end, so they have no unit tests; [docs/testing.md](docs/testing.md#guards) says why.
 
 Do not write tests that:
 
 - restate a TypeScript type or a schema's shape;
-- check that a removed feature stays removed, or that a column, file, export, route, or translation key exists (the i18n catalog check already covers keys);
+- check that a removed feature stays removed, or that a column, file, export, route, or translation key exists (the i18n catalog guards already cover keys);
 - assert static copy, or only that a component renders;
 - only exercise mocks, or can never fail.
 
-Keep a PR's test diff small enough to read next to the change. Deleting a test that cannot catch a real regression is not weakening tests; deleting or loosening one to make a failing run pass is. Never lower a coverage threshold in `vitest.config.ts` without Adam's approval.
+Keep a PR's test diff small enough to read next to the change. Deleting a test that cannot catch a real regression is not weakening tests; deleting or loosening one to make a failing run pass is, and so is removing a guard from `vitest.config.ts` without Adam's approval.
 
 ## Hard boundaries
 
-- Start bug fixes with a failing test when the bug is in behavior listed under [What to test](#what-to-test), otherwise with a repeatable browser reproduction.
+- Start bug fixes with a reproduction that fails: a spec, Deno or pgTAP test at the level [What to test](#what-to-test) names when the bug is in that kind of behavior, otherwise a repeatable browser reproduction.
 - Stub sessions prove rendering only. Do not call them authenticated backend proof.
 - Never put staging or production credentials in jobs, logs, traces, screenshots, commits, comments, or docs. Two scoped exceptions reach jobs only through GitHub Actions secrets:
   - the protected staging values;

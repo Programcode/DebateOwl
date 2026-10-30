@@ -6,7 +6,7 @@ Sparring and Crossfire can run as spoken rounds. The student speaks through the 
 
 - `voice-spar` runs a spoken Lincoln-Douglas round. The opponent is told the round is spoken (`SPOKEN ROUND:` in its system prompt). Each reply comes back as clean text plus signed voice segments, which may keep allowed audio tags such as `[sighs]` and drop invented ones. The browser voice reads the clean text, and no tag reaches the page or the saved round. The scorecard shows `Spoken delivery, measured` (test id `spoken-delivery`), and the saved user turns carry `delivery` measurements.
 - `voice-cross` runs a spoken Crossfire exchange. The question arrives by microphone, the request carries `SPOKEN EXCHANGE:`, and the clean answer is read aloud. The Jev signal still attaches, and the debrief shows `spoken-delivery`.
-- `voice-unavailable`: when the browser has no speech recognition or the microphone is blocked, the switch is replaced by the test id `voice-unavailable`. This is covered by `src/test/pages/SparringVoice.test.tsx` and `CrossfireVoice.test.tsx`, not by a recipe.
+- `voice-unavailable`: when the browser has no speech recognition or the microphone is blocked, the switch is replaced by the test id `voice-unavailable`. No recipe covers it; check it by hand in a browser with the microphone blocked.
 
 ## How to get to it (user POV)
 
