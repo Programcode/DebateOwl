@@ -101,12 +101,12 @@ test("loc-switcher: sign-in and not-found pages carry the language switcher", as
   await evidence.shot("02-login-hu");
 
   await page.goto("/no-such-page");
-  await expect(page.getByRole("heading", { level: 1, name: hu.notFound.title })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1, name: hu.notFound.message })).toBeVisible();
   await expect(page).toHaveTitle(hu.pageHead.notFound.title.replace("{{brand}}", BRAND));
   await evidence.shot("03-not-found-hu");
   await chooseLanguage(page, "es");
   await expect(page).toHaveTitle(es.pageHead.notFound.title.replace("{{brand}}", BRAND));
-  await expect(page.getByText(es.notFound.message)).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1, name: es.notFound.message })).toBeVisible();
   await evidence.shot("04-not-found-es");
 });
 
