@@ -659,9 +659,6 @@ def localized_sections():
             lines.append(f"- [{title}]({BASE}{paths[language]}): {description}")
         if language == "hu":
             lines.append(f"- [Vitafelkészülés MI-vel]({BASE}/hu/mi-vitafelkeszules): egy felkészülő este menete, és melyik MI mire jó a vitára készülésben, magyarul")
-            lines.append(f"- [Melyik MI a legjobb vitára?]({BASE}/hu/melyik-ai-a-legjobb-vitara): a {PRODUCT}, a ChatGPT, a Claude, az ArguFight és mások egyenként, mikor igen és mikor nem, árakkal (2026. október)")
-        else:
-            lines.append(f"- [¿Qué IA es mejor para preparar un debate?]({BASE}/es/mejor-ia-para-preparar-un-debate): {PRODUCT}, ChatGPT, Claude, ArguFight y otras según lo que necesitas, con un caso de ejemplo y precios (octubre de 2026)")
         sections.append(f"## {heading}\n\n" + "\n".join(lines))
     return "\n\n".join(sections)
 
@@ -783,6 +780,8 @@ COMPARE_LINKS = [
     ("debateowl-vs-windebate", None),
     ("debateowl-vs-debateclub", None),
     ("chatgpt-vs-claude-for-debate", ("ChatGPT vs Claude for debate", "where each general chatbot fits in debate prep, prompts that make them argue back, and when a debate-specific tool is better")),
+    ("es/mejor-ia-para-preparar-un-debate", ("¿Qué IA sirve para preparar un debate?", f"in Spanish: a four-step prep guide (motion, case, replies, timed practice) that says which AI fits each step, {PRODUCT} included, as of October 2026")),
+    ("hu/melyik-ai-a-legjobb-vitara", ("Melyik AI a legjobb vitafelkészüléshez?", f"in Hungarian: questions and answers for school debaters and teachers on which AI to use, whether it works in Hungarian, what {PRODUCT} costs and what AI is not good for")),
     ("debateowl-vs-debate-ladder", (f"{PRODUCT} vs Debate Ladder", "case prep and timed format rounds vs a voice-first ranked debate game, with a 7-question checklist")),
     ("free-vs-paid-ai-debate-tools", ("Free vs paid AI debate tools", "what free plans include and what paid AI debate tools cost, checked October 2026")),
     ("best-ai-for-public-forum", ("Best AI for Public Forum debate", "Public Forum AI tools compared speech by speech, with prices as of October 2026")),
