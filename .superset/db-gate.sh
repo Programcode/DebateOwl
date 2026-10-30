@@ -90,7 +90,7 @@ else
   runtime_dir="$(mktemp -d)"
 fi
 # Shared CI runners intermittently hit registry rate limits while pulling images.
-start_command=(start)
+start_command=(start -x "$SUPABASE_START_EXCLUDE")
 if [ "$DB_ONLY" = true ]; then start_command=(db start); fi
 for attempt in 1 2 3; do
   stack_network_prepare "$(pwd)"

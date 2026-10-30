@@ -132,7 +132,7 @@ cmd_up() {
     return "$network_status"
   }
   record STACK_STARTED true
-  supabase start >>"$log_dir/supabase.log" 2>&1
+  supabase start -x "$SUPABASE_START_EXCLUDE" >>"$log_dir/supabase.log" 2>&1
 
   local status_json; status_json="$(supabase status -o json 2>/dev/null)"
   sv() { node -e 'const v=JSON.parse(process.argv[1])[process.argv[2]]; if (!v) process.exit(1); process.stdout.write(String(v))' "$status_json" "$1"; }

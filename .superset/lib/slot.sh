@@ -1,4 +1,9 @@
 # Shared local-stack allocation. Source lock.sh before calling stack_slot_acquire.
+# Containers no gate or recipe uses. Skipping them saves image pulls (CI hit
+# public.ecr.aws's anonymous data limit pulling studio on 2026-10-30) and RAM
+# per stack, so two slots fit on the VPS. Storage and imgproxy stay: account
+# deletion empties the user's storage buckets.
+SUPABASE_START_EXCLUDE="studio,postgres-meta,logflare,vector,supavisor,realtime"
 # Keep slot 1 identical to the pinned CLI defaults; slot 2 offsets ports by 100.
 stack_slot_configure() {
   case "$1" in 1|2) ;; *) echo "Invalid stack slot: $1" >&2; return 1 ;; esac
