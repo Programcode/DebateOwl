@@ -1,4 +1,4 @@
-"""Fail when the seven comparison pages share long sentences: python3 scripts/check_templating.py.
+"""Fail when the comparison pages share long sentences: python3 scripts/check_templating.py.
 
 Each comparison page needs its own angle, so no sentence longer than MAX_WORDS
 words may appear in the visible text of more than MAX_PAGES of them. The pricing
@@ -22,6 +22,8 @@ PAGES = [
     "debateowl-vs-debate-ladder",
     "free-vs-paid-ai-debate-tools",
     "how-to-prepare-for-a-debate-with-ai",
+    "es/mejor-ia-para-preparar-un-debate",
+    "hu/melyik-ai-a-legjobb-vitara",
 ]
 MAX_WORDS = 12
 MAX_PAGES = 2

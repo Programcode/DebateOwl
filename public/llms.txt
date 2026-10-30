@@ -43,7 +43,8 @@ Free to use, no account needed, and they run in the browser.
 - [Vitatétel-generátor | DebateOwl](https://debateowl.com/hu/tools/vitatetel-generator): Ingyenes vitatétel-generátor, amely egy véletlen tételt, vagy vétógyakorláshoz hármat húz 300 eredeti, téma és típus szerint rendezett tételből.
 - [Nyomtatható vitajegyzetlapok | DebateOwl](https://debateowl.com/hu/tools/jegyzetlap): Ingyenes, nyomtatható vitajegyzetlap minden beszédhez külön oszloppal PF, LD, Policy, BP, World Schools vagy Asian Parliamentary formátumhoz.
 - [Beszédidő-kalkulátor | DebateOwl](https://debateowl.com/hu/tools/beszedido-kalkulator): Ingyenes beszédidő-kalkulátor, amely megszámolja egy vitabeszéd szavait, és megmutatja, mennyi ideig tart lassú, átlagos és gyors tempóban.
-- [Vitafelkészülés MI-vel](https://debateowl.com/hu/mi-vitafelkeszules): melyik MI mire jó a vitára készülésben, magyarul
+- [Vitafelkészülés MI-vel](https://debateowl.com/hu/mi-vitafelkeszules): egy felkészülő este menete, és melyik MI mire jó a vitára készülésben, magyarul
+- [Melyik MI a legjobb vitára?](https://debateowl.com/hu/melyik-ai-a-legjobb-vitara): a DebateOwl, a ChatGPT, a Claude, az ArguFight és mások egyenként, mikor igen és mikor nem, árakkal (2026. október)
 
 ## Español
 
@@ -53,6 +54,7 @@ Free to use, no account needed, and they run in the browser.
 - [Generador de mociones de debate | DebateOwl](https://debateowl.com/es/tools/generador-mociones): Generador gratis de mociones de debate que saca una moción al azar, o tres para practicar el veto, de 300 mociones originales por tema y tipo.
 - [Hojas de flujo de debate imprimibles | DebateOwl](https://debateowl.com/es/tools/hoja-de-flujo): Hojas de flujo de debate gratis e imprimibles, con una columna por discurso en PF, LD, Policy, BP, World Schools o Asian Parliamentary, en A4 o Carta.
 - [Calculadora de tiempo de discurso | DebateOwl](https://debateowl.com/es/tools/calculadora-tiempo-discurso): Calculadora gratis que cuenta las palabras de un discurso de debate y muestra cuánto dura a ritmo lento, medio o rápido y en qué turnos cabe.
+- [¿Qué IA es mejor para preparar un debate?](https://debateowl.com/es/mejor-ia-para-preparar-un-debate): DebateOwl, ChatGPT, Claude, ArguFight y otras según lo que necesitas, con un caso de ejemplo y precios (octubre de 2026)
 
 ## Compare
 

@@ -23,7 +23,7 @@ export const COPY_ES: LocalizedToolsCopy = {
   pages: {
     '/tools': {
       title: 'Herramientas de debate gratis',
-      intro: 'Herramientas para practicar debate que funcionan en cualquier navegador y no necesitan cuenta. El cronómetro guarda tu ronda en este navegador, no en un servidor. Úsalas en una sesión del club o proyectadas en clase.',
+      intro: 'Herramientas para practicar debate que funcionan en cualquier navegador y no necesitan cuenta. El cronómetro guarda tu ronda en este navegador, no en un servidor. Úsalas en una sesión del club o proyectadas en clase. Si además quieres preparar el caso con IA, la guía [qué IA es mejor para preparar un debate](/es/mejor-ia-para-preparar-un-debate) compara las opciones según lo que necesitas.',
       sections: [
         {
           heading: 'Para qué sirve cada herramienta',

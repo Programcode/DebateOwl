@@ -33,6 +33,55 @@ HU_DISCLOSURE = (
     f"A {PRODUCT} készíti az egyik eszközt ezen az oldalon. A többi termékről szóló tények a saját weboldalukról származnak, "
     "2026. október 29-én ellenőrizve. Fizetés előtt ellenőrizd őket."
 )
+ES_DISCLOSURE = (
+    f"{PRODUCT} hace una de las herramientas de esta página. Los datos de los demás productos salen de sus propias webs, "
+    "consultadas el 30 de octubre de 2026. Compruébalos antes de pagar."
+)
+# The pricing sentence of the native pages, worded as es.json (faq.a9) and HU_PRICE have it,
+# with the free tools linked by name instead of the bare /es/tools or /hu/tools path.
+ES_PRICE_START = f"La app {PRODUCT} no tiene plan gratuito"
+ES_PRICE_HTML = (
+    f"{ES_PRICE_START} (prueba gratis de {PRICING['trialDays']} días y después ${PRICING['proMonthly']}/mes); "
+    'las herramientas aparte, <a href="/es/tools">cronómetro, generador de mociones, hoja de flujo y calculadora de tiempo de discurso</a>, '
+    "son gratis y no piden cuenta."
+)
+HU_PRICE_START = f"A {PRODUCT} alkalmazásnak nincs ingyenes csomagja"
+HU_PRICE_HTML = (
+    f"{HU_PRICE_START} ({PRICING['trialDays']} napos ingyenes próba, utána havi ${PRICING['proMonthly']}); "
+    'a különálló <a href="/hu/tools">időmérő, tételgenerátor, jegyzetlap és beszédidő-kalkulátor</a> ingyenes, és fiók nélkül is használható.'
+)
+MONTHS = {
+    "es": ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"],
+    "hu": ["január", "február", "március", "április", "május", "június", "július", "augusztus", "szeptember", "október", "november", "december"],
+}
+
+
+def long_date(iso, lang="en"):
+    year, month, day = (int(part) for part in iso.split("-"))
+    if lang == "es":
+        return f"{day} de {MONTHS['es'][month - 1]} de {year}"
+    if lang == "hu":
+        return f"{year}. {MONTHS['hu'][month - 1]} {day}."
+    return f"{['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'][month - 1]} {day}, {year}"
+
+
+# /best-ai-for-debate and its native Spanish and Hungarian pages name each other.
+# render_best_ai_page in generate_seo_content.py prints the same set, as check-site.mjs requires.
+BEST_AI_ALTERNATES = [
+    ("en", f"{BASE}/best-ai-for-debate"),
+    ("es", f"{BASE}/es/mejor-ia-para-preparar-un-debate"),
+    ("hu", f"{BASE}/hu/melyik-ai-a-legjobb-vitara"),
+    ("x-default", f"{BASE}/best-ai-for-debate"),
+]
+
+
+OWN = ' class="own"'
+
+
+def hreflang_links(alternates):
+    return "".join(f'\n  <link rel="alternate" hreflang="{lang}" href="{href}" />' for lang, href in alternates)
+
+
 CASE = (
     'A DebateOwl case is a speech you can read out: an opening, two to four arguments, each with an explanation, '
     'evidence that names its source and year, and why it matters, then "If they say… we answer…" replies, a closing line, and the sources it used. '
@@ -47,7 +96,7 @@ PRICE_HTML = escape(PRICE).replace(
 PRICE_START = f"The {PRODUCT} app has no free plan"
 
 JARGON = re.compile(
-    r"\b(frameworks?|contentions?|warrants?|impact calculus|keretrendszer(?:t|ek)?|kontenció(?:k|t)?)\b",
+    r"\b(frameworks?|contentions?|warrants?|impact calculus|keretrendszer(?:t|ek)?|kontenció(?:k|t)?|contenci[oó]n(?:es)?|marco teórico)\b",
     re.I,
 )
 SIBLINGS = {
@@ -58,6 +107,8 @@ SIBLINGS = {
     "how-to-prepare-for-a-debate-with-ai",
     "best-ai-for-public-forum",
     "hu/mi-vitafelkeszules",
+    "es/mejor-ia-para-preparar-un-debate",
+    "hu/melyik-ai-a-legjobb-vitara",
 }
 
 
@@ -124,8 +175,8 @@ def graph(page, faqs, howto=None):
             "url": url,
             "description": page["description"],
             "inLanguage": page["lang"],
-            "datePublished": DATE,
-            "dateModified": DATE,
+            "datePublished": page.get("published", DATE),
+            "dateModified": page.get("modified", DATE),
             "author": org,
             "publisher": org,
             "about": {"@id": BASE + "/#software"},
@@ -145,9 +196,9 @@ def graph(page, faqs, howto=None):
     return raw.replace("<", "\\u003c")
 
 
-def sources(heading, items):
+def sources(heading, items, checked="Checked Oct 29, 2026."):
     rows = "".join(
-        f'<li id="{esc(key)}"><a href="{esc(url)}">{esc(url)}</a>. {esc(note)} Checked Oct 29, 2026.</li>'
+        f'<li id="{esc(key)}"><a href="{esc(url)}">{esc(url)}</a>. {esc(note)} {esc(checked)}</li>'
         for key, url, note in items
     )
     return f'<section><h2>{esc(heading)}</h2><ol>{rows}</ol></section>'
@@ -170,17 +221,46 @@ def wins(items):
     return f'<ul class="wins">{lis}</ul>'
 
 
+def chrome(page):
+    """The byline, disclosure, "last updated" line and About aside, in the page's language."""
+    lang = page["lang"]
+    published = long_date(page.get("published", DATE), lang)
+    modified = long_date(page.get("modified", DATE), lang)
+    if lang == "es":
+        return {
+            "home": "/es",
+            "byline": f'Por el <a href="/es">equipo de {PRODUCT}</a> · Publicado el {published} · Última actualización: {modified}',
+            "disclosure": ES_DISCLOSURE,
+            "updated": f"Última actualización: {modified}",
+            "about": f'<aside class="about" aria-labelledby="about"><h2 id="about">Sobre {PRODUCT}</h2><p><a href="/es">{PRODUCT}</a> es una app de preparación y práctica de debate con IA. Cómo funciona y lo que cuesta está en la <a href="/es">página de inicio en español</a>.</p></aside>',
+        }
+    if lang == "hu":
+        return {
+            "home": "/hu",
+            "byline": f'<a href="/hu">{PRODUCT}</a> csapata · Közzétéve: {published} · Utolsó frissítés: {modified}',
+            "disclosure": page.get("disclosure", HU_DISCLOSURE),
+            "updated": f"Utolsó frissítés: {modified}",
+            "about": '<aside class="about" aria-labelledby="about"><h2 id="about">A DebateOwlról</h2><p>A <a href="/hu">DebateOwl</a> MI-alapú vitafelkészítő és gyakorlóalkalmazás. A működés és az ár a <a href="/hu">magyar kezdőlapon</a> olvasható.</p></aside>',
+        }
+    return {
+        "home": "/",
+        "byline": f'By the <a href="/">{PRODUCT} team</a> · Published {published} · Last updated {modified}',
+        "disclosure": DISCLOSURE,
+        "updated": f"Last updated: {modified}",
+        "about": f'<aside class="about" aria-labelledby="about"><h2 id="about">About {PRODUCT}</h2><p><a href="/">{PRODUCT}</a> is an AI debate prep and practice app. See <a href="/">how it works</a> or <a href="/debateowl-pricing">pricing</a>.</p></aside>',
+    }
+
+
 def shell(page, style, body, faqs, howto=None):
     url = f"{BASE}/{page['slug']}"
     hreflang = ""
-    if page["lang"] == "hu":
-        hreflang = (
-            f'\n  <link rel="alternate" hreflang="hu" href="{url}" />'
-            f'\n  <link rel="alternate" hreflang="x-default" href="{url}" />'
-        )
-    disclosure = HU_DISCLOSURE if page["lang"] == "hu" else DISCLOSURE
-    # The English disclosure is required on every page, including the Hungarian one.
-    extra_disclosure = f'<p class="disclosure">{esc(DISCLOSURE)}</p>' if page["lang"] == "hu" else ""
+    if "alternates" in page:
+        hreflang = hreflang_links(page["alternates"])
+    elif page["lang"] == "hu":
+        hreflang = hreflang_links([("hu", url), ("x-default", url)])
+    text = chrome(page)
+    # The first Hungarian page also carries the English disclosure; the native pages carry their own only.
+    extra_disclosure = f'<p class="disclosure">{esc(DISCLOSURE)}</p>' if page.get("english_disclosure") else ""
     return f"""<!doctype html>
 <html lang="{page['lang']}">
 <head>
@@ -202,8 +282,8 @@ def shell(page, style, body, faqs, howto=None):
   <meta property="og:description" content="{esc(page['description'])}" />
   <meta property="og:url" content="{url}" />
   <meta property="og:image" content="{BASE}/hero-visual.jpg?v=2" />
-  <meta property="article:published_time" content="{DATE}" />
-  <meta property="article:modified_time" content="{DATE}" />
+  <meta property="article:published_time" content="{page.get('published', DATE)}" />
+  <meta property="article:modified_time" content="{page.get('modified', DATE)}" />
   <meta name="twitter:card" content="summary_large_image" />
   <meta name="twitter:title" content="{esc(page['title'])}" />
   <meta name="twitter:description" content="{esc(page['description'])}" />
@@ -212,15 +292,15 @@ def shell(page, style, body, faqs, howto=None):
 </head>
 <body class="{esc(page['body'])}">
 <main>
-  <p class="crumb"><a href="/">{esc(PRODUCT)}</a></p>
+  <p class="crumb"><a href="{text['home']}">{esc(PRODUCT)}</a></p>
   <h1>{esc(page['h1'])}</h1>
-  <p class="byline">{'<a href="/">DebateOwl</a> csapata · Közzétéve: 2026. október 29. · Utolsó frissítés: 2026. október 29.' if page['lang'] == 'hu' else f'By the <a href="/">{PRODUCT} team</a> · Published {LONG} · Last updated {LONG}'}</p>
-  <p class="disclosure">{esc(disclosure)}</p>
+  <p class="byline">{text['byline']}</p>
+  <p class="disclosure">{esc(text['disclosure'])}</p>
   {extra_disclosure}
-  <p class="updated">Last updated: {LONG}</p>
+  <p class="updated">{esc(text['updated'])}</p>
   <section class="answer" aria-labelledby="short-answer"><h2 id="short-answer">{esc(page['question'])}</h2><p>{esc(page['answer'])}</p></section>
   {body}
-  {'<aside class="about" aria-labelledby="about"><h2 id="about">A DebateOwlról</h2><p>A <a href="/hu">DebateOwl</a> MI-alapú vitafelkészítő és gyakorlóalkalmazás. A működés és az ár a <a href="/hu">magyar kezdőlapon</a> olvasható.</p></aside>' if page['lang'] == 'hu' else f'<aside class="about" aria-labelledby="about"><h2 id="about">About {PRODUCT}</h2><p><a href="/">{PRODUCT}</a> is an AI debate prep and practice app. See <a href="/">how it works</a> or <a href="/debateowl-pricing">pricing</a>.</p></aside>'}
+  {text['about']}
 </main>
 </body>
 </html>
@@ -931,8 +1011,9 @@ def page_hu():
     cost = HU_PRICE + " A Claude-nak van ingyenes, $0-s csomagja. A ChatGPT ingyenes változata mindenki számára elérhető."
     during = "Felkészüléshez igen. A vita közben a verseny szabályait ellenőrizd: a legtöbb liga korlátozza az elektronikát és az MI-t a forduló alatt."
     account = "Nem, a /hu/tools eszközök fiók nélkül működnek."
+    question = "Melyik MI mire jó a vitára készülésben?"
     faqs = [
-        ("Melyik MI a legjobb vitára?", answer),
+        (question, answer),
         ("Mit csinál a második beszélő (R2)?", r2),
         ("Mennyibe kerül?", cost),
         ("Lehet MI-t használni a vita közben?", during),
@@ -942,7 +1023,7 @@ def page_hu():
 <section class="lead-block">
   <h2>Mit tartalmaz egy DebateOwl-eset?</h2>
   <p>{esc(case)}</p>
-  <p>A többi eszköz rövid angol összevetése: <a href="/best-ai-for-debate">the short answer</a>. Itthon a kiindulás a felolvasható eset, a válaszok és az időzített forduló.</p>
+  <p>A többi eszköz rövid angol összevetése: <a href="/best-ai-for-debate">the short answer</a>. Itthon a kiindulás a felolvasható eset, a válaszok és az időzített forduló. Ha az a kérdés, melyik eszközt válaszd, az összevetés egyenként, magyarul: <a href="/hu/melyik-ai-a-legjobb-vitara">melyik MI a legjobb vitára</a>.</p>
   {wins(["Felolvasható eset", "„Ha azt mondják… erre azt feleljük…”", "Időzített Vitapárbaj", "Ingyenes eszközök, aztán havi $5"])}
   <p><a class="cta" href="/app">Próbáld ki 3 napig ingyen</a></p>
 </section>
@@ -1003,9 +1084,263 @@ body.hu table{min-width:560px}
         "slug": "hu/mi-vitafelkeszules",
         "lang": "hu",
         "body": "hu",
+        "modified": "2026-10-30",
+        "english_disclosure": True,
         "title": "Vitafelkészülés MI-vel: melyik eszköz mire jó? | DebateOwl",
         "description": "Melyik MI segít a vitára készülésben? Általános MI-asszisztens, vitagyakorló alkalmazás vagy ingyenes eszközök: mire jó melyik, magyarul.",
         "h1": "Vitafelkészülés mesterséges intelligenciával",
+        "question": question,
+        "answer": answer,
+        "faqs": faqs,
+        "style": style,
+        "html_body": body,
+    }
+
+
+def page_es():
+    answer = (
+        "Si tienes una moción y una fecha, DebateOwl es la primera opción: escribe un caso que puedes leer en voz alta, "
+        "con respuestas «Si dicen… respondemos…», y te deja practicar rondas cronometradas contra una IA, todo en español. "
+        "Para sacar ideas sin pagar, ChatGPT y Claude tienen planes gratis. "
+        "Si prefieres debatir por escrito contra otras personas y que decidan jueces de IA, ArguFight tiene la web en español y es gratis para empezar."
+    )
+    faqs = [
+        ("¿Hay alguna IA gratis para preparar un debate?", "Sí. A octubre de 2026, ChatGPT y Claude tienen planes gratis, ArguFight es gratis para empezar y PublicForumAI da 3 rondas de práctica al mes. El cronómetro, el generador de mociones y la hoja de flujo de DebateOwl son gratis y sin cuenta. La app de DebateOwl es de pago cuando acaba la prueba de 3 días."),
+        ("¿DebateOwl funciona en español?", "Sí. La app está en español, inglés y húngaro, y las herramientas gratis tienen su versión en español."),
+        ("¿Puedo usar la IA durante el debate?", "Casi nunca. La mayoría de las ligas y torneos limitan los dispositivos y la IA durante la ronda. Úsala para preparar y revisa el reglamento de tu competición."),
+        ("¿La IA se inventa fuentes?", "Puede pasar. Abre cada fuente y comprueba que dice exactamente lo que vas a citar. Si no la encuentras, esa frase no entra en tu discurso."),
+        ("¿Qué formatos puedo practicar en una ronda completa?", "Sparring simula rondas de School 4-6-6-3, Lincoln-Douglas y Public Forum. Para Parlamentario Británico, World Schools y otros formatos tienes las herramientas de preparación y el cronómetro gratis, no una ronda simulada."),
+    ]
+    situations = [
+        ("Tengo un debate escolar o un torneo dentro de unos días", "DebateOwl. Te deja el caso escrito para leerlo, las respuestas a lo que dirá el otro equipo y una ronda cronometrada para ensayarlo."),
+        ("Solo quiero entender el tema y sacar ideas", "ChatGPT o Claude, con su plan gratis. Pídele que defienda el lado contrario y que no ceda si tu respuesta no lo convence."),
+        ("Quiero debatir contra personas reales y que me puntúen", "ArguFight. Los debates son por escrito, por rondas, y un panel de jueces de IA decide con razones."),
+        ("Compito en Public Forum, en inglés", "PublicForumAI. Solo trabaja ese formato y tiene un plan gratis con 3 rondas al mes."),
+        ("Quiero soltarme hablando en voz alta, sin un torneo concreto", "Debate Ladder. Hablas por micrófono contra una IA y subes en una clasificación. Su web está en inglés."),
+    ]
+    cards = "".join(f"<div><dt>{esc(q)}</dt><dd>{esc(a)}</dd></div>" for q, a in situations)
+    rows = [
+        ("DebateOwl", "Preparar una moción concreta y ensayarla", "Sí: apertura, argumentos, «Si dicen… respondemos…», cierre y fuentes", "Sí: Sparring cronometrado con veredicto (School 4-6-6-3, LD, PF)", "Prueba de 3 días, luego 5 $/mes + impuestos; herramientas aparte gratis"),
+        ("ChatGPT", "Ideas y contraargumentos rápidos", "Solo si se lo pides cada vez", "Solo si montas tú la conversación", "Versión gratis para todos; planes Go, Plus y Pro"),
+        ("Claude", "Revisar un caso largo que pegas", "Solo si se lo pides cada vez", "Solo si montas tú la conversación", "Plan gratis; Pro 20 $/mes (17 $/mes anual)"),
+        ("ArguFight", "Debates escritos contra personas, con jueces de IA", "No", "Puedes calentar contra una IA; el núcleo es contra personas", "Gratis para empezar; precios de pago no indicados"),
+        ("PublicForumAI", "Public Forum en inglés", "Sí, casos de Public Forum", "Sí: 3 rondas/mes gratis", "Gratis; Premium 9,99 $/mes o 79 $/año"),
+        ("Debate Ladder", "Hablar en voz alta y subir en un ranking", "No", "Sí, por voz: apertura, réplica y cierre", "100 créditos gratis; luego ~1 crédito por minuto"),
+    ]
+    trs = "".join(
+        f'<tr{OWN if i == 0 else ""}><th scope="row">{esc(r[0])}</th>' + "".join(f"<td>{esc(c)}</td>" for c in r[1:]) + "</tr>"
+        for i, r in enumerate(rows)
+    )
+    body = f"""
+<section class="pick">
+  <h2>Elige según lo que te toca esta semana</h2>
+  <p>No hay una IA que gane en todo. La pregunta útil es qué tienes delante: una ronda con fecha, un tema que no entiendes o ganas de practicar sin más.</p>
+  <dl class="situations">{cards}</dl>
+  <p><a class="cta" href="/app">Prueba DebateOwl 3 días gratis</a></p>
+  <p class="price">{ES_PRICE_HTML}</p>
+</section>
+<section>
+  <h2>Así queda un caso de DebateOwl, de principio a fin</h2>
+  <p>Un caso de DebateOwl se escribe como lo preparan los debatientes escolares, en el orden en que lo vas a decir. Este es el esqueleto con una moción de ejemplo, sin datos inventados: donde va la evidencia te decimos qué buscar, porque esa parte la compruebas tú.</p>
+  <div class="case">
+    <p class="motion">Moción: «Este colegio eliminaría los deberes en primaria». Equipo a favor.</p>
+    <h3>Apertura</h3>
+    <p>Las tardes de un niño de ocho años no son tiempo muerto. Hoy vamos a demostrar que los deberes en primaria quitan más de lo que dan.</p>
+    <h3>Argumento 1: el descanso también enseña</h3>
+    <p><strong>Explicación:</strong> a esa edad, jugar, leer por gusto y dormir bien ayudan a aprender al día siguiente. <strong>Evidencia:</strong> busca un estudio sobre deberes y rendimiento en primaria; anota autor y año, y ábrelo antes de citarlo. <strong>Por qué importa:</strong> si los deberes no mejoran las notas a esta edad, el coste en descanso no se compensa.</p>
+    <h3>Argumento 2: los deberes amplían la distancia entre familias</h3>
+    <p><strong>Explicación:</strong> en casa, unos niños tienen ayuda y otros no. <strong>Evidencia:</strong> busca un informe sobre apoyo escolar en casa según el nivel de estudios de los padres. <strong>Por qué importa:</strong> una tarea que depende de quién te ayuda en casa mide a la familia, no al alumno.</p>
+    <h3>Respuestas</h3>
+    <p><strong>Si dicen</strong> que los deberes crean hábito de estudio, <strong>respondemos:</strong> el hábito se crea igual con lectura libre y con tareas cortas en clase, sin cargar la tarde.</p>
+    <p><strong>Si dicen</strong> que los padres quieren saber qué se hace en clase, <strong>respondemos:</strong> para eso sirve un resumen semanal del profesor, no una ficha diaria.</p>
+    <h3>Cierre</h3>
+    <p>Si de verdad queremos que aprendan más, dejemos que la tarde haga su parte.</p>
+  </div>
+  <p>En la app puedes regenerar solo el argumento que te parezca flojo, sin tocar el resto, y exportar el caso a Word, PDF o Google Docs.</p>
+</section>
+<section>
+  <h2>Qué hace bien cada herramienta (octubre de 2026)</h2>
+  <h3>DebateOwl</h3>
+  <p>Guarda cada moción en su propio Debate actual, con el caso, las fuentes y las rondas. Además del generador de casos tiene el Atacante de casos, que busca los puntos débiles; Datos, que propone evidencia con la fuente que tienes que abrir; Interrogatorio, para ensayar preguntas y respuestas; y Sparring, una ronda cronometrada contra una IA que acaba con un veredicto. Puedes escribir o hablar cada discurso. Su límite: Sparring simula School 4-6-6-3, Lincoln-Douglas y Public Forum, no Parlamentario Británico ni World Schools.</p>
+  <h3>ChatGPT</h3>
+  <p>A octubre de 2026, OpenAI dice que la versión gratis está disponible para todos; los planes de pago son Go, Plus y Pro, además de Business y Enterprise. Va muy bien para una lluvia de ideas rápida. Tu moción, tu lado y los tiempos de cada discurso solo los guarda si se lo preparas tú, con proyectos o memoria. <a href="#es1">F1</a></p>
+  <h3>Claude</h3>
+  <p>A octubre de 2026, Claude tiene un plan gratis de 0 $. Pro cuesta 20 $ al mes con pago mensual o 17 $ al mes con pago anual, y Max empieza en 100 $ al mes. Es un buen sitio para pegar un caso largo y pedir una crítica. <a href="#es2">F2</a></p>
+  <h3>ArguFight</h3>
+  <p>A octubre de 2026, ArguFight es una plataforma de debates por escrito: lanzas un reto, eliges a favor o en contra y otra persona lo acepta. Hay modo estándar (5 rondas en 24 horas) y modo rápido (3 rondas en 1 hora). Un panel de hasta tres jueces de IA puntúa cada debate de 0 a 100 y explica su decisión; su propia web habla de un plantel de seis, siete o diez personalidades según la página. Tiene clasificación ELO, cinturones, dictado por voz y la web en 26 idiomas, entre ellos el español. Es gratis para empezar. No publica ningún precio de pago: su página /pricing devuelve un error 404. Si lo que buscas es debatir en español contra gente real, aquí ArguFight te sirve mejor que DebateOwl. <a href="#es3">F3</a> <a href="#es4">F4</a></p>
+  <h3>PublicForumAI</h3>
+  <p>A octubre de 2026, solo trabaja Public Forum. El plan gratis incluye 3 rondas completas al mes, ejercicios de flujo ilimitados, 5 casos al mes y 15 módulos de formación. Premium cuesta 9,99 $ al mes o 79 $ al año y añade rondas ilimitadas con fuentes enlazadas. <a href="#es5">F5</a></p>
+  <h3>Debate Ladder</h3>
+  <p>A octubre de 2026, es un juego de debate por voz: te toca a favor o en contra, das apertura, réplica y cierre por micrófono, y un juez de IA puntúa lógica, capacidad de respuesta, claridad, expresión y persuasión. Las victorias en partidas puntuadas suben tu ELO, que empieza en 500. Las cuentas nuevas reciben 100 créditos y cada debate cuesta más o menos un crédito por minuto. <a href="#es6">F6</a></p>
+</section>
+<section>
+  <h2>Comparativa rápida</h2>
+  <div class="scroll"><table>
+    <caption>Datos de la web de cada producto, consultados el 30 de octubre de 2026. DebateOwl es la primera fila.</caption>
+    <thead><tr><th scope="col">Herramienta</th><th scope="col">Sirve sobre todo para</th><th scope="col">Caso para leer en voz alta</th><th scope="col">Práctica contra una IA</th><th scope="col">Precio</th></tr></thead>
+    <tbody>{trs}</tbody>
+  </table></div>
+  <p>Los precios cambian. Antes de pagar, mira la página del producto.</p>
+</section>
+<section>
+  <h2>¿Y si debates en Parlamentario Británico?</h2>
+  <p>Si tu torneo usa Parlamentario Británico, con cuatro equipos y siete minutos por orador, DebateOwl no simula esa ronda completa. Lo que sí puedes hacer: crear el Debate actual con ese formato, generar el caso de tu posición, pedir al Atacante de casos los puntos débiles y cronometrar cada discurso con el <a href="/es/tools/cronometro-debate">cronómetro de debate gratis</a>, que trae Parlamentario Británico, World Schools y Parlamentario Asiático. Para sacar mociones de práctica está el <a href="/es/tools/generador-mociones">generador de mociones</a>, y para tomar notas, la <a href="/es/tools/hoja-de-flujo">hoja de flujo</a> imprimible.</p>
+</section>
+{faq_block("Preguntas frecuentes", faqs, "details")}
+<p class="langs">Esta guía también está en <a href="/best-ai-for-debate" hreflang="en">inglés</a>, con más herramientas, y en <a href="/hu/melyik-ai-a-legjobb-vitara" hreflang="hu">húngaro</a>.</p>
+{sources("Fuentes (consultadas en octubre de 2026)", [
+    ("es1", "https://chatgpt.com/pricing", "Versión gratis disponible para todos; planes Go, Plus y Pro; Business y Enterprise en las preguntas frecuentes."),
+    ("es2", "https://claude.com/pricing", "Plan gratis de 0 $; Pro 17 $/mes anual o 20 $ mensual; Max desde 100 $/mes."),
+    ("es3", "https://www.argufight.com/", "Retos, modos de 5 y 3 rondas, jueces de IA de 0 a 100, ELO, cinturones, voz, 26 idiomas, gratis para empezar. /pricing devuelve 404."),
+    ("es4", "https://www.argufight.com/judges", "Panel de tres jueces elegidos entre diez personalidades; la portada habla de siete y la página About de seis."),
+    ("es5", "https://publicforumai.com/pricing", "Plan gratis y Premium a 9,99 $/mes o 79 $/año."),
+    ("es6", "https://debateladder.com/", "Juego de debate por voz, ELO desde 500, 100 créditos gratis, un crédito por minuto aproximadamente."),
+], "Consultado el 30 de octubre de 2026.")}
+"""
+    style = """
+body.es{background:#FFFBF2}body.es main{width:min(900px,calc(100% - 32px));margin:30px auto 72px}
+body.es h1{font-size:clamp(2.1rem,5.4vw,3.6rem);color:#0B1426;max-width:18ch}
+body.es .pick{background:#fff;border:2px solid #F2C14E;border-radius:26px;padding:6px 22px 18px;margin:24px 0}
+body.es .situations{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px;margin:16px 0}
+body.es .situations div{background:#FFF6DC;border-radius:18px;padding:12px 14px}
+body.es .situations div:first-child{background:#EEF7FF;outline:2px solid #0A6FF0}
+body.es dt{font-family:Fredoka,Nunito,sans-serif;font-size:1.05rem}body.es dd{margin:6px 0 0}
+body.es .case{background:#fff;border-left:5px solid #0A6FF0;border-radius:0 22px 22px 0;padding:6px 20px 12px}
+body.es .case h3{margin:16px 0 4px}body.es .motion{font-family:Fredoka,Nunito,sans-serif;font-size:1.1rem}
+body.es table{min-width:820px;background:#fff}body.es tr.own{background:#EEF7FF}
+body.es details{border-bottom:1px solid #E8DCC0;padding:10px 0}
+"""
+    return {
+        "slug": "es/mejor-ia-para-preparar-un-debate",
+        "lang": "es",
+        "body": "es",
+        "published": "2026-10-30",
+        "modified": "2026-10-30",
+        "alternates": BEST_AI_ALTERNATES,
+        "price": (ES_PRICE_START, ES_PRICE_HTML),
+        "title": "¿Qué IA es mejor para preparar un debate? (2026) | DebateOwl",
+        "description": "Qué IA usar para preparar un debate en español: DebateOwl, ChatGPT, Claude, ArguFight y otras, según lo que necesitas. Datos de octubre de 2026.",
+        "h1": "La IA para preparar un debate, según lo que necesitas",
+        "question": "¿Qué IA es mejor para preparar un debate?",
+        "answer": answer,
+        "faqs": faqs,
+        "style": style,
+        "html_body": body,
+    }
+
+
+def page_hu_best():
+    answer = (
+        "Ha konkrét indítványra és időpontra készülsz, a DebateOwl az első választás: felolvasható esetet ír "
+        "„Ha azt mondják… erre azt feleljük…” válaszokkal, és időzített gyakorlófordulót futtat MI-ellenféllel, magyar felületen. "
+        "Ötleteléshez a ChatGPT vagy a Claude ingyenes csomagja is elég. "
+        "Ha élő emberekkel vitáznál írásban, MI-bírókkal, az ArguFight felülete magyarul is elérhető, és ingyen kezdhető."
+    )
+    faqs = [
+        ("Van ingyenes MI vitára?", "Igen. 2026 októberében a ChatGPT-nek és a Claude-nak van ingyenes csomagja, az ArguFight ingyen kezdhető, a PublicForumAI pedig havi 3 gyakorlófordulót ad. A DebateOwl időmérője, tételgenerátora és jegyzetlapja ingyenes, fiók nélkül. Maga az alkalmazás a 3 napos próba után fizetős."),
+        ("Magyarul is működik a DebateOwl?", "Igen. Az alkalmazás magyarul, angolul és spanyolul érhető el, és az ingyenes eszközöknek is van magyar változata."),
+        ("Melyik a jobb: ChatGPT vagy Claude?", "Egyik sem jobb mindenkinek. A ChatGPT gyors ötleteléshez jó, a Claude-ba egy hosszabb esetet is bemásolhatsz, hogy kritizálja. Az indítványt, az oldaladat és a beszédidőket egyik sem tartja meg magától, csak ha beállítod."),
+        ("Kitalálhat forrást az MI?", "Igen, előfordul. Minden forrást nyiss meg, és nézd meg, hogy pontosan azt mondja-e, amit idézni akarsz. Ami nincs meg, az nem kerül a beszédbe."),
+    ]
+    steps = [
+        ("Van már indítványod és időpontod?", "Ha igen, a DebateOwl. Megírja az esetet felolvasható formában, a másik oldal várható érveire adott válaszokkal, és a Vitapárbajban időre elpróbálhatod."),
+        ("Csak meg akarod érteni a témát?", "Akkor egy általános MI-asszisztens ingyenes csomagja elég: ChatGPT vagy Claude. Kérd meg, hogy a másik oldalt képviselje, és ne engedjen, amíg a válaszod nem győzi meg."),
+        ("Emberekkel vitáznál, pontozással?", "Az ArguFight írásos vitákat rendez emberek között, és MI-bírók döntenek, indoklással. A felülete magyarul is elérhető."),
+    ]
+    ol = "".join(f"<li><strong>{esc(q)}</strong> {esc(a)}</li>" for q, a in steps)
+    tools = [
+        ("DebateOwl", "konkrét indítványra készülsz iskolai vagy versenyvitára, és felolvasható eset, válaszok, időzített forduló kell.", "teljes brit parlamenti vagy World Schools fordulót akarsz szimulálni: ezekhez csak a felkészítő eszközök és az időmérő való."),
+        ("ChatGPT", "gyorsan akarsz ötletelni, ellenérveket gyűjteni, akár hangalapú beszélgetésben.", "azt várod, hogy magától megjegyezze az indítványt, az oldaladat és a beszédidőket: ezt csak akkor teszi, ha projektben vagy memóriában beállítod."),
+        ("Claude", "egy hosszú esetet másolnál be, és részletes kritikát kérnél rá.", "időzített fordulót és ítéletet keresel: ezt magától nem ad."),
+        ("ArguFight", "élő ellenfelekkel vitáznál írásban, és érdekel a rangsor meg a pontszám.", "egy adott indítványra kell felolvasható eset: esetet nem ír."),
+        ("PublicForumAI", "angolul versenyzel Public Forum formátumban.", "más formátumban vitázol: csak Public Forummal foglalkozik."),
+        ("Debate Ladder", "hangosan, mikrofonba akarsz gyakorolni, és motivál a rangsor.", "magyar felületet keresel: a weboldala angol."),
+    ]
+    cards = "".join(
+        f'<article{OWN if i == 0 else ""}><h3>{esc(name)}</h3><p><strong>Akkor válaszd, ha</strong> {esc(yes)}</p><p><strong>Ne ezt válaszd, ha</strong> {esc(no)}</p></article>'
+        for i, (name, yes, no) in enumerate(tools)
+    )
+    prices = [
+        ("DebateOwl", "3 napos próba; az időmérő, a tételgenerátor és a jegyzetlap ingyenes, fiók nélkül", "havi $5 + adó"),
+        ("ChatGPT", "Ingyenes változat mindenkinek", "Go, Plus, Pro (a megnyitott oldalon dollárár nélkül)"),
+        ("Claude", "Ingyenes csomag, $0", "Pro havi $20 (éves fizetéssel havi $17), Max havi $100-tól"),
+        ("ArguFight", "Ingyen kezdhető", "Nincs feltüntetve (a /pricing oldal 404-et ad)"),
+        ("PublicForumAI", "Havi 3 teljes gyakorlóforduló", "Premium havi $9,99 vagy évi $79"),
+        ("Debate Ladder", "100 kredit új fióknak", "További kredit, nagyjából 1 kredit percenként"),
+    ]
+    prows = "".join(f'<tr><th scope="row">{esc(a)}</th><td>{esc(b)}</td><td>{esc(c)}</td></tr>' for a, b, c in prices)
+    body = f"""
+<section class="flow">
+  <h2>Három kérdés, és megvan, melyik kell</h2>
+  <ol>{ol}</ol>
+  <p><a class="cta" href="/app">Kipróbálom a DebateOwlt 3 napig</a></p>
+  <p class="price">{HU_PRICE_HTML}</p>
+</section>
+<section>
+  <h2>Egy eset vázlata, ahogy a DebateOwl megírja</h2>
+  <p>Indítvány: „Az iskolák térjenek át négynapos tanítási hétre.” Ellenző oldal. A bizonyítékok helyén csak az áll, mit keress, mert azt neked kell megnyitnod és ellenőrizned.</p>
+  <ul class="outline">
+    <li><strong>Nyitás:</strong> Egy rövidebb hét jól hangzik, amíg meg nem kérdezzük, ki vigyáz a gyerekre pénteken.</li>
+    <li><strong>1. érv, a dolgozó szülők:</strong> a szabad pénteket valakinek meg kell oldania. Bizonyíték: keress felmérést arról, hány családban dolgozik mindkét szülő. Miért fontos: ha a teher a családokra kerül, a reform költsége csak máshol jelenik meg.</li>
+    <li><strong>2. érv, a hosszabb napok:</strong> négy nap alatt ugyanannyi tananyag hosszabb tanítási napot jelent. Bizonyíték: keress kutatást a délutáni figyelemről alsó tagozaton. Miért fontos: ha délután már nem figyelnek, a tananyag papíron megvan, a fejekben nincs.</li>
+    <li><strong>Ha azt mondják,</strong> hogy a tanárok kipihentebbek lesznek, <strong>erre azt feleljük:</strong> a hosszabb napok ugyanazt a fáradtságot négy napba sűrítik.</li>
+    <li><strong>Ha azt mondják,</strong> hogy a pénteki napon lehet szakkör, <strong>erre azt feleljük:</strong> akkor az iskola továbbra is nyitva van, csak nem tanít, és ez nem rövidebb hét.</li>
+    <li><strong>Zárás:</strong> A jó tanítási hét nem a napok számán múlik, hanem azon, mennyit marad meg belőle.</li>
+  </ul>
+  <p>Az alkalmazásban egyetlen gyenge részt is újragenerálhatsz, a többi marad. Az esetet Wordbe, PDF-be vagy Google Docsba is kiviheted.</p>
+</section>
+<section>
+  <h2>Az eszközök egyenként: mikor igen, mikor nem</h2>
+  <div class="cards">{cards}</div>
+  <p>Jól működik a kettő együtt: egy általános asszisztens a háttérhez, a DebateOwl magához az indítványhoz. Ha egy felkészülő este menetére vagy kíváncsi, azt a <a href="/hu/mi-vitafelkeszules">vitafelkészülés MI-vel</a> útmutató írja le.</p>
+</section>
+<section>
+  <h2>Ingyen és pénzért (2026. október)</h2>
+  <div class="scroll"><table>
+    <caption>A termékek saját oldaláról, 2026. október 30-án. A DebateOwl az első sor.</caption>
+    <thead><tr><th scope="col">Eszköz</th><th scope="col">Ingyenes lehetőség</th><th scope="col">Fizetős ár</th></tr></thead>
+    <tbody>{prows}</tbody>
+  </table></div>
+  <p>2026 októberében az ArguFight saját oldalai háromféleképpen írják le a bírói kört: a „The Judges” oldal tíz személyiséget mutat, a kezdőlap hetet, az „About” hatot. Mindegyik szerint vitánként legfeljebb három MI-bíró pontoz 0-tól 100-ig, indoklással.</p>
+  <p>Ez az összevetés angolul, több eszközzel: <a href="/best-ai-for-debate" hreflang="en">Which AI is best for debate?</a> Spanyolul: <a href="/es/mejor-ia-para-preparar-un-debate" hreflang="es">¿Qué IA es mejor para preparar un debate?</a></p>
+</section>
+{faq_block("Gyakori kérdések", faqs, "defs")}
+{sources("Források (ellenőrizve: 2026. október)", [
+    ("hu1", "https://chatgpt.com/pricing", "Ingyenes változat mindenkinek; Go, Plus, Pro; a GYIK-ben Business és Enterprise."),
+    ("hu2", "https://claude.com/pricing", "Ingyenes csomag $0; Pro havi $20 vagy éves fizetéssel havi $17; Max havi $100-tól."),
+    ("hu3", "https://www.argufight.com/", "Írásos viták, MI-bírók 0–100 pontozással, ELO, 26 nyelv köztük magyar, ingyen kezdhető. A /pricing 404."),
+    ("hu4", "https://www.argufight.com/judges", "Tíz bírószemélyiség, vitánként háromtagú panel."),
+    ("hu5", "https://publicforumai.com/pricing", "Ingyenes csomag és Premium havi $9,99 vagy évi $79."),
+    ("hu6", "https://debateladder.com/", "Hangalapú vitajáték, ELO 500-ról, 100 ingyenes kredit."),
+], "Ellenőrizve: 2026. október 30.")}
+"""
+    style = """
+body.hubest{background:#F4F8F2}body.hubest main{width:min(960px,calc(100% - 32px));margin:30px auto 72px}
+body.hubest h1{font-size:clamp(2.1rem,5.4vw,3.5rem);color:#10301F;max-width:20ch}
+body.hubest .flow{background:#fff;border-radius:26px;padding:6px 22px 18px;border:2px solid #14B37D;margin:22px 0}
+body.hubest .flow ol{display:grid;gap:10px;padding-left:1.4rem}body.hubest .flow li::marker{font-family:Fredoka,Nunito,sans-serif;font-weight:700;color:#0E8A5F}
+body.hubest .outline{list-style:none;padding:0;display:grid;gap:8px}body.hubest .outline li{background:#fff;border-radius:16px;padding:10px 14px;border:1px solid #CFE3D5}
+body.hubest .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px}
+body.hubest .cards article{background:#fff;border-radius:20px;padding:4px 16px 8px;border:1px solid #CFE3D5}
+body.hubest .cards article.own{border:2px solid #0A6FF0;background:#EEF7FF}
+body.hubest table{min-width:640px;background:#fff}
+body.hubest dt{font-family:Fredoka,Nunito,sans-serif;margin-top:16px;font-size:1.05rem}body.hubest dd{margin:4px 0 0}
+"""
+    return {
+        "slug": "hu/melyik-ai-a-legjobb-vitara",
+        "lang": "hu",
+        "body": "hubest",
+        "published": "2026-10-30",
+        "modified": "2026-10-30",
+        "alternates": BEST_AI_ALTERNATES,
+        "disclosure": (
+            f"A {PRODUCT} készíti az egyik eszközt ezen az oldalon. A többi termékről szóló tények a saját weboldalukról származnak, "
+            "2026. október 30-án ellenőrizve. Fizetés előtt nézd meg őket."
+        ),
+        "price": (HU_PRICE_START, HU_PRICE_HTML),
+        "title": "Melyik MI a legjobb vitára? Eszközök összevetése (2026) | DebateOwl",
+        "description": "Melyik MI-t válaszd vitára: DebateOwl, ChatGPT, Claude, ArguFight és mások, mikor igen és mikor nem, árakkal. 2026. októberi adatok.",
+        "h1": "Vitára készülsz? Így válassz MI-eszközt",
         "question": "Melyik MI a legjobb vitára?",
         "answer": answer,
         "faqs": faqs,
@@ -1023,7 +1358,7 @@ def visible_text(html):
 
 def write_comparison_pages(public: Path):
     ensure_fonts(public)
-    pages = [page_ladder(), page_price(), page_chat(), page_teachers(), page_prep(), page_pf(), page_hu()]
+    pages = [page_ladder(), page_price(), page_chat(), page_teachers(), page_prep(), page_pf(), page_hu(), page_es(), page_hu_best()]
     h2s = {}
     answers = []
     for page in pages:
@@ -1041,9 +1376,12 @@ def write_comparison_pages(public: Path):
                 raise SystemExit(f"{page['slug']}: the pricing sentence must appear exactly once, with the tools linked")
             if "/tools" in visible:
                 raise SystemExit(f"{page['slug']}: shows the path /tools; link the tools by name instead")
-        else:
-            if HU_PRICE not in html:
-                raise SystemExit("Hungarian page is missing the pricing sentence")
+        elif "price" in page:
+            start, price_html = page["price"]
+            if unescape(visible_text(html)).count(start) != 1 or price_html not in html:
+                raise SystemExit(f"{page['slug']}: the pricing sentence must appear exactly once, with the tools linked")
+        elif HU_PRICE not in html:
+            raise SystemExit("Hungarian page is missing the pricing sentence")
         if JARGON.search(re.sub(r"<script[\s\S]*?</script>", " ", html)):
             raise SystemExit(f"{page['slug']}: jargon in the page")
         if html.lower().count('href="/best-ai-for-debate"') != 1:

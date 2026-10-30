@@ -10,6 +10,7 @@ import sys
 sys.dont_write_bytecode = True  # keep scripts/__pycache__ out of the tree
 from seo_answers import ANSWERS  # noqa: E402
 from seo_guides import GUIDES  # noqa: E402
+from seo_comparison_pages import BEST_AI_ALTERNATES, hreflang_links  # noqa: E402
 
 ROOT = Path(__file__).resolve().parents[1]
 PUBLIC = ROOT / "public"
@@ -657,7 +658,10 @@ def localized_sections():
             title, description = (head[key].replace("{{brand}}", BRAND).replace("{{product}}", PRODUCT) for key in ("title", "description"))
             lines.append(f"- [{title}]({BASE}{paths[language]}): {description}")
         if language == "hu":
-            lines.append(f"- [Vitafelkészülés MI-vel]({BASE}/hu/mi-vitafelkeszules): melyik MI mire jó a vitára készülésben, magyarul")
+            lines.append(f"- [Vitafelkészülés MI-vel]({BASE}/hu/mi-vitafelkeszules): egy felkészülő este menete, és melyik MI mire jó a vitára készülésben, magyarul")
+            lines.append(f"- [Melyik MI a legjobb vitára?]({BASE}/hu/melyik-ai-a-legjobb-vitara): a {PRODUCT}, a ChatGPT, a Claude, az ArguFight és mások egyenként, mikor igen és mikor nem, árakkal (2026. október)")
+        else:
+            lines.append(f"- [¿Qué IA es mejor para preparar un debate?]({BASE}/es/mejor-ia-para-preparar-un-debate): {PRODUCT}, ChatGPT, Claude, ArguFight y otras según lo que necesitas, con un caso de ejemplo y precios (octubre de 2026)")
         sections.append(f"## {heading}\n\n" + "\n".join(lines))
     return "\n\n".join(sections)
 
@@ -718,7 +722,7 @@ def render_best_ai_page(page):
   <title>{esc(page["title"])}</title>
   <meta name="description" content="{esc(page["description"])}" />
   <meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large" />
-  <link rel="canonical" href="{page_url(page["slug"])}" />
+  <link rel="canonical" href="{page_url(page["slug"])}" />{hreflang_links(BEST_AI_ALTERNATES)}
   <meta name="author" content="{esc(ORGANIZATION["name"])}" />
   <meta name="msvalidate.01" content="8FC8FD530126287EF8AD3977BFB24C17" />
 {ICON_LINKS}
@@ -748,7 +752,7 @@ def render_best_ai_page(page):
   <main class="wrap">
     <nav class="breadcrumb" aria-label="Breadcrumb"><a href="/">Home</a> / <span aria-current="page">Best AI for debate</span></nav>
     <article>
-      <header class="hero"><h1>{esc(page["h1"])}</h1><p class="dates">By the <a href="/">{esc(PRODUCT)} team</a> · Updated <time datetime="{modified}">{long_date(modified)}</time></p><p class="disclosure">{esc(page["disclosure"])}</p></header>
+      <header class="hero"><h1>{esc(page["h1"])}</h1><p class="dates">By the <a href="/">{esc(PRODUCT)} team</a> · Updated <time datetime="{modified}">{long_date(modified)}</time></p><p class="disclosure">{esc(page["disclosure"])}</p><p class="dates">Also in <a href="/es/mejor-ia-para-preparar-un-debate" hreflang="es" lang="es">español</a> and <a href="/hu/melyik-ai-a-legjobb-vitara" hreflang="hu" lang="hu">magyar</a>.</p></header>
       <p id="short-answer" class="direct">{esc(page["direct_answer"])}</p>
       <div class="article section">{"".join(article)}{cta}</div>
       <section class="section faq article" aria-labelledby="faq"><h2 id="faq">Frequently asked questions</h2>{faq_html}</section>

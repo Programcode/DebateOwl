@@ -2152,7 +2152,7 @@ GUIDES = {
     },
     "best-ai-for-debate": {
         "published": "2026-10-29",
-        "modified": "2026-10-29",
+        "modified": "2026-10-30",
         "h1": "Which AI is best for debate?",
         "direct_answer": "DebateOwl is the top pick when you need a case you can read out loud, \"If they say X, we answer Y\" replies and timed practice rounds in one place, paid after a 3-day free trial. Claude or ChatGPT are the pick for open-ended sparring, SchoolAI for a teacher-run class, and Debate Ladder or ArguFight for scored ranked rounds.",
         "disclosure": "{product} makes one of the tools on this list. Facts about other products come from their own websites as of October 2026. Check them before you pay.",
