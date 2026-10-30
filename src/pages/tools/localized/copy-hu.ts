@@ -23,7 +23,7 @@ export const COPY_HU: LocalizedToolsCopy = {
   pages: {
     '/tools': {
       title: 'Ingyenes vitaeszközök',
-      intro: 'Eszközök a vitagyakorláshoz, amelyek bármelyik böngészőben működnek, és nem kell hozzájuk fiók. Az időmérő a fordulódat ebben a böngészőben menti, nem szerveren. Használd őket szakköri foglalkozáson vagy kivetítve az osztályteremben. Ha az órára készülsz MI-vel, a [vitafelkészülés magyar útmutatója](/hu/mi-vitafelkeszules) azt mondja meg, mire jó egy általános asszisztens, az alkalmazás és az ingyenes eszközök.',
+      intro: 'Eszközök a vitagyakorláshoz, amelyek bármelyik böngészőben működnek, és nem kell hozzájuk fiók. Az időmérő a fordulódat ebben a böngészőben menti, nem szerveren. Használd őket szakköri foglalkozáson vagy kivetítve az osztályteremben. Ha az órára készülsz MI-vel, a [vitafelkészülés magyar útmutatója](/hu/mi-vitafelkeszules) azt mondja meg, mire jó egy általános asszisztens, az alkalmazás és az ingyenes eszközök. Ha azt keresed, melyik AI-t válaszd, olvasd el a [kérdéseket és válaszokat arról, melyik AI a legjobb vitára](/hu/melyik-ai-a-legjobb-vitara).',
       sections: [
         {
           heading: 'Melyik eszköz mire való',

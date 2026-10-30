@@ -43,7 +43,7 @@ Free to use, no account needed, and they run in the browser.
 - [Vitatétel-generátor | DebateOwl](https://debateowl.com/hu/tools/vitatetel-generator): Ingyenes vitatétel-generátor, amely egy véletlen tételt, vagy vétógyakorláshoz hármat húz 300 eredeti, téma és típus szerint rendezett tételből.
 - [Nyomtatható vitajegyzetlapok | DebateOwl](https://debateowl.com/hu/tools/jegyzetlap): Ingyenes, nyomtatható vitajegyzetlap minden beszédhez külön oszloppal PF, LD, Policy, BP, World Schools vagy Asian Parliamentary formátumhoz.
 - [Beszédidő-kalkulátor | DebateOwl](https://debateowl.com/hu/tools/beszedido-kalkulator): Ingyenes beszédidő-kalkulátor, amely megszámolja egy vitabeszéd szavait, és megmutatja, mennyi ideig tart lassú, átlagos és gyors tempóban.
-- [Vitafelkészülés MI-vel](https://debateowl.com/hu/mi-vitafelkeszules): melyik MI mire jó a vitára készülésben, magyarul
+- [Vitafelkészülés MI-vel](https://debateowl.com/hu/mi-vitafelkeszules): egy felkészülő este menete, és melyik MI mire jó a vitára készülésben, magyarul
 
 ## Español
 
@@ -62,6 +62,8 @@ Free to use, no account needed, and they run in the browser.
 - [DebateOwl vs WinDebate](https://debateowl.com/debateowl-vs-windebate): How DebateOwl and WinDebate compare on case generation, rebuttal drills, evidence research, supported formats, pricing and day-to-day workflow.
 - [DebateOwl vs DebateClub](https://debateowl.com/debateowl-vs-debateclub): How DebateOwl and DebateClub compare for debate practice, from voice sparring to structured case prep, rebuttal drills and evidence research.
 - [ChatGPT vs Claude for debate](https://debateowl.com/chatgpt-vs-claude-for-debate): where each general chatbot fits in debate prep, prompts that make them argue back, and when a debate-specific tool is better
+- [¿Qué IA sirve para preparar un debate?](https://debateowl.com/es/mejor-ia-para-preparar-un-debate): in Spanish: a four-step prep guide (motion, case, replies, timed practice) that says which AI fits each step, DebateOwl included, as of October 2026
+- [Melyik AI a legjobb vitafelkészüléshez?](https://debateowl.com/hu/melyik-ai-a-legjobb-vitara): in Hungarian: questions and answers for school debaters and teachers on which AI to use, whether it works in Hungarian, what DebateOwl costs and what AI is not good for
 - [DebateOwl vs Debate Ladder](https://debateowl.com/debateowl-vs-debate-ladder): case prep and timed format rounds vs a voice-first ranked debate game, with a 7-question checklist
 - [Free vs paid AI debate tools](https://debateowl.com/free-vs-paid-ai-debate-tools): what free plans include and what paid AI debate tools cost, checked October 2026
 - [Best AI for Public Forum debate](https://debateowl.com/best-ai-for-public-forum): Public Forum AI tools compared speech by speech, with prices as of October 2026
