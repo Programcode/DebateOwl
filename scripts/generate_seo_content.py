@@ -275,6 +275,7 @@ EXTRA_RELATED = {
         ("/best-ai-for-public-forum", "Best AI for Public Forum debate"),
         ("/debateowl-vs-argufight", "DebateOwl vs ArguFight: which debater should pick which"),
         ("/debateowl-vs-mindduel", "DebateOwl vs MindDuel: one motion, two workflows"),
+        ("/debateowl-vs-debate-ladder", "DebateOwl vs Debate Ladder"),
         ("/debateowl-vs-claude", "DebateOwl vs Claude: the same prep night done twice"),
         ("/debateowl-vs-publicforumai", "DebateOwl vs PublicForumAI: Public Forum only, or every format"),
         ("/debateowl-vs-gemini", "DebateOwl vs Gemini: five assumptions about AI debate prep, checked"),
@@ -833,7 +834,8 @@ def compare_llms_lines():
 
 def llms_txt():
     """public/llms.txt: a plain summary for AI agents, from the same facts as the pages."""
-    guides = "\n".join(f'- [{p["h1"]}]({page_url(p["slug"])}): {p["description"]}' for p in PAGES if p["slug"] not in COMPARE_SLUGS | {"debateowl-pricing"})
+    # A page with its own headline (the title without the brand) is listed by it, as its <title> reads.
+    guides = "\n".join(f'- [{p.get("headline", p["h1"])}]({page_url(p["slug"])}): {p["description"]}' for p in PAGES if p["slug"] not in COMPARE_SLUGS | {"debateowl-pricing"})
     tools = "\n".join(f"- [{name}]({BASE}{route}): {blurb}" for route, name, blurb in FREE_TOOLS)
     return f"""# {BRAND}
 
