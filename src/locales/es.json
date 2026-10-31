@@ -1013,7 +1013,9 @@
     "q8": "¿Qué incluye un caso de {{product}}?",
     "a8": "Un caso de {{product}} se escribe como lo preparan los debatientes escolares: una apertura, de dos a cuatro argumentos, cada uno con explicación, evidencia y por qué importa, respuestas «Si dicen… respondemos…», una frase de cierre y las fuentes que usó.",
     "q9": "¿{{product}} es gratis?",
-    "a9": "La app {{product}} no tiene plan gratuito (prueba gratis de {{trialDays}} días y después ${{proMonthly}}/mes); las herramientas aparte de /es/tools son gratis y no piden cuenta."
+    "a9": "La app {{product}} no tiene plan gratuito (prueba gratis de {{trialDays}} días y después ${{proMonthly}}/mes); las herramientas aparte de /es/tools son gratis y no piden cuenta.",
+    "q10": "¿Qué IA es mejor para el debate?",
+    "a10": "Depende de para qué la quieras. Para sacar ideas y leer sobre el tema, un chatbot general como ChatGPT, Claude o Gemini sirve. Para preparar una moción concreta en tu formato, con un caso que puedes leer en voz alta, respuestas «Si dicen X, respondemos Y» y rondas de práctica cronometradas, {{product}} está hecho para eso. <link>Nuestra comparativa</link> repasa las opciones una por una."
   },
   "guideHub": {
     "title": "Guías de debate y herramientas gratis",
@@ -1023,6 +1025,7 @@
     "skills": "Guías de habilidades",
     "tools": "Herramientas gratis",
     "compare": "Comparar",
+    "versus": "Comparar {{product}}",
     "englishGuides": "Guías en inglés",
     "hungarianPrep": "Preparación de debate con IA, en húngaro",
     "nativeAnswer": "Qué IA sirve para preparar un debate (guía en español)",
@@ -1055,7 +1058,16 @@
       "debateowl-vs-debate-ladder": "{{product}} frente a Debate Ladder",
       "free-vs-paid-ai-debate-tools": "Herramientas de debate con IA: gratis o de pago",
       "chatgpt-vs-claude-for-debate": "ChatGPT o Claude para debatir",
-      "best-ai-for-public-forum": "La mejor IA para Public Forum"
+      "best-ai-for-public-forum": "La mejor IA para Public Forum",
+      "debateowl-vs-claude": "{{product}} frente a Claude",
+      "debateowl-vs-publicforumai": "{{product}} frente a PublicForumAI",
+      "debateowl-vs-gemini": "{{product}} frente a Gemini",
+      "debateowl-vs-hyperwrite": "{{product}} frente a HyperWrite",
+      "debateowl-vs-schoolai": "{{product}} frente a SchoolAI",
+      "debateowl-vs-argufight": "{{product}} frente a ArguFight",
+      "debateowl-vs-mindduel": "{{product}} frente a MindDuel",
+      "debateowl-vs-windebate": "{{product}} frente a WinDebate",
+      "debateowl-vs-debateclub": "{{product}} frente a DebateClub"
     }
   },
   "finalCta": {

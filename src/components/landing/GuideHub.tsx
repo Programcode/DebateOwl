@@ -13,7 +13,16 @@ const GROUPS = [
     { id: "formats", paths: ["/public-forum-debate", "/lincoln-douglas-debate", "/policy-debate", "/british-parliamentary-debate", "/world-schools-debate", "/congress-debate"] },
     { id: "skills", paths: ["/how-to-write-a-debate-case", "/how-to-practice-rebuttals", "/debate-clash-points", "/debate-fallacies", "/debate-judge-adaptation", "/how-to-prepare-for-a-debate-tournament"] },
     { id: "tools", paths: ["/tools", "/tools/debate-timer", "/tools/debate-motion-generator", "/tools/debate-flow-sheet", "/tools/speech-time-calculator"] },
-    { id: "compare", paths: ["/best-ai-debate-tools", "/best-ai-for-debate", "/debateowl-vs-chatgpt", "/debateowl-vs-debate-ladder", "/free-vs-paid-ai-debate-tools", "/chatgpt-vs-claude-for-debate", "/best-ai-for-public-forum"] },
+    { id: "compare", paths: ["/best-ai-debate-tools", "/best-ai-for-debate", "/free-vs-paid-ai-debate-tools", "/chatgpt-vs-claude-for-debate", "/best-ai-for-public-forum"] },
+    // Every /debateowl-vs-* page, so each one is a click from the home page.
+    {
+        id: "versus",
+        paths: [
+            "/debateowl-vs-chatgpt", "/debateowl-vs-claude", "/debateowl-vs-gemini", "/debateowl-vs-hyperwrite", "/debateowl-vs-schoolai",
+            "/debateowl-vs-publicforumai", "/debateowl-vs-windebate", "/debateowl-vs-debateclub", "/debateowl-vs-debate-ladder",
+            "/debateowl-vs-argufight", "/debateowl-vs-mindduel",
+        ],
+    },
 ] as const;
 
 const TOOLS = GROUPS.find((group) => group.id === "tools")!;

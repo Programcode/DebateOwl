@@ -84,6 +84,8 @@ function landingQuestions(language: PageLanguage = 'en'): Array<[string, string]
   const asOf = factsAsOf(language);
   return [
     [i18n.t('shortAnswer.question'), i18n.t('shortAnswer.answer', { asOf })],
+    // The visible answer links its last sentence; the JSON-LD keeps the words without the tag.
+    [i18n.t('faq.q10'), i18n.t('faq.a10').replace(/<\/?link>/g, '')],
     [i18n.t('faq.q6'), i18n.t('faq.a6', { modes: PREP_MODE_COUNT })],
     [i18n.t('faq.q8'), i18n.t('faq.a8')],
     [i18n.t('faq.q7'), i18n.t('faq.a7', { asOf })],

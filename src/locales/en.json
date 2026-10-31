@@ -1013,7 +1013,9 @@
     "q8": "What does a {{product}} case include?",
     "a8": "{{caseFormat}}",
     "q9": "Is {{product}} free?",
-    "a9": "{{freePlan}}"
+    "a9": "{{freePlan}}",
+    "q10": "Which AI is best for debate?",
+    "a10": "It depends on the job. For brainstorming and background reading, a general chatbot such as ChatGPT, Claude or Gemini is fine. For preparing a set motion in your own format, with a case you can read out, \"If they say X, we answer Y\" replies and timed practice rounds, {{product}} is built for that. <link>Our comparison page</link> goes through the options one by one."
   },
   "guideHub": {
     "title": "Debate guides and free tools",
@@ -1023,6 +1025,7 @@
     "skills": "Skills guides",
     "tools": "Free tools",
     "compare": "Compare",
+    "versus": "Compare {{product}}",
     "englishGuides": "Guides in English",
     "hungarianPrep": "Debate prep with AI, in Hungarian",
     "nativeAnswer": "Which AI is best for debate?",
@@ -1055,7 +1058,16 @@
       "debateowl-vs-debate-ladder": "{{product}} vs Debate Ladder",
       "free-vs-paid-ai-debate-tools": "Free vs paid AI debate tools",
       "chatgpt-vs-claude-for-debate": "ChatGPT vs Claude for debate",
-      "best-ai-for-public-forum": "Best AI for Public Forum"
+      "best-ai-for-public-forum": "Best AI for Public Forum",
+      "debateowl-vs-claude": "{{product}} vs Claude",
+      "debateowl-vs-publicforumai": "{{product}} vs PublicForumAI",
+      "debateowl-vs-gemini": "{{product}} vs Gemini",
+      "debateowl-vs-hyperwrite": "{{product}} vs HyperWrite",
+      "debateowl-vs-schoolai": "{{product}} vs SchoolAI",
+      "debateowl-vs-argufight": "{{product}} vs ArguFight",
+      "debateowl-vs-mindduel": "{{product}} vs MindDuel",
+      "debateowl-vs-windebate": "{{product}} vs WinDebate",
+      "debateowl-vs-debateclub": "{{product}} vs DebateClub"
     }
   },
   "finalCta": {

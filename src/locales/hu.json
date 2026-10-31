@@ -1013,7 +1013,9 @@
     "q8": "Mit tartalmaz egy {{product}} által írt eset?",
     "a8": "A {{product}} úgy írja meg az esetet, ahogy az iskolai vitázók készülnek: nyitás, két–négy érv, mindegyik magyarázattal, bizonyítékkal és azzal, hogy miért fontos, „Ha azt mondják… erre azt feleljük…” válaszok, egy zárómondat és a felhasznált források.",
     "q9": "Ingyenes a {{product}}?",
-    "a9": "A {{product}} alkalmazásnak nincs ingyenes csomagja ({{trialDays}} napos ingyenes próba, utána havi ${{proMonthly}}); a /hu/tools oldalon lévő külön eszközök ingyenesek, és fiók nélkül is használhatók."
+    "a9": "A {{product}} alkalmazásnak nincs ingyenes csomagja ({{trialDays}} napos ingyenes próba, utána havi ${{proMonthly}}); a /hu/tools oldalon lévő külön eszközök ingyenesek, és fiók nélkül is használhatók.",
+    "q10": "Melyik MI a legjobb vitához?",
+    "a10": "A feladattól függ. Ötleteléshez és háttérolvasáshoz egy általános chatbot, például a ChatGPT, a Claude vagy a Gemini is megfelel. Ha egy konkrét indítványra készülsz a saját vitaformátumodban, és felolvasható esetet, „Ha azt mondják X-et, erre azt feleljük Y” válaszokat és időzített gyakorlófordulókat szeretnél, arra készült a {{product}}. <link>Részletes összehasonlításunk</link> egyenként végigveszi a lehetőségeket."
   },
   "guideHub": {
     "title": "Vitaútmutatók és ingyenes eszközök",
@@ -1023,6 +1025,7 @@
     "skills": "Készségfejlesztő útmutatók",
     "tools": "Ingyenes eszközök",
     "compare": "Összehasonlítás",
+    "versus": "{{product}} összehasonlítások",
     "englishGuides": "Angol nyelvű útmutatók",
     "hungarianPrep": "Vitafelkészülés MI-vel (magyar útmutató)",
     "nativeAnswer": "Melyik AI a legjobb vitára? (magyar kérdések és válaszok)",
@@ -1055,7 +1058,16 @@
       "debateowl-vs-debate-ladder": "{{product}} vagy Debate Ladder",
       "free-vs-paid-ai-debate-tools": "Ingyenes és fizetős MI-vitaeszközök",
       "chatgpt-vs-claude-for-debate": "ChatGPT vagy Claude vitára",
-      "best-ai-for-public-forum": "A legjobb MI Public Forumhoz"
+      "best-ai-for-public-forum": "A legjobb MI Public Forumhoz",
+      "debateowl-vs-claude": "{{product}} vagy Claude",
+      "debateowl-vs-publicforumai": "{{product}} vagy PublicForumAI",
+      "debateowl-vs-gemini": "{{product}} vagy Gemini",
+      "debateowl-vs-hyperwrite": "{{product}} vagy HyperWrite",
+      "debateowl-vs-schoolai": "{{product}} vagy SchoolAI",
+      "debateowl-vs-argufight": "{{product}} vagy ArguFight",
+      "debateowl-vs-mindduel": "{{product}} vagy MindDuel",
+      "debateowl-vs-windebate": "{{product}} vagy WinDebate",
+      "debateowl-vs-debateclub": "{{product}} vagy DebateClub"
     }
   },
   "finalCta": {
