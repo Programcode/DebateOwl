@@ -67,6 +67,11 @@ Free to use, no account needed, and they run in the browser.
 - [DebateOwl vs Debate Ladder](https://debateowl.com/debateowl-vs-debate-ladder): case prep and timed format rounds vs a voice-first ranked debate game, with a 7-question checklist
 - [DebateOwl vs ArguFight](https://debateowl.com/debateowl-vs-argufight): which debater should pick which: a case and timed rounds against an AI, or written debates against people scored by AI judges, as of October 2026
 - [DebateOwl vs MindDuel](https://debateowl.com/debateowl-vs-mindduel): one motion through two workflows: MindDuel's ten short spoken turns and 0-100 score, or a written case and a timed round, as of October 2026
+- [DebateOwl vs Claude](https://debateowl.com/debateowl-vs-claude): the same prep night done twice: one motion's case, likely replies and timed practice in a Claude chat and in DebateOwl, and when plain Claude is enough, as of October 2026
+- [DebateOwl vs PublicForumAI](https://debateowl.com/debateowl-vs-publicforumai): Public Forum only or every format: a grid of PF, LD, Policy, BP, World Schools and Congress coverage, with prices, as of October 2026
+- [DebateOwl vs Gemini](https://debateowl.com/debateowl-vs-gemini): five common assumptions about Gemini and debate prep, from writing a case to working in Hungarian, each answered in two sentences, as of October 2026
+- [DebateOwl vs HyperWrite](https://debateowl.com/debateowl-vs-hyperwrite): a one-shot AI writer or a practice loop: what you walk away with from each, and prices side by side, as of October 2026
+- [DebateOwl vs SchoolAI](https://debateowl.com/debateowl-vs-schoolai): for teachers and debate coaches: setup, student accounts, cost per student and formats, with a plain pick for each need, as of October 2026
 - [Free vs paid AI debate tools](https://debateowl.com/free-vs-paid-ai-debate-tools): what free plans include and what paid AI debate tools cost, checked October 2026
 - [Best AI for Public Forum debate](https://debateowl.com/best-ai-for-public-forum): Public Forum AI tools compared speech by speech, with prices as of October 2026
 - [AI debate tools for teachers](https://debateowl.com/ai-debate-tools-for-teachers): AI tools for classroom debate by scenario: no-signup timers, AI opponents, class tournaments and graded discussion
