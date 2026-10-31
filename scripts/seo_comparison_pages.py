@@ -111,6 +111,11 @@ SIBLINGS = {
     "hu/melyik-ai-a-legjobb-vitara",
     "debateowl-vs-argufight",
     "debateowl-vs-mindduel",
+    "debateowl-vs-claude",
+    "debateowl-vs-publicforumai",
+    "debateowl-vs-gemini",
+    "debateowl-vs-hyperwrite",
+    "debateowl-vs-schoolai",
 }
 
 
@@ -1582,6 +1587,548 @@ body.duel dt{font-family:Fredoka,Nunito,sans-serif;margin-top:14px}
     }
 
 
+VS_CHECKED_31 = "Checked Oct 31, 2026."
+NEW_VS_DATE = "2026-10-31"
+
+
+def page_claude():
+    answer = (
+        "Use DebateOwl when the motion and the date are fixed: it keeps the motion, your side and the speech times in one place, "
+        'writes the case in the order you will say it with "If they say… we answer…" replies, and times a practice round that ends in a judge\'s verdict. '
+        "Claude is a strong general assistant with a free plan, Projects that remember instructions, cited web search and voice mode. "
+        "It is enough when you want ideas, a critique of a case you already wrote, or a spoken chat without a clock."
+    )
+    faqs = [
+        ("Is Claude free?", "Yes. As of October 2026 Claude has a $0 plan with usage limits that reset every five hours and every week. Pro is $20 a month, or $17 a month billed annually."),
+        ("Can Claude time my speeches?", "The Claude pages we read describe no speech timer. Voice mode holds a spoken conversation; keeping each speech to its minutes is up to you."),
+        ("Does Claude work in Hungarian?", "Claude's interface comes in eleven languages, Spanish among them and Hungarian not, and its help page says you can still chat in any language. The DebateOwl app is in English, Spanish and Hungarian."),
+    ]
+    steps = [
+        (
+            "Set up the motion",
+            "Make a Project for the motion and put the motion, your side and the format in its instructions. Claude follows those instructions in every chat inside the Project, and the free plan allows five Projects. <a href=\"#cl2\">C2</a>",
+            "Open a Current Debate with the motion, your side and your speaker role. Every case, source, drill and round you make tonight is filed under it, and none of it leaks into your other motions.",
+        ),
+        (
+            "Write the case",
+            "Ask for a Pro case. Claude will write one, but its shape is whatever you ask for, so spell it out: an opening, the arguments, the evidence, answers to the other side, a closing.",
+            "The case generator writes it in speaking order: an opening line, two to four arguments that each carry an explanation, evidence naming its source and year, and why it matters, then replies and a closing. A weak argument can be rewritten on its own.",
+        ),
+        (
+            "Back it with evidence",
+            "Turn on web search and ask for studies on homework and grades. Each answer that uses search comes with citations. <a href=\"#cl3\">C3</a>",
+            "Factoids looks up a claim and suggests evidence with a named source.",
+        ),
+        (
+            "Get ready for their replies",
+            "Ask what the Con side will say, or tell Claude to argue Con for the whole chat and not give in until your answer beats its point.",
+            'The case already ends with "If they say… we answer…" lines. Attack reads the Con case for its weakest link, and Crossfire either questions you one question at a time or lets you question it.',
+        ),
+        (
+            "Say it against the clock",
+            "Voice mode gives you a full spoken conversation on every plan. Its pages say nothing about a speech timer, so put your phone timer next to it and keep the Public Forum times yourself. <a href=\"#cl4\">C4</a>",
+            "Sparring runs a Public Forum round at its real times: four-minute constructives and rebuttals, three-minute summaries, a two-minute final focus. Speak or type; in a voice round the opponent answers aloud. It ends with a judge's verdict, a score per category and what to work on next. Delivery is judged from your words, not your voice.",
+        ),
+        (
+            "The next morning",
+            "The chats sit inside the Project. To take the case into the round, copy it out into a document.",
+            "The case and the round transcript are under the motion. Export the case to Google Docs or PDF and print it.",
+        ),
+    ]
+    rows = "".join(
+        f'<li><h3><span class="n">{i}</span>{esc(title)}</h3><div class="pair"><div class="cl"><p class="who">In a Claude chat</p><p>{claude}</p></div>'
+        f'<div class="ow"><p class="who">{TICK}In DebateOwl</p><p>{esc(owl)}</p></div></div></li>'
+        for i, (title, claude, owl) in enumerate(steps, 1)
+    )
+    body = f"""
+<section class="night">
+  <h2>Tonight's motion</h2>
+  <p class="motion">"Schools should replace graded homework with supervised study time."</p>
+  <p>You are Pro, speaking first, in a Public Forum round on Friday. Below, the same evening runs twice, step by step: once in a Claude chat, once in DebateOwl. Neither column is a test result. Both describe what each product's own pages and screens offer as of October 2026.</p>
+  <p class="rule">One rule for both columns: open every source and find the sentence before it goes in your speech. A citation proves a page exists, not that it says what your case needs.</p>
+</section>
+<section>
+  <h2>The evening, six steps, two tools</h2>
+  <ol class="steps">{rows}</ol>
+</section>
+<section class="enough">
+  <h2>When plain Claude is enough</h2>
+  <ul>
+    <li><strong>You are exploring a motion you have never argued.</strong> A free chat that lists both sides is all you need on day one.</li>
+    <li><strong>You already wrote the case.</strong> Paste it in or upload the file and ask Claude where a judge would stop believing you. That critique is one of its strengths.</li>
+    <li><strong>You want to talk an argument through out loud</strong> with no format and no clock. Voice mode does that on the free plan.</li>
+    <li><strong>Your round is a class discussion</strong>, not a timed debate with set speeches.</li>
+  </ul>
+  <p>Claude's free plan costs nothing; Pro is $20 a month, or $17 a month billed annually. <a href="#cl1">C1</a> For how it compares with ChatGPT, see <a href="/chatgpt-vs-claude-for-debate">ChatGPT vs Claude for debate prep</a>.</p>
+</section>
+<section class="owlcta">
+  <h2>When the round has a date</h2>
+  <p>That is the night DebateOwl was built for: the motion stays put, the case comes in the shape you will speak it, and the practice round keeps time for you. <a href="/">DebateOwl's home page</a> shows how it works, and <a href="/best-ai-for-debate">which AI is best for debate</a> lines up more tools.</p>
+  <p><a class="cta" href="/app">Prepare tonight's motion in DebateOwl</a></p>
+  <p>{PRICE_HTML}</p>
+  <p>Other side-by-sides: <a href="/debateowl-vs-gemini">DebateOwl vs Gemini</a> checks five common assumptions, and <a href="/debateowl-vs-hyperwrite">DebateOwl vs HyperWrite</a> sets a one-shot writer against a practice loop.</p>
+</section>
+{faq_block("Claude questions, answered", faqs, "h3")}
+{sources("Where the Claude facts come from", [
+    ("cl1", "https://claude.com/pricing", "Free plan, Pro at $20 billed monthly or $17 a month billed annually, Max from $100; Projects, voice mode and web search on the free plan."),
+    ("cl2", "https://support.claude.com/en/articles/9519177-how-can-i-create-and-manage-projects", "Projects on every plan, five on the free plan, and project instructions that apply to every chat in the Project."),
+    ("cl3", "https://support.claude.com/en/articles/10684626-enabling-and-using-web-search", "Web search answers come with citations."),
+    ("cl4", "https://support.claude.com/en/articles/11101966-using-voice-mode", "Voice mode: spoken conversations, in beta, on all plans."),
+    ("cl5", "https://support.claude.com/en/articles/10769299-how-to-use-claude-in-your-preferred-language", "Eleven interface languages, Hungarian not among them; you can chat in any language."),
+], VS_CHECKED_31)}
+"""
+    style = """
+body.twice{background:#FFF9F2}body.twice main{width:min(1040px,calc(100% - 32px));margin:28px auto 72px}
+body.twice h1{font-size:clamp(2.2rem,5.4vw,3.7rem);color:#2A1608}
+body.twice .night{background:#2A1608;color:#FFF1E2;border-radius:26px;padding:8px 24px 18px;margin:22px 0}
+body.twice .night .motion{font-family:Fredoka,Nunito,sans-serif;font-size:clamp(1.3rem,3vw,1.75rem);margin:6px 0}
+body.twice .night .rule{border-top:1px solid #6B4A2E;padding-top:10px;color:#FFD9A8}
+body.twice .steps{list-style:none;padding:0;display:grid;gap:18px}
+body.twice .steps h3{display:flex;align-items:center;gap:10px;margin:0 0 8px}
+body.twice .n{display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;border-radius:50%;background:#2A1608;color:#FFF1E2;font-size:1rem;flex:none}
+body.twice .pair{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+body.twice .pair>div{background:#fff;border-radius:18px;padding:2px 16px 8px;border:2px solid #F0DEC8}
+body.twice .pair .ow{border-color:#0A6FF0;background:#F2F8FF}
+body.twice .who{font-family:Fredoka,Nunito,sans-serif;display:flex;align-items:center;margin:10px 0 0;color:#6B4A2E}body.twice .ow .who{color:#0556D6}
+body.twice .enough li{margin:8px 0}
+body.twice .owlcta{background:#fff;border:2px solid #0A6FF0;border-radius:24px;padding:4px 22px 16px;margin:26px 0}
+@media(max-width:760px){body.twice .pair{grid-template-columns:1fr}}
+"""
+    return {
+        "slug": "debateowl-vs-claude",
+        "lang": "en",
+        "body": "twice",
+        "published": NEW_VS_DATE,
+        "modified": NEW_VS_DATE,
+        "title": "DebateOwl vs Claude: The Same Prep Night Done Twice | DebateOwl",
+        "description": "One debate motion prepared twice, in a Claude chat and in DebateOwl: the case, the likely replies and a timed practice round, as of October 2026.",
+        "h1": "DebateOwl vs Claude: the same prep night done twice",
+        "question": "Should I prepare my debate with Claude or with DebateOwl?",
+        "answer": answer,
+        "faqs": faqs,
+        "style": style,
+        "html_body": body,
+    }
+
+
+def page_publicforumai():
+    answer = (
+        "If you debate more than Public Forum, or switch formats between tournaments, DebateOwl is the one that follows you: "
+        "timed practice rounds in Public Forum and Lincoln-Douglas, prep tools and a free timer for Policy, British Parliamentary and World Schools, "
+        "and prep tools for Congress. If Public Forum is the only format you will ever debate, PublicForumAI is built for exactly that, "
+        "with full practice rounds judged by a tech or lay judge, and its free plan gives you 3 rounds a month."
+    )
+    faqs = [
+        ("Is PublicForumAI free?", "Yes. As of October 2026 its free plan includes 3 full practice rounds and 5 AI cases a month. Premium is $9.99 a month, or $79 a year, for unlimited rounds and linked evidence."),
+        ("Does either one practise crossfire?", "PublicForumAI's site says a crossfire fast enough for a real round is in the works. DebateOwl drills it separately in Crossfire, and its Sparring round runs the speeches without crossfire periods."),
+        ("I only debate Public Forum. Which should I pick?", "On price, PublicForumAI: its free plan already runs full rounds with a ballot. DebateOwl is the pick when you want crossfire drills, replies written into every case, and room to move to Lincoln-Douglas or World Schools later."),
+    ]
+    levels = {
+        "round": ("Timed round", "lv-round"),
+        "prep": ("Prep and timer", "lv-prep"),
+        "only": ("Prep only", "lv-only"),
+        "built": ("Built for it", "lv-built"),
+        "none": ("Not named", "lv-none"),
+    }
+    grid = [
+        ("Public Forum", "built", "Full practice rounds in PF speech order, a tech or lay judge's ballot, AI flow drills and a case writer. <a href=\"#pf1\">P1</a>",
+         "round", "Sparring at PF times (4, 4, 3 and 2 minutes), Crossfire drills, and a case with replies to the other side."),
+        ("Lincoln-Douglas", "none", "Its site names only Public Forum.",
+         "round", "Sparring at Lincoln-Douglas times, typed or spoken, plus the same case and prep tools."),
+        ("Policy", "none", "Its site names only Public Forum.",
+         "prep", "Set the debate's format to Policy and the prep tools take it into account; the free timer has the Policy speech order. No simulated round."),
+        ("British Parliamentary", "none", "Its site names only Public Forum.",
+         "prep", "Set the debate's format to British Parliamentary for prep; the free timer knocks for points of information. No simulated round."),
+        ("World Schools", "none", "Its site names only Public Forum.",
+         "prep", "Prep tools, and the free timer with World Schools times and protected minutes. No simulated round."),
+        ("Congress", "none", "Its site names only Public Forum.",
+         "only", "Prep tools for a speech on a bill, with replies and evidence. The free timer has no Congress preset, but you can build your own."),
+    ]
+
+    def cell(level, text):
+        label, cls = levels[level]
+        return f'<td class="{cls}"><span class="lv">{esc(label)}</span>{text}</td>'
+
+    trs = "".join(
+        f'<tr><th scope="row">{esc(fmt)}</th>{cell(pl, pt)}{cell(ol, esc(ot))}</tr>'
+        for fmt, pl, pt, ol, ot in grid
+    )
+    body = f"""
+<section class="coverage">
+  <h2>Six formats, two tools</h2>
+  <p>As of October 2026. PublicForumAI facts come from its own site; DebateOwl facts from its app. The tag in each cell says how far the tool goes in that format.</p>
+  <div class="scroll"><table>
+    <caption>Format coverage: PublicForumAI and DebateOwl</caption>
+    <thead><tr><th scope="col">Format</th><th scope="col">PublicForumAI</th><th scope="col">DebateOwl</th></tr></thead>
+    <tbody>{trs}</tbody>
+  </table></div>
+  <p class="legend"><span class="lv lv-round">Timed round</span> an AI opponent at the format's speech times. <span class="lv lv-prep">Prep and timer</span> the case and drills, plus the free timer's preset. <span class="lv lv-only">Prep only</span> no round and no timer preset. <span class="lv lv-none">Not named</span> the site does not mention the format.</p>
+</section>
+<section class="pfonly">
+  <h2>If Public Forum is all you debate</h2>
+  <p>PublicForumAI was started in 2024 by high school debaters in New York City, and every tool follows the Public Forum speech order. A full round takes about 35 minutes with prep time, you choose a tech or lay judge, and premium rounds argue from real evidence with a link for each card. It asks for a computer or a large screen. Its free plan is generous enough that a PF debater can try a full round before paying anything. <a href="#pf1">P1</a> <a href="#pf2">P2</a></p>
+  <p>DebateOwl's case is the same shape in every format: an opening, two to four arguments with evidence and why each matters, then "If they say… we answer…" replies and a closing. That is what lets one account cover a PF season and a British Parliamentary weekend.</p>
+</section>
+<section class="cta-strip">
+  <h2>Debating in more than one format</h2>
+  <p>Start a Current Debate for the next motion, whichever format it is in, and the case, drills and rounds stay filed under it. <a href="/">The DebateOwl home page</a> has the full tour; <a href="/best-ai-for-debate">the best AI for debate</a> compares more tools.</p>
+  <p><a class="cta" href="/app">Start your next motion</a></p>
+  <p>{PRICE_HTML}</p>
+  <p>Also compared: <a href="/debateowl-vs-claude">the same prep night in Claude and DebateOwl</a>, and <a href="/debateowl-vs-gemini">five assumptions about Gemini</a>.</p>
+</section>
+{faq_block("Three short questions", faqs, "defs")}
+{sources("PublicForumAI pages we read", [
+    ("pf1", "https://publicforumai.com/", "Built for Public Forum only; full practice rounds with a ballot and a tech or lay judge; no crossfire yet; about 35 minutes a round; use a computer or large screen; started in 2024 by students in New York City."),
+    ("pf2", "https://publicforumai.com/pricing", "Free: 3 full practice rounds, 5 AI cases a month, unlimited AI Flow drills. Premium: $9.99 a month or $79 a year, unlimited rounds, linked evidence."),
+], VS_CHECKED_31)}
+"""
+    style = """
+body.grid6{background:#F3FAF6}body.grid6 main{width:min(1000px,calc(100% - 32px));margin:28px auto 72px}
+body.grid6 h1{font-size:clamp(2.2rem,5.4vw,3.6rem);color:#0B2A1D}
+body.grid6 table{min-width:720px;background:#fff;border-radius:18px;overflow:hidden}
+body.grid6 caption{text-align:left;font-family:Fredoka,Nunito,sans-serif;padding:6px 0}
+body.grid6 tbody th{font-family:Fredoka,Nunito,sans-serif;width:17%}
+body.grid6 td{width:41%}
+body.grid6 .lv{display:inline-block;font-family:Fredoka,Nunito,sans-serif;font-size:.8rem;border-radius:999px;padding:2px 10px;margin:0 8px 4px 0}
+body.grid6 td .lv{display:block;width:max-content}
+body.grid6 .lv-round{background:#0A6FF0;color:#fff}body.grid6 .lv-built{background:#0B2A1D;color:#E8FFF3}
+body.grid6 .lv-prep{background:#CFE4FF;color:#02307E}body.grid6 .lv-only{background:#E8EEF6;color:#1F2B40}
+body.grid6 .lv-none{background:#F1F1F1;color:#5B6472}
+body.grid6 .legend{font-size:.95rem}
+body.grid6 .pfonly{border-left:5px solid #0B2A1D;padding-left:18px}
+body.grid6 .cta-strip{background:#0B2A1D;color:#E8FFF3;border-radius:26px;padding:6px 24px 18px;margin:26px 0}
+body.grid6 .cta-strip a:not(.cta){color:#FCE48A}
+body.grid6 dt{font-family:Fredoka,Nunito,sans-serif;margin-top:14px}
+"""
+    return {
+        "slug": "debateowl-vs-publicforumai",
+        "lang": "en",
+        "body": "grid6",
+        "published": NEW_VS_DATE,
+        "modified": NEW_VS_DATE,
+        "title": "DebateOwl vs PublicForumAI: PF Only or Every Format | DebateOwl",
+        "description": "PublicForumAI is built only for Public Forum; DebateOwl covers six formats at different depths. A format-by-format grid, as of October 2026.",
+        "h1": "DebateOwl vs PublicForumAI: Public Forum only, or every format",
+        "question": "Should I use DebateOwl or PublicForumAI?",
+        "answer": answer,
+        "faqs": faqs,
+        "style": style,
+        "html_body": body,
+    }
+
+
+def page_gemini():
+    answer = (
+        "For ideas and background, Gemini does the job: it has a free tier, answers in more than 70 languages including Hungarian, "
+        "and Gems remember your instructions. DebateOwl is the pick for a set motion and a round date, because it writes every case in one fixed shape "
+        'with "If they say… we answer…" replies and runs a timed practice round at your format\'s speech times. '
+        "Below are five common assumptions about Gemini and debate, each answered in two sentences."
+    )
+    faqs = [
+        ("How much does Gemini cost?", "As of October 2026 Google lists Google AI Plus at $4.99 a month, Google AI Pro at $19.99 and Google AI Ultra from $99.99, on top of a free tier."),
+        ("Is Gemini's research good enough for debate evidence?", "Deep Research browses hundreds of websites and writes a report, which is a quick start on a new topic. Treat each source in it as a lead, the same as with DebateOwl's Factoids: open it and find the sentence."),
+    ]
+    myths = [
+        ("Any chatbot can write a debate case.", "Half true", "half",
+         "Gemini will write arguments for any motion, but the layout is whatever your prompt asks for, so two evenings can give you two different shapes. "
+         'DebateOwl writes every case the same way: an opening, two to four arguments each with an explanation, evidence and why it matters, "If they say… we answer…" replies, and a closing.'),
+        ("It works in Hungarian.", "True", "true",
+         "Hungarian is on Google's list of more than 70 languages for the Gemini web app, and so is Spanish. "
+         "The DebateOwl app is in Hungarian as well, from the menus to the case, the replies and the practice opponent. <a href=\"#ge1\">G1</a>"),
+        ("You have to explain your motion again in every chat.", "Not with Gems", "true",
+         "A Gem saves detailed instructions for a task you repeat, so it can hold your motion, side and speech times. "
+         "Google's own Live page says Gemini Live cannot use Gems, while every DebateOwl tool, spoken Sparring included, reads the motion from your Current Debate. <a href=\"#ge2\">G2</a> <a href=\"#ge3\">G3</a>"),
+        ("A chatbot can run my practice round.", "Partly", "half",
+         "Gemini Live lets you argue out loud and switch between talking and typing, but the Google pages we read describe no debate format or speech clock. "
+         "DebateOwl's Sparring gives each speech its real time in School 4-6-6-3, Lincoln-Douglas or Public Forum, and ends with a judge's verdict. <a href=\"#ge3\">G3</a>"),
+        ("Students get Gemini Pro for free.", "Only some", "false",
+         "The free year of Google AI Pro is for eligible U.S. college students aged 18 and over, needs a payment method at sign-up, and charges $19.99 a month afterwards unless you cancel. "
+         "A high school debater does not qualify, so the choice is the free tier or paying for a plan. <a href=\"#ge4\">G4</a>"),
+    ]
+    cards = "".join(
+        f'<article class="m {cls}"><p class="tag">Assumption {i}</p><h3>"{esc(claim)}"</h3><p class="verdict">{esc(verdict)}</p><p>{text}</p></article>'
+        for i, (claim, verdict, cls, text) in enumerate(myths, 1)
+    )
+    body = f"""
+<section class="myths">
+  <h2>Five assumptions, checked</h2>
+  <p>Each verdict comes from Google's own Gemini pages and from DebateOwl's app, as of October 2026. Two of the five come out in Gemini's favour.</p>
+  <div class="deck">{cards}</div>
+</section>
+<section class="fits">
+  <h2>Where Gemini earns its place</h2>
+  <p>Background reading on a topic you have never argued: Deep Research browses hundreds of sites and hands you a report. A Gem that holds your club's house style. Talking through an idea on a walk with Gemini Live. All of that works on the free tier, and AI Pro adds higher limits and bigger uploads. <a href="#ge5">G5</a> <a href="#ge6">G6</a></p>
+  <p>What it does not hand you is the round itself: a case in speaking order, replies to the other side, and a clock that stops you at four minutes.</p>
+</section>
+<section class="go">
+  <h2>When a motion lands on your desk</h2>
+  <p>Put it in DebateOwl, get the case with its replies, and practise it at the real speech times. <a href="/">DebateOwl's main page</a> walks through the app; <a href="/best-ai-for-debate">our guide to the best AI for debate</a> covers the wider field.</p>
+  <p><a class="cta" href="/ai-debate-case-generator">Write a case for your motion</a></p>
+  <p>{PRICE_HTML}</p>
+  <p>For a writing tool instead of a chatbot, read <a href="/debateowl-vs-hyperwrite">DebateOwl vs HyperWrite</a>. Teachers choosing for a class can use <a href="/debateowl-vs-schoolai">the SchoolAI checklist</a>.</p>
+</section>
+{faq_block("Two more Gemini questions", faqs, "cards")}
+{sources("Google's pages behind each verdict", [
+    ("ge1", "https://support.google.com/gemini/answer/13575153", "The Gemini web app in more than 70 languages; Hungarian and Spanish are on the list."),
+    ("ge2", "https://gemini.google/overview/gems/", "Gems save detailed prompt instructions for repeatable tasks."),
+    ("ge3", "https://gemini.google/overview/gemini-live/", "Talk with Gemini by voice and switch to typing; Gemini Live does not have access to Gems."),
+    ("ge4", "https://gemini.google/students/", "Free year of Google AI Pro for eligible U.S. college students aged 18+, payment method required, $19.99 a month after, redeem until December 31, 2026."),
+    ("ge5", "https://one.google.com/about/google-ai-plans/", "Google AI Plus $4.99, Pro $19.99, Ultra $99.99 or $199.99 a month; Deep Research browses hundreds of websites."),
+    ("ge6", "https://gemini.google/subscriptions/", "What the free tier includes: Gemini Live, Gems and Deep Research among them."),
+], VS_CHECKED_31)}
+"""
+    style = """
+body.myth{background:#F5F6FF}body.myth main{width:min(1060px,calc(100% - 32px));margin:28px auto 72px}
+body.myth h1{font-size:clamp(2.2rem,5.4vw,3.7rem);color:#14163A}
+body.myth .deck{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:14px;counter-reset:m}
+body.myth .m{background:#fff;border-radius:22px;padding:6px 20px 12px;border-top:6px solid #9AA3C7}
+body.myth .m.true{border-top-color:#14B37D}body.myth .m.half{border-top-color:#F0A202}body.myth .m.false{border-top-color:#E4572E}
+body.myth .m h3{font-size:1.25rem;margin:4px 0}
+body.myth .tag{text-transform:uppercase;letter-spacing:.08em;font-size:.75rem;color:#5B6190;margin:8px 0 0}
+body.myth .verdict{display:inline-block;font-family:Fredoka,Nunito,sans-serif;background:#14163A;color:#fff;border-radius:999px;padding:2px 12px;margin:4px 0}
+body.myth .fits{background:#fff;border-radius:24px;padding:4px 22px 12px;margin:24px 0}
+body.myth .go{background:#14163A;color:#EEF0FF;border-radius:26px;padding:6px 24px 18px}
+body.myth .go a:not(.cta){color:#FCE48A}
+body.myth .qcards{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:12px}body.myth .qcards article{background:#fff;border-radius:18px;padding:2px 18px}
+"""
+    return {
+        "slug": "debateowl-vs-gemini",
+        "lang": "en",
+        "body": "myth",
+        "published": NEW_VS_DATE,
+        "modified": NEW_VS_DATE,
+        "title": "DebateOwl vs Gemini: Five Assumptions, Checked | DebateOwl",
+        "description": "Five things debaters assume about Gemini, from writing a case to working in Hungarian, each checked against Google's pages, as of October 2026.",
+        "h1": "DebateOwl vs Gemini: five assumptions about AI debate prep, checked",
+        "question": "Can I use Gemini instead of DebateOwl for debate?",
+        "answer": answer,
+        "faqs": faqs,
+        "style": style,
+        "html_body": body,
+    }
+
+
+def page_hyperwrite():
+    answer = (
+        "DebateOwl, if you have to stand up and say the case: it writes it with \"If they say… we answer…\" replies, "
+        "then drills you with questions and times a practice round that ends in a verdict. "
+        "HyperWrite is a general AI writing assistant whose Debate Assistant turns a proposition into arguments for and against, backed by statistics it searches for. "
+        "That is enough for an essay, a class discussion or a first look at both sides. It stops at the page, so editing and practising happen elsewhere."
+    )
+    faqs = [
+        ("Is HyperWrite free?", "A free account gets limited monthly credits on its basic AI, and each debate tool offers a limited trial; neither size is stated. Premium is $19.99 a month, as of October 2026."),
+        ("Can HyperWrite practise a round with me?", "Its debate tool pages describe one input and one result, with no back-and-forth, timer or feedback on how you spoke. In DebateOwl, Crossfire and Sparring are that practice half."),
+    ]
+    hw = [
+        'A page of arguments for and against your proposition, with statistics, studies and expert opinions from its Search. <a href="#hw2">H2</a>',
+        'From its Statement Deconstructor: one statement split into its parts and hidden assumptions, a counter-argument to each, and open questions. <a href="#hw3">H3</a>',
+        "Text to review and edit into your own words; its own steps tell you to make any edits it needs.",
+        'A writing assistant for everything else too, from essays to email, with a Chrome extension. <a href="#hw1">H1</a>',
+    ]
+    owl = [
+        'A case for your side in speaking order, with "If they say… we answer…" lines for what the other side will say.',
+        "All of it filed under the motion, so tomorrow starts where tonight stopped.",
+        "A set of questions you have already answered once, from Crossfire.",
+        "A timed round you can reread, with a judge's verdict, a score per category and what to work on next.",
+        "The case exported to Google Docs or PDF, ready to print.",
+    ]
+    lis = lambda items, tick="": "".join(f"<li>{tick}<span>{item}</span></li>" for item in items)
+    body = f"""
+<section class="intro">
+  <h2>Two kinds of tool</h2>
+  <p>A one-shot writer takes your topic and returns a finished page. A practice loop writes the case, then keeps coming back at it: questions, a timed round, a verdict, a fix. HyperWrite is the first kind, and a good one for writing. DebateOwl is the second.</p>
+</section>
+<section class="walk">
+  <h2>What you walk away with</h2>
+  <div class="cols">
+    <div class="hw"><h3>After one go in HyperWrite</h3><ul>{lis(hw)}</ul></div>
+    <div class="ow"><h3>{TICK}After an evening in DebateOwl</h3><ul>{lis([esc(item) for item in owl])}</ul></div>
+  </div>
+  <p>The difference in one line: HyperWrite gives you both sides at once to read; DebateOwl gives you your side and the answers, then makes you say them.</p>
+</section>
+<section class="prices">
+  <h2>Prices side by side</h2>
+  <div class="scroll"><table>
+    <caption>As of October 2026, from HyperWrite's pricing page and DebateOwl's own plan.</caption>
+    <thead><tr><th scope="col"></th><th scope="col">DebateOwl</th><th scope="col">HyperWrite Premium</th><th scope="col">HyperWrite Ultra</th></tr></thead>
+    <tbody>
+      <tr><th scope="row">Paying monthly</th><td>$5/month + tax after a 3-day trial</td><td>$19.99/month</td><td>$44.99/month</td></tr>
+      <tr><th scope="row">Paying yearly</th><td>No yearly plan</td><td>$16/month, billed $192 a year</td><td>$29/month, billed $348 a year</td></tr>
+      <tr><th scope="row">What the price covers</th><td>Every prep and practice tool in the app</td><td>250 AI messages a month, citations, hundreds of AI tools</td><td>Unlimited AI messages</td></tr>
+      <tr><th scope="row">Without paying</th><td>Free timer, motion generator, flow sheet and speech-time calculator, no account</td><td colspan="2">A free account with limited monthly credits; a limited trial on each debate tool</td></tr>
+    </tbody>
+  </table></div>
+  <p>Sources: <a href="#hw4">H4</a> <a href="#hw2">H2</a></p>
+</section>
+<section class="when">
+  <h2>When HyperWrite is enough</h2>
+  <p>When the job ends on paper: a persuasive essay, a position paper, a balanced overview before a class discussion, or a quick list of the other side's best points. If you also write a lot that is not debate, one writing assistant may be worth more to you than a debate app.</p>
+  <h2>When you want the loop</h2>
+  <p>When you will be on your feet with a clock running. Start with the case, practise against the questions, and run the round. <a href="/">DebateOwl's home page</a> shows each step, and <a href="/best-ai-for-debate">the short answer on AI for debate</a> covers more tools.</p>
+  <p><a class="cta" href="/app">Start the loop with your motion</a></p>
+  <p>{PRICE_HTML}</p>
+  <p>Teachers can read <a href="/debateowl-vs-schoolai">DebateOwl vs SchoolAI</a>; Public Forum debaters, <a href="/debateowl-vs-publicforumai">DebateOwl vs PublicForumAI</a>.</p>
+</section>
+{faq_block("HyperWrite, briefly", faqs, "details")}
+{sources("HyperWrite pages we checked", [
+    ("hw1", "https://www.hyperwriteai.com/", "An AI writing assistant with autocomplete, web search and citations, a tools library and a Chrome extension."),
+    ("hw2", "https://www.hyperwriteai.com/aitools/debate-assistant", "Debate Assistant: arguments for and against a proposition, backed by statistics, studies and expert opinions via Search; a limited trial."),
+    ("hw3", "https://www.hyperwriteai.com/aitools/statement-deconstructor", "Statement Deconstructor: a statement broken into parts and presuppositions, counter-arguments to each, open-ended questions."),
+    ("hw4", "https://www.hyperwriteai.com/pricing", "Premium $19.99 a month or $192 a year; Ultra $44.99 a month or $348 a year; 250 AI messages a month on Premium; free accounts get limited monthly credits."),
+], VS_CHECKED_31)}
+"""
+    style = """
+body.loop{background:#F8F7F2}body.loop main{width:min(980px,calc(100% - 32px));margin:28px auto 72px}
+body.loop h1{font-size:clamp(2.2rem,5.4vw,3.6rem);color:#1E1B10}
+body.loop .intro{font-size:1.08rem}
+body.loop .cols{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+body.loop .cols>div{border-radius:22px;padding:4px 20px 10px}
+body.loop .hw{background:#EFEBDD}body.loop .ow{background:#fff;border:3px solid #0A6FF0}
+body.loop .cols h3{display:flex;align-items:center}
+body.loop .cols ul{padding-left:1.1rem}body.loop .cols li{margin:8px 0}
+body.loop .ow ul{list-style:none;padding-left:0}body.loop .ow li{display:flex;align-items:flex-start}
+body.loop table{min-width:720px;background:#fff}body.loop td:nth-child(2){background:#EEF7FF}
+body.loop .when{border-top:2px solid #1E1B10;margin-top:28px}
+body.loop details{border-bottom:1px solid #D8D2BE;padding:10px 0}
+@media(max-width:760px){body.loop .cols{grid-template-columns:1fr}}
+"""
+    return {
+        "slug": "debateowl-vs-hyperwrite",
+        "lang": "en",
+        "body": "loop",
+        "published": NEW_VS_DATE,
+        "modified": NEW_VS_DATE,
+        "title": "DebateOwl vs HyperWrite: One-Shot Writer or Practice Loop | DebateOwl",
+        "description": "HyperWrite's Debate Assistant writes both sides in one go; DebateOwl writes your case, then drills and times you on it. Prices as of October 2026.",
+        "h1": "DebateOwl vs HyperWrite: a one-shot writer or a practice loop",
+        "question": "Should I use HyperWrite or DebateOwl to prepare a debate?",
+        "answer": answer,
+        "faqs": faqs,
+        "style": style,
+        "html_body": body,
+    }
+
+
+def page_schoolai():
+    answer = (
+        'For a debate club getting ready for a competition, pick DebateOwl: each student gets a case with "If they say… we answer…" replies '
+        "and timed rounds in School 4-6-6-3, Lincoln-Douglas or Public Forum, and its free timer, motion generator and flow sheet need no accounts at all. "
+        "For a whole class working with AI while you watch every chat, pick SchoolAI: it is a general classroom platform, not a debate product, "
+        "with a free teacher plan of 5 Space sessions a year. Below are five needs, each with a pick."
+    )
+    faqs = [
+        ("Does SchoolAI have debate templates?", "Its product pages we read describe none. Teachers build their own Spaces, so a debate activity is one you write, and a help article lists debates as an example for its time-based activity tool."),
+        ("Can I see my students' DebateOwl work?", "Not from a dashboard; DebateOwl has none. A student can export a case to Google Docs or PDF and share it with you."),
+        ("Is DebateOwl free for a school?", "The timer, motion generator, flow sheet and speech-time calculator are free, for any number of students, with no accounts. The app itself is paid per student after the trial."),
+    ]
+    needs = [
+        (
+            "Getting a debate running tomorrow",
+            'Put the <a href="/tools/debate-timer">free debate timer</a> on the projector, draw a motion with the <a href="/tools/debate-motion-generator">motion generator</a>, and print a <a href="/tools/debate-flow-sheet">flow sheet</a> for each student. Nobody signs up and nothing is installed.',
+            'Sign up free with Google, Microsoft, Clever, ClassLink or email, build a Space and launch it. Students enter its code at schoolai.com/join or scan a QR code, and can join only while it is running. <a href="#sa8">S8</a> <a href="#sa3">S3</a> <a href="#sa4">S4</a>',
+            "DebateOwl's free tools, when the lesson is a live debate in the room.",
+            "owl",
+        ),
+        (
+            "Student accounts",
+            "The free tools need none. For the app, each student signs up for their own account; there is no class roster and no way to add a class at once. It is for students aged 13 and older.",
+            'Students join a running Space by code or link, and rostering through your school\'s systems comes with paid plans. <a href="#sa3">S3</a> <a href="#sa6">S6</a>',
+            "SchoolAI, if every student in a class needs to be in one place without separate sign-ups.",
+            "sa",
+        ),
+        (
+            "Seeing what each student does",
+            "No teacher view. Each student's cases and rounds stay in that student's account, and the free timer keeps the round in the browser, not on a server.",
+            'Teachers see every conversation in real time, and Mission Control shows who is engaged and who is struggling. Reviewing student chats, down to a single chat, is on the free plan. <a href="#sa1">S1</a> <a href="#sa2">S2</a> <a href="#sa5">S5</a>',
+            "SchoolAI. This is the job it was built for.",
+            "sa",
+        ),
+        (
+            "Cost per student",
+            "The free tools cost nothing for the whole class. The app is $5 a month per student after a 3-day trial, so a club of six is $30 a month plus tax. DebateOwl lists no school plan.",
+            'Free for teachers, capped at 5 Space sessions a year. Pro and Scale are sold only to schools and districts, and the pricing page shows no dollar figures, so the cost per student is whatever your school agrees. <a href="#sa5">S5</a> <a href="#sa6">S6</a>',
+            "SchoolAI's free plan for a few AI lessons a year; DebateOwl for a handful of competitors practising every week.",
+            "both",
+        ),
+        (
+            "Debate formats",
+            "The free timer has presets for Public Forum, Lincoln-Douglas, Policy, British Parliamentary, World Schools, Asian Parliamentary and the School 4-6-6-3 format, and lets you build your own. The app runs timed practice rounds in three of them: School 4-6-6-3, Lincoln-Douglas and Public Forum.",
+            'Its product pages name no competitive debate format. A help article gives debates as one use of its time-based activity tool. <a href="#sa9">S9</a>',
+            "DebateOwl.",
+            "owl",
+        ),
+    ]
+    cards = "".join(
+        f'<article class="need {cls}"><h3>{esc(title)}</h3>'
+        f'<div class="split"><div><p class="who">DebateOwl</p><p>{owl}</p></div><div><p class="who">SchoolAI</p><p>{sa}</p></div></div>'
+        f'<p class="pick">{TICK if cls in ("owl", "both") else ""}<strong>Pick:</strong>&nbsp;{esc(pick)}</p></article>'
+        for title, owl, sa, pick, cls in needs
+    )
+    body = f"""
+<section class="needs">
+  <h2>Five things a debate teacher needs</h2>
+  <p>Written for a debate coach or a class teacher choosing for this term, as of October 2026. SchoolAI facts come from its own site and help centre; DebateOwl facts from its app.</p>
+  {cards}
+</section>
+<section class="privacy">
+  <h2>Student data, in one paragraph each</h2>
+  <p><strong>SchoolAI</strong> lists SOC 2 Type 2, FERPA, COPPA and GDPR compliance on its trust page, and says it does not use student data to train AI models. A standard data processing agreement is available on every plan; custom changes to it come with paid plans. <a href="#sa7">S7</a> <a href="#sa5">S5</a></p>
+  <p><strong>DebateOwl</strong>'s free tools ask for no sign-up, so there are no student accounts to manage. The app is for users 13 and older and keeps each student's work behind that student's own sign-in.</p>
+</section>
+<section class="plan">
+  <h2>A plain plan for a debate class</h2>
+  <ol>
+    <li>This week: run a live debate with DebateOwl's free tools. No accounts.</li>
+    <li>If you want every student talking to an AI under your eye: try SchoolAI's free plan, and save its 5 sessions for the lessons that need them.</li>
+    <li>When the club has a competition: have the competitors start DebateOwl's 3-day trial and prepare the real motion.</li>
+  </ol>
+  <p><a class="cta" href="/tools/debate-timer">Open the free timer for tomorrow</a></p>
+  <p>{PRICE_HTML}</p>
+  <p><a href="/">The DebateOwl home page</a> explains the app for students. For more tools by scenario, see <a href="/best-ai-for-debate">which AI is best for debate</a>, <a href="/debateowl-vs-publicforumai">DebateOwl vs PublicForumAI</a> for a Public Forum squad, and <a href="/debateowl-vs-claude">one prep night in Claude and DebateOwl</a>.</p>
+</section>
+{faq_block("Coaches also ask", faqs, "h3")}
+{sources("SchoolAI pages for this checklist", [
+    ("sa1", "https://schoolai.com/products/spaces", "Teachers see every conversation in real time."),
+    ("sa2", "https://schoolai.com/products/mission-control", "Mission Control shows who is engaged, who is struggling, and what to do next."),
+    ("sa3", "https://help.schoolai.com/en/articles/17591237-create-launch-and-share-spaces", "Students join at schoolai.com/join with a code, or by QR code or link; Spaces can go to Google Classroom, Canvas or Schoology."),
+    ("sa4", "https://help.schoolai.com/en/articles/10280003-getting-students-into-spaces", "Students can only join an active session."),
+    ("sa5", "https://help.schoolai.com/en/articles/15889358-understanding-the-new-schoolai-free-plan", "5 Space sessions a year on the free plan; chat review with single-chat drill-down included; Pro and Scale only through a school or district purchase."),
+    ("sa6", "https://schoolai.com/pricing", "Free Trial, Pro and Scale plans, with no dollar prices shown; rostering and LMS integration on paid plans."),
+    ("sa7", "https://schoolai.com/trust", "SOC 2 Type 2, FERPA, COPPA and GDPR listed as compliant; student data not used to train AI models."),
+    ("sa8", "https://app.schoolai.com/welcome/sign-up", "Teacher sign-up with Google, Microsoft, Clever, ClassLink or email; free for teachers."),
+    ("sa9", "https://help.schoolai.com/en/articles/11535357-use-the-time-based-activity-tool", "Debates or discussions listed as a use of the time-based activity tool."),
+], VS_CHECKED_31)}
+"""
+    style = """
+body.coach{background:#F4F8FB}body.coach main{width:min(1000px,calc(100% - 32px));margin:28px auto 72px}
+body.coach h1{font-size:clamp(2.2rem,5.4vw,3.6rem);color:#10283A}
+body.coach .need{background:#fff;border-radius:22px;padding:6px 20px 12px;margin:14px 0;border-left:8px solid #9FB4C6}
+body.coach .need.owl{border-left-color:#0A6FF0}body.coach .need.sa{border-left-color:#7A4FD6}body.coach .need.both{border-left-color:#14B37D}
+body.coach .split{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+body.coach .who{font-family:Fredoka,Nunito,sans-serif;text-transform:uppercase;letter-spacing:.06em;font-size:.8rem;color:#4A6378;margin:6px 0 0}
+body.coach .pick{display:flex;align-items:center;flex-wrap:wrap;background:#F1F6FA;border-radius:12px;padding:8px 12px;margin:6px 0 0}
+body.coach .privacy{border-top:1px solid #CDD7E4;margin-top:22px}
+body.coach .plan{background:#10283A;color:#EAF3FB;border-radius:26px;padding:6px 24px 18px;margin:24px 0}
+body.coach .plan a:not(.cta){color:#FCE48A}body.coach .plan li{margin:6px 0}
+@media(max-width:760px){body.coach .split{grid-template-columns:1fr}}
+"""
+    return {
+        "slug": "debateowl-vs-schoolai",
+        "lang": "en",
+        "body": "coach",
+        "published": NEW_VS_DATE,
+        "modified": NEW_VS_DATE,
+        "title": "DebateOwl vs SchoolAI for Debate Teachers | DebateOwl",
+        "description": "Setup, student accounts, cost per student and formats: what a debate teacher needs from DebateOwl or SchoolAI, with a plain pick, as of October 2026.",
+        "h1": "DebateOwl vs SchoolAI: a checklist for debate teachers",
+        "question": "Should a teacher use DebateOwl or SchoolAI for debate?",
+        "answer": answer,
+        "faqs": faqs,
+        "style": style,
+        "html_body": body,
+    }
+
+
 def visible_text(html):
     text = re.sub(r"<script[\s\S]*?</script>", " ", html)
     text = re.sub(r"<style[\s\S]*?</style>", " ", text)
@@ -1591,7 +2138,8 @@ def visible_text(html):
 
 def write_comparison_pages(public: Path):
     ensure_fonts(public)
-    pages = [page_ladder(), page_price(), page_chat(), page_teachers(), page_prep(), page_pf(), page_hu(), page_es(), page_hu_best(), page_argufight(), page_mindduel()]
+    pages = [page_ladder(), page_price(), page_chat(), page_teachers(), page_prep(), page_pf(), page_hu(), page_es(), page_hu_best(), page_argufight(), page_mindduel(),
+             page_claude(), page_publicforumai(), page_gemini(), page_hyperwrite(), page_schoolai()]
     h2s = {}
     answers = []
     for page in pages:

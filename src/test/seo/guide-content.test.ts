@@ -53,6 +53,8 @@ const ALLOWED_REPEATS = new Set([
   "The DebateOwl app has no free plan (3-day free trial, then $5/month); the separate timer, motion generator, flow sheet and speech-time calculator are free with no account",
   "Facts about other products come from their own websites, checked on October 29, 2026",
   "By the DebateOwl team · Published October 29, 2026 · Last updated October 29, 2026",
+  "Facts about other products come from their own websites, checked on October 31, 2026",
+  "By the DebateOwl team · Published October 31, 2026 · Last updated October 31, 2026",
 ]);
 
 describe("generated guide pages", () => {
