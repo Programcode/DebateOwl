@@ -3,7 +3,7 @@ import { z } from 'zod';
 
 export const AttackInputSchema = z.object({
   // A catalog key, not text: the form shows it in the interface language.
-  caseText: z.string().min(1, 'validation.caseTextRequired'),
+  caseText: z.string().trim().min(1, 'validation.caseTextRequired'),
   aggressiveness: z.enum(['mild', 'moderate', 'ruthless']),
   judgeParadigm: z.enum(['logic', 'values', 'policy']),
   detectFallacies: z.boolean(),

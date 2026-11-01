@@ -204,7 +204,7 @@ export function SparringRound({
                   {!judging && <ClockAnnouncer secondsLeft={session.timerRemainingSeconds} running={session.timerRunning} />}
                 </div>
               </div>
-              <Progress value={judging ? 0 : timerProgress} className={cn('mt-5 h-2', tone === 'over' ? '[&>div]:bg-destructive' : isUrgent ? '[&>div]:bg-amber-500' : '[&>div]:bg-primary')} aria-label={t('sparring.round.timeRemaining', 'Time remaining')} />
+              <Progress value={judging ? 0 : timerProgress} className={cn('mt-5 h-2', tone === 'over' ? '[&>div]:bg-destructive' : isUrgent ? '[&>div]:bg-amber-500' : '[&>div]:bg-primary')} aria-label={t('sparring.round.timeRemaining', '{{time}} remaining', { time: formatRoundTime(session.timerRemainingSeconds) })} />
               {awaitingStart && (
                 <div className="mt-4 flex flex-wrap items-center gap-3" data-testid="sparring-ready">
                   {!voice && (
