@@ -159,3 +159,22 @@ test('language menu closes once a language is chosen', async ({ page }) => {
   await expect(page.getByRole('radiogroup')).toHaveCount(0);
   await expect(page.locator('html')).toHaveAttribute('lang', 'hu');
 });
+
+// Bug bash 2026-11-01: a motion or argument of only spaces passed validation and spent an AI request.
+test('a motion or argument of only spaces counts as blank', async ({ page }) => {
+  await stubSupabaseSession(page);
+  const aiCalls: string[] = [];
+  page.on('request', (request) => { if (request.url().includes('/functions/v1/ai')) aiCalls.push(request.url()); });
+
+  await page.goto('/app/generate');
+  await page.getByLabel('Motion / topic *').fill('     ');
+  await page.getByRole('button', { name: 'Generate debate case' }).click();
+  await expect(page.getByText('Motion is required')).toBeVisible();
+
+  await page.goto('/app/attack');
+  await page.getByRole('textbox', { name: /argument/i }).first().fill('   ');
+  await page.getByRole('button', { name: 'Find weaknesses' }).click();
+  await expect(page.getByText('Case text is required')).toBeVisible();
+
+  expect(aiCalls).toEqual([]);
+});
