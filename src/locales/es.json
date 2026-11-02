@@ -883,7 +883,7 @@
     "about": "Acerca de",
     "contact": "Contacto",
     "press": "Kit de prensa",
-    "copyright": "© 2026 Pi-Stack. Todos los derechos reservados.",
+    "copyright": "© 2026 Ádám Gáborjáni. Todos los derechos reservados.",
     "formerly": "{{product}}, antes DebateLab.",
     "navLabel": "Pie de página",
     "pricingGuide": "Detalles de precios",
@@ -1895,8 +1895,8 @@
     "question": "¿Qué es {{product}}?",
     "answer": "<home>{{product}}</home> es una app de preparación y práctica de debate con IA para estudiantes y debatientes de competición. Te ayuda a escribir un caso, encontrar los puntos débiles de un argumento, buscar evidencia con citas y practicar rondas cronometradas contra un oponente de IA.",
     "notThis": "{{product}} es una app de debate para estudiantes, no un producto de deportes ni de visión por computadora. El <press>kit de prensa</press> reúne los datos básicos y el logotipo.",
-    "makerHeading": "Quién lo hace",
-    "maker": "{{product}} lo desarrolla una persona estudiante y lo publica <pistack>Pi-Stack</pistack>.",
+    "makerHeading": "Quién gestiona {{product}}",
+    "maker": "{{product}} lo gestiona Ádám Gáborjáni, un estudiante y desarrollador independiente de Hungría. Pi-Stack (<pistack>pi-stack.org</pistack>) es el nombre con el que publica sus proyectos, y <github>Programcode</github> es su nombre de usuario en GitHub. Contacto: <email>{{email}}</email>.",
     "nameHeading": "El nombre",
     "name": "{{product}} se llamaba DebateLab, en debate.pi-stack.org, hasta el {{date}}.",
     "pricingHeading": "Precios",
@@ -1916,7 +1916,7 @@
     "formerlyLabel": "Nombre anterior",
     "formerly": "{{name}}, en {{host}}, renombrado el {{date}}",
     "makerLabel": "Creador",
-    "maker": "Adam (<github>Programcode</github> en GitHub), estudiante y desarrollador en Hungría; lo publica <pistack>Pi-Stack</pistack>",
+    "maker": "Ádám Gáborjáni (<github>Programcode</github> en GitHub), estudiante y desarrollador independiente en Hungría, que publica sus proyectos como Pi-Stack (<pistack>pi-stack.org</pistack>)",
     "launchedLabel": "Lanzamiento",
     "launched": "2026, con el nombre {{name}}",
     "languagesLabel": "Idiomas",
@@ -1944,7 +1944,9 @@
   "termsPage": {
     "title": "Términos de servicio",
     "lastUpdated": "Última actualización",
-    "date": "28 de octubre de 2026",
+    "date": "2 de noviembre de 2026",
+    "operatorLabel": "Responsable",
+    "operator": "{{product}} lo gestiona Ádám Gáborjáni, en Hungría, que publica como Pi-Stack (<pistack>pi-stack.org</pistack>). Contacto: <contact>{{contactEmail}}</contact>.",
     "s1": "Aceptación de términos",
     "p1": "Al usar DebateOwl, aceptas estos términos. Si no estás de acuerdo, no uses el servicio.",
     "s2": "Descripción del servicio",
@@ -2733,7 +2735,7 @@
     },
     "about": {
       "title": "Acerca de {{product}} | {{brand}}",
-      "description": "{{product}} es una app de preparación y práctica de debate con IA para estudiantes, desarrollada por una persona estudiante y publicada por Pi-Stack."
+      "description": "{{product}} es una app de preparación y práctica de debate con IA para estudiantes, gestionada por Ádám Gáborjáni, un estudiante y desarrollador independiente de Hungría."
     },
     "contact": {
       "title": "Contacto | {{brand}}",

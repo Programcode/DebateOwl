@@ -8,7 +8,7 @@
 //   references do not resolve or whose WebSite and SoftwareApplication are not
 //   named for the product, or a page whose publisher or about names an @id the
 //   home page does not define, or a home-page Organization not named for the
-//   product or without its logo and parent;
+//   product or without its logo and founder;
 // - an indexed page without the favicon and 192px icon links, or whose meta
 //   author is not the organization;
 // - two indexed pages with the same <title>, which then compete for one query;
@@ -174,14 +174,16 @@ function checkStructuredData(where, data, body) {
   const sameAs = organization.sameAs;
   // sameAs is optional (site.json lists only profiles that spell the name "DebateOwl"), but when present it is a non-empty list of https URLs.
   if (sameAs !== undefined && (!Array.isArray(sameAs) || !sameAs.length || sameAs.some((url) => !url.startsWith('https://')))) report(where, 'Organization.sameAs is not a list of https URLs');
-  // One name for one entity: the Organization on this domain is the product, and the company
-  // that builds it is its parent, never a sameAs.
+  // One name for one entity: the Organization on this domain is the product, and the person
+  // who runs it is its founder, never a sameAs.
   if (organization.name !== SITE.product) report(where, `Organization.name is "${organization.name}", not the product name "${SITE.product}"`);
   const logo = organization.logo ?? {};
   if (logo['@type'] !== 'ImageObject' || !logo.url?.startsWith(`${SITE_ORIGIN}/`) || !logo.width || !logo.height) report(where, 'Organization.logo is not an ImageObject on this site with a width and height');
-  const parent = organization.parentOrganization ?? {};
-  if (!parent.name || !parent.url) report(where, 'Organization.parentOrganization has no name and url');
-  else if (sameAs?.includes(parent.url)) report(where, `Organization.sameAs lists the parent ${parent.url}`);
+  const founder = organization.founder ?? {};
+  if (founder['@type'] !== 'Person' || !founder.name || !founder.url) report(where, 'Organization.founder is not a Person with a name and url');
+  else if (sameAs?.includes(founder.url)) report(where, `Organization.sameAs lists the founder ${founder.url}`);
+  // Pi-Stack is the name the founder publishes under, not a company: no parent organization or legal name.
+  if (organization.parentOrganization || organization.legalName) report(where, 'Organization has a parentOrganization or legalName');
   const alternates = byType('WebSite').alternateName ?? [];
   if (!alternates.some((name) => name !== SITE.product)) report(where, 'WebSite.alternateName only repeats the name');
 }

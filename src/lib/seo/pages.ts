@@ -11,13 +11,15 @@ export const ORGANIZATION_ID = `${SITE_ORIGIN}/#organization`;
 
 /**
  * The Organization behind the site, named for the product so search engines
- * see one name for one entity. Pi-Stack, which builds it, is its parent, not a
- * sameAs: a sameAs profile is the same entity elsewhere. site.json lists only
- * profiles that spell the name "DebateOwl" and that DebateOwl itself runs; with
- * none, the node has no sameAs. /press, the fact sheet, is its subjectOf.
+ * see one name for one entity. Its founder is the person who runs it; Pi-Stack
+ * is only the name he publishes under, not a company, so it appears as his URL
+ * and never as a parent organization or legal name. A sameAs profile is the same
+ * entity elsewhere: site.json lists only profiles that spell the name "DebateOwl"
+ * and that DebateOwl itself runs; with none, the node has no sameAs. /press, the
+ * fact sheet, is its subjectOf.
  */
 export function organizationNode() {
-  const { name, logo, description, disambiguatingDescription, sameAs, parent } = site.organization;
+  const { name, logo, description, disambiguatingDescription, sameAs, operator } = site.organization;
   return {
     '@type': 'Organization',
     '@id': ORGANIZATION_ID,
@@ -29,7 +31,7 @@ export function organizationNode() {
     disambiguatingDescription,
     email: site.contactEmail,
     contactPoint: { '@type': 'ContactPoint', contactType: 'customer support', email: site.contactEmail, availableLanguage: ['en', 'hu', 'es'] },
-    parentOrganization: { '@type': 'Organization', '@id': `${parent.url}#organization`, name: parent.name, url: parent.url },
+    founder: { '@type': 'Person', name: operator.name, url: operator.publishesAs.url, sameAs: [operator.github] },
     ...(sameAs.length ? { sameAs } : {}),
     subjectOf: { '@type': 'WebPage', '@id': `${SITE_ORIGIN}/press#webpage`, url: `${SITE_ORIGIN}/press`, name: PAGE_HEADS['/press'].title },
   };

@@ -7,6 +7,7 @@ DebateOwl runs at https://debateowl.com/. It is a separate product from debatela
 ## Key facts (as of October 2026)
 
 - Who it is for: students, competitive debaters and their coaches.
+- Who runs it: Ádám Gáborjáni, an independent student developer in Hungary. Pi-Stack (pi-stack.org) is the name he publishes his projects under, and Programcode is his GitHub username. Contact: hello@debateowl.com.
 - 8 prep modes: Case generator, Brainstorm, Factoids, Flowchart, Case attacker, Ask coach, Crossfire and Sparring. Plus 3 utilities: Library, Debate timer and History.
 - Case format: A DebateOwl case is written the way school debaters prepare: an opening, two to four arguments each with an explanation, evidence and why it matters, "If they say… we answer…" replies, a closing line and the sources it used.
 - Second speech (R2): no new arguments; about two minutes reinforcing our arguments, then about four minutes of "If they say X, we answer Y" replies.
@@ -21,7 +22,7 @@ DebateOwl runs at https://debateowl.com/. It is a separate product from debatela
 
 - [Home](https://debateowl.com/): what DebateOwl is, the 8 prep modes, pricing and FAQ
 - [Pricing](https://debateowl.com/debateowl-pricing): trial, Pro and what each includes
-- [About](https://debateowl.com/about): what DebateOwl is, who makes it and its former name
+- [About](https://debateowl.com/about): what DebateOwl is, who runs it and its former name
 - [Contact](https://debateowl.com/contact): email hello@debateowl.com for support and feedback, privacy@debateowl.com for privacy and data requests
 - [Press kit and facts](https://debateowl.com/press): a one-sentence definition, former name, maker, languages, pricing, logo downloads and what DebateOwl is not
 - [Full text](https://debateowl.com/llms-full.txt): this file plus the plain text of the home page, About, Which AI is best for debate? and the press kit
