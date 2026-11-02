@@ -5,11 +5,8 @@
 @font-face{font-family:'Fredoka Fallback';src:local('Arial');size-adjust:94.4%;ascent-override:102.8%;descent-override:25.4%;line-gap-override:0%}
 .goal-page{font-family:'Nunito Variable','Nunito Fallback',ui-rounded,ui-sans-serif,system-ui,sans-serif;font-weight:600}
 .goal-page h1,.goal-page h2,.goal-page h3,.goal-page .btn,.goal-page .brand,.goal-page summary{font-family:'Fredoka Variable','Fredoka Fallback','Nunito Variable',ui-rounded,system-ui,sans-serif;font-weight:600;letter-spacing:-.02em}
-.goal-page .direct{max-width:840px;font-size:clamp(1.08rem,1.8vw,1.28rem);margin:8px 0 0}
+.goal-page .direct{max-width:840px;font-size:clamp(1.08rem,1.8vw,1.28rem);margin:0 0 8px;border:1px solid var(--line);border-left:4px solid var(--brand);border-radius:20px;background:rgba(19,30,51,.85);padding:20px 24px}
 .goal-page .disclosure{max-width:840px;color:var(--muted);font-size:.98rem;margin-top:8px}
-.goal-page .picks{list-style:none;padding:0;margin:12px 0}
-.goal-page .picks li{padding:4px 0}
-.check{color:#14B37D;font-weight:800;margin-right:.35em}
 .checklist{list-style:none;padding:0;margin:14px 0;display:grid;gap:8px}.checklist label{display:flex;gap:10px;align-items:flex-start;border:1px solid var(--line);border-radius:14px;padding:10px 14px;background:rgba(255,255,255,.05);cursor:pointer}.checklist input{accent-color:#14B37D;width:1.1rem;height:1.1rem;margin-top:5px;flex:none}
 .hero .price{max-width:800px;color:var(--muted);margin:14px 0 0}
 .callout{max-width:840px;border:1px solid var(--line);border-radius:16px;padding:14px 18px;background:rgba(255,255,255,.05);margin:18px 0 0}
