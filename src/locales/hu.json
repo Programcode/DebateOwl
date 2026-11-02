@@ -888,7 +888,8 @@
     "navLabel": "Lábléc",
     "pricingGuide": "Árak részletei",
     "compareTools": "MI-alapú vitaeszközök összehasonlítása",
-    "aiDebate": "MI-vitapartner"
+    "aiDebate": "MI-vita",
+    "aiDebatePartner": "MI-vitapartner"
   },
   "announcements": {
     "regionLabel": "Közlemény",
@@ -1076,7 +1077,9 @@
       "debateowl-vs-kialo-edu": "{{product}} vagy Kialo Edu",
       "debateowl-vs-windebate": "{{product}} vagy WinDebate",
       "debateowl-vs-debateclub": "{{product}} vagy DebateClub"
-    }
+    },
+    "aiDebate": "MI-vita",
+    "aiDebateInEnglish": "Vitázz egy MI ellen (angol nyelvű oldal)"
   },
   "finalCta": {
     "title": "Készen állsz a következő eseted felépítésére?",

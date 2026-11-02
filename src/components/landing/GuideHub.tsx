@@ -1,6 +1,7 @@
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
 import { localizedPath, useRouteLanguage } from "@/lib/seo/localized-routes";
+import { AI_DEBATE_LINKS, AI_DEBATE_PARTNER } from "@/lib/seo/ai-debate-cluster";
 import { Reveal } from "./Reveal";
 
 /**
@@ -32,6 +33,20 @@ const NATIVE_ANSWER = { hu: "/hu/melyik-ai-a-legjobb-vitara", es: "/es/mejor-ia-
 const chipClass = "inline-flex shrink-0 items-center whitespace-nowrap rounded-full border-2 border-border bg-card px-3.5 py-1.5 text-sm font-semibold text-foreground transition-colors hover:border-brand-tint-border hover:text-primary pointer-coarse:min-h-11";
 /** One sideways-scrolling row of chips per group on phones; the chips wrap from md up. */
 const chipRowClass = "-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 sm:-mx-6 sm:px-6 md:mx-0 md:flex-wrap md:overflow-visible md:px-0";
+
+/** One group of chips. Static pages, not app routes: a plain link loads each from the server. */
+const HubGroup = ({ id, title, links }: { id: string; title: string; links: readonly { path: string; label: string }[] }) => (
+    <nav aria-labelledby={`guide-hub-${id}`}>
+        <h3 id={`guide-hub-${id}`} className="mb-3 font-display text-lg font-[600] text-heading">{title}</h3>
+        <ul className={chipRowClass}>
+            {links.map(({ path, label }) => (
+                <li key={path} className="shrink-0">
+                    <a href={path} className={chipClass}>{label}</a>
+                </li>
+            ))}
+        </ul>
+    </nav>
+);
 
 const HubHeading = () => {
     const { t } = useTranslation();
@@ -68,6 +83,10 @@ const TranslatedToolsHub = ({ language }: { language: "hu" | "es" }) => {
                     {/* The English home page lists every guide; a plain link loads it from the server. */}
                     <p className="mt-5 flex flex-col items-start gap-2">
                         <a href={NATIVE_ANSWER[language]} hrefLang={language} className="inline-flex items-center font-semibold text-primary underline-offset-4 hover:underline pointer-coarse:min-h-11">{t('guideHub.nativeAnswer')}</a>
+                        {/* No translated AI debate page yet, so this one is the English page. */}
+                        {AI_DEBATE_PARTNER && (
+                            <a href={AI_DEBATE_PARTNER.path} hrefLang="en" className="inline-flex items-center font-semibold text-primary underline-offset-4 hover:underline pointer-coarse:min-h-11">{t('guideHub.aiDebateInEnglish')}</a>
+                        )}
                         {language === "hu" && (
                             <a href="/hu/mi-vitafelkeszules" hrefLang="hu" className="inline-flex items-center font-semibold text-primary underline-offset-4 hover:underline pointer-coarse:min-h-11">{t('guideHub.hungarianPrep')}</a>
                         )}
@@ -90,20 +109,10 @@ const GuideHub = () => {
                 <HubHeading />
 
                 <Reveal delay={0.05} className="grid grid-cols-1 gap-6 md:grid-cols-2 md:gap-8 lg:grid-cols-3">
+                    {/* The AI debate pages by the phrases people search for them with, from src/config/ai-debate-cluster.json. */}
+                    <HubGroup id="ai-debate" title={t('guideHub.aiDebate')} links={AI_DEBATE_LINKS.map(({ path, anchor }) => ({ path, label: anchor[0].toUpperCase() + anchor.slice(1) }))} />
                     {GROUPS.map((group) => (
-                        <nav key={group.id} aria-labelledby={`guide-hub-${group.id}`}>
-                            <h3 id={`guide-hub-${group.id}`} className="mb-3 font-display text-lg font-[600] text-heading">{t(`guideHub.${group.id}`)}</h3>
-                            <ul className={chipRowClass}>
-                                {group.paths.map((path) => (
-                                    <li key={path} className="shrink-0">
-                                        {/* Static pages, not app routes: a plain link loads each from the server. */}
-                                        <a href={path} className={chipClass}>
-                                            {t(`guideHub.links.${path.slice(1)}`)}
-                                        </a>
-                                    </li>
-                                ))}
-                            </ul>
-                        </nav>
+                        <HubGroup key={group.id} id={group.id} title={t(`guideHub.${group.id}`)} links={group.paths.map((path) => ({ path, label: t(`guideHub.links.${path.slice(1)}`) }))} />
                     ))}
                 </Reveal>
             </div>

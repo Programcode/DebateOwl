@@ -3,6 +3,7 @@ import site from '@/config/site.json';
 import { OwlMark } from '@/components/brand/Owl';
 import { Link } from "react-router-dom";
 import { localizedPath, useRouteLanguage } from "@/lib/seo/localized-routes";
+import { AI_DEBATE_LINKS } from "@/lib/seo/ai-debate-cluster";
 
 const Footer = () => {
     const { t } = useTranslation();
@@ -24,10 +25,12 @@ const Footer = () => {
                         <Link to={localizedPath("/tools", language)} className="inline-flex min-h-6 items-center text-muted-foreground hover:text-foreground transition-colors underline-offset-4 hover:underline pointer-coarse:min-h-11 pointer-coarse:min-w-11 pointer-coarse:justify-center">
                             {t('tools:footer.freeTools')}
                         </Link>
-                        {/* English only: there is no Hungarian or Spanish /ai-debate. */}
-                        <Link to="/ai-debate" className="inline-flex min-h-6 items-center text-muted-foreground hover:text-foreground transition-colors underline-offset-4 hover:underline pointer-coarse:min-h-11 pointer-coarse:min-w-11 pointer-coarse:justify-center">
-                            {t('footer.aiDebate')}
-                        </Link>
+                        {/* /ai-debate is English only. English pages list it in the AI debate block below, so this link is for the other languages. */}
+                        {language !== "en" && (
+                            <Link to="/ai-debate" className="inline-flex min-h-6 items-center text-muted-foreground hover:text-foreground transition-colors underline-offset-4 hover:underline pointer-coarse:min-h-11 pointer-coarse:min-w-11 pointer-coarse:justify-center">
+                                {t('footer.aiDebatePartner')}
+                            </Link>
+                        )}
                         {/* Static guide pages, not app routes: plain links load them from the server. */}
                         <a href="/debateowl-pricing" className="inline-flex min-h-6 items-center text-muted-foreground hover:text-foreground transition-colors underline-offset-4 hover:underline pointer-coarse:min-h-11 pointer-coarse:min-w-11 pointer-coarse:justify-center">
                             {t('footer.pricingGuide')}
@@ -62,6 +65,21 @@ const Footer = () => {
                         <p>{t('footer.copyright')}</p>
                     </div>
                 </div>
+                {/* The AI debate pages, by the phrases people search for them with. They are in English, so only the English pages list them. */}
+                {language === "en" && (
+                    <nav aria-labelledby="footer-ai-debate" className="mt-8 flex flex-col items-center gap-2 text-sm md:items-start">
+                        <p id="footer-ai-debate" className="font-semibold text-foreground">{t('footer.aiDebate')}</p>
+                        <ul className="flex flex-wrap justify-center gap-x-4 gap-y-1 md:justify-start">
+                            {AI_DEBATE_LINKS.map(({ path, anchor }) => (
+                                <li key={path}>
+                                    <a href={path} className="inline-flex min-h-6 items-center text-muted-foreground hover:text-foreground transition-colors underline-offset-4 hover:underline pointer-coarse:min-h-11">
+                                        {anchor[0].toUpperCase() + anchor.slice(1)}
+                                    </a>
+                                </li>
+                            ))}
+                        </ul>
+                    </nav>
+                )}
             </div>
         </footer>
     );

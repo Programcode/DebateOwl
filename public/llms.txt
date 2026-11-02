@@ -21,7 +21,6 @@ DebateOwl runs at https://debateowl.com/. It is a separate product from debatela
 
 - [Home](https://debateowl.com/): what DebateOwl is, the 8 prep modes, pricing and FAQ
 - [Pricing](https://debateowl.com/debateowl-pricing): trial, Pro and what each includes
-- [AI debate partner](https://debateowl.com/ai-debate): argue one side of a motion and an AI opponent rebuts it. One exchange and one follow-up are free with no account; full timed rounds need the 3-day trial, then $5/month + tax
 - [About](https://debateowl.com/about): what DebateOwl is, who makes it and its former name
 - [Contact](https://debateowl.com/contact): email hello@debateowl.com for support and feedback, privacy@debateowl.com for privacy and data requests
 - [Press kit and facts](https://debateowl.com/press): a one-sentence definition, former name, maker, languages, pricing, logo downloads and what DebateOwl is not
@@ -56,6 +55,17 @@ Free to use, no account needed, and they run in the browser.
 - [Generador de mociones de debate | DebateOwl](https://debateowl.com/es/tools/generador-mociones): Generador gratis de mociones de debate que saca una moción al azar, o tres para practicar el veto, de 300 mociones originales por tema y tipo.
 - [Hojas de flujo de debate imprimibles | DebateOwl](https://debateowl.com/es/tools/hoja-de-flujo): Hojas de flujo de debate gratis e imprimibles, con una columna por discurso en PF, LD, Policy, BP, World Schools o Asian Parliamentary, en A4 o Carta.
 - [Calculadora de tiempo de discurso | DebateOwl](https://debateowl.com/es/tools/calculadora-tiempo-discurso): Calculadora gratis que cuenta las palabras de un discurso de debate y muestra cuánto dura a ritmo lento, medio o rápido y en qué turnos cabe.
+
+## AI debate
+
+- [AI debate partner](https://debateowl.com/ai-debate): argue a motion against an AI opponent that rebuts your argument
+- [AI debate practice](https://debateowl.com/ai-debate-practice): timed Sparring rounds against an AI opponent in School 4-6-6-3, Lincoln-Douglas and Public Forum, ending in a judged verdict
+- [AI debate coach](https://debateowl.com/ai-debate-coach): ask about strategy, arguments, rebuttals and speeches, with answers tied to your motion, side and speaker role
+- [Best AI debate tools](https://debateowl.com/best-ai-debate-tools): AI debate tools compared on cases, replies, timed rounds and price
+- [Which AI is best for debate](https://debateowl.com/best-ai-for-debate): the best AI for each debate job: research, case drafting, rebuttals, argument mapping, timed practice and class use
+- [AI debate generator](https://debateowl.com/ai-debate-case-generator): turns a motion into a case you can read out: an opening, arguments with evidence, "If they say…" replies, a closing line and sources to check
+- [Free vs paid AI debate tools](https://debateowl.com/free-vs-paid-ai-debate-tools): what free plans include and what paid AI debate tools cost, checked October 2026
+- [How to prepare for a debate with AI](https://debateowl.com/how-to-prepare-for-a-debate-with-ai): a 7-step AI prep plan with a worked example of "If they say X, we answer Y" replies
 
 ## Compare
 

@@ -888,7 +888,8 @@
     "navLabel": "Pie de página",
     "pricingGuide": "Detalles de precios",
     "compareTools": "Comparar herramientas de IA para debate",
-    "aiDebate": "Compañero de debate con IA"
+    "aiDebate": "Debate con IA",
+    "aiDebatePartner": "Compañero de debate con IA"
   },
   "announcements": {
     "regionLabel": "Anuncio",
@@ -1076,7 +1077,9 @@
       "debateowl-vs-kialo-edu": "{{product}} frente a Kialo Edu",
       "debateowl-vs-windebate": "{{product}} frente a WinDebate",
       "debateowl-vs-debateclub": "{{product}} frente a DebateClub"
-    }
+    },
+    "aiDebate": "Debate con IA",
+    "aiDebateInEnglish": "Debate contra una IA (página en inglés)"
   },
   "finalCta": {
     "title": "¿Listo para construir tu próximo caso?",

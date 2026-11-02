@@ -11,7 +11,9 @@
     "faq": "Gyakori kérdések",
     "otherTools": "További ingyenes eszközök",
     "ctaPricing": "Kezdd {{trialDays}} napos ingyenes próbával, bankkártya nélkül. Utána a {{product}} havi {{proMonthly}} dollár plusz adó.",
-    "ctaButton": "Ingyenes próba indítása"
+    "ctaButton": "Ingyenes próba indítása",
+    "aiDebate": "Vitáznál egy MI ellen?",
+    "aiDebateLink": "Próbálj ki egy MI-vitát (angol nyelvű oldal)"
   },
   "shortAnswer": {
     "hub": {
