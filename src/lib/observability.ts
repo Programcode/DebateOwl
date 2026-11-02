@@ -187,6 +187,10 @@ async function loadSentry(): Promise<SentryModule | null> {
         // reject with a plain { code, message } (EIP-1193). Nothing in the app
         // or its bundle rejects with that shape; our errors are Error objects.
         /^Object captured as promise rejection with keys: code, message$/,
+        // Jam's recorder (js.jam.dev, loaded by src/jam-loader.ts) bundles
+        // Rimless, which throws this when a message's source window is gone.
+        // Nothing in our code uses Rimless.
+        /Rimless Error: No target specified for postMessage/,
       ],
       // No sendDefaultPii: deprecated, and Sentry ignores it whenever
       // dataCollection is set. The block below is the only PII control.
