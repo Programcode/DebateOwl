@@ -11,6 +11,7 @@
 //   product or without its logo and parent;
 // - an indexed page without the favicon and 192px icon links, or whose meta
 //   author is not the organization;
+// - two indexed pages with the same <title>, which then compete for one query;
 // - an indexed page without its question H2 (#short-answer) as the first H2,
 //   unless the H1 is itself the question and a #short-answer paragraph
 //   (the extractable answer) comes before that H2;
@@ -190,6 +191,8 @@ const ICON_LINKS = ['href="/favicon.ico"', 'href="/icon-192.png" sizes="192x192"
 
 // Canonical URL -> the page's hreflang set, checked for agreement after the loop.
 const hreflangSets = new Map();
+// Indexed page title -> the first page that used it.
+const titles = new Map();
 
 for (const file of htmlFiles(DIST)) {
   const where = relative(DIST, file);
@@ -227,6 +230,9 @@ for (const file of htmlFiles(DIST)) {
   for (const link of ICON_LINKS) if (indexed && !head.includes(link)) report(where, `no icon link with ${link} in the head`);
   const author = head.match(/<meta name="author" content="([^"]*)"/)?.[1];
   if (indexed && author !== SITE.organization.name) report(where, `meta author is "${author}", not "${SITE.organization.name}"`);
+  const title = textOf(head.match(/<title>([\s\S]*?)<\/title>/)?.[1] ?? '');
+  if (indexed && titles.has(title)) report(where, `has the same title as ${titles.get(title)}: "${title}"`);
+  else if (indexed) titles.set(title, where);
   if (indexed && !NO_SHORT_ANSWER.has(routeOf(file))) {
     const h1 = body.match(/<h1\b[^>]*>([\s\S]*?)<\/h1>/);
     const firstH2At = body.search(/<h2\b/);

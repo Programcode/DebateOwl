@@ -10,19 +10,53 @@ A format guide's speech times must match src/lib/free-tools/formats.ts, which th
 
 GUIDES = {
     "ai-debate-practice": {
-        "modified": "2026-10-30",
+        "modified": "2026-11-02",
         "pricing_cta": True,
         "features": [
-            ("Practice against AI opponents", "Run a full Sparring round in School 4-6-6-3, Lincoln-Douglas or Public Forum, type or speak each speech, and finish with a judged verdict."),
-            ("Turn feedback into drills", "Take the weakest point from a verdict or a Crossfire debrief, rebuild it with Attack or Ask, and run that speech again."),
-            ("Keep private prep out of search", "Cases, sources, rounds and history stay inside your Current Debate behind sign-in. Only these public guides are indexed."),
+            ("A timed round against an AI opponent", "Run a full Sparring round in School 4-6-6-3, Lincoln-Douglas or Public Forum, type or speak each speech, and the AI opponent answers what you said."),
+            ("A scorecard out of 100", "The round ends with a judge's verdict and a score for each side in Logic, Evidence, Delivery and Strategy, each out of 25, with the reason behind every score."),
+            ("Turn feedback into drills", "Take the weakest point from the scorecard or a Crossfire debrief, rebuild it with Attack or Ask, and run that speech again."),
         ],
         "sections": [
-            ("Can practising debate against an AI actually make you better?", [
-                "Yes, if it shortens the loop of giving a speech, finding what failed, fixing one thing and giving it again. A useful session needs a motion, a side, real speech times, an opponent that responds to what you said and a verdict that names why you won or lost. {product}'s Sparring runs School 4-6-6-3, Lincoln-Douglas and Public Forum rounds this way. AI practice adds repetitions between team practices but does not replace them: judge adaptation, delivery under pressure and strategic judgement still develop fastest with a coach and real rounds.",
+            ("What an AI debate practice round is", [
+                "A practice round in {product} is called Sparring. You start it inside a Current Debate, so the motion you wrote your case for is the motion the AI opponent argues. You pick your side and a format, then the speeches run in that format's order, alternating between you and the AI opponent.",
+                {"steps": [
+                    "Choose School 4-6-6-3, Lincoln-Douglas or Public Forum, and your side.",
+                    "Give each of your speeches against the clock. The clock starts when you start speaking or typing, so reading the opponent's last speech does not eat into your time.",
+                    "The AI opponent replies with its own speech, aimed at the points you made, not at a script.",
+                    "After the last speech, the judge scores both sides and writes the verdict.",
+                ]},
+                "You can type each speech or speak it in the browser, so the same round works for rehearsing content at a desk or delivery out loud.",
+            ]),
+            ("Formats you can practise in", [
+                {"table": {
+                    "caption": "Sparring formats, with the speeches in each round and their times",
+                    "head": ["Format", "Speeches in a round", "About how long"],
+                    "rows": [
+                        ["School 4-6-6-3", "Introductor 4 minutes, R1 6, R2 6 and Conclusor 3, for each side: 8 speeches", "38 minutes"],
+                        ["Lincoln-Douglas", "Affirmative constructive 6, negative constructive 7, first affirmative rebuttal 4, negative rebuttal 6, second affirmative rebuttal 3", "26 minutes"],
+                        ["Public Forum", "Constructive 4, rebuttal 4, summary 3 and final focus 2, for each side: 8 speeches", "26 minutes"],
+                    ],
+                }},
+                "World Schools, British Parliamentary and other formats are not Sparring formats yet. For those you can still generate a case, get coaching and drill rebuttals, and time your speeches with the [free debate timer](/tools/debate-timer).",
+            ]),
+            ("What the feedback looks like", [
+                "Every round ends with a round review. It has the same parts each time, so you can compare one round with the next:",
+                {"list": [
+                    "Final result: who won the ballot, or a tie.",
+                    "Your score and the opponent's score, each out of 100.",
+                    "Four categories, each out of 25 for both sides: Logic, Evidence, Delivery and Strategy, with a note on the reason behind every score. Delivery is judged from the written speech, not from audio.",
+                    "The judge's verdict: the reason the round went the way it did.",
+                    "Key moments in the round, and what to work on next.",
+                    "The full transcript of the round. The review exports to DOCX or PDF.",
+                ]},
+                "Rounds and scorecards are saved to the Current Debate they belong to, and your History shows the score of each one, so you can see whether the same weakness keeps coming back.",
+            ]),
+            ("Start a practice round", [
+                "Open [the app](/app), start a Current Debate with your motion and choose Sparring. If you do not have a case yet, generate one first: the AI opponent is harder to beat when you have already read its likely replies. The [pricing page](/debateowl-pricing) lists what the trial and Pro include.",
             ]),
             ("What to look for in an AI practice partner", [
-                "Tick the lines that matter for your next month. The table below shows which tools do each one.",
+                "Tick the lines that matter for your next month. The table below shows how three kinds of practice partner do on each one.",
                 {"checklist": [
                     "The opponent replies to what I actually said, not to a script.",
                     "Rounds use my format's real speech times.",
@@ -33,36 +67,21 @@ GUIDES = {
                 ]},
                 "You may not need all six. A debater with a tournament motion needs the first four. Someone building confidence before a first round mostly needs the first one and a way to speak out loud.",
             ]),
-            ("How practice tools compare (as of October 2026)", [
+            ("How it compares", [
                 {"table": {
-                    "caption": "AI practice tools against the checklist, as of October 2026, from each product's own pages. Not stated means its pages do not say.",
+                    "caption": "Three kinds of AI practice partner against the checklist, checked on 2 November 2026 on each product's own pages. Not stated means its pages do not say.",
                     "head": ["Tool", "Replies to what you said", "Real speech times", "Verdict with reasons", "Drills from the verdict", "Your language", "Private prep"],
                     "rows": [
-                        ["[{product}](/)", "Yes: the AI opponent answers your speech", "Yes: School 4-6-6-3, LD and PF in Sparring", "Yes: a judged verdict that names the reason", "Yes: Crossfire, Attack, or regenerate the weak section", "English, Spanish, Hungarian", "Yes: behind sign-in, not indexed"],
+                        ["[{product}](/)", "Yes: the AI opponent answers your speech", "Yes: School 4-6-6-3, LD and PF in Sparring", "Yes: a scorecard out of 100 and a verdict that names the reason", "Yes: Crossfire, Attack, or regenerate the weak section", "English, Spanish, Hungarian", "Yes: behind sign-in, not indexed"],
                         ["[ChatGPT](https://chatgpt.com/pricing) or [Claude](https://claude.com/pricing), voice or chat", "Yes, in the chat", "Only if you set them", "Only if you ask", "Only if you ask", "Not stated on their pricing pages", "Not stated"],
-                        ["[ArguFight](https://www.argufight.com/)", "A person replies; an AI for a warm-up", "No: 5 written rounds over 24 hours, or 3 in 1 hour", "Yes: up to three AI judges, 0–100 with reasons", "Each verdict names a fix and your next move", "26 listed", "No: debates are public, with spectators; class tournaments can be private"],
-                        ["[MindDuel](https://play.google.com/store/apps/details?id=com.serdaryalkabov.brightmint)", "An AI opponent", "No: 10 turns of 5–60 seconds", "0–100 score in five areas, short explanation", "Not stated", "Not stated", "Not stated"],
-                        ["[PublicForumAI](https://publicforumai.com/pricing)", "Not stated", "Public Forum rounds", "Tech and lay judge feedback", "Flow drills and 15 training modules", "Not stated", "Not stated"],
                         ["[Debate Ladder](https://debateladder.com/)", "An AI argues the other side", "No: its own opening, rebuttal and closing", "AI judge on five criteria, with feedback", "Not stated", "Not stated", "Not stated"],
                     ],
                 }},
-                "Read the table against your ticks, not against a total. A tool with fewer \"yes\" cells can still be the right one if it does the two things you need.",
+                "Read the table against your ticks, not against a total. For more tools, numbered by what each is best for, see [the best AI debate tools](/best-ai-debate-tools).",
             ]),
-            ("Which tool for which debater", [
-                {"list": [
-                    "A set motion and a date: {product}, the top pick for a case you can read out loud, \"If they say X, we answer Y\" replies and timed practice rounds.",
-                    "Ranked speaking reps on any topic: Debate Ladder. See [{product} vs Debate Ladder](/debateowl-vs-debate-ladder).",
-                    "Written rounds against real people, judged by AI: ArguFight, which is free to start. See [{product} vs ArguFight](/debateowl-vs-argufight).",
-                    "Public Forum only, on a free plan: PublicForumAI. See [the best AI for Public Forum](/best-ai-for-public-forum).",
-                    "Short spoken drills on an Android phone: MindDuel. See [{product} vs MindDuel](/debateowl-vs-mindduel).",
-                    "A free partner for ideas: ChatGPT or Claude. See [ChatGPT vs Claude for debate](/chatgpt-vs-claude-for-debate).",
-                ]},
-                "Whichever you choose, open every source an AI suggests before it goes into a speech.",
-            ]),
-            ("What a useful AI practice session looks like", [
-                "Most debaters improve through repetitions with feedback: give a speech, find out what failed, fix one thing, give it again. AI practice is valuable when it shortens that loop, not when it hands you a finished speech to read.",
-                "A chat window can produce arguments on request, but it does not hold a round together. It forgets which side you are on, does not time you, and rarely tells you which of your points the judge would have dropped. Practice needs a motion, a side, a format with real speech times, an opponent that responds to what you actually said, and a verdict that names the reason you lost or won.",
-                "{product} is built around that loop. You start a Current Debate for one motion, and every case, source, round and debrief you create stays filed under it. That means the AI opponent in your third practice round argues the same motion you wrote your case for, and your History shows how the debate developed across sessions.",
+            ("Can practising debate against an AI actually make you better?", [
+                "Yes, if it shortens the loop of giving a speech, finding what failed, fixing one thing and giving it again. A useful session needs a motion, a side, real speech times, an opponent that responds to what you said and a verdict that names why you won or lost. AI practice adds repetitions between team practices but does not replace them: judge adaptation, delivery under pressure and strategic judgement still develop fastest with a coach and real rounds.",
+                "A chat window can produce arguments on request, but it does not hold a round together. It forgets which side you are on, does not time you, and rarely tells you which of your points the judge would have dropped. {product} keeps every case, source, round and debrief filed under one Current Debate, so the AI opponent in your third practice round argues the same motion you wrote your case for.",
             ]),
             ("A 45-minute practice session, step by step", [
                 "This plan fits a weeknight. It assumes you have a motion but no case yet.",
@@ -122,19 +141,18 @@ GUIDES = {
             ("Where AI practice stops being enough", [
                 "An AI opponent is consistent and always available, which is exactly what makes it a good training partner and a limited judge. It will not reproduce the judge who dislikes speed, the panel that splits, or the opponent who asks a question you never anticipated. Use AI rounds for volume between real practices, and save team practices and coached rounds for adaptation, delivery and the feedback only an experienced person can give.",
             ]),
-            ("Sources (checked October 2026)", [
+            ("Sources (checked 2 November 2026)", [
                 {"list": [
-                    "[debateladder.com](https://debateladder.com/): voice-first rounds, AI judge on five criteria, Elo from 500, 100 free credits, custom debates.",
-                    "[argufight.com](https://www.argufight.com/): human challenges in 5-round or 3-round written modes, AI judge panel scoring 0–100, AI warm-up, speech-to-text, free to start. Its /pricing address returned 404. Its [schools page](https://www.argufight.com/for-schools) adds a debate history for every student.",
-                    "[publicforumai.com/pricing](https://publicforumai.com/pricing): free plan with 3 full rounds a month and Premium at $9.99/month or $79/year.",
-                    "[MindDuel on Google Play](https://play.google.com/store/apps/details?id=com.serdaryalkabov.brightmint): 10 rounds, 5–60 second turns, voice-to-text, 0–100 score, in-app purchases. We found no website for it.",
-                    "[chatgpt.com/pricing](https://chatgpt.com/pricing): free version for everyone, limited voice and memory on the free plan.",
-                    "[claude.com/pricing](https://claude.com/pricing): free plan at $0 with memory across conversations.",
+                    "[debateladder.com](https://debateladder.com/): a voice-first debate game against an AI opponent; you speak an opening, rebuttal and closing, and an AI judge scores both sides on logic, responsiveness, clarity, delivery and persuasiveness. New accounts get 100 free credits.",
+                    "[chatgpt.com/pricing](https://chatgpt.com/pricing): a free version for everyone, and paid plans.",
+                    "[claude.com/pricing](https://claude.com/pricing): a free plan at $0, and Pro at $20 a month, or $17 a month billed annually.",
                 ]},
             ]),
         ],
         "faqs": [
-            ("Which AI can I practise debate against?", "{product}'s Sparring gives you an AI opponent for full timed rounds in School 4-6-6-3, Lincoln-Douglas and Public Forum. As of October 2026, Debate Ladder and MindDuel also put you against an AI by voice, PublicForumAI runs Public Forum rounds, and ChatGPT or Claude will argue back in a chat if you set them up. ArguFight's debates are mainly against people."),
+            ("What is AI debate practice?", "A practice round against an AI opponent that answers your speeches. In {product} it is a Sparring round in School 4-6-6-3, Lincoln-Douglas or Public Forum, at real speech times, ending in a scorecard and a verdict."),
+            ("What is on the scorecard?", "A score for you and for the AI opponent out of 100, split into Logic, Evidence, Delivery and Strategy at 25 each, with a note on every score, the judge's verdict, key moments and what to work on next."),
+            ("Which AI can I practise debate against?", "{product}'s Sparring gives you an AI opponent for full timed rounds. Debate Ladder also puts you against an AI by voice, and ChatGPT or Claude will argue back in a chat if you set them up. The best AI debate tools page compares more options."),
             ("Which formats can I spar against the AI in?", "Sparring runs School 4-6-6-3, Lincoln-Douglas and Public Forum rounds with their speech order and times. For WSDC, British Parliamentary and other formats you can still generate cases, get coaching and drill rebuttals, and time speeches yourself."),
             ("Can I give my practice speeches out loud?", "Yes. Sparring and Crossfire can run as spoken rounds in the browser, so you can practise delivery as well as content."),
             ("How often should I practise against an AI opponent?", "Two or three focused sessions a week usually beats one long one. Each session should end with one specific fix that you drill before the next round."),
@@ -144,7 +162,7 @@ GUIDES = {
         ],
     },
     "ai-debate-coach": {
-        "modified": "2026-10-28",
+        "modified": "2026-11-02",
         "definition": ("What is an AI debate coach?", "AI debate coach", "A chat tool that answers a debater's prep questions about strategy, arguments, answers to the other side and speech structure, and gives feedback on practice speeches, for the debater to test and adapt."),
         "features": [
             ("Strategy help", "Ask which argument decides the round, what your side has to prove and where to spend your speaking time, with answers that use your debate's motion and sources."),
@@ -196,6 +214,9 @@ GUIDES = {
             ("Getting answers with sources", [
                 "When a coaching answer depends on facts, turn on Citations in Ask. The coach then answers with sources you can open. Treat those as leads: read the original, confirm it says what the answer claims, and only then use it in a speech. Adding your own trusted articles to the Library has the same effect from the other direction, because active sources that fit the question are used in its answers for that debate.",
             ]),
+            ("Try the AI debate coach on your next motion", [
+                "Open [the app](/app), start a Current Debate with your motion and ask the coach the burden check from the list above: what does each side have to prove? Then paste your opening speech and ask what a judge would remember from it. Ask is part of the {trial_days}-day free trial, with no credit card needed.",
+            ]),
             ("What an AI coach cannot do", [
                 "It has not watched you speak, it does not know the judges at your tournament, and it cannot tell you how your partner works under pressure. Bring the conclusions from AI coaching sessions to your human coach or team, and let them correct the advice that does not fit the people in the room.",
             ]),
@@ -211,7 +232,7 @@ GUIDES = {
         ],
     },
     "ai-debate-case-generator": {
-        "modified": "2026-10-28",
+        "modified": "2026-11-02",
         "definition": ("What is an AI debate case generator?", "AI debate case generator", "A tool that turns a motion into a draft debate case for one side and speaker role, with an opening, arguments backed by evidence, answers to what the other side will say and a source list, for a debater to verify and adapt."),
         "features": [
             ("A case you can read out", "Each draft has an opening, arguments with an explanation, evidence and why it matters, \"If they say… we answer…\" replies, a closing line and the sources it cites."),
@@ -229,6 +250,7 @@ GUIDES = {
                     "Sources: every source the case cites, with the organisation, the year, the claim it supports and the link.",
                 ]},
                 "Your speaker role shapes the speech. The introductor gets the opening and short headline arguments, plus one line on what a motion term means when it is genuinely unclear. R1 gets the full arguments. R2 brings no new arguments: it spends about two minutes backing up the team's arguments, then answers the other side with five or six \"If they say…\" blocks. The conclusor brings no new arguments: it gets two or three reasons why your side won and the closing line.",
+                "An AI debate generator is only as good as the motion you give it, so write the motion exactly as it will be announced. If you need a motion to practise on, the free [debate motion generator](/tools/debate-motion-generator) draws one without an account; copy it into a Current Debate and Generate writes the case for your side.",
                 "Because the answers to the other side are part of the draft, you start preparing rebuttals at the same time as your own case. When one section is weak, regenerate just that section; the rest of the case stays where it is. Finished cases export to PDF or DOCX.",
             ]),
             ("Generated draft vs. finished case: what you still do", [
@@ -307,28 +329,76 @@ GUIDES = {
     },
     "best-ai-debate-tools": {
         "software": True,
-        "modified": "2026-10-29",
+        "modified": "2026-11-02",
         "callout": ("Short answer by goal:", "/best-ai-for-debate", "which AI is best for debate"),
+        "disclosure": "{product} makes this list, and ranking {product} #1 is our editorial pick, not an independent test. Facts about the other tools come from their own websites, linked under each one, checked on 2 November 2026.",
+        "items": [
+            ("{product}", "https://debateowl.com/"),
+            ("WinDebate", "https://windebate.ai"),
+            ("PublicForumAI", "https://publicforumai.com"),
+            ("Debate Ladder", "https://debateladder.com"),
+            ("ArguFight", "https://www.argufight.com/"),
+            ("debatelab.ai", "https://debatelab.ai"),
+            ("Claude", "https://claude.com/pricing"),
+            ("ChatGPT", "https://chatgpt.com/pricing"),
+        ],
         "features": [
-            ("Six tools side by side", "{product}, ChatGPT, Claude, debatelab.ai, WinDebate and Debate Ladder on cases, replies, timed rounds and price."),
-            ("Format coverage", "Which formats a tool actually models, from Public Forum and Lincoln-Douglas to WSDC and British Parliamentary, and where you still prep by hand."),
-            ("Workflow differences", "Whether cases, sources, practice rounds and feedback stay connected to one motion, or end up scattered across chats and documents."),
+            ("Numbered by what each is best for", "Every tool gets one \"best for\" label, so you can skip to the job you have: a set motion, one format, ranked practice or open brainstorming."),
+            ("A source for every fact", "Each fact about another product links to the page on its own website where we read it, and the date we checked."),
+            ("Formats and prices side by side", "Which formats each tool names, whether you can practise against an AI, and what it costs after any free allowance."),
         ],
         "sections": [
-            ("Feature comparison", [
+            ("How we compared", [
+                {"example": {"title": "How we compared", "rows": [
+                    ("Date checked:", "2 November 2026, on each tool's own website. Prices and plans change, so check again before you pay."),
+                    ("What we looked at:", "the job each tool is best for; whether it writes a case you can read out; whether it prepares answers to the other side; whether you can practise a timed round against an AI and get a verdict; the formats and languages it names; and the price after any free allowance."),
+                    ("Sources:", "facts about other products come only from their own pages, linked under each entry. If a page did not say something, we say it is not stated rather than guess."),
+                    ("Order:", "the order is our editorial judgement. We make DebateOwl and put it first. The rest run from dedicated debate platforms to general AI assistants."),
+                ]}},
+            ]),
+            ("The best AI debate tools, numbered", [
+                {"h3": "1. {product} (our top pick): best for preparing a specific motion in English, Spanish or Hungarian"},
+                "{product} is a debate prep and practice app for school and competitive debaters. Generate turns a motion into a case you can read out: an opening, two to four arguments with evidence, \"If they say… we answer…\" replies, a closing line and the sources it used. [Sparring](/ai-debate-practice) runs timed rounds against an AI opponent in School 4-6-6-3, Lincoln-Douglas and Public Forum and ends with a scorecard out of 100. Ask, Attack, Brainstorm, Factoids and Crossfire cover coaching, weak links, ideas, fact checks and cross-examination, and everything for one motion stays in one Current Debate.",
+                "Why it is first: it takes one motion from a written case to a timed, scored round in one place, in English, Spanish or Hungarian. That is our view as its makers, so run the one-hour test further down before you decide.",
+                "Price: a {trial_days}-day free trial with no credit card, then {pro_price}. There is no free plan; the [free debate tools](/tools) need no account. Limits: Sparring does not run World Schools or British Parliamentary rounds yet, and its evidence leads, like any AI tool's, need checking against the original source. Source: [{product} pricing](/debateowl-pricing).",
+                {"h3": "2. WinDebate: best for Policy, Congress and British Parliamentary prep with live-round review"},
+                "WinDebate calls itself a debate training platform and names six formats: Public Forum, Lincoln-Douglas, Congressional, Policy, World Schools and British Parliamentary. Its Live Round Assistant captures speeches while a round is running, and it turns what happened into attack, defense, weighing, summary, final focus and cross-ex drills. Before a round it builds both sides, evidence and rebuttal trees.",
+                "Price: a free tier at $0 with 1 research session, 10 practice drills and 1 Live Assistant round a month; Plus at $19.99 a month or $189.99 a year; Pro at $39.99 a month or $289.99 a year. Source: [windebate.ai](https://windebate.ai).",
+                {"h3": "3. PublicForumAI: best for Public Forum on a free plan"},
+                "PublicForumAI offers free AI tools for Public Forum debate, and says every tool follows the standard Public Forum structure. Both of its plans include tech and lay judge feedback, unlimited AI flow drills and 15 training modules. It says its tools are not meant to be used in real rounds.",
+                "Price: free at $0 with 3 full practice rounds and 5 AI cases a month, plus 2 Premium cases with real sources; Premium at $9.99 a month or $79 a year. Sources: [publicforumai.com](https://publicforumai.com) and [its pricing page](https://publicforumai.com/pricing).",
+                {"h3": "4. Debate Ladder: best for ranked out-loud practice against an AI"},
+                "Debate Ladder is a voice-first debate game. You are assigned a side and speak an opening, rebuttal and closing into your microphone while an AI opponent argues the other side; practice mode lets you type instead. An AI judge scores both sides on logic, responsiveness, clarity, delivery and persuasiveness, and ranked wins raise an Elo rating that starts at 500.",
+                "Price: new accounts get 100 free credits, and a debate costs about one credit per minute of speaking. We did not find the price of more credits on its site. Source: [debateladder.com](https://debateladder.com).",
+                {"h3": "5. ArguFight: best for written debates against real people, judged by AI"},
+                "ArguFight calls itself an AI-judged debate platform. You challenge someone or accept a challenge, in standard mode (5 rounds over 24 hours) or speed mode (3 rounds in 1 hour), and up to three AI judges each score from 0 to 100 with their reasoning. You can also test a take against an AI opponent. Debates are public: spectators can watch live and vote.",
+                "Price: free to start, with no credit card, and free forever for base debating. It is available in 26 languages. Source: [argufight.com](https://www.argufight.com/).",
+                {"h3": "6. debatelab.ai: best for free World Schools and Asian Parliamentary practice"},
+                "debatelab.ai lets you debate an AI opponent in casual, World Schools or Asian Parliamentary mode, with an optional speech timer, and offers drills for rebuttal, structure, weighing, evidence and strategy. It is a separate product: {product} was called DebateLab until October 2026, but the two are not connected.",
+                "Price: its FAQ says it is completely free to use. Source: [debatelab.ai](https://debatelab.ai).",
+                {"h3": "7. Claude: best for critiquing a long case you paste in"},
+                "Claude is a general AI assistant from Anthropic. It has no debate formats, speech order or timer of its own, but it handles a long pasted case well when you ask it where an argument does not follow or what the other side would say first. You set the motion, side and format yourself.",
+                "Price: a free plan at $0; Pro at $20 a month, or $17 a month billed annually ($200 up front). Source: [claude.com/pricing](https://claude.com/pricing).",
+                {"h3": "8. ChatGPT: best for open brainstorming and counter-arguments"},
+                "ChatGPT is a general AI assistant from OpenAI. It is flexible for brainstorming angles on a new motion and producing counter-arguments on request, but it has no debate timer or speech order of its own, and it gives a case structure only when you prompt for one.",
+                "Price: a free version for everyone, and paid plans named Go, Plus and Pro. The prices did not load in a form we could read on 2 November 2026, so check them on the page. Source: [chatgpt.com/pricing](https://chatgpt.com/pricing).",
+            ]),
+            ("At a glance", [
                 {"table": {
-                    "caption": "AI debate tools compared, as of October 2026. Facts about other products come from their own websites; \"Not stated\" means we did not find it there.",
-                    "head": ["Tool", "Best for", "Case you can read out", "Rebuttal / \"If they say\" practice", "Timed rounds", "Price (as of Oct 2026)"],
+                    "caption": "The best AI debate tools at a glance, checked on 2 November 2026. Facts about other products come from their own websites, linked above.",
+                    "head": ["#", "Tool", "Best for", "Practise against an AI", "Price"],
                     "rows": [
-                        ["[{product}](/)", "Preparing a specific motion for a school or competitive round", "Yes: an opening, two to four arguments, \"If they say… we answer…\" replies, a closing line and sources", "Yes: replies in every case, plus Attack and Crossfire drills", "Yes: Sparring in School 4-6-6-3, Lincoln-Douglas and Public Forum, ending in a verdict", "{trial_days}-day free trial, then {pro_price}; no free plan. The [free debate tools](/tools) need no account."],
-                        ["[ChatGPT](https://chatgpt.com)", "Open brainstorming and counter-arguments", "Only if you prompt for it", "Only if you prompt for it", "No built-in debate timer", "Free version; paid Go, Plus and Pro plans"],
-                        ["[Claude](https://claude.ai)", "Critique of a long case you paste in", "Only if you prompt for it", "Only if you prompt for it", "No built-in debate timer", "Free plan; Pro $20/month, or $17/month billed annually"],
-                        ["[debatelab.ai](https://debatelab.ai) (a separate product)", "Free practice against an AI opponent in World Schools or Asian Parliamentary style", "Not stated", "Drills for rebuttal, structure, weighing and evidence", "Speeches of 3, 5 or 7 minutes against an AI opponent", "Says it is completely free"],
-                        ["[WinDebate](https://windebate.ai)", "Policy, Congress or British Parliamentary prep and season tracking", "Not stated", "Drills for attack, defense, weighing and speeches, plus rebuttal trees", "Not stated; it lists a Live Round Assistant and replay review", "Free tier with monthly limits; Plus $19.99/month, Pro $39.99/month"],
-                        ["[Debate Ladder](https://debateladder.com)", "Ranked out-loud practice with an Elo rating", "Not stated", "You speak a rebuttal in each debate against an AI", "Not stated; you speak an opening, rebuttal and closing", "100 free credits for new accounts, then credits (about 1 per minute of speaking)"],
+                        ["1", "[{product}](/)", "Preparing a specific motion in English, Spanish or Hungarian", "Yes: timed rounds in School 4-6-6-3, LD and PF, with a scorecard", "{trial_days}-day free trial, then {pro_price}; no free plan"],
+                        ["2", "[WinDebate](https://windebate.ai)", "Policy, Congress and BP prep with live-round review", "Drills from your own rounds", "Free tier; Plus $19.99/month, Pro $39.99/month"],
+                        ["3", "[PublicForumAI](https://publicforumai.com/pricing)", "Public Forum on a free plan", "Public Forum practice rounds", "Free with 3 rounds a month; Premium $9.99/month or $79/year"],
+                        ["4", "[Debate Ladder](https://debateladder.com)", "Ranked out-loud practice", "Yes: opening, rebuttal and closing by voice", "100 free credits, then about 1 credit per minute"],
+                        ["5", "[ArguFight](https://www.argufight.com/)", "Written debates against people, judged by AI", "Mainly people; you can test a take against an AI", "Free to start"],
+                        ["6", "[debatelab.ai](https://debatelab.ai)", "Free World Schools and Asian Parliamentary practice", "Yes", "Its FAQ says completely free"],
+                        ["7", "[Claude](https://claude.com/pricing)", "Critiquing a long case", "Only if you set it up", "Free plan; Pro $20/month"],
+                        ["8", "[ChatGPT](https://chatgpt.com/pricing)", "Open brainstorming and counter-arguments", "Only if you set it up", "Free version; paid Go, Plus and Pro plans"],
                     ],
                 }},
-                "{product} makes one of these tools. Check each product's own site before you pay: prices and plans change. The [{product} vs WinDebate](/debateowl-vs-windebate) page compares those two in more detail.",
+                "The [{product} vs WinDebate](/debateowl-vs-windebate) page compares the first two in more detail.",
             ]),
             ("The four kinds of AI debate tool", [
                 "Debaters use AI tools for different jobs, and the categories overlap less than the marketing suggests. Most prep setups combine at least two of these.",
@@ -340,19 +410,6 @@ GUIDES = {
                 "These are built around debate concepts: cases with arguments, rebuttals, opponents and verdicts. They vary a great deal in which formats they model and whether they let you practise or only generate text.",
                 {"h3": "Practice utilities"},
                 "Timers, flowing templates and argument maps. Often simple, sometimes not AI-based at all, and still essential for practice that matches tournament conditions.",
-            ]),
-            ("Eight criteria for comparing AI debate tools", [
-                {"steps": [
-                    "Structure: does each argument say what is true, why, and why it matters, or is it a wall of text?",
-                    "Format awareness: does it know your speech order, times and roles, or treat every debate as an essay?",
-                    "Sources: can you see where a claim comes from, and can you add your own material for it to use?",
-                    "Opposition: does it predict and argue the other side, or only help with yours?",
-                    "Practice: can you deliver a speech and get a response to it, not just read generated text?",
-                    "Feedback: does it tell you why an argument failed, with something specific to fix?",
-                    "Continuity: does work stay organised by motion, or do you lose it in a long chat history?",
-                    "Limits and privacy: what is the daily or monthly allowance, and who can see your prep?",
-                ]},
-                "Weight the criteria by what you need. A novice benefits most from structure and feedback; an experienced competitor often cares most about sources, opposition and practice.",
             ]),
             ("A one-hour test you can run on any tool", [
                 "Reviews and feature lists only go so far. The fairest comparison is to give every tool the same motion and the same tasks:",
@@ -385,13 +442,10 @@ GUIDES = {
                 {"h3": "Lincoln-Douglas (LD)"},
                 "LD needs tools that handle value and criterion, not just policy arguments. Test whether a tool can defend a value and criterion (the standard the judge uses to decide) and tie each argument back to it, and whether it can practise the time-pressured 1AR.",
             ]),
-            ("Where {product} fits", [
-                "{product} is a dedicated debate platform that keeps every case, source, round and debrief inside one Current Debate. It covers case generation with \"If they say…\" answers to the other side, Library sources that ground its answers, Attack for finding weak links, Brainstorm, Factoids for checking claims, an Ask coaching chat with optional citations, Crossfire and full Sparring rounds with a verdict, a speech timer and an argument flowchart.",
-                "Its limits are worth stating plainly. Sparring currently runs School 4-6-6-3, Lincoln-Douglas and Public Forum rounds, so WSDC and BP practice uses the prep and coaching tools rather than a full simulated round. Like every AI tool, its evidence leads need checking against the original source. Run the one-hour test above and decide on your own results.",
-            ]),
         ],
         "faqs": [
-            ("What is the best AI tool for debate?", "For preparing a specific motion, {product} gives you a case you can read out loud, \"If they say X, we answer Y\" replies and timed practice rounds. General chatbots are flexible for brainstorming and research tools find sources. Most debaters do best with a dedicated platform plus a way to verify sources."),
+            ("What is the best AI tool for debate?", "Our top pick is {product}, for preparing a specific motion: a case you can read out loud, \"If they say X, we answer Y\" replies and timed practice rounds. We make it, so test it yourself. WinDebate suits Policy, Congress and live-round review, PublicForumAI suits Public Forum, and general chatbots suit open brainstorming."),
+            ("Why is {product} ranked first?", "Because we think it fits the most common job, getting one motion ready for a round, better than the others: case, replies and a timed, scored round in one place, in English, Spanish or Hungarian. We make {product}, so the ranking is our editorial pick, and every fact about the other tools links to their own site."),
             ("Is a general chatbot good enough for debate prep?", "For brainstorming and explaining concepts, often yes. It is weaker at keeping a motion, side and format in context, predicting the opposing case, timing speeches and giving round-style feedback."),
             ("Are free AI debate tools enough?", "Free tiers are a good way to run the comparison test. Check the daily or monthly limits against how many practice sessions you plan before a tournament."),
             ("Can I use AI tools during a debate round?", "Usually not. Most leagues restrict or ban internet access and electronic help during rounds. Check your league's rules, and use AI tools for preparation."),
@@ -2303,7 +2357,7 @@ GUIDES = {
                     "[{product} vs ArguFight](/debateowl-vs-argufight): which debater should pick a case and timed rounds, and which should pick written rounds against people with AI judges.",
                     "[{product} vs MindDuel](/debateowl-vs-mindduel): one motion through both, from ten short spoken turns to a full timed round.",
                     "[{product} vs PublicForumAI](/debateowl-vs-publicforumai): Public Forum only, or every format.",
-                    "[AI debate practice tools compared](/ai-debate-practice): for practice rounds, a checklist and a table of the tools you can practise against.",
+                    "[AI debate practice tools compared](/ai-debate-practice): timed practice rounds against an AI, what the scorecard shows, and a checklist for choosing a practice partner.",
                     "[Free vs paid AI debate tools](/free-vs-paid-ai-debate-tools): what $0 gets you and what paid plans add, with prices.",
                     "[Step-by-step debate prep with AI](/how-to-prepare-for-a-debate-with-ai): a seven-step plan and a worked second speech.",
                 ]},

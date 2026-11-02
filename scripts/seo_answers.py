@@ -10,7 +10,7 @@ Name the product with {product} and the Pro price with {pro_price}.
 ANSWERS = {
     "best-ai-debate-tools": (
         "Which AI debate tool should you use?",
-        "For preparing a specific motion, {product} gives you a case you can read out loud, \"If they say X, we answer Y\" replies and timed practice rounds ({trial_days}-day free trial, then $5/month). General chatbots are better for open brainstorming, and research tools for finding sources. Other debate platforms differ in formats, practice style and price; the table below compares six tools as of October 2026. Give each tool the same motion and tasks before you decide.",
+        "For preparing a specific motion, our top pick is {product}: a case you can read out loud, \"If they say X, we answer Y\" replies and timed practice rounds ({trial_days}-day free trial, then $5/month). We make it, so the ranking is ours. As of November 2026, WinDebate suits Policy, Congress and live-round review, PublicForumAI suits Public Forum on a free plan, Debate Ladder suits ranked voice practice and ArguFight written debates against people. General chatbots are better for open brainstorming. Give each tool the same motion before you decide.",
     ),
     "debateowl-pricing": (
         "How much does {product} cost?",
@@ -29,8 +29,8 @@ ANSWERS = {
         "They solve different problems. As of October 2026, DebateClub is voice-only sparring for high-stakes conversations such as negotiations, pitches and meetings, with opponent personas and rhetorical technique scoring, and Pro costs $19/month. It names no competitive debate formats. {product} is built for school and competitive debate: cases, rebuttals, evidence, a timer and timed rounds in School 4-6-6-3, Lincoln-Douglas and Public Forum, at {pro_price} after a 3-day trial. Choose DebateClub for workplace persuasion practice and {product} for tournament prep.",
     ),
     "ai-debate-practice": (
-        "What is the best AI debate practice tool?",
-        "{product}'s practice runs full Sparring rounds in School 4-6-6-3, Lincoln-Douglas and Public Forum at real speech times, with typed or spoken speeches and a judged verdict, then Crossfire and drills on the weakest point. A general chatbot such as ChatGPT or Claude is enough for open back-and-forth, and as of October 2026 ArguFight, MindDuel, PublicForumAI and Debate Ladder suit written rounds against people, short spoken turns on Android, Public Forum only and ranked voice reps.",
+        "What is AI debate practice in {product}?",
+        "It is a full practice round against an AI opponent. You pick a motion, a side and a format: School 4-6-6-3, Lincoln-Douglas or Public Forum. You give each speech at its real time, typed or spoken, and the AI opponent answers what you said. At the end a judge scores both sides out of 100 across Logic, Evidence, Delivery and Strategy, names the winner and says what to work on next. Crossfire, Attack and Ask then turn the weakest point into a drill.",
     ),
     "ai-debate-case-generator": (
         "Can an AI debate case generator write a case I can actually use?",
