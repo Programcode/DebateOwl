@@ -78,8 +78,10 @@ const ERRORS: Record<string, string> = {
   daily_limit: 'Today’s demo rounds are used up. Come back tomorrow, or start a trial now.',
   not_allowed: 'That motion or argument cannot be used in the demo. Try a different one.',
   bot_check_failed: 'The bot check did not pass. Wait for it to finish and try again.',
+  // A follow-up from a different IP (a phone switching networks) cannot continue the session.
+  unknown_session: 'Your connection changed, so this round cannot continue. Reload the page to start a new one.',
 };
-const ENDS_DEMO = new Set(['ip_limit', 'turn_limit', 'daily_limit']);
+const ENDS_DEMO = new Set(['ip_limit', 'turn_limit', 'daily_limit', 'unknown_session']);
 
 type Turn = { argument: string; rebuttal: string; judgeNote: string };
 

@@ -40,6 +40,7 @@ test.describe('AI debate mini round', () => {
     const bodies = await mockDemo(page);
     await page.goto('/ai-debate');
     await expect(page.getByRole('heading', { level: 1, name: 'Debate an AI that argues back' })).toBeVisible();
+    await expect(page.getByRole('heading', { level: 2, name: 'Frequently asked questions' })).toBeVisible();
 
     await page.getByLabel('Your argument').fill('Phones distract pupils in class and make bullying easier.');
     await page.getByRole('button', { name: 'Get the AI’s rebuttal' }).click();
