@@ -72,6 +72,10 @@ Free to use, no account needed, and they run in the browser.
 - [DebateOwl vs Gemini](https://debateowl.com/debateowl-vs-gemini): five common assumptions about Gemini and debate prep, from writing a case to working in Hungarian, each answered in two sentences, as of October 2026
 - [DebateOwl vs HyperWrite](https://debateowl.com/debateowl-vs-hyperwrite): a one-shot AI writer or a practice loop: what you walk away with from each, and prices side by side, as of October 2026
 - [DebateOwl vs SchoolAI](https://debateowl.com/debateowl-vs-schoolai): for teachers and debate coaches: setup, student accounts, cost per student and formats, with a plain pick for each need, as of October 2026
+- [DebateOwl vs Debatable](https://debateowl.com/debateowl-vs-debatable): one evening on each, clock by clock: a spoken round against an AI or a person with an AI verdict, or a written case before the round, as of November 2026
+- [DebateOwl vs Prilo](https://debateowl.com/debateowl-vs-prilo): a ledger of Prilo NSDA and DebateOwl: formats, languages, monthly and yearly price and free trial, then who should pick which, as of November 2026
+- [DebateOwl vs DebateThis](https://debateowl.com/debateowl-vs-debatethis): a free ranked debate game or a coach for a set motion: four questions for a new debater choosing where to start, as of November 2026
+- [DebateOwl vs Kialo Edu](https://debateowl.com/debateowl-vs-kialo-edu): for the classroom: argument mapping vs case and round prep, and one 50-minute lesson that uses both, as of November 2026
 - [Free vs paid AI debate tools](https://debateowl.com/free-vs-paid-ai-debate-tools): what free plans include and what paid AI debate tools cost, checked October 2026
 - [Best AI for Public Forum debate](https://debateowl.com/best-ai-for-public-forum): Public Forum AI tools compared speech by speech, with prices as of October 2026
 - [AI debate tools for teachers](https://debateowl.com/ai-debate-tools-for-teachers): AI tools for classroom debate by scenario: no-signup timers, AI opponents, class tournaments and graded discussion

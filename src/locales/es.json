@@ -1066,6 +1066,10 @@
       "debateowl-vs-schoolai": "{{product}} frente a SchoolAI",
       "debateowl-vs-argufight": "{{product}} frente a ArguFight",
       "debateowl-vs-mindduel": "{{product}} frente a MindDuel",
+      "debateowl-vs-debatable": "{{product}} frente a Debatable",
+      "debateowl-vs-prilo": "{{product}} frente a Prilo",
+      "debateowl-vs-debatethis": "{{product}} frente a DebateThis",
+      "debateowl-vs-kialo-edu": "{{product}} frente a Kialo Edu",
       "debateowl-vs-windebate": "{{product}} frente a WinDebate",
       "debateowl-vs-debateclub": "{{product}} frente a DebateClub"
     }

@@ -20,7 +20,8 @@ const GROUPS = [
         paths: [
             "/debateowl-vs-chatgpt", "/debateowl-vs-claude", "/debateowl-vs-gemini", "/debateowl-vs-hyperwrite", "/debateowl-vs-schoolai",
             "/debateowl-vs-publicforumai", "/debateowl-vs-windebate", "/debateowl-vs-debateclub", "/debateowl-vs-debate-ladder",
-            "/debateowl-vs-argufight", "/debateowl-vs-mindduel",
+            "/debateowl-vs-argufight", "/debateowl-vs-mindduel", "/debateowl-vs-debatable", "/debateowl-vs-prilo",
+            "/debateowl-vs-debatethis", "/debateowl-vs-kialo-edu",
         ],
     },
 ] as const;

@@ -32,6 +32,10 @@ PAGES = [
     "debateowl-vs-gemini",
     "debateowl-vs-hyperwrite",
     "debateowl-vs-schoolai",
+    "debateowl-vs-debatable",
+    "debateowl-vs-prilo",
+    "debateowl-vs-debatethis",
+    "debateowl-vs-kialo-edu",
 ]
 MAX_WORDS = 12
 MAX_PAGES = 2
