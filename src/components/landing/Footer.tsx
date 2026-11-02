@@ -25,6 +25,12 @@ const Footer = () => {
                         <Link to={localizedPath("/tools", language)} className="inline-flex min-h-6 items-center text-muted-foreground hover:text-foreground transition-colors underline-offset-4 hover:underline pointer-coarse:min-h-11 pointer-coarse:min-w-11 pointer-coarse:justify-center">
                             {t('tools:footer.freeTools')}
                         </Link>
+                        {/* /ai-debate is English only. English pages list it in the AI debate block below, so this link is for the other languages. */}
+                        {language !== "en" && (
+                            <Link to="/ai-debate" className="inline-flex min-h-6 items-center text-muted-foreground hover:text-foreground transition-colors underline-offset-4 hover:underline pointer-coarse:min-h-11 pointer-coarse:min-w-11 pointer-coarse:justify-center">
+                                {t('footer.aiDebatePartner')}
+                            </Link>
+                        )}
                         {/* Static guide pages, not app routes: plain links load them from the server. */}
                         <a href="/debateowl-pricing" className="inline-flex min-h-6 items-center text-muted-foreground hover:text-foreground transition-colors underline-offset-4 hover:underline pointer-coarse:min-h-11 pointer-coarse:min-w-11 pointer-coarse:justify-center">
                             {t('footer.pricingGuide')}

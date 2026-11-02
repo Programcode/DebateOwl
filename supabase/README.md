@@ -53,6 +53,7 @@ The browser boundary is [`../src/lib/ai/client.ts`](../src/lib/ai/client.ts). Sh
 
 ### Authentication and administration
 
+- `demo-rebuttal`: the no-login mini round on `/ai-debate`. Off unless `DEMO_ENABLED=true` and `TURNSTILE_SECRET_KEY` is set. It accepts only allowed origins, checks a Cloudflare Turnstile token before a session starts, and reserves every model call through the service-role-only `claim_demo_round_turn` RPC: 3 sessions per IP per UTC day, 2 turns per session, and `DEMO_DAILY_LIMIT` model calls per UTC day across all visitors (500 when unset). Rows keep a salted, per-day hash of the IP and counts only; nothing the visitor typed is stored or logged. One Claude Haiku call per turn with `max_tokens` 450 and no reasoning.
 - `demo-code-login`: bounded pre-session access-code flow with normalized hashing, fail-closed attempt limits, atomic use consumption, server-owned demo-user bindings in Auth `app_metadata`, and a prohibition on granting administrator status.
 - `admin`: authenticated administrator operations with server-side role checks, including redacted demo-code list/create/disable/reset actions.
 - `announcements`: authenticated announcement listing and dismissal.
@@ -91,6 +92,7 @@ Several entries in [`config.toml`](config.toml) set `verify_jwt = false`. This d
 - administrator role validation;
 - Stripe webhook signature verification;
 - pre-session demo-code validation;
+- the `/ai-debate` mini round, which checks the origin, a Turnstile token and its own rate limits;
 - short-lived Google token handling.
 
 Do not remove handler authentication because the gateway setting looks permissive. Do not enable gateway verification without checking custom request flows and tests.
@@ -172,7 +174,8 @@ Document names, never values. Depending on deployed features, server-side config
 - demo-code hashing material;
 - `WORKSPACE_INVITE_SECRET` for invite derivation, keyed hashes, and target-email encryption;
 - `WORKSPACE_INVITE_MAILER_URL`, `WORKSPACE_INVITE_MAILER_TOKEN`, and `WORKSPACE_INVITE_BASE_URL` for the operator-supplied email relay, plus `WORKSPACE_INVITE_ALLOWED_ORIGINS` for an exact preview origin;
-- sparring integrity material, which also signs voice tokens;
+- sparring integrity material, which also signs voice tokens and salts the `/ai-debate` demo's IP hashes;
+- `DEMO_ENABLED` (`true` turns the `/ai-debate` mini round on; anything else, including unset, keeps it off), `DEMO_DAILY_LIMIT` (its model calls per UTC day, 500 when unset) and `TURNSTILE_SECRET_KEY` (its bot check; without it the demo stays off);
 - Google export configuration;
 - allowed origins and environment-specific application URLs.
 

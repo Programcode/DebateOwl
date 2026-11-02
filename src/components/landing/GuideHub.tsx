@@ -10,7 +10,7 @@ import { Reveal } from "./Reveal";
  * scripts/check-links.mjs fails the build when the home page links to too few.
  */
 const GROUPS = [
-    { id: "practice", paths: ["/ai-debate-practice", "/ai-debate-case-generator", "/ai-rebuttal-generator", "/ai-debate-coach", "/debate-evidence-finder"] },
+    { id: "practice", paths: ["/ai-debate", "/ai-debate-practice", "/ai-debate-case-generator", "/ai-rebuttal-generator", "/ai-debate-coach", "/debate-evidence-finder"] },
     { id: "formats", paths: ["/public-forum-debate", "/lincoln-douglas-debate", "/policy-debate", "/british-parliamentary-debate", "/world-schools-debate", "/congress-debate"] },
     { id: "skills", paths: ["/how-to-write-a-debate-case", "/how-to-practice-rebuttals", "/debate-clash-points", "/debate-fallacies", "/debate-judge-adaptation", "/how-to-prepare-for-a-debate-tournament"] },
     { id: "tools", paths: ["/tools", "/tools/debate-timer", "/tools/debate-motion-generator", "/tools/debate-flow-sheet", "/tools/speech-time-calculator"] },

@@ -19,6 +19,7 @@ import PrivacyPage from '@/pages/PrivacyPage';
 import AboutPage from '@/pages/AboutPage';
 import ContactPage from '@/pages/ContactPage';
 import PressPage from '@/pages/PressPage';
+import AiDebatePage from '@/pages/AiDebatePage';
 import NotFound from '@/pages/NotFound';
 import SourcesPage from '@/pages/SourcesPage';
 import { PRACTICE_TOOLS, PREPARE_TOOLS, PREP_MODE_COUNT, UTILITY_TOOLS } from '@/components/features/tools/tool-links';
@@ -303,6 +304,14 @@ export async function prerenderPages({ landingModified }: { landingModified?: st
       body: render(route, Page),
       structuredData: companyStructuredData(route),
     })),
+    // Like the tool pages, /ai-debate renders its own JSON-LD in the body.
+    {
+      route: '/ai-debate',
+      file: 'ai-debate/index.html',
+      module: 'src/pages/AiDebatePage.tsx',
+      head: PAGE_HEADS['/ai-debate'],
+      body: render('/ai-debate', AiDebatePage),
+    },
     // The tool pages render their own JSON-LD in the body.
     ...TOOL_PAGES.map(({ route, module, Page }) => ({
       ...alternatesOf(route),

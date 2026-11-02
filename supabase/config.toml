@@ -52,6 +52,11 @@ verify_jwt = false
 [functions.demo-code-login]
 verify_jwt = false
 
+# The /ai-debate mini round runs with no account, so no JWT. The function
+# checks the origin, a Turnstile token and its own rate limits instead.
+[functions.demo-rebuttal]
+verify_jwt = false
+
 [auth.email]
 otp_length = 6
 max_frequency = "1s"

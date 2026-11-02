@@ -5,7 +5,7 @@
       "path": "/ai-debate",
       "anchor": "AI debate partner",
       "summary": "argue a motion against an AI opponent that rebuts your argument",
-      "live": false
+      "live": true
     },
     {
       "path": "/ai-debate-practice",
