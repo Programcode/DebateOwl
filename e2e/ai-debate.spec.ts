@@ -25,6 +25,7 @@ async function mockDemo(page: Page) {
       contentType: 'application/json',
       body: JSON.stringify({
         sessionId: '11111111-1111-4111-8111-111111111111',
+        ...(turn === 1 ? { sessionToken: 'signed-session-token' } : {}),
         turn,
         turnsLeft: turn === 1 ? 1 : 0,
         rebuttal: turn === 1 ? 'Phones also let pupils reach their parents in an emergency.' : 'Office phones are slower when every second counts.',
@@ -59,6 +60,7 @@ test.describe('AI debate mini round', () => {
     expect(bodies[0].sessionId).toBeUndefined();
     expect(bodies[1]).toMatchObject({
       sessionId: '11111111-1111-4111-8111-111111111111',
+      sessionToken: 'signed-session-token',
       previous: { argument: 'Phones distract pupils in class and make bullying easier.', rebuttal: 'Phones also let pupils reach their parents in an emergency.' },
     });
   });
