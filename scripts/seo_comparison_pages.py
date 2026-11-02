@@ -116,6 +116,10 @@ SIBLINGS = {
     "debateowl-vs-gemini",
     "debateowl-vs-hyperwrite",
     "debateowl-vs-schoolai",
+    "debateowl-vs-debatable",
+    "debateowl-vs-prilo",
+    "debateowl-vs-debatethis",
+    "debateowl-vs-kialo-edu",
 }
 
 
@@ -2129,6 +2133,458 @@ body.coach .plan a:not(.cta){color:#FCE48A}body.coach .plan li{margin:6px 0}
     }
 
 
+VS_CHECKED_NOV = "Checked Nov 2, 2026."
+NOV_VS_DATE = "2026-11-02"
+
+
+def page_debatable():
+    answer = (
+        "Open Debatable when you want to argue out loud right now: pick a topic and a side, an AI opponent or a real person argues back by voice, "
+        "and an AI judge scores the round out of 100 and says why. Open DebateOwl when the motion and the round date are set: "
+        'it writes your case in speaking order with "If they say… we answer…" replies, finds the other side\'s weak points and then times a practice round. '
+        "Thirty minutes in, Debatable has given you a spoken round and a verdict; DebateOwl, a case you can stand up and read."
+    )
+    faqs = [
+        ("Is Debatable the same as itsdebatable.com and debateai.com?", "Yes. As of November 2026 both addresses forward to debatable.com, which is where every fact on this page comes from."),
+        ("Is Debatable free?", "It has a free plan: live rounds with people after sign-in, and 10 AI voice minutes, about one round, that do not refill. Individual is $10 a year for 120 AI voice minutes a month, and Voice is $12 a month for the same allowance."),
+        ("Can DebateOwl match me with a real person?", "No. Every DebateOwl opponent is the AI. If arguing with strangers is the point, Debatable does that and DebateOwl does not."),
+    ]
+    clock = [
+        (
+            "0:00",
+            'Open the AI voice page. Choose Casual back-and-forth, where you can interrupt, or Conversation, where the AI asks one question at a time. Pick a subject or write your own statement, take a side, pick the AI\'s voice. <a href="#db2">D2</a>',
+            "Start a Current Debate: the motion your coach gave you, your side, the format and your speaker role. Everything you make tonight is filed under it.",
+        ),
+        (
+            "0:03",
+            'You are already talking. The AI argues the other side aloud at the challenge level you chose (Relaxed, Balanced or Tough), and in Casual mode it may cut in like a person would. <a href="#db2">D2</a>',
+            'The case generator writes your case in the order you will say it: an opening, two to four arguments, each with an explanation, evidence naming a source and year, and why it matters, then "If they say… we answer…" replies and a closing.',
+        ),
+        (
+            "0:15",
+            'The round ends and the decision arrives within seconds: who won, a score out of 100 for each side, and reasons that quote what was said. On the free plan, one round like this uses about all of the 10 free AI voice minutes. <a href="#db1">D1</a> <a href="#db3">D3</a>',
+            "Attack reads the case the other side is likely to run and points at its weakest link. Factoids looks up a claim you are unsure of and suggests evidence with a named source to check.",
+        ),
+        (
+            "0:25",
+            'Rematch, switch sides or take a new topic, on a paid plan or with extra rounds bought. Or press Match to debate a stranger live, camera on, as an open conversation or as six timed speeches in 18 minutes. <a href="#db4">D4</a>',
+            "Crossfire questions you on your own case, one question at a time, so the replies you just read become answers you have already given once.",
+        ),
+    ]
+    rows = "".join(
+        f'<li><p class="t">{esc(t)}</p><div class="lane db"><p class="who">Debatable</p><p>{db}</p></div>'
+        f'<div class="lane ow"><p class="who">{TICK}DebateOwl</p><p>{esc(ow)}</p></div></li>'
+        for t, db, ow in clock
+    )
+    body = f"""
+<section class="setup">
+  <h2>Same thirty minutes, opposite order</h2>
+  <p>Debatable starts with the round and leaves the writing out. DebateOwl starts with the writing and puts the round after it. Neither order is wrong; they suit different nights. Below, one evening runs on both, clock in the left margin. The times are a plan, not a stopwatch test, and each step describes what the product's own pages and screens offer as of November 2026.</p>
+</section>
+<section class="clock">
+  <h2>One evening, minute by minute</h2>
+  <ol class="rail">{rows}</ol>
+</section>
+<section class="hold">
+  <h2>What you are holding at 0:30</h2>
+  <div class="two">
+    <div><h3>From Debatable</h3><p>One or more spoken rounds, each with a judge's decision, a score out of 100 per side and a reason for decision you can share or save. Practice in thinking on your feet against something that answers back. No written case, because writing one is not what the voice round is for.</p></div>
+    <div class="mine"><h3>{TICK}From DebateOwl</h3><p>A case for your side that you can read out, replies ready for what the other side will say, the weak spots in their likely case, evidence leads to open and check, and a set of cross-examination answers you have said once. Not yet a full timed round: in Public Forum that is the next 26 minutes of speeches.</p></div>
+  </div>
+</section>
+<section class="later">
+  <h2>Later the same evening</h2>
+  <p>In DebateOwl, Sparring runs the round at your format's real speech times in School 4-6-6-3, Lincoln-Douglas or Public Forum. You can type or talk, and in a voice round the AI opponent talks back. The round closes with a judge's verdict, a mark for each category and the next thing to work on; the judge reads your words, not your tone.</p>
+  <p>In Debatable, a live round against a person is the thing DebateOwl cannot give you. Its judging is built to be checked: three AI models from three companies judge each round, two matching votes decide it, the scoring rules are published before you speak, and either side can appeal to a human reviewer within 72 hours. <a href="#db1">D1</a></p>
+</section>
+<section class="fair">
+  <h2>Where Debatable is the better pick</h2>
+  <ul>
+    <li><strong>You want a human opponent.</strong> Get matched with someone who disagrees, or post a challenge, and debate on camera. <a href="#db4">D4</a></li>
+    <li><strong>You debate in a language other than English, Spanish or Hungarian.</strong> Its language page lists French, German, Italian, Portuguese, Arabic, Hindi, Mandarin, Japanese and Korean among others, with the AI opponent and the ballot in that language. Hungarian is not on the list. <a href="#db5">D5</a></li>
+    <li><strong>You like a ladder.</strong> Rated live rounds move you on a public leaderboard that works like a chess rating.</li>
+    <li><strong>Budget is tight and you mostly want voice practice.</strong> $10 a year buys 120 AI voice minutes every month. <a href="#db3">D3</a></li>
+  </ul>
+</section>
+<section class="next">
+  <h2>When the round on Friday has a motion</h2>
+  <p>Write the case first, then say it under the clock. <a href="/">DebateOwl's home page</a> shows each tool, and <a href="/best-ai-for-debate">the guide to the best AI for debate</a> places both products among the rest.</p>
+  <p><a class="cta" href="/app">Write tonight's case in DebateOwl</a></p>
+  <p>{PRICE_HTML}</p>
+  <p>Comparing prices instead? See <a href="/debateowl-vs-prilo">DebateOwl vs Prilo</a>. Teachers can read <a href="/debateowl-vs-kialo-edu">DebateOwl vs Kialo Edu</a> for a lesson that uses both.</p>
+</section>
+{faq_block("Debatable, quickly", faqs, "details")}
+{sources("Debatable pages we read", [
+    ("db1", "https://debatable.com/", "Debate an AI or a real person in timed rounds; an AI judge gives a score out of 100 and reasons; three judges from three companies, two matching votes decide; appeals heard by a person within 72 hours; itsdebatable.com and debateai.com forward here."),
+    ("db2", "https://debatable.com/newvoice", "AI voice round: Casual back-and-forth or Conversation mode, topic and side, the AI's voice, challenge level Relaxed, Balanced or Tough; a score out of 100 at the end."),
+    ("db3", "https://debatable.com/pricing", "Free: 10 AI voice minutes after sign-in, about one round, not refilled. Individual $10 a year, Voice $12 a month, both 120 AI voice minutes a month; BYOK $1 a month; Team $50 a year; schools $200 a season."),
+    ("db4", "https://debatable.com/how-it-works", "Live rounds: matched with whoever is waiting, camera on for both, open conversation or six timed speeches in 18 minutes, a panel of AI judges, export to Google Docs."),
+    ("db5", "https://debatable.com/languages/", "Fifteen languages for the whole product, including the AI opponent and ballot; more for live rounds; Hungarian not listed."),
+], VS_CHECKED_NOV)}
+"""
+    style = """
+body.evening{background:#F6F3FF}body.evening main{width:min(1040px,calc(100% - 32px));margin:28px auto 72px}
+body.evening h1{font-size:clamp(2.2rem,5.4vw,3.7rem);color:#1C1240}
+body.evening .setup{font-size:1.06rem;max-width:760px}
+body.evening .rail{list-style:none;padding:0;margin:0;position:relative}
+body.evening .rail:before{content:"";position:absolute;left:38px;top:8px;bottom:8px;width:3px;background:#C9BDF2;border-radius:3px}
+body.evening .rail li{display:grid;grid-template-columns:80px 1fr 1fr;gap:14px;align-items:start;margin:0 0 18px;position:relative}
+body.evening .t{margin:10px 0 0;justify-self:center;font-family:Fredoka,Nunito,sans-serif;font-size:1.05rem;background:#1C1240;color:#fff;border-radius:999px;padding:4px 12px;position:relative;z-index:1}
+body.evening .lane{border-radius:18px;padding:2px 16px 8px;background:#fff;border:2px solid #E2DAF8}
+body.evening .lane.ow{border-color:#0A6FF0;background:#F2F8FF}
+body.evening .who{font-family:Fredoka,Nunito,sans-serif;display:flex;align-items:center;margin:10px 0 0;color:#5B3FC4}body.evening .ow .who{color:#0556D6}
+body.evening .two{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+body.evening .two>div{background:#fff;border-radius:22px;padding:4px 20px 10px}
+body.evening .two .mine{border:3px solid #0A6FF0}body.evening .two h3{display:flex;align-items:center}
+body.evening .later{border-left:5px solid #1C1240;padding-left:18px;margin-top:24px}
+body.evening .fair li{margin:8px 0}
+body.evening .next{background:#1C1240;color:#F1ECFF;border-radius:26px;padding:6px 24px 18px;margin:26px 0}
+body.evening .next a:not(.cta){color:#FCE48A}
+body.evening details{border-bottom:1px solid #D9D0F2;padding:10px 0}
+@media(max-width:760px){body.evening .rail:before{display:none}body.evening .rail li{grid-template-columns:1fr}body.evening .t{justify-self:start}body.evening .two{grid-template-columns:1fr}}
+"""
+    return {
+        "slug": "debateowl-vs-debatable",
+        "lang": "en",
+        "body": "evening",
+        "published": NOV_VS_DATE,
+        "modified": NOV_VS_DATE,
+        "title": "DebateOwl vs Debatable: Voice Round or Written Prep | DebateOwl",
+        "description": "One evening on Debatable and on DebateOwl: a spoken round with an AI verdict, or a written case before the round. As of November 2026.",
+        "h1": "DebateOwl vs Debatable: a voice round now, or written prep first",
+        "question": "Should I practise on Debatable or prepare in DebateOwl?",
+        "answer": answer,
+        "faqs": faqs,
+        "style": style,
+        "html_body": body,
+    }
+
+
+def page_prilo():
+    answer = (
+        "Both cover Lincoln-Douglas and Public Forum. Prilo NSDA adds Policy, a 3-minute cross-examination simulator, speech analytics and an evidence library, "
+        "for $15 a month or $60 a year. DebateOwl costs $5 a month after a 3-day free trial, works in English, Spanish and Hungarian, "
+        'writes a whole case with "If they say… we answer…" replies, and runs full timed rounds in School 4-6-6-3, Lincoln-Douglas and Public Forum '
+        "that end in a judge's verdict. The ledger below lines them up."
+    )
+    faqs = [
+        ("Does Prilo have a free trial?", "Its NSDA page and sign-up page, as of November 2026, name none: you create an account, pick monthly or yearly, and go to checkout. Prilo's free NSDA resources, such as event guides and topic analysis, need no plan."),
+        ("Which is cheaper over a year?", "They come out level. Prilo's yearly plan is $60, paid once. DebateOwl has only a monthly plan, and twelve months at $5 is also $60, plus tax, after the 3-day trial."),
+        ("Is Prilo part of the NSDA?", "No. Prilo's own page says it is built by students and not affiliated with the National Speech & Debate Association."),
+    ]
+    ledger = [
+        ("Formats it practises", 'Lincoln-Douglas, Public Forum and Policy, each with its own sparring, cross-examination and flowing workflows. <a href="#pr1">R1</a>',
+         "Full timed rounds in School 4-6-6-3, Lincoln-Douglas and Public Forum. Case and reply tools for any motion, with British Parliamentary, World Schools, Policy and Congress among the format settings."),
+        ("A practice round", 'The AI Sparring Partner writes a rebuttal to the case you type or speak, for either side, with a voice read-back. The pages describe rebuttal practice, not a round with every speech. <a href="#pr1">R1</a>',
+         "Sparring runs every speech in order at its real time, against an AI opponent, typed or spoken, and ends with a verdict and a score per category."),
+        ("Cross-examination", 'CX Simulator: load your case, start a 3-minute clock and answer questions written for your format. <a href="#pr1">R1</a>',
+         "Crossfire: it questions you one question at a time, or you question it."),
+        ("Writing the case", 'PriloGPT answers strategy questions, and CardCut turns pasted text into a cited evidence card to check. <a href="#pr1">R1</a>',
+         'The case generator writes the whole case in speaking order, with "If they say… we answer…" replies; one weak section can be rewritten alone.'),
+        ("How you sound", 'Speech Analytics: words per minute, filler words and vocal variety. <a href="#pr1">R1</a>',
+         "Judged from your words only. DebateOwl does not score pace or fillers."),
+        ("Languages", "Its NSDA pages are in English and name no other language.",
+         "English, Spanish and Hungarian, from the menus to the case and the opponent."),
+        ("Monthly price", '$15 a month. <a href="#pr2">R2</a>', "$5 a month, plus tax."),
+        ("Yearly price", '$60 a year, paid once. <a href="#pr2">R2</a>', "No yearly plan."),
+        ("Free trial", 'None named; sign-up goes from account to plan to checkout. <a href="#pr2">R2</a>', "3 days, no credit card."),
+        ("Free without a plan", 'NSDA resources: event guides, topic analysis, competition calendars and how-to guides. <a href="#pr3">R3</a>',
+         "A debate timer, motion generator, flow sheet and speech-time calculator, with no account."),
+    ]
+    trs = "".join(f'<tr><th scope="row">{esc(label)}</th><td>{pr}</td><td>{esc(ow)}</td></tr>' for label, pr, ow in ledger)
+    body = f"""
+<section class="book">
+  <h2>The ledger</h2>
+  <p>Ten lines, as of November 2026. Prilo's column comes from prilo.ai and its sign-up page; DebateOwl's from its own app and price.</p>
+  <div class="scroll"><table>
+    <caption>Prilo NSDA and DebateOwl, line by line</caption>
+    <thead><tr><th scope="col"></th><th scope="col">Prilo NSDA</th><th scope="col">DebateOwl</th></tr></thead>
+    <tbody>{trs}</tbody>
+  </table></div>
+</section>
+<section class="picks">
+  <h2>Pick Prilo if…</h2>
+  <p>…you compete on the American circuit in Lincoln-Douglas, Public Forum or Policy and want a drill for each skill a tournament tests: a 3-minute cross-examination against the clock, flowing at speeds that build up to nationals pace, feedback on your pace and filler words, and a library for cutting evidence cards. Policy debaters especially: DebateOwl has no Policy practice round. If you will train all season, its $60 yearly plan costs a third of twelve monthly payments.</p>
+  <h2>Pick DebateOwl if…</h2>
+  <p>…you want the whole case written and then a whole round to say it in, from the first speech to the last, with a verdict that tells you what to fix. Pick it too if you debate in Spanish or Hungarian, debate the School 4-6-6-3 format, or want to try before you pay: the trial asks for no card, and the plan is monthly, with no year to commit to.</p>
+</section>
+<section class="notes">
+  <h2>Reading the ledger fairly</h2>
+  <p>Prilo's tools are drills: each takes one part of a round and repeats it. DebateOwl's centre is the round: the case comes first, the questions next, the full timed round last. A debater with both would use Prilo for flowing and pace, and DebateOwl for the case and the full run.</p>
+  <p>Prilo also makes study tools for DECA, FBLA, HOSA and World Scholar's Cup; the NSDA plan is its debate product, priced on its own. <a href="#pr4">R4</a></p>
+</section>
+<section class="go">
+  <h2>Try the round before you pay</h2>
+  <p>Put your next motion into DebateOwl and run the round in the 3-day trial. <a href="/">DebateOwl's home page</a> shows the tools; <a href="/best-ai-for-debate">which AI is best for debate</a> covers the rest of the field.</p>
+  <p><a class="cta" href="/app">Start the 3-day trial</a></p>
+  <p>{PRICE_HTML}</p>
+  <p>More side-by-sides: <a href="/debateowl-vs-debatethis">DebateOwl vs DebateThis</a> for a first-time debater, and <a href="/debateowl-vs-debatable">DebateOwl vs Debatable</a> for voice rounds.</p>
+</section>
+{faq_block("Prilo price questions", faqs, "h3")}
+{sources("Prilo pages behind the ledger", [
+    ("pr1", "https://www.prilo.ai/nsda", "Prilo NSDA for Lincoln-Douglas, Public Forum and Policy: AI Sparring Partner (rebuttal drafts, voice read-back), CX Simulator with a 3-minute clock, Speech Analytics, flowing practice, evidence library and CardCut, PriloGPT; $15 a month or $60 a year; not affiliated with the NSDA."),
+    ("pr2", "https://nsda.prilo.ai/signup?plan=monthly", "Sign-up: yearly $60 or monthly $15, create an account, then secure checkout; no trial named."),
+    ("pr3", "https://www.prilo.ai/nsda-resources", "Free NSDA resources: event guides, topic analysis, competition calendars, and guides on flowing, case writing, evidence cutting and cross-examination."),
+    ("pr4", "https://www.prilo.ai/", "Prilo LLC: an AI study platform for DECA, World Scholar's Cup, FBLA and HOSA, with NSDA debate as a separate plan."),
+], VS_CHECKED_NOV)}
+"""
+    style = """
+body.ledger{background:#FBFAF5}body.ledger main{width:min(980px,calc(100% - 32px));margin:28px auto 72px}
+body.ledger h1{font-size:clamp(2.2rem,5.4vw,3.6rem);color:#14261C}
+body.ledger table{min-width:700px;background:#fff;border:2px solid #14261C;border-radius:4px}
+body.ledger caption{text-align:left;font-family:Fredoka,Nunito,sans-serif;padding:6px 0}
+body.ledger thead th{background:#14261C;color:#F4F1E4}
+body.ledger tbody tr:nth-child(odd){background:#F6F4EA}
+body.ledger tbody th{width:22%;font-family:Fredoka,Nunito,sans-serif;border-right:1px dashed #A9B3A0}
+body.ledger td{width:39%;font-variant-numeric:tabular-nums}body.ledger td:last-child{background:#EEF7FF}
+body.ledger .picks{display:grid;grid-template-columns:1fr 1fr;column-gap:24px;margin-top:22px}
+body.ledger .picks h2{grid-row:1;margin-bottom:4px}body.ledger .picks p{grid-row:2;margin-top:0;background:#fff;border-radius:16px;padding:12px 16px;border-top:5px solid #14261C}
+body.ledger .picks p:last-of-type{border-top-color:#0A6FF0}
+body.ledger .notes{border-top:2px solid #14261C;margin-top:26px}
+body.ledger .go{background:#14261C;color:#F4F1E4;border-radius:22px;padding:6px 24px 18px;margin:24px 0}
+body.ledger .go a:not(.cta){color:#FCE48A}
+@media(max-width:760px){body.ledger .picks{display:block}}
+"""
+    return {
+        "slug": "debateowl-vs-prilo",
+        "lang": "en",
+        "body": "ledger",
+        "published": NOV_VS_DATE,
+        "modified": NOV_VS_DATE,
+        "title": "DebateOwl vs Prilo: Formats and Prices Ledger | DebateOwl",
+        "description": "Prilo NSDA and DebateOwl line by line: formats, languages, monthly and yearly price, free trial, then who should pick which. As of November 2026.",
+        "h1": "DebateOwl vs Prilo: a formats and prices ledger",
+        "question": "Is Prilo or DebateOwl better value for debate practice?",
+        "answer": answer,
+        "faqs": faqs,
+        "style": style,
+        "html_body": body,
+    }
+
+
+def page_debatethis():
+    answer = (
+        "Start with DebateThis if you want to try debating as a game: free one-on-one matches of three timed rounds (opening, rebuttal, closing) "
+        "against people or AI bots, with an Elo rating that moves after every win or loss. Start with DebateOwl if a school or club debate is coming "
+        'and you want a coach: it writes your case with "If they say… we answer…" replies, questions you on it, and runs a timed round in your format '
+        "that ends with what to work on next."
+    )
+    faqs = [
+        ("I have never debated. Which should I open first?",
+         "If you just want to find out whether arguing is fun, DebateThis: it is free to play and you can watch its bots debate before you sign up. "
+         "If your first debate is already on the calendar, DebateOwl, because it starts from that motion and builds the case you will say."),
+        ("Which one tells me what I did wrong?",
+         "DebateOwl. Each Sparring round ends with a judge's verdict, a score per category and what to work on next. "
+         "On DebateThis, your rating and the audience votes tell you whether you won; the pages we read describe no written notes on your arguments."),
+        ("Can I practise a school motion in a real format?",
+         "DebateOwl takes any motion and runs School 4-6-6-3, Lincoln-Douglas or Public Forum at their real speech times. "
+         "DebateThis has its own three-round match and a topic catalog from pop culture to philosophy; its pages name no school format."),
+        ("What does it cost to start?",
+         "DebateThis says it is free to play, and its pages show no paid plan. "
+         "DebateOwl's app is $5 a month after a 3-day free trial, while its timer, motion generator and flow sheet cost nothing."),
+    ]
+    picks = ["DebateThis", "DebateOwl", "DebateOwl", "DebateThis"]
+    qa = "".join(
+        f'<article class="q {"ow" if pick == "DebateOwl" else "dt"}"><p class="num">Question {i}</p><h3>{esc(q)}</h3><p>{esc(a)}</p>'
+        f'<p class="start">{TICK if pick == "DebateOwl" else ""}Start with {esc(pick)}</p></article>'
+        for i, ((q, a), pick) in enumerate(zip(faqs, picks), 1)
+    )
+    body = f"""
+<section class="rungs">
+  <h2>A ladder and a coach</h2>
+  <div class="pair">
+    <div class="dt"><h3>The ladder: DebateThis</h3><p>An online arena where every match is one-on-one and has the same three phases. Win and your Elo rating climbs, through tiers from Unranked to Senator; lose and it drops. When nobody is around, eight house bots with distinct styles (formal, aggressive, thoughtful, snarky) will take the other side at any hour. Spectators vote on who argued better. <a href="#dt1">T1</a> <a href="#dt4">T4</a></p></div>
+    <div class="ow"><h3>{TICK}The coach: DebateOwl</h3><p>A prep and practice app built around one motion at a time. It writes the case you will deliver, questions you on it in Crossfire, and runs a practice round at the real times of your format. At the end a judge's verdict says what worked and what to fix before the next round.</p></div>
+  </div>
+  <p>One is built to keep you coming back for another match. The other is built to get you ready for a particular round. A new debater can use both, but most will want to start in one.</p>
+</section>
+<section class="four">
+  <h2>Four questions before your first debate</h2>
+  {qa}
+</section>
+<section class="week">
+  <h2>A first week with both</h2>
+  <ol>
+    <li><strong>Day 1.</strong> Watch a match in DebateThis's Bot Arena; no account needed to spectate. Notice how each side answers the other in the rebuttal phase. <a href="#dt2">T2</a></li>
+    <li><strong>Day 2.</strong> Play a free DebateThis match against a house bot on a topic you care about.</li>
+    <li><strong>Day 3.</strong> Put your club's motion into DebateOwl and read the case it writes, out loud.</li>
+    <li><strong>Days 4 to 5.</strong> Answer Crossfire's questions on that case, then run one Sparring round and read the verdict.</li>
+    <li><strong>The weekend.</strong> Back on the ladder with what you learned, or straight into the real debate.</li>
+  </ol>
+  <p>DebateThis's leaderboard is open to read, and its human ranking shows how many matches the top players have won and lost. <a href="#dt3">T3</a></p>
+</section>
+<section class="cta-box">
+  <h2>When your debate has a date</h2>
+  <p>Start from the motion, not from a match. <a href="/">The DebateOwl home page</a> walks through each tool; <a href="/best-ai-for-debate">our answer on the best AI for debate</a> compares more of them.</p>
+  <p><a class="cta" href="/app">Prepare your first debate</a></p>
+  <p>{PRICE_HTML}</p>
+  <p>Also compared: <a href="/debateowl-vs-prilo">DebateOwl vs Prilo</a>, a price ledger, and <a href="/debateowl-vs-kialo-edu">DebateOwl vs Kialo Edu</a> for teachers.</p>
+</section>
+{sources("DebateThis pages we read", [
+    ("dt1", "https://debatethisnow.com/", "Competitive one-on-one debate, free to play: three rounds (opening, rebuttal, closing) with timed phases, Elo rating with tiers from Unranked to Senator, eight house bots with distinct styles available around the clock."),
+    ("dt2", "https://debatethisnow.com/bots", "Bot Arena: watch AI bots debate live with no account; a directory of bots with their Elo ratings."),
+    ("dt3", "https://debatethisnow.com/leaderboard", "Top human debaters by Elo, with tier, wins, losses and win rate."),
+    ("dt4", "https://debatethisnow.com/terms", "A one-on-one platform with audience voting, Elo-rated outcomes and bot opponents."),
+    ("dt5", "https://debatethisnow.com/topics", "A topic catalog by category, from pop culture and sports to science, philosophy and ethics, with trending topics that rotate daily."),
+], VS_CHECKED_NOV)}
+"""
+    style = """
+body.rungs{background:#FFF8EC}body.rungs main{width:min(1000px,calc(100% - 32px));margin:28px auto 72px}
+body.rungs h1{font-size:clamp(2.2rem,5.4vw,3.6rem);color:#3A1A00}
+body.rungs .pair{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+body.rungs .pair>div{border-radius:20px;padding:4px 20px 10px}
+body.rungs .pair .dt{background:#3A1A00;color:#FFE9CC}body.rungs .pair .dt a{color:#FCE48A}
+body.rungs .pair .ow{background:#fff;border:3px solid #0A6FF0}body.rungs .pair h3{display:flex;align-items:center}
+body.rungs .four{counter-reset:q}
+body.rungs .q{background:#fff;border-radius:20px;padding:6px 22px 12px;margin:14px 0;border:2px solid #F0D9B5;position:relative}
+body.rungs .q.ow{border-color:#0A6FF0}
+body.rungs .num{margin:8px 0 0;font-size:.78rem;text-transform:uppercase;letter-spacing:.08em;color:#8A5A1E}
+body.rungs .q h3{font-size:1.3rem;margin:4px 0}
+body.rungs .start{display:inline-flex;align-items:center;font-family:Fredoka,Nunito,sans-serif;border-radius:999px;padding:4px 14px;background:#3A1A00;color:#FFE9CC;margin:2px 0}
+body.rungs .q.ow .start{background:#0A6FF0;color:#fff}body.rungs .q.ow .start .tick path{stroke:#fff}
+body.rungs .week li{margin:8px 0}body.rungs ol li{overflow-wrap:anywhere}
+body.rungs .cta-box{border:3px dashed #3A1A00;border-radius:24px;padding:4px 22px 16px;margin:26px 0;background:#fff}
+@media(max-width:760px){body.rungs .pair{grid-template-columns:1fr}}
+"""
+    return {
+        "slug": "debateowl-vs-debatethis",
+        "lang": "en",
+        "body": "rungs",
+        "published": NOV_VS_DATE,
+        "modified": NOV_VS_DATE,
+        "title": "DebateOwl vs DebateThis: Ladder Game or Coach | DebateOwl",
+        "description": "DebateThis is a free ranked debate game; DebateOwl coaches you for a set motion. Four questions for a new debater choosing where to start, Nov 2026.",
+        "h1": "DebateOwl vs DebateThis: a ladder game or a coach",
+        "question": "Should a new debater start with DebateThis or DebateOwl?",
+        "answer": answer,
+        "faqs": faqs,
+        "style": style,
+        "html_body": body,
+    }
+
+
+def page_kialo_edu():
+    answer = (
+        "They do different jobs, so a teacher can use both. Kialo Edu is a free, nonprofit discussion platform where a class maps an argument: "
+        "a thesis with pro and con claims under it, which students add sources to, vote on and get graded on. DebateOwl gets students ready to say a case aloud: "
+        'it writes the case with "If they say… we answer…" replies and runs timed practice rounds. Map the motion in Kialo Edu, '
+        "then debate it in the room with DebateOwl's free timer and flow sheet."
+    )
+    faqs = [
+        ("Is Kialo Edu really free?", "Yes. As of November 2026 Kialo Edu says it is free and always will be, with no premium features, because Kialo is a nonprofit funded by a private philanthropic foundation."),
+        ("Do students need accounts?", "Not for either tool's free part. Kialo Edu's Instant Access lets students join a discussion by link or QR code with only a name, and DebateOwl's timer and flow sheet need no sign-in. Teachers need a Kialo Edu account, and students need their own account for the DebateOwl app."),
+        ("Does Kialo Edu use AI?", "The Kialo Edu pages we read describe argument maps, voting, sources, tasks and grading, and none of them mention AI. It is a tool for students' own reasoning, not an AI opponent or case writer."),
+    ]
+    jobs = [
+        ("What students make", 'A shared map: a thesis, pro and con claims under it, claims under those, shown as a tree or a sunburst. <a href="#ke2">K2</a>',
+         "Each student's own case for one side, in speaking order, with replies to the other side, then a timed round."),
+        ("How the class takes part", 'Everyone writes at once, in text, from any device; anonymous mode shows animal avatars to classmates and real names to you. <a href="#ke2">K2</a>',
+         "One debater at a time in a practice round with the AI, or the whole class in a live debate run on the free timer."),
+        ("Ages", 'Eight and up. <a href="#ke3">K3</a>', "The app is for students aged 13 and older."),
+        ("Accounts", 'Teachers sign up; students can join with only a name, or you batch-create managed accounts. <a href="#ke3">K3</a>',
+         "Each student signs up for the app; the timer, motion generator and flow sheet need none."),
+        ("Teacher view", 'Tasks, grading on a scale you set, comments on each claim, and a record of who changed what. <a href="#ke2">K2</a>',
+         "None. A student can export a case to Google Docs or PDF and share it with you."),
+        ("Cost", 'Free for everyone, with no ads and no paid tier. <a href="#ke4">K4</a>', "The app is $5 a month per student after a 3-day trial; the free tools cost nothing."),
+    ]
+    trs = "".join(f'<tr><th scope="row">{esc(label)}</th><td>{ke}</td><td>{esc(ow)}</td></tr>' for label, ke, ow in jobs)
+    lesson = [
+        ("0–5 min", "Open a starter discussion from Kialo Edu's Topic Library, or type the motion as the thesis. Turn on Instant Access and put the QR code on the board."),
+        ("5–20 min", "Small Group Mode gives each group its own copy. Groups add pro and con claims under the thesis, each with a source. You cycle through the copies and leave comments."),
+        ("20–25 min", "Guided Voting walks each group through its map; the two strongest claims on each side become tonight's arguments."),
+        ("25–45 min", "Close the laptops. Two speakers a side debate the motion in the room, timed on DebateOwl's free debate timer, while everyone else fills in a printed flow sheet."),
+        ("45–50 min", "Back to the map: which claims survived the debate, and which reply nobody had written down? Export the discussion as plain text for next lesson."),
+    ]
+    steps = "".join(f'<li><p class="slot">{esc(t)}</p><p>{esc(d)}</p></li>' for t, d in lesson)
+    body = f"""
+<section class="jobs">
+  <h2>Mapping an argument vs preparing to speak it</h2>
+  <p>Kialo Edu answers "what are all the reasons, and how do they connect?" DebateOwl answers "what will I say in four minutes, and what will I say back?" As of November 2026, from Kialo Edu's own pages and DebateOwl's app:</p>
+  <div class="scroll"><table>
+    <caption>Kialo Edu and DebateOwl in a classroom</caption>
+    <thead><tr><th scope="col"></th><th scope="col">Kialo Edu</th><th scope="col">DebateOwl</th></tr></thead>
+    <tbody>{trs}</tbody>
+  </table></div>
+</section>
+<section class="lesson">
+  <h2>One 50-minute lesson that uses both</h2>
+  <p>For a class of any size, no student accounts anywhere. Kialo Edu's own FAQ puts sign-up to a running discussion at under two minutes. <a href="#ke3">K3</a></p>
+  <ol class="plan">{steps}</ol>
+  <p class="links">The tools for minutes 25 to 45: the <a href="/tools/debate-timer">debate timer</a> has presets for Public Forum, Lincoln-Douglas, Policy, British Parliamentary, World Schools, Asian Parliamentary and School 4-6-6-3, and the <a href="/tools/debate-flow-sheet">flow sheet</a> can be printed for every student.</p>
+  <h3>Homework for the debate club</h3>
+  <p>Students who compete take the strongest claims from the map into DebateOwl. The case generator turns them into a speech with evidence and replies, Crossfire questions them on it, and Sparring runs a timed round that ends with what to fix.</p>
+</section>
+<section class="each">
+  <h2>What only one of them does</h2>
+  <div class="cols">
+    <div><h3>Only Kialo Edu</h3><ul>
+      <li>Every student contributes at the same moment, so nobody waits for a turn.</li>
+      <li>Grading per claim, with Tasks that track progress for you. <a href="#ke2">K2</a></li>
+      <li>Google Classroom, Moodle, Blackboard, D2L and Clever. <a href="#ke1">K1</a></li>
+      <li>Free for good, from a nonprofit based in Germany that runs no ads. <a href="#ke4">K4</a></li>
+    </ul></div>
+    <div class="mine"><h3>{TICK}Only DebateOwl</h3><ul>
+      <li>A full case written for one side, ready to read out.</li>
+      <li>An AI opponent that argues back, typed or spoken.</li>
+      <li>Timed rounds at real speech times, judged at the end.</li>
+      <li>The whole app in English, Spanish and Hungarian.</li>
+    </ul></div>
+  </div>
+  <p>Kialo Edu also uses argument maps for essay planning and large lectures, which DebateOwl does not try to do. <a href="#ke5">K5</a></p>
+</section>
+<section class="teach">
+  <h2>For the students who will compete</h2>
+  <p>Run the lesson above for the class, then point your debaters at DebateOwl's trial for the tournament motion. <a href="/">DebateOwl's home page</a> explains the app for students; <a href="/best-ai-for-debate">the best AI for debate, job by job</a> lists more tools.</p>
+  <p><a class="cta" href="/tools/debate-timer">Open the debate timer for the lesson</a></p>
+  <p>{PRICE_HTML}</p>
+  <p>More for teachers: <a href="/debateowl-vs-schoolai">DebateOwl vs SchoolAI</a>. For students: <a href="/debateowl-vs-debatable">DebateOwl vs Debatable</a> and <a href="/debateowl-vs-debatethis">DebateOwl vs DebateThis</a>.</p>
+</section>
+{faq_block("Teachers ask", faqs, "defs")}
+{sources("Kialo Edu pages for this lesson", [
+    ("ke1", "https://www.kialo-edu.com/", "A free tool for class discussion; students write pros and cons under each other's points to build a discussion map; works with Google Classroom, Microsoft, Moodle, Blackboard, Clever and D2L."),
+    ("ke2", "https://www.kialo-edu.com/features", "Argument maps as a tree or sunburst; simultaneous contributions; Small Group Mode; anonymous participation; Tasks; grading and feedback; Topic Library; Instant Access; sources; Guided Voting; export as plain text."),
+    ("ke3", "https://www.kialo-edu.com/faqs", "Suitable for ages eight and up; teachers need an account, students do not; from sign-up to a discussion in under two minutes; no hidden purchases or premium features."),
+    ("ke4", "https://www.kialo-edu.com/pricing-why-kialo-is-free", "Free and always will be; a nonprofit funded by a private philanthropic foundation, based in Germany, with no ads."),
+    ("ke5", "https://www.kialo-edu.com/use-cases", "Uses beyond class discussion, including essay planning and large lecture groups."),
+], VS_CHECKED_NOV)}
+"""
+    style = """
+body.lesson{background:#F1F8F8}body.lesson main{width:min(1000px,calc(100% - 32px));margin:28px auto 72px}
+body.lesson h1{font-size:clamp(2.2rem,5.4vw,3.6rem);color:#0B2E33}
+body.lesson table{min-width:700px;background:#fff;border-radius:16px;overflow:hidden}
+body.lesson caption{text-align:left;font-family:Fredoka,Nunito,sans-serif;padding:6px 0}
+body.lesson tbody th{width:20%;font-family:Fredoka,Nunito,sans-serif;color:#0B2E33}
+body.lesson td{width:40%}body.lesson td:last-child{background:#EEF7FF}
+body.lesson .plan{list-style:none;padding:0;display:grid;gap:10px}
+body.lesson .plan li{display:grid;grid-template-columns:110px 1fr;gap:14px;align-items:start;background:#fff;border-radius:16px;padding:4px 16px;border-left:6px solid #1F8A8A}
+body.lesson .plan li:nth-child(4){border-left-color:#0A6FF0}
+body.lesson .slot{font-family:Fredoka,Nunito,sans-serif;color:#0B2E33;font-variant-numeric:tabular-nums}
+body.lesson .links{font-size:.98rem}
+body.lesson .cols{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+body.lesson .cols>div{background:#fff;border-radius:20px;padding:4px 20px 8px}body.lesson .cols .mine{border:3px solid #0A6FF0}
+body.lesson .cols h3{display:flex;align-items:center}body.lesson .cols li{margin:6px 0}
+body.lesson .teach{background:#0B2E33;color:#E6F6F6;border-radius:26px;padding:6px 24px 18px;margin:26px 0}
+body.lesson .teach a:not(.cta){color:#FCE48A}
+body.lesson dt{font-family:Fredoka,Nunito,sans-serif;margin-top:14px}
+@media(max-width:760px){body.lesson .cols{grid-template-columns:1fr}body.lesson .plan li{grid-template-columns:1fr;gap:0}}
+"""
+    return {
+        "slug": "debateowl-vs-kialo-edu",
+        "lang": "en",
+        "body": "lesson",
+        "published": NOV_VS_DATE,
+        "modified": NOV_VS_DATE,
+        "title": "DebateOwl vs Kialo Edu for the Classroom | DebateOwl",
+        "description": "Kialo Edu maps a class argument; DebateOwl prepares students to speak it. What each does, and one 50-minute lesson that uses both. As of November 2026.",
+        "h1": "DebateOwl vs Kialo Edu: argument maps and round prep in one classroom",
+        "question": "Should a teacher use Kialo Edu or DebateOwl for debate?",
+        "answer": answer,
+        "faqs": faqs,
+        "style": style,
+        "html_body": body,
+    }
+
+
 def visible_text(html):
     text = re.sub(r"<script[\s\S]*?</script>", " ", html)
     text = re.sub(r"<style[\s\S]*?</style>", " ", text)
@@ -2139,7 +2595,8 @@ def visible_text(html):
 def write_comparison_pages(public: Path):
     ensure_fonts(public)
     pages = [page_ladder(), page_price(), page_chat(), page_teachers(), page_prep(), page_pf(), page_hu(), page_es(), page_hu_best(), page_argufight(), page_mindduel(),
-             page_claude(), page_publicforumai(), page_gemini(), page_hyperwrite(), page_schoolai()]
+             page_claude(), page_publicforumai(), page_gemini(), page_hyperwrite(), page_schoolai(),
+             page_debatable(), page_prilo(), page_debatethis(), page_kialo_edu()]
     h2s = {}
     answers = []
     for page in pages:

@@ -55,6 +55,8 @@ const ALLOWED_REPEATS = new Set([
   "By the DebateOwl team · Published October 29, 2026 · Last updated October 29, 2026",
   "Facts about other products come from their own websites, checked on October 31, 2026",
   "By the DebateOwl team · Published October 31, 2026 · Last updated October 31, 2026",
+  "Facts about other products come from their own websites, checked on November 2, 2026",
+  "By the DebateOwl team · Published November 2, 2026 · Last updated November 2, 2026",
 ]);
 
 describe("generated guide pages", () => {

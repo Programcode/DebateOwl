@@ -1066,6 +1066,10 @@
       "debateowl-vs-schoolai": "{{product}} vagy SchoolAI",
       "debateowl-vs-argufight": "{{product}} vagy ArguFight",
       "debateowl-vs-mindduel": "{{product}} vagy MindDuel",
+      "debateowl-vs-debatable": "{{product}} vagy Debatable",
+      "debateowl-vs-prilo": "{{product}} vagy Prilo",
+      "debateowl-vs-debatethis": "{{product}} vagy DebateThis",
+      "debateowl-vs-kialo-edu": "{{product}} vagy Kialo Edu",
       "debateowl-vs-windebate": "{{product}} vagy WinDebate",
       "debateowl-vs-debateclub": "{{product}} vagy DebateClub"
     }
