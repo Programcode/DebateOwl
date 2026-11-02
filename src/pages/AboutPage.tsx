@@ -12,6 +12,7 @@ export default function AboutPage() {
   const { t, i18n } = useTranslation();
   usePageHead('/about');
   const product = site.product;
+  const { operator } = site.organization;
   const renamedOn = new Intl.DateTimeFormat(i18n.language, { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' })
     .format(new Date(`${site.formerly.until}T00:00:00Z`));
 
@@ -30,9 +31,17 @@ export default function AboutPage() {
           </p>
         </section>
         <section>
-          <h2 className="text-lg font-semibold">{t('aboutPage.makerHeading')}</h2>
+          <h2 className="text-lg font-semibold">{t('aboutPage.makerHeading', { product })}</h2>
           <p>
-            <Trans i18nKey="aboutPage.maker" values={{ product }} components={{ pistack: <a href={site.organization.parent.url} className={linkClass} /> }} />
+            <Trans
+              i18nKey="aboutPage.maker"
+              values={{ product, email: site.contactEmail }}
+              components={{
+                pistack: <a href={operator.publishesAs.url} className={linkClass} />,
+                github: <a href={operator.github} className={linkClass} />,
+                email: <a href={`mailto:${site.contactEmail}`} className={linkClass} />,
+              }}
+            />
           </p>
         </section>
         <section>

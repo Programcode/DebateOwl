@@ -22,6 +22,7 @@ BASE = SITE["origin"]
 BRAND = SITE["brand"]
 PRODUCT = SITE["product"]
 ORGANIZATION = SITE["organization"]
+OPERATOR = ORGANIZATION["operator"]
 FORMERLY = SITE["formerly"]
 PRICING = SITE["pricing"]
 # Prices and plan facts are stated "as of" this month; move it when they are rechecked.
@@ -872,6 +873,7 @@ def llms_txt():
 ## Key facts (as of {FACTS_AS_OF})
 
 - Who it is for: students, competitive debaters and their coaches.
+- Who runs it: {OPERATOR["name"]}, an independent student developer in {OPERATOR["country"]}. Pi-Stack ({OPERATOR["publishesAs"]["url"].removeprefix("https://").rstrip("/")}) is the name he publishes his projects under, and {OPERATOR["github"].rsplit("/", 1)[1]} is his GitHub username. Contact: {SITE["contactEmail"]}.
 - {len(PREP_MODES)} prep modes: {names(PREP_MODES)}. Plus {len(UTILITIES)} utilities: {names(UTILITIES)}.
 - Case format: {CASE_FORMAT}
 - {SITE["secondSpeech"]}
@@ -886,7 +888,7 @@ def llms_txt():
 
 - [Home]({BASE}/): what {PRODUCT} is, the {len(PREP_MODES)} prep modes, pricing and FAQ
 - [Pricing]({page_url("debateowl-pricing")}): trial, Pro and what each includes
-- [About]({BASE}/about): what {PRODUCT} is, who makes it and its former name
+- [About]({BASE}/about): what {PRODUCT} is, who runs it and its former name
 - [Contact]({BASE}/contact): email {SITE["contactEmail"]} for support and feedback, {SITE["privacyEmail"]} for privacy and data requests
 - [Press kit and facts]({BASE}/press): a one-sentence definition, former name, maker, languages, pricing, logo downloads and what {PRODUCT} is not
 - [Full text]({BASE}/llms-full.txt): this file plus the plain text of the home page, About, Which AI is best for debate? and the press kit

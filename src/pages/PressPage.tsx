@@ -9,7 +9,6 @@ import { usePageHead } from '@/lib/seo/use-page-head';
 const linkClass = 'font-medium text-primary underline underline-offset-4 hover:text-primary/80';
 // The day the facts below were last checked; move it when they are.
 const CHECKED_ON = '2026-11-02';
-const MAKER_GITHUB = 'https://github.com/Programcode';
 
 /**
  * The fact sheet for press and answer engines: what DebateOwl is, who makes it
@@ -25,7 +24,7 @@ export default function PressPage() {
     [t('pressPage.nameLabel'), <>{t('pressPage.name', { product, alternateName: site.alternateName })}</>],
     [t('pressPage.websiteLabel'), <a href={`${site.origin}/`} className={linkClass}>{new URL(site.origin).host}</a>],
     [t('pressPage.formerlyLabel'), <>{t('pressPage.formerly', { name: site.formerly.name, host: site.formerly.host, date: longDate(site.formerly.until) })}</>],
-    [t('pressPage.makerLabel'), <Trans i18nKey="pressPage.maker" components={{ github: <a href={MAKER_GITHUB} className={linkClass} />, pistack: <a href={site.organization.parent.url} className={linkClass} /> }} />],
+    [t('pressPage.makerLabel'), <Trans i18nKey="pressPage.maker" components={{ github: <a href={site.organization.operator.github} className={linkClass} />, pistack: <a href={site.organization.operator.publishesAs.url} className={linkClass} /> }} />],
     [t('pressPage.launchedLabel'), <>{t('pressPage.launched', { name: site.formerly.name })}</>],
     [t('pressPage.languagesLabel'), <>{t('aboutPage.languages')}</>],
     [t('pressPage.pricingLabel'), (

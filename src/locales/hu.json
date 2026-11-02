@@ -883,7 +883,7 @@
     "about": "Rólunk",
     "contact": "Kapcsolat",
     "press": "Sajtóanyag",
-    "copyright": "© 2026 Pi-Stack. Minden jog fenntartva.",
+    "copyright": "© 2026 Gáborjáni Ádám. Minden jog fenntartva.",
     "formerly": "{{product}}, korábban DebateLab.",
     "navLabel": "Lábléc",
     "pricingGuide": "Árak részletei",
@@ -1895,8 +1895,8 @@
     "question": "Mi az a {{product}}?",
     "answer": "A <home>{{product}}</home> MI-alapú vitafelkészítő és gyakorló alkalmazás diákoknak és versenyzőknek. Segít megírni az esetet, megtalálni egy érvelés gyenge pontjait, hivatkozásokkal ellátott bizonyítékot keresni, és időre gyakorolni egy MI-ellenféllel.",
     "notThis": "A {{product}} vitaalkalmazás diákoknak, nem sport- vagy gépilátás-termék. A <press>sajtóanyagban</press> megtalálod a rövid adatokat és a logót.",
-    "makerHeading": "Ki készíti",
-    "maker": "A {{product}} alkalmazást egy diák fejlesztő építi, és a <pistack>Pi-Stack</pistack> adja ki.",
+    "makerHeading": "Ki üzemelteti a {{product}}-t",
+    "maker": "A {{product}}-t Gáborjáni Ádám, egy magyarországi független diákfejlesztő üzemelteti. A Pi-Stack (<pistack>pi-stack.org</pistack>) az a név, amelyen a projektjeit közzéteszi, a <github>Programcode</github> pedig a GitHub-felhasználóneve. Kapcsolat: <email>{{email}}</email>.",
     "nameHeading": "A név",
     "name": "A {{product}} neve {{date}}-ig DebateLab volt, a debate.pi-stack.org címen.",
     "pricingHeading": "Árak",
@@ -1916,7 +1916,7 @@
     "formerlyLabel": "Korábbi név",
     "formerly": "{{name}}, a {{host}} címen; átnevezve: {{date}}",
     "makerLabel": "Készítő",
-    "maker": "Ádám (a GitHubon <github>Programcode</github>), magyarországi diák fejlesztő; kiadó: <pistack>Pi-Stack</pistack>",
+    "maker": "Gáborjáni Ádám (a GitHubon <github>Programcode</github>), magyarországi független diákfejlesztő, aki Pi-Stack néven teszi közzé a projektjeit (<pistack>pi-stack.org</pistack>)",
     "launchedLabel": "Indulás",
     "launched": "2026, {{name}} néven",
     "languagesLabel": "Nyelvek",
@@ -1944,7 +1944,9 @@
   "termsPage": {
     "title": "Felhasználási feltételek",
     "lastUpdated": "Utolsó frissítés",
-    "date": "2026. október 28.",
+    "date": "2026. november 2.",
+    "operatorLabel": "Üzemeltető",
+    "operator": "A {{product}}-t Gáborjáni Ádám, egy magyarországi független diákfejlesztő üzemelteti, aki Pi-Stack néven teszi közzé a projektjeit (<pistack>pi-stack.org</pistack>). Kapcsolat: <contact>{{contactEmail}}</contact>.",
     "s1": "Feltételek elfogadása",
     "p1": "A DebateOwl használatával elfogadod ezeket a feltételeket. Ha nem értesz egyet, ne használd a szolgáltatást.",
     "s2": "Szolgáltatás leírása",
@@ -2733,7 +2735,7 @@
     },
     "about": {
       "title": "A {{product}} bemutatása | {{brand}}",
-      "description": "A {{product}} MI-alapú vitafelkészítő és gyakorló alkalmazás diákoknak és versenyzőknek, amelyet egy diák fejlesztő épít, és a Pi-Stack ad ki."
+      "description": "A {{product}} MI-alapú vitafelkészítő és gyakorló alkalmazás diákoknak és versenyzőknek, amelyet Gáborjáni Ádám, egy magyarországi független diákfejlesztő üzemeltet."
     },
     "contact": {
       "title": "Kapcsolat | {{brand}}",
