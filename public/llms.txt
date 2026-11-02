@@ -21,6 +21,7 @@ DebateOwl runs at https://debateowl.com/. It is a separate product from debatela
 
 - [Home](https://debateowl.com/): what DebateOwl is, the 8 prep modes, pricing and FAQ
 - [Pricing](https://debateowl.com/debateowl-pricing): trial, Pro and what each includes
+- [AI debate partner](https://debateowl.com/ai-debate): argue one side of a motion and an AI opponent rebuts it. One exchange and one follow-up are free with no account; full timed rounds need the 3-day trial, then $5/month + tax
 - [About](https://debateowl.com/about): what DebateOwl is, who makes it and its former name
 - [Contact](https://debateowl.com/contact): email hello@debateowl.com for support and feedback, privacy@debateowl.com for privacy and data requests
 - [Press kit and facts](https://debateowl.com/press): a one-sentence definition, former name, maker, languages, pricing, logo downloads and what DebateOwl is not

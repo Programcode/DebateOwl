@@ -85,6 +85,9 @@ export default defineConfig({
     stderr: 'pipe',
     env: {
       VITE_E2E: '1',
+      // The /ai-debate mini round; e2e/ai-debate.spec.ts mocks Turnstile and the function.
+      VITE_DEMO_ENABLED: 'true',
+      VITE_TURNSTILE_SITE_KEY: 'e2e-turnstile-site-key',
       ...(process.env.E2E_ALLOW_PROD === '1' ? { VITE_E2E_ALLOW_PROD: '1' } : {}),
     },
   },
