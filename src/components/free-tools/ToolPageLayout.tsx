@@ -10,6 +10,7 @@ import { localizedPath, useRouteLanguage } from '@/lib/seo/localized-routes';
 import site from '@/config/site.json';
 import { cn } from '@/lib/utils';
 import { MAIN_CONTENT_ID, SkipLink } from '@/components/layout/SkipLink';
+import { AI_DEBATE_PARTNER } from '@/lib/seo/ai-debate-cluster';
 
 export const FREE_TOOLS = [
   { route: '/tools/debate-timer', name: 'Debate timer', blurb: 'Round timer for PF, LD, Policy, BP, World Schools and Asian Parliamentary, with protected time, POI knocks and prep banks.' },
@@ -152,6 +153,10 @@ export function ToolPageLayout({ route, title, intro, shortAnswer, tool, childre
         {tool && <div className="mx-auto mt-8 max-w-5xl">{tool}</div>}
         <ToolArticle className="mt-14 print:hidden">
           {children}
+          {/* The English /ai-debate page, on every language's tool pages until a translated one exists. */}
+          {AI_DEBATE_PARTNER && (
+            <p>{t('layout.aiDebate')} <a href={AI_DEBATE_PARTNER.path} hrefLang={language === 'en' ? undefined : 'en'}>{t('layout.aiDebateLink')}</a></p>
+          )}
           <OtherTools current={route} tools={tools} />
         </ToolArticle>
       </main>

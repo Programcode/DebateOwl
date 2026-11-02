@@ -11,6 +11,7 @@ sys.dont_write_bytecode = True  # keep scripts/__pycache__ out of the tree
 from seo_answers import ANSWERS  # noqa: E402
 from seo_guides import GUIDES  # noqa: E402
 from seo_comparison_pages import BEST_AI_ALTERNATES, hreflang_links  # noqa: E402
+import seo_cluster  # noqa: E402
 
 ROOT = Path(__file__).resolve().parents[1]
 PUBLIC = ROOT / "public"
@@ -592,9 +593,12 @@ def render_page(page):
     for heading, blocks in page["sections"]:
         article.append(f"<h2>{esc(heading)}</h2>")
         article.extend(render_block(block, spans_of) for block in blocks)
+    if page["slug"].startswith("debateowl-vs-"):
+        article.append(seo_cluster.vs_line(page["slug"]))
     IN_BODY_REPORT[page["slug"]] = spans
     faqs = page["faqs"]
     faq_html = "".join(f"<details><summary>{esc(q)}</summary><p>{esc(a)}</p></details>" for q, a in faqs)
+    cluster = "\n    " + seo_cluster.related_ai_debate(page["slug"], css_class="section article") if page["slug"] in seo_cluster.PAGES else ""
     callout = ""
     if page.get("callout"):
         label, href, text = page["callout"]
@@ -654,7 +658,7 @@ def render_page(page):
       <div class="article section">{"".join(article)}</div>
       <section class="section faq article" aria-labelledby="faq"><h2 id="faq">Frequently asked questions</h2>{faq_html}</section>
     </article>
-    {about(page["slug"])}
+    {about(page["slug"])}{cluster}
     <section class="section article" aria-labelledby="related"><h2 id="related">Related {PRODUCT} guides</h2><nav class="links" aria-label="Related guides">{internal_links(page["slug"])}{extra}</nav></section>
   </main>
   <footer class="footer"><div class="wrap">{BRAND}: <a href="/">Home</a> / <a href="/debateowl-pricing">Pricing</a> / <a href="/privacy">Privacy</a> / <a href="/terms">Terms</a> / <a href="/about">About</a> / <a href="/contact">Contact</a> / <a href="/sitemap.xml">Sitemap</a></div></footer>
@@ -775,6 +779,7 @@ def render_best_ai_page(page):
       <section class="section faq article" aria-labelledby="faq"><h2 id="faq">Frequently asked questions</h2>{faq_html}</section>
     </article>
     {about(page["slug"])}
+    {seo_cluster.related_ai_debate(page["slug"], css_class="section article")}
     <section class="section article" aria-labelledby="related"><h2 id="related">Related {PRODUCT} guides</h2><nav class="links" aria-label="Related guides">{internal_links(page["slug"])}</nav></section>
   </main>
   <footer class="footer"><div class="wrap">{BRAND}: <a href="/">Home</a> / <a href="/debateowl-pricing">Pricing</a> / <a href="/privacy">Privacy</a> / <a href="/terms">Terms</a> / <a href="/about">About</a> / <a href="/contact">Contact</a> / <a href="/sitemap.xml">Sitemap</a></div></footer>
@@ -876,6 +881,10 @@ Free to use, no account needed, and they run in the browser.
 {tools}
 
 {localized_sections()}
+
+## AI debate
+
+{seo_cluster.llms_lines(page_url)}
 
 ## Compare
 

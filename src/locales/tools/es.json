@@ -11,7 +11,9 @@
     "faq": "Preguntas frecuentes",
     "otherTools": "Más herramientas gratis",
     "ctaPricing": "Empieza con {{trialDays}} días de prueba gratis, sin tarjeta. Después, {{product}} cuesta {{proMonthly}} $ al mes más impuestos.",
-    "ctaButton": "Empezar la prueba gratis"
+    "ctaButton": "Empezar la prueba gratis",
+    "aiDebate": "¿Quieres debatir contra una IA?",
+    "aiDebateLink": "Prueba un debate con IA (página en inglés)"
   },
   "shortAnswer": {
     "hub": {

@@ -887,7 +887,8 @@
     "formerly": "{{product}}, antes DebateLab.",
     "navLabel": "Pie de página",
     "pricingGuide": "Detalles de precios",
-    "compareTools": "Comparar herramientas de IA para debate"
+    "compareTools": "Comparar herramientas de IA para debate",
+    "aiDebate": "Debate con IA"
   },
   "announcements": {
     "regionLabel": "Anuncio",
@@ -1073,7 +1074,9 @@
       "debateowl-vs-kialo-edu": "{{product}} frente a Kialo Edu",
       "debateowl-vs-windebate": "{{product}} frente a WinDebate",
       "debateowl-vs-debateclub": "{{product}} frente a DebateClub"
-    }
+    },
+    "aiDebate": "Debate con IA",
+    "aiDebateInEnglish": "Debate contra una IA (página en inglés)"
   },
   "finalCta": {
     "title": "¿Listo para construir tu próximo caso?",

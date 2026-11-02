@@ -11,6 +11,8 @@ import json
 import re
 import shutil
 
+import seo_cluster
+
 ROOT = Path(__file__).resolve().parents[1]
 SITE = json.loads((ROOT / "src" / "config" / "site.json").read_text())
 BASE = SITE["origin"]
@@ -270,6 +272,14 @@ def shell(page, style, body, faqs, howto=None):
     elif page["lang"] == "hu":
         hreflang = hreflang_links([("hu", url), ("x-default", url)])
     text = chrome(page)
+    # The Related block skips what the body already links (it links /best-ai-for-debate exactly once)
+    # and the sibling pages, which each page picks for itself within write_comparison_pages' limit.
+    cluster = ""
+    if page["slug"] in seo_cluster.PAGES:
+        skip = {item["path"] for item in seo_cluster.LINKS if f'href="{item["path"]}"' in body} | {f"/{slug}" for slug in SIBLINGS}
+        cluster = "\n  " + seo_cluster.related_ai_debate(page["slug"], skip=skip)
+    if page["slug"].startswith("debateowl-vs-"):
+        cluster = "\n  " + seo_cluster.vs_line(page["slug"])
     # The first Hungarian page also carries the English disclosure; the native pages carry their own only.
     extra_disclosure = f'<p class="disclosure">{esc(DISCLOSURE)}</p>' if page.get("english_disclosure") else ""
     return f"""<!doctype html>
@@ -310,7 +320,7 @@ def shell(page, style, body, faqs, howto=None):
   {extra_disclosure}
   <p class="updated">{esc(text['updated'])}</p>
   <section class="answer" aria-labelledby="short-answer"><h2 id="short-answer">{esc(page['question'])}</h2><p>{esc(page['answer'])}</p></section>
-  {body}
+  {body}{cluster}
   {text['about']}
 </main>
 </body>

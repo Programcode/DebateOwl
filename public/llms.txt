@@ -56,6 +56,16 @@ Free to use, no account needed, and they run in the browser.
 - [Hojas de flujo de debate imprimibles | DebateOwl](https://debateowl.com/es/tools/hoja-de-flujo): Hojas de flujo de debate gratis e imprimibles, con una columna por discurso en PF, LD, Policy, BP, World Schools o Asian Parliamentary, en A4 o Carta.
 - [Calculadora de tiempo de discurso | DebateOwl](https://debateowl.com/es/tools/calculadora-tiempo-discurso): Calculadora gratis que cuenta las palabras de un discurso de debate y muestra cuánto dura a ritmo lento, medio o rápido y en qué turnos cabe.
 
+## AI debate
+
+- [AI debate practice](https://debateowl.com/ai-debate-practice): timed Sparring rounds against an AI opponent in School 4-6-6-3, Lincoln-Douglas and Public Forum, ending in a judged verdict
+- [AI debate coach](https://debateowl.com/ai-debate-coach): ask about strategy, arguments, rebuttals and speeches, with answers tied to your motion, side and speaker role
+- [Best AI debate tools](https://debateowl.com/best-ai-debate-tools): AI debate tools compared on cases, replies, timed rounds and price
+- [Which AI is best for debate](https://debateowl.com/best-ai-for-debate): the best AI for each debate job: research, case drafting, rebuttals, argument mapping, timed practice and class use
+- [AI debate generator](https://debateowl.com/ai-debate-case-generator): turns a motion into a case you can read out: an opening, arguments with evidence, "If they say…" replies, a closing line and sources to check
+- [Free vs paid AI debate tools](https://debateowl.com/free-vs-paid-ai-debate-tools): what free plans include and what paid AI debate tools cost, checked October 2026
+- [How to prepare for a debate with AI](https://debateowl.com/how-to-prepare-for-a-debate-with-ai): a 7-step AI prep plan with a worked example of "If they say X, we answer Y" replies
+
 ## Compare
 
 - [Which AI is best for debate?](https://debateowl.com/best-ai-for-debate): it depends on the job: Perplexity or Gemini for research, DebateOwl for case prep, "If they say X, we answer Y" replies and timed practice rounds (app $5/month after a 3-day trial; free tools), Kialo Edu for argument mapping, with a table of the best AI per debate job (Claude, ChatGPT, Prilo, Debatable, PublicForumAI, SchoolAI and more) as of November 2026

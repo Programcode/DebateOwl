@@ -11,7 +11,9 @@
     "faq": "Frequently asked questions",
     "otherTools": "More free tools",
     "ctaPricing": "Start with a {{trialDays}}-day free trial, no card needed. After that {{product}} costs ${{proMonthly}} a month plus tax.",
-    "ctaButton": "Start the free trial"
+    "ctaButton": "Start the free trial",
+    "aiDebate": "Want to argue against an AI?",
+    "aiDebateLink": "Try an AI debate"
   },
   "shortAnswer": {
     "hub": {

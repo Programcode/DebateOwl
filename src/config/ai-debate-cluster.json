@@ -1,0 +1,56 @@
+{
+  "heading": "More on AI debate",
+  "links": [
+    {
+      "path": "/ai-debate",
+      "anchor": "AI debate partner",
+      "summary": "argue a motion against an AI opponent that rebuts your argument",
+      "live": false
+    },
+    {
+      "path": "/ai-debate-practice",
+      "anchor": "AI debate practice",
+      "summary": "timed Sparring rounds against an AI opponent in School 4-6-6-3, Lincoln-Douglas and Public Forum, ending in a judged verdict"
+    },
+    {
+      "path": "/ai-debate-coach",
+      "anchor": "AI debate coach",
+      "summary": "ask about strategy, arguments, rebuttals and speeches, with answers tied to your motion, side and speaker role"
+    },
+    {
+      "path": "/best-ai-debate-tools",
+      "anchor": "best AI debate tools",
+      "summary": "AI debate tools compared on cases, replies, timed rounds and price"
+    },
+    {
+      "path": "/best-ai-for-debate",
+      "anchor": "which AI is best for debate",
+      "summary": "the best AI for each debate job: research, case drafting, rebuttals, argument mapping, timed practice and class use"
+    },
+    {
+      "path": "/ai-debate-case-generator",
+      "anchor": "AI debate generator",
+      "summary": "turns a motion into a case you can read out: an opening, arguments with evidence, \"If they say…\" replies, a closing line and sources to check"
+    },
+    {
+      "path": "/free-vs-paid-ai-debate-tools",
+      "anchor": "free vs paid AI debate tools",
+      "summary": "what free plans include and what paid AI debate tools cost, checked October 2026"
+    },
+    {
+      "path": "/how-to-prepare-for-a-debate-with-ai",
+      "anchor": "how to prepare for a debate with AI",
+      "summary": "a 7-step AI prep plan with a worked example of \"If they say X, we answer Y\" replies"
+    }
+  ],
+  "pages": [
+    "/ai-debate",
+    "/ai-debate-practice",
+    "/ai-debate-coach",
+    "/best-ai-debate-tools",
+    "/best-ai-for-debate",
+    "/ai-debate-case-generator",
+    "/free-vs-paid-ai-debate-tools",
+    "/how-to-prepare-for-a-debate-with-ai"
+  ]
+}
