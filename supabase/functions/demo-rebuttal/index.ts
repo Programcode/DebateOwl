@@ -5,7 +5,7 @@
 // - a Cloudflare Turnstile check before a session starts;
 // - DEMO_SESSIONS_PER_IP sessions per IP per UTC day, DEMO_TURNS_PER_SESSION turns each;
 // - DEMO_DAILY_LIMIT model calls per UTC day across everyone;
-// - the default Claude Haiku model with a small max_tokens and no reasoning.
+// - the default Claude Haiku model at low reasoning effort with a bounded reply.
 // Logs carry counts and statuses only, never the IP or what the visitor typed.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.114.0";
 import { getCorsHeaders, isAllowedOrigin } from "../_shared/cors.ts";
@@ -13,6 +13,7 @@ import { DEFAULT_MODEL } from "../_shared/model-catalog.ts";
 import { openRouterProviderOptions, warnIfClaudeNotByok } from "../_shared/provider-routing.ts";
 import { fetchJsonWithTimeout, OPENROUTER_API_URL } from "../_shared/research.ts";
 import { BodyTooLargeError, readBoundedBody } from "../_shared/bounded-body.ts";
+import { outputTokenLimit } from "../_shared/output-caps.ts";
 
 const SESSIONS_PER_IP = 3;
 const TURNS_PER_SESSION = 2;
@@ -21,8 +22,16 @@ const MOTION_MAX = 200;
 const ARGUMENT_MAX = 600;
 const REBUTTAL_MAX = 1_200;
 const REBUTTAL_WORDS = 150;
-// About 150 words of rebuttal, a judge note and the JSON around them.
-const MAX_TOKENS = 450;
+// About 150 words of rebuttal, a judge note and the JSON around them, with
+// room for a Hungarian or Spanish reply, which takes more tokens.
+const REPLY_TOKENS = 600;
+// OpenRouter counts Claude's reasoning against max_tokens. With a bare 450
+// the hidden reasoning used most of it and the JSON reply was cut off
+// mid-string ("Unterminated string in JSON"), so reasoning is pinned to low
+// and max_tokens leaves room for it on top of the reply, as the app's own
+// Claude calls do. Unused room costs nothing.
+const REASONING_EFFORT = "low" as const;
+const MAX_TOKENS = outputTokenLimit(REPLY_TOKENS, REASONING_EFFORT, 128_000);
 const MODEL_TIMEOUT_MS = 30_000;
 const MAX_BODY_BYTES = 8_192;
 const TURNSTILE_VERIFY_URL = "https://challenges.cloudflare.com/turnstile/v0/siteverify";
@@ -174,12 +183,15 @@ async function callModel(request: DemoRequest): Promise<ModelReply> {
       model: DEFAULT_MODEL,
       messages: buildDemoMessages(request),
       max_tokens: MAX_TOKENS,
+      reasoning: { effort: REASONING_EFFORT, exclude: true },
       response_format: { type: "json_schema", json_schema: OUTPUT_SCHEMA },
       provider: openRouterProviderOptions(DEFAULT_MODEL),
     }),
   }, MODEL_TIMEOUT_MS);
   if (!response.ok) throw new Error(`OpenRouter ${response.status}`);
   warnIfClaudeNotByok(DEFAULT_MODEL, data?.usage, "demo-rebuttal");
+  const finishReason = data?.choices?.[0]?.finish_reason;
+  if (finishReason === "length") throw new Error(`Demo reply cut off at max_tokens (completion_tokens=${String(data?.usage?.completion_tokens)})`);
   const content = data?.choices?.[0]?.message?.content;
   const parsed = typeof content === "string" ? JSON.parse(content) as Partial<ModelReply> : {};
   if (typeof parsed.allowed !== "boolean" || typeof parsed.rebuttal !== "string" || typeof parsed.judgeNote !== "string") {
