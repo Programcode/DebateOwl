@@ -181,7 +181,13 @@ async function loadSentry(): Promise<SentryModule | null> {
       dsn: sentryDsn,
       release: import.meta.env.VITE_SENTRY_RELEASE || undefined,
       environment: import.meta.env.VITE_SENTRY_ENVIRONMENT || import.meta.env.MODE,
-      ignoreErrors: [/^Synthetic observability verification$/],
+      ignoreErrors: [
+        /^Synthetic observability verification$/,
+        // Wallet providers that browsers and extensions inject into the page
+        // reject with a plain { code, message } (EIP-1193). Nothing in the app
+        // or its bundle rejects with that shape; our errors are Error objects.
+        /^Object captured as promise rejection with keys: code, message$/,
+      ],
       // No sendDefaultPii: deprecated, and Sentry ignores it whenever
       // dataCollection is set. The block below is the only PII control.
       beforeBreadcrumb: filterObservabilityBreadcrumb,
