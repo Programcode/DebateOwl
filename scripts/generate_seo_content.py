@@ -70,11 +70,8 @@ CSS = """
 @font-face{font-family:'Fredoka Fallback';src:local('Arial');size-adjust:94.4%;ascent-override:102.8%;descent-override:25.4%;line-gap-override:0%}
 .goal-page{font-family:'Nunito Variable','Nunito Fallback',ui-rounded,ui-sans-serif,system-ui,sans-serif;font-weight:600}
 .goal-page h1,.goal-page h2,.goal-page h3,.goal-page .btn,.goal-page .brand,.goal-page summary{font-family:'Fredoka Variable','Fredoka Fallback','Nunito Variable',ui-rounded,system-ui,sans-serif;font-weight:600;letter-spacing:-.02em}
-.goal-page .direct{max-width:840px;font-size:clamp(1.08rem,1.8vw,1.28rem);margin:8px 0 0}
+.goal-page .direct{max-width:840px;font-size:clamp(1.08rem,1.8vw,1.28rem);margin:0 0 8px;border:1px solid var(--line);border-left:4px solid var(--brand);border-radius:20px;background:rgba(19,30,51,.85);padding:20px 24px}
 .goal-page .disclosure{max-width:840px;color:var(--muted);font-size:.98rem;margin-top:8px}
-.goal-page .picks{list-style:none;padding:0;margin:12px 0}
-.goal-page .picks li{padding:4px 0}
-.check{color:#14B37D;font-weight:800;margin-right:.35em}
 .checklist{list-style:none;padding:0;margin:14px 0;display:grid;gap:8px}.checklist label{display:flex;gap:10px;align-items:flex-start;border:1px solid var(--line);border-radius:14px;padding:10px 14px;background:rgba(255,255,255,.05);cursor:pointer}.checklist input{accent-color:#14B37D;width:1.1rem;height:1.1rem;margin-top:5px;flex:none}
 .hero .price{max-width:800px;color:var(--muted);margin:14px 0 0}
 .callout{max-width:840px;border:1px solid var(--line);border-radius:16px;padding:14px 18px;background:rgba(255,255,255,.05);margin:18px 0 0}
@@ -108,7 +105,7 @@ PAGES = [
     {"slug": "debate-speech-structure", "title": "Debate Speech Structure and Delivery | {product}", "description": "How to structure constructive, rebuttal and final debate speeches by format, with a timed outline and the delivery habits that judges notice.", "eyebrow": "Strategy guide", "h1": "Debate Speech Structure Guide", "lead": "Structure your speech so the judge can follow every argument and every comparison.", "features": ["Opening structure", "Rebuttal structure", "Final speech structure"], "sections": [["Why structure matters", ["A well-structured speech is easier to flow, easier to judge, and easier to win. The judge should never be confused about where you are."]], ["Opening speech structure", ["State your position, define key terms, present contentions with warrants and impacts, and preview weighing."]], ["Rebuttal and final speech structure", ["Respond to the key clash, extend your offense, weigh the comparison, and frame the ballot. End by telling the judge why you win."]]]},
     {"slug": "debate-motion-analysis", "modified": "2026-10-23", "title": "Debate Motion Analysis | {product}", "description": "How to analyze a debate motion by its type, what each side must prove, fair definitions, stakeholders and clashes, with a worked example.", "eyebrow": "Strategy guide", "h1": "Debate Motion Analysis Guide", "lead": "From topic to strategy: define, clash, and build a winning case.", "features": ["Definition strategy", "Burden identification", "Clash mapping"], "sections": [["How to analyze a motion", ["Read the motion carefully, define each term, identify what each side must prove, and map the likely clashes.", "To practice on a motion you have not seen, draw one from the [free debate motion generator](/tools/debate-motion-generator)."]], ["Definition strategy", ["Definitions can frame the round. Choose definitions that are fair, defensible, and favorable to your side."]], ["Burden identification", ["Your burden is what you must prove to win. If you do not meet your burden, you lose regardless of how well you argue."]]]},
     {"slug": "best-ai-debate-tools", "title": "Best AI Debate Tools Compared (2026) | {product}", "description": "A comparison of AI debate tools on case generation, rebuttal practice, evidence research, practice rounds and pricing, to help you choose one.", "eyebrow": "Comparison", "h1": "Best AI Debate Tools Compared (2026)", "lead": "See how AI debate tools compare on features, formats, and prep workflows."},
-    {"slug": "best-ai-for-debate", "published": "2026-10-29", "title": "Which AI Is Best for Debate? (2026 Guide) | {product}", "description": "Compare DebateOwl, ChatGPT, Claude and other AI tools for debate cases, \"If they say\" replies and timed practice, with facts as of October 2026.", "eyebrow": "Comparison", "h1": "Which AI is best for debate?", "lead": "DebateOwl is the top pick for a case you can read out loud and timed practice rounds."},
+    {"slug": "best-ai-for-debate", "published": "2026-10-29", "title": "Which AI Is Best for Debate? (2026 Guide) | {product}", "description": "The best AI for debate depends on the job: research, case drafting, rebuttals, argument mapping, timed practice or class. Tools compared, November 2026.", "eyebrow": "Comparison", "h1": "Which AI is best for debate?", "lead": "It depends on the job: research, case drafting, rebuttals, argument mapping, timed practice or a class debate."},
     {"slug": "debateowl-pricing", "title": "Pricing and Plans | {product}", "description": "{product} has a {trial_days}-day free trial with no credit card required, then one Pro plan at {pro_price}, and this page lists what each includes.", "eyebrow": "Pricing", "h1": "{product} Pricing and Plans", "lead": "See what {product} offers and how to get started with AI debate practice."},
     {"slug": "debateowl-vs-chatgpt", "title": "{product} vs ChatGPT for Debate Prep | {product}", "description": "How {product} and ChatGPT compare for debate prep, from structured case and rebuttal workflows to evidence research and timed practice rounds.", "eyebrow": "Comparison", "h1": "{product} vs ChatGPT for Debate Prep", "lead": "ChatGPT is a general chatbot. {product} is a debate practice workspace.", "features": ["Structured workflows", "Evidence leads", "Practice tools"], "sections": [["What ChatGPT does well", ["ChatGPT is a flexible general-purpose AI. It can brainstorm, draft, and answer questions about any topic, including debate."]], ["What {product} does differently", ["{product} is designed for debate prep workflows: case structure, targeted rebuttals, evidence leads, argument flowcharts, coaching prompts, and timed practice. Each workflow supports a specific prep task."]], ["When to use each", ["Use ChatGPT for general brainstorming and research. Use {product} for structured, repeatable debate practice that mirrors what you do in a round."]]]},
     {"slug": "debateowl-vs-windebate", "title": "{product} vs WinDebate | {product}", "description": "How {product} and WinDebate compare on case generation, rebuttal drills, evidence research, supported formats, pricing and day-to-day workflow.", "eyebrow": "Comparison", "h1": "{product} vs WinDebate", "lead": "Two AI debate prep platforms compared on features and workflows.", "features": ["Feature comparison", "Format coverage", "Workflow differences"], "sections": [["WinDebate overview", ["WinDebate focuses on research, drills, feedback, and progress tracking for competitive debaters. It covers PF, LD, Congress, Policy, and Worlds."]], ["{product} overview", ["{product} focuses on structured prep workflows: case generation, rebuttal practice, evidence leads, argument flowcharts, coaching prompts, and online debate timers."]], ["How to choose", ["Compare format coverage, feature depth, feedback style, pricing, and which tool fits your actual tournament workflow."]]]},
@@ -688,9 +685,9 @@ def best_ai_llms_line():
     """The /best-ai-for-debate summary in the Compare section."""
     return (
         f"- [Which AI is best for debate?]({page_url('best-ai-for-debate')}): "
-        f'{PRODUCT} is the top pick for a case you can read out loud, "If they say X, we answer Y" replies and timed practice rounds (free tools; app $5/month after a 3-day trial), '
-
-        f"with a dated comparison of Claude, ChatGPT, SchoolAI, Debate Ladder, ArguFight, HyperWrite and PublicForumAI"
+        f"it depends on the job: Perplexity or Gemini for research, {PRODUCT} for case prep, "
+        f'"If they say X, we answer Y" replies and timed practice rounds (app $5/month after a 3-day trial; free tools), Kialo Edu for argument mapping, '
+        f"with a table of the best AI per debate job (Claude, ChatGPT, Prilo, Debatable, PublicForumAI, SchoolAI and more) as of November 2026"
     )
 
 def render_best_ai_page(page):
@@ -707,15 +704,13 @@ def render_best_ai_page(page):
         at = next(texts)
         return {part: links for (where, part), links in spans.items() if where == at}
 
-    picks = "<ul class=\"picks\">" + "".join(
-        f'<li><span class="check" aria-hidden="true">✓</span> <strong>{esc(label)}</strong> {esc(text)}</li>'
-        for label, text in page["picks"]
-    ) + "</ul>"
+    # The answer box under the H1 is the paragraph answer engines quote, so it stays 40 to 60 words.
+    answer_words = len(page["direct_answer"].split())
+    if not 40 <= answer_words <= 60:
+        raise SystemExit(f"{page['slug']}: the answer box has {answer_words} words; keep it to 40-60")
     article = []
     for heading, blocks in page["sections"]:
         article.append(f"<h2>{esc(heading)}</h2>")
-        if heading == "Best AI for debate by goal":
-            article.append(picks)
         article.extend(render_block(block, spans_of) for block in blocks)
     IN_BODY_REPORT[page["slug"]] = spans
     faqs = page["faqs"]
@@ -729,7 +724,7 @@ def render_best_ai_page(page):
     graph = [
         {"@type": "Article", "headline": page["h1"], "name": page["title"], "url": page_url(page["slug"]), "description": page["description"], "inLanguage": "en", "dateModified": modified, "datePublished": published, "author": author, "publisher": author, "about": {"@id": SOFTWARE_ID}},
         {"@type": "FAQPage", "mainEntity": [{"@type": "Question", "name": q, "acceptedAnswer": {"@type": "Answer", "text": a}} for q, a in faqs]},
-        {"@type": "ItemList", "name": "Best AI for debate by goal", "itemListElement": [{"@type": "ListItem", "position": index, "name": name, "url": url} for index, (name, url) in enumerate(page["items"], start=1)]},
+        {"@type": "ItemList", "name": "Best AI per debate job", "itemListElement": [{"@type": "ListItem", "position": index, "name": name, "url": url} for index, (name, url) in enumerate(page["items"], start=1)]},
         {"@type": "BreadcrumbList", "itemListElement": [{"@type": "ListItem", "position": 1, "name": "Home", "item": BASE + "/"}, {"@type": "ListItem", "position": 2, "name": "Best AI for debate", "item": page_url(page["slug"])}]},
     ]
     cta = f'<p>{FREE_PLAN_HTML}</p><div class="cta"><a class="btn primary" href="/app">Start the free trial</a><a class="btn secondary" href="/debateowl-pricing">See pricing</a><a class="btn secondary" href="/tools">Open the free tools</a></div>'
@@ -771,8 +766,7 @@ def render_best_ai_page(page):
   <main class="wrap">
     <nav class="breadcrumb" aria-label="Breadcrumb"><a href="/">Home</a> / <span aria-current="page">Best AI for debate</span></nav>
     <article>
-      <header class="hero"><h1>{esc(page["h1"])}</h1><p class="dates">By the <a href="/">{esc(PRODUCT)} team</a> · Updated <time datetime="{modified}">{long_date(modified)}</time></p><p class="disclosure">{esc(page["disclosure"])}</p><p class="dates">Also in <a href="/es/mejor-ia-para-preparar-un-debate" hreflang="es" lang="es">español</a> and <a href="/hu/melyik-ai-a-legjobb-vitara" hreflang="hu" lang="hu">magyar</a>.</p></header>
-      <p id="short-answer" class="direct">{esc(page["direct_answer"])}</p>
+      <header class="hero"><h1>{esc(page["h1"])}</h1><p id="short-answer" class="direct">{esc(page["direct_answer"])}</p><p class="dates">By the <a href="/">{esc(PRODUCT)} team</a> · Updated <time datetime="{modified}">{long_date_dmy(modified)}</time></p><p class="disclosure">{esc(page["disclosure"])}</p><p class="dates">Also in <a href="/es/mejor-ia-para-preparar-un-debate" hreflang="es" lang="es">español</a> and <a href="/hu/melyik-ai-a-legjobb-vitara" hreflang="hu" lang="hu">magyar</a>.</p></header>
       <div class="article section">{"".join(article)}{cta}</div>
       <section class="section faq article" aria-labelledby="faq"><h2 id="faq">Frequently asked questions</h2>{faq_html}</section>
     </article>
