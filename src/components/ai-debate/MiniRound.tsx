@@ -41,9 +41,12 @@ function Exchange({ argument, rebuttal, judgeNote, label }: { argument: string; 
         <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">AI opponent</p>
         <p className="mt-1 whitespace-pre-line text-foreground" data-testid="demo-rebuttal">{rebuttal}</p>
       </div>
-      <p className="rounded-lg bg-surface-sunken px-4 py-3 text-sm text-foreground" data-testid="demo-judge-note">
-        <span className="font-bold">Judge note: </span>{judgeNote}
-      </p>
+      {/* A reply the server saved from a cut-off answer can come without one. */}
+      {judgeNote && (
+        <p className="rounded-lg bg-surface-sunken px-4 py-3 text-sm text-foreground" data-testid="demo-judge-note">
+          <span className="font-bold">Judge note: </span>{judgeNote}
+        </p>
+      )}
     </div>
   );
 }
@@ -78,8 +81,8 @@ const ERRORS: Record<string, string> = {
   daily_limit: 'Today’s demo rounds are used up. Come back tomorrow, or start a trial now.',
   not_allowed: 'That motion or argument cannot be used in the demo. Try a different one.',
   bot_check_failed: 'The bot check did not pass. Wait for it to finish and try again.',
-  // A follow-up from a different IP (a phone switching networks) cannot continue the session.
-  unknown_session: 'Your connection changed, so this round cannot continue. Reload the page to start a new one.',
+  // The session token expired, or the round started before midnight UTC.
+  unknown_session: 'This demo round has expired. Reload the page to start a new one.',
 };
 const ENDS_DEMO = new Set(['ip_limit', 'turn_limit', 'daily_limit', 'unknown_session']);
 
@@ -91,7 +94,7 @@ function LiveRound({ onDisabled }: { onDisabled: () => void }) {
   const [side, setSide] = useState<DemoSide>('for');
   const [argument, setArgument] = useState('');
   const [token, setToken] = useState<string | null>(null);
-  const [sessionId, setSessionId] = useState<string | null>(null);
+  const [session, setSession] = useState<{ id: string; token?: string } | null>(null);
   const [turns, setTurns] = useState<Turn[]>([]);
   const [turnsLeft, setTurnsLeft] = useState(1);
   const [pending, setPending] = useState(false);
@@ -135,10 +138,10 @@ function LiveRound({ onDisabled }: { onDisabled: () => void }) {
     setError(null);
     try {
       const first = turns[0];
-      const reply = await requestDemoTurn(started && sessionId && first
-        ? { sessionId, motion, side, argument: text, previous: { argument: first.argument, rebuttal: first.rebuttal } }
+      const reply = await requestDemoTurn(started && session && first
+        ? { sessionId: session.id, sessionToken: session.token, motion, side, argument: text, previous: { argument: first.argument, rebuttal: first.rebuttal } }
         : { turnstileToken: token ?? undefined, motion, side, argument: text });
-      setSessionId(reply.sessionId);
+      if (!started) setSession({ id: reply.sessionId, token: reply.sessionToken });
       setTurns((previous) => [...previous, { argument: text, rebuttal: reply.rebuttal, judgeNote: reply.judgeNote }]);
       setTurnsLeft(reply.turnsLeft);
       setArgument('');

@@ -25,6 +25,8 @@ export type DemoSide = "for" | "against";
 export interface DemoTurnRequest {
   turnstileToken?: string;
   sessionId?: string;
+  /** The signed token the first turn returned; sent back with the follow-up. */
+  sessionToken?: string;
   motion: string;
   side: DemoSide;
   argument: string;
@@ -33,6 +35,8 @@ export interface DemoTurnRequest {
 
 export interface DemoTurnReply {
   sessionId: string;
+  /** Only on the first turn. */
+  sessionToken?: string;
   turn: number;
   turnsLeft: number;
   rebuttal: string;
