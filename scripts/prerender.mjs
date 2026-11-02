@@ -76,6 +76,17 @@ function pageHtml(shell, page, assets) {
     [/<meta name="twitter:title" content="[^"]*" \/>/, `<meta name="twitter:title" content="${escapeAttribute(head.title)}" />`, 'twitter:title'],
     [/<meta name="twitter:description" content="[^"]*" \/>/, `<meta name="twitter:description" content="${escapeAttribute(head.description)}" />`, 'twitter:description'],
   ]) html = replaceOnce(html, pattern, value, label);
+  // A page with its own share image; the shell's width and height (1200x630) still apply.
+  if (head.image) {
+    const url = escapeAttribute(`${SITE_ORIGIN}${head.image.path}`);
+    const alt = escapeAttribute(head.image.alt);
+    for (const [pattern, value, label] of [
+      [/<meta property="og:image" content="[^"]*" \/>/, `<meta property="og:image" content="${url}" />`, 'og:image'],
+      [/<meta property="og:image:alt" content="[^"]*" \/>/, `<meta property="og:image:alt" content="${alt}" />`, 'og:image:alt'],
+      [/<meta name="twitter:image" content="[^"]*" \/>/, `<meta name="twitter:image" content="${url}" />`, 'twitter:image'],
+      [/<meta name="twitter:image:alt" content="[^"]*" \/>/, `<meta name="twitter:image:alt" content="${alt}" />`, 'twitter:image:alt'],
+    ]) html = replaceOnce(html, pattern, value, label);
+  }
   // The shell document is noindex (app, login, share). A public page puts the
   // index directive back; a page without a canonical URL stays noindex.
   const robots = head.canonicalPath

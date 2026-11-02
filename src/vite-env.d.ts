@@ -11,4 +11,6 @@ interface ImportMetaEnv {
   readonly VITE_SUPABASE_ENV?: string;
   readonly VITE_SENTRY_ENVIRONMENT?: string;
   readonly VITE_SENTRY_RELEASE?: string;
+  readonly VITE_DEMO_ENABLED?: string;
+  readonly VITE_TURNSTILE_SITE_KEY?: string;
 }

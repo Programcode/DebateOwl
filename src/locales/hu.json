@@ -887,7 +887,8 @@
     "formerly": "{{product}}, korábban DebateLab.",
     "navLabel": "Lábléc",
     "pricingGuide": "Árak részletei",
-    "compareTools": "MI-alapú vitaeszközök összehasonlítása"
+    "compareTools": "MI-alapú vitaeszközök összehasonlítása",
+    "aiDebate": "MI-vitapartner"
   },
   "announcements": {
     "regionLabel": "Közlemény",
@@ -937,7 +938,8 @@
       "sampleOpening": "Mondd el a szabályt, a kivételt és a siker mércéjét.",
       "sampleResponseLabel": "Reagálás",
       "sampleResponse": "Hasonlítsd össze a tanulási időt a szabály betartatásának költségével."
-    }
+    },
+    "tryAiDebate": "Próbálj ki egy MI-vitát"
   },
   "features": {
     "title": "Minden a következő fordulódhoz",
@@ -1031,6 +1033,7 @@
     "hungarianPrep": "Vitafelkészülés MI-vel (magyar útmutató)",
     "nativeAnswer": "Melyik AI a legjobb vitára? (magyar kérdések és válaszok)",
     "links": {
+      "ai-debate": "MI-vitapartner",
       "ai-debate-practice": "MI-alapú vitagyakorlás",
       "ai-debate-case-generator": "MI-esetgenerátor hivatkozásokkal",
       "ai-rebuttal-generator": "MI-cáfolatgenerátor",
@@ -2736,6 +2739,10 @@
     "press": {
       "title": "A {{product}} sajtóanyaga és adatai | {{brand}}",
       "description": "Adatok a {{product}} MI-alapú vitafelkészítő alkalmazásról: korábbi név, készítő, nyelvek, árak, letölthető logó, és hogy mi nem."
+    },
+    "aiDebate": {
+      "title": "MI-vitapartner: vitázz egy MI-ellenféllel | {{brand}}",
+      "description": "Vitázz egy MI-vel, amely a másik oldalt képviseli. Próbálj ki egy ingyenes kört fiók nélkül, majd gyakorolj teljes, időzített köröket 3 napos próbával."
     }
   },
   "validation": {

@@ -887,7 +887,8 @@
     "formerly": "{{product}}, formerly DebateLab.",
     "navLabel": "Footer",
     "pricingGuide": "Pricing details",
-    "compareTools": "Compare AI debate tools"
+    "compareTools": "Compare AI debate tools",
+    "aiDebate": "AI debate partner"
   },
   "announcements": {
     "regionLabel": "Announcement",
@@ -937,7 +938,8 @@
       "sampleOpening": "State the rule, the exception, and the measure of success.",
       "sampleResponseLabel": "Response",
       "sampleResponse": "Compare learning time with the cost of enforcement."
-    }
+    },
+    "tryAiDebate": "Try an AI debate"
   },
   "features": {
     "title": "Everything for your next round",
@@ -1031,6 +1033,7 @@
     "hungarianPrep": "Debate prep with AI, in Hungarian",
     "nativeAnswer": "Which AI is best for debate?",
     "links": {
+      "ai-debate": "AI debate partner",
       "ai-debate-practice": "AI debate practice",
       "ai-debate-case-generator": "AI case generator with citations",
       "ai-rebuttal-generator": "AI rebuttal generator",
@@ -2736,6 +2739,10 @@
     "press": {
       "title": "{{product}} press kit and facts | {{brand}}",
       "description": "Facts about {{product}}, the AI debate prep and practice app for students: former name, maker, languages, pricing, logo downloads and what it is not."
+    },
+    "aiDebate": {
+      "title": "AI Debate Partner: Argue Against an AI Opponent | {{brand}}",
+      "description": "Debate an AI that argues the other side. Try one free exchange with no account, then practice full timed rounds with a 3-day trial."
     }
   },
   "validation": {

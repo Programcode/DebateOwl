@@ -49,6 +49,8 @@ export interface PageHead {
   description: string;
   /** Pages without one are not indexed: the head says noindex and names no canonical URL. */
   canonicalPath?: string;
+  /** A 1200x630 share image in public/, replacing the site-wide og:image. */
+  image?: { path: string; alt: string };
 }
 
 /**
@@ -65,6 +67,7 @@ export const PAGE_HEADS = {
   '/contact': { ...englishHead('contact'), canonicalPath: '/contact' },
   '/press': { ...englishHead('press'), canonicalPath: '/press' },
   '/expocit/sources': { ...englishHead('sources'), canonicalPath: '/expocit/sources' },
+  '/ai-debate': { ...englishHead('aiDebate'), canonicalPath: '/ai-debate', image: { path: '/og/ai-debate.png', alt: 'DebateOwl AI debate partner: argue one side, the AI argues the other' } },
   ...TOOL_PAGE_HEADS,
   '*': englishHead('notFound'),
 } as const satisfies Record<string, PageHead>;
@@ -80,6 +83,7 @@ export const PAGE_HEAD_IDS: Record<PrerenderedRoute, PageHeadId> = {
   '/contact': 'contact',
   '/press': 'press',
   '/expocit/sources': 'sources',
+  '/ai-debate': 'aiDebate',
   ...TOOL_PAGE_HEAD_IDS,
   '*': 'notFound',
 };
