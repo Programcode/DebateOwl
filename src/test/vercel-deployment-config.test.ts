@@ -282,8 +282,9 @@ describe("Vercel frontend deployment configuration", () => {
     // The parent page loads js.jam.dev and frames recorder.jam.dev. A wildcard
     // would allow every other host on that domain. Jam's rspack runtime contains
     // Function("return this"); do not allow unsafe-eval for that fallback.
-    expect(directive("script-src")).toBe("script-src 'self' https://js.jam.dev");
-    expect(directive("frame-src")).toBe("frame-src 'self' https://accounts.google.com https://recorder.jam.dev");
+    // Cloudflare Turnstile, the bot check before the /ai-debate mini round, loads a script and a frame.
+    expect(directive("script-src")).toBe("script-src 'self' https://js.jam.dev https://challenges.cloudflare.com");
+    expect(directive("frame-src")).toBe("frame-src 'self' https://accounts.google.com https://recorder.jam.dev https://challenges.cloudflare.com");
     expect(directive("connect-src")).toContain("https://js.jam.dev");
     expect(directive("connect-src")).toContain("https://recorder.jam.dev");
     expect(directive("img-src")).toContain("https://js.jam.dev");

@@ -5,10 +5,12 @@ import { ArrowRight, CheckCircle2 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useRoutePrefetch } from "@/hooks/use-route-prefetch";
 import { Owl } from "@/components/brand/Owl";
+import { useRouteLanguage } from "@/lib/seo/localized-routes";
 
 const Hero = () => {
     const { t } = useTranslation();
     const appPrefetch = useRoutePrefetch("/app");
+    const language = useRouteLanguage();
 
     const trustChips = [
         t('hero.trialBadge'),
@@ -53,6 +55,15 @@ const Hero = () => {
                                 <span className="relative z-10">{t('hero.cta')}</span>
                                 <ArrowRight aria-hidden="true" className="relative z-10 h-5 w-5" />
                             </Link>
+                            {/* The no-login mini round is an English page; /hu and /es keep the one CTA. */}
+                            {language === "en" && (
+                                <Link
+                                    to="/ai-debate"
+                                    className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-xl border-2 border-border bg-card px-6 py-3.5 text-base font-bold text-heading transition-colors hover:border-brand-tint-border hover:text-primary sm:ml-3 sm:mt-0 sm:w-auto pointer-coarse:min-h-11"
+                                >
+                                    {t('hero.tryAiDebate')}
+                                </Link>
+                            )}
                         </Reveal>
 
                         <ul className="mt-5 flex flex-wrap gap-x-4 gap-y-2">

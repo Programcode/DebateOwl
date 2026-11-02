@@ -887,7 +887,8 @@
     "formerly": "{{product}}, antes DebateLab.",
     "navLabel": "Pie de página",
     "pricingGuide": "Detalles de precios",
-    "compareTools": "Comparar herramientas de IA para debate"
+    "compareTools": "Comparar herramientas de IA para debate",
+    "aiDebate": "Compañero de debate con IA"
   },
   "announcements": {
     "regionLabel": "Anuncio",
@@ -937,7 +938,8 @@
       "sampleOpening": "Expón la regla, la excepción y la medida del éxito.",
       "sampleResponseLabel": "Réplica",
       "sampleResponse": "Compara el tiempo de aprendizaje con el coste de hacer cumplir la regla."
-    }
+    },
+    "tryAiDebate": "Prueba un debate con IA"
   },
   "features": {
     "title": "Todo para tu próxima ronda",
@@ -1031,6 +1033,7 @@
     "hungarianPrep": "Preparación de debate con IA, en húngaro",
     "nativeAnswer": "Qué IA sirve para preparar un debate (guía en español)",
     "links": {
+      "ai-debate": "Compañero de debate con IA",
       "ai-debate-practice": "Práctica de debate con IA",
       "ai-debate-case-generator": "Generador de casos con IA y citas",
       "ai-rebuttal-generator": "Generador de refutaciones con IA",
@@ -2736,6 +2739,10 @@
     "press": {
       "title": "Kit de prensa y datos de {{product}} | {{brand}}",
       "description": "Datos sobre {{product}}, la app de debate con IA para estudiantes: nombre anterior, creador, idiomas, precios, logotipo y lo que no es."
+    },
+    "aiDebate": {
+      "title": "Compañero de debate con IA: discute con una IA | {{brand}}",
+      "description": "Debate con una IA que defiende el otro lado. Prueba un intercambio gratis sin cuenta y luego practica rondas cronometradas con una prueba de 3 días."
     }
   },
   "validation": {
