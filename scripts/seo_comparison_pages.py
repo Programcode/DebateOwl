@@ -2304,7 +2304,7 @@ def page_prilo():
 </section>
 <section class="picks">
   <h2>Pick Prilo if…</h2>
-  <p>…you compete on the American circuit in Lincoln-Douglas, Public Forum or Policy and want a drill for each skill a tournament tests: a 3-minute cross-examination against the clock, flowing at speeds that build up to nationals pace, feedback on your pace and filler words, and a library for cutting evidence cards. Policy debaters especially: DebateOwl has no Policy practice round. If you will train all season, the $60 yearly plan is the cheaper way in.</p>
+  <p>…you compete on the American circuit in Lincoln-Douglas, Public Forum or Policy and want a drill for each skill a tournament tests: a 3-minute cross-examination against the clock, flowing at speeds that build up to nationals pace, feedback on your pace and filler words, and a library for cutting evidence cards. Policy debaters especially: DebateOwl has no Policy practice round. If you will train all season, its $60 yearly plan costs a third of twelve monthly payments.</p>
   <h2>Pick DebateOwl if…</h2>
   <p>…you want the whole case written and then a whole round to say it in, from the first speech to the last, with a verdict that tells you what to fix. Pick it too if you debate in Spanish or Hungarian, debate the School 4-6-6-3 format, or want to try before you pay: the trial asks for no card, and the plan is monthly, with no year to commit to.</p>
 </section>
@@ -2442,7 +2442,7 @@ body.rungs .num{margin:8px 0 0;font-size:.78rem;text-transform:uppercase;letter-
 body.rungs .q h3{font-size:1.3rem;margin:4px 0}
 body.rungs .start{display:inline-flex;align-items:center;font-family:Fredoka,Nunito,sans-serif;border-radius:999px;padding:4px 14px;background:#3A1A00;color:#FFE9CC;margin:2px 0}
 body.rungs .q.ow .start{background:#0A6FF0;color:#fff}body.rungs .q.ow .start .tick path{stroke:#fff}
-body.rungs .week li{margin:8px 0}
+body.rungs .week li{margin:8px 0}body.rungs ol li{overflow-wrap:anywhere}
 body.rungs .cta-box{border:3px dashed #3A1A00;border-radius:24px;padding:4px 22px 16px;margin:26px 0;background:#fff}
 @media(max-width:760px){body.rungs .pair{grid-template-columns:1fr}}
 """
