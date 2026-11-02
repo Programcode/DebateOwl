@@ -882,6 +882,7 @@
     "privacy": "Privacidad",
     "about": "Acerca de",
     "contact": "Contacto",
+    "press": "Kit de prensa",
     "copyright": "© 2026 Pi-Stack. Todos los derechos reservados.",
     "formerly": "{{product}}, antes DebateLab.",
     "navLabel": "Pie de página",
@@ -896,7 +897,7 @@
   },
   "hero": {
     "headline": "{{product}}: preparación y práctica de debate con IA",
-    "subheadline": "{{product}} te ayuda a preparar casos y practicar rondas con IA.",
+    "subheadline": "{{product}} es una app de preparación y práctica de debate con IA: crea casos, encuentra puntos débiles y practica rondas cronometradas.",
     "trialBadge": "Prueba gratis de {{trialDays}} días",
     "cta": "Comenzar prueba gratis",
     "trustBullet1": "Sin tarjeta de crédito",
@@ -1883,6 +1884,7 @@
     "title": "Acerca de {{product}}",
     "question": "¿Qué es {{product}}?",
     "answer": "<home>{{product}}</home> es una app de preparación y práctica de debate con IA para estudiantes y debatientes de competición. Te ayuda a escribir un caso, encontrar los puntos débiles de un argumento, buscar evidencia con citas y practicar rondas cronometradas contra un oponente de IA.",
+    "notThis": "{{product}} es una app de debate para estudiantes, no un producto de deportes ni de visión por computadora. El <press>kit de prensa</press> reúne los datos básicos y el logotipo.",
     "makerHeading": "Quién lo hace",
     "maker": "{{product}} lo desarrolla una persona estudiante y lo publica <pistack>Pi-Stack</pistack>.",
     "nameHeading": "El nombre",
@@ -1892,6 +1894,31 @@
     "languagesHeading": "Idiomas",
     "languages": "Inglés, español y húngaro.",
     "linksHeading": "Más sobre {{product}}"
+  },
+  "pressPage": {
+    "title": "Kit de prensa y datos de {{product}}",
+    "checked": "Datos comprobados el {{date}}.",
+    "definition": "<home>{{product}}</home> es una app de preparación y práctica de debate con IA para estudiantes y debatientes de competición que crea casos, encuentra los puntos débiles de los argumentos, busca evidencia con citas y hace rondas de práctica cronometradas contra un oponente de IA.",
+    "factsHeading": "Datos",
+    "nameLabel": "Nombre",
+    "name": "{{product}}, también escrito {{alternateName}}",
+    "websiteLabel": "Sitio web",
+    "formerlyLabel": "Nombre anterior",
+    "formerly": "{{name}}, en {{host}}, renombrado el {{date}}",
+    "makerLabel": "Creador",
+    "maker": "Adam (<github>Programcode</github> en GitHub), estudiante y desarrollador en Hungría; lo publica <pistack>Pi-Stack</pistack>",
+    "launchedLabel": "Lanzamiento",
+    "launched": "2026, con el nombre {{name}}",
+    "languagesLabel": "Idiomas",
+    "pricingLabel": "Precios",
+    "pricing": "Una prueba gratuita de {{trialDays}} días sin tarjeta de crédito y después {{price}} al mes + impuestos. No hay plan gratuito; las <tools>herramientas de debate gratis</tools> no necesitan cuenta.",
+    "contactLabel": "Contacto de prensa",
+    "logoHeading": "Logotipo",
+    "logoAlt": "El logotipo del búho de {{product}}",
+    "logoPng": "Descargar el logotipo en PNG (512 × 512)",
+    "logoSvg": "Descargar el logotipo en SVG",
+    "notHeading": "No confundir con",
+    "not": "{{product}} no es Owl AI (owl.ai), una plataforma de visión por computadora en tiempo real para deportes, ni debatelab.ai, otro producto de práctica de debate. Antes del cambio de nombre, {{product}} era DebateLab en debate.pi-stack.org, no en debatelab.ai."
   },
   "contactPage": {
     "title": "Contacta con {{product}}",
@@ -2701,6 +2728,10 @@
     "contact": {
       "title": "Contacto | {{brand}}",
       "description": "Cómo escribir a {{product}} por correo para pedir ayuda con tu cuenta o la facturación, hacer solicitudes de privacidad o enviar comentarios."
+    },
+    "press": {
+      "title": "Kit de prensa y datos de {{product}} | {{brand}}",
+      "description": "Datos sobre {{product}}, la app de debate con IA para estudiantes: nombre anterior, creador, idiomas, precios, logotipo y lo que no es."
     }
   },
   "validation": {

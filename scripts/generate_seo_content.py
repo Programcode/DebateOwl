@@ -841,7 +841,7 @@ def llms_txt():
 
 > {DEFINITION}
 
-{BRAND} runs at {BASE}/. It is a separate product from debatelab.ai. {BRAND} was called {FORMERLY["name"]} ({FORMERLY["host"]}) until {long_date_dmy(FORMERLY["until"])}.
+{BRAND} runs at {BASE}/. It is a separate product from debatelab.ai. It is not Owl AI (owl.ai), a computer-vision platform for sports. {BRAND} was called {FORMERLY["name"]} ({FORMERLY["host"]}) until {long_date_dmy(FORMERLY["until"])}.
 
 ## Key facts (as of {FACTS_AS_OF})
 
@@ -862,6 +862,8 @@ def llms_txt():
 - [Pricing]({page_url("debateowl-pricing")}): trial, Pro and what each includes
 - [About]({BASE}/about): what {PRODUCT} is, who makes it and its former name
 - [Contact]({BASE}/contact): email {SITE["contactEmail"]} for support and feedback, {SITE["privacyEmail"]} for privacy and data requests
+- [Press kit and facts]({BASE}/press): a one-sentence definition, former name, maker, languages, pricing, logo downloads and what {PRODUCT} is not
+- [Full text]({BASE}/llms-full.txt): this file plus the plain text of the home page, About, Which AI is best for debate? and the press kit
 - [Sitemap]({BASE}/sitemap.xml): every public page
 
 ## Free tools

@@ -882,6 +882,7 @@
     "privacy": "Adatvédelem",
     "about": "Rólunk",
     "contact": "Kapcsolat",
+    "press": "Sajtóanyag",
     "copyright": "© 2026 Pi-Stack. Minden jog fenntartva.",
     "formerly": "{{product}}, korábban DebateLab.",
     "navLabel": "Lábléc",
@@ -896,7 +897,7 @@
   },
   "hero": {
     "headline": "{{product}}: MI-alapú vitafelkészítés és gyakorlás",
-    "subheadline": "A {{product}} segít eseteket készíteni és fordulókat gyakorolni MI-vel.",
+    "subheadline": "A {{product}} MI-alapú vitafelkészítő és gyakorló alkalmazás: építs esetet, keresd meg a gyenge pontokat, és gyakorolj időre.",
     "trialBadge": "{{trialDays}} napos ingyenes próba",
     "cta": "Ingyenes próba indítása",
     "trustBullet1": "Bankkártya nem szükséges",
@@ -1883,6 +1884,7 @@
     "title": "A {{product}} bemutatása",
     "question": "Mi az a {{product}}?",
     "answer": "A <home>{{product}}</home> MI-alapú vitafelkészítő és gyakorló alkalmazás diákoknak és versenyzőknek. Segít megírni az esetet, megtalálni egy érvelés gyenge pontjait, hivatkozásokkal ellátott bizonyítékot keresni, és időre gyakorolni egy MI-ellenféllel.",
+    "notThis": "A {{product}} vitaalkalmazás diákoknak, nem sport- vagy gépilátás-termék. A <press>sajtóanyagban</press> megtalálod a rövid adatokat és a logót.",
     "makerHeading": "Ki készíti",
     "maker": "A {{product}} alkalmazást egy diák fejlesztő építi, és a <pistack>Pi-Stack</pistack> adja ki.",
     "nameHeading": "A név",
@@ -1892,6 +1894,31 @@
     "languagesHeading": "Nyelvek",
     "languages": "Angol, spanyol és magyar.",
     "linksHeading": "Továbbiak a {{product}} alkalmazásról"
+  },
+  "pressPage": {
+    "title": "A {{product}} sajtóanyaga és adatai",
+    "checked": "Az adatokat {{date}} napján ellenőriztük.",
+    "definition": "A <home>{{product}}</home> MI-alapú vitafelkészítő és gyakorló alkalmazás diákoknak és versenyzőknek: esetet épít, megkeresi az érvelések gyenge pontjait, hivatkozásokkal ellátott bizonyítékot keres, és időzített gyakorlóköröket futtat egy MI-ellenféllel.",
+    "factsHeading": "Adatok",
+    "nameLabel": "Név",
+    "name": "{{product}}, más írásmóddal {{alternateName}}",
+    "websiteLabel": "Weboldal",
+    "formerlyLabel": "Korábbi név",
+    "formerly": "{{name}}, a {{host}} címen; átnevezve: {{date}}",
+    "makerLabel": "Készítő",
+    "maker": "Ádám (a GitHubon <github>Programcode</github>), magyarországi diák fejlesztő; kiadó: <pistack>Pi-Stack</pistack>",
+    "launchedLabel": "Indulás",
+    "launched": "2026, {{name}} néven",
+    "languagesLabel": "Nyelvek",
+    "pricingLabel": "Árak",
+    "pricing": "{{trialDays}} napos ingyenes próbaidőszak bankkártya nélkül, utána havi {{price}} + adó. Ingyenes csomag nincs; az <tools>ingyenes vitaeszközökhöz</tools> nem kell fiók.",
+    "contactLabel": "Sajtókapcsolat",
+    "logoHeading": "Logó",
+    "logoAlt": "A {{product}} bagolylogója",
+    "logoPng": "A logó letöltése PNG-ben (512 × 512)",
+    "logoSvg": "A logó letöltése SVG-ben",
+    "notHeading": "Nem összetévesztendő",
+    "not": "A {{product}} nem azonos az Owl AI-jal (owl.ai), amely valós idejű gépi látás platform sporthoz, és a debatelab.ai-jal sem, amely egy másik vitagyakorló termék. Átnevezése előtt a {{product}} DebateLab néven a debate.pi-stack.org címen futott, nem a debatelab.ai-n."
   },
   "contactPage": {
     "title": "Kapcsolat",
@@ -2701,6 +2728,10 @@
     "contact": {
       "title": "Kapcsolat | {{brand}}",
       "description": "Így írhatsz a {{product}} csapatának e-mailben fiókkal vagy számlázással kapcsolatos segítségért, adatvédelmi kérésekkel és visszajelzéssel."
+    },
+    "press": {
+      "title": "A {{product}} sajtóanyaga és adatai | {{brand}}",
+      "description": "Adatok a {{product}} MI-alapú vitafelkészítő alkalmazásról: korábbi név, készítő, nyelvek, árak, letölthető logó, és hogy mi nem."
     }
   },
   "validation": {

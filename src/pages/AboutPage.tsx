@@ -25,6 +25,9 @@ export default function AboutPage() {
           <p>
             <Trans i18nKey="aboutPage.answer" values={{ product }} components={{ home: <a href={`${site.origin}/`} className={linkClass} /> }} />
           </p>
+          <p className="mt-4">
+            <Trans i18nKey="aboutPage.notThis" values={{ product }} components={{ press: <Link to="/press" className={linkClass} /> }} />
+          </p>
         </section>
         <section>
           <h2 className="text-lg font-semibold">{t('aboutPage.makerHeading')}</h2>
@@ -58,6 +61,7 @@ export default function AboutPage() {
             <li><Link to="/privacy" className={linkClass}>{t('footer.privacy')}</Link></li>
             <li><Link to="/terms" className={linkClass}>{t('footer.terms')}</Link></li>
             <li><Link to="/contact" className={linkClass}>{t('footer.contact')}</Link></li>
+            <li><Link to="/press" className={linkClass}>{t('footer.press')}</Link></li>
           </ul>
         </section>
       </div>

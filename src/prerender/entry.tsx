@@ -18,6 +18,7 @@ import TermsPage from '@/pages/TermsPage';
 import PrivacyPage from '@/pages/PrivacyPage';
 import AboutPage from '@/pages/AboutPage';
 import ContactPage from '@/pages/ContactPage';
+import PressPage from '@/pages/PressPage';
 import NotFound from '@/pages/NotFound';
 import SourcesPage from '@/pages/SourcesPage';
 import { PRACTICE_TOOLS, PREPARE_TOOLS, PREP_MODE_COUNT, UTILITY_TOOLS } from '@/components/features/tools/tool-links';
@@ -124,6 +125,7 @@ function landingStructuredData(dateModified: string | undefined) {
         url: `${SITE_ORIGIN}/`,
         image: `${SITE_ORIGIN}/hero-visual.jpg?v=2`,
         description: SOFTWARE_DESCRIPTION,
+        disambiguatingDescription: site.organization.disambiguatingDescription,
         inLanguage: ['en', 'es', 'hu'],
         featureList: [...APP_TOOLS.map((tool) => i18n.t(`features.${tool.key}`)), EXPORT_FEATURE],
         // One paid offer. Google reads an Offer priced 0 as an app available without
@@ -175,7 +177,7 @@ function localizedLandingStructuredData(head: PageHead, language: PageLanguage, 
 }
 
 /** Home, then the page: the trail the guides and tool pages already carry. */
-function breadcrumbList(route: '/terms' | '/privacy' | '/about' | '/contact' | '/expocit/sources', name: string) {
+function breadcrumbList(route: '/terms' | '/privacy' | '/about' | '/contact' | '/press' | '/expocit/sources', name: string) {
   return {
     '@type': 'BreadcrumbList',
     itemListElement: [
@@ -195,17 +197,22 @@ function legalStructuredData(route: '/terms' | '/privacy', page: 'termsPage' | '
   };
 }
 
-// The day the About and Contact copy last changed; move it when their text does.
-const ABOUT_CONTACT_MODIFIED = '2026-10-28';
+// The day each page's copy last changed; move it when its text does.
+const PAGE_MODIFIED = { '/about': '2026-11-02', '/contact': '2026-10-28', '/press': '2026-11-02' };
 
-/** /about as an AboutPage about the Organization the home page defines; /contact as a ContactPage. */
-function aboutContactStructuredData(route: '/about' | '/contact') {
-  const about = route === '/about';
+/**
+ * /about as an AboutPage and /press as a WebPage, each about the Organization,
+ * which they define in full as the home page does; /contact as a ContactPage.
+ */
+function companyStructuredData(route: '/about' | '/contact' | '/press') {
+  const types = { '/about': 'AboutPage', '/contact': 'ContactPage', '/press': 'WebPage' };
+  const labels = { '/about': 'footer.about', '/contact': 'footer.contact', '/press': 'footer.press' };
   return {
     '@context': 'https://schema.org',
     '@graph': [
-      { ...webPage(route, ABOUT_CONTACT_MODIFIED), '@type': about ? 'AboutPage' : 'ContactPage', about: { '@id': ORGANIZATION_ID } },
-      breadcrumbList(route, i18n.t(about ? 'footer.about' : 'footer.contact', { lng: 'en' })),
+      ...(route === '/contact' ? [] : [organizationNode()]),
+      { ...webPage(route, PAGE_MODIFIED[route]), '@type': types[route], about: { '@id': ORGANIZATION_ID } },
+      breadcrumbList(route, i18n.t(labels[route], { lng: 'en' })),
     ],
   };
 }
@@ -288,13 +295,13 @@ export async function prerenderPages({ landingModified }: { landingModified?: st
       body: render('/privacy', PrivacyPage),
       structuredData: legalStructuredData('/privacy', 'privacyPage'),
     },
-    ...(['/about', '/contact'] as const).map((route) => ({
+    ...([['/about', 'AboutPage', AboutPage], ['/contact', 'ContactPage', ContactPage], ['/press', 'PressPage', PressPage]] as const).map(([route, name, Page]) => ({
       route,
       file: `${route.slice(1)}/index.html`,
-      module: route === '/about' ? 'src/pages/AboutPage.tsx' : 'src/pages/ContactPage.tsx',
+      module: `src/pages/${name}.tsx`,
       head: PAGE_HEADS[route],
-      body: render(route, route === '/about' ? AboutPage : ContactPage),
-      structuredData: aboutContactStructuredData(route),
+      body: render(route, Page),
+      structuredData: companyStructuredData(route),
     })),
     // The tool pages render their own JSON-LD in the body.
     ...TOOL_PAGES.map(({ route, module, Page }) => ({

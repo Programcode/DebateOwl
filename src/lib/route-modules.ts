@@ -35,6 +35,7 @@ export const routeLoaders = {
   "/privacy": cacheLoader(() => import("@/pages/PrivacyPage")),
   "/about": cacheLoader(() => import("@/pages/AboutPage")),
   "/contact": cacheLoader(() => import("@/pages/ContactPage")),
+  "/press": cacheLoader(() => import("@/pages/PressPage")),
   "/expocit/sources": cacheLoader(() => import("@/pages/SourcesPage")),
   "/login": cacheLoader(() => import("@/pages/LoginPage")),
   "/auth/callback": cacheLoader(() => import("@/pages/AuthCallbackPage")),
