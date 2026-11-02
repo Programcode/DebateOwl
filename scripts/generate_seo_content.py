@@ -881,6 +881,7 @@ def llms_txt():
 
 - [Home]({BASE}/): what {PRODUCT} is, the {len(PREP_MODES)} prep modes, pricing and FAQ
 - [Pricing]({page_url("debateowl-pricing")}): trial, Pro and what each includes
+- [AI debate partner]({BASE}/ai-debate): argue one side of a motion and an AI opponent rebuts it. One exchange and one follow-up are free with no account; full timed rounds need the 3-day trial, then $5/month + tax
 - [About]({BASE}/about): what {PRODUCT} is, who makes it and its former name
 - [Contact]({BASE}/contact): email {SITE["contactEmail"]} for support and feedback, {SITE["privacyEmail"]} for privacy and data requests
 - [Press kit and facts]({BASE}/press): a one-sentence definition, former name, maker, languages, pricing, logo downloads and what {PRODUCT} is not

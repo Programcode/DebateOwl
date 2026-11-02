@@ -53,7 +53,7 @@ GUIDES = {
                 "Rounds and scorecards are saved to the Current Debate they belong to, and your History shows the score of each one, so you can see whether the same weakness keeps coming back.",
             ]),
             ("Start a practice round", [
-                "Open [the app](/app), start a Current Debate with your motion and choose Sparring. If you do not have a case yet, generate one first: the AI opponent is harder to beat when you have already read its likely replies. The [pricing page](/debateowl-pricing) lists what the trial and Pro include.",
+                "To see how the AI opponent answers before you sign up, [try an AI debate](/ai-debate): one motion, two exchanges, no account. For a full timed round, open [the app](/app), start a Current Debate with your motion and choose Sparring. If you do not have a case yet, generate one first: the AI opponent is harder to beat when you have already read its likely replies. The [pricing page](/debateowl-pricing) lists what the trial and Pro include.",
             ]),
             ("What to look for in an AI practice partner", [
                 "Tick the lines that matter for your next month. The table below shows how three kinds of practice partner do on each one.",
@@ -215,7 +215,7 @@ GUIDES = {
                 "When a coaching answer depends on facts, turn on Citations in Ask. The coach then answers with sources you can open. Treat those as leads: read the original, confirm it says what the answer claims, and only then use it in a speech. Adding your own trusted articles to the Library has the same effect from the other direction, because active sources that fit the question are used in its answers for that debate.",
             ]),
             ("Try the AI debate coach on your next motion", [
-                "Open [the app](/app), start a Current Debate with your motion and ask the coach the burden check from the list above: what does each side have to prove? Then paste your opening speech and ask what a judge would remember from it. Ask is part of the {trial_days}-day free trial, with no credit card needed.",
+                "Start with [a free AI debate](/ai-debate): pick a motion, write one argument and read the rebuttal and judge note, no account needed. Then open [the app](/app), start a Current Debate with your motion and ask the coach the burden check from the list above: what does each side have to prove? Then paste your opening speech and ask what a judge would remember from it. Ask is part of the {trial_days}-day free trial, with no credit card needed.",
             ]),
             ("What an AI coach cannot do", [
                 "It has not watched you speak, it does not know the judges at your tournament, and it cannot tell you how your partner works under pressure. Bring the conclusions from AI coaching sessions to your human coach or team, and let them correct the advice that does not fit the people in the room.",
