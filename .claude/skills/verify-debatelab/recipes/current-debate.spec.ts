@@ -118,6 +118,8 @@ test("debate-start, debate-scope, debate-once, debate-switch: two debates keep t
   await expect(page.getByTestId("debate-sources")).toContainText("Zoo study");
   await expect(page.getByTestId("debate-sources")).not.toContainText("Homework study");
   await expect(page.getByTestId("debate-recent")).toContainText(ZOOS);
+  // Every row is titled with the motion, so the side tells a Pro case from a Con one.
+  await expect(page.getByTestId("debate-recent")).toContainText("Case · In favor");
   await evidence.shot("05-zoo-dashboard");
 
   // Switching back switches the Library and History with it.

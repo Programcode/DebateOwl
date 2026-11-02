@@ -28,22 +28,27 @@ function ViewAll({ to, count, shown }: { to: string; count: number; shown: numbe
   );
 }
 
-function ItemRow({ item }: { item: DebateItem }) {
+// Every row's title is the motion, so the side is what tells a Pro case from a Con case saved the same minute.
+// A side column omits its own side; a both-sides item still says so, since it is listed in both columns.
+function ItemRow({ item, omitSide }: { item: DebateItem; omitSide?: 'pro' | 'con' }) {
   const { t } = useTranslation();
   const openItem = useOpenDebateItem();
   const canOpen = item.kind !== 'crossfire';
+  const showSide = item.side && item.side !== 'neutral' && item.side !== omitSide;
   return (
     <li className="flex items-center justify-between gap-3 border-b border-border/60 py-2 last:border-b-0">
       <div className="min-w-0 flex-1">
         <p className="truncate text-sm font-medium">{item.title}</p>
         <p className="text-xs text-muted-foreground">
-          {t(`debate.kinds.${item.kind}`)} · {formatEuropeanDateTime(item.createdAt)}
+          {t(`debate.kinds.${item.kind}`)}
+          {showSide && <> · {t(sideLabelKey(item.side!))}</>}
+          {' · '}{formatEuropeanDateTime(item.createdAt)}
         </p>
       </div>
       {/* The name starts with the visible word (WCAG 2.5.3) and ends with which item it loads. */}
       {canOpen && (
         <Button variant="ghost" size="sm" className="shrink-0" onClick={() => openItem(item)}>
-          {t('historyPage.load', 'Load')}<span className="sr-only"> {item.title}</span>
+          {t('historyPage.load', 'Load')}<span className="sr-only"> {item.title}, {t(`debate.kinds.${item.kind}`)}{item.side && item.side !== 'neutral' ? `, ${t(sideLabelKey(item.side))}` : ''}</span>
         </Button>
       )}
     </li>
@@ -62,7 +67,7 @@ function SideSection({ side, items }: { side: 'pro' | 'con'; items: DebateItem[]
       <CardContent>
         {relevant.length === 0
           ? <p className="text-sm text-muted-foreground">{t('debate.sideEmpty', 'No work for this side yet.')}</p>
-          : <ul>{relevant.slice(0, 4).map((item) => <ItemRow key={`${item.kind}-${item.id}`} item={item} />)}</ul>}
+          : <ul>{relevant.slice(0, 4).map((item) => <ItemRow key={`${item.kind}-${item.id}`} item={item} omitSide={side} />)}</ul>}
         <ViewAll to="/app/history" count={relevant.length} shown={4} />
       </CardContent>
     </Card>
