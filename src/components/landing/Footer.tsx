@@ -40,12 +40,15 @@ const Footer = () => {
                         <Link to="/privacy" className="inline-flex min-h-6 items-center text-muted-foreground hover:text-foreground transition-colors underline-offset-4 hover:underline pointer-coarse:min-h-11 pointer-coarse:min-w-11 pointer-coarse:justify-center">
                             {t('footer.privacy')}
                         </Link>
-                        {/* English pages: there is no Hungarian or Spanish About or Contact address. */}
+                        {/* English pages: there is no Hungarian or Spanish About, Contact or Press address. */}
                         <Link to="/about" className="inline-flex min-h-6 items-center text-muted-foreground hover:text-foreground transition-colors underline-offset-4 hover:underline pointer-coarse:min-h-11 pointer-coarse:min-w-11 pointer-coarse:justify-center">
                             {t('footer.about')}
                         </Link>
                         <Link to="/contact" className="inline-flex min-h-6 items-center text-muted-foreground hover:text-foreground transition-colors underline-offset-4 hover:underline pointer-coarse:min-h-11 pointer-coarse:min-w-11 pointer-coarse:justify-center">
                             {t('footer.contact')}
+                        </Link>
+                        <Link to="/press" className="inline-flex min-h-6 items-center text-muted-foreground hover:text-foreground transition-colors underline-offset-4 hover:underline pointer-coarse:min-h-11 pointer-coarse:min-w-11 pointer-coarse:justify-center">
+                            {t('footer.press')}
                         </Link>
                     </nav>
 

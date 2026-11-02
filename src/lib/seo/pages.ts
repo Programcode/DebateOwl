@@ -13,10 +13,11 @@ export const ORGANIZATION_ID = `${SITE_ORIGIN}/#organization`;
  * The Organization behind the site, named for the product so search engines
  * see one name for one entity. Pi-Stack, which builds it, is its parent, not a
  * sameAs: a sameAs profile is the same entity elsewhere. site.json lists only
- * profiles that spell the name "DebateOwl"; with none, the node has no sameAs.
+ * profiles that spell the name "DebateOwl" and that DebateOwl itself runs; with
+ * none, the node has no sameAs. /press, the fact sheet, is its subjectOf.
  */
 export function organizationNode() {
-  const { name, logo, description, sameAs, parent } = site.organization;
+  const { name, logo, description, disambiguatingDescription, sameAs, parent } = site.organization;
   return {
     '@type': 'Organization',
     '@id': ORGANIZATION_ID,
@@ -25,10 +26,12 @@ export function organizationNode() {
     url: `${SITE_ORIGIN}/`,
     logo: { '@type': 'ImageObject', url: `${SITE_ORIGIN}${logo.path}`, width: logo.width, height: logo.height },
     description,
+    disambiguatingDescription,
     email: site.contactEmail,
     contactPoint: { '@type': 'ContactPoint', contactType: 'customer support', email: site.contactEmail, availableLanguage: ['en', 'hu', 'es'] },
     parentOrganization: { '@type': 'Organization', '@id': `${parent.url}#organization`, name: parent.name, url: parent.url },
     ...(sameAs.length ? { sameAs } : {}),
+    subjectOf: { '@type': 'WebPage', '@id': `${SITE_ORIGIN}/press#webpage`, url: `${SITE_ORIGIN}/press`, name: PAGE_HEADS['/press'].title },
   };
 }
 export const PRICING = site.pricing;
@@ -60,6 +63,7 @@ export const PAGE_HEADS = {
   '/privacy': { ...englishHead('privacy'), canonicalPath: '/privacy' },
   '/about': { ...englishHead('about'), canonicalPath: '/about' },
   '/contact': { ...englishHead('contact'), canonicalPath: '/contact' },
+  '/press': { ...englishHead('press'), canonicalPath: '/press' },
   '/expocit/sources': { ...englishHead('sources'), canonicalPath: '/expocit/sources' },
   ...TOOL_PAGE_HEADS,
   '*': englishHead('notFound'),
@@ -74,6 +78,7 @@ export const PAGE_HEAD_IDS: Record<PrerenderedRoute, PageHeadId> = {
   '/privacy': 'privacy',
   '/about': 'about',
   '/contact': 'contact',
+  '/press': 'press',
   '/expocit/sources': 'sources',
   ...TOOL_PAGE_HEAD_IDS,
   '*': 'notFound',

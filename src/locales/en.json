@@ -882,6 +882,7 @@
     "privacy": "Privacy",
     "about": "About",
     "contact": "Contact",
+    "press": "Press kit",
     "copyright": "© 2026 Pi-Stack. All rights reserved.",
     "formerly": "{{product}}, formerly DebateLab.",
     "navLabel": "Footer",
@@ -896,7 +897,7 @@
   },
   "hero": {
     "headline": "{{product}}: AI debate prep and practice",
-    "subheadline": "{{product}} helps you prepare cases and practice rounds with AI.",
+    "subheadline": "{{product}} is an AI debate prep and practice app: build cases, find weak points and run timed rounds.",
     "trialBadge": "{{trialDays}}-day free trial",
     "cta": "Start free trial",
     "trustBullet1": "No credit card required",
@@ -1887,6 +1888,7 @@
     "title": "About {{product}}",
     "question": "What is {{product}}?",
     "answer": "<home>{{product}}</home> is an AI debate prep and practice app for students and competitive debaters. It helps you write a case, find the weak points in an argument, research evidence with citations and practice timed rounds against an AI opponent.",
+    "notThis": "{{product}} is a debate app for students, not a sports or computer-vision product. The <press>press kit</press> has the short facts and the logo.",
     "makerHeading": "Who makes it",
     "maker": "{{product}} is built by a student developer and made by <pistack>Pi-Stack</pistack>.",
     "nameHeading": "The name",
@@ -1896,6 +1898,31 @@
     "languagesHeading": "Languages",
     "languages": "English, Spanish and Hungarian.",
     "linksHeading": "More about {{product}}"
+  },
+  "pressPage": {
+    "title": "{{product}} press kit and facts",
+    "checked": "Facts checked {{date}}.",
+    "definition": "<home>{{product}}</home> is an AI debate prep and practice app for students and competitive debaters that builds cases, finds the weak points in arguments, researches evidence with citations and runs timed practice rounds against an AI opponent.",
+    "factsHeading": "Facts",
+    "nameLabel": "Name",
+    "name": "{{product}}, also written {{alternateName}}",
+    "websiteLabel": "Website",
+    "formerlyLabel": "Former name",
+    "formerly": "{{name}}, at {{host}}, renamed on {{date}}",
+    "makerLabel": "Maker",
+    "maker": "Adam (<github>Programcode</github> on GitHub), a student developer in Hungary, published by <pistack>Pi-Stack</pistack>",
+    "launchedLabel": "Launched",
+    "launched": "2026, under the name {{name}}",
+    "languagesLabel": "Languages",
+    "pricingLabel": "Pricing",
+    "pricing": "A {{trialDays}}-day free trial with no credit card, then {{price}}/month + tax. There is no free plan; the <tools>free debate tools</tools> need no account.",
+    "contactLabel": "Press contact",
+    "logoHeading": "Logo",
+    "logoAlt": "The {{product}} owl logo",
+    "logoPng": "Download the logo as PNG (512 × 512)",
+    "logoSvg": "Download the logo as SVG",
+    "notHeading": "Not to be confused with",
+    "not": "{{product}} is not Owl AI (owl.ai), a real-time computer-vision platform for sports, and it is not debatelab.ai, a separate debate practice product. Before its rename, {{product}} was DebateLab at debate.pi-stack.org, not at debatelab.ai."
   },
   "contactPage": {
     "title": "Contact {{product}}",
@@ -2705,6 +2732,10 @@
     "contact": {
       "title": "Contact | {{brand}}",
       "description": "How to email {{product}} for help with your account or billing, privacy and data requests, and feedback on the AI debate prep app."
+    },
+    "press": {
+      "title": "{{product}} press kit and facts | {{brand}}",
+      "description": "Facts about {{product}}, the AI debate prep and practice app for students: former name, maker, languages, pricing, logo downloads and what it is not."
     }
   },
   "validation": {
