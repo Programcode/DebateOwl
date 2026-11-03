@@ -15,8 +15,10 @@ DebateOwl runs at https://debateowl.com/. It is a separate product from debatela
 - Languages: English, Spanish and Hungarian.
 - Pricing: As of October 2026, DebateOwl has a 3-day free trial with no credit card required, then Pro costs $5/month + tax. There is no permanent free plan.
 - Trial and free tools: The DebateOwl app has no free plan (3-day free trial, then $5/month); the separate tools at /tools are free with no account.
+- Free demo: [AI debate partner](https://debateowl.com/ai-debate) has a mini round with no account: one argument, one AI rebuttal with a judge note and one follow-up, up to three rounds a day per network.
 - Pro adds expanded AI prep access, all 10 models (including Claude Opus and Sonnet, GPT-6.1 Sol and Gemini), Active Grounding research and priority support.
 - Privacy: cases, sources, practice rounds and history stay behind sign-in and are not indexed.
+- Listed elsewhere: https://github.com/Programcode/DebateOwl, https://www.saashub.com/debateowl, https://www.artificialintelligencetoolslist.com/ai-tools/debateowl
 
 ## Main pages
 

@@ -1019,7 +1019,9 @@
     "q9": "Is {{product}} free?",
     "a9": "{{freePlan}}",
     "q10": "Which AI is best for debate?",
-    "a10": "It depends on the job. For brainstorming and background reading, a general chatbot such as ChatGPT, Claude or Gemini is fine. For preparing a set motion in your own format, with a case you can read out, \"If they say X, we answer Y\" replies and timed practice rounds, {{product}} is built for that. <link>Our comparison page</link> goes through the options one by one."
+    "a10": "It depends on the job. For brainstorming and background reading, a general chatbot such as ChatGPT, Claude or Gemini is fine. For preparing a set motion in your own format, with a case you can read out, \"If they say X, we answer Y\" replies and timed practice rounds, {{product}} is built for that. <link>Our comparison page</link> goes through the options one by one.",
+    "q11": "Is there an AI for debate?",
+    "a11": "Yes. Any chatbot will argue a side if asked, but {{product}} is made for debate prep: it turns a motion into a case with \"If they say… we answer…\" replies and drills you with AI rebuttals, cross-examination and timed rounds. The app costs ${{proMonthly}}/month + tax after a {{trialDays}}-day trial; <link>the /ai-debate mini round</link> is free, no account."
   },
   "guideHub": {
     "title": "Debate guides and free tools",

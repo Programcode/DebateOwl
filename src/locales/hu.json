@@ -1019,7 +1019,9 @@
     "q9": "Ingyenes a {{product}}?",
     "a9": "A {{product}} alkalmazásnak nincs ingyenes csomagja ({{trialDays}} napos ingyenes próba, utána havi ${{proMonthly}}); a /hu/tools oldalon lévő külön eszközök ingyenesek, és fiók nélkül is használhatók.",
     "q10": "Melyik MI a legjobb vitához?",
-    "a10": "A feladattól függ. Ötleteléshez és háttérolvasáshoz egy általános chatbot, például a ChatGPT, a Claude vagy a Gemini is megfelel. Ha egy konkrét indítványra készülsz a saját vitaformátumodban, és felolvasható esetet, „Ha azt mondják X-et, erre azt feleljük Y” válaszokat és időzített gyakorlófordulókat szeretnél, arra készült a {{product}}. <link>Részletes összehasonlításunk</link> egyenként végigveszi a lehetőségeket."
+    "a10": "A feladattól függ. Ötleteléshez és háttérolvasáshoz egy általános chatbot, például a ChatGPT, a Claude vagy a Gemini is megfelel. Ha egy konkrét indítványra készülsz a saját vitaformátumodban, és felolvasható esetet, „Ha azt mondják X-et, erre azt feleljük Y” válaszokat és időzített gyakorlófordulókat szeretnél, arra készült a {{product}}. <link>Részletes összehasonlításunk</link> egyenként végigveszi a lehetőségeket.",
+    "q11": "Létezik MI vitához?",
+    "a11": "Igen. Bármelyik chatbot képvisel egy oldalt, ha megkéred rá, de a {{product}} kifejezetten vitafelkészülésre készült: az indítványodból esetet ír „Ha azt mondják… erre azt feleljük…” válaszokkal, majd MI-cáfolatokkal, keresztkérdezéssel és időzített fordulókkal gyakoroltat egy MI-ellenféllel. Az alkalmazás a {{trialDays}} napos próba után havi ${{proMonthly}}; <link>a /ai-debate oldal mini fordulója</link> ingyenes, fiók nélkül."
   },
   "guideHub": {
     "title": "Vitaútmutatók és ingyenes eszközök",
