@@ -1,6 +1,6 @@
 # Debate case examples: raw output
 
-These files are the unedited output behind [/debate-case-example](https://debateowl.com/debate-case-example). [`scripts/seo_case_example.py`](../seo_case_example.py) renders the page from them; [`scripts/generate_seo_content.py`](../generate_seo_content.py) writes it to `public/debate-case-example/index.html`. Change the page copy there, never the case text here.
+These files are the unedited output behind [/debate-case-example](https://debateowl.com/debate-case-example). [`scripts/seo_case_example.py`](../seo_case_example.py) renders the page from them; [`scripts/generate_seo_content.py`](../generate_seo_content.py) writes it to `public/debate-case-example/index.html`. Change the page copy there, never the case text here. The only changes the page makes to the case text are the replaced source links in [`corrections.json`](corrections.json), which it lists under "Source links replaced after generation".
 
 | File | Motion | Format setting | Side | Language |
 | --- | --- | --- | --- | --- |
@@ -34,4 +34,11 @@ The first Hungarian run failed on its R2 (`Generate response is missing metadata
 
 ## Source links, checked 3 November 2026
 
-22 of the 31 links answered 200. The other 9 answer 403 to every automated client tried (Python, headless Chromium, Camofox) behind a Cloudflare or Akamai bot check: `lordslibrary.parliament.uk`, `committees.parliament.uk` (2), `publications.parliament.uk`, `tandfonline.com`, `transportation.gov` (2), `commerce.senate.gov` and `apta.com`. The Edge Function removes any link the request's own research did not return, so each of these was an Exa result at generation time.
+Of the 31 links in the raw output, 22 answered 200 to a script. The other 9 answered 403 behind a Cloudflare or Akamai bot check to every automated client tried (Python, headless Chromium, Camofox): `lordslibrary.parliament.uk`, `committees.parliament.uk` (2), `publications.parliament.uk`, `tandfonline.com`, `transportation.gov` (2), `commerce.senate.gov` and `apta.com`. The Edge Function removes any link the request's own research did not return, so each of these was an Exa result at generation time.
+
+Opened in a real browser, 7 of those 9 load. Two do not, and [`corrections.json`](corrections.json) replaces them on the page:
+
+- `tandfonline.com/doi/full/10.1080/17457289.2025.2560983` (Levin, "Are 16-year-olds mature enough to vote? Evidence from the Voto Joven in Latin America", Journal of Elections, Public Opinion and Parties, 6 October 2025) stays behind a Cloudflare check. It is replaced by the author's preprint of the same paper on APSA Preprints, whose page lists the journal version. The counter's source line, which named the wrong journal, now names APSA Preprints.
+- `commerce.senate.gov/.../2026.02.05 CHSRA Follow-Up Report (Part 2 of Acela Report).pdf` answers Access Denied. It is replaced by the Internet Archive's copy of the same PDF (snapshot of 11 August 2026). The committee's press release is on the same blocked host.
+
+Each change in `corrections.json` names the raw value it replaces; `scripts/seo_case_example.py` fails if a raw file no longer has that value, so a regenerated sample cannot keep a stale correction.

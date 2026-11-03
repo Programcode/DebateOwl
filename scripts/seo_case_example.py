@@ -1,6 +1,7 @@
 """/debate-case-example: real DebateOwl cases, rendered from the raw output in scripts/case-examples/.
 
-The case text comes from the JSON files unchanged. Only the page copy around it lives here;
+The case text comes from the JSON files unchanged, except for the replaced source links listed in
+case-examples/corrections.json, which the page names. Only the page copy around it lives here;
 generate_seo_content.render_case_example_page() builds the page.
 """
 from datetime import datetime
@@ -14,7 +15,7 @@ RAW_URL = "https://github.com/Programcode/DebateOwl/tree/main/scripts/case-examp
 SLUG = "debate-case-example"
 TITLE = "AI Debate Case Example: Real DebateOwl Output | DebateOwl"
 H1 = "What does an AI-written debate case look like?"
-DESCRIPTION = "Three real, unedited DebateOwl cases (British Parliamentary, Policy, and Classroom in Hungarian), each a first speech and an R2, with every source linked."
+DESCRIPTION = "Three real DebateOwl cases (British Parliamentary, Policy, and Classroom in Hungarian), each a first speech and an R2, with every source linked."
 PUBLISHED = "2026-11-03"
 MODIFIED = "2026-11-03"
 GENERATED_ON = "3 November 2026"
@@ -23,7 +24,7 @@ MODEL_ID = "anthropic/claude-sonnet-5.5"
 
 # The paragraph answer engines quote, straight under the H1. 40-60 words.
 ANSWER = (
-    f"Below are three real, unedited DebateOwl cases generated on {GENERATED_ON} with {MODEL_NAME}: "
+    f"Below are three real DebateOwl cases generated on {GENERATED_ON} with {MODEL_NAME}: "
     "British Parliamentary and Policy in English, Classroom in Hungarian. Each first speech has an opening, "
     "three arguments with evidence and why they matter, “If they say… we answer…” replies and a closing line. "
     "The second speech (R2) backs them up and answers theirs."
@@ -46,12 +47,12 @@ HOW_MADE = [
 
 FORMATS_NOTE = "For cases, DebateOwl currently supports the British Parliamentary, Policy and Classroom format settings. Whatever the setting, it writes each speech for a four-speaker team in the 4-6-6-3 structure: Introductor (4 minutes), R1 (6 minutes), R2 (6 minutes) and Conclusor (3 minutes). The samples show R1 and R2."
 
-HONESTY = f"Generated {GENERATED_ON} with {MODEL_NAME}; not edited except formatting. Evidence leads link to their sources; check every source before you use it in a round."
+HONESTY = f"Generated {GENERATED_ON} with {MODEL_NAME}; not edited except formatting and two source links that did not load, replaced as listed below. Evidence leads link to their sources; check every source before you use it in a round."
 
 FAQS = [
     (
         "Can AI write a debate case?",
-        "Yes, as a draft. An AI case generator such as DebateOwl takes a motion, a side and a speaker role and writes the speech: an opening, arguments with evidence and why they matter, answers to what the other side is likely to say, a closing line and a source list. The samples on this page are unedited examples. A debater still has to open every source, check that it says what the case claims, and put the case into their own words before a round.",
+        "Yes, as a draft. An AI case generator such as DebateOwl takes a motion, a side and a speaker role and writes the speech: an opening, arguments with evidence and why they matter, answers to what the other side is likely to say, a closing line and a source list. The samples on this page are real output, unedited apart from two replaced source links. A debater still has to open every source, check that it says what the case claims, and put the case into their own words before a round.",
     ),
     (
         "What should an AI debate case include?",
@@ -68,8 +69,47 @@ RELATED = [
 ]
 
 
-def load(sample_id):
+# Source links replaced after generation because they did not load in a browser. Each change names the
+# raw value it replaces, so a regenerated raw file fails here instead of keeping a stale correction.
+CORRECTIONS = json.loads((RAW / "corrections.json").read_text())
+REPLACED_URLS = {change["to"] for correction in CORRECTIONS for change in correction["changes"] if change["path"][-1] == "url"}
+
+
+def raw(sample_id):
     return json.loads((RAW / f"{sample_id}.json").read_text())
+
+
+def load(sample_id):
+    """The raw record with its corrections applied."""
+    record = raw(sample_id)
+    for correction in CORRECTIONS:
+        for change in correction["changes"]:
+            if change["sample"] != sample_id:
+                continue
+            *parents, key = change["path"]
+            target = record[change["speech"]]["response"]["output"]
+            for step in parents:
+                target = target[step]
+            if target[key] != change["from"]:
+                raise SystemExit(f"{sample_id} {change['speech']} {change['path']}: raw value is {target[key]!r}, correction {correction['id']} expects {change['from']!r}")
+            target[key] = change["to"]
+    return record
+
+
+def check_corrections():
+    """Every correction names a known sample and still matches its raw file."""
+    known = {sample[0] for sample in SAMPLES}
+    for correction in CORRECTIONS:
+        for change in correction["changes"]:
+            if change["sample"] not in known:
+                raise SystemExit(f"correction {correction['id']} names unknown sample {change['sample']}")
+    for sample_id in known:
+        load(sample_id)
+
+
+def corrections_html():
+    items = "".join(f"<li>{escape(correction['note'])}</li>" for correction in CORRECTIONS)
+    return f'<h3 id="replaced-sources">Source links replaced after generation</h3><p>Every source was opened in a browser on {GENERATED_ON}. These did not load, so each was replaced with a copy that does and that supports the same claim:</p><ul>{items}</ul>'
 
 
 def generated_at(record, speech):
@@ -150,7 +190,8 @@ def _sources(output, lang):
         name = escape(", ".join(part for part in (source.get("org", ""), str(source.get("year", ""))) if part))
         named = f'<a href="{escape(source["url"])}">{name}</a>' if source.get("url") else name
         claim = f": {escape(source['claim'])}" if source.get("claim") else ""
-        items.append(f"<li>{named}{claim}</li>")
+        replaced = ' <a class="muted" href="#replaced-sources" lang="en">(link replaced)</a>' if source.get("url") in REPLACED_URLS else ""
+        items.append(f"<li>{named}{claim}{replaced}</li>")
     return f'<h4>Sources</h4><ol class="sources">{"".join(items)}</ol>'
 
 

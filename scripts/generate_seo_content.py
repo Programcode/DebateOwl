@@ -821,6 +821,7 @@ def render_best_ai_page(page):
 def render_case_example_page():
     """/debate-case-example: real, unedited cases from scripts/case-examples/, with the copy in seo_case_example.py."""
     c = case_example
+    c.check_corrections()
     url = page_url(c.SLUG)
     if len(c.DESCRIPTION) > 155:
         raise SystemExit(f"{c.SLUG}: meta description is {len(c.DESCRIPTION)} characters; the limit is 155")
@@ -878,7 +879,7 @@ def render_case_example_page():
     <nav class="breadcrumb" aria-label="Breadcrumb"><a href="/">Home</a> / <span aria-current="page">Debate case example</span></nav>
     <article>
       <header class="hero"><h1>{esc(c.H1)}</h1><p id="short-answer" class="direct">{esc(c.ANSWER)}</p><p class="disclosure">{esc(c.HONESTY)}</p><p class="dates">By the <a href="/">{esc(PRODUCT)} team</a> · Published <time datetime="{c.PUBLISHED}">{long_date_dmy(c.PUBLISHED)}</time></p>{button}</header>
-      <section class="section article" aria-labelledby="how-made"><h2 id="how-made">How these cases were made</h2><ul>{how_made}</ul><p>{esc(c.FORMATS_NOTE)}</p><p>Every case is copied from the raw output, which is published with the request, the model that served each call and the database rows in <a href="{c.RAW_URL}">DebateOwl's GitHub repository</a>.</p><nav aria-label="Samples on this page"><ol>{contents}</ol></nav></section>
+      <section class="section article" aria-labelledby="how-made"><h2 id="how-made">How these cases were made</h2><ul>{how_made}</ul><p>{esc(c.FORMATS_NOTE)}</p><p>Every case is copied from the raw output, apart from the replaced links below. The raw output is published with the request, the model that served each call and the database rows in <a href="{c.RAW_URL}">DebateOwl's GitHub repository</a>.</p>{c.corrections_html()}<nav aria-label="Samples on this page"><ol>{contents}</ol></nav></section>
       {samples}
       <section class="section article" aria-labelledby="own-motion"><h2 id="own-motion">Write a case for your own motion</h2><p>{HOME_LINK} writes the same kind of case for any motion you are preparing, for your side and speaker role, with live web research.</p>{button}<p>{FREE_PLAN_HTML}</p></section>
       <section class="section faq article" aria-labelledby="faq"><h2 id="faq">Frequently asked questions</h2>{faq_html}</section>
@@ -896,7 +897,7 @@ def render_case_example_page():
 
 def case_example_llms_line():
     """The /debate-case-example line under "## Main pages"."""
-    return f"- [Debate case example]({page_url(case_example.SLUG)}): real, unedited {PRODUCT} case examples (British Parliamentary and Policy in English, Classroom in Hungarian) with \"If they say… we answer…\" replies and the R2"
+    return f"- [Debate case example]({page_url(case_example.SLUG)}): real {PRODUCT} case examples (British Parliamentary and Policy in English, Classroom in Hungarian) with \"If they say… we answer…\" replies and the R2"
 
 # The comparison pages, in the order llms.txt lists them under "## Compare". Pages from
 # PAGES use their own H1 and description; the English pages from seo_comparison_pages.py get a line here
