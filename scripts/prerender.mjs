@@ -11,7 +11,7 @@ import { createServer } from 'vite';
 const DIST = 'dist';
 const SITE_ORIGIN = JSON.parse(readFileSync('src/config/site.json', 'utf8')).origin;
 // The landing page's lastmod is the last commit that changed these.
-const LANDING_SOURCES = ['src/pages/LandingPage.tsx', 'src/components/landing', 'src/lib/seo/pages.ts'];
+const LANDING_SOURCES = ['src/pages/LandingPage.tsx', 'src/components/landing', 'src/lib/seo/pages.ts', 'src/config/site.json'];
 
 const escapeAttribute = (value) => value
   .replaceAll('&', '&amp;').replaceAll('"', '&quot;').replaceAll('<', '&lt;').replaceAll('>', '&gt;');

@@ -19,7 +19,11 @@
     },
     "description": "DebateOwl (formerly DebateLab at debate.pi-stack.org) is an AI debate prep and practice app for students and competitive debaters.",
     "disambiguatingDescription": "DebateOwl is an AI debate prep and practice app for students, not a sports or computer-vision product.",
-    "sameAs": ["https://github.com/Programcode/DebateOwl"],
+    "sameAs": [
+      "https://github.com/Programcode/DebateOwl",
+      "https://www.saashub.com/debateowl",
+      "https://www.artificialintelligencetoolslist.com/ai-tools/debateowl"
+    ],
     "operator": {
       "name": "Ádám Gáborjáni",
       "country": "Hungary",

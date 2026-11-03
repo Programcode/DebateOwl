@@ -128,6 +128,8 @@ function landingStructuredData(dateModified: string | undefined) {
         image: `${SITE_ORIGIN}/hero-visual.jpg?v=2`,
         description: SOFTWARE_DESCRIPTION,
         disambiguatingDescription: site.organization.disambiguatingDescription,
+        // The same listings as the Organization: each is a page about the app itself.
+        ...(site.organization.sameAs.length ? { sameAs: site.organization.sameAs } : {}),
         inLanguage: ['en', 'es', 'hu'],
         featureList: [...APP_TOOLS.map((tool) => i18n.t(`features.${tool.key}`)), EXPORT_FEATURE],
         // One paid offer. Google reads an Offer priced 0 as an app available without
@@ -200,7 +202,7 @@ function legalStructuredData(route: '/terms' | '/privacy', page: 'termsPage' | '
 }
 
 // The day each page's copy last changed; move it when its text does.
-const PAGE_MODIFIED = { '/about': '2026-11-02', '/contact': '2026-10-28', '/press': '2026-11-02' };
+const PAGE_MODIFIED = { '/about': '2026-11-03', '/contact': '2026-10-28', '/press': '2026-11-03' };
 
 /**
  * /about as an AboutPage and /press as a WebPage, each about the Organization,

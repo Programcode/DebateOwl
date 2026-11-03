@@ -884,6 +884,7 @@ def llms_txt():
 - Free demo: [AI debate partner]({BASE}/ai-debate) has a mini round with no account: one argument, one AI rebuttal with a judge note and one follow-up, up to three rounds a day per network.
 - Pro adds expanded AI prep access, all 10 models (including Claude Opus and Sonnet, GPT-6.1 Sol and Gemini), Active Grounding research and priority support.
 - Privacy: cases, sources, practice rounds and history stay behind sign-in and are not indexed.
+- Listed elsewhere: {", ".join(ORGANIZATION["sameAs"])}
 
 ## Main pages
 
