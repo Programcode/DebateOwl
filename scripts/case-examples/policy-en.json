@@ -1,0 +1,1165 @@
+{
+  "sample": "policy-en",
+  "debateFormatSetting": "Policy",
+  "howGenerated": "DebateOwl's Generate tool driven in a browser on a local DebateOwl stack (React client, Supabase Auth and Postgres, the ai Edge Function) with live OpenRouter and Exa: start a debate with the motion and format, generate R1, then R2 in the same debate. Every chat call was pinned to anthropic/claude-sonnet-5.5 on the Anthropic provider.",
+  "run": {
+    "test": "case example policy-en",
+    "project": "desktop-chromium",
+    "commit": "a9f69b38ccd3ab43d15d6e82ab1963cc74b1b723",
+    "mode": "live",
+    "liveModel": "anthropic/claude-sonnet-5.5",
+    "baseURL": "http://127.0.0.1:18081",
+    "startedAt": "2026-11-03T17:18:01.925Z"
+  },
+  "r1": {
+    "request": {
+      "feature": "generate",
+      "input": {
+        "motion": "Resolved: The United States federal government should substantially increase its investment in high-speed rail",
+        "side": "con",
+        "format": "custom",
+        "role": "r1",
+        "length": "standard",
+        "audience": "intermediate",
+        "tone": "formal",
+        "language": "en"
+      },
+      "provider": "openrouter",
+      "model": "anthropic/claude-sonnet-5.5",
+      "reasoningEffort": "low",
+      "sourceIds": [],
+      "debateContext": {
+        "debateId": "b1c5b37a-2b9a-4fda-81b1-68a3c8c612d1",
+        "side": "con",
+        "sourceIds": [],
+        "outputs": []
+      },
+      "stream": true,
+      "resultKey": "req_1793726287619_di42mh"
+    },
+    "response": {
+      "output": {
+        "opening": {
+          "hook": "California has spent years building a bullet train and has no passenger service to show for it. Before Washington pours in billions more, we should ask what the last billions bought."
+        },
+        "caseStructure": {
+          "thesis": "Today we will show 3 arguments that prove the federal government should not substantially increase its investment in high-speed rail: it wastes money, it rests on weak demand, and it takes funding from rail that works."
+        },
+        "contentions": [
+          {
+            "id": "1",
+            "title": "Megaprojects Burn Federal Money",
+            "claim": "High-speed rail projects in the United States repeatedly fail to deliver on time and on budget, so more federal money would be wasted.",
+            "reasoning": "Federal grants are paid out over many years against promised schedules and budgets. When a project misses deadlines and its costs rise, taxpayers keep paying while the finished service never arrives. California is the largest test case. If the biggest federal bet has not delivered, adding more funding to the same model repeats the failure at a larger scale.",
+            "evidence": "The Federal Railroad Administration's 2025 compliance review of California's project found 9 key findings, including missed deadlines, budget shortfalls and overstated ridership. In July 2025 the FRA ended roughly $4 billion in federal grants for the project (FRA, 2025; Bond Buyer, 2025).",
+            "needsSource": false,
+            "sourceQuery": "",
+            "impact": "Every dollar sunk into a stalled megaproject is a dollar not spent on roads, bridges or safety. Taxpayers carry that loss."
+          },
+          {
+            "id": "2",
+            "title": "Demand Cannot Carry the Debt",
+            "claim": "American high-speed rail does not earn enough from passengers to pay its own way, so taxpayers are left to cover the gap.",
+            "reasoning": "A rail line has to pay for construction and then for daily operations. If ridership is lower than promised, revenue falls short on both. The lender is then paid from public money or the project defaults. That puts the risk on the public. Private investors have not been willing to absorb it alone.",
+            "evidence": "Grist reported in September 2026 that Brightline filed for Chapter 11 bankruptcy while carrying $4.4 billion in debt, and that it is seeking more public financing for Brightline West. A Senate Commerce Committee report in February 2026 said California's own authority admits its first segment will not be profitable when it opens.",
+            "needsSource": false,
+            "sourceQuery": "",
+            "impact": "If the best-known operators cannot cover their costs, the public will be asked to pay again and again."
+          },
+          {
+            "id": "3",
+            "title": "Better Uses for Rail Dollars",
+            "claim": "Federal rail money does more good on safety and repair of existing rail than on new high-speed lines.",
+            "reasoning": "Federal rail funding is limited and already stretched across Amtrak and its backlog of repairs. Spending heavily on new high-speed lines pulls money away from projects that serve passengers now. Fixing existing track and crossings gives results sooner and at lower risk than a new line that may take decades.",
+            "evidence": "The Congressional Research Service said in March 2026 that Amtrak's expenses have exceeded its revenues every year, so it depends on Congress. The Department of Transportation said in September 2025 that grade crossings see more than 2,000 incidents and 200 deaths each year, and it redirected about $2.4 billion from California's project to a rail safety program.",
+            "needsSource": false,
+            "sourceQuery": "",
+            "impact": "Real people die at crossings today. Money should go to what saves lives and keeps trains running now."
+          }
+        ],
+        "counters": [
+          {
+            "targetArgument": "Other countries like China, Japan and France built successful high-speed rail, so America can too.",
+            "counterpoint": "Other countries do not prove the United States should spend more. Our own record is the relevant test, and it is poor. California, our biggest project, had its roughly $4 billion federal grants ended in 2025 after the FRA found missed deadlines, budget shortfalls and overstated ridership (FRA, 2025). If the model works abroad, why has it not worked here? Our first argument shows why more money repeats the problem.",
+            "source": "FRA, 2025"
+          },
+          {
+            "targetArgument": "Brightline proves Americans want to ride high-speed trains.",
+            "counterpoint": "Wanting to ride is not the same as paying enough to cover costs. Brightline filed for Chapter 11 bankruptcy in 2026 with $4.4 billion in debt, and it is still seeking public financing for Brightline West (Grist, 2026). If demand were enough, why did it need bankruptcy protection? This is our second argument: crowds do not pay off construction debt.",
+            "source": "Grist, 2026"
+          },
+          {
+            "targetArgument": "High-speed rail is an investment that will pay back in economic growth and jobs.",
+            "counterpoint": "Promised returns are only as good as the project that delivers them. California's ridership was overstated, according to the FRA's 2025 review, so its projected benefits were overstated too. The California authority also admits its first segment will not be profitable when it opens (Senate Commerce Committee, 2026). Benefits that never arrive cannot repay taxpayers. That is our first and second arguments together.",
+            "source": "FRA, 2025"
+          },
+          {
+            "targetArgument": "Without federal investment, rail will stay underfunded and projects will keep failing.",
+            "counterpoint": "The problem is how money is managed, not just how much. The Infrastructure Investment and Jobs Act already provided $66 billion in advance rail appropriations (Eno Center for Transportation, 2026). Yet California still missed deadlines and could not show a credible plan to finish its first segment (Bond Buyer, 2025). If more money were the answer, why did billions not fix it? Bigger funding does not fix weak delivery.",
+            "source": "Eno Center for Transportation, 2026"
+          },
+          {
+            "targetArgument": "High-speed rail cuts emissions and congestion.",
+            "counterpoint": "Those benefits exist only when trains are built, running and full. California has no train operating after a quarter of a century (Senate Commerce Committee, 2026). Emissions saved by a line that does not run are zero. Meanwhile, safety work on existing rail has clear results now: grade crossings see more than 2,000 incidents and 200 deaths a year (US DOT, 2025). That is our third argument.",
+            "source": "US Department of Transportation, 2025"
+          },
+          {
+            "targetArgument": "The Trump administration is just hostile to rail, so these cuts are political.",
+            "counterpoint": "Our case does not rest on who is in office. It rests on what the FRA review found: missed deadlines, budget shortfalls and overstated ridership (FRA, 2025). The administration also put more than $5 billion into a national rail partnership program for safety on intercity passenger rail (US DOT, 2025). If the aim were to kill rail, why fund it? We want rail money spent where it works. That is our third argument.",
+            "source": "US Department of Transportation, 2025"
+          }
+        ],
+        "closingLine": "That is why it is clear that the federal government should fix the rail it has, not pour billions more into high-speed projects that have not delivered.",
+        "sources": [
+          {
+            "org": "Federal Railroad Administration, US Department of Transportation",
+            "claim": "Compliance review found missed deadlines, budget shortfalls and overstated ridership; roughly $4 billion in grants",
+            "year": "2025",
+            "url": "https://www.transportation.gov/briefing-room/trumps-transportation-secretary-sean-p-duffy-releases-report-exposing-no-viable-path"
+          },
+          {
+            "org": "Bond Buyer",
+            "claim": "$4 billion in California grants terminated; no credible funding plan for the first segment",
+            "year": "2025",
+            "url": "https://www.bondbuyer.com/news/trump-administration-rescinds-4b-grant-for-california-train-to-nowhere"
+          },
+          {
+            "org": "Grist",
+            "claim": "Brightline Chapter 11, $4.4 billion in debt, public financing sought for Brightline West",
+            "year": "2026",
+            "url": "https://grist.org/solutions/brightline-shows-people-want-more-trains-but-who-will-pay-for-them/"
+          },
+          {
+            "org": "US Senate Committee on Commerce, Science, and Transportation",
+            "claim": "California's first segment will not be profitable when it opens; no train operating",
+            "year": "2026",
+            "url": "https://www.commerce.senate.gov/wp-content/uploads/media/doc/2026.02.05%20CHSRA%20Follow-Up%20Report%20(Part%202%20of%20Acela%20Report).pdf"
+          },
+          {
+            "org": "Congressional Research Service",
+            "claim": "Amtrak's expenses exceed its revenues every year and it depends on Congress",
+            "year": "2026",
+            "url": "https://www.congress.gov/crs_external_products/R/PDF/R48881/R48881.2.pdf"
+          },
+          {
+            "org": "US Department of Transportation",
+            "claim": "Grade crossings: more than 2,000 incidents and 200 deaths a year; about $2.4 billion redirected to rail safety program",
+            "year": "2025",
+            "url": "https://www.transportation.gov/briefing-room/trump-dividend-transportation-secretary-sean-p-duffy-announces-over-5-billion-get-0"
+          },
+          {
+            "org": "Eno Center for Transportation",
+            "claim": "IIJA provided $66 billion in advance rail appropriations",
+            "year": "2026",
+            "url": "https://enotrans.org/eno-resources/looking-down-the-tracks-a-case-for-more-predictable-intercity-passenger-rail-funding/"
+          }
+        ],
+        "metadata": {
+          "side": "con",
+          "format": "custom",
+          "generatedAt": "2026-11-03T00:00:00Z",
+          "model": "anthropic/claude-sonnet-5.5",
+          "provider": "openrouter",
+          "sourceUsage": [],
+          "durationMs": 28828
+        }
+      },
+      "discoveredSources": [
+        {
+          "title": "SPEEDLINES, High-Speed Intercity Passenger Rail Committee, July 2025, Issue #42",
+          "url": "https://www.apta.com/wp-content/uploads/SPEEDLINES-High-Speed-Intercity-Passenger-Rail-Committee-July-2025-Issue-42.pdf",
+          "content": "SPEEDLINES | JULY 2025 1\nSpecial Report on \nIntercity \nPassenger Rail\nSPEEDLINES\nISSUE #42 July 2025\nFEATURE ARTICLE\nImagine America \nconnected coast\u0002to-coast by sleek \nhigh-speed trains. \nThis bold vision \nfor HSR could \nrevolutionize how \nAmericans live, \nwork, and travel.\nTHE IIJA OFFERS SIGNIFICANT FEDERAL FUNDING \nFOR RAIL IMPROVEMENTS IN THE U. S. FROM 2022 \nTO 2026, IT EXPANDS EXISTING FEDERAL RAILROAD \nADMINISTRATION PROGRAMS AND INTRODUCES \nNEW ONES TO IMPROVE THE RAIL NETWORK. THE \nIIJA ALLOCATES $102 BILLION FOR RAIL, CONSISTING \nOF $66 BILLION FROM ADVANCED APPROPRIATIONS \nAND $36 BILLION IN AUTHORIZED FUNDING.\nPG.19\nSPEEDLINES | JULY 2025 2\nCONTENTS\n© 2011-2025 APTA - ALL RIGHTS RESERVED\nSPEEDLINES is published in cooperation with:\nAMERICAN PUBLIC TRANSPORTATION ASSOCIATION\n1300 I Street NW, Suite 1200 East\nWashington, DC 20005\n» p.32\n3 Chairman’s Letter\n4 Project Planning, Development, Delivery\n13 In the Spotlight\n14 High-Speed Rail Snippets\n15 Amtrak Long-Distance Servic",
+          "qualityScore": 95,
+          "sourceType": "official",
+          "qualityLabel": "strong",
+          "query": "Resolved: The United States federal government should substantially increase its investment in high-speed rail official data evidence 2025 2026"
+        },
+        {
+          "title": "commerce.senate.gov",
+          "url": "https://www.commerce.senate.gov/wp-content/uploads/media/doc/2026.02.05%20CHSRA%20Follow-Up%20Report%20(Part%202%20of%20Acela%20Report).pdf",
+          "content": "Photo Credit: CA High-Speed Rail Authority\n\n#### Executive Summary\n\nCalifornia high-speed rail reflects a pattern of ambitious policymaking divorced from practical reality—one encouraged by Democratic policymakers in Sacramento and Washington over the past two decades. In both the Northeast Corridor and California, Democratic administrations pushed major rail projects without securing financing or viable infrastructure, leading to chronic delays, runaway costs, and few tangible benefits. Under Governor Gavin Newsom, the California high-speed rail project remains a clear failure: not a single train is operating after a quarter of a century and $2.6 billion in federal funds. Moreover, the much-maligned high-speed rail line may prove costly even after it is in service. The California High-Speed Rail Authority now admits its core Merced-to Bakersfield segment will not be profitable when it opens. Simply put, Congress is right to rein in this wasteful spending.\n\n#### Introduction\n\nOn Decemb",
+          "qualityScore": 93,
+          "sourceType": "government",
+          "qualityLabel": "strong",
+          "query": "Resolved: The United States federal government should substantially increase its investment in high-speed rail official data evidence 2025 2026"
+        },
+        {
+          "title": "FRA FY 2026 Congressional Justification",
+          "url": "https://www.transportation.gov/sites/dot.gov/files/2025-05/FRA_FY_2026_Budget_Estimates_CJ.pdf",
+          "content": "## BUDGET\n\n##### U.S. Department ESTIMATES of Transportation\n\n### FISCAL YEAR 2026\n\n#### FEDERAL RAILROAD ADMINISTRATION\n\nSUBMITTED FOR THE USE OF THE COMMITTEES ON APPROPRIATIONS\n\nDEPARTMENT OF TRANSPORTATION FEDERAL RAILROAD ADMINISTRATION FY 2026 PRESIDENT’S BUDGET JUSTIFICATION TABLE OF CONTENTS\n\nPage\n\nSection 1: Overview \nAdministrator’s Overview ... 1 \nOrganization Charts ... 3 \nSection 2: Budget Summary Tables \nBudget Authority ... 5 \nTotal Budgetary Resources by Appropriation Account ... 7 \nOutlays ... 9 \nSummary of Requested Funding Changes from Base ... 11 \nWorking Capital Fund ... 24 \nPersonnel Resource Summary – Full-Time Equivalents (FTE) ... 25 \nPersonnel Resource Summary – Full-Time Positions (FTP) ... 26 \nSection 3: Budget Request by Appropriation \nSafety and Operations ... 27 \nRailroad Research and Development ... 43 \nAmtrak ... 67 \nConsolidated Rail Infrastructure and Safety Improvements ... 79 \nAdministrative Provisions ... 89 \nSection 4: Research, Development, and T",
+          "qualityScore": 93,
+          "sourceType": "government",
+          "qualityLabel": "strong",
+          "query": "Resolved: The United States federal government should substantially increase its investment in high-speed rail official data evidence 2025 2026"
+        },
+        {
+          "title": "High-Speed Rail in the U.S.",
+          "url": "https://www.bechtel.com/wp-content/uploads/2025/05/Bechtel_Rail-White-Paper_7-May-2025.pdf",
+          "content": "#### High-Speed Rail in the U.S. The Mega Project Delivery Perspective\n\nMay 2025\n\nExecutive Summary 3 \nTransforming America: The High-Speed Rail Revolution 6 \nThe Economic Benefit of High-Speed Rail in the United States 7 \nEnablers 8 \nReform 19 \nDelivery 26 \nConclusion 35 \nAuthors, Contributors & Acknowledgments 36 \nReferences 37 \n\n### Contents\n\nThe United States is on the brink of transforming how it moves people, connects communities, and bolsters regional economies. After decades of cautious progress, existing rail services like Amtrak’s Acela and Brightline Florida have demonstrated that there is increasing public appetite for faster, smarter, more efficient intercity transport. Such projects are creating a solid foundation on which to learn, build and move forward with increased confidence and certainty. However, to realize high-speed rail’s (HSR) full potential — a nationwide network connecting major population and economic centers - the U.S. must avoid the most common pitfalls t",
+          "qualityScore": 93,
+          "sourceType": "official",
+          "qualityLabel": "strong",
+          "query": "Resolved: The United States federal government should substantially increase its investment in high-speed rail statistics report study 2025 2026"
+        },
+        {
+          "title": "Penn Station and the Two Paths Forward for American Trains | High Speed Rail Alliance",
+          "url": "https://www.hsrail.org/blog/penn-station-and-the-two-paths-forward-for-american-trains-2/",
+          "content": "Penn Station and the Two Paths Forward for American Trains | High Speed Rail Alliance\n\n# Penn Station and the Two Paths Forward for American Trains\n\nAugust 21, 2026\n\n • Advocacy, Policy and Legislation\n\n \n\n### Competing visions for transportation reauthorization\n\nPenn Station handles about 600,000 passengers on a typical weekday—more than LaGuardia, JFK, and Newark airports combined. It powers New York City’s economy, and it’s the beating heart of the most developed and heavily used passenger-rail line in the US, the Northeast Corridor.\n\nPlans to renovate and transform the station are moving forward: Amtrak’s Andy Bynum has said shovels will be in the ground by late 2027. We support Amtrak’s approach, which was laid out in a study published by the Federal Railroad Administration (FRA) in June. It makes the case for a fundamental overhaul of Penn Station’s concourse, track configuration, and operating culture—with the goal of running more trains into and through the station by slashing ",
+          "qualityScore": 91,
+          "sourceType": "results",
+          "qualityLabel": "strong",
+          "query": "Resolved: The United States federal government should substantially increase its investment in high-speed rail official data evidence 2025 2026"
+        }
+      ],
+      "sourceAssessments": [],
+      "meta": {
+        "requestedModel": "anthropic/claude-sonnet-5.5",
+        "resolvedModel": "anthropic/claude-sonnet-5.5",
+        "debateContext": {
+          "debateId": "b1c5b37a-2b9a-4fda-81b1-68a3c8c612d1",
+          "sourcesUsed": 0,
+          "sourcesOmittedForSize": 0,
+          "sourcesShortened": 0,
+          "sourcesUnavailable": 0,
+          "outputsUsed": [],
+          "outputsOmittedForSize": [],
+          "outputsUnavailable": 0,
+          "instructionsUsed": false
+        }
+      }
+    },
+    "providerCalls": [
+      {
+        "feature": "research-queries",
+        "requestedModel": "anthropic/claude-haiku-5.5",
+        "upstreamModel": "anthropic/claude-sonnet-5.5",
+        "upstreamProvider": "Anthropic",
+        "status": 200,
+        "ms": 2758,
+        "stream": false
+      },
+      {
+        "feature": "jev",
+        "requestedModel": null,
+        "upstreamModel": "typesafe/jev-1.13-20260917",
+        "upstreamProvider": "TypeSafe",
+        "status": 200,
+        "ms": 277,
+        "stream": null
+      },
+      {
+        "feature": "generate",
+        "requestedModel": "anthropic/claude-sonnet-5.5",
+        "upstreamModel": "anthropic/claude-sonnet-5.5",
+        "upstreamProvider": "Anthropic",
+        "status": 200,
+        "ms": 24345,
+        "stream": true,
+        "userPromptHead": "Motion: Resolved: The United States federal government should substantially increase its investment in high-speed rail\nSide: con\nFormat: custom\nRole: r1\nLength: standard\nLength Instruction: Return exactly 3 contentions. Give each a clear explanation, evidence, and why it matters.\nSpeech Budget: 6 minutes, about 780 spoken words at 130 words a minute. The opening, the arguments and the closing line together stay within about 600 words, leaving time for the \"If they say...\" answers the speaker picks. With 3 arguments, each argument is about 170 spoken words: claim one sentence of at most 20 words, reasoning about 75 words, evidence about 50 words, whyItMatters about 25 words. opening.hook and caseStructure.thesis at most 35 words each, closingLine one sentence of at most 25 words. Aim for these numbers, not under them: a shorter field leaves the speaker's time unused, a longer one runs past it.\nAudience: intermediate\nAudience Instruction: Assume a trained debater: use clear, concise explanations.\nTone: formal\nTone Instruction: Use polished, judge-facing language with controlled phrasing.\nLanguage: English (en) - Write ALL output in this language.",
+        "debateContextIncluded": true
+      }
+    ]
+  },
+  "r2": {
+    "request": {
+      "feature": "generate",
+      "input": {
+        "motion": "Resolved: The United States federal government should substantially increase its investment in high-speed rail",
+        "side": "con",
+        "format": "custom",
+        "role": "r2",
+        "length": "standard",
+        "audience": "intermediate",
+        "tone": "formal",
+        "language": "en"
+      },
+      "provider": "openrouter",
+      "model": "anthropic/claude-sonnet-5.5",
+      "reasoningEffort": "low",
+      "sourceIds": [
+        "6fea043e-1c4a-4b6a-9105-cd69ff62c3b0",
+        "888af78c-06d9-4258-bef4-19343d07a0b3",
+        "65ad2029-d199-4d79-a882-6709349fe3a0",
+        "5fefc6be-e4f8-4661-bf54-352bdf7c530d",
+        "b8e08602-b06b-431c-864c-320271ca340b"
+      ],
+      "debateContext": {
+        "debateId": "b1c5b37a-2b9a-4fda-81b1-68a3c8c612d1",
+        "side": "con",
+        "sourceIds": [
+          "6fea043e-1c4a-4b6a-9105-cd69ff62c3b0",
+          "888af78c-06d9-4258-bef4-19343d07a0b3",
+          "65ad2029-d199-4d79-a882-6709349fe3a0",
+          "5fefc6be-e4f8-4661-bf54-352bdf7c530d",
+          "b8e08602-b06b-431c-864c-320271ca340b"
+        ],
+        "outputs": [
+          {
+            "kind": "case",
+            "id": "2aba8d8e-d33a-4d70-8425-60e01661cbfc"
+          }
+        ]
+      },
+      "stream": true,
+      "resultKey": "req_1793726318237_y4fz1b"
+    },
+    "response": {
+      "output": {
+        "opening": {
+          "hook": "If high-speed rail were a safe place for federal money, the biggest project in the country would have a train running after twenty-five years. It does not."
+        },
+        "caseStructure": {
+          "thesis": "I'm the R2 of my team, and I'm here to show that the United States should not substantially increase its federal investment in high-speed rail, because the record shows waste and because the same money does more good on rail that already exists."
+        },
+        "contentions": [],
+        "reinforce": [
+          {
+            "argument": "Our first argument: megaprojects burn federal money",
+            "text": "The California project is the clearest proof. In June 2025, the Federal Railroad Administration released a review of over 300 pages with 9 key findings, including missed deadlines, budget shortfalls and overstated ridership (US Department of Transportation, 2025). The two grants at stake were worth roughly $4 billion. In July 2025, the agency ended them, saying the project had no credible funding plan to finish its first segment (Bond Buyer, 2025). A Senate Commerce Committee report in 2026 adds that no train is running after a quarter of a century and $2.6 billion in federal funds. Taxpayers pay while the service never arrives. If this is how the biggest federal bet performs, more money would only repeat the loss."
+          },
+          {
+            "argument": "Our second argument: better uses for rail dollars",
+            "text": "Federal rail money is limited, and it has urgent jobs to do now. In September 2025, the Department of Transportation announced more than $5 billion for the National Railroad Partnership Program, aimed at safety on intercity passenger rail. That includes grade crossings, which see more than 2,000 incidents and 200 deaths every year (US Department of Transportation, 2025). Amtrak's expenses have also exceeded its revenues every year, so it depends on Congress to operate and to improve its infrastructure (Congressional Research Service, 2026). Fixing crossings and track gives results quickly. A new line takes decades. If we care about passengers and lives today, the money belongs on rail that already runs."
+          }
+        ],
+        "counters": [
+          {
+            "targetArgument": "High-speed rail is a long-term investment that pays back in jobs and economic growth.",
+            "counterpoint": "A payback only exists if the project is finished and the forecasts are true, and the American record fails both tests. The FRA review of California found overstated ridership (US Department of Transportation, 2025). Overstated ridership means overstated revenue, jobs and growth. The Senate Commerce Committee reported in 2026 that the California authority admits its first segment will not be profitable when it opens. A line that loses money after opening cannot repay taxpayers through growth. The House Oversight Committee opened an investigation in August 2025 into whether the authority knowingly misrepresented its ridership projections. If the returns were real, why did the forecasts need to be inflated? Jobs from a project that never delivers service are a cost, not a return. This is our first argument: money goes in, and the promised benefits never come out.",
+            "source": "US Department of Transportation, 2025"
+          },
+          {
+            "targetArgument": "The United States has fallen behind China, Japan and Europe, and federal investment is how it catches up.",
+            "counterpoint": "Being behind does not mean more federal spending will fix it. Our own record is the test. The FRA ended roughly $4 billion in California grants in July 2025 after finding the project could not meet its binding obligations (Bond Buyer, 2025). On the Northeast Corridor, a Senate Commerce Committee report in 2025 described NextGen Acela trainsets bought without a credible plan to upgrade the track. They run more slowly than the original Acela trains, after a four-year delay that cost taxpayers another $287 million (Senate Commerce Committee, 2026). So catching up by spending has already produced slower trains and higher bills. If copying others worked, why has it failed here twice? Our first argument explains the reason: American projects miss deadlines and budgets. Our second argument gives the answer: fix and secure what already carries passengers.",
+            "source": "Senate Commerce Committee, 2026"
+          },
+          {
+            "targetArgument": "Rail is underfunded because federal support is unpredictable, and more stable money would fix delivery problems.",
+            "counterpoint": "Stable money has already been tested, and delivery problems remained. The Infrastructure Investment and Jobs Act gave five years of advance appropriations, $66 billion in total, which Eno itself says brought medium-term certainty (Eno Center for Transportation, 2026). Even so, California missed deadlines, ran short of budget and had no credible plan to finish its first segment (US Department of Transportation, 2025). The Congressional Research Service also notes that Amtrak's expenses have exceeded its revenues every year, so more steady funding does not create a self-paying system (Congressional Research Service, 2026). If certainty were the cure, why did billions of certain dollars not fix California? The weakness is in how projects are managed, not only in how money is scheduled. That is our first argument. Better uses for the dollars we already have, such as crossing safety, is our second.",
+            "source": "Eno Center for Transportation, 2026"
+          },
+          {
+            "targetArgument": "Every dollar invested in public transportation returns about five dollars in long-term economic benefits.",
+            "counterpoint": "That figure comes from the transit lobby, and it describes public transportation in general, not high-speed rail. It says nothing about a megaproject that has not delivered a single trip. The group making the claim is the American Public Transportation Association, which is asking Congress for at least $21 billion for passenger rail (APTA, 2025). A return only exists when the service is built and running. California has no train operating after a quarter of a century and $2.6 billion in federal funds (Senate Commerce Committee, 2026). In 2025 the Federal Railroad Administration ended roughly $4 billion in grants because of missed deadlines, budget shortfalls and overstated ridership (US DOT, 2025). So where is the five dollars? You cannot earn a return on a line that does not run. This is our first argument: projects that miss their dates and budgets burn the money before any benefit arrives.",
+            "source": "APTA, 2025"
+          },
+          {
+            "targetArgument": "Electrified high-speed rail cuts emissions and eases congestion on highways and in the air.",
+            "counterpoint": "A cleaner train only cuts emissions when it exists, and in the United States the big one does not. California has no train operating after 25 years and $2.6 billion in federal funds (Senate Commerce Committee, 2026). The Bechtel white paper they rely on says electrified high-speed rail can cut emissions by up to 95%, but the same paper warns that the US must avoid ballooning costs, chronic delays and waning public support (Bechtel, 2025). That is a warning about our record, not a promise. Emissions saved by a line that is stalled are zero. Meanwhile, grade crossings on existing rail see more than 2,000 incidents and 200 deaths a year (US DOT, 2025). If the goal is real results, why pour money into a line that has not started? This is our second argument: limited rail dollars do more good on safety and repair of rail that already runs.",
+            "source": "Bechtel, 2025"
+          },
+          {
+            "targetArgument": "Brightline and the Acela show that Americans want faster trains and will ride them.",
+            "counterpoint": "Wanting a faster train does not mean the project works, and the Acela proves our side. The new NextGen Acela trainsets run more slowly than the original Acela trains, after a four-year delay that cost taxpayers an additional $287 million (Senate Commerce Committee, 2026). Those trains were bought without a credible plan to upgrade the aging track. So the money went to the train and not to the tracks that decide the speed. Even a pro-rail source, the Bechtel white paper, says the US must avoid ballooning costs and chronic delays (Bechtel, 2025). If demand alone were enough, why did the Acela cost more and run slower? Passengers can fill a seat on a project that still wastes federal money. This is our first argument: missed budgets and deadlines. It also supports our second: fix the existing Northeast Corridor track first, before funding new lines.",
+            "source": "Senate Commerce Committee, 2026"
+          },
+          {
+            "targetArgument": "Penn Station and the Northeast Corridor show that federal rail investment can deliver real results.",
+            "counterpoint": "Penn Station proves our point, not theirs. It is an existing station on an existing line. The Federal Railroad Administration study calls for an overhaul of the concourse, the track layout and how the station operates, so more trains can run through it (High Speed Rail Alliance, 2026). That is repair and modernization, not a new high-speed line. Meanwhile, the Senate Commerce Committee found that the NextGen Acela sets for the Northeast Corridor were bought without a credible plan to upgrade the track, they run more slowly than the old Acelas, and a four-year delay cost taxpayers an extra $287 million (Senate Commerce Committee, 2026). If the corridor is the success story, why did that happen? Money works where it fixes what already carries 600,000 people a weekday. It burns where it chases speed first. That is our first and second arguments.",
+            "source": "High Speed Rail Alliance, 2026"
+          },
+          {
+            "targetArgument": "Engineers' groups like ASCE back a national high-speed rail network.",
+            "counterpoint": "Read the ASCE statement in full. It says investment should be prioritized by passenger demand, travel time savings and economic factors, and be balanced between renewal and incremental improvements to existing passenger rail and the development of advanced high-speed systems (ASCE, 2025). That is a call for balance and for tests of demand, not for a blank check. Our case passes those tests. California has no train running after a quarter of a century and $2.6 billion in federal funds (Senate Commerce Committee, 2026). The Federal Railroad Administration found missed deadlines, budget shortfalls and overstated ridership there (US Department of Transportation, 2025). If demand is the standard, why would we pour more money into a project that overstated its demand? ASCE's own priority on renewal supports our second argument: fix existing rail first.",
+            "source": "ASCE, 2025"
+          },
+          {
+            "targetArgument": "The Infrastructure Investment and Jobs Act showed that steady federal money lets Amtrak and states build capacity.",
+            "counterpoint": "Steady money is not the same as more money, and the Act already gave rail a lot. It provided $66 billion in advance appropriations over five years (Eno Center for Transportation, 2026). Yet the California project, which received federal grants over those years, was found by the Federal Railroad Administration to have missed deadlines and run short on budget, and about $4 billion of its grants were terminated (Bond Buyer, 2025). If steady money fixed delivery, why did that happen? The Eno report itself says the benefit was predictability for planning, which is about how money is managed, not about adding billions for new high-speed lines. Congress can keep funding steady without a big increase. That is our first argument: waste comes from weak delivery. And our second argument: put the steady money into existing rail.",
+            "source": "Eno Center for Transportation, 2026"
+          },
+          {
+            "targetArgument": "California's failures come from poor management and politics, not from the idea of high-speed rail.",
+            "counterpoint": "That answer proves our point. The motion asks for more federal money, and federal money goes to the managers we actually have. The Federal Railroad Administration reviewed the California project in 2025 and found nine key findings, including missed deadlines, budget shortfalls and overstated ridership (US Department of Transportation, 2025). The Bond Buyer reported in 2025 that the FRA saw no credible funding plan to finish even the first segment. Bad management is the real risk of any large new line, so you cannot set it aside. If the idea is sound but the delivery keeps failing, why should taxpayers pay more before delivery is fixed? A judge should vote on what a bigger budget would really buy. It would buy more of the same record. This is our first argument: megaprojects miss deadlines and budgets, so more federal money would be wasted.",
+            "source": "US Department of Transportation, 2025"
+          },
+          {
+            "targetArgument": "Cancelling grants like California's is political hostility to rail, not a response to real problems.",
+            "counterpoint": "The grounds for the cancellation are on paper, and they are about performance. The FRA's July 2025 letter ended the agreements after a review that found missed deadlines, budget shortfalls and overstated ridership (US Department of Transportation, 2025). The Bond Buyer reported that the FRA said California could not meet the binding obligations it took on to receive the money (Bond Buyer, 2025). Our case also does not depend on who holds office. The same department announced over $5 billion for a National Railroad Partnership Program for safety on intercity passenger rail, partly funded by the money taken back from California (US Department of Transportation, 2025). If the goal were to kill rail, why keep the money in rail? The money moved from a stalled project to work that is under way. That links our first argument, wasted money, to our second, better uses for rail dollars.",
+            "source": "US Department of Transportation, 2025"
+          },
+          {
+            "targetArgument": "We can fund high-speed rail and also repair existing rail, so there is no real tradeoff.",
+            "counterpoint": "Federal rail money is limited, and the other side has not shown where extra money would come from. The Eno Center said in January 2026 that intercity rail has no dedicated federal revenue source and depends on annual discretionary appropriations. The Congressional Research Service said in 2026 that Amtrak's expenses have exceeded its revenues every year, so it depends on Congress. A budget that is always short makes every new line compete with repairs for the same dollars. Grade crossings alone see more than 2,000 incidents and 200 deaths a year (US Department of Transportation, 2025). If funding is so easy, why is the repair need still there? A new line also takes years before it carries anyone. This is our second argument: limited rail money does more good on safety and repair of existing rail now.",
+            "source": "Eno Center for Transportation, 2026"
+          }
+        ],
+        "reinforce_note": "",
+        "closingLine": "That is why it is clear that the federal government should not substantially increase its investment in high-speed rail: the record shows waste, and the money does more good on rail that works today. Thank you.",
+        "sources": [
+          {
+            "org": "US Department of Transportation",
+            "claim": "FRA review of California high-speed rail found missed deadlines, budget shortfalls and overstated ridership; $5 billion safety program with grade crossing figures",
+            "year": "2025",
+            "url": "https://www.transportation.gov/briefing-room/trumps-transportation-secretary-sean-p-duffy-releases-report-exposing-no-viable-path"
+          },
+          {
+            "org": "US Department of Transportation",
+            "claim": "More than $5 billion for rail safety; grade crossings see over 2,000 incidents and 200 deaths a year",
+            "year": "2025",
+            "url": "https://www.transportation.gov/briefing-room/trump-dividend-transportation-secretary-sean-p-duffy-announces-over-5-billion-get-0"
+          },
+          {
+            "org": "Bond Buyer",
+            "claim": "FRA ended $4 billion in California grants; no credible funding plan for first segment",
+            "year": "2025",
+            "url": "https://www.bondbuyer.com/news/trump-administration-rescinds-4b-grant-for-california-train-to-nowhere"
+          },
+          {
+            "org": "Senate Commerce Committee",
+            "claim": "No train running in California after 25 years and $2.6 billion; first segment not profitable; NextGen Acela delay cost $287 million",
+            "year": "2026",
+            "url": "https://www.commerce.senate.gov/wp-content/uploads/media/doc/2026.02.05%20CHSRA%20Follow-Up%20Report%20(Part%202%20of%20Acela%20Report).pdf"
+          },
+          {
+            "org": "US House Committee on Oversight and Government Reform",
+            "claim": "Investigation into whether California misrepresented ridership projections",
+            "year": "2025",
+            "url": "https://oversight.house.gov/release/chairman-comer-investigates-californias-high-speed-rail-boondoggle/"
+          },
+          {
+            "org": "Eno Center for Transportation",
+            "claim": "IIJA gave $66 billion in advance appropriations over five years",
+            "year": "2026",
+            "url": "https://enotrans.org/eno-resources/looking-down-the-tracks-a-case-for-more-predictable-intercity-passenger-rail-funding/"
+          },
+          {
+            "org": "Congressional Research Service",
+            "claim": "Amtrak's expenses have exceeded its revenues each year and depend on Congress",
+            "year": "2026",
+            "url": "https://www.congress.gov/crs_external_products/R/PDF/R48881/R48881.2.pdf"
+          },
+          {
+            "org": "APTA",
+            "claim": "Transit lobby asks for at least $21 billion for passenger rail and makes the $5 return claim",
+            "year": "2025",
+            "url": "https://www.apta.com/wp-content/uploads/2026/02/APTA-TALKING-POINTS-Pass-Rail-Investment-09-08-2025.pdf"
+          },
+          {
+            "org": "Bechtel",
+            "claim": "Electrified HSR can cut emissions up to 95%, but the US must avoid ballooning costs and chronic delays",
+            "year": "2025",
+            "url": "https://www.bechtel.com/wp-content/uploads/2025/05/Bechtel_Rail-White-Paper_7-May-2025.pdf"
+          },
+          {
+            "org": "High Speed Rail Alliance",
+            "claim": "Penn Station overhaul is a renovation of an existing station",
+            "year": "2026",
+            "url": "https://www.hsrail.org/blog/penn-station-and-the-two-paths-forward-for-american-trains-2/"
+          },
+          {
+            "org": "ASCE",
+            "claim": "Investment should follow demand and balance renewal of existing rail with new high-speed systems",
+            "year": "2025",
+            "url": "https://www.asce.org/advocacy/policy-statements/ps402---high-speed-and-intercity-passenger-rail"
+          }
+        ],
+        "metadata": {
+          "side": "con",
+          "format": "custom",
+          "generatedAt": "2026-11-03T00:00:00Z",
+          "model": "anthropic/claude-sonnet-5.5",
+          "provider": "openrouter",
+          "sourceUsage": [],
+          "durationMs": 26804
+        }
+      },
+      "discoveredSources": [
+        {
+          "title": "commerce.senate.gov",
+          "url": "https://www.commerce.senate.gov/wp-content/uploads/media/doc/2026.02.05%20CHSRA%20Follow-Up%20Report%20(Part%202%20of%20Acela%20Report).pdf",
+          "content": "Photo Credit: CA High-Speed Rail Authority\n\n#### Executive Summary\n\nCalifornia high-speed rail reflects a pattern of ambitious policymaking divorced from practical reality—one encouraged by Democratic policymakers in Sacramento and Washington over the past two decades. In both the Northeast Corridor and California, Democratic administrations pushed major rail projects without securing financing or viable infrastructure, leading to chronic delays, runaway costs, and few tangible benefits. Under Governor Gavin Newsom, the California high-speed rail project remains a clear failure: not a single train is operating after a quarter of a century and $2.6 billion in federal funds. Moreover, the much-maligned high-speed rail line may prove costly even after it is in service. The California High-Speed Rail Authority now admits its core Merced-to Bakersfield segment will not be profitable when it opens. Simply put, Congress is right to rein in this wasteful spending.\n\n#### Introduction\n\nOn Decemb",
+          "qualityScore": 93,
+          "sourceType": "government",
+          "qualityLabel": "strong",
+          "query": "Resolved: The United States federal government should substantially increase its investment in high-speed rail official data evidence 2025 2026"
+        },
+        {
+          "title": "SPEEDLINES, High-Speed Intercity Passenger Rail Committee, July 2025, Issue #42",
+          "url": "https://www.apta.com/wp-content/uploads/SPEEDLINES-High-Speed-Intercity-Passenger-Rail-Committee-July-2025-Issue-42.pdf",
+          "content": "SPEEDLINES | JULY 2025 1\nSpecial Report on \nIntercity \nPassenger Rail\nSPEEDLINES\nISSUE #42 July 2025\nFEATURE ARTICLE\nImagine America \nconnected coast\u0002to-coast by sleek \nhigh-speed trains. \nThis bold vision \nfor HSR could \nrevolutionize how \nAmericans live, \nwork, and travel.\nTHE IIJA OFFERS SIGNIFICANT FEDERAL FUNDING \nFOR RAIL IMPROVEMENTS IN THE U. S. FROM 2022 \nTO 2026, IT EXPANDS EXISTING FEDERAL RAILROAD \nADMINISTRATION PROGRAMS AND INTRODUCES \nNEW ONES TO IMPROVE THE RAIL NETWORK. THE \nIIJA ALLOCATES $102 BILLION FOR RAIL, CONSISTING \nOF $66 BILLION FROM ADVANCED APPROPRIATIONS \nAND $36 BILLION IN AUTHORIZED FUNDING.\nPG.19\nSPEEDLINES | JULY 2025 2\nCONTENTS\n© 2011-2025 APTA - ALL RIGHTS RESERVED\nSPEEDLINES is published in cooperation with:\nAMERICAN PUBLIC TRANSPORTATION ASSOCIATION\n1300 I Street NW, Suite 1200 East\nWashington, DC 20005\n» p.32\n3 Chairman’s Letter\n4 Project Planning, Development, Delivery\n13 In the Spotlight\n14 High-Speed Rail Snippets\n15 Amtrak Long-Distance Servic",
+          "qualityScore": 95,
+          "sourceType": "official",
+          "qualityLabel": "strong",
+          "query": "Resolved: The United States federal government should substantially increase its investment in high-speed rail official data evidence 2025 2026"
+        },
+        {
+          "title": "FRA FY 2026 Congressional Justification",
+          "url": "https://www.transportation.gov/sites/dot.gov/files/2025-05/FRA_FY_2026_Budget_Estimates_CJ.pdf",
+          "content": "## BUDGET\n\n##### U.S. Department ESTIMATES of Transportation\n\n### FISCAL YEAR 2026\n\n#### FEDERAL RAILROAD ADMINISTRATION\n\nSUBMITTED FOR THE USE OF THE COMMITTEES ON APPROPRIATIONS\n\nDEPARTMENT OF TRANSPORTATION FEDERAL RAILROAD ADMINISTRATION FY 2026 PRESIDENT’S BUDGET JUSTIFICATION TABLE OF CONTENTS\n\nPage\n\nSection 1: Overview \nAdministrator’s Overview ... 1 \nOrganization Charts ... 3 \nSection 2: Budget Summary Tables \nBudget Authority ... 5 \nTotal Budgetary Resources by Appropriation Account ... 7 \nOutlays ... 9 \nSummary of Requested Funding Changes from Base ... 11 \nWorking Capital Fund ... 24 \nPersonnel Resource Summary – Full-Time Equivalents (FTE) ... 25 \nPersonnel Resource Summary – Full-Time Positions (FTP) ... 26 \nSection 3: Budget Request by Appropriation \nSafety and Operations ... 27 \nRailroad Research and Development ... 43 \nAmtrak ... 67 \nConsolidated Rail Infrastructure and Safety Improvements ... 79 \nAdministrative Provisions ... 89 \nSection 4: Research, Development, and T",
+          "qualityScore": 93,
+          "sourceType": "government",
+          "qualityLabel": "strong",
+          "query": "Resolved: The United States federal government should substantially increase its investment in high-speed rail official data evidence 2025 2026"
+        },
+        {
+          "title": "High-Speed Rail in the U.S.",
+          "url": "https://www.bechtel.com/wp-content/uploads/2025/05/Bechtel_Rail-White-Paper_7-May-2025.pdf",
+          "content": "#### High-Speed Rail in the U.S. The Mega Project Delivery Perspective\n\nMay 2025\n\nExecutive Summary 3 \nTransforming America: The High-Speed Rail Revolution 6 \nThe Economic Benefit of High-Speed Rail in the United States 7 \nEnablers 8 \nReform 19 \nDelivery 26 \nConclusion 35 \nAuthors, Contributors & Acknowledgments 36 \nReferences 37 \n\n### Contents\n\nThe United States is on the brink of transforming how it moves people, connects communities, and bolsters regional economies. After decades of cautious progress, existing rail services like Amtrak’s Acela and Brightline Florida have demonstrated that there is increasing public appetite for faster, smarter, more efficient intercity transport. Such projects are creating a solid foundation on which to learn, build and move forward with increased confidence and certainty. However, to realize high-speed rail’s (HSR) full potential — a nationwide network connecting major population and economic centers - the U.S. must avoid the most common pitfalls t",
+          "qualityScore": 93,
+          "sourceType": "official",
+          "qualityLabel": "strong",
+          "query": "Resolved: The United States federal government should substantially increase its investment in high-speed rail statistics report study 2025 2026"
+        },
+        {
+          "title": "Penn Station and the Two Paths Forward for American Trains | High Speed Rail Alliance",
+          "url": "https://www.hsrail.org/blog/penn-station-and-the-two-paths-forward-for-american-trains-2/",
+          "content": "Penn Station and the Two Paths Forward for American Trains | High Speed Rail Alliance\n\n# Penn Station and the Two Paths Forward for American Trains\n\nAugust 21, 2026\n\n • Advocacy, Policy and Legislation\n\n \n\n### Competing visions for transportation reauthorization\n\nPenn Station handles about 600,000 passengers on a typical weekday—more than LaGuardia, JFK, and Newark airports combined. It powers New York City’s economy, and it’s the beating heart of the most developed and heavily used passenger-rail line in the US, the Northeast Corridor.\n\nPlans to renovate and transform the station are moving forward: Amtrak’s Andy Bynum has said shovels will be in the ground by late 2027. We support Amtrak’s approach, which was laid out in a study published by the Federal Railroad Administration (FRA) in June. It makes the case for a fundamental overhaul of Penn Station’s concourse, track configuration, and operating culture—with the goal of running more trains into and through the station by slashing ",
+          "qualityScore": 91,
+          "sourceType": "results",
+          "qualityLabel": "strong",
+          "query": "Resolved: The United States federal government should substantially increase its investment in high-speed rail official data evidence 2025 2026"
+        }
+      ],
+      "sourceAssessments": [],
+      "meta": {
+        "requestedModel": "anthropic/claude-sonnet-5.5",
+        "resolvedModel": "anthropic/claude-sonnet-5.5",
+        "debateContext": {
+          "debateId": "b1c5b37a-2b9a-4fda-81b1-68a3c8c612d1",
+          "sourcesUsed": 5,
+          "sourcesOmittedForSize": 0,
+          "sourcesShortened": 0,
+          "sourcesUnavailable": 0,
+          "outputsUsed": [
+            {
+              "kind": "case",
+              "id": "2aba8d8e-d33a-4d70-8425-60e01661cbfc"
+            }
+          ],
+          "outputsOmittedForSize": [],
+          "outputsUnavailable": 0,
+          "instructionsUsed": false
+        }
+      }
+    },
+    "providerCalls": [
+      {
+        "feature": "jev",
+        "requestedModel": null,
+        "upstreamModel": "typesafe/jev-1.13-20260917",
+        "upstreamProvider": "TypeSafe",
+        "status": 200,
+        "ms": 231,
+        "stream": null
+      },
+      {
+        "feature": "research-queries",
+        "requestedModel": "anthropic/claude-haiku-5.5",
+        "upstreamModel": "anthropic/claude-sonnet-5.5",
+        "upstreamProvider": "Anthropic",
+        "status": 200,
+        "ms": 1984,
+        "stream": false
+      },
+      {
+        "feature": "jev",
+        "requestedModel": null,
+        "upstreamModel": "typesafe/jev-1.13-20260917",
+        "upstreamProvider": "TypeSafe",
+        "status": 200,
+        "ms": 240,
+        "stream": null
+      },
+      {
+        "feature": "generate",
+        "requestedModel": "anthropic/claude-sonnet-5.5",
+        "upstreamModel": "anthropic/claude-sonnet-5.5",
+        "upstreamProvider": "Anthropic",
+        "status": 200,
+        "ms": 6491,
+        "stream": false,
+        "userPromptHead": "Motion: Resolved: The United States federal government should substantially increase its investment in high-speed rail\nSide: con\nFormat: custom\nRole: r2\nLength: standard\nLength Instruction: Return no contentions. Return exactly 2 reinforce items and exactly 12 counters, each answer about 120-150 words.\nSpeech Budget: 6 minutes, about 780 spoken words at 130 words a minute. The opening, the backing-up paragraphs and the closing line together stay within about 300 words (about 2 minutes); the rest of the time is for the \"If they say...\" blocks the other side actually used.\nAudience: intermediate\nAudience Instruction: Assume a trained debater: use clear, concise explanations.\nTone: formal\nTone Instruction: Use polished, judge-facing language with controlled phrasing.\nLanguage: English (en) - Write ALL output in this language.",
+        "debateContextIncluded": true
+      },
+      {
+        "feature": "generate",
+        "requestedModel": "anthropic/claude-sonnet-5.5",
+        "upstreamModel": "anthropic/claude-sonnet-5.5",
+        "upstreamProvider": "Anthropic",
+        "status": 200,
+        "ms": 16708,
+        "stream": true,
+        "userPromptHead": "Motion: Resolved: The United States federal government should substantially increase its investment in high-speed rail\nSide: con\nFormat: custom\nRole: r2\nLength: standard\nLength Instruction: Return no contentions. Return exactly 2 reinforce items and exactly 12 counters, each answer about 120-150 words.\nSpeech Budget: 6 minutes, about 780 spoken words at 130 words a minute. The opening, the backing-up paragraphs and the closing line together stay within about 300 words (about 2 minutes); the rest of the time is for the \"If they say...\" blocks the other side actually used.\nAudience: intermediate\nAudience Instruction: Assume a trained debater: use clear, concise explanations.\nTone: formal\nTone Instruction: Use polished, judge-facing language with controlled phrasing.\nLanguage: English (en) - Write ALL output in this language.",
+        "debateContextIncluded": true
+      },
+      {
+        "feature": "generate",
+        "requestedModel": "anthropic/claude-sonnet-5.5",
+        "upstreamModel": "anthropic/claude-sonnet-5.5",
+        "upstreamProvider": "Anthropic",
+        "status": 200,
+        "ms": 11180,
+        "stream": false,
+        "userPromptHead": "Motion: Resolved: The United States federal government should substantially increase its investment in high-speed rail\nSide: con\nFormat: custom\nRole: r2\nLength: standard\nLength Instruction: Return no contentions. Return exactly 2 reinforce items and exactly 12 counters, each answer about 120-150 words.\nSpeech Budget: 6 minutes, about 780 spoken words at 130 words a minute. The opening, the backing-up paragraphs and the closing line together stay within about 300 words (about 2 minutes); the rest of the time is for the \"If they say...\" blocks the other side actually used.\nAudience: intermediate\nAudience Instruction: Assume a trained debater: use clear, concise explanations.\nTone: formal\nTone Instruction: Use polished, judge-facing language with controlled phrasing.\nLanguage: English (en) - Write ALL output in this language.",
+        "debateContextIncluded": true
+      },
+      {
+        "feature": "generate",
+        "requestedModel": "anthropic/claude-sonnet-5.5",
+        "upstreamModel": "anthropic/claude-sonnet-5.5",
+        "upstreamProvider": "Anthropic",
+        "status": 200,
+        "ms": 10859,
+        "stream": false,
+        "userPromptHead": "Motion: Resolved: The United States federal government should substantially increase its investment in high-speed rail\nSide: con\nFormat: custom\nRole: r2\nLength: standard\nLength Instruction: Return no contentions. Return exactly 2 reinforce items and exactly 12 counters, each answer about 120-150 words.\nSpeech Budget: 6 minutes, about 780 spoken words at 130 words a minute. The opening, the backing-up paragraphs and the closing line together stay within about 300 words (about 2 minutes); the rest of the time is for the \"If they say...\" blocks the other side actually used.\nAudience: intermediate\nAudience Instruction: Assume a trained debater: use clear, concise explanations.\nTone: formal\nTone Instruction: Use polished, judge-facing language with controlled phrasing.\nLanguage: English (en) - Write ALL output in this language.",
+        "debateContextIncluded": true
+      },
+      {
+        "feature": "generate",
+        "requestedModel": "anthropic/claude-sonnet-5.5",
+        "upstreamModel": "anthropic/claude-sonnet-5.5",
+        "upstreamProvider": "Anthropic",
+        "status": 200,
+        "ms": 11995,
+        "stream": false,
+        "userPromptHead": "Motion: Resolved: The United States federal government should substantially increase its investment in high-speed rail\nSide: con\nFormat: custom\nRole: r2\nLength: standard\nLength Instruction: Return no contentions. Return exactly 2 reinforce items and exactly 12 counters, each answer about 120-150 words.\nSpeech Budget: 6 minutes, about 780 spoken words at 130 words a minute. The opening, the backing-up paragraphs and the closing line together stay within about 300 words (about 2 minutes); the rest of the time is for the \"If they say...\" blocks the other side actually used.\nAudience: intermediate\nAudience Instruction: Assume a trained debater: use clear, concise explanations.\nTone: formal\nTone Instruction: Use polished, judge-facing language with controlled phrasing.\nLanguage: English (en) - Write ALL output in this language.",
+        "debateContextIncluded": true
+      }
+    ]
+  },
+  "aiRequests": [
+    {
+      "id": "ff1548fb-3f27-4c26-8a2c-d8f915a032b6",
+      "user_id": "d83ef80e-8b82-48c2-b2e6-1775e94f881c",
+      "feature": "jev_source_ranking",
+      "provider": "openrouter",
+      "model": "typesafe/jev-1.13",
+      "input_tokens": 3124,
+      "output_tokens": 279,
+      "latency_ms": null,
+      "status": "success",
+      "error_code": null,
+      "cost_usd": 0.000131208,
+      "created_at": "2026-11-03T17:18:12.213248+00:00",
+      "cached_input_tokens": null,
+      "cache_write_tokens": null,
+      "reasoning_output_tokens": null,
+      "pricing_snapshot_id": "openrouter-response-usage",
+      "pricing_source_url": "https://openrouter.ai/docs/cookbook/administration/usage-accounting",
+      "cost_calculation_version": "openrouter-usage-v2",
+      "raw_usage": {
+        "cost": 0.000131208,
+        "input_tokens": 3124,
+        "output_tokens": 279
+      },
+      "cap_cost_usd": 0.000131208
+    },
+    {
+      "id": "728c43f9-89cb-4ab8-917e-25a83759db7e",
+      "user_id": "d83ef80e-8b82-48c2-b2e6-1775e94f881c",
+      "feature": "generate",
+      "provider": "openrouter",
+      "model": "anthropic/claude-sonnet-5.5",
+      "input_tokens": 20397,
+      "output_tokens": 3327,
+      "latency_ms": 28828,
+      "status": "success",
+      "error_code": null,
+      "cost_usd": 0.11030300000000003,
+      "created_at": "2026-11-03T17:18:36.578408+00:00",
+      "cached_input_tokens": 0,
+      "cache_write_tokens": 6478,
+      "reasoning_output_tokens": 0,
+      "pricing_snapshot_id": "openrouter-response-usage",
+      "pricing_source_url": "https://openrouter.ai/docs/cookbook/administration/usage-accounting",
+      "cost_calculation_version": "openrouter-usage-v2",
+      "raw_usage": {
+        "calls": [
+          {
+            "cost": 0,
+            "is_byok": true,
+            "cost_details": {
+              "upstream_inference_cost": 0.072155,
+              "upstream_inference_prompt_cost": 0.040175,
+              "upstream_inference_completions_cost": 0.03198
+            },
+            "total_tokens": 21666,
+            "prompt_tokens": 18468,
+            "completion_tokens": 3198,
+            "prompt_tokens_details": {
+              "audio_tokens": 0,
+              "video_tokens": 0,
+              "cached_tokens": 0,
+              "cache_write_tokens": 6478
+            },
+            "completion_tokens_details": {
+              "audio_tokens": 0,
+              "image_tokens": 0,
+              "reasoning_tokens": 0
+            }
+          },
+          {
+            "endpoint": "search",
+            "provider": "exa",
+            "request_id": "54fd2db632745868df745773c31f025c",
+            "cost_dollars": {
+              "total": 0.007,
+              "search": {
+                "neural": 0.007
+              }
+            }
+          },
+          {
+            "endpoint": "search",
+            "provider": "exa",
+            "request_id": "cd89245985b2bb26b4a5abf98debc379",
+            "cost_dollars": {
+              "total": 0.007,
+              "search": {
+                "neural": 0.007
+              }
+            }
+          },
+          {
+            "cost": 0,
+            "is_byok": true,
+            "cost_details": {
+              "upstream_inference_cost": 0.005148,
+              "upstream_inference_prompt_cost": 0.003858,
+              "upstream_inference_completions_cost": 0.00129
+            },
+            "total_tokens": 2058,
+            "prompt_tokens": 1929,
+            "completion_tokens": 129,
+            "prompt_tokens_details": {
+              "audio_tokens": 0,
+              "video_tokens": 0,
+              "cached_tokens": 0,
+              "cache_write_tokens": 0
+            },
+            "completion_tokens_details": {
+              "audio_tokens": 0,
+              "image_tokens": 0,
+              "reasoning_tokens": 0
+            }
+          },
+          {
+            "endpoint": "search",
+            "provider": "exa",
+            "request_id": "8aec0ab4958af5e392737b1a35a55464",
+            "cost_dollars": {
+              "total": 0.007,
+              "search": {
+                "neural": 0.007
+              }
+            }
+          },
+          {
+            "endpoint": "search",
+            "provider": "exa",
+            "request_id": "0e0009175b69345289b0c5b9bd5380df",
+            "cost_dollars": {
+              "total": 0.007,
+              "search": {
+                "neural": 0.007
+              }
+            }
+          },
+          {
+            "endpoint": "contents",
+            "provider": "exa",
+            "request_id": "119da0bf5ff8ca51e77111526cbedfa8",
+            "cost_dollars": {
+              "total": 0.001,
+              "contents": {
+                "text": 0.001
+              }
+            }
+          },
+          {
+            "endpoint": "contents",
+            "provider": "exa",
+            "request_id": "bc1d6c340202e5ec35d449177a8b2e9a",
+            "cost_dollars": {
+              "total": 0.001,
+              "contents": {
+                "text": 0.001
+              }
+            }
+          },
+          {
+            "endpoint": "contents",
+            "provider": "exa",
+            "request_id": "c93a488027bb1a1ed12cfc7f822ba8e9",
+            "cost_dollars": {
+              "total": 0.001,
+              "contents": {
+                "text": 0.001
+              }
+            }
+          },
+          {
+            "endpoint": "contents",
+            "provider": "exa",
+            "request_id": "2b00dfc1c30a9c27832efad63199a2e3",
+            "cost_dollars": {
+              "total": 0.001,
+              "contents": {
+                "text": 0.001
+              }
+            }
+          },
+          {
+            "endpoint": "contents",
+            "provider": "exa",
+            "request_id": "bee54c096e84e23194d9408942c7cd71",
+            "cost_dollars": {
+              "total": 0.001,
+              "contents": {
+                "text": 0.001
+              }
+            }
+          }
+        ]
+      },
+      "cap_cost_usd": 0.11030300000000003
+    },
+    {
+      "id": "d1c63bda-caae-48d1-a78b-998cca48addb",
+      "user_id": "d83ef80e-8b82-48c2-b2e6-1775e94f881c",
+      "feature": "jev_source_ranking",
+      "provider": "openrouter",
+      "model": "typesafe/jev-1.13",
+      "input_tokens": 3078,
+      "output_tokens": 279,
+      "latency_ms": null,
+      "status": "success",
+      "error_code": null,
+      "cost_usd": 0.000129276,
+      "created_at": "2026-11-03T17:18:38.579673+00:00",
+      "cached_input_tokens": null,
+      "cache_write_tokens": null,
+      "reasoning_output_tokens": null,
+      "pricing_snapshot_id": "openrouter-response-usage",
+      "pricing_source_url": "https://openrouter.ai/docs/cookbook/administration/usage-accounting",
+      "cost_calculation_version": "openrouter-usage-v2",
+      "raw_usage": {
+        "cost": 0.000129276,
+        "input_tokens": 3078,
+        "output_tokens": 279
+      },
+      "cap_cost_usd": 0.000129276
+    },
+    {
+      "id": "0348ddb1-5202-46ee-a292-5f18a2723dfd",
+      "user_id": "d83ef80e-8b82-48c2-b2e6-1775e94f881c",
+      "feature": "jev_source_ranking",
+      "provider": "openrouter",
+      "model": "typesafe/jev-1.13",
+      "input_tokens": 3124,
+      "output_tokens": 279,
+      "latency_ms": null,
+      "status": "success",
+      "error_code": null,
+      "cost_usd": 0.000131208,
+      "created_at": "2026-11-03T17:18:42.160695+00:00",
+      "cached_input_tokens": null,
+      "cache_write_tokens": null,
+      "reasoning_output_tokens": null,
+      "pricing_snapshot_id": "openrouter-response-usage",
+      "pricing_source_url": "https://openrouter.ai/docs/cookbook/administration/usage-accounting",
+      "cost_calculation_version": "openrouter-usage-v2",
+      "raw_usage": {
+        "cost": 0.000131208,
+        "input_tokens": 3124,
+        "output_tokens": 279
+      },
+      "cap_cost_usd": 0.000131208
+    },
+    {
+      "id": "2acde563-93dd-4da1-aa69-a5ed3536b852",
+      "user_id": "d83ef80e-8b82-48c2-b2e6-1775e94f881c",
+      "feature": "generate",
+      "provider": "openrouter",
+      "model": "anthropic/claude-sonnet-5.5",
+      "input_tokens": 117860,
+      "output_tokens": 8034,
+      "latency_ms": 26804,
+      "status": "success",
+      "error_code": null,
+      "cost_usd": 0.27249360000000006,
+      "created_at": "2026-11-03T17:19:05.393716+00:00",
+      "cached_input_tokens": 43136,
+      "cache_write_tokens": 10784,
+      "reasoning_output_tokens": 0,
+      "pricing_snapshot_id": "openrouter-response-usage",
+      "pricing_source_url": "https://openrouter.ai/docs/cookbook/administration/usage-accounting",
+      "cost_calculation_version": "openrouter-usage-v2",
+      "raw_usage": {
+        "calls": [
+          {
+            "calls": [
+              {
+                "cost": 0,
+                "is_byok": true,
+                "cost_details": {
+                  "upstream_inference_cost": 0.056734,
+                  "upstream_inference_prompt_cost": 0.051604,
+                  "upstream_inference_completions_cost": 0.00513
+                },
+                "total_tokens": 23619,
+                "prompt_tokens": 23106,
+                "completion_tokens": 513,
+                "prompt_tokens_details": {
+                  "audio_tokens": 0,
+                  "video_tokens": 0,
+                  "cached_tokens": 0,
+                  "cache_write_tokens": 10784
+                },
+                "completion_tokens_details": {
+                  "audio_tokens": 0,
+                  "image_tokens": 0,
+                  "reasoning_tokens": 0
+                }
+              },
+              {
+                "cost": 0,
+                "is_byok": true,
+                "cost_details": {
+                  "upstream_inference_cost": 0.0518124,
+                  "upstream_inference_prompt_cost": 0.0259224,
+                  "upstream_inference_completions_cost": 0.02589
+                },
+                "total_tokens": 25795,
+                "prompt_tokens": 23206,
+                "completion_tokens": 2589,
+                "prompt_tokens_details": {
+                  "audio_tokens": 0,
+                  "video_tokens": 0,
+                  "cached_tokens": 10784,
+                  "cache_write_tokens": 0
+                },
+                "completion_tokens_details": {
+                  "audio_tokens": 0,
+                  "image_tokens": 0,
+                  "reasoning_tokens": 0
+                }
+              },
+              {
+                "cost": 0,
+                "is_byok": true,
+                "cost_details": {
+                  "upstream_inference_cost": 0.0424584,
+                  "upstream_inference_prompt_cost": 0.0259184,
+                  "upstream_inference_completions_cost": 0.01654
+                },
+                "total_tokens": 24858,
+                "prompt_tokens": 23204,
+                "completion_tokens": 1654,
+                "prompt_tokens_details": {
+                  "audio_tokens": 0,
+                  "video_tokens": 0,
+                  "cached_tokens": 10784,
+                  "cache_write_tokens": 0
+                },
+                "completion_tokens_details": {
+                  "audio_tokens": 0,
+                  "image_tokens": 0,
+                  "reasoning_tokens": 0
+                }
+              },
+              {
+                "cost": 0,
+                "is_byok": true,
+                "cost_details": {
+                  "upstream_inference_cost": 0.0422944,
+                  "upstream_inference_prompt_cost": 0.0259344,
+                  "upstream_inference_completions_cost": 0.01636
+                },
+                "total_tokens": 24848,
+                "prompt_tokens": 23212,
+                "completion_tokens": 1636,
+                "prompt_tokens_details": {
+                  "audio_tokens": 0,
+                  "video_tokens": 0,
+                  "cached_tokens": 10784,
+                  "cache_write_tokens": 0
+                },
+                "completion_tokens_details": {
+                  "audio_tokens": 0,
+                  "image_tokens": 0,
+                  "reasoning_tokens": 0
+                }
+              },
+              {
+                "cost": 0,
+                "is_byok": true,
+                "cost_details": {
+                  "upstream_inference_cost": 0.0411564,
+                  "upstream_inference_prompt_cost": 0.0259164,
+                  "upstream_inference_completions_cost": 0.01524
+                },
+                "total_tokens": 24727,
+                "prompt_tokens": 23203,
+                "completion_tokens": 1524,
+                "prompt_tokens_details": {
+                  "audio_tokens": 0,
+                  "video_tokens": 0,
+                  "cached_tokens": 10784,
+                  "cache_write_tokens": 0
+                },
+                "completion_tokens_details": {
+                  "audio_tokens": 0,
+                  "image_tokens": 0,
+                  "reasoning_tokens": 0
+                }
+              }
+            ]
+          },
+          {
+            "endpoint": "search",
+            "provider": "exa",
+            "request_id": "ba4fc01da450c3faee23bfe06249e650",
+            "cost_dollars": {
+              "total": 0.007,
+              "search": {
+                "neural": 0.007
+              }
+            }
+          },
+          {
+            "endpoint": "search",
+            "provider": "exa",
+            "request_id": "1fb09a05127211d8a7c465731bfac35c",
+            "cost_dollars": {
+              "total": 0.007,
+              "search": {
+                "neural": 0.007
+              }
+            }
+          },
+          {
+            "cost": 0,
+            "is_byok": true,
+            "cost_details": {
+              "upstream_inference_cost": 0.005038,
+              "upstream_inference_prompt_cost": 0.003858,
+              "upstream_inference_completions_cost": 0.00118
+            },
+            "total_tokens": 2047,
+            "prompt_tokens": 1929,
+            "completion_tokens": 118,
+            "prompt_tokens_details": {
+              "audio_tokens": 0,
+              "video_tokens": 0,
+              "cached_tokens": 0,
+              "cache_write_tokens": 0
+            },
+            "completion_tokens_details": {
+              "audio_tokens": 0,
+              "image_tokens": 0,
+              "reasoning_tokens": 0
+            }
+          },
+          {
+            "endpoint": "search",
+            "provider": "exa",
+            "request_id": "c182d1924a275839c623609b3dc31d63",
+            "cost_dollars": {
+              "total": 0.007,
+              "search": {
+                "neural": 0.007
+              }
+            }
+          },
+          {
+            "endpoint": "search",
+            "provider": "exa",
+            "request_id": "af97dd483d68ec7a841de42d35835d19",
+            "cost_dollars": {
+              "total": 0.007,
+              "search": {
+                "neural": 0.007
+              }
+            }
+          },
+          {
+            "endpoint": "contents",
+            "provider": "exa",
+            "request_id": "a93aea9bc16aae80638988175e96f1f8",
+            "cost_dollars": {
+              "total": 0.001,
+              "contents": {
+                "text": 0.001
+              }
+            }
+          },
+          {
+            "endpoint": "contents",
+            "provider": "exa",
+            "request_id": "0c2340467d321bcecd17197843ac13e7",
+            "cost_dollars": {
+              "total": 0.001,
+              "contents": {
+                "text": 0.001
+              }
+            }
+          },
+          {
+            "endpoint": "contents",
+            "provider": "exa",
+            "request_id": "d4febefacafaea30bea0e141984fe3d8",
+            "cost_dollars": {
+              "total": 0.001,
+              "contents": {
+                "text": 0.001
+              }
+            }
+          },
+          {
+            "endpoint": "contents",
+            "provider": "exa",
+            "request_id": "feeba08cdd58721dc9e2c3d4579e413d",
+            "cost_dollars": {
+              "total": 0.001,
+              "contents": {
+                "text": 0.001
+              }
+            }
+          },
+          {
+            "endpoint": "contents",
+            "provider": "exa",
+            "request_id": "5483b4933c769db88081b3d014a9c150",
+            "cost_dollars": {
+              "total": 0.001,
+              "contents": {
+                "text": 0.001
+              }
+            }
+          }
+        ]
+      },
+      "cap_cost_usd": 0.27249360000000006
+    }
+  ],
+  "caseRows": [
+    {
+      "id": "2aba8d8e-d33a-4d70-8425-60e01661cbfc",
+      "title": "Resolved: The United States federal government should substantially increase its investment in high-speed rail",
+      "side": "con",
+      "created_at": "2026-11-03T17:18:37.276128+00:00",
+      "debates": {
+        "motion": "Resolved: The United States federal government should substantially increase its investment in high-speed rail",
+        "settings": {
+          "role": "general",
+          "format": "policy"
+        }
+      }
+    },
+    {
+      "id": "a0b42ecc-91dd-4267-87a5-202666370548",
+      "title": "Resolved: The United States federal government should substantially increase its investment in high-speed rail",
+      "side": "con",
+      "created_at": "2026-11-03T17:19:05.684525+00:00",
+      "debates": {
+        "motion": "Resolved: The United States federal government should substantially increase its investment in high-speed rail",
+        "settings": {
+          "role": "general",
+          "format": "policy"
+        }
+      }
+    }
+  ]
+}

@@ -232,7 +232,7 @@ GUIDES = {
         ],
     },
     "ai-debate-case-generator": {
-        "modified": "2026-11-02",
+        "modified": "2026-11-03",
         "definition": ("What is an AI debate case generator?", "AI debate case generator", "A tool that turns a motion into a draft debate case for one side and speaker role, with an opening, arguments backed by evidence, answers to what the other side will say and a source list, for a debater to verify and adapt."),
         "features": [
             ("A case you can read out", "Each draft has an opening, arguments with an explanation, evidence and why it matters, \"If they say… we answer…\" replies, a closing line and the sources it cites."),
@@ -241,7 +241,7 @@ GUIDES = {
         ],
         "sections": [
             ("What the case generator produces", [
-                "Generate takes the motion from your Current Debate and returns a case you can read out, not a block of prose. Every draft has the same parts, in the order you would say them:",
+                "Generate takes the motion from your Current Debate and returns a case you can read out, not a block of prose. Every draft has the same parts, in the order you would say them. [See a real example](/debate-case-example): three unedited cases, each with its second speech.",
                 {"list": [
                     "Opening: a hook that makes the judge listen, then the line \"Today we will show N arguments that prove…\".",
                     "Arguments: each with a short title, the point in one sentence, an explanation of why it is true, evidence that names its source and year, and why it matters.",
@@ -706,7 +706,7 @@ GUIDES = {
         ],
     },
     "how-to-write-a-debate-case": {
-        "modified": "2026-10-29",
+        "modified": "2026-11-03",
         "features": [
             ("Motion analysis first", "Define the terms, write down what your side has to prove and find where the two sides disagree before writing a single argument."),
             ("Arguments that hold up", "Build each argument as a point, an explanation, evidence and why it matters, so a judge can follow it and an opponent cannot break it with one question."),
@@ -715,7 +715,7 @@ GUIDES = {
         "sections": [
             ("What a debate case is", [
                 "A debate case is the argument your side will defend for the whole round, organised so a judge can follow it on first hearing. It is not an essay. An essay can explore; a case has to survive an opponent whose job is to find the weakest sentence in it. That is why good cases are built from small, testable parts: an opening that tells the judge what you will prove, two to four arguments that each prove something specific, answers to what the other side will say, and a closing line the judge remembers.",
-                "Every case {product} writes follows that shape, so you can hold a generated draft next to your own and compare them part by part. The process below works for every format. The format changes the length, the number of arguments and who gives which part, which the format section covers further down.",
+                "Every case {product} writes follows that shape, so you can hold a generated draft next to your own and compare them part by part. [See a real example](/debate-case-example) of three unedited {product} cases. The process below works for every format. The format changes the length, the number of arguments and who gives which part, which the format section covers further down.",
             ]),
             ("Eight steps from motion to finished case", [
                 {"steps": [

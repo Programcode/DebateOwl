@@ -1,0 +1,1135 @@
+{
+  "sample": "bp-en",
+  "debateFormatSetting": "British Parliamentary",
+  "howGenerated": "DebateOwl's Generate tool driven in a browser on a local DebateOwl stack (React client, Supabase Auth and Postgres, the ai Edge Function) with live OpenRouter and Exa: start a debate with the motion and format, generate R1, then R2 in the same debate. Every chat call was pinned to anthropic/claude-sonnet-5.5 on the Anthropic provider.",
+  "run": {
+    "test": "case example bp-en",
+    "project": "desktop-chromium",
+    "commit": "a9f69b38ccd3ab43d15d6e82ab1963cc74b1b723",
+    "mode": "live",
+    "liveModel": "anthropic/claude-sonnet-5.5",
+    "baseURL": "http://127.0.0.1:18081",
+    "startedAt": "2026-11-03T17:16:38.556Z"
+  },
+  "r1": {
+    "request": {
+      "feature": "generate",
+      "input": {
+        "motion": "This House would lower the voting age to 16",
+        "side": "pro",
+        "format": "custom",
+        "role": "r1",
+        "length": "standard",
+        "audience": "intermediate",
+        "tone": "formal",
+        "language": "en"
+      },
+      "provider": "openrouter",
+      "model": "anthropic/claude-sonnet-5.5",
+      "reasoningEffort": "low",
+      "sourceIds": [],
+      "debateContext": {
+        "debateId": "e36a93be-ad75-41ec-9c9c-85022d444c2b",
+        "side": "pro",
+        "sourceIds": [],
+        "outputs": []
+      },
+      "stream": true,
+      "resultKey": "req_1793726204941_4jm3ep"
+    },
+    "response": {
+      "output": {
+        "opening": {
+          "hook": "At 16 you can work, pay tax and serve in the armed forces, yet you cannot vote on the laws that govern all three. Today we say that gap has no justification."
+        },
+        "caseStructure": {
+          "thesis": "Today we will show three arguments that prove lowering the voting age to 16 is fair, builds lasting voting habits, and strengthens democracy."
+        },
+        "contentions": [
+          {
+            "id": "1",
+            "title": "Rights follow responsibilities",
+            "claim": "Sixteen-year-olds already carry adult duties, so they should have a say in the rules that bind them.",
+            "reasoning": "At 16 in the UK, young people can work full time, pay income tax and national insurance, and join the armed forces. Each of these makes them subject to decisions made by government. If the state asks for adult contributions, it owes them a voice. Withholding the vote means they are taxed and governed with no say.",
+            "evidence": "The House of Lords Library said in 2025 that Sir Keir Starmer argued during the 2024 campaign that if you can work, pay tax and serve in your armed forces, you should be able to vote. In Scotland and Wales, 16- and 17-year-olds already vote in devolved and local elections.",
+            "needsSource": false,
+            "sourceQuery": "",
+            "impact": "Young workers and taxpayers are governed by laws they cannot influence. Giving them a vote ends that unfairness."
+          },
+          {
+            "id": "2",
+            "title": "Voting habits start earlier",
+            "claim": "Voting at 16 builds a lifelong habit of turning out, because first votes are easier at home and in school.",
+            "reasoning": "At 18, many people leave home or move to university. They move often, struggle to register, and do not know where to vote. At 16, young people live with family and are in education, so they get support through their first vote. People who vote early are more likely to keep voting, so a better first experience carries into adult life.",
+            "evidence": "The Electoral Reform Society said in 2026 that in Austria, Scotland and Germany, those enfranchised at 16 or 17 were more likely to vote into their twenties than those who first voted at 18. It also noted registration for 18- and 19-year-olds is just 60%, against 96% for those aged 65 and over.",
+            "needsSource": false,
+            "sourceQuery": "",
+            "impact": "Habits formed in a supported setting make democracy healthier for decades, not just at the next election."
+          },
+          {
+            "id": "3",
+            "title": "Closing the youth turnout gap",
+            "claim": "Lowering the voting age tackles a widening gap in turnout between young and older voters.",
+            "reasoning": "Young people are being left behind in politics. When they vote less, politicians have less reason to listen to them. Bringing 16- and 17-year-olds in early, while schools can teach them about politics, gives them a way into the system before the habit of staying out sets in.",
+            "evidence": "The Electoral Reform Society said in 2026 that in the 2024 UK general election, 65.4% of 18- to 24-year-olds reported voting, against 88.6% of those aged 66 and over. It also said the gap has widened since the 1990s.",
+            "needsSource": false,
+            "sourceQuery": "",
+            "impact": "A democracy where young people stay silent produces policy that ignores them. Votes at 16 makes government answer to the next generation."
+          }
+        ],
+        "counters": [
+          {
+            "targetArgument": "Sixteen-year-olds are not mature enough to vote.",
+            "counterpoint": "Maturity is not tested for any other voter, and there is no reason to start with 16-year-olds. Research from the University of California, Irvine, published in 2025, looked at the Voto Joven in Latin America, where 16-year-olds have voted since 1984 in Nicaragua and Brazil, and asked directly whether they are mature enough. The question is answered by evidence from real countries, not assumption.",
+            "source": "Levin, Political Studies Review (Taylor & Francis), 2025"
+          },
+          {
+            "targetArgument": "Young people are not interested in politics, so they will not vote.",
+            "counterpoint": "That is exactly why we start earlier. The Electoral Reform Society said in 2026 that those enfranchised at 16 or 17 in Austria, Scotland and Germany turned out more into their twenties. Interest is built through voting, not before it.",
+            "source": "Electoral Reform Society, 2026"
+          },
+          {
+            "targetArgument": "Young people will just copy their parents' views or be easily influenced.",
+            "counterpoint": "Adults are influenced by family, media and friends too, and we do not remove their vote for it. The question is whether 16-year-olds are capable of forming their own view, and countries that already allow it show they do. Political education in school, as I Have A Voice told Parliament, helps long-term turnout when it is consistent and high quality.",
+            "source": "I Have A Voice, written evidence to UK Parliament"
+          },
+          {
+            "targetArgument": "Lowering the voting age will mainly help one political party.",
+            "counterpoint": "The evidence does not support that. The Joseph Rowntree Reform Trust briefing by Dr Christine Huebner and Dr Jan Eichhorn, published in January 2025, includes a section titled a limited impact on electoral outcomes. Rights should not depend on guessing which party benefits.",
+            "source": "Huebner and Eichhorn, JRRT UK Democracy Fund, 2025"
+          },
+          {
+            "targetArgument": "If you can vote at 16, you should be able to drink, smoke and drive too.",
+            "counterpoint": "Voting is different from those activities. Drinking and smoking harm the person doing them. Voting is a say in the rules that already apply to you. And 16-year-olds already work, pay tax and can serve in the armed forces, so the link to voting is far closer than to alcohol.",
+            "source": "House of Lords Library, 2025"
+          }
+        ],
+        "closingLine": "That is why it is clear that 16-year-olds already carry adult duties, and giving them the vote is fair and good for democracy.",
+        "sources": [
+          {
+            "org": "House of Lords Library",
+            "claim": "Starmer argued that working, paying tax and serving in the armed forces should come with the vote; 16- and 17-year-olds already vote in Scotland and Wales",
+            "year": "2025",
+            "url": "https://lordslibrary.parliament.uk/votes-at-16/"
+          },
+          {
+            "org": "Electoral Reform Society",
+            "claim": "Early voters in Austria, Scotland and Germany voted more into their twenties; registration and youth turnout gaps",
+            "year": "2026",
+            "url": "https://electoral-reform.org.uk/latest-news-and-research/parliamentary-briefings/briefing-on-votes-at-16-2026/"
+          },
+          {
+            "org": "Huebner and Eichhorn, JRRT UK Democracy Fund",
+            "claim": "Votes at 16 has a limited impact on electoral outcomes",
+            "year": "2025",
+            "url": "https://www.jrrt.org.uk/wp-content/uploads/2025/01/Votes-at-16-report-FINAL.pdf"
+          },
+          {
+            "org": "Levin, Taylor & Francis",
+            "claim": "Study of political maturity of 16-year-olds in Latin America",
+            "year": "2025",
+            "url": "https://www.tandfonline.com/doi/full/10.1080/17457289.2025.2560983"
+          },
+          {
+            "org": "I Have A Voice, UK Parliament written evidence",
+            "claim": "Voting at 16 increases long-term turnout when paired with citizenship education",
+            "year": "2025",
+            "url": "https://committees.parliament.uk/writtenevidence/166167/pdf/"
+          }
+        ],
+        "metadata": {
+          "side": "pro",
+          "format": "custom",
+          "generatedAt": "2026-11-03T00:00:00Z",
+          "model": "anthropic/claude-sonnet-5.5",
+          "provider": "openrouter",
+          "sourceUsage": [],
+          "durationMs": 22551
+        }
+      },
+      "discoveredSources": [
+        {
+          "title": "Briefing on Votes at 16",
+          "url": "https://electoral-reform.org.uk/wp-content/uploads/2026/02/Briefing-on-Votes-at-16-2026.pdf",
+          "content": "## Briefing on Votes at 16\n\nFebruary 2026\n\nIn 2024, turnout in the General Election was 59.9%. This narrowly avoided the 2001 historic low of 59.4%. Not only are voters not turning out, but there is evidence of a widening turnout gap between younger and older voters. The British Electoral Study finds that (in reported turnout which tends to over-estimate) 65.4% of 18- to 24-year-olds voted in 2024, compared to 88.6% of those aged 66 and over. 1 From the 1990s onwards, the turnout gap has been expanding 2 and we see lower levels of turnout in constituencies which have larger proportions of young people. 3 Lowering the franchise is an opportunity to nurture more active citizens for the future. By giving 16- and 17-year-olds a vote we can engage the next generation in politics and improve the future health of our democracy.\n\nDemocratic habits Research has shown that the younger people are engaged in voting, the more likely they are to carry on voting later in their lives. In Austria, Scot",
+          "qualityScore": 95,
+          "sourceType": "results",
+          "qualityLabel": "strong",
+          "query": "This House would lower the voting age to 16 statistics report study 2025 2026"
+        },
+        {
+          "title": "Representation of the People Bill: progress of the bill - House of Commons Library",
+          "url": "https://commonslibrary.parliament.uk/research-briefings/cbp-10876/",
+          "content": "Representation of the People Bill: progress of the bill - House of Commons Library\n\nPublished Tuesday, 29 September, 2026\n\nThis briefing tracks the progress of the bill to introduce votes at 16, automatic voter registration, tighten the rules on political donations and allow bank cards to be used as voter ID.\n\n## Documents to download\n\n- Representation of the People Bill: progress of the bill (2MB PDF)\n\n Download full report Download ‘Representation of the People Bill: progress of the bill’ report (2MB , PDF) \n\nThe Representation of the People Bill 2024-26, 2026-27 was introduced in the House of Commons on 12 February 2026. The bill had its second reading on 2 March 2026.\n\nCommittee stage took place over nine sittings from 18 March to 16 April 2026. The first two sittings were evidence sessions, where the committee heard from external witnesses. The remaining seven sittings were held from 24 March to 16 April 2026. The 2024–26 session of Parliament ended on 29 April 2026 without the bi",
+          "qualityScore": 91,
+          "sourceType": "results",
+          "qualityLabel": "strong",
+          "query": "This House would lower the voting age to 16 official data evidence 2025 2026"
+        },
+        {
+          "title": "Briefing on Votes at 16 (2026) – Electoral Reform Society – ERS",
+          "url": "https://electoral-reform.org.uk/latest-news-and-research/parliamentary-briefings/briefing-on-votes-at-16-2026/",
+          "content": "Briefing on Votes at 16 (2026) – Electoral Reform Society – ERS\n\n# Briefing on Votes at 16 (2026)\n\nPosted on the 12th February 2026\n\nThis briefing was written for the Representation of the People Bill.\n\nIn 2024, turnout in the General Election was 59.9%. This narrowly avoided the 2001 historic low of 59.4%. Not only are voters not turning out, but there is evidence of a widening turnout gap between younger and older voters. The British Electoral Study finds that (in reported turnout which tends to over-estimate) 65.4% of 18- to 24-year-olds voted in 2024, compared to 88.6% of those aged 66 and over. [1]\n\nFrom the 1990s onwards, the turnout gap has been expanding [2] and we see lower levels of turnout in constituencies which have larger proportions of young people. [3]\n\nLowering the franchise is an opportunity to nurture more active citizens for the future. By giving 16- and 17-year-olds a vote we can engage the next generation in politics and improve the future health of our democracy.",
+          "qualityScore": 91,
+          "sourceType": "results",
+          "qualityLabel": "strong",
+          "query": "Austria Scotland lowered voting age 16 turnout study first-time voters political knowledge efficacy"
+        },
+        {
+          "title": "Modernising Elections - Committees - UK Parliament",
+          "url": "https://committees.parliament.uk/work/9680/modernising-elections/",
+          "content": "Modernising Elections - Committees - UK Parliament\n\n## Inquiry\n\nThe Government has introduced the Representation of the People Bill, which includes its manifesto commitment to lower the voting age to 16. They have described this Bill as “the biggest expansion of democratic participation in a generation”. The Bill had its second reading on 2 March 2026.\n\nThis inquiry will examine the health of electoral democracy in the UK today, in light of the decline in voter turnout in recent elections and diminishing voter trust in democratic institutions. We will scrutinise the potential effectiveness of the Government’s proposals for increasing democratic engagement, including its reforms to the voting age and the move towards automated systems of voter registration. We will also consider best practice for implementation of these changes.\n\nThe Government have commissioned an independent review, led by Philip Rycroft, into foreign financial interference in UK politics. Our inquiry will also consid",
+          "qualityScore": 91,
+          "sourceType": "official",
+          "qualityLabel": "strong",
+          "query": "This House would lower the voting age to 16 official data evidence 2025 2026"
+        },
+        {
+          "title": "Voting age",
+          "url": "https://researchbriefings.files.parliament.uk/documents/SN01747/SN01747.pdf",
+          "content": "commonslibrary.parliament.uk\n\nResearch Briefing\n\n13 February 2026 By Neil Johnston Voting age\n\nSummary \n1 Current rules \n2 Proposals for change \n3 Votes at 16 in parts of the UK and other countries \n\nNumber 1747\n\nImage Credits To the polling station by Matt. Licensed under CC BY 2.0 / image cropped Disclaimer The Commons Library does not intend the information in our research publications and briefings to address the specific circumstances of any particular individual. We have published it to support the work of MPs. You should not rely upon it as legal or professional advice, or as a substitute for it. We do not accept any liability whatsoever for any errors, omissions or misstatements contained herein. You should consult a suitably qualified professional if you require specific advice or information. Read our briefing ‘Legal help: where to go and how to pay’ for further information about sources of legal advice and help. This information is provided subject to the conditions of the O",
+          "qualityScore": 95,
+          "sourceType": "results",
+          "qualityLabel": "strong",
+          "query": "This House would lower the voting age to 16 official data evidence 2025 2026"
+        }
+      ],
+      "sourceAssessments": [],
+      "meta": {
+        "requestedModel": "anthropic/claude-sonnet-5.5",
+        "resolvedModel": "anthropic/claude-sonnet-5.5",
+        "debateContext": {
+          "debateId": "e36a93be-ad75-41ec-9c9c-85022d444c2b",
+          "sourcesUsed": 0,
+          "sourcesOmittedForSize": 0,
+          "sourcesShortened": 0,
+          "sourcesUnavailable": 0,
+          "outputsUsed": [],
+          "outputsOmittedForSize": [],
+          "outputsUnavailable": 0,
+          "instructionsUsed": false
+        }
+      }
+    },
+    "providerCalls": [
+      {
+        "feature": "research-queries",
+        "requestedModel": "anthropic/claude-haiku-5.5",
+        "upstreamModel": "anthropic/claude-sonnet-5.5",
+        "upstreamProvider": "Anthropic",
+        "status": 200,
+        "ms": 2335,
+        "stream": false
+      },
+      {
+        "feature": "jev",
+        "requestedModel": null,
+        "upstreamModel": "typesafe/jev-1.13-20260917",
+        "upstreamProvider": "TypeSafe",
+        "status": 200,
+        "ms": 330,
+        "stream": null
+      },
+      {
+        "feature": "generate",
+        "requestedModel": "anthropic/claude-sonnet-5.5",
+        "upstreamModel": "anthropic/claude-sonnet-5.5",
+        "upstreamProvider": "Anthropic",
+        "status": 200,
+        "ms": 18332,
+        "stream": true,
+        "userPromptHead": "Motion: This House would lower the voting age to 16\nSide: pro\nFormat: custom\nRole: r1\nLength: standard\nLength Instruction: Return exactly 3 contentions. Give each a clear explanation, evidence, and why it matters.\nSpeech Budget: 6 minutes, about 780 spoken words at 130 words a minute. The opening, the arguments and the closing line together stay within about 600 words, leaving time for the \"If they say...\" answers the speaker picks. With 3 arguments, each argument is about 170 spoken words: claim one sentence of at most 20 words, reasoning about 75 words, evidence about 50 words, whyItMatters about 25 words. opening.hook and caseStructure.thesis at most 35 words each, closingLine one sentence of at most 25 words. Aim for these numbers, not under them: a shorter field leaves the speaker's time unused, a longer one runs past it.\nAudience: intermediate\nAudience Instruction: Assume a trained debater: use clear, concise explanations.\nTone: formal\nTone Instruction: Use polished, judge-facing language with controlled phrasing.\nLanguage: English (en) - Write ALL output in this language.",
+        "debateContextIncluded": true
+      }
+    ]
+  },
+  "r2": {
+    "request": {
+      "feature": "generate",
+      "input": {
+        "motion": "This House would lower the voting age to 16",
+        "side": "pro",
+        "format": "custom",
+        "role": "r2",
+        "length": "standard",
+        "audience": "intermediate",
+        "tone": "formal",
+        "language": "en"
+      },
+      "provider": "openrouter",
+      "model": "anthropic/claude-sonnet-5.5",
+      "reasoningEffort": "low",
+      "sourceIds": [
+        "add531f3-2895-49a2-a97a-85030c0e8beb",
+        "22d5448e-2e44-4a1b-8960-d609b08daee4",
+        "1604caa5-3e1a-4630-8746-a56fa634b791",
+        "b0135ab9-ea6d-4ea7-a2f1-2786d40b6b02",
+        "742a0120-f31b-4b09-8b4b-b9cf8bf83f0b"
+      ],
+      "debateContext": {
+        "debateId": "e36a93be-ad75-41ec-9c9c-85022d444c2b",
+        "side": "pro",
+        "sourceIds": [
+          "add531f3-2895-49a2-a97a-85030c0e8beb",
+          "22d5448e-2e44-4a1b-8960-d609b08daee4",
+          "1604caa5-3e1a-4630-8746-a56fa634b791",
+          "b0135ab9-ea6d-4ea7-a2f1-2786d40b6b02",
+          "742a0120-f31b-4b09-8b4b-b9cf8bf83f0b"
+        ],
+        "outputs": [
+          {
+            "kind": "case",
+            "id": "29f502c2-8558-417d-9a2c-2cb4a7d94051"
+          }
+        ]
+      },
+      "stream": true,
+      "resultKey": "req_1793726229392_s1jr2j"
+    },
+    "response": {
+      "output": {
+        "opening": {
+          "hook": "If sixteen-year-olds were really too young to have a say, why do we already ask them to work, pay tax and plan their futures, and then tell them to wait two more years before they get a vote?"
+        },
+        "caseStructure": {
+          "thesis": "I'm the R2 of my team, and I'm here to show that lowering the voting age to 16 builds lasting voting habits, closes the gap between young and old voters, and that nothing the other side has said changes that."
+        },
+        "contentions": [],
+        "counters": [
+          {
+            "targetArgument": "Sixteen-year-olds are not mature or informed enough to vote.",
+            "counterpoint": "That claim treats 16-year-olds as a problem, but countries that already do this say the opposite. Austria lowered its voting age to 16 in 2007 because, in the government's own words, 16-year-olds already have criminal responsibility and are making key decisions about education and work (EACEA YouthWiki, 2025). We do not test the maturity of any adult voter, so why start with teenagers? And knowledge is not fixed. The Institute for Government said in 2025 that votes at 16 must come with better civic education, which means the answer to a knowledge gap is teaching, not exclusion. I Have A Voice told Parliament that votes at 16 raise long-term turnout when citizenship education is consistent and good. Voting is also something you learn by doing. This is our first argument: a first vote at 16, at home and in school, is the best place to build the habit.",
+            "source": "EACEA YouthWiki, 2025"
+          },
+          {
+            "targetArgument": "Lowering the voting age is a party political move to help Labour win elections.",
+            "counterpoint": "That is a claim about motives, and it does not tell us whether the reform is right. The evidence also does not back it. The Joseph Rowntree Reform Trust briefing by Dr Christine Huebner and Dr Jan Eichhorn, from January 2025, has a section titled a limited impact on electoral outcomes. And support is not limited to one party. The House of Lords Library noted in 2025 that the Liberal Democrats, the Greens, the SNP and Plaid Cymru all backed votes at 16 in their manifestos. If this were a Labour trick, why do four other parties want it too? Rights should not depend on guessing who benefits. They depend on whether 16-year-olds are affected by the laws. They are, and that is why our second argument matters: a democracy that hears the young needs them in it.",
+            "source": "Joseph Rowntree Reform Trust, 2025"
+          },
+          {
+            "targetArgument": "Young people do not want the vote, and many teenagers themselves are against it.",
+            "counterpoint": "Opposition says teenagers are not interested, but that is exactly the problem we are fixing. The Electoral Reform Society said in 2026 that turnout among 18- to 24-year-olds in 2024 was 65.4%, against 88.6% for those aged 66 and over. Young people are not being heard, and that gap has been growing since the 1990s. Interest does not appear before the vote, it grows with it. The same briefing says that people enfranchised at 16 or 17 in Austria, Scotland and Germany were more likely to vote into their twenties than those who first voted at 18. If teenagers did not care, why would they turn out more later? Also, a survey of opinion is not a reason to deny a right. This is our first argument: the habit is built by voting, not by waiting until someone is already keen.",
+            "source": "Electoral Reform Society, 2026"
+          },
+          {
+            "targetArgument": "Teenagers will just copy their parents or be swayed by teachers and social media.",
+            "counterpoint": "Being influenced is not a reason to lose the vote. Every adult is shaped by family, friends and media, and nobody takes their ballot away for it. Look at what the Electoral Reform Society said in 2026: people enfranchised at 16 or 17 in Austria, Scotland and Germany were more likely to turn out into their twenties than people who first voted at 18. Pupils who were only repeating their parents would not build a habit like that. The Joseph Rowntree Reform Trust briefing by Dr Huebner and Dr Eichhorn (2025) also has a section on a limited impact on electoral outcomes. If 16-year-olds were simply copies of their parents, why would the results look so ordinary? Home is also where a first vote is best supported. This is exactly our first argument: voting at 16, with family and school around you, builds a lasting habit.",
+            "source": "Electoral Reform Society, 2026"
+          },
+          {
+            "targetArgument": "Schools do not teach enough political education, so 16-year-olds are not ready.",
+            "counterpoint": "That is an argument for better teaching, not for keeping the vote at 18. I Have A Voice told Parliament that voting from 16 increases long-term turnout when young people get consistent, high-quality citizenship education. The Institute for Government said in July 2025 that the voting age change should come with improved education. Both say the same thing: lower the age and build the teaching around it. Nobody tests adults on political knowledge before they vote. Why should 16-year-olds face a test that no other voter faces? At 16, young people are still in school, so that is the best moment to teach them how voting works and then let them use it. The Electoral Reform Society (2026) notes they are better supported at home and in education. This is our first argument: an early first vote, backed by school, creates the habit.",
+            "source": "I Have A Voice, written evidence to Parliament, and Institute for Government, 2025"
+          },
+          {
+            "targetArgument": "Results in Scotland and Wales have been mixed, so the reform has not worked.",
+            "counterpoint": "Mixed headlines do not cancel the evidence on what matters most: habits and turnout over time. The Electoral Reform Society said in 2026 that people enfranchised at 16 or 17 in Austria, Scotland and Germany were more likely to turn out into their twenties than those who first voted at 18. Austria lowered its voting age to 16 in 2007, and the European Commission's YouthWiki (updated 2025) reports that the reform was meant to encourage youth participation. I Have A Voice told Parliament that the gains in the devolved nations show up when citizenship education is consistent and high quality. So the lesson is to do it properly, not to scrap it. If the reform had failed, why would these voters keep turning out into their twenties? This is our second argument: closing the youth turnout gap. In 2024, 65.4% of 18- to 24-year-olds voted against 88.6% of those aged 66 and over (British Electoral Study, cited by the Electoral Reform Society, 2026).",
+            "source": "Electoral Reform Society, 2026"
+          },
+          {
+            "targetArgument": "If you can vote at 16, you should also be able to drink, smoke and drive.",
+            "counterpoint": "That comparison fails, because voting is not like those activities. Drinking and smoking harm the person doing them. A vote harms nobody. It is a say in rules that already apply to you. The House of Lords Library recorded in 2025 that Keir Starmer put it this way: if you can work, pay tax and serve in the armed forces, you ought to be able to vote. Austria used the same reasoning in 2007, pointing to 16-year-olds' criminal responsibility and extended legal capacity (YouthWiki, 2025). So the link to voting is about being bound by the law, not about risk. If the other side wants a consistent age for everything, why does a 16-year-old already carry the legal duties of an adult but have no say in the laws behind them? This is exactly our first argument: a vote at 16 is easier to cast at home and at school, and it starts a habit that lasts.",
+            "source": "House of Commons Library, 2025"
+          },
+          {
+            "targetArgument": "Sixteen-year-olds are still children, and the law protects them from adult responsibilities.",
+            "counterpoint": "The law does not treat 16-year-olds as children in the ways that matter here. The House of Lords Library noted in 2025 that the case for votes at 16 rests on adult duties like working, paying tax and serving in the armed forces. Austria's youth portal explains that its 2007 reform reflected the fact that 16-year-olds already have criminal responsibility and extended legal capacity (YouthWiki, 2025). The law holds them accountable like adults, so it cannot also say they are too young to have a voice. Protection is a reason to give them education and support, and votes at 16 do that. The Electoral Reform Society said in 2026 that younger voters are better supported through a first vote while they are at home and in education. If the aim is protection, why send them into their first vote at 18, alone, after leaving home? That is our first argument.",
+            "source": "House of Lords Library, 2025"
+          },
+          {
+            "targetArgument": "Early voters do not keep the habit, so any benefit for later turnout is overstated.",
+            "counterpoint": "The evidence points the other way. The Electoral Reform Society said in 2026 that in Austria, Scotland and Germany, people enfranchised at 16 or 17 were more likely to turn out into their twenties than those who first voted at 18. It also said enfranchised 16- and 17-year-olds tend to turn out in greater numbers than those first voting at 18 or over. The Electoral Psychology Observatory at LSE told Parliament in 2026 that lowering the voting age can sharply improve electoral participation over a lifetime. The reason is practical. Registration for 18- and 19-year-olds is just 60%, against 96% for those aged 65 and over (Electoral Reform Society, 2026), because many have left home and moved. If the habit does not stick, why do these countries show higher turnout in the twenties? This is our first argument, and it also feeds our second: a habit formed early narrows the youth turnout gap.",
+            "source": "Electoral Reform Society, 2026"
+          },
+          {
+            "targetArgument": "First-time voting at 18 is fine, because turnout among 18-year-olds is not the real problem.",
+            "counterpoint": "That ignores what happens at 18. Registration among 18- and 19-year-olds is just 60%, compared to 96% for those aged 65 and over (Electoral Reform Society, 2026). Many 18-year-olds have just left home or started university, so they move often and do not know how or where to vote. At 16, they are still at home and in school, and they get help with their first vote. The same briefing says those enfranchised at 16 or 17 in Austria, Scotland and Germany were more likely to turn out into their twenties than those who first voted at 18. So 18 is not fine. It is the age when the system loses people. If 18 works, why is the gap between 18- to 24-year-olds and over-66s so wide, at 65.4% against 88.6% in 2024? This is exactly our first argument: a first vote at home builds a habit that lasts.",
+            "source": "Electoral Reform Society, 2026"
+          },
+          {
+            "targetArgument": "Adding 16- and 17-year-olds will not close the gap and could even lower overall turnout.",
+            "counterpoint": "The evidence points the other way. Turnout in 2024 was 59.9%, and the gap between young and old voters has been growing since the 1990s (Electoral Reform Society, 2026). Doing nothing leaves that gap in place. The same briefing found that 16- and 17-year-olds who can vote tend to turn out in greater numbers than people voting for the first time at 18 or over. So the new voters pull the average up, not down. The LSE Electoral Psychology Observatory told the Commons Committee in 2026 that lowering the voting age can sharply improve participation over a lifetime. And the Joseph Rowntree Reform Trust briefing in 2025 has a section on challenging inequalities in political participation. If the reform were harmful, why would researchers who studied real cases support it? This is our second argument: bring young people in early, before staying out becomes a habit.",
+            "source": "Electoral Reform Society, 2026"
+          },
+          {
+            "targetArgument": "Politicians will not change policy for young voters, so a youth vote changes nothing.",
+            "counterpoint": "Politicians go where the votes are. The Electoral Reform Society found in 2026 that turnout is lower in constituencies with more young people. When a group votes less, parties have less reason to listen to it. Adding more than a million 16- and 17-year-olds to the electorate, as The Guardian reported in 2025, changes that calculation. The government's own bill has been described in Parliament as the biggest expansion of democratic participation in a generation (UK Parliament Committees, 2026). A group that is counted gets answered. If youth votes changed nothing, why do parties fight so hard over this reform? Both sides treat these votes as worth having. That is our second argument: when young people vote, government has to answer to them. And when they vote early, they keep voting, so that pressure lasts.",
+            "source": "Electoral Reform Society, 2026"
+          }
+        ],
+        "reinforce": [
+          {
+            "argument": "Our first argument: voting habits start earlier",
+            "text": "The Electoral Reform Society said in 2026 that in Austria, Scotland and Germany, people who were enfranchised at 16 or 17 were more likely to turn out into their twenties than those who first voted at 18. The reason is practical. At 16, young people are at home and in school, so they get help with their first vote. At 18, many have moved away or gone to university, and registration for 18- and 19-year-olds is just 60%, compared with 96% for those aged 65 and over. The LSE Electoral Psychology Observatory told Parliament in 2026 that lowering the age can sharply improve participation over a lifetime. If the first vote is hard, many never take a second step. Votes at 16 make that first experience easy."
+          },
+          {
+            "argument": "Our second argument: closing the youth turnout gap",
+            "text": "Turnout in the 2024 general election was 59.9%, close to the record low of 59.4% in 2001, the Electoral Reform Society said in 2026. Within that, 65.4% of 18- to 24-year-olds voted, compared with 88.6% of those aged 66 and over. The society also found that turnout is lower in constituencies with more young people. That means politicians have less reason to listen to the young, because the young do not turn up. Bringing in 16- and 17-year-olds, while schools can teach them about politics, gives them a way in before the habit of staying out sets. If the system worked for the young, this gap would not exist, and it keeps getting wider."
+          }
+        ],
+        "closingLine": "That is why it is clear that lowering the voting age to 16 is fair, builds habits that last, and makes our democracy answer to the young. Thank you.",
+        "sources": [
+          {
+            "org": "EACEA YouthWiki",
+            "claim": "Austria lowered the voting age to 16 in 2007 because 16-year-olds already carry legal responsibility and make key decisions",
+            "year": "2025",
+            "url": "https://national-policies.eacea.ec.europa.eu/youthwiki/chapters/austria/52-youth-participation-in-representative-democracy"
+          },
+          {
+            "org": "Institute for Government",
+            "claim": "Votes at 16 must come with improved civic education",
+            "year": "2025",
+            "url": "https://www.instituteforgovernment.org.uk/comment/lowering-voting-age-must-come-improved-education"
+          },
+          {
+            "org": "I Have A Voice",
+            "claim": "Voting from 16 raises long-term turnout when citizenship education is consistent and high quality",
+            "year": "2025",
+            "url": "https://committees.parliament.uk/writtenevidence/166167/pdf/"
+          },
+          {
+            "org": "Joseph Rowntree Reform Trust",
+            "claim": "Votes at 16 have a limited impact on electoral outcomes",
+            "year": "2025",
+            "url": "https://www.jrrt.org.uk/wp-content/uploads/2025/01/Votes-at-16-report-FINAL.pdf"
+          },
+          {
+            "org": "House of Lords Library",
+            "claim": "Several parties besides Labour supported votes at 16 in their manifestos",
+            "year": "2025",
+            "url": "https://lordslibrary.parliament.uk/votes-at-16/"
+          },
+          {
+            "org": "Electoral Reform Society",
+            "claim": "Youth turnout gap, registration rates, and higher turnout among those enfranchised at 16 or 17",
+            "year": "2026",
+            "url": "https://electoral-reform.org.uk/wp-content/uploads/2026/02/Briefing-on-Votes-at-16-2026.pdf"
+          },
+          {
+            "org": "Electoral Psychology Observatory, LSE",
+            "claim": "Lowering the voting age can sharply improve participation over a lifetime",
+            "year": "2026",
+            "url": "https://publications.parliament.uk/pa/cm5901/cmpublic/RepresentationPeople/memo/RPB19.htm"
+          },
+          {
+            "org": "The Guardian",
+            "claim": "More than a million 16- and 17-year-olds would be included in democracy",
+            "year": "2025",
+            "url": "https://www.theguardian.com/politics/2025/jul/17/lowering-voting-age-impact-uk-democracy-analysis"
+          },
+          {
+            "org": "UK Parliament Committees, Modernising Elections",
+            "claim": "Government describes the bill as the biggest expansion of democratic participation in a generation",
+            "year": "2026",
+            "url": "https://committees.parliament.uk/work/9680/modernising-elections/"
+          }
+        ],
+        "metadata": {
+          "side": "pro",
+          "format": "custom",
+          "generatedAt": "2026-11-03T12:00:00Z",
+          "model": "anthropic/claude-sonnet-5.5",
+          "provider": "openrouter",
+          "sourceUsage": [],
+          "durationMs": 26111
+        }
+      },
+      "discoveredSources": [
+        {
+          "title": "Voting age",
+          "url": "https://researchbriefings.files.parliament.uk/documents/SN01747/SN01747.pdf",
+          "content": "commonslibrary.parliament.uk\n\nResearch Briefing\n\n13 February 2026 By Neil Johnston Voting age\n\nSummary \n1 Current rules \n2 Proposals for change \n3 Votes at 16 in parts of the UK and other countries \n\nNumber 1747\n\nImage Credits To the polling station by Matt. Licensed under CC BY 2.0 / image cropped Disclaimer The Commons Library does not intend the information in our research publications and briefings to address the specific circumstances of any particular individual. We have published it to support the work of MPs. You should not rely upon it as legal or professional advice, or as a substitute for it. We do not accept any liability whatsoever for any errors, omissions or misstatements contained herein. You should consult a suitably qualified professional if you require specific advice or information. Read our briefing ‘Legal help: where to go and how to pay’ for further information about sources of legal advice and help. This information is provided subject to the conditions of the O",
+          "qualityScore": 95,
+          "sourceType": "results",
+          "qualityLabel": "strong",
+          "query": "This House would lower the voting age to 16 official data evidence 2025 2026"
+        },
+        {
+          "title": "Representation of the People Bill: progress of the bill - House of Commons Library",
+          "url": "https://commonslibrary.parliament.uk/research-briefings/cbp-10876/",
+          "content": "Representation of the People Bill: progress of the bill - House of Commons Library\n\nPublished Tuesday, 29 September, 2026\n\nThis briefing tracks the progress of the bill to introduce votes at 16, automatic voter registration, tighten the rules on political donations and allow bank cards to be used as voter ID.\n\n## Documents to download\n\n- Representation of the People Bill: progress of the bill (2MB PDF)\n\n Download full report Download ‘Representation of the People Bill: progress of the bill’ report (2MB , PDF) \n\nThe Representation of the People Bill 2024-26, 2026-27 was introduced in the House of Commons on 12 February 2026. The bill had its second reading on 2 March 2026.\n\nCommittee stage took place over nine sittings from 18 March to 16 April 2026. The first two sittings were evidence sessions, where the committee heard from external witnesses. The remaining seven sittings were held from 24 March to 16 April 2026. The 2024–26 session of Parliament ended on 29 April 2026 without the bi",
+          "qualityScore": 91,
+          "sourceType": "results",
+          "qualityLabel": "strong",
+          "query": "This House would lower the voting age to 16 official data evidence 2025 2026"
+        },
+        {
+          "title": "Briefing on Votes at 16",
+          "url": "https://electoral-reform.org.uk/wp-content/uploads/2026/02/Briefing-on-Votes-at-16-2026.pdf",
+          "content": "## Briefing on Votes at 16\n\nFebruary 2026\n\nIn 2024, turnout in the General Election was 59.9%. This narrowly avoided the 2001 historic low of 59.4%. Not only are voters not turning out, but there is evidence of a widening turnout gap between younger and older voters. The British Electoral Study finds that (in reported turnout which tends to over-estimate) 65.4% of 18- to 24-year-olds voted in 2024, compared to 88.6% of those aged 66 and over. 1 From the 1990s onwards, the turnout gap has been expanding 2 and we see lower levels of turnout in constituencies which have larger proportions of young people. 3 Lowering the franchise is an opportunity to nurture more active citizens for the future. By giving 16- and 17-year-olds a vote we can engage the next generation in politics and improve the future health of our democracy.\n\nDemocratic habits Research has shown that the younger people are engaged in voting, the more likely they are to carry on voting later in their lives. In Austria, Scot",
+          "qualityScore": 95,
+          "sourceType": "results",
+          "qualityLabel": "strong",
+          "query": "This House would lower the voting age to 16 statistics report study 2025 2026"
+        },
+        {
+          "title": "Votes at 16 - House of Lords Library",
+          "url": "https://lordslibrary.parliament.uk/votes-at-16/",
+          "content": "Votes at 16 - House of Lords Library\n\nPublished Wednesday, 23 July, 2025\n\nFollowing Labour’s manifesto commitment to lower the voting age to 16, this briefing considers the potential impact on turnout, electoral outcomes and democratic engagement.\n\n## Table of contents\n\n- 1. An electoral advantage? skip to link\n- 2. A question of fairness? skip to link\n- 3. Stronger participation? skip to link\n\nAp proximate r ead time: 10 minutes\n\nThe government plans to lower the voting age for all elections to 16 before the next general election. [1] At the moment, there is a patchwork of different voting ages across the UK. In Scotland and Wales, 16- and 17-year-olds can vote in devolved parliament and local government elections, but the voting age for UK parliamentary elections and other elections in England and Northern Ireland is 18. [2] \n\nThe government argues that votes at 16 will strengthen democracy and empower young people to participate. [3] There is also a view that certain adult responsib",
+          "qualityScore": 89,
+          "sourceType": "results",
+          "qualityLabel": "strong",
+          "query": "This House would lower the voting age to 16 official data evidence 2025 2026"
+        },
+        {
+          "title": "Modernising Elections - Committees - UK Parliament",
+          "url": "https://committees.parliament.uk/work/9680/modernising-elections/",
+          "content": "Modernising Elections - Committees - UK Parliament\n\n## Inquiry\n\nThe Government has introduced the Representation of the People Bill, which includes its manifesto commitment to lower the voting age to 16. They have described this Bill as “the biggest expansion of democratic participation in a generation”. The Bill had its second reading on 2 March 2026.\n\nThis inquiry will examine the health of electoral democracy in the UK today, in light of the decline in voter turnout in recent elections and diminishing voter trust in democratic institutions. We will scrutinise the potential effectiveness of the Government’s proposals for increasing democratic engagement, including its reforms to the voting age and the move towards automated systems of voter registration. We will also consider best practice for implementation of these changes.\n\nThe Government have commissioned an independent review, led by Philip Rycroft, into foreign financial interference in UK politics. Our inquiry will also consid",
+          "qualityScore": 91,
+          "sourceType": "official",
+          "qualityLabel": "strong",
+          "query": "This House would lower the voting age to 16 official data evidence 2025 2026"
+        }
+      ],
+      "sourceAssessments": [],
+      "meta": {
+        "requestedModel": "anthropic/claude-sonnet-5.5",
+        "resolvedModel": "anthropic/claude-sonnet-5.5",
+        "debateContext": {
+          "debateId": "e36a93be-ad75-41ec-9c9c-85022d444c2b",
+          "sourcesUsed": 5,
+          "sourcesOmittedForSize": 0,
+          "sourcesShortened": 0,
+          "sourcesUnavailable": 0,
+          "outputsUsed": [
+            {
+              "kind": "case",
+              "id": "29f502c2-8558-417d-9a2c-2cb4a7d94051"
+            }
+          ],
+          "outputsOmittedForSize": [],
+          "outputsUnavailable": 0,
+          "instructionsUsed": false
+        }
+      }
+    },
+    "providerCalls": [
+      {
+        "feature": "jev",
+        "requestedModel": null,
+        "upstreamModel": "typesafe/jev-1.13-20260917",
+        "upstreamProvider": "TypeSafe",
+        "status": 200,
+        "ms": 242,
+        "stream": null
+      },
+      {
+        "feature": "research-queries",
+        "requestedModel": "anthropic/claude-haiku-5.5",
+        "upstreamModel": "anthropic/claude-sonnet-5.5",
+        "upstreamProvider": "Anthropic",
+        "status": 200,
+        "ms": 1862,
+        "stream": false
+      },
+      {
+        "feature": "jev",
+        "requestedModel": null,
+        "upstreamModel": "typesafe/jev-1.13-20260917",
+        "upstreamProvider": "TypeSafe",
+        "status": 200,
+        "ms": 262,
+        "stream": null
+      },
+      {
+        "feature": "generate",
+        "requestedModel": "anthropic/claude-sonnet-5.5",
+        "upstreamModel": "anthropic/claude-sonnet-5.5",
+        "upstreamProvider": "Anthropic",
+        "status": 200,
+        "ms": 5422,
+        "stream": false,
+        "userPromptHead": "Motion: This House would lower the voting age to 16\nSide: pro\nFormat: custom\nRole: r2\nLength: standard\nLength Instruction: Return no contentions. Return exactly 2 reinforce items and exactly 12 counters, each answer about 120-150 words.\nSpeech Budget: 6 minutes, about 780 spoken words at 130 words a minute. The opening, the backing-up paragraphs and the closing line together stay within about 300 words (about 2 minutes); the rest of the time is for the \"If they say...\" blocks the other side actually used.\nAudience: intermediate\nAudience Instruction: Assume a trained debater: use clear, concise explanations.\nTone: formal\nTone Instruction: Use polished, judge-facing language with controlled phrasing.\nLanguage: English (en) - Write ALL output in this language.",
+        "debateContextIncluded": true
+      },
+      {
+        "feature": "generate",
+        "requestedModel": "anthropic/claude-sonnet-5.5",
+        "upstreamModel": "anthropic/claude-sonnet-5.5",
+        "upstreamProvider": "Anthropic",
+        "status": 200,
+        "ms": 17424,
+        "stream": true,
+        "userPromptHead": "Motion: This House would lower the voting age to 16\nSide: pro\nFormat: custom\nRole: r2\nLength: standard\nLength Instruction: Return no contentions. Return exactly 2 reinforce items and exactly 12 counters, each answer about 120-150 words.\nSpeech Budget: 6 minutes, about 780 spoken words at 130 words a minute. The opening, the backing-up paragraphs and the closing line together stay within about 300 words (about 2 minutes); the rest of the time is for the \"If they say...\" blocks the other side actually used.\nAudience: intermediate\nAudience Instruction: Assume a trained debater: use clear, concise explanations.\nTone: formal\nTone Instruction: Use polished, judge-facing language with controlled phrasing.\nLanguage: English (en) - Write ALL output in this language.",
+        "debateContextIncluded": true
+      },
+      {
+        "feature": "generate",
+        "requestedModel": "anthropic/claude-sonnet-5.5",
+        "upstreamModel": "anthropic/claude-sonnet-5.5",
+        "upstreamProvider": "Anthropic",
+        "status": 200,
+        "ms": 10069,
+        "stream": false,
+        "userPromptHead": "Motion: This House would lower the voting age to 16\nSide: pro\nFormat: custom\nRole: r2\nLength: standard\nLength Instruction: Return no contentions. Return exactly 2 reinforce items and exactly 12 counters, each answer about 120-150 words.\nSpeech Budget: 6 minutes, about 780 spoken words at 130 words a minute. The opening, the backing-up paragraphs and the closing line together stay within about 300 words (about 2 minutes); the rest of the time is for the \"If they say...\" blocks the other side actually used.\nAudience: intermediate\nAudience Instruction: Assume a trained debater: use clear, concise explanations.\nTone: formal\nTone Instruction: Use polished, judge-facing language with controlled phrasing.\nLanguage: English (en) - Write ALL output in this language.",
+        "debateContextIncluded": true
+      },
+      {
+        "feature": "generate",
+        "requestedModel": "anthropic/claude-sonnet-5.5",
+        "upstreamModel": "anthropic/claude-sonnet-5.5",
+        "upstreamProvider": "Anthropic",
+        "status": 200,
+        "ms": 10722,
+        "stream": false,
+        "userPromptHead": "Motion: This House would lower the voting age to 16\nSide: pro\nFormat: custom\nRole: r2\nLength: standard\nLength Instruction: Return no contentions. Return exactly 2 reinforce items and exactly 12 counters, each answer about 120-150 words.\nSpeech Budget: 6 minutes, about 780 spoken words at 130 words a minute. The opening, the backing-up paragraphs and the closing line together stay within about 300 words (about 2 minutes); the rest of the time is for the \"If they say...\" blocks the other side actually used.\nAudience: intermediate\nAudience Instruction: Assume a trained debater: use clear, concise explanations.\nTone: formal\nTone Instruction: Use polished, judge-facing language with controlled phrasing.\nLanguage: English (en) - Write ALL output in this language.",
+        "debateContextIncluded": true
+      },
+      {
+        "feature": "generate",
+        "requestedModel": "anthropic/claude-sonnet-5.5",
+        "upstreamModel": "anthropic/claude-sonnet-5.5",
+        "upstreamProvider": "Anthropic",
+        "status": 200,
+        "ms": 11188,
+        "stream": false,
+        "userPromptHead": "Motion: This House would lower the voting age to 16\nSide: pro\nFormat: custom\nRole: r2\nLength: standard\nLength Instruction: Return no contentions. Return exactly 2 reinforce items and exactly 12 counters, each answer about 120-150 words.\nSpeech Budget: 6 minutes, about 780 spoken words at 130 words a minute. The opening, the backing-up paragraphs and the closing line together stay within about 300 words (about 2 minutes); the rest of the time is for the \"If they say...\" blocks the other side actually used.\nAudience: intermediate\nAudience Instruction: Assume a trained debater: use clear, concise explanations.\nTone: formal\nTone Instruction: Use polished, judge-facing language with controlled phrasing.\nLanguage: English (en) - Write ALL output in this language.",
+        "debateContextIncluded": true
+      }
+    ]
+  },
+  "aiRequests": [
+    {
+      "id": "51afb447-bd9c-44d7-91c5-c3c942bf6404",
+      "user_id": "4550fc06-706d-441e-ae1c-458d81fe9190",
+      "feature": "jev_source_ranking",
+      "provider": "openrouter",
+      "model": "typesafe/jev-1.13",
+      "input_tokens": 2912,
+      "output_tokens": 279,
+      "latency_ms": null,
+      "status": "success",
+      "error_code": null,
+      "cost_usd": 0.000122304,
+      "created_at": "2026-11-03T17:16:49.237943+00:00",
+      "cached_input_tokens": null,
+      "cache_write_tokens": null,
+      "reasoning_output_tokens": null,
+      "pricing_snapshot_id": "openrouter-response-usage",
+      "pricing_source_url": "https://openrouter.ai/docs/cookbook/administration/usage-accounting",
+      "cost_calculation_version": "openrouter-usage-v2",
+      "raw_usage": {
+        "cost": 0.000122304,
+        "input_tokens": 2912,
+        "output_tokens": 279
+      },
+      "cap_cost_usd": 0.000122304
+    },
+    {
+      "id": "98a1e4aa-2700-40f6-80f8-aedf0bda72c8",
+      "user_id": "4550fc06-706d-441e-ae1c-458d81fe9190",
+      "feature": "generate",
+      "provider": "openrouter",
+      "model": "anthropic/claude-sonnet-5.5",
+      "input_tokens": 18690,
+      "output_tokens": 2646,
+      "latency_ms": 22551,
+      "status": "success",
+      "error_code": null,
+      "cost_usd": 0.10007200000000002,
+      "created_at": "2026-11-03T17:17:07.6555+00:00",
+      "cached_input_tokens": 0,
+      "cache_write_tokens": 6464,
+      "reasoning_output_tokens": 0,
+      "pricing_snapshot_id": "openrouter-response-usage",
+      "pricing_source_url": "https://openrouter.ai/docs/cookbook/administration/usage-accounting",
+      "cost_calculation_version": "openrouter-usage-v2",
+      "raw_usage": {
+        "calls": [
+          {
+            "cost": 0,
+            "is_byok": true,
+            "cost_details": {
+              "upstream_inference_cost": 0.063244,
+              "upstream_inference_prompt_cost": 0.037834,
+              "upstream_inference_completions_cost": 0.02541
+            },
+            "total_tokens": 19842,
+            "prompt_tokens": 17301,
+            "completion_tokens": 2541,
+            "prompt_tokens_details": {
+              "audio_tokens": 0,
+              "video_tokens": 0,
+              "cached_tokens": 0,
+              "cache_write_tokens": 6464
+            },
+            "completion_tokens_details": {
+              "audio_tokens": 0,
+              "image_tokens": 0,
+              "reasoning_tokens": 0
+            }
+          },
+          {
+            "endpoint": "search",
+            "provider": "exa",
+            "request_id": "9cf9f39d4f4855503a478fd3260a60a6",
+            "cost_dollars": {
+              "total": 0.007,
+              "search": {
+                "neural": 0.007
+              }
+            }
+          },
+          {
+            "endpoint": "search",
+            "provider": "exa",
+            "request_id": "862120759dfafadd1c2b2a0f9a673c37",
+            "cost_dollars": {
+              "total": 0.007,
+              "search": {
+                "neural": 0.007
+              }
+            }
+          },
+          {
+            "cost": 0,
+            "is_byok": true,
+            "cost_details": {
+              "upstream_inference_cost": 0.003828,
+              "upstream_inference_prompt_cost": 0.002778,
+              "upstream_inference_completions_cost": 0.00105
+            },
+            "total_tokens": 1494,
+            "prompt_tokens": 1389,
+            "completion_tokens": 105,
+            "prompt_tokens_details": {
+              "audio_tokens": 0,
+              "video_tokens": 0,
+              "cached_tokens": 0,
+              "cache_write_tokens": 0
+            },
+            "completion_tokens_details": {
+              "audio_tokens": 0,
+              "image_tokens": 0,
+              "reasoning_tokens": 0
+            }
+          },
+          {
+            "endpoint": "search",
+            "provider": "exa",
+            "request_id": "20539446f578434c7fd1bb55d81198a5",
+            "cost_dollars": {
+              "total": 0.007,
+              "search": {
+                "neural": 0.007
+              }
+            }
+          },
+          {
+            "endpoint": "search",
+            "provider": "exa",
+            "request_id": "43a73f65d23e6cd9f68968ce83a8354e",
+            "cost_dollars": {
+              "total": 0.007,
+              "search": {
+                "neural": 0.007
+              }
+            }
+          },
+          {
+            "endpoint": "contents",
+            "provider": "exa",
+            "request_id": "1586fff6980ee70549b2ff88600aa763",
+            "cost_dollars": {
+              "total": 0.001,
+              "contents": {
+                "text": 0.001
+              }
+            }
+          },
+          {
+            "endpoint": "contents",
+            "provider": "exa",
+            "request_id": "a384cceaee4dab1012c610be5aa7c74c",
+            "cost_dollars": {
+              "total": 0.001,
+              "contents": {
+                "text": 0.001
+              }
+            }
+          },
+          {
+            "endpoint": "contents",
+            "provider": "exa",
+            "request_id": "65e094b77fd3595a13b38e13992e6fea",
+            "cost_dollars": {
+              "total": 0.001,
+              "contents": {
+                "text": 0.001
+              }
+            }
+          },
+          {
+            "endpoint": "contents",
+            "provider": "exa",
+            "request_id": "78342ad3aa732801d1131606d7931559",
+            "cost_dollars": {
+              "total": 0.001,
+              "contents": {
+                "text": 0.001
+              }
+            }
+          },
+          {
+            "endpoint": "contents",
+            "provider": "exa",
+            "request_id": "382c99cf08c509e371709c83bc0c838b",
+            "cost_dollars": {
+              "total": 0.001,
+              "contents": {
+                "text": 0.001
+              }
+            }
+          }
+        ]
+      },
+      "cap_cost_usd": 0.10007200000000002
+    },
+    {
+      "id": "22e10a51-e13a-43d0-87ff-b9efdded608b",
+      "user_id": "4550fc06-706d-441e-ae1c-458d81fe9190",
+      "feature": "jev_source_ranking",
+      "provider": "openrouter",
+      "model": "typesafe/jev-1.13",
+      "input_tokens": 2921,
+      "output_tokens": 279,
+      "latency_ms": null,
+      "status": "success",
+      "error_code": null,
+      "cost_usd": 0.000122682,
+      "created_at": "2026-11-03T17:17:09.77326+00:00",
+      "cached_input_tokens": null,
+      "cache_write_tokens": null,
+      "reasoning_output_tokens": null,
+      "pricing_snapshot_id": "openrouter-response-usage",
+      "pricing_source_url": "https://openrouter.ai/docs/cookbook/administration/usage-accounting",
+      "cost_calculation_version": "openrouter-usage-v2",
+      "raw_usage": {
+        "cost": 0.000122682,
+        "input_tokens": 2921,
+        "output_tokens": 279
+      },
+      "cap_cost_usd": 0.000122682
+    },
+    {
+      "id": "479b294f-f35b-4057-84b4-cfdd6c0a4d92",
+      "user_id": "4550fc06-706d-441e-ae1c-458d81fe9190",
+      "feature": "jev_source_ranking",
+      "provider": "openrouter",
+      "model": "typesafe/jev-1.13",
+      "input_tokens": 2815,
+      "output_tokens": 279,
+      "latency_ms": null,
+      "status": "success",
+      "error_code": null,
+      "cost_usd": 0.00011823,
+      "created_at": "2026-11-03T17:17:13.00545+00:00",
+      "cached_input_tokens": null,
+      "cache_write_tokens": null,
+      "reasoning_output_tokens": null,
+      "pricing_snapshot_id": "openrouter-response-usage",
+      "pricing_source_url": "https://openrouter.ai/docs/cookbook/administration/usage-accounting",
+      "cost_calculation_version": "openrouter-usage-v2",
+      "raw_usage": {
+        "cost": 0.00011823,
+        "input_tokens": 2815,
+        "output_tokens": 279
+      },
+      "cap_cost_usd": 0.00011823
+    },
+    {
+      "id": "b009abb2-1c31-4bbb-89d2-5d725b956173",
+      "user_id": "4550fc06-706d-441e-ae1c-458d81fe9190",
+      "feature": "generate",
+      "provider": "openrouter",
+      "model": "anthropic/claude-sonnet-5.5",
+      "input_tokens": 105735,
+      "output_tokens": 7666,
+      "latency_ms": 26111,
+      "status": "success",
+      "error_code": null,
+      "cost_usd": 0.251692,
+      "created_at": "2026-11-03T17:17:35.896632+00:00",
+      "cached_input_tokens": 39120,
+      "cache_write_tokens": 9780,
+      "reasoning_output_tokens": 0,
+      "pricing_snapshot_id": "openrouter-response-usage",
+      "pricing_source_url": "https://openrouter.ai/docs/cookbook/administration/usage-accounting",
+      "cost_calculation_version": "openrouter-usage-v2",
+      "raw_usage": {
+        "calls": [
+          {
+            "calls": [
+              {
+                "cost": 0,
+                "is_byok": true,
+                "cost_details": {
+                  "upstream_inference_cost": 0.051244,
+                  "upstream_inference_prompt_cost": 0.046484,
+                  "upstream_inference_completions_cost": 0.00476
+                },
+                "total_tokens": 21273,
+                "prompt_tokens": 20797,
+                "completion_tokens": 476,
+                "prompt_tokens_details": {
+                  "audio_tokens": 0,
+                  "video_tokens": 0,
+                  "cached_tokens": 0,
+                  "cache_write_tokens": 9780
+                },
+                "completion_tokens_details": {
+                  "audio_tokens": 0,
+                  "image_tokens": 0,
+                  "reasoning_tokens": 0
+                }
+              },
+              {
+                "cost": 0,
+                "is_byok": true,
+                "cost_details": {
+                  "upstream_inference_cost": 0.047534,
+                  "upstream_inference_prompt_cost": 0.023164,
+                  "upstream_inference_completions_cost": 0.02437
+                },
+                "total_tokens": 23310,
+                "prompt_tokens": 20873,
+                "completion_tokens": 2437,
+                "prompt_tokens_details": {
+                  "audio_tokens": 0,
+                  "video_tokens": 0,
+                  "cached_tokens": 9780,
+                  "cache_write_tokens": 0
+                },
+                "completion_tokens_details": {
+                  "audio_tokens": 0,
+                  "image_tokens": 0,
+                  "reasoning_tokens": 0
+                }
+              },
+              {
+                "cost": 0,
+                "is_byok": true,
+                "cost_details": {
+                  "upstream_inference_cost": 0.03916,
+                  "upstream_inference_prompt_cost": 0.02319,
+                  "upstream_inference_completions_cost": 0.01597
+                },
+                "total_tokens": 22483,
+                "prompt_tokens": 20886,
+                "completion_tokens": 1597,
+                "prompt_tokens_details": {
+                  "audio_tokens": 0,
+                  "video_tokens": 0,
+                  "cached_tokens": 9780,
+                  "cache_write_tokens": 0
+                },
+                "completion_tokens_details": {
+                  "audio_tokens": 0,
+                  "image_tokens": 0,
+                  "reasoning_tokens": 0
+                }
+              },
+              {
+                "cost": 0,
+                "is_byok": true,
+                "cost_details": {
+                  "upstream_inference_cost": 0.03805,
+                  "upstream_inference_prompt_cost": 0.0232,
+                  "upstream_inference_completions_cost": 0.01485
+                },
+                "total_tokens": 22376,
+                "prompt_tokens": 20891,
+                "completion_tokens": 1485,
+                "prompt_tokens_details": {
+                  "audio_tokens": 0,
+                  "video_tokens": 0,
+                  "cached_tokens": 9780,
+                  "cache_write_tokens": 0
+                },
+                "completion_tokens_details": {
+                  "audio_tokens": 0,
+                  "image_tokens": 0,
+                  "reasoning_tokens": 0
+                }
+              },
+              {
+                "cost": 0,
+                "is_byok": true,
+                "cost_details": {
+                  "upstream_inference_cost": 0.038636,
+                  "upstream_inference_prompt_cost": 0.023216,
+                  "upstream_inference_completions_cost": 0.01542
+                },
+                "total_tokens": 22441,
+                "prompt_tokens": 20899,
+                "completion_tokens": 1542,
+                "prompt_tokens_details": {
+                  "audio_tokens": 0,
+                  "video_tokens": 0,
+                  "cached_tokens": 9780,
+                  "cache_write_tokens": 0
+                },
+                "completion_tokens_details": {
+                  "audio_tokens": 0,
+                  "image_tokens": 0,
+                  "reasoning_tokens": 0
+                }
+              }
+            ]
+          },
+          {
+            "endpoint": "search",
+            "provider": "exa",
+            "request_id": "468f841e08b237502b720acadfdf91f8",
+            "cost_dollars": {
+              "total": 0.007,
+              "search": {
+                "neural": 0.007
+              }
+            }
+          },
+          {
+            "endpoint": "search",
+            "provider": "exa",
+            "request_id": "2ceedf2d43af2a54056771528303bf8b",
+            "cost_dollars": {
+              "total": 0.007,
+              "search": {
+                "neural": 0.007
+              }
+            }
+          },
+          {
+            "cost": 0,
+            "is_byok": true,
+            "cost_details": {
+              "upstream_inference_cost": 0.004068,
+              "upstream_inference_prompt_cost": 0.002778,
+              "upstream_inference_completions_cost": 0.00129
+            },
+            "total_tokens": 1518,
+            "prompt_tokens": 1389,
+            "completion_tokens": 129,
+            "prompt_tokens_details": {
+              "audio_tokens": 0,
+              "video_tokens": 0,
+              "cached_tokens": 0,
+              "cache_write_tokens": 0
+            },
+            "completion_tokens_details": {
+              "audio_tokens": 0,
+              "image_tokens": 0,
+              "reasoning_tokens": 0
+            }
+          },
+          {
+            "endpoint": "search",
+            "provider": "exa",
+            "request_id": "87c5afb51b223e4e1d07c30344c76685",
+            "cost_dollars": {
+              "total": 0.007,
+              "search": {
+                "neural": 0.007
+              }
+            }
+          },
+          {
+            "endpoint": "search",
+            "provider": "exa",
+            "request_id": "8187e1c61ed3edcbd8c9468f62e3e349",
+            "cost_dollars": {
+              "total": 0.007,
+              "search": {
+                "neural": 0.007
+              }
+            }
+          },
+          {
+            "endpoint": "contents",
+            "provider": "exa",
+            "request_id": "171a6f531080d8a00826fc1f8a891124",
+            "cost_dollars": {
+              "total": 0.001,
+              "contents": {
+                "text": 0.001
+              }
+            }
+          },
+          {
+            "endpoint": "contents",
+            "provider": "exa",
+            "request_id": "46bd3167933212edb48e44c29cb97176",
+            "cost_dollars": {
+              "total": 0.001,
+              "contents": {
+                "text": 0.001
+              }
+            }
+          },
+          {
+            "endpoint": "contents",
+            "provider": "exa",
+            "request_id": "3fb17a1493b52ff2762761b456d56366",
+            "cost_dollars": {
+              "total": 0.001,
+              "contents": {
+                "text": 0.001
+              }
+            }
+          },
+          {
+            "endpoint": "contents",
+            "provider": "exa",
+            "request_id": "ff029387822e76d3466ffa76a4347ec0",
+            "cost_dollars": {
+              "total": 0.001,
+              "contents": {
+                "text": 0.001
+              }
+            }
+          },
+          {
+            "endpoint": "contents",
+            "provider": "exa",
+            "request_id": "9098528ed4fe1ae4a496cdc1927387c4",
+            "cost_dollars": {
+              "total": 0.001,
+              "contents": {
+                "text": 0.001
+              }
+            }
+          }
+        ]
+      },
+      "cap_cost_usd": 0.251692
+    }
+  ],
+  "caseRows": [
+    {
+      "id": "29f502c2-8558-417d-9a2c-2cb4a7d94051",
+      "title": "This House would lower the voting age to 16",
+      "side": "pro",
+      "created_at": "2026-11-03T17:17:08.395332+00:00",
+      "debates": {
+        "motion": "This House would lower the voting age to 16",
+        "settings": {
+          "role": "general",
+          "format": "bp"
+        }
+      }
+    },
+    {
+      "id": "11ff837a-caff-472e-bf54-96ee792b4f69",
+      "title": "This House would lower the voting age to 16",
+      "side": "pro",
+      "created_at": "2026-11-03T17:17:36.226953+00:00",
+      "debates": {
+        "motion": "This House would lower the voting age to 16",
+        "settings": {
+          "role": "general",
+          "format": "bp"
+        }
+      }
+    }
+  ]
+}

@@ -6,7 +6,7 @@ import { join } from 'node:path';
 
 const DIST = 'dist';
 const SITE_ORIGIN = JSON.parse(readFileSync('src/config/site.json', 'utf8')).origin;
-const PAGES = ['/', '/about', '/best-ai-for-debate', '/press'];
+const PAGES = ['/', '/about', '/best-ai-for-debate', '/press', '/debate-case-example'];
 
 const ENTITIES = { amp: '&', lt: '<', gt: '>', quot: '"', apos: "'", nbsp: ' ' };
 const decode = (text) => text.replace(/&(#x[0-9a-f]+|#\d+|\w+);/gi, (entity, name) => {
