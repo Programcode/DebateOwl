@@ -1,12 +1,13 @@
 """/debate-case-example: real DebateOwl cases, rendered from the raw output in scripts/case-examples/.
 
-The case text comes from the JSON files unchanged, except for the replaced source links listed in
-case-examples/corrections.json, which the page names. Only the page copy around it lives here;
+The case text comes from the JSON files unchanged, except for the replaced source links and the
+inline correction markers listed in case-examples/corrections.json, which the page names. Only the page copy around it lives here;
 generate_seo_content.render_case_example_page() builds the page.
 """
 from datetime import datetime
 from html import escape
 import json
+import re
 from pathlib import Path
 
 RAW = Path(__file__).resolve().parent / "case-examples"
@@ -47,12 +48,12 @@ HOW_MADE = [
 
 FORMATS_NOTE = "For cases, DebateOwl currently supports the British Parliamentary, Policy and Classroom format settings. Whatever the setting, it writes each speech for a four-speaker team in the 4-6-6-3 structure: Introductor (4 minutes), R1 (6 minutes), R2 (6 minutes) and Conclusor (3 minutes). The samples show R1 and R2."
 
-HONESTY = f"Generated {GENERATED_ON} with {MODEL_NAME}; not edited except formatting and two source links that did not load, replaced as listed below. Evidence leads link to their sources; check every source before you use it in a round."
+HONESTY = f"Generated {GENERATED_ON} with {MODEL_NAME}; not edited except formatting, two replaced source links and one marked correction, all listed below. Evidence leads link to their sources; check every source before you use it in a round."
 
 FAQS = [
     (
         "Can AI write a debate case?",
-        "Yes, as a draft. An AI case generator such as DebateOwl takes a motion, a side and a speaker role and writes the speech: an opening, arguments with evidence and why they matter, answers to what the other side is likely to say, a closing line and a source list. The samples on this page are real output, unedited apart from two replaced source links. A debater still has to open every source, check that it says what the case claims, and put the case into their own words before a round.",
+        "Yes, as a draft. An AI case generator such as DebateOwl takes a motion, a side and a speaker role and writes the speech: an opening, arguments with evidence and why they matter, answers to what the other side is likely to say, a closing line and a source list. The samples on this page are real output, unedited apart from two replaced source links and one marked correction. A debater still has to open every source, check that it says what the case claims, and put the case into their own words before a round.",
     ),
     (
         "What should an AI debate case include?",
@@ -69,10 +70,13 @@ RELATED = [
 ]
 
 
-# Source links replaced after generation because they did not load in a browser. Each change names the
-# raw value it replaces, so a regenerated raw file fails here instead of keeping a stale correction.
+# Corrections after generation. A "from"/"to" change replaces a source link that did not load; an
+# "after"/"marker" change keeps the generated wording and adds a visible "[correction: ...]" right after
+# the words it corrects. Each names the raw text it expects, so a regenerated raw file fails here
+# instead of keeping a stale correction.
 CORRECTIONS = json.loads((RAW / "corrections.json").read_text())
-REPLACED_URLS = {change["to"] for correction in CORRECTIONS for change in correction["changes"] if change["path"][-1] == "url"}
+REPLACED_URLS = {change["to"] for correction in CORRECTIONS for change in correction["changes"] if "to" in change and change["path"][-1] == "url"}
+MARKER = re.compile(r"\[correction: [^\]]+\]")
 
 
 def raw(sample_id):
@@ -90,8 +94,16 @@ def load(sample_id):
             target = record[change["speech"]]["response"]["output"]
             for step in parents:
                 target = target[step]
+            where = f"{sample_id} {change['speech']} {change['path']}"
+            if "marker" in change:
+                if not MARKER.fullmatch(change["marker"]):
+                    raise SystemExit(f"{where}: marker {change['marker']!r} must read [correction: ...]")
+                if target[key].count(change["after"]) != 1:
+                    raise SystemExit(f"{where}: correction {correction['id']} expects {change['after']!r} exactly once in the raw text")
+                target[key] = target[key].replace(change["after"], f"{change['after']} {change['marker']}")
+                continue
             if target[key] != change["from"]:
-                raise SystemExit(f"{sample_id} {change['speech']} {change['path']}: raw value is {target[key]!r}, correction {correction['id']} expects {change['from']!r}")
+                raise SystemExit(f"{where}: raw value is {target[key]!r}, correction {correction['id']} expects {change['from']!r}")
             target[key] = change["to"]
     return record
 
@@ -109,7 +121,7 @@ def check_corrections():
 
 def corrections_html():
     items = "".join(f"<li>{escape(correction['note'])}</li>" for correction in CORRECTIONS)
-    return f'<h3 id="replaced-sources">Source links replaced after generation</h3><p>Every source was opened in a browser on {GENERATED_ON}. These did not load, so each was replaced with a copy that does and that supports the same claim:</p><ul>{items}</ul>'
+    return f'<h3 id="corrections">Corrections after generation</h3><p>Every source was opened in a browser on {GENERATED_ON}. Two did not load, so each was replaced with a copy that does and that supports the same claim. One fact in the generated text is wrong; the wording stays as the model wrote it, with the correction marked inline in square brackets.</p><ul>{items}</ul>'
 
 
 def generated_at(record, speech):
@@ -125,8 +137,13 @@ def _label(text, lang):
     return f"<strong{attr}>{escape(text)}</strong>"
 
 
+def _text(value):
+    """Escaped generated text, with each inline correction marker shown as a link to the corrections list."""
+    return MARKER.sub(lambda match: f'<a class="correction" href="#corrections" lang="en">{match.group(0)}</a>', escape(value))
+
+
 def _p(label, value, lang):
-    return f"<p>{_label(label, lang)} {escape(value)}</p>" if value else ""
+    return f"<p>{_label(label, lang)} {_text(value)}</p>" if value else ""
 
 
 def _opening(output, lang):
@@ -190,7 +207,7 @@ def _sources(output, lang):
         name = escape(", ".join(part for part in (source.get("org", ""), str(source.get("year", ""))) if part))
         named = f'<a href="{escape(source["url"])}">{name}</a>' if source.get("url") else name
         claim = f": {escape(source['claim'])}" if source.get("claim") else ""
-        replaced = ' <a class="muted" href="#replaced-sources" lang="en">(link replaced)</a>' if source.get("url") in REPLACED_URLS else ""
+        replaced = ' <a class="muted" href="#corrections" lang="en">(link replaced)</a>' if source.get("url") in REPLACED_URLS else ""
         items.append(f"<li>{named}{claim}{replaced}</li>")
     return f'<h4>Sources</h4><ol class="sources">{"".join(items)}</ol>'
 

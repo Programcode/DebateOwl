@@ -1,6 +1,6 @@
 # Debate case examples: raw output
 
-These files are the unedited output behind [/debate-case-example](https://debateowl.com/debate-case-example). [`scripts/seo_case_example.py`](../seo_case_example.py) renders the page from them; [`scripts/generate_seo_content.py`](../generate_seo_content.py) writes it to `public/debate-case-example/index.html`. Change the page copy there, never the case text here. The only changes the page makes to the case text are the replaced source links in [`corrections.json`](corrections.json), which it lists under "Source links replaced after generation".
+These files are the unedited output behind [/debate-case-example](https://debateowl.com/debate-case-example). [`scripts/seo_case_example.py`](../seo_case_example.py) renders the page from them; [`scripts/generate_seo_content.py`](../generate_seo_content.py) writes it to `public/debate-case-example/index.html`. Change the page copy there, never the case text here. The only changes the page makes to the case text are the entries in [`corrections.json`](corrections.json), which it lists under "Corrections after generation": replaced source links, and inline `[correction: ...]` markers that keep the generated wording and flag a wrong fact.
 
 | File | Motion | Format setting | Side | Language |
 | --- | --- | --- | --- | --- |
@@ -41,4 +41,8 @@ Opened in a real browser, 7 of those 9 load. Two do not, and [`corrections.json`
 - `tandfonline.com/doi/full/10.1080/17457289.2025.2560983` (Levin, "Are 16-year-olds mature enough to vote? Evidence from the Voto Joven in Latin America", Journal of Elections, Public Opinion and Parties, 6 October 2025) stays behind a Cloudflare check. It is replaced by the author's preprint of the same paper on APSA Preprints, whose page lists the journal version. The counter's source line, which named the wrong journal, now names APSA Preprints.
 - `commerce.senate.gov/.../2026.02.05 CHSRA Follow-Up Report (Part 2 of Acela Report).pdf` answers Access Denied. It is replaced by the Internet Archive's copy of the same PDF (snapshot of 11 August 2026). The committee's press release is on the same blocked host.
 
-Each change in `corrections.json` names the raw value it replaces; `scripts/seo_case_example.py` fails if a raw file no longer has that value, so a regenerated sample cannot keep a stale correction.
+## Fact corrections
+
+- Sample 1, first speech, first "If they say…" answer: the model wrote that 16-year-olds have voted "since 1984 in Nicaragua and Brazil". Brazil's year is 1988 (the cited Levin paper and Brazil's 1988 constitution), so the page keeps the sentence and adds `[correction: Brazil since 1988]` right after it.
+
+Each change in `corrections.json` names the raw value it replaces, or for a marker the exact words it follows, which must appear once; `scripts/seo_case_example.py` fails if a raw file no longer has that value, so a regenerated sample cannot keep a stale correction.

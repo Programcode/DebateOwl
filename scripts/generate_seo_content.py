@@ -78,7 +78,7 @@ CSS = """
 .checklist{list-style:none;padding:0;margin:14px 0;display:grid;gap:8px}.checklist label{display:flex;gap:10px;align-items:flex-start;border:1px solid var(--line);border-radius:14px;padding:10px 14px;background:rgba(255,255,255,.05);cursor:pointer}.checklist input{accent-color:#14B37D;width:1.1rem;height:1.1rem;margin-top:5px;flex:none}
 .hero .price{max-width:800px;color:var(--muted);margin:14px 0 0}
 .callout{max-width:840px;border:1px solid var(--line);border-radius:16px;padding:14px 18px;background:rgba(255,255,255,.05);margin:18px 0 0}
-.case .facts{display:grid;grid-template-columns:max-content 1fr;gap:4px 16px;margin:16px 0}.case .facts dt{color:var(--muted)}.case .facts dd{margin:0}.case h4{font-size:1.05rem;margin:1.6rem 0 .4rem}.case-list{padding-left:1.4rem}.case-list li{margin:0 0 14px}.case-list p,.speech p{margin:.3rem 0}.sources{padding-left:1.4rem;overflow-wrap:anywhere}@media(max-width:760px){.case .facts{grid-template-columns:1fr}.case .facts dd{margin-bottom:8px}}
+.case .facts{display:grid;grid-template-columns:max-content 1fr;gap:4px 16px;margin:16px 0}.case .facts dt{color:var(--muted)}.case .facts dd{margin:0}.case h4{font-size:1.05rem;margin:1.6rem 0 .4rem}.case-list{padding-left:1.4rem}.case-list li{margin:0 0 14px}.case-list p,.speech p{margin:.3rem 0}.sources{padding-left:1.4rem;overflow-wrap:anywhere}.correction{color:var(--brand2);font-weight:750;text-decoration:none}@media(max-width:760px){.case .facts{grid-template-columns:1fr}.case .facts dd{margin-bottom:8px}}
 """.strip()
 
 PAGES = [
@@ -879,7 +879,7 @@ def render_case_example_page():
     <nav class="breadcrumb" aria-label="Breadcrumb"><a href="/">Home</a> / <span aria-current="page">Debate case example</span></nav>
     <article>
       <header class="hero"><h1>{esc(c.H1)}</h1><p id="short-answer" class="direct">{esc(c.ANSWER)}</p><p class="disclosure">{esc(c.HONESTY)}</p><p class="dates">By the <a href="/">{esc(PRODUCT)} team</a> · Published <time datetime="{c.PUBLISHED}">{long_date_dmy(c.PUBLISHED)}</time></p>{button}</header>
-      <section class="section article" aria-labelledby="how-made"><h2 id="how-made">How these cases were made</h2><ul>{how_made}</ul><p>{esc(c.FORMATS_NOTE)}</p><p>Every case is copied from the raw output, apart from the replaced links below. The raw output is published with the request, the model that served each call and the database rows in <a href="{c.RAW_URL}">DebateOwl's GitHub repository</a>.</p>{c.corrections_html()}<nav aria-label="Samples on this page"><ol>{contents}</ol></nav></section>
+      <section class="section article" aria-labelledby="how-made"><h2 id="how-made">How these cases were made</h2><ul>{how_made}</ul><p>{esc(c.FORMATS_NOTE)}</p><p>Every case is copied from the raw output, apart from the corrections listed below. The raw output is published with the request, the model that served each call and the database rows in <a href="{c.RAW_URL}">DebateOwl's GitHub repository</a>.</p>{c.corrections_html()}<nav aria-label="Samples on this page"><ol>{contents}</ol></nav></section>
       {samples}
       <section class="section article" aria-labelledby="own-motion"><h2 id="own-motion">Write a case for your own motion</h2><p>{HOME_LINK} writes the same kind of case for any motion you are preparing, for your side and speaker role, with live web research.</p>{button}<p>{FREE_PLAN_HTML}</p></section>
       <section class="section faq article" aria-labelledby="faq"><h2 id="faq">Frequently asked questions</h2>{faq_html}</section>
