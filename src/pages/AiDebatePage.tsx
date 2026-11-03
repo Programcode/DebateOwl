@@ -14,7 +14,7 @@ const ROUTE = '/ai-debate';
 const URL = `${SITE_ORIGIN}${ROUTE}`;
 const NAME = 'AI debate partner';
 // The day this page's copy last changed; move it when the text does.
-const MODIFIED = '2026-11-02';
+const MODIFIED = '2026-11-03';
 
 const SHORT_ANSWER: FaqEntry = {
   question: 'What is an AI debate partner?',
@@ -22,6 +22,10 @@ const SHORT_ANSWER: FaqEntry = {
 };
 
 const FAQ: FaqEntry[] = [
+  {
+    question: 'Is there an AI for debate?',
+    answer: `Yes. Any chatbot will argue a side if asked, but ${site.product} is made for debate prep: it turns a motion into a case with "If they say… we answer…" replies and drills you with AI rebuttals, cross-examination and timed rounds. Try one exchange above, free and without an account; the full app costs $${PRICING.proMonthly}/month plus tax after a ${PRICING.trialDays}-day trial.`,
+  },
   {
     question: 'Is it free?',
     answer: `The mini round on this page is free: one argument, one AI rebuttal with a judge note, and one follow-up, up to three rounds a day per network. The ${site.product} app is not free. It starts with a ${PRICING.trialDays}-day free trial with no credit card, then costs $${PRICING.proMonthly}/month plus tax. There is no free plan.`,
