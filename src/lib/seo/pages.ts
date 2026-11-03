@@ -14,8 +14,8 @@ export const ORGANIZATION_ID = `${SITE_ORIGIN}/#organization`;
  * see one name for one entity. Its founder is the person who runs it; Pi-Stack
  * is only the name he publishes under, not a company, so it appears as his URL
  * and never as a parent organization or legal name. A sameAs profile is the same
- * entity elsewhere: site.json lists only profiles that spell the name "DebateOwl"
- * and that DebateOwl itself runs; with none, the node has no sameAs. /press, the
+ * entity elsewhere: site.json lists only pages about DebateOwl that spell the name
+ * "DebateOwl" (its repository and directory listings); with none, the node has no sameAs. /press, the
  * fact sheet, is its subjectOf.
  */
 export function organizationNode() {
