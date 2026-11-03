@@ -46,5 +46,6 @@ Preconditions:
 - `Save` appears both on the result toolbar and in the dialog. Scope the second click to `getByRole("dialog")`. The toolbar `Save` exists only for one-off results.
 - A case filed in a debate is titled with the motion, which the header control also shows (truncated and hidden). Look for it inside the History panel, not with a page-wide `getByText`.
 - The client files a result after it renders. Wait for the result on screen (and the row, if the next step reloads) before a `page.goto`, or the reload can drop it.
+- `recipes/case-examples.spec.ts` is not a check: it generates the public `/debate-case-example` samples (a debate with a format setting, then R1 and R2) and runs only on a live stack with `CASE_EXAMPLES=all` or a sample id. `scripts/case-examples/README.md` covers the run.
 - The model label in the result header (for example `anthropic/claude-sonnet-5.5`) is the model the function requested. The answer itself came from the fake provider.
 - `Google Docs` export needs Google OAuth and cannot be proven locally.

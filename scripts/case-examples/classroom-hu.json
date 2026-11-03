@@ -1,0 +1,1139 @@
+{
+  "sample": "classroom-hu",
+  "debateFormatSetting": "Classroom",
+  "howGenerated": "DebateOwl's Generate tool driven in a browser on a local DebateOwl stack (React client, Supabase Auth and Postgres, the ai Edge Function) with live OpenRouter and Exa: start a debate with the motion and format, generate R1, then R2 in the same debate. Every chat call was pinned to anthropic/claude-sonnet-5.5 on the Anthropic provider.",
+  "run": {
+    "test": "case example classroom-hu",
+    "project": "desktop-chromium",
+    "commit": "a9f69b38ccd3ab43d15d6e82ab1963cc74b1b723",
+    "mode": "live",
+    "liveModel": "anthropic/claude-sonnet-5.5",
+    "baseURL": "http://127.0.0.1:18081",
+    "startedAt": "2026-11-03T17:20:58.087Z"
+  },
+  "r1": {
+    "request": {
+      "feature": "generate",
+      "input": {
+        "motion": "Ez a Ház betiltaná a házi feladatot az általános iskolákban",
+        "side": "pro",
+        "format": "custom",
+        "role": "r1",
+        "length": "standard",
+        "audience": "intermediate",
+        "tone": "formal",
+        "language": "hu"
+      },
+      "provider": "openrouter",
+      "model": "anthropic/claude-sonnet-5.5",
+      "reasoningEffort": "low",
+      "sourceIds": [],
+      "debateContext": {
+        "debateId": "cf057d21-3472-4faf-bba4-9be4341032b6",
+        "side": "pro",
+        "sourceIds": [],
+        "outputs": []
+      },
+      "stream": true,
+      "resultKey": "req_1793726463972_zlzi1a"
+    },
+    "response": {
+      "output": {
+        "opening": {
+          "hook": "Képzeljenek el egy hatéves gyereket, aki nyolc órát tölt az iskolában, aztán hazamegy, és még leckét ír. Mikor játszik, mikor pihen, mikor van ideje a családjára?"
+        },
+        "caseStructure": {
+          "thesis": "Ma három érvvel bizonyítjuk, hogy a házi feladatot be kell tiltani az általános iskolákban: a gyerekeknek pihenés kell, a lecke nem a legjobb gyakorlás, és a tilalom igazságosabb."
+        },
+        "contentions": [
+          {
+            "id": "1",
+            "title": "A gyereknek pihenés jár",
+            "claim": "Az iskola után a gyerek ideje a pihenésé, a játéké és a családé, nem az újabb feladatoké.",
+            "reasoning": "A gyerek már a tanórákon dolgozik, sokan reggel nyolctól délután négyig az iskolában vannak. Ha hazaérve még leckét is kell írniuk, nincs idejük mozogni, játszani vagy a szüleikkel lenni. A fáradt gyerek pedig másnap kevésbé figyel, vagyis a lecke saját magát ássa alá.",
+            "evidence": "Az Oktatási és Gyermekügyi Minisztérium 2026-os javaslatcsomagja szerint a házi feladat korlátozásának célja a gyerekek délutáni és családi idejének védelme. Lengyelországban az oktatási miniszter 2024-ben azzal tiltotta be az általános iskolai leckét, hogy a gyerekeknek pihenniük kell.",
+            "needsSource": false,
+            "sourceQuery": "",
+            "impact": "Itt kisgyerekekről van szó. Az ő délutánjuk nem az iskolai nap folytatása, hanem a saját idejük."
+          },
+          {
+            "id": "2",
+            "title": "A lecke nem jó gyakorlás",
+            "claim": "Az iskolai tanulást az iskolában, tanári segítséggel kell megoldani, mert otthon a házi feladat sokszor nem fejleszt.",
+            "reasoning": "Otthon nincs ott a tanár, aki észrevenné a hibát. A gyerek begyakorolhat egy rossz megoldást, vagy a szülő csinálja meg helyette. Ha a gyakorlás az iskolai időbe kerül, a tanár azonnal javít, és mindenki ugyanazt a segítséget kapja. A rövid, jól vezetett iskolai gyakorlás többet ér, mint a fáradt esti lecke.",
+            "evidence": "A minisztérium javaslatcsomagja szerint az önállóan teljesíthető, valóban fejlesztő gyakorlást kell előtérbe helyezni. Ez azt jelzi, hogy maga az oktatási tárca sem tartja minden házi feladatot hasznosnak. Az ajánlás első osztályban és egész napos iskolában lehetőség szerint megszüntetné a kötelező írásbeli leckét.",
+            "needsSource": false,
+            "sourceQuery": "",
+            "impact": "Ha a lecke nem fejleszt, csak fáraszt és feszültséget okoz, akkor nincs jó ok megtartani."
+          },
+          {
+            "id": "3",
+            "title": "A lecke egyenlőtlenséget szül",
+            "claim": "A házi feladat azokat a gyerekeket sújtja, akiknek otthon nincs segítség, nyugodt hely vagy idő.",
+            "reasoning": "Aki mellett este leül egy szülő, gyorsan elkészül és jobb jegyet kap. Aki mellett nincs senki, vagy a szülő későn ér haza, hátrányba kerül. Ez nem a gyerek tudásán múlik, hanem a családi helyzetén. Ha minden gyakorlás az iskolában történik, mindenkinek ugyanazok a feltételei vannak.",
+            "evidence": "Egy hazai cikk szerint Magyarországon nincs egységes szabály, és az iskolák pedagógiai programja dönti el, mennyi leckét adhatnak (Eduline, 2024). Vagyis ugyanannyi idős gyerek az egyik iskolában alig kap leckét, a másikban sokat. Ez önmagában is igazságtalan.",
+            "needsSource": true,
+            "sourceQuery": "magyar kutatás a szülői segítség és a házi feladat teljesítése közötti összefüggésről, hátrányos helyzetű tanulók",
+            "impact": "Az iskola feladata, hogy mindenkinek egyenlő esélyt adjon, nem az, hogy a családi háttér döntsön."
+          }
+        ],
+        "counters": [
+          {
+            "targetArgument": "A házi feladat megtanít önállóan tanulni és felelősséget vállalni.",
+            "counterpoint": "Az önállóságot nem kell leckével tanítani, mert iskolai projektekkel, önálló munkával is lehet gyakorolni, tanári segítséggel. A minisztérium javaslatcsomagja is az önállóan teljesíthető, valóban fejlesztő gyakorlást helyezi előtérbe, nem a sok leckét (Oktatási és Gyermekügyi Minisztérium, 2026). Ha a hatéves gyerek leckéje a szülő munkája lesz, mit tanult a felelősségről?",
+            "source": "Oktatási és Gyermekügyi Minisztérium, 2026"
+          },
+          {
+            "targetArgument": "A magyar szülők többsége ragaszkodik a házi feladathoz.",
+            "counterpoint": "A szülői megszokás nem bizonyíték arra, hogy a lecke jó a gyereknek. Az Eduline 2024-es cikke szerint sok szülő azzal érvel, hogy neki is volt, mindig így volt. Ez hagyomány, nem érv. A Blikk szavazásából az is kiderült, hogy a válaszolók jóval több mint fele örült volna a lecke megszűnésének (Blikk, 2024). Kinek van igaza, ha maguk a szülők sem értenek egyet?",
+            "source": "Eduline, 2024"
+          },
+          {
+            "targetArgument": "A lengyel példa nem működik, a pedagógusok szerint a teljes tilalom rossz megoldás.",
+            "counterpoint": "A tilalmat éppen az oktatási miniszter vezette be, azzal, hogy a gyerekeknek pihenniük kell (nlc.hu, 2024). A magyar pedagógusok is inkább a lecke céljának tisztázását kérik, ami azt mutatja, hogy a mostani gyakorlat nem tiszta (Blikk, 2024). Az általános iskolában nem a lecke a megoldás erre. Ez tartozik a pihenésről szóló első érvünkhöz.",
+            "source": "nlc.hu, 2024"
+          },
+          {
+            "targetArgument": "Elég a korlátozás, nem kell tiltani.",
+            "counterpoint": "A korlátozás ajánlás, nem szabály. A minisztérium csomagja is csak javaslat az iskoláknak, amelyeket megvizsgálhatnak (444.hu, 2026). Az iskolák maguk döntik el, mennyit adnak, így az egyenlőtlenség marad. Miért ne lehetne mindenkinek ugyanaz a szabály? Ez a harmadik érvünk.",
+            "source": "444.hu, 2026"
+          },
+          {
+            "targetArgument": "Lecke nélkül a gyerekek lemaradnak, nem lesz idő gyakorolni.",
+            "counterpoint": "Az iskolai napot lehet úgy szervezni, hogy a gyakorlás is beleférjen. A minisztérium a délutáni időt is átgondolná, hogy az ne a délelőtti tanórák folytatása legyen (Oktatási és Gyermekügyi Minisztérium, 2026). Ha egy gyerek fél nyolctól négyig bent van, miért ne fér bele ebbe a gyakorlás? Ez a második érvünk.",
+            "source": "Oktatási és Gyermekügyi Minisztérium, 2026"
+          }
+        ],
+        "closingLine": "Ezért világos, hogy az általános iskolás gyereknek az iskola után pihenés jár, nem házi feladat, és ezért a Háznak be kell tiltania.",
+        "sources": [
+          {
+            "org": "Oktatási és Gyermekügyi Minisztérium (Legyen ÉLMÉNY a tanulás!)",
+            "claim": "Az alsó tagozatos házi feladat észszerű korlátozása a délutáni és családi idő védelmére, és az önállóan teljesíthető gyakorlás előtérbe helyezése",
+            "year": "2026",
+            "url": "https://www.munkacsysuli.hu/_upload/editor/Dokumentumok/Javaslatcsomag-2.pdf"
+          },
+          {
+            "org": "HVG",
+            "claim": "Első osztályban és egész napos iskolában lehetőség szerint nincs kötelező írásbeli lecke",
+            "year": "2026",
+            "url": "https://hvg.hu/itthon/20260808_johetnek-a-35-perces-orak-es-a-kevesebb-hazi-az-also-tagozaton"
+          },
+          {
+            "org": "444.hu",
+            "claim": "A minisztérium csomagja ajánlás, nem kötelező szabály",
+            "year": "2026",
+            "url": "https://444.hu/2026/08/08/35-perces-tanorak-kevesebb-hazi-feladat-oraszam-atcsoportositas-mindennapos-meseolvasas-elkeszult-a-miniszterium-also-tagozatos-javaslatcsomagja"
+          },
+          {
+            "org": "nlc.hu",
+            "claim": "A lengyel oktatási miniszter betiltotta az általános iskolai házi feladatot, mert a gyerekeknek pihenniük kell",
+            "year": "2024",
+            "url": "https://nlc.hu/csalad/20240126/hazi-feladatok-betiltas-lengyelorszag/"
+          },
+          {
+            "org": "Eduline",
+            "claim": "Magyarországon nincs egységes szabály a házi feladat mennyiségére, iskolánként eltér",
+            "year": "2024",
+            "url": "https://eduline.hu/kozoktatas/20240124_Mennyi-hazi-feladatot-adhatnak-fel-a-tanarok"
+          },
+          {
+            "org": "Blikk",
+            "claim": "A cikk szavazásában a válaszolók jóval több mint fele örülne a lecke megszűnésének, a pedagógusok a lecke célját tisztáznák",
+            "year": "2024",
+            "url": "https://www.blikk.hu/aktualis/belfold/hazi-feladat-betiltas-magyarorszag-belugyminiszterium/ztb4r2p"
+          }
+        ],
+        "metadata": {
+          "side": "pro",
+          "format": "custom",
+          "generatedAt": "2026-11-03T00:00:00Z",
+          "model": "anthropic/claude-sonnet-5.5",
+          "provider": "openrouter",
+          "sourceUsage": [],
+          "durationMs": 33962
+        }
+      },
+      "discoveredSources": [
+        {
+          "title": "Kevesebb házi feladat, hosszabb szünetek és 35 perces órák jöhetnek az alsó tagozatban – CsaládiNet",
+          "url": "https://www.csaladinet.hu/hirek/gyerekneveles/iskolas/36840/kevesebb_hazi_feladat_hosszabb_szunetek_es_35_perces_orak_johetnek_az_also_tagozatban",
+          "content": "Kevesebb házi feladat, hosszabb szünetek és 35 perces órák jöhetnek az alsó tagozatban – CsaládiNet\n\n# Kevesebb házi feladat, hosszabb szünetek és 35 perces órák jöhetnek az alsó tagozatban\n\n2026. 08. 10. Családinet\n\nRugalmasabb napkezdést, több mozgást, hosszabb szüneteket és kevesebb otthoni feladatot is javasolnak az általános iskoláknak. Az új lehetőségekből már a szeptemberben kezdődő tanévben is válogathatnak az intézmények.\n\nNem feltétlenül ugyanúgy indul majd a tanítás minden általános iskolában szeptembertől. Az Oktatási és Gyermekügyi Minisztérium 14 pontos szakmai javaslatcsomagot küldött az intézményeknek, amely az alsó tagozatos gyerekek terhelésének csökkentését és a gyerekekhez jobban igazodó tanulásszervezést célozza.\n\nA javaslatok között egészen konkrét változtatások is szerepelnek: például a 35 perces tanítási órák lehetőségének megvizsgálása, hosszabb szünetek, kevesebb házi feladat és több játékos, tapasztalati tanulás.\n\n### 35 perces órák és rugalmasabb reggelek\n\nA",
+          "qualityScore": 75,
+          "sourceType": "generic",
+          "qualityLabel": "strong",
+          "query": "Ez a Ház betiltaná a házi feladatot az általános iskolákban official data evidence 2025 2026"
+        },
+        {
+          "title": "Legyen ÉLMÉNY a tanulás!",
+          "url": "https://www.munkacsysuli.hu/_upload/editor/Dokumentumok/Javaslatcsomag-2.pdf",
+          "content": "## Legyen ÉLMÉNY a tanulás!\n\n##### Javaslatcsomag az alsó tagozat gyermekközpontú megújítására\n\nOktatási és Gyermekügyi Minisztérium 2026. július 31.\n\nJAVASLAT JAVASLAT JAVASLAT JAVASLAT JAVASLAT JAVASLAT JAVASLAT\n\nCÉL CÉL CÉL CÉL CÉL CÉL CÉL\n\nGyermekbarát iskolakezdés és napirend\n\nA tanítási nap \nnyugodt, biztonságos \nés a gyermekek \néletkori \nsajátosságaihoz \nigazodó kezdése. \nRugalmas \nóraszervezés: \nrövidebb órák és \nkomplex blokkok \n\nA figyelmi terhelés mérséklése és az elmélyült, tevékenységalapú tanulás feltételeinek megteremtése.\n\nHosszabb \nmozgásos \nszünetek, nyugodt \nebéd-és pihenőidő \n\nA tanulók fizikai és mentális regenerálódásának biztosítása a tanítási nap során.\n\nAz óraszámok és tanulási tartalmak rugalmas elosztása\n\nA merev napi tantárgyi rend helyett életkorhoz igazodó, változatos tanulási ritmus kialakítása.\n\nAz alsó tagozatos \nházi feladat \nészszerű \nkorlátozása. \n\nA gyermekek délutáni és családi idejének védelme, valamint az önállóan teljesíthető, valóban fejlesztő ",
+          "qualityScore": 76,
+          "sourceType": "generic",
+          "qualityLabel": "strong",
+          "query": "Oktatási és Gyermekügyi Minisztérium \"Legyen élmény a tanulás\" házi feladat javaslatcsomag alsó tagozat"
+        },
+        {
+          "title": "Itthon: Jöhetnek a 35 perces órák és a kevesebb házi az alsó tagozaton",
+          "url": "https://hvg.hu/itthon/20260808_johetnek-a-35-perces-orak-es-a-kevesebb-hazi-az-also-tagozaton",
+          "content": "Itthon: Jöhetnek a 35 perces órák és a kevesebb házi az alsó tagozaton\n\n# Jöhetnek a 35 perces órák és a kevesebb házi az alsó tagozaton\n\nTöbb időt hagynának a pihenésre és a mozgásra is.\n\n- HVG \n\nRövidebb tanórákat, hosszabb szüneteket, kevesebb házi feladatot, valamint több játékot, mesét és mozgást javasol az Oktatási és Gyermekügyi Minisztérium az alsó tagozatos oktatás megújítására. Kókayné Lányi Marietta közoktatásért felelős államtitkár „Legyen élmény a tanulás!” címmel küldte el az iskoláknak a gyermekközpontúbb oktatást célzó javaslatcsomagot.\n\nAz egyik legfontosabb változás a tanórák hosszát érintheti. A minisztérium azt javasolja az iskoláknak, hogy vizsgálják meg a 35 perces tanítási órák bevezetésének lehetőségét. Emellett hosszabb, többféle tevékenységet összekapcsoló tanulási blokkokat is kialakíthatnának. A reggelek is lazábban indulhatnának: a tanítás előtt beszélgetőkör, közös olvasás, mesehallgatás vagy mozgás segíthetné a gyerekek ráhangolódását.\n\nJelentősen változh",
+          "qualityScore": 75,
+          "sourceType": "generic",
+          "qualityLabel": "strong",
+          "query": "Ez a Ház betiltaná a házi feladatot az általános iskolákban Magyarország kutatás adatok felmérés 2025 2026"
+        },
+        {
+          "title": "Gazdaság: Így változik az életünk szeptember 1-től",
+          "url": "https://hvg.hu/gazdasag/20260901_igy-valtozik-az-eletunk-szeptember-1-tol",
+          "content": "Gazdaság: Így változik az életünk szeptember 1-től\n\n# Így változik az életünk szeptember 1-től\n\nA legtöbben az iskolakezdésre készülnek, de ezen túl is több fontos változás jön keddtől. \n\n- HVG \n\nSzeptember elsejével nemcsak az ősz érkezik meg (igaz, még azért elég meleg lesz), hanem számtalan egyéb változás is meghatározza majd az életünket.\n\n## Jön a suli, jönnek a dugók\n\nA legtöbb magyar életében vélhetően az iskolakezdés (és persze óvoda-, bölcsődekezdés) hozza a legnagyobb változást. Ez ugyanis nemcsak a gyerekeseket érinti, hanem a növekvő forgalom miatt azokat is, akik nem egy oktatási intézményben kezdik mostantól a mindennapjaikat: nemcsak több autó lesz az utakon, hanem a buszokon is kevesebb helyünk lesz, hogy kényelmesen utazzunk – bár igaz, a BKK is sűrűbb menetrenddel és nagyobb kapacitással működik keddtől. A fővárosi közlekedők számára az is fontos információ, hogy szeptembertől változik a pesti alsó rakpart autómentes időszaka, \n\na diákok számára pedig az, hogy mostant",
+          "qualityScore": 75,
+          "sourceType": "generic",
+          "qualityLabel": "strong",
+          "query": "Ez a Ház betiltaná a házi feladatot az általános iskolákban Magyarország kutatás adatok felmérés 2025 2026"
+        },
+        {
+          "title": "KÖZNEVELÉS 2025",
+          "url": "https://www.parlament.hu/documents/d/guest/infotablo_2025_43_kozneveles_2025",
+          "content": "ORSZÁGGYŰLÉS HIVATALA KÖZGYŰJTEMÉNYI ÉS KÖZMŰVELŐDÉSI IGAZGATÓSÁG KÉPVISELŐI INFORMÁCIÓS SZOLGÁLAT\n\nóvoda\n\n710,5\n\n547,2\n\n429,1\n\n324,9\n\n### KÖZNEVELÉSBEN RÉSZTVEVŐ GYERMEKEK, TANULÓK SZÁMA (ezer fő)\n\nAz egyes középfokú intézménytípusok között lényeges különbségek nincsenek. A ’24/25-ös tanévben a technikumokban, szakgimnáziumokban és gimnáziumokban egy pedagógusra átlagosan 10,2, a szakképző iskolákban pedig 10,1 tanuló jutott.\n\n1\n\n2025. NOVEMBER 28.\n\n2025 43\n\nRendszeresen publikált Infotablónk célja egyes oktatási mutatók ismertetése. A kiadvány évente jelenik meg, a legfrissebb nyilvános adatokon alapul. Magyarországra fókuszál, de esetenként nemzetközi összehasonlító adatokat is közöl.\n\nKÖZNEVELÉS 2025 óvodás gyermek középiskolai tanuló* általános iskolai tanuló* * nappali oktatásban\n\n397,3\n\n1001,7\n\n#### EGY PEDAGÓGUSRA JUTÓ GYERMEK, ILLETVE TANULÓ (fő)\n\n2009/2010 2024/2025\n\n328,5\n\n581,9\n\n773,7 10,9 10,4\n\náltalános iskola közép iskola\n\n10,4 9,7\n\n12,0 10,0\n\n#### TANÁRI FIZETÉSEK (ALSÓ",
+          "qualityScore": 94,
+          "sourceType": "results",
+          "qualityLabel": "strong",
+          "query": "Ez a Ház betiltaná a házi feladatot az általános iskolákban Magyarország kutatás adatok felmérés 2025 2026"
+        }
+      ],
+      "sourceAssessments": [],
+      "meta": {
+        "requestedModel": "anthropic/claude-sonnet-5.5",
+        "resolvedModel": "anthropic/claude-sonnet-5.5",
+        "debateContext": {
+          "debateId": "cf057d21-3472-4faf-bba4-9be4341032b6",
+          "sourcesUsed": 0,
+          "sourcesOmittedForSize": 0,
+          "sourcesShortened": 0,
+          "sourcesUnavailable": 0,
+          "outputsUsed": [],
+          "outputsOmittedForSize": [],
+          "outputsUnavailable": 0,
+          "instructionsUsed": false
+        }
+      }
+    },
+    "providerCalls": [
+      {
+        "feature": "research-queries",
+        "requestedModel": "anthropic/claude-haiku-5.5",
+        "upstreamModel": "anthropic/claude-sonnet-5.5",
+        "upstreamProvider": "Anthropic",
+        "status": 200,
+        "ms": 2097,
+        "stream": false
+      },
+      {
+        "feature": "jev",
+        "requestedModel": null,
+        "upstreamModel": "typesafe/jev-1.13-20260917",
+        "upstreamProvider": "TypeSafe",
+        "status": 200,
+        "ms": 248,
+        "stream": null
+      },
+      {
+        "feature": "generate",
+        "requestedModel": "anthropic/claude-sonnet-5.5",
+        "upstreamModel": "anthropic/claude-sonnet-5.5",
+        "upstreamProvider": "Anthropic",
+        "status": 200,
+        "ms": 28506,
+        "stream": true,
+        "userPromptHead": "Motion: Ez a Ház betiltaná a házi feladatot az általános iskolákban\nSide: pro\nFormat: custom\nRole: r1\nLength: standard\nLength Instruction: Return exactly 3 contentions. Give each a clear explanation, evidence, and why it matters.\nSpeech Budget: 6 minutes, about 780 spoken words at 130 words a minute. The opening, the arguments and the closing line together stay within about 600 words, leaving time for the \"If they say...\" answers the speaker picks. With 3 arguments, each argument is about 170 spoken words: claim one sentence of at most 20 words, reasoning about 75 words, evidence about 50 words, whyItMatters about 25 words. opening.hook and caseStructure.thesis at most 35 words each, closingLine one sentence of at most 25 words. Aim for these numbers, not under them: a shorter field leaves the speaker's time unused, a longer one runs past it.\nAudience: intermediate\nAudience Instruction: Assume a trained debater: use clear, concise explanations.\nTone: formal\nTone Instruction: Use polished, judge-facing language with controlled phrasing.\nLanguage: Hungarian (hu) - Write ALL output in this language.",
+        "debateContextIncluded": true
+      }
+    ]
+  },
+  "r2": {
+    "request": {
+      "feature": "generate",
+      "input": {
+        "motion": "Ez a Ház betiltaná a házi feladatot az általános iskolákban",
+        "side": "pro",
+        "format": "custom",
+        "role": "r2",
+        "length": "standard",
+        "audience": "intermediate",
+        "tone": "formal",
+        "language": "hu"
+      },
+      "provider": "openrouter",
+      "model": "anthropic/claude-sonnet-5.5",
+      "reasoningEffort": "low",
+      "sourceIds": [
+        "32a9dd03-814f-4f15-8bf1-a88c2c9aba7b",
+        "5137bb5f-874f-4a4f-afc4-1d626997cfe4",
+        "f575affc-41e0-4c62-8549-4380343aa26a",
+        "a64ecbd6-7239-4e1a-8318-5fe29516c248",
+        "17147139-272b-4f10-b5d4-f852678876a1"
+      ],
+      "debateContext": {
+        "debateId": "cf057d21-3472-4faf-bba4-9be4341032b6",
+        "side": "pro",
+        "sourceIds": [
+          "32a9dd03-814f-4f15-8bf1-a88c2c9aba7b",
+          "5137bb5f-874f-4a4f-afc4-1d626997cfe4",
+          "f575affc-41e0-4c62-8549-4380343aa26a",
+          "a64ecbd6-7239-4e1a-8318-5fe29516c248",
+          "17147139-272b-4f10-b5d4-f852678876a1"
+        ],
+        "outputs": [
+          {
+            "kind": "case",
+            "id": "f3fd8f7b-af33-48e9-9f61-813af5ce5d0f"
+          }
+        ]
+      },
+      "stream": true,
+      "resultKey": "req_1793726499840_m1rcl4"
+    },
+    "response": {
+      "output": {
+        "opening": {
+          "hook": "Az iskolák azt mondják, hogy a gyerekekért dolgoznak. De ha ez igaz, miért van az, hogy a hatéves gyerek délutánja is az iskolai nap folytatása?"
+        },
+        "caseStructure": {
+          "thesis": "Én vagyok a csapatunk R2-je, és azt fogom megmutatni, hogy a házi feladatot az általános iskolákban be kell tiltani, mert elveszi a gyerekektől a pihenést, és a családi háttér szerint osztja szét az esélyeket."
+        },
+        "contentions": [],
+        "counters": [
+          {
+            "targetArgument": "A házi feladat megtanít önállóan tanulni és felelősséget vállalni.",
+            "counterpoint": "Ez nem igaz arra a korosztályra, amelyről beszélünk. Egy hatéves gyerek leckéje gyakran a szülő munkája lesz, és ott nem a gyerek vállal felelősséget. Maga az Oktatási és Gyermekügyi Minisztérium is úgy látja, hogy az alsó tagozatban az első osztályban és az egész napos iskolákban lehetőség szerint ne legyen kötelező otthoni írásbeli feladat (HVG, 2026). A minisztérium ugyanebben a csomagban azt kéri, hogy a gyakorlás önállóan teljesíthető és valóban fejlesztő legyen (Oktatási és Gyermekügyi Minisztérium, 2026). Vagyis maga az oktatási tárca nem a leckétől várja az önállóságot. Önállóságot lehet tanítani iskolai projektekkel és önálló munkával, tanári segítséggel. Ha a lecke tényleg felelősségre nevel, miért akarja az oktatási minisztérium kivenni az első osztályból? Ez az első érvünk: a délután a gyereké, nem az iskola meghosszabbítása.",
+            "source": "HVG, 2026"
+          },
+          {
+            "targetArgument": "Lecke nélkül a gyerekek lemaradnak, mert az iskolában nincs elég idő gyakorolni.",
+            "counterpoint": "Éppen fordítva: az iskolai gyakorlás tanári segítséggel többet ér, mint az esti lecke egyedül. Otthon nincs ott a tanár, aki észreveszi a hibát, és a gyerek akár rossz megoldást is begyakorolhat. A minisztérium csomagja a tanórák rugalmasabb szervezését javasolja, például 35 perces órákat és hosszabb tanulási blokkokat (HVG, 2026). A délutáni foglalkozások pedig kevésbé hasonlítanának a délelőtti órák folytatására (HVG, 2026). Az iskolai nap átszervezhető úgy, hogy a gyakorlás beleférjen. Ha a gyerek egész nap bent van, miért ne férne bele a gyakorlás ebbe az időbe? Ráadásul a lecke nélkül sem marad el a tanulás: csak az iskola veszi át a felelősséget érte. Ez kapcsolódik az első érvünkhöz, a pihenéshez, és a másodikhoz is: az iskolában mindenki ugyanazt a segítséget kapja.",
+            "source": "HVG, 2026"
+          },
+          {
+            "targetArgument": "A magyar szülők többsége ragaszkodik a házi feladathoz, ezért a tilalom nem lenne elfogadott.",
+            "counterpoint": "A megszokás nem érv arra, hogy valami jó a gyereknek. Az Eduline 2024-es cikke éppen azt idézi, hogy sok szülő azzal érvel: nekem is volt, ez mindig így volt (Eduline, 2024). Ez hagyomány, nem indok. Ugyanez a cikk azt is rögzíti, hogy Magyarországon nincs egységes szabályozás a házi feladatról, így iskolánként teljesen eltérhet, mennyi leckét kapnak a gyerekek (Eduline, 2024). Ez a második érvünk lényege: ha minden iskola maga dönt, a gyerekek eltérő feltételek között tanulnak. Közben maga a minisztérium is a lecke korlátozását javasolja az alsó tagozatban, hogy megvédje a gyerekek délutánját és a családi időt (Családinet, 2026). Ha a szabályozás szükséges, miért ne lehetne mindenkinek ugyanaz a szabály? Az elfogadottságnál fontosabb, hogy a gyerekeknek igazságos és egységes feltételeket adjunk.",
+            "source": "Eduline, 2024"
+          },
+          {
+            "targetArgument": "A teljes tilalom túl szigorú, elég a mennyiség korlátozása, ahogy a minisztérium ajánlja.",
+            "counterpoint": "Éppen a minisztérium csomagja mutatja, hogy a korlátozás nem elég. Ez ajánlás, nem szabály: az iskolák csak megvizsgálhatják, mit vezetnek be (Elhetomagyarorszag.hu, 2026). Első osztályban is csak azt javasolják, hogy lehetőség szerint ne legyen kötelező írásbeli lecke, hétvégére pedig csak kivételesen adnának (HVG, 2026). A „lehetőség szerint” és a „kivételesen” nem kötelezettség. Az iskolák évfolyamonként maguk döntenék el, mennyi az elfogadható (HVG, 2026). Ez azt jelenti, hogy két szomszéd iskolában két különböző gyerek más-más terhet cipel haza. Ha a mennyiség korlátozása elég lenne, miért kell a minisztériumnak külön csomagot küldenie az iskoláknak? Egységes szabály nélkül marad az egyenlőtlenség. Ez a második érvünk. A gyerek pihenéshez való joga pedig, az első érvünk, nem lehet véletlen kérdése.",
+            "source": "HVG, 2026"
+          },
+          {
+            "targetArgument": "Az iskolák és a tanárok jobban tudják, mennyi lecke kell, ezért ne az állam döntsön helyettük.",
+            "counterpoint": "Ma sincs egységes szabály, ezért intézményenként teljesen eltérhet, mekkora a lecketerhelés (Eduline, 2024). Egy iskola pedagógiai programja dönt, a gyerek viszont nem választhat iskolát a leckemennyiség alapján. Az eredmény az, hogy a család helyzete és a lakóhely számít, nem a gyerek igénye. Ez pontosan a második érvünk: a lecke ott sújt a legjobban, ahol otthon nincs segítség és nyugodt hely. Az állam sem tenne mást, mint ami a közoktatásban megszokott: közös keretet ad, a tanár pedig az iskolai órán szabadon tanít és gyakoroltat. A minisztérium maga is úgy látja, hogy a lecke ne vegyen el indokolatlanul sok időt a délutánból és a családi időből (Elhetomagyarorszag.hu, 2026). Ha ez a cél, miért bízzuk véletlenre? A gyerekek pihenése, az első érvünk, minden iskolában ugyanannyit ér.",
+            "source": "Eduline, 2024"
+          },
+          {
+            "targetArgument": "A lengyel tilalom nem bizonyítja, hogy ez Magyarországon is működne, és a pedagógusok kételkednek benne.",
+            "counterpoint": "Nem azt állítjuk, hogy Lengyelország bizonyíték, hanem azt, hogy a tilalom megvalósítható: 2024 januárjában a lengyel oktatási miniszter be is tiltotta a házi feladatot az általános iskolákban (Eduline, 2024). Magyarországon pedig nem kell külföldre néznünk. A saját minisztériumunk is arra indult el, hogy kevesebb legyen a lecke, és első osztályban, egész napos iskolában lehetőség szerint ne legyen kötelező otthoni írásbeli feladat (HVG, 2026). A tilalom ennek a következetes végigvitele. A pedagógusok kételyét pedig nem a gyerekek pihenése, hanem a megszokás táplálja. Ugyanez a cikk azt mutatja, hogy sok szülő is csak azt mondja: „nekem is volt, ez mindig így volt” (Eduline, 2024). Ez hagyomány, nem érv. Ha a lecke nem hiányzik a gyereknek, mi indokolja, hogy megtartsuk? Ez az első és a második érvünk együtt: pihenés mindenkinek, egyenlő feltételek mindenkinek.",
+            "source": "Eduline, 2024"
+          },
+          {
+            "targetArgument": "A házi feladat a szülőket is bevonja, és segít látni, mit tanul a gyerek.",
+            "counterpoint": "A szülői bevonódás nem azt jelenti, hogy a gyereknek esténként kötelezően leckét kell írnia. A minisztérium csomagja is azt kéri, hogy az iskolai kötelezettségek ne vegyenek el indokolatlanul sok időt a gyerekek délutánjából és a családdal töltött időből (Elhetomagyarorszag.hu, 2026). Ugyanez a csomag első osztályban és egész napos iskolában lehetőség szerint megszüntetné a kötelező otthoni írásbeli feladatot (HVG, 2026). Vagyis maga a szakpolitika sem a leckében látja a családi kapcsolat eszközét. A szülő a mesehallgatásból, a beszélgetésből, a közös olvasásból is látja, mit tanul a gyerek. Hol van a bevonódás, ha a szülő a hatéves gyerek mellett este hétkor a hibákat javítgatja? Ezt a szülőt a lecke nem bevonja, hanem kiszolgáltatja a időhiánynak. Ez pontosan az első érvünk: a délután a pihenésé és a családé. A második érvünk is ide tartozik: ahol nincs otthon segítő szülő, ott a lecke nem híd, hanem hátrány.",
+            "source": "HVG, 2026"
+          },
+          {
+            "targetArgument": "A gyakorlás ismétlést igényel, és az iskolai idő erre nem elég, főleg 35 perces órák mellett.",
+            "counterpoint": "A gyakorláshoz nem otthoni lecke kell, hanem jól megtervezett iskolai idő. A minisztérium javaslata nem csak rövidebb órákról szól, hanem hosszabb, összevont tanulási blokkokról is, amelyekben többféle tevékenység fér el (CsaládiNet, 2026). A délutáni foglalkozások pedig a javaslat szerint ne a délelőtti órák folytatásai legyenek, hanem szabad játék, mozgás, mese kapjon helyet (HVG, 2026). Ebből látszik, hogy az iskolai napot át lehet szervezni úgy, hogy a gyakorlás beleférjen, a gyerek pedig ne vigye haza a munkát. Ráadásul a 35 perces óra csak lehetőség, amelyet az iskolák megvizsgálhatnak, nem kötelező (Elhetomagyarorszag.hu, 2026). Ha az iskola rövidebb órát választ, az iskola dolga a gyakorlás idejét is megoldani. Ha a gyerek reggel nyolctól délutánig bent van, miért kellene este is ismételnie? A tanár az iskolában azonnal javít, otthon senki. Ez a második érvünk: egységes szabály, mindenkinek ugyanaz a támogatás.",
+            "source": "CsaládiNet, 2026"
+          },
+          {
+            "targetArgument": "A tilalom a felső tagozatra és a továbbtanulásra felkészítést is lehetetlenné tenné.",
+            "counterpoint": "A mai javaslat az általános iskola kisebb gyerekeiről szól, és a mi álláspontunk is az, hogy a tanulásnak az iskolai időben kell megtörténnie, tanári segítséggel. A felkészítés nem tűnik el azzal, hogy a lecke eltűnik: az iskola tanórán, korrepetáláson, délutáni foglalkozáson is fel tudja készíteni a tanulókat. A minisztérium csomagja is azt mutatja, hogy a hangsúly az önállóan teljesíthető, valóban fejlesztő feladatokon van, nem a mennyiségen (Oktatási és Gyermekügyi Minisztérium, 2026). Aki a továbbtanulásra készül, annak a magas színvonalú iskolai gyakorlás kell, nem az, hogy a szülő háttere döntsön. Ha a felvételire csak az készülhet fel jól, akinek otthon van segítség, akkor a lecke a családi háttér szerint válogat. Ez a második érvünk. Az első érvünk pedig az, hogy a fáradt gyerek másnap kevésbé figyel, tehát a felkészülést is rontja a túlterhelés.",
+            "source": "Oktatási és Gyermekügyi Minisztérium, 2026"
+          },
+          {
+            "targetArgument": "A pihenésre elég idő jut, mert a legtöbb gyereknek nem soknyi lecke van, a probléma csak a túlzás.",
+            "counterpoint": "Ha a probléma csak a túlzás, akkor miért nincs rá szabály? Magyarországon nincs egységes szabályozás, minden iskola a saját pedagógiai programjában dönti el, mennyi házi feladat jár (Eduline, 2024). Vagyis egyik iskolában kevés a lecke, a másikban sok, és a gyereknek nincs mibe kapaszkodnia. A minisztérium 2026-os csomagja szerint is az iskoláknak kell meghatározniuk, mennyi házi feladatot tartanak elfogadhatónak, és a hétvégére, szünetekre csak kivételesen adnának kötelező feladatot (HVG, 2026). Ez azt mutatja, hogy a terhelés valódi gond, különben nem kellene ilyen javaslat. Egy kisgyerek délutánja nem azon múlik, hogy melyik tanárhoz került. Ha a túlzás ellen szabály kell, akkor a legbiztosabb szabály a tilalom. Ez pontosan az első érvünk: az iskola utáni idő a pihenésé, a játéké és a családé.",
+            "source": "Eduline, 2024"
+          },
+          {
+            "targetArgument": "Az egyenlőtlenséget a tanodák és az iskolai felzárkóztatás kezeli, nem kell hozzá tilalom.",
+            "counterpoint": "A felzárkóztatás a következményt kezeli, a lecke pedig az okot adja. Amíg minden gyerek kap házi feladatot, addig lesz olyan, akinek otthon nincs segítség, és csak utólag próbáljuk helyrehozni a hátrányt. Miért adnánk fel előbb a leckét, hogy aztán külön program kelljen a bajra? A minisztérium maga is azt javasolja, hogy első osztályban és az egész napos iskolákban lehetőség szerint ne legyen kötelező otthoni írásbeli feladat (HVG, 2026). Ez azt jelzi, hogy a döntéshozók is a lecke csökkentésében látják a megoldást, nem a pótlásban. A csomag emellett csak ajánlás, az iskolák maguk döntenek, így az egyenlőtlenség az iskolák között is megmarad (Elhető Magyarország, 2026). Egy egységes szabály mindenkinek ugyanazt adja. Ez a második érvünk: aki otthon nem kap segítséget, azt nem kell leckével hátrányba hozni.",
+            "source": "HVG, 2026"
+          },
+          {
+            "targetArgument": "Egy tilalom végrehajthatatlan, mert a tanárok és a szülők úgyis adnának otthoni feladatot.",
+            "counterpoint": "Az, hogy valamit nehéz betartatni, nem jelenti azt, hogy rossz szabály. Ha így lenne, akkor semmilyen szabályt nem hoznánk. A magyar iskolák már most is írásban rögzítik a házi feladat szabályait: ha egy iskola a minisztériumi javaslatból választ, azt az órarendben, a munkatervben és szükség esetén a pedagógiai programban is rögzíteni kell (Elhető Magyarország, 2026). Vagyis az iskolák képesek ellenőrizhető, leírt szabályokat követni. A szülőket pedig éppen a világos szabály védi: ma a szülő nem tudja, mire számíthat, mert minden intézmény mást ír elő (Eduline, 2024). Ha a tanár nem adhat leckét, a szülőnek sincs mihez igazodnia. Ha a tilalom tényleg végrehajthatatlan, miért ajánlja már most a minisztérium az iskoláknak a lecke korlátozását? Ez a második érvünket erősíti: egységes szabály nélkül a családi háttér dönt.",
+            "source": "Elhető Magyarország, 2026"
+          }
+        ],
+        "reinforce": [
+          {
+            "argument": "Első érvünk: a gyereknek pihenés jár",
+            "text": "Az első érvünk arról szólt, hogy az iskola utáni idő a pihenésé, a játéké és a családé. Ezt ma már az oktatási minisztérium is kimondja: 2026 augusztusában azt javasolta, hogy az iskolai kötelezettségek ne vegyenek el indokolatlanul sok időt a gyerekek délutánjából és a családdal töltött időből (Elhetomagyarorszag.hu, 2026). Első osztályban és az egész napos iskolákban lehetőség szerint nem lenne kötelező otthoni írásbeli feladat (HVG, 2026). A tárca hosszabb mozgásos szüneteket és nyugodtabb ebédidőt is javasol (Családinet, 2026). Ez azt jelenti, hogy a fáradt kisgyerek nem kap újabb munkát az iskolai nap után. Ha a mostani terhelés rendben lenne, a minisztérium nem akarná csökkenteni."
+          },
+          {
+            "argument": "Második érvünk: a lecke egyenlőtlenséget szül",
+            "text": "A második érvünk az egyenlőtlenségről szólt: a lecke azokat sújtja, akiknek otthon nincs segítség, nyugodt hely vagy idő. Magyarországon nincs egységes szabályozás, ezért intézményenként teljesen eltérhet, milyen előírások vonatkoznak a házi feladatra (Eduline, 2024). Az adott iskola pedagógiai programja dönti el, mikor és mennyit adhatnak fel a tanárok (Eduline, 2024). Vagyis két gyerek, két iskolában, teljesen más terhelést kap, és ez nem a tudásukon múlik. A minisztérium csomagja is csak ajánlás, nem szabály (Elhetomagyarorszag.hu, 2026). Ha minden gyakorlás az iskolában történik, mindenkinek ugyanazok a feltételei. Ezért kell egységes szabály, nem ajánlás."
+          }
+        ],
+        "closingLine": "Ezért világos, hogy a házi feladatot be kell tiltani az általános iskolákban: a gyereknek pihenés jár, és minden gyereknek egyenlő esélyt kell adnunk. Köszönöm.",
+        "sources": [
+          {
+            "org": "HVG",
+            "claim": "Első osztályban és egész napos iskolában nem lenne kötelező az írásbeli házi, 35 perces órák, átszervezett délután",
+            "year": "2026",
+            "url": "https://hvg.hu/itthon/20260808_johetnek-a-35-perces-orak-es-a-kevesebb-hazi-az-also-tagozaton"
+          },
+          {
+            "org": "Eduline",
+            "claim": "A szülők ragaszkodása megszokás, Magyarországon nincs egységes szabály a házi feladatra",
+            "year": "2024",
+            "url": "https://eduline.hu/kozoktatas/20240124_Mennyi-hazi-feladatot-adhatnak-fel-a-tanarok"
+          },
+          {
+            "org": "Családinet",
+            "claim": "A minisztérium a házi feladat korlátozását és hosszabb szüneteket javasol",
+            "year": "2026",
+            "url": "https://www.csaladinet.hu/hirek/gyerekneveles/iskolas/36840/kevesebb_hazi_feladat_hosszabb_szunetek_es_35_perces_orak_johetnek_az_also_tagozatban"
+          },
+          {
+            "org": "Elhetomagyarorszag.hu",
+            "claim": "A házi feladat korlátozása a délután és a családi idő védelmére, egyelőre csak ajánlás",
+            "year": "2026",
+            "url": "https://elhetomagyarorszag.hu/index.php/2026/08/08/35-perces-tanora-hazi-feladat-korlatozas/"
+          },
+          {
+            "org": "Oktatási és Gyermekügyi Minisztérium",
+            "claim": "Az önállóan teljesíthető, valóban fejlesztő gyakorlás előtérbe helyezése",
+            "year": "2026",
+            "url": "https://www.munkacsysuli.hu/_upload/editor/Dokumentumok/Javaslatcsomag-2.pdf"
+          }
+        ],
+        "metadata": {
+          "side": "pro",
+          "format": "custom",
+          "generatedAt": "2026-11-03T12:00:00Z",
+          "model": "anthropic/claude-sonnet-5.5",
+          "provider": "openrouter",
+          "sourceUsage": [],
+          "durationMs": 33887
+        }
+      },
+      "discoveredSources": [
+        {
+          "title": "KÖZNEVELÉS 2025",
+          "url": "https://www.parlament.hu/documents/d/guest/infotablo_2025_43_kozneveles_2025",
+          "content": "ORSZÁGGYŰLÉS HIVATALA KÖZGYŰJTEMÉNYI ÉS KÖZMŰVELŐDÉSI IGAZGATÓSÁG KÉPVISELŐI INFORMÁCIÓS SZOLGÁLAT\n\nóvoda\n\n710,5\n\n547,2\n\n429,1\n\n324,9\n\n### KÖZNEVELÉSBEN RÉSZTVEVŐ GYERMEKEK, TANULÓK SZÁMA (ezer fő)\n\nAz egyes középfokú intézménytípusok között lényeges különbségek nincsenek. A ’24/25-ös tanévben a technikumokban, szakgimnáziumokban és gimnáziumokban egy pedagógusra átlagosan 10,2, a szakképző iskolákban pedig 10,1 tanuló jutott.\n\n1\n\n2025. NOVEMBER 28.\n\n2025 43\n\nRendszeresen publikált Infotablónk célja egyes oktatási mutatók ismertetése. A kiadvány évente jelenik meg, a legfrissebb nyilvános adatokon alapul. Magyarországra fókuszál, de esetenként nemzetközi összehasonlító adatokat is közöl.\n\nKÖZNEVELÉS 2025 óvodás gyermek középiskolai tanuló* általános iskolai tanuló* * nappali oktatásban\n\n397,3\n\n1001,7\n\n#### EGY PEDAGÓGUSRA JUTÓ GYERMEK, ILLETVE TANULÓ (fő)\n\n2009/2010 2024/2025\n\n328,5\n\n581,9\n\n773,7 10,9 10,4\n\náltalános iskola közép iskola\n\n10,4 9,7\n\n12,0 10,0\n\n#### TANÁRI FIZETÉSEK (ALSÓ",
+          "qualityScore": 94,
+          "sourceType": "results",
+          "qualityLabel": "strong",
+          "query": "Ez a Ház betiltaná a házi feladatot az általános iskolákban Magyarország kutatás adatok felmérés 2025 2026"
+        },
+        {
+          "title": "Gazdaság: Így változik az életünk szeptember 1-től",
+          "url": "https://hvg.hu/gazdasag/20260901_igy-valtozik-az-eletunk-szeptember-1-tol",
+          "content": "Gazdaság: Így változik az életünk szeptember 1-től\n\n# Így változik az életünk szeptember 1-től\n\nA legtöbben az iskolakezdésre készülnek, de ezen túl is több fontos változás jön keddtől. \n\n- HVG \n\nSzeptember elsejével nemcsak az ősz érkezik meg (igaz, még azért elég meleg lesz), hanem számtalan egyéb változás is meghatározza majd az életünket.\n\n## Jön a suli, jönnek a dugók\n\nA legtöbb magyar életében vélhetően az iskolakezdés (és persze óvoda-, bölcsődekezdés) hozza a legnagyobb változást. Ez ugyanis nemcsak a gyerekeseket érinti, hanem a növekvő forgalom miatt azokat is, akik nem egy oktatási intézményben kezdik mostantól a mindennapjaikat: nemcsak több autó lesz az utakon, hanem a buszokon is kevesebb helyünk lesz, hogy kényelmesen utazzunk – bár igaz, a BKK is sűrűbb menetrenddel és nagyobb kapacitással működik keddtől. A fővárosi közlekedők számára az is fontos információ, hogy szeptembertől változik a pesti alsó rakpart autómentes időszaka, \n\na diákok számára pedig az, hogy mostant",
+          "qualityScore": 75,
+          "sourceType": "generic",
+          "qualityLabel": "strong",
+          "query": "Ez a Ház betiltaná a házi feladatot az általános iskolákban Magyarország kutatás adatok felmérés 2025 2026"
+        },
+        {
+          "title": "Itthon: Jöhetnek a 35 perces órák és a kevesebb házi az alsó tagozaton",
+          "url": "https://hvg.hu/itthon/20260808_johetnek-a-35-perces-orak-es-a-kevesebb-hazi-az-also-tagozaton",
+          "content": "Itthon: Jöhetnek a 35 perces órák és a kevesebb házi az alsó tagozaton\n\n# Jöhetnek a 35 perces órák és a kevesebb házi az alsó tagozaton\n\nTöbb időt hagynának a pihenésre és a mozgásra is.\n\n- HVG \n\nRövidebb tanórákat, hosszabb szüneteket, kevesebb házi feladatot, valamint több játékot, mesét és mozgást javasol az Oktatási és Gyermekügyi Minisztérium az alsó tagozatos oktatás megújítására. Kókayné Lányi Marietta közoktatásért felelős államtitkár „Legyen élmény a tanulás!” címmel küldte el az iskoláknak a gyermekközpontúbb oktatást célzó javaslatcsomagot.\n\nAz egyik legfontosabb változás a tanórák hosszát érintheti. A minisztérium azt javasolja az iskoláknak, hogy vizsgálják meg a 35 perces tanítási órák bevezetésének lehetőségét. Emellett hosszabb, többféle tevékenységet összekapcsoló tanulási blokkokat is kialakíthatnának. A reggelek is lazábban indulhatnának: a tanítás előtt beszélgetőkör, közös olvasás, mesehallgatás vagy mozgás segíthetné a gyerekek ráhangolódását.\n\nJelentősen változh",
+          "qualityScore": 75,
+          "sourceType": "generic",
+          "qualityLabel": "strong",
+          "query": "Ez a Ház betiltaná a házi feladatot az általános iskolákban Magyarország kutatás adatok felmérés 2025 2026"
+        },
+        {
+          "title": "35 perces tanóra jöhet, a házi feladatot is korlátoznák",
+          "url": "https://elhetomagyarorszag.hu/index.php/2026/08/08/35-perces-tanora-hazi-feladat-korlatozas/",
+          "content": "35 perces tanóra jöhet, a házi feladatot is korlátoznák\n\n# Jöhet a 35 perces tanóra: az alsósok házi feladatát is korlátoznák\n\nÍrta:\n\nGeschitz József\n\n2026.08.08.\n\nA 35 perces tanóra bevezetésének lehetőségét is megvizsgálhatják az általános iskolák az alsó tagozatokon. Az Oktatási és Gyermekügyi Minisztérium 14 pontos ajánláscsomagja emellett kevesebb házi feladatot, hosszabb mozgásos szüneteket, nyugodtabb ebédidőt és gyermekközpontúbb oktatást szorgalmaz.\n\n## 35 perces tanóra jöhet az alsó tagozatokon\n\nAz Oktatási és Gyermekügyi Minisztérium szombaton tette közzé az alsó tagozatos oktatás megújítását célzó, 14 pontból álló ajánláscsomagját.\n\nA Kókayné Lányi Marietta közoktatásért felelős államtitkár által jegyzett dokumentum egyik legfontosabb eleme, hogy az iskolák vizsgálják meg a 35 perces tanítási órák bevezetésének lehetőségét.\n\nFontos ugyanakkor, hogy egyelőre ajánlásról van szó, vagyis a dokumentum nem jelenti azt, hogy szeptembertől minden magyar általános iskolában automati",
+          "qualityScore": 75,
+          "sourceType": "generic",
+          "qualityLabel": "strong",
+          "query": "Ez a Ház betiltaná a házi feladatot az általános iskolákban official data evidence 2025 2026"
+        },
+        {
+          "title": "Kevesebb házi feladat, hosszabb szünetek és 35 perces órák jöhetnek az alsó tagozatban – CsaládiNet",
+          "url": "https://www.csaladinet.hu/hirek/gyerekneveles/iskolas/36840/kevesebb_hazi_feladat_hosszabb_szunetek_es_35_perces_orak_johetnek_az_also_tagozatban",
+          "content": "Kevesebb házi feladat, hosszabb szünetek és 35 perces órák jöhetnek az alsó tagozatban – CsaládiNet\n\n# Kevesebb házi feladat, hosszabb szünetek és 35 perces órák jöhetnek az alsó tagozatban\n\n2026. 08. 10. Családinet\n\nRugalmasabb napkezdést, több mozgást, hosszabb szüneteket és kevesebb otthoni feladatot is javasolnak az általános iskoláknak. Az új lehetőségekből már a szeptemberben kezdődő tanévben is válogathatnak az intézmények.\n\nNem feltétlenül ugyanúgy indul majd a tanítás minden általános iskolában szeptembertől. Az Oktatási és Gyermekügyi Minisztérium 14 pontos szakmai javaslatcsomagot küldött az intézményeknek, amely az alsó tagozatos gyerekek terhelésének csökkentését és a gyerekekhez jobban igazodó tanulásszervezést célozza.\n\nA javaslatok között egészen konkrét változtatások is szerepelnek: például a 35 perces tanítási órák lehetőségének megvizsgálása, hosszabb szünetek, kevesebb házi feladat és több játékos, tapasztalati tanulás.\n\n### 35 perces órák és rugalmasabb reggelek\n\nA",
+          "qualityScore": 75,
+          "sourceType": "generic",
+          "qualityLabel": "strong",
+          "query": "Ez a Ház betiltaná a házi feladatot az általános iskolákban official data evidence 2025 2026"
+        }
+      ],
+      "sourceAssessments": [],
+      "meta": {
+        "requestedModel": "anthropic/claude-sonnet-5.5",
+        "resolvedModel": "anthropic/claude-sonnet-5.5",
+        "debateContext": {
+          "debateId": "cf057d21-3472-4faf-bba4-9be4341032b6",
+          "sourcesUsed": 5,
+          "sourcesOmittedForSize": 0,
+          "sourcesShortened": 0,
+          "sourcesUnavailable": 0,
+          "outputsUsed": [
+            {
+              "kind": "case",
+              "id": "f3fd8f7b-af33-48e9-9f61-813af5ce5d0f"
+            }
+          ],
+          "outputsOmittedForSize": [],
+          "outputsUnavailable": 0,
+          "instructionsUsed": false
+        }
+      }
+    },
+    "providerCalls": [
+      {
+        "feature": "jev",
+        "requestedModel": null,
+        "upstreamModel": "typesafe/jev-1.13-20260917",
+        "upstreamProvider": "TypeSafe",
+        "status": 200,
+        "ms": 289,
+        "stream": null
+      },
+      {
+        "feature": "research-queries",
+        "requestedModel": "anthropic/claude-haiku-5.5",
+        "upstreamModel": "anthropic/claude-sonnet-5.5",
+        "upstreamProvider": "Anthropic",
+        "status": 200,
+        "ms": 2394,
+        "stream": false
+      },
+      {
+        "feature": "jev",
+        "requestedModel": null,
+        "upstreamModel": "typesafe/jev-1.13-20260917",
+        "upstreamProvider": "TypeSafe",
+        "status": 200,
+        "ms": 279,
+        "stream": null
+      },
+      {
+        "feature": "generate",
+        "requestedModel": "anthropic/claude-sonnet-5.5",
+        "upstreamModel": "anthropic/claude-sonnet-5.5",
+        "upstreamProvider": "Anthropic",
+        "status": 200,
+        "ms": 8033,
+        "stream": false,
+        "userPromptHead": "Motion: Ez a Ház betiltaná a házi feladatot az általános iskolákban\nSide: pro\nFormat: custom\nRole: r2\nLength: standard\nLength Instruction: Return no contentions. Return exactly 2 reinforce items and exactly 12 counters, each answer about 120-150 words.\nSpeech Budget: 6 minutes, about 780 spoken words at 130 words a minute. The opening, the backing-up paragraphs and the closing line together stay within about 300 words (about 2 minutes); the rest of the time is for the \"If they say...\" blocks the other side actually used.\nAudience: intermediate\nAudience Instruction: Assume a trained debater: use clear, concise explanations.\nTone: formal\nTone Instruction: Use polished, judge-facing language with controlled phrasing.\nLanguage: Hungarian (hu) - Write ALL output in this language.",
+        "debateContextIncluded": true
+      },
+      {
+        "feature": "generate",
+        "requestedModel": "anthropic/claude-sonnet-5.5",
+        "upstreamModel": "anthropic/claude-sonnet-5.5",
+        "upstreamProvider": "Anthropic",
+        "status": 200,
+        "ms": 21698,
+        "stream": true,
+        "userPromptHead": "Motion: Ez a Ház betiltaná a házi feladatot az általános iskolákban\nSide: pro\nFormat: custom\nRole: r2\nLength: standard\nLength Instruction: Return no contentions. Return exactly 2 reinforce items and exactly 12 counters, each answer about 120-150 words.\nSpeech Budget: 6 minutes, about 780 spoken words at 130 words a minute. The opening, the backing-up paragraphs and the closing line together stay within about 300 words (about 2 minutes); the rest of the time is for the \"If they say...\" blocks the other side actually used.\nAudience: intermediate\nAudience Instruction: Assume a trained debater: use clear, concise explanations.\nTone: formal\nTone Instruction: Use polished, judge-facing language with controlled phrasing.\nLanguage: Hungarian (hu) - Write ALL output in this language.",
+        "debateContextIncluded": true
+      },
+      {
+        "feature": "generate",
+        "requestedModel": "anthropic/claude-sonnet-5.5",
+        "upstreamModel": "anthropic/claude-sonnet-5.5",
+        "upstreamProvider": "Anthropic",
+        "status": 200,
+        "ms": 16560,
+        "stream": false,
+        "userPromptHead": "Motion: Ez a Ház betiltaná a házi feladatot az általános iskolákban\nSide: pro\nFormat: custom\nRole: r2\nLength: standard\nLength Instruction: Return no contentions. Return exactly 2 reinforce items and exactly 12 counters, each answer about 120-150 words.\nSpeech Budget: 6 minutes, about 780 spoken words at 130 words a minute. The opening, the backing-up paragraphs and the closing line together stay within about 300 words (about 2 minutes); the rest of the time is for the \"If they say...\" blocks the other side actually used.\nAudience: intermediate\nAudience Instruction: Assume a trained debater: use clear, concise explanations.\nTone: formal\nTone Instruction: Use polished, judge-facing language with controlled phrasing.\nLanguage: Hungarian (hu) - Write ALL output in this language.",
+        "debateContextIncluded": true
+      },
+      {
+        "feature": "generate",
+        "requestedModel": "anthropic/claude-sonnet-5.5",
+        "upstreamModel": "anthropic/claude-sonnet-5.5",
+        "upstreamProvider": "Anthropic",
+        "status": 200,
+        "ms": 15209,
+        "stream": false,
+        "userPromptHead": "Motion: Ez a Ház betiltaná a házi feladatot az általános iskolákban\nSide: pro\nFormat: custom\nRole: r2\nLength: standard\nLength Instruction: Return no contentions. Return exactly 2 reinforce items and exactly 12 counters, each answer about 120-150 words.\nSpeech Budget: 6 minutes, about 780 spoken words at 130 words a minute. The opening, the backing-up paragraphs and the closing line together stay within about 300 words (about 2 minutes); the rest of the time is for the \"If they say...\" blocks the other side actually used.\nAudience: intermediate\nAudience Instruction: Assume a trained debater: use clear, concise explanations.\nTone: formal\nTone Instruction: Use polished, judge-facing language with controlled phrasing.\nLanguage: Hungarian (hu) - Write ALL output in this language.",
+        "debateContextIncluded": true
+      },
+      {
+        "feature": "generate",
+        "requestedModel": "anthropic/claude-sonnet-5.5",
+        "upstreamModel": "anthropic/claude-sonnet-5.5",
+        "upstreamProvider": "Anthropic",
+        "status": 200,
+        "ms": 14955,
+        "stream": false,
+        "userPromptHead": "Motion: Ez a Ház betiltaná a házi feladatot az általános iskolákban\nSide: pro\nFormat: custom\nRole: r2\nLength: standard\nLength Instruction: Return no contentions. Return exactly 2 reinforce items and exactly 12 counters, each answer about 120-150 words.\nSpeech Budget: 6 minutes, about 780 spoken words at 130 words a minute. The opening, the backing-up paragraphs and the closing line together stay within about 300 words (about 2 minutes); the rest of the time is for the \"If they say...\" blocks the other side actually used.\nAudience: intermediate\nAudience Instruction: Assume a trained debater: use clear, concise explanations.\nTone: formal\nTone Instruction: Use polished, judge-facing language with controlled phrasing.\nLanguage: Hungarian (hu) - Write ALL output in this language.",
+        "debateContextIncluded": true
+      }
+    ]
+  },
+  "aiRequests": [
+    {
+      "id": "760f4d5e-32fc-4b93-be15-fae731cdbad0",
+      "user_id": "9e9e64e8-080a-482b-8ade-5bb5abda48db",
+      "feature": "jev_source_ranking",
+      "provider": "openrouter",
+      "model": "typesafe/jev-1.13",
+      "input_tokens": 4058,
+      "output_tokens": 279,
+      "latency_ms": null,
+      "status": "success",
+      "error_code": null,
+      "cost_usd": 0.000170436,
+      "created_at": "2026-11-03T17:21:09.500009+00:00",
+      "cached_input_tokens": null,
+      "cache_write_tokens": null,
+      "reasoning_output_tokens": null,
+      "pricing_snapshot_id": "openrouter-response-usage",
+      "pricing_source_url": "https://openrouter.ai/docs/cookbook/administration/usage-accounting",
+      "cost_calculation_version": "openrouter-usage-v2",
+      "raw_usage": {
+        "cost": 0.000170436,
+        "input_tokens": 4058,
+        "output_tokens": 279
+      },
+      "cap_cost_usd": 0.000170436
+    },
+    {
+      "id": "3d6ddaa7-aa02-40d5-b24f-e8cdfe37fbc5",
+      "user_id": "9e9e64e8-080a-482b-8ade-5bb5abda48db",
+      "feature": "generate",
+      "provider": "openrouter",
+      "model": "anthropic/claude-sonnet-5.5",
+      "input_tokens": 23820,
+      "output_tokens": 3843,
+      "latency_ms": 33962,
+      "status": "success",
+      "error_code": null,
+      "cost_usd": 0.11375800000000004,
+      "created_at": "2026-11-03T17:21:38.054466+00:00",
+      "cached_input_tokens": 6480,
+      "cache_write_tokens": 0,
+      "reasoning_output_tokens": 0,
+      "pricing_snapshot_id": "openrouter-response-usage",
+      "pricing_source_url": "https://openrouter.ai/docs/cookbook/administration/usage-accounting",
+      "cost_calculation_version": "openrouter-usage-v2",
+      "raw_usage": {
+        "calls": [
+          {
+            "cost": 0,
+            "is_byok": true,
+            "cost_details": {
+              "upstream_inference_cost": 0.068276,
+              "upstream_inference_prompt_cost": 0.031226,
+              "upstream_inference_completions_cost": 0.03705
+            },
+            "total_tokens": 25474,
+            "prompt_tokens": 21769,
+            "completion_tokens": 3705,
+            "prompt_tokens_details": {
+              "audio_tokens": 0,
+              "video_tokens": 0,
+              "cached_tokens": 6480,
+              "cache_write_tokens": 0
+            },
+            "completion_tokens_details": {
+              "audio_tokens": 0,
+              "image_tokens": 0,
+              "reasoning_tokens": 0
+            }
+          },
+          {
+            "endpoint": "search",
+            "provider": "exa",
+            "request_id": "da123697a8f95db0c2eca960bb09f7a2",
+            "cost_dollars": {
+              "total": 0.007,
+              "search": {
+                "neural": 0.007
+              }
+            }
+          },
+          {
+            "endpoint": "search",
+            "provider": "exa",
+            "request_id": "d291b493ad52538b897d55ed51feb8eb",
+            "cost_dollars": {
+              "total": 0.007,
+              "search": {
+                "neural": 0.007
+              }
+            }
+          },
+          {
+            "endpoint": "search",
+            "provider": "exa",
+            "request_id": "c6c93461fa2fb0ab1872a649ef4ae81a",
+            "cost_dollars": {
+              "total": 0.007,
+              "search": {
+                "neural": 0.007
+              }
+            }
+          },
+          {
+            "cost": 0,
+            "is_byok": true,
+            "cost_details": {
+              "upstream_inference_cost": 0.005482,
+              "upstream_inference_prompt_cost": 0.004102,
+              "upstream_inference_completions_cost": 0.00138
+            },
+            "total_tokens": 2189,
+            "prompt_tokens": 2051,
+            "completion_tokens": 138,
+            "prompt_tokens_details": {
+              "audio_tokens": 0,
+              "video_tokens": 0,
+              "cached_tokens": 0,
+              "cache_write_tokens": 0
+            },
+            "completion_tokens_details": {
+              "audio_tokens": 0,
+              "image_tokens": 0,
+              "reasoning_tokens": 0
+            }
+          },
+          {
+            "endpoint": "search",
+            "provider": "exa",
+            "request_id": "13ab5d662e1ce47f1c67a64363074aa2",
+            "cost_dollars": {
+              "total": 0.007,
+              "search": {
+                "neural": 0.007
+              }
+            }
+          },
+          {
+            "endpoint": "search",
+            "provider": "exa",
+            "request_id": "c5b5d6fc436b4a7241bd978ede6999b9",
+            "cost_dollars": {
+              "total": 0.007,
+              "search": {
+                "neural": 0.007
+              }
+            }
+          },
+          {
+            "endpoint": "contents",
+            "provider": "exa",
+            "request_id": "4c567f1260388d2601b9ee5bae97119e",
+            "cost_dollars": {
+              "total": 0.001,
+              "contents": {
+                "text": 0.001
+              }
+            }
+          },
+          {
+            "endpoint": "contents",
+            "provider": "exa",
+            "request_id": "3aa2bfa88c3ce626eb3ebbd3a702abba",
+            "cost_dollars": {
+              "total": 0.001,
+              "contents": {
+                "text": 0.001
+              }
+            }
+          },
+          {
+            "endpoint": "contents",
+            "provider": "exa",
+            "request_id": "c6a0a55e8ce8efe89559f9be2a845e66",
+            "cost_dollars": {
+              "total": 0.001,
+              "contents": {
+                "text": 0.001
+              }
+            }
+          },
+          {
+            "endpoint": "contents",
+            "provider": "exa",
+            "request_id": "5838f5c21142f891f7ed5d7dc45e8e45",
+            "cost_dollars": {
+              "total": 0.001,
+              "contents": {
+                "text": 0.001
+              }
+            }
+          },
+          {
+            "endpoint": "contents",
+            "provider": "exa",
+            "request_id": "a74379d85caf534c305bb797ca53034d",
+            "cost_dollars": {
+              "total": 0.001,
+              "contents": {
+                "text": 0.001
+              }
+            }
+          }
+        ]
+      },
+      "cap_cost_usd": 0.11375800000000004
+    },
+    {
+      "id": "c6bb619c-4dcf-48b6-aaec-b536127b30b5",
+      "user_id": "9e9e64e8-080a-482b-8ade-5bb5abda48db",
+      "feature": "jev_source_ranking",
+      "provider": "openrouter",
+      "model": "typesafe/jev-1.13",
+      "input_tokens": 4018,
+      "output_tokens": 279,
+      "latency_ms": null,
+      "status": "success",
+      "error_code": null,
+      "cost_usd": 0.000168756,
+      "created_at": "2026-11-03T17:21:40.43894+00:00",
+      "cached_input_tokens": null,
+      "cache_write_tokens": null,
+      "reasoning_output_tokens": null,
+      "pricing_snapshot_id": "openrouter-response-usage",
+      "pricing_source_url": "https://openrouter.ai/docs/cookbook/administration/usage-accounting",
+      "cost_calculation_version": "openrouter-usage-v2",
+      "raw_usage": {
+        "cost": 0.000168756,
+        "input_tokens": 4018,
+        "output_tokens": 279
+      },
+      "cap_cost_usd": 0.000168756
+    },
+    {
+      "id": "c4d82696-9e52-49e1-847c-5e7d8402f89b",
+      "user_id": "9e9e64e8-080a-482b-8ade-5bb5abda48db",
+      "feature": "jev_source_ranking",
+      "provider": "openrouter",
+      "model": "typesafe/jev-1.13",
+      "input_tokens": 4088,
+      "output_tokens": 279,
+      "latency_ms": null,
+      "status": "success",
+      "error_code": null,
+      "cost_usd": 0.000171696,
+      "created_at": "2026-11-03T17:21:44.567335+00:00",
+      "cached_input_tokens": null,
+      "cache_write_tokens": null,
+      "reasoning_output_tokens": null,
+      "pricing_snapshot_id": "openrouter-response-usage",
+      "pricing_source_url": "https://openrouter.ai/docs/cookbook/administration/usage-accounting",
+      "cost_calculation_version": "openrouter-usage-v2",
+      "raw_usage": {
+        "cost": 0.000171696,
+        "input_tokens": 4088,
+        "output_tokens": 279
+      },
+      "cap_cost_usd": 0.000171696
+    },
+    {
+      "id": "64c6e0f9-9c7f-466e-96d0-7bceeffade07",
+      "user_id": "9e9e64e8-080a-482b-8ade-5bb5abda48db",
+      "feature": "generate",
+      "provider": "openrouter",
+      "model": "anthropic/claude-sonnet-5.5",
+      "input_tokens": 138715,
+      "output_tokens": 9741,
+      "latency_ms": 33887,
+      "status": "success",
+      "error_code": null,
+      "cost_usd": 0.332338,
+      "created_at": "2026-11-03T17:22:14.350787+00:00",
+      "cached_input_tokens": 46480,
+      "cache_write_tokens": 11620,
+      "reasoning_output_tokens": 0,
+      "pricing_snapshot_id": "openrouter-response-usage",
+      "pricing_source_url": "https://openrouter.ai/docs/cookbook/administration/usage-accounting",
+      "cost_calculation_version": "openrouter-usage-v2",
+      "raw_usage": {
+        "calls": [
+          {
+            "calls": [
+              {
+                "cost": 0,
+                "is_byok": true,
+                "cost_details": {
+                  "upstream_inference_cost": 0.067436,
+                  "upstream_inference_prompt_cost": 0.060176,
+                  "upstream_inference_completions_cost": 0.00726
+                },
+                "total_tokens": 27909,
+                "prompt_tokens": 27183,
+                "completion_tokens": 726,
+                "prompt_tokens_details": {
+                  "audio_tokens": 0,
+                  "video_tokens": 0,
+                  "cached_tokens": 0,
+                  "cache_write_tokens": 11620
+                },
+                "completion_tokens_details": {
+                  "audio_tokens": 0,
+                  "image_tokens": 0,
+                  "reasoning_tokens": 0
+                }
+              },
+              {
+                "cost": 0,
+                "is_byok": true,
+                "cost_details": {
+                  "upstream_inference_cost": 0.063568,
+                  "upstream_inference_prompt_cost": 0.032628,
+                  "upstream_inference_completions_cost": 0.03094
+                },
+                "total_tokens": 30447,
+                "prompt_tokens": 27353,
+                "completion_tokens": 3094,
+                "prompt_tokens_details": {
+                  "audio_tokens": 0,
+                  "video_tokens": 0,
+                  "cached_tokens": 11620,
+                  "cache_write_tokens": 0
+                },
+                "completion_tokens_details": {
+                  "audio_tokens": 0,
+                  "image_tokens": 0,
+                  "reasoning_tokens": 0
+                }
+              },
+              {
+                "cost": 0,
+                "is_byok": true,
+                "cost_details": {
+                  "upstream_inference_cost": 0.051326,
+                  "upstream_inference_prompt_cost": 0.032686,
+                  "upstream_inference_completions_cost": 0.01864
+                },
+                "total_tokens": 29246,
+                "prompt_tokens": 27382,
+                "completion_tokens": 1864,
+                "prompt_tokens_details": {
+                  "audio_tokens": 0,
+                  "video_tokens": 0,
+                  "cached_tokens": 11620,
+                  "cache_write_tokens": 0
+                },
+                "completion_tokens_details": {
+                  "audio_tokens": 0,
+                  "image_tokens": 0,
+                  "reasoning_tokens": 0
+                }
+              },
+              {
+                "cost": 0,
+                "is_byok": true,
+                "cost_details": {
+                  "upstream_inference_cost": 0.053954,
+                  "upstream_inference_prompt_cost": 0.032644,
+                  "upstream_inference_completions_cost": 0.02131
+                },
+                "total_tokens": 29492,
+                "prompt_tokens": 27361,
+                "completion_tokens": 2131,
+                "prompt_tokens_details": {
+                  "audio_tokens": 0,
+                  "video_tokens": 0,
+                  "cached_tokens": 11620,
+                  "cache_write_tokens": 0
+                },
+                "completion_tokens_details": {
+                  "audio_tokens": 0,
+                  "image_tokens": 0,
+                  "reasoning_tokens": 0
+                }
+              },
+              {
+                "cost": 0,
+                "is_byok": true,
+                "cost_details": {
+                  "upstream_inference_cost": 0.050582,
+                  "upstream_inference_prompt_cost": 0.032692,
+                  "upstream_inference_completions_cost": 0.01789
+                },
+                "total_tokens": 29174,
+                "prompt_tokens": 27385,
+                "completion_tokens": 1789,
+                "prompt_tokens_details": {
+                  "audio_tokens": 0,
+                  "video_tokens": 0,
+                  "cached_tokens": 11620,
+                  "cache_write_tokens": 0
+                },
+                "completion_tokens_details": {
+                  "audio_tokens": 0,
+                  "image_tokens": 0,
+                  "reasoning_tokens": 0
+                }
+              }
+            ]
+          },
+          {
+            "endpoint": "search",
+            "provider": "exa",
+            "request_id": "40752b52b9bd4e85e50e8a392e417ae5",
+            "cost_dollars": {
+              "total": 0.007,
+              "search": {
+                "neural": 0.007
+              }
+            }
+          },
+          {
+            "endpoint": "search",
+            "provider": "exa",
+            "request_id": "fa6524b8efcb10bbda60419f5a8620de",
+            "cost_dollars": {
+              "total": 0.007,
+              "search": {
+                "neural": 0.007
+              }
+            }
+          },
+          {
+            "endpoint": "search",
+            "provider": "exa",
+            "request_id": "0f7b5e17c3e597d2ac77ccc1d7816370",
+            "cost_dollars": {
+              "total": 0.007,
+              "search": {
+                "neural": 0.007
+              }
+            }
+          },
+          {
+            "cost": 0,
+            "is_byok": true,
+            "cost_details": {
+              "upstream_inference_cost": 0.005472,
+              "upstream_inference_prompt_cost": 0.004102,
+              "upstream_inference_completions_cost": 0.00137
+            },
+            "total_tokens": 2188,
+            "prompt_tokens": 2051,
+            "completion_tokens": 137,
+            "prompt_tokens_details": {
+              "audio_tokens": 0,
+              "video_tokens": 0,
+              "cached_tokens": 0,
+              "cache_write_tokens": 0
+            },
+            "completion_tokens_details": {
+              "audio_tokens": 0,
+              "image_tokens": 0,
+              "reasoning_tokens": 0
+            }
+          },
+          {
+            "endpoint": "search",
+            "provider": "exa",
+            "request_id": "4c5e4192852410040a617786f9ba36ed",
+            "cost_dollars": {
+              "total": 0.007,
+              "search": {
+                "neural": 0.007
+              }
+            }
+          },
+          {
+            "endpoint": "search",
+            "provider": "exa",
+            "request_id": "c95838cfb58cdbd73e59528521666755",
+            "cost_dollars": {
+              "total": 0.007,
+              "search": {
+                "neural": 0.007
+              }
+            }
+          },
+          {
+            "endpoint": "contents",
+            "provider": "exa",
+            "request_id": "5c84fd5f25ea682fa66837bea65f2c4b",
+            "cost_dollars": {
+              "total": 0.001,
+              "contents": {
+                "text": 0.001
+              }
+            }
+          },
+          {
+            "endpoint": "contents",
+            "provider": "exa",
+            "request_id": "393d1e64bcd9362121345149c9737ca9",
+            "cost_dollars": {
+              "total": 0.001,
+              "contents": {
+                "text": 0.001
+              }
+            }
+          },
+          {
+            "endpoint": "contents",
+            "provider": "exa",
+            "request_id": "5ca2d44c56bffddef73a95fa1f213b7d",
+            "cost_dollars": {
+              "total": 0.001,
+              "contents": {
+                "text": 0.001
+              }
+            }
+          },
+          {
+            "endpoint": "contents",
+            "provider": "exa",
+            "request_id": "2bb34b069abd831e6e0cf9beea2c003d",
+            "cost_dollars": {
+              "total": 0.001,
+              "contents": {
+                "text": 0.001
+              }
+            }
+          },
+          {
+            "endpoint": "contents",
+            "provider": "exa",
+            "request_id": "666d9b991c20d71e7564ec1e7c801c2b",
+            "cost_dollars": {
+              "total": 0.001,
+              "contents": {
+                "text": 0.001
+              }
+            }
+          }
+        ]
+      },
+      "cap_cost_usd": 0.332338
+    }
+  ],
+  "caseRows": [
+    {
+      "id": "f3fd8f7b-af33-48e9-9f61-813af5ce5d0f",
+      "title": "Ez a Ház betiltaná a házi feladatot az általános iskolákban",
+      "side": "pro",
+      "created_at": "2026-11-03T17:21:38.778817+00:00",
+      "debates": {
+        "motion": "Ez a Ház betiltaná a házi feladatot az általános iskolákban",
+        "settings": {
+          "role": "general",
+          "format": "classroom"
+        }
+      }
+    },
+    {
+      "id": "02ffe158-fad9-4ff0-8015-54c5ad287ace",
+      "title": "Ez a Ház betiltaná a házi feladatot az általános iskolákban",
+      "side": "pro",
+      "created_at": "2026-11-03T17:22:14.758949+00:00",
+      "debates": {
+        "motion": "Ez a Ház betiltaná a házi feladatot az általános iskolákban",
+        "settings": {
+          "role": "general",
+          "format": "classroom"
+        }
+      }
+    }
+  ]
+}

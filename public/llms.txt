@@ -27,7 +27,8 @@ DebateOwl runs at https://debateowl.com/. It is a separate product from debatela
 - [About](https://debateowl.com/about): what DebateOwl is, who runs it and its former name
 - [Contact](https://debateowl.com/contact): email hello@debateowl.com for support and feedback, privacy@debateowl.com for privacy and data requests
 - [Press kit and facts](https://debateowl.com/press): a one-sentence definition, former name, maker, languages, pricing, logo downloads and what DebateOwl is not
-- [Full text](https://debateowl.com/llms-full.txt): this file plus the plain text of the home page, About, Which AI is best for debate? and the press kit
+- [Debate case example](https://debateowl.com/debate-case-example): real DebateOwl case examples (British Parliamentary and Policy in English, Classroom in Hungarian) with "If they say… we answer…" replies and the R2
+- [Full text](https://debateowl.com/llms-full.txt): this file plus the plain text of the home page, About, Which AI is best for debate?, the press kit and the debate case examples
 - [Sitemap](https://debateowl.com/sitemap.xml): every public page
 
 ## Free tools

@@ -1,0 +1,89 @@
+[
+  {
+    "id": "levin-2025",
+    "checked": "2026-11-03",
+    "note": "Sample 1 (British Parliamentary), first speech: the Levin (2025) study of whether 16-year-olds are mature enough to vote linked to the journal's page at tandfonline.com, which stays behind a Cloudflare check. It now links the author's open preprint of the same paper on APSA Preprints. Its source line also named the wrong journal (the study appeared in the Journal of Elections, Public Opinion and Parties), so the line now names APSA Preprints.",
+    "changes": [
+      {
+        "sample": "bp-en",
+        "speech": "r1",
+        "path": [
+          "sources",
+          3,
+          "url"
+        ],
+        "from": "https://www.tandfonline.com/doi/full/10.1080/17457289.2025.2560983",
+        "to": "https://preprints.apsanet.org/engage/apsa/article-details/6886c339728bf9025e8fa41a"
+      },
+      {
+        "sample": "bp-en",
+        "speech": "r1",
+        "path": [
+          "sources",
+          3,
+          "org"
+        ],
+        "from": "Levin, Taylor & Francis",
+        "to": "Levin, APSA Preprints"
+      },
+      {
+        "sample": "bp-en",
+        "speech": "r1",
+        "path": [
+          "counters",
+          0,
+          "source"
+        ],
+        "from": "Levin, Political Studies Review (Taylor & Francis), 2025",
+        "to": "Levin, APSA Preprints, 2025"
+      }
+    ]
+  },
+  {
+    "id": "senate-commerce-2026",
+    "checked": "2026-11-03",
+    "note": "Sample 2 (Policy), first and second speech: the Senate Commerce Committee's February 2026 report on California high-speed rail linked to commerce.senate.gov, which answers Access Denied. It now links the Internet Archive's copy of the same report. The case's wording did not change.",
+    "changes": [
+      {
+        "sample": "policy-en",
+        "speech": "r1",
+        "path": [
+          "sources",
+          3,
+          "url"
+        ],
+        "from": "https://www.commerce.senate.gov/wp-content/uploads/media/doc/2026.02.05%20CHSRA%20Follow-Up%20Report%20(Part%202%20of%20Acela%20Report).pdf",
+        "to": "https://web.archive.org/web/20260811041844/https://www.commerce.senate.gov/wp-content/uploads/media/doc/2026.02.05%20CHSRA%20Follow-Up%20Report%20(Part%202%20of%20Acela%20Report).pdf"
+      },
+      {
+        "sample": "policy-en",
+        "speech": "r2",
+        "path": [
+          "sources",
+          3,
+          "url"
+        ],
+        "from": "https://www.commerce.senate.gov/wp-content/uploads/media/doc/2026.02.05%20CHSRA%20Follow-Up%20Report%20(Part%202%20of%20Acela%20Report).pdf",
+        "to": "https://web.archive.org/web/20260811041844/https://www.commerce.senate.gov/wp-content/uploads/media/doc/2026.02.05%20CHSRA%20Follow-Up%20Report%20(Part%202%20of%20Acela%20Report).pdf"
+      }
+    ]
+  },
+  {
+    "id": "brazil-1988",
+    "checked": "2026-11-03",
+    "note": "Sample 1 (British Parliamentary), first speech, first “If they say…” answer: the model wrote that 16-year-olds have voted “since 1984 in Nicaragua and Brazil”. Nicaragua is right, but Brazil has allowed 16-year-olds to vote since 1988: the cited paper (Levin, 2025) and Brazil's 1988 constitution both give 1988. The wording stays as generated, with the correction marked inline.",
+    "changes": [
+      {
+        "sample": "bp-en",
+        "speech": "r1",
+        "path": [
+          "counters",
+          0,
+          "counterpoint"
+        ],
+        "after": "since 1984 in Nicaragua and Brazil",
+        "marker": "[correction: Brazil since 1988]"
+      }
+    ]
+  }
+]

@@ -12,6 +12,7 @@ from seo_answers import ANSWERS  # noqa: E402
 from seo_guides import GUIDES  # noqa: E402
 from seo_comparison_pages import BEST_AI_ALTERNATES, hreflang_links  # noqa: E402
 import seo_cluster  # noqa: E402
+import seo_case_example as case_example  # noqa: E402
 
 ROOT = Path(__file__).resolve().parents[1]
 PUBLIC = ROOT / "public"
@@ -77,6 +78,7 @@ CSS = """
 .checklist{list-style:none;padding:0;margin:14px 0;display:grid;gap:8px}.checklist label{display:flex;gap:10px;align-items:flex-start;border:1px solid var(--line);border-radius:14px;padding:10px 14px;background:rgba(255,255,255,.05);cursor:pointer}.checklist input{accent-color:#14B37D;width:1.1rem;height:1.1rem;margin-top:5px;flex:none}
 .hero .price{max-width:800px;color:var(--muted);margin:14px 0 0}
 .callout{max-width:840px;border:1px solid var(--line);border-radius:16px;padding:14px 18px;background:rgba(255,255,255,.05);margin:18px 0 0}
+.case .facts{display:grid;grid-template-columns:max-content 1fr;gap:4px 16px;margin:16px 0}.case .facts dt{color:var(--muted)}.case .facts dd{margin:0}.case h4{font-size:1.05rem;margin:1.6rem 0 .4rem}.case-list{padding-left:1.4rem}.case-list li{margin:0 0 14px}.case-list p,.speech p{margin:.3rem 0}.sources{padding-left:1.4rem;overflow-wrap:anywhere}.correction{color:var(--brand2);font-weight:750;text-decoration:none}@media(max-width:760px){.case .facts{grid-template-columns:1fr}.case .facts dd{margin-bottom:8px}}
 """.strip()
 
 PAGES = [
@@ -816,6 +818,87 @@ def render_best_ai_page(page):
         raise SystemExit(f"{page['slug']} contains debate jargon")
     return html
 
+def render_case_example_page():
+    """/debate-case-example: real, unedited cases from scripts/case-examples/, with the copy in seo_case_example.py."""
+    c = case_example
+    c.check_corrections()
+    url = page_url(c.SLUG)
+    if len(c.DESCRIPTION) > 155:
+        raise SystemExit(f"{c.SLUG}: meta description is {len(c.DESCRIPTION)} characters; the limit is 155")
+    if not 40 <= c.answer_words() <= 60:
+        raise SystemExit(f"{c.SLUG}: the answer box has {c.answer_words()} words; keep it to 40-60")
+    nav = "".join(f'<a href="{href}">{esc(label)}</a>' for label, href in NAV)
+    samples = "".join(c.sample_html(number, sample) for number, sample in enumerate(c.SAMPLES, start=1))
+    faq_html = "".join(f"<details><summary>{esc(q)}</summary><p>{esc(a)}</p></details>" for q, a in c.FAQS)
+    how_made = "".join(f"<li>{esc(line)}</li>" for line in c.HOW_MADE)
+    contents = "".join(f'<li><a href="#sample-{sample_id}">Sample {number}: {esc(heading)}</a></li>' for number, (sample_id, heading, *_) in enumerate(c.SAMPLES, start=1))
+    related = "".join(f'<a href="{href}">{esc(label)}</a>' for href, label in c.RELATED)
+    graph = [
+        {"@type": "Article", "@id": f"{url}#article", "headline": c.H1, "name": c.TITLE, "url": url, "description": c.DESCRIPTION, "inLanguage": "en", "dateModified": c.MODIFIED, "datePublished": c.PUBLISHED, "author": ORGANIZATION_REF, "publisher": ORGANIZATION_REF, "about": {"@id": SOFTWARE_ID}, "hasPart": [{"@id": f"{url}#sample-{sample[0]}"} for sample in c.SAMPLES]},
+        *c.creative_works(url, SOFTWARE_ID),
+        {"@type": "FAQPage", "mainEntity": [{"@type": "Question", "name": q, "acceptedAnswer": {"@type": "Answer", "text": a}} for q, a in c.FAQS]},
+        {"@type": "BreadcrumbList", "itemListElement": [{"@type": "ListItem", "position": 1, "name": "Home", "item": BASE + "/"}, {"@type": "ListItem", "position": 2, "name": "Debate case example", "item": url}]},
+    ]
+    button = '<div class="cta"><a class="btn primary" href="/">Generate a case for your own motion</a></div>'
+    html_out = f'''<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{esc(c.TITLE)}</title>
+  <meta name="description" content="{esc(c.DESCRIPTION)}" />
+  <meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large" />
+  <link rel="canonical" href="{url}" />
+  <meta name="author" content="{esc(ORGANIZATION["name"])}" />
+  <meta name="msvalidate.01" content="8FC8FD530126287EF8AD3977BFB24C17" />
+{ICON_LINKS}
+  <meta property="og:type" content="article" />
+  <meta property="og:site_name" content="{BRAND}" />
+  <meta property="og:title" content="{esc(c.TITLE)}" />
+  <meta property="og:description" content="{esc(c.DESCRIPTION)}" />
+  <meta property="og:url" content="{url}" />
+  <meta property="og:image" content="{BASE}/hero-visual.jpg?v=2" />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="630" />
+  <meta property="og:image:alt" content="{esc(f"{PRODUCT} wordmark with the owl, for AI debate prep and practice")}" />
+  <meta property="article:published_time" content="{c.PUBLISHED}" />
+  <meta property="article:modified_time" content="{c.MODIFIED}" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="{esc(c.TITLE)}" />
+  <meta name="twitter:description" content="{esc(c.DESCRIPTION)}" />
+  <meta name="twitter:image" content="{BASE}/hero-visual.jpg?v=2" />
+  <meta name="twitter:image:alt" content="{esc(f"{PRODUCT} wordmark with the owl, for AI debate prep and practice")}" />
+  <link rel="stylesheet" href="/seo-pages.css" />
+  <script type="application/ld+json">{json_script({"@context": "https://schema.org", "@graph": graph})}</script>
+</head>
+<body class="goal-page">
+  <header class="wrap">
+    <nav class="nav" aria-label="Primary"><a class="brand" href="/" aria-label="{esc(f"{BRAND} home")}">{BRAND}</a><div>{nav}</div></nav>
+  </header>
+  <main class="wrap">
+    <nav class="breadcrumb" aria-label="Breadcrumb"><a href="/">Home</a> / <span aria-current="page">Debate case example</span></nav>
+    <article>
+      <header class="hero"><h1>{esc(c.H1)}</h1><p id="short-answer" class="direct">{esc(c.ANSWER)}</p><p class="disclosure">{esc(c.HONESTY)}</p><p class="dates">By the <a href="/">{esc(PRODUCT)} team</a> · Published <time datetime="{c.PUBLISHED}">{long_date_dmy(c.PUBLISHED)}</time></p>{button}</header>
+      <section class="section article" aria-labelledby="how-made"><h2 id="how-made">How these cases were made</h2><ul>{how_made}</ul><p>{esc(c.FORMATS_NOTE)}</p><p>Every case is copied from the raw output, apart from the corrections listed below. The raw output is published with the request, the model that served each call and the database rows in <a href="{c.RAW_URL}">DebateOwl's GitHub repository</a>.</p>{c.corrections_html()}<nav aria-label="Samples on this page"><ol>{contents}</ol></nav></section>
+      {samples}
+      <section class="section article" aria-labelledby="own-motion"><h2 id="own-motion">Write a case for your own motion</h2><p>{HOME_LINK} writes the same kind of case for any motion you are preparing, for your side and speaker role, with live web research.</p>{button}<p>{FREE_PLAN_HTML}</p></section>
+      <section class="section faq article" aria-labelledby="faq"><h2 id="faq">Frequently asked questions</h2>{faq_html}</section>
+    </article>
+    {about(c.SLUG)}
+    <section class="section article" aria-labelledby="related"><h2 id="related">Related {PRODUCT} guides</h2><nav class="links" aria-label="Related guides">{related}</nav></section>
+  </main>
+  <footer class="footer"><div class="wrap">{BRAND}: <a href="/">Home</a> / <a href="/debateowl-pricing">Pricing</a> / <a href="/privacy">Privacy</a> / <a href="/terms">Terms</a> / <a href="/about">About</a> / <a href="/contact">Contact</a> / <a href="/sitemap.xml">Sitemap</a></div></footer>
+</body>
+</html>
+'''
+    if re.search(r"Public Forum|World Schools|WSDC", html_out):
+        raise SystemExit(f"{c.SLUG} names a format DebateOwl does not generate cases in")
+    return html_out
+
+def case_example_llms_line():
+    """The /debate-case-example line under "## Main pages"."""
+    return f"- [Debate case example]({page_url(case_example.SLUG)}): real {PRODUCT} case examples (British Parliamentary and Policy in English, Classroom in Hungarian) with \"If they say… we answer…\" replies and the R2"
+
 # The comparison pages, in the order llms.txt lists them under "## Compare". Pages from
 # PAGES use their own H1 and description; the English pages from seo_comparison_pages.py get a line here
 # (the Spanish and Hungarian ones are listed under their language by localized_sections).
@@ -893,7 +976,8 @@ def llms_txt():
 - [About]({BASE}/about): what {PRODUCT} is, who runs it and its former name
 - [Contact]({BASE}/contact): email {SITE["contactEmail"]} for support and feedback, {SITE["privacyEmail"]} for privacy and data requests
 - [Press kit and facts]({BASE}/press): a one-sentence definition, former name, maker, languages, pricing, logo downloads and what {PRODUCT} is not
-- [Full text]({BASE}/llms-full.txt): this file plus the plain text of the home page, About, Which AI is best for debate? and the press kit
+{case_example_llms_line()}
+- [Full text]({BASE}/llms-full.txt): this file plus the plain text of the home page, About, Which AI is best for debate?, the press kit and the debate case examples
 - [Sitemap]({BASE}/sitemap.xml): every public page
 
 ## Free tools
@@ -928,6 +1012,9 @@ def main():
     # Imported here so a failure in the comparison pages still names this script.
     from seo_comparison_pages import write_comparison_pages
     write_comparison_pages(PUBLIC)
+    directory = PUBLIC / case_example.SLUG
+    directory.mkdir(parents=True, exist_ok=True)
+    (directory / "index.html").write_text(render_case_example_page())
     (PUBLIC / "llms.txt").write_text(llms_txt())
 
     print(f"Generated {len(PAGES)} public SEO pages and llms.txt; the build writes sitemap.xml")
