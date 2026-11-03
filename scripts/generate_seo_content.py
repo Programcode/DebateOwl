@@ -883,6 +883,7 @@ def llms_txt():
 - Trial and free tools: {FREE_PLAN}
 - Pro adds expanded AI prep access, all 10 models (including Claude Opus and Sonnet, GPT-6.1 Sol and Gemini), Active Grounding research and priority support.
 - Privacy: cases, sources, practice rounds and history stay behind sign-in and are not indexed.
+- Listed elsewhere: {", ".join(ORGANIZATION["sameAs"])}
 
 ## Main pages
 
