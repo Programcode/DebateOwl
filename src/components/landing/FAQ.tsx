@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { Trans, useTranslation } from "react-i18next";
+import { Link } from "react-router-dom";
 import { ChevronDown } from "lucide-react";
 import { PREP_MODE_COUNT } from "@/components/features/tools/tool-links";
 import { factsAsOf } from "@/lib/seo/pages";
@@ -15,6 +16,11 @@ const FAQ = () => {
     const asOf = factsAsOf(i18n.language);
 
     const faqs: Array<{ question: string; answer: ReactNode }> = [
+        {
+            question: t('faq.q11'),
+            // An app route, in English only; the mini round answers in the language you write in.
+            answer: <Trans i18nKey="faq.a11" components={{ link: <Link to="/ai-debate" className="font-semibold text-primary underline underline-offset-4" /> }} />,
+        },
         {
             question: t('faq.q10'),
             // A static page, not an app route: a plain link loads it from the server.

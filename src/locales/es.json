@@ -1019,7 +1019,9 @@
     "q9": "¿{{product}} es gratis?",
     "a9": "La app {{product}} no tiene plan gratuito (prueba gratis de {{trialDays}} días y después ${{proMonthly}}/mes); las herramientas aparte de /es/tools son gratis y no piden cuenta.",
     "q10": "¿Qué IA es mejor para el debate?",
-    "a10": "Depende de para qué la quieras. Para sacar ideas y leer sobre el tema, un chatbot general como ChatGPT, Claude o Gemini sirve. Para preparar una moción concreta en tu formato, con un caso que puedes leer en voz alta, respuestas «Si dicen X, respondemos Y» y rondas de práctica cronometradas, {{product}} está hecho para eso. <link>Nuestra comparativa</link> repasa las opciones una por una."
+    "a10": "Depende de para qué la quieras. Para sacar ideas y leer sobre el tema, un chatbot general como ChatGPT, Claude o Gemini sirve. Para preparar una moción concreta en tu formato, con un caso que puedes leer en voz alta, respuestas «Si dicen X, respondemos Y» y rondas de práctica cronometradas, {{product}} está hecho para eso. <link>Nuestra comparativa</link> repasa las opciones una por una.",
+    "q11": "¿Existe una IA para debatir?",
+    "a11": "Sí. Cualquier chatbot defiende una postura si se lo pides, pero {{product}} está pensado para preparar debates: convierte tu moción en un caso con respuestas «Si dicen… respondemos…» y te entrena con refutaciones, interrogatorios y rondas cronometradas contra un oponente de IA. La app cuesta ${{proMonthly}}/mes tras {{trialDays}} días de prueba; <link>la mini ronda de /ai-debate</link> es gratis, sin cuenta."
   },
   "guideHub": {
     "title": "Guías de debate y herramientas gratis",
