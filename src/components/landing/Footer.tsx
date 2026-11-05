@@ -31,6 +31,10 @@ const Footer = () => {
                                 {t('footer.aiDebatePartner')}
                             </Link>
                         )}
+                        {/* An English page, linked in every language: tournaments often set motions in English. */}
+                        <Link to="/motion" className="inline-flex min-h-6 items-center text-muted-foreground hover:text-foreground transition-colors underline-offset-4 hover:underline pointer-coarse:min-h-11 pointer-coarse:min-w-11 pointer-coarse:justify-center">
+                            {t('footer.dailyMotion')}
+                        </Link>
                         {/* Static guide pages, not app routes: plain links load them from the server. */}
                         <a href="/debateowl-pricing" className="inline-flex min-h-6 items-center text-muted-foreground hover:text-foreground transition-colors underline-offset-4 hover:underline pointer-coarse:min-h-11 pointer-coarse:min-w-11 pointer-coarse:justify-center">
                             {t('footer.pricingGuide')}

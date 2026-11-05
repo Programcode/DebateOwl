@@ -889,7 +889,8 @@
     "pricingGuide": "Detalles de precios",
     "compareTools": "Comparar herramientas de IA para debate",
     "aiDebate": "Debate con IA",
-    "aiDebatePartner": "Compañero de debate con IA"
+    "aiDebatePartner": "Compañero de debate con IA",
+    "dailyMotion": "Moción del día"
   },
   "announcements": {
     "regionLabel": "Anuncio",
@@ -2751,6 +2752,10 @@
     "aiDebate": {
       "title": "Compañero de debate con IA: discute con una IA | {{brand}}",
       "description": "Debate con una IA que defiende el otro lado. Prueba un intercambio gratis sin cuenta y luego practica rondas cronometradas con una prueba de 3 días."
+    },
+    "dailyMotion": {
+      "title": "Moción de debate diaria: una moción de práctica al día | {{brand}}",
+      "description": "Una moción de debate numerada cada día para Public Forum, Lincoln-Douglas y debate escolar, con tiempos de discurso, el choque central y lo que decidirá la papeleta."
     }
   },
   "validation": {

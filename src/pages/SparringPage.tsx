@@ -31,6 +31,8 @@ import { useSubscription } from '@/hooks/use-subscription';
 import { useAuth } from '@/lib/supabase/AuthProvider';
 import { useSubscriptionError } from '@/hooks/use-subscription-error';
 import { SubscriptionErrorModals } from '@/components/features/subscription';
+import { MAX_MOTION_LENGTH } from '@/lib/stores/debate-store';
+import { SPARRING_FORMATS } from '@/lib/sparring/formats';
 
 function readableError(error: unknown, fallback: string) {
   // Subscription errors have their own text; provider errors get the translated outage message.
@@ -41,6 +43,15 @@ function readableError(error: unknown, fallback: string) {
 function estimateAiTimeUsedSeconds(content: string, limit: number) {
   const words = content.trim() ? content.trim().split(/\s+/).length : 0;
   return Math.min(limit, Math.max(1, Math.round((words / 140) * 60)));
+}
+
+/** The motion and format a link asks for, as each Daily Motion page's Sparring link does. */
+function linkedSetup(search: string): Partial<SparringSetupValues> | undefined {
+  const params = new URLSearchParams(search);
+  const motion = params.get('motion')?.trim().slice(0, MAX_MOTION_LENGTH);
+  const format = SPARRING_FORMATS.find((item) => item.id === params.get('format'))?.id;
+  if (!motion && !format) return undefined;
+  return { ...(motion ? { motion } : {}), ...(format ? { format } : {}) };
 }
 
 export default function SparringPage() {
@@ -410,7 +421,7 @@ export default function SparringPage() {
       <div className={cn(stateMotionClass, 'container px-4 py-8 sm:py-10')}>
         <WorkspaceToolScope context={workspace.context} />
         <SparringSetup
-          initialValues={workspace.context ? { motion: workspace.context.motion, userSide: workspace.context.side } : undefined}
+          initialValues={workspace.context ? { motion: workspace.context.motion, userSide: workspace.context.side } : linkedSetup(location.search)}
           onStart={handleStart}
           roundCost={sessionQuota.units}
           remainingRequests={sessionQuota.remaining ?? remainingToday}
