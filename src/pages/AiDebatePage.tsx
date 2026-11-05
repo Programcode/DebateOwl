@@ -15,7 +15,7 @@ const ROUTE = '/ai-debate';
 const URL = `${SITE_ORIGIN}${ROUTE}`;
 const NAME = 'AI debate partner';
 // The day this page's copy last changed; move it when the text does.
-const MODIFIED = '2026-11-03';
+const MODIFIED = '2026-11-05';
 
 const SHORT_ANSWER: FaqEntry = {
   question: 'What is an AI debate partner?',

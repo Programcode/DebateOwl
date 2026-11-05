@@ -76,7 +76,7 @@ export default function DailyMotionArchivePage() {
                 <p className="mt-0! text-xs font-bold uppercase tracking-wide text-muted-foreground">
                   #{day.number} · <time dateTime={day.date}>{longDate(day.date)}</time> · {formatName(day)}
                 </p>
-                <Link to={dailyMotionPath(day.number)} className="mt-1 inline-block text-foreground! no-underline! hover:underline!">{day.wording}</Link>
+                <Link to={dailyMotionPath(day.number)} className="mt-1 inline-block font-medium text-foreground! no-underline! hover:underline!">{day.wording}</Link>
               </li>
             ))}
           </ol>
