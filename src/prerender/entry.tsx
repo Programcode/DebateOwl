@@ -202,7 +202,7 @@ function legalStructuredData(route: '/terms' | '/privacy', page: 'termsPage' | '
 }
 
 // The day each page's copy last changed; move it when its text does.
-const PAGE_MODIFIED = { '/about': '2026-11-03', '/contact': '2026-10-28', '/press': '2026-11-03' };
+const PAGE_MODIFIED = { '/about': '2026-11-05', '/contact': '2026-10-28', '/press': '2026-11-05' };
 
 /**
  * /about as an AboutPage and /press as a WebPage, each about the Organization,
