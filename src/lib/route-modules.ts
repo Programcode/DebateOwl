@@ -38,6 +38,7 @@ export const routeLoaders = {
   "/press": cacheLoader(() => import("@/pages/PressPage")),
   "/expocit/sources": cacheLoader(() => import("@/pages/SourcesPage")),
   "/ai-debate": cacheLoader(() => import("@/pages/AiDebatePage")),
+  "/ai-debate/round/:slug": cacheLoader(() => import("@/pages/PublishedRoundPage")),
   "/login": cacheLoader(() => import("@/pages/LoginPage")),
   "/auth/callback": cacheLoader(() => import("@/pages/AuthCallbackPage")),
   "/share/:code": cacheLoader(() => import("@/pages/SharedPage")),
@@ -101,6 +102,8 @@ function isRoutePath(pathname: string): pathname is RoutePath {
 
 export function preloadRoute(pathname: string): Promise<unknown> | undefined {
   if (isRoutePath(pathname)) return routeLoaders[pathname]();
+  // A published round may be prerendered; its page must be loaded before the first render replaces that HTML.
+  if (/^\/ai-debate\/round\/[^/]+$/.test(pathname)) return routeLoaders["/ai-debate/round/:slug"]();
   return localizedRouteLoaders[pathname]?.();
 }
 

@@ -50,16 +50,37 @@ export function usePageHead(route: PrerenderedRoute) {
     const head: PageHead = PAGE_HEADS[route];
     setMeta('robots', head.canonicalPath ? SHELL_HEAD.robots : 'noindex, nofollow');
     setCanonical(head.canonicalPath && localizedPath(head.canonicalPath, routeLanguage));
-    return () => {
-      document.title = SHELL_HEAD.title;
-      setMeta('description', SHELL_HEAD.description);
-      setMeta('robots', SHELL_HEAD.robots);
-      setCanonical(undefined);
-      document.head
-        .querySelectorAll('script[type="application/ld+json"], meta[property="og:url"], link[rel="alternate"][hreflang]')
-        .forEach((node) => node.remove());
-    };
+    return restoreShellHead;
   }, [route, routeLanguage]);
+}
+
+function restoreShellHead() {
+  document.title = SHELL_HEAD.title;
+  setMeta('description', SHELL_HEAD.description);
+  setMeta('robots', SHELL_HEAD.robots);
+  setCanonical(undefined);
+  document.head
+    .querySelectorAll('script[type="application/ld+json"], meta[property="og:url"], link[rel="alternate"][hreflang]')
+    .forEach((node) => node.remove());
+}
+
+/**
+ * The head of a page built from data, such as a published round: its title
+ * and description, and an index directive and canonical URL only when the
+ * head names a canonical path. Null, while the data loads or when there is
+ * none, keeps the page noindex.
+ */
+export function useDataPageHead(head: PageHead | null) {
+  const title = head?.title ?? SHELL_HEAD.title;
+  const description = head?.description ?? SHELL_HEAD.description;
+  const canonicalPath = head?.canonicalPath;
+  useEffect(() => {
+    document.title = title;
+    setMeta('description', description);
+    setMeta('robots', canonicalPath ? SHELL_HEAD.robots : 'noindex, nofollow');
+    setCanonical(canonicalPath);
+    return restoreShellHead;
+  }, [title, description, canonicalPath]);
 }
 
 const PageLabelContext = createContext<(label: string | null) => void>(() => undefined);

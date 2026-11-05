@@ -37,8 +37,8 @@ SELECT set_eq(
   $$SELECT p.proname::text FROM pg_proc p
     WHERE p.pronamespace = 'public'::regnamespace
       AND has_function_privilege('anon', p.oid, 'EXECUTE')$$,
-  ARRAY['get_shared_item'],
-  'anon holds EXECUTE only on get_shared_item; admin RPCs rely on more than require_admin()'
+  ARRAY['get_shared_item', 'get_published_demo_round', 'list_published_demo_rounds'],
+  'anon holds EXECUTE only on the public share and published-round readers; admin RPCs rely on more than require_admin()'
 );
 
 -- A migration that forgets its grants must leave a new table closed. (A new

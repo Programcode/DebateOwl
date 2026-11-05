@@ -18,6 +18,14 @@ async function mockDemo(page: Page) {
     if (request.method() === 'OPTIONS') return route.fulfill({ status: 200, headers: { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': '*' } });
     const body = request.postDataJSON() as Record<string, unknown>;
     bodies.push(body);
+    if (body.action === 'publish') {
+      return route.fulfill({
+        status: 200,
+        headers: { 'Access-Control-Allow-Origin': '*' },
+        contentType: 'application/json',
+        body: JSON.stringify({ slug: 'abcdefghij12', deleteToken: 'd'.repeat(64), indexable: false, redactions: 1 }),
+      });
+    }
     const turn = body.sessionId ? 2 : 1;
     return route.fulfill({
       status: 200,
@@ -30,6 +38,7 @@ async function mockDemo(page: Page) {
         turnsLeft: turn === 1 ? 1 : 0,
         rebuttal: turn === 1 ? 'Phones also let pupils reach their parents in an emergency.' : 'Office phones are slower when every second counts.',
         judgeNote: turn === 1 ? 'You never say how a ban is enforced.' : 'Good answer; now weigh safety against focus.',
+        signature: String(turn).repeat(64),
       }),
     });
   });
@@ -78,5 +87,80 @@ test.describe('AI debate mini round', () => {
     await page.getByRole('button', { name: 'Get the AI’s rebuttal' }).click();
     await expect(page.getByTestId('demo-sample')).toBeVisible();
     await expect(page.getByLabel('Your argument')).toHaveCount(0);
+  });
+
+  test('a finished round stays private until the visitor opts in to publish it', async ({ page }) => {
+    const bodies = await mockDemo(page);
+    await page.goto('/ai-debate');
+    await page.getByLabel('Your argument').fill('Phones distract pupils in class and make bullying easier.');
+    await page.getByRole('button', { name: 'Get the AI’s rebuttal' }).click();
+    await page.getByLabel('Your reply (one more turn)').fill('The school office phone covers emergencies.');
+    await page.getByRole('button', { name: 'Send reply' }).click();
+
+    // Default off: the box is unticked and Publish cannot be pressed.
+    const consent = page.getByRole('checkbox', { name: /Publish this round as a public page/ });
+    await expect(consent).not.toBeChecked();
+    await expect(page.getByRole('button', { name: 'Publish round' })).toBeDisabled();
+    expect(bodies.filter((body) => body.action)).toHaveLength(0);
+
+    await consent.check();
+    await page.getByRole('button', { name: 'Publish round' }).click();
+    await expect(page.getByTestId('demo-published')).toContainText('We removed one personal detail');
+    await expect(page.getByTestId('demo-published-indexing')).toContainText('search engines are asked not to list it');
+    await expect(page.getByRole('link', { name: 'Open your public round' })).toHaveAttribute('href', '/ai-debate/round/abcdefghij12');
+
+    const publish = bodies.find((body) => body.action === 'publish')!;
+    expect(publish).toMatchObject({
+      sessionId: '11111111-1111-4111-8111-111111111111',
+      sessionToken: 'signed-session-token',
+      motion: 'This House would ban smartphones in schools',
+      side: 'for',
+      turns: [
+        { argument: 'Phones distract pupils in class and make bullying easier.', signature: '1'.repeat(64) },
+        { argument: 'The school office phone covers emergencies.', signature: '2'.repeat(64) },
+      ],
+    });
+  });
+});
+
+const ROUND = {
+  slug: 'abcdefghij12',
+  motion: 'This House would ban smartphones in schools',
+  side: 'for',
+  turns: [{ argument: 'Phones distract pupils.', rebuttal: 'Phones help in emergencies.', judgeNote: 'Say how a ban is enforced.' }],
+  published_at: '2026-11-05T10:00:00Z',
+};
+
+test.describe('published round page', () => {
+  for (const indexable of [true, false]) {
+    test(`an ${indexable ? 'indexable' : 'thin'} round is ${indexable ? 'indexed with a canonical URL' : 'noindex'}`, async ({ page }) => {
+      await page.route('**/rest/v1/rpc/get_published_demo_round', (route) => route.fulfill({
+        headers: { 'Access-Control-Allow-Origin': '*' },
+        contentType: 'application/json',
+        body: JSON.stringify([{ ...ROUND, indexable }]),
+      }));
+      await page.goto('/ai-debate/round/abcdefghij12');
+      await expect(page.getByTestId('published-motion')).toHaveText(ROUND.motion);
+      await expect(page.getByTestId('demo-rebuttal')).toHaveText('Phones help in emergencies.');
+      const robots = page.locator('meta[name="robots"]');
+      if (indexable) {
+        await expect(robots).toHaveAttribute('content', /^index/);
+        await expect(page.locator('link[rel="canonical"]')).toHaveAttribute('href', 'https://debateowl.com/ai-debate/round/abcdefghij12');
+      } else {
+        await expect(robots).toHaveAttribute('content', 'noindex, nofollow');
+        await expect(page.locator('link[rel="canonical"]')).toHaveCount(0);
+      }
+    });
+  }
+
+  test('a round that was taken down shows as removed, noindex', async ({ page }) => {
+    await page.route('**/rest/v1/rpc/get_published_demo_round', (route) => route.fulfill({
+      headers: { 'Access-Control-Allow-Origin': '*' },
+      contentType: 'application/json',
+      body: '[]',
+    }));
+    await page.goto('/ai-debate/round/abcdefghij12');
+    await expect(page.getByTestId('published-missing')).toHaveText('This round is not published');
+    await expect(page.locator('meta[name="robots"]')).toHaveAttribute('content', 'noindex, nofollow');
   });
 });

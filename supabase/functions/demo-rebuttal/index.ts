@@ -9,6 +9,10 @@
 //   phone that changes networks mid-round can finish it;
 // - DEMO_DAILY_LIMIT model calls per UTC day across everyone;
 // - the default Claude Haiku model at low reasoning effort with a bounded reply.
+// Every answered turn carries a signature. A visitor who finishes a round can
+// opt in to publish it as a public page (action "publish", publish.ts), which
+// checks those signatures, and take it down again with the delete token the
+// publish returned (action "unpublish").
 // Logs carry counts and statuses only, never the IP or what the visitor typed.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.114.0";
 import { getCorsHeaders, isAllowedOrigin } from "../_shared/cors.ts";
@@ -17,6 +21,8 @@ import { openRouterProviderOptions, warnIfClaudeNotByok } from "../_shared/provi
 import { fetchJsonWithTimeout, OPENROUTER_API_URL } from "../_shared/research.ts";
 import { BodyTooLargeError, readBoundedBody } from "../_shared/bounded-body.ts";
 import { outputTokenLimit } from "../_shared/output-caps.ts";
+import { handlePublish, handleUnpublish } from "./publish.ts";
+import { signSessionToken, signTurn, toHex, verifySessionToken, verifyTurn } from "./signing.ts";
 
 const SESSIONS_PER_IP = 3;
 const TURNS_PER_SESSION = 2;
@@ -25,6 +31,7 @@ const MOTION_MAX = 200;
 const ARGUMENT_MAX = 600;
 // The first rebuttal comes back with the follow-up, up to REBUTTAL_HARD_CAP words.
 const REBUTTAL_MAX = 2_000;
+const JUDGE_NOTE_MAX = 1_000;
 const REBUTTAL_WORDS = { min: 90, max: 130 };
 /** A rebuttal past this many words is cut at its last full sentence before it. */
 const REBUTTAL_HARD_CAP = 170;
@@ -39,10 +46,9 @@ const REPLY_TOKENS = 600;
 const REASONING_EFFORT = "low" as const;
 const MAX_TOKENS = outputTokenLimit(REPLY_TOKENS, REASONING_EFFORT, 128_000);
 const MODEL_TIMEOUT_MS = 30_000;
-const MAX_BODY_BYTES = 8_192;
+// A publish carries both turns back, up to about 6 KB of text before escaping.
+const MAX_BODY_BYTES = 16_384;
 const TURNSTILE_VERIFY_URL = "https://challenges.cloudflare.com/turnstile/v0/siteverify";
-/** Long enough for a slow second turn; the claim RPC also ends sessions at the UTC day. */
-const SESSION_TOKEN_TTL_MS = 2 * 60 * 60 * 1_000;
 
 type Side = "for" | "against";
 interface DemoRequest {
@@ -53,8 +59,8 @@ interface DemoRequest {
   motion: string;
   side: Side;
   argument: string;
-  /** The first exchange, sent back with the follow-up. */
-  previous?: { argument: string; rebuttal: string };
+  /** The first exchange, sent back with the follow-up, with the signature the first turn returned. */
+  previous?: { argument: string; rebuttal: string; judgeNote: string; signature: string };
 }
 
 function demoEnabled(env: (name: string) => string | undefined = (name) => Deno.env.get(name)): boolean {
@@ -78,7 +84,14 @@ function parseDemoRequest(raw: unknown): DemoRequest | null {
   if (!motion || !argument || !side) return null;
   const sessionId = typeof body.sessionId === "string" && UUID.test(body.sessionId) ? body.sessionId : undefined;
   const prior = body.previous && typeof body.previous === "object" ? body.previous as Record<string, unknown> : undefined;
-  const previous = prior ? { argument: text(prior.argument, ARGUMENT_MAX), rebuttal: text(prior.rebuttal, REBUTTAL_MAX) } : undefined;
+  const previous = prior
+    ? {
+      argument: text(prior.argument, ARGUMENT_MAX),
+      rebuttal: text(prior.rebuttal, REBUTTAL_MAX),
+      judgeNote: text(prior.judgeNote, JUDGE_NOTE_MAX),
+      signature: text(prior.signature, 64),
+    }
+    : undefined;
   // A follow-up names its session and carries the first exchange; a first turn does neither.
   if (sessionId ? !previous?.argument || !previous.rebuttal : previous) return null;
   return {
@@ -113,39 +126,6 @@ function getIpAddress(req: Request): string {
 async function hashIp(ip: string, salt: string): Promise<string> {
   const day = new Date().toISOString().slice(0, 10);
   return toHex(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(`demo-round:${day}:${salt}:${ip}`)));
-}
-
-const toHex = (bytes: ArrayBuffer) => [...new Uint8Array(bytes)].map((byte) => byte.toString(16).padStart(2, "0")).join("");
-
-function hmacKey(secret: string, usage: "sign" | "verify") {
-  return crypto.subtle.importKey("raw", new TextEncoder().encode(secret), { name: "HMAC", hash: "SHA-256" }, false, [usage]);
-}
-
-/**
- * The token a first turn returns: session id, the hashed IP the session was
- * opened from, and an expiry, signed with a server secret. The follow-up is
- * charged to that IP hash, so it no longer has to come from the same IP; the
- * per-IP session limit applies only when a session starts.
- */
-async function signSessionToken(sessionId: string, ipHash: string, secret: string, now = Date.now()): Promise<string> {
-  const payload = `${sessionId}.${ipHash}.${now + SESSION_TOKEN_TTL_MS}`;
-  const signature = await crypto.subtle.sign("HMAC", await hmacKey(secret, "sign"), new TextEncoder().encode(`demo-session:v1:${payload}`));
-  return `${payload}.${toHex(signature)}`;
-}
-
-/** The session's IP hash when the token is ours, unexpired and names this session; otherwise null. */
-async function verifySessionToken(token: string | undefined, sessionId: string, secret: string, now = Date.now()): Promise<string | null> {
-  const match = token?.match(/^([0-9a-f-]{36})\.([0-9a-f]{64})\.(\d{1,15})\.([0-9a-f]{64})$/);
-  if (!match) return null;
-  const [, tokenSession, ipHash, expires, signature] = match;
-  if (tokenSession !== sessionId || Number(expires) < now) return null;
-  const valid = await crypto.subtle.verify(
-    "HMAC",
-    await hmacKey(secret, "verify"),
-    new Uint8Array(signature.match(/../g)!.map((byte) => parseInt(byte, 16))),
-    new TextEncoder().encode(`demo-session:v1:${tokenSession}.${ipHash}.${expires}`),
-  );
-  return valid ? ipHash : null;
 }
 
 async function verifyTurnstile(token: string | undefined, ip: string, secret: string): Promise<boolean> {
@@ -222,6 +202,17 @@ function toLastSentence(value: string): string {
  * Keeps a rebuttal that ran past REBUTTAL_HARD_CAP words to the full
  * sentences within the cap. It used to be cut at a word count, mid-sentence.
  */
+/**
+ * Keeps text within the characters a follow-up or publish reads back
+ * (REBUTTAL_MAX, JUDGE_NOTE_MAX), at its last full sentence, so what is signed
+ * is exactly what comes back.
+ */
+function fitChars(value: string, max: number): string {
+  if (value.length <= max) return value;
+  const cut = value.slice(0, max);
+  return toLastSentence(cut) || cut.trim();
+}
+
 function capRebuttal(value: string): string {
   const words = value.trim().split(/\s+/);
   if (words.length <= REBUTTAL_HARD_CAP) return value.trim();
@@ -298,25 +289,32 @@ export async function handleRequest(req: Request): Promise<Response> {
   if (req.method !== "POST") return json(405, { error: "method_not_allowed" });
   // The page calls from our own origins only; anything else is a script.
   if (!origin || !isAllowedOrigin(origin)) return json(403, { error: "forbidden_origin" });
+  let raw: unknown;
+  try {
+    raw = JSON.parse(await readBoundedBody(req, MAX_BODY_BYTES));
+  } catch (error) {
+    if (error instanceof BodyTooLargeError) return json(413, { error: "too_large" });
+    raw = null;
+  }
+  const body = raw && typeof raw === "object" ? raw as Record<string, unknown> : {};
+  const serviceClient = () => createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
+  // Taking a published page down keeps working while the demo is off.
+  if (body.action === "unpublish") return handleUnpublish(body, serviceClient(), json);
   if (!demoEnabled()) return json(503, { error: "demo_disabled" });
+
+  // The IP hash salt and the key for session tokens and turn signatures. Like
+  // the ai function, fall back to the service-role key when
+  // SPARRING_INTEGRITY_SECRET is unset; either stays on the server.
+  const salt = Deno.env.get("SPARRING_INTEGRITY_SECRET")?.trim() || Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+  if (body.action === "publish") return handlePublish(body, salt, serviceClient(), json);
 
   const turnstileSecret = Deno.env.get("TURNSTILE_SECRET_KEY")?.trim();
   if (!turnstileSecret) {
     console.error("[DEMO] disabled: TURNSTILE_SECRET_KEY is not set");
     return json(503, { error: "demo_disabled" });
   }
-  // The IP hash salt and the session token key. Like the ai function, fall
-  // back to the service-role key when SPARRING_INTEGRITY_SECRET is unset;
-  // either stays on the server.
-  const salt = Deno.env.get("SPARRING_INTEGRITY_SECRET")?.trim() || Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
-  let request: DemoRequest | null;
-  try {
-    request = parseDemoRequest(JSON.parse(await readBoundedBody(req, MAX_BODY_BYTES)));
-  } catch (error) {
-    if (error instanceof BodyTooLargeError) return json(413, { error: "too_large" });
-    request = null;
-  }
+  const request = body.action === undefined ? parseDemoRequest(raw) : null;
   if (!request) return json(400, { error: "invalid_request" });
 
   // A first turn needs a passing bot check and is counted against its IP. A
@@ -329,6 +327,14 @@ export async function handleRequest(req: Request): Promise<Response> {
       console.log("[DEMO] status=bad_session_token turn=2");
       return json(400, { error: "unknown_session" });
     }
+    // The first exchange the model answers from must be the one this function served, so a
+    // made-up "first rebuttal" cannot steer the signed second turn.
+    const first = request.previous!;
+    const firstTurn = { sessionId: request.sessionId, turn: 1, motion: request.motion, side: request.side, argument: first.argument, rebuttal: first.rebuttal, judgeNote: first.judgeNote };
+    if (!(await verifyTurn(firstTurn, first.signature, salt))) {
+      console.log("[DEMO] status=bad_turn_signature turn=2");
+      return json(400, { error: "invalid_round" });
+    }
     ipHash = sessionIpHash;
   } else {
     const ip = getIpAddress(req);
@@ -339,8 +345,7 @@ export async function handleRequest(req: Request): Promise<Response> {
     ipHash = await hashIp(ip, salt);
   }
 
-  const supabase = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
-  const { data: claim, error: claimError } = await supabase.rpc("claim_demo_round_turn", {
+  const { data: claim, error: claimError } = await serviceClient().rpc("claim_demo_round_turn", {
     p_session_id: request.sessionId ?? null,
     p_ip_hash: ipHash,
     p_sessions_per_ip: SESSIONS_PER_IP,
@@ -362,13 +367,19 @@ export async function handleRequest(req: Request): Promise<Response> {
   try {
     const reply = await callModel(request);
     if (!reply.allowed) return json(422, { error: "not_allowed", sessionId: row.session_id });
+    const turn = request.sessionId ? 2 : 1;
+    const rebuttal = fitChars(capRebuttal(reply.rebuttal), REBUTTAL_MAX);
+    const judgeNote = fitChars(reply.judgeNote.trim(), JUDGE_NOTE_MAX);
+    const { motion, side, argument } = request;
     return json(200, {
       sessionId: row.session_id,
       ...(request.sessionId ? {} : { sessionToken: await signSessionToken(row.session_id, ipHash, salt) }),
-      turn: request.sessionId ? 2 : 1,
+      turn,
       turnsLeft: request.sessionId ? 0 : TURNS_PER_SESSION - 1,
-      rebuttal: capRebuttal(reply.rebuttal),
-      judgeNote: reply.judgeNote.trim(),
+      rebuttal,
+      judgeNote,
+      // Only an allowed reply is signed, so a published page holds moderated text only.
+      signature: await signTurn({ sessionId: row.session_id, turn, motion, side, argument, rebuttal, judgeNote }, salt),
     });
   } catch (error) {
     console.error("[DEMO] model call failed:", error instanceof Error ? error.message.slice(0, 120) : "unknown");

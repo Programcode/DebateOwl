@@ -87,8 +87,10 @@ describe("Vercel frontend deployment configuration", () => {
   it("serves the SPA shell for app routes only, so unknown paths get the real 404", () => {
     const config = loadConfig();
 
+    // A published round the build did not prerender (new, or noindex) renders
+    // in the browser; the prerendered ones are files and win over the rewrite.
     expect(config.rewrites).toEqual(
-      ["/app", "/app/:path*", "/login", "/auth/callback", "/share/:path*", "/expocit/sources"]
+      ["/app", "/app/:path*", "/login", "/auth/callback", "/share/:path*", "/ai-debate/round/:slug", "/expocit/sources"]
         .map((source) => ({ source, destination: "/app-shell.html" })),
     );
     // Rewrite sources match exactly, so /app/settings/ must first lose its slash.

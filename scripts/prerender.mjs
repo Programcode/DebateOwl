@@ -46,7 +46,8 @@ function landingModified() {
 function replaceOnce(html, pattern, replacement, label) {
   const matches = html.match(new RegExp(pattern.source, `${pattern.flags.replace('g', '')}g`)) ?? [];
   if (matches.length !== 1) throw new Error(`index.html should have exactly one ${label}, found ${matches.length}`);
-  return html.replace(pattern, replacement);
+  // A function, so a "$&" or "$'" in a page's text is not read as a replacement pattern.
+  return html.replace(pattern, () => replacement);
 }
 
 /** The page chunk's JavaScript and CSS that the shell does not load already. */
@@ -105,6 +106,10 @@ function pageHtml(shell, page, assets) {
   }
   for (const href of assets.styles) added.push(`<link rel="stylesheet" href="${href}" />`);
   for (const href of assets.scripts) added.push(`<link rel="modulepreload" crossorigin href="${href}" />`);
+  // What the page was rendered from, so the browser renders the same page at once (src/lib/seo/prerendered-data.ts).
+  if (page.data) {
+    added.push(`<script type="application/json" id="prerendered-data">${JSON.stringify(page.data).replaceAll('<', '\\u003c')}</script>`);
+  }
   if (page.structuredData) {
     // "<" escaped so the JSON can never close the script element.
     const json = JSON.stringify(page.structuredData).replaceAll('<', '\\u003c');

@@ -87,11 +87,16 @@ function appShellRewrites(): Plugin {
     rewrites?: Array<{ source: string; destination: string }>;
   };
   const routes = rewrites.map(({ source, destination }) => {
-    // vercel.json uses only exact paths and a trailing `/:path*` (any rest of the path).
+    // vercel.json uses only exact paths, whole `/:name` segments (one segment
+    // each) and a trailing `/:path*` (any rest of the path).
     const exact = source.replace(/\/:path\*$/, "");
-    if (exact.includes(":")) throw new Error(`appShellRewrites cannot read the vercel.json source ${source}`);
+    const segments = exact.split("/").map((segment) => {
+      if (/^:\w+$/.test(segment)) return "[^/]+";
+      if (segment.includes(":")) throw new Error(`appShellRewrites cannot read the vercel.json source ${source}`);
+      return segment.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    });
     const rest = exact === source ? "" : "(?:/.*)?";
-    return { pattern: new RegExp(`^${exact.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}${rest}$`), destination };
+    return { pattern: new RegExp(`^${segments.join("/")}${rest}$`), destination };
   });
   return {
     name: "app-shell-rewrites",

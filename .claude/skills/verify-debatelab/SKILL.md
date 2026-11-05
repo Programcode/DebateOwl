@@ -49,10 +49,10 @@ It prints nothing about the values. Ask Adam before the first live run: it spend
 `$H up` takes 1–3 minutes on a warm Docker cache. It runs these steps in order:
 
 1. `supabase start`, which replays `supabase/migrations/`.
-2. Writes the function env from `.superset/workspace-test.env`.
+2. Writes the function env from `.superset/workspace-test.env`, plus `DEMO_ENABLED=true` and Cloudflare's always-pass Turnstile test secret for the `/ai-debate` mini round.
 3. Starts the slot's fake provider container (`debatelab-fake-openrouter` on `18090`, or `debatelab-fake-openrouter-s2` on `18190`) on the stack network.
 4. `supabase functions serve --no-verify-jwt`.
-5. Starts Vite on the allocated app origin (`http://127.0.0.1:18081` or `http://127.0.0.1:18181`) in local-preview mode.
+5. Starts Vite on the allocated app origin (`http://127.0.0.1:18081` or `http://127.0.0.1:18181`) in local-preview mode, with the mini round on (`VITE_DEMO_ENABLED=true` and the Turnstile test site key).
 
 It is ready when it prints `READY <app-origin>`. Use that URL for interactive driving. The chosen slot is saved in `.verify/state/stack.env` and restored by later commands. The generated `function.env` lists that app origin in `LOCAL_GATE_APP_ORIGINS`; CORS accepts this override only for dev origins. Production does not set it.
 

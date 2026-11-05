@@ -30,7 +30,8 @@ export interface DemoTurnRequest {
   motion: string;
   side: DemoSide;
   argument: string;
-  previous?: { argument: string; rebuttal: string };
+  /** The first exchange as the function returned it, with its signature. */
+  previous?: { argument: string; rebuttal: string; judgeNote: string; signature: string };
 }
 
 export interface DemoTurnReply {
@@ -41,6 +42,8 @@ export interface DemoTurnReply {
   turnsLeft: number;
   rebuttal: string;
   judgeNote: string;
+  /** The function's signature on this turn; a publish sends it back. */
+  signature: string;
 }
 
 /** Why a turn did not come back: the function's error code, or "network". */
@@ -50,7 +53,7 @@ export class DemoTurnError extends Error {
   }
 }
 
-export async function requestDemoTurn(body: DemoTurnRequest, signal?: AbortSignal): Promise<DemoTurnReply> {
+async function callDemo(body: object, signal?: AbortSignal): Promise<Record<string, unknown>> {
   let response: Response;
   try {
     response = await fetch(`${SUPABASE_URL}/functions/v1/demo-rebuttal`, {
@@ -62,12 +65,80 @@ export async function requestDemoTurn(body: DemoTurnRequest, signal?: AbortSigna
   } catch {
     throw new DemoTurnError("network");
   }
-  const data = await response.json().catch(() => ({})) as Partial<DemoTurnReply> & { error?: string };
-  if (!response.ok || typeof data.rebuttal !== "string" || typeof data.sessionId !== "string") {
-    throw new DemoTurnError(data.error ?? "unavailable");
-  }
-  return data as DemoTurnReply;
+  const data = await response.json().catch(() => ({})) as Record<string, unknown>;
+  if (!response.ok) throw new DemoTurnError(typeof data.error === "string" ? data.error : "unavailable");
+  return data;
 }
+
+export async function requestDemoTurn(body: DemoTurnRequest, signal?: AbortSignal): Promise<DemoTurnReply> {
+  const data = await callDemo(body, signal);
+  if (typeof data.rebuttal !== "string" || typeof data.sessionId !== "string") throw new DemoTurnError("unavailable");
+  return data as unknown as DemoTurnReply;
+}
+
+export interface PublishDemoRequest {
+  sessionId: string;
+  sessionToken: string;
+  motion: string;
+  side: DemoSide;
+  turns: Array<{ argument: string; rebuttal: string; judgeNote: string; signature: string }>;
+}
+
+export interface PublishDemoReply {
+  slug: string;
+  deleteToken: string;
+  /** False when search engines are asked not to list the page. */
+  indexable: boolean;
+  /** How many personal details were removed. */
+  redactions: number;
+}
+
+/** Publishes a finished round as a public page. Only on the visitor's explicit opt-in. */
+export async function publishDemoRound(body: PublishDemoRequest): Promise<PublishDemoReply> {
+  const data = await callDemo({ action: "publish", ...body });
+  if (typeof data.slug !== "string" || typeof data.deleteToken !== "string") throw new DemoTurnError("unavailable");
+  rememberDeleteToken(data.slug, data.deleteToken);
+  return data as unknown as PublishDemoReply;
+}
+
+export async function unpublishDemoRound(slug: string, deleteToken: string): Promise<void> {
+  try {
+    await callDemo({ action: "unpublish", slug, deleteToken });
+  } catch (error) {
+    // Already gone counts as done.
+    if (!(error instanceof DemoTurnError && error.code === "not_found")) throw error;
+  }
+  forgetDeleteToken(slug);
+}
+
+// The delete token lives only in the publishing browser; the server keeps its hash.
+const DELETE_TOKENS_KEY = "debateowl-published-rounds";
+
+function readDeleteTokens(): Record<string, string> {
+  try {
+    const value = JSON.parse(localStorage.getItem(DELETE_TOKENS_KEY) ?? "{}") as unknown;
+    return value && typeof value === "object" ? value as Record<string, string> : {};
+  } catch {
+    return {};
+  }
+}
+
+function writeDeleteTokens(tokens: Record<string, string>) {
+  try {
+    localStorage.setItem(DELETE_TOKENS_KEY, JSON.stringify(tokens));
+  } catch {
+    // Private mode: the round can still be unpublished from the page that published it.
+  }
+}
+
+const rememberDeleteToken = (slug: string, token: string) => writeDeleteTokens({ ...readDeleteTokens(), [slug]: token });
+const forgetDeleteToken = (slug: string) => {
+  const { [slug]: _removed, ...rest } = readDeleteTokens();
+  writeDeleteTokens(rest);
+};
+
+/** The delete token for a round this browser published, if it still has it. */
+export const deleteTokenFor = (slug: string): string | undefined => readDeleteTokens()[slug];
 
 type TurnstileApi = {
   render: (element: HTMLElement, options: Record<string, unknown>) => string;
