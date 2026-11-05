@@ -35,7 +35,9 @@ const PATTERNS: Pattern[] = [
   },
   { pattern: /(?<![\p{L}\p{N}])@[\p{L}\p{N}_.]{2,}/gu, replace: () => "[handle removed]" },
   // Nine or more digits with phone-style separators: a phone or an ID number,
-  // never a year or a statistic. "+36 30 123 4567", "555-123-4567", "612345678".
+  // "+36 30 123 4567", "555-123-4567", "612 345 678". A number grouped with
+  // spaces ("8 000 000 000") or a run of years looks the same and goes too;
+  // that costs the page its indexing, and the figure, nothing more.
   {
     pattern: /\+?\d(?:[\d\s().-]*\d)?/g,
     replace: (match) => ((match.match(/\d/g)?.length ?? 0) >= 9 ? "[number removed]" : null),

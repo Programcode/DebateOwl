@@ -11,7 +11,7 @@ import { ORGANIZATION_ID, PAGE_HEADS, PRICING, SITE_ORIGIN } from '@/lib/seo/pag
 import { jsonLd, type FaqEntry } from '@/lib/seo/tool-pages';
 import { usePageHead } from '@/lib/seo/use-page-head';
 import { readPrerenderedData } from '@/lib/seo/prerendered-data';
-import { listPublishedRounds, publishedRoundPath, sideLabel, type PublishedRound } from '@/lib/published-rounds';
+import { listPublishedRounds, publishedRoundPath, roundLink, sideLabel, type RoundLink } from '@/lib/published-rounds';
 
 const ROUTE = '/ai-debate';
 const URL = `${SITE_ORIGIN}${ROUTE}`;
@@ -110,16 +110,16 @@ export const RECENT_ROUNDS = 12;
 
 export interface AiDebatePageData {
   route: typeof ROUTE;
-  recentRounds: PublishedRound[];
+  recentRounds: RoundLink[];
 }
 
 /** The newest indexable published rounds: from the build when this page was prerendered, otherwise fetched. */
-function useRecentRounds(fromBuild: PublishedRound[] | undefined): PublishedRound[] {
+function useRecentRounds(fromBuild: RoundLink[] | undefined): RoundLink[] {
   const [rounds, setRounds] = useState(() => fromBuild ?? readPrerenderedData<AiDebatePageData>(ROUTE)?.recentRounds);
   useEffect(() => {
     if (rounds) return;
     const controller = new AbortController();
-    listPublishedRounds(RECENT_ROUNDS, controller.signal).then(setRounds, (): void => undefined);
+    listPublishedRounds(RECENT_ROUNDS, controller.signal).then((rounds) => setRounds(rounds.map(roundLink)), (): void => undefined);
     return () => controller.abort();
   }, [rounds]);
   return rounds ?? [];
@@ -133,7 +133,7 @@ function Speech({ speaker, children }: { speaker: string; children: string }) {
   );
 }
 
-export default function AiDebatePage({ recentRounds: fromBuild }: { recentRounds?: PublishedRound[] }) {
+export default function AiDebatePage({ recentRounds: fromBuild }: { recentRounds?: RoundLink[] }) {
   const { t } = useTranslation('tools');
   usePageHead(ROUTE);
   const recentRounds = useRecentRounds(fromBuild);

@@ -28,6 +28,10 @@ export interface PublishedRound {
 
 type Row = Omit<PublishedRound, "publishedAt"> & { published_at: string };
 
+/** What a list of rounds shows, and all the build embeds for one: no argument text. */
+export type RoundLink = Pick<PublishedRound, "slug" | "motion" | "side">;
+export const roundLink = ({ slug, motion, side }: PublishedRound): RoundLink => ({ slug, motion, side });
+
 export const PUBLISHED_ROUND_ROUTE = "/ai-debate/round/:slug";
 export const publishedRoundPath = (slug: string) => `/ai-debate/round/${slug}`;
 export const sideLabel = (side: PublishedRound["side"]) => (side === "for" ? "For" : "Against");

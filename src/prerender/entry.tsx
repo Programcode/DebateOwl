@@ -21,7 +21,7 @@ import ContactPage from '@/pages/ContactPage';
 import PressPage from '@/pages/PressPage';
 import AiDebatePage, { RECENT_ROUNDS, type AiDebatePageData } from '@/pages/AiDebatePage';
 import { PublishedRoundView, type PublishedRoundData } from '@/pages/PublishedRoundPage';
-import { listPublishedRounds, publishedRoundPath, roundDescription, roundTitle, type PublishedRound } from '@/lib/published-rounds';
+import { listPublishedRounds, publishedRoundPath, roundDescription, roundLink, roundTitle, type PublishedRound, type RoundLink } from '@/lib/published-rounds';
 import NotFound from '@/pages/NotFound';
 import SourcesPage from '@/pages/SourcesPage';
 import { PRACTICE_TOOLS, PREPARE_TOOLS, PREP_MODE_COUNT, UTILITY_TOOLS } from '@/components/features/tools/tool-links';
@@ -309,7 +309,7 @@ async function publishedRounds(): Promise<PublishedRound[]> {
   }
 }
 
-function publishedRoundPage(round: PublishedRound, related: PublishedRound[]): PrerenderedPage {
+function publishedRoundPage(round: PublishedRound, related: RoundLink[]): PrerenderedPage {
   const route = publishedRoundPath(round.slug);
   const url = `${SITE_ORIGIN}${route}`;
   const head: PageHead = { title: roundTitle(round), description: roundDescription(round), canonicalPath: route };
@@ -356,7 +356,7 @@ const alternatesOf = (route: string) => (isLocalizedRoute(route) ? { alternates:
 export async function prerenderPages({ landingModified }: { landingModified?: string }): Promise<PrerenderedPage[]> {
   await i18n.changeLanguage('en');
   const rounds = await publishedRounds();
-  const recentRounds = rounds.slice(0, RECENT_ROUNDS);
+  const recentRounds = rounds.slice(0, RECENT_ROUNDS).map(roundLink);
   const aiDebateData: AiDebatePageData = { route: '/ai-debate', recentRounds };
   return [
     {
@@ -402,7 +402,7 @@ export async function prerenderPages({ landingModified }: { landingModified?: st
       data: aiDebateData,
     },
     // Each links to its three newer and three older neighbours, so every round has inbound links.
-    ...rounds.map((round, index) => publishedRoundPage(round, [...rounds.slice(Math.max(0, index - 3), index), ...rounds.slice(index + 1, index + 4)])),
+    ...rounds.map((round, index) => publishedRoundPage(round, [...rounds.slice(Math.max(0, index - 3), index), ...rounds.slice(index + 1, index + 4)].map(roundLink))),
     // The tool pages render their own JSON-LD in the body.
     ...TOOL_PAGES.map(({ route, module, Page }) => ({
       ...alternatesOf(route),

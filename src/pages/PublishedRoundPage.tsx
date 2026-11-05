@@ -15,6 +15,7 @@ import {
   roundTitle,
   sideLabel,
   type PublishedRound,
+  type RoundLink,
 } from '@/lib/published-rounds';
 import { readPrerenderedData } from '@/lib/seo/prerendered-data';
 import { useDataPageHead } from '@/lib/seo/use-page-head';
@@ -24,14 +25,14 @@ export interface PublishedRoundData {
   route: string;
   round: PublishedRound;
   /** Neighbouring indexable rounds, so every listed round is linked from others. */
-  related: PublishedRound[];
+  related: RoundLink[];
 }
 
 const publishedOn = (round: PublishedRound) =>
   new Intl.DateTimeFormat('en', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' }).format(new Date(round.publishedAt));
 
 /** A published round as a page. The build renders it with the same props, so the static HTML matches. */
-export function PublishedRoundView({ round, related, owner }: { round: PublishedRound; related: PublishedRound[]; owner?: ReactNode }) {
+export function PublishedRoundView({ round, related, owner }: { round: PublishedRound; related: RoundLink[]; owner?: ReactNode }) {
   const { t } = useTranslation('tools');
   const opponent = round.side === 'for' ? 'Against' : 'For';
   return (
@@ -143,7 +144,7 @@ type State =
   | { status: 'loading' }
   | { status: 'missing' }
   | { status: 'error' }
-  | { status: 'ready'; round: PublishedRound; related: PublishedRound[] };
+  | { status: 'ready'; round: PublishedRound; related: RoundLink[] };
 
 /**
  * /ai-debate/round/:slug. A prerendered round renders from the data the build
