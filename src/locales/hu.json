@@ -1898,6 +1898,15 @@
     "question": "Mi az a {{product}}?",
     "answer": "A <home>{{product}}</home> MI-alapú vitafelkészítő és gyakorló alkalmazás diákoknak és versenyzőknek. Segít megírni az esetet, megtalálni egy érvelés gyenge pontjait, hivatkozásokkal ellátott bizonyítékot keresni, és időre gyakorolni egy MI-ellenféllel.",
     "notThis": "A {{product}} vitaalkalmazás diákoknak, nem sport- vagy gépilátás-termék. A <press>sajtóanyagban</press> megtalálod a rövid adatokat és a logót.",
+    "debateAiHeading": "A {{product}} nem a DebateAI",
+    "debateAiIntro": "Több, egymástól független termék is a DebateAI nevet használja. A {{product}} (debateowl.com) egyikük sem, és nincs kapcsolata velük:",
+    "debateAiOrg": "A <site>debateai.org</site> („Challenge Your Convictions”): megadod az álláspontodat, és egy MI az ellenkező oldalt képviseli, vagy <compare>nézed, ahogy MI-modellek vitáznak egymással</compare>. <faq>A saját GYIK-je</faq> szerint ingyen kipróbálható.",
+    "debateAiCom": "A debateai.com a Debatable oldalra irányít át, ahol élő vitakörökben lehet emberrel vagy MI-vel vitázni; a <compare>{{product}} vs Debatable</compare> oldal összeveti a kettőt.",
+    "debateAiNet": "A debateai.net a „debate AI”, amelyet Abhik Sharma 2024 decemberében <ph>mutatott be a Product Huntön</ph>.",
+    "debateAiX": "Az <x>@DebateAI fiók az X-en</x> a Better Judgement Ltd.-é, egy brit döntéstámogató cégé, nem a debateai.org-é.",
+    "debateAiOther": "A debateai.app és a debateai.dev két további különálló oldal.",
+    "debateAiContrast": "A {{product}} időre menő gyakorlóvita MI-ellenféllel iskolai, Lincoln-Douglas (LD) és Public Forum (PF) formátumban, valamint esetírás. {{trialDays}} napos ingyenes próbaidőszak, utána havi {{price}} + adó, ingyenes csomag nincs. Az <tools>ingyenes vitaeszközökhöz</tools> és az <demo>MI-vitapartner bemutatójához</demo> nem kell fiók.",
+    "debateAiChecked": "Ellenőrizve: {{date}}, minden termék saját nyilvános oldalain.",
     "makerHeading": "Ki üzemelteti a {{product}}-t",
     "maker": "A {{product}}-t Gáborjáni Ádám, egy magyarországi független diákfejlesztő üzemelteti. A Pi-Stack (<pistack>pi-stack.org</pistack>) az a név, amelyen a projektjeit közzéteszi, a <github>Programcode</github> pedig a GitHub-felhasználóneve. Kapcsolat: <email>{{email}}</email>.",
     "nameHeading": "A név",
@@ -1931,7 +1940,7 @@
     "logoPng": "A logó letöltése PNG-ben (512 × 512)",
     "logoSvg": "A logó letöltése SVG-ben",
     "notHeading": "Nem összetévesztendő",
-    "not": "A {{product}} nem azonos az Owl AI-jal (owl.ai), amely valós idejű gépi látás platform sporthoz, és a debatelab.ai-jal sem, amely egy másik vitagyakorló termék. Átnevezése előtt a {{product}} DebateLab néven a debate.pi-stack.org címen futott, nem a debatelab.ai-n."
+    "not": "A {{product}} nem azonos az Owl AI-jal (owl.ai), amely valós idejű gépi látás platform sporthoz, és a debatelab.ai-jal sem, amely egy másik vitagyakorló termék. Átnevezése előtt a {{product}} DebateLab néven a debate.pi-stack.org címen futott, nem a debatelab.ai-n. Egyik DebateAI nevű termékkel sem azonos; ezeket <about>a {{product}} bemutatása</about> oldal sorolja fel."
   },
   "contactPage": {
     "title": "Kapcsolat",

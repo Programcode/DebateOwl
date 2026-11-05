@@ -1898,6 +1898,15 @@
     "question": "What is {{product}}?",
     "answer": "<home>{{product}}</home> is an AI debate prep and practice app for students and competitive debaters. It helps you write a case, find the weak points in an argument, research evidence with citations and practice timed rounds against an AI opponent.",
     "notThis": "{{product}} is a debate app for students, not a sports or computer-vision product. The <press>press kit</press> has the short facts and the logo.",
+    "debateAiHeading": "{{product}} is not DebateAI",
+    "debateAiIntro": "Several unrelated products use the name DebateAI. {{product}}, at debateowl.com, is none of them and has no link to them:",
+    "debateAiOrg": "<site>debateai.org</site> (“Challenge Your Convictions”): you state a position and an AI argues the opposite side, or you <compare>watch AI models debate each other</compare>. <faq>Its own FAQ</faq> says it is free to try.",
+    "debateAiCom": "debateai.com forwards to Debatable, a site for live rounds against a person or an AI; <compare>{{product}} vs Debatable</compare> compares the two.",
+    "debateAiNet": "debateai.net is “debate AI”, which Abhik Sharma <ph>launched on Product Hunt</ph> in December 2024.",
+    "debateAiX": "<x>@DebateAI on X</x> is Better Judgement Ltd, a UK decision-support firm, not debateai.org.",
+    "debateAiOther": "debateai.app and debateai.dev are two more separate sites.",
+    "debateAiContrast": "{{product}} is timed School, Lincoln-Douglas (LD) and Public Forum (PF) sparring against an AI opponent, plus case prep. It has a {{trialDays}}-day free trial, then {{price}}/month + tax, and no free plan. The <tools>free debate tools</tools> and the <demo>AI debate demo</demo> need no account.",
+    "debateAiChecked": "Checked on {{date}} against each product's own public pages.",
     "makerHeading": "Who runs {{product}}",
     "maker": "{{product}} is run by Ádám Gáborjáni, an independent student developer in Hungary. Pi-Stack (<pistack>pi-stack.org</pistack>) is the name he publishes his projects under, and <github>Programcode</github> is his GitHub username. Contact: <email>{{email}}</email>.",
     "nameHeading": "The name",
@@ -1931,7 +1940,7 @@
     "logoPng": "Download the logo as PNG (512 × 512)",
     "logoSvg": "Download the logo as SVG",
     "notHeading": "Not to be confused with",
-    "not": "{{product}} is not Owl AI (owl.ai), a real-time computer-vision platform for sports, and it is not debatelab.ai, a separate debate practice product. Before its rename, {{product}} was DebateLab at debate.pi-stack.org, not at debatelab.ai."
+    "not": "{{product}} is not Owl AI (owl.ai), a real-time computer-vision platform for sports, and it is not debatelab.ai, a separate debate practice product. Before its rename, {{product}} was DebateLab at debate.pi-stack.org, not at debatelab.ai. It is also not any of the products called DebateAI; <about>About {{product}}</about> lists them."
   },
   "contactPage": {
     "title": "Contact {{product}}",

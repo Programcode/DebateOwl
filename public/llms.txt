@@ -2,7 +2,7 @@
 
 > DebateOwl is an AI debate prep and practice app for students and competitive debaters that builds structured cases, finds the weak points in arguments, researches evidence with citations and runs timed practice rounds against an AI opponent.
 
-DebateOwl runs at https://debateowl.com/. It is a separate product from debatelab.ai. It is not Owl AI (owl.ai), a computer-vision platform for sports. DebateOwl was called DebateLab (debate.pi-stack.org) until 27 October 2026.
+DebateOwl runs at https://debateowl.com/. It is a separate product from debatelab.ai. It is not Owl AI (owl.ai), a computer-vision platform for sports. It is not DebateAI: debateai.org, debateai.com (which forwards to Debatable), debateai.net and @DebateAI on X (Better Judgement Ltd) are unrelated products; see [About](https://debateowl.com/about#not-debateai). DebateOwl was called DebateLab (debate.pi-stack.org) until 27 October 2026.
 
 ## Key facts (as of October 2026)
 

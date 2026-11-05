@@ -70,7 +70,8 @@ export default function PressPage() {
         </section>
         <section>
           <h2 className="text-lg font-semibold">{t('pressPage.notHeading')}</h2>
-          <p>{t('pressPage.not', { product })}</p>
+          {/* A plain link: the router does not scroll to an anchor on another page, the browser does. */}
+          <p><Trans i18nKey="pressPage.not" values={{ product }} components={{ about: <a href="/about#not-debateai" className={linkClass} /> }} /></p>
         </section>
         <section>
           <h2 className="text-lg font-semibold">{t('aboutPage.linksHeading', { product })}</h2>

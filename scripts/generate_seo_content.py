@@ -951,7 +951,7 @@ def llms_txt():
 
 > {DEFINITION}
 
-{BRAND} runs at {BASE}/. It is a separate product from debatelab.ai. It is not Owl AI (owl.ai), a computer-vision platform for sports. {BRAND} was called {FORMERLY["name"]} ({FORMERLY["host"]}) until {long_date_dmy(FORMERLY["until"])}.
+{BRAND} runs at {BASE}/. It is a separate product from debatelab.ai. It is not Owl AI (owl.ai), a computer-vision platform for sports. It is not DebateAI: debateai.org, debateai.com (which forwards to Debatable), debateai.net and @DebateAI on X (Better Judgement Ltd) are unrelated products; see [About]({BASE}/about#not-debateai). {BRAND} was called {FORMERLY["name"]} ({FORMERLY["host"]}) until {long_date_dmy(FORMERLY["until"])}.
 
 ## Key facts (as of {FACTS_AS_OF})
 

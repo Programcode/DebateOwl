@@ -1898,6 +1898,15 @@
     "question": "¿Qué es {{product}}?",
     "answer": "<home>{{product}}</home> es una app de preparación y práctica de debate con IA para estudiantes y debatientes de competición. Te ayuda a escribir un caso, encontrar los puntos débiles de un argumento, buscar evidencia con citas y practicar rondas cronometradas contra un oponente de IA.",
     "notThis": "{{product}} es una app de debate para estudiantes, no un producto de deportes ni de visión por computadora. El <press>kit de prensa</press> reúne los datos básicos y el logotipo.",
+    "debateAiHeading": "{{product}} no es DebateAI",
+    "debateAiIntro": "Varios productos sin relación entre sí usan el nombre DebateAI. {{product}}, en debateowl.com, no es ninguno de ellos ni tiene vínculo con ellos:",
+    "debateAiOrg": "<site>debateai.org</site> («Challenge Your Convictions»): tú defiendes una postura y una IA argumenta la contraria, o <compare>ves a modelos de IA debatir entre sí</compare>. <faq>Sus propias preguntas frecuentes</faq> dicen que se puede probar gratis.",
+    "debateAiCom": "debateai.com redirige a Debatable, un sitio de rondas en vivo contra una persona o una IA; <compare>{{product}} vs Debatable</compare> compara los dos.",
+    "debateAiNet": "debateai.net es «debate AI», que Abhik Sharma <ph>presentó en Product Hunt</ph> en diciembre de 2024.",
+    "debateAiX": "<x>La cuenta @DebateAI en X</x> es de Better Judgement Ltd, una empresa británica de apoyo a la toma de decisiones, no de debateai.org.",
+    "debateAiOther": "debateai.app y debateai.dev son otros dos sitios distintos.",
+    "debateAiContrast": "{{product}} es práctica cronometrada contra un oponente de IA en formato escolar, Lincoln-Douglas (LD) y Public Forum (PF), más preparación de casos. Tiene una prueba gratuita de {{trialDays}} días, después {{price}} al mes + impuestos, y no hay plan gratuito. Las <tools>herramientas de debate gratuitas</tools> y la <demo>demo de debate con IA</demo> no necesitan cuenta.",
+    "debateAiChecked": "Comprobado el {{date}} en las páginas públicas de cada producto.",
     "makerHeading": "Quién gestiona {{product}}",
     "maker": "{{product}} lo gestiona Ádám Gáborjáni, un estudiante y desarrollador independiente de Hungría. Pi-Stack (<pistack>pi-stack.org</pistack>) es el nombre con el que publica sus proyectos, y <github>Programcode</github> es su nombre de usuario en GitHub. Contacto: <email>{{email}}</email>.",
     "nameHeading": "El nombre",
@@ -1931,7 +1940,7 @@
     "logoPng": "Descargar el logotipo en PNG (512 × 512)",
     "logoSvg": "Descargar el logotipo en SVG",
     "notHeading": "No confundir con",
-    "not": "{{product}} no es Owl AI (owl.ai), una plataforma de visión por computadora en tiempo real para deportes, ni debatelab.ai, otro producto de práctica de debate. Antes del cambio de nombre, {{product}} era DebateLab en debate.pi-stack.org, no en debatelab.ai."
+    "not": "{{product}} no es Owl AI (owl.ai), una plataforma de visión por computadora en tiempo real para deportes, ni debatelab.ai, otro producto de práctica de debate. Antes del cambio de nombre, {{product}} era DebateLab en debate.pi-stack.org, no en debatelab.ai. Tampoco es ninguno de los productos llamados DebateAI; <about>Acerca de {{product}}</about> los enumera."
   },
   "contactPage": {
     "title": "Contacta con {{product}}",
