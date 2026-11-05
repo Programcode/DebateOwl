@@ -273,9 +273,15 @@ async function localizedPages(landingModified: string | undefined): Promise<Prer
 const MAX_PUBLISHED_ROUNDS = 1_000;
 const PUBLISHED_ROUNDS_TIMEOUT_MS = 10_000;
 // Visitor text that would fail a build check is not prerendered: check-site
-// fails JSON-LD carrying an HTML entity, and prerender.mjs fails a page that
-// names a /src/ path.
-const BREAKS_BUILD = /&(?:[a-z]+|#x?[\da-f]+);|\/src\//i;
+// fails JSON-LD carrying an HTML entity, prerender.mjs fails a page that names
+// a /src/ path, and check-build-boundaries.mjs fails a file with a server
+// secret pattern or any JWT (its patterns, kept in step by hand).
+const BREAKS_BUILD = [
+  /&(?:[a-z]+|#x?[\da-f]+);/i,
+  /\/src\//,
+  /\b(?:sk_live_|sk_test_|rk_live_|whsec_|sk-or-v1-|sk-ant-|sk-proj-|sb_secret_)[A-Za-z0-9_-]{8,}|service_role/,
+  /eyJ[A-Za-z0-9_-]{10,}\.eyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}/,
+];
 /** A title as check-site compares them: escaped &, < and > each read as one "x". */
 const titleKey = (title: string) => title.replace(/[&<>]/g, 'x').trim();
 
@@ -291,7 +297,7 @@ async function publishedRounds(): Promise<PublishedRound[]> {
     const titles = new Set<string>();
     const kept = rounds.filter((round) => {
       const title = titleKey(roundTitle(round));
-      if (!round.indexable || round.turns.length === 0 || titles.has(title) || BREAKS_BUILD.test(JSON.stringify(round))) return false;
+      if (!round.indexable || round.turns.length === 0 || titles.has(title) || BREAKS_BUILD.some((pattern) => pattern.test(JSON.stringify(round)))) return false;
       titles.add(title);
       return true;
     });

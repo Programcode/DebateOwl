@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { OwlMark } from '@/components/brand/Owl';
@@ -159,9 +159,13 @@ export default function PublishedRoundPage() {
     return data ? { status: 'ready', round: data.round, related: data.related } : { status: 'loading' };
   });
 
+  // Set once this browser unpublishes the round: a read that started before then must not bring it back.
+  const removed = useRef(false);
+
   useEffect(() => {
     const controller = new AbortController();
     fetchPublishedRound(slug, controller.signal).then((round) => {
+      if (removed.current) return;
       setState((previous) => (round
         ? { status: 'ready', round, related: previous.status === 'ready' ? previous.related : [] }
         : { status: 'missing' }));
@@ -181,7 +185,7 @@ export default function PublishedRoundPage() {
       <PublishedRoundView
         round={state.round}
         related={state.related}
-        owner={<OwnerControls slug={slug} onRemoved={() => setState({ status: 'missing' })} />}
+        owner={<OwnerControls slug={slug} onRemoved={() => { removed.current = true; setState({ status: 'missing' }); }} />}
       />
     );
   }

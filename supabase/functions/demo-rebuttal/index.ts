@@ -202,6 +202,17 @@ function toLastSentence(value: string): string {
  * Keeps a rebuttal that ran past REBUTTAL_HARD_CAP words to the full
  * sentences within the cap. It used to be cut at a word count, mid-sentence.
  */
+/**
+ * Keeps text within the characters a follow-up or publish reads back
+ * (REBUTTAL_MAX, JUDGE_NOTE_MAX), at its last full sentence, so what is signed
+ * is exactly what comes back.
+ */
+function fitChars(value: string, max: number): string {
+  if (value.length <= max) return value;
+  const cut = value.slice(0, max);
+  return toLastSentence(cut) || cut.trim();
+}
+
 function capRebuttal(value: string): string {
   const words = value.trim().split(/\s+/);
   if (words.length <= REBUTTAL_HARD_CAP) return value.trim();
@@ -357,8 +368,8 @@ export async function handleRequest(req: Request): Promise<Response> {
     const reply = await callModel(request);
     if (!reply.allowed) return json(422, { error: "not_allowed", sessionId: row.session_id });
     const turn = request.sessionId ? 2 : 1;
-    const rebuttal = capRebuttal(reply.rebuttal);
-    const judgeNote = reply.judgeNote.trim();
+    const rebuttal = fitChars(capRebuttal(reply.rebuttal), REBUTTAL_MAX);
+    const judgeNote = fitChars(reply.judgeNote.trim(), JUDGE_NOTE_MAX);
     const { motion, side, argument } = request;
     return json(200, {
       sessionId: row.session_id,

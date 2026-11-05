@@ -16,15 +16,21 @@ interface Pattern {
 const NAME = "[\\p{Lu}][\\p{L}'’-]+(?:\\s+[\\p{Lu}][\\p{L}'’-]+)?";
 
 const PATTERNS: Pattern[] = [
+  // A pasted API key or token, first so the link rule cannot split a JWT at its dots.
+  {
+    pattern: /\b(?:sk|rk|pk|whsec|sb_secret)[_-][A-Za-z0-9_-]{8,}|eyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}/g,
+    replace: () => "[key removed]",
+  },
   { pattern: /[\p{L}\p{N}._%+-]+@[\p{L}\p{N}-]+(?:\.[\p{L}\p{N}-]+)*\.\p{L}{2,}/gu, replace: () => "[email removed]" },
   { pattern: /\b(?:https?:\/\/|www\.)[^\s<>"]+/giu, replace: () => "[link removed]" },
   // A bare domain, with or without a path, in any case and script: example.com,
-  // school.hu/class, EVIL.COM, Spam-Shop.Xyz, пример.рф. Any top-level domain counts, so a
+  // school.hu/class, EVIL.COM, Spam-Shop.Xyz, пример.рф, example.भारत (whose
+  // vowel signs are combining marks, \p{M}, not letters). Any top-level domain counts, so a
   // page cannot carry a site name a list did not foresee. Words that only look
   // like one ("Node.js", or "casa.Es" with a missing space) go too; that costs
   // the page its indexing, nothing more.
   {
-    pattern: /(?<![\p{L}\p{N}@.-])[\p{L}\p{N}-]+(?:\.[\p{L}\p{N}-]+)*\.\p{L}{2,24}(?![\p{L}\p{N}])(?:\/[^\s<>"]*)?/gu,
+    pattern: /(?<![\p{L}\p{M}\p{N}@.-])[\p{L}\p{M}\p{N}-]+(?:\.[\p{L}\p{M}\p{N}-]+)*\.\p{L}[\p{L}\p{M}]{1,23}(?![\p{L}\p{M}\p{N}])(?:\/[^\s<>"]*)?/gu,
     replace: () => "[link removed]",
   },
   { pattern: /(?<![\p{L}\p{N}])@[\p{L}\p{N}_.]{2,}/gu, replace: () => "[handle removed]" },
@@ -43,6 +49,8 @@ const PATTERNS: Pattern[] = [
     pattern: /(?<![\p{L}\p{N}])((?:my name is|my name's|i am called|i'm called|me llamo|mi nombre es|a nevem|nevem)\s+)[\p{L}'’-]+(?:\s+[\p{L}'’-]+)?/giu,
     replace: (_match, intro) => `${intro}[name removed]`,
   },
+  // "Call me Anna": only with a capitalised name, so "call me old-fashioned" stays.
+  { pattern: new RegExp(`(?<![\\p{L}\\p{N}])([Cc]all me\\s+)${NAME}`, "gu"), replace: (_match, intro) => `${intro}[name removed]` },
   // A person named with a title: "Mr Smith", "Dr. Kovács", "Sra. García".
   {
     pattern: new RegExp(`\\b(?:Mr|Mrs|Ms|Miss|Mx|Dr|Prof|Sr|Sra|Srta|Señor|Señora|Señorita)\\.?\\s+${NAME}`, "gu"),

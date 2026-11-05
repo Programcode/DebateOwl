@@ -322,3 +322,17 @@ Deno.test("a one-turn or short round publishes as a noindex page", async () => {
     demo.restore();
   }
 });
+
+Deno.test("an over-long judge note is cut before signing, so the follow-up and the publish still verify", async () => {
+  const judgeNote = "Say which pupils a ban protects and why that outweighs the cost. ".repeat(20).trim(); // 1,299 characters
+  const demo = harness({ content: JSON.stringify({ allowed: true, rebuttal: "Phones help in emergencies.", judgeNote }) });
+  try {
+    const publish = await playRound(demo);
+    assert(String(publish.turns[0].judgeNote).length <= 1_000);
+    assert(String(publish.turns[0].judgeNote).endsWith("the cost."));
+    const reply = await demo.send("198.51.100.7", publish);
+    assertEquals(reply.status, 200);
+  } finally {
+    demo.restore();
+  }
+});
