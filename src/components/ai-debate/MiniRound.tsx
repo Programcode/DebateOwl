@@ -97,7 +97,6 @@ type Turn = { argument: string; rebuttal: string; judgeNote: string; signature: 
 
 const PUBLISH_ERRORS: Record<string, string> = {
   unknown_session: 'This round is too old to publish. A round can be published for two hours after it starts.',
-  already_published: 'This round is already published.',
   invalid_round: 'This round could not be verified, so it was not published.',
   demo_disabled: 'Publishing is switched off right now.',
 };

@@ -272,8 +272,12 @@ async function localizedPages(landingModified: string | undefined): Promise<Prer
 /** The most published rounds the build prerenders and lists in the sitemap. */
 const MAX_PUBLISHED_ROUNDS = 1_000;
 const PUBLISHED_ROUNDS_TIMEOUT_MS = 10_000;
-// check-site fails JSON-LD that carries an HTML entity; a round whose text holds one is not prerendered.
-const HTML_ENTITY = /&(?:[a-z]+|#x?[\da-f]+);/i;
+// Visitor text that would fail a build check is not prerendered: check-site
+// fails JSON-LD carrying an HTML entity, and prerender.mjs fails a page that
+// names a /src/ path.
+const BREAKS_BUILD = /&(?:[a-z]+|#x?[\da-f]+);|\/src\//i;
+/** A title as check-site compares them: escaped &, < and > each read as one "x". */
+const titleKey = (title: string) => title.replace(/[&<>]/g, 'x').trim();
 
 /**
  * The indexable published rounds in the project this build talks to (the same
@@ -286,8 +290,8 @@ async function publishedRounds(): Promise<PublishedRound[]> {
     const rounds = await listPublishedRounds(MAX_PUBLISHED_ROUNDS, AbortSignal.timeout(PUBLISHED_ROUNDS_TIMEOUT_MS));
     const titles = new Set<string>();
     const kept = rounds.filter((round) => {
-      const title = roundTitle(round);
-      if (!round.indexable || round.turns.length === 0 || titles.has(title) || HTML_ENTITY.test(JSON.stringify(round))) return false;
+      const title = titleKey(roundTitle(round));
+      if (!round.indexable || round.turns.length === 0 || titles.has(title) || BREAKS_BUILD.test(JSON.stringify(round))) return false;
       titles.add(title);
       return true;
     });

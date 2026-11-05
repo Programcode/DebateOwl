@@ -33,8 +33,9 @@ REVOKE ALL ON TABLE public.published_demo_rounds FROM PUBLIC, anon, authenticate
 GRANT SELECT, INSERT, DELETE ON TABLE public.published_demo_rounds TO service_role;
 
 /**
- * Stores a published round. Returns (status, indexable): status 'ok' or
- * 'already_published' (the session has a page). A round the function judged
+ * Stores a published round. Returns (status, indexable, slug): status 'ok', or
+ * 'already_published' with the stored round's indexable and slug, so a retried
+ * publish learns its page. A round the function judged
  * indexable stays noindex when an indexable round on the same motion and side
  * already exists, so a preset motion does not fill the index with near-copies.
  */
@@ -47,7 +48,7 @@ CREATE FUNCTION public.publish_demo_round(
   p_indexable boolean,
   p_delete_token_hash text
 )
-RETURNS TABLE (status text, indexable boolean)
+RETURNS TABLE (status text, indexable boolean, slug text)
 LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path = ''
@@ -68,10 +69,11 @@ BEGIN
   VALUES (p_slug, p_session_id, p_motion, p_side, p_turns, v_indexable, p_delete_token_hash)
   ON CONFLICT (session_id) DO NOTHING;
   IF NOT FOUND THEN
-    RETURN QUERY SELECT 'already_published'::text, NULL::boolean;
+    RETURN QUERY SELECT 'already_published'::text, r.indexable, r.slug
+      FROM public.published_demo_rounds r WHERE r.session_id = p_session_id;
     RETURN;
   END IF;
-  RETURN QUERY SELECT 'ok'::text, v_indexable;
+  RETURN QUERY SELECT 'ok'::text, v_indexable, p_slug;
 END;
 $$;
 

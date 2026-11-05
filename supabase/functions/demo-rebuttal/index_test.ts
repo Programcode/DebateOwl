@@ -48,9 +48,10 @@ function harness(modelReply: ModelReply = { content: JSON.stringify({ allowed: t
     }
     if (url.pathname === "/rest/v1/rpc/publish_demo_round") {
       const body = await request.json() as Record<string, unknown>;
-      if (published.some((row) => row.p_session_id === body.p_session_id)) return Response.json([{ status: "already_published", indexable: null }]);
+      const existing = published.find((row) => row.p_session_id === body.p_session_id);
+      if (existing) return Response.json([{ status: "already_published", indexable: existing.p_indexable, slug: existing.p_slug }]);
       published.push(body);
-      return Response.json([{ status: "ok", indexable: body.p_indexable }]);
+      return Response.json([{ status: "ok", indexable: body.p_indexable, slug: body.p_slug }]);
     }
     if (url.pathname === "/rest/v1/rpc/unpublish_demo_round") {
       const body = await request.json() as Record<string, unknown>;
@@ -256,7 +257,11 @@ Deno.test("a finished round publishes once, indexable, and its delete token take
     assert(demo.published[0].p_delete_token_hash !== reply.body.deleteToken);
     assertEquals(demo.published[0].p_turns, publish.turns.map(({ argument, rebuttal, judgeNote }) => ({ argument, rebuttal, judgeNote })));
 
-    assertEquals((await demo.send("198.51.100.7", publish)).body.error, "already_published");
+    // A retry after a lost answer gets the same page and token, and stores nothing new.
+    const retry = await demo.send("198.51.100.7", publish);
+    assertEquals(retry.status, 200);
+    assertEquals([retry.body.slug, retry.body.deleteToken], [reply.body.slug, reply.body.deleteToken]);
+    assertEquals(demo.published.length, 1);
 
     const wrong = await demo.send("198.51.100.7", { action: "unpublish", slug: reply.body.slug, deleteToken: "0".repeat(64) });
     assertEquals(wrong.status, 404);

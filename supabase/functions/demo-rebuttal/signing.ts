@@ -56,6 +56,19 @@ export interface SignedTurn {
 const turnMessage = (turn: SignedTurn) =>
   `demo-turn:v1:${JSON.stringify([turn.sessionId, turn.turn, turn.motion, turn.side, turn.argument, turn.rebuttal, turn.judgeNote])}`;
 
+/**
+ * A published round's slug and delete token, derived from its session so a
+ * publish retried after a lost response returns the same ones. Only a caller
+ * holding the session token reaches this.
+ */
+export async function publishKeys(sessionId: string, secret: string): Promise<{ slug: string; deleteToken: string }> {
+  const slugHex = await sign(secret, `demo-slug:v1:${sessionId}`);
+  return {
+    slug: BigInt(`0x${slugHex}`).toString(36).padStart(12, "0").slice(-12),
+    deleteToken: await sign(secret, `demo-delete:v1:${sessionId}`),
+  };
+}
+
 export const signTurn = (turn: SignedTurn, secret: string) => sign(secret, turnMessage(turn));
 
 export const verifyTurn = (turn: SignedTurn, signature: string, secret: string) => verify(secret, turnMessage(turn), signature);

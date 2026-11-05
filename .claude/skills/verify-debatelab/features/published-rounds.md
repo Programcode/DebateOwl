@@ -35,6 +35,6 @@ Build-time behaviour (not in the recipe, checked by hand): publish rows through 
 ## Gotchas
 
 - A publish must happen within two hours of the first turn: the session token expires and the function answers `unknown_session`.
-- One page per session (`already_published`), and only the first indexable round on a motion and side stays indexable, so recipes use a motion unique to the project and delete their rows afterwards.
+- One page per session: publishing again returns the same slug and delete token. Only the first indexable round on a motion and side stays indexable, so recipes use a motion unique to the project and delete their rows afterwards.
 - The redaction patterns cannot recognise a bare name ("Anna said…"). The opt-in text asks visitors not to include one.
 - A published round's static HTML outlives an unpublish until the next production build; the browser shows it as removed at once.

@@ -5,10 +5,11 @@
 // it, so nobody can publish text the model did not answer or moderation did
 // not pass. Each field is redacted (redact.ts); the round is indexable only
 // when it is substantial and nothing was redacted. The visitor receives a
-// delete token, of which only the SHA-256 is stored.
+// delete token, of which only the SHA-256 is stored. The slug and token are
+// derived from the session, so publishing again returns the same ones.
 import type { SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2.114.0";
 import { isSubstantial, redactPersonalData } from "./redact.ts";
-import { toHex, verifySessionToken, verifyTurn } from "./signing.ts";
+import { publishKeys, toHex, verifySessionToken, verifyTurn } from "./signing.ts";
 
 const MOTION_MAX = 200;
 const ARGUMENT_MAX = 600;
@@ -17,7 +18,6 @@ const JUDGE_NOTE_MAX = 1_000; // index.ts reads the first turn's note back with 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const SLUG = /^[a-z0-9]{12}$/;
 const DELETE_TOKEN = /^[0-9a-f]{64}$/;
-const SLUG_ALPHABET = "abcdefghijklmnopqrstuvwxyz0123456789";
 
 type Json = (status: number, body: Record<string, unknown>) => Response;
 type Turn = { argument: string; rebuttal: string; judgeNote: string; signature: string };
@@ -52,17 +52,6 @@ function parsePublishRequest(raw: Record<string, unknown>): PublishRequest | nul
   return { sessionId, sessionToken, motion, side, turns };
 }
 
-function randomSlug(): string {
-  let slug = "";
-  while (slug.length < 12) {
-    for (const byte of crypto.getRandomValues(new Uint8Array(16))) {
-      // 252 is the largest multiple of 36 below 256; a higher byte would bias the alphabet.
-      if (byte < 252 && slug.length < 12) slug += SLUG_ALPHABET[byte % 36];
-    }
-  }
-  return slug;
-}
-
 const sha256 = async (value: string) => toHex(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(value)));
 
 export async function handlePublish(raw: Record<string, unknown>, secret: string, supabase: SupabaseClient, json: Json): Promise<Response> {
@@ -89,8 +78,7 @@ export async function handlePublish(raw: Record<string, unknown>, secret: string
   };
   const motion = clean(request.motion);
   const turns = request.turns.map((turn) => ({ argument: clean(turn.argument), rebuttal: clean(turn.rebuttal), judgeNote: clean(turn.judgeNote) }));
-  const deleteToken = toHex(crypto.getRandomValues(new Uint8Array(32)).buffer);
-  const slug = randomSlug();
+  const { slug, deleteToken } = await publishKeys(request.sessionId, secret);
 
   const { data, error } = await supabase.rpc("publish_demo_round", {
     p_slug: slug,
@@ -105,10 +93,10 @@ export async function handlePublish(raw: Record<string, unknown>, secret: string
     console.error("[DEMO] publish failed:", error.code);
     return json(500, { error: "unavailable" });
   }
-  const row = (Array.isArray(data) ? data[0] : data) as { status: string; indexable: boolean | null } | undefined;
+  const row = (Array.isArray(data) ? data[0] : data) as { status: string; indexable: boolean | null; slug: string | null } | undefined;
   console.log(`[DEMO] publish status=${row?.status ?? "unavailable"} indexable=${row?.indexable === true} redactions=${redactions}`);
-  if (row?.status === "already_published") return json(409, { error: "already_published" });
-  if (row?.status !== "ok") return json(500, { error: "unavailable" });
+  // A retry of a publish whose answer was lost gets the same page and token back.
+  if ((row?.status !== "ok" && row?.status !== "already_published") || row.slug !== slug) return json(500, { error: "unavailable" });
   return json(200, { slug, deleteToken, indexable: row.indexable === true, redactions });
 }
 

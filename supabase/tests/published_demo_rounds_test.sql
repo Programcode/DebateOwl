@@ -14,7 +14,7 @@ SELECT ok(
   'only the service role can publish or unpublish a round'
 );
 
-CREATE TEMP TABLE results (label text, status text, indexable boolean);
+CREATE TEMP TABLE results (label text, status text, indexable boolean, slug text);
 INSERT INTO results SELECT 'first', * FROM public.publish_demo_round(
   'aaaaaaaaaaaa', 'a1000000-0000-4000-8000-000000000001', 'This House would ban homework', 'for',
   '[{"argument":"a","rebuttal":"b","judgeNote":"c"}]', true, repeat('1', 64));
@@ -32,10 +32,11 @@ INSERT INTO results SELECT 'thin', * FROM public.publish_demo_round(
   '[{"argument":"a","rebuttal":"b","judgeNote":"c"}]', false, repeat('5', 64));
 
 SELECT results_eq(
-  $$SELECT label, status, indexable FROM results ORDER BY label$$,
-  $$VALUES ('first', 'ok', true), ('other-side', 'ok', true), ('same-motion', 'ok', false),
-           ('same-session', 'already_published', NULL::boolean), ('thin', 'ok', false)$$,
-  'one page per session, and only the first indexable round on a motion and side stays indexable'
+  $$SELECT label, status, indexable, slug FROM results ORDER BY label$$,
+  $$VALUES ('first', 'ok', true, 'aaaaaaaaaaaa'), ('other-side', 'ok', true, 'dddddddddddd'),
+           ('same-motion', 'ok', false, 'cccccccccccc'), ('same-session', 'already_published', true, 'aaaaaaaaaaaa'),
+           ('thin', 'ok', false, 'eeeeeeeeeeee')$$,
+  'one page per session (a second publish learns the first one), and only the first indexable round on a motion and side stays indexable'
 );
 
 SET LOCAL ROLE anon;

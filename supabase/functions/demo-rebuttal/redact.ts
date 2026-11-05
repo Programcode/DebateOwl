@@ -18,13 +18,13 @@ const NAME = "[\\p{Lu}][\\p{L}'’-]+(?:\\s+[\\p{Lu}][\\p{L}'’-]+)?";
 const PATTERNS: Pattern[] = [
   { pattern: /[\p{L}\p{N}._%+-]+@[\p{L}\p{N}-]+(?:\.[\p{L}\p{N}-]+)*\.\p{L}{2,}/gu, replace: () => "[email removed]" },
   { pattern: /\b(?:https?:\/\/|www\.)[^\s<>"]+/giu, replace: () => "[link removed]" },
-  // A bare domain, with or without a path, in any case: example.com,
-  // school.hu/class, EVIL.COM, Spam-Shop.Xyz. Any top-level domain counts, so a
+  // A bare domain, with or without a path, in any case and script: example.com,
+  // school.hu/class, EVIL.COM, Spam-Shop.Xyz, пример.рф. Any top-level domain counts, so a
   // page cannot carry a site name a list did not foresee. Words that only look
   // like one ("Node.js", or "casa.Es" with a missing space) go too; that costs
   // the page its indexing, nothing more.
   {
-    pattern: /(?<![\p{L}\p{N}@.-])[\p{L}\p{N}-]+(?:\.[\p{L}\p{N}-]+)*\.[A-Za-z]{2,24}(?![\p{L}\p{N}])(?:\/[^\s<>"]*)?/gu,
+    pattern: /(?<![\p{L}\p{N}@.-])[\p{L}\p{N}-]+(?:\.[\p{L}\p{N}-]+)*\.\p{L}{2,24}(?![\p{L}\p{N}])(?:\/[^\s<>"]*)?/gu,
     replace: () => "[link removed]",
   },
   { pattern: /(?<![\p{L}\p{N}])@[\p{L}\p{N}_.]{2,}/gu, replace: () => "[handle removed]" },
@@ -34,9 +34,13 @@ const PATTERNS: Pattern[] = [
     pattern: /\+?\d(?:[\d\s().-]*\d)?/g,
     replace: (match) => ((match.match(/\d/g)?.length ?? 0) >= 9 ? "[number removed]" : null),
   },
-  // A name the writer gives: "my name is Anna Kovács", "me llamo Lucía", "a nevem Péter".
+  // A name the writer gives, in any case: "my name is Anna Kovács", "my name is
+  // anna kovács", "me llamo Lucía", "a nevem Péter". The two words after the
+  // phrase go, since a first name and a surname look like any other words in
+  // lower case; "my name is not the point" loses "not the", which costs the
+  // page its indexing, nothing more.
   {
-    pattern: new RegExp(`\\b((?:[Mm]y name is|[Mm]y name's|I am called|I'm called|[Cc]all me|[Mm]e llamo|[Mm]i nombre es|[Aa] nevem|[Nn]evem)\\s+)${NAME}`, "gu"),
+    pattern: /(?<![\p{L}\p{N}])((?:my name is|my name's|i am called|i'm called|me llamo|mi nombre es|a nevem|nevem)\s+)[\p{L}'’-]+(?:\s+[\p{L}'’-]+)?/giu,
     replace: (_match, intro) => `${intro}[name removed]`,
   },
   // A person named with a title: "Mr Smith", "Dr. Kovács", "Sra. García".
