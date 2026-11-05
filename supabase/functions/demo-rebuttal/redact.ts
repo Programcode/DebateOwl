@@ -18,13 +18,13 @@ const NAME = "[\\p{Lu}][\\p{L}'’-]+(?:\\s+[\\p{Lu}][\\p{L}'’-]+)?";
 const PATTERNS: Pattern[] = [
   { pattern: /[\p{L}\p{N}._%+-]+@[\p{L}\p{N}-]+(?:\.[\p{L}\p{N}-]+)*\.\p{L}{2,}/gu, replace: () => "[email removed]" },
   { pattern: /\b(?:https?:\/\/|www\.)[^\s<>"]+/giu, replace: () => "[link removed]" },
-  // A bare domain, with or without a path: example.com, school.hu/class,
-  // spam-shop.xyz. Any lowercase top-level domain counts, so a page cannot carry
-  // a site name the list did not foresee; a word that only looks like one
-  // ("Node.js") is removed too, which costs the page its indexing, nothing more.
-  // A capitalised ending is a sentence missing its space ("casa.Es"), not a domain.
+  // A bare domain, with or without a path, in any case: example.com,
+  // school.hu/class, EVIL.COM, Spam-Shop.Xyz. Any top-level domain counts, so a
+  // page cannot carry a site name a list did not foresee. Words that only look
+  // like one ("Node.js", or "casa.Es" with a missing space) go too; that costs
+  // the page its indexing, nothing more.
   {
-    pattern: /(?<![\p{L}\p{N}@.-])[\p{L}\p{N}-]+(?:\.[\p{L}\p{N}-]+)*\.[a-z]{2,24}(?![\p{L}\p{N}])(?:\/[^\s<>"]*)?/gu,
+    pattern: /(?<![\p{L}\p{N}@.-])[\p{L}\p{N}-]+(?:\.[\p{L}\p{N}-]+)*\.[A-Za-z]{2,24}(?![\p{L}\p{N}])(?:\/[^\s<>"]*)?/gu,
     replace: () => "[link removed]",
   },
   { pattern: /(?<![\p{L}\p{N}])@[\p{L}\p{N}_.]{2,}/gu, replace: () => "[handle removed]" },
