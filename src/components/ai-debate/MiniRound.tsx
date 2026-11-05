@@ -88,9 +88,14 @@ const ENDS_DEMO = new Set(['ip_limit', 'turn_limit', 'daily_limit', 'unknown_ses
 
 type Turn = { argument: string; rebuttal: string; judgeNote: string };
 
+/** A motion the address brings (/ai-debate?motion=…, from a Daily Motion page), as the custom motion. */
+function linkedMotion(): string {
+  return new URLSearchParams(window.location.search).get('motion')?.trim().slice(0, MOTION_MAX) ?? '';
+}
+
 function LiveRound({ onDisabled }: { onDisabled: () => void }) {
-  const [preset, setPreset] = useState<string>(PRESET_MOTIONS[0]);
-  const [customMotion, setCustomMotion] = useState('');
+  const [customMotion, setCustomMotion] = useState(linkedMotion);
+  const [preset, setPreset] = useState<string>(() => (customMotion ? CUSTOM : PRESET_MOTIONS[0]));
   const [side, setSide] = useState<DemoSide>('for');
   const [argument, setArgument] = useState('');
   const [token, setToken] = useState<string | null>(null);

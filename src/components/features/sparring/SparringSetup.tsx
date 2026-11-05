@@ -74,7 +74,7 @@ export function SparringSetup({ onStart, roundCost = null, remainingRequests = n
   motionRef.current = motion;
   useDebateMotionPrefill(() => motionRef.current, setMotion, !debatePrefill);
   const [userSide, setUserSide] = useState<SparringSide>(initialValues?.userSide ?? 'pro');
-  const [format, setFormat] = useState<SparringFormat>('standard');
+  const [format, setFormat] = useState<SparringFormat>(initialValues?.format ?? 'standard');
   const [difficulty, setDifficulty] = useState<SparringDifficulty>('medium');
   const [voice, setVoice] = useState(false);
   const voiceAvailability = useVoiceAvailability();

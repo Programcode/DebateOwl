@@ -50,16 +50,33 @@ export function usePageHead(route: PrerenderedRoute) {
     const head: PageHead = PAGE_HEADS[route];
     setMeta('robots', head.canonicalPath ? SHELL_HEAD.robots : 'noindex, nofollow');
     setCanonical(head.canonicalPath && localizedPath(head.canonicalPath, routeLanguage));
-    return () => {
-      document.title = SHELL_HEAD.title;
-      setMeta('description', SHELL_HEAD.description);
-      setMeta('robots', SHELL_HEAD.robots);
-      setCanonical(undefined);
-      document.head
-        .querySelectorAll('script[type="application/ld+json"], meta[property="og:url"], link[rel="alternate"][hreflang]')
-        .forEach((node) => node.remove());
-    };
+    return restoreShellHead;
   }, [route, routeLanguage]);
+}
+
+function restoreShellHead() {
+  document.title = SHELL_HEAD.title;
+  setMeta('description', SHELL_HEAD.description);
+  setMeta('robots', SHELL_HEAD.robots);
+  setCanonical(undefined);
+  document.head
+    .querySelectorAll('script[type="application/ld+json"], meta[property="og:url"], link[rel="alternate"][hreflang]')
+    .forEach((node) => node.remove());
+}
+
+/**
+ * usePageHead for an English-only page whose head comes from data, not the
+ * catalog: one page per Daily Motion. The prerender writes the same head.
+ */
+export function useDataPageHead(head: PageHead) {
+  const { title, description, canonicalPath } = head;
+  useEffect(() => {
+    document.title = title;
+    setMeta('description', description);
+    setMeta('robots', canonicalPath ? SHELL_HEAD.robots : 'noindex, nofollow');
+    setCanonical(canonicalPath);
+    return restoreShellHead;
+  }, [title, description, canonicalPath]);
 }
 
 const PageLabelContext = createContext<(label: string | null) => void>(() => undefined);

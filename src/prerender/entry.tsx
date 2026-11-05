@@ -22,6 +22,10 @@ import PressPage from '@/pages/PressPage';
 import AiDebatePage from '@/pages/AiDebatePage';
 import NotFound from '@/pages/NotFound';
 import SourcesPage from '@/pages/SourcesPage';
+import DailyMotionArchivePage from '@/pages/DailyMotionArchivePage';
+import { DailyMotionRoutes } from '@/pages/DailyMotionPage';
+import { dailyMotionHead } from '@/lib/daily-motion/pages';
+import { pastDailyMotions, setDailyMotionClock } from '@/lib/daily-motion/schedule';
 import { PRACTICE_TOOLS, PREPARE_TOOLS, PREP_MODE_COUNT, UTILITY_TOOLS } from '@/components/features/tools/tool-links';
 import { TOOL_PAGES } from './tool-pages';
 
@@ -265,6 +269,39 @@ async function localizedPages(landingModified: string | undefined): Promise<Prer
   return pages;
 }
 
+/**
+ * /motion and one page per day up to the day the build runs (UTC). Later days
+ * appear with the next build; until then the browser renders them from the
+ * 404 page. DAILY_MOTION_TODAY=YYYY-MM-DD builds as of another day.
+ */
+function dailyMotionPages(): PrerenderedPage[] {
+  const today = process.env.DAILY_MOTION_TODAY;
+  if (today) {
+    const date = new Date(`${today}T12:00:00Z`);
+    if (Number.isNaN(date.getTime())) throw new Error(`DAILY_MOTION_TODAY is not a date: ${today}`);
+    setDailyMotionClock(() => date);
+  }
+  return [
+    {
+      route: '/motion',
+      file: 'motion/index.html',
+      module: 'src/pages/DailyMotionArchivePage.tsx',
+      head: PAGE_HEADS['/motion'],
+      body: render('/motion', DailyMotionArchivePage),
+    },
+    ...pastDailyMotions().map((day) => {
+      const head = dailyMotionHead(day);
+      return {
+        route: head.canonicalPath!,
+        file: `${head.canonicalPath!.slice(1)}/index.html`,
+        module: 'src/pages/DailyMotionPage.tsx',
+        head,
+        body: render(head.canonicalPath!, DailyMotionRoutes),
+      };
+    }),
+  ];
+}
+
 const alternatesOf = (route: string) => (isLocalizedRoute(route) ? { alternates: hreflangAlternates(route) } : {});
 
 /**
@@ -273,6 +310,8 @@ const alternatesOf = (route: string) => (isLocalizedRoute(route) ? { alternates:
  */
 export async function prerenderPages({ landingModified }: { landingModified?: string }): Promise<PrerenderedPage[]> {
   await i18n.changeLanguage('en');
+  // First: the landing page and the tool pages show the day the build is for.
+  const dailyMotions = dailyMotionPages();
   return [
     {
       ...alternatesOf('/'),
@@ -315,6 +354,8 @@ export async function prerenderPages({ landingModified }: { landingModified?: st
       head: PAGE_HEADS['/ai-debate'],
       body: render('/ai-debate', AiDebatePage),
     },
+    // Like /ai-debate, the Daily Motion pages render their own JSON-LD in the body.
+    ...dailyMotions,
     // The tool pages render their own JSON-LD in the body.
     ...TOOL_PAGES.map(({ route, module, Page }) => ({
       ...alternatesOf(route),

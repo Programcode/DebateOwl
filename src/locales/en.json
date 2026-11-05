@@ -889,7 +889,8 @@
     "pricingGuide": "Pricing details",
     "compareTools": "Compare AI debate tools",
     "aiDebate": "AI debate",
-    "aiDebatePartner": "AI debate partner"
+    "aiDebatePartner": "AI debate partner",
+    "dailyMotion": "Daily motion"
   },
   "announcements": {
     "regionLabel": "Announcement",
@@ -2751,6 +2752,10 @@
     "aiDebate": {
       "title": "AI Debate Partner: Argue Against an AI Opponent | {{brand}}",
       "description": "Debate an AI that argues the other side. Try one free exchange with no account, then practice full timed rounds with a 3-day trial."
+    },
+    "dailyMotion": {
+      "title": "Daily Debate Motion: One Practice Motion a Day | {{brand}}",
+      "description": "One numbered debate motion every day for Public Forum, Lincoln-Douglas and school debate, with speech times, the clash and what the ballot will turn on."
     }
   },
   "validation": {

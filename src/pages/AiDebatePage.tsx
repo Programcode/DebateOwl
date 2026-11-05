@@ -5,6 +5,7 @@ import Footer from '@/components/landing/Footer';
 import { MAIN_CONTENT_ID, SkipLink } from '@/components/layout/SkipLink';
 import { ToolArticle, ToolFaq } from '@/components/free-tools/ToolPageLayout';
 import { MiniRound, TrialCta } from '@/components/ai-debate/MiniRound';
+import { DailyMotionCard } from '@/components/daily-motion/DailyMotion';
 import site from '@/config/site.json';
 import { ORGANIZATION_ID, PAGE_HEADS, PRICING, SITE_ORIGIN } from '@/lib/seo/pages';
 import { jsonLd, type FaqEntry } from '@/lib/seo/tool-pages';
@@ -14,7 +15,7 @@ const ROUTE = '/ai-debate';
 const URL = `${SITE_ORIGIN}${ROUTE}`;
 const NAME = 'AI debate partner';
 // The day this page's copy last changed; move it when the text does.
-const MODIFIED = '2026-11-03';
+const MODIFIED = '2026-11-05';
 
 const SHORT_ANSWER: FaqEntry = {
   question: 'What is an AI debate partner?',
@@ -144,6 +145,7 @@ export default function AiDebatePage() {
             <h2 id="short-answer" className="text-xl font-semibold tracking-tight text-foreground">{SHORT_ANSWER.question}</h2>
             <p className="mt-2 leading-7 text-foreground">{SHORT_ANSWER.answer}</p>
           </section>
+          <DailyMotionCard className="mt-10" />
         </div>
 
         <ToolArticle className="mt-14">

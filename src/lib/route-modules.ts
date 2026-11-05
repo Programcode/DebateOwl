@@ -38,6 +38,8 @@ export const routeLoaders = {
   "/press": cacheLoader(() => import("@/pages/PressPage")),
   "/expocit/sources": cacheLoader(() => import("@/pages/SourcesPage")),
   "/ai-debate": cacheLoader(() => import("@/pages/AiDebatePage")),
+  "/motion": cacheLoader(() => import("@/pages/DailyMotionArchivePage")),
+  "/motion/:number": cacheLoader(() => import("@/pages/DailyMotionPage")),
   "/login": cacheLoader(() => import("@/pages/LoginPage")),
   "/auth/callback": cacheLoader(() => import("@/pages/AuthCallbackPage")),
   "/share/:code": cacheLoader(() => import("@/pages/SharedPage")),
@@ -101,6 +103,8 @@ function isRoutePath(pathname: string): pathname is RoutePath {
 
 export function preloadRoute(pathname: string): Promise<unknown> | undefined {
   if (isRoutePath(pathname)) return routeLoaders[pathname]();
+  // Each Daily Motion is prerendered; its page replaces the HTML only once loaded.
+  if (/^\/motion\/\d+$/.test(pathname)) return routeLoaders["/motion/:number"]();
   return localizedRouteLoaders[pathname]?.();
 }
 

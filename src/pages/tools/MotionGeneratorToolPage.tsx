@@ -6,6 +6,7 @@ import { PRACTICE_MOTIONS } from '@/lib/free-tools/practice-motions';
 import { MOTION_TOPICS } from '@/lib/free-tools/motion-types';
 import { TOPIC_NAMES } from '@/lib/free-tools/motion-bank';
 import { toolStructuredData, type FaqEntry } from '@/lib/seo/tool-pages';
+import { DailyMotionCard } from '@/components/daily-motion/DailyMotion';
 
 const NAME = 'Debate motion generator';
 
@@ -100,6 +101,8 @@ export default function MotionGeneratorToolPage() {
         <h3>Wording swap</h3>
         <p>Switch a motion to its Resolved form and compare. &quot;This House regrets the rise of dating apps&quot; and &quot;Resolved: The rise of dating apps has done more harm than good&quot; ask almost the same question, but the second makes the harm-benefit weighing explicit. Debaters moving between US and parliamentary formats should practise reading both.</p>
       </section>
+
+      <DailyMotionCard />
 
       <MotionList />
 

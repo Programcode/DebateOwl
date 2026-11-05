@@ -889,7 +889,8 @@
     "pricingGuide": "Árak részletei",
     "compareTools": "MI-alapú vitaeszközök összehasonlítása",
     "aiDebate": "MI-vita",
-    "aiDebatePartner": "MI-vitapartner"
+    "aiDebatePartner": "MI-vitapartner",
+    "dailyMotion": "Napi vitatéma"
   },
   "announcements": {
     "regionLabel": "Közlemény",
@@ -2751,6 +2752,10 @@
     "aiDebate": {
       "title": "MI-vitapartner: vitázz egy MI-ellenféllel | {{brand}}",
       "description": "Vitázz egy MI-vel, amely a másik oldalt képviseli. Próbálj ki egy ingyenes kört fiók nélkül, majd gyakorolj teljes, időzített köröket 3 napos próbával."
+    },
+    "dailyMotion": {
+      "title": "Napi vitatéma: minden nap egy gyakorló téma | {{brand}}",
+      "description": "Minden nap egy számozott vitatéma Public Forum, Lincoln-Douglas és iskolai vitához, beszédidőkkel, a fő ütközési ponttal és azzal, min dől el a döntés."
     }
   },
   "validation": {

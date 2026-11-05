@@ -977,6 +977,7 @@ def llms_txt():
 - [Contact]({BASE}/contact): email {SITE["contactEmail"]} for support and feedback, {SITE["privacyEmail"]} for privacy and data requests
 - [Press kit and facts]({BASE}/press): a one-sentence definition, former name, maker, languages, pricing, logo downloads and what {PRODUCT} is not
 {case_example_llms_line()}
+- [Daily debate motion]({BASE}/motion): one numbered practice motion a day for Public Forum, Lincoln-Douglas or School 4-6-6-3, with speech times, the clash and what the ballot will turn on
 - [Full text]({BASE}/llms-full.txt): this file plus the plain text of the home page, About, Which AI is best for debate?, the press kit and the debate case examples
 - [Sitemap]({BASE}/sitemap.xml): every public page
 
