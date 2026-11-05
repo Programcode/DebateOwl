@@ -13,7 +13,7 @@ import { toHex, verifySessionToken, verifyTurn } from "./signing.ts";
 const MOTION_MAX = 200;
 const ARGUMENT_MAX = 600;
 const REBUTTAL_MAX = 2_000;
-const JUDGE_NOTE_MAX = 1_000;
+const JUDGE_NOTE_MAX = 1_000; // index.ts reads the first turn's note back with the same cap
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const SLUG = /^[a-z0-9]{12}$/;
 const DELETE_TOKEN = /^[0-9a-f]{64}$/;

@@ -30,7 +30,8 @@ export interface DemoTurnRequest {
   motion: string;
   side: DemoSide;
   argument: string;
-  previous?: { argument: string; rebuttal: string };
+  /** The first exchange as the function returned it, with its signature. */
+  previous?: { argument: string; rebuttal: string; judgeNote: string; signature: string };
 }
 
 export interface DemoTurnReply {

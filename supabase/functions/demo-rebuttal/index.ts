@@ -22,7 +22,7 @@ import { fetchJsonWithTimeout, OPENROUTER_API_URL } from "../_shared/research.ts
 import { BodyTooLargeError, readBoundedBody } from "../_shared/bounded-body.ts";
 import { outputTokenLimit } from "../_shared/output-caps.ts";
 import { handlePublish, handleUnpublish } from "./publish.ts";
-import { signSessionToken, signTurn, toHex, verifySessionToken } from "./signing.ts";
+import { signSessionToken, signTurn, toHex, verifySessionToken, verifyTurn } from "./signing.ts";
 
 const SESSIONS_PER_IP = 3;
 const TURNS_PER_SESSION = 2;
@@ -31,6 +31,7 @@ const MOTION_MAX = 200;
 const ARGUMENT_MAX = 600;
 // The first rebuttal comes back with the follow-up, up to REBUTTAL_HARD_CAP words.
 const REBUTTAL_MAX = 2_000;
+const JUDGE_NOTE_MAX = 1_000;
 const REBUTTAL_WORDS = { min: 90, max: 130 };
 /** A rebuttal past this many words is cut at its last full sentence before it. */
 const REBUTTAL_HARD_CAP = 170;
@@ -58,8 +59,8 @@ interface DemoRequest {
   motion: string;
   side: Side;
   argument: string;
-  /** The first exchange, sent back with the follow-up. */
-  previous?: { argument: string; rebuttal: string };
+  /** The first exchange, sent back with the follow-up, with the signature the first turn returned. */
+  previous?: { argument: string; rebuttal: string; judgeNote: string; signature: string };
 }
 
 function demoEnabled(env: (name: string) => string | undefined = (name) => Deno.env.get(name)): boolean {
@@ -83,7 +84,14 @@ function parseDemoRequest(raw: unknown): DemoRequest | null {
   if (!motion || !argument || !side) return null;
   const sessionId = typeof body.sessionId === "string" && UUID.test(body.sessionId) ? body.sessionId : undefined;
   const prior = body.previous && typeof body.previous === "object" ? body.previous as Record<string, unknown> : undefined;
-  const previous = prior ? { argument: text(prior.argument, ARGUMENT_MAX), rebuttal: text(prior.rebuttal, REBUTTAL_MAX) } : undefined;
+  const previous = prior
+    ? {
+      argument: text(prior.argument, ARGUMENT_MAX),
+      rebuttal: text(prior.rebuttal, REBUTTAL_MAX),
+      judgeNote: text(prior.judgeNote, JUDGE_NOTE_MAX),
+      signature: text(prior.signature, 64),
+    }
+    : undefined;
   // A follow-up names its session and carries the first exchange; a first turn does neither.
   if (sessionId ? !previous?.argument || !previous.rebuttal : previous) return null;
   return {
@@ -307,6 +315,14 @@ export async function handleRequest(req: Request): Promise<Response> {
     if (!sessionIpHash) {
       console.log("[DEMO] status=bad_session_token turn=2");
       return json(400, { error: "unknown_session" });
+    }
+    // The first exchange the model answers from must be the one this function served, so a
+    // made-up "first rebuttal" cannot steer the signed second turn.
+    const first = request.previous!;
+    const firstTurn = { sessionId: request.sessionId, turn: 1, motion: request.motion, side: request.side, argument: first.argument, rebuttal: first.rebuttal, judgeNote: first.judgeNote };
+    if (!(await verifyTurn(firstTurn, first.signature, salt))) {
+      console.log("[DEMO] status=bad_turn_signature turn=2");
+      return json(400, { error: "invalid_round" });
     }
     ipHash = sessionIpHash;
   } else {

@@ -6,6 +6,8 @@ Deno.test("contact details, links, handles and introduced names are removed", ()
     ["Write to anna.k@example.com today.", "Write to [email removed] today."],
     ["See https://example.com/a?b=1 and www.school.hu.", "See [link removed] and [link removed]"],
     ["My school blog is kovacs-debate.com/posts.", "My school blog is [link removed]"],
+    ["Buy now at cheap-pills.xyz today", "Buy now at [link removed] today"],
+    ["Visit best.shop.online for deals", "Visit [link removed] for deals"],
     ["Follow @debate_anna for more.", "Follow [handle removed] for more."],
     ["Call +36 30 123 4567 or 555-123-4567.", "Call [number removed] or [number removed]."],
     ["My name is Anna Kovács and I think", "My name is [name removed] and I think"],

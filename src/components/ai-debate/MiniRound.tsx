@@ -88,8 +88,10 @@ const ERRORS: Record<string, string> = {
   bot_check_failed: 'The bot check did not pass. Wait for it to finish and try again.',
   // The session token expired, or the round started before midnight UTC.
   unknown_session: 'This demo round has expired. Reload the page to start a new one.',
+  // The first exchange did not match what the server sent, for example after a deploy mid-round.
+  invalid_round: 'This demo round cannot continue. Reload the page to start a new one.',
 };
-const ENDS_DEMO = new Set(['ip_limit', 'turn_limit', 'daily_limit', 'unknown_session']);
+const ENDS_DEMO = new Set(['ip_limit', 'turn_limit', 'daily_limit', 'unknown_session', 'invalid_round']);
 
 type Turn = { argument: string; rebuttal: string; judgeNote: string; signature: string };
 
@@ -239,7 +241,7 @@ function LiveRound({ onDisabled }: { onDisabled: () => void }) {
     try {
       const first = turns[0];
       const reply = await requestDemoTurn(started && session && first
-        ? { sessionId: session.id, sessionToken: session.token, motion, side, argument: text, previous: { argument: first.argument, rebuttal: first.rebuttal } }
+        ? { sessionId: session.id, sessionToken: session.token, motion, side, argument: text, previous: first }
         : { turnstileToken: token ?? undefined, motion, side, argument: text });
       if (!started) setSession({ id: reply.sessionId, token: reply.sessionToken });
       setTurns((previous) => [...previous, { argument: text, rebuttal: reply.rebuttal, judgeNote: reply.judgeNote, signature: reply.signature }]);
