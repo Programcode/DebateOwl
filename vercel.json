@@ -156,6 +156,10 @@
       "destination": "/app-shell.html"
     },
     {
+      "source": "/ai-debate/round/:slug",
+      "destination": "/app-shell.html"
+    },
+    {
       "source": "/expocit/sources",
       "destination": "/app-shell.html"
     }

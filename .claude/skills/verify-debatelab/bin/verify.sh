@@ -40,6 +40,9 @@ PROJECT_ID="$(basename "$REPO")"   # supabase/config.toml has no project_id
 # refused; the proxy pins the rewritten call to the Anthropic provider.
 LIVE_MODEL="${VERIFY_LIVE_MODEL:-anthropic/claude-haiku-5.5}"
 case "$LIVE_MODEL" in anthropic/*) ;; *) printf 'FAIL VERIFY_LIVE_MODEL must be an anthropic/ model (Anthropic BYOK), not %s\n' "$LIVE_MODEL" >&2; exit 1 ;; esac
+# Cloudflare's documented Turnstile test keys: the widget and siteverify always pass.
+TURNSTILE_TEST_SITE_KEY=1x00000000000000000000AA
+TURNSTILE_TEST_SECRET=1x0000000000000000000000000000000AA
 LIVE_KEYS_FILE="${VERIFY_LIVE_KEYS_FILE:-$HOME/.config/debatelab/live-verify.env}"
 
 say() { printf '%s\n' "$*"; }
@@ -156,6 +159,8 @@ cmd_up() {
     mv -- "$STATE_DIR/function.env.next" "$STATE_DIR/function.env"
     chmod 600 "$STATE_DIR/function.env"
   fi
+  # The /ai-debate mini round, with Cloudflare's published always-pass Turnstile test keys.
+  printf 'DEMO_ENABLED=true\nTURNSTILE_SECRET_KEY=%s\n' "$TURNSTILE_TEST_SECRET" >>"$STATE_DIR/function.env"
   # Values the recipes and `user` need. Local, test-only, but never echo them.
   (
     umask 077
@@ -198,6 +203,8 @@ cmd_up() {
     >"$log_dir/functions.log" 2>&1 &
   record FUNCTIONS_PID "$!"
 
+  VITE_DEMO_ENABLED=true \
+  VITE_TURNSTILE_SITE_KEY="$TURNSTILE_TEST_SITE_KEY" \
   VITE_LOCAL_PREVIEW=true \
   VITE_LOCAL_SUPABASE_URL="$api_url" \
   VITE_LOCAL_SUPABASE_ANON_KEY="$anon_key" \

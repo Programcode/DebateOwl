@@ -19,7 +19,9 @@ import PrivacyPage from '@/pages/PrivacyPage';
 import AboutPage from '@/pages/AboutPage';
 import ContactPage from '@/pages/ContactPage';
 import PressPage from '@/pages/PressPage';
-import AiDebatePage from '@/pages/AiDebatePage';
+import AiDebatePage, { RECENT_ROUNDS, type AiDebatePageData } from '@/pages/AiDebatePage';
+import { PublishedRoundView, type PublishedRoundData } from '@/pages/PublishedRoundPage';
+import { listPublishedRounds, publishedRoundPath, roundDescription, roundTitle, type PublishedRound } from '@/lib/published-rounds';
 import NotFound from '@/pages/NotFound';
 import SourcesPage from '@/pages/SourcesPage';
 import { PRACTICE_TOOLS, PREPARE_TOOLS, PREP_MODE_COUNT, UTILITY_TOOLS } from '@/components/features/tools/tool-links';
@@ -57,6 +59,8 @@ export interface PrerenderedPage {
   head: PageHead;
   body: string;
   structuredData?: object;
+  /** What the body was rendered from, embedded for the browser's first render. */
+  data?: { route: string };
 }
 
 const WEBSITE_ID = `${SITE_ORIGIN}/#website`;
@@ -265,6 +269,74 @@ async function localizedPages(landingModified: string | undefined): Promise<Prer
   return pages;
 }
 
+/** The most published rounds the build prerenders and lists in the sitemap. */
+const MAX_PUBLISHED_ROUNDS = 1_000;
+const PUBLISHED_ROUNDS_TIMEOUT_MS = 10_000;
+// check-site fails JSON-LD that carries an HTML entity; a round whose text holds one is not prerendered.
+const HTML_ENTITY = /&(?:[a-z]+|#x?[\da-f]+);/i;
+
+/**
+ * The indexable published rounds in the project this build talks to (the same
+ * one the browser does), newest first. Anything going wrong, such as the
+ * project not having the table yet or no network, means none: published
+ * rounds must never fail a deploy.
+ */
+async function publishedRounds(): Promise<PublishedRound[]> {
+  try {
+    const rounds = await listPublishedRounds(MAX_PUBLISHED_ROUNDS, AbortSignal.timeout(PUBLISHED_ROUNDS_TIMEOUT_MS));
+    const titles = new Set<string>();
+    const kept = rounds.filter((round) => {
+      const title = roundTitle(round);
+      if (!round.indexable || round.turns.length === 0 || titles.has(title) || HTML_ENTITY.test(JSON.stringify(round))) return false;
+      titles.add(title);
+      return true;
+    });
+    console.log(`prerender: ${kept.length} published round(s) to prerender`);
+    return kept;
+  } catch (error) {
+    console.log(`prerender: no published rounds (${error instanceof Error ? error.message : 'unknown error'})`);
+    return [];
+  }
+}
+
+function publishedRoundPage(round: PublishedRound, related: PublishedRound[]): PrerenderedPage {
+  const route = publishedRoundPath(round.slug);
+  const url = `${SITE_ORIGIN}${route}`;
+  const head: PageHead = { title: roundTitle(round), description: roundDescription(round), canonicalPath: route };
+  const data: PublishedRoundData = { route, round, related };
+  return {
+    route,
+    file: `${route.slice(1)}/index.html`,
+    module: 'src/pages/PublishedRoundPage.tsx',
+    head,
+    body: render(route, () => <PublishedRoundView round={round} related={related} />),
+    data,
+    structuredData: {
+      '@context': 'https://schema.org',
+      '@graph': [
+        {
+          '@type': 'WebPage',
+          '@id': `${url}#webpage`,
+          url,
+          name: head.title,
+          description: head.description,
+          isPartOf: { '@id': WEBSITE_ID },
+          datePublished: round.publishedAt.slice(0, 10),
+          dateModified: round.publishedAt.slice(0, 10),
+        },
+        {
+          '@type': 'BreadcrumbList',
+          itemListElement: [
+            { '@type': 'ListItem', position: 1, name: PRODUCT, item: `${SITE_ORIGIN}/` },
+            { '@type': 'ListItem', position: 2, name: 'AI debate partner', item: `${SITE_ORIGIN}/ai-debate` },
+            { '@type': 'ListItem', position: 3, name: round.motion, item: url },
+          ],
+        },
+      ],
+    },
+  };
+}
+
 const alternatesOf = (route: string) => (isLocalizedRoute(route) ? { alternates: hreflangAlternates(route) } : {});
 
 /**
@@ -273,6 +345,9 @@ const alternatesOf = (route: string) => (isLocalizedRoute(route) ? { alternates:
  */
 export async function prerenderPages({ landingModified }: { landingModified?: string }): Promise<PrerenderedPage[]> {
   await i18n.changeLanguage('en');
+  const rounds = await publishedRounds();
+  const recentRounds = rounds.slice(0, RECENT_ROUNDS);
+  const aiDebateData: AiDebatePageData = { route: '/ai-debate', recentRounds };
   return [
     {
       ...alternatesOf('/'),
@@ -313,8 +388,11 @@ export async function prerenderPages({ landingModified }: { landingModified?: st
       file: 'ai-debate/index.html',
       module: 'src/pages/AiDebatePage.tsx',
       head: PAGE_HEADS['/ai-debate'],
-      body: render('/ai-debate', AiDebatePage),
+      body: render('/ai-debate', () => <AiDebatePage recentRounds={recentRounds} />),
+      data: aiDebateData,
     },
+    // Each links to its three newer and three older neighbours, so every round has inbound links.
+    ...rounds.map((round, index) => publishedRoundPage(round, [...rounds.slice(Math.max(0, index - 3), index), ...rounds.slice(index + 1, index + 4)])),
     // The tool pages render their own JSON-LD in the body.
     ...TOOL_PAGES.map(({ route, module, Page }) => ({
       ...alternatesOf(route),

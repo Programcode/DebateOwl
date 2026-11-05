@@ -1,6 +1,7 @@
 // Runs after scripts/check-site.mjs. Counts, for every URL in dist/sitemap.xml,
 // how many other sitemap pages link to it, and fails the build on:
-// - a sitemap page with fewer than MIN_INBOUND inbound links (an orphan, or close to one);
+// - a sitemap page with fewer than MIN_INBOUND inbound links (an orphan, or close to one),
+//   or a published round with fewer than min(MIN_INBOUND, published rounds);
 // - a homepage that links to fewer than MIN_HOME_LINKS distinct sitemap pages.
 // `node scripts/check-links.mjs --report` prints every count as JSON and checks nothing.
 import { readFileSync } from 'node:fs';
@@ -41,9 +42,16 @@ if (process.argv.includes('--report')) {
   process.exit(0);
 }
 
+// A published round is linked from /ai-debate and from up to six neighbouring
+// rounds, so while fewer than MIN_INBOUND rounds exist it cannot reach that.
+const PUBLISHED_ROUND = /^\/ai-debate\/round\/[^/]+$/;
+const roundCount = routes.filter((route) => PUBLISHED_ROUND.test(route)).length;
+const minimumFor = (route) => (PUBLISHED_ROUND.test(route) ? Math.min(MIN_INBOUND, roundCount) : MIN_INBOUND);
+
 const problems = [];
 for (const [route, count] of inbound) {
-  if (!EXEMPT.has(route) && count < MIN_INBOUND) problems.push(`${route} has ${count} inbound link(s) from other sitemap pages; the minimum is ${MIN_INBOUND}`);
+  const minimum = minimumFor(route);
+  if (!EXEMPT.has(route) && count < minimum) problems.push(`${route} has ${count} inbound link(s) from other sitemap pages; the minimum is ${minimum}`);
 }
 if (homeLinks < MIN_HOME_LINKS) problems.push(`/ links to ${homeLinks} distinct sitemap pages; the minimum is ${MIN_HOME_LINKS}`);
 

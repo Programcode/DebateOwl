@@ -71,7 +71,7 @@ The checked-in [`.env.example`](../.env.example) contains optional client observ
 - `VITE_POSTHOG_KEY`
 - `VITE_POSTHOG_HOST`
 
-Two more build variables turn on the no-login mini round on `/ai-debate`: `VITE_DEMO_ENABLED=true` and `VITE_TURNSTILE_SITE_KEY` (Cloudflare Turnstile's public site key). Without both, the page shows its static sample round. The `demo-rebuttal` Edge Function has its own `DEMO_ENABLED` switch; see [supabase/README.md](../supabase/README.md#function-groups).
+Two more build variables turn on the no-login mini round on `/ai-debate`: `VITE_DEMO_ENABLED=true` and `VITE_TURNSTILE_SITE_KEY` (Cloudflare Turnstile's public site key). Without both, the page shows its static sample round. The `demo-rebuttal` Edge Function has its own `DEMO_ENABLED` switch; see [supabase/README.md](../supabase/README.md#function-groups). A finished mini round can be published to `/ai-debate/round/<slug>`; [docs/operations.md](operations.md) describes how the build prerenders those pages. The local verify stack turns the demo on with Cloudflare's always-pass Turnstile test keys.
 
 Production builds also read the Sentry build variables `SENTRY_AUTH_TOKEN`, `SENTRY_ORG` and `SENTRY_PROJECT`. Local builds leave them unset and skip source map upload. See [operations.md](operations.md#secrets).
 

@@ -59,6 +59,7 @@ const AboutPage = prerenderedPage("/about");
 const ContactPage = prerenderedPage("/contact");
 const PressPage = prerenderedPage("/press");
 const AiDebatePage = prerenderedPage("/ai-debate");
+const PublishedRoundPage = prerenderedModule(routeLoaders["/ai-debate/round/:slug"]);
 // The Hungarian and Spanish addresses in src/config/localized-routes.json.
 const LOCALIZED_PAGES = LOCALIZED_PATHS.map((entry) => ({ ...entry, Page: prerenderedModule(localizedRouteLoaders[entry.path]) }));
 const HomePage = lazyChunk(routeLoaders["/app"]);
@@ -482,6 +483,7 @@ function AppRoutes() {
           <Route path="/contact" element={<RouteContent><ContactPage /></RouteContent>} />
           <Route path="/press" element={<RouteContent><PressPage /></RouteContent>} />
           <Route path="/ai-debate" element={<RouteContent><AiDebatePage /></RouteContent>} />
+          <Route path="/ai-debate/round/:slug" element={<RouteContent><PublishedRoundPage /></RouteContent>} />
           <Route path="/expocit/sources" element={<RouteContent><SourcesPage /></RouteContent>} />
           <Route path="/login" element={<RouteContent><LoginPage /></RouteContent>} />
           <Route path={AUTH_CALLBACK_PATH} element={<RouteContent><AuthCallbackPage /></RouteContent>} />

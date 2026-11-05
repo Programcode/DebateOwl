@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { OwlMark } from '@/components/brand/Owl';
@@ -9,12 +10,14 @@ import site from '@/config/site.json';
 import { ORGANIZATION_ID, PAGE_HEADS, PRICING, SITE_ORIGIN } from '@/lib/seo/pages';
 import { jsonLd, type FaqEntry } from '@/lib/seo/tool-pages';
 import { usePageHead } from '@/lib/seo/use-page-head';
+import { readPrerenderedData } from '@/lib/seo/prerendered-data';
+import { listPublishedRounds, publishedRoundPath, sideLabel, type PublishedRound } from '@/lib/published-rounds';
 
 const ROUTE = '/ai-debate';
 const URL = `${SITE_ORIGIN}${ROUTE}`;
 const NAME = 'AI debate partner';
 // The day this page's copy last changed; move it when the text does.
-const MODIFIED = '2026-11-03';
+const MODIFIED = '2026-11-05';
 
 const SHORT_ANSWER: FaqEntry = {
   question: 'What is an AI debate partner?',
@@ -33,6 +36,10 @@ const FAQ: FaqEntry[] = [
   {
     question: 'Do I need an account?',
     answer: 'Not for the mini round. You pass a quick bot check and start typing. For full timed rounds, saved history and the other practice modes you sign in with Google or an email code, which starts the trial.',
+  },
+  {
+    question: 'Can I share my round?',
+    answer: 'Only if you choose to. A finished mini round stays private unless you tick the publish box and press Publish; then it gets its own page that anyone with the link can read. Email addresses, phone numbers, links, handles and introduced names are removed first, and short rounds or rounds with something removed are kept out of search results. You can unpublish it from the same browser.',
   },
   {
     question: 'Which debate formats does it support?',
@@ -98,6 +105,26 @@ function structuredData() {
   };
 }
 
+/** How many published rounds the page links to; the build embeds them (src/prerender/entry.tsx). */
+export const RECENT_ROUNDS = 12;
+
+export interface AiDebatePageData {
+  route: typeof ROUTE;
+  recentRounds: PublishedRound[];
+}
+
+/** The newest indexable published rounds: from the build when this page was prerendered, otherwise fetched. */
+function useRecentRounds(fromBuild: PublishedRound[] | undefined): PublishedRound[] {
+  const [rounds, setRounds] = useState(() => fromBuild ?? readPrerenderedData<AiDebatePageData>(ROUTE)?.recentRounds);
+  useEffect(() => {
+    if (rounds) return;
+    const controller = new AbortController();
+    listPublishedRounds(RECENT_ROUNDS, controller.signal).then(setRounds, (): void => undefined);
+    return () => controller.abort();
+  }, [rounds]);
+  return rounds ?? [];
+}
+
 function Speech({ speaker, children }: { speaker: string; children: string }) {
   return (
     <p>
@@ -106,9 +133,10 @@ function Speech({ speaker, children }: { speaker: string; children: string }) {
   );
 }
 
-export default function AiDebatePage() {
+export default function AiDebatePage({ recentRounds: fromBuild }: { recentRounds?: PublishedRound[] }) {
   const { t } = useTranslation('tools');
   usePageHead(ROUTE);
+  const recentRounds = useRecentRounds(fromBuild);
 
   return (
     <div className="min-h-screen bg-background">
@@ -189,6 +217,20 @@ export default function AiDebatePage() {
             <h2>{site.product} vs general chatbots</h2>
             <p>You can ask any general chatbot to argue against you, and for a quick back-and-forth it will. What it will not do on its own is keep a round: speech order, time limits, staying on the other side when you push back, and a scorecard that quotes what each side actually said. {site.product} is built for that part. If you want to compare the options by debate job, see <a href="/best-ai-for-debate">which AI is best for debate</a>.</p>
           </section>
+
+          {recentRounds.length > 0 && (
+            <section aria-labelledby="published-rounds">
+              <h2 id="published-rounds">Rounds visitors published</h2>
+              <p>Visitors can publish a finished mini round as its own page. These are the newest; personal details are removed before a round goes up.</p>
+              <ul>
+                {recentRounds.map((round) => (
+                  <li key={round.slug}>
+                    <Link to={publishedRoundPath(round.slug)}>{round.motion}</Link> ({sideLabel(round.side)})
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
 
           <ToolFaq faq={FAQ} />
 

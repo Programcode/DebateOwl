@@ -255,6 +255,13 @@ const crossfire = (user) => {
   return { type, text: `${tag}${MARK} crossfire ${type}: what evidence links fewer cars to safer streets?` };
 };
 
+// The /ai-debate mini round: a rebuttal in the 90-130 words the prompt asks for, and a judge note.
+const demoRebuttal = (user) => ({
+  allowed: true,
+  rebuttal: `${MARK} demo rebuttal${/follow-up/.test(user) ? " to your reply" : ""}: ${"The other side assumes the benefit arrives on its own, but every policy has a cost that someone pays, and the case never says who that is or why they should accept it. ".repeat(3).trim()}`,
+  judgeNote: "Weakest link: the impact is asserted, not weighed; say why it outweighs the cost.",
+});
+
 // Order matters only where one marker could appear inside another prompt.
 const routes = [
   ["research-decision", "You decide whether a debate coaching answer needs live web research", () => ({ shouldSearch: false, query: "" })],
@@ -266,6 +273,7 @@ const routes = [
   ["sparring", "live debate sparring opponent", (user, system) => sparring(user, system)],
   ["crossfire", "You are DebateOwl's crossfire coach", (user) => crossfire(user)],
   ["ask", "You are a debate coach chat bot", ask],
+  ["demo-rebuttal", "You are DebateOwl's practice debate opponent in a short public demo", demoRebuttal],
 ];
 
 // A cacheable system prompt arrives as text parts instead of a plain string.
