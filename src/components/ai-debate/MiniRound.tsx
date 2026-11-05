@@ -169,7 +169,7 @@ function PublishPanel({ round }: { round: Parameters<typeof publishDemoRound>[0]
     <div className="space-y-3 rounded-xl border border-border p-4 text-sm" data-testid="demo-publish">
       <p className="font-semibold text-foreground">Your round is private.</p>
       <p className="text-muted-foreground">
-        Nothing you typed is kept unless you publish the round. A published round gets its own public page at debateowl.com that anyone with the link can read, and that search engines may list if it is long enough.
+        Nothing you typed is kept unless you publish the round. A published round gets its own public page on {new URL(site.origin).host} that anyone with the link can read, and that search engines may list if it is long enough.
       </p>
       <div className="flex items-start gap-3">
         <Checkbox id="demo-publish-consent" checked={consent} onCheckedChange={(value) => setConsent(value === true)} className="mt-0.5" />
