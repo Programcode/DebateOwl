@@ -36,6 +36,10 @@ PAGES = [
     "debateowl-vs-prilo",
     "debateowl-vs-debatethis",
     "debateowl-vs-kialo-edu",
+    "best-ai-for-debate-formats",
+    "best-ai-for-lincoln-douglas",
+    "best-ai-for-british-parliamentary",
+    "best-ai-for-world-schools-debate",
 ]
 MAX_WORDS = 12
 MAX_PAGES = 2

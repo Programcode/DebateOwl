@@ -95,6 +95,10 @@ Free to use, no account needed, and they run in the browser.
 - [DebateOwl vs Kialo Edu](https://debateowl.com/debateowl-vs-kialo-edu): for the classroom: argument mapping vs case and round prep, and one 50-minute lesson that uses both, as of November 2026
 - [Free vs paid AI debate tools](https://debateowl.com/free-vs-paid-ai-debate-tools): what free plans include and what paid AI debate tools cost, checked October 2026
 - [Best AI for Public Forum debate](https://debateowl.com/best-ai-for-public-forum): Public Forum AI tools compared speech by speech, with prices as of October 2026
+- [Best AI for your debate format](https://debateowl.com/best-ai-for-debate-formats): Lincoln-Douglas, Public Forum, British Parliamentary and World Schools side by side: what DebateOwl does in each and where it stops, as of November 2026
+- [Best AI for Lincoln-Douglas debate](https://debateowl.com/best-ai-for-lincoln-douglas): the LD clock segment by segment, which tool covers each part, and a value and criterion tested before the round, as of November 2026
+- [Best AI for British Parliamentary debate](https://debateowl.com/best-ai-for-british-parliamentary): the four BP benches and what each needs from a tool, a 15-minute prep routine, and POI timing, as of November 2026
+- [Best AI for World Schools debate](https://debateowl.com/best-ai-for-world-schools-debate): prepared motions versus the impromptu hour, each WSDC speech and the reply, and where AI helps, as of November 2026
 - [AI debate tools for teachers](https://debateowl.com/ai-debate-tools-for-teachers): AI tools for classroom debate by scenario: no-signup timers, AI opponents, class tournaments and graded discussion
 - [How to prepare for a debate with AI](https://debateowl.com/how-to-prepare-for-a-debate-with-ai): a 7-step AI prep plan with a worked R2 example of "If they say X, we answer Y" replies
 

@@ -289,6 +289,7 @@ EXTRA_RELATED = {
         ("/chatgpt-vs-claude-for-debate", "ChatGPT vs Claude for debate prep"),
         ("/ai-debate-tools-for-teachers", "AI debate tools for teachers"),
         ("/best-ai-for-public-forum", "Best AI for Public Forum debate"),
+        ("/best-ai-for-debate-formats", "Best AI for your debate format"),
         ("/debateowl-vs-argufight", "DebateOwl vs ArguFight: which debater should pick which"),
         ("/debateowl-vs-mindduel", "DebateOwl vs MindDuel: one motion, two workflows"),
         ("/debateowl-vs-debate-ladder", "DebateOwl vs Debate Ladder"),
@@ -302,6 +303,11 @@ EXTRA_RELATED = {
         ("/debateowl-vs-debatethis", "DebateOwl vs DebateThis: a ladder game or a coach"),
         ("/debateowl-vs-kialo-edu", "DebateOwl vs Kialo Edu: argument maps and round prep in one classroom"),
     ],
+    # Each format guide links the AI tools for its format and the format hub.
+    "lincoln-douglas-debate": [("/best-ai-for-lincoln-douglas", "Best AI for Lincoln-Douglas debate"), ("/best-ai-for-debate-formats", "Best AI for your debate format")],
+    "public-forum-debate": [("/best-ai-for-debate-formats", "Best AI for your debate format")],
+    "british-parliamentary-debate": [("/best-ai-for-british-parliamentary", "Best AI for British Parliamentary debate"), ("/best-ai-for-debate-formats", "Best AI for your debate format")],
+    "world-schools-debate": [("/best-ai-for-world-schools-debate", "Best AI for World Schools debate"), ("/best-ai-for-debate-formats", "Best AI for your debate format")],
     "debateowl-vs-debateclub": [("/debateowl-vs-mindduel", "DebateOwl vs MindDuel: one motion, two workflows")],
     "debateowl-vs-windebate": [("/debateowl-vs-argufight", "DebateOwl vs ArguFight: which debater should pick which")],
 }
@@ -925,6 +931,10 @@ COMPARE_LINKS = [
     ("debateowl-vs-kialo-edu", (f"{PRODUCT} vs Kialo Edu", "for the classroom: argument mapping vs case and round prep, and one 50-minute lesson that uses both, as of November 2026")),
     ("free-vs-paid-ai-debate-tools", ("Free vs paid AI debate tools", "what free plans include and what paid AI debate tools cost, checked October 2026")),
     ("best-ai-for-public-forum", ("Best AI for Public Forum debate", "Public Forum AI tools compared speech by speech, with prices as of October 2026")),
+    ("best-ai-for-debate-formats", ("Best AI for your debate format", f"Lincoln-Douglas, Public Forum, British Parliamentary and World Schools side by side: what {PRODUCT} does in each and where it stops, as of November 2026")),
+    ("best-ai-for-lincoln-douglas", ("Best AI for Lincoln-Douglas debate", "the LD clock segment by segment, which tool covers each part, and a value and criterion tested before the round, as of November 2026")),
+    ("best-ai-for-british-parliamentary", ("Best AI for British Parliamentary debate", "the four BP benches and what each needs from a tool, a 15-minute prep routine, and POI timing, as of November 2026")),
+    ("best-ai-for-world-schools-debate", ("Best AI for World Schools debate", "prepared motions versus the impromptu hour, each WSDC speech and the reply, and where AI helps, as of November 2026")),
     ("ai-debate-tools-for-teachers", ("AI debate tools for teachers", "AI tools for classroom debate by scenario: no-signup timers, AI opponents, class tournaments and graded discussion")),
     ("how-to-prepare-for-a-debate-with-ai", ("How to prepare for a debate with AI", 'a 7-step AI prep plan with a worked R2 example of "If they say X, we answer Y" replies')),
 ]

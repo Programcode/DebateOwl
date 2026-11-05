@@ -950,7 +950,7 @@ def page_pf():
     body = f"""
 <section class="order">
   <h2>The pick for a Public Forum case and a timed round</h2>
-  <p>DebateOwl is the first name in the speech table because it covers the case you read, the replies, the crossfire drill and the timed speeches together. {PRICE_HTML} The rules of the format, without the tool comparison, are on <a href="/public-forum-debate">Public Forum debate</a>. Question drills are in <a href="/how-to-cross-examine-in-debate">how to cross-examine</a>, and weighing is in <a href="/how-to-weigh-in-debate">how to weigh</a>. The wider list is <a href="/best-ai-for-debate">the short answer</a>. Prices are on <a href="/free-vs-paid-ai-debate-tools">free vs paid</a>.</p>
+  <p>DebateOwl is the first name in the speech table because it covers the case you read, the replies, the crossfire drill and the timed speeches together. {PRICE_HTML} The rules of the format, without the tool comparison, are on <a href="/public-forum-debate">Public Forum debate</a>. Question drills are in <a href="/how-to-cross-examine-in-debate">how to cross-examine</a>, and weighing is in <a href="/how-to-weigh-in-debate">how to weigh</a>. The wider list is <a href="/best-ai-for-debate">the short answer</a>. Prices are on <a href="/free-vs-paid-ai-debate-tools">free vs paid</a>. <a href="/best-ai-for-lincoln-douglas">Lincoln-Douglas</a>, <a href="/best-ai-for-british-parliamentary">British Parliamentary</a> and <a href="/best-ai-for-world-schools-debate">World Schools</a> have their own pages, gathered on <a href="/best-ai-for-debate-formats">the format hub</a>.</p>
   {wins(["A PF case you can read out", '"If they say… we answer…" replies', "Crossfire as its own drill", "Sparring at 4-4-3-2, then $5/month"])}
   <p>Sparring runs the PF speeches at those times and ends with a judged verdict. It does not insert the three crossfire periods. Practise those in Crossfire. The free <a href="/tools/debate-timer">timer</a> does run the crossfires and the prep banks, and the <a href="/tools/debate-flow-sheet">flow sheet</a> prints the columns. <a href="/debate-clash-points">Clash</a> is where you decide which argument the summary should keep.</p>
   <p><a class="cta" href="/app">Spar a full PF round at 4-4-3-2 times</a></p>
@@ -2595,6 +2595,434 @@ body.lesson dt{font-family:Fredoka,Nunito,sans-serif;margin-top:14px}
     }
 
 
+# The school-format guides: a hub and one page each for Lincoln-Douglas, British
+# Parliamentary and World Schools (Public Forum is page_pf above). Each says plainly
+# where DebateOwl stops, since only School 4-6-6-3, LD and PF have Sparring rounds.
+FORMAT_DATE = "2026-11-05"
+FORMAT_CHECKED = "Checked Nov 5, 2026."
+FORMAT_HUB = "best-ai-for-debate-formats"
+FORMAT_PAGES = {"best-ai-for-lincoln-douglas", "best-ai-for-british-parliamentary", "best-ai-for-world-schools-debate", "best-ai-for-public-forum"}
+
+
+def page_formats_hub():
+    answer = (
+        "It depends on whether you need the whole round or one part of it. DebateOwl runs full timed rounds against an AI opponent "
+        "in Lincoln-Douglas, Public Forum and the School 4-6-6-3 format, and writes cases with replies for any motion, "
+        "for $5/month after a 3-day free trial. For British Parliamentary and World Schools it helps with the case, the extension and the clock, "
+        "but it does not run those rounds yet. Tavara and WinDebate name both formats, and debatelab.ai has a World Schools mode."
+    )
+    faqs = [
+        ("Which formats can I run a full timed round in?", "School 4-6-6-3, Lincoln-Douglas and Public Forum. A round runs the speeches in order at their real lengths, typed or spoken, against an AI opponent, and ends with a verdict scored on logic, evidence, delivery and strategy."),
+        ("Does DebateOwl have a free plan?", "No. The app starts with a 3-day free trial that asks for no credit card, then costs $5/month plus tax. The debate timer, motion generator, flow sheet and speech-time calculator are free without an account, and so is the one-exchange mini round on the AI debate page."),
+        ("Why does a format-specific tool matter?", "Because the clock shapes the speech. A four-minute PF rebuttal, a seven-minute BP extension and a four-minute World Schools reply ask for different things, and practice at the wrong length trains the wrong habit."),
+        ("Can I use these tools during a round?", "Treat them as preparation. Whether a device may be used in a round, or in BP and World Schools prep time, is your league's rule, so read it before the tournament."),
+    ]
+    rows = [
+        ("Lincoln-Douglas", "One against one. 6-3-7-3-4-6-3, with 4 minutes of prep each.",
+         "Sparring runs the five speeches at those times and ends in a verdict. Crossfire drills the questioning.",
+         "The two cross-examinations and prep time are not on the Sparring clock.",
+         '<a href="/best-ai-for-lincoln-douglas">LD tools</a>'),
+        ("Public Forum", "Two against two. 4-4-3-2, with three 3-minute crossfires.",
+         "Sparring at 4-4-3-2. Crossfire at 3, 5 or 8 minutes. A case with replies.",
+         "Sparring leaves out the crossfire periods; Crossfire covers them separately.",
+         '<a href="/best-ai-for-public-forum">PF tools</a>'),
+        ("British Parliamentary", "Four teams of two. Eight 7-minute speeches after 15 minutes of prep.",
+         "A case written under the BP setting, Brainstorm for extensions, Attack on an opening case, a free timer that knocks for POIs.",
+         "No BP round: the app does not play the other three teams.",
+         '<a href="/best-ai-for-british-parliamentary">BP tools</a>'),
+        ("World Schools", "Three against three. Six 8-minute speeches, then two 4-minute replies.",
+         "A prepared-motion case with replies, evidence leads, Attack, and a free WSDC timer and flow sheet.",
+         "No World Schools round, and no WSDC setting in the case generator; use Custom and say so in the Instructions.",
+         '<a href="/best-ai-for-world-schools-debate">World Schools tools</a>'),
+    ]
+    trs = "".join(f'<tr><th scope="row">{esc(a)}</th><td>{esc(b)}</td><td>{esc(c)}</td><td>{esc(d)}</td><td>{e}</td></tr>' for a, b, c, d, e in rows)
+    body = f"""
+<section class="matrix">
+  <h2>Four formats, side by side</h2>
+  <p>Each row says what DebateOwl does for that format today, and where it stops. The format guides go deeper, with the other tools named for each one and a source for every fact about them.</p>
+  <div class="scroll"><table>
+    <caption>DebateOwl by school debate format, as of November 2026</caption>
+    <thead><tr><th scope="col">Format</th><th scope="col">The round</th><th scope="col">What DebateOwl does</th><th scope="col">Where it stops</th><th scope="col">Guide</th></tr></thead>
+    <tbody>{trs}</tbody>
+  </table></div>
+</section>
+<section class="gap">
+  <h2>What the popular AI debate lists leave out</h2>
+  <p>DebateAI's own list of the best AI debate tools for 2026 names seven tools: DebateAI, ChatGPT, DeepAI Debate, Symbai, HyperWrite, Junia and PublicForum AI. Only the last is tied to a competitive format, and the list does not mention Lincoln-Douglas, British Parliamentary or World Schools at all. DebateOwl is not on it either. <a href="#f1">F1</a></p>
+  <p>That list is honest about its aim. DebateAI is built for arguing against an AI, or watching two of them argue, in "opening arguments, rebuttals, closing statements", and it calls itself free to start without naming a paid price. <a href="#f2">F2</a> A debater with a tournament on Saturday needs something narrower: the right speakers, in the right order, on the right clock. That is the gap this page fills, with DebateOwl first where it does the job and other tools named where it does not.</p>
+  <p>The wider field, ranked by goal rather than by format, is on <a href="/best-ai-for-debate">which AI is best for debate</a>.</p>
+</section>
+<section class="pick">
+  <h2>Three questions that pick the tool</h2>
+  <ol>
+    <li><strong>Does it keep your format's speech order and times?</strong> A tool that only offers "opening, rebuttal, closing" will not teach you to collapse a PF summary into three minutes or to hold a BP extension for seven.</li>
+    <li><strong>Does it cover the part you lose on?</strong> If judges keep writing that your questioning gave nothing away, you need a cross-examination drill more than another case. If your closing team keeps repeating opening, you need angles, not a timer.</li>
+    <li><strong>What does a month cost, and what is free before you pay?</strong> Prices differ by a factor of eight across the tools on these pages, and several have free tiers with monthly limits.</li>
+  </ol>
+  <p>{PRICE_HTML} The mini round on the <a href="/ai-debate">AI debate page</a> is free as well: one argument, one AI rebuttal with a judge's note and one follow-up, without an account.</p>
+  <p><a class="cta" href="/app">Start the 3-day trial</a></p>
+</section>
+<section class="other">
+  <h2>The formats outside these four</h2>
+  <p>Sparring's third round type is the School 4-6-6-3 format: an Introductor, two main speeches (R1 and R2) and a Conclusor for each side. Policy has a case setting in the generator and an 8-3-5 preset on the free timer, but no Sparring round; Prilo's NSDA plan covers Policy drills. Congress is explained on <a href="/congress-debate">Congress debate</a>, and Asian Parliamentary has its own preset on the free timer. For the rules of each format without any tool talk, start from <a href="/lincoln-douglas-debate">Lincoln-Douglas</a>, <a href="/public-forum-debate">Public Forum</a>, <a href="/british-parliamentary-debate">British Parliamentary</a> or <a href="/world-schools-debate">World Schools</a>.</p>
+</section>
+{faq_block("Format questions", faqs, "cards")}
+{sources("Sources for the format hub", [
+    ("f1", "https://www.debateai.org/tools/best-ai-debate-tools-2026", "DebateAI's list of seven tools; PublicForum AI is the only competitive-format pick, and LD, BP and World Schools are not mentioned."),
+    ("f2", "https://www.debateai.org/compare/debateai-vs-chatgpt", "\"Free to start\"; debate structure described as opening arguments, rebuttals and closing statements; no DebateAI price named."),
+    ("f3", "https://www.tavara.co/debate", "Lincoln-Douglas, World Schools and British Parliamentary grids with live points of information; no price named on the page."),
+    ("f4", "https://windebate.ai", "Six formats named, including World Schools and British Parliamentary; Free, Plus and Pro plans."),
+    ("f5", "https://debatelab.ai", "Casual, World Schools and Asian Parliamentary debate modes; a separate product, not DebateOwl."),
+], FORMAT_CHECKED)}
+"""
+    style = """
+body.hub{background:#FFFDF6}body.hub main{width:min(1040px,calc(100% - 32px));margin:24px auto 72px}
+body.hub h1{font-size:clamp(2.3rem,5.6vw,3.8rem);color:#1A1530}
+body.hub table{min-width:860px;background:#fff;border-radius:18px;overflow:hidden;box-shadow:0 10px 30px rgba(26,21,48,.07)}
+body.hub thead th{background:#1A1530;color:#FFF6D8}
+body.hub tbody th{color:#1A1530;white-space:nowrap}
+body.hub tbody td:nth-child(3){background:#EEF6FF}body.hub tbody td:nth-child(4){background:#FFF3E8}
+body.hub caption{text-align:left;font-family:Fredoka,Nunito,sans-serif;padding:6px 0;color:#46566F}
+body.hub .gap{border-left:6px solid #FFC414;padding-left:18px;margin-top:28px}
+body.hub .pick ol{padding-left:22px}body.hub .pick li{margin:10px 0}
+body.hub .qcards{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px}
+body.hub .qcards article{background:#fff;border:2px solid #1A1530;border-radius:16px;padding:4px 16px 8px}
+body.hub .qcards h3{font-size:1.05rem}
+"""
+    return {
+        "slug": FORMAT_HUB,
+        "lang": "en",
+        "body": "hub",
+        "published": FORMAT_DATE,
+        "modified": FORMAT_DATE,
+        "title": "Best AI for Debate Formats: LD, PF, BP and World Schools | DebateOwl",
+        "description": "Which AI fits Lincoln-Douglas, Public Forum, British Parliamentary or World Schools: what DebateOwl does in each, where it stops, and what else exists.",
+        "h1": "Best AI for your debate format",
+        "question": "Which AI is best for my debate format?",
+        "answer": answer,
+        "faqs": faqs,
+        "style": style,
+        "html_body": body,
+    }
+
+
+def page_ld():
+    answer = (
+        "For a full LD round on the clock, start with DebateOwl: Sparring runs the five Lincoln-Douglas speeches at 6-7-4-6-3 against an AI opponent "
+        "and ends in a judged verdict, and Crossfire drills the cross-examination, for $5/month after a 3-day free trial. "
+        "Tavara runs LD with both cross-examinations inside the round. Prilo adds a 3-minute cross-examination simulator for $15 a month. "
+        "Cardinal cuts LD evidence cards and lists four tools as free."
+    )
+    faqs = [
+        ("Does DebateOwl run the LD cross-examinations?", "Not inside a Sparring round. Sparring times the five speeches and skips both 3-minute cross-examinations, so practise those in Crossfire, which has a 3-minute setting and can question you or answer your questions."),
+        ("Can AI write a value and criterion?", "It can propose them. In DebateOwl, put the value and criterion you want in the debate's Instructions, since the generator reads them with the motion, then check that every argument comes back to the criterion. A criterion no argument uses is a label, not a test."),
+        ("Is there a free AI for LD practice?", "Cardinal lists four tools as free forever, and WinDebate has a free tier with 10 practice drills a month. DebateOwl's LD timer with prep banks is free; its Sparring rounds are part of the paid app after the trial."),
+        ("Which tool is best for LD speed and delivery?", "Prilo's Speech Analytics reports pace and filler words. DebateOwl scores delivery from what you say, not how fast you say it."),
+    ]
+    clock = [
+        ("AC", "6:00", "Affirmative constructive",
+         "DebateOwl writes the affirmative as a speech you can read out, with \"If they say… we answer…\" replies after it. Sparring gives you the six minutes to deliver it.",
+         ""),
+        ("CX", "3:00", "Negative questions the affirmative",
+         "Crossfire, with the AI asking: one question at a time about your case, on a 3-minute clock.",
+         "Sparring skips this period."),
+        ("NC", "7:00", "Negative constructive",
+         "When you are affirmative, the AI gives this speech in Sparring. When you are negative, Attack reads the affirmative case and points to its weakest link.",
+         ""),
+        ("CX", "3:00", "Affirmative questions the negative",
+         "Crossfire the other way round: you ask, and you choose whether the AI answers cooperatively, evasively or aggressively.",
+         "Sparring skips this period too."),
+        ("1AR", "4:00", "First affirmative rebuttal",
+         "The speech most LD rounds turn on. Sparring makes you give it in four minutes against the seven-minute NC the AI just delivered.",
+         ""),
+        ("NR", "6:00", "Negative rebuttal",
+         "In Sparring, the AI's last speech when you are affirmative, or your chance to collapse onto one clean line when you are negative.",
+         ""),
+        ("2AR", "3:00", "Second affirmative rebuttal",
+         "The last word, then the verdict: a score in four categories and a note on what decided the round.",
+         ""),
+        ("Prep", "4:00", "Each debater, between speeches",
+         'The free <a href="/tools/debate-timer?format=ld">LD timer</a> keeps both prep banks.',
+         "Sparring has no prep clock."),
+    ]
+    steps = "".join(
+        f'<li><span class="seg">{esc(short)}</span><span class="len">{length}</span><div><strong>{esc(label)}</strong><p>{what}</p>'
+        + (f'<p class="miss">{esc(gap)}</p>' if gap else "")
+        + "</div></li>"
+        for short, length, label, what, gap in clock
+    )
+    body = f"""
+<section class="clockwrap">
+  <h2>The LD clock, and what covers each part</h2>
+  <p>Lincoln-Douglas is one debater against one, on a value resolution. The National Speech &amp; Debate Association times the round at 6-3-7-3-4-6-3, with four minutes of prep each; the <a href="/lincoln-douglas-debate">Lincoln-Douglas guide</a> explains the rules. Here is that clock, segment by segment, with the part of DebateOwl that covers it and the places it does not.</p>
+  <ol class="clock">{steps}</ol>
+</section>
+<section class="tools">
+  <h2>Other LD tools, by what each is for</h2>
+  <h3>Tavara: the cross-examinations inside the round</h3>
+  <p>Tavara's debate page describes its Lincoln-Douglas mode as "a single AI opponent across 7 timed speeches and 2 cross-examinations". That is the part DebateOwl's Sparring leaves out. The page names no price. <a href="#l1">L1</a></p>
+  <h3>Prilo: circuit drills</h3>
+  <p>Prilo's NSDA plan covers Lincoln-Douglas, Public Forum and Policy, with a cross-examination simulator on a 3-minute clock and speech analytics for pace and filler words. It is $15 a month or $60 a year. There is a line-by-line comparison on <a href="/debateowl-vs-prilo">DebateOwl vs Prilo</a>. <a href="#l2">L2</a></p>
+  <h3>Cardinal: evidence cards</h3>
+  <p>Cardinal searches the web and opencaselist and cuts cards with the citation written. Its Attack a Card tool says it works on PF, LD and Policy cards. Four tools are marked free forever, and Pro starts at $10 a month or $75 a season. <a href="#l3">L3</a></p>
+  <h3>WinDebate: drills from your own rounds</h3>
+  <p>WinDebate names Lincoln-Douglas among six formats and builds drills from rounds you record. Its free tier has 10 drills a month; Plus is $19.99 a month. <a href="#l4">L4</a></p>
+</section>
+<section class="vc">
+  <h2>A value and criterion, tested before the round</h2>
+  <p>An example resolution, not a current NSDA topic: "Resolved: A just society ought to guarantee free public transit."</p>
+  <p><strong>Affirmative value:</strong> justice, as giving each person fair access to public life. <strong>Criterion:</strong> removing barriers that fall hardest on people with the least money.</p>
+  <p><strong>One argument:</strong> a fare is the same price for everyone but a much larger share of a small income, so it keeps the poorest riders off the bus first. Free transit removes that barrier for exactly the people the criterion names.</p>
+  <p>In a Crossfire drill with the AI asking, expect the question that matters: "If the city pays for free transit by cutting routes, has your criterion been met?" If you have no answer ready, the negative has its turn. Write the answer into your case before the round, not during the 1AR.</p>
+</section>
+<section class="go">
+  <h2>Run an LD round tonight</h2>
+  <p>{PRICE_HTML}</p>
+  <p>Other formats are compared on <a href="/{FORMAT_HUB}">the format hub</a>, and the field ranked by goal is on <a href="/best-ai-for-debate">which AI is best for debate</a>. Debating in a team format next? See <a href="/best-ai-for-british-parliamentary">BP</a> or <a href="/best-ai-for-world-schools-debate">World Schools</a>.</p>
+  <p><a class="cta" href="/app">Spar an LD round at NSDA times</a></p>
+</section>
+{faq_block("Lincoln-Douglas tool questions", faqs, "details")}
+{sources("Where the LD tool facts come from", [
+    ("l1", "https://www.tavara.co/debate", "Lincoln-Douglas: \"a single AI opponent across 7 timed speeches and 2 cross-examinations\"; no price on the page."),
+    ("l2", "https://www.prilo.ai/nsda", "Lincoln-Douglas, Public Forum and Policy; 3-minute cross-examination simulator; $15/month or $60/year."),
+    ("l3", "https://cardinaldebate.org/", "Card search over the web and opencaselist; \"Works on PF, LD and Policy cards\"; 4 tools free forever; Pro from $10 a month or $75 a season."),
+    ("l4", "https://windebate.ai", "Six formats including Lincoln-Douglas; free tier with 10 practice drills a month; Plus $19.99/month."),
+], FORMAT_CHECKED)}
+"""
+    style = """
+body.ld{background:#FBF7F7}body.ld main{width:min(880px,calc(100% - 32px));margin:20px auto 64px}
+body.ld h1{font-size:clamp(2.3rem,6vw,3.8rem);color:#3B0D16}
+body.ld .clock{list-style:none;padding:0;margin:0;border-left:4px solid #8C1C2E}
+body.ld .clock li{display:grid;grid-template-columns:64px 56px 1fr;gap:4px 12px;padding:12px 0 12px 14px;border-bottom:1px dashed #E3C9CE}
+body.ld .clock .seg{font-family:Fredoka,Nunito,sans-serif;color:#8C1C2E;font-size:1.15rem}
+body.ld .clock .len{font-variant-numeric:tabular-nums;color:#46566F}
+body.ld .clock p{margin:.2rem 0}
+body.ld .clock .miss{color:#7A4B00;background:#FFF4D6;border-radius:8px;padding:2px 8px;display:inline-block}
+body.ld .tools h3{margin-bottom:.2rem}
+body.ld .vc{background:#3B0D16;color:#FBEFF1;border-radius:24px;padding:6px 22px 16px;margin-top:24px}
+body.ld .go{border-top:4px solid #8C1C2E;margin-top:24px}
+@media(max-width:560px){body.ld .clock li{grid-template-columns:52px 1fr}body.ld .clock li div{grid-column:1/-1}}
+"""
+    return {
+        "slug": "best-ai-for-lincoln-douglas",
+        "lang": "en",
+        "body": "ld",
+        "published": FORMAT_DATE,
+        "modified": FORMAT_DATE,
+        "title": "Best AI for Lincoln-Douglas Debate (2026) | DebateOwl",
+        "description": "AI tools for Lincoln-Douglas, segment by segment: timed LD rounds, cross-examination drills, value and criterion checks and evidence, as of November 2026.",
+        "h1": "Best AI for Lincoln-Douglas debate",
+        "question": "What is the best AI for Lincoln-Douglas practice?",
+        "answer": answer,
+        "faqs": faqs,
+        "style": style,
+        "html_body": body,
+    }
+
+
+def page_bp():
+    answer = (
+        "For the prep and the speech clock, start with DebateOwl: it writes a case under its British Parliamentary setting, maps angles for both benches, "
+        "finds the weak link in an opening team's case, and its free timer knocks when points of information open and close. "
+        "It does not run a BP round. For a simulated room, Tavara seats you in an eight-speaker grid with live POIs, "
+        "and WinDebate names BP among six formats. DebateOwl is $5/month after a 3-day free trial."
+    )
+    faqs = [
+        ("Can DebateOwl spar a British Parliamentary round?", "No. Sparring runs School 4-6-6-3, Lincoln-Douglas and Public Forum. A BP round has eight speakers on four teams, and DebateOwl does not play the other three teams yet."),
+        ("When can I offer a POI in BP?", "Between the first and the last minute of each 7-minute speech. Under the WUDC manual the protected time is 0:00 to 1:00 and 6:00 to 7:00, and judges disregard anything after 7:15."),
+        ("Is the BP timer free?", "Yes. The debate timer's BP preset runs the eight speeches, shows the protected time, knocks when POIs open and close, and needs no account."),
+        ("Can I use AI in the 15 minutes of prep?", "Only if your tournament allows devices in prep, and many restrict them. Use the routine on this page in the week before, so the habit is yours on the day."),
+    ]
+    benches = [
+        ("Opening Government", "PM and DPM",
+         "Define the motion and set a model the room can debate.",
+         "A definition so narrow that the opposition has nothing to say.",
+         "Write the case with the format set to British Parliamentary and your position named in the Instructions. Regenerate a weak section without touching the rest."),
+        ("Opening Opposition", "LO and DLO",
+         "Clash with the model directly and set the opposition's line.",
+         "Opposing a version of the motion that Government never proposed.",
+         "Paste the government case you expect into Attack, which points to the link most worth hitting first."),
+        ("Closing Government", "MG and GW",
+         "Agree with opening, then add an extension opening did not make.",
+         "Repeating opening's arguments with new examples and calling it an extension.",
+         "Brainstorm lists angles for the motion. Strike the two opening would obviously run and build from what is left."),
+        ("Closing Opposition", "MO and OW",
+         "Out-extend Closing Government and, in the whip, sum up the debate by its clashes.",
+         "A whip speech that lists every speaker instead of the two or three questions that decided the room.",
+         "Brainstorm on the opposition side for the extension; the free flow sheet has a column for each of the eight speakers."),
+    ]
+    cards = "".join(
+        f'<article><h3>{esc(team)}</h3><p class="who">{esc(who)}</p><p><strong>The job:</strong> {esc(job)}</p><p><strong>The trap:</strong> {esc(trap)}</p><p class="own"><strong>With DebateOwl:</strong> {esc(tool)}</p></article>'
+        for team, who, job, trap, tool in benches
+    )
+    body = f"""
+<section class="benches">
+  <h2>Four benches, four different jobs</h2>
+  <p>British Parliamentary puts four teams of two in one room: two on Government, two on Opposition, and each team competes against all three others, not just the bench opposite. The rules and speaker roles are on <a href="/british-parliamentary-debate">British Parliamentary debate</a>. What each team needs from a tool is different, so here they are one at a time.</p>
+  <div class="grid">{cards}</div>
+</section>
+<section class="routine">
+  <h2>A 15-minute routine to practise before the tournament</h2>
+  <p>BP teams get 15 minutes after the motion is released. Draw a "This House" motion from the free <a href="/tools/debate-motion-generator">motion generator</a> and run this against the clock, alone or with your partner:</p>
+  <ol>
+    <li><strong>Minutes 0 to 2.</strong> Read the motion and your position. Write one sentence on what your team must prove that the other three teams will not.</li>
+    <li><strong>Minutes 2 to 6.</strong> Brainstorm angles for your bench. If you are closing, cross out what opening will say first.</li>
+    <li><strong>Minutes 6 to 12.</strong> Generate or write the case, then split it: who says what, and in which minute.</li>
+    <li><strong>Minutes 12 to 15.</strong> Write three POIs you will offer and the one-line answer to the POI you fear most.</li>
+  </ol>
+  <p>Then give the first speech on the free <a href="/tools/debate-timer?format=bp">BP timer</a>. It knocks at 1:00 when POIs open and at 6:00 when they close, so you learn to have your roadmap and first argument out before anyone can stand.</p>
+</section>
+<section class="field">
+  <h2>Other ways to practise BP with AI</h2>
+  <p><strong>Tavara</strong> describes an eight-speaker BP grid, "4 teams, strict speaking order, live Points of Information", where AI speakers fill the seats you do not take. That is the closest thing to a full room on this page. Its debate page names no price. <a href="#b1">B1</a></p>
+  <p><strong>WinDebate</strong> lists British Parliamentary as "4 teams of 2 · Ranked 1st–4th" among six formats and builds drills from rounds you record with its Live Round Assistant. It has a free tier; Plus is $19.99 a month and Pro $39.99. <a href="#b2">B2</a></p>
+  <p>DebateAI's list of the best AI debate tools for 2026 does not mention British Parliamentary at all. <a href="#b3">B3</a> The format hub has <a href="/{FORMAT_HUB}">the other formats side by side</a>, and <a href="/best-ai-for-debate">which AI is best for debate</a> ranks the whole field by goal. If your school also enters <a href="/best-ai-for-world-schools-debate">World Schools</a> or <a href="/best-ai-for-lincoln-douglas">Lincoln-Douglas</a>, those have pages too.</p>
+</section>
+<section class="go">
+  <h2>Write an opening case under the BP setting</h2>
+  <p>{PRICE_HTML}</p>
+  <p><a class="cta" href="/app">Start the 3-day trial</a></p>
+</section>
+{faq_block("British Parliamentary tool questions", faqs, "defs")}
+{sources("Where the BP tool facts come from", [
+    ("b1", "https://www.tavara.co/debate", "\"British Parliamentary Debate (BP): 8-speaker grid: 4 teams, strict speaking order, live Points of Information\"; no price on the page."),
+    ("b2", "https://windebate.ai", "\"British Parliamentary: 4 teams of 2 · Ranked 1st–4th\"; Free $0, Plus $19.99/month, Pro $39.99/month."),
+    ("b3", "https://www.debateai.org/tools/best-ai-debate-tools-2026", "Seven tools listed; British Parliamentary not mentioned."),
+], FORMAT_CHECKED)}
+"""
+    style = """
+body.bp{background:#F4F8F5}body.bp main{width:min(980px,calc(100% - 32px));margin:20px auto 64px}
+body.bp h1{font-size:clamp(2.3rem,6vw,3.8rem);color:#0B3B2C}
+body.bp .grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+body.bp .grid article{background:#fff;border-radius:20px;padding:4px 18px 10px;border-top:8px solid #0E5C46}
+body.bp .grid article:nth-child(2n){border-top-color:#A3262A}
+body.bp .grid h3{margin-bottom:0}body.bp .grid .who{margin-top:2px;color:#46566F}
+body.bp .grid .own{background:#EEF6FF;border-radius:10px;padding:6px 10px}
+body.bp .routine{background:#0B3B2C;color:#EAF5EF;border-radius:26px;padding:6px 22px 16px;margin-top:26px}
+body.bp .routine a{color:#FCE48A}
+body.bp dl dt{font-family:Fredoka,Nunito,sans-serif;font-size:1.08rem;margin-top:14px}body.bp dl dd{margin-left:0}
+@media(max-width:720px){body.bp .grid{grid-template-columns:1fr}}
+"""
+    return {
+        "slug": "best-ai-for-british-parliamentary",
+        "lang": "en",
+        "body": "bp",
+        "published": FORMAT_DATE,
+        "modified": FORMAT_DATE,
+        "title": "Best AI for British Parliamentary Debate (2026) | DebateOwl",
+        "description": "AI for British Parliamentary debate by bench: opening cases, closing extensions, POI timing and the 15-minute prep, with what DebateOwl does not do.",
+        "h1": "Best AI for British Parliamentary debate",
+        "question": "Is there an AI for British Parliamentary practice?",
+        "answer": answer,
+        "faqs": faqs,
+        "style": style,
+        "html_body": body,
+    }
+
+
+def page_wsdc():
+    answer = (
+        "For prepared motions, start with DebateOwl: it writes the case with \"If they say… we answer…\" replies, finds the weak link, "
+        "suggests cited evidence leads to check, and its free timer runs the World Schools 8-minute speeches and 4-minute replies, "
+        "for $5/month after a 3-day free trial. It does not run a World Schools round against the AI. "
+        "debatelab.ai, a separate product, has a World Schools practice mode, and Tavara seats you in a six-speaker grid with points of information."
+    )
+    faqs = [
+        ("Is debatelab.ai the same as DebateOwl?", "No. DebateOwl was called DebateLab until October 2026, but debatelab.ai is a different product made by a different team, and DebateOwl has no connection to it."),
+        ("Can DebateOwl run a World Schools round?", "Not yet. Sparring runs School 4-6-6-3, Lincoln-Douglas and Public Forum. For World Schools, use the case and reply tools on a prepared motion and the free timer for the speeches."),
+        ("Who gives the World Schools reply speech?", "The first or second speaker of each team, never the third. Opposition replies first, the replies take no POIs, and each is four minutes."),
+        ("How should I use AI for an impromptu motion?", "To practise the hour, not to replace it. Many tournaments restrict devices during impromptu prep, so the skill has to be yours on the day."),
+    ]
+    speakers = [
+        ("First Proposition", "8 min", "Define, set the team line, give the first arguments.", "The case generator writes the opening and arguments; set the format to Custom and name World Schools in the Instructions."),
+        ("First Opposition", "8 min", "Answer the definition if needed, then rebut and add opposition arguments.", "Attack on the proposition case you expect."),
+        ("Second speakers", "8 min each", "Rebuild against rebuttal and add the team's remaining substantive material.", "Factoids for evidence leads with named sources you still check."),
+        ("Third speakers", "8 min each", "Mostly rebuttal, organised by the main clashes.", "The free flow sheet's WSDC columns, to see which clashes are still open."),
+        ("Replies", "4 min each", "A biased summary of the debate by a first or second speaker, Opposition first, with no POIs.", "Ask, the coach chat, to check that the two or three clashes you plan to name are the ones that decided the round."),
+    ]
+    trs = "".join(f'<tr><th scope="row">{esc(a)}</th><td>{esc(b)}</td><td>{esc(c)}</td><td>{esc(d)}</td></tr>' for a, b, c, d in speakers)
+    body = f"""
+<section class="split">
+  <h2>Prepared or impromptu: two different jobs</h2>
+  <p>World Schools mixes two kinds of motion. Prepared motions are released weeks before the tournament, and impromptu motions come with one hour of preparation. The <a href="/world-schools-debate">World Schools guide</a> covers the rules; this page is about what AI is good for in each.</p>
+  <div class="cols">
+    <article>
+      <h3>Prepared motion: weeks ahead</h3>
+      <p>Here a tool can do real work. DebateOwl writes the case as a speech, an opening, two to four arguments with evidence that names its source and year, and the replies, so three speakers can split it. Attack then reads it as the opposition would and points to the weakest link. Factoids suggests evidence leads, each with a source to open and check before it goes near a speech.</p>
+      <p>Then read it aloud on the free <a href="/tools/debate-timer?format=wsdc">World Schools timer</a>. Eight minutes is longer than most school speeches, and the knock at 1:00 marks the point after which the other team may offer points of information.</p>
+    </article>
+    <article>
+      <h3>Impromptu motion: one hour</h3>
+      <p>The hour is the skill, so practise it as an hour. Draw a "This House" motion from the free <a href="/tools/debate-motion-generator">motion generator</a> and time the hour on the free timer, which takes custom prep periods of up to 30 minutes, so run two in a row:</p>
+      <ol>
+        <li>10 minutes on what the motion means and what each side must show.</li>
+        <li>20 minutes building the team line and splitting material across three speakers.</li>
+        <li>20 minutes writing speeches.</li>
+        <li>10 minutes on the reply: which two or three clashes it will name.</li>
+      </ol>
+      <p>Afterwards, run the same motion through Brainstorm and compare. Every angle it found that you missed is something to look for next time.</p>
+    </article>
+  </div>
+</section>
+<section class="roles">
+  <h2>Each World Schools speech, and the tool that helps</h2>
+  <div class="scroll"><table>
+    <caption>Six 8-minute speeches with POIs after the first minute and before the last, then two 4-minute replies, under the WSDC rules</caption>
+    <thead><tr><th scope="col">Speaker</th><th scope="col">Time</th><th scope="col">The job</th><th scope="col">In DebateOwl</th></tr></thead>
+    <tbody>{trs}</tbody>
+  </table></div>
+</section>
+<section class="field">
+  <h2>Other World Schools practice tools</h2>
+  <p><strong>debatelab.ai</strong> offers casual, World Schools and Asian Parliamentary modes against an AI, with one to three exchanges and an optional timer. It is a separate product from DebateOwl. <a href="#w1">W1</a></p>
+  <p><strong>Tavara</strong> describes a World Schools "6-speaker grid: 3 Proposition, 3 Opposition, with live Points of Information". Its debate page names no price. <a href="#w2">W2</a></p>
+  <p><strong>WinDebate</strong> lists World Schools as "3v3 international" among its six formats, with a free tier and paid plans from $19.99 a month. <a href="#w3">W3</a></p>
+  <p>Other formats are on <a href="/{FORMAT_HUB}">the format hub</a>, and <a href="/best-ai-for-debate">which AI is best for debate</a> ranks the field by goal. Many World Schools debaters also compete in <a href="/best-ai-for-british-parliamentary">British Parliamentary</a> or <a href="/best-ai-for-lincoln-douglas">Lincoln-Douglas</a>.</p>
+</section>
+<section class="go">
+  <h2>Prepare this season's motions</h2>
+  <p>{PRICE_HTML}</p>
+  <p><a class="cta" href="/app">Write a prepared-motion case</a></p>
+</section>
+{faq_block("World Schools tool questions", faqs, "h3")}
+{sources("Where the World Schools tool facts come from", [
+    ("w1", "https://debatelab.ai", "Debate modes: Casual, \"WSDC / World Schools format\" and \"AP / Asian Parliamentary\"; 1 to 3 exchanges; optional timer."),
+    ("w2", "https://www.tavara.co/debate", "\"World Schools Debate (WSDC) 6-speaker grid: 3 Proposition, 3 Opposition, with live Points of Information\"; no price on the page."),
+    ("w3", "https://windebate.ai", "\"World Schools: 3v3 international\"; Free $0, Plus $19.99/month, Pro $39.99/month."),
+], FORMAT_CHECKED)}
+"""
+    style = """
+body.ws{background:#F3F8F9}body.ws main{width:min(980px,calc(100% - 32px));margin:20px auto 64px}
+body.ws h1{font-size:clamp(2.3rem,6vw,3.8rem);color:#08343A}
+body.ws .cols{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+body.ws .cols article{background:#fff;border-radius:22px;padding:4px 20px 12px;box-shadow:0 12px 32px rgba(8,52,58,.07)}
+body.ws .cols article:first-child{border-left:6px solid #0B6E79}body.ws .cols article:last-child{border-left:6px solid #E0A100}
+body.ws table{min-width:720px;background:#fff}
+body.ws thead th{background:#0B6E79;color:#fff}
+body.ws td:last-child{background:#EEF6FF}
+body.ws caption{text-align:left;color:#46566F;padding:6px 0}
+body.ws .field p strong{color:#08343A}
+body.ws .go{background:#08343A;color:#E6F4F5;border-radius:24px;padding:6px 22px 18px;margin-top:24px}
+body.ws .go a:not(.cta){color:#FCE48A}
+@media(max-width:760px){body.ws .cols{grid-template-columns:1fr}}
+"""
+    return {
+        "slug": "best-ai-for-world-schools-debate",
+        "lang": "en",
+        "body": "ws",
+        "published": FORMAT_DATE,
+        "modified": FORMAT_DATE,
+        "title": "Best AI for World Schools Debate (WSDC, 2026) | DebateOwl",
+        "description": "AI for World Schools debate: prepared-motion cases, the impromptu hour, the reply speech and WSDC timing, and where DebateOwl stops, as of November 2026.",
+        "h1": "Best AI for World Schools debate",
+        "question": "What AI helps with World Schools (WSDC) debate?",
+        "answer": answer,
+        "faqs": faqs,
+        "style": style,
+        "html_body": body,
+    }
+
+
 def visible_text(html):
     text = re.sub(r"<script[\s\S]*?</script>", " ", html)
     text = re.sub(r"<style[\s\S]*?</style>", " ", text)
@@ -2606,7 +3034,8 @@ def write_comparison_pages(public: Path):
     ensure_fonts(public)
     pages = [page_ladder(), page_price(), page_chat(), page_teachers(), page_prep(), page_pf(), page_hu(), page_es(), page_hu_best(), page_argufight(), page_mindduel(),
              page_claude(), page_publicforumai(), page_gemini(), page_hyperwrite(), page_schoolai(),
-             page_debatable(), page_prilo(), page_debatethis(), page_kialo_edu()]
+             page_debatable(), page_prilo(), page_debatethis(), page_kialo_edu(),
+             page_formats_hub(), page_ld(), page_bp(), page_wsdc()]
     h2s = {}
     answers = []
     for page in pages:
@@ -2622,7 +3051,8 @@ def write_comparison_pages(public: Path):
             visible = unescape(visible_text(html))
             if visible.count(PRICE_START) != 1 or PRICE_HTML not in html:
                 raise SystemExit(f"{page['slug']}: the pricing sentence must appear exactly once, with the tools linked")
-            if "/tools" in visible:
+            # A source URL on another site, such as debateai.org/tools/..., is not the bare path.
+            if "/tools" in re.sub(r"https?://\S+", " ", visible):
                 raise SystemExit(f"{page['slug']}: shows the path /tools; link the tools by name instead")
         elif "price" in page:
             start, price_html = page["price"]
@@ -2639,6 +3069,11 @@ def write_comparison_pages(public: Path):
         linked = [slug for slug in SIBLINGS if slug != page["slug"] and f'href="/{slug}"' in html]
         if len(linked) > 3:
             raise SystemExit(f"{page['slug']}: links to {len(linked)} sibling pages: {linked}")
+        # The format guides link their hub, and the hub links every format guide.
+        if page["slug"] in FORMAT_PAGES and f'href="/{FORMAT_HUB}"' not in html:
+            raise SystemExit(f"{page['slug']}: link the format hub /{FORMAT_HUB}")
+        if page["slug"] == FORMAT_HUB and any(f'href="/{slug}"' not in html for slug in FORMAT_PAGES):
+            raise SystemExit(f"{FORMAT_HUB}: link every format guide")
         folder = public / page["slug"]
         folder.mkdir(parents=True, exist_ok=True)
         (folder / "index.html").write_text(html)

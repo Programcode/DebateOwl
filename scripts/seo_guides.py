@@ -329,7 +329,7 @@ GUIDES = {
     },
     "best-ai-debate-tools": {
         "software": True,
-        "modified": "2026-11-02",
+        "modified": "2026-11-05",
         "callout": ("Short answer by goal:", "/best-ai-for-debate", "which AI is best for debate"),
         "disclosure": "{product} makes this list, and ranking {product} #1 is our editorial pick, not an independent test. Facts about the other tools come from their own websites, linked under each one, checked on 2 November 2026.",
         "items": [
@@ -872,7 +872,7 @@ GUIDES = {
         ],
     },
     "public-forum-debate": {
-        "modified": "2026-10-29",
+        "modified": "2026-11-05",
         "features": [
             ("The PF round, speech by speech", "What each of the eight speeches and three crossfires is for, with the standard times."),
             ("Summary and final focus that agree", "How to collapse to two issues in summary and extend exactly those into final focus."),
@@ -1308,7 +1308,7 @@ GUIDES = {
         ],
     },
     "world-schools-debate": {
-        "modified": "2026-10-28",
+        "modified": "2026-11-05",
         "features": [
             ("Motion interpretation", "Define the model, the stakeholders and what each side has to prove before anyone writes a speech."),
             ("Team roles", "What the first, second and third speakers and the reply speaker each owe the team, and how to practise each role."),
@@ -1541,7 +1541,7 @@ GUIDES = {
         ],
     },
     "lincoln-douglas-debate": {
-        "modified": "2026-10-28",
+        "modified": "2026-11-05",
         "features": [
             ("The NSDA round", "Seven speeches and cross-examinations at 6-3-7-3-4-6-3, with four minutes of prep per debater."),
             ("A useful test for the judge", "A value and a criterion the rest of the case actually depends on, instead of a label at the top."),
@@ -1687,7 +1687,7 @@ GUIDES = {
         ],
     },
     "british-parliamentary-debate": {
-        "modified": "2026-10-26",
+        "modified": "2026-11-05",
         "features": [
             ("Eight speakers, four teams", "What the Prime Minister through the Opposition Whip each owe the debate, shown on one practice motion."),
             ("Finding an extension", "Three ways a closing team finds material its opening half has not used, and why a thin one loses to the opening."),
