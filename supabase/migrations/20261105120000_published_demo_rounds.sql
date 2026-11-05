@@ -17,7 +17,8 @@ CREATE TABLE public.published_demo_rounds (
   -- The demo session it came from: one page per round. The session row itself
   -- is deleted after a day, so this is not a foreign key.
   session_id uuid NOT NULL UNIQUE,
-  motion text NOT NULL CHECK (char_length(motion) BETWEEN 1 AND 200),
+  -- 200 characters as typed; redaction can lengthen it (publish.ts STORED_MOTION_MAX).
+  motion text NOT NULL CHECK (char_length(motion) BETWEEN 1 AND 1000),
   side text NOT NULL CHECK (side IN ('for', 'against')),
   -- [{argument, rebuttal, judgeNote}], one or two turns.
   turns jsonb NOT NULL CHECK (jsonb_typeof(turns) = 'array' AND jsonb_array_length(turns) BETWEEN 1 AND 2),

@@ -13,7 +13,7 @@ interface Pattern {
   replace: (match: string, ...groups: string[]) => string | null;
 }
 
-const NAME = "[\\p{Lu}][\\p{L}'’-]+(?:\\s+[\\p{Lu}][\\p{L}'’-]+)?";
+const NAME = "[\\p{Lu}][\\p{L}\\p{M}'’-]+(?:\\s+[\\p{Lu}][\\p{L}\\p{M}'’-]+)?";
 
 const PATTERNS: Pattern[] = [
   // A pasted API key or token, first so the link rule cannot split a JWT at its dots.
@@ -46,7 +46,7 @@ const PATTERNS: Pattern[] = [
   // lower case; "my name is not the point" loses "not the", which costs the
   // page its indexing, nothing more.
   {
-    pattern: /(?<![\p{L}\p{N}])((?:my name is|my name's|i am called|i'm called|me llamo|mi nombre es|a nevem|nevem)\s+)[\p{L}'’-]+(?:\s+[\p{L}'’-]+)?/giu,
+    pattern: /(?<![\p{L}\p{N}])((?:my name is|my name's|i am called|i'm called|me llamo|mi nombre es|a nevem|nevem)\s+)[\p{L}\p{M}'’-]+(?:\s+[\p{L}\p{M}'’-]+)?/giu,
     replace: (_match, intro) => `${intro}[name removed]`,
   },
   // "Call me Anna": only with a capitalised name, so "call me old-fashioned" stays.
@@ -61,7 +61,8 @@ const PATTERNS: Pattern[] = [
 /** The text with personal data replaced by a bracketed note, and how many replacements were made. */
 export function redactPersonalData(text: string): { text: string; redactions: number } {
   let redactions = 0;
-  let result = text;
+  // Composed form, so "A" plus a combining accent reads as the one letter "Á".
+  let result = text.normalize("NFC");
   for (const { pattern, replace } of PATTERNS) {
     result = result.replace(pattern, (match: string, ...groups: unknown[]) => {
       const replacement = replace(match, ...groups.filter((group): group is string => typeof group === "string"));

@@ -12,6 +12,10 @@ import { isSubstantial, redactPersonalData } from "./redact.ts";
 import { publishKeys, toHex, verifySessionToken, verifyTurn } from "./signing.ts";
 
 const MOTION_MAX = 200;
+// What the table accepts once redaction has run: a 200-character motion grows
+// at most 3.5 times ("a.bc" becomes "[link removed]"). A redacted round is
+// never indexed, so the longer motion never reaches a title.
+const STORED_MOTION_MAX = 1_000;
 const ARGUMENT_MAX = 600;
 const REBUTTAL_MAX = 2_000;
 const JUDGE_NOTE_MAX = 1_000; // index.ts reads the first turn's note back with the same cap
@@ -77,6 +81,7 @@ export async function handlePublish(raw: Record<string, unknown>, secret: string
     return result.text;
   };
   const motion = clean(request.motion);
+  if (motion.length > STORED_MOTION_MAX) return json(400, { error: "invalid_request" });
   const turns = request.turns.map((turn) => ({ argument: clean(turn.argument), rebuttal: clean(turn.rebuttal), judgeNote: clean(turn.judgeNote) }));
   const { slug, deleteToken } = await publishKeys(request.sessionId, secret);
 

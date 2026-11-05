@@ -17,6 +17,8 @@ Deno.test("contact details, links, handles and introduced names are removed", ()
     ["Visit пример.рф now", "Visit [link removed] now"],
     ["See example.भारत today", "See [link removed] today"],
     ["Call me Anna Kovács, I argue", "Call me [name removed], I argue"],
+    ["Call me A\u0301ron Szabo, I argue", "Call me [name removed], I argue"],
+    ["my name is a\u0301ron szabo and", "my name is [name removed] and"],
     ["My key is sk-ant-abcdef123456 ok", "My key is [key removed] ok"],
     ["Hola, me llamo Lucía Pérez y creo", "Hola, me llamo [name removed] y creo"],
     ["Szia, a nevem Péter, és szerintem", "Szia, a nevem [name removed], és szerintem"],

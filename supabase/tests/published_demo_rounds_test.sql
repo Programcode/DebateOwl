@@ -1,5 +1,5 @@
 BEGIN;
-SELECT plan(11);
+SELECT plan(12);
 
 SELECT ok(
   NOT has_table_privilege('anon', 'public.published_demo_rounds', 'SELECT,INSERT,UPDATE,DELETE')
@@ -37,6 +37,14 @@ SELECT results_eq(
            ('same-motion', 'ok', false, 'cccccccccccc'), ('same-session', 'already_published', true, 'aaaaaaaaaaaa'),
            ('thin', 'ok', false, 'eeeeeeeeeeee')$$,
   'one page per session (a second publish learns the first one), and only the first indexable round on a motion and side stays indexable'
+);
+
+SELECT is(
+  (SELECT status FROM public.publish_demo_round(
+    'ffffffffffff', 'a1000000-0000-4000-8000-000000000005', repeat('[email removed] ', 60), 'for',
+    '[{"argument":"a","rebuttal":"b","judgeNote":"c"}]', false, repeat('6', 64))),
+  'ok',
+  'a motion that redaction lengthened past 200 characters is stored'
 );
 
 SET LOCAL ROLE anon;

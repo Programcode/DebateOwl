@@ -336,3 +336,20 @@ Deno.test("an over-long judge note is cut before signing, so the follow-up and t
     demo.restore();
   }
 });
+
+Deno.test("a full-length motion that redaction lengthens still publishes", async () => {
+  const demo = harness();
+  try {
+    const motion = `This House would ban phones, mail a@b.co ${"x".repeat(200)}`.slice(0, 200);
+    const original = demo.firstTurn.motion;
+    demo.firstTurn.motion = motion;
+    const publish = await playRound(demo);
+    demo.firstTurn.motion = original;
+    const reply = await demo.send("198.51.100.7", publish);
+    assertEquals(reply.status, 200);
+    assert(String(demo.published[0].p_motion).length > 200);
+    assertEquals(reply.body.indexable, false);
+  } finally {
+    demo.restore();
+  }
+});
