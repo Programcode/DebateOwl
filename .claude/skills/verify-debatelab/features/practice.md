@@ -13,12 +13,14 @@ Live practice modes. Sparring runs a multi-speech round against an AI opponent a
 - `cross-history` after leaving the page, `/app/history?tab=crossfire` lists the round (test id `history-crossfire-row`). `Open Crossfire round: <resolution>` shows test id `saved-crossfire` with the debrief (`saved-crossfire-debrief`) and transcript (`saved-crossfire-transcript`); `Delete Crossfire round: <resolution>` asks first and removes the row.
 - `cross-daily-limit` with no AI requests left, the first AI turn is refused: the daily-limit dialog opens and the page stays in setup with no clock and no `end-crossfire`.
 - `cross-end-early` ending a round before any exchange returns to setup with no error.
+- `spar-daily-motion` each Daily Motion page (`/motion/<number>`, public) links `Run a full PF round in Sparring` (or LD, 4-6-6-3) to `/app/sparring?motion=…&format=…`; setup opens with that motion in `Motion` and that format in `Round format`. The same page's `Argue it against the AI, free` link fills the custom motion on `/ai-debate`.
 - `spar-daily-limit` Sparring setup warns (test id `sparring-request-shortfall`) when today's remaining requests, as the server reports them, are fewer than the round costs. A round costs one use (by model weight) however many replies it takes; `session-cost` says so before Start.
 
 ## How to get to it (user POV)
 
 - Header links `Sparring` and `Crossfire`, or `/app/sparring` and `/app/crossfire`.
 - Generate result → `Open in Crossfire`, which seeds Crossfire from a generated case.
+- A Daily Motion page (`/motion/<number>`) → `Run a full … round in Sparring`, which seeds the motion and format.
 
 ## Driving it with verify.sh + Playwright
 

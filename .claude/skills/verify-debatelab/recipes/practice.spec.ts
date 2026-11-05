@@ -238,3 +238,15 @@ test("cross-end-early: ending a round before any exchange returns to setup witho
   await expect(page.getByText("Complete at least one exchange before ending the session.")).toHaveCount(0);
   await evidence.shot("01-back-in-setup");
 });
+
+test("spar-daily-motion: a Daily Motion page opens Sparring with its motion and format", async ({ signedIn: page, evidence }) => {
+  await page.goto("/motion/1");
+  const motion = (await page.getByTestId("daily-motion-wording").textContent())?.trim() ?? "";
+  expect(motion).toMatch(/^Resolved: /);
+  await evidence.shot("01-daily-motion");
+  await page.getByRole("link", { name: "Run a full PF round in Sparring" }).click();
+  await expect(page).toHaveURL(/\/app\/sparring\?motion=.+&format=pf$/);
+  await expect(page.getByLabel("Motion")).toHaveValue(motion);
+  await expect(page.getByRole("combobox", { name: "Round format" })).toContainText("Public Forum");
+  await evidence.shot("02-sparring-prefilled");
+});
